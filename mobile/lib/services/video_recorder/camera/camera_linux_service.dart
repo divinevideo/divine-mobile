@@ -91,6 +91,7 @@ class CameraLinuxService extends CameraService {
     bool preferUnprocessedAudio = false,
     DivineVideoStabilizationMode videoStabilizationMode =
         DivineVideoStabilizationMode.off,
+    bool mirrorFrontCameraOutput = false,
   }) async {
     Log.info(
       'Camera is not available on Linux - showing placeholder',

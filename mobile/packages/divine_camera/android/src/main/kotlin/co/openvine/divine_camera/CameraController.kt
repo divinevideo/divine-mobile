@@ -127,7 +127,9 @@ class CameraController(
     // Requested video stabilization mode (cross-platform string). Applied to
     // the shared capture session via Camera2 interop, so it affects both the
     // preview and the recorded file. Defaults to "off" to preserve existing
-    // behaviour until the user opts in.
+    // behaviour until the user opts in. Kept across lens switches: a lens that
+    // cannot apply it records with off, and the next lens that can gets it
+    // back.
     private var requestedStabilizationMode: String = STABILIZATION_OFF
 
     // Auto flash mode - checks brightness once when recording starts
@@ -465,6 +467,55 @@ class CameraController(
                     .CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION
             ) == true,
         )
+
+        /**
+         * Resolves [requested] into the raw Camera2
+         * `CONTROL_VIDEO_STABILIZATION_MODE` value (0=off, 1=on/basic EIS,
+         * 2=preview stabilization) for a lens with the given support. A mode
+         * the lens cannot apply resolves to off.
+         */
+        fun camera2StabilizationMode(
+            requested: String,
+            onSupported: Boolean,
+            previewSupported: Boolean,
+        ): Int {
+            val off = CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_OFF
+            val on = CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_ON
+            val preview = CameraMetadata
+                .CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION
+            return when (requested) {
+                STABILIZATION_STANDARD -> if (onSupported) on else off
+                STABILIZATION_CINEMATIC,
+                STABILIZATION_CINEMATIC_EXTENDED,
+                STABILIZATION_PREVIEW_OPTIMIZED,
+                STABILIZATION_LOW_LATENCY,
+                STABILIZATION_AUTO -> when {
+                    previewSupported -> preview
+                    onSupported -> on
+                    else -> off
+                }
+                else -> off
+            }
+        }
+
+        /**
+         * The mode to report for [requested] on a lens with the given
+         * support: the request itself, or off where the lens applies none of
+         * it, which is what the camera then records with.
+         */
+        fun reportedStabilizationMode(
+            requested: String,
+            onSupported: Boolean,
+            previewSupported: Boolean,
+        ): String {
+            val resolved =
+                camera2StabilizationMode(requested, onSupported, previewSupported)
+            return if (resolved == CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_OFF) {
+                STABILIZATION_OFF
+            } else {
+                requested
+            }
+        }
     }
 
     /** Listener for auto-stop events, set by the plugin. */
@@ -528,8 +579,15 @@ class CameraController(
         }
 
         // Applied by the first bind below. Setting it after initialize instead
-        // would rebind the whole camera a second time just to change it.
-        requestedStabilizationMode = initialStabilizationMode(videoStabilizationMode)
+        // would rebind the whole camera a second time just to change it. Kept
+        // even when the opening lens cannot apply it, so switching to a lens
+        // that can turns it on.
+        requestedStabilizationMode =
+            if (isCanonicalStabilizationMode(videoStabilizationMode)) {
+                videoStabilizationMode
+            } else {
+                STABILIZATION_OFF
+            }
 
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         cameraProviderFuture.addListener({
@@ -737,23 +795,6 @@ class CameraController(
         telephotoNativeMaxZoom = inventory.telephotoNativeMaxZoom
     }
 
-    /**
-     * The stabilization mode the first bind should use: [mode] when it is a
-     * recognised mode the opened lens supports, otherwise off — the same gate
-     * the recorder applied when it restored the preference after start.
-     */
-    private fun initialStabilizationMode(mode: String): String {
-        if (mode == STABILIZATION_OFF || !isCanonicalStabilizationMode(mode)) {
-            return STABILIZATION_OFF
-        }
-        return if (mode in availableVideoStabilizationModesForCurrentLens()) {
-            mode
-        } else {
-            DivineCameraLog.w(TAG, "Stabilization mode $mode unsupported on $currentLensType; opening with off")
-            STABILIZATION_OFF
-        }
-    }
-    
     /**
      * Returns a list of available lens types on this device.
      */
@@ -1008,27 +1049,15 @@ class CameraController(
      * supported modes.
      */
     private fun resolvedCamera2StabilizationMode(): Int {
-        val off = CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_OFF
-        if (requestedStabilizationMode == STABILIZATION_OFF) return off
-
-        val on = CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_ON
-        val preview =
-            CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_PREVIEW_STABILIZATION
-        val (onSupported, previewSupported) = stabilizationSupport()
-
-        val mode = when (requestedStabilizationMode) {
-            STABILIZATION_STANDARD -> if (onSupported) on else off
-            STABILIZATION_CINEMATIC,
-            STABILIZATION_CINEMATIC_EXTENDED,
-            STABILIZATION_PREVIEW_OPTIMIZED,
-            STABILIZATION_LOW_LATENCY,
-            STABILIZATION_AUTO -> when {
-                previewSupported -> preview
-                onSupported -> on
-                else -> off
-            }
-            else -> off
+        if (requestedStabilizationMode == STABILIZATION_OFF) {
+            return CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_OFF
         }
+        val (onSupported, previewSupported) = stabilizationSupport()
+        val mode = camera2StabilizationMode(
+            requestedStabilizationMode,
+            onSupported,
+            previewSupported,
+        )
         DivineCameraLog.info(
             "Stabilization '$requestedStabilizationMode' -> camera2Mode=$mode " +
                 "(0=off,1=on,2=preview) " +
@@ -2175,15 +2204,6 @@ class CameraController(
     }
 
     /**
-     * Returns the stabilization modes the active camera supports, as
-     * cross-platform strings, read from the lens's Camera2 capabilities.
-     */
-    private fun availableVideoStabilizationModesForCurrentLens(): List<String> {
-        val (onSupported, previewSupported) = stabilizationSupport()
-        return buildStabilizationModeList(onSupported, previewSupported)
-    }
-
-    /**
      * Forwards a diagnostic when the CameraX audio-source state changes during
      * recording. Only transitions are reported (Status fires continuously):
      * [AudioStats.AUDIO_STATE_ACTIVE] is info, anything else is a warning
@@ -2288,7 +2308,16 @@ class CameraController(
         }
         if (!outputDir.exists()) outputDir.mkdirs()
         val photoFile = File(outputDir, "IMG_${System.currentTimeMillis()}.jpg")
-        val options = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+        // Mirror a front still the way VideoCapture mirrors front clips, so a
+        // stop-motion frame matches the preview like a recording does. CameraX
+        // applies this as an EXIF flip rather than rewriting the pixels.
+        val metadata = ImageCapture.Metadata().apply {
+            isReversedHorizontal = mirrorFrontCameraOutput &&
+                currentLens == CameraSelector.LENS_FACING_FRONT
+        }
+        val options = ImageCapture.OutputFileOptions.Builder(photoFile)
+            .setMetadata(metadata)
+            .build()
 
         capture.takePicture(
             options,
@@ -2894,7 +2923,9 @@ class CameraController(
         val handlesTransform = surfaceProducer?.handlesCropAndRotation() == true
         val previewRotation =
             if (handlesTransform) 0 else currentSensorOrientation()
-        val stabilizationModes = availableVideoStabilizationModesForCurrentLens()
+        val (onSupported, previewSupported) = stabilizationSupport()
+        val stabilizationModes =
+            buildStabilizationModeList(onSupported, previewSupported)
         return mutableMapOf(
             "isInitialized" to (camera != null),
             "isRecording" to isRecording,
@@ -2916,7 +2947,11 @@ class CameraController(
             "previewHandlesTransform" to handlesTransform,
             "availableLenses" to getAvailableLenses(),
             "currentLensMetadata" to getCurrentLensMetadata(),
-            "videoStabilizationMode" to requestedStabilizationMode,
+            "videoStabilizationMode" to reportedStabilizationMode(
+                requestedStabilizationMode,
+                onSupported,
+                previewSupported,
+            ),
             "availableVideoStabilizationModes" to stabilizationModes,
             "isVideoStabilizationSupported" to (stabilizationModes.size > 1)
         )

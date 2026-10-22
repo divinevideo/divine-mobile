@@ -4666,6 +4666,7 @@
   "videoEditorEffectWave": "Sóng",
   "videoEditorEffectGlow": "Phát sáng",
   "videoEditorEffectEcho": "Tiếng vọng",
+  "videoEditorEffectFisheye": "Mắt cá",
   "videoEditorEffectsFlashingReplaced": "Mỗi lúc chỉ một hiệu ứng nhấp nháy. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm, nên chúng mình đã thay hiệu ứng kia ở đây.",
   "videoEditorEffectsFlashingNotDuplicated": "Mỗi lúc chỉ một hiệu ứng nhấp nháy. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm.",
   "videoEditorEffectsOnBeat": "Theo nhịp",
@@ -5028,6 +5029,7 @@
   "@videoEditorSetClipSpeedSemanticLabel": {
     "description": "Accessibility label for the Set Speed button in the timeline clip controls."
   },
+  "videoEditorSetSoundSpeedSemanticLabel": "Đặt tốc độ phát cho âm thanh đã chọn",
   "videoEditorReverseLabel": "Đảo ngược",
   "@videoEditorReverseLabel": {
     "description": "Label for the Reverse button in the timeline clip controls."
@@ -5121,7 +5123,19 @@
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."
   },
+  "videoEditorSoundSpeedSheetTitle": "Tốc độ âm thanh",
   "videoEditorSpeedPresetSemanticLabel": "Tốc độ {speed}×",
+  "videoEditorSpeedModeConstant": "Cố định",
+  "videoEditorSpeedModeCurve": "Đường cong",
+  "videoEditorSpeedCurveCustom": "Tùy chỉnh",
+  "videoEditorSpeedCurveMontage": "Montage",
+  "videoEditorSpeedCurveHero": "Anh hùng",
+  "videoEditorSpeedCurveBullet": "Bullet time",
+  "videoEditorSpeedCurveFlashIn": "Vào nhanh",
+  "videoEditorSpeedCurveFlashOut": "Ra nhanh",
+  "videoEditorSpeedCurveHint": "Kéo một điểm lên để tăng tốc, xuống để chậm lại",
+  "videoEditorSpeedCurvePointSemanticLabel": "Điểm tốc độ {index}/{total}",
+  "videoEditorSpeedResultingLength": "Phát trong {seconds} giây",
   "@videoEditorSpeedPresetSemanticLabel": {
     "description": "Accessibility label for a one-tap speed preset in the clip speed bottom sheet. {speed} is a speed multiplier like 0.5, 1, or 2.",
     "placeholders": {
@@ -6022,6 +6036,8 @@
   "generalSettingsHoldToRecordSubtitle": "Bắt đầu quay khi bạn nhấn giữ, dừng khi bạn thả ra",
   "settingsBackUpRecordings": "Sao lưu bản quay vào thư viện ảnh",
   "settingsBackUpRecordingsSubtitle": "Lưu một bản sao của mỗi bản quay mới vào thư viện ảnh của bạn. Ứng dụng khác và bản sao lưu ảnh trên đám mây có thể thấy nó ở đó.",
+  "settingsMirrorFrontCamera": "Lật gương camera trước",
+  "settingsMirrorFrontCameraSubtitle": "Lưu clip từ camera trước đúng như bản xem trước hiển thị. Chữ trong khung hình sẽ bị ngược.",
   "uploadPublishedCountMessage": "{count, plural, =1{Đã đăng video lên hồ sơ của bạn} other{Đã đăng {count} video lên hồ sơ của bạn}}",
   "@uploadPublishedCountMessage": {
     "description": "Snackbar shown after one or more background uploads succeed, e.g. after a re-auth redirect during which uploads completed.",

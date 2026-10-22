@@ -20,6 +20,7 @@ AudioEvent _sound(
   Duration? endTime,
   double? duration = 30,
   double volume = 1,
+  double playbackSpeed = 1,
 }) => AudioEvent(
   id: id,
   pubkey: 'a' * 64,
@@ -30,6 +31,7 @@ AudioEvent _sound(
   startOffset: startOffset,
   endTime: endTime,
   volume: volume,
+  playbackSpeed: playbackSpeed,
 );
 
 DivineVideoClip _clip(
@@ -93,6 +95,27 @@ void main() {
       expect(parts.single.from, _ms(4000));
       expect(parts.single.to, _ms(6000));
       expect(parts.single.at, _ms(1000));
+    });
+
+    test('takes as much more of a sped-up sound as it plays faster', () {
+      final part = beatSourceFor(
+        sounds: [
+          _sound(
+            'music',
+            startTime: _ms(1000),
+            startOffset: _ms(4000),
+            endTime: _ms(3000),
+            playbackSpeed: 2,
+          ),
+        ],
+        clips: const [],
+        videoEnd: _ms(6000),
+      ).single;
+
+      expect(part.from, _ms(4000));
+      expect(part.to, _ms(8000));
+      expect(part.at, _ms(1000));
+      expect(part.speed, 2);
     });
 
     test('plays a sound without an end to the end of the video, but not past '
@@ -215,6 +238,38 @@ void main() {
       expect(
         worstMiss(beats, [
           for (var kick = 250; kick < 4000; kick += 500) _ms(1000 + kick ~/ 2),
+        ]),
+        lessThanOrEqualTo(_ms(15)),
+      );
+    });
+
+    test('places the beats of a speed-ramped clip where the ramp plays '
+        'them', () async {
+      // 4 s of file: the first 2 s at 2× (1 s), the last 2 s at 0.5× (4 s).
+      const ramp = VideoSpeedRamp([
+        VideoSpeedRampPoint(position: 0, speed: 2),
+        VideoSpeedRampPoint(position: 0.5, speed: 2),
+        VideoSpeedRampPoint(position: 0.5000001, speed: 0.5),
+        VideoSpeedRampPoint(position: 1, speed: 0.5),
+      ]);
+      final clips = [
+        _clip('ramped', duration: _ms(4000)).copyWith(speedRamp: ramp),
+      ];
+      final parts = beatSourceFor(
+        sounds: const [],
+        clips: clips,
+        videoEnd: _ms(5000),
+      );
+      await resolver.read(parts);
+      final beats = resolver.beatsOnOutput(parts, videoEnd: _ms(5000));
+
+      // Kicks at 0.25, 0.75, … s of the file: twice as dense in the fast
+      // half, twice as sparse in the slow one.
+      expect(
+        worstMiss(beats, [
+          for (var kick = 250; kick < 2000; kick += 500) _ms(kick ~/ 2),
+          for (var kick = 2250; kick < 4000; kick += 500)
+            _ms(1000 + (kick - 2000) * 2),
         ]),
         lessThanOrEqualTo(_ms(15)),
       );

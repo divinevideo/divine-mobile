@@ -4666,6 +4666,7 @@
   "videoEditorEffectWave": "波浪",
   "videoEditorEffectGlow": "辉光",
   "videoEditorEffectEcho": "残影",
+  "videoEditorEffectFisheye": "鱼眼",
   "videoEditorEffectsFlashingReplaced": "一次只能用一个闪烁效果。闪烁太多可能会伤害对闪光敏感的人，所以我们在这里替换了另一个。",
   "videoEditorEffectsFlashingNotDuplicated": "一次只能用一个闪烁效果。闪烁太多可能会伤害对闪光敏感的人。",
   "videoEditorEffectsOnBeat": "卡点",
@@ -5028,6 +5029,7 @@
   "@videoEditorSetClipSpeedSemanticLabel": {
     "description": "Accessibility label for the Set Speed button in the timeline clip controls."
   },
+  "videoEditorSetSoundSpeedSemanticLabel": "设置选中声音的播放速度",
   "videoEditorReverseLabel": "倒放",
   "@videoEditorReverseLabel": {
     "description": "Label for the Reverse button in the timeline clip controls."
@@ -5121,7 +5123,19 @@
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."
   },
+  "videoEditorSoundSpeedSheetTitle": "声音速度",
   "videoEditorSpeedPresetSemanticLabel": "速度 {speed}×",
+  "videoEditorSpeedModeConstant": "恒定",
+  "videoEditorSpeedModeCurve": "曲线",
+  "videoEditorSpeedCurveCustom": "自定义",
+  "videoEditorSpeedCurveMontage": "蒙太奇",
+  "videoEditorSpeedCurveHero": "英雄",
+  "videoEditorSpeedCurveBullet": "子弹时间",
+  "videoEditorSpeedCurveFlashIn": "快速进入",
+  "videoEditorSpeedCurveFlashOut": "快速退出",
+  "videoEditorSpeedCurveHint": "向上拖动点加速，向下拖动减速",
+  "videoEditorSpeedCurvePointSemanticLabel": "速度点 {index}/{total}",
+  "videoEditorSpeedResultingLength": "时长 {seconds} 秒",
   "@videoEditorSpeedPresetSemanticLabel": {
     "description": "Accessibility label for a one-tap speed preset in the clip speed bottom sheet. {speed} is a speed multiplier like 0.5, 1, or 2.",
     "placeholders": {
@@ -6022,6 +6036,8 @@
   "generalSettingsHoldToRecordSubtitle": "按住开始录制，松开停止",
   "settingsBackUpRecordings": "将录制内容备份到相册",
   "settingsBackUpRecordingsSubtitle": "为每段新录制的视频在相册中保存一份副本。其他应用和云端照片备份都能看到它。",
+  "settingsMirrorFrontCamera": "前置摄像头镜像",
+  "settingsMirrorFrontCameraSubtitle": "按预览中的样子保存前置摄像头片段。画面中的文字会左右颠倒。",
   "uploadPublishedCountMessage": "{count, plural, =1{1 个视频已发布到你的主页} other{{count} 个视频已发布到你的主页}}",
   "@uploadPublishedCountMessage": {
     "description": "Snackbar shown after one or more background uploads succeed, e.g. after a re-auth redirect during which uploads completed.",

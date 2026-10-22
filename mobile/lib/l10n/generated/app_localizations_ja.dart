@@ -8446,6 +8446,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectEcho => 'エコー';
 
   @override
+  String get videoEditorEffectFisheye => '魚眼';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       '点滅エフェクトは一度にひとつだけ。点滅が多すぎると、敏感な人の体に負担がかかることがあるので、ここではもう一方を置き換えました。';
 
@@ -9355,6 +9358,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorSetClipSpeedSemanticLabel => '選択したクリップの再生速度を設定';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel => '選択したサウンドの再生速度を設定';
+
+  @override
   String get videoEditorReverseLabel => '逆再生';
 
   @override
@@ -9448,8 +9454,48 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'クリップの速度';
 
   @override
+  String get videoEditorSoundSpeedSheetTitle => 'サウンドの速度';
+
+  @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return '速度 $speed×';
+  }
+
+  @override
+  String get videoEditorSpeedModeConstant => '一定';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'カーブ';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'カスタム';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'モンタージュ';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'ヒーロー';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'バレットタイム';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'フラッシュイン';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'フラッシュアウト';
+
+  @override
+  String get videoEditorSpeedCurveHint => '点を上にドラッグすると速く、下にドラッグすると遅くなります';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return '速度ポイント $index/$total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return '再生時間 $seconds 秒';
   }
 
   @override
@@ -10870,7 +10916,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockExpiredBody =>
-      'The response deadline has passed. Contact Support Center if you need help.';
+      'The response deadline has passed. Contact support if you need help.';
 
   @override
   String get minorAccountReviewResponseClockUnavailableTitle =>
@@ -10878,18 +10924,18 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockUnavailableBody =>
-      'We can\'t show your response deadline right now. Contact Support Center if you need help.';
+      'We can\'t show your response deadline right now. Contact support if you need help.';
 
   @override
   String get minorAccountReviewAppealTitle => 'Think we got this wrong?';
 
   @override
   String get minorAccountReviewAppealTeenBody =>
-      'Contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Contact support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewAppealUnder13Body =>
-      'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Your parent or guardian can email support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewOpenModerationMessage => 'モデレーションメッセージを開く';
@@ -11397,6 +11443,13 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get settingsBackUpRecordingsSubtitle =>
       '新しい録画のコピーをギャラリーに保存します。他のアプリやクラウドの写真バックアップからも見えます。';
+
+  @override
+  String get settingsMirrorFrontCamera => '前面カメラのミラー反転';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      '前面カメラのクリップをプレビューと同じ向きで保存します。映っている文字は左右反転します。';
 
   @override
   String uploadPublishedCountMessage(int count) {

@@ -8925,6 +8925,9 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorEffectEcho => 'Echo';
 
   @override
+  String get videoEditorEffectFisheye => 'Visoog';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Eén knipperend effect tegelijk. Te veel knipperen kan schadelijk zijn voor mensen die er gevoelig voor zijn, dus hebben we het andere hier vervangen.';
 
@@ -9876,6 +9879,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Afspeelsnelheid voor geselecteerd clip instellen';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'Afspeelsnelheid voor geselecteerd geluid instellen';
+
+  @override
   String get videoEditorReverseLabel => 'Omgekeerd';
 
   @override
@@ -9987,8 +9994,49 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Clipsnelheid';
 
   @override
+  String get videoEditorSoundSpeedSheetTitle => 'Geluidssnelheid';
+
+  @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'Snelheid $speed×';
+  }
+
+  @override
+  String get videoEditorSpeedModeConstant => 'Constant';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'Curve';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'Eigen';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'Montage';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'Held';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'Bullet time';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'Snel erin';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'Snel eruit';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'Sleep een punt omhoog om te versnellen, omlaag om te vertragen';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'Snelheidspunt $index van $total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'Duurt $seconds s';
   }
 
   @override
@@ -11492,7 +11540,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockExpiredBody =>
-      'The response deadline has passed. Contact Support Center if you need help.';
+      'The response deadline has passed. Contact support if you need help.';
 
   @override
   String get minorAccountReviewResponseClockUnavailableTitle =>
@@ -11500,18 +11548,18 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockUnavailableBody =>
-      'We can\'t show your response deadline right now. Contact Support Center if you need help.';
+      'We can\'t show your response deadline right now. Contact support if you need help.';
 
   @override
   String get minorAccountReviewAppealTitle => 'Think we got this wrong?';
 
   @override
   String get minorAccountReviewAppealTeenBody =>
-      'Contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Contact support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewAppealUnder13Body =>
-      'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Your parent or guardian can email support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>
@@ -12064,6 +12112,13 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get settingsBackUpRecordingsSubtitle =>
       'Zet een kopie van elke nieuwe opname in je galerij. Andere apps en fotoback-ups in de cloud kunnen die daar zien.';
+
+  @override
+  String get settingsMirrorFrontCamera => 'Frontcamera spiegelen';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Slaat clips van de frontcamera op zoals de preview ze laat zien. Tekst in beeld staat dan in spiegelschrift.';
 
   @override
   String uploadPublishedCountMessage(int count) {

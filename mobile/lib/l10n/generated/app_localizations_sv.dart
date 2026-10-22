@@ -8879,6 +8879,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectEcho => 'Eko';
 
   @override
+  String get videoEditorEffectFisheye => 'Fisköga';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'En blinkande effekt i taget. För mycket blinkande kan skada känsliga personer, så vi har ersatt den andra här.';
 
@@ -9829,6 +9832,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Ange uppspelningshastighet för valt klipp';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'Ange uppspelningshastighet för valt ljud';
+
+  @override
   String get videoEditorReverseLabel => 'Baklänges';
 
   @override
@@ -9939,8 +9946,49 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Klipphastighet';
 
   @override
+  String get videoEditorSoundSpeedSheetTitle => 'Ljudhastighet';
+
+  @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'Hastighet $speed×';
+  }
+
+  @override
+  String get videoEditorSpeedModeConstant => 'Konstant';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'Kurva';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'Egen';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'Montage';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'Hjälte';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'Bullet time';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'Snabb start';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'Snabbt slut';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'Dra en punkt uppåt för snabbare, nedåt för långsammare';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'Hastighetspunkt $index av $total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'Spelar i $seconds s';
   }
 
   @override
@@ -11439,7 +11487,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockExpiredBody =>
-      'The response deadline has passed. Contact Support Center if you need help.';
+      'The response deadline has passed. Contact support if you need help.';
 
   @override
   String get minorAccountReviewResponseClockUnavailableTitle =>
@@ -11447,18 +11495,18 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockUnavailableBody =>
-      'We can\'t show your response deadline right now. Contact Support Center if you need help.';
+      'We can\'t show your response deadline right now. Contact support if you need help.';
 
   @override
   String get minorAccountReviewAppealTitle => 'Think we got this wrong?';
 
   @override
   String get minorAccountReviewAppealTeenBody =>
-      'Contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Contact support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewAppealUnder13Body =>
-      'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Your parent or guardian can email support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>
@@ -12006,6 +12054,13 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get settingsBackUpRecordingsSubtitle =>
       'Sparar en kopia av varje ny inspelning i ditt galleri. Andra appar och fotosäkerhetskopior i molnet kan se den där.';
+
+  @override
+  String get settingsMirrorFrontCamera => 'Spegelvänd främre kamera';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Sparar klipp från den främre kameran så som förhandsvisningen visar dem. Text i bilden blir spegelvänd.';
 
   @override
   String uploadPublishedCountMessage(int count) {

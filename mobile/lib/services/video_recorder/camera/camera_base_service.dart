@@ -71,6 +71,9 @@ abstract class CameraService {
   /// `MusicModePreferenceService`.
   /// [videoStabilizationMode] is applied by the first capture-session
   /// configuration; a mode the opened lens cannot take falls back to off.
+  /// [mirrorFrontCameraOutput] saves front camera clips and stills mirrored,
+  /// the way the preview shows them (default: false) — see
+  /// `FrontCameraMirrorPreferenceService`.
   ///
   /// Mobile implementations rethrow platform initialization failures after
   /// updating [initializationError]. Callers must handle those exceptions.
@@ -81,6 +84,7 @@ abstract class CameraService {
     bool preferUnprocessedAudio = false,
     DivineVideoStabilizationMode videoStabilizationMode =
         DivineVideoStabilizationMode.off,
+    bool mirrorFrontCameraOutput = false,
   });
 
   /// Releases camera resources and cleans up.

@@ -81,6 +81,15 @@ typedef OfflineProbe = Future<bool> Function();
 /// divinevideo/keycast.
 const _keycastPolicyDenialMarker = 'Operation denied by policy';
 
+/// What one attempt to publish the sender's own copy came to.
+enum _SelfWrapPublish {
+  published,
+
+  /// No relay was connected, so nothing left the device.
+  reachedNoRelay,
+  failed,
+}
+
 /// Service for sending encrypted private messages using NIP-17 gift wrapping.
 ///
 /// Accepts any [NostrSigner] implementation, supporting both local key
@@ -1064,7 +1073,9 @@ class NIP17MessageService {
   /// publish (the `messageEventId` slot carries the rumor id since no
   /// new recipient-wrap event id is produced on this path) or
   /// [NIP17SendResult.failure] when the self-wrap could not be built
-  /// or did not reach a relay.
+  /// or did not reach a relay. The failure carries `reachedNoRelay` when
+  /// nothing left the device — offline, or no relay connected — so a retry
+  /// caller can leave it uncharged, as it does a full send (#8516).
   @useResult
   Future<NIP17SendResult> publishSelfWrap({
     required Event rumorEvent,
@@ -1082,6 +1093,7 @@ class NIP17MessageService {
         );
         return const NIP17SendResult.failure(
           'Self-wrap not sent: device offline',
+          reachedNoRelay: true,
         );
       }
 
@@ -1100,14 +1112,20 @@ class NIP17MessageService {
         prebuiltSelfWrap: _ownCopyOrNull(prebuiltSelfWrap),
         targetRelays: targetRelays,
       );
-      if (!published) {
-        return const NIP17SendResult.failure('Self-wrap publish failed');
-      }
-      return NIP17SendResult.success(
-        rumorEventId: rumorEvent.id,
-        messageEventId: rumorEvent.id,
-        recipientPubkey: _senderPublicKey,
-      );
+      return switch (published) {
+        _SelfWrapPublish.published => NIP17SendResult.success(
+          rumorEventId: rumorEvent.id,
+          messageEventId: rumorEvent.id,
+          recipientPubkey: _senderPublicKey,
+        ),
+        _SelfWrapPublish.reachedNoRelay => const NIP17SendResult.failure(
+          'Self-wrap not sent: no relay connected',
+          reachedNoRelay: true,
+        ),
+        _SelfWrapPublish.failed => const NIP17SendResult.failure(
+          'Self-wrap publish failed',
+        ),
+      };
     } on Object catch (e, stackTrace) {
       Log.error(
         'Failed to publish self-wrap on its own: $e',
@@ -1157,18 +1175,19 @@ class NIP17MessageService {
       );
       return false;
     }
-    return _publishSelfWrap(
+    final published = await _publishSelfWrap(
       nostr: nostr,
       rumorEvent: rumorEvent,
       wrapBuildTimeout: wrapBuildTimeout,
       prebuiltSelfWrap: prebuiltSelfWrap,
       targetRelays: targetRelays,
     );
+    return published == _SelfWrapPublish.published;
   }
 
   /// Build and publish the sender self-addressed gift wrap for
-  /// [rumorEvent]. Returns `true` when the wrap reached at least one
-  /// relay.
+  /// [rumorEvent], and say whether it reached a relay, found none connected,
+  /// or failed.
   ///
   /// When [prebuiltSelfWrap] is non-null (supplied by [_buildBothWraps] on a
   /// batch path, directly or through [publishSelfWrap]), the build step is
@@ -1179,7 +1198,7 @@ class NIP17MessageService {
   /// recipient has already received the message and an exception must
   /// not crash the result) and the recovery path (where an exception
   /// is just another failure mode the caller surfaces).
-  Future<bool> _publishSelfWrap({
+  Future<_SelfWrapPublish> _publishSelfWrap({
     required Nostr nostr,
     required Event rumorEvent,
     required Duration? wrapBuildTimeout,
@@ -1225,7 +1244,7 @@ class NIP17MessageService {
           'this message on other devices or after a reinstall.',
           category: LogCategory.system,
         );
-        return false;
+        return _SelfWrapPublish.failed;
       }
       // Bounded: publishEvent is frame-accept with no timeout of its own, so
       // a stalled socket would hang the send's tail past the caller's outer
@@ -1267,24 +1286,30 @@ class NIP17MessageService {
         Log.warning(
           'Self-wrap publish failed — the sender will not see this '
           'message on other devices or after a reinstall '
-          '(event=${selfWrapEvent.id}, requested=$destinationForLog)',
+          '(event=${selfWrapEvent.id}, requested=$destinationForLog, '
+          'reason=${published.failureReason})',
           category: LogCategory.system,
         );
-        return false;
+        // Named relays skip publishEvent's PublishNoRelays check, so the
+        // pool is read directly — the same test sendRumor applies (#8516).
+        return published is PublishNoRelays ||
+                _nostrService.connectedRelayCount == 0
+            ? _SelfWrapPublish.reachedNoRelay
+            : _SelfWrapPublish.failed;
       }
       Log.info(
         'Self-wrap published (event=${selfWrapEvent.id}, '
         'requested=$destinationForLog)',
         category: LogCategory.system,
       );
-      return true;
+      return _SelfWrapPublish.published;
     } on Object catch (e) {
       Log.error(
         'Self-wrap failed (non-fatal): the sender will not see this '
         'message on other devices or after a reinstall: $e',
         category: LogCategory.system,
       );
-      return false;
+      return _SelfWrapPublish.failed;
     }
   }
 

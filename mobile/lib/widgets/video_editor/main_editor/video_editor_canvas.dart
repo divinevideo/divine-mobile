@@ -56,6 +56,7 @@ import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:openvine/utils/video_editor_playhead.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_player.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_player_registry.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/paint_editor_stroke_width.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_preview.dart';
@@ -74,6 +75,7 @@ import 'package:openvine/widgets/video_editor/tune_editor/tune_set_timeline_ops.
 import 'package:openvine/widgets/video_editor/video_editor_widget_layer_loader.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     hide AudioTrack, VideoClip;
+import 'package:pro_video_editor/pro_video_editor.dart' show VideoSpeedRamp;
 import 'package:sound_service/sound_service.dart' show AudioSourceConfig;
 import 'package:unified_logger/unified_logger.dart';
 
@@ -246,6 +248,7 @@ class VideoEditorCanvas extends StatelessWidget {
           a.volume != b.volume ||
           a.equalizer != b.equalizer ||
           a.playbackSpeed != b.playbackSpeed ||
+          a.speedRamp != b.speedRamp ||
           a.reversed != b.reversed ||
           a.sourceStartOffset != b.sourceStartOffset ||
           a.transition != b.transition) {
@@ -276,7 +279,8 @@ class VideoEditorCanvas extends StatelessWidget {
     var speedChanged = false;
     for (var i = 0; i < previous.length; i++) {
       if (previous[i].id != current[i].id) return position;
-      if (previous[i].playbackSpeed != current[i].playbackSpeed) {
+      if (previous[i].playbackSpeed != current[i].playbackSpeed ||
+          previous[i].speedRamp != current[i].speedRamp) {
         speedChanged = true;
       }
     }
@@ -540,6 +544,7 @@ class VideoEditorCanvas extends StatelessWidget {
           a.volume != b.volume ||
           a.equalizer != b.equalizer ||
           a.playbackSpeed != b.playbackSpeed ||
+          a.speedRamp != b.speedRamp ||
           a.transition != b.transition ||
           a.mask != b.mask ||
           // Frame edits (hold changes, delete, reorder) are the whole edit
@@ -989,6 +994,12 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     runDetached: _runDetached,
     onSeamRendered: _resyncPlayerClips,
     onSpeedClipRendered: _resyncSpeedClipsWhenIdle,
+  );
+
+  /// Detached clips play a ramped clip from the same speed body as the
+  /// timeline, rendered by this composition.
+  late final _detachedSpeedBodies = DetachedClipSpeedBodies(
+    (clip) async => (await _composition.speedRenders.render(clip))?.path,
   );
 
   /// Set when a finished speed render's composition swap was deferred because
@@ -1902,7 +1913,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       if (sound == null) continue;
 
       final trackStart = sound.startOffset;
-      final trackEnd = trackStart + (item.endTime - item.startTime);
+      final trackEnd =
+          trackStart + sound.sourceSpanOf(item.endTime - item.startTime);
       // Imported, extracted and voice-effect tracks all play a local path,
       // which only the file loader takes — the network loader rejects it. A
       // clip sampled into stills brings its own sound as an extracted track.
@@ -1938,6 +1950,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           windowEnd: item.endTime,
           fadeIn: sound.fadeInDuration,
           fadeOut: sound.fadeOutDuration,
+          speed: sound.playbackSpeed,
         ),
       );
     }
@@ -2057,6 +2070,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             fadeInDuration: sound.fadeInDuration,
             fadeOutDuration: sound.fadeOutDuration,
             equalizer: sound.equalizer.toPlayerEqualizer(),
+            playbackSpeed: sound.playbackSpeed,
           );
         } else if (sound.isLocalImport && sound.localFilePath != null) {
           track = AudioTrack.file(
@@ -2071,6 +2085,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             fadeInDuration: sound.fadeInDuration,
             fadeOutDuration: sound.fadeOutDuration,
             equalizer: sound.equalizer.toPlayerEqualizer(),
+            playbackSpeed: sound.playbackSpeed,
           );
         } else {
           track = AudioTrack.network(
@@ -2085,6 +2100,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             fadeInDuration: sound.fadeInDuration,
             fadeOutDuration: sound.fadeOutDuration,
             equalizer: sound.equalizer.toPlayerEqualizer(),
+            playbackSpeed: sound.playbackSpeed,
           );
         }
         tracks.add(track);
@@ -2645,10 +2661,12 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       },
     );
 
-    // Update native player speeds when any clip's playback speed changes.
-    ref.listen<List<double?>>(
+    // Update native player speeds when any clip's playback speed or speed
+    // ramp changes. VideoSpeedRamp overrides `==`, so the record comparison
+    // detects a reshaped curve.
+    ref.listen<List<(double?, VideoSpeedRamp?)>>(
       clipManagerProvider.select(
-        (s) => s.clips.map((c) => c.playbackSpeed).toList(),
+        (s) => s.clips.map((c) => (c.playbackSpeed, c.speedRamp)).toList(),
       ),
       (previous, current) {
         if (listEquals(previous, current)) return;
@@ -2703,7 +2721,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     );
 
     // Listen for playback control requests from BLoC
-    return MultiBlocListener(
+    final editor = MultiBlocListener(
       listeners: [
         BlocListener<VideoEditorEffectsCubit, VideoEditorEffectsState>(
           listenWhen: (previous, current) => !listEquals(
@@ -2794,7 +2812,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                   end: clip.duration,
                   volume: clip.volume,
                   equalizer: clip.equalizer.toPlayerEqualizer(),
-                  playbackSpeed: clip.playbackSpeed ?? 1.0,
+                  playbackSpeed: clip.averagePlaybackSpeed,
                 ),
               ]),
               'show clip trim preview',
@@ -3603,6 +3621,11 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           ),
         ),
       ),
+    );
+
+    return RepositoryProvider<DetachedClipSpeedBodies>.value(
+      value: _detachedSpeedBodies,
+      child: editor,
     );
   }
 }

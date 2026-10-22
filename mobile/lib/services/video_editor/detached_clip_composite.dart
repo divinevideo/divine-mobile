@@ -275,7 +275,7 @@ VideoLayer buildDetachedClipVideoLayer({
   // for the clip's own file.
   final offsetIntoSource = speedFlattened
       ? sourceOffset
-      : _sourceSpanFor(clip, sourceOffset, speedFlattened: false);
+      : clip.playbackOffsetToSourceOffset(sourceOffset);
   final trimStart =
       (speedFlattened ? Duration.zero : clip.trimStart) + offsetIntoSource;
   final whole = speedFlattened ? clip.playbackDuration : clip.trimmedDuration;
@@ -284,7 +284,12 @@ VideoLayer buildDetachedClipVideoLayer({
   // A layer window shorter than the clip cuts the clip; a longer one leaves it
   // to end on its own last frame rather than freezing.
   final windowed = start != null && end != null && end > start
-      ? _sourceSpanFor(clip, end - start, speedFlattened: speedFlattened)
+      ? _sourceSpanFor(
+          clip,
+          from: sourceOffset,
+          playbackSpan: end - start,
+          speedFlattened: speedFlattened,
+        )
       : available;
   return (
     start: start,
@@ -293,11 +298,15 @@ VideoLayer buildDetachedClipVideoLayer({
   );
 }
 
-/// How much of [clip]'s source media fills [playbackSpan] of wall clock.
+/// How much of [clip]'s source media fills [playbackSpan] of wall clock from
+/// [from] (playback time into the clip) on; under a speed ramp that depends
+/// on where the span sits.
 Duration _sourceSpanFor(
-  DivineVideoClip clip,
-  Duration playbackSpan, {
+  DivineVideoClip clip, {
+  required Duration from,
+  required Duration playbackSpan,
   required bool speedFlattened,
 }) => speedFlattened
     ? playbackSpan
-    : clip.playbackDurationToSourceDuration(playbackSpan);
+    : clip.playbackOffsetToSourceOffset(from + playbackSpan) -
+          clip.playbackOffsetToSourceOffset(from);

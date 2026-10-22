@@ -87,6 +87,7 @@ class AudioEvent {
     this.anchorClipId,
     this.fadeInDuration = Duration.zero,
     this.fadeOutDuration = Duration.zero,
+    this.playbackSpeed = 1.0,
     this.voiceEffect = VoiceEffect.none,
     this.noiseReduction = false,
     this.equalizer = EqualizerSettings.none,
@@ -95,7 +96,11 @@ class AudioEvent {
     this.allowsReuse = true,
     this.hasExplicitReuseConsent = false,
     this.requiresCurrentReuseVerification = false,
-  }) : title = sanitizeUtf16OrNull(title),
+  }) : assert(
+         playbackSpeed > 0 && playbackSpeed < double.infinity,
+         'playbackSpeed must be finite and greater than 0',
+       ),
+       title = sanitizeUtf16OrNull(title),
        source = sanitizeUtf16OrNull(source),
        creatorName = sanitizeUtf16OrNull(creatorName),
        licenseName = sanitizeUtf16OrNull(licenseName),
@@ -346,6 +351,10 @@ class AudioEvent {
       fadeOutDuration: Duration(
         milliseconds: (json['fadeOutMs'] as num?)?.toInt() ?? 0,
       ),
+      playbackSpeed: switch ((json['playbackSpeed'] as num?)?.toDouble()) {
+        final double speed when speed > 0 && speed.isFinite => speed,
+        _ => 1.0,
+      },
       voiceEffect: switch (json['voiceEffect']) {
         final Map<dynamic, dynamic> effect => VoiceEffect.fromJson(
           Map<String, dynamic>.from(effect),
@@ -719,6 +728,21 @@ class AudioEvent {
   bool get hasFade =>
       fadeInDuration > Duration.zero || fadeOutDuration > Duration.zero;
 
+  /// How fast the track plays its sound, at unchanged pitch: `2` plays it in
+  /// half the time, `0.5` in twice the time.
+  ///
+  /// [startOffset] and [duration] stay positions and lengths in the sound;
+  /// [startTime], [endTime] and the fades stay editor-timeline time. Convert
+  /// between the two with [sourceSpanOf] and [timelineSpanOf]. Local-only
+  /// editor state, never published to Nostr.
+  final double playbackSpeed;
+
+  /// How much of the sound plays in [timeline] of the editor timeline.
+  Duration sourceSpanOf(Duration timeline) => timeline * playbackSpeed;
+
+  /// How long [source] of the sound takes to play on the editor timeline.
+  Duration timelineSpanOf(Duration source) => source * (1 / playbackSpeed);
+
   /// The voice effect baked into the file at [url].
   ///
   /// Local-only editor state, never published to Nostr.
@@ -930,6 +954,7 @@ class AudioEvent {
     bool clearAnchorClipId = false,
     Duration? fadeInDuration,
     Duration? fadeOutDuration,
+    double? playbackSpeed,
     VoiceEffect? voiceEffect,
     bool? noiseReduction,
     EqualizerSettings? equalizer,
@@ -972,6 +997,7 @@ class AudioEvent {
           : (anchorClipId ?? this.anchorClipId),
       fadeInDuration: fadeInDuration ?? this.fadeInDuration,
       fadeOutDuration: fadeOutDuration ?? this.fadeOutDuration,
+      playbackSpeed: playbackSpeed ?? this.playbackSpeed,
       voiceEffect: voiceEffect ?? this.voiceEffect,
       noiseReduction: noiseReduction ?? this.noiseReduction,
       equalizer: equalizer ?? this.equalizer,
@@ -999,6 +1025,7 @@ class AudioEvent {
         other.anchorClipId == anchorClipId &&
         other.fadeInDuration == fadeInDuration &&
         other.fadeOutDuration == fadeOutDuration &&
+        other.playbackSpeed == playbackSpeed &&
         other.equalizer == equalizer;
   }
 
@@ -1011,6 +1038,7 @@ class AudioEvent {
     anchorClipId,
     fadeInDuration,
     fadeOutDuration,
+    playbackSpeed,
     equalizer,
   );
 
@@ -1060,6 +1088,7 @@ class AudioEvent {
       'fadeInMs': fadeInDuration.inMilliseconds,
     if (fadeOutDuration > Duration.zero)
       'fadeOutMs': fadeOutDuration.inMilliseconds,
+    if (playbackSpeed != 1.0) 'playbackSpeed': playbackSpeed,
     if (!voiceEffect.isNone) 'voiceEffect': voiceEffect.toJson(),
     if (noiseReduction) 'noiseReduction': true,
     if (!equalizer.isNone) 'equalizer': equalizer.toJson(),

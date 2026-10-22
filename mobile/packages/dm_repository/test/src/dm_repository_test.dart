@@ -29752,6 +29752,9 @@ void main() {
             lastError: any(named: 'lastError'),
           ),
         ).thenAnswer((_) async => true);
+        when(
+          () => mockOutgoingDmsDao.incrementRetry(any()),
+        ).thenAnswer((_) async => true);
       });
 
       test(
@@ -29974,8 +29977,8 @@ void main() {
       );
 
       test(
-        'on self-wrap publish failure: marks self_wrap_status failed '
-        'and leaves the row queued for the next retry',
+        'on self-wrap publish failure: marks self_wrap_status failed, '
+        'charges one retry, and leaves the row queued for the next retry',
         () async {
           when(
             () => mockOutgoingDmsDao.getById(_rumorEventId),
@@ -30003,6 +30006,9 @@ void main() {
               status: OutgoingWrapStatus.failed,
               lastError: 'relay timeout',
             ),
+          ).called(1);
+          verify(
+            () => mockOutgoingDmsDao.incrementRetry(_rumorEventId),
           ).called(1);
           verifyNever(() => mockOutgoingDmsDao.deleteById(any()));
         },
@@ -30165,6 +30171,9 @@ void main() {
               ),
             ),
           ).called(1);
+          verify(
+            () => mockOutgoingDmsDao.incrementRetry(_rumorEventId),
+          ).called(1);
           verifyNever(
             () => mockMessageService.publishSelfWrap(
               rumorEvent: any(named: 'rumorEvent'),
@@ -30260,6 +30269,10 @@ void main() {
           );
 
           expect(result.success, isFalse);
+          // The attempt still counts when its status write failed.
+          verify(
+            () => mockOutgoingDmsDao.incrementRetry(_rumorEventId),
+          ).called(1);
           expect(reporterCalls, hasLength(1));
           expect(
             reporterCalls.single.site,
@@ -30267,6 +30280,42 @@ void main() {
               DmRepositoryReportableSites
                   .recoverSelfWrapMarkFailedAfterPublishFailure,
             ),
+          );
+        },
+      );
+
+      test(
+        'on self-wrap publish failure: when charging the attempt throws, '
+        'reports it and still returns the publish-failure result',
+        () async {
+          when(
+            () => mockOutgoingDmsDao.getById(_rumorEventId),
+          ).thenAnswer((_) async => queuedRow());
+          when(
+            () => mockMessageService.publishSelfWrap(
+              rumorEvent: any(named: 'rumorEvent'),
+            ),
+          ).thenAnswer(
+            (_) async => const NIP17SendResult.failure('relay timeout'),
+          );
+          when(
+            () => mockOutgoingDmsDao.incrementRetry(any()),
+          ).thenThrow(Exception('drift busy'));
+
+          final repository = createRepository(
+            outgoingDmsDao: mockOutgoingDmsDao,
+          );
+
+          final result = await repository.recoverSelfWrap(
+            rumorId: _rumorEventId,
+          );
+
+          expect(result.success, isFalse);
+          expect(result.error, equals('relay timeout'));
+          expect(reporterCalls, hasLength(1));
+          expect(
+            reporterCalls.single.site,
+            equals(DmRepositoryReportableSites.chargeFailedReplay),
           );
         },
       );

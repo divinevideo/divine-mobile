@@ -1,0 +1,2 @@
+# Preserve the checksummed upstream corpus, including its trailing spaces.
+IdnaTestV2.txt -whitespace

@@ -32,11 +32,15 @@ class _StubDmRepository extends DmRepository {
 
   final Future<NIP17SendResult> Function(String rumorId) onRecoverFullSend;
 
+  /// The `resetRetryBudget` each replay asked for, by rumor id.
+  final resetRequests = <String, bool>{};
+
   @override
   Future<NIP17SendResult> recoverFullSend({
     required String rumorId,
     bool resetRetryBudget = false,
   }) {
+    resetRequests[rumorId] = resetRetryBudget;
     return onRecoverFullSend(rumorId);
   }
 }
@@ -617,6 +621,32 @@ void main() {
         expect(recoveredRumorIds, ['target-a']);
       },
     );
+
+    test('hands each retried invite back to the sweep with a fresh retry '
+        'budget (#8628)', () async {
+      when(() => outgoingDmsDao.watchAllForOwner(_ownerPubkey)).thenAnswer(
+        (_) => Stream.value([
+          _inviteRow(
+            id: 'target-a',
+            collaboratorPubkey: _collaboratorA,
+            recipient: OutgoingWrapStatus.failed,
+            self: OutgoingWrapStatus.failed,
+          ),
+        ]),
+      );
+
+      final summary = await repository.retryPendingCollaboratorInvitesForVideo(
+        videoAddress: _videoAddress,
+        collaboratorPubkeys: const [_collaboratorA],
+      );
+
+      expect(summary.attemptedCount, 1);
+      expect(
+        repository.resetRequests,
+        equals({'target-a': true}),
+        reason: 'a tap on the banner is an explicit retry, like Resend',
+      );
+    });
 
     test('retryPendingCollaboratorInvites reports partial failures', () async {
       recoverFullSendHandler = (rumorId) async {

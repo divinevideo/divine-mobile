@@ -16,6 +16,7 @@ import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
+import 'package:openvine/models/video_editor/clip_speed_choice.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_mask.dart';
@@ -34,6 +35,7 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dar
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/layer_style_actions.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_audio_fade_sheet.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_clip_speed_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_equalizer_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_layer_animation_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_saved_title_styles_sheet.dart';
@@ -42,6 +44,7 @@ import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_edi
 import 'package:openvine/widgets/video_editor/timeline_editor/keyframes/layer_keyframe_actions.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/keyframes/playhead_on_keyframe_builder.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/tracking/layer_tracking_actions.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/open_tune_editor.dart';
 import 'package:pro_image_editor/core/models/layers/layer.dart';
 import 'package:pro_image_editor/features/filter_editor/types/filter_state.dart';
@@ -736,7 +739,8 @@ TuneAdjustmentMatrix _reSet(TuneAdjustmentMatrix m, String setId) {
   );
 }
 
-/// Controls for sound overlays: delete, edit, duplicate, split, and done.
+/// Controls for sound overlays: delete, edit, fade, voice, equalizer, speed,
+/// duplicate, split, and done.
 class _SoundOverlayControls extends StatelessWidget {
   const _SoundOverlayControls({required this.item});
 
@@ -746,18 +750,18 @@ class _SoundOverlayControls extends StatelessWidget {
   Widget build(BuildContext context) {
     // Every sound with audio to process can change voice: voice-overs,
     // music, bundled, published and imported sounds and extracted clip audio.
-    final (canChangeVoice, hasVoiceEffect, hasEqualizer) = context.select(
-      (TimelineOverlayBloc bloc) {
-        final track = bloc.state.audioTracks
-            .where((track) => track.id == item.id)
-            .firstOrNull;
-        return (
-          track?.originalSource != null,
-          track?.hasVoiceProcessing ?? false,
-          !(track?.equalizer.isNone ?? true),
-        );
-      },
-    );
+    final (canChangeVoice, hasVoiceEffect, hasEqualizer, hasSpeed) = context
+        .select((TimelineOverlayBloc bloc) {
+          final track = bloc.state.audioTracks
+              .where((track) => track.id == item.id)
+              .firstOrNull;
+          return (
+            track?.originalSource != null,
+            track?.hasVoiceProcessing ?? false,
+            !(track?.equalizer.isNone ?? true),
+            (track?.playbackSpeed ?? 1) != 1,
+          );
+        });
     return VideoEditorTimelineControls(
       onDelete: () => _removeSound(context: context),
       onEdit: () => _editSound(context: context),
@@ -769,6 +773,9 @@ class _SoundOverlayControls extends StatelessWidget {
       hasVoiceEffect: hasVoiceEffect,
       onEqualizer: () => _equalizeSound(context: context),
       hasEqualizer: hasEqualizer,
+      onSpeed: () => _changeSpeed(context: context),
+      hasSpeed: hasSpeed,
+      speedSemanticLabel: context.l10n.videoEditorSetSoundSpeedSemanticLabel,
       onDuplicated: () => _duplicateSound(context: context),
       onSplit: () => _splitSound(context: context),
       onDone: () => TimelineOverlayControls._deselect(context),
@@ -909,6 +916,60 @@ class _SoundOverlayControls extends StatelessWidget {
     live?.value = null;
   }
 
+  /// Opens the speed sheet of the sound. A confirmed speed becomes one undo
+  /// step, with the sound's window rescaled to play the same stretch of it;
+  /// see [audioAtSpeed].
+  Future<void> _changeSpeed({required BuildContext context}) async {
+    final editor = VideoEditorScope.of(context).editor;
+    if (editor == null) return;
+
+    final sound = editor.stateManager.audioTracks
+        .where((t) => t.id == item.id)
+        .firstOrNull;
+    if (sound == null) return;
+
+    final choice = await VineBottomSheet.show<ClipSpeedChoice>(
+      context: context,
+      expanded: false,
+      scrollable: false,
+      isScrollControlled: true,
+      body: VideoEditorClipSpeedSheet(
+        initialSpeed: sound.playbackSpeed,
+        title: context.l10n.videoEditorSoundSpeedSheetTitle,
+        offerCurve: false,
+      ),
+    );
+    final speed = switch (choice) {
+      ConstantClipSpeed(:final speed) => speed,
+      RampClipSpeed() || null => null,
+    };
+    if (speed == null || !context.mounted) return;
+
+    // The slider steps in floating point; store the step it landed on, so a
+    // sound set back to 1x is exactly 1x again.
+    final newSpeed = (speed * 100).round() / 100;
+    // Re-read the tracks after the async gap: another edit (an undo, a
+    // finished extraction) may have changed them while the sheet was open.
+    final tracks = editor.stateManager.audioTracks;
+    final current = tracks.where((t) => t.id == item.id).firstOrNull;
+    if (current == null || current.playbackSpeed == newSpeed) return;
+
+    final compositionEnd = context.read<ClipEditorBloc>().state.totalDuration;
+    editor.addHistory(
+      meta: {
+        ...editor.stateManager.activeMeta,
+        VideoEditorConstants.audioStateHistoryKey: tracks
+            .map(
+              (t) => t.id == item.id
+                  ? audioAtSpeed(t, newSpeed, compositionEnd: compositionEnd)
+                  : t,
+            )
+            .map((e) => e.toJson())
+            .toList(),
+      },
+    );
+  }
+
   Future<void> _changeVoice({required BuildContext context}) async {
     final editor = VideoEditorScope.of(context).editor;
     if (editor == null) return;
@@ -1027,7 +1088,9 @@ class _SoundOverlayControls extends StatelessWidget {
     if (trackIdx < 0) return;
 
     final track = tracks[trackIdx];
-    final offsetShift = splitAt - item.startTime;
+    // The tail starts as much further into the sound as the head plays of it,
+    // which at a speed other than 1 is more or less than its timeline length.
+    final offsetShift = track.sourceSpanOf(splitAt - item.startTime);
     // The fade in stays with the head and the fade out with the tail: the cut
     // itself is a new edge, which starts and ends at full volume.
     final second = track.copyWith(

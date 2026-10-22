@@ -8870,6 +8870,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorEffectEcho => 'صدى';
 
   @override
+  String get videoEditorEffectFisheye => 'عين السمكة';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'تأثير وامض واحد في كل مرة. الوميض الكثير قد يؤذي الأشخاص الحساسين له، لذلك استبدلنا التأثير الآخر هنا.';
 
@@ -9808,6 +9811,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعيين سرعة التشغيل للمقطع المحدد';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'تعيين سرعة التشغيل للصوت المحدد';
+
+  @override
   String get videoEditorReverseLabel => 'عكس';
 
   @override
@@ -9914,8 +9921,49 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'سرعة المقطع';
 
   @override
+  String get videoEditorSoundSpeedSheetTitle => 'سرعة الصوت';
+
+  @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'السرعة $speed×';
+  }
+
+  @override
+  String get videoEditorSpeedModeConstant => 'ثابتة';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'منحنى';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'مخصص';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'مونتاج';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'بطل';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'زمن الرصاصة';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'دخول سريع';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'خروج سريع';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'سحب نقطة للأعلى يسرّع الفيديو، وللأسفل يبطّئه';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'نقطة السرعة $index من $total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'المدة $seconds ث';
   }
 
   @override
@@ -11406,7 +11454,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockExpiredBody =>
-      'The response deadline has passed. Contact Support Center if you need help.';
+      'The response deadline has passed. Contact support if you need help.';
 
   @override
   String get minorAccountReviewResponseClockUnavailableTitle =>
@@ -11414,18 +11462,18 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockUnavailableBody =>
-      'We can\'t show your response deadline right now. Contact Support Center if you need help.';
+      'We can\'t show your response deadline right now. Contact support if you need help.';
 
   @override
   String get minorAccountReviewAppealTitle => 'Think we got this wrong?';
 
   @override
   String get minorAccountReviewAppealTeenBody =>
-      'Contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Contact support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewAppealUnder13Body =>
-      'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Your parent or guardian can email support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewOpenModerationMessage => 'فتح رسالة الإشراف';
@@ -11976,6 +12024,13 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get settingsBackUpRecordingsSubtitle =>
       'يحفظ نسخة من كل تسجيل جديد في معرض الصور. يمكن للتطبيقات الأخرى وخدمات النسخ الاحتياطي للصور على السحابة رؤيتها هناك.';
+
+  @override
+  String get settingsMirrorFrontCamera => 'عكس الكاميرا الأمامية';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'يحفظ مقاطع الكاميرا الأمامية كما تظهر في المعاينة. تظهر النصوص في اللقطة معكوسة.';
 
   @override
   String uploadPublishedCountMessage(int count) {

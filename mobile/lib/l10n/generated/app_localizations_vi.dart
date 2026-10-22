@@ -8848,6 +8848,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectEcho => 'Tiếng vọng';
 
   @override
+  String get videoEditorEffectFisheye => 'Mắt cá';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Mỗi lúc chỉ một hiệu ứng nhấp nháy. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm, nên chúng mình đã thay hiệu ứng kia ở đây.';
 
@@ -9791,6 +9794,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đặt tốc độ phát cho clip đã chọn';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'Đặt tốc độ phát cho âm thanh đã chọn';
+
+  @override
   String get videoEditorReverseLabel => 'Đảo ngược';
 
   @override
@@ -9900,8 +9907,49 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Tốc độ clip';
 
   @override
+  String get videoEditorSoundSpeedSheetTitle => 'Tốc độ âm thanh';
+
+  @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'Tốc độ $speed×';
+  }
+
+  @override
+  String get videoEditorSpeedModeConstant => 'Cố định';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'Đường cong';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'Tùy chỉnh';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'Montage';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'Anh hùng';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'Bullet time';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'Vào nhanh';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'Ra nhanh';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'Kéo một điểm lên để tăng tốc, xuống để chậm lại';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'Điểm tốc độ $index/$total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'Phát trong $seconds giây';
   }
 
   @override
@@ -11391,7 +11439,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockExpiredBody =>
-      'The response deadline has passed. Contact Support Center if you need help.';
+      'The response deadline has passed. Contact support if you need help.';
 
   @override
   String get minorAccountReviewResponseClockUnavailableTitle =>
@@ -11399,18 +11447,18 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockUnavailableBody =>
-      'We can\'t show your response deadline right now. Contact Support Center if you need help.';
+      'We can\'t show your response deadline right now. Contact support if you need help.';
 
   @override
   String get minorAccountReviewAppealTitle => 'Think we got this wrong?';
 
   @override
   String get minorAccountReviewAppealTeenBody =>
-      'Contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Contact support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewAppealUnder13Body =>
-      'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Your parent or guardian can email support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>
@@ -11952,6 +12000,13 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get settingsBackUpRecordingsSubtitle =>
       'Lưu một bản sao của mỗi bản quay mới vào thư viện ảnh của bạn. Ứng dụng khác và bản sao lưu ảnh trên đám mây có thể thấy nó ở đó.';
+
+  @override
+  String get settingsMirrorFrontCamera => 'Lật gương camera trước';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Lưu clip từ camera trước đúng như bản xem trước hiển thị. Chữ trong khung hình sẽ bị ngược.';
 
   @override
   String uploadPublishedCountMessage(int count) {

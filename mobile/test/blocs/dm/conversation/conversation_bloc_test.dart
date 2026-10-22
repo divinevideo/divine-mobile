@@ -1853,6 +1853,7 @@ void main() {
           when(
             () => mockDmRepository.recoverSelfWrap(
               rumorId: any(named: 'rumorId'),
+              resetRetryBudget: any(named: 'resetRetryBudget'),
             ),
           ).thenAnswer(
             (inv) async => NIP17SendResult.success(
@@ -1891,10 +1892,16 @@ void main() {
           // Every rumor in the event payload was passed to
           // recoverSelfWrap (with no recipient publish in sight).
           verify(
-            () => mockDmRepository.recoverSelfWrap(rumorId: rumorId1),
+            () => mockDmRepository.recoverSelfWrap(
+              rumorId: rumorId1,
+              resetRetryBudget: true,
+            ),
           ).called(1);
           verify(
-            () => mockDmRepository.recoverSelfWrap(rumorId: rumorId2),
+            () => mockDmRepository.recoverSelfWrap(
+              rumorId: rumorId2,
+              resetRetryBudget: true,
+            ),
           ).called(1);
           // Pin the no-duplicate-recipient-publish contract from #4102.
           verifyNever(
@@ -1917,7 +1924,10 @@ void main() {
         'when one of two recoveries fails',
         setUp: () {
           when(
-            () => mockDmRepository.recoverSelfWrap(rumorId: rumorId1),
+            () => mockDmRepository.recoverSelfWrap(
+              rumorId: rumorId1,
+              resetRetryBudget: true,
+            ),
           ).thenAnswer(
             (_) async => NIP17SendResult.success(
               rumorEventId: rumorId1,
@@ -1926,7 +1936,10 @@ void main() {
             ),
           );
           when(
-            () => mockDmRepository.recoverSelfWrap(rumorId: rumorId2),
+            () => mockDmRepository.recoverSelfWrap(
+              rumorId: rumorId2,
+              resetRetryBudget: true,
+            ),
           ).thenAnswer(
             (_) async => const NIP17SendResult.failure('relay timeout'),
           );
@@ -1967,7 +1980,10 @@ void main() {
         'still-failing',
         setUp: () {
           when(
-            () => mockDmRepository.recoverSelfWrap(rumorId: rumorId1),
+            () => mockDmRepository.recoverSelfWrap(
+              rumorId: rumorId1,
+              resetRetryBudget: true,
+            ),
           ).thenThrow(StateError('queue DAO not wired'));
         },
         seed: () => const ConversationState(
@@ -2011,7 +2027,10 @@ void main() {
         'retry set without reporting',
         setUp: () {
           when(
-            () => mockDmRepository.recoverSelfWrap(rumorId: rumorId1),
+            () => mockDmRepository.recoverSelfWrap(
+              rumorId: rumorId1,
+              resetRetryBudget: true,
+            ),
           ).thenThrow(
             ArgumentError.value(
               rumorId1,
@@ -2062,6 +2081,7 @@ void main() {
           verifyNever(
             () => mockDmRepository.recoverSelfWrap(
               rumorId: any(named: 'rumorId'),
+              resetRetryBudget: any(named: 'resetRetryBudget'),
             ),
           );
         },

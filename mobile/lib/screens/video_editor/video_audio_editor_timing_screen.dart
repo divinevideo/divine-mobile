@@ -286,6 +286,7 @@ class _VideoAudioEditorTimingScreenState
                         return _BottomControls(
                           startOffset: timingState.startOffset,
                           audioDuration: timingState.audioDuration,
+                          selectionSecs: _audioTimingCubit.selectionSecs,
                           onOffsetChanged: _handleOffsetChanged,
                           onFling: _handleFling,
                           onDragStart: _handleDragStart,
@@ -309,6 +310,7 @@ class _BottomControls extends StatelessWidget {
   const _BottomControls({
     required this.startOffset,
     required this.audioDuration,
+    required this.selectionSecs,
     required this.onOffsetChanged,
     required this.onFling,
     required this.onDragStart,
@@ -319,6 +321,10 @@ class _BottomControls extends StatelessWidget {
 
   /// Audio duration in seconds, or null if unknown.
   final double? audioDuration;
+
+  /// Seconds of audio the video plays at its longest: the sound's speed
+  /// times [VideoEditorConstants.maxDuration].
+  final double selectionSecs;
   final ValueChanged<double> onOffsetChanged;
   final ValueChanged<double> onFling;
   final VoidCallback onDragStart;
@@ -347,6 +353,7 @@ class _BottomControls extends StatelessWidget {
         _VideoDurationTimeline(
           startOffset: startOffset,
           audioDuration: audioDuration,
+          selectionSecs: selectionSecs,
           onOffsetChanged: onOffsetChanged,
           onFling: onFling,
           onDragStart: onDragStart,
@@ -359,6 +366,7 @@ class _BottomControls extends StatelessWidget {
         _AudioWaveformSelector(
           startOffset: startOffset,
           audioDuration: audioDuration,
+          selectionSecs: selectionSecs,
           onOffsetChanged: onOffsetChanged,
           onFling: onFling,
           onDragStart: onDragStart,
@@ -377,8 +385,9 @@ double get _maxDurationSecs =>
 Duration _secondsToDuration(double seconds) =>
     Duration(milliseconds: (seconds * 1000).toInt());
 
-/// Width of the marker representing [VideoEditorConstants.maxDuration] of audio
-/// on a bar where [trackWidth] pixels span [audioDurationSecs] of audio.
+/// Width of the marker representing [selectionSecs] of audio, what the video
+/// plays at its longest, on a bar where [trackWidth] pixels span
+/// [audioDurationSecs] of audio.
 ///
 /// [minWidth] floors the result — the two callers floor it for unrelated
 /// reasons (visibility above, scrub resolution below), so the floor stays at
@@ -386,10 +395,11 @@ Duration _secondsToDuration(double seconds) =>
 double _maxDurationSegmentWidth({
   required double trackWidth,
   required double audioDurationSecs,
+  required double selectionSecs,
   required double minWidth,
 }) {
-  if (audioDurationSecs <= _maxDurationSecs) return trackWidth;
-  return (trackWidth * _maxDurationSecs / audioDurationSecs).clamp(
+  if (audioDurationSecs <= selectionSecs) return trackWidth;
+  return (trackWidth * selectionSecs / audioDurationSecs).clamp(
     math.min(minWidth, trackWidth),
     trackWidth,
   );
@@ -400,6 +410,7 @@ class _VideoDurationTimeline extends StatelessWidget {
   const _VideoDurationTimeline({
     required this.startOffset,
     required this.audioDuration,
+    required this.selectionSecs,
     required this.onOffsetChanged,
     required this.onFling,
     required this.onDragStart,
@@ -417,6 +428,10 @@ class _VideoDurationTimeline extends StatelessWidget {
   /// Audio duration in seconds, or null if unknown.
   final double? audioDuration;
 
+  /// Seconds of audio the video plays at its longest: the sound's speed
+  /// times [VideoEditorConstants.maxDuration].
+  final double selectionSecs;
+
   final ValueChanged<double> onOffsetChanged;
   final ValueChanged<double> onFling;
   final VoidCallback onDragStart;
@@ -433,6 +448,7 @@ class _VideoDurationTimeline extends StatelessWidget {
     final segmentWidth = _maxDurationSegmentWidth(
       trackWidth: screenWidth,
       audioDurationSecs: audioDurationSecs,
+      selectionSecs: selectionSecs,
       minWidth: _minSegmentWidth,
     );
 
@@ -536,6 +552,7 @@ class _AudioWaveformSelector extends StatelessWidget {
   const _AudioWaveformSelector({
     required this.startOffset,
     required this.audioDuration,
+    required this.selectionSecs,
     required this.onOffsetChanged,
     required this.onFling,
     required this.onDragStart,
@@ -546,6 +563,10 @@ class _AudioWaveformSelector extends StatelessWidget {
 
   /// Audio duration in seconds, or null if unknown.
   final double? audioDuration;
+
+  /// Seconds of audio the video plays at its longest: the sound's speed
+  /// times [VideoEditorConstants.maxDuration].
+  final double selectionSecs;
   final ValueChanged<double> onOffsetChanged;
   final ValueChanged<double> onFling;
   final VoidCallback onDragStart;
@@ -557,15 +578,16 @@ class _AudioWaveformSelector extends StatelessWidget {
     final audioDurationSecs = audioDuration ?? 0;
 
     // Zoom is chosen for scrub precision, not to mirror the overview bar above.
-    // `selectionWidth` pixels always represent [VideoEditorConstants.maxDuration]
-    // of audio, so one pixel of drag moves the in-point by
-    // `maxDuration / selectionWidth` seconds. Flooring that width at one pixel
-    // per frame keeps the in-point resolvable on the same grid the timeline
-    // ruler labels; a purely proportional width collapses on long tracks, where
-    // a single pixel used to jump roughly six frames.
+    // `selectionWidth` pixels always represent [selectionSecs] of audio, so one
+    // pixel of drag moves the in-point by `selectionSecs / selectionWidth`
+    // seconds. Flooring that width at one pixel per video frame keeps the
+    // in-point resolvable on the same grid the timeline ruler labels; a purely
+    // proportional width collapses on long tracks, where a single pixel used to
+    // jump roughly six frames.
     final selectionWidth = _maxDurationSegmentWidth(
       trackWidth: screenWidth,
       audioDurationSecs: audioDurationSecs,
+      selectionSecs: selectionSecs,
       minWidth: _maxDurationSecs * VideoEditorConstants.editorFps,
     );
     // Selection is always centered
@@ -574,12 +596,12 @@ class _AudioWaveformSelector extends StatelessWidget {
     // Every length below is derived from this one scale, so the bars, the
     // scrollable range and the shrinking tail cannot disagree about where a
     // second of audio sits.
-    final pixelsPerSecond = selectionWidth / _maxDurationSecs;
+    final pixelsPerSecond = selectionWidth / selectionSecs;
 
     // The canvas spans whichever is longer, the track or the video window:
     // audio shorter than the video leaves the remainder to the painter's
     // placeholder bars.
-    final waveformSpanSecs = math.max(audioDurationSecs, _maxDurationSecs);
+    final waveformSpanSecs = math.max(audioDurationSecs, selectionSecs);
     final fullWaveformWidth = waveformSpanSecs * pixelsPerSecond;
 
     // On-screen extent of the audio itself. Until the duration resolves there

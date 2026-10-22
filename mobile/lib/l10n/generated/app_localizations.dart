@@ -15011,6 +15011,12 @@ abstract class AppLocalizations {
   /// **'Echo'**
   String get videoEditorEffectEcho;
 
+  /// Name of a video effect: the middle of the picture bulges out, as through a fisheye (very wide-angle) lens.
+  ///
+  /// In en, this message translates to:
+  /// **'Fisheye'**
+  String get videoEditorEffectFisheye;
+
   /// Snack bar after a flashing video effect (strobe, negative flash) replaced another flashing effect where the two overlapped on the timeline. Explains, without technical terms, that overlapping flashes can harm people with photosensitivity.
   ///
   /// In en, this message translates to:
@@ -16691,6 +16697,12 @@ abstract class AppLocalizations {
   /// **'Set playback speed for selected clip'**
   String get videoEditorSetClipSpeedSemanticLabel;
 
+  /// Accessibility label for the Speed button in the timeline controls of a selected sound.
+  ///
+  /// In en, this message translates to:
+  /// **'Set playback speed for selected sound'**
+  String get videoEditorSetSoundSpeedSemanticLabel;
+
   /// Label for the Reverse button in the timeline clip controls.
   ///
   /// In en, this message translates to:
@@ -16871,11 +16883,83 @@ abstract class AppLocalizations {
   /// **'Clip Speed'**
   String get videoEditorSpeedSheetTitle;
 
+  /// Title of the bottom sheet for adjusting the playback speed of a sound added to the video in the editor timeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound Speed'**
+  String get videoEditorSoundSpeedSheetTitle;
+
   /// Accessibility label for a one-tap speed preset in the clip speed bottom sheet. {speed} is a speed multiplier like 0.5, 1, or 2.
   ///
   /// In en, this message translates to:
   /// **'Speed {speed}×'**
   String videoEditorSpeedPresetSemanticLabel(String speed);
+
+  /// Option in the clip speed sheet: the clip plays at one speed throughout.
+  ///
+  /// In en, this message translates to:
+  /// **'Constant'**
+  String get videoEditorSpeedModeConstant;
+
+  /// Option in the clip speed sheet: the clip's speed changes along a curve while it plays (speed ramp).
+  ///
+  /// In en, this message translates to:
+  /// **'Curve'**
+  String get videoEditorSpeedModeCurve;
+
+  /// Speed curve preset chip for a curve the user shapes by dragging points.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get videoEditorSpeedCurveCustom;
+
+  /// Speed curve preset: speeds up, slows right down and speeds up again.
+  ///
+  /// In en, this message translates to:
+  /// **'Montage'**
+  String get videoEditorSpeedCurveMontage;
+
+  /// Speed curve preset: fast, a short deep slow-motion on the peak, fast again.
+  ///
+  /// In en, this message translates to:
+  /// **'Hero'**
+  String get videoEditorSpeedCurveHero;
+
+  /// Speed curve preset named after 'bullet time': a long slow-motion between two fast ends.
+  ///
+  /// In en, this message translates to:
+  /// **'Bullet'**
+  String get videoEditorSpeedCurveBullet;
+
+  /// Speed curve preset: starts fast and settles into normal speed.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash in'**
+  String get videoEditorSpeedCurveFlashIn;
+
+  /// Speed curve preset: plays at normal speed and rushes out at the end.
+  ///
+  /// In en, this message translates to:
+  /// **'Flash out'**
+  String get videoEditorSpeedCurveFlashOut;
+
+  /// Hint under the speed curve editor: dragging a point up makes that moment faster, down slower.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag a point up to speed up, down to slow down'**
+  String get videoEditorSpeedCurveHint;
+
+  /// Accessibility label for a draggable point on the speed curve, a position like "Clip 2 of 5" rather than a quantity. {index} is the point's number from the left, {total} how many points there are.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed point {index} of {total}'**
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total);
+
+  /// How long the clip plays with the chosen speed or speed curve. {seconds} is a number with one decimal, like 6.4.
+  ///
+  /// In en, this message translates to:
+  /// **'Plays for {seconds}s'**
+  String videoEditorSpeedResultingLength(String seconds);
 
   /// Caption of the button in the sound's timeline controls that opens the fade in / fade out sheet.
   ///
@@ -19230,7 +19314,7 @@ abstract class AppLocalizations {
   /// No description provided for @minorAccountReviewResponseClockExpiredBody.
   ///
   /// In en, this message translates to:
-  /// **'The response deadline has passed. Contact Support Center if you need help.'**
+  /// **'The response deadline has passed. Contact support if you need help.'**
   String get minorAccountReviewResponseClockExpiredBody;
 
   /// No description provided for @minorAccountReviewResponseClockUnavailableTitle.
@@ -19242,7 +19326,7 @@ abstract class AppLocalizations {
   /// No description provided for @minorAccountReviewResponseClockUnavailableBody.
   ///
   /// In en, this message translates to:
-  /// **'We can\'t show your response deadline right now. Contact Support Center if you need help.'**
+  /// **'We can\'t show your response deadline right now. Contact support if you need help.'**
   String get minorAccountReviewResponseClockUnavailableBody;
 
   /// Heading above the support action that introduces the restricted-minor reconsideration policy. Approved wording from #8239 — do not reword without a product decision.
@@ -19251,16 +19335,16 @@ abstract class AppLocalizations {
   /// **'Think we got this wrong?'**
   String get minorAccountReviewAppealTitle;
 
-  /// Tells a restricted 13-to-15-year-old how to ask support to reconsider the decision without promising a reversal. Approved wording from #8239, used verbatim.
+  /// Tells a restricted 13-to-15-year-old how to ask support to reconsider the decision without promising a reversal. The approved #8239 wording with only the routing clause changed to name the Contact Support action (#9176); the promise language is unchanged.
   ///
   /// In en, this message translates to:
-  /// **'Contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.'**
+  /// **'Contact support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.'**
   String get minorAccountReviewAppealTeenBody;
 
-  /// Tells a restricted child under 13 that a parent or guardian may ask support to reconsider the decision without promising a reversal. The approved #8239 wording with the actor changed to the parent or guardian; the promise language is unchanged.
+  /// Tells a restricted child under 13 that a parent or guardian may ask support to reconsider the decision without promising a reversal. The approved #8239 wording with the actor changed to the parent or guardian, and the routing clause changed to email because this path opens the parent-support email screen (#9176); the promise language is unchanged.
   ///
   /// In en, this message translates to:
-  /// **'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.'**
+  /// **'Your parent or guardian can email support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.'**
   String get minorAccountReviewAppealUnder13Body;
 
   /// No description provided for @minorAccountReviewOpenModerationMessage.
@@ -20120,6 +20204,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Keeps a copy of each new recording in your gallery. Other apps and cloud photo backups can see it there.'**
   String get settingsBackUpRecordingsSubtitle;
+
+  /// Title of the Create & Share setting that saves front camera recordings mirrored, the way the camera preview shows them. Off by default, which saves them the way other people see the person filming.
+  ///
+  /// In en, this message translates to:
+  /// **'Mirror front camera'**
+  String get settingsMirrorFrontCamera;
+
+  /// Subtitle of the Mirror front camera setting. Must say that clips are saved as the preview shows them, and that any text in the shot then reads backwards.
+  ///
+  /// In en, this message translates to:
+  /// **'Saves front camera clips the way the preview shows them. Text in the shot reads backwards.'**
+  String get settingsMirrorFrontCameraSubtitle;
 
   /// Snackbar shown after one or more background uploads succeed, e.g. after a re-auth redirect during which uploads completed.
   ///

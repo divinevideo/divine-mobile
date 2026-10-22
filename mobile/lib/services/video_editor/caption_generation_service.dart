@@ -117,6 +117,7 @@ class CaptionGenerationService {
   }) async {
     final segments = <AudioMergeSegment>[];
     final timelineStarts = <Duration>[];
+    final mergedClips = <DivineVideoClip>[];
     var clipStart = Duration.zero;
     var totalDuration = Duration.zero;
 
@@ -134,6 +135,7 @@ class CaptionGenerationService {
       }
 
       timelineStarts.add(start);
+      mergedClips.add(clip);
       segments.add(
         AudioMergeSegment(
           video: video!,
@@ -173,6 +175,7 @@ class CaptionGenerationService {
         words,
         merged.segments,
         timelineStarts,
+        mergedClips,
       );
       if (mapped.isEmpty) return const CaptionsEmpty();
       // The server times whole cues only, so the words the grouper spreads
@@ -334,22 +337,38 @@ class CaptionGenerationService {
   /// the next audible clip is capped at this clip's timeline end instead of
   /// spilling later speech into the skipped clip's muted gap. The full word
   /// text is kept intact; only its timing is bounded.
+  ///
+  /// A clip under a speed ramp is merged at its recorded speed (see
+  /// [_effectiveSpeed]), so its words are moved through the ramp instead.
   List<CaptionSegment> _mapMergedToTimeline(
     List<CaptionSegment> words,
     List<AudioMergeSegmentOffset> offsets,
     List<Duration> timelineStarts,
+    List<DivineVideoClip> clips,
   ) {
     if (offsets.isEmpty) return const [];
     final mapped = <CaptionSegment>[];
     for (final word in words) {
       final index = _segmentIndexFor(word.start, offsets);
       final offset = offsets[index];
-      final delta = timelineStarts[index] - offset.outputStart;
-      final start =
-          _clamp(word.start, offset.outputStart, offset.outputEnd) + delta;
-      final end =
-          _clamp(word.end, offset.outputStart, offset.outputEnd) + delta;
-      mapped.add(CaptionSegment(text: word.text, start: start, end: end));
+      final clip = clips[index];
+      Duration onTimeline(Duration time) {
+        final local =
+            _clamp(time, offset.outputStart, offset.outputEnd) -
+            offset.outputStart;
+        return timelineStarts[index] +
+            (clip.speedRamp == null
+                ? local
+                : clip.sourceOffsetToPlaybackOffset(local));
+      }
+
+      mapped.add(
+        CaptionSegment(
+          text: word.text,
+          start: onTimeline(word.start),
+          end: onTimeline(word.end),
+        ),
+      );
     }
     return mapped;
   }
@@ -368,11 +387,32 @@ class CaptionGenerationService {
 
   /// Windows [segments] (timed in the clip's full-source playback time) to the
   /// clip's trim range and shifts them onto the composition timeline.
+  ///
+  /// A clip under a speed ramp is transcribed at its recorded speed (see
+  /// [_effectiveSpeed]), so its words are moved through the ramp.
   List<CaptionSegment> _windowToTimeline(
     List<CaptionSegment> segments,
     DivineVideoClip clip, {
     required Duration clipStartTime,
   }) {
+    if (clip.speedRamp != null) {
+      final windowStart = clip.trimStart;
+      final windowEnd = clip.trimStart + clip.trimmedDuration;
+      Duration onTimeline(Duration time) =>
+          clipStartTime +
+          clip.sourceOffsetToPlaybackOffset(
+            _clamp(time, windowStart, windowEnd) - windowStart,
+          );
+      return [
+        for (final segment in segments)
+          if (segment.end > windowStart && segment.start < windowEnd)
+            CaptionSegment(
+              text: segment.text,
+              start: onTimeline(segment.start),
+              end: onTimeline(segment.end),
+            ),
+      ];
+    }
     final windowStart = clip.sourceDurationToPlaybackDuration(clip.trimStart);
     final windowEnd = windowStart + clip.playbackDuration;
     final shift = clipStartTime - windowStart;
@@ -410,7 +450,11 @@ class CaptionGenerationService {
     return value;
   }
 
+  /// The speed a clip's sound is transcribed at. A speed ramp has no single
+  /// speed, so its sound is transcribed as recorded and its words are moved
+  /// through the ramp afterwards.
   static double _effectiveSpeed(DivineVideoClip clip) {
+    if (clip.speedRamp != null) return 1.0;
     final speed = clip.playbackSpeed;
     return speed != null && speed > 0 ? speed : 1.0;
   }

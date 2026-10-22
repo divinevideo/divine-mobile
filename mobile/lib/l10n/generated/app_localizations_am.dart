@@ -8684,6 +8684,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectEcho => 'ማሚቶ';
 
   @override
+  String get videoEditorEffectFisheye => 'ፊሽአይ';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'አንድ ብልጭ ድርግም የሚል ኢፌክት በአንድ ጊዜ። ብዙ ብልጭታ ለሚነኩ ሰዎች ሊጎዳ ይችላል፣ ስለዚህ ሌላውን እዚህ ተክተነዋል።';
 
@@ -9605,6 +9608,10 @@ class AppLocalizationsAm extends AppLocalizations {
       'ለተመረጠው ክሊፕ የማጫወቻ ፍጥነት ያዘጋጁ';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'ለተመረጠው ድምጽ የማጫወቻ ፍጥነት ያዘጋጁ';
+
+  @override
   String get videoEditorReverseLabel => 'ወደ ኋላ';
 
   @override
@@ -9709,8 +9716,48 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'የክሊፕ ፍጥነት';
 
   @override
+  String get videoEditorSoundSpeedSheetTitle => 'የድምጽ ፍጥነት';
+
+  @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'ፍጥነት $speed×';
+  }
+
+  @override
+  String get videoEditorSpeedModeConstant => 'ቋሚ';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'ኩርባ';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'ብጁ';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'ሞንታዥ';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'ጀግና';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'ቡሌት ታይም';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'ፈጣን መግቢያ';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'ፈጣን መውጫ';
+
+  @override
+  String get videoEditorSpeedCurveHint => 'ለማፍጠን ነጥብን ወደ ላይ፣ ለማዘግየት ወደ ታች ይጎትቱ';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'የፍጥነት ነጥብ $index ከ$total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'ለ$seconds ሰከንድ ይጫወታል';
   }
 
   @override
@@ -11162,7 +11209,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockExpiredBody =>
-      'The response deadline has passed. Contact Support Center if you need help.';
+      'The response deadline has passed. Contact support if you need help.';
 
   @override
   String get minorAccountReviewResponseClockUnavailableTitle =>
@@ -11170,18 +11217,18 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockUnavailableBody =>
-      'We can\'t show your response deadline right now. Contact Support Center if you need help.';
+      'We can\'t show your response deadline right now. Contact support if you need help.';
 
   @override
   String get minorAccountReviewAppealTitle => 'Think we got this wrong?';
 
   @override
   String get minorAccountReviewAppealTeenBody =>
-      'Contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Contact support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewAppealUnder13Body =>
-      'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Your parent or guardian can email support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewOpenModerationMessage => 'የቁጥጥር መልእክቱን ክፈት';
@@ -11703,6 +11750,13 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get settingsBackUpRecordingsSubtitle =>
       'የእያንዳንዱን አዲስ ቀረጻ ቅጂ በጋለሪዎ ያስቀምጣል። ሌሎች መተግበሪያዎች እና የደመና የፎቶ ምትኬዎች እዚያ ሊያዩት ይችላሉ።';
+
+  @override
+  String get settingsMirrorFrontCamera => 'የፊት ካሜራ ማንጸባረቅ';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'የፊት ካሜራ ቅንጥቦችን ቅድመ ዕይታው በሚያሳያቸው መልኩ ያስቀምጣል። በቀረጻው ውስጥ ያለ ጽሑፍ ተገልብጦ ይነበባል።';
 
   @override
   String uploadPublishedCountMessage(int count) {

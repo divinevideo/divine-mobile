@@ -63,9 +63,15 @@ void main() {
       expect(find.text('confirmed=true'), findsOneWidget);
     });
 
+    // Account Status is pushed, which the router's match-list uri does not
+    // reflect, so a check against that uri stacked a second Account Status.
+    // The app turns on optionURLReflectsImperativeAPIs; so does this test.
     testWidgets('does not stack Account Status for another restriction', (
       tester,
     ) async {
+      final previous = GoRouter.optionURLReflectsImperativeAPIs;
+      GoRouter.optionURLReflectsImperativeAPIs = true;
+      addTearDown(() => GoRouter.optionURLReflectsImperativeAPIs = previous);
       final bloc = _MockVideoInteractionsBloc();
       final states = StreamController<VideoInteractionsState>();
       whenListen(
@@ -105,10 +111,17 @@ void main() {
       await tester.pumpAndSettle();
       states.add(const VideoInteractionsState(accountRestrictionRevision: 2));
       await tester.pumpAndSettle();
+      expect(
+        find.text('confirmed=true', skipOffstage: false),
+        findsOneWidget,
+      );
 
       router.pop();
       await tester.pumpAndSettle();
-      expect(router.routerDelegate.currentConfiguration.uri.path, '/');
+      expect(
+        find.text('confirmed=true', skipOffstage: false),
+        findsNothing,
+      );
       await states.close();
     });
   });

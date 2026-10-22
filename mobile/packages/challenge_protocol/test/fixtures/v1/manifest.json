@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "convention": "divine-challenge",
+  "synthetic": true,
+  "files": {
+    "events.json": "7a070f57f2246ab2897fc5bd7e5442ec5fc698058a2bdf10df6cc124a8858b37",
+    "scenarios.json": "003ceae2356b3e5324f21adad253539f68f01eb895530deb366722c723d1d20b"
+  }
+}

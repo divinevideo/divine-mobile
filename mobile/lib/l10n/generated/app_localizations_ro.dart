@@ -9086,6 +9086,9 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectEcho => 'Ecou';
 
   @override
+  String get videoEditorEffectFisheye => 'Ochi de pește';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile, așa că l-am înlocuit aici pe celălalt.';
 
@@ -10048,6 +10051,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Setați viteza de redare pentru clipul selectat';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'Setați viteza de redare pentru sunetul selectat';
+
+  @override
   String get videoEditorReverseLabel => 'Invers';
 
   @override
@@ -10157,8 +10164,49 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Viteza clipului';
 
   @override
+  String get videoEditorSoundSpeedSheetTitle => 'Viteza sunetului';
+
+  @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'Viteză $speed×';
+  }
+
+  @override
+  String get videoEditorSpeedModeConstant => 'Constantă';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'Curbă';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'Personalizată';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'Montaj';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'Erou';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'Bullet time';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'Intrare rapidă';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'Ieșire rapidă';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'Trage un punct în sus ca să accelerezi, în jos ca să încetinești';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'Punct de viteză $index din $total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'Durează $seconds s';
   }
 
   @override
@@ -11683,7 +11731,7 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockExpiredBody =>
-      'The response deadline has passed. Contact Support Center if you need help.';
+      'The response deadline has passed. Contact support if you need help.';
 
   @override
   String get minorAccountReviewResponseClockUnavailableTitle =>
@@ -11691,18 +11739,18 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockUnavailableBody =>
-      'We can\'t show your response deadline right now. Contact Support Center if you need help.';
+      'We can\'t show your response deadline right now. Contact support if you need help.';
 
   @override
   String get minorAccountReviewAppealTitle => 'Think we got this wrong?';
 
   @override
   String get minorAccountReviewAppealTeenBody =>
-      'Contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Contact support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewAppealUnder13Body =>
-      'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Your parent or guardian can email support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>
@@ -12259,6 +12307,13 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get settingsBackUpRecordingsSubtitle =>
       'Salvează o copie a fiecărei înregistrări noi în galeria ta. Alte aplicații și backupurile foto din cloud o pot vedea acolo.';
+
+  @override
+  String get settingsMirrorFrontCamera => 'Oglindește camera frontală';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Salvează clipurile de pe camera frontală așa cum apar în previzualizare. Textul din cadru se citește invers.';
 
   @override
   String uploadPublishedCountMessage(int count) {

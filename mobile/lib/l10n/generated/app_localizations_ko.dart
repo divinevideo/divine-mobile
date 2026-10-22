@@ -8464,6 +8464,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectEcho => '에코';
 
   @override
+  String get videoEditorEffectFisheye => '피시아이';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       '깜빡이는 효과는 한 번에 하나만 쓸 수 있어요. 깜빡임이 너무 많으면 민감한 사람에게 해로울 수 있어서 여기서는 다른 효과를 바꿨어요.';
 
@@ -9372,6 +9375,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorSetClipSpeedSemanticLabel => '선택한 클립의 재생 속도 설정';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel => '선택한 사운드의 재생 속도 설정';
+
+  @override
   String get videoEditorReverseLabel => '역재생';
 
   @override
@@ -9468,8 +9474,48 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => '클립 속도';
 
   @override
+  String get videoEditorSoundSpeedSheetTitle => '사운드 속도';
+
+  @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return '속도 $speed×';
+  }
+
+  @override
+  String get videoEditorSpeedModeConstant => '일정';
+
+  @override
+  String get videoEditorSpeedModeCurve => '곡선';
+
+  @override
+  String get videoEditorSpeedCurveCustom => '사용자 지정';
+
+  @override
+  String get videoEditorSpeedCurveMontage => '몽타주';
+
+  @override
+  String get videoEditorSpeedCurveHero => '히어로';
+
+  @override
+  String get videoEditorSpeedCurveBullet => '불릿 타임';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => '플래시 인';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => '플래시 아웃';
+
+  @override
+  String get videoEditorSpeedCurveHint => '점을 위로 끌면 빨라지고 아래로 끌면 느려져요';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return '속도 지점 $index/$total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return '$seconds초 동안 재생돼요';
   }
 
   @override
@@ -10888,7 +10934,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockExpiredBody =>
-      'The response deadline has passed. Contact Support Center if you need help.';
+      'The response deadline has passed. Contact support if you need help.';
 
   @override
   String get minorAccountReviewResponseClockUnavailableTitle =>
@@ -10896,18 +10942,18 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockUnavailableBody =>
-      'We can\'t show your response deadline right now. Contact Support Center if you need help.';
+      'We can\'t show your response deadline right now. Contact support if you need help.';
 
   @override
   String get minorAccountReviewAppealTitle => 'Think we got this wrong?';
 
   @override
   String get minorAccountReviewAppealTeenBody =>
-      'Contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Contact support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewAppealUnder13Body =>
-      'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Your parent or guardian can email support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewOpenModerationMessage => '검수 메시지 열기';
@@ -11416,6 +11462,13 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get settingsBackUpRecordingsSubtitle =>
       '새 녹화본마다 갤러리에 사본을 저장해요. 다른 앱과 클라우드 사진 백업에서도 볼 수 있어요.';
+
+  @override
+  String get settingsMirrorFrontCamera => '전면 카메라 좌우 반전';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      '전면 카메라 클립을 미리보기에서 보이는 그대로 저장해요. 화면 속 글자는 좌우가 뒤집혀 보여요.';
 
   @override
   String uploadPublishedCountMessage(int count) {

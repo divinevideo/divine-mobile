@@ -53,6 +53,9 @@ class _GatedSeamService extends TransitionSeamRenderService {
   final cancelled = <String, Completer<TransitionSeam?>>{};
   int renderCalls = 0;
 
+  /// The speed renderer each render was handed, in call order.
+  final speedRenderers = <ClipSpeedRenderService?>[];
+
   String _id(DivineVideoClip a, DivineVideoClip b) =>
       seamKey(a, b, a.transition!);
 
@@ -68,8 +71,10 @@ class _GatedSeamService extends TransitionSeamRenderService {
     required DivineVideoClip clipA,
     required DivineVideoClip clipB,
     required editor.ClipTransition transition,
+    ClipSpeedRenderService? speedRenders,
   }) {
     renderCalls++;
+    speedRenderers.add(speedRenders);
     final id = _id(clipA, clipB);
     return pending.putIfAbsent(id, Completer.new).future;
   }
@@ -107,7 +112,7 @@ class _GatedSpeedService extends ClipSpeedRenderService {
   @override
   Future<RenderedSpeedClip?> render(DivineVideoClip clip) {
     // Like the real service: a clip at 1× has nothing to render.
-    if ((clip.playbackSpeed ?? 1.0) == 1.0) return Future.value();
+    if (!clip.changesSpeed) return Future.value();
     return pending.putIfAbsent(clip.id, Completer.new).future;
   }
 
@@ -181,6 +186,23 @@ void main() {
         // Both seams are cached now: nothing left to render.
         composition.ensureSeamsRendered(clips);
         expect(seams.renderCalls, 2);
+      });
+
+      test('hands its speed renderer to every seam render', () {
+        // A ramped side of a seam is cut from that renderer's body, the same
+        // file the timeline plays.
+        final a = _clip('a', transition: _dissolve);
+        final b = _clip('b');
+        clips = [a, b];
+
+        composition.ensureSeamsRendered(clips);
+
+        expect(seams.speedRenderers, isNotEmpty);
+        expect(
+          seams.speedRenderers,
+          everyElement(same(composition.speedRenders)),
+        );
+        expect(composition.speedRenders, same(speeds));
       });
 
       test(
@@ -267,6 +289,23 @@ void main() {
         composition.ensureSpeedClipsRendered(clips);
 
         expect(speeds.pending, isEmpty);
+      });
+
+      test('still renders a speed ramp whose body a seam consumes', () {
+        // The player can only play a ramp from its render, cut where the
+        // seam takes over.
+        const ramp = editor.VideoSpeedRamp([
+          editor.VideoSpeedRampPoint(position: 0, speed: 2),
+          editor.VideoSpeedRampPoint(position: 1, speed: 0.5),
+        ]);
+        final a = _clip('a', transition: _dissolve).copyWith(speedRamp: ramp);
+        final b = _clip('b', playbackSpeed: 2);
+        clips = [a, b];
+        seams.cacheSeamForTest(a, b, _dissolve, _seam);
+
+        composition.ensureSpeedClipsRendered(clips);
+
+        expect(speeds.pending.keys, ['a']);
       });
 
       test('skips the first and last clip while a loop wrap is active', () {

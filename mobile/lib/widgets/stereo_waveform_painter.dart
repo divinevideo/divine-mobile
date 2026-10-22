@@ -84,6 +84,7 @@ class StereoWaveformPainter extends CustomPainter {
     this.fadeIn = Duration.zero,
     this.fadeOut = Duration.zero,
     this.audibleDuration,
+    this.playbackSpeed = 1,
   });
 
   /// Left channel amplitude data.
@@ -134,6 +135,12 @@ class StereoWaveformPainter extends CustomPainter {
   /// what is drawn: the fade out ends there, and later bars sit at the
   /// baseline. `null` when the whole displayed audio sounds.
   final Duration? audibleDuration;
+
+  /// How many seconds of audio play per second of [fadeIn], [fadeOut] and
+  /// [audibleDuration], which are playback time while [audioDuration],
+  /// [maxDuration] and [startOffset] are audio time. A sound played twice as
+  /// fast fades in over twice as much of its drawn audio.
+  final double playbackSpeed;
 
   /// Computed step (width + spacing) for each bar.
   double get _barStep => barWidth + barSpacing;
@@ -306,7 +313,11 @@ class StereoWaveformPainter extends CustomPainter {
   }) {
     final barCount = (waveformWidth / _barStep).floor();
     final hasFade = fadeIn > Duration.zero || fadeOut > Duration.zero;
-    final visibleLength = Duration(microseconds: (visibleMs * 1000).round());
+    // The fades are playback time; the drawn audio plays this much faster.
+    final visiblePlaybackMs = visibleMs / playbackSpeed;
+    final visibleLength = Duration(
+      microseconds: (visiblePlaybackMs * 1000).round(),
+    );
     final audibleLength =
         audibleDuration != null && audibleDuration! < visibleLength
         ? audibleDuration!
@@ -335,7 +346,7 @@ class StereoWaveformPainter extends CustomPainter {
       final gain = hasFade
           ? audioFadeGain(
               position: Duration(
-                microseconds: (i / barCount * visibleMs * 1000).round(),
+                microseconds: (i / barCount * visiblePlaybackMs * 1000).round(),
               ),
               length: audibleLength,
               fadeIn: fadeIn,
@@ -389,6 +400,7 @@ class StereoWaveformPainter extends CustomPainter {
         oldDelegate.barSpacing != barSpacing ||
         oldDelegate.fadeIn != fadeIn ||
         oldDelegate.fadeOut != fadeOut ||
-        oldDelegate.audibleDuration != audibleDuration;
+        oldDelegate.audibleDuration != audibleDuration ||
+        oldDelegate.playbackSpeed != playbackSpeed;
   }
 }

@@ -5455,6 +5455,7 @@
   "videoEditorEffectWave": "వేవ్",
   "videoEditorEffectGlow": "మెరుపు",
   "videoEditorEffectEcho": "ప్రతిధ్వని",
+  "videoEditorEffectFisheye": "ఫిష్‌ఐ",
   "videoEditorEffectsFlashingReplaced": "ఒకసారి ఒక మెరిసే ఎఫెక్ట్ మాత్రమే. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు, అందుకే ఇక్కడ మరొకదాన్ని మార్చాం.",
   "videoEditorEffectsFlashingNotDuplicated": "ఒకసారి ఒక మెరిసే ఎఫెక్ట్ మాత్రమే. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు.",
   "videoEditorEffectsOnBeat": "బీట్‌కు అనుగుణంగా",
@@ -5826,6 +5827,7 @@
   "@videoEditorSetClipSpeedSemanticLabel": {
     "description": "Accessibility label for the Set Speed button in the timeline clip controls."
   },
+  "videoEditorSetSoundSpeedSemanticLabel": "ఎంచుకున్న ధ్వని కోసం ప్లేబ్యాక్ వేగాన్ని సెట్ చేయండి",
   "videoEditorReverseLabel": "రివర్స్",
   "@videoEditorReverseLabel": {
     "description": "Label for the Reverse button in the timeline clip controls."
@@ -5919,7 +5921,19 @@
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."
   },
+  "videoEditorSoundSpeedSheetTitle": "ధ్వని స్పీడ్",
   "videoEditorSpeedPresetSemanticLabel": "వేగం {speed}×",
+  "videoEditorSpeedModeConstant": "స్థిరం",
+  "videoEditorSpeedModeCurve": "వక్రం",
+  "videoEditorSpeedCurveCustom": "అనుకూలం",
+  "videoEditorSpeedCurveMontage": "మాంటేజ్",
+  "videoEditorSpeedCurveHero": "హీరో",
+  "videoEditorSpeedCurveBullet": "బుల్లెట్ టైమ్",
+  "videoEditorSpeedCurveFlashIn": "ఫ్లాష్ ఇన్",
+  "videoEditorSpeedCurveFlashOut": "ఫ్లాష్ అవుట్",
+  "videoEditorSpeedCurveHint": "వేగం పెంచడానికి పాయింట్‌ను పైకి, తగ్గించడానికి కిందికి లాగండి",
+  "videoEditorSpeedCurvePointSemanticLabel": "వేగ పాయింట్ {index}/{total}",
+  "videoEditorSpeedResultingLength": "{seconds} సెకన్లు ప్లే అవుతుంది",
   "@videoEditorSpeedPresetSemanticLabel": {
     "description": "Accessibility label for a one-tap speed preset in the clip speed bottom sheet. {speed} is a speed multiplier like 0.5, 1, or 2.",
     "placeholders": {
@@ -6687,20 +6701,10 @@
     }
   },
   "minorAccountReviewResponseClockExpiredTitle": "ప్రతిస్పందన గడువు ముగిసింది",
-  "minorAccountReviewResponseClockExpiredBody": "ప్రతిస్పందన గడువు ముగిసింది. మీకు సహాయం కావాలంటే సపోర్ట్ సెంటర్‌ని సంప్రదించండి.",
   "minorAccountReviewResponseClockUnavailableTitle": "గడువు అందుబాటులో లేదు",
-  "minorAccountReviewResponseClockUnavailableBody": "మేము ప్రస్తుతం మీ ప్రతిస్పందన గడువును చూపలేము. మీకు సహాయం కావాలంటే సపోర్ట్ సెంటర్‌ని సంప్రదించండి.",
   "minorAccountReviewAppealTitle": "మేము దీన్ని తప్పుగా అర్థం చేసుకున్నామని అనుకుంటున్నారా?",
   "@minorAccountReviewAppealTitle": {
     "description": "Heading above the support action that introduces the restricted-minor reconsideration policy. Approved wording from #8239 — do not reword without a product decision."
-  },
-  "minorAccountReviewAppealTeenBody": "మద్దతు కేంద్రాన్ని సంప్రదించండి మరియు ఏమి జరిగిందో మాకు తెలియజేయండి. మేము మరొకసారి పరిశీలిస్తాము, కానీ నిర్ణయం మారుతుందని మేము హామీ ఇవ్వలేము.",
-  "@minorAccountReviewAppealTeenBody": {
-    "description": "Tells a restricted 13-to-15-year-old how to ask support to reconsider the decision without promising a reversal. Approved wording from #8239, used verbatim."
-  },
-  "minorAccountReviewAppealUnder13Body": "మీ తల్లిదండ్రులు లేదా సంరక్షకులు సపోర్ట్ సెంటర్‌ను సంప్రదించి ఏమి జరిగిందో మాకు తెలియజేయగలరు. మేము మరొకసారి పరిశీలిస్తాము, కానీ నిర్ణయం మారుతుందని మేము హామీ ఇవ్వలేము.",
-  "@minorAccountReviewAppealUnder13Body": {
-    "description": "Tells a restricted child under 13 that a parent or guardian may ask support to reconsider the decision without promising a reversal. The approved #8239 wording with the actor changed to the parent or guardian; the promise language is unchanged."
   },
   "minorAccountReviewOpenModerationMessage": "మోడరేషన్ సందేశాన్ని తెరవండి",
   "minorAccountReviewOpenReviewPage": "సమీక్ష పేజీని తెరవండి",
@@ -6964,6 +6968,8 @@
   "generalSettingsHoldToRecordSubtitle": "మీరు నొక్కి ఉంచినప్పుడు రికార్డింగ్ ప్రారంభించండి, ఆపై మీరు విడుదల చేసినప్పుడు ఆపివేయండి",
   "settingsBackUpRecordings": "రికార్డింగ్‌లను గ్యాలరీకి బ్యాకప్ చేయండి",
   "settingsBackUpRecordingsSubtitle": "ప్రతి కొత్త రికార్డింగ్ కాపీని మీ గ్యాలరీలో సేవ్ చేస్తుంది. ఇతర యాప్‌లు మరియు క్లౌడ్ ఫోటో బ్యాకప్‌లు దాన్ని అక్కడ చూడగలవు.",
+  "settingsMirrorFrontCamera": "ఫ్రంట్ కెమెరాను మిర్రర్ చేయండి",
+  "settingsMirrorFrontCameraSubtitle": "ఫ్రంట్ కెమెరా క్లిప్‌లను ప్రివ్యూలో కనిపించినట్లే సేవ్ చేస్తుంది. షాట్‌లోని అక్షరాలు తిరగబడి కనిపిస్తాయి.",
   "uploadPublishedCountMessage": "{count, plural, =1{వీడియో మీ ప్రొఫైల్‌లో ప్రచురించబడింది} other{{count}వీడియోలు మీ ప్రొఫైల్‌లో ప్రచురించబడ్డాయి}}",
   "@uploadPublishedCountMessage": {
     "description": "Snackbar shown after one or more background uploads succeed, e.g. after a re-auth redirect during which uploads completed.",

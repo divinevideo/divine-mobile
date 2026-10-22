@@ -8971,6 +8971,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorEffectEcho => 'Eco';
 
   @override
+  String get videoEditorEffectFisheye => 'Ojo de pez';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Solo un efecto parpadeante a la vez. Demasiado parpadeo puede hacer daño a las personas sensibles, así que aquí hemos reemplazado el otro.';
 
@@ -9928,6 +9931,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Establecer la velocidad de reproducción del clip seleccionado';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'Establecer la velocidad de reproducción del sonido seleccionado';
+
+  @override
   String get videoEditorReverseLabel => 'Invertir';
 
   @override
@@ -10038,8 +10045,49 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Velocidad del clip';
 
   @override
+  String get videoEditorSoundSpeedSheetTitle => 'Velocidad del sonido';
+
+  @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'Velocidad $speed×';
+  }
+
+  @override
+  String get videoEditorSpeedModeConstant => 'Constante';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'Curva';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'Personalizada';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'Montaje';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'Héroe';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'Bullet time';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'Entrada rápida';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'Salida rápida';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'Arrastrá un punto hacia arriba para acelerar y hacia abajo para frenar';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'Punto de velocidad $index de $total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'Dura $seconds s';
   }
 
   @override
@@ -11561,7 +11609,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockExpiredBody =>
-      'The response deadline has passed. Contact Support Center if you need help.';
+      'The response deadline has passed. Contact support if you need help.';
 
   @override
   String get minorAccountReviewResponseClockUnavailableTitle =>
@@ -11569,18 +11617,18 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockUnavailableBody =>
-      'We can\'t show your response deadline right now. Contact Support Center if you need help.';
+      'We can\'t show your response deadline right now. Contact support if you need help.';
 
   @override
   String get minorAccountReviewAppealTitle => 'Think we got this wrong?';
 
   @override
   String get minorAccountReviewAppealTeenBody =>
-      'Contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Contact support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewAppealUnder13Body =>
-      'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Your parent or guardian can email support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>
@@ -12135,6 +12183,13 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get settingsBackUpRecordingsSubtitle =>
       'Guarda una copia de cada grabación nueva en tu galería. Otras apps y los respaldos de fotos en la nube pueden verla ahí.';
+
+  @override
+  String get settingsMirrorFrontCamera => 'Espejar cámara frontal';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Guarda los clips de la cámara frontal tal como se ven en la vista previa. El texto en la toma se lee al revés.';
 
   @override
   String uploadPublishedCountMessage(int count) {

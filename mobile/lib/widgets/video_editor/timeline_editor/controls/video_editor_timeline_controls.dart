@@ -33,6 +33,8 @@ class VideoEditorTimelineControls extends StatelessWidget {
     this.onTrack,
     this.onStyles,
     this.onSpeed,
+    this.hasSpeed = false,
+    this.speedSemanticLabel,
     this.onTransform,
     this.onChromaKey,
     this.isChromaKeying = false,
@@ -161,6 +163,14 @@ class VideoEditorTimelineControls extends StatelessWidget {
   /// Opens the saved title styles sheet. Text overlays only.
   final VoidCallback? onStyles;
   final VoidCallback? onSpeed;
+
+  /// Whether the selected sound plays at a speed other than 1, which
+  /// highlights the Speed action. Sound overlays only.
+  final bool hasSpeed;
+
+  /// Overrides the speed button's accessibility label. Defaults to the
+  /// clip-oriented copy; sound overlays pass a sound-specific label.
+  final String? speedSemanticLabel;
   final VoidCallback? onTransform;
 
   /// Overrides the transform button's accessibility label. Defaults to the
@@ -374,8 +384,11 @@ class VideoEditorTimelineControls extends StatelessWidget {
           TimelineActionButton(
             icon: .lightning,
             label: context.l10n.videoEditorSpeedLabel,
-            semanticLabel: context.l10n.videoEditorSetClipSpeedSemanticLabel,
+            semanticLabel:
+                speedSemanticLabel ??
+                context.l10n.videoEditorSetClipSpeedSemanticLabel,
             onPressed: isExtractingAudio ? null : onSpeed,
+            type: hasSpeed ? .primary : .secondary,
           ),
         if (onTransform != null)
           TimelineActionButton(

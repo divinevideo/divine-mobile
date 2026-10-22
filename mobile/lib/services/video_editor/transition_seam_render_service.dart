@@ -151,10 +151,14 @@ class TransitionSeamRenderService {
   /// Renders (or returns the cached / in-flight) seam for the transition out of
   /// [clipA] into [clipB]. Returns `null` on failure or when either clip is too
   /// short to contribute.
+  ///
+  /// A side under a speed ramp is cut from its body rendered by
+  /// [speedRenders], so the seam plays the frames the export plays there.
   Future<TransitionSeam?> render({
     required DivineVideoClip clipA,
     required DivineVideoClip clipB,
     required ClipTransition transition,
+    ClipSpeedRenderService? speedRenders,
   }) {
     final key = _key(clipA, clipB, transition);
     final cached = _cache[key];
@@ -163,14 +167,22 @@ class TransitionSeamRenderService {
     if (inFlight != null) return inFlight;
     final attempt = _SeamRenderAttempt();
     late final Future<TransitionSeam?> render;
-    render = _render(clipA, clipB, transition, key, attempt).whenComplete(() {
-      // A cancelled attempt already gave up its key, and a newer attempt may
-      // hold it by now; only the owner releases it.
-      if (identical(_inFlight[key], render)) {
-        final _ = _inFlight.remove(key);
-        final _ = _attempts.remove(key);
-      }
-    });
+    render =
+        _render(
+          clipA,
+          clipB,
+          transition,
+          key,
+          attempt,
+          speedRenders,
+        ).whenComplete(() {
+          // A cancelled attempt already gave up its key, and a newer attempt may
+          // hold it by now; only the owner releases it.
+          if (identical(_inFlight[key], render)) {
+            final _ = _inFlight.remove(key);
+            final _ = _attempts.remove(key);
+          }
+        });
     _inFlight[key] = render;
     _attempts[key] = attempt;
     return render;
@@ -182,6 +194,7 @@ class TransitionSeamRenderService {
     ClipTransition transition,
     String key,
     _SeamRenderAttempt attempt,
+    ClipSpeedRenderService? speedRenders,
   ) async {
     try {
       final (:consumed, :blend, :seamTransition) = computeSeamSpans(
@@ -193,9 +206,11 @@ class TransitionSeamRenderService {
 
       // `consumed` is wall-clock (playback) time; convert it into each clip's
       // own source media time for trimming, honouring per-clip playbackSpeed
-      // (clip A and clip B may run at different speeds).
-      final tailConsumed = clipA.playbackDurationToSourceDuration(consumed);
-      final headConsumed = clipB.playbackDurationToSourceDuration(consumed);
+      // (clip A and clip B may run at different speeds). Under a speed ramp
+      // that depends on the edge, so A's tail and B's head are each measured
+      // where they sit.
+      final tailConsumed = clipA.tailSourceSpan(consumed);
+      final headConsumed = clipB.headSourceSpan(consumed);
 
       // Persisted seam from a previous session — reuse it without re-rendering.
       // A file truncated by a kill mid-write (see the temp-then-rename publish
@@ -216,8 +231,28 @@ class TransitionSeamRenderService {
         }
       }
 
-      final tailClip = _tailClip(clipA, tailConsumed, seamTransition);
-      final headClip = _headClip(clipB, headConsumed);
+      // Before taking a render slot: a body render needs one of its own.
+      final bodyA = clipA.speedRamp == null
+          ? null
+          : await speedRenders?.render(clipA);
+      final bodyB = clipB.speedRamp == null
+          ? null
+          : await speedRenders?.render(clipB);
+      if (attempt.cancelled) return null;
+
+      final tailClip = _tailClip(
+        clipA,
+        tailConsumed,
+        seamTransition,
+        playbackLen: consumed,
+        body: bodyA,
+      );
+      final headClip = _headClip(
+        clipB,
+        headConsumed,
+        playbackLen: consumed,
+        body: bodyB,
+      );
 
       // Leaving the default 6.3s export cap in place never truncates a seam:
       // `consumed` is bounded by the shorter adjacent clip, and two adjacent
@@ -411,15 +446,36 @@ class TransitionSeamRenderService {
     );
   }
 
-  /// Clip A trimmed to play only its last [tailLen], carrying the transition.
+  /// Clip A trimmed to play only its last [tailLen] of source, which plays for
+  /// [playbackLen], carrying the transition.
+  ///
+  /// A ramped clip with a rendered [body] plays the body's last [playbackLen]
+  /// instead. The body holds the ramp's own frames, as the export renders
+  /// them; cropping the ramp to the tail would ease a new curve between the
+  /// cut's speeds and play that stretch faster or slower than the export.
+  /// Without a body the cropped ramp is the closest the seam can get.
   DivineVideoClip _tailClip(
     DivineVideoClip clip,
     Duration tailLen,
-    ClipTransition transition,
-  ) {
+    ClipTransition transition, {
+    required Duration playbackLen,
+    RenderedSpeedClip? body,
+  }) {
+    if (body != null) {
+      final len = _min(playbackLen, body.duration);
+      return _bodyClip(
+        clip,
+        body,
+        trimStart: body.duration - len,
+      ).copyWith(transition: transition);
+    }
     final visibleEnd = clip.duration - clip.trimEnd;
     return clip.copyWith(
       trimStart: visibleEnd - tailLen,
+      speedRamp: clip.speedRampBetween(
+        clip.trimmedDuration - tailLen,
+        clip.trimmedDuration,
+      ),
       transition: transition,
       // The canvas draws timeline masks over playback, including seams.
       // Baking a cover here applies it twice and persists a mask that the
@@ -428,11 +484,49 @@ class TransitionSeamRenderService {
     );
   }
 
-  /// Clip B trimmed to play only its first [headLen], with no transition.
-  DivineVideoClip _headClip(DivineVideoClip clip, Duration headLen) {
+  /// Clip B trimmed to play only its first [headLen] of source, which plays
+  /// for [playbackLen], with no transition. A ramped clip with a rendered
+  /// [body] plays the body's first [playbackLen], see [_tailClip].
+  DivineVideoClip _headClip(
+    DivineVideoClip clip,
+    Duration headLen, {
+    required Duration playbackLen,
+    RenderedSpeedClip? body,
+  }) {
+    if (body != null) {
+      final len = _min(playbackLen, body.duration);
+      return _bodyClip(
+        clip,
+        body,
+        trimStart: Duration.zero,
+        trimEnd: body.duration - len,
+      ).copyWith(clearTransition: true);
+    }
     return clip.copyWith(
       trimEnd: clip.duration - (clip.trimStart + headLen),
+      speedRamp: clip.speedRampBetween(Duration.zero, headLen),
       clearTransition: true,
+      clearMask: true,
+    );
+  }
+
+  /// [clip] played from its rendered speed [body]: already trimmed and at the
+  /// clip's speeds, so it is trimmed again in playback time and plays at 1×.
+  DivineVideoClip _bodyClip(
+    DivineVideoClip clip,
+    RenderedSpeedClip body, {
+    required Duration trimStart,
+    Duration trimEnd = Duration.zero,
+  }) {
+    return clip.copyWith(
+      video: EditorVideo.file(body.path),
+      duration: body.duration,
+      trimStart: trimStart,
+      trimEnd: trimEnd,
+      sourceStartOffset: Duration.zero,
+      minTrimStart: Duration.zero,
+      clearPlaybackSpeed: true,
+      clearSpeedRamp: true,
       clearMask: true,
     );
   }
@@ -481,7 +575,10 @@ class TransitionSeamRenderService {
         '${c.id}:${c.requireVideo.file?.path}:${c.duration.inMicroseconds}:'
         '${c.trimStart.inMicroseconds}:${c.trimEnd.inMicroseconds}:'
         '${c.playbackSpeed ?? 1.0}:${c.volume}:'
-        '${c.equalizer.gains.join(',')}:${c.targetAspectRatio.name}';
+        '${c.equalizer.gains.join(',')}:${c.targetAspectRatio.name}'
+        // Only a ramped clip adds its points, so every other seam keeps the
+        // key it was persisted under.
+        '${c.speedRamp == null ? '' : ':${c.speedRamp!.toMap()}'}';
     final t =
         '${transition.type.name}:${transition.duration.inMicroseconds}:'
         '${transition.curve.name}:${transition.direction.name}';
@@ -622,12 +719,12 @@ class SeamTimeline {
     final wrapHeadPb = !wrapDisplay.isActive
         ? Duration.zero
         : wrapSeam != null
-        ? clips[0].sourceDurationToPlaybackDuration(wrapSeam.headConsumed)
+        ? clips[0].headPlaybackSpan(wrapSeam.headConsumed)
         : wrapDisplay.consumedPerSide;
     final wrapTailPb = !wrapDisplay.isActive
         ? Duration.zero
         : wrapSeam != null
-        ? clips[n - 1].sourceDurationToPlaybackDuration(wrapSeam.tailConsumed)
+        ? clips[n - 1].tailPlaybackSpan(wrapSeam.tailConsumed)
         : wrapDisplay.consumedPerSide;
 
     var composite = Duration.zero;
@@ -650,7 +747,7 @@ class SeamTimeline {
       if (prevTransition != null) {
         final seam = seams.cached(clips[i - 1], clip, prevTransition);
         if (seam != null) {
-          headPb = clip.sourceDurationToPlaybackDuration(seam.headConsumed);
+          headPb = clip.headPlaybackSpan(seam.headConsumed);
         }
       }
 
@@ -660,7 +757,7 @@ class SeamTimeline {
       if (i + 1 < n && transition != null) {
         outgoing = seams.cached(clip, clips[i + 1], transition);
         if (outgoing != null) {
-          tailPb = clip.sourceDurationToPlaybackDuration(outgoing.tailConsumed);
+          tailPb = clip.tailPlaybackSpan(outgoing.tailConsumed);
         }
       }
 
@@ -694,7 +791,7 @@ class SeamTimeline {
 
       if (outgoing != null) {
         final boundary = editor + clipDuration;
-        final nextHeadPb = clips[i + 1].sourceDurationToPlaybackDuration(
+        final nextHeadPb = clips[i + 1].headPlaybackSpan(
           outgoing.headConsumed,
         );
         final editorStart = _maxDur(boundary - tailPb, editorCursor);
@@ -851,7 +948,7 @@ List<player.VideoClip> buildSeamAwarePlayerClips(
     if (i == 0 && wrapDisplay.isActive) {
       headConsumed +=
           wrapSeam?.headConsumed ??
-          clip.playbackDurationToSourceDuration(wrapDisplay.consumedPerSide);
+          clip.headSourceSpan(wrapDisplay.consumedPerSide);
     }
 
     TransitionSeam? outgoingSeam;
@@ -864,7 +961,7 @@ List<player.VideoClip> buildSeamAwarePlayerClips(
     if (i == n - 1 && wrapDisplay.isActive) {
       tailConsumed +=
           wrapSeam?.tailConsumed ??
-          clip.playbackDurationToSourceDuration(wrapDisplay.consumedPerSide);
+          clip.tailSourceSpan(wrapDisplay.consumedPerSide);
     }
 
     final bodyStart = clip.trimStart + headConsumed;
@@ -873,14 +970,23 @@ List<player.VideoClip> buildSeamAwarePlayerClips(
       // A pre-rendered normal-rate body is only used when no seam consumes part
       // of this clip — the rendered file spans the full trimmed body, so a
       // partial seam trim can't be expressed against it. Seam-consumed clips
-      // therefore stay on live retiming.
-      final rendered =
-          headConsumed == Duration.zero && tailConsumed == Duration.zero
+      // therefore stay on live retiming. The exception is a speed ramp, which
+      // live retiming can only approximate: it plays the stretch of its body
+      // the seams leave, measured in the body's own (playback) time.
+      final unconsumed =
+          headConsumed == Duration.zero && tailConsumed == Duration.zero;
+      final rendered = unconsumed || clip.speedRamp != null
           ? speedRenders?.cached(clip)
           : null;
       final body = rendered != null
           ? player.VideoClip.file(
               rendered.path,
+              start: unconsumed
+                  ? Duration.zero
+                  : clip.headPlaybackSpan(headConsumed),
+              end: unconsumed
+                  ? null
+                  : clip.playbackDuration - clip.tailPlaybackSpan(tailConsumed),
               volume: clip.volume,
               equalizer: clip.equalizer.toPlayerEqualizer(),
             )

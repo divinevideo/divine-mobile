@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:models/models.dart' show AudioEvent;
+import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/utils/draft_audio_path_resolver.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -342,6 +343,62 @@ class AudioExtractionService {
     speed: speed,
     outputDirectory: await _draftAudioDirectory(),
   );
+
+  /// [extractAudioForDraft] for a clip under a speed ramp, whose sound
+  /// follows the ramp: renders the window from [start] to [end] of
+  /// [videoPath] with [speedRamp] and extracts the sound of that, so the track
+  /// plays in step with the clip. Unlike a constant speed it covers the
+  /// window only, from its first frame.
+  ///
+  /// Throws [AudioExtractionException] like [extractAudio], or when the
+  /// window cannot be rendered.
+  Future<AudioExtractionResult> extractRampedAudioForDraft({
+    required String videoPath,
+    required Duration start,
+    required Duration end,
+    required VideoSpeedRamp speedRamp,
+  }) async {
+    final timestamp = DateTime.now().microsecondsSinceEpoch;
+    final renderedPath = p.join(
+      (await getTemporaryDirectory()).path,
+      'ramped_audio_source_$timestamp.mp4',
+    );
+    try {
+      await VideoEditorRenderService.renderNativeVideoToFile(
+        renderedPath,
+        VideoRenderData(
+          id: 'ramped_audio_$timestamp',
+          videoSegments: [
+            VideoSegment(
+              video: EditorVideo.file(videoPath),
+              startTime: start == Duration.zero ? null : start,
+              endTime: end,
+              speedRamp: speedRamp,
+            ),
+          ],
+        ),
+      );
+    } on Exception catch (e) {
+      await _deleteQuietly(renderedPath);
+      throw AudioExtractionException(
+        'Failed to render the speed ramp',
+        cause: e,
+      );
+    }
+    try {
+      return await extractAudioForDraft(videoPath: renderedPath);
+    } finally {
+      await _deleteQuietly(renderedPath);
+    }
+  }
+
+  static Future<void> _deleteQuietly(String path) async {
+    try {
+      await File(path).delete();
+    } on FileSystemException {
+      // Already gone: the render failed before writing, or a cleanup ran.
+    }
+  }
 
   static Future<Directory> _draftAudioDirectory() async {
     final docs = await getApplicationDocumentsDirectory();

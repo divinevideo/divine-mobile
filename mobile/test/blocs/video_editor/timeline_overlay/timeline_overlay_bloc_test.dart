@@ -571,6 +571,42 @@ void main() {
       );
 
       blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+        'maxDuration of a sped-up sound is its remaining audio at its speed',
+        build: TimelineOverlayBloc.new,
+        act: (bloc) => bloc.add(
+          TimelineOverlayItemsUpdate(
+            layers: const <Layer>[],
+            filters: const <FilterState>[],
+            audioTracks: [
+              _audioEvent(
+                id: 'sound-1',
+                start: const Duration(seconds: 1),
+                end: const Duration(seconds: 2),
+              ).copyWith(
+                duration: 8.0,
+                startOffset: const Duration(seconds: 2),
+                playbackSpeed: 2,
+              ),
+            ],
+            totalVideoDuration: const Duration(seconds: 12),
+          ),
+        ),
+        expect: () => [
+          isA<TimelineOverlayState>()
+              .having(
+                (s) => s.items.first.maxDuration,
+                'maxDuration',
+                const Duration(seconds: 3), // (8000ms - 2000ms) / 2
+              )
+              .having(
+                (s) => s.items.first.playbackSpeed,
+                'playbackSpeed',
+                2,
+              ),
+        ],
+      );
+
+      blocTest<TimelineOverlayBloc, TimelineOverlayState>(
         'carries full source duration and start offset onto sound items',
         build: TimelineOverlayBloc.new,
         act: (bloc) => bloc.add(
@@ -1448,6 +1484,40 @@ void main() {
             trimPosition: const Duration(seconds: 4),
           ),
         ],
+      );
+
+      blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+        'keeps the trim ceiling of a sped-up sound at its speed on a '
+        'left-trim',
+        build: TimelineOverlayBloc.new,
+        seed: () => const TimelineOverlayState(
+          items: [
+            TimelineOverlayItem(
+              id: 'sound',
+              type: TimelineOverlayType.sound,
+              startTime: Duration(seconds: 1),
+              endTime: Duration(seconds: 3),
+              sourceDuration: Duration(seconds: 10),
+              maxDuration: Duration(seconds: 5),
+              playbackSpeed: 2,
+            ),
+          ],
+        ),
+        act: (bloc) => bloc.add(
+          const TimelineOverlayItemTrimmed(
+            itemId: 'sound',
+            isStart: true,
+            startTime: Duration(seconds: 2),
+            endTime: Duration(seconds: 3),
+            startOffset: Duration(seconds: 2),
+          ),
+        ),
+        verify: (bloc) {
+          expect(
+            bloc.state.items.single.maxDuration,
+            const Duration(seconds: 4), // (10s - 2s) / 2
+          );
+        },
       );
 
       blocTest<TimelineOverlayBloc, TimelineOverlayState>(

@@ -144,6 +144,14 @@ class _PlayerReports extends MockStreamHandler {
   }
 }
 
+/// The streams the real `pro_video_editor` plugin listens on when the first
+/// read of `ProVideoEditor.instance` constructs it, except on Linux and
+/// Windows, where it never listens.
+const _proVideoEditorStreams = [
+  EventChannel('pro_video_editor_progress'),
+  EventChannel('pro_video_editor_logs'),
+];
+
 void main() {
   late Directory tempDir;
   late _PlayerReports reports;
@@ -166,6 +174,16 @@ void main() {
           const MethodChannel('divine_video_player'),
           (call) async => call.method == 'create' ? {'textureId': 1} : null,
         );
+    // Unmocked, the listen fails whichever test is running when the reply
+    // arrives: on macOS when this file is the first to build the plugin. On
+    // Linux, where Mobile CI runs, the plugin never listens.
+    for (final stream in _proVideoEditorStreams) {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockStreamHandler(
+            stream,
+            MockStreamHandler.inline(onListen: (_, _) {}),
+          );
+    }
     clipBloc = _MockClipEditorBloc();
     overlayBloc = _MockTimelineOverlayBloc();
     whenListen(
@@ -181,6 +199,10 @@ void main() {
           const MethodChannel('divine_video_player'),
           null,
         );
+    for (final stream in _proVideoEditorStreams) {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockStreamHandler(stream, null);
+    }
     await mainBloc.close();
     await effectsCubit.close();
     tempDir.deleteSync(recursive: true);
@@ -374,9 +396,12 @@ void main() {
         1,
         reason: 'the gated native render completed',
       );
-      // Publishing the cache performs copy, rename and delete I/O. Let those
-      // real completions and their fake-zone continuations reach metadata.
-      for (var i = 0; i < 5; i++) {
+      // Publishing the cache does copy, rename and delete I/O; each completion
+      // needs a runAsync turn, then a pump for its fake-zone continuation.
+      // Under disk load that takes more turns, so drain until the reload.
+      final drain = Stopwatch()..start();
+      while (!nextReload.isCompleted &&
+          drain.elapsed < const Duration(seconds: 10)) {
         await tester.runAsync(pumpEventQueue);
         await tester.pump();
       }

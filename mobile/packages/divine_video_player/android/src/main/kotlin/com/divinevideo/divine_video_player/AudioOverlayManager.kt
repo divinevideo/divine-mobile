@@ -23,6 +23,10 @@ import androidx.media3.exoplayer.ExoPlayer
  *
  * Each track plays through its own [TrackEqualizerAudioProcessor], ahead of
  * its volume and fade, as the export applies it.
+ *
+ * A track's own speed multiplies the player's: its file advances that much
+ * faster than the video at unchanged pitch, while its slot on the video and
+ * its fades stay video time, as the export plays them.
  */
 @UnstableApi
 internal class AudioOverlayManager(
@@ -61,6 +65,8 @@ internal class AudioOverlayManager(
             val videoEndMs = (map["videoEndMs"] as? Number)?.toLong()
             val trackStartMs = (map["trackStartMs"] as? Number)?.toLong() ?: 0L
             val trackEndMs = (map["trackEndMs"] as? Number)?.toLong()
+            val trackSpeed = (map["playbackSpeed"] as? Number)?.toDouble()
+                ?.takeIf { it > 0.0 && it.isFinite() } ?: 1.0
 
             val equalizer = TrackEqualizerAudioProcessor().apply {
                 this.equalizer = AudioEqualizer.fromMap(map["equalizer"] as? Map<*, *>)
@@ -71,7 +77,7 @@ internal class AudioOverlayManager(
             ).build()
             overlay.setMediaItem(MediaItem.fromUri(uri))
             overlay.prepare()
-            overlay.setPlaybackSpeed(currentPlaybackSpeed)
+            overlay.setPlaybackSpeed(currentPlaybackSpeed * trackSpeed.toFloat())
 
             val entry = AudioOverlayEntry(
                 player = overlay,
@@ -79,6 +85,7 @@ internal class AudioOverlayManager(
                 videoEndMs = videoEndMs,
                 trackStartMs = trackStartMs,
                 trackEndMs = trackEndMs,
+                speed = trackSpeed,
                 baseVolume = vol,
                 fade = AudioOverlayFade.fromMap(map),
                 equalizer = equalizer,
@@ -112,10 +119,10 @@ internal class AudioOverlayManager(
         overlays.getOrNull(index)?.equalizer?.equalizer = equalizer
     }
 
-    /** Updates playback speed on all overlay players. */
+    /** Updates playback speed on all overlay players, times each track's own. */
     fun setPlaybackSpeed(speed: Float) {
         for (entry in overlays) {
-            entry.player.setPlaybackSpeed(speed)
+            entry.player.setPlaybackSpeed(speed * entry.speed.toFloat())
         }
     }
 
@@ -162,8 +169,7 @@ internal class AudioOverlayManager(
                 (entry.videoEndMs == null || globalPositionMs < entry.videoEndMs)
 
             if (inRange && isPlaying) {
-                val expectedAudioMs = entry.trackStartMs +
-                    (globalPositionMs - entry.videoStartMs)
+                val expectedAudioMs = entry.audioPositionAt(globalPositionMs)
 
                 // Clamp to trackEnd if set.
                 if (entry.trackEndMs != null && expectedAudioMs >= entry.trackEndMs) {
@@ -182,9 +188,10 @@ internal class AudioOverlayManager(
                     entry.player.play()
                     entry.isActive = true
                 } else {
-                    // Correct drift.
+                    // Correct drift, measured in video time: that is how far
+                    // the sound is off the picture, whatever the track's speed.
                     val actualMs = entry.player.currentPosition
-                    val drift = kotlin.math.abs(expectedAudioMs - actualMs)
+                    val drift = kotlin.math.abs(expectedAudioMs - actualMs) / entry.speed
                     if (drift > DRIFT_THRESHOLD_MS) {
                         applyFadeGain(entry, expectedAudioMs)
                         entry.player.seekTo(expectedAudioMs)
@@ -222,7 +229,7 @@ internal class AudioOverlayManager(
      */
     private fun applyFadeGain(entry: AudioOverlayEntry, audioPositionMs: Long) {
         val gain = entry.fade.gainAt(
-            elapsedMs = audioPositionMs - entry.trackStartMs,
+            elapsedMs = entry.videoMsOf(audioPositionMs - entry.trackStartMs),
             audibleMs = audibleMs(entry),
         )
         val volume = AudioSessionBoost.attenuationOf(entry.baseVolume) * gain
@@ -232,16 +239,18 @@ internal class AudioOverlayManager(
     }
 
     /**
-     * How long [entry] sounds, which is where its fade out ends: the end of its
-     * slot on the video timeline, the end of its trimmed audio, or the end of
-     * the file, whichever comes first. Null while none of them is known.
+     * How long [entry] sounds in video time, which is where its fade out ends:
+     * the end of its slot on the video timeline, the end of its trimmed audio,
+     * or the end of the file, whichever comes first. Null while none of them
+     * is known.
      */
     private fun audibleMs(entry: AudioOverlayEntry): Long? {
         val fileDurationMs = entry.player.duration
         return listOfNotNull(
             entry.videoEndMs?.let { it - entry.videoStartMs },
-            entry.trackEndMs?.let { it - entry.trackStartMs },
-            fileDurationMs.takeIf { it != C.TIME_UNSET }?.let { it - entry.trackStartMs },
+            entry.trackEndMs?.let { entry.videoMsOf(it - entry.trackStartMs) },
+            fileDurationMs.takeIf { it != C.TIME_UNSET }
+                ?.let { entry.videoMsOf(it - entry.trackStartMs) },
         ).minOrNull()
     }
 
@@ -271,6 +280,8 @@ internal class AudioOverlayEntry(
     val videoEndMs: Long?,
     val trackStartMs: Long,
     val trackEndMs: Long?,
+    /** How many milliseconds of the file play per millisecond of video. */
+    val speed: Double = 1.0,
     /** The track's volume before its fade is applied, above 1.0 when boosted. */
     var baseVolume: Float = 1.0f,
     val fade: AudioOverlayFade = AudioOverlayFade(fadeInMs = 0, fadeOutMs = 0),
@@ -283,4 +294,11 @@ internal class AudioOverlayEntry(
     /** Whether this track is sounding with a fade that needs stepping. */
     val isFading: Boolean
         get() = isActive && player.playWhenReady && !fade.isNone
+
+    /** The position in the file that plays at [videoPositionMs]. */
+    fun audioPositionAt(videoPositionMs: Long): Long =
+        trackStartMs + Math.round((videoPositionMs - videoStartMs) * speed)
+
+    /** How long [fileMs] of the file takes to play, in video time. */
+    fun videoMsOf(fileMs: Long): Long = Math.round(fileMs / speed)
 }

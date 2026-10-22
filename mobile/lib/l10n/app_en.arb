@@ -6163,6 +6163,10 @@
   "@videoEditorEffectEcho": {
     "description": "Name of a video effect: moving subjects leave fading copies of where they just were, like an echo or ghost trail."
   },
+  "videoEditorEffectFisheye": "Fisheye",
+  "@videoEditorEffectFisheye": {
+    "description": "Name of a video effect: the middle of the picture bulges out, as through a fisheye (very wide-angle) lens."
+  },
   "videoEditorEffectsFlashingReplaced": "One flashing effect at a time. Too much flashing can hurt people who are sensitive to it, so we swapped out the other one here.",
   "@videoEditorEffectsFlashingReplaced": {
     "description": "Snack bar after a flashing video effect (strobe, negative flash) replaced another flashing effect where the two overlapped on the timeline. Explains, without technical terms, that overlapping flashes can harm people with photosensitivity."
@@ -6799,6 +6803,10 @@
   "@videoEditorSetClipSpeedSemanticLabel": {
     "description": "Accessibility label for the Set Speed button in the timeline clip controls."
   },
+  "videoEditorSetSoundSpeedSemanticLabel": "Set playback speed for selected sound",
+  "@videoEditorSetSoundSpeedSemanticLabel": {
+    "description": "Accessibility label for the Speed button in the timeline controls of a selected sound."
+  },
   "videoEditorReverseLabel": "Reverse",
   "@videoEditorReverseLabel": {
     "description": "Label for the Reverse button in the timeline clip controls."
@@ -6919,11 +6927,72 @@
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."
   },
+  "videoEditorSoundSpeedSheetTitle": "Sound Speed",
+  "@videoEditorSoundSpeedSheetTitle": {
+    "description": "Title of the bottom sheet for adjusting the playback speed of a sound added to the video in the editor timeline."
+  },
   "videoEditorSpeedPresetSemanticLabel": "Speed {speed}×",
   "@videoEditorSpeedPresetSemanticLabel": {
     "description": "Accessibility label for a one-tap speed preset in the clip speed bottom sheet. {speed} is a speed multiplier like 0.5, 1, or 2.",
     "placeholders": {
       "speed": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorSpeedModeConstant": "Constant",
+  "@videoEditorSpeedModeConstant": {
+    "description": "Option in the clip speed sheet: the clip plays at one speed throughout."
+  },
+  "videoEditorSpeedModeCurve": "Curve",
+  "@videoEditorSpeedModeCurve": {
+    "description": "Option in the clip speed sheet: the clip's speed changes along a curve while it plays (speed ramp)."
+  },
+  "videoEditorSpeedCurveCustom": "Custom",
+  "@videoEditorSpeedCurveCustom": {
+    "description": "Speed curve preset chip for a curve the user shapes by dragging points."
+  },
+  "videoEditorSpeedCurveMontage": "Montage",
+  "@videoEditorSpeedCurveMontage": {
+    "description": "Speed curve preset: speeds up, slows right down and speeds up again."
+  },
+  "videoEditorSpeedCurveHero": "Hero",
+  "@videoEditorSpeedCurveHero": {
+    "description": "Speed curve preset: fast, a short deep slow-motion on the peak, fast again."
+  },
+  "videoEditorSpeedCurveBullet": "Bullet",
+  "@videoEditorSpeedCurveBullet": {
+    "description": "Speed curve preset named after 'bullet time': a long slow-motion between two fast ends."
+  },
+  "videoEditorSpeedCurveFlashIn": "Flash in",
+  "@videoEditorSpeedCurveFlashIn": {
+    "description": "Speed curve preset: starts fast and settles into normal speed."
+  },
+  "videoEditorSpeedCurveFlashOut": "Flash out",
+  "@videoEditorSpeedCurveFlashOut": {
+    "description": "Speed curve preset: plays at normal speed and rushes out at the end."
+  },
+  "videoEditorSpeedCurveHint": "Drag a point up to speed up, down to slow down",
+  "@videoEditorSpeedCurveHint": {
+    "description": "Hint under the speed curve editor: dragging a point up makes that moment faster, down slower."
+  },
+  "videoEditorSpeedCurvePointSemanticLabel": "Speed point {index} of {total}",
+  "@videoEditorSpeedCurvePointSemanticLabel": {
+    "description": "Accessibility label for a draggable point on the speed curve, a position like \"Clip 2 of 5\" rather than a quantity. {index} is the point's number from the left, {total} how many points there are.",
+    "placeholders": {
+      "index": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorSpeedResultingLength": "Plays for {seconds}s",
+  "@videoEditorSpeedResultingLength": {
+    "description": "How long the clip plays with the chosen speed or speed curve. {seconds} is a number with one decimal, like 6.4.",
+    "placeholders": {
+      "seconds": {
         "type": "String"
       }
     }
@@ -8181,20 +8250,20 @@
     }
   },
   "minorAccountReviewResponseClockExpiredTitle": "Response deadline passed",
-  "minorAccountReviewResponseClockExpiredBody": "The response deadline has passed. Contact Support Center if you need help.",
+  "minorAccountReviewResponseClockExpiredBody": "The response deadline has passed. Contact support if you need help.",
   "minorAccountReviewResponseClockUnavailableTitle": "Deadline unavailable",
-  "minorAccountReviewResponseClockUnavailableBody": "We can't show your response deadline right now. Contact Support Center if you need help.",
+  "minorAccountReviewResponseClockUnavailableBody": "We can't show your response deadline right now. Contact support if you need help.",
   "minorAccountReviewAppealTitle": "Think we got this wrong?",
   "@minorAccountReviewAppealTitle": {
     "description": "Heading above the support action that introduces the restricted-minor reconsideration policy. Approved wording from #8239 — do not reword without a product decision."
   },
-  "minorAccountReviewAppealTeenBody": "Contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.",
+  "minorAccountReviewAppealTeenBody": "Contact support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.",
   "@minorAccountReviewAppealTeenBody": {
-    "description": "Tells a restricted 13-to-15-year-old how to ask support to reconsider the decision without promising a reversal. Approved wording from #8239, used verbatim."
+    "description": "Tells a restricted 13-to-15-year-old how to ask support to reconsider the decision without promising a reversal. The approved #8239 wording with only the routing clause changed to name the Contact Support action (#9176); the promise language is unchanged."
   },
-  "minorAccountReviewAppealUnder13Body": "Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.",
+  "minorAccountReviewAppealUnder13Body": "Your parent or guardian can email support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.",
   "@minorAccountReviewAppealUnder13Body": {
-    "description": "Tells a restricted child under 13 that a parent or guardian may ask support to reconsider the decision without promising a reversal. The approved #8239 wording with the actor changed to the parent or guardian; the promise language is unchanged."
+    "description": "Tells a restricted child under 13 that a parent or guardian may ask support to reconsider the decision without promising a reversal. The approved #8239 wording with the actor changed to the parent or guardian, and the routing clause changed to email because this path opens the parent-support email screen (#9176); the promise language is unchanged."
   },
   "minorAccountReviewOpenModerationMessage": "Open Moderation Message",
   "minorAccountReviewOpenReviewPage": "Open review page",
@@ -8490,6 +8559,14 @@
   "settingsBackUpRecordingsSubtitle": "Keeps a copy of each new recording in your gallery. Other apps and cloud photo backups can see it there.",
   "@settingsBackUpRecordingsSubtitle": {
     "description": "Subtitle of the gallery backup setting. Must say that other apps and cloud photo backups can see the copies in the gallery. Kept to about three lines; the delete dialogs say that gallery copies stay."
+  },
+  "settingsMirrorFrontCamera": "Mirror front camera",
+  "@settingsMirrorFrontCamera": {
+    "description": "Title of the Create & Share setting that saves front camera recordings mirrored, the way the camera preview shows them. Off by default, which saves them the way other people see the person filming."
+  },
+  "settingsMirrorFrontCameraSubtitle": "Saves front camera clips the way the preview shows them. Text in the shot reads backwards.",
+  "@settingsMirrorFrontCameraSubtitle": {
+    "description": "Subtitle of the Mirror front camera setting. Must say that clips are saved as the preview shows them, and that any text in the shot then reads backwards."
   },
   "uploadPublishedCountMessage": "{count, plural, =1{Video published to your profile} other{{count} videos published to your profile}}",
   "@uploadPublishedCountMessage": {

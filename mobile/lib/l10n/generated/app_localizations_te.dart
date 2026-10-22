@@ -9135,6 +9135,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectEcho => 'ప్రతిధ్వని';
 
   @override
+  String get videoEditorEffectFisheye => 'ఫిష్‌ఐ';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'ఒకసారి ఒక మెరిసే ఎఫెక్ట్ మాత్రమే. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు, అందుకే ఇక్కడ మరొకదాన్ని మార్చాం.';
 
@@ -10106,6 +10109,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఎంచుకున్న క్లిప్ కోసం ప్లేబ్యాక్ వేగాన్ని సెట్ చేయండి';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'ఎంచుకున్న ధ్వని కోసం ప్లేబ్యాక్ వేగాన్ని సెట్ చేయండి';
+
+  @override
   String get videoEditorReverseLabel => 'రివర్స్';
 
   @override
@@ -10217,8 +10224,49 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'క్లిప్ స్పీడ్';
 
   @override
+  String get videoEditorSoundSpeedSheetTitle => 'ధ్వని స్పీడ్';
+
+  @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'వేగం $speed×';
+  }
+
+  @override
+  String get videoEditorSpeedModeConstant => 'స్థిరం';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'వక్రం';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'అనుకూలం';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'మాంటేజ్';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'హీరో';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'బుల్లెట్ టైమ్';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'ఫ్లాష్ ఇన్';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'ఫ్లాష్ అవుట్';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'వేగం పెంచడానికి పాయింట్‌ను పైకి, తగ్గించడానికి కిందికి లాగండి';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'వేగ పాయింట్ $index/$total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return '$seconds సెకన్లు ప్లే అవుతుంది';
   }
 
   @override
@@ -11742,7 +11790,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockExpiredBody =>
-      'ప్రతిస్పందన గడువు ముగిసింది. మీకు సహాయం కావాలంటే సపోర్ట్ సెంటర్‌ని సంప్రదించండి.';
+      'The response deadline has passed. Contact support if you need help.';
 
   @override
   String get minorAccountReviewResponseClockUnavailableTitle =>
@@ -11750,7 +11798,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockUnavailableBody =>
-      'మేము ప్రస్తుతం మీ ప్రతిస్పందన గడువును చూపలేము. మీకు సహాయం కావాలంటే సపోర్ట్ సెంటర్‌ని సంప్రదించండి.';
+      'We can\'t show your response deadline right now. Contact support if you need help.';
 
   @override
   String get minorAccountReviewAppealTitle =>
@@ -11758,11 +11806,11 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get minorAccountReviewAppealTeenBody =>
-      'మద్దతు కేంద్రాన్ని సంప్రదించండి మరియు ఏమి జరిగిందో మాకు తెలియజేయండి. మేము మరొకసారి పరిశీలిస్తాము, కానీ నిర్ణయం మారుతుందని మేము హామీ ఇవ్వలేము.';
+      'Contact support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewAppealUnder13Body =>
-      'మీ తల్లిదండ్రులు లేదా సంరక్షకులు సపోర్ట్ సెంటర్‌ను సంప్రదించి ఏమి జరిగిందో మాకు తెలియజేయగలరు. మేము మరొకసారి పరిశీలిస్తాము, కానీ నిర్ణయం మారుతుందని మేము హామీ ఇవ్వలేము.';
+      'Your parent or guardian can email support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>
@@ -12318,6 +12366,13 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get settingsBackUpRecordingsSubtitle =>
       'ప్రతి కొత్త రికార్డింగ్ కాపీని మీ గ్యాలరీలో సేవ్ చేస్తుంది. ఇతర యాప్‌లు మరియు క్లౌడ్ ఫోటో బ్యాకప్‌లు దాన్ని అక్కడ చూడగలవు.';
+
+  @override
+  String get settingsMirrorFrontCamera => 'ఫ్రంట్ కెమెరాను మిర్రర్ చేయండి';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'ఫ్రంట్ కెమెరా క్లిప్‌లను ప్రివ్యూలో కనిపించినట్లే సేవ్ చేస్తుంది. షాట్‌లోని అక్షరాలు తిరగబడి కనిపిస్తాయి.';
 
   @override
   String uploadPublishedCountMessage(int count) {

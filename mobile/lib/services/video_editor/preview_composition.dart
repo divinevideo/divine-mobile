@@ -79,6 +79,10 @@ class PreviewComposition {
   /// live-retimed clip until the render swaps in (no overlay, no wait).
   final ClipSpeedRenderService _speedRenderService;
 
+  /// The speed bodies this composition renders, for the detached clips on the
+  /// canvas: they play a ramped clip from the same body as the timeline.
+  ClipSpeedRenderService get speedRenders => _speedRenderService;
+
   final _pendingSeamRenders = ValueNotifier<int>(0);
   bool _disposed = false;
 
@@ -178,6 +182,7 @@ class PreviewComposition {
       clipA: clipA,
       clipB: clipB,
       transition: transition,
+      speedRenders: _speedRenderService,
     );
     if (_disposed) return;
     if (identical(_seamRendersInFlight[key], attempt)) {
@@ -213,6 +218,8 @@ class PreviewComposition {
       // whole-body speed render would never be spliced in — matching the gate
       // in [buildSeamAwarePlayerClips]. Avoids a native encode the player can't
       // use. Until the seam lands the clip isn't consumed, so it still renders.
+      // A speed ramp is the exception: live retiming cannot play it, so the
+      // player plays the part of its render the seams leave.
       final incoming = i > 0 ? clamped[clips[i - 1].id] : null;
       final consumedByIncoming =
           incoming != null &&
@@ -223,7 +230,10 @@ class PreviewComposition {
           outgoing != null &&
           _seamService.cached(clip, clips[i + 1], outgoing) != null;
       final consumedByWrap = wrapActive && (i == 0 || i == clips.length - 1);
-      if (consumedByIncoming || consumedByOutgoing || consumedByWrap) continue;
+      if (clip.speedRamp == null &&
+          (consumedByIncoming || consumedByOutgoing || consumedByWrap)) {
+        continue;
+      }
 
       if (_speedRenderService.cached(clip) != null) continue;
       if (_speedRenderService.isRendering(clip)) continue;

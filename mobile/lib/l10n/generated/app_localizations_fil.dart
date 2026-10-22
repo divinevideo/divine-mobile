@@ -8947,6 +8947,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorEffectEcho => 'Echo';
 
   @override
+  String get videoEditorEffectFisheye => 'Fisheye';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Isang kumikislap na effect lang sa isang pagkakataon. Puwedeng makasama ang sobrang pagkislap sa mga taong sensitibo rito, kaya pinalitan namin ang isa pa dito.';
 
@@ -9909,6 +9912,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Itakda ang bilis ng playback para sa napiling clip';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'Itakda ang bilis ng playback para sa napiling sound';
+
+  @override
   String get videoEditorReverseLabel => 'Baligtad';
 
   @override
@@ -10019,8 +10026,49 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Bilis ng Clip';
 
   @override
+  String get videoEditorSoundSpeedSheetTitle => 'Bilis ng Sound';
+
+  @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'Bilis $speed×';
+  }
+
+  @override
+  String get videoEditorSpeedModeConstant => 'Constant';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'Curve';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'Custom';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'Montage';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'Hero';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'Bullet';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'Flash in';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'Flash out';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'I-drag pataas ang point para bumilis, pababa para bumagal';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'Speed point $index ng $total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'Tatagal nang ${seconds}s';
   }
 
   @override
@@ -11532,7 +11580,7 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockExpiredBody =>
-      'The response deadline has passed. Contact Support Center if you need help.';
+      'The response deadline has passed. Contact support if you need help.';
 
   @override
   String get minorAccountReviewResponseClockUnavailableTitle =>
@@ -11540,18 +11588,18 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockUnavailableBody =>
-      'We can\'t show your response deadline right now. Contact Support Center if you need help.';
+      'We can\'t show your response deadline right now. Contact support if you need help.';
 
   @override
   String get minorAccountReviewAppealTitle => 'Think we got this wrong?';
 
   @override
   String get minorAccountReviewAppealTeenBody =>
-      'Contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Contact support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewAppealUnder13Body =>
-      'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Your parent or guardian can email support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>
@@ -12108,6 +12156,13 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get settingsBackUpRecordingsSubtitle =>
       'Nagse-save ng kopya ng bawat bagong recording sa gallery mo. Makikita ito roon ng ibang app at ng mga cloud photo backup.';
+
+  @override
+  String get settingsMirrorFrontCamera => 'I-mirror ang camera sa harap';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Sine-save ang mga clip mula sa camera sa harap nang kagaya ng nasa preview. Mababaligtad ang text sa shot.';
 
   @override
   String uploadPublishedCountMessage(int count) {

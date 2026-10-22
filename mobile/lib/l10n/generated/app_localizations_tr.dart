@@ -8803,6 +8803,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectEcho => 'Yankı';
 
   @override
+  String get videoEditorEffectFisheye => 'Balık Gözü';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Aynı anda tek bir yanıp sönen efekt. Fazla yanıp sönme hassas kişilere zarar verebilir, bu yüzden buradaki diğerini değiştirdik.';
 
@@ -9748,6 +9751,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Seçili klip için oynatma hızını ayarla';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'Seçili ses için oynatma hızını ayarla';
+
+  @override
   String get videoEditorReverseLabel => 'Tersine Çevir';
 
   @override
@@ -9856,8 +9863,49 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Klip Hızı';
 
   @override
+  String get videoEditorSoundSpeedSheetTitle => 'Ses Hızı';
+
+  @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'Hız $speed×';
+  }
+
+  @override
+  String get videoEditorSpeedModeConstant => 'Sabit';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'Eğri';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'Özel';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'Montaj';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'Kahraman';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'Bullet time';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'Hızlı giriş';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'Hızlı çıkış';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'Hızlandırmak için bir noktayı yukarı, yavaşlatmak için aşağı sürükle';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'Hız noktası $index/$total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return '$seconds sn sürer';
   }
 
   @override
@@ -11352,7 +11400,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockExpiredBody =>
-      'The response deadline has passed. Contact Support Center if you need help.';
+      'The response deadline has passed. Contact support if you need help.';
 
   @override
   String get minorAccountReviewResponseClockUnavailableTitle =>
@@ -11360,18 +11408,18 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockUnavailableBody =>
-      'We can\'t show your response deadline right now. Contact Support Center if you need help.';
+      'We can\'t show your response deadline right now. Contact support if you need help.';
 
   @override
   String get minorAccountReviewAppealTitle => 'Think we got this wrong?';
 
   @override
   String get minorAccountReviewAppealTeenBody =>
-      'Contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Contact support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewAppealUnder13Body =>
-      'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Your parent or guardian can email support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>
@@ -11919,6 +11967,13 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get settingsBackUpRecordingsSubtitle =>
       'Her yeni kaydın bir kopyasını galerine kaydeder. Diğer uygulamalar ve buluttaki fotoğraf yedekleri onu orada görebilir.';
+
+  @override
+  String get settingsMirrorFrontCamera => 'Ön kamerayı aynala';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Ön kamera kliplerini önizlemede göründüğü gibi kaydeder. Çekimdeki yazılar ters görünür.';
 
   @override
   String uploadPublishedCountMessage(int count) {

@@ -33,13 +33,15 @@ class CameraMobileService extends CameraService {
     bool preferUnprocessedAudio = false,
     DivineVideoStabilizationMode videoStabilizationMode =
         DivineVideoStabilizationMode.off,
+    bool mirrorFrontCameraOutput = false,
   }) async {
     _isInitialized = false;
     _initializationError = null;
 
     Log.info(
       '📷 Initializing mobile camera with quality: ${videoQuality.value}, '
-      'lens: ${initialLens.displayName}',
+      'lens: ${initialLens.displayName}, '
+      'mirrorFrontCameraOutput: $mirrorFrontCameraOutput',
       name: 'CameraMobileService',
       category: .video,
     );
@@ -50,6 +52,7 @@ class CameraMobileService extends CameraService {
         enableAutoLensSwitch: enableAutoLensSwitch,
         preferUnprocessedAudio: preferUnprocessedAudio,
         videoStabilizationMode: videoStabilizationMode,
+        mirrorFrontCameraOutput: mirrorFrontCameraOutput,
       );
       _camera.onRecordingAutoStopped = (result) {
         onAutoStopped(

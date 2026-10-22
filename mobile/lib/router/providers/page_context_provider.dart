@@ -61,6 +61,7 @@ enum RouteType {
   storageManagement, // Storage screen (clear caches, audit clip library)
   monetizationLinksSettings, // Creator monetization link settings
   accountStatus, // Account enforcement status (s-t-s#200)
+  minorAccountReview, // Restricted account review and its diagnostic context
   appLanguage, // App language picker (UI locale override)
   appearanceSettings, // Appearance picker (system/light/dark)
   supportCenter, // Support center (bug reports, logs, FAQ, legal links)
@@ -450,6 +451,11 @@ RouteContext? _parseRoute(String path, {required bool knownOnly}) {
     case 'support-center':
       return const RouteContext(type: RouteType.supportCenter);
 
+    case 'account-review':
+      return segments.length == 1
+          ? const RouteContext(type: RouteType.minorAccountReview)
+          : null;
+
     case 'legal':
       return const RouteContext(type: RouteType.legal);
 
@@ -761,6 +767,9 @@ String buildRoute(RouteContext context) {
 
     case RouteType.accountStatus:
       return RoutePaths.accountStatus;
+
+    case RouteType.minorAccountReview:
+      return RoutePaths.minorAccountReview;
 
     case RouteType.nostrSettings:
       return RoutePaths.nostrSettings;

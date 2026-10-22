@@ -384,11 +384,12 @@ class _VideoEditorTimelineClipStripState
       var visibleStart = clip.trimStart;
       var visibleEnd = clip.duration - clip.trimEnd;
       if (wrap.isActive) {
-        final consumedSource = clip.playbackDurationToSourceDuration(
-          wrap.consumedPerSide,
-        );
-        if (clip.id == widget.clips.first.id) visibleStart += consumedSource;
-        if (clip.id == widget.clips.last.id) visibleEnd -= consumedSource;
+        if (clip.id == widget.clips.first.id) {
+          visibleStart += clip.headSourceSpan(wrap.consumedPerSide);
+        }
+        if (clip.id == widget.clips.last.id) {
+          visibleEnd -= clip.tailSourceSpan(wrap.consumedPerSide);
+        }
       }
       final visibleMs = (visibleEnd - visibleStart).inMilliseconds;
       if (clipPx <= 0 || visibleMs <= 0) continue;
@@ -396,7 +397,7 @@ class _VideoEditorTimelineClipStripState
       // Mirror the tile's recording-anchored slot raster (fixed pitch,
       // phase-shifted by sourceStartOffset) so the priority frames land on
       // the exact window centers the visible slots will look up.
-      final speed = clip.playbackSpeed ?? 1.0;
+      final speed = clip.averagePlaybackSpeed;
       final spanMs =
           TimelineConstants.thumbnailWidth *
           1000 *

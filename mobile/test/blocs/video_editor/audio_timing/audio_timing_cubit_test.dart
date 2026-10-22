@@ -333,6 +333,50 @@ void main() {
       );
     });
 
+    group('playbackSpeed', () {
+      test('selects as much more of a sped-up sound as it plays faster', () {
+        final normal = buildCubit();
+        final fast = buildCubit(
+          sound: _createTestSound().copyWith(playbackSpeed: 2),
+        );
+        addTearDown(normal.close);
+        addTearDown(fast.close);
+
+        expect(fast.selectionSecs, equals(normal.selectionSecs * 2));
+      });
+
+      blocTest<AudioTimingCubit, AudioTimingState>(
+        'plays the selection of a sped-up sound at its speed',
+        setUp: () => when(
+          () => mockClipPlayer.setSpeed(any()),
+        ).thenAnswer((_) async {}),
+        build: () => buildCubit(
+          sound: _createTestSound(duration: 60).copyWith(playbackSpeed: 2),
+        ),
+        seed: () => const AudioTimingState(audioDuration: 60),
+        act: (cubit) => cubit.resumePlayback(),
+        verify: (cubit) {
+          final captured =
+              verify(() => mockClipPlayer.setClip(captureAny())).captured.single
+                  as AudioSourceConfig;
+          expect(captured.start, Duration.zero);
+          expect(
+            captured.end,
+            Duration(milliseconds: (cubit.selectionSecs * 1000).toInt()),
+          );
+          verify(() => mockClipPlayer.setSpeed(2)).called(1);
+        },
+      );
+
+      blocTest<AudioTimingCubit, AudioTimingState>(
+        'leaves the player speed alone for a sound at normal speed',
+        build: buildCubit,
+        seed: () => const AudioTimingState(audioDuration: 20),
+        act: (cubit) => cubit.resumePlayback(),
+        verify: (_) => verifyNever(() => mockClipPlayer.setSpeed(any())),
+      );
+    });
+
     group('updateOffset', () {
       blocTest<AudioTimingCubit, AudioTimingState>(
         'emits state with updated offset',

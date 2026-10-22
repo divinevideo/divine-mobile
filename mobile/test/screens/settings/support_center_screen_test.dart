@@ -65,6 +65,7 @@ void main() {
       Locale locale = const Locale('en'),
       ComposeSupportEmail? composeEmail,
       Future<bool> Function()? openZendeskSupport,
+      ThemeData? theme,
     }) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -84,6 +85,7 @@ void main() {
             profileReadRepositoryProvider.overrideWithValue(null),
           ],
           child: MaterialApp(
+            theme: theme,
             locale: locale,
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
@@ -329,6 +331,20 @@ void main() {
       final row = find.text(en.nostrSettingsDeleteAccount);
       expect(row, findsOneWidget);
       expect(tester.getRect(row).bottom, lessThan(667));
+    });
+
+    // The row sits on the adaptive page, where the fixed VineTheme.error red
+    // holds only 3.45:1 in light mode. Account review shows the same row.
+    testWidgets('takes the delete-account red from the palette on light', (
+      tester,
+    ) async {
+      await pump(tester, theme: VineTheme.lightTheme);
+
+      final color = tester
+          .widget<Text>(find.text(en.nostrSettingsDeleteAccount))
+          .style
+          ?.color;
+      expect(color, equals(VineTheme.lightColors.onErrorContainer));
     });
 
     testWidgets('hides the delete-account entry when signed out', (

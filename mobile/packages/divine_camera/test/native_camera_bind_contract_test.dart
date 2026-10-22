@@ -41,24 +41,48 @@ void main() {
         expect(modeAt, lessThan(bindAt));
       });
 
-      test('Android opens unsupported modes with stabilization off', () {
-        final gate = declarationAt(
+      // A lens that cannot apply the mode records with off, but the request
+      // survives: opening on such a lens (often the front one) and flipping
+      // to one that can must turn stabilization on.
+      test('Android keeps an unsupported mode for the next lens', () {
+        final initialize = declarationAt(
           androidController,
-          'private fun initialStabilizationMode(',
+          '    fun initialize(',
         );
-        expect(
-          gate,
-          contains('availableVideoStabilizationModesForCurrentLens()'),
+        expect(initialize, contains('isCanonicalStabilizationMode('));
+        expect(initialize, isNot(contains('stabilizationSupport()')));
+
+        final resolve = declarationAt(
+          androidController,
+          'private fun resolvedCamera2StabilizationMode(',
         );
-        expect(gate, contains('STABILIZATION_OFF'));
+        expect(resolve, contains('stabilizationSupport()'));
+
+        final state = declarationAt(
+          androidController,
+          '    fun getCameraState(',
+        );
+        expect(state, contains('reportedStabilizationMode('));
       });
 
-      test('iOS falls back to off when the connection rejects the mode', () {
+      test('iOS keeps the request and reports off where it is rejected', () {
         expect(
           iosController,
+          isNot(contains('requestedStabilizationMode = .off')),
+        );
+        expect(
+          iosController,
+          contains('requestedStabilizationApplied = applied'),
+        );
+        final reported = declarationAt(
+          iosController,
+          'private func reportedStabilizationString(',
+        );
+        expect(
+          reported,
           contains(
-            'if !applyVideoStabilization() && '
-            'requestedStabilizationMode != .off {',
+            'if requestedStabilizationMode != .off && '
+            '!requestedStabilizationApplied {',
           ),
         );
       });

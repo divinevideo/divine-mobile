@@ -20,6 +20,9 @@ class _FakeCameraPlatform extends DivineCameraPlatform {
   /// The stabilization mode the last [initializeCamera] asked for.
   DivineVideoStabilizationMode? lastStabilizationMode;
 
+  /// Whether the last [initializeCamera] asked for mirrored front output.
+  bool? lastMirrorFrontCameraOutput;
+
   @override
   void Function(VideoRecordingResult? result)? onRecordingAutoStopped;
 
@@ -41,6 +44,7 @@ class _FakeCameraPlatform extends DivineCameraPlatform {
         DivineVideoStabilizationMode.off,
   }) async {
     lastStabilizationMode = videoStabilizationMode;
+    lastMirrorFrontCameraOutput = mirrorFrontCameraOutput;
     if (shouldFail) throw StateError('camera unavailable');
     return CameraState(
       isInitialized: true,
@@ -136,6 +140,17 @@ void main() {
         DivineVideoStabilizationMode.standard,
       );
     });
+
+    test(
+      'opens the camera with the requested front camera mirroring',
+      () async {
+        platform.shouldFail = false;
+
+        await service.initialize(mirrorFrontCameraOutput: true);
+
+        expect(platform.lastMirrorFrontCameraOutput, isTrue);
+      },
+    );
 
     group('audio capture suspension', () {
       test('forwards suspend and resume once initialized', () async {

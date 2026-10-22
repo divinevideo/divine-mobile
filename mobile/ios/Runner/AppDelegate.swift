@@ -19,6 +19,7 @@ extension FlutterError: @retroactive Error {}
     UNUserNotificationCenter.current().delegate = self as UNUserNotificationCenterDelegate
     // Divine's own video effects, for the editor preview and the export (#9708).
     EchoVideoEffect.register()
+    FisheyeVideoEffect.register()
     #if DEBUG
     exportScreenshotLaunchConfig()
     #endif

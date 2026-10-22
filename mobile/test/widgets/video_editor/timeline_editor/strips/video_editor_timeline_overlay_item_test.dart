@@ -138,6 +138,34 @@ void main() {
       );
 
       testWidgets(
+        'shows the stretch of the source a sped-up sound plays',
+        (tester) async {
+          final soundItem = TimelineOverlayItem(
+            id: 'sound-fast',
+            type: TimelineOverlayType.sound,
+            // 2s on the timeline at 2x plays 4s of the 8s source from 2s on.
+            startTime: const Duration(seconds: 2),
+            endTime: const Duration(seconds: 4),
+            label: 'Beat',
+            sourceDuration: const Duration(seconds: 8),
+            startOffset: const Duration(seconds: 2),
+            playbackSpeed: 2,
+            waveformLeftChannel: Float32List.fromList(
+              List<double>.generate(64, (i) => (i % 8) / 8),
+            ),
+          );
+
+          await tester.pumpWidget(buildSound(soundItem));
+
+          final painter = findWaveformPainter(tester);
+          expect(painter.audioDuration, const Duration(seconds: 8));
+          expect(painter.maxDuration, const Duration(seconds: 4));
+          expect(painter.startOffset, const Duration(seconds: 2));
+          expect(painter.playbackSpeed, 2);
+        },
+      );
+
+      testWidgets(
         'falls back to zero offset when the source duration is unknown',
         (tester) async {
           final soundItem = TimelineOverlayItem(

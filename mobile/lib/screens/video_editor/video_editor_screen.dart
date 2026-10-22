@@ -1206,7 +1206,10 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     final healed = editor.stateManager.audioTracks.map((track) {
       final secs = resolved[track.id];
       if (secs == null) return track;
-      final audioDuration = Duration(milliseconds: (secs * 1000).toInt());
+      // How long the whole sound plays on the timeline at its speed.
+      final audioDuration = track.timelineSpanOf(
+        Duration(milliseconds: (secs * 1000).toInt()),
+      );
       final endTime = [
         audioDuration,
         clipDuration,

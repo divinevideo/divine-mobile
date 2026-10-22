@@ -118,6 +118,7 @@ class TimelineOverlayItem extends Equatable {
     this.audioSource,
     this.fadeIn = Duration.zero,
     this.fadeOut = Duration.zero,
+    this.playbackSpeed = 1,
     this.effectType,
     this.keyframeTimes = const [],
     this.effectOnBeat = false,
@@ -148,7 +149,9 @@ class TimelineOverlayItem extends Equatable {
   /// Maximum allowed duration for this item.
   ///
   /// When set (e.g. for sound items), trimming cannot extend
-  /// the item beyond this duration — the item moves instead.
+  /// the item beyond this duration — the item moves instead. Timeline time:
+  /// for a sound at a [playbackSpeed] other than 1, the remaining audio
+  /// after [startOffset] divided by that speed.
   final Duration? maxDuration;
 
   /// Full duration of the underlying audio source for sound items.
@@ -185,6 +188,12 @@ class TimelineOverlayItem extends Equatable {
   /// non-sound items and sounds that stop at full volume.
   final Duration fadeOut;
 
+  /// How many seconds of its audio source a sound item plays per second of
+  /// the timeline. [sourceDuration] and [startOffset] are audio-source time;
+  /// [startTime], [endTime], [maxDuration] and the fades are timeline time.
+  /// `1` for non-sound items.
+  final double playbackSpeed;
+
   /// The look of an effect item, which its tile names in the user's language.
   ///
   /// `null` for non-effect items.
@@ -206,6 +215,9 @@ class TimelineOverlayItem extends Equatable {
 
   /// Whether a sound item fades in or out at all.
   bool get hasFade => fadeIn > Duration.zero || fadeOut > Duration.zero;
+
+  /// How long [source] of a sound item's audio takes to play on the timeline.
+  Duration timelineSpanOf(Duration source) => source * (1 / playbackSpeed);
 
   /// Start time in seconds for layout calculations.
   double get startTimeInSeconds => startTime.inMilliseconds / 1000.0;
@@ -229,6 +241,7 @@ class TimelineOverlayItem extends Equatable {
     AudioSource? audioSource,
     Duration? fadeIn,
     Duration? fadeOut,
+    double? playbackSpeed,
     EditorEffectType? effectType,
     List<Duration>? keyframeTimes,
     bool? effectOnBeat,
@@ -249,6 +262,7 @@ class TimelineOverlayItem extends Equatable {
       audioSource: audioSource ?? this.audioSource,
       fadeIn: fadeIn ?? this.fadeIn,
       fadeOut: fadeOut ?? this.fadeOut,
+      playbackSpeed: playbackSpeed ?? this.playbackSpeed,
       effectType: effectType ?? this.effectType,
       keyframeTimes: keyframeTimes ?? this.keyframeTimes,
       effectOnBeat: effectOnBeat ?? this.effectOnBeat,
@@ -272,6 +286,7 @@ class TimelineOverlayItem extends Equatable {
     audioSource,
     fadeIn,
     fadeOut,
+    playbackSpeed,
     effectType,
     keyframeTimes,
     effectOnBeat,

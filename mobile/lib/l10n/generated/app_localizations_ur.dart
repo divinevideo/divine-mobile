@@ -8885,6 +8885,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectEcho => 'گونج';
 
   @override
+  String get videoEditorEffectFisheye => 'فش آئی';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'ایک وقت میں صرف ایک ٹمٹماتا ایفیکٹ۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے، اس لیے ہم نے یہاں دوسرے کو بدل دیا۔';
 
@@ -9831,6 +9834,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'منتخب کلپ کی پلے بیک رفتار مقرر کریں';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'منتخب آواز کی پلے بیک رفتار مقرر کریں';
+
+  @override
   String get videoEditorReverseLabel => 'الٹائیں';
 
   @override
@@ -9940,8 +9947,49 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'کلپ رفتار';
 
   @override
+  String get videoEditorSoundSpeedSheetTitle => 'آواز کی رفتار';
+
+  @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'رفتار $speed×';
+  }
+
+  @override
+  String get videoEditorSpeedModeConstant => 'مستقل';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'خم';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'حسبِ منشا';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'مونتاج';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'ہیرو';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'بلٹ ٹائم';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'تیز آغاز';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'تیز اختتام';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'رفتار بڑھانے کے لیے نقطے کو اوپر اور کم کرنے کے لیے نیچے گھسیٹیں';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'رفتار کا نقطہ $index از $total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'دورانیہ $seconds سیکنڈ';
   }
 
   @override
@@ -11440,7 +11488,7 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockExpiredBody =>
-      'The response deadline has passed. Contact Support Center if you need help.';
+      'The response deadline has passed. Contact support if you need help.';
 
   @override
   String get minorAccountReviewResponseClockUnavailableTitle =>
@@ -11448,18 +11496,18 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockUnavailableBody =>
-      'We can\'t show your response deadline right now. Contact Support Center if you need help.';
+      'We can\'t show your response deadline right now. Contact support if you need help.';
 
   @override
   String get minorAccountReviewAppealTitle => 'Think we got this wrong?';
 
   @override
   String get minorAccountReviewAppealTeenBody =>
-      'Contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Contact support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewAppealUnder13Body =>
-      'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Your parent or guardian can email support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewOpenModerationMessage => 'موڈریشن پیغام کھولیں';
@@ -12002,6 +12050,13 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get settingsBackUpRecordingsSubtitle =>
       'ہر نئی ریکارڈنگ کی ایک کاپی آپ کی گیلری میں محفوظ کرتا ہے۔ دوسری ایپس اور کلاؤڈ فوٹو بیک اپس اسے وہاں دیکھ سکتے ہیں۔';
+
+  @override
+  String get settingsMirrorFrontCamera => 'سامنے والے کیمرے کو مرر کریں';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'سامنے والے کیمرے کے کلپس کو ویسے ہی محفوظ کرتا ہے جیسے پیش نظارہ میں نظر آتے ہیں۔ شاٹ میں موجود تحریر الٹی نظر آئے گی۔';
 
   @override
   String uploadPublishedCountMessage(int count) {

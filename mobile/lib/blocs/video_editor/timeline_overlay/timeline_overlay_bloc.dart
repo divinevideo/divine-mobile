@@ -300,10 +300,11 @@ class TimelineOverlayBloc
   /// Builds the timeline item for one audio [track].
   ///
   /// [TimelineOverlayItem.maxDuration] (remaining audio after
-  /// [TimelineOverlayItem.startOffset]) is derived from the same full-source
-  /// basis as [TimelineOverlayItem.sourceDuration] so the two never drift —
-  /// the same `sourceDuration - startOffset` relationship [_onItemTrimmed]
-  /// applies live during a trim drag.
+  /// [TimelineOverlayItem.startOffset], on the timeline at the track's speed)
+  /// is derived from the same full-source basis as
+  /// [TimelineOverlayItem.sourceDuration] so the two never drift — the same
+  /// `(sourceDuration - startOffset) / playbackSpeed` relationship
+  /// [_onItemTrimmed] applies live during a trim drag.
   ///
   /// [measuredSourceDuration] is the basis the waveform extractor reported for
   /// this track (see [_onWaveformLoaded]). It only fills in for a track whose
@@ -346,7 +347,7 @@ class TimelineOverlayBloc
       endTime: _clampEnd(_soundWindowEnd(track, total), total),
       label: track.title ?? track.pubkey,
       maxDuration: sourceDuration != null
-          ? sourceDuration - track.startOffset
+          ? track.timelineSpanOf(sourceDuration - track.startOffset)
           : VideoEditorConstants.maxDuration,
       sourceDuration: sourceDuration,
       startOffset: track.startOffset,
@@ -357,6 +358,7 @@ class TimelineOverlayBloc
           : AudioSource.custom,
       fadeIn: track.fadeInDuration,
       fadeOut: track.fadeOutDuration,
+      playbackSpeed: track.playbackSpeed,
     );
   }
 
@@ -459,7 +461,7 @@ class TimelineOverlayBloc
     // (and the trim move-conversion) would read a stale remaining-audio value.
     final newMaxDuration =
         event.startOffset != null && item.sourceDuration != null
-        ? item.sourceDuration! - newStartOffset
+        ? item.timelineSpanOf(item.sourceDuration! - newStartOffset)
         : item.maxDuration;
 
     items[idx] = item.copyWith(
@@ -768,8 +770,8 @@ class TimelineOverlayBloc
   /// squeezed into the visible bar. The extraction covers the whole source, so
   /// its measured duration is exactly the missing basis.
   /// [TimelineOverlayItem.maxDuration] moves with it to keep the
-  /// `sourceDuration - startOffset` relationship [_onItemTrimmed] and
-  /// [_soundItem] rely on.
+  /// `(sourceDuration - startOffset) / playbackSpeed` relationship
+  /// [_onItemTrimmed] and [_soundItem] rely on.
   static TimelineOverlayItem _withMeasuredBasis(
     TimelineOverlayItem item,
     Duration? measured,
@@ -782,7 +784,7 @@ class TimelineOverlayBloc
       sourceDuration: basis,
       // Derived exactly as [_soundItem] does, so the next rebuild recomputes
       // the same value instead of flip-flopping the bar's trim ceiling.
-      maxDuration: basis - item.startOffset,
+      maxDuration: item.timelineSpanOf(basis - item.startOffset),
     );
   }
 

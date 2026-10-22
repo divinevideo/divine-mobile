@@ -8370,6 +8370,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectEcho => '残影';
 
   @override
+  String get videoEditorEffectFisheye => '鱼眼';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       '一次只能用一个闪烁效果。闪烁太多可能会伤害对闪光敏感的人，所以我们在这里替换了另一个。';
 
@@ -9261,6 +9264,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorSetClipSpeedSemanticLabel => '设置选中片段的播放速度';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel => '设置选中声音的播放速度';
+
+  @override
   String get videoEditorReverseLabel => '倒放';
 
   @override
@@ -9351,8 +9357,48 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => '片段速度';
 
   @override
+  String get videoEditorSoundSpeedSheetTitle => '声音速度';
+
+  @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return '速度 $speed×';
+  }
+
+  @override
+  String get videoEditorSpeedModeConstant => '恒定';
+
+  @override
+  String get videoEditorSpeedModeCurve => '曲线';
+
+  @override
+  String get videoEditorSpeedCurveCustom => '自定义';
+
+  @override
+  String get videoEditorSpeedCurveMontage => '蒙太奇';
+
+  @override
+  String get videoEditorSpeedCurveHero => '英雄';
+
+  @override
+  String get videoEditorSpeedCurveBullet => '子弹时间';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => '快速进入';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => '快速退出';
+
+  @override
+  String get videoEditorSpeedCurveHint => '向上拖动点加速，向下拖动减速';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return '速度点 $index/$total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return '时长 $seconds 秒';
   }
 
   @override
@@ -10747,7 +10793,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockExpiredBody =>
-      'The response deadline has passed. Contact Support Center if you need help.';
+      'The response deadline has passed. Contact support if you need help.';
 
   @override
   String get minorAccountReviewResponseClockUnavailableTitle =>
@@ -10755,18 +10801,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockUnavailableBody =>
-      'We can\'t show your response deadline right now. Contact Support Center if you need help.';
+      'We can\'t show your response deadline right now. Contact support if you need help.';
 
   @override
   String get minorAccountReviewAppealTitle => 'Think we got this wrong?';
 
   @override
   String get minorAccountReviewAppealTeenBody =>
-      'Contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Contact support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewAppealUnder13Body =>
-      'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Your parent or guardian can email support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewOpenModerationMessage => '打开管理消息';
@@ -11266,6 +11312,13 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get settingsBackUpRecordingsSubtitle =>
       '为每段新录制的视频在相册中保存一份副本。其他应用和云端照片备份都能看到它。';
+
+  @override
+  String get settingsMirrorFrontCamera => '前置摄像头镜像';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      '按预览中的样子保存前置摄像头片段。画面中的文字会左右颠倒。';
 
   @override
   String uploadPublishedCountMessage(int count) {

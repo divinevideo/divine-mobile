@@ -4666,6 +4666,7 @@
   "videoEditorEffectWave": "لہر",
   "videoEditorEffectGlow": "دمک",
   "videoEditorEffectEcho": "گونج",
+  "videoEditorEffectFisheye": "فش آئی",
   "videoEditorEffectsFlashingReplaced": "ایک وقت میں صرف ایک ٹمٹماتا ایفیکٹ۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے، اس لیے ہم نے یہاں دوسرے کو بدل دیا۔",
   "videoEditorEffectsFlashingNotDuplicated": "ایک وقت میں صرف ایک ٹمٹماتا ایفیکٹ۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے۔",
   "videoEditorEffectsOnBeat": "بیٹ کے ساتھ",
@@ -5028,6 +5029,7 @@
   "@videoEditorSetClipSpeedSemanticLabel": {
     "description": "Accessibility label for the Set Speed button in the timeline clip controls."
   },
+  "videoEditorSetSoundSpeedSemanticLabel": "منتخب آواز کی پلے بیک رفتار مقرر کریں",
   "videoEditorReverseLabel": "الٹائیں",
   "@videoEditorReverseLabel": {
     "description": "Label for the Reverse button in the timeline clip controls."
@@ -5121,7 +5123,19 @@
   "@videoEditorSpeedSheetTitle": {
     "description": "Title of the bottom sheet for adjusting clip playback speed."
   },
+  "videoEditorSoundSpeedSheetTitle": "آواز کی رفتار",
   "videoEditorSpeedPresetSemanticLabel": "رفتار {speed}×",
+  "videoEditorSpeedModeConstant": "مستقل",
+  "videoEditorSpeedModeCurve": "خم",
+  "videoEditorSpeedCurveCustom": "حسبِ منشا",
+  "videoEditorSpeedCurveMontage": "مونتاج",
+  "videoEditorSpeedCurveHero": "ہیرو",
+  "videoEditorSpeedCurveBullet": "بلٹ ٹائم",
+  "videoEditorSpeedCurveFlashIn": "تیز آغاز",
+  "videoEditorSpeedCurveFlashOut": "تیز اختتام",
+  "videoEditorSpeedCurveHint": "رفتار بڑھانے کے لیے نقطے کو اوپر اور کم کرنے کے لیے نیچے گھسیٹیں",
+  "videoEditorSpeedCurvePointSemanticLabel": "رفتار کا نقطہ {index} از {total}",
+  "videoEditorSpeedResultingLength": "دورانیہ {seconds} سیکنڈ",
   "@videoEditorSpeedPresetSemanticLabel": {
     "description": "Accessibility label for a one-tap speed preset in the clip speed bottom sheet. {speed} is a speed multiplier like 0.5, 1, or 2.",
     "placeholders": {
@@ -6022,6 +6036,8 @@
   "generalSettingsHoldToRecordSubtitle": "دبا کر رکھنے پر ریکارڈنگ شروع ہو، چھوڑنے پر رک جائے",
   "settingsBackUpRecordings": "ریکارڈنگز کا گیلری میں بیک اپ",
   "settingsBackUpRecordingsSubtitle": "ہر نئی ریکارڈنگ کی ایک کاپی آپ کی گیلری میں محفوظ کرتا ہے۔ دوسری ایپس اور کلاؤڈ فوٹو بیک اپس اسے وہاں دیکھ سکتے ہیں۔",
+  "settingsMirrorFrontCamera": "سامنے والے کیمرے کو مرر کریں",
+  "settingsMirrorFrontCameraSubtitle": "سامنے والے کیمرے کے کلپس کو ویسے ہی محفوظ کرتا ہے جیسے پیش نظارہ میں نظر آتے ہیں۔ شاٹ میں موجود تحریر الٹی نظر آئے گی۔",
   "uploadPublishedCountMessage": "{count, plural, =1{ویڈیو آپ کے پروفائل پر شائع ہو گئی} other{{count} ویڈیوز آپ کے پروفائل پر شائع ہو گئیں}}",
   "@uploadPublishedCountMessage": {
     "description": "Snackbar shown after one or more background uploads succeed, e.g. after a re-auth redirect during which uploads completed.",

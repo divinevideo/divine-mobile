@@ -45,11 +45,14 @@ class VideoEditorSplitService {
     // Start half: source start → split point. [duration] caps the visible end
     // at the split, and it drops the source's outgoing transition — only the
     // end half (which now owns the boundary into the next clip) keeps it.
+    // A speed ramp is cut with the clip, so each half keeps the speeds its
+    // frames had.
     final startClip = sourceClip.copyWith(
       id: '${timestampMs}_start',
       duration: absoluteSplitPos,
       trimEnd: Duration.zero,
       clearTransition: true,
+      speedRamp: sourceClip.speedRampBetween(Duration.zero, splitPosition),
     );
     // End half: split point → source end. [minTrimStart] pins its left trim
     // handle at the split so it can't be dragged back into the start half's
@@ -58,6 +61,10 @@ class VideoEditorSplitService {
       id: '${timestampMs}_end',
       trimStart: absoluteSplitPos,
       minTrimStart: absoluteSplitPos,
+      speedRamp: sourceClip.speedRampBetween(
+        splitPosition,
+        sourceClip.trimmedDuration,
+      ),
     );
     return (startClip, endClip);
   }

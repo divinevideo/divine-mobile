@@ -6862,7 +6862,10 @@ class DmRepository {
   ///
   /// - Success: delete the queue row — both wraps have now landed.
   /// - Failure: mark the self-wrap status [OutgoingWrapStatus.failed]
-  ///   so the row stays retryable.
+  ///   so the row stays retryable, and charge the attempt to the row's
+  ///   retry budget — unless it reached no relay, which is free and waits
+  ///   for a relay to connect (#8516). Callers never charge the returned
+  ///   outcome (#8628).
   ///
   /// Returns the underlying [NIP17SendResult] so callers can chain a
   /// per-rumor recovery and aggregate the result.
@@ -6877,8 +6880,16 @@ class DmRepository {
   /// Throws [StateError] if the repository or its queue DAO are not
   /// wired in. Throws [ArgumentError] if no row exists for [rumorId]
   /// or the row belongs to a different account.
+  ///
+  /// [resetRetryBudget] zeroes the row's retry counter before dispatch, as in
+  /// [recoverFullSend]. Pass `true` from a user's Retry tap: the tap is then
+  /// charged like any attempt, but it hands a row whose budget the sweep
+  /// already spent back to the sweep instead of leaving it abandoned.
   @useResult
-  Future<NIP17SendResult> recoverSelfWrap({required String rumorId}) async {
+  Future<NIP17SendResult> recoverSelfWrap({
+    required String rumorId,
+    bool resetRetryBudget = false,
+  }) async {
     _assertInitialized();
     final dao = _outgoingDmsDao;
     if (dao == null) {
@@ -6886,6 +6897,9 @@ class DmRepository {
         'recoverSelfWrap requires the outgoing_dms queue DAO; '
         'wire OutgoingDmsDao into DmRepository before calling.',
       );
+    }
+    if (resetRetryBudget) {
+      await _resetRetryBudget(dao: dao, rumorId: rumorId);
     }
     return _joinOrStartRecovery(
       'self:$rumorId',
@@ -6977,6 +6991,7 @@ class DmRepository {
         );
         // Swallow — caller still gets the failure result below.
       }
+      await _chargeFailedReplay(dao: dao, rumorId: rumorId);
       // Row stays retryable (self-wrap failed) — nudge the sweep.
       _notifyRetryableWork();
       return NIP17SendResult.failure('rumor JSON parse failed: $e');
@@ -7072,7 +7087,11 @@ class DmRepository {
               .recoverSelfWrapMarkFailedAfterPublishFailure,
         );
         // Don't rethrow — caller already gets the failure result.
-      } finally {
+      }
+      // A replay that reached no relay is free and waits for a relay to
+      // connect rather than the sweep heartbeat, as a full send does (#8516).
+      if (!result.reachedNoRelay) {
+        await _chargeFailedReplay(dao: dao, rumorId: rumorId);
         // The self-wrap is still missing — nudge the sweep. Manual
         // recoveries (sentPartial Retry) reach here without a sweep pass
         // to reschedule them.
@@ -7107,6 +7126,11 @@ class DmRepository {
   /// - Recipient failure: re-mark both wraps `failed` so the row
   ///   stays retryable.
   ///
+  /// Every failed attempt this runs is charged to the row's retry budget
+  /// here, once — a soft-unconfirmed one too — except one that reached no
+  /// relay (#8516). Callers never charge the returned outcome, so the budget
+  /// counts the same attempts whoever asked for them (#8628).
+  ///
   /// After a full success on a one-to-one thread still latched to NIP-04, the
   /// legacy kind-4 copy goes out too, as it would have from [sendMessage]
   /// (#8506) — but only for a plain-text rumor. The row does not record
@@ -7135,8 +7159,8 @@ class DmRepository {
   /// instead of publishing a duplicate.
   ///
   /// [resetRetryBudget] zeroes the row's retry counter before dispatch. Pass
-  /// `true` from the manual Resend path: each soft-unconfirmed attempt burns
-  /// the shared sweep budget, and once `retry_count` reaches the sweep's
+  /// `true` from the manual Resend path: each failed attempt burns the shared
+  /// sweep budget, and once `retry_count` reaches the sweep's
   /// `maxRetries` the sweep abandons the row permanently — an explicit user
   /// resend is the signal to hand it back with a fresh budget.
   @useResult
@@ -7153,28 +7177,37 @@ class DmRepository {
       );
     }
     if (resetRetryBudget) {
-      // Before the in-flight join, so a resend that lands mid-sweep still
-      // refreshes the budget for the sweep's follow-up passes. Owner-checked
-      // first (same pattern as cancelOutgoingSend): resetRetryCount is not
-      // owner-scoped, so without the check a foreign account's row would get
-      // its budget re-armed before the locked body's ArgumentError fires.
-      // Non-fatal: a missed reset only means the sweep may give up earlier.
-      try {
-        final row = await dao.getById(rumorId);
-        if (row != null && row.ownerPubkey == _userPubkey) {
-          await dao.resetRetryCount(rumorId);
-        }
-      } on Object catch (e) {
-        Log.warning(
-          'Failed to reset retry budget for $rumorId: $e',
-          category: LogCategory.system,
-        );
-      }
+      await _resetRetryBudget(dao: dao, rumorId: rumorId);
     }
     return _joinOrStartRecovery(
       'full:$rumorId',
       () => _recoverFullSendLocked(dao: dao, rumorId: rumorId),
     );
+  }
+
+  /// Zero [rumorId]'s retry counter for an explicit user retry.
+  ///
+  /// Runs before the in-flight join, so a retry that lands mid-sweep still
+  /// refreshes the budget for the sweep's follow-up passes. Owner-checked
+  /// first (same pattern as cancelOutgoingSend): resetRetryCount is not
+  /// owner-scoped, so without the check a foreign account's row would get its
+  /// budget re-armed before the locked body's ArgumentError fires. Non-fatal:
+  /// a missed reset only means the sweep may give up earlier.
+  Future<void> _resetRetryBudget({
+    required OutgoingDmsDao dao,
+    required String rumorId,
+  }) async {
+    try {
+      final row = await dao.getById(rumorId);
+      if (row != null && row.ownerPubkey == _userPubkey) {
+        await dao.resetRetryCount(rumorId);
+      }
+    } on Object catch (e) {
+      Log.warning(
+        'Failed to reset retry budget for $rumorId: $e',
+        category: LogCategory.system,
+      );
+    }
   }
 
   Future<NIP17SendResult> _recoverFullSendLocked({
@@ -7233,6 +7266,7 @@ class DmRepository {
         rumorId: rumorId,
         errorMessage: 'rumor JSON parse failed: $e',
       );
+      await _chargeFailedReplay(dao: dao, rumorId: rumorId);
       return NIP17SendResult.failure('rumor JSON parse failed: $e');
     }
 
@@ -7525,6 +7559,11 @@ class DmRepository {
         errorMessage: result.error ?? 'Unknown publish failure',
         reachedNoRelay: result.reachedNoRelay,
       );
+      // An attempt that reached no relay is an outage on our side, not a
+      // failed attempt, so it stays free (#8516).
+      if (!result.reachedNoRelay) {
+        await _chargeFailedReplay(dao: dao, rumorId: rumorId);
+      }
     }
 
     return result;
@@ -7639,7 +7678,12 @@ class DmRepository {
     for (final invite in matchingInvites) {
       attempted++;
       try {
-        final result = await recoverFullSend(rumorId: invite.rumorId);
+        // A banner tap is an explicit retry: like Resend, it hands the row
+        // back to the sweep with a fresh budget (#8628).
+        final result = await recoverFullSend(
+          rumorId: invite.rumorId,
+          resetRetryBudget: true,
+        );
         if (result.success) {
           success++;
         } else if (result.blocked) {
@@ -8188,6 +8232,34 @@ class DmRepository {
       // The row stays pending either way — nudge the sweep so a
       // soft-unconfirmed send converges without a foreground flip.
       _notifyRetryableWork();
+    }
+  }
+
+  /// Charge one failed [recoverFullSend] / [recoverSelfWrap] attempt to the
+  /// row's retry budget.
+  ///
+  /// The locked recovery body is the only place a failed replay is charged,
+  /// so every caller — the sweep, a Resend, a banner Retry — spends the same
+  /// budget for the same attempt, and a joiner never charges it again
+  /// (#8628). Non-rethrowing: the caller already has the failure result.
+  Future<void> _chargeFailedReplay({
+    required OutgoingDmsDao dao,
+    required String rumorId,
+  }) async {
+    try {
+      await dao.incrementRetry(rumorId);
+    } on Object catch (e, stackTrace) {
+      Log.error(
+        'Failed to charge the failed replay of outgoing_dms row $rumorId: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      _errorReporter?.call(
+        e,
+        stackTrace,
+        site: DmRepositoryReportableSites.chargeFailedReplay,
+      );
     }
   }
 

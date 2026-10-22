@@ -53,6 +53,7 @@ workspace:
   - packages/divine_quick_actions
   - packages/divine_status_client
   - packages/dm_repository
+  - packages/challenge_protocol
   - packages/concord_protocol
   - packages/concord_repository
   - packages/divine_video_player
@@ -407,7 +408,7 @@ dependencies:
   # extra Flutter-specific native SQLite providers can make plain SQLite win.
   sqlite3: ^3.3.3
   audio_session: ^0.2.2
-  pro_video_editor: ^2.40.0
+  pro_video_editor: ^2.41.1
   pro_image_editor: ^14.14.2
   sensors_plus: ^7.0.0
   stream_transform: ^2.1.1
@@ -532,9 +533,11 @@ flutter:
     - shorebird.yaml
 
   # Fragment shaders. `chroma_key.frag` powers the video editor's live
-  # green-screen preview (see shaders/chroma_key.frag).
+  # green-screen preview (see shaders/chroma_key.frag); `fisheye.frag` draws
+  # the fisheye effect's tile in the effects picker.
   shaders:
     - shaders/chroma_key.frag
+    - shaders/fisheye.frag
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

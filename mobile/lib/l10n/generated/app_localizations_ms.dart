@@ -8891,6 +8891,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorEffectEcho => 'Gema';
 
   @override
+  String get videoEditorEffectFisheye => 'Mata Ikan';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Satu kesan berkelip pada satu masa. Kelipan berlebihan boleh memudaratkan orang yang sensitif, jadi kami menggantikan yang satu lagi di sini.';
 
@@ -9840,6 +9843,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Tetapkan kelajuan main balik untuk klip dipilih';
 
   @override
+  String get videoEditorSetSoundSpeedSemanticLabel =>
+      'Tetapkan kelajuan main balik untuk bunyi dipilih';
+
+  @override
   String get videoEditorReverseLabel => 'Songsang';
 
   @override
@@ -9949,8 +9956,49 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorSpeedSheetTitle => 'Kelajuan Klip';
 
   @override
+  String get videoEditorSoundSpeedSheetTitle => 'Kelajuan Bunyi';
+
+  @override
   String videoEditorSpeedPresetSemanticLabel(String speed) {
     return 'Kelajuan $speed×';
+  }
+
+  @override
+  String get videoEditorSpeedModeConstant => 'Malar';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'Lengkung';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'Tersuai';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'Montaj';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'Wira';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'Bullet time';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'Masuk pantas';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'Keluar pantas';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'Seret titik ke atas untuk mempercepat, ke bawah untuk memperlahan';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'Titik kelajuan $index daripada $total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'Dimainkan selama $seconds saat';
   }
 
   @override
@@ -11444,7 +11492,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockExpiredBody =>
-      'The response deadline has passed. Contact Support Center if you need help.';
+      'The response deadline has passed. Contact support if you need help.';
 
   @override
   String get minorAccountReviewResponseClockUnavailableTitle =>
@@ -11452,18 +11500,18 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get minorAccountReviewResponseClockUnavailableBody =>
-      'We can\'t show your response deadline right now. Contact Support Center if you need help.';
+      'We can\'t show your response deadline right now. Contact support if you need help.';
 
   @override
   String get minorAccountReviewAppealTitle => 'Think we got this wrong?';
 
   @override
   String get minorAccountReviewAppealTeenBody =>
-      'Contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Contact support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewAppealUnder13Body =>
-      'Your parent or guardian can contact Support Center and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
+      'Your parent or guardian can email support and tell us what happened. We’ll take another look, but we can’t promise the decision will change.';
 
   @override
   String get minorAccountReviewOpenModerationMessage =>
@@ -12007,6 +12055,13 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get settingsBackUpRecordingsSubtitle =>
       'Menyimpan salinan setiap rakaman baharu dalam galeri anda. Apl lain dan sandaran foto awan boleh melihatnya di sana.';
+
+  @override
+  String get settingsMirrorFrontCamera => 'Cerminkan kamera hadapan';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Menyimpan klip kamera hadapan seperti yang dipaparkan dalam pratonton. Teks dalam rakaman akan kelihatan terbalik.';
 
   @override
   String uploadPublishedCountMessage(int count) {

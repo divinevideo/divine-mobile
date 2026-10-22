@@ -24,6 +24,7 @@ import 'package:openvine/models/video_recorder/video_recorder_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_timer_duration.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/services/front_camera_mirror_preference_service.dart';
 import 'package:openvine/services/music_mode_preference_service.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';
@@ -983,11 +984,13 @@ void main() {
           applying.complete();
           await pumpEventQueue();
 
+          // Clear the retained request on the mode switch, then clear the
+          // cinematic request again when its in-flight application completes.
           verify(
             () => cameraService.setVideoStabilizationMode(
               DivineVideoStabilizationMode.off,
             ),
-          ).called(1);
+          ).called(2);
           verify(
             () =>
                 prefs.setString('camera_last_used_stabilization', 'cinematic'),
@@ -1152,6 +1155,9 @@ void main() {
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'a persisted off choice keeps the grid hidden on mode switch',
         setUp: () {
+          when(
+            () => cameraService.setVideoStabilizationMode(any()),
+          ).thenAnswer((_) async => true);
           when(
             () => prefs.getBool('camera_grid_lines_enabled'),
           ).thenReturn(false);
@@ -3557,6 +3563,11 @@ void main() {
       setUp(stubRecorderDefaults);
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'capture → classic flips defaults and clears clips + editor',
+        setUp: () {
+          when(
+            () => cameraService.setVideoStabilizationMode(any()),
+          ).thenAnswer((_) async => true);
+        },
         build: () => buildBloc()
           ..emit(
             const VideoRecorderBlocState(
@@ -3721,6 +3732,70 @@ void main() {
         }
 
         blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'clears the retained stabilization request when classic starts on '
+          'an unsupported lens',
+          setUp: () {
+            // Native reports off on this lens but retains the saved request
+            // for a later lens switch. Classic must clear that request too.
+            cameraRuns(DivineVideoStabilizationMode.off);
+            when(
+              () => cameraService.availableVideoStabilizationModes,
+            ).thenReturn(const [DivineVideoStabilizationMode.off]);
+          },
+          build: buildBloc,
+          act: (bloc) => bloc.add(
+            const VideoRecorderRecorderModeSet(VideoRecorderMode.classic),
+          ),
+          verify: (_) {
+            verify(
+              () => cameraService.setVideoStabilizationMode(
+                DivineVideoStabilizationMode.off,
+              ),
+            ).called(1);
+            verifyNever(
+              () => prefs.setString('camera_last_used_stabilization', any()),
+            );
+          },
+        );
+
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+          'clears the retained request after upload resumes into classic '
+          'on an unsupported lens',
+          setUp: () {
+            cameraRuns(DivineVideoStabilizationMode.off);
+            when(
+              () => cameraService.availableVideoStabilizationModes,
+            ).thenReturn(const [DivineVideoStabilizationMode.off]);
+          },
+          build: buildBloc,
+          seed: () => const VideoRecorderBlocState(
+            recorderMode: VideoRecorderMode.upload,
+          ),
+          act: (bloc) async {
+            final classic = bloc.stream.firstWhere(
+              (state) => state.recorderMode == VideoRecorderMode.classic,
+            );
+            bloc.add(
+              const VideoRecorderRecorderModeSet(VideoRecorderMode.classic),
+            );
+            await classic;
+            bloc.add(
+              const VideoRecorderAppLifecycleChanged(AppLifecycleState.resumed),
+            );
+          },
+          verify: (_) {
+            verify(
+              () => cameraService.setVideoStabilizationMode(
+                DivineVideoStabilizationMode.off,
+              ),
+            ).called(1);
+            verifyNever(
+              () => prefs.setString('camera_last_used_stabilization', any()),
+            );
+          },
+        );
+
+        blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
           'restores the saved choice when switching back to capture',
           setUp: () => cameraRuns(DivineVideoStabilizationMode.off),
           build: buildBloc,
@@ -3796,6 +3871,7 @@ void main() {
             enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
             preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
             videoStabilizationMode: any(named: 'videoStabilizationMode'),
+            mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
           ),
         ).thenAnswer((_) async {});
         when(
@@ -3938,6 +4014,7 @@ void main() {
               enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
               preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
               videoStabilizationMode: any(named: 'videoStabilizationMode'),
+              mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
             ),
             () => cameraService.handleAppLifecycleState(
               AppLifecycleState.paused,
@@ -4012,6 +4089,7 @@ void main() {
               enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
               preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
               videoStabilizationMode: any(named: 'videoStabilizationMode'),
+              mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
             ),
           ).thenThrow(Exception('camera boom')),
           build: buildTraced,
@@ -4035,6 +4113,7 @@ void main() {
               enableAutoLensSwitch: true,
               preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
               videoStabilizationMode: any(named: 'videoStabilizationMode'),
+              mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
             ),
           ).called(1);
         },
@@ -4057,6 +4136,53 @@ void main() {
               enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
               preferUnprocessedAudio: true,
               videoStabilizationMode: any(named: 'videoStabilizationMode'),
+              mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'opens the camera unmirrored while Mirror front camera was never set',
+        build: buildBloc,
+        act: (bloc) => bloc.add(const VideoRecorderInitializeRequested()),
+        verify: (_) {
+          verify(
+            () => cameraService.initialize(
+              videoQuality: any(named: 'videoQuality'),
+              initialLens: any(named: 'initialLens'),
+              enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
+              preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
+              videoStabilizationMode: any(named: 'videoStabilizationMode'),
+              // Matched rather than passed: a literal `false` equals the
+              // parameter default, which the analyzer flags as redundant.
+              mirrorFrontCameraOutput: any(
+                named: 'mirrorFrontCameraOutput',
+                that: isFalse,
+              ),
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'opens the camera mirrored when Mirror front camera is on',
+        setUp: () {
+          when(
+            () => prefs.getBool(FrontCameraMirrorPreferenceService.prefsKey),
+          ).thenReturn(true);
+        },
+        build: buildBloc,
+        act: (bloc) => bloc.add(const VideoRecorderInitializeRequested()),
+        verify: (_) {
+          verify(
+            () => cameraService.initialize(
+              videoQuality: any(named: 'videoQuality'),
+              initialLens: any(named: 'initialLens'),
+              enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
+              preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
+              videoStabilizationMode: any(named: 'videoStabilizationMode'),
+              mirrorFrontCameraOutput: true,
             ),
           ).called(1);
         },
@@ -4120,6 +4246,7 @@ void main() {
               enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
               preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
               videoStabilizationMode: any(named: 'videoStabilizationMode'),
+              mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
             ),
           );
         },
@@ -4223,6 +4350,9 @@ void main() {
                     videoStabilizationMode: captureAny(
                       named: 'videoStabilizationMode',
                     ),
+                    mirrorFrontCameraOutput: any(
+                      named: 'mirrorFrontCameraOutput',
+                    ),
                   ),
                 ).captured.single
                 as DivineVideoStabilizationMode?;
@@ -4244,12 +4374,13 @@ void main() {
         );
 
         blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
-          'opens the camera with stabilization off when none is persisted',
+          'opens the camera with standard stabilization when none is '
+          'persisted',
           // prefs.getString returns null by default (see outer setUp).
           build: buildBloc,
           act: (bloc) => bloc.add(const VideoRecorderInitializeRequested()),
           verify: (_) {
-            expect(initializedWith(), DivineVideoStabilizationMode.off);
+            expect(initializedWith(), DivineVideoStabilizationMode.standard);
           },
         );
 
@@ -4325,6 +4456,7 @@ void main() {
                 enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
                 preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
                 videoStabilizationMode: any(named: 'videoStabilizationMode'),
+                mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
               ),
             ).thenAnswer((_) => opening.future.then((_) => cameraOpen = true));
             final bloc = buildBloc();
@@ -4720,6 +4852,7 @@ void main() {
               enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
               preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
               videoStabilizationMode: any(named: 'videoStabilizationMode'),
+              mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
             ),
           ).thenAnswer((_) async {});
           when(
@@ -5084,6 +5217,9 @@ void main() {
       );
 
       test('undo removal waits for the in-flight eager save', () async {
+        when(
+          () => cameraService.setVideoStabilizationMode(any()),
+        ).thenAnswer((_) async => true);
         final calls = <String>[];
         final saving = Completer<void>();
         final releaseSave = Completer<void>();
@@ -5146,6 +5282,11 @@ void main() {
 
       blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
         'switching modes discards the session and drops its library row',
+        setUp: () {
+          when(
+            () => cameraService.setVideoStabilizationMode(any()),
+          ).thenAnswer((_) async => true);
+        },
         build: buildBloc,
         seed: () => VideoRecorderBlocState(
           recorderMode: VideoRecorderMode.stopMotion,
