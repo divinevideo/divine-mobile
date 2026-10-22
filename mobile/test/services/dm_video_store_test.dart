@@ -972,6 +972,55 @@ void main() {
 
     group('previewFor', () {
       test(
+        'keeps a video fetched again when the frame of the copy before it '
+        'passes its age',
+        () async {
+          final message = _videoMessage();
+          // Videos are trimmed before frames: the frame of an earlier copy
+          // can outlive it, and age past a copy fetched since.
+          final video = keptFile(
+            DmVideoStore.videoFileNameFor(message),
+            _plaintext,
+            keptAt: now,
+          );
+          keptFile(
+            '${message.id}.preview.jpg',
+            _frame,
+            keptAt: now.subtract(
+              DmVideoStore.defaultMaxAge + const Duration(days: 1),
+            ),
+          );
+          final store = createStore();
+
+          expect(await store.previewFor(message), isNotNull);
+
+          expect(video.existsSync(), isTrue);
+          expect(fetches, equals(0));
+        },
+      );
+
+      test(
+        'deletes the record with a frame past its age whose video is gone',
+        () async {
+          final message = _videoMessage(
+            fileSize: DmVideoStore.autoDownloadMaxBytes + 1,
+          );
+          keptFile('${message.id}.preview.jpg', _frame, keptAt: now);
+          keptFile(
+            '${message.id}.conversation',
+            'conversation\n1757385263'.codeUnits,
+            keptAt: now,
+          );
+          now = now.add(DmVideoStore.defaultMaxAge + const Duration(days: 1));
+          final store = createStore();
+
+          expect(await store.previewFor(message), isNull);
+
+          expect(keptFiles(), isEmpty);
+        },
+      );
+
+      test(
         'reads a new frame once its frame is past its age, though its video '
         'is not',
         () async {

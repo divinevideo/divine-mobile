@@ -1039,6 +1039,8 @@ class DmVideoStore {
       _deleteKeptFor(keptVideo);
     } else if (_isPastMaxAge(preview)) {
       _deleteNow(preview);
+      // With no video kept either, nothing is left for its record to find.
+      if (!keptVideo.existsSync()) _deleteKeptFor(keptVideo);
     }
     if (preview.existsSync()) {
       await _records.writeQuietly(message, dir);
