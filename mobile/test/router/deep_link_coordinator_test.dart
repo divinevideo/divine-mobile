@@ -96,6 +96,29 @@ void main() {
         );
       });
 
+      // The segment arrives decoded from the link, so it is arbitrary text.
+      // Unencoded, a `?` binds the route to a prefix of it and opens a
+      // different profile than the link named.
+      test('keeps a question mark inside the profile id', () {
+        expect(
+          handleAndReadLocation(
+            const DeepLink(type: DeepLinkType.profile, npub: 'a?b=c'),
+          ),
+          equals('/profile/a%3Fb%3Dc'),
+        );
+      });
+
+      // Unencoded, a `/` splits the id into two segments, which matches the
+      // profile route that takes a video index instead.
+      test('keeps a slash inside the profile id', () {
+        expect(
+          handleAndReadLocation(
+            const DeepLink(type: DeepLinkType.profile, npub: 'a/7'),
+          ),
+          equals('/profile/a%2F7'),
+        );
+      });
+
       test('routes a hashtag link to that hashtag', () {
         expect(
           handleAndReadLocation(
@@ -133,6 +156,21 @@ void main() {
         () {
           expect(
             handleAndReadLocation(const DeepLink(type: DeepLinkType.profile)),
+            equals('/home/0'),
+          );
+        },
+      );
+
+      // `https://divine.video/profile/` parses to an empty npub, which must
+      // be read as a missing field, not routed to `/profile/` with an empty
+      // segment.
+      test(
+        'leaves the current route alone when a profile link is empty',
+        () {
+          expect(
+            handleAndReadLocation(
+              const DeepLink(type: DeepLinkType.profile, npub: ''),
+            ),
             equals('/home/0'),
           );
         },

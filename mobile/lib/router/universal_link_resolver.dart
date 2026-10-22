@@ -23,11 +23,15 @@ String? divineUrlToPushRoute(Uri uri) {
   if (host != 'divine.video' && host != 'www.divine.video') return null;
 
   final deepLink = DeepLinkService.parseDeepLink(uri.toString());
-  return _pushRouteForDeepLink(deepLink) ??
+  return deepLinkRouterPath(deepLink) ??
       _invalidPeopleListRoute(uri, deepLink);
 }
 
-String? _pushRouteForDeepLink(DeepLink deepLink) {
+/// The in-app location [deepLink] addresses, or null when it names none.
+///
+/// The router redirect and the deep-link coordinator both navigate with this
+/// mapping, so a link reaches one location whichever of them delivers it.
+String? deepLinkRouterPath(DeepLink deepLink) {
   switch (deepLink.type) {
     case DeepLinkType.video:
       final videoRef = deepLink.videoRef;
@@ -67,8 +71,9 @@ String? _pushRouteForDeepLink(DeepLink deepLink) {
       );
     case DeepLinkType.peopleList:
       return peopleListDeepLinkToRouterPath(deepLink);
-    // savedVideos is unreachable here — it only arrives over divine://, which
-    // both callers reject before this point. customSchemeToRouterPath owns it.
+    // savedVideos only arrives over divine://, and the callers that can see it
+    // — customSchemeToRouterPath and the deep-link coordinator — route it
+    // themselves.
     case DeepLinkType.savedVideos:
     case DeepLinkType.signerCallback:
     case DeepLinkType.unknown:
@@ -114,7 +119,7 @@ String? customSchemeToRouterPath(Uri uri) {
     pathSegments: segments,
     queryParameters: uri.queryParameters.isEmpty ? null : uri.queryParameters,
   );
-  final mapped = _pushRouteForDeepLink(
+  final mapped = deepLinkRouterPath(
     DeepLinkService.parseDeepLink(canonical.toString()),
   );
   if (mapped != null) return mapped;
@@ -166,7 +171,7 @@ String? universalLinkToRouterPath(Uri uri) {
   if (host != 'divine.video' && host != 'www.divine.video') return null;
 
   final deepLink = DeepLinkService.parseDeepLink(uri.toString());
-  final route = _pushRouteForDeepLink(deepLink);
+  final route = deepLinkRouterPath(deepLink);
   switch (deepLink.type) {
     case DeepLinkType.video:
     case DeepLinkType.savedVideos:
