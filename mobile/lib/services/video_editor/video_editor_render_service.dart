@@ -13,6 +13,7 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
+import 'package:openvine/extensions/layer_blend_mode.dart';
 import 'package:openvine/extensions/layer_keyframes.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -1253,6 +1254,7 @@ class VideoEditorRenderService {
           animations: animations,
           keyframes: keyframes,
           keyframeClock: keyframeClock,
+          blendMode: item.layer.exportBlendMode,
           // A layer without a start or end begins or ends with the video, so
           // its implicit range is the output's. Left null, the native
           // renderer falls back to each split frame's own start or end: an

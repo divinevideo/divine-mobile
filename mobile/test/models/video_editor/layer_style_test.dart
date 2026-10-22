@@ -1,5 +1,6 @@
 // ABOUTME: Tests for LayerStyle: which layers take a style, and what each kind
-// ABOUTME: of layer takes from a copied one — look, animations, opacity, mask.
+// ABOUTME: of layer takes from a copied one — look, animations, opacity, blend
+// ABOUTME: mode, mask.
 
 import 'package:flutter/painting.dart';
 import 'package:flutter/widgets.dart' show SizedBox;
@@ -123,6 +124,29 @@ void main() {
 
         expect(styled.opacity, 1);
         expect(styled.keyframes.map((k) => k.opacity), [0.2, 0.8]);
+      });
+
+      test('carries the blend mode, and takes it off when the style has '
+          'none', () {
+        final source = TextLayer(text: 'a', blendMode: BlendMode.screen);
+        final style = LayerStyle.of(source, at: Duration.zero);
+
+        expect(
+          style
+              .applyTo(_drawing(), canvasSize: _canvas, totalDuration: _total)
+              .blendMode,
+          BlendMode.screen,
+        );
+        expect(
+          const LayerStyle()
+              .applyTo(
+                _drawing()..blendMode = BlendMode.multiply,
+                canvasSize: _canvas,
+                totalDuration: _total,
+              )
+              .blendMode,
+          BlendMode.srcOver,
+        );
       });
 
       test('takes the mask off a layer when the style has none', () {

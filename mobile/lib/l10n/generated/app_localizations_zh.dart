@@ -9073,6 +9073,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorOpacitySemanticLabel => '设置所选图层的透明程度';
 
   @override
+  String get videoEditorBlendLabel => '混合';
+
+  @override
+  String get videoEditorBlendSemanticLabel => '将所选图层与下方视频混合';
+
+  @override
+  String get videoEditorBlendModeNormal => '正常';
+
+  @override
+  String get videoEditorBlendModeMultiply => '正片叠底';
+
+  @override
+  String get videoEditorBlendModeScreen => '滤色';
+
+  @override
+  String get videoEditorBlendModeOverlay => '叠加';
+
+  @override
+  String get videoEditorBlendModeSoftLight => '柔光';
+
+  @override
+  String get videoEditorBlendModeDarken => '变暗';
+
+  @override
+  String get videoEditorBlendModeLighten => '变亮';
+
+  @override
+  String get videoEditorBlendModeAdd => '相加';
+
+  @override
+  String get videoEditorBlendModeDifference => '差值';
+
+  @override
   String get videoEditorShapeMaskLabel => '形状蒙版';
 
   @override

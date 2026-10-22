@@ -9176,6 +9176,39 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorOpacitySemanticLabel => '선택한 레이어가 비쳐 보이는 정도 설정';
 
   @override
+  String get videoEditorBlendLabel => '혼합';
+
+  @override
+  String get videoEditorBlendSemanticLabel => '선택한 레이어를 아래 동영상과 혼합';
+
+  @override
+  String get videoEditorBlendModeNormal => '표준';
+
+  @override
+  String get videoEditorBlendModeMultiply => '곱하기';
+
+  @override
+  String get videoEditorBlendModeScreen => '스크린';
+
+  @override
+  String get videoEditorBlendModeOverlay => '오버레이';
+
+  @override
+  String get videoEditorBlendModeSoftLight => '소프트 라이트';
+
+  @override
+  String get videoEditorBlendModeDarken => '어둡게 하기';
+
+  @override
+  String get videoEditorBlendModeLighten => '밝게 하기';
+
+  @override
+  String get videoEditorBlendModeAdd => '더하기';
+
+  @override
+  String get videoEditorBlendModeDifference => '차이';
+
+  @override
   String get videoEditorShapeMaskLabel => '모양 마스크';
 
   @override

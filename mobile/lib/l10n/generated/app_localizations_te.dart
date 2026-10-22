@@ -9890,6 +9890,40 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఎంచుకున్న లేయర్ ఎంత పారదర్శకంగా ఉండాలో సెట్ చేయండి';
 
   @override
+  String get videoEditorBlendLabel => 'మిళితం';
+
+  @override
+  String get videoEditorBlendSemanticLabel =>
+      'ఎంచుకున్న లేయర్‌ను కింద ఉన్న వీడియోతో మిళితం చేయండి';
+
+  @override
+  String get videoEditorBlendModeNormal => 'సాధారణం';
+
+  @override
+  String get videoEditorBlendModeMultiply => 'గుణించు';
+
+  @override
+  String get videoEditorBlendModeScreen => 'స్క్రీన్';
+
+  @override
+  String get videoEditorBlendModeOverlay => 'ఓవర్‌లే';
+
+  @override
+  String get videoEditorBlendModeSoftLight => 'మృదువైన కాంతి';
+
+  @override
+  String get videoEditorBlendModeDarken => 'ముదురు చేయి';
+
+  @override
+  String get videoEditorBlendModeLighten => 'లేత చేయి';
+
+  @override
+  String get videoEditorBlendModeAdd => 'కలుపు';
+
+  @override
+  String get videoEditorBlendModeDifference => 'తేడా';
+
+  @override
   String get videoEditorShapeMaskLabel => 'ఆకార మాస్క్';
 
   @override

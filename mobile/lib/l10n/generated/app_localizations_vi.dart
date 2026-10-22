@@ -9586,6 +9586,40 @@ class AppLocalizationsVi extends AppLocalizations {
       'Đặt mức trong suốt cho lớp đã chọn';
 
   @override
+  String get videoEditorBlendLabel => 'Hòa trộn';
+
+  @override
+  String get videoEditorBlendSemanticLabel =>
+      'Hòa trộn lớp đã chọn với video bên dưới';
+
+  @override
+  String get videoEditorBlendModeNormal => 'Bình thường';
+
+  @override
+  String get videoEditorBlendModeMultiply => 'Nhân';
+
+  @override
+  String get videoEditorBlendModeScreen => 'Màn hình';
+
+  @override
+  String get videoEditorBlendModeOverlay => 'Phủ';
+
+  @override
+  String get videoEditorBlendModeSoftLight => 'Ánh sáng dịu';
+
+  @override
+  String get videoEditorBlendModeDarken => 'Làm tối';
+
+  @override
+  String get videoEditorBlendModeLighten => 'Làm sáng';
+
+  @override
+  String get videoEditorBlendModeAdd => 'Cộng';
+
+  @override
+  String get videoEditorBlendModeDifference => 'Khác biệt';
+
+  @override
   String get videoEditorShapeMaskLabel => 'Mặt nạ hình dạng';
 
   @override

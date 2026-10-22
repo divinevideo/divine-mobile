@@ -9544,6 +9544,40 @@ class AppLocalizationsTr extends AppLocalizations {
       'Seçili katmanın ne kadar saydam olacağını ayarla';
 
   @override
+  String get videoEditorBlendLabel => 'Karışım';
+
+  @override
+  String get videoEditorBlendSemanticLabel =>
+      'Seçili katmanı alttaki videoyla karıştır';
+
+  @override
+  String get videoEditorBlendModeNormal => 'Normal';
+
+  @override
+  String get videoEditorBlendModeMultiply => 'Çarp';
+
+  @override
+  String get videoEditorBlendModeScreen => 'Ekran';
+
+  @override
+  String get videoEditorBlendModeOverlay => 'Bindirme';
+
+  @override
+  String get videoEditorBlendModeSoftLight => 'Yumuşak ışık';
+
+  @override
+  String get videoEditorBlendModeDarken => 'Koyulaştır';
+
+  @override
+  String get videoEditorBlendModeLighten => 'Açıklaştır';
+
+  @override
+  String get videoEditorBlendModeAdd => 'Ekle';
+
+  @override
+  String get videoEditorBlendModeDifference => 'Fark';
+
+  @override
   String get videoEditorShapeMaskLabel => 'Şekil maskesi';
 
   @override

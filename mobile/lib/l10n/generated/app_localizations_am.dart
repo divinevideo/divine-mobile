@@ -9407,6 +9407,40 @@ class AppLocalizationsAm extends AppLocalizations {
       'የተመረጠው ንብርብር ምን ያህል እንደሚታይ ማዘጋጀት';
 
   @override
+  String get videoEditorBlendLabel => 'መቀላቀል';
+
+  @override
+  String get videoEditorBlendSemanticLabel =>
+      'የተመረጠውን ንብርብር ከስሩ ካለው ቪዲዮ ጋር ማቀላቀል';
+
+  @override
+  String get videoEditorBlendModeNormal => 'መደበኛ';
+
+  @override
+  String get videoEditorBlendModeMultiply => 'ማባዛት';
+
+  @override
+  String get videoEditorBlendModeScreen => 'ስክሪን';
+
+  @override
+  String get videoEditorBlendModeOverlay => 'ተደራቢ';
+
+  @override
+  String get videoEditorBlendModeSoftLight => 'ለስላሳ ብርሃን';
+
+  @override
+  String get videoEditorBlendModeDarken => 'ማጨለም';
+
+  @override
+  String get videoEditorBlendModeLighten => 'ማቅለል';
+
+  @override
+  String get videoEditorBlendModeAdd => 'መደመር';
+
+  @override
+  String get videoEditorBlendModeDifference => 'ልዩነት';
+
+  @override
   String get videoEditorShapeMaskLabel => 'የቅርጽ ጭንብል';
 
   @override

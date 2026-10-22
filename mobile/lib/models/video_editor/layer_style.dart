@@ -1,8 +1,8 @@
-// ABOUTME: The style of an overlay layer — opacity, enter/leave/loop animation,
-// ABOUTME: shape mask and, for a text, its look — as one unit that Copy style
-// ABOUTME: lifts off a layer and Paste style writes onto others (#10258).
+// ABOUTME: The style of an overlay layer — opacity, blend mode, enter/leave/loop
+// ABOUTME: animation, shape mask and, for a text, its look — as one unit that
+// ABOUTME: Copy style lifts off a layer and Paste style writes onto others.
 
-import 'dart:ui' show Offset, Size;
+import 'dart:ui' show BlendMode, Offset, Size;
 
 import 'package:equatable/equatable.dart';
 import 'package:openvine/extensions/layer_animation_apply.dart';
@@ -21,7 +21,7 @@ import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 /// style: a text, a sticker, a drawing or an audio visualizer.
 ///
 /// A hidden area (blur, pixelate) is left out because it takes none of the
-/// parts: it cannot be see-through, animated or masked. A detached clip is
+/// parts: it cannot be see-through, blended, animated or masked. A detached clip is
 /// left out too: it is a clip as much as a layer, and its style would mix the
 /// two. A burned-in caption cue takes its look from the caption track.
 bool canCopyLayerStyle(Layer? layer) =>
@@ -42,6 +42,7 @@ class LayerStyle extends Equatable {
   /// Creates a style.
   const LayerStyle({
     this.opacity = 1,
+    this.blendMode = BlendMode.srcOver,
     this.enter = const [],
     this.leave = const [],
     this.loop = const [],
@@ -61,6 +62,7 @@ class LayerStyle extends Equatable {
     final points = LayerSlidePoints.of(layer);
     return LayerStyle(
       opacity: layer.keyframePlacementAt(at)?.opacity ?? layer.opacity,
+      blendMode: layer.blendMode,
       enter: layer.divineEnterAnimations,
       leave: layer.divineLeaveAnimations,
       loop: layer.divineLoopAnimations,
@@ -77,6 +79,9 @@ class LayerStyle extends Equatable {
   /// A layer with keyframes fades through its keyframes instead, so it keeps
   /// them when this is pasted onto it.
   final double opacity;
+
+  /// How the layer is drawn onto the video beneath it.
+  final BlendMode blendMode;
 
   /// Animations played when the layer appears.
   final List<pve.LayerAnimation> enter;
@@ -136,6 +141,7 @@ class LayerStyle extends Equatable {
             totalDuration: totalDuration,
           );
     if (!styled.hasKeyframes) styled.opacity = opacity;
+    styled.blendMode = blendMode;
     if (canMaskLayer(styled)) {
       final mask = this.mask;
       styled.mask = mask == null
@@ -148,6 +154,7 @@ class LayerStyle extends Equatable {
   @override
   List<Object?> get props => [
     opacity,
+    blendMode,
     enter,
     leave,
     loop,

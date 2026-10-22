@@ -9667,6 +9667,40 @@ class AppLocalizationsNl extends AppLocalizations {
       'Instellen hoe doorzichtig de geselecteerde laag is';
 
   @override
+  String get videoEditorBlendLabel => 'Overvloeien';
+
+  @override
+  String get videoEditorBlendSemanticLabel =>
+      'Laat de geselecteerde laag overvloeien met de video eronder';
+
+  @override
+  String get videoEditorBlendModeNormal => 'Normaal';
+
+  @override
+  String get videoEditorBlendModeMultiply => 'Vermenigvuldigen';
+
+  @override
+  String get videoEditorBlendModeScreen => 'Bleken';
+
+  @override
+  String get videoEditorBlendModeOverlay => 'Bedekken';
+
+  @override
+  String get videoEditorBlendModeSoftLight => 'Zacht licht';
+
+  @override
+  String get videoEditorBlendModeDarken => 'Donkerder';
+
+  @override
+  String get videoEditorBlendModeLighten => 'Lichter';
+
+  @override
+  String get videoEditorBlendModeAdd => 'Optellen';
+
+  @override
+  String get videoEditorBlendModeDifference => 'Verschil';
+
+  @override
   String get videoEditorShapeMaskLabel => 'Vormmasker';
 
   @override

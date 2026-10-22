@@ -9633,6 +9633,40 @@ class AppLocalizationsMs extends AppLocalizations {
       'Tetapkan tahap lutsinar lapisan yang dipilih';
 
   @override
+  String get videoEditorBlendLabel => 'Adun';
+
+  @override
+  String get videoEditorBlendSemanticLabel =>
+      'Adunkan lapisan yang dipilih dengan video di bawahnya';
+
+  @override
+  String get videoEditorBlendModeNormal => 'Biasa';
+
+  @override
+  String get videoEditorBlendModeMultiply => 'Darab';
+
+  @override
+  String get videoEditorBlendModeScreen => 'Skrin';
+
+  @override
+  String get videoEditorBlendModeOverlay => 'Tindihan';
+
+  @override
+  String get videoEditorBlendModeSoftLight => 'Cahaya lembut';
+
+  @override
+  String get videoEditorBlendModeDarken => 'Gelapkan';
+
+  @override
+  String get videoEditorBlendModeLighten => 'Cerahkan';
+
+  @override
+  String get videoEditorBlendModeAdd => 'Tambah';
+
+  @override
+  String get videoEditorBlendModeDifference => 'Beza';
+
+  @override
   String get videoEditorShapeMaskLabel => 'Topeng bentuk';
 
   @override

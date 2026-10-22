@@ -9623,6 +9623,40 @@ class AppLocalizationsUr extends AppLocalizations {
       'منتخب لیئر کتنی شفاف ہو، یہ طے کریں';
 
   @override
+  String get videoEditorBlendLabel => 'آمیزش';
+
+  @override
+  String get videoEditorBlendSemanticLabel =>
+      'منتخب لیئر کو نیچے والی ویڈیو کے ساتھ ملائیں';
+
+  @override
+  String get videoEditorBlendModeNormal => 'معمول';
+
+  @override
+  String get videoEditorBlendModeMultiply => 'ضرب';
+
+  @override
+  String get videoEditorBlendModeScreen => 'اسکرین';
+
+  @override
+  String get videoEditorBlendModeOverlay => 'اوورلے';
+
+  @override
+  String get videoEditorBlendModeSoftLight => 'نرم روشنی';
+
+  @override
+  String get videoEditorBlendModeDarken => 'گہرا کریں';
+
+  @override
+  String get videoEditorBlendModeLighten => 'ہلکا کریں';
+
+  @override
+  String get videoEditorBlendModeAdd => 'جمع';
+
+  @override
+  String get videoEditorBlendModeDifference => 'فرق';
+
+  @override
   String get videoEditorShapeMaskLabel => 'شیپ ماسک';
 
   @override

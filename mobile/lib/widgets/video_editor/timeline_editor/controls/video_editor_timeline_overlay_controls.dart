@@ -33,6 +33,7 @@ import 'package:openvine/widgets/video_editor/effects_editor/flashing_effect_sna
 import 'package:openvine/widgets/video_editor/effects_editor/open_effects_editor.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/layer_blend_mode_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/layer_style_actions.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_audio_fade_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_clip_speed_sheet.dart';
@@ -184,6 +185,11 @@ class _LayerOverlayControls extends StatelessWidget {
             ? null
             : () => _editOpacity(context: context),
         hasOpacity: layer != null && _isSeeThrough(layer),
+        // Blend, for the same layers: a hidden area draws nothing to blend.
+        onBlendMode: layer == null || isCensorLayer(layer)
+            ? null
+            : () => _editBlendMode(context: context),
+        hasBlendMode: layer != null && layer.blendMode != BlendMode.srcOver,
         onKeyframes: canKeyframeLayer(layer)
             ? () => _editKeyframes(context: context)
             : null,
@@ -270,6 +276,12 @@ class _LayerOverlayControls extends StatelessWidget {
     final layer = _liveLayer(context);
     if (layer == null) return;
     await editLayerOpacity(context, layer, item: item);
+  }
+
+  Future<void> _editBlendMode({required BuildContext context}) async {
+    final layer = _liveLayer(context);
+    if (layer == null) return;
+    await editLayerBlendMode(context, layer, item: item);
   }
 
   Future<void> _editKeyframes({required BuildContext context}) async {

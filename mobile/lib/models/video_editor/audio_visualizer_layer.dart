@@ -8,6 +8,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/widgets.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
+import 'package:openvine/extensions/layer_blend_mode.dart';
 import 'package:openvine/extensions/layer_keyframes.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/utils/audio_band_energies.dart';
@@ -252,5 +253,6 @@ pve.ImageLayer audioVisualizerImageLayer(
       turnedRaster: false,
     ),
     keyframeClock: layer.divineKeyframeClockForExport(timelineMap: timelineMap),
+    blendMode: layer.exportBlendMode,
   );
 }
