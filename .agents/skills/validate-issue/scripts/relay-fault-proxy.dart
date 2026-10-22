@@ -43,6 +43,12 @@ String _frameType(Object? data) {
   return 'non-nostr';
 }
 
+// A REQ's subscription id; null for a malformed REQ, which the relay answers.
+Object? _subscriptionId(String frame) {
+  final decoded = jsonDecode(frame);
+  return decoded is List && decoded.length > 1 ? decoded[1] : null;
+}
+
 String _frame(Object? data) =>
     data is String ? data : '<${(data as List).length} bytes>';
 
@@ -130,9 +136,9 @@ Future<void> main(List<String> args) async {
     client.listen(
       (data) {
         final type = _frameType(data);
-        if (type == 'REQ' && closeCount > 0) {
+        final sub = type == 'REQ' ? _subscriptionId(data as String) : null;
+        if (sub != null && closeCount > 0) {
           closeCount--;
-          final sub = (jsonDecode(data as String) as List)[1];
           client.add(jsonEncode(['CLOSED', sub, '$closePrefix: injected']));
           _log({
             'dir': 'c>r',
