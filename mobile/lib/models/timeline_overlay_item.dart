@@ -24,7 +24,8 @@ bool isMergeableDrawLayer(Layer? layer) =>
 ///
 /// The same rule as [isMergeableDrawLayer]: a layer with its own timeline
 /// window, animations, keyframes, shape mask or blend mode cannot share one
-/// with other stickers. A sticker that is already a combination can be combined again.
+/// with other stickers. A sticker that is already a combination can be
+/// combined again.
 bool isMergeableStickerLayer(Layer? layer) =>
     layer is WidgetLayer &&
     isStickerLayerMeta(layer.exportConfigs.meta ?? layer.meta) &&
