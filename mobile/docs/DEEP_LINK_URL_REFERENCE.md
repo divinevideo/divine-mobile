@@ -379,7 +379,7 @@ URL.
 | `/apps/:slug` | `NostrAppDirectoryEntry` | Resolved by slug |
 | `/inbox/conversation/:id` | counterparty pubkeys, room subject | Pubkeys are read from the conversation row; a DM-restricted account (#176) is bounced to the inbox instead, by design. The subject is not re-read: a titled group shows its "name and N others" title instead, while a 1:1 thread is unaffected |
 | `/inbox/message-requests/:id` | counterparty pubkeys, room subject | Same, via `RequestPreviewCubit` |
-| `/list/:listId` | list name, video ids, author | Videos resolve from the list id; the title falls back until the local list loads |
+| `/list/:listId` | list name, video ids, author, the discovered `CuratedList` | Videos resolve from the list id; the title falls back until the local list loads. Subscribing before the list is stored locally saves a stand-in record with no description or image |
 | `/list/:pubkey/:listId` | the discovered `CuratedList`, used only when its author and d-tag match the path | Resolved from relays by author + d-tag |
 | `/categories/:categoryName` | `VideoCategory` | Rebuilt from the path segment with a zero video count |
 | `/video/:id` | prefetched video, comment autoscroll, fallback event ids, DM reply context | Loaded by id. A notification also passes the plain event id to try when the addressable id does not resolve; without it that video shows as not found. Opened from a DM, the screen shows a private reply bar in place of the public comment bar; without the hint it shows the comment bar |
