@@ -411,7 +411,7 @@ void main() {
       });
 
       test('mirrors a speed curve onto the way back and gives it back '
-          'when turned off', () async {
+          'when turned off, also after the boomerang was trimmed', () async {
         final source = File(p.join(temp.path, 'clip.mp4'))
           ..writeAsStringSync('take');
         const ramp = VideoSpeedRamp([
@@ -431,6 +431,21 @@ void main() {
         expect(bounced.points.map((point) => point.speed), [0.5, 2, 0.5]);
         expect(bounced.points.first.position, 0);
         expect(bounced.points.last.position, 1);
+
+        // Trimmed shorter than its forward part: the curve is stretched over
+        // what is left, not cut.
+        final boomerang = bloc.state.clips.single;
+        bloc.add(
+          ClipEditorClipUpdated(
+            clipId: 'clip',
+            clip: boomerang.copyWith(
+              trimEnd: const Duration(milliseconds: 2200),
+            ),
+          ),
+        );
+        await bloc.stream.firstWhere(
+          (s) => s.clips.single.trimEnd == const Duration(milliseconds: 2200),
+        );
 
         final restored = (await toggle(bloc)).clips.single.speedRamp!;
         expect(restored.points.first.speed, closeTo(0.5, 1e-9));

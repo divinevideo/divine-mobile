@@ -2150,9 +2150,11 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     }
 
     // A speed curve set on the boomerang runs over both directions; the
-    // footage gets the part that played forward.
+    // footage gets the part that played forward. Trimming stretches a curve
+    // over what is left rather than cutting it, so the forward part is still
+    // its share of the whole boomerang the curve was mirrored over.
     final ramp = clip.speedRamp;
-    final played = clip.trimmedDuration.inMicroseconds;
+    final played = clip.duration.inMicroseconds;
     final forwardShare = played <= 0
         ? 1.0
         : record.sourceWindow.inMicroseconds / played;
