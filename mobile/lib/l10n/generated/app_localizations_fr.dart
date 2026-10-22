@@ -9017,6 +9017,30 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorEffectFisheye => 'Fish-eye';
 
   @override
+  String get videoEditorEffectDrops => 'Gouttes';
+
+  @override
+  String get videoEditorDropsSettingsTitle => 'Ajuster les gouttes';
+
+  @override
+  String get videoEditorDropsCountLabel => 'Nombre';
+
+  @override
+  String get videoEditorDropsSizeLabel => 'Taille';
+
+  @override
+  String get videoEditorDropsSpeedLabel => 'Vitesse';
+
+  @override
+  String get videoEditorDropsFrostLabel => 'Givre';
+
+  @override
+  String get videoEditorDropsFringesLabel => 'Franges colorées';
+
+  @override
+  String get videoEditorDropsShuffle => 'Mélanger';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Un seul effet clignotant à la fois. Trop de clignotements peuvent faire du mal aux personnes sensibles, alors on a remplacé l\'autre ici.';
 

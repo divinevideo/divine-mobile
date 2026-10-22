@@ -8983,6 +8983,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorEffectFisheye => 'Fisheye';
 
   @override
+  String get videoEditorEffectDrops => 'Drops';
+
+  @override
+  String get videoEditorDropsSettingsTitle => 'Adjust drops';
+
+  @override
+  String get videoEditorDropsCountLabel => 'Number';
+
+  @override
+  String get videoEditorDropsSizeLabel => 'Size';
+
+  @override
+  String get videoEditorDropsSpeedLabel => 'Speed';
+
+  @override
+  String get videoEditorDropsFrostLabel => 'Frost';
+
+  @override
+  String get videoEditorDropsFringesLabel => 'Color fringes';
+
+  @override
+  String get videoEditorDropsShuffle => 'Shuffle';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'One flashing effect at a time. Too much flashing can hurt people who are sensitive to it, so we swapped out the other one here.';
 

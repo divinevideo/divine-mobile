@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
@@ -6,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/drops_effect_settings.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
@@ -29,8 +31,10 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
     with CloseGuardedEmit<VideoEditorEffectsState> {
   VideoEditorEffectsCubit({
     String Function()? createId,
+    int Function()? createSeed,
     VideoEditorBeatResolver? beatResolver,
   }) : _createId = createId ?? _uniqueId,
+       _createSeed = createSeed ?? _randomSeed,
        _beatResolver = beatResolver ?? VideoEditorBeatResolver(),
        super(const VideoEditorEffectsState());
 
@@ -38,11 +42,17 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
   static const double defaultIntensity = 0.7;
 
   final String Function() _createId;
+  final int Function() _createSeed;
   final VideoEditorBeatResolver _beatResolver;
 
   static const _uuid = Uuid();
 
+  static final _random = Random();
+
   static String _uniqueId() => 'effect_${_uuid.v4()}';
+
+  /// A seed other than the default arrangement's 0.
+  static int _randomSeed() => 1 + _random.nextInt(9999);
 
   /// Mirrors the effects committed to the editor history, after an undo,
   /// redo, timeline edit or draft restore.
@@ -90,6 +100,9 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
         selectedType: current?.type,
         clearSelectedType: current == null,
         intensity: current?.intensity ?? defaultIntensity,
+        dropsSettings: current?.type == EditorEffectType.drops
+            ? DropsEffectSettings.fromParams(current!.custom!.params)
+            : const DropsEffectSettings(),
         onBeat: current?.onBeat ?? false,
         startedPlayback: startedPlayback,
       ),
@@ -117,6 +130,23 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
   /// Sets the intensity of the picked effect, clamped to 0..1.
   void setIntensity(double intensity) {
     emit(state.copyWith(intensity: intensity.clamp(0.0, 1.0)));
+  }
+
+  /// Sets how the drops look.
+  void setDropsSettings(DropsEffectSettings settings) {
+    emit(state.copyWith(dropsSettings: settings));
+  }
+
+  /// Gives the drops another arrangement and other paths.
+  void shuffleDrops() {
+    final current = state.dropsSettings.seed;
+    var seed = _createSeed();
+    while (seed == current) {
+      seed = _createSeed();
+    }
+    emit(
+      state.copyWith(dropsSettings: state.dropsSettings.copyWith(seed: seed)),
+    );
   }
 
   /// Closes the editor without changing the committed effects.
@@ -151,6 +181,7 @@ class VideoEditorEffectsCubit extends Cubit<VideoEditorEffectsState>
           startTime: entry.startTime,
           endTime: entry.endTime,
           onBeat: picked.onBeat,
+          settings: state.settingsFor(picked.type),
         ),
       );
     }

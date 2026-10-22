@@ -7,6 +7,7 @@ import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/drops_effect_settings.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_overlay_controls.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
@@ -14,6 +15,8 @@ import 'package:openvine/widgets/video_editor/video_editor_vertical_slider.dart'
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show VideoEffect, VideoEffectType;
+
+import '../../../helpers/scroll.dart';
 
 class _MockVideoEditorMainBloc
     extends MockBloc<VideoEditorMainEvent, VideoEditorMainState>
@@ -56,8 +59,10 @@ void main() {
       when(() => editor.setState(any())).thenAnswer((invocation) {
         (invocation.positionalArguments.single as VoidCallback)();
       });
-      cubit = VideoEditorEffectsCubit(createId: () => 'effect-1')
-        ..startEditing();
+      cubit = VideoEditorEffectsCubit(
+        createId: () => 'effect-1',
+        createSeed: () => 42,
+      )..startEditing();
     });
 
     tearDown(() => cubit.close());
@@ -152,6 +157,77 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text(l10n.videoEditorEffectsOnBeatNoSound), findsOneWidget);
+      });
+    });
+
+    group('drops settings', () {
+      Future<void> openSettings(WidgetTester tester) async {
+        cubit.selectType(EditorEffectType.drops);
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.videoEditorDropsSettingsTitle));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('show only while the drops are picked', (tester) async {
+        cubit.selectType(EditorEffectType.echo);
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.videoEditorDropsSettingsTitle), findsNothing);
+
+        cubit.selectType(EditorEffectType.drops);
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.videoEditorDropsSettingsTitle), findsOneWidget);
+        expect(find.text(l10n.videoEditorDropsCountLabel), findsNothing);
+      });
+
+      testWidgets('open to sliders that change the drops', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await openSettings(tester);
+        // A count, not a share of the range.
+        expect(
+          tester.getSemantics(
+            find.bySemanticsLabel(l10n.videoEditorDropsCountLabel),
+          ),
+          isSemantics(
+            label: l10n.videoEditorDropsCountLabel,
+            isSlider: true,
+            value: '${DropsEffectSettings.defaultCount}',
+          ),
+        );
+
+        await tester.drag(
+          find.bySemanticsLabel(l10n.videoEditorDropsCountLabel),
+          const Offset(400, 0),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          cubit.state.dropsSettings,
+          const DropsEffectSettings(count: DropsEffectSettings.maxCount),
+        );
+        expect(find.text('${DropsEffectSettings.maxCount}'), findsOneWidget);
+        semantics.dispose();
+      });
+
+      testWidgets('shuffle gives the drops a new arrangement', (tester) async {
+        await openSettings(tester);
+        final shuffle = find.text(l10n.videoEditorDropsShuffle);
+
+        await scrollUntilTappable(
+          tester,
+          shuffle,
+          50,
+          scrollable: find.descendant(
+            of: find.byType(ExpansionTile),
+            matching: find.byType(Scrollable),
+          ),
+        );
+        await tester.tap(shuffle);
+        await tester.pump();
+
+        expect(cubit.state.dropsSettings.seed, 42);
       });
     });
 

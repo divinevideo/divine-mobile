@@ -1518,3 +1518,209 @@ final class FisheyeVideoEffectTests: XCTestCase {
     XCTAssertLessThan(worst, 0.05, "pixels off the shader's mapping, in px")
   }
 }
+
+/// The drops are drawn with a Metal kernel on iOS and macOS, and with the
+/// same shader in GLSL on Android (`DropsVideoEffect`) and in the effects
+/// picker (`shaders/drops.frag`). These tests pin where the drops are, and
+/// check every pixel of the kernel against the shader's formulas computed
+/// here on the CPU, so a change to one copy that is not made to the others
+/// fails, and so does a kernel that reads its textures upside down.
+final class DropsVideoEffectTests: XCTestCase {
+  private let width = 90
+  private let height = 160
+
+  func testPlacesTheDropsWhereAndroidAndDartDo() {
+    // The same numbers are pinned in the Dart `dropsLayout` test.
+    let cases: [(DropsSettings, Double, [DropsLayout.Drop])] = [
+      (
+        DropsSettings(), 7,
+        [
+          .init(x: 0.370810, y: 0.336231, radius: 0.17),
+          .init(x: 0.240065, y: 0.584015, radius: 0.13),
+          .init(x: 0.629452, y: 0.605205, radius: 0.15),
+        ]
+      ),
+      (
+        settings(count: 5, size: 1, speed: 0, seed: 2), 5,
+        [
+          .init(x: 0.260919, y: 0.330758, radius: 0.255),
+          .init(x: 0.301859, y: 0.663046, radius: 0.195),
+          .init(x: 0.680109, y: 0.581244, radius: 0.225),
+          .init(x: 0.352791, y: 0.674857, radius: 0.165),
+          .init(x: 0.379547, y: 0.649744, radius: 0.21),
+        ]
+      ),
+      (
+        settings(count: 1, size: 0, speed: 1), 3,
+        [.init(x: 0.490785, y: 0.367983, radius: 0.085)]
+      ),
+    ]
+    for (settings, seconds, expected) in cases {
+      let drops = DropsLayout.drops(settings, seconds: seconds)
+      XCTAssertEqual(drops.count, DropsLayout.maxDrops)
+      for (i, drop) in drops.enumerated() {
+        let want = i < expected.count ? expected[i] : DropsLayout.Drop(x: -100, y: -100, radius: 0)
+        XCTAssertEqual(drop.x, want.x, accuracy: 1e-5, "drop \(i) at \(seconds) s")
+        XCTAssertEqual(drop.y, want.y, accuracy: 1e-5, "drop \(i) at \(seconds) s")
+        XCTAssertEqual(drop.radius, want.radius, accuracy: 1e-9, "drop \(i) at \(seconds) s")
+      }
+    }
+  }
+
+  func testDrawsWhatTheAndroidShaderDraws() {
+    // Red and green hold each pixel's position, so a wrong bend shows; blue
+    // is a checkerboard, so the frost, the light and the shadow show.
+    var rgb = [Double](repeating: 0, count: width * height * 3)
+    for y in 0..<height {
+      for x in 0..<width {
+        let i = (y * width + x) * 3
+        rgb[i] = (Double(x) + 0.5) / Double(width)
+        rgb[i + 1] = (Double(y) + 0.5) / Double(height)
+        rgb[i + 2] = (x / 6 + y / 6) % 2 == 0 ? 0.2 : 0.7
+      }
+    }
+    // A bitmap's first row is the top of the image, Core Image's y = 0 the bottom.
+    var pixels = [Float](repeating: 1, count: width * height * 4)
+    for y in 0..<height {
+      for x in 0..<width {
+        let s = (y * width + x) * 3, d = ((height - 1 - y) * width + x) * 4
+        for k in 0..<3 { pixels[d + k] = Float(rgb[s + k]) }
+      }
+    }
+    let frame = CIImage(
+      bitmapData: Data(bytes: pixels, count: pixels.count * 4),
+      bytesPerRow: width * 16,
+      size: CGSize(width: width, height: height),
+      format: .RGBAf,
+      colorSpace: nil)
+    let context = CIContext(options: [.workingColorSpace: NSNull()])
+
+    let cases: [(Double, [String: Any], Double)] = [
+      (0.7, [:], 0),
+      (1, ["count": 5, "size": 1.0, "frost": 1.0, "fringes": 1.0, "seed": 3], 7),
+      (0.35, ["count": 1, "size": 0.0, "speed": 1.0, "frost": 0.0, "fringes": 0.0], 12.3),
+      (0, [:], 3),
+    ]
+    for (intensity, params, seconds) in cases {
+      var all = params
+      all["intensity"] = intensity
+      let output = DropsVideoEffect(params: all)
+        .render(frame, history: [], timeUs: 0, effectTimeUs: Int64(seconds * 1_000_000))
+      XCTAssertEqual(output.extent, frame.extent)
+      var drawn = [Float](repeating: 0, count: pixels.count)
+      drawn.withUnsafeMutableBytes {
+        context.render(
+          output, toBitmap: $0.baseAddress!, rowBytes: width * 16,
+          bounds: frame.extent, format: .RGBAf, colorSpace: nil)
+      }
+
+      let expected = draw(
+        rgb, intensity: intensity, settings: DropsSettings(params: all), seconds: seconds)
+      var worst = 0.0
+      for y in 0..<height {
+        for x in 0..<width {
+          for k in 0..<3 {
+            let got = Double(drawn[((height - 1 - y) * width + x) * 4 + k])
+            worst = max(worst, abs(got - expected[(y * width + x) * 3 + k]))
+          }
+        }
+      }
+      // Half-float textures round to about 0.0005.
+      XCTAssertLessThan(worst, 0.003, "intensity \(intensity), \(params), \(seconds) s")
+    }
+  }
+
+  private func settings(count: Int, size: Double, speed: Double, seed: Int = 0)
+    -> DropsSettings
+  {
+    var settings = DropsSettings()
+    settings.count = count
+    settings.size = size
+    settings.speed = speed
+    settings.seed = seed
+    return settings
+  }
+
+  /// The shader on the CPU, for an RGB frame stored bottom row first.
+  private func draw(
+    _ rgb: [Double], intensity: Double, settings: DropsSettings, seconds: Double
+  ) -> [Double] {
+    let w = Double(width), h = Double(height), s = min(w, h)
+    let z = DropsLayout.scale(settings)
+    let drops = DropsLayout.drops(settings, seconds: seconds).map {
+      (x: $0.x * w, y: $0.y * h, r: $0.radius * s)
+    }
+    func tap(_ qx: Double, _ qy: Double) -> [Double] {
+      let x = min(max(qx, 0.5), w - 0.5) - 0.5, y = min(max(qy, 0.5), h - 0.5) - 0.5
+      let x0 = Int(x), y0 = Int(y), x1 = min(x0 + 1, width - 1), y1 = min(y0 + 1, height - 1)
+      let fx = x - Double(x0), fy = y - Double(y0)
+      return (0..<3).map { k in
+        let row0 = rgb[(y0 * width + x0) * 3 + k] * (1 - fx) + rgb[(y0 * width + x1) * 3 + k] * fx
+        let row1 = rgb[(y1 * width + x0) * 3 + k] * (1 - fx) + rgb[(y1 * width + x1) * 3 + k] * fx
+        return row0 * (1 - fy) + row1 * fy
+      }
+    }
+    func frosted(_ qx: Double, _ qy: Double, _ r: Double) -> [Double] {
+      var sum = tap(qx, qy)
+      for i in 0..<8 {
+        let n = Double(i), angle = n * 2.399963, reach = r * ((n + 0.5) / 8).squareRoot()
+        let more = tap(qx + reach * cos(angle), qy + reach * sin(angle))
+        for k in 0..<3 { sum[k] += more[k] }
+      }
+      return sum.map { $0 / 9 }
+    }
+    func smoothstep(_ edge: Double, _ x: Double) -> Double {
+      let v = min(max(x / edge, 0), 1)
+      return v * v * (3 - 2 * v)
+    }
+    func smin(_ a: Double, _ b: Double, _ k: Double) -> Double {
+      let blend = max(k - abs(a - b), 0) / k
+      return min(a, b) - blend * blend * k * 0.25
+    }
+    func distance(_ x: Double, _ y: Double) -> Double {
+      drops.reduce(1e5) { d, drop in smin(d, hypot(x - drop.x, y - drop.y) - drop.r, 0.13 * s * z) }
+    }
+
+    var out = [Double](repeating: 0, count: rgb.count)
+    for yi in 0..<height {
+      for xi in 0..<width {
+        let px = Double(xi) + 0.5, py = Double(yi) + 0.5
+        let d = distance(px, py)
+        let shadow = 1 - smoothstep(0.07 * s * z, distance(px, py + 0.018 * s * z))
+        let background = tap(px, py).map { $0 * (1 - shadow * 0.3 * intensity) }
+        var result = background
+        if d <= 1 {
+          let gx = distance(px + 1, py) - distance(px - 1, py)
+          let gy = distance(px, py + 1) - distance(px, py - 1)
+          let length = max(hypot(gx, gy), 1e-4)
+          let nx = gx / length, ny = gy / length
+          let e = 1 - min(max(-d / (0.11 * s * z), 0), 1)
+          let slope = e * e * e * pow(max(1 - e * e * e * e, 1e-4), -0.75)
+          let bend = slope / (1 + slope * slope).squareRoot() * 0.95 * intensity * 0.11 * s * z
+          let r = 0.028 * s * settings.frost * intensity
+          let spread = 0.28 * settings.fringes
+          let shifted = { (f: Double) -> [Double] in
+            frosted(px - nx * bend * f, py - ny * bend * f, r)
+          }
+          let rim: Double = 1 - smoothstep(0.014 * s * z, -d)
+          let light: Double = nx * -0.5524 + ny * 0.8336
+          let lit: Double = max(light, 0)
+          let back: Double = max(-light, 0)
+          let highlight: Double = lit * lit * lit + 0.45 * back * back * back
+          let glow: Double = intensity * rim * (0.85 * highlight + 0.08)
+          let lift: Double = (0.05 + 0.12 * settings.frost) * intensity
+          let bent: [Double] = [shifted(1 - spread)[0], shifted(1)[1], shifted(1 + spread)[2]]
+          let color: [Double] = bent.map { (channel: Double) -> Double in
+            min(max(channel + (1 - channel) * lift + glow, 0), 1)
+          }
+          let cover: Double = min(max(0.5 - d, 0), 1)
+          result = (0..<3).map { (k: Int) -> Double in
+            background[k] + (color[k] - background[k]) * cover
+          }
+        }
+        for k in 0..<3 { out[(yi * width + xi) * 3 + k] = result[k] }
+      }
+    }
+    return out
+  }
+}

@@ -9138,6 +9138,30 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectFisheye => 'ఫిష్‌ఐ';
 
   @override
+  String get videoEditorEffectDrops => 'బిందువులు';
+
+  @override
+  String get videoEditorDropsSettingsTitle => 'బిందువుల సర్దుబాటు';
+
+  @override
+  String get videoEditorDropsCountLabel => 'సంఖ్య';
+
+  @override
+  String get videoEditorDropsSizeLabel => 'పరిమాణం';
+
+  @override
+  String get videoEditorDropsSpeedLabel => 'వేగం';
+
+  @override
+  String get videoEditorDropsFrostLabel => 'మసక గాజు';
+
+  @override
+  String get videoEditorDropsFringesLabel => 'రంగు అంచులు';
+
+  @override
+  String get videoEditorDropsShuffle => 'కలపండి';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'ఒకసారి ఒక మెరిసే ఎఫెక్ట్ మాత్రమే. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు, అందుకే ఇక్కడ మరొకదాన్ని మార్చాం.';
 

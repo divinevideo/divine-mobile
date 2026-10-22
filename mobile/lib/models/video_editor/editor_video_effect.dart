@@ -16,6 +16,10 @@ const echoVideoEffectId = 'divine.echo';
 /// native `FisheyeVideoEffect` on Android, iOS and macOS.
 const fisheyeVideoEffectId = 'divine.fisheye';
 
+/// The id Divine's glass drops are registered under with pro_video_editor, by
+/// the native `DropsVideoEffect` on Android, iOS and macOS.
+const dropsVideoEffectId = 'divine.drops';
+
 /// What an editor effect looks like: one of pro_video_editor's built-in
 /// effects, or one Divine implements natively and registers with it.
 @immutable
@@ -43,11 +47,16 @@ class EditorEffectType {
   /// wide-angle lens.
   static const fisheye = EditorEffectType.custom(fisheyeVideoEffectId);
 
+  /// Drops: clear glass drops drift over the picture and flow into each
+  /// other; see `DropsEffectSettings` for how they can be set.
+  static const drops = EditorEffectType.custom(dropsVideoEffectId);
+
   /// Every type the effects editor offers, in picker order.
   static final List<EditorEffectType> values = List.unmodifiable([
     for (final type in VideoEffectType.values) EditorEffectType.builtIn(type),
     echo,
     fisheye,
+    drops,
   ]);
 
   /// The built-in effect, or `null` for a custom one.
@@ -93,7 +102,8 @@ class EditorVideoEffect extends Equatable {
     this.onBeat = false,
   }) : custom = null;
 
-  /// An effect Divine renders natively; its `intensity` param drives it.
+  /// An effect Divine renders natively; its `intensity` param drives it, next
+  /// to any settings of its own.
   const EditorVideoEffect.custom({
     required this.id,
     required CustomVideoEffect this.custom,
@@ -102,7 +112,8 @@ class EditorVideoEffect extends Equatable {
 
   /// A new effect of [type] at [intensity], placed from [startTime] until
   /// [endTime]. [onBeat] only applies to a type that
-  /// [EditorEffectType.supportsOnBeat].
+  /// [EditorEffectType.supportsOnBeat], and [settings] only to a custom one,
+  /// which stores them next to its intensity.
   factory EditorVideoEffect.of({
     required String id,
     required EditorEffectType type,
@@ -110,6 +121,7 @@ class EditorVideoEffect extends Equatable {
     Duration? startTime,
     Duration? endTime,
     bool onBeat = false,
+    Map<String, Object> settings = const {},
   }) {
     final builtIn = type.builtIn;
     if (builtIn != null) {
@@ -128,7 +140,7 @@ class EditorVideoEffect extends Equatable {
       id: id,
       custom: CustomVideoEffect(
         id: type.customId!,
-        params: {intensityParam: intensity},
+        params: {...settings, intensityParam: intensity},
         startTime: startTime,
         endTime: endTime,
       ),

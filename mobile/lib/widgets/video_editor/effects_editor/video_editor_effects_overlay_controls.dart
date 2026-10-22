@@ -1,5 +1,6 @@
 // ABOUTME: Overlay controls of the video effects editor: close/done toolbar,
-// ABOUTME: intensity slider, on-the-beat switch and the play/pause tap area.
+// ABOUTME: intensity slider, on-the-beat switch, the drops' settings and the
+// ABOUTME: play/pause tap area.
 
 import 'dart:math';
 
@@ -12,6 +13,7 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/drops_effect_settings.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/flashing_effect_snack_bar.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
@@ -22,8 +24,9 @@ import 'package:pro_video_editor/pro_video_editor.dart' show VideoEffectPreview;
 /// Overlay controls for the effects editor.
 ///
 /// Shows a vertical intensity slider on the right while an effect is picked,
-/// a switch to fire it on the beat when it can, and says so when this device
-/// cannot preview effects at all.
+/// a switch to fire it on the beat when it can, the settings of the drops
+/// while they are picked, and says so when this device cannot preview effects
+/// at all.
 class VideoEditorEffectsOverlayControls extends StatelessWidget {
   const VideoEditorEffectsOverlayControls({super.key});
 
@@ -72,6 +75,7 @@ class VideoEditorEffectsOverlayControls extends StatelessWidget {
           ),
         ),
         const Align(alignment: .bottomCenter, child: _OnBeatSwitch()),
+        const Align(alignment: .bottomCenter, child: _DropsSettingsCard()),
         const _TopBarContent(),
       ],
     );
@@ -173,6 +177,186 @@ class _OnBeatSwitch extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The settings of the drops while they are picked: a card that opens to
+/// sliders for how many drops there are, how large, how fast and how frosted
+/// they are and how strong their colour fringes are, and a button that gives
+/// them a new arrangement.
+class _DropsSettingsCard extends StatelessWidget {
+  const _DropsSettingsCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDrops = context.select(
+      (VideoEditorEffectsCubit c) =>
+          c.state.selectedType == EditorEffectType.drops,
+    );
+    if (!isDrops) return const SizedBox.shrink();
+    final l10n = context.l10n;
+    return Padding(
+      // Clear of the intensity slider on the right.
+      padding: const .fromLTRB(16, 16, 72, 16),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 360),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: context.vineColors.surfaceContainer,
+            borderRadius: .circular(16),
+          ),
+          // The tile's ink needs a surface of its own over the video.
+          child: Material(
+            type: MaterialType.transparency,
+            child: ExpansionTile(
+              title: Text(
+                l10n.videoEditorDropsSettingsTitle,
+                style: VineTheme.titleSmallFont(
+                  color: context.vineColors.onSurface,
+                ),
+              ),
+              shape: const Border(),
+              collapsedShape: const Border(),
+              iconColor: context.vineColors.onSurface,
+              collapsedIconColor: context.vineColors.onSurface,
+              childrenPadding: const .fromLTRB(16, 0, 16, 16),
+              children: [
+                ConstrainedBox(
+                  // Leaves most of the video in view while the card is open.
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.sizeOf(context).height * 0.4,
+                  ),
+                  child: const SingleChildScrollView(child: _DropsSettings()),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DropsSettings extends StatelessWidget {
+  const _DropsSettings();
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = context.select(
+      (VideoEditorEffectsCubit c) => c.state.dropsSettings,
+    );
+    final cubit = context.read<VideoEditorEffectsCubit>();
+    final l10n = context.l10n;
+    // Each change starts from the cubit's latest settings, so quick drags on
+    // one slider never undo another.
+    void update(DropsEffectSettings Function(DropsEffectSettings) change) =>
+        cubit.setDropsSettings(change(cubit.state.dropsSettings));
+    return Column(
+      crossAxisAlignment: .start,
+      spacing: 8,
+      children: [
+        _DropsSlider(
+          label: l10n.videoEditorDropsCountLabel,
+          value: settings.count.toDouble(),
+          format: (value) => '${value.round()}',
+          min: DropsEffectSettings.minCount.toDouble(),
+          max: DropsEffectSettings.maxCount.toDouble(),
+          divisions:
+              DropsEffectSettings.maxCount - DropsEffectSettings.minCount,
+          onChanged: (value) => update((s) => s.copyWith(count: value.round())),
+        ),
+        _DropsSlider(
+          label: l10n.videoEditorDropsSizeLabel,
+          value: settings.size,
+          onChanged: (value) => update((s) => s.copyWith(size: value)),
+        ),
+        _DropsSlider(
+          label: l10n.videoEditorDropsSpeedLabel,
+          value: settings.speed,
+          onChanged: (value) => update((s) => s.copyWith(speed: value)),
+        ),
+        _DropsSlider(
+          label: l10n.videoEditorDropsFrostLabel,
+          value: settings.frost,
+          onChanged: (value) => update((s) => s.copyWith(frost: value)),
+        ),
+        _DropsSlider(
+          label: l10n.videoEditorDropsFringesLabel,
+          value: settings.fringes,
+          onChanged: (value) => update((s) => s.copyWith(fringes: value)),
+        ),
+        DivineButton(
+          label: l10n.videoEditorDropsShuffle,
+          leadingIcon: DivineIconName.arrowsClockwise,
+          size: .small,
+          type: .secondary,
+          onPressed: cubit.shuffleDrops,
+        ),
+      ],
+    );
+  }
+}
+
+/// A labelled slider of the drops' settings, with its value on the right:
+/// a share from 0 to 100 unless [format] says otherwise.
+class _DropsSlider extends StatelessWidget {
+  const _DropsSlider({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+    this.format,
+    this.min = 0,
+    this.max = 1,
+    this.divisions,
+  });
+
+  final String label;
+  final double value;
+  final ValueChanged<double> onChanged;
+
+  /// Writes the value, for the eye and for screen readers alike.
+  final String Function(double value)? format;
+  final double min;
+  final double max;
+  final int? divisions;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: .start,
+      children: [
+        // The slider announces its label and value itself.
+        ExcludeSemantics(
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  label,
+                  style: VineTheme.bodyMediumFont(
+                    color: context.vineColors.onSurface,
+                  ),
+                ),
+              ),
+              Text(
+                format?.call(value) ?? '${(value * 100).round()}',
+                style: VineTheme.bodyMediumFont(
+                  color: context.vineColors.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+        DivineSlider(
+          value: value.clamp(min, max),
+          min: min,
+          max: max,
+          divisions: divisions,
+          semanticLabel: label,
+          semanticValue: format,
+          onChanged: onChanged,
+        ),
+      ],
     );
   }
 }

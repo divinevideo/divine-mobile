@@ -8373,6 +8373,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectFisheye => '鱼眼';
 
   @override
+  String get videoEditorEffectDrops => '水滴';
+
+  @override
+  String get videoEditorDropsSettingsTitle => '调节水滴';
+
+  @override
+  String get videoEditorDropsCountLabel => '数量';
+
+  @override
+  String get videoEditorDropsSizeLabel => '大小';
+
+  @override
+  String get videoEditorDropsSpeedLabel => '速度';
+
+  @override
+  String get videoEditorDropsFrostLabel => '磨砂';
+
+  @override
+  String get videoEditorDropsFringesLabel => '色边';
+
+  @override
+  String get videoEditorDropsShuffle => '随机排列';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       '一次只能用一个闪烁效果。闪烁太多可能会伤害对闪光敏感的人，所以我们在这里替换了另一个。';
 

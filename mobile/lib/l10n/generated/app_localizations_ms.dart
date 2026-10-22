@@ -8894,6 +8894,30 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorEffectFisheye => 'Mata Ikan';
 
   @override
+  String get videoEditorEffectDrops => 'Titisan';
+
+  @override
+  String get videoEditorDropsSettingsTitle => 'Laras titisan';
+
+  @override
+  String get videoEditorDropsCountLabel => 'Bilangan';
+
+  @override
+  String get videoEditorDropsSizeLabel => 'Saiz';
+
+  @override
+  String get videoEditorDropsSpeedLabel => 'Kelajuan';
+
+  @override
+  String get videoEditorDropsFrostLabel => 'Kabur';
+
+  @override
+  String get videoEditorDropsFringesLabel => 'Pinggir warna';
+
+  @override
+  String get videoEditorDropsShuffle => 'Kocok';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Satu kesan berkelip pada satu masa. Kelipan berlebihan boleh memudaratkan orang yang sensitif, jadi kami menggantikan yang satu lagi di sini.';
 

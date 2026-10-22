@@ -6167,6 +6167,38 @@
   "@videoEditorEffectFisheye": {
     "description": "Name of a video effect: the middle of the picture bulges out, as through a fisheye (very wide-angle) lens."
   },
+  "videoEditorEffectDrops": "Drops",
+  "@videoEditorEffectDrops": {
+    "description": "Name of a video effect: clear glass drops drift over the picture, bend it at their edges and flow into each other when they meet."
+  },
+  "videoEditorDropsSettingsTitle": "Adjust drops",
+  "@videoEditorDropsSettingsTitle": {
+    "description": "Header of the expandable card in the video effects editor that holds the settings of the Drops effect."
+  },
+  "videoEditorDropsCountLabel": "Number",
+  "@videoEditorDropsCountLabel": {
+    "description": "Slider label in the Drops effect settings: how many glass drops float over the video (1 to 5)."
+  },
+  "videoEditorDropsSizeLabel": "Size",
+  "@videoEditorDropsSizeLabel": {
+    "description": "Slider label in the Drops effect settings: how large the glass drops are."
+  },
+  "videoEditorDropsSpeedLabel": "Speed",
+  "@videoEditorDropsSpeedLabel": {
+    "description": "Slider label in the Drops effect settings: how fast the drops drift over the video; at zero they stand still."
+  },
+  "videoEditorDropsFrostLabel": "Frost",
+  "@videoEditorDropsFrostLabel": {
+    "description": "Slider label in the Drops effect settings: how frosted (blurred, like frosted glass) the drops are."
+  },
+  "videoEditorDropsFringesLabel": "Color fringes",
+  "@videoEditorDropsFringesLabel": {
+    "description": "Slider label in the Drops effect settings: how strong the rainbow-colored edges at the rims of the drops are."
+  },
+  "videoEditorDropsShuffle": "Shuffle",
+  "@videoEditorDropsShuffle": {
+    "description": "Button in the Drops effect settings that gives the drops a new random arrangement and new paths."
+  },
   "videoEditorEffectsFlashingReplaced": "One flashing effect at a time. Too much flashing can hurt people who are sensitive to it, so we swapped out the other one here.",
   "@videoEditorEffectsFlashingReplaced": {
     "description": "Snack bar after a flashing video effect (strobe, negative flash) replaced another flashing effect where the two overlapped on the timeline. Explains, without technical terms, that overlapping flashes can harm people with photosensitivity."

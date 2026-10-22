@@ -8888,6 +8888,30 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectFisheye => 'فش آئی';
 
   @override
+  String get videoEditorEffectDrops => 'قطرے';
+
+  @override
+  String get videoEditorDropsSettingsTitle => 'قطرے ایڈجسٹ کریں';
+
+  @override
+  String get videoEditorDropsCountLabel => 'تعداد';
+
+  @override
+  String get videoEditorDropsSizeLabel => 'سائز';
+
+  @override
+  String get videoEditorDropsSpeedLabel => 'رفتار';
+
+  @override
+  String get videoEditorDropsFrostLabel => 'دھندلا شیشہ';
+
+  @override
+  String get videoEditorDropsFringesLabel => 'رنگین کنارے';
+
+  @override
+  String get videoEditorDropsShuffle => 'ملائیں';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'ایک وقت میں صرف ایک ٹمٹماتا ایفیکٹ۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے، اس لیے ہم نے یہاں دوسرے کو بدل دیا۔';
 

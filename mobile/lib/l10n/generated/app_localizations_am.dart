@@ -8687,6 +8687,30 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectFisheye => 'ፊሽአይ';
 
   @override
+  String get videoEditorEffectDrops => 'ጠብታዎች';
+
+  @override
+  String get videoEditorDropsSettingsTitle => 'ጠብታዎችን አስተካክል';
+
+  @override
+  String get videoEditorDropsCountLabel => 'ብዛት';
+
+  @override
+  String get videoEditorDropsSizeLabel => 'መጠን';
+
+  @override
+  String get videoEditorDropsSpeedLabel => 'ፍጥነት';
+
+  @override
+  String get videoEditorDropsFrostLabel => 'ብዥታ';
+
+  @override
+  String get videoEditorDropsFringesLabel => 'የቀለም ጠርዞች';
+
+  @override
+  String get videoEditorDropsShuffle => 'አደባልቅ';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'አንድ ብልጭ ድርግም የሚል ኢፌክት በአንድ ጊዜ። ብዙ ብልጭታ ለሚነኩ ሰዎች ሊጎዳ ይችላል፣ ስለዚህ ሌላውን እዚህ ተክተነዋል።';
 

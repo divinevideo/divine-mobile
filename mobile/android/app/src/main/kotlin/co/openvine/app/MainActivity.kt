@@ -13,6 +13,7 @@ import android.security.keystore.KeyProperties
 import android.util.Log
 import android.window.OnBackInvokedCallback
 import co.openvine.app.proofmode.HardwareAttestationNotarizationProvider
+import co.openvine.app.videoeffects.DropsVideoEffect
 import co.openvine.app.videoeffects.EchoVideoEffect
 import co.openvine.app.videoeffects.FisheyeVideoEffect
 import io.flutter.embedding.android.FlutterFragmentActivity
@@ -101,6 +102,7 @@ class MainActivity : FlutterFragmentActivity() {
         // Divine's own video effects, for the editor preview and the export (#9708).
         EchoVideoEffect.register()
         FisheyeVideoEffect.register()
+        DropsVideoEffect.register()
 
         // Set up Nostr bridge frame attestation channel. Must run after
         // super.configureFlutterEngine (which registers WebViewFlutterPlugin via

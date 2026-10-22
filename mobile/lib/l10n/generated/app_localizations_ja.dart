@@ -8449,6 +8449,30 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectFisheye => '魚眼';
 
   @override
+  String get videoEditorEffectDrops => 'しずく';
+
+  @override
+  String get videoEditorDropsSettingsTitle => 'しずくを調整';
+
+  @override
+  String get videoEditorDropsCountLabel => '数';
+
+  @override
+  String get videoEditorDropsSizeLabel => 'サイズ';
+
+  @override
+  String get videoEditorDropsSpeedLabel => '速度';
+
+  @override
+  String get videoEditorDropsFrostLabel => 'すりガラス';
+
+  @override
+  String get videoEditorDropsFringesLabel => '色のにじみ';
+
+  @override
+  String get videoEditorDropsShuffle => 'シャッフル';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       '点滅エフェクトは一度にひとつだけ。点滅が多すぎると、敏感な人の体に負担がかかることがあるので、ここではもう一方を置き換えました。';
 
