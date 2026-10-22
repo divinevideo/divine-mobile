@@ -26,6 +26,7 @@ Widget _buildSubject({
   double initialSpeed = 1.0,
   VideoSpeedRamp? initialRamp,
   Duration? sourceDuration,
+  bool offerCurve = true,
 }) {
   return MaterialApp.router(
     localizationsDelegates: appLocalizationsDelegates,
@@ -43,6 +44,7 @@ Widget _buildSubject({
                   initialSpeed: initialSpeed,
                   initialRamp: initialRamp,
                   sourceDuration: sourceDuration,
+                  offerCurve: offerCurve,
                 ),
               ),
             ),
@@ -354,6 +356,26 @@ void main() {
         );
         expect(find.byType(DivineSlider), findsNothing);
         expect(_curvePoint(3), findsOneWidget);
+      });
+
+      testWidgets('leaves the curve out where only one speed can play', (
+        tester,
+      ) async {
+        // A sound plays at one speed; its sheet even ignores a curve handed in.
+        await tester.pumpWidget(
+          _buildSubject(
+            initialRamp: ClipSpeedRampPreset.hero.ramp,
+            offerCurve: false,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          find.bySemanticsLabel(_l10n.videoEditorSpeedModeCurve),
+          findsNothing,
+        );
+        expect(find.byType(DivineSlider), findsOneWidget);
+        expect(_curvePoint(0), findsNothing);
       });
 
       testWidgets('confirming a preset returns its ramp', (tester) async {
