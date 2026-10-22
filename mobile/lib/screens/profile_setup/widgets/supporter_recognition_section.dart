@@ -26,12 +26,8 @@ class _SupporterRecognition extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final SupporterCubit cubit;
-    try {
-      cubit = context.read<SupporterCubit>();
-    } on ProviderNotFoundException {
-      return const SizedBox.shrink();
-    }
+    final cubit = context.read<SupporterCubit?>();
+    if (cubit == null) return const SizedBox.shrink();
     final l10n = context.l10n;
     return BlocConsumer<SupporterCubit, SupporterState>(
       bloc: cubit,

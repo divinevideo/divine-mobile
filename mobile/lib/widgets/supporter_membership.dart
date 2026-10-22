@@ -40,7 +40,7 @@ class SupporterMembership extends ConsumerWidget {
       );
     }
     final status = _MembershipStatus(compact: compact);
-    return _hasSupporterCubit(context)
+    return context.read<SupporterCubit?>() != null
         ? status
         : SupporterMembershipScope(child: status);
   }
@@ -87,15 +87,6 @@ class SupporterMembershipScope extends ConsumerWidget {
       },
       child: child,
     );
-  }
-}
-
-bool _hasSupporterCubit(BuildContext context) {
-  try {
-    context.read<SupporterCubit>();
-    return true;
-  } on ProviderNotFoundException {
-    return false;
   }
 }
 

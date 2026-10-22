@@ -599,23 +599,17 @@ bool _showsSupporterTreatment(
     final own = _ownPublicRecognition(context);
     if (own != null) return own;
   }
-  try {
-    return context.select<PublicSupporterCubit, bool>((cubit) => cubit.state);
-  } on ProviderNotFoundException {
-    return false;
-  }
+  return context.select<PublicSupporterCubit?, bool>(
+    (cubit) => cubit?.state ?? false,
+  );
 }
 
 /// The owner's published supporter status, or null until their account has
 /// been read.
 bool? _ownPublicRecognition(BuildContext context) {
-  try {
-    return context.select<SupporterCubit, bool?>((cubit) {
-      final state = cubit.state;
-      if (state.snapshot == null) return null;
-      return state.isSupporter && state.haloVisible;
-    });
-  } on ProviderNotFoundException {
-    return null;
-  }
+  return context.select<SupporterCubit?, bool?>((cubit) {
+    final state = cubit?.state;
+    if (state == null || state.snapshot == null) return null;
+    return state.isSupporter && state.haloVisible;
+  });
 }
