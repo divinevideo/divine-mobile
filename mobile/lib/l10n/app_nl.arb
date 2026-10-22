@@ -5768,5 +5768,9 @@
       }
     }
   },
-  "userRowPosted": "Geplaatst {time}"
+  "userRowPosted": "Geplaatst {time}",
+  "badgeSubscribedAction": "Volgend",
+  "badgeSubscribeAction": "Badge volgen",
+  "badgeAcceptedHoldersTitle": "Geaccepteerde badgehouders",
+  "badgeSubscriptionLoadError": "Je badge-abonnementen konden niet worden geladen. Probeer het opnieuw."
 }

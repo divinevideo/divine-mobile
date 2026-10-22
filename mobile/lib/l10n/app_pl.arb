@@ -5768,5 +5768,9 @@
       }
     }
   },
-  "userRowPosted": "Opublikowano {time}"
+  "userRowPosted": "Opublikowano {time}",
+  "badgeSubscribedAction": "Subskrybujesz",
+  "badgeSubscribeAction": "Subskrybuj odznakę",
+  "badgeAcceptedHoldersTitle": "Osoby, które przyjęły odznakę",
+  "badgeSubscriptionLoadError": "Nie udało się wczytać twoich subskrypcji odznak. Spróbuj ponownie."
 }

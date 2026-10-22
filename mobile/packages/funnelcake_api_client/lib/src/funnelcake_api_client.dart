@@ -174,7 +174,22 @@ class FunnelcakeApiClient {
   /// budget in one attempt is not retried; the fast failures a flaky link
   /// actually produces — reset sockets, refused connections, 5xx — leave
   /// almost the whole budget intact and still get every attempt.
-  Future<http.Response> _get(Uri uri) async {
+  Future<http.Response> _get(Uri uri) => _retryRead(
+    uri,
+    () => _httpClient.get(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+        ...buildDivineClientHeaders(appVersion: _appVersion),
+      },
+    ),
+  );
+
+  /// Retries an idempotent read within one shared timeout budget.
+  Future<http.Response> _retryRead(
+    Uri uri,
+    Future<http.Response> Function() request,
+  ) async {
     final elapsed = Stopwatch()..start();
     Duration remaining() => _timeout - elapsed.elapsed;
 
@@ -190,15 +205,7 @@ class FunnelcakeApiClient {
       }
       attempt++;
       try {
-        final response = await _httpClient
-            .get(
-              uri,
-              headers: {
-                'Accept': 'application/json',
-                ...buildDivineClientHeaders(appVersion: _appVersion),
-              },
-            )
-            .timeout(remaining());
+        final response = await request().timeout(remaining());
 
         if (_canRetry(attempt, remaining()) &&
             _isRetryableStatus(response.statusCode)) {
@@ -252,18 +259,21 @@ class FunnelcakeApiClient {
     );
   }
 
-  Future<http.Response> _post(Uri uri, {required Object body}) {
-    return _httpClient
-        .post(
-          uri,
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            ...buildDivineClientHeaders(appVersion: _appVersion),
-          },
-          body: jsonEncode(body),
-        )
-        .timeout(_timeout);
+  Future<http.Response> _post(
+    Uri uri, {
+    required Object body,
+    bool retryRead = false,
+  }) {
+    Future<http.Response> request() => _httpClient.post(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        ...buildDivineClientHeaders(appVersion: _appVersion),
+      },
+      body: jsonEncode(body),
+    );
+    return retryRead ? _retryRead(uri, request) : request().timeout(_timeout);
   }
 
   Map<String, String> _diagnosticHeaders(http.Response response) {
@@ -1136,6 +1146,95 @@ class FunnelcakeApiClient {
       rethrow;
     } catch (e) {
       throw FunnelcakeException('Failed to fetch home feed: $e');
+    }
+  }
+
+  /// Public videos from at most 200 authors, with moderation labels included.
+  /// Larger holder sets are split by the repository before calling this API.
+  /// JSON POST keeps full author chunks out of the request URL. The backend
+  /// must support this route before callers ship; there is no GET fallback.
+  Future<RecentVideosResponse> getVideosByAuthors({
+    required List<String> authors,
+    int limit = 50,
+    int offset = 0,
+    int? before,
+    String? cursor,
+    String sort = 'recent',
+  }) async {
+    if (!isAvailable) throw const FunnelcakeNotConfiguredException();
+    if (authors.isEmpty || authors.length > 200) {
+      throw const FunnelcakeException('Expected 1 to 200 authors');
+    }
+    final body = <String, Object>{
+      ..._videoQueryParameters(const {}),
+      'authors': authors,
+      'sort': sort,
+      'limit': limit,
+      'offset': offset,
+      'before': ?before,
+      'cursor': ?cursor,
+    };
+    final uri = Uri.parse('$_baseUrl/api/v2/videos/by-authors');
+    try {
+      final response = await _post(uri, body: body, retryRead: true);
+      if (response.statusCode != 200) {
+        throw FunnelcakeApiException(
+          message: 'Failed to fetch videos by authors',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+      final (:items, :hasMore, :nextCursor) = _unwrapListResponse(
+        jsonDecode(response.body),
+      );
+      return RecentVideosResponse(
+        videos: items
+            .map((item) => VideoStats.fromJson(item as Map<String, dynamic>))
+            .where((video) => video.id.isNotEmpty && video.videoUrl.isNotEmpty)
+            .toList(),
+        serverItemCount: items.length,
+        hasMore: hasMore,
+        nextCursor: nextCursor,
+      );
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (error) {
+      throw FunnelcakeException('Failed to fetch videos by authors: $error');
+    }
+  }
+
+  /// Locally indexed accepted holders from the first bounded award page.
+  ///
+  /// This is a fast preview only. Callers must reconcile with relays for the
+  /// complete federated holder set before treating the result as final.
+  Future<List<String>> getBadgeHolderPreview({
+    required String creatorPubkey,
+    required String dTag,
+  }) async {
+    if (!isAvailable) throw const FunnelcakeNotConfiguredException();
+    final uri = Uri.parse(
+      '$_baseUrl/api/badges/${Uri.encodeComponent(creatorPubkey)}/${Uri.encodeComponent(dTag)}/holders',
+    ).replace(queryParameters: {'limit': '10'});
+    try {
+      final response = await _get(uri);
+      if (response.statusCode != 200) {
+        throw FunnelcakeApiException(
+          message: 'Failed to fetch badge holder preview',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final holders = data['holders'] as List<dynamic>;
+      return holders.cast<String>();
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } catch (error) {
+      throw FunnelcakeException('Failed to fetch badge holder preview: $error');
     }
   }
 

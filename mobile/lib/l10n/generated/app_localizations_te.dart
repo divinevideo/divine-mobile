@@ -11248,6 +11248,23 @@ class AppLocalizationsTe extends AppLocalizations {
   String get badgesTitle => 'బ్యాడ్జ్‌లు';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'బ్యాడ్జ్‌ను సబ్‌స్క్రైబ్ చేయండి';
+
+  @override
+  String get badgeSubscribedAction => 'సబ్‌స్క్రైబ్ చేశారు';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'బ్యాడ్జ్‌ను అంగీకరించినవారు';
+
+  @override
+  String get badgeSubscriptionLoadError =>
+      'మీ బ్యాడ్జ్ సబ్‌స్క్రిప్షన్‌లను లోడ్ చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get badgesLoadError => 'బ్యాడ్జ్‌లను లోడ్ చేయడం సాధ్యపడలేదు';
 
   @override

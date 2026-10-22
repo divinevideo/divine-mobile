@@ -5768,5 +5768,9 @@
       }
     }
   },
-  "userRowPosted": "Pubblicato {time}"
+  "userRowPosted": "Pubblicato {time}",
+  "badgeSubscribedAction": "Iscritto",
+  "badgeSubscribeAction": "Iscriviti al badge",
+  "badgeAcceptedHoldersTitle": "Persone che hanno accettato il badge",
+  "badgeSubscriptionLoadError": "Impossibile caricare i tuoi abbonamenti ai badge. Riprova."
 }

@@ -5768,5 +5768,9 @@
       }
     }
   },
-  "userRowPosted": "Gepostet {time}"
+  "userRowPosted": "Gepostet {time}",
+  "badgeSubscribedAction": "Abonniert",
+  "badgeSubscribeAction": "Abzeichen abonnieren",
+  "badgeAcceptedHoldersTitle": "Personen mit angenommenem Abzeichen",
+  "badgeSubscriptionLoadError": "Deine Abzeichen-Abonnements konnten nicht geladen werden. Versuche es erneut."
 }

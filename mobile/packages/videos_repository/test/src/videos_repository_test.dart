@@ -152,6 +152,7 @@ void main() {
 
     setUpAll(() {
       registerFallbackValue(<Filter>[]);
+      registerFallbackValue(<String>[]);
       registerFallbackValue(LeaderboardPeriod.week);
       registerFallbackValue(PopularVideosVariant.classic);
       registerFallbackValue(VideoSearchSort.trending);
@@ -159,6 +160,224 @@ void main() {
 
     test('can be instantiated', () {
       expect(repository, isNotNull);
+    });
+
+    group('createBadgeVideoPager', () {
+      test('requires an available multi-author API', () {
+        expect(
+          () => repository.createBadgeVideoPager(['holder']),
+          throwsA(isA<FunnelcakeNotConfiguredException>()),
+        );
+        final client = MockFunnelcakeApiClient();
+        when(() => client.isAvailable).thenReturn(false);
+        final withClient = VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: client,
+        );
+        expect(
+          () => withClient.createBadgeVideoPager(['holder']),
+          throwsA(isA<FunnelcakeNotConfiguredException>()),
+        );
+      });
+
+      test('Following badge pages retain recently seen demotion', () async {
+        final client = MockFunnelcakeApiClient();
+        when(() => client.isAvailable).thenReturn(true);
+        final seen = _createVideoStats(
+          id: '1' * 64,
+          pubkey: 'a' * 64,
+          dTag: 'seen',
+          videoUrl: 'https://example.com/seen.mp4',
+          createdAt: 200,
+        );
+        final fresh = _createVideoStats(
+          id: '2' * 64,
+          pubkey: 'a' * 64,
+          dTag: 'fresh',
+          videoUrl: 'https://example.com/fresh.mp4',
+          createdAt: 100,
+        );
+        when(
+          () => client.getVideosByAuthors(
+            authors: any(named: 'authors'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer(
+          (_) async => RecentVideosResponse(
+            videos: [seen, fresh],
+            serverItemCount: 2,
+            hasMore: false,
+          ),
+        );
+        final repo = VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: client,
+          seenVideoLookup: SeenVideoLookup(
+            wasSeenRecently: (id, {within = const Duration(hours: 24)}) =>
+                id == seen.id,
+          ),
+        );
+        final pager = repo.createBadgeVideoPager([
+          'a' * 64,
+        ], prioritizeUnseen: true);
+        expect((await pager.loadMore()).map((v) => v.id), [fresh.id, seen.id]);
+      });
+
+      test('factory preserves event-time order across chunk buffers', () async {
+        final client = MockFunnelcakeApiClient();
+        when(() => client.isAvailable).thenReturn(true);
+        VideoStats video(int id, int createdAt, {int? publishedAt}) =>
+            _createVideoStats(
+              id: id.toRadixString(16).padLeft(64, '0'),
+              pubkey: 'a' * 64,
+              dTag: 'video-$id',
+              videoUrl: 'https://example.com/$id.mp4',
+              createdAt: createdAt,
+              eventCreatedAt: createdAt,
+              publishedAt: publishedAt,
+            );
+        final edited = video(1, 400, publishedAt: 100);
+        final nextInChunk = video(2, 300);
+        final otherChunk = video(3, 350);
+        when(
+          () => client.getVideosByAuthors(
+            authors: any(named: 'authors'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer((invocation) async {
+          final authors = invocation.namedArguments[#authors]! as List<String>;
+          final videos = authors.length == 200
+              ? [edited, nextInChunk]
+              : [otherChunk];
+          return RecentVideosResponse(
+            videos: videos,
+            serverItemCount: videos.length,
+            hasMore: false,
+          );
+        });
+        final repo = VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: client,
+        );
+        final pager = repo.createBadgeVideoPager([
+          for (var i = 0; i < 201; i++) i.toRadixString(16).padLeft(64, '0'),
+        ]);
+
+        expect((await pager.loadMore(limit: 1)).single.id, edited.id);
+        expect((await pager.loadMore()).map((video) => video.id), [
+          otherChunk.id,
+          nextInChunk.id,
+        ]);
+        expect(pager.hasMore, isFalse);
+      });
+
+      for (final hideBy in ['block', 'delete']) {
+        test('factory rechecks $hideBy for buffered videos', () async {
+          final client = MockFunnelcakeApiClient();
+          when(() => client.isAvailable).thenReturn(true);
+          final videos = [
+            for (var i = 1; i <= 4; i++)
+              _createVideoStats(
+                id: i.toRadixString(16).padLeft(64, '0'),
+                pubkey: i.toRadixString(16).padLeft(64, 'a'),
+                dTag: 'video-$i',
+                videoUrl: 'https://example.com/$i.mp4',
+                createdAt: 500 - i,
+              ),
+          ];
+          when(
+            () => client.getVideosByAuthors(
+              authors: any(named: 'authors'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              before: any(named: 'before'),
+            ),
+          ).thenAnswer(
+            (_) async => RecentVideosResponse(
+              videos: videos,
+              serverItemCount: videos.length,
+              hasMore: false,
+            ),
+          );
+          final blocked = <String>{};
+          final deleted = <String>{};
+          final repo = VideosRepository(
+            nostrClient: mockNostrClient,
+            funnelcakeApiClient: client,
+            blockFilter: blocked.contains,
+            deletedFilter: (video) => deleted.contains(video.id),
+          );
+          final pager = repo.createBadgeVideoPager(videos.map((v) => v.pubkey));
+
+          expect((await pager.loadMore(limit: 1)).single.id, videos.first.id);
+          if (hideBy == 'block') {
+            blocked.addAll([videos[1].pubkey, videos[2].pubkey]);
+          } else {
+            deleted.addAll([videos[1].id, videos[2].id]);
+          }
+          expect((await pager.loadMore()).map((video) => video.id), [
+            videos.last.id,
+          ]);
+          expect(pager.hasMore, isFalse);
+          verify(
+            () => client.getVideosByAuthors(
+              authors: any(named: 'authors'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              before: any(named: 'before'),
+            ),
+          ).called(1);
+        });
+      }
+
+      test('sorts unique authors and transforms the returned video', () async {
+        final client = MockFunnelcakeApiClient();
+        when(() => client.isAvailable).thenReturn(true);
+        final stats = _createVideoStats(
+          id: 'badge-video',
+          pubkey: 'holder-a',
+          dTag: 'badge-video',
+          videoUrl: 'https://example.com/badge-video.mp4',
+        );
+        when(
+          () => client.getVideosByAuthors(
+            authors: any(named: 'authors'),
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer(
+          (_) async => RecentVideosResponse(
+            videos: [stats],
+            serverItemCount: 1,
+            hasMore: false,
+          ),
+        );
+        final withClient = VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: client,
+        );
+        final pager = withClient.createBadgeVideoPager([
+          'holder-b',
+          'holder-a',
+          'holder-a',
+        ]);
+
+        final videos = await pager.loadMore(limit: 1);
+
+        expect(videos.single.id, stats.id);
+        verify(
+          () => client.getVideosByAuthors(
+            authors: ['holder-a', 'holder-b'],
+            limit: 100,
+            before: any(named: 'before'),
+          ),
+        ).called(1);
+      });
     });
 
     group('refreshAudioReusePolicy', () {
@@ -16122,6 +16341,7 @@ VideoStats _createVideoStats({
   required String videoUrl,
   int createdAt = 1704067200,
   int? publishedAt,
+  int? eventCreatedAt,
   String title = 'Test Video',
   String thumbnail = 'https://example.com/thumb.jpg',
   int? loops,
@@ -16138,6 +16358,7 @@ VideoStats _createVideoStats({
     pubkey: pubkey,
     createdAt: DateTime.fromMillisecondsSinceEpoch(createdAt * 1000),
     kind: EventKind.videoVertical,
+    eventCreatedAt: eventCreatedAt,
     publishedAt: publishedAt,
     dTag: dTag,
     title: title,

@@ -11056,6 +11056,23 @@ class AppLocalizationsBg extends AppLocalizations {
   String get badgesTitle => 'Значки';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'Абониране за значката';
+
+  @override
+  String get badgeSubscribedAction => 'Абониран';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Приели значката';
+
+  @override
+  String get badgeSubscriptionLoadError =>
+      'Абонаментите ви за значки не можаха да се заредят. Опитайте отново.';
+
+  @override
   String get badgesLoadError => 'Значките не се заредиха';
 
   @override

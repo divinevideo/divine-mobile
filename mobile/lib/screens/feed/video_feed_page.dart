@@ -90,6 +90,7 @@ class VideoFeedPage extends ConsumerWidget {
 
     final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
     final feedTuningRepository = ref.watch(feedTuningRepositoryProvider);
+    final badgeRepository = ref.watch(badgeRepositoryProvider);
     final enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
 
     return MultiBlocProvider(
@@ -98,6 +99,7 @@ class VideoFeedPage extends ConsumerWidget {
         showDivineHostedOnly,
         contentFilterVersion,
         hashtagRepository,
+        badgeRepository,
       )),
       providers: [
         BlocProvider(
@@ -117,6 +119,8 @@ class VideoFeedPage extends ConsumerWidget {
                 // fresh, so the cached serve is never stale to the viewer.
                 feedTracker: ref.read(feedPerformanceTrackerProvider),
                 feedTuningRepository: feedTuningRepository,
+                badgeAuthors: badgeRepository.loadSubscribedHolders,
+                badgeSubscriptionChanges: badgeRepository.subscriptionChanges,
                 enrichVideos: (videos) => enrichVideosWithNostrTags(
                   videos,
                   nostrService: ref.read(nostrServiceProvider),

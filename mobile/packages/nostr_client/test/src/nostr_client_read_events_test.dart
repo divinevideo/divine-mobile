@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:db_client/db_client.dart' hide Filter;
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -28,6 +29,7 @@ class _StubPagerNostr extends Mock implements Nostr {
 
   /// The deadline the client handed the pager, null until it has walked.
   DateTime? seenDeadline;
+  List<String>? seenTempRelays;
 
   @override
   Future<PagedQueryResult> readAllEvents(
@@ -40,6 +42,7 @@ class _StubPagerNostr extends Mock implements Nostr {
     List<int> relayTypes = RelayType.all,
   }) async {
     seenDeadline = deadline;
+    seenTempRelays = tempRelays;
     return walk;
   }
 }
@@ -66,6 +69,27 @@ class _ScriptedReadsNostr extends Mock implements Nostr {
   }) async {
     deadlines.add(deadline);
     return results[deadlines.length - 1];
+  }
+}
+
+/// Holds network reads until the test explicitly releases its query slots.
+class _ControlledNostr extends Mock implements Nostr {
+  final pendingReads = <Completer<QueryResult>>[];
+
+  @override
+  Future<QueryResult> readEvents(
+    List<Map<String, dynamic>> filters, {
+    String? id,
+    List<String>? tempRelays,
+    List<int>? relayTypes,
+    bool sendAfterAuth = false,
+    Duration timeout = const Duration(seconds: 5),
+    DateTime? deadline,
+    bool requireAllRelaysSettled = false,
+  }) {
+    final pending = Completer<QueryResult>();
+    pendingReads.add(pending);
+    return pending.future;
   }
 }
 
@@ -163,9 +187,15 @@ NostrClient _clientOver(
   required List<String> connectedRelays,
   AppDbClient? dbClient,
   RelayDiagnosticsSink? diagnosticsSink,
+  bool Function(String url)? isRelayAllowed,
 }) {
   final relayManager = _MockRelayManager();
   when(() => relayManager.connectedRelays).thenReturn(connectedRelays);
+  when(() => relayManager.isRelayAllowed(any())).thenAnswer(
+    (invocation) =>
+        isRelayAllowed?.call(invocation.positionalArguments.single as String) ??
+        true,
+  );
   when(() => relayManager.diagnosticsSink).thenReturn(diagnosticsSink);
   when(relayManager.dispose).thenAnswer((_) async {});
   when(relayManager.retryDisconnectedRelays).thenAnswer((_) async {});
@@ -1105,6 +1135,42 @@ void main() {
   });
 
   group('NostrClient.readAllEvents', () {
+    test(
+      'passes a public relay to the pager without connected relays',
+      () async {
+        final nostr = _StubPagerNostr(
+          const PagedQueryResult(events: [], isComplete: true, pages: 1),
+        );
+        final client = _clientOver(nostr, connectedRelays: []);
+
+        final result = await client.readAllEvents(
+          _textNotes(),
+          tempRelays: ['wss://relay.example'],
+        );
+
+        expect(result.isComplete, isTrue);
+        expect(nostr.seenTempRelays, ['wss://relay.example']);
+      },
+    );
+
+    test('drops a public relay outside the environment', () async {
+      final nostr = _StubPagerNostr(
+        const PagedQueryResult(events: [], isComplete: true, pages: 1),
+      );
+      final client = _clientOver(
+        nostr,
+        connectedRelays: [],
+        isRelayAllowed: (url) => url == 'wss://relay.example',
+      );
+
+      await client.readAllEvents(
+        _textNotes(),
+        tempRelays: ['wss://relay.example', 'wss://elsewhere.example'],
+      );
+
+      expect(nostr.seenTempRelays, ['wss://relay.example']);
+    });
+
     test('walks two pages and stops on the empty page', () async {
       final nostr = _newNostr();
       final relay = _ScriptedRelay('wss://pages.example');
@@ -1740,25 +1806,75 @@ void main() {
 
     test(
       'tells an observer why a read was skipped without being sent',
-      () async {
-        final setup = await _saturatedPool(holdFor: holdFor);
-        final reasons = <String>[];
-
-        final skipped = await NostrClient.observeSkippedReads(
-          () => setup.client.queryEventsDetailed(
-            [inboxList()],
-            useCache: false,
-            tempRelays: const [_pooledRelayUrl],
-            relayTypes: const [RelayType.temp],
-            requireAllRelaysSettled: true,
-            timeout: lookupTimeout,
-          ),
-          onSkipped: reasons.add,
+      () {
+        final nostr = _ControlledNostr();
+        final manager = _MockRelayManager();
+        when(() => manager.connectedRelays).thenReturn([_pooledRelayUrl]);
+        when(() => manager.configuredRelays).thenReturn([_pooledRelayUrl]);
+        when(() => manager.isRelayAllowed(any())).thenReturn(true);
+        when(() => manager.diagnosticsSink).thenReturn(null);
+        when(manager.dispose).thenAnswer((_) async {});
+        final client = NostrClient.forTesting(
+          nostr: nostr,
+          relayManager: manager,
         );
-
-        expect(skipped.timedOut, isTrue);
-        expect(reasons, [contains('no query-pool slot arrived')]);
-        await setup.occupants;
+        fakeAsync((async) {
+          var occupantsDone = false;
+          unawaited(
+            Future.wait([
+              for (var i = 0; i < NostrClient.maxConcurrentQueries; i++)
+                client.readEvents(
+                  [_textNotes()],
+                  useCache: false,
+                  timeout: holdFor,
+                ),
+            ]).then((_) => occupantsDone = true),
+          );
+          async.flushMicrotasks();
+          expect(
+            nostr.pendingReads,
+            hasLength(NostrClient.maxConcurrentQueries),
+          );
+          try {
+            final reasons = <String>[];
+            bool? timedOut;
+            unawaited(
+              NostrClient.observeSkippedReads(
+                () => client.queryEventsDetailed(
+                  [inboxList()],
+                  useCache: false,
+                  tempRelays: const [_pooledRelayUrl],
+                  relayTypes: const [RelayType.temp],
+                  requireAllRelaysSettled: true,
+                  timeout: lookupTimeout,
+                ),
+                onSkipped: reasons.add,
+              ).then((result) => timedOut = result.timedOut),
+            );
+            async.flushMicrotasks();
+            expect(timedOut, isNull);
+            async.elapse(lookupTimeout - RelayPool.querySettleWindow);
+            expect(timedOut, isTrue);
+            expect(reasons, [contains('no query-pool slot arrived')]);
+            expect(occupantsDone, isFalse);
+            expect(
+              nostr.pendingReads,
+              hasLength(NostrClient.maxConcurrentQueries),
+            );
+          } finally {
+            for (final read in nostr.pendingReads) {
+              read.complete(
+                const QueryResult(events: [], endedBy: QueryEnd.complete),
+              );
+            }
+            async.flushMicrotasks();
+            expect(occupantsDone, isTrue);
+            var disposed = false;
+            unawaited(client.dispose().then((_) => disposed = true));
+            async.flushMicrotasks();
+            expect(disposed, isTrue);
+          }
+        });
       },
     );
 

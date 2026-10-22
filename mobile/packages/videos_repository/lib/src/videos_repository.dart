@@ -13,6 +13,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/src/author_feed_result.dart';
+import 'package:videos_repository/src/badge_video_pager.dart';
 import 'package:videos_repository/src/home_feed_result.dart';
 import 'package:videos_repository/src/in_memory_feed_cache.dart';
 import 'package:videos_repository/src/popular_videos_page.dart';
@@ -299,6 +300,29 @@ class VideosRepository {
       _cachedHashtagKeys.clear();
       _inMemoryFeedCache?.clear();
     }
+  }
+
+  /// A snapshot pager for videos by all currently accepted badge holders.
+  /// [prioritizeUnseen] applies Following's existing seen-freshness ordering
+  /// to each delivered page without changing the underlying snapshot cursor.
+  BadgeVideoPager createBadgeVideoPager(
+    Iterable<String> authors, {
+    bool prioritizeUnseen = false,
+  }) {
+    final client = _funnelcakeApiClient;
+    if (client == null || !client.isAvailable) {
+      throw const FunnelcakeNotConfiguredException();
+    }
+    final unique = authors.toSet().toList()..sort();
+    return BadgeVideoPager(
+      client: client,
+      authors: unique,
+      orderPage: prioritizeUnseen ? _orderBySeenFreshness : null,
+      transform: (stats) => _transformVideoStats(stats, sortByCreatedAt: false),
+      isVisible: (video) =>
+          !(_blockFilter?.call(video.pubkey) ?? false) &&
+          !(_deletedFilter?.call(video) ?? false),
+    );
   }
 
   /// Fetches videos from followed users for the home feed, optionally

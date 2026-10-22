@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:badge_repository/src/badge_coordinate.dart';
+import 'package:badge_repository/src/badge_read_incomplete_exception.dart';
 import 'package:badge_repository/src/nip58_badge_models.dart';
 import 'package:badge_repository/src/nip58_badge_parser.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -29,6 +32,7 @@ typedef BadgeEventSigner =
       required int kind,
       required String content,
       required List<List<String>> tags,
+      int? createdAt,
     });
 
 class BadgeDashboardData {
@@ -327,18 +331,39 @@ class BadgePublishException implements Exception {
   String toString() => 'BadgePublishException: $message';
 }
 
+/// Signing was declined or could not complete before the signer timed out.
+///
+/// An expected interaction failure, not a programming invariant.
+class BadgeSigningException implements Exception {
+  const BadgeSigningException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'BadgeSigningException: $message';
+}
+
 class BadgeRepository {
+  /// Creates a badge repository. [sessionChanges] ends any cached subscription
+  /// absence proof, including a sign-out/sign-in to the same account.
   BadgeRepository({
     required NostrClient nostrClient,
     required SharedPreferences sharedPreferences,
     required BadgeCurrentPubkeyReader currentPubkey,
     required BadgeEventSigner signEvent,
     BadgeHiddenPubkeyReader? isHiddenPubkey,
+    String? definitionRelayUrl,
+    Stream<void>? sessionChanges,
   }) : _nostrClient = nostrClient,
        _sharedPreferences = sharedPreferences,
        _currentPubkey = currentPubkey,
        _signEvent = signEvent,
-       _isHiddenPubkey = isHiddenPubkey;
+       _isHiddenPubkey = isHiddenPubkey,
+       _definitionRelayUrl = definitionRelayUrl {
+    _subscriptionSessionChanges = sessionChanges?.listen(
+      (_) => _resetSubscriptionSession(),
+    );
+  }
 
   final NostrClient _nostrClient;
   final SharedPreferences _sharedPreferences;
@@ -348,6 +373,9 @@ class BadgeRepository {
   /// Null leaves awards unfiltered, which is what an anonymous or test
   /// repository wants — there is no blocklist to consult.
   final BadgeHiddenPubkeyReader? _isHiddenPubkey;
+
+  /// Relay added to every public definition read, including before sign-in.
+  final String? _definitionRelayUrl;
 
   /// The profile badge list this repository last published, and whose it is.
   ///
@@ -370,6 +398,470 @@ class BadgeRepository {
   /// cached either, and an edit would read the previous definition straight
   /// back — the badge would keep its old name until a manual refresh.
   final Map<String, Nip58BadgeDefinition> _publishedDefinitions = {};
+
+  /// A just-published subscription event may take a moment to appear in relay
+  /// queries. Keep it until the relay supplies the same or a newer event.
+  Event? _publishedSubscriptions;
+  final StreamController<void> _subscriptionChanges =
+      StreamController<void>.broadcast();
+
+  String? _subscriptionAccount;
+  int _subscriptionSession = 0;
+  int _subscriptionProof = 0;
+  int _subscriptionEdits = 0;
+  bool _verifiedEmptySubscriptions = false;
+  bool _subscriptionDiscoveryPending = false;
+  Event? _observedSubscriptions;
+  Future<void>? _subscriptionRevalidation;
+  StreamSubscription<void>? _subscriptionSessionChanges;
+  bool _disposed = false;
+
+  void _invalidateEmptySubscriptions() {
+    _verifiedEmptySubscriptions = false;
+    _subscriptionProof++;
+  }
+
+  void _resetSubscriptionSession({bool preserveObservedSubscriptions = false}) {
+    final pubkey = _currentPubkey();
+    if (!preserveObservedSubscriptions || pubkey != _subscriptionAccount) {
+      _observedSubscriptions = null;
+    }
+    _subscriptionAccount = pubkey;
+    _subscriptionSession++;
+    _subscriptionEdits = 0;
+    _subscriptionDiscoveryPending = false;
+    _invalidateEmptySubscriptions();
+    _subscriptionRevalidation = null;
+  }
+
+  String? _syncSubscriptionAccount() {
+    final pubkey = _currentPubkey();
+    if (pubkey != _subscriptionAccount) _resetSubscriptionSession();
+    return pubkey;
+  }
+
+  bool _isSubscriptionSessionCurrent(String pubkey, int session) =>
+      !_disposed &&
+      session == _subscriptionSession &&
+      pubkey == _subscriptionAccount &&
+      pubkey == _currentPubkey();
+
+  void _revalidateEmptySubscriptions(
+    String pubkey,
+    int session,
+    Duration timeout,
+  ) {
+    if (_subscriptionRevalidation != null) return;
+    final proof = _subscriptionProof;
+    late final Future<void> revalidation;
+    revalidation = (() async {
+      try {
+        await loadSubscriptions(requireComplete: true).timeout(timeout);
+      } on Object {
+        if (_isSubscriptionSessionCurrent(pubkey, session) &&
+            proof == _subscriptionProof) {
+          _invalidateEmptySubscriptions();
+        }
+      } finally {
+        if (identical(_subscriptionRevalidation, revalidation)) {
+          _subscriptionRevalidation = null;
+        }
+      }
+    })();
+    _subscriptionRevalidation = revalidation;
+    unawaited(revalidation);
+  }
+
+  static const _subscriptionsIdentifier = 'divine.badge_subscriptions';
+
+  /// Definitions from the issuers selected for Explore.
+  ///
+  /// Throws [BadgeReadIncompleteException] when a relay walk is incomplete.
+  Future<List<Nip58BadgeDefinition>> loadDefinitionsByIssuers(
+    Iterable<String> issuerPubkeys,
+  ) async {
+    final definitions = <String, Nip58BadgeDefinition>{};
+    for (final issuer in issuerPubkeys.toSet()) {
+      if (!isBadgePubkey(issuer)) continue;
+      final result = await _nostrClient.readAllEvents(
+        Filter(authors: [issuer], kinds: [EventKind.badgeDefinition]),
+        tempRelays: _definitionRelayUrl == null ? null : [_definitionRelayUrl],
+      );
+      if (!result.isComplete) {
+        throw const BadgeReadIncompleteException(
+          'Badge definitions could not be fully loaded',
+        );
+      }
+      // The relay filters on authors; only the issuer's own signature counts.
+      final signed = result.events
+          .where((event) => event.pubkey == issuer)
+          .toList();
+      for (final definition in _newestDefinitionPerIdentifier(signed)) {
+        definitions[definition.coordinate] = definition;
+      }
+    }
+    return definitions.values.toList(growable: false)
+      ..sort((a, b) => (a.name ?? a.dTag).compareTo(b.name ?? b.dTag));
+  }
+
+  /// Every currently accepted holder with an issuer-signed award.
+  ///
+  /// An incomplete relay walk is an error: returning the partial set would
+  /// misrepresent a large badge as having no further holders. Throws
+  /// [BadgeReadIncompleteException] when awards, revocations or profiles
+  /// cannot be completely read.
+  Future<Set<String>> loadAcceptedHolders(BadgeCoordinate coordinate) =>
+      _loadAcceptedHolders(coordinate);
+
+  Future<Set<String>> _loadAcceptedHolders(
+    BadgeCoordinate coordinate, {
+    void Function()? ensureCurrent,
+    Duration Function()? remainingBudget,
+  }) async {
+    ensureCurrent?.call();
+    final awardsPage = await _nostrClient.readAllEvents(
+      Filter(
+        authors: [coordinate.pubkey],
+        kinds: [EventKind.badgeAward],
+        a: [coordinate.value],
+      ),
+      timeout: remainingBudget?.call() ?? const Duration(minutes: 2),
+    );
+    ensureCurrent?.call();
+    if (!awardsPage.isComplete) {
+      throw const BadgeReadIncompleteException(
+        'Badge holders could not be fully loaded',
+      );
+    }
+    final awardIds = awardsPage.events.map((event) => event.id).toList();
+    final revokedIds = <String>{};
+    for (var i = 0; i < awardIds.length; i += 100) {
+      ensureCurrent?.call();
+      final deletions = await _nostrClient.readAllEvents(
+        Filter(
+          authors: [coordinate.pubkey],
+          kinds: [EventKind.eventDeletion],
+          e: awardIds.skip(i).take(100).toList(),
+        ),
+        timeout: remainingBudget?.call() ?? const Duration(minutes: 2),
+      );
+      ensureCurrent?.call();
+      if (!deletions.isComplete) {
+        throw const BadgeReadIncompleteException(
+          'Badge revocations could not be fully loaded',
+        );
+      }
+      // NIP-09 honors a deletion only from the original author.
+      for (final deletion in deletions.events) {
+        if (deletion.pubkey != coordinate.pubkey) continue;
+        for (final tag in deletion.tags) {
+          if (tag.length >= 2 && tag[0] == 'e') revokedIds.add(tag[1]);
+        }
+      }
+    }
+    final awarded = <String>{};
+    for (final event in awardsPage.events) {
+      // An award counts only when the badge's own issuer signed it.
+      if (event.pubkey != coordinate.pubkey) continue;
+      if (revokedIds.contains(event.id)) continue;
+      final award = Nip58BadgeParser.parseAward(event);
+      if (award?.definitionCoordinate == coordinate.value) {
+        awarded.addAll(award!.recipientPubkeys.where(isBadgePubkey));
+      }
+    }
+    // Blocked, muted and platform-blocklisted accounts stay out of the public
+    // holder list and of subscribers' Following, as in other user lists.
+    final isHiddenPubkey = _isHiddenPubkey;
+    if (isHiddenPubkey != null) awarded.removeWhere(isHiddenPubkey);
+    if (awarded.isEmpty) return const {};
+    final profiles = await _completeProfileBadgesByPubkeyChunked(
+      awarded,
+      ensureCurrent: ensureCurrent,
+      remainingBudget: remainingBudget,
+    );
+    return Set.unmodifiable({
+      for (final entry in profiles.entries)
+        if (_containsBadgeCoordinateValue(entry.value, coordinate.value))
+          entry.key,
+    });
+  }
+
+  /// [pubkeys] without the accounts this viewer hides, in their given order.
+  ///
+  /// Applies the same filter as [loadAcceptedHolders], for holder sets that
+  /// come from somewhere other than a relay walk.
+  List<String> withoutHiddenPubkeys(Iterable<String> pubkeys) {
+    final isHiddenPubkey = _isHiddenPubkey;
+    return [
+      for (final pubkey in pubkeys)
+        if (isHiddenPubkey == null || !isHiddenPubkey(pubkey)) pubkey,
+    ];
+  }
+
+  /// Every accepted holder of the badges the current account subscribes to.
+  ///
+  /// Empty when signed out or subscribed to nothing. Throws when the
+  /// subscription list or a holder set cannot be fully loaded within [timeout].
+  /// At most two badge holder walks run concurrently. Throws
+  /// [BadgeReadIncompleteException] for incomplete reads and
+  /// [TimeoutException] when the overall budget expires.
+  ///
+  /// A completed empty subscription read is reused within this account's
+  /// session while one background read revalidates it. Failure revokes that
+  /// shortcut; an observed subscription notifies [subscriptionChanges].
+  Future<Set<String>> loadSubscribedHolders({
+    Duration timeout = const Duration(seconds: 10),
+  }) async {
+    final pubkey = _syncSubscriptionAccount();
+    if (pubkey == null || pubkey.isEmpty) return const {};
+    final session = _subscriptionSession;
+    final proof = _subscriptionProof;
+    if (_verifiedEmptySubscriptions) {
+      _revalidateEmptySubscriptions(pubkey, session, timeout);
+      return const {};
+    }
+    var expired = false;
+    final elapsed = Stopwatch()..start();
+    Duration remainingBudget() {
+      final remaining = timeout - elapsed.elapsed;
+      if (remaining <= Duration.zero) {
+        expired = true;
+        throw TimeoutException('Badge subscriptions could not be fully loaded');
+      }
+      return remaining;
+    }
+
+    Future<Set<String>> load() async {
+      final subscriptions = (await _loadSubscriptions(
+        requireComplete: true,
+        callerAwaiting: () => !expired,
+      )).toList();
+      if (expired || !_isSubscriptionSessionCurrent(pubkey, session)) {
+        throw const BadgeReadIncompleteException(
+          'Badge subscription read was superseded',
+        );
+      }
+      if (subscriptions.isEmpty) {
+        if (proof != _subscriptionProof) {
+          throw const BadgeReadIncompleteException(
+            'Badge subscriptions changed during the read',
+          );
+        }
+        if (_subscriptionEdits == 0) {
+          _verifiedEmptySubscriptions = true;
+          _subscriptionDiscoveryPending = true;
+        }
+        return const {};
+      }
+      final holders = <String>{};
+      // Leave the client's remaining query slots available for other screens.
+      for (var offset = 0; offset < subscriptions.length; offset += 2) {
+        if (expired) break;
+        final batch = subscriptions.skip(offset).take(2);
+        final results = await Future.wait(
+          batch.map(
+            (coordinate) => _loadAcceptedHolders(
+              coordinate,
+              remainingBudget: remainingBudget,
+              ensureCurrent: () {
+                if (expired ||
+                    !_isSubscriptionSessionCurrent(pubkey, session)) {
+                  throw const BadgeReadIncompleteException(
+                    'Badge holder read was superseded',
+                  );
+                }
+              },
+            ),
+          ),
+        );
+        if (!_isSubscriptionSessionCurrent(pubkey, session)) {
+          throw const BadgeReadIncompleteException(
+            'Badge holder read was superseded',
+          );
+        }
+        results.forEach(holders.addAll);
+      }
+      return Set.unmodifiable(holders);
+    }
+
+    return load().timeout(
+      timeout,
+      onTimeout: () {
+        // In-flight relay reads settle themselves; do not queue another batch.
+        expired = true;
+        if (_isSubscriptionSessionCurrent(pubkey, session) &&
+            proof == _subscriptionProof &&
+            _subscriptionCoordinates(_observedSubscriptions).isEmpty) {
+          _subscriptionDiscoveryPending = true;
+        }
+        throw TimeoutException('Badge subscriptions could not be fully loaded');
+      },
+    );
+  }
+
+  /// Public, account-synced badge subscriptions stored in a NIP-78 event.
+  ///
+  /// Throws [BadgeReadIncompleteException] when [requireComplete] is true
+  /// and the relays do not settle the subscription read, or when a session
+  /// change supersedes the read.
+  Future<Set<BadgeCoordinate>> loadSubscriptions({
+    bool requireComplete = false,
+  }) => _loadSubscriptions(requireComplete: requireComplete);
+
+  Future<Set<BadgeCoordinate>> _loadSubscriptions({
+    required bool requireComplete,
+    bool Function()? callerAwaiting,
+  }) async {
+    final pubkey = _requireCurrentPubkey();
+    _syncSubscriptionAccount();
+    final session = _subscriptionSession;
+    final filters = [
+      Filter(
+        authors: [pubkey],
+        kinds: [EventKind.appSpecificData],
+        d: [_subscriptionsIdentifier],
+        limit: 10,
+      ),
+    ];
+    final List<Event> events;
+    if (requireComplete) {
+      final result = await _nostrClient.queryEventsDetailed(
+        filters,
+        requireAllRelaysSettled: true,
+        acceptRelayClosedWhenOthersAnswered: true,
+      );
+      if (result.timedOut || result.noRelays) {
+        throw const BadgeReadIncompleteException(
+          'Badge subscriptions could not be fully loaded',
+        );
+      }
+      events = result.events;
+    } else {
+      events = await _nostrClient.queryEvents(filters);
+    }
+    if (!_isSubscriptionSessionCurrent(pubkey, session)) {
+      throw const BadgeReadIncompleteException(
+        'Badge subscription read was superseded',
+      );
+    }
+    final matching =
+        events
+            .where(
+              (event) =>
+                  event.pubkey == pubkey &&
+                  event.tags.any(
+                    (tag) =>
+                        tag.length >= 2 &&
+                        tag[0] == 'd' &&
+                        tag[1] == _subscriptionsIdentifier,
+                  ),
+            )
+            .toList()
+          ..sort(_compareSubscriptionEvents);
+    var event = matching.isEmpty ? null : matching.first;
+    // A missing relay result cannot erase signed state already observed in
+    // this session. Only a newer replaceable event (including an empty list)
+    // can supersede it; query completion order is not event freshness.
+    for (final known in [_publishedSubscriptions, _observedSubscriptions]) {
+      if (known != null &&
+          known.pubkey == pubkey &&
+          (event == null || _compareSubscriptionEvents(known, event) < 0)) {
+        event = known;
+      }
+    }
+    _observedSubscriptions = event;
+    final coordinates = _subscriptionCoordinates(event);
+    if (coordinates.isNotEmpty) {
+      // A foreground caller owns its result; abandoned and background reads
+      // refresh Following once when they discover signed subscriptions.
+      final notify =
+          _subscriptionDiscoveryPending && !(callerAwaiting?.call() ?? false);
+      _subscriptionDiscoveryPending = false;
+      _invalidateEmptySubscriptions();
+      if (notify && !_subscriptionChanges.isClosed) {
+        _subscriptionChanges.add(null);
+      }
+    }
+    return Set.unmodifiable(coordinates);
+  }
+
+  static Set<BadgeCoordinate> _subscriptionCoordinates(Event? event) => {
+    for (final tag in event?.tags ?? <List<String>>[])
+      if (tag.length >= 2 && tag[0] == 'a') ?BadgeCoordinate.parse(tag[1]),
+  };
+
+  static int _compareSubscriptionEvents(Event a, Event b) {
+    final byTime = b.createdAt.compareTo(a.createdAt);
+    return byTime != 0 ? byTime : a.id.compareTo(b.id);
+  }
+
+  /// Add or remove one badge subscription without following its holders.
+  ///
+  /// Throws [BadgeReadIncompleteException] when the current subscription
+  /// list cannot be completely read, leaving it unchanged. Throws
+  /// [BadgeSigningException] if signing fails and [BadgePublishException]
+  /// if no relay confirms the change.
+  Future<Set<BadgeCoordinate>> setSubscription(
+    BadgeCoordinate coordinate, {
+    required bool subscribed,
+  }) async {
+    final pubkey = _requireCurrentPubkey();
+    _syncSubscriptionAccount();
+    _resetSubscriptionSession(preserveObservedSubscriptions: true);
+    final session = _subscriptionSession;
+    _subscriptionEdits++;
+    try {
+      final current = {...await loadSubscriptions(requireComplete: true)};
+      if (subscribed) {
+        current.add(coordinate);
+      } else {
+        current.remove(coordinate);
+      }
+      // NIP-01 replaces by created_at, with event ID as a tie-breaker.
+      // Step past the latest observed revision even within the same second.
+      final now = NostrTimestamp.now();
+      final previous = _observedSubscriptions;
+      final createdAt = previous != null && previous.createdAt >= now
+          ? previous.createdAt + 1
+          : now;
+      final tags = [
+        ['d', _subscriptionsIdentifier],
+        for (final item
+            in current.toList()..sort((a, b) => a.value.compareTo(b.value)))
+          ['a', item.value],
+      ];
+      _publishedSubscriptions = await _signAndPublish(
+        kind: EventKind.appSpecificData,
+        label: 'badge subscriptions',
+        tags: tags,
+        createdAt: createdAt,
+        canPublish: (event) =>
+            event.pubkey == pubkey &&
+            _isSubscriptionSessionCurrent(pubkey, session),
+      );
+      if (_isSubscriptionSessionCurrent(pubkey, session)) {
+        _subscriptionChanges.add(null);
+      }
+      return Set.unmodifiable(current);
+    } finally {
+      if (session == _subscriptionSession) {
+        _subscriptionEdits--;
+        _invalidateEmptySubscriptions();
+      }
+    }
+  }
+
+  /// Emits after this account saves a subscription change, or a read discovers
+  /// subscriptions after a verified empty snapshot, so Following can reload.
+  Stream<void> get subscriptionChanges => _subscriptionChanges.stream;
+
+  /// Closes [subscriptionChanges].
+  Future<void> dispose() async {
+    _disposed = true;
+    _resetSubscriptionSession();
+    await _subscriptionSessionChanges?.cancel();
+    await _subscriptionChanges.close();
+  }
 
   Future<BadgeDashboardData> loadDashboard() async {
     final memo = _DashboardLookupMemo();
@@ -932,7 +1424,8 @@ class BadgeRepository {
   ///
   /// * [ArgumentError] if [recipientPubkey] is not a hex pubkey.
   /// * [StateError] if there is no current pubkey, the badge belongs to
-  ///   someone else, or an event cannot be signed.
+  ///   someone else.
+  /// * [BadgeSigningException] if an event cannot be signed.
   /// * [BadgePublishException] when no relay accepts one of the events.
   Future<void> revokeAward({
     required BadgeCoordinate coordinate,
@@ -1013,7 +1506,8 @@ class BadgeRepository {
   /// Throws:
   ///
   /// * [StateError] if there is no current pubkey, the badge belongs to
-  ///   someone else, or the request cannot be signed.
+  ///   someone else.
+  /// * [BadgeSigningException] if the request cannot be signed.
   /// * [BadgePublishException] when no relay accepts the request.
   Future<void> deleteBadge(BadgeCoordinate coordinate) async {
     final pubkey = _requireCurrentPubkey();
@@ -1196,6 +1690,51 @@ class BadgeRepository {
     return result;
   }
 
+  Future<Map<String, Nip58ProfileBadges?>>
+  _completeProfileBadgesByPubkeyChunked(
+    Iterable<String> pubkeys, {
+    void Function()? ensureCurrent,
+    Duration Function()? remainingBudget,
+  }) async {
+    final unique = pubkeys.toSet().toList(growable: false);
+    final profiles = <String, Nip58ProfileBadges?>{};
+    for (var start = 0; start < unique.length; start += 100) {
+      final chunk = unique.skip(start).take(100).toList(growable: false);
+      ensureCurrent?.call();
+      final current = await _nostrClient.readAllEvents(
+        Filter(authors: chunk, kinds: [EventKind.profileBadges]),
+        timeout: remainingBudget?.call() ?? const Duration(minutes: 2),
+      );
+      ensureCurrent?.call();
+      final legacy = await _nostrClient.readAllEvents(
+        Filter(
+          authors: chunk,
+          kinds: [EventKind.badgeSet],
+          d: ['profile_badges'],
+        ),
+        timeout: remainingBudget?.call() ?? const Duration(minutes: 2),
+      );
+      ensureCurrent?.call();
+      if (!current.isComplete || !legacy.isComplete) {
+        throw const BadgeReadIncompleteException(
+          'Badge holder profiles could not be fully loaded',
+        );
+      }
+      final byPubkey = <String, List<Event>>{};
+      for (final event in [...current.events, ...legacy.events]) {
+        if (!chunk.contains(event.pubkey)) continue;
+        byPubkey.putIfAbsent(event.pubkey, () => []).add(event);
+      }
+      for (final pubkey in chunk) {
+        profiles[pubkey] = _preferPublishedProfileBadges(
+          pubkey,
+          _newestParsedProfileBadges(byPubkey[pubkey] ?? const <Event>[]),
+        );
+      }
+    }
+    return profiles;
+  }
+
   Future<Map<String, Nip58ProfileBadges?>> _profileBadgesByPubkey(
     _DashboardLookupMemo memo,
     Iterable<String> pubkeys,
@@ -1212,8 +1751,8 @@ class BadgeRepository {
   ///
   /// Throws:
   ///
-  /// * [StateError] if there is no current pubkey or the profile badge event
-  ///   cannot be signed.
+  /// * [StateError] if there is no current pubkey.
+  /// * [BadgeSigningException] if signing is declined or times out.
   /// * [BadgePublishException] when no relay confirms the published list.
   Future<void> acceptAward(BadgeAwardViewData award) async {
     final pubkey = _requireCurrentPubkey();
@@ -1252,8 +1791,8 @@ class BadgeRepository {
   ///
   /// Throws:
   ///
-  /// * [StateError] if there is no current pubkey or the profile badge event
-  ///   cannot be signed.
+  /// * [StateError] if there is no current pubkey.
+  /// * [BadgeSigningException] if signing is declined or times out.
   /// * [BadgePublishException] when no relay confirms the published list.
   Future<void> removeAward(BadgeAwardViewData award) =>
       _unpinCoordinate(award.definitionCoordinate);
@@ -1503,16 +2042,31 @@ class BadgeRepository {
 
   /// Signs and publishes an empty-content event, returning the signed event.
   ///
-  /// Throws [StateError] when signing fails and [BadgePublishException] when
-  /// no relay confirms the publish.
+  /// Throws [BadgeSigningException] when signing fails and
+  /// [BadgePublishException] when no relay confirms the publish.
+  /// [canPublish] guards subscription ownership
+  /// after asynchronous signing; a superseded edit fails before publication.
   Future<Event> _signAndPublish({
     required int kind,
     required String label,
     required List<List<String>> tags,
+    bool Function(Event event)? canPublish,
+    int? createdAt,
   }) async {
-    final event = await _signEvent(kind: kind, content: '', tags: tags);
+    final event = await _signEvent(
+      kind: kind,
+      content: '',
+      tags: tags,
+      createdAt: createdAt,
+    );
     if (event == null) {
-      throw StateError('Could not sign $label event');
+      throw BadgeSigningException('Could not sign $label event');
+    }
+
+    if (canPublish != null && !canPublish(event)) {
+      throw const BadgeReadIncompleteException(
+        'Badge subscription edit was superseded',
+      );
     }
 
     final outcome = await _nostrClient.publishEventAwaitOk(event);

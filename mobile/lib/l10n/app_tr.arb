@@ -5768,5 +5768,9 @@
       }
     }
   },
-  "userRowPosted": "{time} paylaşıldı"
+  "userRowPosted": "{time} paylaşıldı",
+  "badgeSubscribedAction": "Abone olundu",
+  "badgeSubscribeAction": "Rozete abone ol",
+  "badgeAcceptedHoldersTitle": "Rozeti kabul edenler",
+  "badgeSubscriptionLoadError": "Rozet aboneliklerin yüklenemedi. Tekrar dene."
 }

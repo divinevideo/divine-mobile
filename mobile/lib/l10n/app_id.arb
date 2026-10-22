@@ -5768,5 +5768,9 @@
       }
     }
   },
-  "userRowPosted": "Diposting {time}"
+  "userRowPosted": "Diposting {time}",
+  "badgeSubscribedAction": "Diikuti",
+  "badgeSubscribeAction": "Ikuti lencana",
+  "badgeAcceptedHoldersTitle": "Pemegang lencana yang menerima",
+  "badgeSubscriptionLoadError": "Langganan lencana kamu tidak dapat dimuat. Coba lagi."
 }

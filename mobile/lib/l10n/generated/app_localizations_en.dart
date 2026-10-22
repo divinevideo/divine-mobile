@@ -11040,6 +11040,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get badgesTitle => 'Badges';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'Subscribe to badge';
+
+  @override
+  String get badgeSubscribedAction => 'Subscribed';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Accepted holders';
+
+  @override
+  String get badgeSubscriptionLoadError =>
+      'Could not load your badge subscriptions. Try again.';
+
+  @override
   String get badgesLoadError => 'Could not load badges';
 
   @override

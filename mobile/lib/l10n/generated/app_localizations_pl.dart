@@ -11166,6 +11166,23 @@ class AppLocalizationsPl extends AppLocalizations {
   String get badgesTitle => 'Odznaki';
 
   @override
+  String get badgeSubscriptionsPublicNotice =>
+      'Your badge subscriptions are public.';
+
+  @override
+  String get badgeSubscribeAction => 'Subskrybuj odznakę';
+
+  @override
+  String get badgeSubscribedAction => 'Subskrybujesz';
+
+  @override
+  String get badgeAcceptedHoldersTitle => 'Osoby, które przyjęły odznakę';
+
+  @override
+  String get badgeSubscriptionLoadError =>
+      'Nie udało się wczytać twoich subskrypcji odznak. Spróbuj ponownie.';
+
+  @override
   String get badgesLoadError => 'Nie udało się wczytać odznak';
 
   @override

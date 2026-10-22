@@ -5768,5 +5768,9 @@
       }
     }
   },
-  "userRowPosted": "Publicado {time}"
+  "userRowPosted": "Publicado {time}",
+  "badgeSubscribedAction": "A seguir",
+  "badgeSubscribeAction": "Seguir emblema",
+  "badgeAcceptedHoldersTitle": "Pessoas que aceitaram o emblema",
+  "badgeSubscriptionLoadError": "Não foi possível carregar suas assinaturas de emblemas. Tente novamente."
 }
