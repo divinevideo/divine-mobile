@@ -835,6 +835,7 @@ void main() {
         SupporterRepository? ownMembership,
         Locale locale = const Locale('en'),
         List<LocalizationsDelegate<dynamic>> extraDelegates = const [],
+        ThemeData? theme,
       }) async {
         await tester.pumpWidget(
           buildTestWidget(
@@ -850,6 +851,7 @@ void main() {
             supporterRepository: ownMembership,
             locale: locale,
             extraDelegates: extraDelegates,
+            theme: theme,
             // Holds the halo still so the tree can settle.
             disableAnimations: true,
           ),
@@ -1048,6 +1050,44 @@ void main() {
             ),
           );
         });
+
+        for (final (appearance, theme, accent) in [
+          ('dark', VineTheme.theme, VineTheme.darkColors.accentBrand),
+          ('light', VineTheme.lightTheme, VineTheme.lightColors.accentBrand),
+        ]) {
+          testWidgets('draws the supporter badge in the $appearance accent', (
+            tester,
+          ) async {
+            await pumpHeader(
+              tester,
+              isOwnProfile: false,
+              isPublicSupporter: true,
+              theme: theme,
+            );
+            await openSupporterView(tester);
+
+            final headline = tester.widget<Text>(
+              find.byWidgetPredicate(
+                (widget) =>
+                    widget is Text &&
+                    (widget.textSpan?.toPlainText().contains(
+                          l10n.supporterLightboxBadge,
+                        ) ??
+                        false),
+              ),
+            );
+            final spans = <TextSpan>[];
+            headline.textSpan!.visitChildren((span) {
+              if (span is TextSpan &&
+                  span.text == l10n.supporterLightboxBadge) {
+                spans.add(span);
+              }
+              return true;
+            });
+            expect(spans, hasLength(1));
+            expect(spans.single.style?.color, accent);
+          });
+        }
 
         testWidgets('keeps the halo and wings at full opacity when the '
             'supporter view closes', (tester) async {

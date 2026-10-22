@@ -373,7 +373,7 @@ class _SupporterLightboxHeadline extends StatelessWidget {
           spans.add(
             TextSpan(
               text: l10n.supporterLightboxBadge,
-              style: style.copyWith(color: VineTheme.vineGreen),
+              style: style.copyWith(color: colors.accentBrand),
             ),
           );
         }
