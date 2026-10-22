@@ -29,6 +29,27 @@ class _CuratedListRepository extends Mock implements CuratedListRepository {}
 
 class _PeopleListsRepository extends Mock implements PeopleListsRepository {}
 
+// Identity and policy tests still construct Home's always-available people
+// source. Keep that incidental source in memory for cases focused on videos.
+PeopleListsRepository _emptyPeopleListsRepository() {
+  final repository = _PeopleListsRepository();
+  when(
+    () =>
+        repository.readFollowedLists(viewerPubkey: any(named: 'viewerPubkey')),
+  ).thenAnswer((_) async => const []);
+  when(
+    () =>
+        repository.watchFollowedLists(viewerPubkey: any(named: 'viewerPubkey')),
+  ).thenAnswer((_) => const Stream.empty());
+  when(
+    () => repository.syncFollowedLists(
+      viewerPubkey: any(named: 'viewerPubkey'),
+      isCancelled: any(named: 'isCancelled'),
+    ),
+  ).thenAnswer((_) async {});
+  return repository;
+}
+
 class _Nostr extends Mock implements NostrClient {}
 
 class _Api extends Mock implements FunnelcakeApiClient {}
@@ -96,6 +117,9 @@ Future<_SafetyPolicyHome> _mountSafetyPolicyHome(WidgetTester tester) async {
       additionalOverrides: [
         // Stable repository identities prove the Page owns safety invalidation.
         videosRepositoryProvider.overrideWithValue(videos),
+        peopleListsRepositoryProvider.overrideWithValue(
+          _emptyPeopleListsRepository(),
+        ),
         curatedListRepositoryProvider.overrideWithValue(curated),
         ageVerificationServiceProvider.overrideWithValue(ageVerification),
       ],
@@ -343,6 +367,9 @@ void main() {
             mockProfileRepository: createMockProfileRepository(),
             additionalOverrides: [
               videosRepositoryProvider.overrideWithValue(videos),
+              peopleListsRepositoryProvider.overrideWithValue(
+                _emptyPeopleListsRepository(),
+              ),
               curatedListRepositoryProvider.overrideWithValue(curated),
             ],
           ),
@@ -607,6 +634,9 @@ void main() {
             mockProfileRepository: createMockProfileRepository(),
             additionalOverrides: [
               videosRepositoryProvider.overrideWithValue(videos),
+              peopleListsRepositoryProvider.overrideWithValue(
+                _emptyPeopleListsRepository(),
+              ),
             ],
           ),
         );
@@ -733,6 +763,9 @@ void main() {
               mockProfileRepository: createMockProfileRepository(),
               additionalOverrides: [
                 videosRepositoryProvider.overrideWithValue(videos),
+                peopleListsRepositoryProvider.overrideWithValue(
+                  _emptyPeopleListsRepository(),
+                ),
               ],
             ),
           );
