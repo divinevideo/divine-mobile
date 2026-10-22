@@ -1,5 +1,6 @@
 // ABOUTME: Tests how an audio visualizer layer keeps its look in its meta and
-// ABOUTME: how it reaches the export: its box, rotation, color and levels.
+// ABOUTME: how it reaches the export: its box, rotation, color, blend mode
+// ABOUTME: and levels.
 
 import 'dart:math' as math;
 import 'dart:typed_data';
@@ -263,6 +264,18 @@ void main() {
       );
 
       expect(image.audioVisualizer!.color.a, closeTo(0.5, 1e-3));
+    });
+
+    test('blends with the video beneath it as the canvas does', () {
+      final image = audioVisualizerImageLayer(
+        captured(_layer()..blendMode = BlendMode.screen, const Size(40, 40)),
+        _ring,
+        bodySize: const Size(100, 200),
+        mapping: mapping,
+        timelineMap: timelineMap,
+      );
+
+      expect(image.blendMode, pve.LayerBlendMode.screen);
     });
 
     test('passes its bar width and reaction on', () {
