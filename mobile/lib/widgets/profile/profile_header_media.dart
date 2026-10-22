@@ -726,6 +726,20 @@ void _showAvatarLightbox(
   required String userIdHex,
   String? imageUrl,
 }) {
+  _pushAvatarLightbox(
+    context,
+    _AvatarLightbox(imageUrl: imageUrl, userIdHex: userIdHex),
+    'open avatar lightbox',
+  );
+}
+
+/// Pushes [lightbox], which the header avatar's Hero flies into, over the
+/// whole app.
+void _pushAvatarLightbox(
+  BuildContext context,
+  Widget lightbox,
+  String description,
+) {
   // Push on the root navigator so the full-screen blurred backdrop covers the
   // bottom navigation bar: on the own-profile tab the nearest navigator is the
   // StatefulShellRoute branch, confined to the Scaffold body. (The previous
@@ -742,14 +756,13 @@ void _showAvatarLightbox(
           barrierColor: VineTheme.transparent,
           barrierDismissible: true,
           barrierLabel: context.l10n.profileAvatarLightboxBarrierLabel,
-          pageBuilder: (context, _, _) =>
-              _AvatarLightbox(imageUrl: imageUrl, userIdHex: userIdHex),
+          pageBuilder: (_, _, _) => lightbox,
           transitionsBuilder: (context, animation, _, child) =>
               FadeTransition(opacity: animation, child: child),
         ),
       ),
     ),
-    'open avatar lightbox',
+    description,
   );
 }
 

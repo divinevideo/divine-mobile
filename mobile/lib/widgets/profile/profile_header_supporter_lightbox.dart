@@ -102,23 +102,12 @@ void _showSupporterLightbox(
   required bool isOwnProfile,
   String? imageUrl,
 }) {
-  _runProfileDetached(
-    _awaitProfileResult(
-      Navigator.of(context, rootNavigator: true).push<void>(
-        PageRouteBuilder<void>(
-          opaque: false,
-          barrierColor: VineTheme.transparent,
-          barrierDismissible: true,
-          barrierLabel: context.l10n.profileAvatarLightboxBarrierLabel,
-          pageBuilder: (context, _, _) => _SupporterLightbox(
-            imageUrl: imageUrl,
-            userIdHex: userIdHex,
-            isOwnProfile: isOwnProfile,
-          ),
-          transitionsBuilder: (context, animation, _, child) =>
-              FadeTransition(opacity: animation, child: child),
-        ),
-      ),
+  _pushAvatarLightbox(
+    context,
+    _SupporterLightbox(
+      imageUrl: imageUrl,
+      userIdHex: userIdHex,
+      isOwnProfile: isOwnProfile,
     ),
     'open supporter lightbox',
   );
