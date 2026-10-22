@@ -86,6 +86,8 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       isStabilized,
       isStabilizingCurrentClip,
       hasPendingCaptureChromaKey,
+      isBoomerang,
+      isBoomerangingCurrentClip,
     ) = context.select((ClipEditorBloc b) {
       final state = b.state;
       final index = state.currentClipIndex;
@@ -134,6 +136,10 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
             currentClipId != null &&
             state.stabilizingClipId == currentClipId,
         hasClip && state.clips[index].hasPendingCaptureChromaKey,
+        hasClip && state.clips[index].boomerang != null,
+        state.isBoomeranging &&
+            currentClipId != null &&
+            state.boomerangingClipId == currentClipId,
       );
     });
     final isLastClip = clipCount <= 1;
@@ -232,6 +238,14 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       hasShapeMask: hasShapeMask,
       onExtractAudio: () => _requestExtractAudio(context),
       onReversed: () => _reverseClip(context),
+      isReverseDisabled: isBoomerang,
+      // A recorded green screen still waiting to bake would land on the raw
+      // take, so the bounce waits for it like stabilizing does.
+      onBoomerang: hasPendingCaptureChromaKey
+          ? null
+          : () => _boomerangClip(context),
+      isBoomerang: isBoomerang,
+      isBoomeranging: isBoomerangingCurrentClip,
       // A recorded green screen still waiting to bake would land on the raw
       // take and undo the stabilization, so the action waits for it.
       onStabilize: hasPendingCaptureChromaKey
@@ -498,6 +512,17 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
     }
     final clip = state.clips[state.currentClipIndex];
     bloc.add(ClipEditorClipReverseRequested(clipId: clip.id));
+  }
+
+  void _boomerangClip(BuildContext context) {
+    final bloc = context.read<ClipEditorBloc>();
+    final state = bloc.state;
+    if (state.currentClipIndex < 0 ||
+        state.currentClipIndex >= state.clips.length) {
+      return;
+    }
+    final clip = state.clips[state.currentClipIndex];
+    bloc.add(ClipEditorClipBoomerangRequested(clipId: clip.id));
   }
 
   void _stabilizeClip(BuildContext context) {

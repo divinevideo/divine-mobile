@@ -10035,6 +10035,38 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się odwrócić klipu. Spróbuj ponownie.';
 
   @override
+  String get videoEditorBoomerangLabel => 'Bumerang';
+
+  @override
+  String get videoEditorBoomerangClipSemanticLabel =>
+      'Włącz lub wyłącz bumerang dla wybranego klipu';
+
+  @override
+  String get videoEditorBoomerangSelectedClipsSemanticLabel =>
+      'Zrób z zaznaczonych klipów jeden bumerang';
+
+  @override
+  String get videoEditorBoomerangProgressLabel =>
+      'Chwileczkę, tworzymy Twój bumerang';
+
+  @override
+  String videoEditorBoomerangTooLong(String seconds) {
+    return 'Bumerang odtwarza nagranie dwa razy. Najpierw przytnij je do $seconds s lub mniej.';
+  }
+
+  @override
+  String get videoEditorBoomerangNoLocalFile =>
+      'Nie można utworzyć bumerangu: klip nie jest dostępny lokalnie.';
+
+  @override
+  String get videoEditorBoomerangOriginalMissing =>
+      'Oryginalnego nagrania już nie ma, więc ten klip pozostaje bumerangiem.';
+
+  @override
+  String get videoEditorBoomerangFailed =>
+      'Nie udało się utworzyć bumerangu. Spróbuj ponownie.';
+
+  @override
   String get videoEditorStabilizeLabel => 'Stabilizuj';
 
   @override

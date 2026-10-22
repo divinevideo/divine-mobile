@@ -9914,6 +9914,38 @@ class AppLocalizationsPt extends AppLocalizations {
       'Não foi possível inverter o clipe. Por favor, tente novamente.';
 
   @override
+  String get videoEditorBoomerangLabel => 'Bumerangue';
+
+  @override
+  String get videoEditorBoomerangClipSemanticLabel =>
+      'Ativar ou desativar o bumerangue do clipe selecionado';
+
+  @override
+  String get videoEditorBoomerangSelectedClipsSemanticLabel =>
+      'Transformar os clipes selecionados em um bumerangue';
+
+  @override
+  String get videoEditorBoomerangProgressLabel =>
+      'Um momento, estamos criando seu bumerangue';
+
+  @override
+  String videoEditorBoomerangTooLong(String seconds) {
+    return 'Um bumerangue reproduz seu vídeo duas vezes. Corte para $seconds s ou menos primeiro.';
+  }
+
+  @override
+  String get videoEditorBoomerangNoLocalFile =>
+      'Não é possível criar o bumerangue: o clipe não está disponível localmente.';
+
+  @override
+  String get videoEditorBoomerangOriginalMissing =>
+      'O vídeo original não está mais aqui, então este clipe continua sendo um bumerangue.';
+
+  @override
+  String get videoEditorBoomerangFailed =>
+      'Não foi possível criar o bumerangue. Tente novamente.';
+
+  @override
   String get videoEditorStabilizeLabel => 'Estabilizar';
 
   @override

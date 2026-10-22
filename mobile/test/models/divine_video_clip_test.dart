@@ -8,6 +8,7 @@ import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/clip_gallery_backup.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/clip_boomerang.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:openvine/models/video_editor/clip_stabilization.dart';
@@ -918,6 +919,11 @@ void main() {
           sourceDuration: Duration(seconds: 3),
           sourceDerivedFrom: [C2paEditSource(path: '/videos/take.mp4')],
         ),
+        boomerang: const ClipBoomerang(
+          sourcePath: '/videos/before-bounce.mp4',
+          sourceDuration: Duration(seconds: 2),
+          sourceDerivedFrom: [C2paEditSource(path: '/videos/bounce-take.mp4')],
+        ),
       );
 
       expect(populated.ownedFilePaths.nonNulls, <String>[
@@ -930,6 +936,8 @@ void main() {
         '/videos/pre-key.mp4',
         '/videos/unsteady.mp4',
         '/videos/take.mp4',
+        '/videos/before-bounce.mp4',
+        '/videos/bounce-take.mp4',
         '/backdrops/beach.jpg',
         '/videos/recording.mp4',
       ]);

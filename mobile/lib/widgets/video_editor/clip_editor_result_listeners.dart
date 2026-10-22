@@ -3,6 +3,7 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
@@ -23,7 +24,8 @@ import 'package:pro_image_editor/pro_image_editor.dart'
 
 /// Reacts to the result of each [ClipEditorBloc] operation.
 ///
-/// Every operation the user can wait on — split, reverse, transform, merge,
+/// Every operation the user can wait on — split, reverse, boomerang,
+/// transform, merge,
 /// detach, backdrop change, freeze frame, split-screen layout, detached-clip
 /// transform and reattach,
 /// remove, audio extraction, library save, library import, recorded chroma
@@ -43,22 +45,24 @@ class ClipEditorResultListeners extends StatelessWidget {
   Widget build(BuildContext context) {
     return _SplitFailureListener(
       child: _ClipReverseResultListener(
-        child: _ClipStabilizeResultListener(
-          child: _ClipTransformResultListener(
-            child: _ClipMergeResultListener(
-              child: _ClipDetachResultListener(
-                child: _ClipPlaceholderFillResultListener(
-                  child: _ClipFreezeFrameResultListener(
-                    child: _SplitScreenLayoutResultListener(
-                      child: _DetachedClipTransformResultListener(
-                        child: _DetachedClipReattachResultListener(
-                          child: _ClipsRemovedResultListener(
-                            child: _AudioExtractionResultListener(
-                              child: _ClipLibrarySaveResultListener(
-                                child: _ClipLibraryImportResultListener(
-                                  child: _CapturedChromaKeyBakeResultListener(
-                                    child: _ClipStylePasteResultListener(
-                                      child: child,
+        child: _ClipBoomerangResultListener(
+          child: _ClipStabilizeResultListener(
+            child: _ClipTransformResultListener(
+              child: _ClipMergeResultListener(
+                child: _ClipDetachResultListener(
+                  child: _ClipPlaceholderFillResultListener(
+                    child: _ClipFreezeFrameResultListener(
+                      child: _SplitScreenLayoutResultListener(
+                        child: _DetachedClipTransformResultListener(
+                          child: _DetachedClipReattachResultListener(
+                            child: _ClipsRemovedResultListener(
+                              child: _AudioExtractionResultListener(
+                                child: _ClipLibrarySaveResultListener(
+                                  child: _ClipLibraryImportResultListener(
+                                    child: _CapturedChromaKeyBakeResultListener(
+                                      child: _ClipStylePasteResultListener(
+                                        child: child,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -154,6 +158,117 @@ class _ClipReverseResultListener extends StatelessWidget {
         // Player sync is handled by the canvas listener; nothing to do here.
         break;
     }
+  }
+}
+
+/// Listens to [ClipEditorState.lastBoomerangResult]: commits a boomerang
+/// turned on or off to editor history, and says why nothing changed when the
+/// footage is too long, missing, or the render failed.
+///
+/// Kept at the scaffold level (always mounted) so the commit survives the
+/// timeline controls unmounting while the boomerang renders.
+class _ClipBoomerangResultListener extends StatelessWidget {
+  const _ClipBoomerangResultListener({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<ClipEditorBloc, ClipEditorState>(
+      listenWhen: (prev, curr) =>
+          !identical(prev.lastBoomerangResult, curr.lastBoomerangResult) &&
+          curr.lastBoomerangResult != null,
+      listener: _onBoomerangResult,
+      child: child,
+    );
+  }
+
+  void _onBoomerangResult(BuildContext context, ClipEditorState state) {
+    final l10n = context.l10n;
+    final String message;
+    switch (state.lastBoomerangResult) {
+      case ClipBoomerangSuccess(
+        :final previousClips,
+        :final clipId,
+        :final bounced,
+      ):
+        _commitBoomerang(context, state, previousClips, clipId, bounced);
+        return;
+      case ClipBoomerangTooLong(:final maxSourceDuration):
+        final seconds =
+            (NumberFormat.decimalPattern(
+                    Localizations.localeOf(context).toString(),
+                  )
+                  ..minimumFractionDigits = 1
+                  ..maximumFractionDigits = 2)
+                .format(
+                  maxSourceDuration.inMicroseconds /
+                      Duration.microsecondsPerSecond,
+                );
+        message = l10n.videoEditorBoomerangTooLong(seconds);
+      case ClipBoomerangNoLocalFile():
+        message = l10n.videoEditorBoomerangNoLocalFile;
+      case ClipBoomerangOriginalMissing():
+        message = l10n.videoEditorBoomerangOriginalMissing;
+      case ClipBoomerangFailure():
+        message = l10n.videoEditorBoomerangFailed;
+      case ClipBoomerangDiscarded():
+      // The clip changed or went away while the boomerang rendered — nothing
+      // to commit, and no action that warrants a snackbar.
+      case null:
+        return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(DivineSnackbarContainer.snackBar(message));
+  }
+}
+
+/// Writes a boomerang turned on or off to editor history.
+///
+/// The footage at the clip's start is unchanged either way; only how long it
+/// plays changes. Markers on the forward part stay, markers after the clip
+/// move with it, and markers on a way back that was taken out go with it.
+/// Turning it on only makes the composition longer, so it is written with
+/// [VideoEditorExtensions.setLengthenedClipState], as a freeze frame is.
+void _commitBoomerang(
+  BuildContext context,
+  ClipEditorState state,
+  List<DivineVideoClip> previousClips,
+  String clipId,
+  bool bounced,
+) {
+  final editor = VideoEditorScope.of(context).editor;
+  if (editor == null) return;
+  final overlayBloc = context.read<TimelineOverlayBloc>();
+
+  final index = state.clips.indexWhere((c) => c.id == clipId);
+  if (index == -1) return;
+  final start = state.clips
+      .take(index)
+      .fold(Duration.zero, (total, c) => total + c.playbackDuration);
+  // What the clip stands in for: itself as it was, or the clips a selection
+  // boomerang was made from.
+  final ids = {for (final c in state.clips) c.id};
+  final replaced = previousClips
+      .where((c) => c.id == clipId || !ids.contains(c.id))
+      .fold(Duration.zero, (total, c) => total + c.playbackDuration);
+  final playback = state.clips[index].playbackDuration;
+  final markers = shiftTimelineMarkersForResize(
+    markers: overlayBloc.state.timelineMarkers,
+    at: start + (playback < replaced ? playback : replaced),
+    by: playback - replaced,
+  );
+
+  overlayBloc.add(TimelineMarkersRebased(markers));
+  if (bounced) {
+    editor.setLengthenedClipState(
+      previousClips: previousClips,
+      clips: state.clips,
+      timelineMarkers: markers,
+    );
+  } else {
+    editor.setClipState(state.clips, timelineMarkers: markers);
   }
 }
 

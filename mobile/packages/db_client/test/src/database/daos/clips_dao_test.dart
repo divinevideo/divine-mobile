@@ -222,6 +222,29 @@ void main() {
         expect(referenced, {'unsteady.mp4'});
       });
 
+      test('protects the footage under a boomerang', () async {
+        // A boomerang swaps `file_path` to the bounced render, so the footage
+        // it was made from is only reachable through the JSON blob. Reaped,
+        // turning the boomerang off fails for good.
+        await dao.upsertClip(
+          id: 'clip_bounced',
+          draftId: testDraftId,
+          orderIndex: 0,
+          durationMs: 3000,
+          recordedAt: DateTime(2023, 11, 14, 10),
+          filePath: 'clip_bounced_boomerang_1.mp4',
+          thumbnailPath: null,
+          data: '{"boomerang":{"boomerangSourcePath":"take.mp4"}}',
+        );
+
+        final referenced = await dao.referencedFilenames({
+          'take.mp4',
+          'unrelated.mp4',
+        });
+
+        expect(referenced, {'take.mp4'});
+      });
+
       test('protects the backdrop video a chroma key plays', () async {
         // A video backdrop is another library clip's file. Deleting that clip
         // must not take the file away from a key that still renders it: a

@@ -10049,6 +10049,38 @@ class AppLocalizationsRo extends AppLocalizations {
       'Nu s-a putut inversa clipul. Vă rugăm să încercați din nou.';
 
   @override
+  String get videoEditorBoomerangLabel => 'Bumerang';
+
+  @override
+  String get videoEditorBoomerangClipSemanticLabel =>
+      'Activează sau dezactivează bumerangul pentru clipul selectat';
+
+  @override
+  String get videoEditorBoomerangSelectedClipsSemanticLabel =>
+      'Transformă clipurile selectate într-un bumerang';
+
+  @override
+  String get videoEditorBoomerangProgressLabel =>
+      'O clipă, îți facem bumerangul';
+
+  @override
+  String videoEditorBoomerangTooLong(String seconds) {
+    return 'Un bumerang redă filmarea de două ori. Scurteaz-o mai întâi la $seconds s sau mai puțin.';
+  }
+
+  @override
+  String get videoEditorBoomerangNoLocalFile =>
+      'Nu se poate face bumerangul: clipul nu este disponibil local.';
+
+  @override
+  String get videoEditorBoomerangOriginalMissing =>
+      'Filmarea originală nu mai există, așa că acest clip rămâne un bumerang.';
+
+  @override
+  String get videoEditorBoomerangFailed =>
+      'Nu s-a putut face bumerangul. Încearcă din nou.';
+
+  @override
   String get videoEditorStabilizeLabel => 'Stabilizează';
 
   @override

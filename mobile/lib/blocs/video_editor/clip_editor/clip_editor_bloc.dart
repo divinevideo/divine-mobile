@@ -12,6 +12,7 @@ import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/clip_boomerang.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:openvine/models/video_editor/clip_stabilization.dart';
@@ -29,6 +30,7 @@ import 'package:openvine/services/video_editor/freeze_frame_render_service.dart'
 import 'package:openvine/services/video_editor/stop_motion_frame_sample_service.dart';
 import 'package:openvine/services/video_editor/stop_motion_frame_transform_service.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
+import 'package:openvine/services/video_editor/video_editor_boomerang_service.dart';
 import 'package:openvine/services/video_editor/video_editor_clip_library_save_service.dart';
 import 'package:openvine/services/video_editor/video_editor_merge_service.dart';
 import 'package:openvine/services/video_editor/video_editor_reverse_service.dart';
@@ -61,6 +63,14 @@ typedef SplitClipFn = Future<void> Function({
 /// Function signature matching [VideoEditorReverseService.reverseClip], used as
 /// an injectable seam so tests can swap in a pure-Dart fake.
 typedef ReverseClipFn = Future<EditorVideo> Function({
+  required DivineVideoClip sourceClip,
+  required String renderId,
+});
+
+/// Function signature matching
+/// [VideoEditorBoomerangService.renderBoomerang], used as an injectable seam
+/// so tests can swap in a pure-Dart fake.
+typedef RenderBoomerangFn = Future<BoomerangRender> Function({
   required DivineVideoClip sourceClip,
   required String renderId,
 });
@@ -215,6 +225,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     AudioExtractionService? audioExtractionService,
     SplitClipFn? splitClip,
     ReverseClipFn? reverseClip,
+    RenderBoomerangFn? renderBoomerang,
     StabilizeClipFn? stabilizeClip,
     TransformClipFn? transformClip,
     MeasureAspectRatioFn? measureAspectRatio,
@@ -236,6 +247,8 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
            audioExtractionService ?? AudioExtractionService(),
        _splitClip = splitClip ?? VideoEditorSplitService.splitClip,
        _reverseClip = reverseClip ?? VideoEditorReverseService.reverseClip,
+       _renderBoomerang =
+           renderBoomerang ?? VideoEditorBoomerangService.renderBoomerang,
        _stabilizeClip = stabilizeClip ?? ClipStabilizationService.stabilizeClip,
        _transformClip =
            transformClip ?? VideoEditorTransformService.transformClip,
@@ -292,6 +305,10 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       _onSelectedClipsMergeRequested,
       transformer: droppable(),
     );
+    on<ClipEditorSelectedClipsBoomerangRequested>(
+      _onSelectedClipsBoomerangRequested,
+      transformer: droppable(),
+    );
 
     // Editing mode
     on<ClipEditorEditingStarted>(_onEditingStarted);
@@ -321,6 +338,12 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     // Reverse
     on<ClipEditorClipReverseRequested>(
       _onClipReverseRequested,
+      transformer: droppable(),
+    );
+
+    // Boomerang
+    on<ClipEditorClipBoomerangRequested>(
+      _onClipBoomerangRequested,
       transformer: droppable(),
     );
 
@@ -430,6 +453,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
   final AudioExtractionService _audioExtractionService;
   final SplitClipFn _splitClip;
   final ReverseClipFn _reverseClip;
+  final RenderBoomerangFn _renderBoomerang;
   final StabilizeClipFn _stabilizeClip;
   final TransformClipFn _transformClip;
   final MeasureAspectRatioFn _measureAspectRatio;
@@ -1798,9 +1822,10 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         // source no longer describes it. The key stays baked in; only
         // re-tuning it is lost.
         clearChromaKey: true,
-        // The steadied footage stays, but the record no longer describes how
-        // to undo it.
+        // The steadied or bouncing footage stays, but the records no longer
+        // describe how to undo it.
         clearStabilization: true,
+        clearBoomerang: true,
       );
       final newClips = List<DivineVideoClip>.of(state.clips)
         ..[index] = restoredClip;
@@ -1824,9 +1849,10 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         reversed: true,
         // See the forward branch above.
         clearChromaKey: true,
-        // The steadied footage stays, but the record no longer describes how
-        // to undo it.
+        // The steadied or bouncing footage stays, but the records no longer
+        // describe how to undo it.
         clearStabilization: true,
+        clearBoomerang: true,
       );
       final newClips = List<DivineVideoClip>.of(state.clips)
         ..[index] = restoredClip;
@@ -1924,9 +1950,10 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         // The reversed render is a new file; re-keying from the un-reversed
         // chroma source would undo the reverse.
         clearChromaKey: true,
-        // The steadied footage stays, but the record no longer describes how
-        // to undo it.
+        // The steadied or bouncing footage stays, but the records no longer
+        // describe how to undo it.
         clearStabilization: true,
+        clearBoomerang: true,
         // The render carries no manifest; an edit of it is signed against
         // the media it was reversed from.
         derivedFrom: clip.signingSources,
@@ -1966,6 +1993,399 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         ),
       );
     }
+  }
+
+  // === BOOMERANG ===
+
+  /// Toggles the boomerang of one clip.
+  ///
+  /// Unlike reverse, a boomerang changes how long the clip plays, so the
+  /// widget layer writes the history entry itself, moving markers and sounds
+  /// with it (see [ClipBoomerangSuccess]); [onFinalClipInvalidated] would
+  /// write a second entry for the same change.
+  Future<void> _onClipBoomerangRequested(
+    ClipEditorClipBoomerangRequested event,
+    Emitter<ClipEditorState> emit,
+  ) async {
+    final clip = state.clips.firstWhereOrNull((c) => c.id == event.clipId);
+    if (clip == null) return;
+
+    final record = clip.boomerang;
+    if (record != null) {
+      _restoreFromBoomerang(clip, record, emit);
+      return;
+    }
+    await _bounceClip(clip, emit);
+  }
+
+  /// Renders [clip] to play forward and then backward, and swaps the render
+  /// in for it.
+  Future<void> _bounceClip(
+    DivineVideoClip clip,
+    Emitter<ClipEditorState> emit,
+  ) async {
+    // The action bar offers this only on footage; a still bounces in place.
+    if (!clip.canBoomerang) {
+      Log.warning(
+        '⚠️ Refusing to bounce clip ${clip.id}: not footage',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      return;
+    }
+    if (clip.video?.file?.path == null) {
+      Log.warning(
+        '⚠️ Boomerang skipped: clip ${clip.id} has no local file',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      emit(state.copyWith(lastBoomerangResult: ClipBoomerangNoLocalFile()));
+      return;
+    }
+    if (_rejectTooLongBoomerang(clip.playbackDuration, emit)) return;
+
+    final renderId = VideoEditorBoomerangService.renderIdFor(clip.id);
+    emit(
+      state.copyWith(
+        isBoomeranging: true,
+        boomerangingClipId: clip.id,
+        boomerangRenderId: renderId,
+      ),
+    );
+
+    BoomerangRender? render;
+    try {
+      render = await _renderBoomerang(sourceClip: clip, renderId: renderId);
+    } catch (e, stackTrace) {
+      _reportBoomerangFailure(e, stackTrace, clip.id);
+    }
+
+    // Screen dispose closes this bloc while a render can still be finishing.
+    // The new file is on disk either way.
+    if (isClosed) {
+      _deferOrphanedPaths([render?.video.file?.path]);
+      return;
+    }
+    if (render == null) {
+      emit(
+        state.copyWith(
+          isBoomeranging: false,
+          clearBoomerangingClipId: true,
+          lastBoomerangResult: ClipBoomerangFailure(),
+        ),
+      );
+      return;
+    }
+
+    final currentClips = state.clips;
+    final index = currentClips.indexWhere((c) => c.id == clip.id);
+    final current = index == -1 ? null : currentClips[index];
+    // The render bounced the clip as it was when the user asked. Swapping it
+    // in for a clip that has since been re-rendered or re-trimmed would undo
+    // that edit.
+    if (current == null ||
+        current.video?.file?.path != clip.video?.file?.path ||
+        current.trimStart != clip.trimStart ||
+        current.trimEnd != clip.trimEnd) {
+      Log.warning(
+        '⚠️ Boomerang discarded: clip ${clip.id} changed during the render',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      _deferOrphanedPaths([render.video.file?.path]);
+      emit(
+        state.copyWith(
+          isBoomeranging: false,
+          clearBoomerangingClipId: true,
+          lastBoomerangResult: ClipBoomerangDiscarded(),
+        ),
+      );
+      return;
+    }
+
+    final newClips = List<DivineVideoClip>.of(currentClips)
+      ..[index] = _bounced(current, render);
+    emit(
+      state.copyWith(
+        clips: List.unmodifiable(newClips),
+        isBoomeranging: false,
+        clearBoomerangingClipId: true,
+        lastBoomerangResult: ClipBoomerangSuccess(
+          previousClips: currentClips,
+          clipId: clip.id,
+          bounced: true,
+        ),
+      ),
+    );
+    _deferSupersededFiles(current);
+  }
+
+  /// Puts back the clip [clip] was bounced from, which is a file swap.
+  void _restoreFromBoomerang(
+    DivineVideoClip clip,
+    ClipBoomerang record,
+    Emitter<ClipEditorState> emit,
+  ) {
+    if (!File(record.sourcePath).existsSync()) {
+      Log.warning(
+        '⚠️ Boomerang kept: footage ${record.sourcePath} of clip ${clip.id} '
+        'is gone',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      emit(state.copyWith(lastBoomerangResult: ClipBoomerangOriginalMissing()));
+      return;
+    }
+
+    // A speed curve set on the boomerang runs over both directions; the
+    // footage gets the part that played forward.
+    final ramp = clip.speedRamp;
+    final played = clip.trimmedDuration.inMicroseconds;
+    final forwardShare = played <= 0
+        ? 1.0
+        : record.sourceWindow.inMicroseconds / played;
+    final restored = clip.copyWith(
+      video: EditorVideo.file(record.sourcePath),
+      duration: record.sourceDuration,
+      trimStart: record.sourceTrimStart,
+      trimEnd: record.sourceTrimEnd,
+      minTrimStart: record.sourceMinTrimStart,
+      sourceStartOffset: record.sourceStartOffset,
+      speedRamp: ramp == null || forwardShare <= 0 || forwardShare >= 1
+          ? ramp
+          : ramp.cropped(0, forwardShare),
+      clearBoomerang: true,
+      derivedFrom: record.sourceDerivedFrom,
+      clearDerivedFrom: record.sourceDerivedFrom == null,
+    );
+
+    final previousClips = state.clips;
+    final newClips = [
+      for (final c in previousClips)
+        if (c.id == clip.id) restored else c,
+    ];
+    emit(
+      state.copyWith(
+        clips: List.unmodifiable(newClips),
+        lastBoomerangResult: ClipBoomerangSuccess(
+          previousClips: previousClips,
+          clipId: clip.id,
+          bounced: false,
+        ),
+      ),
+    );
+    _deferSupersededFiles(clip);
+  }
+
+  Future<void> _onSelectedClipsBoomerangRequested(
+    ClipEditorSelectedClipsBoomerangRequested event,
+    Emitter<ClipEditorState> emit,
+  ) async {
+    if (!state.canBoomerangSelection) return;
+    final selectedIds = state.selectedClipIds;
+    final selected = state.clips
+        .where((c) => selectedIds.contains(c.id))
+        .toList();
+    final playback = selected.fold(
+      Duration.zero,
+      (sum, clip) => sum + clip.playbackDuration,
+    );
+    // Stays in multi-select so the user can pick fewer clips.
+    if (_rejectTooLongBoomerang(playback, emit)) return;
+
+    if (selected.length == 1) {
+      emit(state.copyWith(isMultiSelectMode: false, selectedClipIds: const {}));
+      await _bounceClip(selected.single, emit);
+      return;
+    }
+
+    Log.info(
+      '🪃 Bouncing ${selected.length} selected clip(s) as one boomerang',
+      name: 'ClipEditorBloc',
+      category: LogCategory.video,
+    );
+
+    final mergeRenderId =
+        'boomerang_merge_${DateTime.now().microsecondsSinceEpoch}';
+    emit(
+      state.copyWith(isBoomeranging: true, boomerangRenderId: mergeRenderId),
+    );
+
+    // The transition out of the selection leads into the clip after it, not
+    // back into the bounce: render without it and hand it to the boomerang.
+    final exit = selected.last.transition;
+    final renderClips = [
+      ...selected.take(selected.length - 1),
+      selected.last.copyWith(clearTransition: true),
+    ];
+
+    DivineVideoClip? merged;
+    BoomerangRender? render;
+    try {
+      merged = await _mergeClips(
+        clips: await _withCapturedChromaKeysBaked(renderClips),
+        renderId: mergeRenderId,
+      );
+      if (merged != null && !isClosed) {
+        final renderId = VideoEditorBoomerangService.renderIdFor(merged.id);
+        emit(state.copyWith(boomerangRenderId: renderId));
+        render = await _renderBoomerang(sourceClip: merged, renderId: renderId);
+      }
+    } catch (e, stackTrace) {
+      _reportBoomerangFailure(e, stackTrace, null);
+    }
+
+    final rendered = [...?merged?.ownedFilePaths, render?.video.file?.path];
+    if (isClosed) {
+      _deferOrphanedPaths(rendered);
+      return;
+    }
+    if (merged == null || render == null) {
+      _deferOrphanedPaths(rendered);
+      emit(
+        state.copyWith(
+          isBoomeranging: false,
+          clearBoomerangingClipId: true,
+          lastBoomerangResult: ClipBoomerangFailure(),
+        ),
+      );
+      return;
+    }
+
+    // Reconcile against current state after the async gap. The progress
+    // overlay blocks competing edits, but guard anyway so a stale result never
+    // resurrects removed clips.
+    final currentClips = state.clips;
+    if (!selectedIds.every((id) => currentClips.any((c) => c.id == id))) {
+      Log.warning(
+        '⚠️ Boomerang discarded: a selected clip no longer exists',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      _deferOrphanedPaths(rendered);
+      emit(
+        state.copyWith(
+          isBoomeranging: false,
+          clearBoomerangingClipId: true,
+          isMultiSelectMode: false,
+          selectedClipIds: const {},
+          lastBoomerangResult: ClipBoomerangDiscarded(),
+        ),
+      );
+      return;
+    }
+
+    final bounced = _bounced(merged.copyWith(transition: exit), render);
+    final earliestIndex = currentClips.indexWhere(
+      (c) => selectedIds.contains(c.id),
+    );
+    final newClips =
+        currentClips.where((c) => !selectedIds.contains(c.id)).toList()
+          ..insert(earliestIndex, bounced);
+
+    emit(
+      state.copyWith(
+        clips: List.unmodifiable(newClips),
+        currentClipIndex: earliestIndex,
+        isBoomeranging: false,
+        clearBoomerangingClipId: true,
+        isMultiSelectMode: false,
+        selectedClipIds: const {},
+        lastBoomerangResult: ClipBoomerangSuccess(
+          previousClips: currentClips,
+          clipId: bounced.id,
+          bounced: true,
+        ),
+      ),
+    );
+  }
+
+  /// [clip] showing [render], with a record of what it was so the boomerang
+  /// can be turned off again.
+  ///
+  /// The render holds only the part of the clip that played, so the boomerang
+  /// starts untrimmed. Speed stays a setting of the clip; a speed curve is
+  /// mirrored onto the way back so the slow motion lands on the same moment
+  /// both ways.
+  DivineVideoClip _bounced(DivineVideoClip clip, BoomerangRender render) {
+    final ramp = clip.speedRamp;
+    return clip.copyWith(
+      video: render.video,
+      duration: render.duration,
+      trimStart: Duration.zero,
+      trimEnd: Duration.zero,
+      minTrimStart: Duration.zero,
+      sourceStartOffset: Duration.zero,
+      speedRamp: ramp == null
+          ? null
+          : ClipBoomerang.bounceSpeedRamp(
+              ramp,
+              forwardShare:
+                  render.forwardDuration.inMicroseconds /
+                  render.duration.inMicroseconds,
+            ),
+      boomerang: ClipBoomerang(
+        sourcePath: clip.requireVideo.file!.path,
+        sourceDuration: clip.duration,
+        sourceTrimStart: clip.trimStart,
+        sourceTrimEnd: clip.trimEnd,
+        sourceMinTrimStart: clip.minTrimStart,
+        sourceStartOffset: clip.sourceStartOffset,
+        sourceDerivedFrom: clip.derivedFrom,
+      ),
+      // The caches hold the footage before the bounce.
+      clearForwardVideoPath: true,
+      clearReversedVideoPath: true,
+      // The key and the steadying stay baked in; re-tuning them from their
+      // sources would drop the bounce.
+      clearChromaKey: true,
+      clearStabilization: true,
+      // The render carries no manifest; an edit of it is signed against the
+      // media it was bounced from.
+      derivedFrom: clip.signingSources,
+    );
+  }
+
+  /// Whether footage that plays for [playback] would outgrow the export as a
+  /// boomerang, which plays it twice; reports it when it would.
+  ///
+  /// The export stops at [VideoEditorConstants.maxDuration], so the way back
+  /// would be cut off.
+  bool _rejectTooLongBoomerang(
+    Duration playback,
+    Emitter<ClipEditorState> emit,
+  ) {
+    const maxDuration = VideoEditorConstants.maxDuration;
+    if (playback * 2 <= maxDuration) return false;
+    emit(
+      state.copyWith(
+        lastBoomerangResult: ClipBoomerangTooLong(
+          maxSourceDuration: maxDuration ~/ 2,
+        ),
+      ),
+    );
+    return true;
+  }
+
+  void _reportBoomerangFailure(
+    Object e,
+    StackTrace stackTrace,
+    String? clipId,
+  ) {
+    final error = switch (e) {
+      StateError() ||
+      TypeError() ||
+      RangeError() => Reportable(e, context: '_bounceClip'),
+      _ => e,
+    };
+    addError(error, stackTrace);
+    Log.error(
+      clipId == null
+          ? '❌ Failed to bounce the selected clips: $e'
+          : '❌ Failed to bounce clip $clipId: $e',
+      name: 'ClipEditorBloc',
+      category: LogCategory.video,
+    );
   }
 
   // === STABILIZE ===
@@ -2149,6 +2569,9 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       // The reverse caches hold unsteadied footage.
       clearForwardVideoPath: true,
       clearReversedVideoPath: true,
+      // The steadied render bounces, but the boomerang record describes
+      // how to undo it on unsteadied footage.
+      clearBoomerang: true,
       // The render carries no manifest; an edit of it is signed against the
       // footage it was steadied from.
       derivedFrom: steadySources,
@@ -2981,6 +3404,9 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         clearCaptureChromaKey: true,
         clearForwardVideoPath: true,
         clearReversedVideoPath: true,
+        // The key is baked onto the bounced footage; turning the boomerang
+        // off would bring back the unkeyed clip and drop it.
+        clearBoomerang: true,
         derivedFrom: sources,
         clearDerivedFrom: sources == null,
       );
@@ -3540,9 +3966,10 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         // would silently drop the crop. The key stays baked into the video;
         // only the ability to re-tune it is lost.
         clearChromaKey: true,
-        // The steadied footage stays, but the record no longer describes how
-        // to undo it.
+        // The steadied or bouncing footage stays, but the records no longer
+        // describe how to undo it.
         clearStabilization: true,
+        clearBoomerang: true,
         derivedFrom: clip.signingSources,
       );
       final newClips = List<DivineVideoClip>.of(currentClips)
@@ -3655,9 +4082,10 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
               clearForwardVideoPath: true,
               clearReversedVideoPath: true,
               clearChromaKey: true,
-              // The steadied footage stays, but the record no longer describes how
-              // to undo it.
+              // The steadied or bouncing footage stays, but the records no
+              // longer describe how to undo it.
               clearStabilization: true,
+              clearBoomerang: true,
               derivedFrom: clip.signingSources,
             ),
           ),

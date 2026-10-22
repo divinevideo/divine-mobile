@@ -9350,6 +9350,35 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorReverseFailed => 'クリップを逆再生できませんでした。もう一度お試しください。';
 
   @override
+  String get videoEditorBoomerangLabel => 'ブーメラン';
+
+  @override
+  String get videoEditorBoomerangClipSemanticLabel => '選択したクリップのブーメランを切り替え';
+
+  @override
+  String get videoEditorBoomerangSelectedClipsSemanticLabel =>
+      '選択したクリップを1つのブーメランにする';
+
+  @override
+  String get videoEditorBoomerangProgressLabel => '少々お待ちください。ブーメランを作成しています';
+
+  @override
+  String videoEditorBoomerangTooLong(String seconds) {
+    return 'ブーメランは映像を2回再生します。先に$seconds秒以下にトリミングしてください。';
+  }
+
+  @override
+  String get videoEditorBoomerangNoLocalFile =>
+      'ブーメランを作成できません：クリップがローカルで利用できません。';
+
+  @override
+  String get videoEditorBoomerangOriginalMissing =>
+      '元の映像が見つからないため、このクリップはブーメランのままになります。';
+
+  @override
+  String get videoEditorBoomerangFailed => 'ブーメランを作成できませんでした。もう一度お試しください。';
+
+  @override
   String get videoEditorStabilizeLabel => '手ぶれ補正';
 
   @override

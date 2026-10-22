@@ -9605,6 +9605,38 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorReverseFailed => 'ቅንጥቡን ወደ ኋላ መቀየር አልተቻለም። እንደገና ሞክር።';
 
   @override
+  String get videoEditorBoomerangLabel => 'ቡሜራንግ';
+
+  @override
+  String get videoEditorBoomerangClipSemanticLabel =>
+      'ለተመረጠው ክሊፕ ቡሜራንግ ማብራት ወይም ማጥፋት';
+
+  @override
+  String get videoEditorBoomerangSelectedClipsSemanticLabel =>
+      'የተመረጡ ክሊፖችን ወደ አንድ ቡሜራንግ መቀየር';
+
+  @override
+  String get videoEditorBoomerangProgressLabel =>
+      'አንድ ትንሽ ይቆዩ፣ ቡሜራንግዎን እየሠራን ነው';
+
+  @override
+  String videoEditorBoomerangTooLong(String seconds) {
+    return 'ቡሜራንግ ቀረጻውን ሁለት ጊዜ ያጫውታል። በመጀመሪያ ወደ $seconds ሰ ወይም ከዚያ በታች ይቁረጡት።';
+  }
+
+  @override
+  String get videoEditorBoomerangNoLocalFile =>
+      'ቡሜራንግ መሥራት አልተቻለም፤ ቅንጥቡ በሀገር ዉስጥ አይገኝም።';
+
+  @override
+  String get videoEditorBoomerangOriginalMissing =>
+      'የመጀመሪያው ቀረጻ ስለጠፋ ይህ ክሊፕ ቡሜራንግ ሆኖ ይቆያል።';
+
+  @override
+  String get videoEditorBoomerangFailed =>
+      'ቡሜራንግ መሥራት አልተቻለም። እባክዎ እንደገና ይሞክሩ።';
+
+  @override
   String get videoEditorStabilizeLabel => 'ማረጋጋት';
 
   @override

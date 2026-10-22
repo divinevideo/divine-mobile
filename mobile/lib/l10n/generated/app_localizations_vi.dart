@@ -9791,6 +9791,38 @@ class AppLocalizationsVi extends AppLocalizations {
       'Không đảo ngược được clip. Vui lòng thử lại.';
 
   @override
+  String get videoEditorBoomerangLabel => 'Boomerang';
+
+  @override
+  String get videoEditorBoomerangClipSemanticLabel =>
+      'Bật/tắt boomerang cho clip đã chọn';
+
+  @override
+  String get videoEditorBoomerangSelectedClipsSemanticLabel =>
+      'Biến các clip đã chọn thành một boomerang';
+
+  @override
+  String get videoEditorBoomerangProgressLabel =>
+      'Một chút thôi, bọn mình đang tạo boomerang cho bạn';
+
+  @override
+  String videoEditorBoomerangTooLong(String seconds) {
+    return 'Boomerang phát đoạn phim của bạn hai lần. Hãy cắt xuống còn $seconds giây hoặc ngắn hơn trước.';
+  }
+
+  @override
+  String get videoEditorBoomerangNoLocalFile =>
+      'Không thể tạo boomerang: clip không có sẵn trên máy.';
+
+  @override
+  String get videoEditorBoomerangOriginalMissing =>
+      'Đoạn phim gốc không còn nữa, nên clip này vẫn là boomerang.';
+
+  @override
+  String get videoEditorBoomerangFailed =>
+      'Không tạo được boomerang. Vui lòng thử lại.';
+
+  @override
   String get videoEditorStabilizeLabel => 'Chống rung';
 
   @override

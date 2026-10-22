@@ -11,31 +11,35 @@ import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timel
 
 /// Action bar shown while the timeline is in multi-select mode.
 ///
-/// Surfaces the selection count plus Merge / Paste style / Delete / Done
-/// actions. Merge and Delete are gated on the selection so the user can never
-/// merge a single clip or delete every clip; Paste style waits for a copied
-/// clip style.
+/// Surfaces the selection count plus Merge / Boomerang / Paste style /
+/// Delete / Done actions. Merge and Delete are gated on the selection so the
+/// user can never merge a single clip or delete every clip, Boomerang on
+/// neighbouring clips, since the way back retraces exactly the way there, and
+/// Paste style waits for a copied clip style.
 class TimelineMultiSelectControls extends StatelessWidget {
   const TimelineMultiSelectControls({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final (selectedCount, clipCount, isMerging) = context.select(
-      (ClipEditorBloc b) => (
-        b.state.selectedClipIds.length,
-        b.state.clips.length,
-        b.state.isMerging,
-      ),
-    );
+    final (selectedCount, clipCount, isBusy, canBoomerangSelection) = context
+        .select(
+          (ClipEditorBloc b) => (
+            b.state.selectedClipIds.length,
+            b.state.clips.length,
+            b.state.isMerging || b.state.isBoomeranging,
+            b.state.canBoomerangSelection,
+          ),
+        );
 
     final hasCopiedStyle = context.select(
       (StyleClipboardCubit cubit) => cubit.state.clipStyle != null,
     );
 
-    final canMerge = selectedCount >= 2 && !isMerging;
-    final canPasteStyle = hasCopiedStyle && selectedCount >= 1 && !isMerging;
+    final canMerge = selectedCount >= 2 && !isBusy;
+    final canBoomerang = canBoomerangSelection && !isBusy;
+    final canPasteStyle = hasCopiedStyle && selectedCount >= 1 && !isBusy;
     final canDelete =
-        selectedCount >= 1 && selectedCount < clipCount && !isMerging;
+        selectedCount >= 1 && selectedCount < clipCount && !isBusy;
 
     return TimelineActionBar(
       countLabel: context.l10n.videoEditorMultiSelectCountLabel(selectedCount),
@@ -47,6 +51,13 @@ class TimelineMultiSelectControls extends StatelessWidget {
               context.l10n.videoEditorMergeSelectedClipsSemanticLabel,
           onPressed: canMerge ? () => _merge(context) : null,
           type: .primary,
+        ),
+        TimelineActionButton(
+          icon: .arrowUUpRight,
+          label: context.l10n.videoEditorBoomerangLabel,
+          semanticLabel:
+              context.l10n.videoEditorBoomerangSelectedClipsSemanticLabel,
+          onPressed: canBoomerang ? () => _boomerang(context) : null,
         ),
         TimelineActionButton(
           icon: .paintBucket,
@@ -78,6 +89,12 @@ class TimelineMultiSelectControls extends StatelessWidget {
   void _merge(BuildContext context) {
     context.read<ClipEditorBloc>().add(
       const ClipEditorSelectedClipsMergeRequested(),
+    );
+  }
+
+  void _boomerang(BuildContext context) {
+    context.read<ClipEditorBloc>().add(
+      const ClipEditorSelectedClipsBoomerangRequested(),
     );
   }
 

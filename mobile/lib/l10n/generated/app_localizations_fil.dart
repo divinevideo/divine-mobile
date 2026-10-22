@@ -9911,6 +9911,38 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hindi na-reverse ang clip. Pakisubukang muli.';
 
   @override
+  String get videoEditorBoomerangLabel => 'Boomerang';
+
+  @override
+  String get videoEditorBoomerangClipSemanticLabel =>
+      'I-toggle ang boomerang para sa napiling clip';
+
+  @override
+  String get videoEditorBoomerangSelectedClipsSemanticLabel =>
+      'Gawing isang boomerang ang mga napiling clip';
+
+  @override
+  String get videoEditorBoomerangProgressLabel =>
+      'Sandali lang, ginagawa namin ang boomerang mo';
+
+  @override
+  String videoEditorBoomerangTooLong(String seconds) {
+    return 'Dalawang beses pine-play ng boomerang ang footage mo. I-trim muna ito sa $seconds s o mas maikli.';
+  }
+
+  @override
+  String get videoEditorBoomerangNoLocalFile =>
+      'Hindi magawa ang boomerang: hindi available ang clip nang lokal.';
+
+  @override
+  String get videoEditorBoomerangOriginalMissing =>
+      'Wala na ang original na footage, kaya mananatiling boomerang ang clip na ito.';
+
+  @override
+  String get videoEditorBoomerangFailed =>
+      'Hindi nagawa ang boomerang. Subukan ulit.';
+
+  @override
   String get videoEditorStabilizeLabel => 'I-stabilize';
 
   @override

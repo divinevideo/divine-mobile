@@ -1,7 +1,7 @@
 // ABOUTME: Full-screen progress overlays for the long-running clip operations
-// ABOUTME: (reverse, stabilize, transform, detach, backdrop, freeze frame,
-// ABOUTME: merge, library import, recorded chroma key, pasted color mask) that
-// ABOUTME: block the editor.
+// ABOUTME: (reverse, boomerang, stabilize, transform, detach, backdrop, freeze
+// ABOUTME: frame, merge, library import, recorded chroma key, pasted color
+// ABOUTME: mask) that block the editor.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -28,6 +28,7 @@ class ClipOperationProgressOverlays extends StatelessWidget {
       clipBehavior: .none,
       children: [
         _ReverseProgressOverlay(),
+        _BoomerangProgressOverlay(),
         _StabilizeProgressOverlay(),
         _TransformProgressOverlay(),
         _DetachProgressOverlay(),
@@ -95,6 +96,34 @@ class _ReverseProgressOverlay extends StatelessWidget {
               ),
             ),
           ),
+        );
+      },
+    );
+  }
+}
+
+/// Full-screen progress overlay shown while a boomerang renders, of one clip
+/// or of the clips selected in multi-select.
+///
+/// A selection is merged before it bounces, and the render id moves on from
+/// the merge to the bounce, so the ring fills once for each.
+class _BoomerangProgressOverlay extends StatelessWidget {
+  const _BoomerangProgressOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<ClipEditorBloc, ClipEditorState, String?>(
+      selector: (state) =>
+          state.isBoomeranging ? state.boomerangRenderId : null,
+      builder: (context, renderId) {
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          child: renderId == null
+              ? const SizedBox.shrink()
+              : _RenderProgressContent(
+                  renderId: renderId,
+                  label: context.l10n.videoEditorBoomerangProgressLabel,
+                ),
         );
       },
     );

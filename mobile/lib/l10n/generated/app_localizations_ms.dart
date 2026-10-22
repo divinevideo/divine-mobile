@@ -9841,6 +9841,38 @@ class AppLocalizationsMs extends AppLocalizations {
       'Tidak dapat menyongsangkan klip. Sila cuba lagi.';
 
   @override
+  String get videoEditorBoomerangLabel => 'Bumerang';
+
+  @override
+  String get videoEditorBoomerangClipSemanticLabel =>
+      'Togol bumerang untuk klip dipilih';
+
+  @override
+  String get videoEditorBoomerangSelectedClipsSemanticLabel =>
+      'Jadikan klip dipilih satu bumerang';
+
+  @override
+  String get videoEditorBoomerangProgressLabel =>
+      'Sebentar, kami sedang membuat bumerang anda';
+
+  @override
+  String videoEditorBoomerangTooLong(String seconds) {
+    return 'Bumerang memainkan rakaman anda dua kali. Pangkas dahulu kepada $seconds s atau kurang.';
+  }
+
+  @override
+  String get videoEditorBoomerangNoLocalFile =>
+      'Tidak dapat membuat bumerang: klip tidak tersedia secara setempat.';
+
+  @override
+  String get videoEditorBoomerangOriginalMissing =>
+      'Rakaman asal sudah tiada, jadi klip ini kekal sebagai bumerang.';
+
+  @override
+  String get videoEditorBoomerangFailed =>
+      'Tidak dapat membuat bumerang. Sila cuba lagi.';
+
+  @override
   String get videoEditorStabilizeLabel => 'Stabilkan';
 
   @override

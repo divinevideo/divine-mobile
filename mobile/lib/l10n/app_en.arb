@@ -6864,6 +6864,44 @@
   "@videoEditorReverseFailed": {
     "description": "Snackbar message shown when reversing a clip fails during rendering."
   },
+  "videoEditorBoomerangLabel": "Boomerang",
+  "@videoEditorBoomerangLabel": {
+    "description": "Label of the clip toolbar action, and of the multi-select action, that makes a clip play forward and then backward. Turns it off again when the clip already is a boomerang."
+  },
+  "videoEditorBoomerangClipSemanticLabel": "Toggle boomerang for selected clip",
+  "@videoEditorBoomerangClipSemanticLabel": {
+    "description": "Screen reader label for the Boomerang action in the clip toolbar."
+  },
+  "videoEditorBoomerangSelectedClipsSemanticLabel": "Turn selected clips into one boomerang",
+  "@videoEditorBoomerangSelectedClipsSemanticLabel": {
+    "description": "Screen reader label for the Boomerang action in the multi-select toolbar, which turns the selected neighbouring clips into one clip that plays all of them forward and then backward."
+  },
+  "videoEditorBoomerangProgressLabel": "One moment, we're making your boomerang",
+  "@videoEditorBoomerangProgressLabel": {
+    "description": "Shown while a boomerang is being rendered."
+  },
+  "videoEditorBoomerangTooLong": "A boomerang plays your footage twice. Trim it to {seconds} s or less first.",
+  "@videoEditorBoomerangTooLong": {
+    "description": "Snackbar shown when the footage is too long to become a boomerang: a boomerang plays it forward and backward, so it would run past the longest video. {seconds} is the longest footage that still fits, already formatted with one or two decimals, like 3.15.",
+    "placeholders": {
+      "seconds": {
+        "type": "String",
+        "example": "3.15"
+      }
+    }
+  },
+  "videoEditorBoomerangNoLocalFile": "Cannot make a boomerang: clip is not locally available.",
+  "@videoEditorBoomerangNoLocalFile": {
+    "description": "Snackbar message shown when a boomerang is requested for a clip that has no locally available file."
+  },
+  "videoEditorBoomerangOriginalMissing": "The original footage is gone, so this clip stays a boomerang.",
+  "@videoEditorBoomerangOriginalMissing": {
+    "description": "Snackbar message shown when the user turns a boomerang off but the footage it was made from is no longer on the device. The clip keeps playing as a boomerang. Retrying cannot bring the file back, so the message must not suggest trying again."
+  },
+  "videoEditorBoomerangFailed": "Could not make a boomerang. Please try again.",
+  "@videoEditorBoomerangFailed": {
+    "description": "Snackbar message shown when rendering a boomerang fails."
+  },
   "videoEditorStabilizeLabel": "Stabilize",
   "@videoEditorStabilizeLabel": {
     "description": "Label of the clip toolbar action that steadies shaky footage. Turns it off again when the clip is already stabilized."

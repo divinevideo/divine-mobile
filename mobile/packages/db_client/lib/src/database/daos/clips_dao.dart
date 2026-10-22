@@ -529,6 +529,8 @@ class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
   ///
   /// `rawSourcePath` is a stabilized clip's unstabilized footage, kept to turn
   /// stabilization off again; it is orphaned to the diff the same way.
+  /// `boomerangSourcePath` is a boomerang's footage before the bounce, kept to
+  /// turn the boomerang off again, for the same reason.
   ///
   /// `chromaKeySourcePath` and `backgroundImage` belong here for the same
   /// reason as the reverse caches: baking a green screen swaps the clip's
@@ -548,6 +550,7 @@ class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
     'reversedVideoPath',
     'chromaKeySourcePath',
     'rawSourcePath',
+    'boomerangSourcePath',
     'backgroundImage',
     'backgroundVideo',
     'path',

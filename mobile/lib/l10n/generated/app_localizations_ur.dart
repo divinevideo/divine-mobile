@@ -9833,6 +9833,38 @@ class AppLocalizationsUr extends AppLocalizations {
       'کلپ الٹی نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔';
 
   @override
+  String get videoEditorBoomerangLabel => 'بومرینگ';
+
+  @override
+  String get videoEditorBoomerangClipSemanticLabel =>
+      'منتخب کلپ کا بومرینگ ٹوگل کریں';
+
+  @override
+  String get videoEditorBoomerangSelectedClipsSemanticLabel =>
+      'منتخب کلپس کو ایک بومرینگ بنائیں';
+
+  @override
+  String get videoEditorBoomerangProgressLabel =>
+      'ایک لمحہ، ہم آپ کا بومرینگ بنا رہے ہیں';
+
+  @override
+  String videoEditorBoomerangTooLong(String seconds) {
+    return 'بومرینگ آپ کی فوٹیج دو بار چلاتا ہے۔ پہلے اسے $seconds سیکنڈ یا اس سے کم کر لیں۔';
+  }
+
+  @override
+  String get videoEditorBoomerangNoLocalFile =>
+      'بومرینگ نہیں بن سکتا: کلپ مقامی طور پر دستیاب نہیں ہے۔';
+
+  @override
+  String get videoEditorBoomerangOriginalMissing =>
+      'اصل فوٹیج اب موجود نہیں، اس لیے یہ کلپ بومرینگ ہی رہے گی۔';
+
+  @override
+  String get videoEditorBoomerangFailed =>
+      'بومرینگ نہیں بن سکا۔ براہ کرم دوبارہ کوشش کریں۔';
+
+  @override
   String get videoEditorStabilizeLabel => 'مستحکم کریں';
 
   @override

@@ -1,5 +1,5 @@
-// ABOUTME: Tests for the listeners that finish a detach, its way back and a
-// ABOUTME: freeze frame — each lands in one editor-history entry
+// ABOUTME: Tests for the listeners that finish a detach, its way back, a
+// ABOUTME: freeze frame and a boomerang — each lands in one history entry
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -549,6 +549,156 @@ void main() {
         // Nothing changed, so nothing is written to the undo history.
         verifyNever(() => editor.addHistory(meta: any(named: 'meta')));
       });
+    });
+    group('boomerang', () {
+      List<Map<String, dynamic>> committedClips() {
+        final meta =
+            verify(
+                  () => editor.addHistory(meta: captureAny(named: 'meta')),
+                ).captured.single
+                as Map<String, dynamic>;
+        return [
+          for (final clip
+              in meta[VideoEditorConstants.clipsStateHistoryKey]
+                  as List<dynamic>)
+            clip as Map<String, dynamic>,
+        ];
+      }
+
+      testWidgets('turning it on moves the markers after the clip', (
+        tester,
+      ) async {
+        final bounced = _clip(
+          'a',
+        ).copyWith(duration: const Duration(seconds: 4));
+        when(() => overlayBloc.state).thenReturn(
+          const TimelineOverlayState(
+            timelineMarkers: [Duration(seconds: 1), Duration(seconds: 3)],
+          ),
+        );
+        whenListen(
+          clipBloc,
+          Stream.value(
+            ClipEditorState(
+              clips: [bounced, _clip('b')],
+              lastBoomerangResult: ClipBoomerangSuccess(
+                previousClips: [_clip('a'), _clip('b')],
+                clipId: 'a',
+                bounced: true,
+              ),
+            ),
+          ),
+          initialState: const ClipEditorState(),
+        );
+
+        await tester.pumpWidget(build());
+        await tester.pump();
+
+        // The marker on the forward part stays; the one on the clip after it
+        // moves with that clip, two seconds later.
+        verify(
+          () => overlayBloc.add(
+            const TimelineMarkersRebased([
+              Duration(seconds: 1),
+              Duration(seconds: 5),
+            ]),
+          ),
+        ).called(1);
+        expect(committedClips().map((c) => c['durationMs']), [4000, 2000]);
+      });
+
+      testWidgets('turning it off drops the markers on the way back', (
+        tester,
+      ) async {
+        when(() => overlayBloc.state).thenReturn(
+          const TimelineOverlayState(
+            timelineMarkers: [
+              Duration(seconds: 1),
+              Duration(seconds: 3),
+              Duration(seconds: 5),
+            ],
+          ),
+        );
+        whenListen(
+          clipBloc,
+          Stream.value(
+            ClipEditorState(
+              clips: [_clip('a'), _clip('b')],
+              lastBoomerangResult: ClipBoomerangSuccess(
+                previousClips: [
+                  _clip('a').copyWith(duration: const Duration(seconds: 4)),
+                  _clip('b'),
+                ],
+                clipId: 'a',
+                bounced: false,
+              ),
+            ),
+          ),
+          initialState: const ClipEditorState(),
+        );
+
+        await tester.pumpWidget(build());
+        await tester.pump();
+
+        verify(
+          () => overlayBloc.add(
+            const TimelineMarkersRebased([
+              Duration(seconds: 1),
+              Duration(seconds: 3),
+            ]),
+          ),
+        ).called(1);
+        expect(committedClips().map((c) => c['durationMs']), [2000, 2000]);
+      });
+
+      Future<void> pumpResult(
+        WidgetTester tester,
+        ClipBoomerangResult result,
+      ) async {
+        whenListen(
+          clipBloc,
+          Stream.value(
+            ClipEditorState(clips: [_clip('a')], lastBoomerangResult: result),
+          ),
+          initialState: const ClipEditorState(),
+        );
+        await tester.pumpWidget(
+          build(child: const Scaffold(body: SizedBox.shrink())),
+        );
+        await tester.pump();
+      }
+
+      testWidgets('says how long the footage may be', (tester) async {
+        await pumpResult(
+          tester,
+          ClipBoomerangTooLong(
+            maxSourceDuration: const Duration(milliseconds: 3150),
+          ),
+        );
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.videoEditorBoomerangTooLong('3.15')), findsOne);
+      });
+
+      testWidgets('tells the user when the render fails', (tester) async {
+        await pumpResult(tester, ClipBoomerangFailure());
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.videoEditorBoomerangFailed), findsOneWidget);
+      });
+
+      testWidgets(
+        'explains that missing original footage cannot be restored',
+        (tester) async {
+          await pumpResult(tester, ClipBoomerangOriginalMissing());
+
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          expect(
+            find.text(l10n.videoEditorBoomerangOriginalMissing),
+            findsOneWidget,
+          );
+        },
+      );
     });
   });
 }

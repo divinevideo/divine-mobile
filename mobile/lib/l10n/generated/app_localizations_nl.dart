@@ -9879,6 +9879,38 @@ class AppLocalizationsNl extends AppLocalizations {
       'Kon clip niet omdraaien. Probeer het opnieuw.';
 
   @override
+  String get videoEditorBoomerangLabel => 'Boomerang';
+
+  @override
+  String get videoEditorBoomerangClipSemanticLabel =>
+      'Boomerang voor geselecteerde clip in-/uitschakelen';
+
+  @override
+  String get videoEditorBoomerangSelectedClipsSemanticLabel =>
+      'Geselecteerde clips samen tot één boomerang maken';
+
+  @override
+  String get videoEditorBoomerangProgressLabel =>
+      'Een moment, we maken je boomerang';
+
+  @override
+  String videoEditorBoomerangTooLong(String seconds) {
+    return 'Een boomerang speelt je beelden twee keer af. Kort ze eerst in tot $seconds s of minder.';
+  }
+
+  @override
+  String get videoEditorBoomerangNoLocalFile =>
+      'Kan geen boomerang maken: clip is niet lokaal beschikbaar.';
+
+  @override
+  String get videoEditorBoomerangOriginalMissing =>
+      'Het originele beeldmateriaal is er niet meer, dus deze clip blijft een boomerang.';
+
+  @override
+  String get videoEditorBoomerangFailed =>
+      'Kon geen boomerang maken. Probeer het opnieuw.';
+
+  @override
   String get videoEditorStabilizeLabel => 'Stabiliseren';
 
   @override

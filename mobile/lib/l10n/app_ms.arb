@@ -5060,6 +5060,14 @@
     "description": "Snackbar message shown when a reverse is requested for a clip that has no locally available file."
   },
   "videoEditorReverseFailed": "Tidak dapat menyongsangkan klip. Sila cuba lagi.",
+  "videoEditorBoomerangLabel": "Bumerang",
+  "videoEditorBoomerangClipSemanticLabel": "Togol bumerang untuk klip dipilih",
+  "videoEditorBoomerangSelectedClipsSemanticLabel": "Jadikan klip dipilih satu bumerang",
+  "videoEditorBoomerangProgressLabel": "Sebentar, kami sedang membuat bumerang anda",
+  "videoEditorBoomerangTooLong": "Bumerang memainkan rakaman anda dua kali. Pangkas dahulu kepada {seconds} s atau kurang.",
+  "videoEditorBoomerangNoLocalFile": "Tidak dapat membuat bumerang: klip tidak tersedia secara setempat.",
+  "videoEditorBoomerangOriginalMissing": "Rakaman asal sudah tiada, jadi klip ini kekal sebagai bumerang.",
+  "videoEditorBoomerangFailed": "Tidak dapat membuat bumerang. Sila cuba lagi.",
   "@videoEditorReverseFailed": {
     "description": "Snackbar message shown when reversing a clip fails during rendering."
   },

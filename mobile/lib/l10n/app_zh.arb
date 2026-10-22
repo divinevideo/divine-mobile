@@ -5060,6 +5060,14 @@
     "description": "Snackbar message shown when a reverse is requested for a clip that has no locally available file."
   },
   "videoEditorReverseFailed": "无法倒放片段，请重试。",
+  "videoEditorBoomerangLabel": "回旋镖",
+  "videoEditorBoomerangClipSemanticLabel": "切换选中片段的回旋镖效果",
+  "videoEditorBoomerangSelectedClipsSemanticLabel": "将选中片段做成一个回旋镖",
+  "videoEditorBoomerangProgressLabel": "稍等，正在制作你的回旋镖",
+  "videoEditorBoomerangTooLong": "回旋镖会把画面播放两遍。请先剪到 {seconds} 秒以内。",
+  "videoEditorBoomerangNoLocalFile": "无法制作回旋镖：片段不在本地。",
+  "videoEditorBoomerangOriginalMissing": "原始素材已不存在，因此该片段会保持回旋镖效果。",
+  "videoEditorBoomerangFailed": "无法制作回旋镖，请重试。",
   "@videoEditorReverseFailed": {
     "description": "Snackbar message shown when reversing a clip fails during rendering."
   },
