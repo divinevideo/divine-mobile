@@ -53,6 +53,18 @@ LayerMergeKind? layerMergeKindOf(Layer? layer) {
   return null;
 }
 
+/// The [LayerMergeKind] all of [layers] can be combined as together, or
+/// `null` when one of them cannot be combined or they are of different kinds.
+LayerMergeKind? sharedLayerMergeKind(Iterable<Layer> layers) {
+  LayerMergeKind? shared;
+  for (final layer in layers) {
+    final kind = layerMergeKindOf(layer);
+    if (kind == null || (shared != null && kind != shared)) return null;
+    shared = kind;
+  }
+  return shared;
+}
+
 /// The type of overlay on the timeline.
 enum TimelineOverlayType {
   /// Visual overlay: text, drawing, sticker, etc.

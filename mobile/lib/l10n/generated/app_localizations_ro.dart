@@ -10779,10 +10779,6 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
-  String get videoEditorLayerMultiSelectSemanticLabel =>
-      'Selectează mai multe desene';
-
-  @override
   String get videoEditorLayerMultiSelectDoneSemanticLabel =>
       'Termină selectarea desenelor';
 
@@ -10801,10 +10797,6 @@ class AppLocalizationsRo extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String get videoEditorStickerMultiSelectSemanticLabel =>
-      'Selectează mai multe stickere';
 
   @override
   String get videoEditorStickerMultiSelectDoneSemanticLabel =>
@@ -10830,6 +10822,79 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoEditorCombineStickerLayersSemanticLabel =>
       'Combină stickerele selectate într-un singur strat';
+
+  @override
+  String get videoEditorCopyStyleLabel => 'Copiază stilul';
+
+  @override
+  String get videoEditorPasteStyleLabel => 'Lipește stilul';
+
+  @override
+  String get videoEditorCopyClipStyleSemanticLabel =>
+      'Copiază stilul acestui clip';
+
+  @override
+  String get videoEditorCopyLayerStyleSemanticLabel =>
+      'Copiază stilul acestui strat';
+
+  @override
+  String get videoEditorPasteClipStyleSemanticLabel =>
+      'Lipește stilul copiat pe acest clip';
+
+  @override
+  String get videoEditorPasteLayerStyleSemanticLabel =>
+      'Lipește stilul copiat pe acest strat';
+
+  @override
+  String get videoEditorPasteStyleSelectedClipsSemanticLabel =>
+      'Lipește stilul copiat pe clipurile selectate';
+
+  @override
+  String get videoEditorPasteStyleSelectedLayersSemanticLabel =>
+      'Lipește stilul copiat pe straturile selectate';
+
+  @override
+  String get videoEditorStyleCopied => 'Stil copiat';
+
+  @override
+  String videoEditorPasteStyleColorMaskFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Masca de culoare nu a putut fi lipită pe $count de clipuri. Restul stilului e aplicat.',
+      few:
+          'Masca de culoare nu a putut fi lipită pe $count clipuri. Restul stilului e aplicat.',
+      one:
+          'Masca de culoare nu a putut fi lipită pe $count clip. Restul stilului e aplicat.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoEditorLayersMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de straturi selectate',
+      few: '$count straturi selectate',
+      one: '$count strat selectat',
+      zero: 'Niciun strat selectat',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorDeleteSelectedLayersSemanticLabel =>
+      'Șterge straturile selectate';
+
+  @override
+  String get videoEditorLayersMultiSelectDoneSemanticLabel =>
+      'Termină selectarea straturilor';
+
+  @override
+  String get videoEditorSelectMultipleLayersSemanticLabel =>
+      'Selectează mai multe straturi';
 
   @override
   String videoEditorStickerGroupLabel(int count) {

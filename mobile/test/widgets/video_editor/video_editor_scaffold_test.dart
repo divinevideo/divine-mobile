@@ -15,6 +15,7 @@ import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bl
 import 'package:openvine/blocs/video_editor/layer_tracking/layer_tracking_cubit.dart';
 import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
+import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -131,6 +132,7 @@ void main() {
               BlocProvider<LayerTrackingCubit>(
                 create: (_) => LayerTrackingCubit(),
               ),
+              BlocProvider(create: (_) => StyleClipboardCubit()),
               if (loopSuggestionCubit != null)
                 BlocProvider<LoopSuggestionCubit>.value(
                   value: loopSuggestionCubit,

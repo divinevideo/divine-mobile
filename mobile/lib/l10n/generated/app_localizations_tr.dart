@@ -10468,10 +10468,6 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get videoEditorLayerMultiSelectSemanticLabel =>
-      'Birden fazla çizim seç';
-
-  @override
   String get videoEditorLayerMultiSelectDoneSemanticLabel =>
       'Çizim seçimini bitir';
 
@@ -10490,10 +10486,6 @@ class AppLocalizationsTr extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String get videoEditorStickerMultiSelectSemanticLabel =>
-      'Birden fazla çıkartma seç';
 
   @override
   String get videoEditorStickerMultiSelectDoneSemanticLabel =>
@@ -10518,6 +10510,76 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get videoEditorCombineStickerLayersSemanticLabel =>
       'Seçili çıkartmaları tek katmanda birleştir';
+
+  @override
+  String get videoEditorCopyStyleLabel => 'Stili kopyala';
+
+  @override
+  String get videoEditorPasteStyleLabel => 'Stili yapıştır';
+
+  @override
+  String get videoEditorCopyClipStyleSemanticLabel =>
+      'Bu klibin stilini kopyala';
+
+  @override
+  String get videoEditorCopyLayerStyleSemanticLabel =>
+      'Bu katmanın stilini kopyala';
+
+  @override
+  String get videoEditorPasteClipStyleSemanticLabel =>
+      'Kopyalanan stili bu klibe yapıştır';
+
+  @override
+  String get videoEditorPasteLayerStyleSemanticLabel =>
+      'Kopyalanan stili bu katmana yapıştır';
+
+  @override
+  String get videoEditorPasteStyleSelectedClipsSemanticLabel =>
+      'Kopyalanan stili seçili kliplere yapıştır';
+
+  @override
+  String get videoEditorPasteStyleSelectedLayersSemanticLabel =>
+      'Kopyalanan stili seçili katmanlara yapıştır';
+
+  @override
+  String get videoEditorStyleCopied => 'Stil kopyalandı';
+
+  @override
+  String videoEditorPasteStyleColorMaskFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Renk maskesi $count klibe yapıştırılamadı. Stilin geri kalanı uygulandı.',
+      one:
+          'Renk maskesi 1 klibe yapıştırılamadı. Stilin geri kalanı uygulandı.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoEditorLayersMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count katman seçildi',
+      one: '1 katman seçildi',
+      zero: 'Hiç katman seçilmedi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorDeleteSelectedLayersSemanticLabel =>
+      'Seçili katmanları sil';
+
+  @override
+  String get videoEditorLayersMultiSelectDoneSemanticLabel =>
+      'Katman seçimini bitir';
+
+  @override
+  String get videoEditorSelectMultipleLayersSemanticLabel =>
+      'Birden çok katman seç';
 
   @override
   String videoEditorStickerGroupLabel(int count) {

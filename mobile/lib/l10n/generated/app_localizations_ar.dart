@@ -10521,9 +10521,6 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get videoEditorLayerMultiSelectSemanticLabel => 'تحديد عدة رسومات';
-
-  @override
   String get videoEditorLayerMultiSelectDoneSemanticLabel =>
       'إنهاء تحديد الرسومات';
 
@@ -10542,9 +10539,6 @@ class AppLocalizationsAr extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String get videoEditorStickerMultiSelectSemanticLabel => 'تحديد عدة ملصقات';
 
   @override
   String get videoEditorStickerMultiSelectDoneSemanticLabel =>
@@ -10572,6 +10566,78 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get videoEditorCombineStickerLayersSemanticLabel =>
       'دمج الملصقات المحددة في طبقة واحدة';
+
+  @override
+  String get videoEditorCopyStyleLabel => 'نسخ النمط';
+
+  @override
+  String get videoEditorPasteStyleLabel => 'لصق النمط';
+
+  @override
+  String get videoEditorCopyClipStyleSemanticLabel => 'نسخ نمط هذا المقطع';
+
+  @override
+  String get videoEditorCopyLayerStyleSemanticLabel => 'نسخ نمط هذه الطبقة';
+
+  @override
+  String get videoEditorPasteClipStyleSemanticLabel =>
+      'لصق النمط المنسوخ على هذا المقطع';
+
+  @override
+  String get videoEditorPasteLayerStyleSemanticLabel =>
+      'لصق النمط المنسوخ على هذه الطبقة';
+
+  @override
+  String get videoEditorPasteStyleSelectedClipsSemanticLabel =>
+      'لصق النمط المنسوخ على المقاطع المحددة';
+
+  @override
+  String get videoEditorPasteStyleSelectedLayersSemanticLabel =>
+      'لصق النمط المنسوخ على الطبقات المحددة';
+
+  @override
+  String get videoEditorStyleCopied => 'تم نسخ النمط';
+
+  @override
+  String videoEditorPasteStyleColorMaskFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'تعذّر لصق قناع اللون على $count مقطع. باقي النمط مطبّق.',
+      many: 'تعذّر لصق قناع اللون على $count مقطعًا. باقي النمط مطبّق.',
+      few: 'تعذّر لصق قناع اللون على $count مقاطع. باقي النمط مطبّق.',
+      two: 'تعذّر لصق قناع اللون على مقطعين. باقي النمط مطبّق.',
+      one: 'تعذّر لصق قناع اللون على مقطع واحد. باقي النمط مطبّق.',
+      zero: 'تعذّر لصق قناع اللون على أي مقطع. باقي النمط مطبّق.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoEditorLayersMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'تم تحديد $count طبقة',
+      many: 'تم تحديد $count طبقة',
+      few: 'تم تحديد $count طبقات',
+      two: 'تم تحديد طبقتين',
+      one: 'تم تحديد طبقة واحدة',
+      zero: 'لم يتم تحديد أي طبقة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorDeleteSelectedLayersSemanticLabel =>
+      'حذف الطبقات المحددة';
+
+  @override
+  String get videoEditorLayersMultiSelectDoneSemanticLabel =>
+      'إنهاء تحديد الطبقات';
+
+  @override
+  String get videoEditorSelectMultipleLayersSemanticLabel => 'تحديد عدة طبقات';
 
   @override
   String videoEditorStickerGroupLabel(int count) {

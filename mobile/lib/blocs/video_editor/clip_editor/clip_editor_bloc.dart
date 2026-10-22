@@ -15,6 +15,7 @@ import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:openvine/models/video_editor/clip_stabilization.dart';
+import 'package:openvine/models/video_editor/clip_style.dart';
 import 'package:openvine/models/video_editor/composition_duration.dart';
 import 'package:openvine/models/video_editor/detached_clip_reattach.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
@@ -357,6 +358,13 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     on<ClipEditorCapturedChromaKeysBakeRequested>(
       _onCapturedChromaKeysBakeRequested,
       transformer: sequential(),
+    );
+
+    // Paste a copied style. droppable: a paste that renders a color mask
+    // covers the action bars, so a second one meanwhile is a stray duplicate.
+    on<ClipEditorStylePasteRequested>(
+      _onStylePasteRequested,
+      transformer: droppable(),
     );
 
     // Lift a clip off the timeline and onto the canvas
@@ -3112,6 +3120,172 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       ),
     );
     if (baked.isNotEmpty) _onCapturedChromaKeysBaked?.call(baked);
+  }
+
+  // === STYLE ===
+
+  /// Puts a copied [ClipStyle] on every target clip.
+  ///
+  /// Color masks go first, one clip at a time, as each is a render or a file
+  /// swap; a target whose mask cannot be changed keeps the one it had and
+  /// still takes the rest of the style. Everything then lands in one emit,
+  /// which the widget layer writes as one undo step.
+  Future<void> _onStylePasteRequested(
+    ClipEditorStylePasteRequested event,
+    Emitter<ClipEditorState> emit,
+  ) async {
+    final style = event.style;
+    final targets = [
+      for (final clip in state.clips)
+        if (event.clipIds.contains(clip.id) && canPasteClipStyle(clip)) clip,
+    ];
+    final needsMask = targets.where(style.needsColorMaskChange).toList();
+    if (targets.every(style.isOn)) return;
+
+    // Each mask change, as a write onto the clip it ends up on, so a change
+    // to that clip during a render elsewhere is kept.
+    final masks = <String, DivineVideoClip Function(DivineVideoClip)>{};
+    final renders = <String>[];
+    var failures = 0;
+    if (needsMask.isNotEmpty) emit(state.copyWith(isPastingClipStyle: true));
+    for (final clip in needsMask) {
+      final mask = await _pastedColorMask(clip, style.chromaKey, emit, renders);
+      // Leave-during-bake: the renders never landed on a clip.
+      if (isClosed) {
+        _deferOrphanedPaths(renders);
+        return;
+      }
+      if (mask == null) {
+        failures++;
+      } else {
+        masks[clip.id] = mask;
+      }
+    }
+
+    final targetIds = {for (final clip in targets) clip.id};
+    final before = state.clips;
+    final after = <DivineVideoClip>[];
+    final superseded = <DivineVideoClip>[];
+    var changed = false;
+    for (final clip in before) {
+      final mask = masks[clip.id];
+      if (!targetIds.contains(clip.id) ||
+          (mask == null && style.hasSettingsOn(clip))) {
+        after.add(clip);
+        continue;
+      }
+      changed = true;
+      if (mask != null) superseded.add(clip);
+      after.add(style.applyTo(mask?.call(clip) ?? clip));
+    }
+
+    emit(
+      state.copyWith(
+        clips: changed ? List.unmodifiable(after) : before,
+        isPastingClipStyle: false,
+        clearClipStylePasteRenderId: true,
+        lastClipStylePasteResult: changed || failures > 0
+            ? ClipStylePasteSuccess(
+                previousClips: before,
+                colorMaskFailures: failures,
+              )
+            : null,
+      ),
+    );
+    superseded.forEach(_deferSupersededFiles);
+    // A target deleted during its render never takes the file made for it.
+    _deferOrphanedPaths(renders);
+  }
+
+  /// A write that puts [chromaKey] on [clip], or takes its key off for
+  /// `null`, as [ClipEditorChromaKeyRequested] and [ClipEditorChromaKeyRemoved]
+  /// do; `null` when that failed.
+  ///
+  /// The path of every file it rendered is added to [renders].
+  Future<DivineVideoClip Function(DivineVideoClip)?> _pastedColorMask(
+    DivineVideoClip clip,
+    ClipChromaKey? chromaKey,
+    Emitter<ClipEditorState> emit,
+    List<String> renders,
+  ) async {
+    if (chromaKey == null) return _removedColorMask(clip, renders);
+
+    final renderId = ChromaKeyBakeService.renderIdFor(clip.id);
+    emit(state.copyWith(clipStylePasteRenderId: renderId));
+    try {
+      final baked = await _bakeChromaKey(
+        sourceClip: clip,
+        chromaKey: chromaKey,
+        renderId: renderId,
+      );
+      if (baked.video.file?.path case final path?) renders.add(path);
+      final sources = clip.sourcesWithChromaKey(chromaKey);
+      return (DivineVideoClip current) => current.copyWith(
+        video: baked.video,
+        chromaKey: chromaKey,
+        chromaKeySourcePath: baked.source,
+        clearCaptureChromaKey: true,
+        clearForwardVideoPath: true,
+        clearReversedVideoPath: true,
+        derivedFrom: sources,
+        clearDerivedFrom: sources == null,
+      );
+    } catch (e, stackTrace) {
+      addError(switch (e) {
+        // A backdrop deleted from the library since it was copied is an
+        // expected outcome, not a defect.
+        ChromaKeyBackdropMissingException() => e,
+        StateError() ||
+        TypeError() ||
+        RangeError() => Reportable(e, context: '_onStylePasteRequested'),
+        _ => e,
+      }, stackTrace);
+      Log.error(
+        '❌ Failed to paste the color mask onto clip ${clip.id}: $e',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      return null;
+    }
+  }
+
+  /// A write that takes [clip]'s color mask off, by putting back the footage
+  /// it was applied to; `null` when that footage is gone.
+  Future<DivineVideoClip Function(DivineVideoClip)?> _removedColorMask(
+    DivineVideoClip clip,
+    List<String> renders,
+  ) async {
+    // Only a key recorded with the take, not baked yet: nothing to swap.
+    if (clip.chromaKey == null) {
+      return (DivineVideoClip current) =>
+          current.copyWith(clearCaptureChromaKey: true);
+    }
+    final source = clip.chromaKeySourcePath;
+    if (source == null || !File(source).existsSync()) {
+      Log.warning(
+        '⚠️ Cannot take the color mask off clip ${clip.id}: '
+        'its unmasked video $source is gone',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      return null;
+    }
+    // A key baked right after the take also moved the poster onto the
+    // composite, so take a fresh one from the footage going back in.
+    final poster = await _posterOf(source, at: clip.thumbnailTimestamp);
+    if (poster != null) renders.add(poster.path);
+    final unkeyed = clip.unkeyedSources;
+    return (DivineVideoClip current) => current.copyWith(
+      video: EditorVideo.file(source),
+      derivedFrom: unkeyed,
+      clearDerivedFrom: unkeyed == null,
+      thumbnailPath: poster?.path,
+      thumbnailTimestamp: poster?.timestamp,
+      clearChromaKey: true,
+      clearCaptureChromaKey: true,
+      clearForwardVideoPath: true,
+      clearReversedVideoPath: true,
+    );
   }
 
   /// Queues every file [superseded] pointed at that the clip list no longer

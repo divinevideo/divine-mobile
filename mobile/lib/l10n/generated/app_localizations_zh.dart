@@ -9934,9 +9934,6 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get videoEditorLayerMultiSelectSemanticLabel => '选择多个涂鸦';
-
-  @override
   String get videoEditorLayerMultiSelectDoneSemanticLabel => '完成涂鸦选择';
 
   @override
@@ -9953,9 +9950,6 @@ class AppLocalizationsZh extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String get videoEditorStickerMultiSelectSemanticLabel => '选择多个贴纸';
 
   @override
   String get videoEditorStickerMultiSelectDoneSemanticLabel => '完成贴纸选择';
@@ -9977,6 +9971,64 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorCombineStickerLayersSemanticLabel => '把选中的贴纸合并为一个图层';
+
+  @override
+  String get videoEditorCopyStyleLabel => '复制样式';
+
+  @override
+  String get videoEditorPasteStyleLabel => '粘贴样式';
+
+  @override
+  String get videoEditorCopyClipStyleSemanticLabel => '复制此片段的样式';
+
+  @override
+  String get videoEditorCopyLayerStyleSemanticLabel => '复制此图层的样式';
+
+  @override
+  String get videoEditorPasteClipStyleSemanticLabel => '将复制的样式粘贴到此片段';
+
+  @override
+  String get videoEditorPasteLayerStyleSemanticLabel => '将复制的样式粘贴到此图层';
+
+  @override
+  String get videoEditorPasteStyleSelectedClipsSemanticLabel => '将复制的样式粘贴到选中片段';
+
+  @override
+  String get videoEditorPasteStyleSelectedLayersSemanticLabel =>
+      '将复制的样式粘贴到选中图层';
+
+  @override
+  String get videoEditorStyleCopied => '样式已复制';
+
+  @override
+  String videoEditorPasteStyleColorMaskFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '有 $count 个片段没能粘贴颜色蒙版。样式的其余部分已应用。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoEditorLayersMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已选中 $count 个图层',
+      zero: '已选中 0 个图层',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorDeleteSelectedLayersSemanticLabel => '删除选中图层';
+
+  @override
+  String get videoEditorLayersMultiSelectDoneSemanticLabel => '完成图层选择';
+
+  @override
+  String get videoEditorSelectMultipleLayersSemanticLabel => '选择多个图层';
 
   @override
   String videoEditorStickerGroupLabel(int count) {

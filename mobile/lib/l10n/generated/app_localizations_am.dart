@@ -10310,9 +10310,6 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
-  String get videoEditorLayerMultiSelectSemanticLabel => 'ብዙ ስዕሎችን ይምረጡ';
-
-  @override
   String get videoEditorLayerMultiSelectDoneSemanticLabel => 'ስዕሎችን መምረጥ ጨርስ';
 
   @override
@@ -10330,9 +10327,6 @@ class AppLocalizationsAm extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String get videoEditorStickerMultiSelectSemanticLabel => 'ብዙ ተለጣፊዎችን ይምረጡ';
 
   @override
   String get videoEditorStickerMultiSelectDoneSemanticLabel =>
@@ -10357,6 +10351,71 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get videoEditorCombineStickerLayersSemanticLabel =>
       'የተመረጡ ተለጣፊዎችን ወደ አንድ ንብርብር አዋህድ';
+
+  @override
+  String get videoEditorCopyStyleLabel => 'ስታይል ቅዳ';
+
+  @override
+  String get videoEditorPasteStyleLabel => 'ስታይል ለጥፍ';
+
+  @override
+  String get videoEditorCopyClipStyleSemanticLabel => 'የዚህን ቅንጥብ ስታይል ቅዳ';
+
+  @override
+  String get videoEditorCopyLayerStyleSemanticLabel => 'የዚህን ንብርብር ስታይል ቅዳ';
+
+  @override
+  String get videoEditorPasteClipStyleSemanticLabel =>
+      'የተቀዳውን ስታይል በዚህ ቅንጥብ ላይ ለጥፍ';
+
+  @override
+  String get videoEditorPasteLayerStyleSemanticLabel =>
+      'የተቀዳውን ስታይል በዚህ ንብርብር ላይ ለጥፍ';
+
+  @override
+  String get videoEditorPasteStyleSelectedClipsSemanticLabel =>
+      'የተቀዳውን ስታይል በተመረጡት ቅንጥቦች ላይ ለጥፍ';
+
+  @override
+  String get videoEditorPasteStyleSelectedLayersSemanticLabel =>
+      'የተቀዳውን ስታይል በተመረጡት ንብርብሮች ላይ ለጥፍ';
+
+  @override
+  String get videoEditorStyleCopied => 'ስታይሉ ተቀድቷል';
+
+  @override
+  String videoEditorPasteStyleColorMaskFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'የቀለም ጭንብሉን በ$count ቅንጥቦች ላይ መለጠፍ አልተቻለም። የቀረው ስታይል ተተግብሯል።',
+      one: 'የቀለም ጭንብሉን በ$count ቅንጥብ ላይ መለጠፍ አልተቻለም። የቀረው ስታይል ተተግብሯል።',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoEditorLayersMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ንብርብሮች ተመርጠዋል',
+      one: '$count ንብርብር ተመርጧል',
+      zero: 'ምንም ንብርብር አልተመረጠም',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorDeleteSelectedLayersSemanticLabel =>
+      'የተመረጡ ንብርብሮችን ሰርዝ';
+
+  @override
+  String get videoEditorLayersMultiSelectDoneSemanticLabel =>
+      'ንብርብሮችን መምረጥ ጨርስ';
+
+  @override
+  String get videoEditorSelectMultipleLayersSemanticLabel => 'ብዙ ንብርብሮችን ምረጥ';
 
   @override
   String videoEditorStickerGroupLabel(int count) {

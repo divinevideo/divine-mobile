@@ -434,6 +434,27 @@ class ClipEditorCapturedChromaKeysBakeRequested extends ClipEditorEvent {
   const ClipEditorCapturedChromaKeysBakeRequested();
 }
 
+// === STYLE ===
+
+/// Request that every clip in [clipIds] take on [style] (#10258).
+///
+/// A color mask that differs is baked into each target in turn, or taken off;
+/// the other settings are written once those renders are done, so the whole
+/// paste reaches the widget layer as one [ClipStylePasteResult] and becomes
+/// one undo step.
+class ClipEditorStylePasteRequested extends ClipEditorEvent {
+  const ClipEditorStylePasteRequested({
+    required this.clipIds,
+    required this.style,
+  });
+
+  final List<String> clipIds;
+  final ClipStyle style;
+
+  @override
+  List<Object?> get props => [clipIds, style];
+}
+
 // === DETACH ===
 
 /// Lift the clip with [clipId] out of the timeline so it can be placed freely

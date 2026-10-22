@@ -18,6 +18,7 @@ import 'package:openvine/blocs/video_editor/audio_visualizer/video_editor_audio_
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
+import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/blocs/video_editor/voice_over/voice_over_cubit.dart';
@@ -31,6 +32,7 @@ import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/models/video_editor/layer_style.dart';
 import 'package:openvine/models/video_editor/saved_title_style.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/providers/saved_title_style_repository_provider.dart';
@@ -54,6 +56,7 @@ import 'package:pro_video_editor/pro_video_editor.dart'
 import 'package:riverpod/misc.dart' show Override;
 import 'package:sound_service/sound_service.dart';
 
+import '../../../../helpers/scroll.dart';
 import '../../../../mocks/mock_path_provider_platform.dart';
 
 class _MockTimelineOverlayBloc
@@ -85,6 +88,7 @@ class _MockAudioClipPlayer extends Mock implements AudioClipPlayer {}
 void main() {
   group(TimelineOverlayControls, () {
     late _MockTimelineOverlayBloc overlayBloc;
+    late StyleClipboardCubit clipboard;
     final l10n = lookupAppLocalizations(const Locale('en'));
 
     setUpAll(() {
@@ -96,11 +100,14 @@ void main() {
 
     setUp(() {
       overlayBloc = _MockTimelineOverlayBloc();
+      clipboard = StyleClipboardCubit();
       when(
         () => overlayBloc.stream,
       ).thenAnswer((_) => const Stream<TimelineOverlayState>.empty());
       when(() => overlayBloc.state).thenReturn(const TimelineOverlayState());
     });
+
+    tearDown(() => clipboard.close());
 
     Widget buildWithEditor(
       TimelineOverlayItem item,
@@ -122,6 +129,7 @@ void main() {
             if (effectsCubit != null)
               BlocProvider<VideoEditorEffectsCubit>.value(value: effectsCubit),
             BlocProvider(create: (_) => VideoEditorAudioVisualizerCubit()),
+            BlocProvider.value(value: clipboard),
           ],
           child: VideoEditorScope(
             editorKey: GlobalKey(),
@@ -197,6 +205,7 @@ void main() {
                 providers: [
                   BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
                   BlocProvider<VideoEditorMainBloc>.value(value: mainBloc),
+                  BlocProvider.value(value: clipboard),
                 ],
                 child: TimelineOverlayControls(item: item),
               ),
@@ -2840,7 +2849,7 @@ void main() {
       );
 
       testWidgets(
-        'multi-select entry starts draw-layer multi-select with the tapped id',
+        'multi-select entry starts layer multi-select with the tapped id',
         (tester) async {
           final drawA = _buildPaintLayer('draw-a');
           final drawB = _buildPaintLayer('draw-b');
@@ -2859,9 +2868,10 @@ void main() {
 
           expect(find.text(l10n.videoEditorMultiSelectLabel), findsOneWidget);
 
-          await tester.tap(
+          await _tapBarAction(
+            tester,
             find.bySemanticsLabel(
-              l10n.videoEditorLayerMultiSelectSemanticLabel,
+              l10n.videoEditorSelectMultipleLayersSemanticLabel,
             ),
           );
           await tester.pump();
@@ -2875,14 +2885,11 @@ void main() {
       );
 
       testWidgets(
-        'multi-select entry is hidden when a non-draw layer is selected',
+        'multi-select entry on a text layer starts a selection beside a drawing',
         (tester) async {
           final text = TextLayer(text: 'hi', id: 'text-1');
           final drawA = _buildPaintLayer('draw-a');
-          final drawB = _buildPaintLayer('draw-b');
-          when(
-            () => mockEditor.activeLayers,
-          ).thenReturn([text, drawA, drawB]);
+          when(() => mockEditor.activeLayers).thenReturn([text, drawA]);
           when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
 
           const item = TimelineOverlayItem(
@@ -2893,7 +2900,19 @@ void main() {
           );
           await tester.pumpWidget(buildWithEditor(item, mockEditor, mainBloc));
 
-          expect(find.text(l10n.videoEditorMultiSelectLabel), findsNothing);
+          await _tapBarAction(
+            tester,
+            find.bySemanticsLabel(
+              l10n.videoEditorSelectMultipleLayersSemanticLabel,
+            ),
+          );
+          await tester.pump();
+
+          verify(
+            () => overlayBloc.add(
+              const TimelineOverlayLayerMultiSelectStarted('text-1'),
+            ),
+          ).called(1);
         },
       );
 
@@ -2916,9 +2935,10 @@ void main() {
           );
           await tester.pumpWidget(buildWithEditor(item, mockEditor, mainBloc));
 
-          await tester.tap(
+          await _tapBarAction(
+            tester,
             find.bySemanticsLabel(
-              l10n.videoEditorStickerMultiSelectSemanticLabel,
+              l10n.videoEditorSelectMultipleLayersSemanticLabel,
             ),
           );
           await tester.pump();
@@ -2932,18 +2952,16 @@ void main() {
       );
 
       testWidgets(
-        'multi-select entry is hidden for a sticker with only drawings beside it',
+        'multi-select entry is hidden for a hidden area',
         (tester) async {
-          final sticker = _buildStickerLayer('sticker-a');
+          final blur = _buildCensorLayer('blur-a');
           final drawA = _buildPaintLayer('draw-a');
           final drawB = _buildPaintLayer('draw-b');
-          when(
-            () => mockEditor.activeLayers,
-          ).thenReturn([sticker, drawA, drawB]);
+          when(() => mockEditor.activeLayers).thenReturn([blur, drawA, drawB]);
           when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
 
           const item = TimelineOverlayItem(
-            id: 'sticker-a',
+            id: 'blur-a',
             type: TimelineOverlayType.layer,
             startTime: Duration.zero,
             endTime: Duration(seconds: 3),
@@ -2951,6 +2969,71 @@ void main() {
           await tester.pumpWidget(buildWithEditor(item, mockEditor, mainBloc));
 
           expect(find.text(l10n.videoEditorMultiSelectLabel), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'copy style puts the layer style on the clipboard',
+        (tester) async {
+          final text = TextLayer(text: 'hi', id: 'text-1')..opacity = 0.5;
+          when(() => mockEditor.activeLayers).thenReturn([text]);
+          when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+
+          const item = TimelineOverlayItem(
+            id: 'text-1',
+            type: TimelineOverlayType.layer,
+            startTime: Duration.zero,
+            endTime: Duration(seconds: 3),
+          );
+          await tester.pumpWidget(buildWithEditor(item, mockEditor, mainBloc));
+          await _tapBarAction(
+            tester,
+            find.bySemanticsLabel(l10n.videoEditorCopyLayerStyleSemanticLabel),
+          );
+          await tester.pump();
+
+          final copied = clipboard.state.layerStyle;
+          expect(copied?.opacity, 0.5);
+          expect(copied?.text, isNotNull);
+          expect(find.text(l10n.videoEditorStyleCopied), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'paste style restyles the selected layer as one undo step',
+        (tester) async {
+          final clipBloc = _MockClipEditorBloc();
+          when(() => clipBloc.state).thenReturn(const ClipEditorState());
+          final drawA = _buildPaintLayer('draw-a');
+          final drawB = _buildPaintLayer('draw-b');
+          when(() => mockEditor.activeLayers).thenReturn([drawA, drawB]);
+          when(() => mockEditor.mounted).thenReturn(true);
+          when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+          clipboard.copyLayerStyle(const LayerStyle(opacity: 0.3));
+
+          const item = TimelineOverlayItem(
+            id: 'draw-b',
+            type: TimelineOverlayType.layer,
+            startTime: Duration.zero,
+            endTime: Duration(seconds: 3),
+          );
+          await tester.pumpWidget(
+            buildWithEditor(item, mockEditor, mainBloc, clipBloc: clipBloc),
+          );
+          await _tapBarAction(
+            tester,
+            find.bySemanticsLabel(l10n.videoEditorPasteLayerStyleSemanticLabel),
+          );
+          await tester.pump();
+
+          final written =
+              verify(
+                    () => mockEditor.addHistory(
+                      layers: captureAny(named: 'layers'),
+                    ),
+                  ).captured.single
+                  as List<Layer>;
+          expect(written.map((l) => l.opacity), [1, 0.3]);
         },
       );
 
@@ -2990,6 +3073,34 @@ WidgetLayer _buildStickerLayer(String id) {
     exportConfigs: WidgetLayerExportConfigs(id: id, meta: meta),
   );
 }
+
+/// Scrolls the action bar until [action] is on screen, then taps it.
+Future<void> _tapBarAction(WidgetTester tester, Finder action) async {
+  await scrollUntilTappable(
+    tester,
+    action,
+    200,
+    scrollable: find.descendant(
+      of: find.byType(TimelineActionBar),
+      matching: find.byType(Scrollable),
+    ),
+  );
+  await tester.tap(action);
+}
+
+PaintLayer _buildCensorLayer(String id) => PaintLayer(
+  id: id,
+  rawSize: const Size(10, 10),
+  opacity: 1,
+  item: PaintedModel(
+    mode: PaintMode.blur,
+    offsets: const [Offset.zero, Offset(10, 10)],
+    erasedOffsets: const [],
+    color: const Color(0xFF000000),
+    strokeWidth: 6,
+    opacity: 1,
+  ),
+);
 
 PaintLayer _buildPaintLayer(String id) => PaintLayer(
   id: id,

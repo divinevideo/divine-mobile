@@ -18,6 +18,7 @@ import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/models/video_editor/layer_style.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 part 'timeline_overlay_event.dart';
@@ -260,20 +261,16 @@ class TimelineOverlayBloc
           currentVolumes.containsKey(t.id) && currentVolumes[t.id] != t.volume,
     );
 
-    // Drop multi-selected layer ids that no longer exist or are no longer
-    // mergeable as the selected kind (e.g. after a merge, or an undo that
-    // restored an animation or timeline window) and exit multi-select mode
-    // once nothing valid remains selected.
-    final selectedKind = state.layerMultiSelectKind;
-    bool canStaySelected(TimelineOverlayItem item) {
-      final kind = layerMergeKindOf(item.layer);
-      return kind != null && (selectedKind == null || kind == selectedKind);
-    }
-
+    // Drop multi-selected layer ids that no longer exist or can no longer be
+    // selected (e.g. after a combine, or an undo that turned a layer back into
+    // a detached clip) and exit multi-select mode once nothing valid remains
+    // selected.
     final prunedMultiSelect = state.isLayerMultiSelectMode
         ? state.multiSelectedLayerIds
               .where(
-                (id) => newItems.any((i) => i.id == id && canStaySelected(i)),
+                (id) => newItems.any(
+                  (i) => i.id == id && canCopyLayerStyle(i.layer),
+                ),
               )
               .toSet()
         : state.multiSelectedLayerIds;
@@ -295,7 +292,6 @@ class TimelineOverlayBloc
         timelineMarkers: _clampMarkers(event.timelineMarkers, total),
         isLayerMultiSelectMode: keepsMultiSelect,
         multiSelectedLayerIds: prunedMultiSelect,
-        clearLayerMultiSelectKind: !keepsMultiSelect,
         captionsBurnIn: event.captionTrack?.burnIn ?? false,
       ),
     );
@@ -520,16 +516,13 @@ class TimelineOverlayBloc
     final seed = state.items
         .where((i) => i.id == event.initialLayerId)
         .firstOrNull;
-    final kind = layerMergeKindOf(seed?.layer);
     emit(
       state.copyWith(
         isLayerMultiSelectMode: true,
         clearSelectedItemId: true,
-        multiSelectedLayerIds: kind != null
+        multiSelectedLayerIds: canCopyLayerStyle(seed?.layer)
             ? {event.initialLayerId}
             : const <String>{},
-        layerMultiSelectKind: kind,
-        clearLayerMultiSelectKind: kind == null,
       ),
     );
   }
@@ -540,21 +533,15 @@ class TimelineOverlayBloc
   ) {
     if (!state.isLayerMultiSelectMode) return;
     final item = state.items.where((i) => i.id == event.layerId).firstOrNull;
-    final kind = layerMergeKindOf(item?.layer);
-    // A drawing never joins a sticker selection, nor the other way round.
-    final selectedKind = state.layerMultiSelectKind;
-    if (kind == null || (selectedKind != null && kind != selectedKind)) return;
+    // Every layer a style can be pasted onto joins, whatever its kind; the
+    // control bar offers Combine only for a selection that can be combined.
+    if (!canCopyLayerStyle(item?.layer)) return;
 
     final selected = Set<String>.of(state.multiSelectedLayerIds);
     if (!selected.remove(event.layerId)) {
       selected.add(event.layerId);
     }
-    emit(
-      state.copyWith(
-        multiSelectedLayerIds: selected,
-        layerMultiSelectKind: kind,
-      ),
-    );
+    emit(state.copyWith(multiSelectedLayerIds: selected));
   }
 
   void _onLayerMultiSelectCancelled(
@@ -565,7 +552,6 @@ class TimelineOverlayBloc
       state.copyWith(
         isLayerMultiSelectMode: false,
         multiSelectedLayerIds: const <String>{},
-        clearLayerMultiSelectKind: true,
       ),
     );
   }

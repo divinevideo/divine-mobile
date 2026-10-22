@@ -10653,10 +10653,6 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
-  String get videoEditorLayerMultiSelectSemanticLabel =>
-      'Избор на няколко рисунки';
-
-  @override
   String get videoEditorLayerMultiSelectDoneSemanticLabel =>
       'Приключване на избора на рисунки';
 
@@ -10675,10 +10671,6 @@ class AppLocalizationsBg extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String get videoEditorStickerMultiSelectSemanticLabel =>
-      'Избор на няколко стикера';
 
   @override
   String get videoEditorStickerMultiSelectDoneSemanticLabel =>
@@ -10703,6 +10695,75 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get videoEditorCombineStickerLayersSemanticLabel =>
       'Обедини избраните стикери в един слой';
+
+  @override
+  String get videoEditorCopyStyleLabel => 'Копиране на стила';
+
+  @override
+  String get videoEditorPasteStyleLabel => 'Поставяне на стила';
+
+  @override
+  String get videoEditorCopyClipStyleSemanticLabel =>
+      'Копиране на стила на този клип';
+
+  @override
+  String get videoEditorCopyLayerStyleSemanticLabel =>
+      'Копиране на стила на този слой';
+
+  @override
+  String get videoEditorPasteClipStyleSemanticLabel =>
+      'Поставяне на копирания стил върху този клип';
+
+  @override
+  String get videoEditorPasteLayerStyleSemanticLabel =>
+      'Поставяне на копирания стил върху този слой';
+
+  @override
+  String get videoEditorPasteStyleSelectedClipsSemanticLabel =>
+      'Поставяне на копирания стил върху избраните клипове';
+
+  @override
+  String get videoEditorPasteStyleSelectedLayersSemanticLabel =>
+      'Поставяне на копирания стил върху избраните слоеве';
+
+  @override
+  String get videoEditorStyleCopied => 'Стилът е копиран';
+
+  @override
+  String videoEditorPasteStyleColorMaskFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Цветовата маска не можа да се постави върху $count клипа. Останалата част от стила е приложена.',
+      one: 'Цветовата маска не можа да се постави върху 1 клип. Останалата част от стила е приложена.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoEditorLayersMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count избрани слоя',
+      one: '1 избран слой',
+      zero: 'Няма избрани слоеве',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorDeleteSelectedLayersSemanticLabel =>
+      'Изтриване на избраните слоеве';
+
+  @override
+  String get videoEditorLayersMultiSelectDoneSemanticLabel =>
+      'Приключване на избора на слоеве';
+
+  @override
+  String get videoEditorSelectMultipleLayersSemanticLabel =>
+      'Избор на няколко слоя';
 
   @override
   String videoEditorStickerGroupLabel(int count) {

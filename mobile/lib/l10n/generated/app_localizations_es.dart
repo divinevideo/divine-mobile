@@ -10658,10 +10658,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get videoEditorLayerMultiSelectSemanticLabel =>
-      'Seleccionar varios dibujos';
-
-  @override
   String get videoEditorLayerMultiSelectDoneSemanticLabel =>
       'Terminar de seleccionar dibujos';
 
@@ -10680,10 +10676,6 @@ class AppLocalizationsEs extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String get videoEditorStickerMultiSelectSemanticLabel =>
-      'Seleccionar varios stickers';
 
   @override
   String get videoEditorStickerMultiSelectDoneSemanticLabel =>
@@ -10709,6 +10701,79 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get videoEditorCombineStickerLayersSemanticLabel =>
       'Combina los stickers seleccionados en una capa';
+
+  @override
+  String get videoEditorCopyStyleLabel => 'Copiar estilo';
+
+  @override
+  String get videoEditorPasteStyleLabel => 'Pegar estilo';
+
+  @override
+  String get videoEditorCopyClipStyleSemanticLabel =>
+      'Copiar el estilo de este clip';
+
+  @override
+  String get videoEditorCopyLayerStyleSemanticLabel =>
+      'Copiar el estilo de esta capa';
+
+  @override
+  String get videoEditorPasteClipStyleSemanticLabel =>
+      'Pegar el estilo copiado en este clip';
+
+  @override
+  String get videoEditorPasteLayerStyleSemanticLabel =>
+      'Pegar el estilo copiado en esta capa';
+
+  @override
+  String get videoEditorPasteStyleSelectedClipsSemanticLabel =>
+      'Pegar el estilo copiado en los clips seleccionados';
+
+  @override
+  String get videoEditorPasteStyleSelectedLayersSemanticLabel =>
+      'Pegar el estilo copiado en las capas seleccionadas';
+
+  @override
+  String get videoEditorStyleCopied => 'Estilo copiado';
+
+  @override
+  String videoEditorPasteStyleColorMaskFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'No se pudo pegar la máscara de color en $count clips. El resto del estilo quedó aplicado.',
+      many:
+          'No se pudo pegar la máscara de color en $count de clips. El resto del estilo quedó aplicado.',
+      one:
+          'No se pudo pegar la máscara de color en $count clip. El resto del estilo quedó aplicado.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoEditorLayersMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count capas seleccionadas',
+      many: '$count de capas seleccionadas',
+      one: '$count capa seleccionada',
+      zero: 'No hay capas seleccionadas',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorDeleteSelectedLayersSemanticLabel =>
+      'Eliminar las capas seleccionadas';
+
+  @override
+  String get videoEditorLayersMultiSelectDoneSemanticLabel =>
+      'Terminar de seleccionar capas';
+
+  @override
+  String get videoEditorSelectMultipleLayersSemanticLabel =>
+      'Seleccionar varias capas';
 
   @override
   String videoEditorStickerGroupLabel(int count) {

@@ -5450,10 +5450,6 @@
       }
     }
   },
-  "videoEditorLayerMultiSelectSemanticLabel": "Pilih berbilang lukisan",
-  "@videoEditorLayerMultiSelectSemanticLabel": {
-    "description": "Accessibility label for the button that starts draw-layer multi-select mode."
-  },
   "videoEditorLayerMultiSelectDoneSemanticLabel": "Selesai memilih lukisan",
   "@videoEditorLayerMultiSelectDoneSemanticLabel": {
     "description": "Accessibility label for the button that exits draw-layer multi-select mode."
@@ -5471,11 +5467,24 @@
       }
     }
   },
-  "videoEditorStickerMultiSelectSemanticLabel": "Pilih berbilang pelekat",
   "videoEditorStickerMultiSelectDoneSemanticLabel": "Selesai memilih pelekat",
   "videoEditorDeleteSelectedStickersSemanticLabel": "Padam pelekat dipilih",
   "videoEditorStickerMultiSelectCountLabel": "{count, plural, =0{Tiada pelekat dipilih} =1{1 pelekat dipilih} other{{count} pelekat dipilih}}",
   "videoEditorCombineStickerLayersSemanticLabel": "Gabungkan pelekat dipilih menjadi satu lapisan",
+  "videoEditorCopyStyleLabel": "Salin gaya",
+  "videoEditorPasteStyleLabel": "Tampal gaya",
+  "videoEditorCopyClipStyleSemanticLabel": "Salin gaya klip ini",
+  "videoEditorCopyLayerStyleSemanticLabel": "Salin gaya lapisan ini",
+  "videoEditorPasteClipStyleSemanticLabel": "Tampal gaya yang disalin pada klip ini",
+  "videoEditorPasteLayerStyleSemanticLabel": "Tampal gaya yang disalin pada lapisan ini",
+  "videoEditorPasteStyleSelectedClipsSemanticLabel": "Tampal gaya yang disalin pada klip dipilih",
+  "videoEditorPasteStyleSelectedLayersSemanticLabel": "Tampal gaya yang disalin pada lapisan dipilih",
+  "videoEditorStyleCopied": "Gaya disalin",
+  "videoEditorPasteStyleColorMaskFailed": "{count, plural, other{Topeng warna tidak dapat ditampal pada {count} klip. Bahagian gaya yang lain sudah digunakan.}}",
+  "videoEditorLayersMultiSelectCountLabel": "{count, plural, =0{Tiada lapisan dipilih} other{{count} lapisan dipilih}}",
+  "videoEditorDeleteSelectedLayersSemanticLabel": "Padam lapisan dipilih",
+  "videoEditorLayersMultiSelectDoneSemanticLabel": "Selesai memilih lapisan",
+  "videoEditorSelectMultipleLayersSemanticLabel": "Pilih berbilang lapisan",
   "videoEditorStickerGroupLabel": "{count, plural, other{{count} pelekat}}",
   "videoEditorMergeLabel": "Gabungkan",
   "@videoEditorMergeLabel": {

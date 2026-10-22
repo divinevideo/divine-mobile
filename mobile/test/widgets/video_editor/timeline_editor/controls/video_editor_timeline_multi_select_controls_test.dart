@@ -9,10 +9,12 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
+import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/clip_style.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_action_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_multi_select_controls.dart';
@@ -69,16 +71,20 @@ DivineVideoClip _clip(String id) {
 void main() {
   group(TimelineMultiSelectControls, () {
     late _MockClipEditorBloc bloc;
+    late StyleClipboardCubit clipboard;
     late _MockVideoEditorMainBloc mainBloc;
     final l10n = lookupAppLocalizations(const Locale('en'));
 
     setUp(() {
       bloc = _MockClipEditorBloc();
+      clipboard = StyleClipboardCubit();
       when(
         () => bloc.stream,
       ).thenAnswer((_) => const Stream<ClipEditorState>.empty());
       mainBloc = _MockVideoEditorMainBloc();
     });
+
+    tearDown(() => clipboard.close());
 
     Widget build() {
       return MaterialApp(
@@ -88,6 +94,7 @@ void main() {
           body: MultiBlocProvider(
             providers: [
               BlocProvider<ClipEditorBloc>.value(value: bloc),
+              BlocProvider.value(value: clipboard),
               BlocProvider<VideoEditorMainBloc>.value(value: mainBloc),
             ],
             child: const TimelineMultiSelectControls(),
@@ -259,6 +266,62 @@ void main() {
         ),
         () => bloc.add(const ClipEditorSelectedClipsRemoved()),
       ]);
+    });
+
+    group('paste style', () {
+      testWidgets('is disabled while no clip style is copied', (tester) async {
+        when(() => bloc.state).thenReturn(
+          ClipEditorState(
+            clips: [_clip('a'), _clip('b')],
+            isMultiSelectMode: true,
+            selectedClipIds: const {'a'},
+          ),
+        );
+
+        await tester.pumpWidget(build());
+
+        expect(
+          buttonWithLabel(
+            tester,
+            l10n.videoEditorPasteStyleSelectedClipsSemanticLabel,
+          ).onPressed,
+          isNull,
+        );
+      });
+
+      testWidgets('pastes onto every selected clip and leaves multi-select', (
+        tester,
+      ) async {
+        when(() => bloc.state).thenReturn(
+          ClipEditorState(
+            clips: [_clip('a'), _clip('b'), _clip('c')],
+            isMultiSelectMode: true,
+            selectedClipIds: const {'a', 'c'},
+          ),
+        );
+        final style = ClipStyle.of(_clip('x').copyWith(volume: 0.3));
+        clipboard.copyClipStyle(style);
+
+        await tester.pumpWidget(build());
+        await tester.tap(
+          find.bySemanticsLabel(
+            l10n.videoEditorPasteStyleSelectedClipsSemanticLabel,
+          ),
+        );
+        await tester.pump();
+
+        verify(
+          () => bloc.add(
+            ClipEditorStylePasteRequested(
+              clipIds: const ['a', 'c'],
+              style: style,
+            ),
+          ),
+        ).called(1);
+        verify(
+          () => bloc.add(const ClipEditorMultiSelectCancelled()),
+        ).called(1);
+      });
     });
   });
 

@@ -10635,10 +10635,6 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
-  String get videoEditorLayerMultiSelectSemanticLabel =>
-      'Pumili ng maraming drawing';
-
-  @override
   String get videoEditorLayerMultiSelectDoneSemanticLabel =>
       'Tapos nang pumili ng mga drawing';
 
@@ -10657,10 +10653,6 @@ class AppLocalizationsFil extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String get videoEditorStickerMultiSelectSemanticLabel =>
-      'Pumili ng maraming sticker';
 
   @override
   String get videoEditorStickerMultiSelectDoneSemanticLabel =>
@@ -10685,6 +10677,76 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get videoEditorCombineStickerLayersSemanticLabel =>
       'Pagsamahin ang mga napiling sticker sa isang layer';
+
+  @override
+  String get videoEditorCopyStyleLabel => 'Kopyahin ang style';
+
+  @override
+  String get videoEditorPasteStyleLabel => 'I-paste ang style';
+
+  @override
+  String get videoEditorCopyClipStyleSemanticLabel =>
+      'Kopyahin ang style ng clip na ito';
+
+  @override
+  String get videoEditorCopyLayerStyleSemanticLabel =>
+      'Kopyahin ang style ng layer na ito';
+
+  @override
+  String get videoEditorPasteClipStyleSemanticLabel =>
+      'I-paste ang kinopyang style sa clip na ito';
+
+  @override
+  String get videoEditorPasteLayerStyleSemanticLabel =>
+      'I-paste ang kinopyang style sa layer na ito';
+
+  @override
+  String get videoEditorPasteStyleSelectedClipsSemanticLabel =>
+      'I-paste ang kinopyang style sa mga napiling clip';
+
+  @override
+  String get videoEditorPasteStyleSelectedLayersSemanticLabel =>
+      'I-paste ang kinopyang style sa mga napiling layer';
+
+  @override
+  String get videoEditorStyleCopied => 'Nakopya ang style';
+
+  @override
+  String videoEditorPasteStyleColorMaskFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Hindi na-paste ang color mask sa $count na clip. Nailagay na ang iba pang bahagi ng style.',
+      one:
+          'Hindi na-paste ang color mask sa $count clip. Nailagay na ang iba pang bahagi ng style.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoEditorLayersMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count layer ang napili',
+      one: '$count layer ang napili',
+      zero: 'Walang napiling layer',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorDeleteSelectedLayersSemanticLabel =>
+      'Burahin ang mga napiling layer';
+
+  @override
+  String get videoEditorLayersMultiSelectDoneSemanticLabel =>
+      'Tapos nang pumili ng mga layer';
+
+  @override
+  String get videoEditorSelectMultipleLayersSemanticLabel =>
+      'Pumili ng maraming layer';
 
   @override
   String videoEditorStickerGroupLabel(int count) {

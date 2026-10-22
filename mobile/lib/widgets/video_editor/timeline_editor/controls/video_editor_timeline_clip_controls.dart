@@ -8,13 +8,17 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
+import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:openvine/models/video_editor/clip_speed_choice.dart';
+import 'package:openvine/models/video_editor/clip_style.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/loop_point_search.dart';
 import 'package:openvine/screens/video_editor/video_clip_chroma_key_screen.dart';
@@ -147,6 +151,9 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
           index < state.clips.length &&
           state.clips[index].mask != null;
     });
+    final hasCopiedStyle = context.select(
+      (StyleClipboardCubit cubit) => cubit.state.clipStyle != null,
+    );
     // The loop's seam is at the end of the last clip, so only that clip
     // offers to find a smoother one.
     final canFindLoop = context.select((ClipEditorBloc bloc) {
@@ -187,6 +194,10 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
         onTransform: () => _transformClip(context),
         onShapeMask: () => _editShapeMask(context),
         hasShapeMask: hasShapeMask,
+        // No Copy style: a still has no sound, speed or color mask to copy,
+        // but it takes a pasted shape mask.
+        onPasteStyle: () => _pasteStyle(context),
+        canPasteStyle: hasCopiedStyle,
         onMultiSelect: isLastClip ? null : () => _startMultiSelect(context),
         onDone: () => context.read<ClipEditorBloc>().add(
           const ClipEditorEditingStopped(),
@@ -231,6 +242,9 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       onSaveToLibrary: () => _saveClipToLibrary(context),
       isSavingToLibrary: isSavingCurrentClipToLibrary,
       isSaveToLibraryDisabled: isSavingAnyClipToLibrary,
+      onCopyStyle: () => _copyStyle(context),
+      onPasteStyle: () => _pasteStyle(context),
+      canPasteStyle: hasCopiedStyle,
       onMultiSelect: isLastClip ? null : () => _startMultiSelect(context),
       isReversed: isReversed,
       isExtractingAudio: isExtractingAudioCurrentClip,
@@ -685,6 +699,35 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       // clip even if the selection changes while it runs.
       ClipEditorSaveClipToLibraryRequested(clipId: clipId, overlays: overlays),
     );
+  }
+
+  /// The clip being edited, or `null` when the index points past the list.
+  DivineVideoClip? _currentClip(ClipEditorState state) {
+    final index = state.currentClipIndex;
+    if (index < 0 || index >= state.clips.length) return null;
+    return state.clips[index];
+  }
+
+  /// Copies the selected clip's style for Paste style.
+  void _copyStyle(BuildContext context) {
+    final clip = _currentClip(context.read<ClipEditorBloc>().state);
+    if (clip == null || !canCopyClipStyle(clip)) return;
+    context.read<StyleClipboardCubit>().copyClipStyle(ClipStyle.of(clip));
+    ScaffoldMessenger.of(context).showSnackBar(
+      DivineSnackbarContainer.snackBar(
+        context.l10n.videoEditorStyleCopied,
+        duration: VideoEditorConstants.styleCopiedSnackBarDuration,
+      ),
+    );
+  }
+
+  /// Puts the copied clip style on the selected clip, as one undo step.
+  void _pasteStyle(BuildContext context) {
+    final style = context.read<StyleClipboardCubit>().state.clipStyle;
+    final bloc = context.read<ClipEditorBloc>();
+    final clip = _currentClip(bloc.state);
+    if (style == null || clip == null) return;
+    bloc.add(ClipEditorStylePasteRequested(clipIds: [clip.id], style: style));
   }
 
   void _startMultiSelect(BuildContext context) {

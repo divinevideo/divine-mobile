@@ -73,6 +73,32 @@ LayerMask? maskForDetachedClip(
   );
 }
 
+/// [mask], shaped on an item whose box is [from], moved onto an item whose
+/// box is [to].
+///
+/// Its size is measured in fractions of the box, so carried over as it is a
+/// circle on a square sticker would turn into an oval on a wide text. The
+/// shape keeps its proportions on screen instead and takes the same share of
+/// the shorter side, and is then kept on the new item ([fitEditorMask]).
+/// Without both boxes it carries over as it is.
+LayerMask transferEditorMask(
+  LayerMask mask, {
+  required Size? from,
+  required Size? to,
+}) {
+  if (from == null || to == null || from.isEmpty || to.isEmpty) return mask;
+  final scale = to.shortestSide / from.shortestSide;
+  final transferred = mask.copyWith(
+    size: clampEditorMaskSize(
+      Size(
+        mask.size.width * from.width * scale / to.width,
+        mask.size.height * from.height * scale / to.height,
+      ),
+    ),
+  );
+  return fitEditorMask(transferred, to);
+}
+
 /// A mask of [shape] for an item whose box is [boxSize].
 ///
 /// Switching from [previous] keeps where it is, how far it is turned, how
@@ -129,9 +155,7 @@ LayerMask scaleEditorMask(LayerMask mask, double factor) {
     editorMaskMinSize / smallest,
     editorMaskMaxSize / largest,
   );
-  return mask.copyWith(
-    size: clampEditorMaskSize(mask.size * clamped),
-  );
+  return mask.copyWith(size: clampEditorMaskSize(mask.size * clamped));
 }
 
 /// [mask] kept on an item whose box is [boxSize].
@@ -172,11 +196,7 @@ LayerMask fitEditorMask(LayerMask mask, Size boxSize) {
 ///
 /// A side handle dragged past the item's edge therefore stops where the shape
 /// touches it.
-LayerMask resizeEditorMask(
-  LayerMask mask,
-  Size size, {
-  required Size boxSize,
-}) {
+LayerMask resizeEditorMask(LayerMask mask, Size size, {required Size boxSize}) {
   final target = mask.copyWith(size: clampEditorMaskSize(size));
   if (mask.shape == LayerMaskShape.linear ||
       boxSize.isEmpty ||

@@ -27,7 +27,7 @@ import 'package:pro_image_editor/pro_image_editor.dart'
 /// detach, backdrop change, freeze frame, split-screen layout, detached-clip
 /// transform and reattach,
 /// remove, audio extraction, library save, library import, recorded chroma
-/// key — reports its
+/// key, style paste — reports its
 /// outcome through a `last*Result` field on [ClipEditorState].
 /// The listeners below turn those into user-visible feedback and, for the
 /// operations that change the timeline, into one editor-history step.
@@ -57,7 +57,9 @@ class ClipEditorResultListeners extends StatelessWidget {
                               child: _ClipLibrarySaveResultListener(
                                 child: _ClipLibraryImportResultListener(
                                   child: _CapturedChromaKeyBakeResultListener(
-                                    child: child,
+                                    child: _ClipStylePasteResultListener(
+                                      child: child,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -1012,6 +1014,77 @@ class _CapturedChromaKeyBakeResultListener extends StatelessWidget {
         );
       },
       child: child,
+    );
+  }
+}
+
+/// Listens to [ClipEditorState.lastClipStylePasteResult] and commits a paste
+/// to editor history as one step, with timeline markers rebased, and says so
+/// when a color mask could not be pasted.
+///
+/// A pasted speed can make the video longer, so a sound that covered the old
+/// end grows with it, as it does when a clip is slowed down in the speed
+/// sheet.
+class _ClipStylePasteResultListener extends StatelessWidget {
+  const _ClipStylePasteResultListener({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<ClipEditorBloc, ClipEditorState>(
+      listenWhen: (prev, curr) =>
+          !identical(
+            prev.lastClipStylePasteResult,
+            curr.lastClipStylePasteResult,
+          ) &&
+          curr.lastClipStylePasteResult != null,
+      listener: _onPasteResult,
+      child: child,
+    );
+  }
+
+  void _onPasteResult(BuildContext context, ClipEditorState state) {
+    switch (state.lastClipStylePasteResult) {
+      case ClipStylePasteSuccess(
+        :final previousClips,
+        :final colorMaskFailures,
+      ):
+        if (!identical(previousClips, state.clips)) {
+          _commit(context, previousClips, state.clips);
+        }
+        if (colorMaskFailures > 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            DivineSnackbarContainer.snackBar(
+              context.l10n.videoEditorPasteStyleColorMaskFailed(
+                colorMaskFailures,
+              ),
+            ),
+          );
+        }
+      case null:
+        break;
+    }
+  }
+
+  void _commit(
+    BuildContext context,
+    List<DivineVideoClip> previousClips,
+    List<DivineVideoClip> clips,
+  ) {
+    final editor = VideoEditorScope.of(context).editor;
+    if (editor == null) return;
+    final overlayBloc = context.read<TimelineOverlayBloc>();
+    final rebasedMarkers = rebaseTimelineMarkersForClipState(
+      oldClips: previousClips,
+      newClips: clips,
+      markers: overlayBloc.state.timelineMarkers,
+    );
+    overlayBloc.add(TimelineMarkersRebased(rebasedMarkers));
+    editor.setLengthenedClipState(
+      previousClips: previousClips,
+      clips: clips,
+      timelineMarkers: rebasedMarkers,
     );
   }
 }

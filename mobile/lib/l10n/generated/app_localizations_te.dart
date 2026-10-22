@@ -10842,10 +10842,6 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String get videoEditorLayerMultiSelectSemanticLabel =>
-      'బహుళ డ్రాయింగ్‌లను ఎంచుకోండి';
-
-  @override
   String get videoEditorLayerMultiSelectDoneSemanticLabel =>
       'డ్రాయింగ్‌లను ఎంచుకోవడం పూర్తయింది';
 
@@ -10864,10 +10860,6 @@ class AppLocalizationsTe extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String get videoEditorStickerMultiSelectSemanticLabel =>
-      'బహుళ స్టిక్కర్లను ఎంచుకోండి';
 
   @override
   String get videoEditorStickerMultiSelectDoneSemanticLabel =>
@@ -10892,6 +10884,75 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoEditorCombineStickerLayersSemanticLabel =>
       'ఎంచుకున్న స్టిక్కర్లను ఒక లేయర్‌గా కలపండి';
+
+  @override
+  String get videoEditorCopyStyleLabel => 'శైలిని కాపీ చేయండి';
+
+  @override
+  String get videoEditorPasteStyleLabel => 'శైలిని పేస్ట్ చేయండి';
+
+  @override
+  String get videoEditorCopyClipStyleSemanticLabel =>
+      'ఈ క్లిప్ శైలిని కాపీ చేయండి';
+
+  @override
+  String get videoEditorCopyLayerStyleSemanticLabel =>
+      'ఈ లేయర్ శైలిని కాపీ చేయండి';
+
+  @override
+  String get videoEditorPasteClipStyleSemanticLabel =>
+      'కాపీ చేసిన శైలిని ఈ క్లిప్‌పై పేస్ట్ చేయండి';
+
+  @override
+  String get videoEditorPasteLayerStyleSemanticLabel =>
+      'కాపీ చేసిన శైలిని ఈ లేయర్‌పై పేస్ట్ చేయండి';
+
+  @override
+  String get videoEditorPasteStyleSelectedClipsSemanticLabel =>
+      'కాపీ చేసిన శైలిని ఎంచుకున్న క్లిప్‌లపై పేస్ట్ చేయండి';
+
+  @override
+  String get videoEditorPasteStyleSelectedLayersSemanticLabel =>
+      'కాపీ చేసిన శైలిని ఎంచుకున్న లేయర్‌లపై పేస్ట్ చేయండి';
+
+  @override
+  String get videoEditorStyleCopied => 'శైలి కాపీ చేయబడింది';
+
+  @override
+  String videoEditorPasteStyleColorMaskFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count క్లిప్‌లపై రంగు మాస్క్‌ను పేస్ట్ చేయడం సాధ్యపడలేదు. మిగతా శైలి వర్తింపజేయబడింది.',
+      one: '1 క్లిప్‌పై రంగు మాస్క్‌ను పేస్ట్ చేయడం సాధ్యపడలేదు. మిగతా శైలి వర్తింపజేయబడింది.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoEditorLayersMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count లేయర్‌లు ఎంచుకోబడ్డాయి',
+      one: '1 లేయర్ ఎంచుకోబడింది',
+      zero: 'లేయర్‌లు ఏవీ ఎంచుకోబడలేదు',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorDeleteSelectedLayersSemanticLabel =>
+      'ఎంచుకున్న లేయర్‌లను తొలగించండి';
+
+  @override
+  String get videoEditorLayersMultiSelectDoneSemanticLabel =>
+      'లేయర్‌లను ఎంచుకోవడం పూర్తయింది';
+
+  @override
+  String get videoEditorSelectMultipleLayersSemanticLabel =>
+      'బహుళ లేయర్‌లను ఎంచుకోండి';
 
   @override
   String videoEditorStickerGroupLabel(int count) {

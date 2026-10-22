@@ -10058,9 +10058,6 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get videoEditorLayerMultiSelectSemanticLabel => '여러 그림 선택';
-
-  @override
   String get videoEditorLayerMultiSelectDoneSemanticLabel => '그림 선택 완료';
 
   @override
@@ -10077,9 +10074,6 @@ class AppLocalizationsKo extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String get videoEditorStickerMultiSelectSemanticLabel => '여러 스티커 선택';
 
   @override
   String get videoEditorStickerMultiSelectDoneSemanticLabel => '스티커 선택 완료';
@@ -10102,6 +10096,65 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get videoEditorCombineStickerLayersSemanticLabel =>
       '선택한 스티커를 하나의 레이어로 합치기';
+
+  @override
+  String get videoEditorCopyStyleLabel => '스타일 복사';
+
+  @override
+  String get videoEditorPasteStyleLabel => '스타일 붙여넣기';
+
+  @override
+  String get videoEditorCopyClipStyleSemanticLabel => '이 클립의 스타일 복사';
+
+  @override
+  String get videoEditorCopyLayerStyleSemanticLabel => '이 레이어의 스타일 복사';
+
+  @override
+  String get videoEditorPasteClipStyleSemanticLabel => '복사한 스타일을 이 클립에 붙여넣기';
+
+  @override
+  String get videoEditorPasteLayerStyleSemanticLabel => '복사한 스타일을 이 레이어에 붙여넣기';
+
+  @override
+  String get videoEditorPasteStyleSelectedClipsSemanticLabel =>
+      '복사한 스타일을 선택한 클립에 붙여넣기';
+
+  @override
+  String get videoEditorPasteStyleSelectedLayersSemanticLabel =>
+      '복사한 스타일을 선택한 레이어에 붙여넣기';
+
+  @override
+  String get videoEditorStyleCopied => '스타일을 복사했어요';
+
+  @override
+  String videoEditorPasteStyleColorMaskFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '클립 $count개에 색상 마스크를 붙여넣지 못했어요. 나머지 스타일은 적용됐어요.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoEditorLayersMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '레이어 $count개 선택됨',
+      zero: '선택된 레이어 없음',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorDeleteSelectedLayersSemanticLabel => '선택한 레이어 삭제';
+
+  @override
+  String get videoEditorLayersMultiSelectDoneSemanticLabel => '레이어 선택 완료';
+
+  @override
+  String get videoEditorSelectMultipleLayersSemanticLabel => '여러 레이어 선택';
 
   @override
   String videoEditorStickerGroupLabel(int count) {

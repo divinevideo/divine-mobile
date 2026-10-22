@@ -5450,10 +5450,6 @@
       }
     }
   },
-  "videoEditorLayerMultiSelectSemanticLabel": "选择多个涂鸦",
-  "@videoEditorLayerMultiSelectSemanticLabel": {
-    "description": "Accessibility label for the button that starts draw-layer multi-select mode."
-  },
   "videoEditorLayerMultiSelectDoneSemanticLabel": "完成涂鸦选择",
   "@videoEditorLayerMultiSelectDoneSemanticLabel": {
     "description": "Accessibility label for the button that exits draw-layer multi-select mode."
@@ -5471,11 +5467,24 @@
       }
     }
   },
-  "videoEditorStickerMultiSelectSemanticLabel": "选择多个贴纸",
   "videoEditorStickerMultiSelectDoneSemanticLabel": "完成贴纸选择",
   "videoEditorDeleteSelectedStickersSemanticLabel": "删除选中贴纸",
   "videoEditorStickerMultiSelectCountLabel": "{count, plural, =0{已选中 0 个贴纸} =1{已选中 1 个贴纸} other{已选中 {count} 个贴纸}}",
   "videoEditorCombineStickerLayersSemanticLabel": "把选中的贴纸合并为一个图层",
+  "videoEditorCopyStyleLabel": "复制样式",
+  "videoEditorPasteStyleLabel": "粘贴样式",
+  "videoEditorCopyClipStyleSemanticLabel": "复制此片段的样式",
+  "videoEditorCopyLayerStyleSemanticLabel": "复制此图层的样式",
+  "videoEditorPasteClipStyleSemanticLabel": "将复制的样式粘贴到此片段",
+  "videoEditorPasteLayerStyleSemanticLabel": "将复制的样式粘贴到此图层",
+  "videoEditorPasteStyleSelectedClipsSemanticLabel": "将复制的样式粘贴到选中片段",
+  "videoEditorPasteStyleSelectedLayersSemanticLabel": "将复制的样式粘贴到选中图层",
+  "videoEditorStyleCopied": "样式已复制",
+  "videoEditorPasteStyleColorMaskFailed": "{count, plural, other{有 {count} 个片段没能粘贴颜色蒙版。样式的其余部分已应用。}}",
+  "videoEditorLayersMultiSelectCountLabel": "{count, plural, =0{已选中 0 个图层} other{已选中 {count} 个图层}}",
+  "videoEditorDeleteSelectedLayersSemanticLabel": "删除选中图层",
+  "videoEditorLayersMultiSelectDoneSemanticLabel": "完成图层选择",
+  "videoEditorSelectMultipleLayersSemanticLabel": "选择多个图层",
   "videoEditorStickerGroupLabel": "{count, plural, other{{count} 个贴纸}}",
   "videoEditorMergeLabel": "合并",
   "@videoEditorMergeLabel": {

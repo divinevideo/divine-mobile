@@ -10684,10 +10684,6 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get videoEditorLayerMultiSelectSemanticLabel =>
-      'Mehrere Zeichnungen auswählen';
-
-  @override
   String get videoEditorLayerMultiSelectDoneSemanticLabel =>
       'Auswahl der Zeichnungen abschließen';
 
@@ -10706,10 +10702,6 @@ class AppLocalizationsDe extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String get videoEditorStickerMultiSelectSemanticLabel =>
-      'Mehrere Sticker auswählen';
 
   @override
   String get videoEditorStickerMultiSelectDoneSemanticLabel =>
@@ -10734,6 +10726,75 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get videoEditorCombineStickerLayersSemanticLabel =>
       'Ausgewählte Sticker zu einer Ebene zusammenführen';
+
+  @override
+  String get videoEditorCopyStyleLabel => 'Stil kopieren';
+
+  @override
+  String get videoEditorPasteStyleLabel => 'Stil einfügen';
+
+  @override
+  String get videoEditorCopyClipStyleSemanticLabel =>
+      'Stil dieses Clips kopieren';
+
+  @override
+  String get videoEditorCopyLayerStyleSemanticLabel =>
+      'Stil dieser Ebene kopieren';
+
+  @override
+  String get videoEditorPasteClipStyleSemanticLabel =>
+      'Kopierten Stil auf diesen Clip übertragen';
+
+  @override
+  String get videoEditorPasteLayerStyleSemanticLabel =>
+      'Kopierten Stil auf diese Ebene übertragen';
+
+  @override
+  String get videoEditorPasteStyleSelectedClipsSemanticLabel =>
+      'Kopierten Stil auf die ausgewählten Clips übertragen';
+
+  @override
+  String get videoEditorPasteStyleSelectedLayersSemanticLabel =>
+      'Kopierten Stil auf die ausgewählten Ebenen übertragen';
+
+  @override
+  String get videoEditorStyleCopied => 'Stil kopiert';
+
+  @override
+  String videoEditorPasteStyleColorMaskFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Die Farbmaske konnte nicht auf $count Clips übertragen werden. Der Rest des Stils ist drauf.',
+      one: 'Die Farbmaske konnte nicht auf 1 Clip übertragen werden. Der Rest des Stils ist drauf.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoEditorLayersMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Ebenen ausgewählt',
+      one: '1 Ebene ausgewählt',
+      zero: 'Keine Ebenen ausgewählt',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorDeleteSelectedLayersSemanticLabel =>
+      'Ausgewählte Ebenen löschen';
+
+  @override
+  String get videoEditorLayersMultiSelectDoneSemanticLabel =>
+      'Auswahl der Ebenen abschließen';
+
+  @override
+  String get videoEditorSelectMultipleLayersSemanticLabel =>
+      'Mehrere Ebenen auswählen';
 
   @override
   String videoEditorStickerGroupLabel(int count) {

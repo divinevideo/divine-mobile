@@ -10511,9 +10511,6 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get videoEditorLayerMultiSelectSemanticLabel => 'Chọn nhiều hình vẽ';
-
-  @override
   String get videoEditorLayerMultiSelectDoneSemanticLabel =>
       'Chọn hình vẽ xong';
 
@@ -10532,10 +10529,6 @@ class AppLocalizationsVi extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String get videoEditorStickerMultiSelectSemanticLabel =>
-      'Chọn nhiều nhãn dán';
 
   @override
   String get videoEditorStickerMultiSelectDoneSemanticLabel =>
@@ -10560,6 +10553,71 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get videoEditorCombineStickerLayersSemanticLabel =>
       'Kết hợp các nhãn dán đã chọn thành một lớp';
+
+  @override
+  String get videoEditorCopyStyleLabel => 'Sao chép kiểu';
+
+  @override
+  String get videoEditorPasteStyleLabel => 'Dán kiểu';
+
+  @override
+  String get videoEditorCopyClipStyleSemanticLabel =>
+      'Sao chép kiểu của clip này';
+
+  @override
+  String get videoEditorCopyLayerStyleSemanticLabel =>
+      'Sao chép kiểu của lớp này';
+
+  @override
+  String get videoEditorPasteClipStyleSemanticLabel =>
+      'Dán kiểu đã sao chép vào clip này';
+
+  @override
+  String get videoEditorPasteLayerStyleSemanticLabel =>
+      'Dán kiểu đã sao chép vào lớp này';
+
+  @override
+  String get videoEditorPasteStyleSelectedClipsSemanticLabel =>
+      'Dán kiểu đã sao chép vào các clip đã chọn';
+
+  @override
+  String get videoEditorPasteStyleSelectedLayersSemanticLabel =>
+      'Dán kiểu đã sao chép vào các lớp đã chọn';
+
+  @override
+  String get videoEditorStyleCopied => 'Đã sao chép kiểu';
+
+  @override
+  String videoEditorPasteStyleColorMaskFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Không dán được mặt nạ màu vào $count clip. Phần còn lại của kiểu đã được áp dụng.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoEditorLayersMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Đã chọn $count lớp',
+      zero: 'Chưa chọn lớp nào',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorDeleteSelectedLayersSemanticLabel =>
+      'Xóa các lớp đã chọn';
+
+  @override
+  String get videoEditorLayersMultiSelectDoneSemanticLabel => 'Chọn lớp xong';
+
+  @override
+  String get videoEditorSelectMultipleLayersSemanticLabel => 'Chọn nhiều lớp';
 
   @override
   String videoEditorStickerGroupLabel(int count) {

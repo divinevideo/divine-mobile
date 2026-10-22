@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
+import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -19,6 +20,7 @@ import 'package:openvine/models/video_editor/clip_speed_choice.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_mask.dart';
+import 'package:openvine/models/video_editor/layer_style.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
@@ -31,6 +33,7 @@ import 'package:openvine/widgets/video_editor/effects_editor/flashing_effect_sna
 import 'package:openvine/widgets/video_editor/effects_editor/open_effects_editor.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/layer_style_actions.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_audio_fade_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_clip_speed_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_equalizer_sheet.dart';
@@ -107,17 +110,17 @@ class _LayerOverlayControls extends StatelessWidget {
     final isAudioVisualizer =
         layer != null && AudioVisualizerLayerData.isAudioVisualizerLayer(layer);
 
-    // Drawings and stickers can be multi-selected and combined when the
-    // selected layer is itself mergeable and at least one more layer of its
-    // kind exists on the canvas.
-    final mergeKind = layerMergeKindOf(layer);
-    final mergeableCount = mergeKind == null
-        ? 0
-        : scope.editor?.activeLayers
-                  .where((l) => layerMergeKindOf(l) == mergeKind)
-                  .length ??
-              0;
-    final canMultiSelect = mergeableCount >= 2;
+    // Every layer that takes a style can be multi-selected, to paste a style
+    // onto several at once, delete them, or combine drawings or stickers, as
+    // long as at least one more such layer exists on the canvas.
+    final canTakeStyle = canCopyLayerStyle(layer);
+    final selectableCount = canTakeStyle
+        ? scope.editor?.activeLayers.where(canCopyLayerStyle).length ?? 0
+        : 0;
+    final canMultiSelect = selectableCount >= 2;
+    final hasCopiedStyle = context.select(
+      (StyleClipboardCubit cubit) => cubit.state.layerStyle != null,
+    );
 
     // Rebuilt as the playhead reaches or leaves a keyframe, which fills the
     // keyframes action in.
@@ -134,9 +137,19 @@ class _LayerOverlayControls extends StatelessWidget {
         onMultiSelect: canMultiSelect
             ? () => _startLayerMultiSelect(context: context)
             : null,
-        multiSelectSemanticLabel: mergeKind == .sticker
-            ? context.l10n.videoEditorStickerMultiSelectSemanticLabel
-            : context.l10n.videoEditorLayerMultiSelectSemanticLabel,
+        multiSelectSemanticLabel:
+            context.l10n.videoEditorSelectMultipleLayersSemanticLabel,
+        // Copy style / Paste style, for every layer but a hidden area and a
+        // detached clip; see [canCopyLayerStyle].
+        onCopyStyle: canTakeStyle ? () => _copyStyle(context: context) : null,
+        copyStyleSemanticLabel:
+            context.l10n.videoEditorCopyLayerStyleSemanticLabel,
+        onPasteStyle: canTakeStyle
+            ? () => pasteLayerStyle(context, {item.id})
+            : null,
+        canPasteStyle: hasCopiedStyle,
+        pasteStyleSemanticLabel:
+            context.l10n.videoEditorPasteLayerStyleSemanticLabel,
         onSplit: () => _splitLayer(context: context),
         // The way back from Detach, for a detached clip only.
         onReattach: isDetachedClip
@@ -327,10 +340,17 @@ class _LayerOverlayControls extends StatelessWidget {
     editor.addHistory(layers: layers);
   }
 
+  /// Copies the selected layer's style for Paste style.
+  void _copyStyle({required BuildContext context}) {
+    final layer = _liveLayer(context);
+    if (layer == null) return;
+    copyLayerStyle(context, layer);
+  }
+
   /// Enters layer multi-select mode, seeded with the tapped layer.
   ///
-  /// The user then toggles more layers of the same kind and combines the
-  /// selection via the multi-select control bar.
+  /// The user then toggles more layers and pastes a style onto, combines or
+  /// deletes the selection via the multi-select control bar.
   void _startLayerMultiSelect({required BuildContext context}) {
     context.read<TimelineOverlayBloc>().add(
       TimelineOverlayLayerMultiSelectStarted(item.id),

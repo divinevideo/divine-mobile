@@ -10554,10 +10554,6 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
-  String get videoEditorLayerMultiSelectSemanticLabel =>
-      'کئی ڈرائنگز منتخب کریں';
-
-  @override
   String get videoEditorLayerMultiSelectDoneSemanticLabel =>
       'ڈرائنگز کا انتخاب مکمل';
 
@@ -10576,10 +10572,6 @@ class AppLocalizationsUr extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String get videoEditorStickerMultiSelectSemanticLabel =>
-      'کئی اسٹیکرز منتخب کریں';
 
   @override
   String get videoEditorStickerMultiSelectDoneSemanticLabel =>
@@ -10604,6 +10596,74 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoEditorCombineStickerLayersSemanticLabel =>
       'منتخب اسٹیکرز کو ایک لیئر میں ملائیں';
+
+  @override
+  String get videoEditorCopyStyleLabel => 'اسٹائل کاپی کریں';
+
+  @override
+  String get videoEditorPasteStyleLabel => 'اسٹائل پیسٹ کریں';
+
+  @override
+  String get videoEditorCopyClipStyleSemanticLabel =>
+      'اس کلپ کا اسٹائل کاپی کریں';
+
+  @override
+  String get videoEditorCopyLayerStyleSemanticLabel =>
+      'اس لیئر کا اسٹائل کاپی کریں';
+
+  @override
+  String get videoEditorPasteClipStyleSemanticLabel =>
+      'کاپی کیا گیا اسٹائل اس کلپ پر پیسٹ کریں';
+
+  @override
+  String get videoEditorPasteLayerStyleSemanticLabel =>
+      'کاپی کیا گیا اسٹائل اس لیئر پر پیسٹ کریں';
+
+  @override
+  String get videoEditorPasteStyleSelectedClipsSemanticLabel =>
+      'کاپی کیا گیا اسٹائل منتخب کلپس پر پیسٹ کریں';
+
+  @override
+  String get videoEditorPasteStyleSelectedLayersSemanticLabel =>
+      'کاپی کیا گیا اسٹائل منتخب لیئرز پر پیسٹ کریں';
+
+  @override
+  String get videoEditorStyleCopied => 'اسٹائل کاپی ہو گیا';
+
+  @override
+  String videoEditorPasteStyleColorMaskFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count کلپس پر کلر ماسک پیسٹ نہیں ہو سکا۔ باقی اسٹائل لگ گیا ہے۔',
+      one: '1 کلپ پر کلر ماسک پیسٹ نہیں ہو سکا۔ باقی اسٹائل لگ گیا ہے۔',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String videoEditorLayersMultiSelectCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count لیئرز منتخب',
+      one: '1 لیئر منتخب',
+      zero: 'کوئی لیئر منتخب نہیں',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoEditorDeleteSelectedLayersSemanticLabel =>
+      'منتخب لیئرز حذف کریں';
+
+  @override
+  String get videoEditorLayersMultiSelectDoneSemanticLabel =>
+      'لیئرز کا انتخاب مکمل';
+
+  @override
+  String get videoEditorSelectMultipleLayersSemanticLabel =>
+      'کئی لیئرز منتخب کریں';
 
   @override
   String videoEditorStickerGroupLabel(int count) {

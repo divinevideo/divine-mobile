@@ -94,6 +94,13 @@ class VideoEditorConstants {
   /// Shortest a caption cue may be trimmed; below this reading is impossible.
   static const Duration minCaptionCueDuration = Duration(milliseconds: 200);
 
+  /// How long the "Style copied" confirmation shows. It floats over the
+  /// timeline's action bar, so it clears quickly for the Paste style or
+  /// Select tap that usually follows.
+  static const Duration styleCopiedSnackBarDuration = Duration(
+    milliseconds: 1500,
+  );
+
   /// `TuneAdjustmentMatrix.meta` key grouping the adjustments produced by one
   /// tune-editor session into a single timeline "set" (one bar per set, sharing
   /// a time window).
