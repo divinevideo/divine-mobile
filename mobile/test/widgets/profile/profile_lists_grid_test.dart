@@ -13,8 +13,6 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -117,8 +115,6 @@ void main() {
                 myListsWithThumbnailsProvider.overrideWith(
                   (ref) async => mockListService.myLists,
                 ),
-            isFeatureEnabledProvider(FeatureFlag.curatedLists)
-                .overrideWithValue(enabled),
           ],
           child: BlocProvider<PeopleListsBloc>.value(
             value: peopleBloc,

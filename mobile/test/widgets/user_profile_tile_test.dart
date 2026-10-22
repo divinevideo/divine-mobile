@@ -9,8 +9,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
@@ -277,12 +275,6 @@ void main() {
               userProfileReactiveProvider(
                 pubkey,
               ).overrideWith((ref) => Stream.value(profileWith())),
-              isFeatureEnabledProvider(
-                FeatureFlag.profileListFeatures,
-              ).overrideWithValue(true),
-              isFeatureEnabledProvider(
-                FeatureFlag.curatedLists,
-              ).overrideWithValue(true),
             ],
             home: Scaffold(
               body: showAddToListButton == null

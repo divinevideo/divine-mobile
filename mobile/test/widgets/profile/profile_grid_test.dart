@@ -306,9 +306,6 @@ void main() {
           isFeatureEnabledProvider(
             FeatureFlag.videoReplies,
           ).overrideWith((_) => false),
-          isFeatureEnabledProvider(
-            FeatureFlag.curatedLists,
-          ).overrideWith((_) => false),
           if (curatedListService != null)
             curatedListsStateProvider.overrideWith(
               () => _FakeCuratedListsState(curatedListService),
@@ -482,9 +479,6 @@ void main() {
             ),
             isFeatureEnabledProvider(
               FeatureFlag.videoReplies,
-            ).overrideWith((_) => false),
-            isFeatureEnabledProvider(
-              FeatureFlag.curatedLists,
             ).overrideWith((_) => false),
           ],
         );

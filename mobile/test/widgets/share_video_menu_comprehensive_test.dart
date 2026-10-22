@@ -155,7 +155,6 @@ void main() {
 
   group('Unified share sheet', () {
     Widget buildSubject({
-      bool curatedListsEnabled = true,
       bool debugToolsEnabled = true,
       VideoEvent? video,
       MockAuthService? mockAuthService,
@@ -187,9 +186,6 @@ void main() {
           mockVideoClipImportService,
         ),
         curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
-        isFeatureEnabledProvider(
-          FeatureFlag.curatedLists,
-        ).overrideWithValue(curatedListsEnabled),
         isFeatureEnabledProvider(
           FeatureFlag.debugTools,
         ).overrideWithValue(debugToolsEnabled),
@@ -697,26 +693,20 @@ void main() {
       expect(find.text('Public Lists'), findsNothing);
     });
 
-    // Video lists (kind 30005) ship unflagged: the profile Lists tab and its
-    // create button are ungated, so gating only the add action would leave
-    // the flag able to strand lists the user can still make but not fill.
-    // FeatureFlag.curatedLists now covers people lists (kind 30000) alone.
-    for (final flagEnabled in [true, false]) {
-      testWidgets(
-        'shows Add to List with the curatedLists flag ${flagEnabled ? 'on' : 'off'}',
-        (tester) async {
-          final l10n = lookupAppLocalizations(const Locale('en'));
+    testWidgets(
+      'shows Add to List',
+      (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
 
-          await tester.pumpWidget(
-            buildSubject(curatedListsEnabled: flagEnabled),
-          );
-          await tester.tap(find.byType(ShareActionButton));
-          await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          buildSubject(),
+        );
+        await tester.tap(find.byType(ShareActionButton));
+        await tester.pumpAndSettle();
 
-          expect(find.text(l10n.shareSheetAddToList), findsOneWidget);
-        },
-      );
-    }
+        expect(find.text(l10n.shareSheetAddToList), findsOneWidget);
+      },
+    );
 
     testWidgets(
       'shows Event JSON and Event ID when debugTools flag is enabled',
@@ -780,9 +770,6 @@ void main() {
             (ref) => mockVideoSharingService,
           ),
           curatedListsStateProvider.overrideWith(_FakeCuratedListsState.new),
-          isFeatureEnabledProvider(
-            FeatureFlag.curatedLists,
-          ).overrideWithValue(true),
           isFeatureEnabledProvider(
             FeatureFlag.debugTools,
           ).overrideWithValue(true),

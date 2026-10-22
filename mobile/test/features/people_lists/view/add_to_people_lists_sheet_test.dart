@@ -12,8 +12,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/bloc/people_list_picks_cubit.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/models/people_list_entry_point.dart';
@@ -40,7 +38,6 @@ class _TrackedPeopleListsBloc extends PeopleListsBloc {
     required super.repositoryStream,
   }) : super(
          ownerPubkeyStream: const Stream.empty(),
-         enabledStream: const Stream.empty(),
          initialOwnerPubkey: _ownerPubkey,
        );
 
@@ -176,8 +173,7 @@ void main() {
     /// Opens the real sheet from a button, as the app does.
     Future<void> openSheet(WidgetTester tester) async {
       await tester.pumpWidget(
-        _withCuratedListsFlag(
-          enabled: true,
+        _withAuth(
           auth: auth,
           child: BlocProvider<PeopleListsBloc>.value(
             value: bloc,
@@ -737,8 +733,7 @@ void main() {
           // BlocProvider must sit above the navigator so the bloc is
           // reachable from the modal route.
           await tester.pumpWidget(
-            _withCuratedListsFlag(
-              enabled: true,
+            _withAuth(
               child: BlocProvider<PeopleListsBloc>.value(
                 value: bloc,
                 child: MaterialApp(
@@ -960,8 +955,7 @@ void main() {
         PeopleListsBloc realBloc, {
         bool startActor = true,
         ValueChanged<Future<void>>? onOpened,
-      }) => _withCuratedListsFlag(
-        enabled: true,
+      }) => _withAuth(
         auth: auth,
         child: BlocProvider<PeopleListsBloc>(
           create: (_) {
@@ -1031,7 +1025,6 @@ void main() {
             repository: repositoryWith(list),
             ownerPubkeyStream: const Stream.empty(),
             repositoryStream: const Stream.empty(),
-            enabledStream: const Stream.empty(),
             initialOwnerPubkey: _ownerPubkey,
           );
           var openingCompleted = false;
@@ -1196,8 +1189,6 @@ void main() {
             overrides: [
               ...getStandardTestOverrides(),
               authServiceProvider.overrideWithValue(auth),
-              isFeatureEnabledProvider(FeatureFlag.curatedLists)
-                  .overrideWithValue(true),
             ],
           );
           await tester.pumpWidget(
@@ -1255,38 +1246,9 @@ void main() {
       );
     });
 
-    // The global PeopleListsBloc is registered unconditionally in main.dart
-    // (a conditional entry re-inflated the Navigator on every flag flip), so
-    // BlocProvider laziness is what keeps it unbuilt while curated lists are
-    // off. These pin that: `create` firing means a relay query and cache
-    // subscription started for a disabled feature.
-    group('curatedLists gate', () {
+    group('sheet entry point', () {
       testWidgetsWithSurfaceSize(
-        'show does not open the sheet or construct $PeopleListsBloc when '
-        'curatedLists is off',
-        (tester) async {
-          var blocCreated = false;
-
-          await tester.pumpWidget(
-            _buildLazyBlocSubject(
-              curatedListsEnabled: false,
-              createBloc: () {
-                blocCreated = true;
-                return bloc;
-              },
-            ),
-          );
-
-          await tester.tap(find.text('open'));
-          await tester.pumpAndSettle();
-
-          expect(blocCreated, isFalse);
-          expect(find.byType(AddToPeopleListsSheet), findsNothing);
-        },
-      );
-
-      testWidgetsWithSurfaceSize(
-        'show opens the sheet when curatedLists is on',
+        'show opens the sheet and reads the lazy bloc',
         (tester) async {
           var blocCreated = false;
           whenListen(
@@ -1297,7 +1259,6 @@ void main() {
 
           await tester.pumpWidget(
             _buildLazyBlocSubject(
-              curatedListsEnabled: true,
               createBloc: () {
                 blocCreated = true;
                 return bloc;
@@ -1325,8 +1286,7 @@ void main() {
           // reachable from the modal route. Wrapping the MaterialApp does
           // this because MaterialApp builds the root Navigator below it.
           await tester.pumpWidget(
-            _withCuratedListsFlag(
-              enabled: true,
+            _withAuth(
               child: BlocProvider<PeopleListsBloc>.value(
                 value: bloc,
                 child: MaterialApp(
@@ -1365,11 +1325,9 @@ void main() {
 /// Mirrors the app shell: a lazy `BlocProvider` above the navigator, so
 /// [createBloc] only runs if something below actually reads the bloc.
 Widget _buildLazyBlocSubject({
-  required bool curatedListsEnabled,
   required PeopleListsBloc Function() createBloc,
 }) {
-  return _withCuratedListsFlag(
-    enabled: curatedListsEnabled,
+  return _withAuth(
     child: BlocProvider<PeopleListsBloc>(
       create: (_) => createBloc(),
       child: MaterialApp(
@@ -1392,10 +1350,8 @@ Widget _buildLazyBlocSubject({
   );
 }
 
-/// Scopes [child] with an explicit [FeatureFlag.curatedLists] value —
-/// `AddToPeopleListsSheet.show` reads it before opening.
-Widget _withCuratedListsFlag({
-  required bool enabled,
+/// Scopes the sheet entry point to the signed-in account.
+Widget _withAuth({
   required Widget child,
   MockAuthService? auth,
 }) {
@@ -1405,9 +1361,6 @@ Widget _withCuratedListsFlag({
       authServiceProvider.overrideWithValue(
         auth ?? createMockAuthService(currentPublicKeyHex: _ownerPubkey),
       ),
-      isFeatureEnabledProvider(
-        FeatureFlag.curatedLists,
-      ).overrideWithValue(enabled),
     ],
     child: child,
   );

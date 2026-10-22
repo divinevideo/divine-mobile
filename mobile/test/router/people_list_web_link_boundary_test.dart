@@ -10,8 +10,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/nip19.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/people_lists.dart';
 import 'package:openvine/features/people_lists/view/add_people_to_list_screen.dart';
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
@@ -102,8 +100,6 @@ void main() {
           videoEventServiceProvider.overrideWithValue(
             createMockVideoEventService(),
           ),
-          isFeatureEnabledProvider(FeatureFlag.curatedLists)
-              .overrideWith((ref) => true),
           peopleListsRepositoryProvider.overrideWithValue(repository),
           hasFollowingInCacheProvider.overrideWithValue(true),
           currentAccountDeletionAttemptProvider.overrideWith(

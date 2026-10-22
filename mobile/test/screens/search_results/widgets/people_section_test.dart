@@ -8,8 +8,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/search_results/widgets/people_section.dart';
@@ -59,11 +57,6 @@ void main() {
 
     Widget buildSubject({bool showAll = false}) {
       return testProviderScope(
-        additionalOverrides: [
-          isFeatureEnabledProvider(
-            FeatureFlag.profileListFeatures,
-          ).overrideWithValue(false),
-        ],
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -183,26 +176,7 @@ void main() {
       });
 
       testWidgets(
-        'hides add-to-list action on search user tiles when profile list '
-        'features flag is disabled',
-        (tester) async {
-          when(() => mockBloc.state).thenReturn(
-            UserSearchState(
-              status: UserSearchStatus.success,
-              query: 'test',
-              results: [testProfile],
-            ),
-          );
-
-          await tester.pumpWidget(buildSubject());
-
-          expect(_divineIcon(DivineIconName.listPlus), findsNothing);
-        },
-      );
-
-      testWidgets(
-        'shows add-to-list action on search user tiles when profile list '
-        'features flag is enabled',
+        'shows add-to-list action on search user tiles',
         (tester) async {
           when(() => mockBloc.state).thenReturn(
             UserSearchState(
@@ -214,11 +188,6 @@ void main() {
 
           await tester.pumpWidget(
             testProviderScope(
-              additionalOverrides: [
-                isFeatureEnabledProvider(
-                  FeatureFlag.profileListFeatures,
-                ).overrideWithValue(true),
-              ],
               child: MaterialApp(
                 localizationsDelegates: appLocalizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,

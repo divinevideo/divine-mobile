@@ -18,8 +18,6 @@ import 'package:openvine/blocs/search_results_filter/search_results_filter.dart'
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
 import 'package:openvine/constants/search_constants.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
@@ -777,12 +775,7 @@ void main() {
                   authState: AuthState.authenticated,
                   currentPublicKeyHex: _viewerPubkey,
                 ),
-                flagOverrides: [
-                  isFeatureEnabledProvider(FeatureFlag.curatedLists)
-                      .overrideWith((ref) => master),
-                  isFeatureEnabledProvider(FeatureFlag.profileListFeatures)
-                      .overrideWith((ref) => profile),
-                ],
+                flagOverrides: [],
               ),
             );
             await tester.pump();

@@ -1,4 +1,4 @@
-// ABOUTME: Tests showNewPeopleListSheet's curatedLists gate.
+// ABOUTME: Tests creating people lists from the profile sheet.
 // ABOUTME: The sheet reads the lazily-registered global PeopleListsBloc.
 
 import 'dart:async';
@@ -13,8 +13,6 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -70,34 +68,6 @@ void main() {
       await bloc.close();
     });
 
-    // The global PeopleListsBloc is registered unconditionally in main.dart
-    // (a conditional entry re-inflated the Navigator on every flag flip), so
-    // BlocProvider laziness is what keeps it unbuilt while curated lists are
-    // off. `create` firing means a relay query and cache subscription started
-    // for a disabled feature.
-    testWidgets(
-      'does not open or construct $PeopleListsBloc when curatedLists is off',
-      (tester) async {
-        var blocCreated = false;
-
-        await tester.pumpWidget(
-          _buildSubject(
-            curatedListsEnabled: false,
-            createBloc: () {
-              blocCreated = true;
-              return bloc;
-            },
-          ),
-        );
-
-        await tester.tap(find.text('open'));
-        await tester.pumpAndSettle();
-
-        expect(blocCreated, isFalse);
-        expect(find.text(l10n.listNewPeopleList), findsNothing);
-      },
-    );
-
     // The summary line keeps the `UserProfile` the picker handed back and
     // formats its own text, so it does not inherit the picker's own
     // substitution — a deleted collaborator was still named here after the
@@ -145,7 +115,6 @@ void main() {
 
       await tester.pumpWidget(
         _buildSubject(
-          curatedListsEnabled: true,
           createBloc: () => bloc,
           initialCollaborator: collaborator,
           extraOverrides: [
@@ -174,7 +143,6 @@ void main() {
         when(() => auth.currentPublicKeyHex).thenAnswer((_) => owner);
         await tester.pumpWidget(
           _buildSubject(
-            curatedListsEnabled: true,
             createBloc: () => bloc,
             auth: auth,
           ),
@@ -250,7 +218,6 @@ void main() {
 
       await tester.pumpWidget(
         _buildSubject(
-          curatedListsEnabled: true,
           createBloc: () => bloc,
           initialCollaborator: seeded,
           locale: const Locale('ja'),
@@ -290,7 +257,7 @@ void main() {
 
     testWidgets('Done stays disabled until a name is entered', (tester) async {
       await tester.pumpWidget(
-        _buildSubject(curatedListsEnabled: true, createBloc: () => bloc),
+        _buildSubject(createBloc: () => bloc),
       );
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
@@ -313,7 +280,7 @@ void main() {
       final pending = Completer<PeopleListsOperationResult>();
       when(() => bloc.submit(any())).thenAnswer((_) => pending.future);
       await tester.pumpWidget(
-        _buildSubject(curatedListsEnabled: true, createBloc: () => bloc),
+        _buildSubject(createBloc: () => bloc),
       );
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
@@ -328,9 +295,9 @@ void main() {
       expect(find.text(l10n.listCreateFailed), findsOneWidget);
     });
 
-    testWidgets('opens when curatedLists is on', (tester) async {
+    testWidgets('opens the new people list sheet', (tester) async {
       await tester.pumpWidget(
-        _buildSubject(curatedListsEnabled: true, createBloc: () => bloc),
+        _buildSubject(createBloc: () => bloc),
       );
 
       await tester.tap(find.text('open'));
@@ -344,7 +311,6 @@ void main() {
 /// Mirrors the app shell: a lazy `BlocProvider` above the navigator, so
 /// [createBloc] only runs if something below actually reads the bloc.
 Widget _buildSubject({
-  required bool curatedListsEnabled,
   required PeopleListsBloc Function() createBloc,
   List<Override> extraOverrides = const [],
   MockAuthService? auth,
@@ -357,9 +323,6 @@ Widget _buildSubject({
       authServiceProvider.overrideWithValue(
         auth ?? createMockAuthService(currentPublicKeyHex: _owner),
       ),
-      isFeatureEnabledProvider(
-        FeatureFlag.curatedLists,
-      ).overrideWithValue(curatedListsEnabled),
       ...extraOverrides,
     ],
     child: BlocProvider<PeopleListsBloc>(

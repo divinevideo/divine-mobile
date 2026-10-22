@@ -657,7 +657,6 @@ void main() {
         String? viewerPubkey = _ownerPubkey,
         List<PeopleListSearchResult> followed = const [],
         Future<UserList?> Function()? resolve,
-        bool enabled = true,
       }) async {
         final bloc = _MockPeopleListsBloc();
         whenListen(
@@ -666,7 +665,6 @@ void main() {
           initialState: PeopleListsState(
             status: PeopleListsStatus.ready,
             ownerPubkey: viewerPubkey,
-            enabled: enabled,
           ),
         );
         final videosRepository = _MockVideosRepository();
@@ -763,25 +761,6 @@ void main() {
       ) async {
         await pumpDiscovered(tester, resolve: () async => null);
         expect(find.byType(FollowListButton), findsNothing);
-      });
-
-      testWidgets('disabled lists hide the durable follow control', (
-        tester,
-      ) async {
-        await pumpDiscovered(
-          tester,
-          enabled: false,
-          followed: [
-            PeopleListSearchResult(ownerPubkey: listOwner, list: discovered),
-          ],
-          resolve: () async => null,
-        );
-        expect(find.byType(FollowListButton), findsNothing);
-        verifyNever(
-          () => repository.watchFollowedLists(
-            viewerPubkey: any(named: 'viewerPubkey'),
-          ),
-        );
       });
 
       testWidgets("follows someone else's list for the signed-in viewer", (
@@ -1656,41 +1635,6 @@ void main() {
     // exactly like the delete settling. The relay still has the list, so
     // announcing a delete and popping the route would be a lie. The bloc
     // reports the dropped request as `cancelled`.
-    testWidgets('a delete dropped by a flag-off neither announces nor pops', (
-      tester,
-    ) async {
-      final bloc = _MockPeopleListsBloc();
-      final list = _buildList(id: 'flag-off-list', name: 'Flag Off List');
-      final result = Completer<PeopleListsOperationResult>();
-      when(() => bloc.submit(any())).thenAnswer((_) => result.future);
-      final controller = StreamController<PeopleListsState>.broadcast();
-      addTearDown(controller.close);
-      whenListen(
-        bloc,
-        controller.stream,
-        initialState: PeopleListsState(
-          status: PeopleListsStatus.ready,
-          ownerPubkey: _ownerPubkey,
-          lists: [list],
-        ),
-      );
-
-      await _pumpPushedListRoute(tester, bloc: bloc, list: list);
-      await _confirmDelete(tester, l10n);
-      final announcements = _captureAnnouncements(tester);
-
-      // What `_onEnabledChanged` emits when the curated-lists flag goes off.
-      controller.add(
-        const PeopleListsState(ownerPubkey: _ownerPubkey, enabled: false),
-      );
-      result.complete(PeopleListsOperationResult.cancelled);
-      await tester.pumpAndSettle();
-
-      expect(announcements, isEmpty);
-      expect(find.text(l10n.peopleListsDeleteFailed), findsNothing);
-      expect(find.text('Open list'), findsNothing);
-      expect(find.text(l10n.peopleListsListNotFoundTitle), findsOneWidget);
-    });
 
     testWidgets(
       'a delete dropped by an account switch neither announces nor pops',

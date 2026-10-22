@@ -240,7 +240,6 @@ void main() {
           repository: repository,
           ownerPubkeyStream: const Stream.empty(),
           repositoryStream: const Stream.empty(),
-          enabledStream: const Stream.empty(),
           initialOwnerPubkey: _ownerA,
           clock: () => DateTime.utc(2026, 10, 4),
         );

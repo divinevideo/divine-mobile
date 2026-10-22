@@ -12,8 +12,6 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/services/age_verification_service.dart';
@@ -100,8 +98,6 @@ Future<_SafetyPolicyHome> _mountSafetyPolicyHome(WidgetTester tester) async {
         videosRepositoryProvider.overrideWithValue(videos),
         curatedListRepositoryProvider.overrideWithValue(curated),
         ageVerificationServiceProvider.overrideWithValue(ageVerification),
-        isFeatureEnabledProvider(FeatureFlag.curatedLists)
-            .overrideWithValue(false),
       ],
     ),
   );
@@ -191,9 +187,9 @@ void main() {
     });
   });
 
-  group('VideoFeedPage account and flag identity', () {
+  group('VideoFeedPage account and repository identity', () {
     testWidgets(
-      'Home flag flip closes old feed, hides people sources, preserves and restores saved selection',
+      'legacy false flags preserve people sources and saved selection',
       (tester) async {
         await CacheSync.init(dao: _CacheDao());
         final viewer = 'a' * 64;
@@ -207,6 +203,8 @@ void main() {
         final selectionKey = 'selected_feed_mode_$viewer';
         SharedPreferences.setMockInitialValues({
           selectionKey: FeedModePreferenceStore.storageValueFor(source),
+          'ff_curatedLists': false,
+          'ff_profileListFeatures': false,
         });
         final prefs = await SharedPreferences.getInstance();
         final people = _PeopleListsRepository();
@@ -284,9 +282,6 @@ void main() {
         final original = tester
             .element(find.byType(VideoFeedView))
             .read<VideoFeedBloc>();
-        final container = ProviderScope.containerOf(
-          tester.element(find.byType(VideoFeedPage)),
-        );
         expect(original.state.source, source);
         expect(find.text('Flag Crew'), findsOneWidget);
         expect(stream.hasListener, isTrue);
@@ -295,45 +290,8 @@ void main() {
         expect(find.text('Flag Crew'), findsNWidgets(2));
         Navigator.of(tester.element(find.byType(VideoFeedView))).pop();
         await tester.pumpAndSettle();
-        await container
-            .read(featureFlagServiceProvider)
-            .setFlag(FeatureFlag.curatedLists, false);
-        await tester.pumpAndSettle();
-        await tester.runAsync(pumpEventQueue);
-        await tester.pump();
-        final gated = tester
-            .element(find.byType(VideoFeedView))
-            .read<VideoFeedBloc>();
-        expect(identical(gated, original), isFalse);
-        expect(original.isClosed, isTrue);
-        expect(stream.hasListener, isFalse);
-        expect(gated.state.source.type, VideoFeedSourceType.forYou);
-        expect(gated.state.followedPeopleLists, isEmpty);
-        expect(find.text('Flag Crew'), findsNothing);
-        expect(find.text('For You'), findsOneWidget);
-        await tester.tap(find.text('For You'));
-        await tester.pumpAndSettle();
-        expect(find.text('Flag Crew'), findsNothing);
-        Navigator.of(tester.element(find.byType(VideoFeedView))).pop();
-        await tester.pumpAndSettle();
-        expect(
-          prefs.getString(selectionKey),
-          FeedModePreferenceStore.storageValueFor(source),
-        );
-        await container
-            .read(featureFlagServiceProvider)
-            .setFlag(FeatureFlag.curatedLists, true);
-        await tester.pumpAndSettle();
-        await tester.runAsync(pumpEventQueue);
-        await tester.pump();
-        final restored = tester
-            .element(find.byType(VideoFeedView))
-            .read<VideoFeedBloc>();
-        expect(identical(gated, restored), isFalse);
-        expect(gated.isClosed, isTrue);
-        expect(restored.state.source, source);
-        expect(restored.state.followedPeopleLists, copies);
-        expect(find.text('Flag Crew'), findsOneWidget);
+        expect(original.state.source, source);
+        expect(original.state.followedPeopleLists, copies);
         expect(stream.hasListener, isTrue);
         expect(
           prefs.getString(selectionKey),
@@ -343,13 +301,13 @@ void main() {
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.runAsync(pumpEventQueue);
         await tester.pump();
-        expect(restored.isClosed, isTrue);
+        expect(original.isClosed, isTrue);
         expect(stream.hasListener, isFalse);
       },
     );
 
     testWidgets(
-      'Home is rebuilt for another account while people lists are off',
+      'Home is rebuilt for another account',
       (tester) async {
         await CacheSync.init(dao: _CacheDao());
         final firstViewer = 'a' * 64;
@@ -386,8 +344,6 @@ void main() {
             additionalOverrides: [
               videosRepositoryProvider.overrideWithValue(videos),
               curatedListRepositoryProvider.overrideWithValue(curated),
-              isFeatureEnabledProvider(FeatureFlag.curatedLists)
-                  .overrideWithValue(false),
             ],
           ),
         );
@@ -651,8 +607,6 @@ void main() {
             mockProfileRepository: createMockProfileRepository(),
             additionalOverrides: [
               videosRepositoryProvider.overrideWithValue(videos),
-              isFeatureEnabledProvider(FeatureFlag.curatedLists)
-                  .overrideWithValue(false),
             ],
           ),
         );
@@ -779,8 +733,6 @@ void main() {
               mockProfileRepository: createMockProfileRepository(),
               additionalOverrides: [
                 videosRepositoryProvider.overrideWithValue(videos),
-                isFeatureEnabledProvider(FeatureFlag.curatedLists)
-                    .overrideWithValue(false),
               ],
             ),
           );

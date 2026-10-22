@@ -4,8 +4,6 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/services/auth_service.dart';
@@ -50,7 +48,7 @@ void main() {
       expect(_divineIcon(DivineIconName.userMinus), findsNothing);
     });
 
-    // showAddToList is `profileListFeatures && curatedLists && !isCurrentUser`.
+    // Only other users expose the add-to-list action.
     // Both flags are on here, so only the identity check can hide it.
     testWidgets('hides the add-to-list action on your own row', (tester) async {
       await tester.pumpWidget(_buildSubject(authService, _viewerPubkey));
@@ -68,12 +66,6 @@ Widget _buildSubject(_TestAuthService authService, String tilePubkey) {
     home: testProviderScope(
       additionalOverrides: [
         authServiceProvider.overrideWithValue(authService),
-        isFeatureEnabledProvider(
-          FeatureFlag.profileListFeatures,
-        ).overrideWithValue(true),
-        isFeatureEnabledProvider(
-          FeatureFlag.curatedLists,
-        ).overrideWithValue(true),
       ],
       child: Scaffold(
         body: UserProfileTile(

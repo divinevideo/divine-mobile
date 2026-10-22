@@ -79,12 +79,10 @@ void main() {
     });
 
     ListSearchBloc buildBloc({
-      bool peopleEnabled = false,
       String? viewerPubkey,
     }) => ListSearchBloc(
       curatedListRepository: curatedListRepository,
       peopleListsRepository: peopleListsRepository,
-      peopleListSearchEnabled: peopleEnabled,
       viewerPubkey: viewerPubkey,
     );
 
@@ -95,7 +93,7 @@ void main() {
     group(ListSearchQueryChanged, () {
       blocTest<ListSearchBloc, ListSearchState>(
         'does not search and resets when the query contains a private key',
-        build: () => buildBloc(peopleEnabled: true),
+        build: buildBloc,
         seed: () => ListSearchState(
           status: ListSearchStatus.success,
           query: 'top',
@@ -157,7 +155,7 @@ void main() {
             ),
           ).thenAnswer((_) => Stream.value([testPeopleResult]));
         },
-        build: () => buildBloc(peopleEnabled: true, viewerPubkey: 'a' * 64),
+        build: () => buildBloc(viewerPubkey: 'a' * 64),
         act: (bloc) => bloc.add(const ListSearchQueryChanged('people')),
         wait: const Duration(milliseconds: 400),
         verify: (_) {
@@ -171,13 +169,13 @@ void main() {
       );
 
       blocTest<ListSearchBloc, ListSearchState>(
-        'emits people results when people list search is enabled',
+        'emits people results for a matching query',
         setUp: () {
           when(
             () => peopleListsRepository.searchPublicLists('people'),
           ).thenAnswer((_) => Stream.value([testPeopleResult]));
         },
-        build: () => buildBloc(peopleEnabled: true),
+        build: buildBloc,
         act: (bloc) => bloc.add(const ListSearchQueryChanged('people')),
         wait: const Duration(milliseconds: 400),
         expect: () => [
@@ -202,25 +200,7 @@ void main() {
       );
 
       blocTest<ListSearchBloc, ListSearchState>(
-        'does not search people lists when flag is disabled',
-        setUp: () {
-          when(
-            () => curatedListRepository.searchAllLists('mixed'),
-          ).thenAnswer((_) => Stream.value([testCuratedList]));
-        },
-        build: buildBloc, // peopleEnabled: false by default
-        act: (bloc) => bloc.add(const ListSearchQueryChanged('mixed')),
-        wait: const Duration(milliseconds: 400),
-        verify: (bloc) {
-          verifyNever(
-            () => peopleListsRepository.searchPublicLists(any()),
-          );
-          expect(bloc.state.peopleResults, isEmpty);
-        },
-      );
-
-      blocTest<ListSearchBloc, ListSearchState>(
-        'merges video and people results when both enabled',
+        'merges video and people results from both sources',
         setUp: () {
           when(
             () => curatedListRepository.searchAllLists('mixed'),
@@ -229,7 +209,7 @@ void main() {
             () => peopleListsRepository.searchPublicLists('mixed'),
           ).thenAnswer((_) => Stream.value([testPeopleResult]));
         },
-        build: () => buildBloc(peopleEnabled: true),
+        build: buildBloc,
         act: (bloc) => bloc.add(const ListSearchQueryChanged('mixed')),
         wait: const Duration(milliseconds: 400),
         expect: () => [
@@ -350,7 +330,7 @@ void main() {
             () => peopleListsRepository.searchPublicLists(any()),
           ).thenAnswer((_) => Stream.error(Exception('relay down')));
         },
-        build: () => buildBloc(peopleEnabled: true),
+        build: buildBloc,
         act: (bloc) => bloc.add(const ListSearchQueryChanged('test')),
         wait: const Duration(milliseconds: 400),
         expect: () => [
@@ -505,7 +485,7 @@ void main() {
               .thenAnswer((_) => videos.stream);
           when(() => peopleListsRepository.searchPublicLists('mixed'))
               .thenAnswer((_) => people.stream);
-          final bloc = buildBloc(peopleEnabled: true);
+          final bloc = buildBloc();
           addTearDown(() async {
             await bloc.close();
             await videos.close();
@@ -565,7 +545,7 @@ void main() {
                         const PublicPeopleListReadUnavailableException(),
                       ),
               );
-          final bloc = buildBloc(peopleEnabled: true);
+          final bloc = buildBloc();
           addTearDown(bloc.close);
           bloc.add(const ListSearchQueryChanged('mixed'));
           await bloc.stream.firstWhere(
@@ -603,7 +583,7 @@ void main() {
                 ? Stream.error(const PublicPeopleListReadUnavailableException())
                 : Stream.value([testPeopleResult]),
           );
-          final bloc = buildBloc(peopleEnabled: true);
+          final bloc = buildBloc();
           addTearDown(bloc.close);
           bloc.add(const ListSearchQueryChanged('mixed'));
           await bloc.stream.firstWhere((state) => state.hasSourceFailure);
@@ -626,7 +606,7 @@ void main() {
             .thenAnswer((_) => Stream.error(Exception('video unavailable')));
         when(() => peopleListsRepository.searchPublicLists('mixed'))
             .thenAnswer((_) => Stream.value([testPeopleResult]));
-        final bloc = buildBloc(peopleEnabled: true);
+        final bloc = buildBloc();
         addTearDown(bloc.close);
         bloc.add(const ListSearchQueryChanged('mixed'));
         await bloc.stream.firstWhere((state) => state.peopleResults.isNotEmpty);
@@ -706,7 +686,7 @@ void main() {
             .thenAnswer((_) => videos.stream);
         when(() => peopleListsRepository.searchPublicLists('active'))
             .thenAnswer((_) => people.stream);
-        final bloc = buildBloc(peopleEnabled: true);
+        final bloc = buildBloc();
         final subscribed = bloc.stream.firstWhere(
           (s) =>
               s.query == 'active' &&
@@ -767,7 +747,7 @@ void main() {
             (_) =>
                 Stream.error(const PublicPeopleListReadUnavailableException()),
           );
-          final bloc = buildBloc(peopleEnabled: true);
+          final bloc = buildBloc();
           addTearDown(bloc.close);
           bloc.add(const ListSearchQueryChanged('mixed'));
           await bloc.stream.firstWhere((state) => state.hasSourceFailure);
@@ -806,7 +786,7 @@ void main() {
                   (_) =>
                       peopleCalls++ == 0 ? people.stream : const Stream.empty(),
                 );
-            final bloc = buildBloc(peopleEnabled: true);
+            final bloc = buildBloc();
             addTearDown(() async {
               await bloc.close();
               await videos.close();
@@ -840,7 +820,7 @@ void main() {
       }
 
       test('clear also cancels a query still in its debounce', () async {
-        final bloc = buildBloc(peopleEnabled: true);
+        final bloc = buildBloc();
         addTearDown(bloc.close);
         bloc.add(const ListSearchQueryChanged('pending'));
         bloc.add(const ListSearchCleared());

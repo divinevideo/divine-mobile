@@ -48,14 +48,6 @@ final Provider<PeopleListsRepository> _repositoryProvider =
 final Provider<Stream<PeopleListsRepository>> _repositoryStreamProvider =
     identityStreamOf<PeopleListsRepository>(_repositoryProvider);
 
-/// Stand-in for `isFeatureEnabledProvider(FeatureFlag.curatedLists)`, which the
-/// app shell feeds to the bloc through `curatedListsEnabledStreamProvider`.
-final _enabledSelector = StateProvider<bool>((_) => true);
-
-final Provider<Stream<bool>> _enabledStreamProvider = identityStreamOf<bool>(
-  _enabledSelector,
-);
-
 int _mountCount = 0;
 
 /// Drains the bloc's event queue.
@@ -110,7 +102,6 @@ class _AppShellProbe extends ConsumerWidget {
       create: (_) => PeopleListsBloc(
         repository: ref.read(_repositoryProvider),
         repositoryStream: ref.read(_repositoryStreamProvider),
-        enabledStream: ref.read(_enabledStreamProvider),
         ownerPubkeyStream: ownerPubkeyStream,
         initialOwnerPubkey: _owner,
       )..add(const PeopleListsStarted()),
@@ -194,40 +185,6 @@ void main() {
       // And #4918's regression stays fixed: keying the BlocProvider on the
       // dependency would have remounted the whole subtree here.
       expect(_mountCount, equals(1));
-    });
-
-    // #6494. The flag flip has to stop the bloc's work from inside the bloc,
-    // because the provider chain cannot change shape — a conditional entry
-    // here is what #6477 removed.
-    testWidgets('a curated-lists flag-off stops syncing', (tester) async {
-      final container = ProviderContainer(
-        overrides: [_selector.overrideWith((_) => first)],
-      );
-      addTearDown(container.dispose);
-
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: _AppShellProbe(ownerPubkeyStream: ownerController.stream),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(firstLists.hasListener, isTrue);
-      clearInteractions(first);
-
-      container.read(_enabledSelector.notifier).state = false;
-      for (var i = 0; i < 10; i++) {
-        await tester.pump();
-      }
-
-      expect(firstLists.hasListener, isFalse);
-
-      // A repository flip while the feature is off must not restart the sync.
-      await _flipTo(tester, container, second);
-      verifyNever(
-        () => second.syncOwner(ownerPubkey: any(named: 'ownerPubkey')),
-      );
-      expect(secondLists.hasListener, isFalse);
     });
 
     testWidgets('renders lists from the swapped-in repository', (tester) async {

@@ -15,8 +15,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/semantic_ids.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/lists_discovery/cubit/lists_discovery_cubit.dart';
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -56,15 +54,6 @@ class _TestCuratedListsState extends CuratedListsState {
   @override
   Future<List<CuratedList>> build() async => const [];
 }
-
-class _GalleryPeopleEnabled extends Notifier<bool> {
-  @override
-  bool build() => true;
-  void setEnabled(bool enabled) => state = enabled;
-}
-
-final _galleryPeopleEnabledProvider =
-    NotifierProvider<_GalleryPeopleEnabled, bool>(_GalleryPeopleEnabled.new);
 
 class _RecoveringCuratedListsState extends _TestCuratedListsState {
   _RecoveringCuratedListsState(super._service, this.shouldFail);
@@ -130,7 +119,7 @@ void main() {
       pushedRoute = '';
     });
 
-    Widget buildPage({bool peopleEnabled = true}) {
+    Widget buildPage() {
       final people = _MockPeopleListsRepository();
       when(
         () => people.discoverPublicLists(
@@ -146,8 +135,6 @@ void main() {
           ),
           peopleListsRepositoryProvider.overrideWithValue(people),
           listsDiscoveryBlockFilterProvider.overrideWithValue((_) => false),
-          isFeatureEnabledProvider(FeatureFlag.curatedLists)
-              .overrideWithValue(peopleEnabled),
         ],
         child: MaterialApp.router(
           localizationsDelegates: appLocalizationsDelegates,
@@ -171,21 +158,14 @@ void main() {
       );
     }
 
-    for (final enabled in [true, false]) {
-      testWidgets('empty lists offers explicit creation with master=$enabled', (
-        tester,
-      ) async {
-        await tester.pumpWidget(buildPage(peopleEnabled: enabled));
-        await tester.pump();
-        await tester.pump();
-        expect(find.text('New video list'), findsOneWidget);
-        expect(
-          find.text('New people list'),
-          enabled ? findsOneWidget : findsNothing,
-        );
-        expect(tester.takeException(), isNull);
-      });
-    }
+    testWidgets('empty lists offers video and people creation', (tester) async {
+      await tester.pumpWidget(buildPage());
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('New video list'), findsOneWidget);
+      expect(find.text('New people list'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
 
     for (final failure in [false, true]) {
       testWidgets(
@@ -314,86 +294,56 @@ void main() {
   });
 
   group(ExploreListsTab, () {
-    for (final master in [false, true]) {
-      for (final profileFeatures in [false, true]) {
-        testWidgets('master $master and profile features $profileFeatures '
-            'gate only people discovery', (tester) async {
-          final service = _MockCuratedListService();
-          final videos = _MockCuratedListRepository();
-          final people = _MockPeopleListsRepository();
-          when(
-            () =>
-                service.streamPublicListsFromRelays(limit: any(named: 'limit')),
-          ).thenAnswer((_) => Stream.value([_videoList('skate')]));
-          when(
-            () => videos.resolveListThumbnails(
-              any(),
-              maxThumbnails: any(named: 'maxThumbnails'),
+    testWidgets('discovers video and people lists', (tester) async {
+      final service = _MockCuratedListService();
+      final videos = _MockCuratedListRepository();
+      final people = _MockPeopleListsRepository();
+      when(
+        () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
+      ).thenAnswer((_) => Stream.value([_videoList('skate')]));
+      when(
+        () => videos.resolveListThumbnails(
+          any(),
+          maxThumbnails: any(named: 'maxThumbnails'),
+        ),
+      ).thenAnswer(
+        (invocation) async =>
+            invocation.positionalArguments.first as List<CuratedList>,
+      );
+      when(
+        () => people.discoverPublicLists(
+          limit: any(named: 'limit'),
+          excludeAuthor: any(named: 'excludeAuthor'),
+        ),
+      ).thenAnswer((_) async => [_peopleList('crew')]);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ..._galleryTestOverrides(),
+            curatedListsStateProvider.overrideWith(
+              () => _TestCuratedListsState(service),
             ),
-          ).thenAnswer(
-            (invocation) async =>
-                invocation.positionalArguments.first as List<CuratedList>,
-          );
-          when(
-            () => people.discoverPublicLists(
-              limit: any(named: 'limit'),
-              excludeAuthor: any(named: 'excludeAuthor'),
-            ),
-          ).thenAnswer((_) async => [_peopleList('crew')]);
-          await tester.pumpWidget(
-            ProviderScope(
-              overrides: [
-                ..._galleryTestOverrides(),
-                curatedListsStateProvider.overrideWith(
-                  () => _TestCuratedListsState(service),
-                ),
-                curatedListRepositoryProvider.overrideWithValue(videos),
-                peopleListsRepositoryProvider.overrideWithValue(people),
-                listsDiscoveryBlockFilterProvider.overrideWithValue(
-                  (_) => false,
-                ),
-                isFeatureEnabledProvider(FeatureFlag.curatedLists)
-                    .overrideWith((_) => master),
-                isFeatureEnabledProvider(FeatureFlag.profileListFeatures)
-                    .overrideWith((_) => profileFeatures),
-              ],
-              child: const MaterialApp(
-                localizationsDelegates: appLocalizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: Scaffold(body: ExploreListsTab()),
-              ),
-            ),
-          );
-          await tester.pumpAndSettle();
-          expect(find.text('Video skate'), findsOneWidget);
-          expect(
-            find.text('People crew'),
-            master ? findsOneWidget : findsNothing,
-          );
-          final view = tester.element(find.byType(ExploreListsView));
-          expect(
-            view.read<ListsDiscoveryCubit>().state.peopleListsEnabled,
-            master,
-          );
-          if (master) {
-            verify(
-              () => people.discoverPublicLists(
-                limit: any(named: 'limit'),
-                excludeAuthor: any(named: 'excludeAuthor'),
-              ),
-            ).called(1);
-          } else {
-            verifyNever(
-              () => people.discoverPublicLists(
-                limit: any(named: 'limit'),
-                excludeAuthor: any(named: 'excludeAuthor'),
-              ),
-            );
-            expect(find.byType(DivineListThumbnailSkeleton), findsNothing);
-          }
-        });
-      }
-    }
+            curatedListRepositoryProvider.overrideWithValue(videos),
+            peopleListsRepositoryProvider.overrideWithValue(people),
+            listsDiscoveryBlockFilterProvider.overrideWithValue((_) => false),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: ExploreListsTab()),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Video skate'), findsOneWidget);
+      expect(find.text('People crew'), findsOneWidget);
+      verify(
+        () => people.discoverPublicLists(
+          limit: any(named: 'limit'),
+          excludeAuthor: any(named: 'excludeAuthor'),
+        ),
+      ).called(1);
+    });
 
     for (final policy in ['content', 'adult verification', 'provenance']) {
       for (final initiallyPending in [false, true]) {
@@ -528,12 +478,14 @@ void main() {
       }
     }
 
-    testWidgets('runtime master change retires pending people discovery', (
+    testWidgets('block change retires pending people discovery', (
       tester,
     ) async {
       final service = _MockCuratedListService();
       final people = _MockPeopleListsRepository();
       final pending = Completer<List<PeopleListSearchResult>>();
+      var blocked = false;
+      var requests = 0;
       when(
         () => service.streamPublicListsFromRelays(limit: any(named: 'limit')),
       ).thenAnswer((_) => const Stream.empty());
@@ -542,7 +494,7 @@ void main() {
           limit: any(named: 'limit'),
           excludeAuthor: any(named: 'excludeAuthor'),
         ),
-      ).thenAnswer((_) => pending.future);
+      ).thenAnswer((_) async => ++requests == 1 ? pending.future : []);
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
@@ -554,10 +506,10 @@ void main() {
               _MockCuratedListRepository(),
             ),
             peopleListsRepositoryProvider.overrideWithValue(people),
-            listsDiscoveryBlockFilterProvider.overrideWithValue((_) => false),
-            isFeatureEnabledProvider(FeatureFlag.curatedLists).overrideWith(
-              (ref) => ref.watch(_galleryPeopleEnabledProvider),
-            ),
+            listsDiscoveryBlockFilterProvider.overrideWith((ref) {
+              ref.watch(blocklistVersionProvider);
+              return (_) => blocked;
+            }),
           ],
           child: const MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
@@ -570,7 +522,8 @@ void main() {
       final element = tester.element(find.byType(ExploreListsView));
       final oldCubit = element.read<ListsDiscoveryCubit>();
       final container = ProviderScope.containerOf(element);
-      container.read(_galleryPeopleEnabledProvider.notifier).setEnabled(false);
+      blocked = true;
+      container.read(blocklistVersionProvider.notifier).increment();
       await tester.pumpAndSettle();
       expect(oldCubit.isClosed, isTrue);
       pending.complete([_peopleList('late')]);
@@ -736,11 +689,7 @@ void main() {
                   controller = DefaultTabController.of(context);
                   return const Scaffold(
                     body: TabBarView(
-                      children: [
-                        ExploreListsTab(),
-                        SizedBox(),
-                        SizedBox(),
-                      ],
+                      children: [ExploreListsTab(), SizedBox(), SizedBox()],
                     ),
                   );
                 },
@@ -922,9 +871,7 @@ void main() {
       expect(card.thumbnailsPending, isTrue);
     });
 
-    testWidgets('keeps one column alive while the other loads', (
-      tester,
-    ) async {
+    testWidgets('keeps one column alive while the other loads', (tester) async {
       whenListen(
         cubit,
         const Stream<ListsDiscoveryState>.empty(),
@@ -1054,9 +1001,8 @@ void main() {
 
       await tester.tap(find.text('People crew'));
 
-      verify(
-        () => goRouter.push<void>('/people-lists/crew?owner=$_author'),
-      ).called(1);
+      verify(() => goRouter.push<void>('/people-lists/crew?owner=$_author'))
+          .called(1);
     });
   });
 }
