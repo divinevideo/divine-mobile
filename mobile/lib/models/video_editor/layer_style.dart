@@ -1,7 +1,6 @@
-// ABOUTME: The style of an overlay layer — opacity, blend mode,
-// ABOUTME: enter/leave/loop animation, shape mask and, for a text, its look —
-// ABOUTME: as one unit that Copy style lifts off a layer and Paste style
-// ABOUTME: writes onto others.
+// ABOUTME: The style of an overlay layer — opacity, blend mode, enter/leave/loop
+// ABOUTME: animation, shape mask and, for a text, its look — as one unit that
+// ABOUTME: Copy style lifts off a layer and Paste style writes onto others.
 
 import 'dart:ui' show BlendMode, Offset, Size;
 
@@ -22,9 +21,9 @@ import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 /// style: a text, a sticker, a drawing or an audio visualizer.
 ///
 /// A hidden area (blur, pixelate) is left out because it takes none of the
-/// parts: it cannot be see-through, blended, animated or masked. A detached
-/// clip is left out too: it is a clip as much as a layer, and its style would
-/// mix the two. A burned-in caption cue takes its look from the caption track.
+/// parts: it cannot be see-through, blended, animated or masked. A detached clip is
+/// left out too: it is a clip as much as a layer, and its style would mix the
+/// two. A burned-in caption cue takes its look from the caption track.
 bool canCopyLayerStyle(Layer? layer) =>
     layer != null &&
     !isCensorLayer(layer) &&
