@@ -464,6 +464,12 @@ class _SupporterLightboxActions extends ConsumerWidget {
     if (!ref.watch(supporterApiConfiguredProvider)) {
       return const _SupporterLightboxButtons();
     }
+    // A guest has no membership to read, and reading one would start the
+    // store connection behind it.
+    ref.watch(currentAuthStateProvider);
+    if (!ref.watch(authServiceProvider).isAuthenticated) {
+      return const _SupporterLightboxButtons();
+    }
     final repository = ref.watch(supporterRepositoryProvider);
     return BlocProvider(
       key: ValueKey(repository),
