@@ -40,6 +40,23 @@ void main() {
       AgeReviewClosureLaunchNoticeCubit,
       AgeReviewClosureLaunchNoticeState
     >(
+      'settles once the closure has been shown',
+      build: AgeReviewClosureLaunchNoticeCubit.new,
+      seed: () => const AgeReviewClosureLaunchNoticeState(
+        status: AgeReviewClosureLaunchNoticeStatus.closureFound,
+      ),
+      act: (cubit) => cubit.shown(),
+      expect: () => const [
+        AgeReviewClosureLaunchNoticeState(
+          status: AgeReviewClosureLaunchNoticeStatus.settled,
+        ),
+      ],
+    );
+
+    blocTest<
+      AgeReviewClosureLaunchNoticeCubit,
+      AgeReviewClosureLaunchNoticeState
+    >(
       'settles without showing for any other answer',
       build: AgeReviewClosureLaunchNoticeCubit.new,
       act: (cubit) => cubit.answered(

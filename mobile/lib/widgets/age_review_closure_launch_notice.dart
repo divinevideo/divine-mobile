@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:openvine/models/account_enforcement_status.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/repositories/account_enforcement_repository.dart';
+import 'package:openvine/router/providers/router_location_provider.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
@@ -95,15 +96,41 @@ class _LaunchStatusReaderState extends ConsumerState<_LaunchStatusReader> {
     if (!notice.state.isReading) _status?.close();
   }
 
-  void _show(BuildContext context) {
-    // Only over the tabs. Over the recorder, an editor or a conversation a
-    // push would skip their own exit steps, such as the recorder's lock and
-    // pause, so the closure is left unmarked for the next launch or a
-    // rejected post to explain. That includes an Account Status already open.
-    if (!(ModalRoute.of(context)?.isCurrent ?? true)) return;
-    final pubkey = ref.read(activeEnforcementPubkeyProvider);
-    if (pubkey == null) return;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Depending on whether the tabs are in front brings this back when the
+    // screen covering them closes, so a closure found under it shows then.
+    // This runs during a build, which may neither navigate nor modify a
+    // provider, so the showing waits for the frame.
+    if (ModalRoute.isCurrentOf(context) ?? true) {
+      addPostFrameCallbackIfMounted(_showFoundClosure);
+    }
+  }
+
+  void _showFoundClosure() {
+    final notice = context.read<AgeReviewClosureLaunchNoticeCubit>();
+    if (notice.state.status !=
+        AgeReviewClosureLaunchNoticeStatus.closureFound) {
+      return;
+    }
     final shown = ref.read(ageReviewClosureLaunchShownProvider.notifier);
+    final pubkey = ref.read(activeEnforcementPubkeyProvider);
+    // Only over the tabs. Over the recorder, an editor, a conversation or the
+    // app-update dialog a push would skip their own exit steps, such as the
+    // recorder's lock and pause, so the closure waits for the tabs. Account
+    // Status reached by push is reflected by routerLocationOf, not the match
+    // list's uri; an account with it open already has the explanation.
+    if (!(ModalRoute.isCurrentOf(context) ?? true)) {
+      if (routerLocationOf(GoRouter.of(context)).path ==
+          AccountStatusScreen.path) {
+        if (pubkey != null) shown.markShown(pubkey);
+        notice.shown();
+      }
+      return;
+    }
+    notice.shown();
+    if (pubkey == null) return;
     if (!shown.markShown(pubkey)) return;
     runDetached(
       context.pushNamed(AccountStatusScreen.routeName),
@@ -121,7 +148,7 @@ class _LaunchStatusReaderState extends ConsumerState<_LaunchStatusReader> {
       >(
         listenWhen: (_, current) =>
             current.status == AgeReviewClosureLaunchNoticeStatus.closureFound,
-        listener: (context, _) => _show(context),
+        listener: (_, _) => _showFoundClosure(),
         child: widget.child,
       );
 }

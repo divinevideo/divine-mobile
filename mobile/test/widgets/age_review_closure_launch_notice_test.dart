@@ -595,10 +595,10 @@ void main() {
     });
 
     // An answer that arrives late, after a retry, can find the recorder, an
-    // editor or a conversation open. Pushing over them would skip their own
-    // exit steps, such as the recorder's lock and pause, so the closure is
-    // left for the next launch or a rejected post to explain.
-    testWidgets('leaves a closure found under another screen for later', (
+    // editor or a conversation open, and a launch can open the app-update
+    // dialog. Pushing over them would skip their own exit steps, such as the
+    // recorder's lock and pause, so the closure waits for the tabs.
+    testWidgets('waits for the tabs to show a closure found under a screen', (
       tester,
     ) async {
       final answer = Completer<AccountEnforcementStatus>();
@@ -626,6 +626,47 @@ void main() {
         findsNothing,
       );
       expect(container.read(ageReviewClosureLaunchShownProvider), isEmpty);
+
+      router.pop();
+      await tester.pumpAndSettle();
+
+      expect(find.text('account-status'), findsOneWidget);
+    });
+
+    // The account already has the explanation in front of it, so backing out
+    // of that Account status must not bring a second one.
+    testWidgets('does not reopen an Account status the account had open', (
+      tester,
+    ) async {
+      final previous = GoRouter.optionURLReflectsImperativeAPIs;
+      GoRouter.optionURLReflectsImperativeAPIs = true;
+      addTearDown(() => GoRouter.optionURLReflectsImperativeAPIs = previous);
+      final answer = Completer<AccountEnforcementStatus>();
+      final container = ProviderContainer(
+        overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+          accountEnforcementStatusProvider.overrideWith(
+            (ref) => answer.future,
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final router = _router();
+      addTearDown(router.dispose);
+      await _pumpApp(tester, container, router);
+
+      unawaited(router.pushNamed(AccountStatusScreen.routeName));
+      await tester.pumpAndSettle();
+      answer.complete(_closure);
+      await tester.pumpAndSettle();
+      router.pop();
+      await tester.pumpAndSettle();
+
+      expect(find.text('home'), findsOneWidget);
+      expect(
+        find.text('account-status', skipOffstage: false),
+        findsNothing,
+      );
     });
 
     // The notice lets go of the status once it has answered, so the screen it

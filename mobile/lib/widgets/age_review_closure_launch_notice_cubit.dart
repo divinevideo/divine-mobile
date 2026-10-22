@@ -24,8 +24,8 @@ class AgeReviewClosureLaunchNoticeState extends Equatable {
 
 /// The launch notice's read policy (support-trust-safety#260).
 ///
-/// The first answer settles it: a closure asks to be shown, anything else is
-/// left alone. A failed read gets one retry, on the next resume or when the
+/// The first answer ends the reading: a closure asks to be shown until
+/// [shown] settles it, anything else is left alone. A failed read gets one retry, on the next resume or when the
 /// signer becomes ready; a second failure settles it too, so a failure that
 /// never clears, such as a remote signer declining the request, does not ask
 /// again on every resume. Settings, the account's own profile and a rejected
@@ -44,6 +44,17 @@ class AgeReviewClosureLaunchNoticeCubit
         status: status.isAgeReviewClosure
             ? AgeReviewClosureLaunchNoticeStatus.closureFound
             : AgeReviewClosureLaunchNoticeStatus.settled,
+        failedReads: state.failedReads,
+      ),
+    );
+  }
+
+  /// The closure has been explained, or the account already has it open.
+  void shown() {
+    if (state.status != AgeReviewClosureLaunchNoticeStatus.closureFound) return;
+    emit(
+      AgeReviewClosureLaunchNoticeState(
+        status: AgeReviewClosureLaunchNoticeStatus.settled,
         failedReads: state.failedReads,
       ),
     );
