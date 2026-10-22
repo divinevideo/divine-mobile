@@ -80,8 +80,8 @@ class UserProfileTile extends ConsumerWidget {
   /// Optional index for semantic labeling in lists (e.g., Maestro tests).
   final int? index;
 
-  /// Which entry point to attribute the "Add to list" action to when the
-  /// opening the picker. Defaults to followers-list context.
+  /// Entry point attributed to the "Add to list" action when opening the picker.
+  /// Defaults to followers-list context.
   final PeopleListEntryPoint addToListEntryPoint;
 
   /// Inset around the row.

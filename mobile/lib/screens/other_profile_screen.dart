@@ -98,16 +98,16 @@ class OtherProfileScreen extends ConsumerWidget {
     final identityClaimsRepository = ref.watch(
       identityClaimsRepositoryProvider,
     );
-    final requireRawKind0 = ref.watch(
+    final loadSupportLinks = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.profileMonetizationLinks),
     );
 
     return BlocProvider(
       // Re-create the bloc when captured dependencies change. A keyless
       // create: would keep stale repositories/current-user state after auth or
-      // account changes, and would also miss requireRawKind0 flag flips.
+      // account changes, and would also miss support-link flag changes.
       key: ValueKey((
-        requireRawKind0,
+        loadSupportLinks,
         profileRepository,
         blocklistRepository,
         nostrClient.publicKey,
@@ -121,7 +121,7 @@ class OtherProfileScreen extends ConsumerWidget {
         currentUserPubkey: nostrClient.publicKey,
         followRepository: followRepository,
         identityClaimsRepository: identityClaimsRepository,
-        requireRawKind0: requireRawKind0,
+        loadSupportLinks: loadSupportLinks,
       )..add(const OtherProfileLoadRequested()),
       child: OtherProfileView(
         pubkey: pubkey,
