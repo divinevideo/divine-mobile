@@ -1,6 +1,7 @@
 // ABOUTME: Riverpod infrastructure exposing Funnelcake enforcement status for the active account.
 // ABOUTME: Retains only confirmed restrictions so unavailable refreshes cannot erase warnings.
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/account_enforcement_status.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -53,7 +54,8 @@ class AccountRestrictionMemory {
 /// can be seen in states Funnelcake cannot yet report (support-trust-safety#260).
 ///
 /// Held in memory only, for the account it was turned on for: a restart, or
-/// any change of account, returns to the real status.
+/// any change of account, returns to the real status. Read in debug builds
+/// only, like the minor-review and protected-minor simulations.
 class AccountEnforcementDevOverride
     extends Notifier<AccountEnforcementStatus?> {
   @override
@@ -114,8 +116,10 @@ accountEnforcementStatusProvider =
           kind: AccountEnforcementKind.signedOut,
         );
       }
-      final devOverride = ref.watch(accountEnforcementDevOverrideProvider);
-      if (devOverride != null) return devOverride;
+      if (kDebugMode) {
+        final devOverride = ref.watch(accountEnforcementDevOverrideProvider);
+        if (devOverride != null) return devOverride;
+      }
       if (pubkey == null) throw const AccountStatusUnavailable();
 
       final authService = ref.watch(authServiceProvider);
