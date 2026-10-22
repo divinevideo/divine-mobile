@@ -1423,7 +1423,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
       reason: FeedLoadReason.refresh,
     );
 
-    await _loadVideos(source, emit, feedLoad: feedLoad, skipCache: true, startsNewFeedSession: true);
+    await _loadVideos(
+      source,
+      emit,
+      feedLoad: feedLoad,
+      skipCache: true,
+      startsNewFeedSession: true,
+    );
   }
 
   /// Handle blocklist changes.
@@ -1674,7 +1680,13 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
   }) async {
     final cachedValid = await _readCachedFeed(source, skipCache: skipCache);
     if (generation != _loadGeneration) return false;
-    return _emitCachedFeed(source, cachedValid, emit, feedLoad: feedLoad, feedSessionRevision: feedSessionRevision);
+    return _emitCachedFeed(
+      source,
+      cachedValid,
+      emit,
+      feedLoad: feedLoad,
+      feedSessionRevision: feedSessionRevision,
+    );
   }
 
   Future<List<VideoEvent>> _readCachedFeed(
