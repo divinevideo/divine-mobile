@@ -75,8 +75,10 @@ The name server keeps a username active after its account is banned,
 suspended, deactivated, vanished or made private, and people search hides those
 accounts. So the owner is pinned only when Funnelcake's people search lists it:
 either on the REST page already fetched, or in a second search for its Divine
-NIP-05 (`alice.divine.video`). The profile comes from that REST result, so no
-cache is written for it. Without Funnelcake there is no lookup at all.
+NIP-05 (`alice.divine.video`). The profile comes from that REST result and is
+reconciled with any listed copy by the same revision rule as the REST page, so
+fields the server cleared stay cleared; no cache is written for it. Without
+Funnelcake there is no lookup at all.
 
 A pinned owner joins the REST yield and leads every yield from there, even when
 its visible name does not match the query, and the envelope reports it as

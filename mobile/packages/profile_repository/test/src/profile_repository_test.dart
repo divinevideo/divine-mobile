@@ -5144,6 +5144,103 @@ void main() {
       });
 
       test(
+        'keeps the fields the server cleared on a discovered owner',
+        () async {
+          stubOwnerHoldsAlice();
+          when(() => mockUserProfilesDao.getProfile(ownerPubkey)).thenAnswer(
+            (_) async => UserProfile(
+              pubkey: ownerPubkey,
+              name: 'AC555',
+              picture: 'https://example.com/old-avatar.jpg',
+              createdAt: DateTime(2025),
+              eventId: 'a' * 64,
+              rawData: const {},
+            ),
+          );
+          stubDiscovery([
+            ProfileSearchResult(
+              pubkey: ownerPubkey,
+              name: 'AC555',
+              nip05: '_@alice.divine.video',
+              createdAt: DateTime(2026),
+            ),
+          ]);
+
+          final result = await repository
+              .searchUsersProgressive(query: 'alice', sortBy: 'followers')
+              .last;
+
+          expect(result.profiles.first.pubkey, ownerPubkey);
+          expect(result.profiles.first.picture, isNull);
+        },
+      );
+
+      UserProfile localOwner(DateTime revision) => UserProfile(
+        pubkey: ownerPubkey,
+        displayName: 'Alice Chan',
+        picture: 'https://example.com/old-avatar.jpg',
+        createdAt: revision,
+        eventId: 'a' * 64,
+        rawData: const {},
+      );
+
+      test('replaces an older local copy of the owner', () async {
+        stubOwnerHoldsAlice();
+        when(
+          () => mockUserProfilesDao.getAllProfiles(),
+        ).thenAnswer((_) async => [localOwner(DateTime(2025))]);
+        stubDiscovery([
+          ProfileSearchResult(
+            pubkey: ownerPubkey,
+            name: 'AC555',
+            displayName: 'AC555',
+            nip05: '_@alice.divine.video',
+            createdAt: DateTime(2026),
+          ),
+        ]);
+
+        final result = await repository
+            .searchUsersProgressive(query: 'alice', sortBy: 'followers')
+            .last;
+
+        final owner = result.profiles.first;
+        expect(owner.pubkey, ownerPubkey);
+        expect(owner.displayName, 'AC555');
+        expect(owner.picture, isNull);
+      });
+
+      test(
+        'keeps a newer local copy of the owner with server counts',
+        () async {
+          stubOwnerHoldsAlice();
+          when(
+            () => mockUserProfilesDao.getAllProfiles(),
+          ).thenAnswer((_) async => [localOwner(DateTime(2027))]);
+          stubDiscovery([
+            ProfileSearchResult(
+              pubkey: ownerPubkey,
+              name: 'AC555',
+              displayName: 'AC555',
+              nip05: '_@alice.divine.video',
+              createdAt: DateTime(2026),
+              followerCount: 315,
+              videoCount: 136,
+            ),
+          ]);
+
+          final result = await repository
+              .searchUsersProgressive(query: 'alice', sortBy: 'followers')
+              .last;
+
+          final owner = result.profiles.first;
+          expect(owner.pubkey, ownerPubkey);
+          expect(owner.displayName, 'Alice Chan');
+          expect(owner.restFollowerCount, 315);
+          expect(owner.restVideoCount, 136);
+        },
+      );
+
+      test(
         'takes the owner from the REST page without searching again',
         () async {
           stubOwnerHoldsAlice();

@@ -2429,6 +2429,36 @@ class ProfileRepository implements ProfileReader {
       sources[SearchSource.localCache] = const SearchSourceSkipped();
     }
 
+    // Merges a REST profile with any copy already listed. A cached copy wins
+    // only with a canonical event ID and a strictly newer event timestamp;
+    // otherwise the server's revision is kept whole, including the fields it
+    // cleared.
+    void mergeRestResult(ProfileSearchResult result) {
+      final cached = resultMap[result.pubkey];
+      final serverRevision = result.createdAt;
+      // Compare event revisions before conversion: an older API can omit
+      // created_at, and toUserProfile's fallback is not an event timestamp.
+      // Cached REST and bundled seed projections lack event provenance.
+      if (cached != null &&
+          NostrHexUtils.isValidEventId(cached.eventId) &&
+          serverRevision != null &&
+          cached.createdAt.isAfter(serverRevision)) {
+        // Counts are not part of the profile event, so the newer revision
+        // still ranks and renders with the server's numbers.
+        resultMap[result.pubkey] = cached.copyWith(
+          rawData: {
+            ...cached.rawData,
+            if (result.followerCount != null)
+              'follower_count': result.followerCount,
+            if (result.videoCount != null) 'video_count': result.videoCount,
+          },
+        );
+        return;
+      }
+      resultMap[result.pubkey] = result.toUserProfile();
+      serverSelectedPubkeys.add(result.pubkey);
+    }
+
     // Phase 2: Funnelcake REST API (fast)
     if (_isSearchCancelled(cancellationToken)) return;
     final prevCount = resultMap.length;
@@ -2448,29 +2478,7 @@ class ProfileRepository implements ProfileReader {
         restHasMore = restResults.length == limit;
         for (final result in restResults) {
           restPubkeys.add(result.pubkey);
-          final cached = resultMap[result.pubkey];
-          final serverRevision = result.createdAt;
-          // Compare event revisions before conversion: an older API can omit
-          // created_at, and toUserProfile's fallback is not an event timestamp.
-          // Cached REST and bundled seed projections lack event provenance.
-          if (cached != null &&
-              NostrHexUtils.isValidEventId(cached.eventId) &&
-              serverRevision != null &&
-              cached.createdAt.isAfter(serverRevision)) {
-            // Counts are not part of the profile event, so the newer revision
-            // still ranks and renders with the server's numbers.
-            resultMap[result.pubkey] = cached.copyWith(
-              rawData: {
-                ...cached.rawData,
-                if (result.followerCount != null)
-                  'follower_count': result.followerCount,
-                if (result.videoCount != null) 'video_count': result.videoCount,
-              },
-            );
-            continue;
-          }
-          resultMap[result.pubkey] = result.toUserProfile();
-          serverSelectedPubkeys.add(result.pubkey);
+          mergeRestResult(result);
         }
         sources[SearchSource.funnelcakeApi] = SearchSourceSuccess(
           resultCount: resultMap.length - preRestCount,
@@ -2495,21 +2503,21 @@ class ProfileRepository implements ProfileReader {
     // claim its handle after they were shown.
     final candidate = await ownerLookup;
     if (_isSearchCancelled(cancellationToken)) return;
-    final owner = candidate == null
-        ? null
-        : restPubkeys.contains(candidate.pubkey)
-        ? resultMap[candidate.pubkey]
-        : await _discoverableUsernameOwner(candidate);
-    if (_isSearchCancelled(cancellationToken)) return;
-    if (owner != null) {
-      resultMap.putIfAbsent(owner.pubkey, () => owner);
-      ownerPubkey = owner.pubkey;
+    if (candidate != null && restPubkeys.contains(candidate.pubkey)) {
+      ownerPubkey = candidate.pubkey;
+    } else if (candidate != null) {
+      final discovered = await _discoverableUsernameOwner(candidate);
+      if (_isSearchCancelled(cancellationToken)) return;
+      if (discovered != null) {
+        mergeRestResult(discovered);
+        ownerPubkey = candidate.pubkey;
+      }
     }
 
     // Yield after Phase 2 if new results were added or the owner was pinned.
     // Skips enrichment for faster progressive display; the final Phase 3
     // yield enriches all results from cache.
-    if (resultMap.length > prevCount || owner != null) {
+    if (resultMap.length > prevCount || ownerPubkey != null) {
       yield snapshot(isComplete: false);
     }
 
@@ -2826,15 +2834,15 @@ class ProfileRepository implements ProfileReader {
     }
   }
 
-  /// The owner's profile when the first page of people search for its Divine
-  /// NIP-05 lists it, otherwise `null`. Profiles that copy the identifier come
-  /// back from the same query, ranked by followers.
+  /// The owner's search result when the first page of people search for its
+  /// Divine NIP-05 lists it, otherwise `null`. Profiles that copy the
+  /// identifier come back from the same query, ranked by followers.
   ///
   /// The name server keeps a username active after its account is banned,
   /// suspended, deactivated, vanished or made private; people search drops
   /// those accounts, so asking it keeps the pin from showing anyone search
   /// would hide.
-  Future<UserProfile?> _discoverableUsernameOwner(
+  Future<ProfileSearchResult?> _discoverableUsernameOwner(
     ({String username, String pubkey}) candidate,
   ) async {
     try {
@@ -2845,7 +2853,7 @@ class ProfileRepository implements ProfileReader {
           )
           .timeout(_usernameOwnerSearchTimeout);
       for (final result in results) {
-        if (result.pubkey == candidate.pubkey) return result.toUserProfile();
+        if (result.pubkey == candidate.pubkey) return result;
       }
       return null;
     } on Exception catch (e) {
