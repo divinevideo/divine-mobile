@@ -408,14 +408,17 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
           // people-list pill, stats row, and action buttons sit as
           // siblings outside the skeleton so they remain tappable
           // during the loading window (#4183 review).
-          Skeletonizer(
-            enabled: showIdentitySkeleton,
-            enableSwitchAnimation: true,
-            effect: vineSkeletonEffectOf(context),
-            child: _SupporterStatusScope(
-              pubkey: widget.userIdHex,
-              isOwnProfile: widget.isOwnProfile,
-              enabled: !isVanished,
+          // The supporter status sits above the skeleton, whose switch to
+          // content remounts its child, so it loads alongside the profile
+          // and survives that switch.
+          _SupporterStatusScope(
+            pubkey: widget.userIdHex,
+            isOwnProfile: widget.isOwnProfile,
+            enabled: !isVanished,
+            child: Skeletonizer(
+              enabled: showIdentitySkeleton,
+              enableSwitchAnimation: true,
+              effect: vineSkeletonEffectOf(context),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [

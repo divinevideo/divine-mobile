@@ -575,6 +575,9 @@ class _SupporterStatusScope extends ConsumerWidget {
     if (client == null) return scoped;
     return BlocProvider(
       key: ValueKey((client, pubkey)),
+      // Eager, so the request runs while the profile itself still loads;
+      // the header reads the result only once that load has finished.
+      lazy: false,
       create: (_) {
         final cubit = PublicSupporterCubit(client: client, pubkey: pubkey);
         unawaited(cubit.load());

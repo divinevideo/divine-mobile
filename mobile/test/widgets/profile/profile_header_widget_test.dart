@@ -402,6 +402,8 @@ void main() {
       UserProfile? suppliedProfile,
       ProfileStats? profileStats,
       bool profileIsLoading = false,
+      // Resolves the fetched profile when the test chooses to.
+      Future<UserProfile?>? profileLoad,
       bool isAnonymous = false,
       bool isAccountEnforced = false,
       VoidCallback? onEnforcementRead,
@@ -564,7 +566,9 @@ void main() {
                 : (ref, pubkey) async => isOgDiviner && pubkey == userIdHex,
           ),
           fetchUserProfileProvider(userIdHex).overrideWith(
-            profileIsLoading
+            profileLoad != null
+                ? (ref) => profileLoad
+                : profileIsLoading
                 ? (ref) => Completer<UserProfile?>().future
                 : (ref) async => profile,
           ),
@@ -935,6 +939,33 @@ void main() {
           final rightWing = transformsAbove('assets/supporter/wing_right.png');
           expect(tilt(leftWing.first), isNot(0));
           expect(tilt(leftWing.first), closeTo(-tilt(rightWing.first), 1e-9));
+        });
+
+        testWidgets("asks for someone else's public status once, while "
+            'their profile is still loading', (tester) async {
+          final client = supporterClient(isPublicSupporter: true);
+          final profileLoad = Completer<UserProfile?>();
+          await tester.pumpWidget(
+            buildTestWidget(
+              userIdHex: testUserHex,
+              isOwnProfile: false,
+              profileLoad: profileLoad.future,
+              supporterClient: client,
+              disableAnimations: true,
+            ),
+          );
+          await tester.pump();
+
+          expect(find.byType(SupporterHaloWings), findsNothing);
+          verify(() => client.fetchPublicRecognition(testUserHex)).called(1);
+
+          profileLoad.complete(
+            createTestProfile(displayName: 'Ivy', picture: supporterPicture),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.byType(SupporterHaloWings), findsOneWidget);
+          verifyNever(() => client.fetchPublicRecognition(any()));
         });
 
         testWidgets("shows no halo on someone else's profile without public "
