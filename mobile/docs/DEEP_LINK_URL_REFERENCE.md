@@ -382,7 +382,7 @@ URL.
 | `/list/:listId` | list name, video ids, author | Videos resolve from the list id; the title falls back until the local list loads |
 | `/list/:pubkey/:listId` | the discovered `CuratedList`, used only when its author and d-tag match the path | Resolved from relays by author + d-tag |
 | `/categories/:categoryName` | `VideoCategory` | Rebuilt from the path segment with a zero video count |
-| `/video/:id` | prefetched video, comment autoscroll | Loaded by id |
+| `/video/:id` | prefetched video, comment autoscroll, fallback event ids, DM reply context | Loaded by id. A notification also passes the plain event id to try when the addressable id does not resolve; without it that video shows as not found. Opened from a DM, the screen shows a private reply bar in place of the public comment bar; without the hint it shows the comment bar |
 | `/sound/:id` | `AudioEvent` (+ source video) | `SoundDetailLoader` fetches by id |
 | `/original-sound/:pubkey` | source video | Creator resolves from the pubkey; the source-video card is omitted |
 | `/video-edit/:videoId`, `/subtitle-edit/:videoId` | prefetched video | Loaded by id |
