@@ -9085,6 +9085,30 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorEffectFisheye => 'Rybie oko';
 
   @override
+  String get videoEditorEffectDrops => 'Krople';
+
+  @override
+  String get videoEditorDropsSettingsTitle => 'Dostosuj krople';
+
+  @override
+  String get videoEditorDropsCountLabel => 'Liczba';
+
+  @override
+  String get videoEditorDropsSizeLabel => 'Rozmiar';
+
+  @override
+  String get videoEditorDropsSpeedLabel => 'Prędkość';
+
+  @override
+  String get videoEditorDropsFrostLabel => 'Szron';
+
+  @override
+  String get videoEditorDropsFringesLabel => 'Kolorowe obwódki';
+
+  @override
+  String get videoEditorDropsShuffle => 'Wymieszaj';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Tylko jeden migający efekt naraz. Zbyt dużo migania może szkodzić osobom wrażliwym, więc zastąpiliśmy tutaj ten drugi.';
 

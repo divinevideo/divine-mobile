@@ -8961,6 +8961,30 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorEffectFisheye => 'Olho de peixe';
 
   @override
+  String get videoEditorEffectDrops => 'Gotas';
+
+  @override
+  String get videoEditorDropsSettingsTitle => 'Ajustar gotas';
+
+  @override
+  String get videoEditorDropsCountLabel => 'Quantidade';
+
+  @override
+  String get videoEditorDropsSizeLabel => 'Tamanho';
+
+  @override
+  String get videoEditorDropsSpeedLabel => 'Velocidade';
+
+  @override
+  String get videoEditorDropsFrostLabel => 'Fosco';
+
+  @override
+  String get videoEditorDropsFringesLabel => 'Bordas coloridas';
+
+  @override
+  String get videoEditorDropsShuffle => 'Embaralhar';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Só um efeito piscante de cada vez. Piscar demais pode fazer mal a pessoas sensíveis, por isso substituímos o outro aqui.';
 

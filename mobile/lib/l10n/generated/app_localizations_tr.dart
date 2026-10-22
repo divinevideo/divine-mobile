@@ -8806,6 +8806,30 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectFisheye => 'Balık Gözü';
 
   @override
+  String get videoEditorEffectDrops => 'Damlalar';
+
+  @override
+  String get videoEditorDropsSettingsTitle => 'Damlaları ayarla';
+
+  @override
+  String get videoEditorDropsCountLabel => 'Sayı';
+
+  @override
+  String get videoEditorDropsSizeLabel => 'Boyut';
+
+  @override
+  String get videoEditorDropsSpeedLabel => 'Hız';
+
+  @override
+  String get videoEditorDropsFrostLabel => 'Buzlu cam';
+
+  @override
+  String get videoEditorDropsFringesLabel => 'Renk saçakları';
+
+  @override
+  String get videoEditorDropsShuffle => 'Karıştır';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Aynı anda tek bir yanıp sönen efekt. Fazla yanıp sönme hassas kişilere zarar verebilir, bu yüzden buradaki diğerini değiştirdik.';
 

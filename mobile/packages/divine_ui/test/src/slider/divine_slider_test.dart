@@ -78,6 +78,31 @@ void main() {
         );
         handle.dispose();
       });
+
+      testWidgets('announces the value semanticValue formats', (tester) async {
+        final handle = tester.ensureSemantics();
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: DivineSlider(
+                value: 3,
+                min: 1,
+                max: 5,
+                divisions: 4,
+                onChanged: (_) {},
+                semanticLabel: 'Drops',
+                semanticValue: (value) => '${value.round()}',
+              ),
+            ),
+          ),
+        );
+
+        expect(
+          tester.getSemantics(find.bySemanticsLabel('Drops')),
+          isSemantics(label: 'Drops', isSlider: true, value: '3'),
+        );
+        handle.dispose();
+      });
     });
 
     group('renders', () {

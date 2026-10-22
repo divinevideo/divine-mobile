@@ -7,6 +7,7 @@ import 'package:models/models.dart' as model show AspectRatio;
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/drops_effect_settings.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/services/video_editor/video_editor_beat_resolver.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -480,6 +481,115 @@ void main() {
         );
         await silent.close();
         await unreadable.close();
+      });
+    });
+
+    group('drops settings', () {
+      const custom = DropsEffectSettings(count: 2, size: 0.8, seed: 9);
+      final committed = EditorVideoEffect.custom(
+        id: 'drops',
+        custom: CustomVideoEffect(
+          id: dropsVideoEffectId,
+          params: {
+            ...custom.toParams(),
+            EditorVideoEffect.intensityParam: 0.6,
+          },
+          startTime: const Duration(seconds: 1),
+          endTime: const Duration(seconds: 2),
+        ),
+      );
+
+      test('a new drops effect stores the default settings next to its '
+          'intensity', () async {
+        final cubit = buildCubit()
+          ..startEditing()
+          ..selectType(EditorEffectType.drops);
+
+        final result = cubit.confirm();
+
+        expect(result.effects.single.custom!.params, {
+          ...const DropsEffectSettings().toParams(),
+          EditorVideoEffect.intensityParam:
+              VideoEditorEffectsCubit.defaultIntensity,
+        });
+        await cubit.close();
+      });
+
+      test(
+        'the picked drops show their settings in the native preview',
+        () async {
+          final cubit = buildCubit()
+            ..startEditing()
+            ..selectType(EditorEffectType.drops)
+            ..setDropsSettings(custom);
+
+          final preview = cubit.state.previewCustomEffects.single;
+
+          expect(preview.id, dropsVideoEffectId);
+          expect(DropsEffectSettings.fromParams(preview.params), custom);
+          await cubit.close();
+        },
+      );
+
+      test('editing committed drops starts from their settings and keeps '
+          'them, and their window, on confirm', () async {
+        final cubit = buildCubit()
+          ..syncApplied([committed])
+          ..startEditing(effectId: 'drops');
+        expect(cubit.state.dropsSettings, custom);
+
+        cubit.setIntensity(0.9);
+        final edited = cubit.confirm().effects.single;
+
+        expect(DropsEffectSettings.fromParams(edited.custom!.params), custom);
+        expect(edited.intensity, 0.9);
+        expect(edited.startTime, const Duration(seconds: 1));
+        expect(edited.endTime, const Duration(seconds: 2));
+        await cubit.close();
+      });
+
+      test('a new effect starts from the default settings again', () async {
+        final cubit = buildCubit()
+          ..syncApplied([committed])
+          ..startEditing(effectId: 'drops');
+        expect(cubit.state.dropsSettings, custom);
+
+        cubit
+          ..cancel()
+          ..startEditing();
+
+        expect(cubit.state.dropsSettings, const DropsEffectSettings());
+        await cubit.close();
+      });
+
+      test('other effects store none of the drops settings', () async {
+        final cubit = buildCubit()
+          ..startEditing()
+          ..selectType(EditorEffectType.echo)
+          ..setDropsSettings(custom);
+
+        expect(cubit.confirm().effects.single.custom!.params, {
+          EditorVideoEffect.intensityParam:
+              VideoEditorEffectsCubit.defaultIntensity,
+        });
+        await cubit.close();
+      });
+
+      test('shuffleDrops picks a seed other than the current one', () async {
+        final seeds = [9, 9, 4];
+        final cubit =
+            VideoEditorEffectsCubit(
+                createId: () => 'new',
+                createSeed: () => seeds.removeAt(0),
+              )
+              ..startEditing()
+              ..selectType(EditorEffectType.drops)
+              ..setDropsSettings(custom);
+
+        cubit.shuffleDrops();
+
+        expect(cubit.state.dropsSettings, custom.copyWith(seed: 4));
+        await cubit.close();
       });
     });
   });

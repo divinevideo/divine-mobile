@@ -8988,6 +8988,30 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorEffectFisheye => 'Occhio di pesce';
 
   @override
+  String get videoEditorEffectDrops => 'Gocce';
+
+  @override
+  String get videoEditorDropsSettingsTitle => 'Regola le gocce';
+
+  @override
+  String get videoEditorDropsCountLabel => 'Numero';
+
+  @override
+  String get videoEditorDropsSizeLabel => 'Dimensione';
+
+  @override
+  String get videoEditorDropsSpeedLabel => 'Velocità';
+
+  @override
+  String get videoEditorDropsFrostLabel => 'Smerigliato';
+
+  @override
+  String get videoEditorDropsFringesLabel => 'Frange di colore';
+
+  @override
+  String get videoEditorDropsShuffle => 'Mescola';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Un solo effetto lampeggiante alla volta. Troppi lampeggiamenti possono fare male alle persone sensibili, quindi qui abbiamo sostituito l\'altro.';
 

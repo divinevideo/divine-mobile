@@ -917,6 +917,37 @@ void main() {
       expect(read.intensity, 0.8);
     });
 
+    test('reads saved drops back as the drops, settings included', () {
+      final drops = EditorVideoEffect.of(
+        id: 'drops-1',
+        type: EditorEffectType.drops,
+        intensity: 0.8,
+        settings: const {'count': 4, 'seed': 7},
+      );
+
+      final read = EditorVideoEffect.fromMap(drops.toMap(), fallbackId: 'x');
+
+      expect(read, drops);
+      expect(read.type, EditorEffectType.drops);
+      expect(read.intensity, 0.8);
+      expect(read.custom!.params, {
+        'count': 4,
+        'seed': 7,
+        EditorVideoEffect.intensityParam: 0.8,
+      });
+    });
+
+    test('keeps its intensity over a setting of the same name', () {
+      final drops = EditorVideoEffect.of(
+        id: 'drops-1',
+        type: EditorEffectType.drops,
+        intensity: 0.3,
+        settings: const {EditorVideoEffect.intensityParam: 1},
+      );
+
+      expect(drops.intensity, 0.3);
+    });
+
     test('rejects a custom effect this build does not know', () {
       final map = {
         EditorVideoEffect.idKey: 'a',

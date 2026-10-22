@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/drops_effect_settings.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -123,6 +124,8 @@ class _EffectItem extends StatelessWidget {
                       ? _EchoThumbnail(path: path)
                       : type == EditorEffectType.fisheye
                       ? _FisheyeThumbnail(path: path)
+                      : type == EditorEffectType.drops
+                      ? _DropsThumbnail(path: path)
                       : VideoEffectPreview(
                           effects: [
                             if (type?.builtIn case final builtIn?)
@@ -262,16 +265,98 @@ class _FisheyeThumbnailState extends State<_FisheyeThumbnail> {
   }
 }
 
+/// The drops tile: the thumbnail through `shaders/drops.frag`, the drops the
+/// native `DropsVideoEffect` draws, at full strength with the default
+/// settings, at a moment where two of them flow into each other.
+///
+/// Shows the plain thumbnail where the backend has no shader image filter
+/// (Skia), as the chroma-key preview does.
+class _DropsThumbnail extends StatefulWidget {
+  const _DropsThumbnail({required this.path});
+
+  final String path;
+
+  @override
+  State<_DropsThumbnail> createState() => _DropsThumbnailState();
+}
+
+class _DropsThumbnailState extends State<_DropsThumbnail> {
+  /// Seconds into the effect, where two drops have just met.
+  static const _seconds = 7.0;
+
+  static Future<ui.FragmentProgram>? _program;
+
+  ui.FragmentShader? _shader;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!ui.ImageFilter.isShaderFilterSupported) return;
+    runDetached(
+      (_program ??= ui.FragmentProgram.fromAsset('shaders/drops.frag')).then((
+        program,
+      ) {
+        if (!mounted) return;
+        setState(() => _shader = _configured(program.fragmentShader()));
+      }),
+      'load the drops tile shader',
+      logName: 'VideoEditorEffectsBottomBar',
+      category: LogCategory.video,
+    );
+  }
+
+  /// Uniforms 0 and 1 are the bound texture's size, which the engine sets;
+  /// then the intensity, the scale, the frost, the fringes and each drop.
+  static ui.FragmentShader _configured(ui.FragmentShader shader) {
+    const settings = DropsEffectSettings();
+    var index = 2;
+    for (final value in [
+      1.0,
+      dropsScale(settings),
+      settings.frost,
+      settings.fringes,
+      for (final drop in dropsLayout(settings, seconds: _seconds)) ...[
+        drop.x,
+        drop.y,
+        drop.radius,
+      ],
+    ]) {
+      shader.setFloat(index++, value);
+    }
+    return shader;
+  }
+
+  @override
+  void dispose() {
+    _shader?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shader = _shader;
+    final thumbnail = _Thumbnail(path: widget.path);
+    if (shader == null) return thumbnail;
+    return ImageFiltered(
+      imageFilter: ui.ImageFilter.shader(shader),
+      child: thumbnail,
+    );
+  }
+}
+
 /// The localized name of [type], or of "no effect" for `null`.
 String videoEffectLabel(BuildContext context, EditorEffectType? type) {
   if (type == null) return context.l10n.videoEditorEffectNone;
   if (type.builtIn case final builtIn?) {
     return builtInVideoEffectLabel(context, builtIn);
   }
-  // Divine renders two effects itself: the echo trail and the fisheye.
-  return type == EditorEffectType.fisheye
-      ? context.l10n.videoEditorEffectFisheye
-      : context.l10n.videoEditorEffectEcho;
+  // Divine renders three effects itself: the echo trail, the fisheye and
+  // the drops.
+  return switch (type.customId) {
+    fisheyeVideoEffectId => context.l10n.videoEditorEffectFisheye,
+    dropsVideoEffectId => context.l10n.videoEditorEffectDrops,
+    _ => context.l10n.videoEditorEffectEcho,
+  };
 }
 
 /// The localized name of the built-in effect [type].

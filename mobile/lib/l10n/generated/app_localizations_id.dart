@@ -8800,6 +8800,30 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorEffectFisheye => 'Mata Ikan';
 
   @override
+  String get videoEditorEffectDrops => 'Tetesan';
+
+  @override
+  String get videoEditorDropsSettingsTitle => 'Sesuaikan tetesan';
+
+  @override
+  String get videoEditorDropsCountLabel => 'Jumlah';
+
+  @override
+  String get videoEditorDropsSizeLabel => 'Ukuran';
+
+  @override
+  String get videoEditorDropsSpeedLabel => 'Kecepatan';
+
+  @override
+  String get videoEditorDropsFrostLabel => 'Buram';
+
+  @override
+  String get videoEditorDropsFringesLabel => 'Tepi warna';
+
+  @override
+  String get videoEditorDropsShuffle => 'Acak';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Satu efek berkedip dalam satu waktu. Kedipan berlebihan bisa membahayakan orang yang sensitif, jadi kami mengganti efek lainnya di sini.';
 

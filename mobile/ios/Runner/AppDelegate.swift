@@ -20,6 +20,7 @@ extension FlutterError: @retroactive Error {}
     // Divine's own video effects, for the editor preview and the export (#9708).
     EchoVideoEffect.register()
     FisheyeVideoEffect.register()
+    DropsVideoEffect.register()
     #if DEBUG
     exportScreenshotLaunchConfig()
     #endif

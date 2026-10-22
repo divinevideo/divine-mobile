@@ -8467,6 +8467,30 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectFisheye => '피시아이';
 
   @override
+  String get videoEditorEffectDrops => '물방울';
+
+  @override
+  String get videoEditorDropsSettingsTitle => '물방울 조정';
+
+  @override
+  String get videoEditorDropsCountLabel => '개수';
+
+  @override
+  String get videoEditorDropsSizeLabel => '크기';
+
+  @override
+  String get videoEditorDropsSpeedLabel => '속도';
+
+  @override
+  String get videoEditorDropsFrostLabel => '서리 효과';
+
+  @override
+  String get videoEditorDropsFringesLabel => '색 번짐';
+
+  @override
+  String get videoEditorDropsShuffle => '섞기';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       '깜빡이는 효과는 한 번에 하나만 쓸 수 있어요. 깜빡임이 너무 많으면 민감한 사람에게 해로울 수 있어서 여기서는 다른 효과를 바꿨어요.';
 

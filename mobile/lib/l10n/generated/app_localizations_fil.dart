@@ -8950,6 +8950,30 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorEffectFisheye => 'Fisheye';
 
   @override
+  String get videoEditorEffectDrops => 'Drops';
+
+  @override
+  String get videoEditorDropsSettingsTitle => 'Isaayos ang drops';
+
+  @override
+  String get videoEditorDropsCountLabel => 'Bilang';
+
+  @override
+  String get videoEditorDropsSizeLabel => 'Laki';
+
+  @override
+  String get videoEditorDropsSpeedLabel => 'Bilis';
+
+  @override
+  String get videoEditorDropsFrostLabel => 'Frost';
+
+  @override
+  String get videoEditorDropsFringesLabel => 'Kulay sa gilid';
+
+  @override
+  String get videoEditorDropsShuffle => 'I-shuffle';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Isang kumikislap na effect lang sa isang pagkakataon. Puwedeng makasama ang sobrang pagkislap sa mga taong sensitibo rito, kaya pinalitan namin ang isa pa dito.';
 

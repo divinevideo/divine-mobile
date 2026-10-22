@@ -45,6 +45,7 @@ class VideoEditorEffectsState extends Equatable {
     this.editingId,
     this.selectedType,
     this.intensity = VideoEditorEffectsCubit.defaultIntensity,
+    this.dropsSettings = const DropsEffectSettings(),
     this.onBeat = false,
     this.startedPlayback = false,
     this.beatInput,
@@ -68,6 +69,9 @@ class VideoEditorEffectsState extends Equatable {
 
   /// The intensity of [selectedType], from 0 to 1.
   final double intensity;
+
+  /// How the drops look when [selectedType] is [EditorEffectType.drops].
+  final DropsEffectSettings dropsSettings;
 
   /// Whether the picked effect fires on the beat; only applies when
   /// [selectedType] [EditorEffectType.supportsOnBeat].
@@ -99,7 +103,12 @@ class VideoEditorEffectsState extends Equatable {
           type: selectedType!,
           intensity: intensity,
           onBeat: selectionOnBeat,
+          settings: settingsFor(selectedType!),
         );
+
+  /// The settings a picked effect of [type] stores next to its intensity.
+  Map<String, Object> settingsFor(EditorEffectType type) =>
+      type == EditorEffectType.drops ? dropsSettings.toParams() : const {};
 
   /// Whether any effect, committed or picked, fires on the beat, so the beats
   /// are needed.
@@ -164,6 +173,7 @@ class VideoEditorEffectsState extends Equatable {
     EditorEffectType? selectedType,
     bool clearSelectedType = false,
     double? intensity,
+    DropsEffectSettings? dropsSettings,
     bool? onBeat,
     bool? startedPlayback,
     VideoEditorBeatInput? beatInput,
@@ -178,6 +188,7 @@ class VideoEditorEffectsState extends Equatable {
           ? null
           : (selectedType ?? this.selectedType),
       intensity: intensity ?? this.intensity,
+      dropsSettings: dropsSettings ?? this.dropsSettings,
       onBeat: onBeat ?? this.onBeat,
       startedPlayback: startedPlayback ?? this.startedPlayback,
       beatInput: beatInput ?? this.beatInput,
@@ -193,6 +204,7 @@ class VideoEditorEffectsState extends Equatable {
     editingId,
     selectedType,
     intensity,
+    dropsSettings,
     onBeat,
     startedPlayback,
     beatInput,

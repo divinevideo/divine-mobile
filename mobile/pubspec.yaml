@@ -533,10 +533,11 @@ flutter:
     - shorebird.yaml
 
   # Fragment shaders. `chroma_key.frag` powers the video editor's live
-  # green-screen preview (see shaders/chroma_key.frag); `fisheye.frag` draws
-  # the fisheye effect's tile in the effects picker.
+  # green-screen preview (see shaders/chroma_key.frag); `fisheye.frag` and
+  # `drops.frag` draw those effects' tiles in the effects picker.
   shaders:
     - shaders/chroma_key.frag
+    - shaders/drops.frag
     - shaders/fisheye.frag
 
   # An image asset can refer to one or more resolution-specific "variants", see

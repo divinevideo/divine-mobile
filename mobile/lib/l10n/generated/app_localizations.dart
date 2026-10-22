@@ -15017,6 +15017,54 @@ abstract class AppLocalizations {
   /// **'Fisheye'**
   String get videoEditorEffectFisheye;
 
+  /// Name of a video effect: clear glass drops drift over the picture, bend it at their edges and flow into each other when they meet.
+  ///
+  /// In en, this message translates to:
+  /// **'Drops'**
+  String get videoEditorEffectDrops;
+
+  /// Header of the expandable card in the video effects editor that holds the settings of the Drops effect.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust drops'**
+  String get videoEditorDropsSettingsTitle;
+
+  /// Slider label in the Drops effect settings: how many glass drops float over the video (1 to 5).
+  ///
+  /// In en, this message translates to:
+  /// **'Number'**
+  String get videoEditorDropsCountLabel;
+
+  /// Slider label in the Drops effect settings: how large the glass drops are.
+  ///
+  /// In en, this message translates to:
+  /// **'Size'**
+  String get videoEditorDropsSizeLabel;
+
+  /// Slider label in the Drops effect settings: how fast the drops drift over the video; at zero they stand still.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed'**
+  String get videoEditorDropsSpeedLabel;
+
+  /// Slider label in the Drops effect settings: how frosted (blurred, like frosted glass) the drops are.
+  ///
+  /// In en, this message translates to:
+  /// **'Frost'**
+  String get videoEditorDropsFrostLabel;
+
+  /// Slider label in the Drops effect settings: how strong the rainbow-colored edges at the rims of the drops are.
+  ///
+  /// In en, this message translates to:
+  /// **'Color fringes'**
+  String get videoEditorDropsFringesLabel;
+
+  /// Button in the Drops effect settings that gives the drops a new random arrangement and new paths.
+  ///
+  /// In en, this message translates to:
+  /// **'Shuffle'**
+  String get videoEditorDropsShuffle;
+
   /// Snack bar after a flashing video effect (strobe, negative flash) replaced another flashing effect where the two overlapped on the timeline. Explains, without technical terms, that overlapping flashes can harm people with photosensitivity.
   ///
   /// In en, this message translates to:

@@ -8851,6 +8851,30 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectFisheye => 'Mắt cá';
 
   @override
+  String get videoEditorEffectDrops => 'Giọt nước';
+
+  @override
+  String get videoEditorDropsSettingsTitle => 'Điều chỉnh giọt nước';
+
+  @override
+  String get videoEditorDropsCountLabel => 'Số lượng';
+
+  @override
+  String get videoEditorDropsSizeLabel => 'Kích thước';
+
+  @override
+  String get videoEditorDropsSpeedLabel => 'Tốc độ';
+
+  @override
+  String get videoEditorDropsFrostLabel => 'Mờ sương';
+
+  @override
+  String get videoEditorDropsFringesLabel => 'Viền màu';
+
+  @override
+  String get videoEditorDropsShuffle => 'Xáo trộn';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Mỗi lúc chỉ một hiệu ứng nhấp nháy. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm, nên chúng mình đã thay hiệu ứng kia ở đây.';
 

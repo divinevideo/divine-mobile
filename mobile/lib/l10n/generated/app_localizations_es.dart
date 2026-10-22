@@ -8974,6 +8974,30 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorEffectFisheye => 'Ojo de pez';
 
   @override
+  String get videoEditorEffectDrops => 'Gotas';
+
+  @override
+  String get videoEditorDropsSettingsTitle => 'Ajustar gotas';
+
+  @override
+  String get videoEditorDropsCountLabel => 'Cantidad';
+
+  @override
+  String get videoEditorDropsSizeLabel => 'Tamaño';
+
+  @override
+  String get videoEditorDropsSpeedLabel => 'Velocidad';
+
+  @override
+  String get videoEditorDropsFrostLabel => 'Esmerilado';
+
+  @override
+  String get videoEditorDropsFringesLabel => 'Bordes de color';
+
+  @override
+  String get videoEditorDropsShuffle => 'Mezclar';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Solo un efecto parpadeante a la vez. Demasiado parpadeo puede hacer daño a las personas sensibles, así que aquí hemos reemplazado el otro.';
 

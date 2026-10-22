@@ -8873,6 +8873,30 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorEffectFisheye => 'عين السمكة';
 
   @override
+  String get videoEditorEffectDrops => 'قطرات';
+
+  @override
+  String get videoEditorDropsSettingsTitle => 'ضبط القطرات';
+
+  @override
+  String get videoEditorDropsCountLabel => 'العدد';
+
+  @override
+  String get videoEditorDropsSizeLabel => 'الحجم';
+
+  @override
+  String get videoEditorDropsSpeedLabel => 'السرعة';
+
+  @override
+  String get videoEditorDropsFrostLabel => 'زجاج مصنفر';
+
+  @override
+  String get videoEditorDropsFringesLabel => 'حواف ملونة';
+
+  @override
+  String get videoEditorDropsShuffle => 'خلط';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'تأثير وامض واحد في كل مرة. الوميض الكثير قد يؤذي الأشخاص الحساسين له، لذلك استبدلنا التأثير الآخر هنا.';
 

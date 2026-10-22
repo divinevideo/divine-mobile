@@ -8928,6 +8928,30 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorEffectFisheye => 'Visoog';
 
   @override
+  String get videoEditorEffectDrops => 'Druppels';
+
+  @override
+  String get videoEditorDropsSettingsTitle => 'Druppels aanpassen';
+
+  @override
+  String get videoEditorDropsCountLabel => 'Aantal';
+
+  @override
+  String get videoEditorDropsSizeLabel => 'Grootte';
+
+  @override
+  String get videoEditorDropsSpeedLabel => 'Snelheid';
+
+  @override
+  String get videoEditorDropsFrostLabel => 'Matglas';
+
+  @override
+  String get videoEditorDropsFringesLabel => 'Kleurranden';
+
+  @override
+  String get videoEditorDropsShuffle => 'Husselen';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Eén knipperend effect tegelijk. Te veel knipperen kan schadelijk zijn voor mensen die er gevoelig voor zijn, dus hebben we het andere hier vervangen.';
 

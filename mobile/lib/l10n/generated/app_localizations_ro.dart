@@ -9089,6 +9089,30 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectFisheye => 'Ochi de pește';
 
   @override
+  String get videoEditorEffectDrops => 'Picături';
+
+  @override
+  String get videoEditorDropsSettingsTitle => 'Ajustează picăturile';
+
+  @override
+  String get videoEditorDropsCountLabel => 'Număr';
+
+  @override
+  String get videoEditorDropsSizeLabel => 'Mărime';
+
+  @override
+  String get videoEditorDropsSpeedLabel => 'Viteză';
+
+  @override
+  String get videoEditorDropsFrostLabel => 'Mătuire';
+
+  @override
+  String get videoEditorDropsFringesLabel => 'Margini colorate';
+
+  @override
+  String get videoEditorDropsShuffle => 'Amestecă';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Un singur efect intermitent odată. Prea multe clipiri pot face rău persoanelor sensibile, așa că l-am înlocuit aici pe celălalt.';
 
