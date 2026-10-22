@@ -8,8 +8,8 @@ import 'package:unified_logger/unified_logger.dart';
 
 /// What the video DM store remembers of the downloads it makes by itself, so
 /// a card fetches a video by itself neither too often nor too soon after a
-/// failure, nor at all once one failed in a way that would repeat. Each try
-/// tells the sender's media server that the thread is open.
+/// failure, nor, until its mark ages out, once one failed in a way that would
+/// repeat. Each try tells the sender's media server that the thread is open.
 class DmVideoAutoDownloadLimits {
   /// Creates the limits of one store: at most [maxTries] downloads start for
   /// a message a session, and one that may pass waits [retryAfter].

@@ -232,8 +232,8 @@ class DmVideoStore {
   /// How many callers asked for each video being fetched, by message id.
   final Map<String, int> _videoCallers = {};
 
-  /// Videos about to be handed out or being read for their frame, counted.
-  /// Never pruned until released.
+  /// Videos about to be handed out or being read for their frame, and frames
+  /// whose record is being written, counted. Never pruned until released.
   final Map<String, int> _leases = {};
 
   /// Files of gone messages left because they were leased, by a prune or a
