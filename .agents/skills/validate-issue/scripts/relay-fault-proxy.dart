@@ -101,18 +101,18 @@ Future<void> main(List<String> args) async {
     exit(0);
   });
 
-  await for (final request in server) {
+  Future<void> serve(HttpRequest request) async {
     if (refuseConnects > 0) {
       refuseConnects--;
       _log({'event': 'refused-connect', 'remaining': refuseConnects});
       request.response.statusCode = HttpStatus.serviceUnavailable;
       await request.response.close();
-      continue;
+      return;
     }
     if (!WebSocketTransformer.isUpgradeRequest(request)) {
       // Relay information document (NIP-11) and anything else over plain HTTP.
       await _forwardHttp(request, upstream);
-      continue;
+      return;
     }
     // Compression off on both legs: some clients reject the deflate parameters
     // dart:io offers, and the proxy has to read every frame anyway.
@@ -129,7 +129,7 @@ Future<void> main(List<String> args) async {
     } on Object catch (error) {
       _log({'event': 'upstream-connect-failed', 'error': '$error'});
       await client.close(WebSocketStatus.internalServerError);
-      continue;
+      return;
     }
     _log({'event': 'client-connected'});
 
@@ -193,6 +193,17 @@ Future<void> main(List<String> args) async {
       },
       onDone: client.close,
       onError: (Object _) => client.close(),
+    );
+  }
+
+  // Each connection is served on its own: a stalled upstream connect for one
+  // client must not hold up the next client's handshake.
+  await for (final request in server) {
+    unawaited(
+      serve(request).catchError(
+        (Object error) =>
+            _log({'event': 'connection-failed', 'error': '$error'}),
+      ),
     );
   }
 }
