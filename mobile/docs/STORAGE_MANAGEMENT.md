@@ -60,8 +60,9 @@ A file is removed when **all** of these hold:
    database's legacy location are out of reach.
 2. Its extension is one the app writes for media (`.mp4`, `.mov`, `.m4v`,
    `.webm`, `.jpg`, `.jpeg`, `.png`, `.webp`, `.wav`, `.m4a`, `.aac`,
-   `.mp3`), or it is the `.old` twin of a video
-   (`C2paDebrisJanitor.isUnsignedOriginalName`, e.g. `VID_*.mp4.old`; see
+   `.mp3`), or it is the `.old` twin of a video whose signed replacement
+   sits beside it (`C2paDebrisJanitor.isRedundantUnsignedOriginal`, e.g.
+   `VID_*.mp4.old` next to a non-empty `VID_*.mp4`; see
    [Background janitors](#background-janitors)). A `.hive`, `.lock` or `.db`
    file left by an old build is counted as content and never touched.
 3. No clip row references its basename — checked against **every** row in
@@ -133,7 +134,10 @@ Independent of the screen, these sweeps run on their own:
   left by failed signs, and the unsigned originals builds up to 1.0.19 renamed
   to `<video>.mp4.old` before moving the signed copy into place. Nothing ever
   read or removed those, so each recording signed then occupies its space
-  twice; #7395 stopped writing them in 1.0.20. Logs the bytes it freed.
+  twice; #7395 stopped writing them in 1.0.20. A `.old` file is deleted only
+  when its replacement (the same name without `.old`) exists and is not empty:
+  a failure between the two renames was never rolled back, leaving the `.old`
+  file as the only copy of the recording. Logs the bytes it freed.
 - `ClipLibraryService.purgeOrphanedDraftClips` — after sign-in, deletes clip
   rows whose draft no longer exists (`ClipsDao.deleteOrphanedDraftClips`),
   across all accounts, then their files through `FileCleanupService`, which

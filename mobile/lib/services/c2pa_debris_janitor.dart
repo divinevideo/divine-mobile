@@ -18,18 +18,30 @@ abstract final class C2paDebrisJanitor {
     caseSensitive: false,
   );
 
-  /// Whether [name] is the unsigned original of a signed video, such as
-  /// `VID_<timestamp>.mp4.old`.
+  /// Whether [file] is the unsigned original of a signed video, such as
+  /// `VID_<timestamp>.mp4.old`, whose signed replacement sits beside it.
   ///
-  /// Builds up to 1.0.19 renamed the recording to `<name>.old` before moving
-  /// the signed copy into its place, and never deleted it. Nothing reads these
-  /// files: each is a full-size duplicate of the signed video beside it.
-  static bool isUnsignedOriginalName(String name) =>
-      _unsignedOriginalName.hasMatch(name);
+  /// Builds up to 1.0.19 replaced a recording with two renames: the original
+  /// to `<name>.old`, then the signed copy to `<name>`. They never deleted the
+  /// `.old` file, so after a completed replacement it is a full-size duplicate
+  /// nothing reads. A failure between the two renames was not rolled back and
+  /// left the `.old` file as the only copy of the recording, so one whose
+  /// replacement is missing or empty is never redundant.
+  static bool isRedundantUnsignedOriginal(File file) {
+    if (!_unsignedOriginalName.hasMatch(p.basename(file.path))) return false;
+    try {
+      final replacement = File(p.withoutExtension(file.path)).statSync();
+      return replacement.type == FileSystemEntityType.file &&
+          replacement.size > 0;
+    } on Object {
+      // A replacement we cannot inspect does not prove the original redundant.
+      return false;
+    }
+  }
 
   /// Deletes stale signing debris directly inside [directory]: empty
   /// `c2pa_signed_<ms>.mp4` destinations of failed signs, and the unsigned
-  /// originals described at [isUnsignedOriginalName].
+  /// originals described at [isRedundantUnsignedOriginal].
   ///
   /// This is intentionally non-recursive and best-effort: inaccessible files
   /// are retried on a later launch, and filesystem failures never reach the
@@ -48,13 +60,14 @@ abstract final class C2paDebrisJanitor {
         if (entity is! File) continue;
         final name = p.basename(entity.path);
         final isFailedOutput = _debrisName.hasMatch(name);
-        if (!isFailedOutput && !isUnsignedOriginalName(name)) continue;
+        if (!isFailedOutput && !_unsignedOriginalName.hasMatch(name)) continue;
 
         try {
           final stat = entity.statSync();
           if (stat.type != FileSystemEntityType.file) continue;
           if (isFailedOutput && stat.size != 0) continue;
           if (!stat.modified.isBefore(cutoff)) continue;
+          if (!isFailedOutput && !isRedundantUnsignedOriginal(entity)) continue;
 
           entity.deleteSync();
           deletedCount++;

@@ -554,6 +554,7 @@ void main() {
             thumbnailPath: null,
           );
           final twin = writeFile('${docs.path}/VID_1.mp4.old', 100, age: old);
+          writeFile('${docs.path}/VID_2.mp4', 40, age: fresh);
           final freshTwin = writeFile(
             '${docs.path}/VID_2.mp4.old',
             40,
@@ -564,6 +565,12 @@ void main() {
             7,
             age: old,
           );
+          // A failed replacement left this as the only copy of its recording.
+          final stranded = writeFile(
+            '${docs.path}/VID_3.mp4.old',
+            30,
+            age: old,
+          );
 
           expect(await service.removeOrphanedFiles(), 100);
 
@@ -571,6 +578,7 @@ void main() {
           expect(signed.existsSync(), isTrue);
           expect(freshTwin.existsSync(), isTrue);
           expect(otherOld.existsSync(), isTrue);
+          expect(stranded.existsSync(), isTrue);
         },
       );
 

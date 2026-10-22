@@ -282,7 +282,7 @@ class StorageManagementService {
   };
 
   /// Extensions of the media the app writes to the documents root — with the
-  /// `.old` twins of [C2paDebrisJanitor.isUnsignedOriginalName], the only
+  /// `.old` twins of [C2paDebrisJanitor.isRedundantUnsignedOriginal], the only
   /// files the orphan sweep will ever remove. Anything else there (legacy Hive
   /// boxes, lock files, a database left by an old build) is counted as content
   /// and left alone, because a wrong guess deletes something irreplaceable
@@ -685,7 +685,9 @@ class StorageManagementService {
   /// pending upload's input, a file still being written, or something the
   /// app did not write and cannot vouch for. The unsigned `.old` originals
   /// older builds left beside signed videos qualify too, so this sweep covers
-  /// them on a device where the startup janitor has not removed them yet.
+  /// them on a device where the startup janitor has not removed them yet; one
+  /// whose signed replacement is missing or empty is the only copy of its
+  /// recording, and stays content.
   bool _isSweepCandidate(
     _DocumentsFile file,
     FileStat stat,
@@ -695,7 +697,7 @@ class StorageManagementService {
     if (!_sweepableMediaExtensions.contains(
           p.extension(file.name).toLowerCase(),
         ) &&
-        !C2paDebrisJanitor.isUnsignedOriginalName(file.name)) {
+        !C2paDebrisJanitor.isRedundantUnsignedOriginal(file.file)) {
       return false;
     }
     if (protectedNames.contains(file.name)) return false;

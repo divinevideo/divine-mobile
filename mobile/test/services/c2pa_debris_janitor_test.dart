@@ -94,31 +94,61 @@ void main() {
       expect(matchingDirectory.existsSync(), isTrue);
     });
 
-    test('deletes stale unsigned originals of signed videos', () {
+    test('deletes stale unsigned originals beside their signed copy', () {
       final stale =
           C2paDebrisJanitor.staleDebrisAge + const Duration(minutes: 1);
-      final twins = [
-        writeFile('VID_20260614_113531.mp4.old', age: stale, bytes: [1, 2]),
-        writeFile('divine_1786700133469.mp4.old', age: stale, bytes: [1]),
-        writeFile('VID_1786700133470.MOV.OLD', age: stale, bytes: [1]),
-      ];
-      final signed = writeFile(
+      final signedNames = [
         'VID_20260614_113531.mp4',
-        age: stale,
-        bytes: [1, 2],
-      );
+        'divine_1786700133469.mp4',
+        'VID_1786700133470.MOV',
+      ];
+      final signed = [
+        for (final name in signedNames)
+          writeFile(name, age: stale, bytes: [1, 2]),
+      ];
+      final twins = [
+        for (final name in signedNames)
+          writeFile('$name.old', age: stale, bytes: [1, 2]),
+      ];
 
       C2paDebrisJanitor.deleteStaleDebris(tempDir, now: now);
 
       for (final twin in twins) {
         expect(twin.existsSync(), isFalse, reason: p.basename(twin.path));
       }
-      expect(signed.existsSync(), isTrue);
+      for (final file in signed) {
+        expect(file.existsSync(), isTrue, reason: p.basename(file.path));
+      }
+    });
+
+    test('keeps an unsigned original whose signed copy is missing or '
+        'empty', () {
+      // Up to 1.0.19 a failure between the two renames left the `.old` file
+      // as the only copy of the recording.
+      final stale =
+          C2paDebrisJanitor.staleDebrisAge + const Duration(minutes: 1);
+      final stranded = writeFile(
+        'VID_20260614_113532.mp4.old',
+        age: stale,
+        bytes: [1, 2],
+      );
+      writeFile('VID_20260614_113533.mp4', age: stale);
+      final besideEmpty = writeFile(
+        'VID_20260614_113533.mp4.old',
+        age: stale,
+        bytes: [1, 2],
+      );
+
+      C2paDebrisJanitor.deleteStaleDebris(tempDir, now: now);
+
+      expect(stranded.existsSync(), isTrue);
+      expect(besideEmpty.existsSync(), isTrue);
     });
 
     test('keeps fresh unsigned originals and other .old files', () {
       final stale =
           C2paDebrisJanitor.staleDebrisAge + const Duration(minutes: 1);
+      writeFile('VID_1786964993571.mp4', age: stale, bytes: [1]);
       final kept = [
         writeFile(
           'VID_1786964993571.mp4.old',
