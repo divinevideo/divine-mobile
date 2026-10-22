@@ -223,7 +223,8 @@ pushNotificationTapTarget({
 /// misdirection, and a pre-push fetch would reintroduce the relay round-trip
 /// this path exists to avoid. Transient failures are already mitigated
 /// downstream: the route lookup tries cache → Funnelcake REST → relays, and
-/// the screen retries once when relays become ready on cold start.
+/// the screen searches with bounded retries while connections or indexing
+/// catch up, then offers Retry rather than treating a miss as proof of deletion.
 Future<void> routeNotificationTap({
   required String? referencedAddress,
   required String? referencedEventId,
