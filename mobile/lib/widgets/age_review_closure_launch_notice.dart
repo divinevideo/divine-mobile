@@ -8,7 +8,6 @@ import 'package:go_router/go_router.dart';
 import 'package:openvine/models/account_enforcement_status.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/repositories/account_enforcement_repository.dart';
-import 'package:openvine/router/providers/router_location_provider.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
@@ -116,19 +115,15 @@ class _LaunchStatusReaderState extends ConsumerState<_LaunchStatusReader> {
     }
     final shown = ref.read(ageReviewClosureLaunchShownProvider.notifier);
     final pubkey = ref.read(activeEnforcementPubkeyProvider);
-    // Only over the tabs. Over the recorder, an editor, a conversation or the
-    // app-update dialog a push would skip their own exit steps, such as the
-    // recorder's lock and pause, so the closure waits for the tabs. Account
-    // Status reached by push is reflected by routerLocationOf, not the match
-    // list's uri; an account with it open already has the explanation.
-    if (!(ModalRoute.isCurrentOf(context) ?? true)) {
-      if (routerLocationOf(GoRouter.of(context)).path ==
-          AccountStatusScreen.path) {
-        if (pubkey != null) shown.markShown(pubkey);
-        notice.shown();
-      }
-      return;
-    }
+    // Not under a screen or dialog pushed over the whole shell: over the
+    // recorder, an editor, a conversation or the app-update dialog a push
+    // would skip their own exit steps, such as the recorder's lock and pause,
+    // so the closure waits until the shell is in front. A sheet opened inside
+    // a tab sits on that tab's navigator and does not cover the shell, which
+    // is harmless: a sheet has no exit steps to skip. Account Status marks a
+    // closure it explains as shown, so one the account opened itself in the
+    // meantime is not opened again.
+    if (!(ModalRoute.isCurrentOf(context) ?? true)) return;
     notice.shown();
     if (pubkey == null) return;
     if (!shown.markShown(pubkey)) return;

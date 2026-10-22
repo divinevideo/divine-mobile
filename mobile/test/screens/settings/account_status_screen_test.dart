@@ -112,6 +112,42 @@ void main() {
     });
 
     group('closed by age review (support-trust-safety#260)', () {
+      // The launch notice explains a closure once per session. One explained
+      // here counts, so backing out of this screen does not bring the notice.
+      testWidgets('counts as the closure having been shown', (tester) async {
+        await _pumpWith(
+          tester,
+          AccountEnforcementKind.banned,
+          category: AccountEnforcementCategory.ageReview,
+        );
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(AccountStatusScreen)),
+        );
+
+        expect(
+          container
+              .read(ageReviewClosureLaunchShownProvider.notifier)
+              .markShown(_pubkey),
+          isFalse,
+        );
+      });
+
+      testWidgets('leaves the closure unshown for any other ban', (
+        tester,
+      ) async {
+        await _pumpWith(tester, AccountEnforcementKind.banned);
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(AccountStatusScreen)),
+        );
+
+        expect(
+          container
+              .read(ageReviewClosureLaunchShownProvider.notifier)
+              .markShown(_pubkey),
+          isTrue,
+        );
+      });
+
       testWidgets('says why the account closed instead of the generic ban', (
         tester,
       ) async {

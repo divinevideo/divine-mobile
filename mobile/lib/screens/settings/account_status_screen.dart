@@ -78,6 +78,33 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
     });
   }
 
+  /// The explanation for [status]. An age-review closure explained here
+  /// counts as shown, so the launch notice does not open this screen again
+  /// once the account backs out of it (support-trust-safety#260).
+  _StatusBody _body({
+    required AccountEnforcementStatus status,
+    bool isLastKnown = false,
+    VoidCallback? onRetry,
+  }) {
+    if (status.isAgeReviewClosure) {
+      // A build may not modify a provider, so the mark waits for the frame.
+      addPostFrameCallbackIfMounted(() {
+        final pubkey = ref.read(activeEnforcementPubkeyProvider);
+        if (pubkey == null) return;
+        ref
+            .read(ageReviewClosureLaunchShownProvider.notifier)
+            .markShown(pubkey);
+      });
+    }
+    return _StatusBody(
+      status: status,
+      isLastKnown: isLastKnown,
+      onRetry: onRetry,
+      openSupportMessages: widget.openSupportMessages,
+      composeEmail: widget.composeEmail,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -124,13 +151,11 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
               // The publish result cannot tell a closure from any other ban,
               // so a closure this session already confirmed keeps its own
               // explanation instead of the generic paths it leaves out.
-              return _StatusBody(
+              return _body(
                 status: switch (lastConfirmed) {
                   final known? when known.isAgeReviewClosure => known,
                   _ => publishRestriction,
                 },
-                openSupportMessages: widget.openSupportMessages,
-                composeEmail: widget.composeEmail,
               );
             },
             // Keep a confirmed restriction through a failed read so its appeal
@@ -145,18 +170,14 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
                       ref.invalidate(accountEnforcementStatusProvider),
                 );
               }
-              return _StatusBody(
+              return _body(
                 status: retained,
                 isLastKnown: true,
                 onRetry: () => ref.invalidate(accountEnforcementStatusProvider),
-                openSupportMessages: widget.openSupportMessages,
-                composeEmail: widget.composeEmail,
               );
             },
-            data: (status) => _StatusBody(
+            data: (status) => _body(
               status: effective(status),
-              openSupportMessages: widget.openSupportMessages,
-              composeEmail: widget.composeEmail,
             ),
           ),
         ),

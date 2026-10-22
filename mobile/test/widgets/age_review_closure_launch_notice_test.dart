@@ -116,6 +116,40 @@ Future<void> _pumpApp(
   await tester.pumpAndSettle();
 }
 
+/// A closed account whose status [answer] settles, with the real Account
+/// status screen reading it.
+ProviderContainer _closureContainer(
+  Completer<AccountEnforcementStatus> answer,
+) {
+  final container = ProviderContainer(
+    overrides: [
+      activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+      accountEnforcementStatusProvider.overrideWith((ref) => answer.future),
+    ],
+  );
+  addTearDown(container.dispose);
+  return container;
+}
+
+GoRouter _routerWithAccountStatus() => GoRouter(
+  routes: [
+    GoRoute(
+      path: '/',
+      builder: (context, state) =>
+          const AgeReviewClosureLaunchNotice(child: Text('home')),
+    ),
+    GoRoute(
+      path: AccountStatusScreen.path,
+      name: AccountStatusScreen.routeName,
+      builder: (context, state) => const AccountStatusScreen(),
+    ),
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => const Text('settings'),
+    ),
+  ],
+);
+
 class _Flag extends Notifier<bool> {
   @override
   bool build() => false;
@@ -634,13 +668,60 @@ void main() {
     });
 
     // The account already has the explanation in front of it, so backing out
-    // of that Account status must not bring a second one.
+    // of that Account status must not bring a second.
     testWidgets('does not reopen an Account status the account had open', (
       tester,
     ) async {
-      final previous = GoRouter.optionURLReflectsImperativeAPIs;
-      GoRouter.optionURLReflectsImperativeAPIs = true;
-      addTearDown(() => GoRouter.optionURLReflectsImperativeAPIs = previous);
+      final answer = Completer<AccountEnforcementStatus>();
+      final container = _closureContainer(answer);
+      final router = _routerWithAccountStatus();
+      addTearDown(router.dispose);
+      await _pumpApp(tester, container, router);
+
+      unawaited(router.pushNamed(AccountStatusScreen.routeName));
+      // Its spinner runs until the answer arrives, so this cannot settle.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      answer.complete(_closure);
+      await tester.pumpAndSettle();
+      router.pop();
+      await tester.pumpAndSettle();
+
+      expect(find.text('home'), findsOneWidget);
+      expect(find.byType(AccountStatusScreen), findsNothing);
+    });
+
+    // A closure found under Settings waits for the tabs. If the account opens
+    // Account status from Settings meanwhile, it has been told, so going back
+    // to the tabs must not open it a second time.
+    testWidgets('counts an Account status opened from a covering screen', (
+      tester,
+    ) async {
+      final answer = Completer<AccountEnforcementStatus>();
+      final container = _closureContainer(answer);
+      final router = _routerWithAccountStatus();
+      addTearDown(router.dispose);
+      await _pumpApp(tester, container, router);
+
+      unawaited(router.push('/settings'));
+      await tester.pumpAndSettle();
+      answer.complete(_closure);
+      await tester.pumpAndSettle();
+      unawaited(router.pushNamed(AccountStatusScreen.routeName));
+      await tester.pumpAndSettle();
+      expect(find.byType(AccountStatusScreen), findsOneWidget);
+      router.pop();
+      await tester.pumpAndSettle();
+      router.pop();
+      await tester.pumpAndSettle();
+
+      expect(find.text('home'), findsOneWidget);
+      expect(find.byType(AccountStatusScreen), findsNothing);
+    });
+
+    // The app-update dialog opens over the shell at launch. It is a pageless
+    // route, which leaves the navigator differently from a page.
+    testWidgets('waits for a dialog over the tabs to close', (tester) async {
       final answer = Completer<AccountEnforcementStatus>();
       final container = ProviderContainer(
         overrides: [
@@ -655,18 +736,25 @@ void main() {
       addTearDown(router.dispose);
       await _pumpApp(tester, container, router);
 
-      unawaited(router.pushNamed(AccountStatusScreen.routeName));
+      unawaited(
+        showDialog<void>(
+          context: tester.element(find.text('home')),
+          builder: (_) => const Text('update'),
+        ),
+      );
       await tester.pumpAndSettle();
       answer.complete(_closure);
       await tester.pumpAndSettle();
-      router.pop();
-      await tester.pumpAndSettle();
-
-      expect(find.text('home'), findsOneWidget);
+      expect(find.text('update'), findsOneWidget);
       expect(
         find.text('account-status', skipOffstage: false),
         findsNothing,
       );
+
+      Navigator.of(tester.element(find.text('update'))).pop();
+      await tester.pumpAndSettle();
+
+      expect(find.text('account-status'), findsOneWidget);
     });
 
     // The notice lets go of the status once it has answered, so the screen it
