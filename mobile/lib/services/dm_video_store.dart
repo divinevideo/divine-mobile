@@ -1043,7 +1043,15 @@ class DmVideoStore {
       if (!keptVideo.existsSync()) _deleteKeptFor(keptVideo);
     }
     if (preview.existsSync()) {
-      await _records.writeQuietly(message, dir);
+      // Leased like a video, so a prune meanwhile leaves it to the release,
+      // which deletes it with its record if its message went.
+      _lease(preview);
+      try {
+        await _records.writeQuietly(message, dir);
+      } finally {
+        _release(preview);
+      }
+      if (!preview.existsSync()) return null;
       _knownPreviews[message.id] = preview.path;
       return preview;
     }
