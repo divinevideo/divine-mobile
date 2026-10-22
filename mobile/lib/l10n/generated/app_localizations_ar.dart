@@ -8870,6 +8870,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorEffectEcho => 'صدى';
 
   @override
+  String get videoEditorEffectFisheye => 'عين السمكة';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'تأثير وامض واحد في كل مرة. الوميض الكثير قد يؤذي الأشخاص الحساسين له، لذلك استبدلنا التأثير الآخر هنا.';
 

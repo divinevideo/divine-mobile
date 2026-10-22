@@ -8891,6 +8891,9 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorEffectEcho => 'Gema';
 
   @override
+  String get videoEditorEffectFisheye => 'Mata Ikan';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Satu kesan berkelip pada satu masa. Kelipan berlebihan boleh memudaratkan orang yang sensitif, jadi kami menggantikan yang satu lagi di sini.';
 

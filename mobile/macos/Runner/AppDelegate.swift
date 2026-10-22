@@ -10,6 +10,7 @@ class AppDelegate: FlutterAppDelegate {
     // Divine's own video effects, for the editor preview and the export (#9708).
     // The source is shared with the iOS runner.
     EchoVideoEffect.register()
+    FisheyeVideoEffect.register()
     // CameraMacOSPlugin removed - Flutter now has native macOS camera support
   }
 

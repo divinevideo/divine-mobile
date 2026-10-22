@@ -2611,6 +2611,7 @@
   "videoEditorEffectWave": "Våg",
   "videoEditorEffectGlow": "Glöd",
   "videoEditorEffectEcho": "Eko",
+  "videoEditorEffectFisheye": "Fisköga",
   "videoEditorEffectsFlashingReplaced": "En blinkande effekt i taget. För mycket blinkande kan skada känsliga personer, så vi har ersatt den andra här.",
   "videoEditorEffectsFlashingNotDuplicated": "En blinkande effekt i taget. För mycket blinkande kan skada känsliga personer.",
   "videoEditorEffectsOnBeat": "I takt",

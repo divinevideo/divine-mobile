@@ -901,6 +901,22 @@ void main() {
       expect(EditorVideoEffect.fromMap(echo.toMap(), fallbackId: 'x'), echo);
     });
 
+    test('reads a saved fisheye back as the fisheye', () {
+      const fisheye = EditorVideoEffect.custom(
+        id: 'fisheye-1',
+        custom: CustomVideoEffect(
+          id: fisheyeVideoEffectId,
+          params: {EditorVideoEffect.intensityParam: 0.8},
+        ),
+      );
+
+      final read = EditorVideoEffect.fromMap(fisheye.toMap(), fallbackId: 'x');
+
+      expect(read, fisheye);
+      expect(read.type, EditorEffectType.fisheye);
+      expect(read.intensity, 0.8);
+    });
+
     test('rejects a custom effect this build does not know', () {
       final map = {
         EditorVideoEffect.idKey: 'a',

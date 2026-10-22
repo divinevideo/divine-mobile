@@ -8971,6 +8971,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorEffectEcho => 'Eco';
 
   @override
+  String get videoEditorEffectFisheye => 'Ojo de pez';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Solo un efecto parpadeante a la vez. Demasiado parpadeo puede hacer daño a las personas sensibles, así que aquí hemos reemplazado el otro.';
 

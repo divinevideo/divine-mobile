@@ -2,6 +2,7 @@
 // ABOUTME: tile per effect, each showing the effect on the clip thumbnail.
 
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
@@ -12,8 +13,10 @@ import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show VideoEffect, VideoEffectPreview, VideoEffectType;
+import 'package:unified_logger/unified_logger.dart';
 
 /// Bottom bar listing "None" and every video effect.
 ///
@@ -118,6 +121,8 @@ class _EffectItem extends StatelessWidget {
                       ? const SizedBox.expand()
                       : type == EditorEffectType.echo
                       ? _EchoThumbnail(path: path)
+                      : type == EditorEffectType.fisheye
+                      ? _FisheyeThumbnail(path: path)
                       : VideoEffectPreview(
                           effects: [
                             if (type?.builtIn case final builtIn?)
@@ -194,13 +199,79 @@ class _EchoThumbnail extends StatelessWidget {
   }
 }
 
+/// The fisheye tile: the thumbnail through `shaders/fisheye.frag`, the bulge
+/// the native `FisheyeVideoEffect` draws, at full strength.
+///
+/// Shows the plain thumbnail where the backend has no shader image filter
+/// (Skia), as the chroma-key preview does.
+class _FisheyeThumbnail extends StatefulWidget {
+  const _FisheyeThumbnail({required this.path});
+
+  final String path;
+
+  @override
+  State<_FisheyeThumbnail> createState() => _FisheyeThumbnailState();
+}
+
+class _FisheyeThumbnailState extends State<_FisheyeThumbnail> {
+  /// `FisheyeVideoEffect`'s `CIBumpDistortion` scale at intensity 1.
+  static const _fullStrengthScale = 0.8;
+
+  static Future<ui.FragmentProgram>? _program;
+
+  ui.FragmentShader? _shader;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!ui.ImageFilter.isShaderFilterSupported) return;
+    runDetached(
+      (_program ??= ui.FragmentProgram.fromAsset('shaders/fisheye.frag')).then((
+        program,
+      ) {
+        if (!mounted) return;
+        // Uniforms 0 and 1 are the bound texture's size, which the engine
+        // sets.
+        setState(
+          () =>
+              _shader = program.fragmentShader()
+                ..setFloat(2, _fullStrengthScale),
+        );
+      }),
+      'load the fisheye tile shader',
+      logName: 'VideoEditorEffectsBottomBar',
+      category: LogCategory.video,
+    );
+  }
+
+  @override
+  void dispose() {
+    _shader?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shader = _shader;
+    final thumbnail = _Thumbnail(path: widget.path);
+    if (shader == null) return thumbnail;
+    return ImageFiltered(
+      imageFilter: ui.ImageFilter.shader(shader),
+      child: thumbnail,
+    );
+  }
+}
+
 /// The localized name of [type], or of "no effect" for `null`.
 String videoEffectLabel(BuildContext context, EditorEffectType? type) {
   if (type == null) return context.l10n.videoEditorEffectNone;
-  final builtIn = type.builtIn;
-  // The echo trail is the only effect Divine renders itself so far.
-  if (builtIn == null) return context.l10n.videoEditorEffectEcho;
-  return builtInVideoEffectLabel(context, builtIn);
+  if (type.builtIn case final builtIn?) {
+    return builtInVideoEffectLabel(context, builtIn);
+  }
+  // Divine renders two effects itself: the echo trail and the fisheye.
+  return type == EditorEffectType.fisheye
+      ? context.l10n.videoEditorEffectFisheye
+      : context.l10n.videoEditorEffectEcho;
 }
 
 /// The localized name of the built-in effect [type].

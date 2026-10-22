@@ -8980,6 +8980,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorEffectEcho => 'Echo';
 
   @override
+  String get videoEditorEffectFisheye => 'Fisheye';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'One flashing effect at a time. Too much flashing can hurt people who are sensitive to it, so we swapped out the other one here.';
 

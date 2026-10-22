@@ -9000,6 +9000,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorEffectEcho => 'Echo';
 
   @override
+  String get videoEditorEffectFisheye => 'Fischauge';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Immer nur ein blinkender Effekt. Zu viel Blinken kann empfindlichen Menschen schaden, deshalb haben wir den anderen hier ersetzt.';
 

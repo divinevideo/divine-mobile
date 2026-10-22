@@ -2611,6 +2611,7 @@
   "videoEditorEffectWave": "Vague",
   "videoEditorEffectGlow": "Lueur",
   "videoEditorEffectEcho": "Écho",
+  "videoEditorEffectFisheye": "Fish-eye",
   "videoEditorEffectsFlashingReplaced": "Un seul effet clignotant à la fois. Trop de clignotements peuvent faire du mal aux personnes sensibles, alors on a remplacé l'autre ici.",
   "videoEditorEffectsFlashingNotDuplicated": "Un seul effet clignotant à la fois. Trop de clignotements peuvent faire du mal aux personnes sensibles.",
   "videoEditorEffectsOnBeat": "Sur le rythme",

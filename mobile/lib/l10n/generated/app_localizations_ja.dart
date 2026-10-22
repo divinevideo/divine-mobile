@@ -8446,6 +8446,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectEcho => 'エコー';
 
   @override
+  String get videoEditorEffectFisheye => '魚眼';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       '点滅エフェクトは一度にひとつだけ。点滅が多すぎると、敏感な人の体に負担がかかることがあるので、ここではもう一方を置き換えました。';
 

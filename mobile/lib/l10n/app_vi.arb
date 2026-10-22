@@ -4666,6 +4666,7 @@
   "videoEditorEffectWave": "Sóng",
   "videoEditorEffectGlow": "Phát sáng",
   "videoEditorEffectEcho": "Tiếng vọng",
+  "videoEditorEffectFisheye": "Mắt cá",
   "videoEditorEffectsFlashingReplaced": "Mỗi lúc chỉ một hiệu ứng nhấp nháy. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm, nên chúng mình đã thay hiệu ứng kia ở đây.",
   "videoEditorEffectsFlashingNotDuplicated": "Mỗi lúc chỉ một hiệu ứng nhấp nháy. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm.",
   "videoEditorEffectsOnBeat": "Theo nhịp",

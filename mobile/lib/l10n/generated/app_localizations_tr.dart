@@ -8803,6 +8803,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectEcho => 'Yankı';
 
   @override
+  String get videoEditorEffectFisheye => 'Balık Gözü';
+
+  @override
   String get videoEditorEffectsFlashingReplaced =>
       'Aynı anda tek bir yanıp sönen efekt. Fazla yanıp sönme hassas kişilere zarar verebilir, bu yüzden buradaki diğerini değiştirdik.';
 
