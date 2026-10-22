@@ -12,6 +12,7 @@ import 'package:openvine/blocs/codec_heavy_surface/codec_heavy_surface_cubit.dar
 import 'package:openvine/blocs/feed_loading_moderation/feed_loading_moderation_cubit.dart';
 import 'package:openvine/blocs/feed_loading_moderation/feed_loading_moderation_state.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
+import 'package:openvine/blocs/video_loops/video_loops_cubit.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_state.dart';
 import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
@@ -332,6 +333,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
   @override
   Widget build(BuildContext context) {
     final playbackEligible = ref.watch(playbackEligibleProvider);
+    final videosRepository = ref.watch(videosRepositoryProvider);
     final isFeedActive =
         widget.isActive && _routeAllowsPlayback && playbackEligible;
     // A focus-only pause leaves the visible feed warm for the next swipe.
@@ -555,30 +557,42 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
             return const SizedBox.shrink();
           }
           final video = widget.videos[index];
-          return DivineVideoMetricsTracker(
-            video: video,
-            controller: controller,
-            isActive: isActive,
-            isFeedVisible: isFeedActive,
-            position: index,
-            trafficSource: widget.trafficSource,
-            sourceDetail: widget.sourceDetail,
-            child: _Overlay(
-              controller: controller,
+          return BlocProvider(
+            key: ValueKey((video.id, videosRepository)),
+            create: (_) => VideoLoopsCubit(
               video: video,
-              index: index,
-              isActive: isActive,
-              isFeedActive: isFeedActive,
-              contextTitle: widget.contextTitle,
-              contentWarningRevealed: _revealedContentWarningVideoIds.contains(
-                video.id,
+              videosRepository: videosRepository,
+            ),
+            child: Builder(
+              builder: (context) => DivineVideoMetricsTracker(
+                loopCounts: context.read<VideoLoopsCubit>(),
+                video: video,
+                controller: controller,
+                isActive: isActive,
+                isFeedVisible: isFeedActive,
+                position: index,
+                trafficSource: widget.trafficSource,
+                sourceDetail: widget.sourceDetail,
+                child: _Overlay(
+                  controller: controller,
+                  video: video,
+                  index: index,
+                  isActive: isActive,
+                  isFeedActive: isFeedActive,
+                  contextTitle: widget.contextTitle,
+                  contentWarningRevealed: _revealedContentWarningVideoIds
+                      .contains(
+                        video.id,
+                      ),
+                  onContentWarningRevealed: () =>
+                      _revealContentWarning(video.id),
+                  onSuppressAutoAdvance: _suppressAutoAdvance,
+                  onResumeAutoAdvance: _resumeAutoAdvanceAfterSwipe,
+                  onSkipToNextVideo: () => _skipPooledVideoAt(index),
+                  onAutomaticSkipToNextVideo: () =>
+                      unawaited(_animateToPage(index + 1)),
+                ),
               ),
-              onContentWarningRevealed: () => _revealContentWarning(video.id),
-              onSuppressAutoAdvance: _suppressAutoAdvance,
-              onResumeAutoAdvance: _resumeAutoAdvanceAfterSwipe,
-              onSkipToNextVideo: () => _skipPooledVideoAt(index),
-              onAutomaticSkipToNextVideo: () =>
-                  unawaited(_animateToPage(index + 1)),
             ),
           );
         },

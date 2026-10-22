@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
+import 'package:openvine/blocs/video_loops/video_loops_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/utils/string_utils.dart';
@@ -14,8 +15,8 @@ import 'package:openvine/utils/string_utils.dart';
 /// Horizontal stats row displaying engagement counts for a video.
 ///
 /// Reads live counts from [VideoInteractionsBloc] (likes, comments, reposts)
-/// and static loops from [VideoEvent.totalLoops]. The headline numbers are
-/// combined totals (archival Vine + live Divine); classic Vines additionally
+/// and live loops when the player supplies [VideoLoopsCubit]. The headline
+/// numbers combine archival Vine + live Divine; classic Vines additionally
 /// get a per-source breakdown underneath.
 ///
 /// The Loops column trails the row and is shown only when the viewer asked for
@@ -53,6 +54,11 @@ class _MetadataStatsRowContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final liveLoops = context.select<VideoLoopsCubit?, int?>(
+      (cubit) => cubit?.state.count,
+    );
+    final loopCount =
+        liveLoops ?? (video.hasLoopMetadata ? video.totalLoops : null);
     return BlocBuilder<VideoInteractionsBloc, VideoInteractionsState>(
       builder: (context, state) {
         final isLoading = state.isLoading;
@@ -115,11 +121,9 @@ class _MetadataStatsRowContent extends StatelessWidget {
                           if (showVideoLoops) ...[
                             const _VerticalDivider(),
                             _StatColumn(
-                              count: video.hasLoopMetadata
-                                  ? video.totalLoops
-                                  : null,
+                              count: loopCount,
                               label: context.l10n.metadataLoopsLabel(
-                                video.totalLoops,
+                                loopCount ?? 0,
                               ),
                               isLoading: false,
                             ),
@@ -165,7 +169,14 @@ class _VineDivineBreakdown extends StatelessWidget {
     final l10n = context.l10n;
     String compact(int? count) => StringUtils.formatCompactNumber(count ?? 0);
 
-    final divineViews = int.tryParse(video.rawTags['views'] ?? '') ?? 0;
+    final liveLoops = context.select<VideoLoopsCubit?, int?>(
+      (cubit) => cubit?.state.count,
+    );
+    final divineLoops = divineOnlyCount(
+      displayCount: liveLoops,
+      archivedCount: video.originalLoops,
+      liveCount: int.tryParse(video.rawTags['views'] ?? ''),
+    );
     final divineLikes = divineOnlyCount(
       displayCount: state.isLoading ? null : state.likeCount,
       archivedCount: video.originalLikes,
@@ -207,7 +218,7 @@ class _VineDivineBreakdown extends StatelessWidget {
             label: l10n.metadataDivineStatsLabel,
             value: showVideoLoops
                 ? l10n.metadataDivineStatsLine(
-                    compact(divineViews),
+                    compact(divineLoops),
                     compact(divineLikes),
                     compact(divineComments),
                     compact(divineReposts),

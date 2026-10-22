@@ -358,8 +358,9 @@ The `.content` field is optional and could contain a free-form note.
 ### Two-phase sessions
 
 One viewing session publishes one `start` event at playback start and one or
-more `end` events (on feed interruption, video change, or dispose), each
-carrying only the watch/loop delta since the previous `end`. An end event
+more `end` events (every 15 seconds of active playback and on feed interruption,
+video change, or dispose), each carrying only the watch/loop delta since the
+previous `end`. An end event
 with no new playback emits nothing. An app kill mid-session still leaves the
 `start` — and therefore the view — counted.
 
@@ -401,8 +402,9 @@ with no new playback emits nothing. An app kill mid-session still leaves the
 - The `viewed` tag carries elapsed playback seconds for the session, not positions within the video. Mobile always emits `["viewed", "0", "<whole seconds watched>"]`, so a 6s video looped twice reports `["viewed", "0", "12"]`, and a sub-second view truncates to `["viewed", "0", "0"]`
 - Analytics services should consume these events in real-time before relays discard them
 - No minimum watch threshold: a playback start counts as a view even when the session ends before the first loop completes (a fractional loop is valid)
-- Mobile emits one `start` per viewing session plus one `end` segment per
-  interruption. A cover (comment sheet, route push, tab switch, backgrounding)
+- Mobile emits one `start` per viewing session, an `end` segment every 15
+  seconds while playing visibly, and an `end` segment per interruption.
+  A cover (comment sheet, route push, tab switch, backgrounding)
   flushes an `end` segment but keeps the session, so watch time after the cover
   lifts still belongs to it. Scrolling away ends the session, and scrolling back
   starts a new one that reports its own `start`.

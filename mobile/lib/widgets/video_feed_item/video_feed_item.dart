@@ -5,12 +5,14 @@
 
 import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' hide NIP71VideoKinds;
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:openvine/blocs/video_loops/video_loops_cubit.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -826,8 +828,13 @@ class _VideoMetaLineContent extends ConsumerWidget {
         ? authorStats!.totalViews
         : null;
     final video = this.video;
-    final showVideoCount =
-        showVideoLoops && video != null && video.hasLoopMetadata;
+    final liveLoops = context.select<VideoLoopsCubit?, int?>(
+      (cubit) => cubit?.state.count,
+    );
+    final videoLoopCount =
+        liveLoops ??
+        (video != null && video.hasLoopMetadata ? video.totalLoops : null);
+    final showVideoCount = showVideoLoops && videoLoopCount != null;
     final publishedAtSeconds = video == null
         ? null
         : int.tryParse(video.publishedAt ?? '') ?? video.createdAt;
@@ -846,14 +853,14 @@ class _VideoMetaLineContent extends ConsumerWidget {
         ? null
         : StringUtils.formatCompactNumber(totalLoops);
     final compactVideo = showVideoCount
-        ? StringUtils.formatCompactNumber(video.totalLoops)
+        ? StringUtils.formatCompactNumber(videoLoopCount)
         : null;
     final l10n = context.l10n;
     final parts = <_MetaLineField>[
       if (showVideoCount)
         _MetaLineField.counted(
           compactVideo!,
-          (count) => l10n.videoFeedLoopCountLine(count, video.totalLoops),
+          (count) => l10n.videoFeedLoopCountLine(count, videoLoopCount),
         ),
       if (totalLoops != null && totalLoops > 0 && showVideoCount)
         _MetaLineField.counted(
