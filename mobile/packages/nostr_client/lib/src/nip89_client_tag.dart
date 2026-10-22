@@ -62,6 +62,23 @@ abstract final class Nip89ClientTag {
   static bool hasClientTag(Iterable<List<String>> tags) =>
       tags.any(_isClientTag);
 
+  /// Whether the signing path stamps Divine's `client` tag on a new event of
+  /// [kind] right now: the kind is not excluded and the user has not opted
+  /// out. A signed event whose tags disagree with this answer was signed
+  /// under a different setting.
+  static Future<bool> wantsClientTag(int kind) async =>
+      !shouldSkipKind(kind) && await isEnabled();
+
+  /// Returns a copy of [tags] without any `client` tag; [tags] is not changed.
+  ///
+  /// Use it before re-signing an event Divine published earlier, so the
+  /// signing path re-derives attribution from the current preference instead
+  /// of carrying the old tag forward.
+  static List<List<String>> withoutClientTag(Iterable<List<String>> tags) => [
+    for (final tag in tags)
+      if (!_isClientTag(tag)) tag,
+  ];
+
   /// Returns whether Divine should emit the `client` tag for new events.
   static Future<bool> isEnabled() async {
     final cachedEnabled = _cachedEnabled;

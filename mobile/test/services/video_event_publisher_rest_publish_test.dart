@@ -19,6 +19,7 @@ import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/video_event_publisher.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/utils/async_utils.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockUploadManager extends Mock implements UploadManager {}
 
@@ -58,6 +59,8 @@ void main() {
   });
 
   setUp(() {
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    Nip89ClientTag.resetForTest();
     mockUploadManager = _MockUploadManager();
     mockNostrClient = _MockNostrClient();
     mockAuthService = _MockAuthService();
@@ -108,6 +111,8 @@ void main() {
     when(() => mockVideoEventService.addVideoEvent(any())).thenReturn(null);
   });
 
+  tearDown(Nip89ClientTag.resetForTest);
+
   PendingUpload createUpload() {
     return PendingUpload(
       id: 'test-upload-id',
@@ -122,14 +127,18 @@ void main() {
     );
   }
 
-  Event createSignedEvent() {
+  /// A signed video event as `createAndSignEvent` mints it. [attributed]
+  /// adds the client tag the signing path stamps while attribution is on,
+  /// which a cached retry event must carry to be reused (#8176).
+  Event createSignedEvent({bool attributed = false}) {
     return Event(
       testPubkey,
       NIP71VideoKinds.getPreferredAddressableKind(),
-      const [
-        ['d', 'test-video-id'],
-        ['title', 'Plants'],
-        ['imeta', 'url https://cdn.example.com/video.mp4', 'm video/mp4'],
+      [
+        const ['d', 'test-video-id'],
+        const ['title', 'Plants'],
+        const ['imeta', 'url https://cdn.example.com/video.mp4', 'm video/mp4'],
+        if (attributed) Nip89ClientTag.tag,
       ],
       'A plant video',
       createdAt: 1700000000,
@@ -377,7 +386,7 @@ void main() {
     });
 
     test('retry reuses the original signed event id (no re-sign)', () async {
-      final signedEvent = createSignedEvent();
+      final signedEvent = createSignedEvent(attributed: true);
       final retryUpload = createUpload().copyWith(nostrEventId: signedEvent.id);
       when(
         () => mockPersonalEventCache.getEventById(signedEvent.id),
@@ -404,7 +413,7 @@ void main() {
     test(
       'recovery: existing relay event marks published without re-publishing',
       () async {
-        final signedEvent = createSignedEvent();
+        final signedEvent = createSignedEvent(attributed: true);
         final retryUpload = createUpload().copyWith(
           nostrEventId: signedEvent.id,
         );
