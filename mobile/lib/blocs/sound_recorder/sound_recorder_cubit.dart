@@ -389,7 +389,12 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
   @override
   Future<void> close() async {
     _closing = true;
-    await _nativeStart;
+    try {
+      await _nativeStart;
+    } on Object {
+      // start() owns reporting this failure and its scratch cleanup. A failed
+      // native start must not prevent disposal or leave the cubit open.
+    }
     final ending = _ending;
     if (ending != null) {
       _discardRequested = true;

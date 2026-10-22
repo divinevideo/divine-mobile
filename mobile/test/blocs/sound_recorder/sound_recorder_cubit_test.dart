@@ -672,6 +672,27 @@ void main() {
 
     group('close while starting', () {
       test(
+        'still disposes and closes when the in-flight native start fails',
+        () async {
+          recorder
+            ..startGate = Completer<void>()
+            ..throwOnStart = true;
+          final cubit = build();
+          final starting = cubit.start();
+          addTearDown(() => starting);
+          await pumpEventQueue();
+
+          final closing = cubit.close();
+          recorder.startGate!.complete();
+          await closing;
+
+          expect(cubit.isClosed, isTrue);
+          expect(recorder.disposed, isTrue);
+          expect(File(recorder.path!).existsSync(), isFalse);
+        },
+      );
+
+      test(
         'leaves no take behind when the native start is in flight',
         () async {
           recorder.startGate = Completer<void>();
