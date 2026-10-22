@@ -5125,6 +5125,17 @@
   },
   "videoEditorSoundSpeedSheetTitle": "Kelajuan Bunyi",
   "videoEditorSpeedPresetSemanticLabel": "Kelajuan {speed}×",
+  "videoEditorSpeedModeConstant": "Malar",
+  "videoEditorSpeedModeCurve": "Lengkung",
+  "videoEditorSpeedCurveCustom": "Tersuai",
+  "videoEditorSpeedCurveMontage": "Montaj",
+  "videoEditorSpeedCurveHero": "Wira",
+  "videoEditorSpeedCurveBullet": "Bullet time",
+  "videoEditorSpeedCurveFlashIn": "Masuk pantas",
+  "videoEditorSpeedCurveFlashOut": "Keluar pantas",
+  "videoEditorSpeedCurveHint": "Seret titik ke atas untuk mempercepat, ke bawah untuk memperlahan",
+  "videoEditorSpeedCurvePointSemanticLabel": "Titik kelajuan {index} daripada {total}",
+  "videoEditorSpeedResultingLength": "Dimainkan selama {seconds} saat",
   "@videoEditorSpeedPresetSemanticLabel": {
     "description": "Accessibility label for a one-tap speed preset in the clip speed bottom sheet. {speed} is a speed multiplier like 0.5, 1, or 2.",
     "placeholders": {

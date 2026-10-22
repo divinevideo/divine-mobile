@@ -4,6 +4,7 @@ import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/clip_speed_choice.dart';
 import 'package:openvine/services/video_editor/video_editor_split_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
@@ -344,6 +345,95 @@ void main() {
         // The split point (A1 → A2) is a hard cut; A2 → B keeps the boundary.
         expect(start!.transition, isNull);
         expect(end!.transition, equals(dissolve));
+      });
+
+      test('cuts a speed ramp so each half keeps its speeds', () async {
+        // Slow at the start, fast at the end.
+        const ramp = VideoSpeedRamp([
+          VideoSpeedRampPoint(position: 0, speed: 0.5),
+          VideoSpeedRampPoint(position: 1, speed: 2),
+        ]);
+        final clip = _clip(
+          duration: const Duration(seconds: 4),
+        ).copyWith(speedRamp: ramp);
+        DivineVideoClip? start;
+        DivineVideoClip? end;
+        await VideoEditorSplitService.splitClip(
+          sourceClip: clip,
+          splitPosition: const Duration(seconds: 2),
+          onClipsCreated: (s, e) {
+            start = s;
+            end = e;
+          },
+          onThumbnailExtracted: null,
+        );
+
+        expect(start!.speedRamp!.points.first.speed, 0.5);
+        expect(start!.speedRamp!.points.last.speed, closeTo(1, 1e-9));
+        expect(end!.speedRamp!.points.first.speed, closeTo(1, 1e-9));
+        expect(end!.speedRamp!.points.last.speed, 2);
+        // Together the halves play exactly as long as the clip did.
+        final halves = start!.playbackDuration + end!.playbackDuration;
+        expect(
+          (halves - clip.playbackDuration).inMicroseconds.abs(),
+          lessThanOrEqualTo(2),
+        );
+      });
+
+      test('keeps the cut and every later clip where they were under a '
+          'speed ramp', () async {
+        // Hero on six seconds, cut on the slow-down: a refitted curve moved
+        // this cut 235 ms and everything after it 214 ms.
+        final clip = _clip(
+          duration: const Duration(seconds: 6),
+        ).copyWith(speedRamp: ClipSpeedRampPreset.hero.ramp);
+        final next = _clip(duration: const Duration(seconds: 1));
+        const cut = Duration(seconds: 4);
+        DivineVideoClip? start;
+        DivineVideoClip? end;
+        await VideoEditorSplitService.splitClip(
+          sourceClip: clip,
+          splitPosition: cut,
+          onClipsCreated: (s, e) {
+            start = s;
+            end = e;
+          },
+          onThumbnailExtracted: null,
+        );
+
+        // The cut plays where the frame played inside the whole clip.
+        expect(
+          (start!.playbackDuration - clip.sourceOffsetToPlaybackOffset(cut))
+              .inMicroseconds
+              .abs(),
+          lessThanOrEqualTo(1),
+        );
+        // A frame inside the tail half keeps its place on the timeline.
+        const later = Duration(milliseconds: 5200);
+        expect(
+          (start!.playbackDuration +
+                  end!.sourceOffsetToPlaybackOffset(later - cut) -
+                  clip.sourceOffsetToPlaybackOffset(later))
+              .inMicroseconds
+              .abs(),
+          lessThanOrEqualTo(2),
+        );
+        // So the next clip starts where it did.
+        Duration onsetOf(DivineVideoClip target, List<DivineVideoClip> track) {
+          var at = Duration.zero;
+          for (final c in track) {
+            if (identical(c, target)) return at;
+            at += c.playbackDuration;
+          }
+          return at;
+        }
+
+        expect(
+          (onsetOf(next, [start!, end!, next]) - onsetOf(next, [clip, next]))
+              .inMicroseconds
+              .abs(),
+          lessThanOrEqualTo(2),
+        );
       });
 
       test('re-splitting the end half floors it at the new split', () async {

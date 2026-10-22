@@ -5125,6 +5125,17 @@
   },
   "videoEditorSoundSpeedSheetTitle": "آواز کی رفتار",
   "videoEditorSpeedPresetSemanticLabel": "رفتار {speed}×",
+  "videoEditorSpeedModeConstant": "مستقل",
+  "videoEditorSpeedModeCurve": "خم",
+  "videoEditorSpeedCurveCustom": "حسبِ منشا",
+  "videoEditorSpeedCurveMontage": "مونتاج",
+  "videoEditorSpeedCurveHero": "ہیرو",
+  "videoEditorSpeedCurveBullet": "بلٹ ٹائم",
+  "videoEditorSpeedCurveFlashIn": "تیز آغاز",
+  "videoEditorSpeedCurveFlashOut": "تیز اختتام",
+  "videoEditorSpeedCurveHint": "رفتار بڑھانے کے لیے نقطے کو اوپر اور کم کرنے کے لیے نیچے گھسیٹیں",
+  "videoEditorSpeedCurvePointSemanticLabel": "رفتار کا نقطہ {index} از {total}",
+  "videoEditorSpeedResultingLength": "دورانیہ {seconds} سیکنڈ",
   "@videoEditorSpeedPresetSemanticLabel": {
     "description": "Accessibility label for a one-tap speed preset in the clip speed bottom sheet. {speed} is a speed multiplier like 0.5, 1, or 2.",
     "placeholders": {

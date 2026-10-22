@@ -456,6 +456,33 @@ void main() {
         ).called(1);
       });
 
+      test('transcribes a speed ramp as recorded and moves its words through '
+          'the ramp', () async {
+        // 3 s of footage: the first 1.5 s at 2× (0.75 s), the rest at 0.5×.
+        const ramp = VideoSpeedRamp([
+          VideoSpeedRampPoint(position: 0, speed: 2),
+          VideoSpeedRampPoint(position: 0.5, speed: 2),
+          VideoSpeedRampPoint(position: 0.5000001, speed: 0.5),
+          VideoSpeedRampPoint(position: 1, speed: 0.5),
+        ]);
+        stubExtraction();
+        // Spoken 2 s into the footage: 0.5 s into the slow half.
+        stubGenerator([_word('Slow.', 2000, 2500)]);
+
+        final outcome = await buildService().generateForClips(
+          clips: [_clip('a').copyWith(speedRamp: ramp)],
+          localeIdentifier: 'en-US',
+        );
+
+        verify(
+          () => extraction.extractAudio(videoPath: '/tmp/a.mp4', speed: 1),
+        ).called(1);
+        final cue = (outcome as CaptionsGenerated).cues.single;
+        // 0.75 s for the fast half, then 1 s for the first 0.5 s of slow.
+        expect((cue.start.inMilliseconds - 1750).abs(), lessThanOrEqualTo(2));
+        expect((cue.end.inMilliseconds - 2750).abs(), lessThanOrEqualTo(2));
+      });
+
       test('skips muted clips and clips without a local file', () async {
         final outcome = await buildService().generateForClips(
           clips: [_clip('muted', volume: 0), _clip('remote', withVideo: false)],

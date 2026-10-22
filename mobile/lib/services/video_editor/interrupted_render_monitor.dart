@@ -560,6 +560,7 @@ Map<String, Object> describeVideoRender(VideoRenderData data) {
     'speedChanged': segments
         .where((s) => s.playbackSpeed != null && s.playbackSpeed != 1)
         .length,
+    'speedRamps': segments.where((s) => s.speedRamp != null).length,
     'transitions': segments.where((s) => s.transition != null).length,
     'transformed': segments.where((s) => s.transform != null).length,
     'maxSegmentVolume': maxVolume(segments.map((s) => s.volume)),

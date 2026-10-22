@@ -98,7 +98,8 @@ class _VideoClipTransformScreenState extends State<VideoClipTransformScreen> {
           end: widget.clip.duration - widget.clip.trimEnd,
           volume: widget.clip.volume,
           equalizer: widget.clip.equalizer.toPlayerEqualizer(),
-          playbackSpeed: widget.clip.playbackSpeed ?? 1.0,
+          // The player retimes at one speed, so a ramp previews at its average.
+          playbackSpeed: widget.clip.averagePlaybackSpeed,
         ),
       );
       await player.setLooping(looping: true);

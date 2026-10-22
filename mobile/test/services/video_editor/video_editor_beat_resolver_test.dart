@@ -243,6 +243,38 @@ void main() {
       );
     });
 
+    test('places the beats of a speed-ramped clip where the ramp plays '
+        'them', () async {
+      // 4 s of file: the first 2 s at 2× (1 s), the last 2 s at 0.5× (4 s).
+      const ramp = VideoSpeedRamp([
+        VideoSpeedRampPoint(position: 0, speed: 2),
+        VideoSpeedRampPoint(position: 0.5, speed: 2),
+        VideoSpeedRampPoint(position: 0.5000001, speed: 0.5),
+        VideoSpeedRampPoint(position: 1, speed: 0.5),
+      ]);
+      final clips = [
+        _clip('ramped', duration: _ms(4000)).copyWith(speedRamp: ramp),
+      ];
+      final parts = beatSourceFor(
+        sounds: const [],
+        clips: clips,
+        videoEnd: _ms(5000),
+      );
+      await resolver.read(parts);
+      final beats = resolver.beatsOnOutput(parts, videoEnd: _ms(5000));
+
+      // Kicks at 0.25, 0.75, … s of the file: twice as dense in the fast
+      // half, twice as sparse in the slow one.
+      expect(
+        worstMiss(beats, [
+          for (var kick = 250; kick < 2000; kick += 500) _ms(kick ~/ 2),
+          for (var kick = 2250; kick < 4000; kick += 500)
+            _ms(1000 + (kick - 2000) * 2),
+        ]),
+        lessThanOrEqualTo(_ms(15)),
+      );
+    });
+
     test('uses the playback order of an already reversed clip file', () async {
       final clips = [_clip('reversed', duration: _ms(2800), reversed: true)];
       final parts = beatSourceFor(

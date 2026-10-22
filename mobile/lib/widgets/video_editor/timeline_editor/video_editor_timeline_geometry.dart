@@ -28,11 +28,7 @@ Duration? clipSourcePositionToTimelinePosition(
         return null;
       }
 
-      final speed = clip.playbackSpeed ?? 1.0;
-      final relativePlayback = speed <= 0 || speed == 1.0
-          ? relative
-          : Duration(microseconds: (relative.inMicroseconds / speed).round());
-      return precedingDuration + relativePlayback;
+      return precedingDuration + clip.sourceOffsetToPlaybackOffset(relative);
     }
 
     precedingDuration += clip.playbackDuration;
@@ -58,7 +54,7 @@ Duration? timelinePositionToClipSourcePosition(
         return null;
       }
       return clip.trimStart +
-          clip.playbackDurationToSourceDuration(relativePlayback);
+          clip.playbackOffsetToSourceOffset(relativePlayback);
     }
 
     clipStart += clip.playbackDuration;
@@ -455,11 +451,7 @@ Duration _playbackOffsetToSourcePosition(
   DivineVideoClip clip,
   Duration playbackOffset,
 ) {
-  final speed = clip.playbackSpeed ?? 1.0;
-  final sourceOffset = speed <= 0 || speed == 1.0
-      ? playbackOffset
-      : Duration(microseconds: (playbackOffset.inMicroseconds * speed).round());
-
+  final sourceOffset = clip.playbackOffsetToSourceOffset(playbackOffset);
   return clip.trimStart + _clampDuration(sourceOffset, clip.trimmedDuration);
 }
 
@@ -473,11 +465,7 @@ Duration? _sourcePositionToPlaybackOffset(
     return null;
   }
 
-  final sourceOffset = sourcePosition - visibleStart;
-  final speed = clip.playbackSpeed ?? 1.0;
-  if (speed <= 0 || speed == 1.0) return sourceOffset;
-
-  return Duration(microseconds: (sourceOffset.inMicroseconds / speed).round());
+  return clip.sourceOffsetToPlaybackOffset(sourcePosition - visibleStart);
 }
 
 Duration _clampDuration(Duration value, Duration max) {

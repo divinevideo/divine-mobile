@@ -9869,6 +9869,44 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String get videoEditorSpeedModeConstant => 'Konstan';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'Kurva';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'Kustom';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'Montase';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'Pahlawan';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'Bullet time';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'Masuk cepat';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'Keluar cepat';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'Seret titik ke atas untuk mempercepat, ke bawah untuk memperlambat';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'Titik kecepatan $index dari $total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'Diputar selama $seconds dtk';
+  }
+
+  @override
   String get videoEditorFadeLabel => 'Pudar';
 
   @override

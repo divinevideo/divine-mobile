@@ -10108,6 +10108,44 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String get videoEditorSpeedModeConstant => 'Constante';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'Courbe';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'Personnalisée';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'Montage';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'Héros';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'Bullet time';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'Entrée rapide';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'Sortie rapide';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'Fais glisser un point vers le haut pour accélérer, vers le bas pour ralentir';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'Point de vitesse $index sur $total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'Dure $seconds s';
+  }
+
+  @override
   String get videoEditorFadeLabel => 'Fondu';
 
   @override

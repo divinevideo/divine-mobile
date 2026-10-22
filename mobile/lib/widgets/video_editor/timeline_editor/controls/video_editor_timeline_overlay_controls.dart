@@ -15,6 +15,7 @@ import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
+import 'package:openvine/models/video_editor/clip_speed_choice.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_mask.dart';
@@ -907,7 +908,7 @@ class _SoundOverlayControls extends StatelessWidget {
         .firstOrNull;
     if (sound == null) return;
 
-    final speed = await VineBottomSheet.show<double>(
+    final choice = await VineBottomSheet.show<ClipSpeedChoice>(
       context: context,
       expanded: false,
       scrollable: false,
@@ -915,8 +916,13 @@ class _SoundOverlayControls extends StatelessWidget {
       body: VideoEditorClipSpeedSheet(
         initialSpeed: sound.playbackSpeed,
         title: context.l10n.videoEditorSoundSpeedSheetTitle,
+        offerCurve: false,
       ),
     );
+    final speed = switch (choice) {
+      ConstantClipSpeed(:final speed) => speed,
+      RampClipSpeed() || null => null,
+    };
     if (speed == null || !context.mounted) return;
 
     // The slider steps in floating point; store the step it landed on, so a

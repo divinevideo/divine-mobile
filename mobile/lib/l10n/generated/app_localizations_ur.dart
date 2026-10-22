@@ -9955,6 +9955,44 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String get videoEditorSpeedModeConstant => 'مستقل';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'خم';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'حسبِ منشا';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'مونتاج';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'ہیرو';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'بلٹ ٹائم';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'تیز آغاز';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'تیز اختتام';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'رفتار بڑھانے کے لیے نقطے کو اوپر اور کم کرنے کے لیے نیچے گھسیٹیں';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'رفتار کا نقطہ $index از $total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'دورانیہ $seconds سیکنڈ';
+  }
+
+  @override
   String get videoEditorFadeLabel => 'فیڈ';
 
   @override

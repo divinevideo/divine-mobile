@@ -9365,6 +9365,43 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get videoEditorSpeedModeConstant => '恒定';
+
+  @override
+  String get videoEditorSpeedModeCurve => '曲线';
+
+  @override
+  String get videoEditorSpeedCurveCustom => '自定义';
+
+  @override
+  String get videoEditorSpeedCurveMontage => '蒙太奇';
+
+  @override
+  String get videoEditorSpeedCurveHero => '英雄';
+
+  @override
+  String get videoEditorSpeedCurveBullet => '子弹时间';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => '快速进入';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => '快速退出';
+
+  @override
+  String get videoEditorSpeedCurveHint => '向上拖动点加速，向下拖动减速';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return '速度点 $index/$total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return '时长 $seconds 秒';
+  }
+
+  @override
   String get videoEditorFadeLabel => '淡入淡出';
 
   @override

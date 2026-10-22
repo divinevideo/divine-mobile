@@ -10044,6 +10044,44 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String get videoEditorSpeedModeConstant => 'Постоянна';
+
+  @override
+  String get videoEditorSpeedModeCurve => 'Крива';
+
+  @override
+  String get videoEditorSpeedCurveCustom => 'Персонализирана';
+
+  @override
+  String get videoEditorSpeedCurveMontage => 'Монтаж';
+
+  @override
+  String get videoEditorSpeedCurveHero => 'Герой';
+
+  @override
+  String get videoEditorSpeedCurveBullet => 'Бълет тайм';
+
+  @override
+  String get videoEditorSpeedCurveFlashIn => 'Бързо влизане';
+
+  @override
+  String get videoEditorSpeedCurveFlashOut => 'Бързо излизане';
+
+  @override
+  String get videoEditorSpeedCurveHint =>
+      'Плъзни точка нагоре, за да ускориш, и надолу, за да забавиш';
+
+  @override
+  String videoEditorSpeedCurvePointSemanticLabel(String index, String total) {
+    return 'Точка на скоростта $index от $total';
+  }
+
+  @override
+  String videoEditorSpeedResultingLength(String seconds) {
+    return 'Продължава $seconds сек';
+  }
+
+  @override
   String get videoEditorFadeLabel => 'Избледняване';
 
   @override

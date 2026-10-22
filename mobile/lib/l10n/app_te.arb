@@ -5923,6 +5923,17 @@
   },
   "videoEditorSoundSpeedSheetTitle": "ధ్వని స్పీడ్",
   "videoEditorSpeedPresetSemanticLabel": "వేగం {speed}×",
+  "videoEditorSpeedModeConstant": "స్థిరం",
+  "videoEditorSpeedModeCurve": "వక్రం",
+  "videoEditorSpeedCurveCustom": "అనుకూలం",
+  "videoEditorSpeedCurveMontage": "మాంటేజ్",
+  "videoEditorSpeedCurveHero": "హీరో",
+  "videoEditorSpeedCurveBullet": "బుల్లెట్ టైమ్",
+  "videoEditorSpeedCurveFlashIn": "ఫ్లాష్ ఇన్",
+  "videoEditorSpeedCurveFlashOut": "ఫ్లాష్ అవుట్",
+  "videoEditorSpeedCurveHint": "వేగం పెంచడానికి పాయింట్‌ను పైకి, తగ్గించడానికి కిందికి లాగండి",
+  "videoEditorSpeedCurvePointSemanticLabel": "వేగ పాయింట్ {index}/{total}",
+  "videoEditorSpeedResultingLength": "{seconds} సెకన్లు ప్లే అవుతుంది",
   "@videoEditorSpeedPresetSemanticLabel": {
     "description": "Accessibility label for a one-tap speed preset in the clip speed bottom sheet. {speed} is a speed multiplier like 0.5, 1, or 2.",
     "placeholders": {
