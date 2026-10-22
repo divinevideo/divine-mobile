@@ -69,6 +69,11 @@ const _divineNip05Suffix = '.$_divineDomain';
 const String profileSearchSortFollowers =
     FunnelcakeApiClient.profileSortFollowers;
 
+/// Sort key for profile searches ordered by match strength, then creator
+/// activity. Within a relevance tier, results keep the server's order.
+const String profileSearchSortRelevance =
+    FunnelcakeApiClient.profileSortRelevance;
+
 // TODO(search): Move ProfileSearchFilter to a shared package
 // (e.g., search_utils) when we need to reuse search logic across
 // multiple repositories.
@@ -2443,6 +2448,7 @@ class ProfileRepository implements ProfileReader {
         ? _lookUpUsernameOwner(trimmed)
         : null;
     final restPubkeys = <String>{};
+    final restPositions = <String, int>{};
 
     List<UserProfile> rank(List<UserProfile> profiles) => _applyFilter(
       trimmed,
@@ -2451,6 +2457,7 @@ class ProfileRepository implements ProfileReader {
       boostPubkeys,
       sortBy: sortBy,
       pinnedPubkey: ownerPubkey,
+      serverPositions: restPositions,
     );
 
     ProgressiveSearchResult snapshot({
@@ -2551,6 +2558,7 @@ class ProfileRepository implements ProfileReader {
         restHasMore = restResults.length == limit;
         for (final result in restResults) {
           restPubkeys.add(result.pubkey);
+          restPositions.putIfAbsent(result.pubkey, () => restPositions.length);
           mergeRestResult(result);
         }
         sources[SearchSource.funnelcakeApi] = SearchSourceSuccess(
@@ -2692,6 +2700,10 @@ class ProfileRepository implements ProfileReader {
   ///
   /// [pinnedPubkey] leads the result without having to match the query: the
   /// name server says it owns the username searched for.
+  ///
+  /// [serverPositions] maps each pubkey the REST page returned to its position
+  /// there; a [profileSearchSortRelevance] search keeps that order within a
+  /// relevance tier.
   List<UserProfile> _applyFilter(
     String query,
     List<UserProfile> profiles,
@@ -2699,6 +2711,7 @@ class ProfileRepository implements ProfileReader {
     Set<String>? boostPubkeys, {
     String? sortBy,
     String? pinnedPubkey,
+    Map<String, int> serverPositions = const {},
   }) {
     final pinned = profiles.where((p) => p.pubkey == pinnedPubkey).toList();
     final candidates = pinned.isEmpty
@@ -2707,7 +2720,12 @@ class ProfileRepository implements ProfileReader {
 
     List<UserProfile> filtered;
     if (useServerSort) {
-      filtered = _rankSearchResults(query, candidates, sortBy);
+      filtered = _rankSearchResults(
+        query,
+        candidates,
+        sortBy,
+        serverPositions,
+      );
     } else if (_profileSearchFilter != null) {
       filtered = _profileSearchFilter(query, candidates);
     } else {
@@ -2768,12 +2786,16 @@ class ProfileRepository implements ProfileReader {
 
   /// Orders people search by textual relevance before popularity.
   ///
-  /// Funnelcake's follower sort remains a useful tie-breaker, but an exact
-  /// account match must never be buried beneath popular substring matches.
+  /// Within a relevance tier, a [profileSearchSortRelevance] search keeps
+  /// Funnelcake's order, which ranks by creator activity, and lists profiles
+  /// only a local source found after it; a follower sort ranks by the REST
+  /// counts. Either way, an exact account match must never be buried beneath
+  /// popular substring matches.
   static List<UserProfile> _rankSearchResults(
     String query,
     List<UserProfile> profiles,
     String? sortBy,
+    Map<String, int> serverPositions,
   ) {
     final normalizedQuery = query.trim().toLowerCase();
     final queryHex = _npubQueryToHex(normalizedQuery);
@@ -2783,7 +2805,9 @@ class ProfileRepository implements ProfileReader {
     final matching = profiles
         .where((p) => _searchRelevance(p, normalizedQuery, queryHex) > 0)
         .toList();
-    final popularityRanked = _rankServerSortedPage(matching, sortBy);
+    final popularityRanked = sortBy == profileSearchSortRelevance
+        ? _inServerOrder(matching, serverPositions)
+        : _rankServerSortedPage(matching, sortBy);
     final popularityIndex = {
       for (final (index, profile) in popularityRanked.indexed)
         profile.pubkey: index,
@@ -2990,6 +3014,25 @@ class ProfileRepository implements ProfileReader {
           return byVideos != 0 ? byVideos : a.$1.compareTo(b.$1);
         });
     return [for (final entry in indexed) entry.$2];
+  }
+
+  /// [profiles] in the order the server returned them, by [serverPositions],
+  /// followed by those the server did not return, in their current order.
+  static List<UserProfile> _inServerOrder(
+    List<UserProfile> profiles,
+    Map<String, int> serverPositions,
+  ) {
+    final listed =
+        profiles.where((p) => serverPositions.containsKey(p.pubkey)).toList()
+          ..sort(
+            (a, b) => serverPositions[a.pubkey]!.compareTo(
+              serverPositions[b.pubkey]!,
+            ),
+          );
+    return [
+      ...listed,
+      ...profiles.where((p) => !serverPositions.containsKey(p.pubkey)),
+    ];
   }
 
   /// Moves profiles whose pubkey is in [boostPubkeys] to the front of

@@ -184,7 +184,7 @@ void main() {
           () => mockProfileRepository.searchUsersProgressive(
             query: 'alice',
             limit: 50,
-            sortBy: profileSearchSortFollowers,
+            sortBy: profileSearchSortRelevance,
             cancellationToken: any(named: 'cancellationToken'),
           ),
         ).thenAnswer((_) => progressive([]));
@@ -201,7 +201,7 @@ void main() {
                   () => mockProfileRepository.searchUsersProgressive(
                     query: 'alice',
                     limit: 50,
-                    sortBy: profileSearchSortFollowers,
+                    sortBy: profileSearchSortRelevance,
                     cancellationToken: captureAny(named: 'cancellationToken'),
                   ),
                 ).captured.single
@@ -217,7 +217,7 @@ void main() {
           () => mockProfileRepository.searchUsersProgressive(
             query: 'alice',
             limit: 50,
-            sortBy: 'followers',
+            sortBy: profileSearchSortRelevance,
           ),
         ).thenAnswer(
           (_) => progressive([
@@ -909,7 +909,7 @@ void main() {
             () => mockProfileRepository.searchUsersProgressive(
               query: 'alice',
               limit: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
             ),
           ).called(1);
         },
@@ -1178,7 +1178,7 @@ void main() {
             () => mockProfileRepository.searchUsersProgressive(
               query: 'bob',
               limit: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
             ),
           ).called(1);
         },
@@ -1251,7 +1251,7 @@ void main() {
             () => mockProfileRepository.searchUsersProgressive(
               query: 'final',
               limit: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
             ),
           ).called(1);
           verifyNever(
@@ -1421,7 +1421,7 @@ void main() {
               query: 'alice',
               limit: 50,
               offset: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
             ),
           ).thenAnswer(
             (_) => progressive(createTestProfiles(10, start: 50)),
@@ -1458,7 +1458,7 @@ void main() {
               query: 'alice',
               limit: 50,
               offset: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
             ),
           ).thenAnswer(
             (_) => Stream.fromIterable([
@@ -1506,7 +1506,7 @@ void main() {
               query: 'alice',
               limit: 50,
               offset: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
             ),
           ).thenAnswer(
             (_) => progressive(
@@ -1545,7 +1545,7 @@ void main() {
               query: 'alice',
               limit: 50,
               offset: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
             ),
           ).thenAnswer(
             (_) => Stream.value(
@@ -1588,7 +1588,7 @@ void main() {
               query: 'alice',
               limit: 50,
               offset: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
             ),
           ).thenAnswer(
             (_) => progressive([
@@ -1658,7 +1658,7 @@ void main() {
               query: 'alice',
               limit: 50,
               offset: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
             ),
           ).thenAnswer(
             (_) => Stream<ProgressiveSearchResult>.error(
@@ -1747,7 +1747,7 @@ void main() {
             () => mockProfileRepository.searchUsersProgressive(
               query: 'liz',
               limit: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
               hasVideos: any(named: 'hasVideos'),
               boostPubkeys: {'01x${'a' * 61}', '02x${'a' * 61}'},
             ),
@@ -1780,7 +1780,7 @@ void main() {
             () => mockProfileRepository.searchUsersProgressive(
               query: 'test',
               limit: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
               hasVideos: any(named: 'hasVideos'),
               boostPubkeys: <String>{},
             ),
@@ -1864,7 +1864,7 @@ void main() {
               query: 'liz',
               limit: 50,
               offset: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
               hasVideos: any(named: 'hasVideos'),
             ),
           ).called(1);
@@ -1899,7 +1899,7 @@ void main() {
             () => mockProfileRepository.searchUsersProgressive(
               query: 'test',
               limit: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
               hasVideos: true,
             ),
           ).called(1);
@@ -1914,7 +1914,7 @@ void main() {
               query: 'alice',
               limit: 50,
               offset: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
               hasVideos: true,
             ),
           ).thenAnswer((_) => progressive(createTestProfiles(10)));
@@ -1937,7 +1937,7 @@ void main() {
               query: 'alice',
               limit: 50,
               offset: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
               hasVideos: true,
             ),
           ).called(1);
@@ -1964,7 +1964,7 @@ void main() {
             () => mockProfileRepository.searchUsersProgressive(
               query: 'test',
               limit: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
               hasVideos: true,
             ),
           );

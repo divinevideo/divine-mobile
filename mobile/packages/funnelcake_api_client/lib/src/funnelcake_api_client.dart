@@ -92,6 +92,10 @@ class FunnelcakeApiClient {
   /// Sort key for profile searches ordered by follower count.
   static const String profileSortFollowers = 'followers';
 
+  /// Sort key for profile searches ordered by match strength, then creator
+  /// activity: followers, videos, loops, a profile picture and recent posts.
+  static const String profileSortRelevance = 'relevance';
+
   /// Server-side cap on the engagement-list endpoints, used as the default
   /// page size for [getVideoLikers].
   ///
