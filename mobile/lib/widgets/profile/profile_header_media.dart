@@ -467,7 +467,8 @@ class _ProfileAvatarWithColor extends StatelessWidget {
   final VoidCallback? onActionTap;
 
   /// Whether this is the viewer's own profile, which reflects their own
-  /// membership and opens their supporter view, with its public setting.
+  /// membership and opens their own supporter view. That view has no public
+  /// setting; it lives in Edit Profile and the Supporter screen.
   final bool isOwnProfile;
 
   @override

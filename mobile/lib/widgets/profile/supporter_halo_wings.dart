@@ -7,8 +7,7 @@ import 'package:flutter/widgets.dart';
 import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
-/// Wraps [avatar] with a halo above it and a wing on each
-/// side.
+/// Wraps [avatar] with a halo above it and a wing on each side.
 ///
 /// Geometry comes from the Figma profile frame, where the avatar is 144pt.
 /// Every offset is stored as a fraction of that size so the treatment scales
