@@ -271,19 +271,7 @@ class _OwnSupporterDetails extends StatelessWidget {
           child: Row(
             spacing: 12,
             children: [
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: colors.iconButton,
-                  shape: BoxShape.circle,
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: DivineIcon(
-                    icon: DivineIconName.heart,
-                    color: colors.accentBrand,
-                  ),
-                ),
-              ),
+              const _SupporterIconBadge(DivineIconName.heart),
               Expanded(
                 child: Text(
                   l10n.supporterActiveBadge,
@@ -435,19 +423,7 @@ class _SupporterBenefit extends StatelessWidget {
         child: Column(
           spacing: 12,
           children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: colors.iconButton,
-                shape: BoxShape.circle,
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: DivineIcon(
-                  icon: icon,
-                  color: colors.accentBrand,
-                ),
-              ),
-            ),
+            _SupporterIconBadge(icon),
             Text(
               label,
               textAlign: TextAlign.center,
@@ -455,6 +431,28 @@ class _SupporterBenefit extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// An icon in the filled circle the supporter view's benefits share.
+class _SupporterIconBadge extends StatelessWidget {
+  const _SupporterIconBadge(this.icon);
+
+  final DivineIconName icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.vineColors;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.iconButton,
+        shape: BoxShape.circle,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: DivineIcon(icon: icon, color: colors.accentBrand),
       ),
     );
   }
