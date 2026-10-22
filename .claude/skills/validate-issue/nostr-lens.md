@@ -151,7 +151,7 @@ production.
       --drop-ok 1 > <scratch>/proxy.jsonl </dev/null &      # then point the client at ws://localhost:47801
   ```
 
-  To put the app behind it, start the local stack (`mise run local_up` from `mobile/`; for the iOS simulator export `BLOSSOM_PUBLIC_URL=http://localhost:43003` first, per `AGENTS.md`), use `--upstream ws://localhost:47777` (the stack's relay, `localRelayPort` in `mobile/lib/models/environment_config.dart`), run the app with `DEFAULT_ENV=LOCAL`, and add `ws://localhost:47801` in the app's relay settings.
+  To put the app behind it, start the local stack (`mise run local_up` from `mobile/`; for the iOS simulator export `BLOSSOM_PUBLIC_URL=http://localhost:43003` first, per `AGENTS.md`), use `--upstream ws://localhost:47777` (the stack's relay, `localRelayPort` in `mobile/lib/models/environment_config.dart`), run the app with `DEFAULT_ENV=LOCAL`, and add `ws://localhost:47801` in the app's relay settings. Not yet run with the app as the client: so far only `nak` and `websocat` have connected through it.
 
   | Flag | Reproduces |
   |---|---|

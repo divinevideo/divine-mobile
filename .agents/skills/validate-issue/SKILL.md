@@ -29,6 +29,11 @@ the question gate included.
 | Trap notes | `.claude/rules/` (start with `self_review_checklist.md`), the domain skills in `.claude/skills/`, divine-context (`NOSTR.md`, `repo-context/divine-mobile.md`), Divine Brain, and your own agent memory for this repo if you keep one |
 | Tools | `gh`, `jq`, `mise`, `websocat`, `nak` (lens commands verified on 0.20.6), `perl`; Xcode's `devicectl` for an iPhone, `adb` for Android |
 
+The two lenses are dated snapshots: each opens with the SDK, NIP commit and tool
+versions it was checked against, and says what has not yet run on a device.
+When code, NIP text or a tool disagrees with a lens, trust what you observed,
+say so in the Gate B report, and correct the lens in its own PR.
+
 ## 0. Preflight (no build yet)
 
 ```
