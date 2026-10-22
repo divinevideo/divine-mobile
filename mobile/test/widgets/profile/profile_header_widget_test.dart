@@ -1031,6 +1031,36 @@ void main() {
           expect(find.text(l10n.supporterActiveBadge), findsNothing);
         });
 
+        testWidgets('invites a viewer who is not a supporter to become one', (
+          tester,
+        ) async {
+          await pumpHeader(
+            tester,
+            isOwnProfile: false,
+            isPublicSupporter: true,
+          );
+
+          await openSupporterView(tester);
+
+          expect(find.text(l10n.supporterJoinLabel), findsOneWidget);
+        });
+
+        testWidgets('does not invite a viewer who already supports Divine', (
+          tester,
+        ) async {
+          await pumpHeader(
+            tester,
+            isOwnProfile: false,
+            isPublicSupporter: true,
+            ownMembership: await membership(tester, isSupporter: true),
+          );
+
+          await openSupporterView(tester);
+
+          expect(find.text(l10n.supporterLightboxBody), findsOneWidget);
+          expect(find.text(l10n.supporterJoinLabel), findsNothing);
+        });
+
         testWidgets('tapping your own supporter avatar opens your supporter '
             'view, without its public setting', (tester) async {
           await pumpHeader(
