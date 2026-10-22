@@ -403,7 +403,7 @@ void main() {
     });
 
     group('waveform', () {
-      testWidgets('glides on each sample position, not on bar values', (
+      testWidgets('passes each sample position to the waveform', (
         tester,
       ) async {
         const state = VoiceOverState(
