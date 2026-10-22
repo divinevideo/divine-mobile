@@ -391,7 +391,7 @@ URL.
 | `/followers/:pubkey`, `/following/:pubkey` | display name | Title falls back until the profile loads |
 | `/pooled-video-feed` | in-memory feed args | Redirects to `/video/:id` from the `?video=` parameter, else to the home feed |
 | `/video-recorder` | preselected sound (`RecorderSoundSelection`) | Opens with no sound selected; the entry point and auto-record still come from the query string |
-| `/settings/account-status` | a publish was just refused (`bool`) | Shows the fetched status, with a spinner first. The hint is for the moment after a refused publish: it shows generic restriction copy while loading, and while the status has not caught up |
+| `/settings/account-status` | a publish was just refused (`bool`) | Shows the fetched status, with a spinner first. The hint is for the moment after a refused publish: it shows generic restriction copy while loading, while the status has not caught up, and when the status read fails |
 
 ### Screens reachable only by URL must also be exitable
 
