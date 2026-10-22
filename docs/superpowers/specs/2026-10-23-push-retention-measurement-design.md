@@ -2,7 +2,8 @@
 
 Date: 2026-10-23
 
-Status: proposed design, awaiting written-spec review. No production experiment,
+Status: written design approved by Rabble's instruction to implement on
+2026-10-23; implementation plan awaiting review. No production experiment,
 collection, dashboard, or notification suppression is enabled by this document.
 
 ## Intent and success
