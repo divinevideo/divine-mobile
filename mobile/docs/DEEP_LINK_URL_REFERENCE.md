@@ -365,30 +365,33 @@ Three shapes satisfy the contract, all of them already in the codebase:
 |---|---|
 | Resolve by id, `extra` skips the fetch | `/apps/:appId/sandbox` → `SandboxRouteCubit`; `/inbox/conversation/:id` → `ConversationParticipantsCubit` |
 | Scalar in a query parameter | `/video-recorder?entry_point=`, `/video-recorder?auto_record=true`, `/video-metadata?mode=`, `/video-editor?from=library` |
-| `extra` is a display hint the screen already defaults | `/profile/:npub` display-name and avatar hints |
+| `extra` is a display hint the screen already defaults | `/profile-view/:npub` display-name and avatar hints |
 
 ### What each `extra`-bearing route loses without it
 
-All of these render and function; the hint only saves a fetch or improves the
-first frame.
+All of these render and function without it. Most hints only save a fetch or
+improve the first frame; the rest carry state the route cannot recover from its
+URL.
 
 | Route | Hint | Without it |
 |---|---|---|
 | `/apps/:appId/sandbox`, `/apps/:appId/web-sandbox` | `NostrAppDirectoryEntry` | Resolved from the approved-integrations directory by id or slug; a spinner first |
 | `/apps/:slug` | `NostrAppDirectoryEntry` | Resolved by slug |
-| `/inbox/conversation/:id` | counterparty pubkeys | Read from the conversation row. A DM-restricted account (#176) is bounced to the inbox instead, by design |
-| `/inbox/message-requests/:id` | counterparty pubkeys | Same, via `RequestPreviewCubit` |
-| `/list/:listId` | list name, video ids, author | Videos resolve from the list id; the title falls back until the local list loads |
+| `/inbox/conversation/:id` | counterparty pubkeys, room subject | Pubkeys are read from the conversation row; a DM-restricted account (#176) is bounced to the inbox instead, by design. The subject is not re-read: a titled group shows its "name and N others" title instead, while a 1:1 thread is unaffected |
+| `/inbox/message-requests/:id` | counterparty pubkeys, room subject | Same, via `RequestPreviewCubit` |
+| `/list/:listId` | list name, video ids, author, the discovered `CuratedList` | Videos resolve from the list id; the title falls back until the local list loads. Subscribing before the list is stored locally saves a stand-in record with no description or image |
 | `/list/:pubkey/:listId` | the discovered `CuratedList`, used only when its author and d-tag match the path | Resolved from relays by author + d-tag |
 | `/categories/:categoryName` | `VideoCategory` | Rebuilt from the path segment with a zero video count |
-| `/video/:id` | prefetched video, comment autoscroll | Loaded by id |
+| `/video/:id` | prefetched video, comment autoscroll, fallback event ids, DM reply context | Loaded by id. A notification also passes the plain event id to try when the addressable id does not resolve; without it that video shows as not found. Opened from a DM, the screen shows a private reply bar in place of the public comment bar; without the hint it shows the comment bar |
 | `/sound/:id` | `AudioEvent` (+ source video) | `SoundDetailLoader` fetches by id |
 | `/original-sound/:pubkey` | source video | Creator resolves from the pubkey; the source-video card is omitted |
 | `/video-edit/:videoId`, `/subtitle-edit/:videoId` | prefetched video | Loaded by id |
 | `/creator-analytics/:videoId` | `VideoPerformance` | Recomputed for that video |
-| `/profile/:npub` | display name, avatar url | Read from the profile; the hint only covers accounts with no kind-0 |
+| `/profile-view/:npub` | display name, avatar url | Read from the profile; the hint only covers accounts with no kind-0 |
 | `/followers/:pubkey`, `/following/:pubkey` | display name | Title falls back until the profile loads |
 | `/pooled-video-feed` | in-memory feed args | Redirects to `/video/:id` from the `?video=` parameter, else to the home feed |
+| `/video-recorder` | preselected sound (`RecorderSoundSelection`) | Opens with no sound selected; the entry point and auto-record still come from the query string |
+| `/settings/account-status` | a publish was just refused (`bool`) | Shows the fetched status, with a spinner first. The hint is for the moment after a refused publish: it shows generic restriction copy while loading, while the status has not caught up, and when the status read fails |
 
 ### Screens reachable only by URL must also be exitable
 
