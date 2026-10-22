@@ -8,7 +8,13 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_style.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show ChromaKey, EditorVideo;
+    show ChromaKey, EditorVideo, VideoSpeedRamp, VideoSpeedRampPoint;
+
+const _ramp = VideoSpeedRamp([
+  VideoSpeedRampPoint(position: 0, speed: 2.5),
+  VideoSpeedRampPoint(position: 0.5, speed: 0.3),
+  VideoSpeedRampPoint(position: 1, speed: 2.5),
+]);
 
 const _key = ClipChromaKey(
   key: ChromaKey.greenScreen(backgroundColor: Color(0xFF203040)),
@@ -18,6 +24,7 @@ DivineVideoClip _clip({
   bool isPlaceholder = false,
   bool isFreezeFrame = false,
   double? playbackSpeed,
+  VideoSpeedRamp? speedRamp,
   ClipChromaKey? captureChromaKey,
 }) => DivineVideoClip(
   id: 'clip',
@@ -29,6 +36,7 @@ DivineVideoClip _clip({
   isPlaceholder: isPlaceholder,
   isFreezeFrame: isFreezeFrame,
   playbackSpeed: playbackSpeed,
+  speedRamp: speedRamp,
   captureChromaKey: captureChromaKey,
 );
 
@@ -56,6 +64,26 @@ void main() {
         );
 
         expect(style.isOn(_clip(isPlaceholder: true)), isTrue);
+      });
+    });
+
+    group('applyTo', () {
+      test('replaces a constant speed with a copied speed ramp', () {
+        final styled = ClipStyle.of(
+          _clip(speedRamp: _ramp),
+        ).applyTo(_clip(playbackSpeed: 2));
+
+        expect(styled.speedRamp, _ramp);
+        expect(styled.playbackSpeed, isNull);
+      });
+
+      test('takes the speed ramp off for a copied constant speed', () {
+        final styled = ClipStyle.of(
+          _clip(playbackSpeed: 2),
+        ).applyTo(_clip(speedRamp: _ramp));
+
+        expect(styled.speedRamp, isNull);
+        expect(styled.playbackSpeed, 2);
       });
     });
 

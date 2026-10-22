@@ -1,5 +1,5 @@
-// ABOUTME: The style of a timeline clip — volume, EQ, speed, color mask and
-// ABOUTME: shape mask — as one unit that Copy style lifts off a clip and Paste
+// ABOUTME: The style of a timeline clip — volume, EQ, speed or speed ramp,
+// ABOUTME: color mask and shape mask — as one unit that Copy style lifts off a clip and Paste
 // ABOUTME: style writes onto others (#10258).
 
 import 'package:equatable/equatable.dart';
@@ -7,6 +7,7 @@ import 'package:models/models.dart' show EqualizerSettings;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:pro_image_editor/pro_image_editor.dart' show LayerMask;
+import 'package:pro_video_editor/pro_video_editor.dart' show VideoSpeedRamp;
 
 /// Whether Copy style is offered on [clip]: a clip of footage.
 ///
@@ -33,6 +34,7 @@ class ClipStyle extends Equatable {
     required this.volume,
     required this.equalizer,
     required this.playbackSpeed,
+    this.speedRamp,
     this.chromaKey,
     this.mask,
   });
@@ -45,6 +47,7 @@ class ClipStyle extends Equatable {
     volume: clip.volume,
     equalizer: clip.equalizer,
     playbackSpeed: clip.playbackSpeed ?? 1,
+    speedRamp: clip.speedRamp,
     chromaKey: clip.chromaKey,
     mask: clip.mask,
   );
@@ -55,8 +58,16 @@ class ClipStyle extends Equatable {
   /// How the clip's sound is raised or lowered per frequency band.
   final EqualizerSettings equalizer;
 
-  /// Playback speed multiplier, 1 for normal speed.
+  /// Playback speed multiplier, 1 for normal speed. Unused while
+  /// [speedRamp] is set.
   final double playbackSpeed;
+
+  /// The speed ramp the clip plays along instead of one constant speed, or
+  /// `null` for [playbackSpeed].
+  ///
+  /// Its points are fractions of the trimmed clip, so it takes the same shape
+  /// on a target of any length.
+  final VideoSpeedRamp? speedRamp;
 
   /// The color mask, or `null` for none.
   ///
@@ -82,7 +93,8 @@ class ClipStyle extends Equatable {
     if (clip.isFreezeFrame) return true;
     return clip.volume == volume &&
         clip.equalizer == equalizer &&
-        (clip.playbackSpeed ?? 1) == playbackSpeed;
+        clip.speedRamp == speedRamp &&
+        (speedRamp != null || (clip.playbackSpeed ?? 1) == playbackSpeed);
   }
 
   /// Whether pasting onto [clip] has to put on, change or take off its color
@@ -103,11 +115,16 @@ class ClipStyle extends Equatable {
     if (clip.isFreezeFrame) {
       return clip.copyWith(mask: mask, clearMask: mask == null);
     }
+    // A clip plays at one constant speed or along one ramp, never both, as
+    // the speed sheet writes it.
+    final ramp = speedRamp;
     return clip.copyWith(
       volume: volume,
       equalizer: equalizer,
-      playbackSpeed: playbackSpeed == 1 ? null : playbackSpeed,
-      clearPlaybackSpeed: playbackSpeed == 1,
+      playbackSpeed: ramp != null || playbackSpeed == 1 ? null : playbackSpeed,
+      clearPlaybackSpeed: ramp != null || playbackSpeed == 1,
+      speedRamp: ramp,
+      clearSpeedRamp: ramp == null,
       mask: mask,
       clearMask: mask == null,
     );
@@ -118,6 +135,7 @@ class ClipStyle extends Equatable {
     volume,
     equalizer,
     playbackSpeed,
+    speedRamp,
     chromaKey,
     mask,
   ];
