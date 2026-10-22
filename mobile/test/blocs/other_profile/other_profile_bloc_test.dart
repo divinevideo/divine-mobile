@@ -1638,8 +1638,338 @@ void main() {
         },
       );
 
+      OtherProfileBloc createSupportBloc() => OtherProfileBloc(
+        profileRepository: mockProfileRepository,
+        pubkey: testPubkey,
+        contentBlocklistRepository: mockBlocklistRepository,
+        currentUserPubkey: testCurrentUserPubkey,
+        followRepository: mockFollowRepository,
+        loadSupportLinks: true,
+      );
+
+      void stubSupportReads(UserProfile normal, Future<UserProfile?> raw) {
+        when(() => mockProfileRepository.getCachedProfile(pubkey: testPubkey))
+            .thenAnswer((_) async => null);
+        when(() => mockProfileRepository.fetchFreshProfile(pubkey: testPubkey))
+            .thenAnswer((_) async => normal);
+        when(
+          () => mockProfileRepository.fetchFreshProfile(
+            pubkey: testPubkey,
+            requireRawKind0: true,
+            rawKind0RetryDelays: const [],
+          ),
+        ).thenAnswer((_) => raw);
+      }
+
+      test(
+        'loaded state distinguishes changed support metadata for one event',
+        () {
+          final normal = createTestProfile();
+          final withLinks = normal.copyWith(
+            rawData: relayProfileWithLinks().rawData,
+          );
+          expect(
+            OtherProfileLoaded(profile: normal, isFresh: true),
+            isNot(OtherProfileLoaded(profile: withLinks, isFresh: true)),
+          );
+        },
+      );
+
+      test('raw failure preserves the fresh readable profile', () async {
+        final raw = Completer<UserProfile?>();
+        final normal = createTestProfile(eventId: 'rest-$testPubkey');
+        stubSupportReads(normal, raw.future);
+        final bloc = createSupportBloc();
+        addTearDown(bloc.close);
+        bloc.add(const OtherProfileLoadRequested());
+        await pumpEventQueue();
+        raw.completeError(Exception('relay unavailable'));
+        await pumpEventQueue();
+        expect(bloc.state, OtherProfileLoaded(profile: normal, isFresh: true));
+      });
+
+      const claim = IdentityClaim(
+        pubkey: testPubkey,
+        platform: 'github',
+        identity: 'creator',
+        proof: 'https://example.com/proof',
+      );
       blocTest<OtherProfileBloc, OtherProfileState>(
-        'asks the repository to retry raw Kind 0 when monetization is on',
+        'enriches only support links and preserves stats and verified claims',
+        seed: () => OtherProfileLoaded(
+          profile: createTestProfile(),
+          isFresh: true,
+          verifiedClaims: const [claim],
+        ),
+        build: () {
+          final normal = createTestProfile(eventId: 'rest-$testPubkey')
+              .copyWith(
+                rawData: const {'follower_count': 42, 'video_count': 9},
+              );
+          stubSupportReads(normal, Future.value(relayProfileWithLinks()));
+          return createSupportBloc();
+        },
+        act: (bloc) => bloc.add(const OtherProfileRefreshRequested()),
+        verify: (bloc) {
+          final loaded = bloc.state as OtherProfileLoaded;
+          expect(loaded.profile.enabledMonetizationLinks, hasLength(1));
+          expect(loaded.profile.restFollowerCount, 42);
+          expect(loaded.profile.restVideoCount, 9);
+          expect(loaded.profile.eventId, 'rest-$testPubkey');
+          expect(loaded.profile.createdAt, DateTime(2024));
+          expect(loaded.verifiedClaims, const [claim]);
+          expect(loaded.isFresh, isTrue);
+        },
+      );
+
+      test(
+        'raw enrichment preserves claims resolved while its read was pending',
+        () async {
+          final raw = Completer<UserProfile?>();
+          final claims = _MockIdentityClaimsRepository();
+          stubSupportReads(
+            createTestProfile(eventId: 'rest-$testPubkey'),
+            raw.future,
+          );
+          when(() => mockProfileRepository.cachedIdentityTags(testPubkey))
+              .thenAnswer((_) async => null);
+          when(
+            () => mockProfileRepository.freshIdentityTags(
+              pubkey: testPubkey,
+              kind0Tags: const [],
+            ),
+          ).thenAnswer((_) async => const []);
+          when(
+            () =>
+                claims.cachedVerifiedClaims(pubkey: testPubkey, tags: const []),
+          ).thenAnswer((_) async => null);
+          when(
+            () => claims.resolveClaims(
+              pubkey: testPubkey,
+              freshTags: const [],
+              cached: null,
+              renderedClaims: const [],
+            ),
+          ).thenAnswer((_) async => const [claim]);
+          final bloc = OtherProfileBloc(
+            profileRepository: mockProfileRepository,
+            pubkey: testPubkey,
+            contentBlocklistRepository: mockBlocklistRepository,
+            currentUserPubkey: testCurrentUserPubkey,
+            followRepository: mockFollowRepository,
+            loadSupportLinks: true,
+            identityClaimsRepository: claims,
+          );
+          addTearDown(bloc.close);
+          bloc.add(const OtherProfileLoadRequested());
+          await pumpEventQueue();
+          expect((bloc.state as OtherProfileLoaded).verifiedClaims, const [
+            claim,
+          ]);
+          raw.complete(relayProfileWithLinks());
+          await pumpEventQueue();
+          final loaded = bloc.state as OtherProfileLoaded;
+          expect(loaded.profile.enabledMonetizationLinks, hasLength(1));
+          expect(loaded.verifiedClaims, const [claim]);
+        },
+      );
+
+      test('late initial load cannot replace a newer refresh', () async {
+        final initial = Completer<UserProfile?>();
+        final refreshed = createTestProfile(displayName: 'Refreshed');
+        when(() => mockProfileRepository.getCachedProfile(pubkey: testPubkey))
+            .thenAnswer((_) async => null);
+        var read = 0;
+        when(() => mockProfileRepository.fetchFreshProfile(pubkey: testPubkey))
+            .thenAnswer(
+              (_) => read++ == 0 ? initial.future : Future.value(refreshed),
+            );
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        bloc.add(const OtherProfileLoadRequested());
+        await pumpEventQueue();
+        bloc.add(const OtherProfileRefreshRequested());
+        await pumpEventQueue();
+        initial.complete(createTestProfile(displayName: 'Older initial load'));
+        await pumpEventQueue();
+        expect(
+          bloc.state,
+          OtherProfileLoaded(profile: refreshed, isFresh: true),
+        );
+        expect(
+          (bloc.state as OtherProfileLoaded).profile.displayName,
+          'Refreshed',
+        );
+      });
+
+      test('late raw enrichment cannot replace a newer refresh', () async {
+        final olderRaw = Completer<UserProfile?>();
+        final newerRaw = Completer<UserProfile?>();
+        final normal = createTestProfile(eventId: 'rest-$testPubkey');
+        stubSupportReads(normal, olderRaw.future);
+        var rawRead = 0;
+        when(
+          () => mockProfileRepository.fetchFreshProfile(
+            pubkey: testPubkey,
+            requireRawKind0: true,
+            rawKind0RetryDelays: const [],
+          ),
+        ).thenAnswer((_) => rawRead++ == 0 ? olderRaw.future : newerRaw.future);
+        final bloc = createSupportBloc();
+        addTearDown(bloc.close);
+        bloc.add(const OtherProfileLoadRequested());
+        await pumpEventQueue();
+        final refreshed = normal.copyWith(displayName: 'Updated name');
+        when(() => mockProfileRepository.fetchFreshProfile(pubkey: testPubkey))
+            .thenAnswer((_) async => refreshed);
+        bloc.add(const OtherProfileRefreshRequested());
+        await pumpEventQueue();
+        newerRaw.complete(createTestProfile());
+        await pumpEventQueue();
+        olderRaw.complete(relayProfileWithLinks());
+        await pumpEventQueue();
+        expect(
+          bloc.state,
+          OtherProfileLoaded(profile: refreshed, isFresh: true),
+        );
+      });
+
+      test('late raw enrichment cannot restore a deleted profile', () async {
+        final raw = Completer<UserProfile?>();
+        stubSupportReads(createTestProfile(), raw.future);
+        final bloc = createSupportBloc();
+        addTearDown(bloc.close);
+        bloc.add(const OtherProfileLoadRequested());
+        await pumpEventQueue();
+        when(() => mockProfileRepository.isVanished(testPubkey))
+            .thenReturn(true);
+        bloc.add(const OtherProfileRefreshRequested());
+        await pumpEventQueue();
+        raw.complete(relayProfileWithLinks());
+        await pumpEventQueue();
+        expect(
+          bloc.state,
+          const OtherProfileError(errorType: OtherProfileErrorType.notFound),
+        );
+      });
+
+      test(
+        'raw read discovering deletion removes the displayed profile',
+        () async {
+          final raw = Completer<UserProfile?>();
+          stubSupportReads(createTestProfile(), raw.future);
+          final bloc = createSupportBloc();
+          addTearDown(bloc.close);
+          bloc.add(const OtherProfileLoadRequested());
+          await pumpEventQueue();
+          when(() => mockProfileRepository.isVanished(testPubkey))
+              .thenReturn(true);
+          raw.complete(null);
+          await pumpEventQueue();
+          expect(
+            bloc.state,
+            const OtherProfileError(errorType: OtherProfileErrorType.notFound),
+          );
+        },
+      );
+
+      test(
+        'older relay metadata cannot replace newer visible raw links',
+        () async {
+          final normal = relayProfileWithLinks();
+          stubSupportReads(normal, Future.value(createTestProfile()));
+          final bloc = createSupportBloc();
+          addTearDown(bloc.close);
+          bloc.add(const OtherProfileLoadRequested());
+          await pumpEventQueue();
+          expect(
+            bloc.state,
+            OtherProfileLoaded(profile: normal, isFresh: true),
+          );
+        },
+      );
+
+      test(
+        'REST fallback timestamp does not block support enrichment',
+        () async {
+          final normal = UserProfile(
+            pubkey: testPubkey,
+            createdAt: DateTime(2030),
+            eventId: 'rest-$testPubkey',
+            rawData: const {},
+          );
+          stubSupportReads(normal, Future.value(relayProfileWithLinks()));
+          final bloc = createSupportBloc();
+          addTearDown(bloc.close);
+          bloc.add(const OtherProfileLoadRequested());
+          await pumpEventQueue();
+          expect(
+            (bloc.state as OtherProfileLoaded).profile.enabledMonetizationLinks,
+            hasLength(1),
+          );
+        },
+      );
+
+      test('closed bloc ignores a late raw result without errors', () async {
+        final observer = _ErrorCapturingObserver();
+        final previousObserver = Bloc.observer;
+        Bloc.observer = observer;
+        addTearDown(() => Bloc.observer = previousObserver);
+        final raw = Completer<UserProfile?>();
+        stubSupportReads(createTestProfile(), raw.future);
+        final bloc = createSupportBloc();
+        bloc.add(const OtherProfileLoadRequested());
+        await pumpEventQueue();
+        final closing = bloc.close();
+        raw.complete(relayProfileWithLinks());
+        await closing;
+        await pumpEventQueue();
+        expect(observer.errors, isEmpty);
+      });
+
+      test(
+        'shows a cold normal profile while raw support links are pending',
+        () async {
+          final raw = Completer<UserProfile?>();
+          final normal = createTestProfile(eventId: 'rest-$testPubkey');
+          when(() => mockProfileRepository.getCachedProfile(pubkey: testPubkey))
+              .thenAnswer((_) async => null);
+          when(
+            () => mockProfileRepository.fetchFreshProfile(pubkey: testPubkey),
+          ).thenAnswer((_) async => normal);
+          when(
+            () => mockProfileRepository.fetchFreshProfile(
+              pubkey: testPubkey,
+              requireRawKind0: true,
+              rawKind0RetryDelays: const [],
+            ),
+          ).thenAnswer((_) => raw.future);
+          final bloc = OtherProfileBloc(
+            profileRepository: mockProfileRepository,
+            pubkey: testPubkey,
+            contentBlocklistRepository: mockBlocklistRepository,
+            currentUserPubkey: testCurrentUserPubkey,
+            followRepository: mockFollowRepository,
+            loadSupportLinks: true,
+          );
+          addTearDown(() async {
+            if (!raw.isCompleted) raw.complete(null);
+            await bloc.close();
+          });
+          bloc.add(const OtherProfileLoadRequested());
+          await pumpEventQueue();
+          expect(bloc.state, isA<OtherProfileLoaded>());
+          expect((bloc.state as OtherProfileLoaded).profile, normal);
+          expect((bloc.state as OtherProfileLoaded).isFresh, isTrue);
+          raw.complete(null);
+          await pumpEventQueue();
+          expect((bloc.state as OtherProfileLoaded).profile, normal);
+          expect((bloc.state as OtherProfileLoaded).isFresh, isTrue);
+        },
+      );
+
+      blocTest<OtherProfileBloc, OtherProfileState>(
+        'reads raw Kind 0 once after the normal profile when support links are on',
         build: () {
           when(
             () => mockProfileRepository.getCachedProfile(
@@ -1661,8 +1991,7 @@ void main() {
             contentBlocklistRepository: mockBlocklistRepository,
             currentUserPubkey: testCurrentUserPubkey,
             followRepository: mockFollowRepository,
-            requireRawKind0: true,
-            rawKind0RetryDelays: const [Duration(milliseconds: 1)],
+            loadSupportLinks: true,
           );
         },
         act: (bloc) => bloc.add(const OtherProfileLoadRequested()),
@@ -1676,7 +2005,6 @@ void main() {
             () => mockProfileRepository.fetchFreshProfile(
               pubkey: testPubkey,
               requireRawKind0: true,
-              rawKind0RetryDelays: const [Duration(milliseconds: 1)],
             ),
           ).called(1);
         },
@@ -1705,7 +2033,6 @@ void main() {
             contentBlocklistRepository: mockBlocklistRepository,
             currentUserPubkey: testCurrentUserPubkey,
             followRepository: mockFollowRepository,
-            rawKind0RetryDelays: const [Duration(milliseconds: 1)],
           );
         },
         act: (bloc) => bloc.add(const OtherProfileLoadRequested()),

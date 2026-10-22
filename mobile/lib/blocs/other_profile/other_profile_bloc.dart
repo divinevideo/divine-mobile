@@ -31,21 +31,20 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
     required ContentBlocklistRepository contentBlocklistRepository,
     required String currentUserPubkey,
     required FollowRepository followRepository,
-    bool requireRawKind0 = false,
+    bool loadSupportLinks = false,
     IdentityClaimsRepository? identityClaimsRepository,
-    List<Duration> rawKind0RetryDelays = _defaultRawKind0RetryDelays,
   }) : _profileRepository = profileRepository,
        _blocklistRepository = contentBlocklistRepository,
        _currentUserPubkey = currentUserPubkey,
        _followRepository = followRepository,
-       _requireRawKind0 = requireRawKind0,
+       _loadSupportLinks = loadSupportLinks,
        _identityClaimsRepository = identityClaimsRepository,
-       _rawKind0RetryDelays = rawKind0RetryDelays,
        super(const OtherProfileInitial()) {
     on<OtherProfileLoadRequested>(_onLoadRequested);
     on<OtherProfileRefreshRequested>(_onRefreshRequested);
     on<OtherProfileBlockRequested>(_onBlockRequested);
     on<OtherProfileUnblockRequested>(_onUnblockRequested);
+    on<_SupportLinksRequested>(_onSupportLinksRequested);
     on<VerifiedClaimsRequested>(
       _onVerifiedClaimsRequested,
       transformer: restartable(),
@@ -56,18 +55,10 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
   final ContentBlocklistRepository _blocklistRepository;
   final String _currentUserPubkey;
   final FollowRepository _followRepository;
-  final bool _requireRawKind0;
+  final bool _loadSupportLinks;
   final IdentityClaimsRepository? _identityClaimsRepository;
 
-  /// Repository-owned raw Kind 0 retry delays. Injectable so tests don't wait
-  /// on real relay backoff.
-  final List<Duration> _rawKind0RetryDelays;
-
-  static const _defaultRawKind0RetryDelays = [
-    Duration(milliseconds: 600),
-    Duration(milliseconds: 1200),
-    Duration(milliseconds: 2400),
-  ];
+  int _profileRequest = 0;
 
   /// The pubkey of the profile being viewed.
   final String pubkey;
@@ -100,6 +91,7 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
     OtherProfileLoadRequested event,
     Emitter<OtherProfileState> emit,
   ) async {
+    final request = ++_profileRequest;
     // Known-deleted accounts short-circuit before the cache read: the durable
     // vanish marker is hydrated at startup, so a cold start on a deleted
     // profile resolves without touching the network.
@@ -112,7 +104,7 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
     final cachedProfile = await _profileRepository.getCachedProfile(
       pubkey: pubkey,
     );
-    if (isClosed) return;
+    if (!_isCurrentRequest(request, emit)) return;
     // Carry claims through the reload so chips do not vanish and re-pop
     // while the verifier revalidates (#3936). Read AFTER the await so an
     // authoritative claims resolve landing during the cache read is not
@@ -126,8 +118,10 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
     );
 
     try {
-      final freshProfile = await _fetchFreshProfile();
-      if (isClosed) return;
+      final freshProfile = await _profileRepository.fetchFreshProfile(
+        pubkey: pubkey,
+      );
+      if (!_isCurrentRequest(request, emit)) return;
       final latestClaims = _claimsFromState(state);
       if (freshProfile != null) {
         emit(
@@ -138,6 +132,7 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
           ),
         );
         add(const VerifiedClaimsRequested());
+        _requestSupportLinks(request);
       } else if (_profileRepository.isVanished(pubkey)) {
         // The fetch discovered a deletion and evicted the cache. A null result
         // here is not the same as a network miss, so the stale-cache fallback
@@ -154,13 +149,14 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
           ),
         );
         add(const VerifiedClaimsRequested());
+        _requestSupportLinks(request);
       } else {
         emit(
           const OtherProfileError(errorType: OtherProfileErrorType.notFound),
         );
       }
     } catch (e) {
-      if (isClosed) return;
+      if (!_isCurrentRequest(request, emit)) return;
       if (cachedProfile != null && !_profileRepository.isVanished(pubkey)) {
         emit(
           OtherProfileLoaded(
@@ -170,6 +166,7 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
           ),
         );
         add(const VerifiedClaimsRequested());
+        _requestSupportLinks(request);
       } else if (_profileRepository.isVanished(pubkey)) {
         emit(
           const OtherProfileError(errorType: OtherProfileErrorType.notFound),
@@ -188,6 +185,7 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
     OtherProfileRefreshRequested event,
     Emitter<OtherProfileState> emit,
   ) async {
+    final request = ++_profileRequest;
     if (_profileRepository.isVanished(pubkey)) {
       emit(const OtherProfileError(errorType: OtherProfileErrorType.notFound));
       return;
@@ -210,17 +208,20 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
     );
 
     try {
-      final freshProfile = await _fetchFreshProfile();
-      if (isClosed) return;
+      final freshProfile = await _profileRepository.fetchFreshProfile(
+        pubkey: pubkey,
+      );
+      if (!_isCurrentRequest(request, emit)) return;
       if (freshProfile != null) {
         emit(
           OtherProfileLoaded(
             profile: freshProfile,
             isFresh: true,
-            verifiedClaims: currentClaims,
+            verifiedClaims: _claimsFromState(state),
           ),
         );
         add(const VerifiedClaimsRequested());
+        _requestSupportLinks(request);
       } else {
         emit(
           OtherProfileError(
@@ -236,16 +237,21 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
         );
       }
     } catch (e) {
-      if (isClosed) return;
-      if (currentProfile != null) {
+      if (!_isCurrentRequest(request, emit)) return;
+      if (_profileRepository.isVanished(pubkey)) {
+        emit(
+          const OtherProfileError(errorType: OtherProfileErrorType.notFound),
+        );
+      } else if (currentProfile != null) {
         emit(
           OtherProfileLoaded(
             profile: currentProfile,
             isFresh: false,
-            verifiedClaims: currentClaims,
+            verifiedClaims: _claimsFromState(state),
           ),
         );
         add(const VerifiedClaimsRequested());
+        _requestSupportLinks(request);
       } else {
         emit(
           const OtherProfileError(
@@ -256,15 +262,62 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
     }
   }
 
-  Future<UserProfile?> _fetchFreshProfile() {
-    if (!_requireRawKind0) {
-      return _profileRepository.fetchFreshProfile(pubkey: pubkey);
+  bool _isCurrentRequest(int request, Emitter<OtherProfileState> emit) =>
+      !isClosed && !emit.isDone && request == _profileRequest;
+
+  void _requestSupportLinks(int request) {
+    if (_loadSupportLinks) add(_SupportLinksRequested(request));
+  }
+
+  /// Optional raw metadata must never hold the ordinary profile read open.
+  /// The repository owns transport, fallback, and authoritative vanish state.
+  Future<void> _onSupportLinksRequested(
+    _SupportLinksRequested event,
+    Emitter<OtherProfileState> emit,
+  ) async {
+    if (!_isCurrentRequest(event.request, emit)) return;
+    UserProfile? raw;
+    try {
+      raw = await _profileRepository.fetchFreshProfile(
+        pubkey: pubkey,
+        requireRawKind0: true,
+      );
+    } on Exception catch (error, stackTrace) {
+      if (!_isCurrentRequest(event.request, emit)) return;
+      if (_profileRepository.isVanished(pubkey)) {
+        emit(
+          const OtherProfileError(errorType: OtherProfileErrorType.notFound),
+        );
+      }
+      // Enrichment failure leaves the readable profile and freshness intact.
+      addError(error, stackTrace);
+      return;
     }
-    return _profileRepository.fetchFreshProfile(
-      pubkey: pubkey,
-      requireRawKind0: true,
-      rawKind0RetryDelays: _rawKind0RetryDelays,
-    );
+    if (isClosed || emit.isDone) return;
+    // A raw read can discover an authoritative deletion even when a newer
+    // display request has already completed. Never keep that account visible.
+    if (_profileRepository.isVanished(pubkey)) {
+      emit(const OtherProfileError(errorType: OtherProfileErrorType.notFound));
+      return;
+    }
+    if (!_isCurrentRequest(event.request, emit) || raw == null) return;
+    final latest = state;
+    if (latest is! OtherProfileLoaded || raw.pubkey != pubkey) return;
+    // REST projections may carry a synthetic DateTime.now timestamp. Only a
+    // real Kind 0 timestamp can establish that the visible metadata is newer.
+    if (!latest.profile.isRestProjection &&
+        raw.createdAt.isBefore(latest.profile.createdAt)) {
+      return;
+    }
+    final metadata = {...latest.profile.rawData}
+      ..remove(divineMonetizationLinksKey);
+    if (raw.rawData.containsKey(divineMonetizationLinksKey)) {
+      metadata[divineMonetizationLinksKey] =
+          raw.rawData[divineMonetizationLinksKey];
+    }
+    // Copy only support metadata. Keep the fast profile's fields, statistics,
+    // provenance, freshness, and claims that resolved while the raw read ran.
+    emit(latest.copyWith(profile: latest.profile.copyWith(rawData: metadata)));
   }
 
   Future<void> _onVerifiedClaimsRequested(

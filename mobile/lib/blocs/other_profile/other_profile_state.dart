@@ -64,15 +64,24 @@ final class OtherProfileLoaded extends OtherProfileState {
   final List<IdentityClaim> verifiedClaims;
 
   /// Returns a copy of this state with the given fields replaced.
-  OtherProfileLoaded copyWith({List<IdentityClaim>? verifiedClaims}) =>
-      OtherProfileLoaded(
-        profile: profile,
-        isFresh: isFresh,
-        verifiedClaims: verifiedClaims ?? this.verifiedClaims,
-      );
+  OtherProfileLoaded copyWith({
+    UserProfile? profile,
+    List<IdentityClaim>? verifiedClaims,
+  }) => OtherProfileLoaded(
+    profile: profile ?? this.profile,
+    isFresh: isFresh,
+    verifiedClaims: verifiedClaims ?? this.verifiedClaims,
+  );
 
   @override
-  List<Object?> get props => [profile, isFresh, verifiedClaims];
+  // UserProfile equality uses only pubkey/eventId. Optional support metadata
+  // can arrive later for that same event and must still rebuild the profile.
+  List<Object?> get props => [
+    profile,
+    isFresh,
+    verifiedClaims,
+    profile.rawData[divineMonetizationLinksKey],
+  ];
 }
 
 /// Error state - may still contain cached profile to display.

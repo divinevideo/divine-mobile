@@ -295,9 +295,6 @@ void main() {
         isFeatureEnabledProvider(
           FeatureFlag.profileMonetizationLinks,
         ).overrideWith((ref) => false),
-        isFeatureEnabledProvider(
-          FeatureFlag.curatedLists,
-        ).overrideWith((ref) => false),
         // Element-level, since the standard overrides already claim the
         // family and Riverpod rejects a second family override.
         if (isVanished)
@@ -461,7 +458,7 @@ void main() {
       're-fetches raw Kind 0 when the monetization flag flips while mounted',
       (tester) async {
         // Regression: the flag both gates the Tip/Support button AND gates
-        // OtherProfileBloc.requireRawKind0 (relay Kind 0, which carries the
+        // OtherProfileBloc.loadSupportLinks (relay Kind 0, which carries the
         // monetization links, vs the REST projection that strips them). A
         // keyless BlocProvider captured the first flag value forever, so
         // enabling the flag on an already-mounted profile never re-fetched the
@@ -543,9 +540,6 @@ void main() {
             ).overrideWith((ref) async => profile()),
             isFeatureEnabledProvider(
               FeatureFlag.videoReplies,
-            ).overrideWith((ref) => false),
-            isFeatureEnabledProvider(
-              FeatureFlag.curatedLists,
             ).overrideWith((ref) => false),
             isFeatureEnabledProvider(
               FeatureFlag.profileMonetizationLinks,

@@ -55,3 +55,14 @@ final class OtherProfileUnblockRequested extends OtherProfileEvent {
 final class VerifiedClaimsRequested extends OtherProfileEvent {
   const VerifiedClaimsRequested();
 }
+
+/// Background support metadata for one display request; superseded requests
+/// cannot overwrite a newer load or refresh.
+final class _SupportLinksRequested extends OtherProfileEvent {
+  const _SupportLinksRequested(this.request);
+
+  final int request;
+
+  @override
+  List<Object?> get props => [request];
+}
