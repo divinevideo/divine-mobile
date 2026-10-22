@@ -676,46 +676,57 @@ void main() {
       );
 
       for (final anotherStore in [false, true]) {
-        test(
-          'does not decode a video retracted during its record write after rows '
-          'are cleared (another store: $anotherStore)',
-          () async {
-            final started = Completer<void>();
-            final resume = Completer<void>();
-            final message = _videoMessage();
-            readFrame = (_) async => null;
-            var retracted = false;
-            await IOOverrides.runWithIOOverrides(
-              () async {
-                final store = createStore(
-                  isMessageGone: (_) async => retracted,
-                );
-                final cleaner = anotherStore
-                    ? createStore(isMessageGone: (_) async => retracted)
-                    : store;
-                final preview = store.previewFor(message);
-                await started.future;
-                retracted = true;
-                await cleaner.prune();
-                retracted = false;
-                resume.complete();
-                expect(await preview, isNull);
-                expect(frameReads, equals(0));
-                await store.prune();
-                expect(keptFiles(), isEmpty);
-              },
-              _WriteHooks(
-                (_) {},
-                waitBeforeWrite: (part) async {
-                  if (part.path.contains('${message.id}.conversation.')) {
-                    started.complete();
-                    await resume.future;
+        for (final tapped in [false, true]) {
+          test(
+            'refuses a video retracted during its record write after rows '
+            'are cleared (another store: $anotherStore, tap: $tapped)',
+            () async {
+              final started = Completer<void>();
+              final resume = Completer<void>();
+              final message = _videoMessage();
+              readFrame = (_) async => null;
+              var retracted = false;
+              await IOOverrides.runWithIOOverrides(
+                () async {
+                  final store = createStore(
+                    isMessageGone: (_) async => retracted,
+                  );
+                  final cleaner = anotherStore
+                      ? createStore(isMessageGone: (_) async => retracted)
+                      : store;
+                  final obtaining = tapped
+                      ? store.videoFor(message)
+                      : store.previewFor(message);
+                  await started.future;
+                  retracted = true;
+                  await cleaner.prune();
+                  retracted = false;
+                  resume.complete();
+                  if (tapped) {
+                    await expectLater(
+                      obtaining,
+                      throwsA(isA<DmVideoGoneException>()),
+                    );
+                  } else {
+                    expect(await obtaining, isNull);
                   }
+                  expect(frameReads, equals(0));
+                  await store.prune();
+                  expect(keptFiles(), isEmpty);
                 },
-              ),
-            );
-          },
-        );
+                _WriteHooks(
+                  (_) {},
+                  waitBeforeWrite: (part) async {
+                    if (part.path.contains('${message.id}.conversation.')) {
+                      started.complete();
+                      await resume.future;
+                    }
+                  },
+                ),
+              );
+            },
+          );
+        }
       }
 
       test(

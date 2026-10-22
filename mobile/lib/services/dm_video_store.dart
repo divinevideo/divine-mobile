@@ -1011,7 +1011,9 @@ class DmVideoStore {
   Future<void> _refuseIfGone(DmMessage message, File video) async {
     final bool gone;
     try {
-      gone = await _gone.isGone(message, video.parent);
+      gone =
+          _goneWhileLeased.contains(video.path) ||
+          await _gone.isGone(message, video.parent);
     } on Object catch (error, stackTrace) {
       Log.warning(
         'Could not tell whether a video DM message is gone, so its video is '
@@ -1025,7 +1027,7 @@ class DmVideoStore {
         mayPass: true,
       );
     }
-    if (!gone) return;
+    if (!gone && !_goneWhileLeased.contains(video.path)) return;
     _goneWhileLeased.add(video.path);
     // Other stores can still be downloading it, with no file on disk yet.
     _markGoneInStores(video);
