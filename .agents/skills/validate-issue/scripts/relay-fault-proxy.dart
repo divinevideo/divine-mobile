@@ -133,9 +133,28 @@ Future<void> main(List<String> args) async {
     }
     _log({'event': 'client-connected'});
 
+    // Set when the relay leg ends and the proxy closes the client. From then
+    // on client.add throws, while client.closeCode stays null until the
+    // client answers the close, so closeCode alone cannot tell.
+    var relayEnded = false;
+    void endRelay() {
+      relayEnded = true;
+      client.close();
+    }
+
     client.listen(
       (data) {
         final type = _frameType(data);
+        if (relayEnded) {
+          _log({
+            'dir': 'c>r',
+            'type': type,
+            'bytes': _size(data),
+            'action': 'dropped: relay closed',
+            'frame': _frame(data),
+          });
+          return;
+        }
         final sub = type == 'REQ' ? _subscriptionId(data as String) : null;
         if (sub != null && closeCount > 0) {
           closeCount--;
@@ -180,7 +199,11 @@ Future<void> main(List<String> args) async {
               await Future<void>.delayed(Duration(milliseconds: hold));
               action = 'delayed ${hold}ms';
             }
-            if (client.closeCode == null) client.add(data);
+            if (relayEnded || client.closeCode != null) {
+              action = 'dropped: client closed';
+            } else {
+              client.add(data);
+            }
           }
           _log({
             'dir': 'r>c',
@@ -191,19 +214,19 @@ Future<void> main(List<String> args) async {
           });
         });
       },
-      onDone: client.close,
-      onError: (Object _) => client.close(),
+      onDone: endRelay,
+      onError: (Object _) => endRelay(),
     );
   }
 
   // Each connection is served on its own: a stalled upstream connect for one
-  // client must not hold up the next client's handshake.
+  // client must not hold up the next client's handshake. Its own error zone
+  // also catches what its socket listeners throw later, so a failure in one
+  // connection is logged and never ends the proxy.
   await for (final request in server) {
-    unawaited(
-      serve(request).catchError(
-        (Object error) =>
-            _log({'event': 'connection-failed', 'error': '$error'}),
-      ),
+    runZonedGuarded(
+      () => unawaited(serve(request)),
+      (error, _) => _log({'event': 'connection-failed', 'error': '$error'}),
     );
   }
 }
