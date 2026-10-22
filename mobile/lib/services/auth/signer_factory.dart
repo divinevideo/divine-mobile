@@ -249,9 +249,8 @@ class SignerFactory {
         eventTags.add(['expiration', expirationTimestamp.toString()]);
       }
 
-      if (!Nip89ClientTag.shouldSkipKind(kind) &&
-          !Nip89ClientTag.hasClientTag(eventTags) &&
-          await Nip89ClientTag.isEnabled()) {
+      if (!Nip89ClientTag.hasClientTag(eventTags) &&
+          await Nip89ClientTag.wantsClientTag(kind)) {
         eventTags.add(Nip89ClientTag.tag);
       }
 

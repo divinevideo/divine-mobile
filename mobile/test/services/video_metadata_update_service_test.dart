@@ -322,7 +322,6 @@ void main() {
             extraTags: const [
               ['e', audioEventId, 'wss://relay.divine.video', 'audio'],
               ['expiration', '1799999999'],
-              ['client', 'divine'],
               ['r', 'wss://relay.divine.video'],
               ['proofmode', 'proof-payload'],
               ['c2pa_manifest_id', 'manifest-123'],
@@ -343,7 +342,6 @@ void main() {
             ),
           );
           expect(capturedTags, contains(equals(['expiration', '1799999999'])));
-          expect(capturedTags, contains(equals(['client', 'divine'])));
           expect(
             capturedTags,
             contains(equals(['r', 'wss://relay.divine.video'])),
@@ -355,6 +353,32 @@ void main() {
           expect(
             capturedTags,
             contains(equals(['c2pa_manifest_id', 'manifest-123'])),
+          );
+        },
+      );
+
+      test(
+        'drops the original client tag so the signing path attributes the '
+        'edit per the current preference (#8176)',
+        () async {
+          final video = _testVideo(
+            extraTags: const [
+              ['client', 'divine'],
+            ],
+          );
+
+          final result = await service.updateVideo(
+            originalVideo: video,
+            editorState: VideoEditorProviderState(),
+            initialCollaboratorPubkeys: const {},
+          );
+
+          expect(result, isA<VideoUpdateSuccess>());
+          expect(
+            capturedTags.where(
+              (tag) => tag.isNotEmpty && tag.first == 'client',
+            ),
+            isEmpty,
           );
         },
       );

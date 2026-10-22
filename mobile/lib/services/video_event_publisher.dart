@@ -543,7 +543,7 @@ class VideoEventPublisher {
       // A scheduled post never reuses a cached event: its id is bound to the
       // chosen time, and the cached one would be a different post.
       final reusedEvent = scheduledAt == null
-          ? _loadRetryableSignedEvent(upload)
+          ? await _loadRetryableSignedEvent(upload)
           : null;
       final scheduledCreatedAt = scheduledAt == null
           ? null
@@ -783,7 +783,9 @@ class VideoEventPublisher {
     );
   }
 
-  Event? _loadRetryableSignedEvent(PendingUpload upload) {
+  /// The signed event a failed attempt left for [upload], or `null` when
+  /// there is none or it was signed under the other attribution setting.
+  Future<Event?> _loadRetryableSignedEvent(PendingUpload upload) async {
     final cachedEventId = upload.nostrEventId;
     if (cachedEventId == null || cachedEventId.isEmpty) {
       return null;
@@ -796,15 +798,34 @@ class VideoEventPublisher {
         name: _logName,
         category: LogCategory.video,
       );
-      return null;
+    } else if (await _signedUnderCurrentAttribution(cachedEvent)) {
+      Log.info(
+        'Reusing cached signed video event for retry: ${cachedEvent.id}',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      return cachedEvent;
     }
+    return null;
+  }
 
-    Log.info(
-      'Reusing cached signed video event for retry: ${cachedEvent.id}',
-      name: _logName,
-      category: LogCategory.video,
-    );
-    return cachedEvent;
+  /// Whether [cached] was signed under the client-attribution setting in
+  /// force now. Reuse skips signing, and nothing after signing may add or
+  /// remove the NIP-89 `client` tag (#8173), so an event signed under the
+  /// other setting is not reused and the retry signs afresh (#8176).
+  Future<bool> _signedUnderCurrentAttribution(Event cached) async {
+    final wantsTag = await Nip89ClientTag.wantsClientTag(cached.kind);
+    final matches = wantsTag == Nip89ClientTag.hasClientTag(cached.tags);
+    if (!matches) {
+      Log.info(
+        'Discarding cached signed video event ${cached.id}: client '
+        'attribution is now ${wantsTag ? 'on' : 'off'} but it was signed '
+        '${wantsTag ? 'without' : 'with'} the client tag; signing afresh',
+        name: _logName,
+        category: LogCategory.video,
+      );
+    }
+    return matches;
   }
 
   Future<void> _persistRetryableSignedEvent(

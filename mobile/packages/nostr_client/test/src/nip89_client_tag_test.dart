@@ -104,6 +104,58 @@ void main() {
     });
   });
 
+  group('wantsClientTag', () {
+    test('is true for a public kind while attribution is on', () async {
+      expect(await Nip89ClientTag.wantsClientTag(EventKind.textNote), isTrue);
+    });
+
+    test('is false once the user has opted out', () async {
+      await Nip89ClientTag.setEnabled(enabled: false);
+
+      expect(await Nip89ClientTag.wantsClientTag(EventKind.textNote), isFalse);
+    });
+
+    test(
+      'is false for an excluded wrapper kind even while attribution is on',
+      () async {
+        expect(
+          await Nip89ClientTag.wantsClientTag(EventKind.giftWrap),
+          isFalse,
+        );
+      },
+    );
+  });
+
+  group('withoutClientTag', () {
+    test('drops every client tag and keeps the other tags in order', () {
+      final tags = <List<String>>[
+        ['d', 'video'],
+        ['client', 'OtherClient'],
+        ['title', 'hello'],
+        Nip89ClientTag.tag,
+      ];
+
+      final stripped = Nip89ClientTag.withoutClientTag(tags);
+
+      expect(stripped, [
+        ['d', 'video'],
+        ['title', 'hello'],
+      ]);
+    });
+
+    test('leaves the input list untouched', () {
+      final tags = <List<String>>[
+        ['d', 'video'],
+        Nip89ClientTag.tag,
+      ];
+
+      Nip89ClientTag.withoutClientTag(tags);
+
+      expect(tags, hasLength(2));
+      expect(Nip89ClientTag.hasClientTag(tags), isTrue);
+    });
+  });
+
   group('NostrClient publish augmentation', () {
     late _MockNostr mockNostr;
     late _MockRelayManager mockRelayManager;

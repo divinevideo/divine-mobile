@@ -90,7 +90,6 @@ void main() {
       ['title', 'Test Video'],
       ['published_at', '1700000000'],
       ['t', 'test'],
-      Nip89ClientTag.tag,
     ];
     const rawEventCreatedAt = 4102444800;
 
@@ -117,6 +116,47 @@ void main() {
         createdAt: 1700000001,
       );
     }
+
+    test('drops the original client tag before signing (#8176)', () async {
+      late List<List<String>> capturedTags;
+      when(
+        () => mockAuthService.createAndSignEvent(
+          kind: any(named: 'kind'),
+          content: any(named: 'content'),
+          tags: any(named: 'tags'),
+          createdAt: any(named: 'createdAt'),
+        ),
+      ).thenAnswer((invocation) async {
+        capturedTags = invocation.namedArguments[#tags] as List<List<String>>;
+        return createSignedEvent(capturedTags);
+      });
+      when(
+        () => mockNostrClient.publishEventAwaitOk(
+          any(),
+          timeout: any(named: 'timeout'),
+        ),
+      ).thenAnswer(
+        (invocation) async => PublishOutcome(
+          eventId: (invocation.positionalArguments.first as Event).id,
+          acceptedBy: const ['wss://relay.divine.video'],
+          rejectedBy: const {},
+          noResponseFrom: const [],
+        ),
+      );
+
+      await publisher.republishWithSubtitles(
+        existingEvent: existingEvent.copyWith(
+          nostrEventTags: [...existingTags, Nip89ClientTag.tag],
+        ),
+        textTrackRef: textTrackRef,
+      );
+
+      expect(
+        capturedTags.where((tag) => tag.isNotEmpty && tag.first == 'client'),
+        isEmpty,
+      );
+      expect(_containsTag(capturedTags, ['d', 'test-vine-id']), isTrue);
+    });
 
     test(
       'creates event with original tags plus text-track tag and publishes',
