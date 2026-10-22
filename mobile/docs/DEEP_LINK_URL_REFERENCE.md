@@ -369,8 +369,9 @@ Three shapes satisfy the contract, all of them already in the codebase:
 
 ### What each `extra`-bearing route loses without it
 
-All of these render and function; the hint only saves a fetch or improves the
-first frame.
+All of these render and function without it. Most hints only save a fetch or
+improve the first frame; the rest carry state the route cannot recover from its
+URL.
 
 | Route | Hint | Without it |
 |---|---|---|
