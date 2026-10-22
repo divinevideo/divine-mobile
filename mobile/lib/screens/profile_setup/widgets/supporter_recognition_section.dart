@@ -4,8 +4,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/supporter/supporter_cubit.dart';
 import 'package:openvine/blocs/supporter/supporter_state.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/l10n/supporter_failure_l10n.dart';
 import 'package:openvine/screens/profile_setup/widgets/profile_setup_rows.dart';
-import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/widgets/supporter_membership.dart';
 
 /// Whether a supporter's halo and wings show on their profile to others.
