@@ -136,17 +136,11 @@ accountEnforcementStatusProvider =
       return status;
     }, retry: (_, _) => null);
 
-final Provider<bool> isAccountEnforcedProvider = Provider.autoDispose<bool>((
-  ref,
-) {
-  final pubkey = ref.watch(activeEnforcementPubkeyProvider);
-  if (pubkey == null) return false;
-  final asyncStatus = ref.watch(accountEnforcementStatusProvider);
-  final current = asyncStatus.hasValue ? asyncStatus.value : null;
-  return current?.isEnforced ??
-      ref.read(accountRestrictionMemoryProvider).read(pubkey)?.isEnforced ??
-      false;
-});
+/// Whether [lastConfirmedRestrictionProvider] knows of a restriction, so the
+/// Settings row and the profile agree with what Account Status shows.
+final Provider<bool> isAccountEnforcedProvider = Provider.autoDispose<bool>(
+  (ref) => ref.watch(lastConfirmedRestrictionProvider) != null,
+);
 
 /// The restriction this session last confirmed for the active account, or
 /// null when it knows of none.

@@ -441,4 +441,65 @@ void main() {
       },
     );
   });
+
+  // Settings and the profile header read this flag while Account Status reads
+  // the restriction itself, so the two must agree.
+  group('isAccountEnforcedProvider', () {
+    test('stays set when the read after a release fails', () async {
+      final authService = _MockAuthService();
+      when(() => authService.currentPublicKeyHex).thenReturn(_pubkeyA);
+      when(() => authService.canPublishNostrWritesNow).thenReturn(true);
+      final client = _QueueStatusClient([
+        FunnelcakeAccountStatus.suspended,
+        const AccountStatusApiException(
+          AccountStatusApiFailureKind.unavailable,
+          'offline',
+        ),
+      ]);
+      final container = _container(authService: authService, client: client);
+      addTearDown(container.dispose);
+      final launch = container.listen(
+        accountEnforcementStatusProvider,
+        (_, _) {},
+      );
+      await container.read(accountEnforcementStatusProvider.future);
+      launch.close();
+      await container.pump();
+
+      final settings = container.listen(isAccountEnforcedProvider, (_, _) {});
+      addTearDown(settings.close);
+      await expectLater(
+        container.read(accountEnforcementStatusProvider.future),
+        throwsA(isA<AccountStatusUnavailable>()),
+      );
+
+      expect(client.requestedPubkeys, [_pubkeyA, _pubkeyA]);
+      expect(container.read(isAccountEnforcedProvider), isTrue);
+    });
+
+    test('clears once Funnelcake reports the account active', () async {
+      final authService = _MockAuthService();
+      when(() => authService.currentPublicKeyHex).thenReturn(_pubkeyA);
+      when(() => authService.canPublishNostrWritesNow).thenReturn(true);
+      final client = _QueueStatusClient([FunnelcakeAccountStatus.active]);
+      final container = _container(
+        authService: authService,
+        client: client,
+        memory: AccountRestrictionMemory()
+          ..record(
+            _pubkeyA,
+            const AccountEnforcementStatus(kind: AccountEnforcementKind.banned),
+          ),
+      );
+      addTearDown(container.dispose);
+
+      final settings = container.listen(isAccountEnforcedProvider, (_, _) {});
+      addTearDown(settings.close);
+      final whileLoading = container.read(isAccountEnforcedProvider);
+      await container.read(accountEnforcementStatusProvider.future);
+
+      expect(whileLoading, isTrue);
+      expect(container.read(isAccountEnforcedProvider), isFalse);
+    });
+  });
 }
