@@ -143,7 +143,14 @@ class _LaunchStatusReaderState extends ConsumerState<_LaunchStatusReader> {
       >(
         listenWhen: (_, current) =>
             current.status == AgeReviewClosureLaunchNoticeStatus.closureFound,
-        listener: (_, _) => _showFoundClosure(),
+        listener: (_, _) {
+          // A screen pushed this frame is already in the router's
+          // configuration but not yet over the tabs, so check after the frame
+          // builds it. A post-frame callback does not ask for a frame, and an
+          // answer from the network rebuilds nothing.
+          addPostFrameCallbackIfMounted(_showFoundClosure);
+          WidgetsBinding.instance.ensureVisualUpdate();
+        },
         child: widget.child,
       );
 }

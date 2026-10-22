@@ -667,6 +667,42 @@ void main() {
       expect(find.text('account-status'), findsOneWidget);
     });
 
+    // A push is in the router's configuration at once but reaches the
+    // navigator only on the next frame, so an answer landing in between finds
+    // the tabs still in front.
+    testWidgets('waits for a screen pushed just before the answer lands', (
+      tester,
+    ) async {
+      final answer = Completer<AccountEnforcementStatus>();
+      final container = ProviderContainer(
+        overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+          accountEnforcementStatusProvider.overrideWith(
+            (ref) => answer.future,
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final router = _router();
+      addTearDown(router.dispose);
+      await _pumpApp(tester, container, router);
+
+      unawaited(router.push('/recorder'));
+      answer.complete(_closure);
+      await tester.pumpAndSettle();
+
+      expect(find.text('recorder'), findsOneWidget);
+      expect(
+        find.text('account-status', skipOffstage: false),
+        findsNothing,
+      );
+
+      router.pop();
+      await tester.pumpAndSettle();
+
+      expect(find.text('account-status'), findsOneWidget);
+    });
+
     // The account already has the explanation in front of it, so backing out
     // of that Account status must not bring a second.
     testWidgets('does not reopen an Account status the account had open', (
