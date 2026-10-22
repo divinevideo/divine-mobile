@@ -1047,8 +1047,10 @@ class DmVideoStore {
       _deleteKeptFor(keptVideo);
     } else if (_isPastMaxAge(preview)) {
       _deleteNow(preview);
-      // With no video kept either, nothing is left for its record to find.
-      if (!keptVideo.existsSync()) _deleteKeptFor(keptVideo);
+      // With no video kept or on its way, nothing is left for its record.
+      if (!keptVideo.existsSync() && !_isInUse(keptVideo)) {
+        _deleteKeptFor(keptVideo);
+      }
     }
     if (preview.existsSync()) {
       // Leased like a video, so a prune meanwhile leaves it to the release,

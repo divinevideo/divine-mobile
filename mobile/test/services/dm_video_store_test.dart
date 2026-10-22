@@ -1076,6 +1076,53 @@ void main() {
       );
 
       test(
+        'leaves a tapped download alone when the frame before it passes its '
+        'age',
+        () async {
+          final videoWriteStarted = Completer<void>();
+          final videoWritten = Completer<void>();
+          final message = _videoMessage();
+          final videoName = DmVideoStore.videoFileNameFor(message);
+          keptFile(
+            '${message.id}.preview.jpg',
+            _frame,
+            keptAt: now.subtract(
+              DmVideoStore.defaultMaxAge + const Duration(days: 1),
+            ),
+          );
+
+          await IOOverrides.runWithIOOverrides(
+            () async {
+              final store = createStore();
+              final tapped = store.videoFor(message);
+              // Its record is written; its video is about to be.
+              await videoWriteStarted.future;
+              final preview = store.previewFor(message);
+              await pumpEventQueue();
+              videoWritten.complete();
+
+              await expectLater(tapped, completes);
+              await preview;
+            },
+            _WriteHooks(
+              (_) {},
+              waitBeforeWrite: (part) async {
+                if (part.path.contains('/$videoName.')) {
+                  videoWriteStarted.complete();
+                  await videoWritten.future;
+                }
+              },
+            ),
+          );
+
+          expect(
+            File('${ownerDir().path}/${message.id}.conversation').existsSync(),
+            isTrue,
+          );
+        },
+      );
+
+      test(
         'deletes the record with a frame past its age whose video is gone',
         () async {
           final message = _videoMessage(
