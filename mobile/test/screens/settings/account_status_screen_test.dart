@@ -170,6 +170,82 @@ void main() {
         );
       });
 
+      // A closure the session already confirmed is explained before this
+      // screen's own read answers, and through a failed one. Both count, or
+      // backing out to the tabs would open the screen a second time.
+      testWidgets('counts a closure explained while the status loads', (
+        tester,
+      ) async {
+        final load = Completer<AccountEnforcementStatus>();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+              accountRestrictionMemoryProvider.overrideWithValue(
+                AccountRestrictionMemory()..record(_pubkey, _closure),
+              ),
+              accountEnforcementStatusProvider.overrideWith(
+                (ref) => load.future,
+              ),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: AccountStatusScreen(publishRestrictionConfirmed: true),
+            ),
+          ),
+        );
+        await tester.pump();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(AccountStatusScreen)),
+        );
+
+        expect(find.text(l10n.accountStatusAgeClosureHeading), findsOneWidget);
+        expect(
+          container
+              .read(ageReviewClosureLaunchShownProvider.notifier)
+              .markShown(_pubkey),
+          isFalse,
+        );
+        load.complete(_closure);
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('counts a closure kept through a failed read', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+              accountRestrictionMemoryProvider.overrideWithValue(
+                AccountRestrictionMemory()..record(_pubkey, _closure),
+              ),
+              accountEnforcementStatusProvider.overrideWith(
+                (ref) async => throw const AccountStatusUnavailable(),
+              ),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: AccountStatusScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(AccountStatusScreen)),
+        );
+
+        expect(find.text(l10n.accountStatusAgeClosureHeading), findsOneWidget);
+        expect(
+          container
+              .read(ageReviewClosureLaunchShownProvider.notifier)
+              .markShown(_pubkey),
+          isFalse,
+        );
+      });
+
       testWidgets('leaves the closure unshown for any other ban', (
         tester,
       ) async {
