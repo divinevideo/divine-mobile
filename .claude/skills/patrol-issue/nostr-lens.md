@@ -148,8 +148,10 @@ production.
 
   ```bash
   dart <skill dir>/scripts/relay-fault-proxy.dart --upstream ws://localhost:10547 --listen 47801 \
-      --drop-ok 1 > proxy.jsonl </dev/null &      # then point the client at ws://localhost:47801
+      --drop-ok 1 > <scratch>/proxy.jsonl </dev/null &      # then point the client at ws://localhost:47801
   ```
+
+  To put the app behind it, start the local stack (`mise run local_up` from `mobile/`; for the iOS simulator export `BLOSSOM_PUBLIC_URL=http://localhost:43003` first, per `AGENTS.md`), use `--upstream ws://localhost:47777` (the stack's relay, `localRelayPort` in `mobile/lib/models/environment_config.dart`), run the app with `DEFAULT_ENV=LOCAL`, and add `ws://localhost:47801` in the app's relay settings.
 
   | Flag | Reproduces |
   |---|---|
@@ -159,7 +161,7 @@ production.
   | `--refuse-connects N` | the first N connections fail (HTTP 503), then recover |
   | `--delay-ms MS` | latency on every relay frame |
 
-  It logs one JSON line per frame (direction, type, size, action, and the frame itself, untruncated so ids stay greppable), forwards the NIP-11 document, and exits by itself after `--max-seconds` (default 1800) so it cannot outlive the session. All of the above ran against `nak serve`; none of it has been pointed at the app yet. A simulator reaches it on `localhost` with `DEFAULT_ENV=LOCAL`. A phone cannot reach the Mac's `localhost`, and the app drops a cleartext `ws://` relay on any other host (`normalizeRelayUrl` in `mobile/packages/nostr_client/lib/src/relay_manager.dart` checks `isLoopbackHost`), so a phone run silently loads zero relays. It needs `--bind-all`, the Mac's LAN address, and a scratch, never-committed patch that lets that check accept the LAN address: an ask-the-user item.
+  It logs one JSON line per frame (direction, type, size, action, and the frame itself, untruncated so ids stay greppable), forwards the NIP-11 document, and exits by itself after `--max-seconds` (default 1800) so it cannot outlive the session. All of the above ran against `nak serve`; none of it, including the app wiring above, has been run against the app yet. A simulator reaches it on `localhost` with `DEFAULT_ENV=LOCAL`. A phone cannot reach the Mac's `localhost`, and the app drops a cleartext `ws://` relay on any other host (`normalizeRelayUrl` in `mobile/packages/nostr_client/lib/src/relay_manager.dart` checks `isLoopbackHost`), so a phone run silently loads zero relays. It needs `--bind-all`, the Mac's LAN address, and a scratch, never-committed patch that lets that check accept the LAN address: an ask-the-user item.
 - **Test level.** A fake relay in a package test reproduces most ordering and refusal bugs in milliseconds. Reach for the device only when the claim involves lifecycle, sockets across backgrounding, or the UI.
 
 ## 7. Safety

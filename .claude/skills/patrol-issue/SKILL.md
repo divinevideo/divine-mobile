@@ -19,9 +19,10 @@ printing its block; a block with an empty slot is an unfinished phase. Phases
 | Fact | Value |
 |---|---|
 | Org remote | `https://github.com/divinevideo` |
-| Local root | The parent of this repo's main checkout: `main=$(git worktree list --porcelain \| sed -n '1s/^worktree //p'); echo "${main%/*}"`. Sibling clones live there (`divine-funnelcake`, `keycast`, `divine-blossom`, `divine-relay-manager`, `divine-web`); `divine-context` may instead be at `DIVINE_CONTEXT_ROOT` |
+| Local root | The parent of this repo's main checkout: `main=$(git worktree list --porcelain \| sed -n '1s/^worktree //p'); echo "${main%/*}"`. Sibling clones live there (`divine-funnelcake`, `keycast`, `divine-blossom`, `divine-relay-manager`, `divine-web`; `gh repo clone divinevideo/<name> <root>/<name>` if absent); `divine-context` may instead be at `DIVINE_CONTEXT_ROOT` |
 | NIP text | `<root>/nips`, a reference clone of `nostr-protocol/nips` (`gh repo clone nostr-protocol/nips <root>/nips` if absent). Fast-forwarding it (`git -C <root>/nips pull --ff-only`) is expected, even in a read-only pass; if it will not fast-forward, read `origin/master` with `git show`. Cite `NN.md:<line>` at the SHA |
-| Trap notes | `.claude/rules/` (`self_review_checklist.md` links the rest), the domain skills in `.claude/skills/`, divine-context (`NOSTR.md`, `repo-context/divine-mobile.md`), Divine Brain, and your own agent memory for this repo if you keep one |
+| Trap notes | `.claude/rules/` (start with `self_review_checklist.md`), the domain skills in `.claude/skills/`, divine-context (`NOSTR.md`, `repo-context/divine-mobile.md`), Divine Brain, and your own agent memory for this repo if you keep one |
+| Tools | `gh`, `jq`, `mise`, `websocat`, `nak` (lens commands verified on 0.20.6), `perl`; Xcode's `devicectl` for an iPhone, `adb` for Android |
 
 ## 0. Preflight (no build yet)
 
@@ -75,8 +76,9 @@ because <file:line@sha>. Right?" Every question names the finding that makes it
 open, puts your recommendation first, and changes what you do next. A question
 you could ask of any issue is not ready.
 
-Use `AskUserQuestion`, at most 4 per call, so 3-5 rounds. One question per row
-that applies:
+Use the client's question tool (`AskUserQuestion` in Claude Code; in a client
+without one, numbered questions in chat), at most 4 per round, so 3-5 rounds.
+One question per row that applies:
 
 | Area | Confirm |
 |---|---|
@@ -118,7 +120,7 @@ Before the first build read `.claude/rules/ios_build_troubleshooting.md` and
 `flutter-lens.md` §0-1, then print:
 
 ```
-Run: sha=<…>  mode=<debug | profile>  env=<LOCAL | STAGING | PRODUCTION>  device=<udid, iOS version>
+Run: sha=<…>  mode=<debug | profile | release>  env=<LOCAL | STAGING | PRODUCTION>  device=<udid, iOS version>
 Shared hardware: phone=<free | held by session …>  simulator=<udid>  local_stack=<not needed | shared>
 Logs: <file>  categories=<…>
 ```
@@ -133,7 +135,8 @@ Logs: <file>  categories=<…>
 
 ## 4. Adjacent sweep
 
-Run the lens's adversarial rows that touch the same code path, and read the
+Run the lens rows that touch the same code path (`flutter-lens.md` §6
+adversarial rows, `nostr-lens.md` §5 failure classes), and read the
 whole run's errors (`get_runtime_errors`, uncaught exceptions, relay `OK false`
 and `CLOSED` lines), not only the lines about this issue. Each finding becomes a
 claim with its own tags. Findings outside the issue are listed, never fixed here.
@@ -167,7 +170,9 @@ Outward posts state the checks in words and carry no scores.
 ## 5-6. Fix and deliver (only after the user's go on Gate B)
 
 Own worktree from `origin/main`. **REQUIRED SUB-SKILLS:**
-superpowers:systematic-debugging, superpowers:test-driven-development, then the
+superpowers:systematic-debugging, superpowers:test-driven-development (the
+team's Superpowers baseline; install it per divine-context `SUPERPOWERS.md`),
+then the
 repo's verification ladder (`.claude/rules/self_review_checklist.md`, "Before
 committing"). The regression test sits at the lowest layer that shows the
 bug; removing the fix must turn it red (commit before mutating). Replay the
