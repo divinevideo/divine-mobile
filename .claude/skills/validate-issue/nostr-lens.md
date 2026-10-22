@@ -69,7 +69,7 @@ Three rules before any command:
 
 1. **Close stdin.** Append `</dev/null` to every `nak` call. Under zsh a backgrounded `nak serve` never starts listening without it, and `nak event` waits on stdin.
 2. **An empty result is not a zero.** Read stderr. `nak` exits 3 only when every relay fails to connect; with several relays a partial failure still exits 0. An AUTH-gated relay queried without `--auth` exits **0** with no events and `CLOSED: auth-required` on stderr. `2>/dev/null | jq -s length` turns all of these into a confident `0`. Before reporting "not on the relay", run the same query for an event you know is there.
-3. **Name the key.** Export `NOSTR_SECRET_KEY` for the designated test account, read from your credential manager rather than typed into a command. `nak` and every subcommand use it. Never pass the key as `--sec <value>`: shell expansion puts it in `argv`, where the process table and shell history expose it. Without a key `nak` signs with a per-machine default key, and a bare `nak event <relay>` publishes a kind 1 "hello from the nostr army knife" under it.
+3. **Name the key.** Export `NOSTR_SECRET_KEY` for the designated test account, read from your credential manager rather than typed into a command. `event`, `req`, `count` and `gift` read it, although `gift --help` does not list it. Never pass the key as `--sec <value>`: shell expansion puts it in `argv`, where the process table and shell history expose it. Without a key `nak` signs with a per-machine default key, and a bare `nak event <relay>` publishes a kind 1 "hello from the nostr army knife" under it.
 
 | Need | Command |
 |---|---|
