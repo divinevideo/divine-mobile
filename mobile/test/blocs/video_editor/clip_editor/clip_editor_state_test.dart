@@ -88,10 +88,11 @@ void main() {
       expect(selecting({'b'}).canBoomerangSelection, isFalse);
     });
 
-    test('is false while a picked clip waits for its recorded key', () {
-      // The bounce or the merge before it would land on the raw take.
+    test('waits for a recorded key only on a clip picked on its own', () {
+      // Bounced alone it would land on the raw take; the merge before a
+      // bounce of several bakes the key first.
       expect(selecting({'d'}).canBoomerangSelection, isFalse);
-      expect(selecting({'c', 'd'}).canBoomerangSelection, isFalse);
+      expect(selecting({'c', 'd'}).canBoomerangSelection, isTrue);
     });
   });
 }
