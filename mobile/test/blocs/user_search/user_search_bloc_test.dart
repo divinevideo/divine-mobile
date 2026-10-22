@@ -513,6 +513,48 @@ void main() {
       );
 
       test(
+        'the username owner moves ahead of shown exact matches',
+        () async {
+          final stream = StreamController<ProgressiveSearchResult>();
+          addTearDown(stream.close);
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer((_) => stream.stream);
+          final impostor = createTestProfile('e' * 64, 'Alice');
+          final owner = createTestProfile('f' * 64, 'AC555');
+          final bloc = createBloc(rankingSignalsLoader: loader);
+          addTearDown(bloc.close);
+          bloc.add(const UserSearchQueryChanged('alice'));
+          final first = bloc.stream.firstWhere((s) => s.results.isNotEmpty);
+          stream.add(
+            ProgressiveSearchResult(
+              profiles: [impostor, profiles[0]],
+              sources: const {},
+              isComplete: false,
+            ),
+          );
+          await first;
+          expect(bloc.state.results, [impostor, profiles[0]]);
+          final second = bloc.stream.firstWhere((s) => s.results.length == 3);
+          stream.add(
+            ProgressiveSearchResult(
+              profiles: [owner, impostor, profiles[0]],
+              sources: const {},
+              isComplete: true,
+              usernameOwnerPubkey: owner.pubkey,
+            ),
+          );
+          await second;
+          expect(bloc.state.results, [owner, impostor, profiles[0]]);
+        },
+      );
+
+      test(
         'resuming the same query retains the inherited progressive prefix',
         () async {
           final prefix = profiles.take(2).toList();

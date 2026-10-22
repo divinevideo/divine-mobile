@@ -31,6 +31,9 @@ UserSearchBloc                              mobile/lib/blocs/user_search/
     or blocking or muting you); the viewer stays listed on the Search page
         ↓
 ProfileRepository.searchUsersProgressive    mobile/packages/profile_repository/
+  Owner (offset==0, username-shaped query, Funnelcake available):
+                       name server /.well-known/nostr.json?name=, run beside
+                       phases 1-2; pinned only if REST search lists the owner
   Phase 1 (offset==0): UserProfilesDao.searchProfilesByIdentity
                        bounded SQLite identity query (name, display name,
                        nip05, whole pubkey; bio excluded), npub decoded to hex
@@ -56,6 +59,52 @@ keeps broader server search from filling people results with accounts whose
 visible identity does not match. Other callers of `SearchUtils.matchProfile`
 can still use that helper's broader bio matching. Callers without `sortBy`
 retain their configured filter, or the display-name fallback when none is set.
+
+### Username owner
+
+When the first-page query names a Divine username (`alice`, `@alice`,
+`alice@divine.video`, `_@alice.divine.video` or `alice.divine.video`; not a
+phrase, another domain or a complete npub), the repository asks the name
+server's NIP-05 directory (`/.well-known/nostr.json?name=`) who holds it while
+the local and REST phases run. That read is exact, active-only and cached for 60
+seconds. The availability endpoint `/api/username/check` is not used: for a free
+name it runs the username-judgment check, whose per-minute budget is shared with
+claims, so search traffic would spend what sign-ups need.
+
+The name server keeps a username active after its account is banned,
+suspended, deactivated, vanished or made private, and people search hides those
+accounts. So the owner is pinned only when Funnelcake's people search lists it:
+either on the REST page already fetched, or in a second search for its Divine
+NIP-05 (`alice.divine.video`). The profile comes from that REST result and is
+reconciled with any listed copy by the same revision rule as the REST page, so
+fields the server cleared stay cleared; no cache is written for it. Without
+Funnelcake there is no lookup at all.
+
+A pinned owner joins the REST yield and leads every yield from there, even when
+its visible name does not match the query, and the envelope reports it as
+`usernameOwnerPubkey`. The bloc keeps it ahead of exact matches that an earlier
+yield already showed. Blocked owners stay dropped. A free name, a failed or
+cancelled lookup, either step taking longer than 3 seconds, or an owner search
+does not list leaves the results as they were. Video-only searches and later
+pages skip the lookup.
+
+A profile publishing `_@alice.divine.video` does not count as an exact match for
+`alice` on that basis: anyone can publish that identifier, and only the account
+the name server resolves it to is the owner. The handle counts through the pin
+alone.
+
+The search index cannot be relied on for this. Funnelcake ranks a token match
+on a profile's name above a prefix match on its NIP-05, so for `alice` a
+hundred profiles named `alice` fill the result window before the account whose
+display name is something else but who owns `alice.divine.video`.
+
+Two side effects to know:
+
+- Every username-shaped query reaches the name server, whose worker logs each
+  request URL, so search terms appear in those logs.
+- `nameServerBaseUrl` is production for every non-local environment. On staging
+  the owner is still pinned only if staging's own people search lists that
+  pubkey.
 
 Reconcile each REST profile before matching. A cached profile wins only with a
 canonical event ID and an event timestamp strictly newer than the server's
