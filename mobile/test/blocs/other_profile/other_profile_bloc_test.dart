@@ -1541,7 +1541,6 @@ void main() {
             () => mockClaimsRepository.resolveClaims(
               pubkey: testPubkey,
               freshTags: any(named: 'freshTags'),
-              cached: null,
               renderedClaims: const [aliceClaim],
             ),
           ).called(1);
@@ -1656,7 +1655,6 @@ void main() {
           () => mockProfileRepository.fetchFreshProfile(
             pubkey: testPubkey,
             requireRawKind0: true,
-            rawKind0RetryDelays: const [],
           ),
         ).thenAnswer((_) => raw);
       }
@@ -1747,7 +1745,6 @@ void main() {
             () => claims.resolveClaims(
               pubkey: testPubkey,
               freshTags: const [],
-              cached: null,
               renderedClaims: const [],
             ),
           ).thenAnswer((_) async => const [claim]);
@@ -1812,7 +1809,6 @@ void main() {
           () => mockProfileRepository.fetchFreshProfile(
             pubkey: testPubkey,
             requireRawKind0: true,
-            rawKind0RetryDelays: const [],
           ),
         ).thenAnswer((_) => rawRead++ == 0 ? olderRaw.future : newerRaw.future);
         final bloc = createSupportBloc();
@@ -1941,7 +1937,6 @@ void main() {
             () => mockProfileRepository.fetchFreshProfile(
               pubkey: testPubkey,
               requireRawKind0: true,
-              rawKind0RetryDelays: const [],
             ),
           ).thenAnswer((_) => raw.future);
           final bloc = OtherProfileBloc(
