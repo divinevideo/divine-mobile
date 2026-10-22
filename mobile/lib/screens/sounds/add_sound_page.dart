@@ -20,13 +20,12 @@ import 'package:openvine/providers/sound_upload_providers.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/screens/sounds/widgets/microphone_denied_notice.dart';
+import 'package:openvine/screens/sounds/widgets/sound_recording_panel.dart';
 import 'package:openvine/utils/detached_future.dart';
-import 'package:openvine/widgets/audio/live_amplitude_waveform.dart';
 import 'package:openvine/widgets/audio/public_audio_credit_editor.dart';
-import 'package:openvine/widgets/audio/record_toggle_button.dart';
 import 'package:permissions_service/permissions_service.dart';
 import 'package:sound_service/sound_service.dart';
-import 'package:time_formatter/time_formatter.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Full-screen flow that adds a sound to My Sounds without starting a video.
@@ -410,9 +409,9 @@ class _AddSoundViewState extends ConsumerState<AddSoundView> {
                     ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.only(bottom: 24),
                 children: [
-                  if (isMicrophoneDenied) const _MicrophoneDenied(),
+                  if (isMicrophoneDenied) const MicrophoneDeniedNotice(),
                   if (isRecorderActive)
-                    const _RecordingPanel()
+                    const SoundRecordingPanel()
                   else if (audio == null)
                     _SourcePrompt(
                       inFlight: state.status == AddSoundStatus.importing
@@ -577,151 +576,6 @@ class _SourcePrompt extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Shown while microphone access is refused, with the way to grant it.
-class _MicrophoneDenied extends StatelessWidget {
-  const _MicrophoneDenied();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: context.vineColors.surfaceContainer,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            spacing: 8,
-            children: [
-              Row(
-                spacing: 8,
-                children: [
-                  DivineIcon(
-                    icon: DivineIconName.microphone,
-                    color: context.vineColors.onSurfaceVariant,
-                  ),
-                  Expanded(
-                    child: Text(
-                      l10n.videoEditorVoiceOverPermissionTitle,
-                      style: VineTheme.titleMediumFont(
-                        color: context.vineColors.onSurface,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                l10n.soundsRecordPermissionBody,
-                style: VineTheme.bodyMediumFont(
-                  color: context.vineColors.onSurfaceVariant,
-                ),
-              ),
-              DivineButton(
-                key: const Key('add_sound_open_settings'),
-                label: l10n.videoEditorVoiceOverOpenSettings,
-                type: DivineButtonType.secondary,
-                size: DivineButtonSize.small,
-                onPressed: () =>
-                    context.read<SoundRecorderCubit>().openSettings(),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The recording in progress: its live levels, its length, and stop.
-class _RecordingPanel extends StatelessWidget {
-  const _RecordingPanel();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(16, 40, 16, 16),
-      child: Column(
-        spacing: 24,
-        children: [
-          RepaintBoundary(
-            child: SizedBox(
-              height: 120,
-              width: double.infinity,
-              child: _RecordingWave(),
-            ),
-          ),
-          _RecordingClock(),
-          _StopRecordingButton(),
-        ],
-      ),
-    );
-  }
-}
-
-class _RecordingWave extends StatelessWidget {
-  const _RecordingWave();
-
-  @override
-  Widget build(BuildContext context) {
-    final bars = context.select((SoundRecorderCubit c) => c.state.waveformBars);
-    final samplePosition = context.select(
-      (SoundRecorderCubit c) => c.state.elapsed,
-    );
-    final isRecording = context.select(
-      (SoundRecorderCubit c) => c.state.isRecording,
-    );
-    return LiveAmplitudeWaveform(
-      bars: bars,
-      isRecording: isRecording,
-      color: context.vineColors.accentPositive,
-      sampleInterval: SoundRecorderCubit.amplitudeInterval,
-      samplePosition: samplePosition,
-    );
-  }
-}
-
-/// Elapsed time over the length at which the recording stops on its own.
-class _RecordingClock extends StatelessWidget {
-  const _RecordingClock();
-
-  @override
-  Widget build(BuildContext context) {
-    final elapsed = context.select((SoundRecorderCubit c) => c.state.elapsed);
-    final maxDuration = context.select(
-      (SoundRecorderCubit c) => c.state.maxDuration,
-    );
-    return Text(
-      '${TimeFormatter.formatMinutesSeconds(elapsed)} / '
-      '${TimeFormatter.formatMinutesSeconds(maxDuration)}',
-      style: VineTheme.titleLargeFont(color: context.vineColors.onSurface),
-    );
-  }
-}
-
-class _StopRecordingButton extends StatelessWidget {
-  const _StopRecordingButton();
-
-  @override
-  Widget build(BuildContext context) {
-    // Stays a stop shape while the file is being finished, but inert.
-    final isRecording = context.select(
-      (SoundRecorderCubit c) => c.state.isRecording,
-    );
-    return RecordToggleButton(
-      key: const Key('add_sound_stop_recording'),
-      isRecording: true,
-      semanticLabel: context.l10n.videoEditorVoiceOverStopSemanticLabel,
-      onPressed: isRecording
-          ? () => context.read<SoundRecorderCubit>().stop()
-          : null,
     );
   }
 }
