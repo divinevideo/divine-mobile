@@ -2,6 +2,7 @@
 // ABOUTME: target in one emit, color masks baked or taken off per target, and a
 // ABOUTME: color mask that fails leaving the rest of the style in place.
 
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 
@@ -45,13 +46,14 @@ void main() {
     ClipEditorBloc seeded(
       List<DivineVideoClip> clips, {
       ChromaKeyBakeFn? bakeChromaKey,
+      DeferFileCleanupFn? deferFileCleanup,
     }) {
       final bloc = ClipEditorBloc(
         onFinalClipInvalidated: () {},
         saveClipToLibrary: ({required clip}) async => false,
         bakeChromaKey: bakeChromaKey,
         extractPoster: ({required videoPath, required timestamp}) async => null,
-        deferFileCleanup: (_) {},
+        deferFileCleanup: deferFileCleanup ?? (_) {},
       );
       addTearDown(bloc.close);
       return bloc..add(ClipEditorInitialized(clips));
@@ -182,6 +184,56 @@ void main() {
         expect(state.clips.map((c) => c.volume), [0.2, 0.2]);
         final result = state.lastClipStylePasteResult! as ClipStylePasteSuccess;
         expect(result.colorMaskFailures, 1);
+      },
+    );
+
+    test(
+      'queues the color mask made for a target deleted during its render',
+      () async {
+        final bRender = Completer<void>();
+        final deferred = <String?>[];
+        late final ClipEditorBloc bloc;
+        bloc = seeded(
+          [_clip('a'), _clip('b')],
+          bakeChromaKey:
+              ({
+                required sourceClip,
+                required chromaKey,
+                required renderId,
+              }) async {
+                if (sourceClip.id == 'b') {
+                  bloc.add(const ClipEditorClipRemoved('b'));
+                  await bRender.future;
+                }
+                return (
+                  video: EditorVideo.file(
+                    '/documents/${sourceClip.id}_key.mp4',
+                  ),
+                  source: sourceClip.video!.file!.path,
+                );
+              },
+          deferFileCleanup: deferred.addAll,
+        );
+        await pumpEventQueue();
+
+        final done = paste(
+          bloc,
+          ['a', 'b'],
+          const ClipStyle(
+            volume: 1,
+            equalizer: EqualizerSettings.none,
+            playbackSpeed: 1,
+            chromaKey: _key,
+          ),
+        );
+        await pumpEventQueue();
+        expect(bloc.state.clips.map((c) => c.id), ['a']);
+        bRender.complete();
+        final state = await done;
+
+        expect(state.clips.single.video?.file?.path, '/documents/a_key.mp4');
+        expect(deferred, contains('/documents/b_key.mp4'));
+        expect(deferred, isNot(contains('/documents/a_key.mp4')));
       },
     );
 

@@ -3193,6 +3193,8 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       ),
     );
     superseded.forEach(_deferSupersededFiles);
+    // A target deleted during its render never takes the file made for it.
+    _deferOrphanedPaths(renders);
   }
 
   /// A write that puts [chromaKey] on [clip], or takes its key off for
