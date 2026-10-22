@@ -87,6 +87,14 @@ ProviderContainer _container({
   );
 }
 
+/// A read that failed, as opposed to one that was never sent because the
+/// signer was not ready. The launch notice counts only the first.
+final _failedRead = isA<AccountStatusUnavailable>().having(
+  (error) => error is AccountStatusSignerNotReady,
+  'is a signer not ready yet',
+  isFalse,
+);
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -252,6 +260,36 @@ void main() {
       }
     });
 
+    test('an account with no pubkey yet is not ready to read', () async {
+      final authService = _MockAuthService();
+      final client = _QueueStatusClient([FunnelcakeAccountStatus.active]);
+      final container = ProviderContainer(
+        overrides: [
+          currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+          currentAuthRpcCapabilityProvider.overrideWithValue(
+            AuthRpcCapability.rpcReady,
+          ),
+          authServiceProvider.overrideWithValue(authService),
+          accountEnforcementRepositoryProvider.overrideWithValue(
+            AccountEnforcementRepository(apiClient: client),
+          ),
+          activeEnforcementPubkeyProvider.overrideWithValue(null),
+        ],
+      );
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        accountEnforcementStatusProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+
+      await expectLater(
+        container.read(accountEnforcementStatusProvider.future),
+        throwsA(isA<AccountStatusSignerNotReady>()),
+      );
+      expect(client.requestedPubkeys, isEmpty);
+    });
+
     test('pubkey-only identity is indeterminate without a request', () async {
       final authService = _MockAuthService();
       when(() => authService.currentPublicKeyHex).thenReturn(_pubkeyA);
@@ -309,7 +347,7 @@ void main() {
         );
         await expectLater(
           container.read(accountEnforcementStatusProvider.future),
-          throwsA(isA<AccountStatusUnavailable>()),
+          throwsA(_failedRead),
         );
         failedSubscription.close();
         expect(memory.read(_pubkeyA)?.isEnforced, isTrue);
@@ -488,7 +526,7 @@ void main() {
         addTearDown(reopened.close);
         await expectLater(
           container.read(accountEnforcementStatusProvider.future),
-          throwsA(isA<AccountStatusUnavailable>()),
+          throwsA(_failedRead),
         );
 
         expect(client.requestedPubkeys, [_pubkeyA, _pubkeyA]);

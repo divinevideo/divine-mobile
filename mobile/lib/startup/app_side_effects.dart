@@ -55,7 +55,8 @@ class AppRootSideEffects extends ConsumerWidget {
     // Remembers which accounts were shown their age-review closure on launch.
     // It forgets an account when it signs out, and signing out unmounts the
     // shell, so only a host here can see that happen: a provider nothing
-    // listens to is paused and misses it. Building it reads no service.
+    // listens to is paused and misses it. Building it costs nothing beyond
+    // authServiceProvider, which the identity mirrors below build anyway.
     ref.watch(ageReviewClosureLaunchShownProvider);
 
     // Mirrors the authenticated pubkey into Zendesk, and into Firebase

@@ -25,11 +25,15 @@ class AgeReviewClosureLaunchNoticeState extends Equatable {
 /// The launch notice's read policy (support-trust-safety#260).
 ///
 /// The first answer ends the reading: a closure asks to be shown until
-/// [shown] settles it, anything else is left alone. A failed read gets one retry, on the next resume or when the
-/// signer becomes ready; a second failure settles it too, so a failure that
-/// never clears, such as a remote signer declining the request, does not ask
-/// again on every resume. Settings, the account's own profile and a rejected
-/// post still read the status when they need it.
+/// [shown] settles it, anything else is left alone. A failed read gets one
+/// retry, on the next resume or when the signer becomes ready; a second
+/// failure settles it too, so a failure that never clears, such as a remote
+/// signer declining the request, does not ask again on every resume. Settings,
+/// the account's own profile and a rejected post still read the status when
+/// they need it.
+///
+/// The cubit lives with the shell, so the budget is per mount: navigation
+/// that replaces the shell and brings it back starts a fresh read.
 class AgeReviewClosureLaunchNoticeCubit
     extends Cubit<AgeReviewClosureLaunchNoticeState> {
   AgeReviewClosureLaunchNoticeCubit()
