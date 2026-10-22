@@ -91,6 +91,10 @@ GoRouter _router() => GoRouter(
       name: AccountStatusScreen.routeName,
       builder: (context, state) => const Text('account-status'),
     ),
+    GoRoute(
+      path: '/recorder',
+      builder: (context, state) => const Text('recorder'),
+    ),
   ],
 );
 
@@ -215,15 +219,11 @@ void main() {
       expect(find.text('account-status'), findsNothing);
     });
 
-    // Account status is reached by push, which the router's match-list uri
-    // does not reflect. Checking that uri let the notice stack a second
-    // Account status on top of one the user had already opened.
+    // An Account status the user already opened covers the tabs, so the
+    // notice leaves it alone rather than stacking a second one on top.
     testWidgets('does not stack a second Account status on a pushed one', (
       tester,
     ) async {
-      final previous = GoRouter.optionURLReflectsImperativeAPIs;
-      GoRouter.optionURLReflectsImperativeAPIs = true;
-      addTearDown(() => GoRouter.optionURLReflectsImperativeAPIs = previous);
       final answer = Completer<AccountEnforcementStatus>();
       final container = ProviderContainer(
         overrides: [
@@ -592,6 +592,40 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('account-status'), findsOneWidget);
+    });
+
+    // An answer that arrives late, after a retry, can find the recorder, an
+    // editor or a conversation open. Pushing over them would skip their own
+    // exit steps, such as the recorder's lock and pause, so the closure is
+    // left for the next launch or a rejected post to explain.
+    testWidgets('leaves a closure found under another screen for later', (
+      tester,
+    ) async {
+      final answer = Completer<AccountEnforcementStatus>();
+      final container = ProviderContainer(
+        overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+          accountEnforcementStatusProvider.overrideWith(
+            (ref) => answer.future,
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final router = _router();
+      addTearDown(router.dispose);
+      await _pumpApp(tester, container, router);
+
+      unawaited(router.push('/recorder'));
+      await tester.pumpAndSettle();
+      answer.complete(_closure);
+      await tester.pumpAndSettle();
+
+      expect(find.text('recorder'), findsOneWidget);
+      expect(
+        find.text('account-status', skipOffstage: false),
+        findsNothing,
+      );
+      expect(container.read(ageReviewClosureLaunchShownProvider), isEmpty);
     });
 
     // The notice lets go of the status once it has answered, so the screen it

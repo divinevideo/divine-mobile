@@ -8,7 +8,6 @@ import 'package:go_router/go_router.dart';
 import 'package:openvine/models/account_enforcement_status.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/repositories/account_enforcement_repository.dart';
-import 'package:openvine/router/providers/router_location_provider.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
@@ -97,14 +96,15 @@ class _LaunchStatusReaderState extends ConsumerState<_LaunchStatusReader> {
   }
 
   void _show(BuildContext context) {
+    // Only over the tabs. Over the recorder, an editor or a conversation a
+    // push would skip their own exit steps, such as the recorder's lock and
+    // pause, so the closure is left unmarked for the next launch or a
+    // rejected post to explain. That includes an Account Status already open.
+    if (!(ModalRoute.of(context)?.isCurrent ?? true)) return;
     final pubkey = ref.read(activeEnforcementPubkeyProvider);
     if (pubkey == null) return;
     final shown = ref.read(ageReviewClosureLaunchShownProvider.notifier);
     if (!shown.markShown(pubkey)) return;
-    // Account Status is reached by push, which the match list's uri does not
-    // reflect; routerLocationOf does.
-    final router = GoRouter.of(context);
-    if (routerLocationOf(router).path == AccountStatusScreen.path) return;
     runDetached(
       context.pushNamed(AccountStatusScreen.routeName),
       'open account status for age-review closure',
