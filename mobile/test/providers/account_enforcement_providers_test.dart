@@ -566,7 +566,7 @@ void main() {
       addTearDown(settings.close);
       await expectLater(
         container.read(accountEnforcementStatusProvider.future),
-        throwsA(isA<AccountStatusUnavailable>()),
+        throwsA(_failedRead),
       );
 
       expect(client.requestedPubkeys, [_pubkeyA, _pubkeyA]);
