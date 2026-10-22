@@ -344,6 +344,7 @@ class _SupporterLightboxHeadline extends StatelessWidget {
     final template = l10n.supporterLightboxHeadline(_nameToken, _badgeToken);
     final spans = <InlineSpan>[];
     for (final (index, part) in template.split(_nameToken).indexed) {
+      var text = part;
       if (index > 0) {
         spans.add(
           WidgetSpan(
@@ -360,11 +361,13 @@ class _SupporterLightboxHeadline extends StatelessWidget {
         );
         // Give a leading name its own line only at a word boundary. Attached
         // honorifics (for example in Japanese and Korean) stay with the name.
-        if (template.startsWith(_nameToken) && part.startsWith(RegExp(r'\s'))) {
+        if (template.startsWith(_nameToken) && text.startsWith(RegExp(r'\s'))) {
           spans.add(const TextSpan(text: '\n'));
+          // The break replaces that space; a name mid-sentence keeps its own.
+          text = text.trimLeft();
         }
       }
-      final pieces = part.trimLeft().split(_badgeToken);
+      final pieces = text.split(_badgeToken);
       for (final (badgeIndex, piece) in pieces.indexed) {
         if (badgeIndex > 0) {
           spans.add(

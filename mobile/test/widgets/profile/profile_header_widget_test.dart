@@ -33,6 +33,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/features/monetization/monetization_storefront_policy.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/view/people_list_membership_indicator.dart';
+import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_rpc_capability.dart';
 import 'package:openvine/models/divine_video_draft.dart';
@@ -98,6 +99,28 @@ class _MockBackgroundPublishBloc
     implements BackgroundPublishBloc {}
 
 class _MockSupporterApiClient extends Mock implements SupporterApiClient {}
+
+/// English with the supporter headline's name in mid-sentence, as a
+/// translation may place it.
+class _MidSentenceNameLocalizations extends AppLocalizationsEn {
+  @override
+  String supporterLightboxHeadline(String name, String badge) =>
+      'As a $badge, $name keeps Divine going';
+}
+
+class _MidSentenceNameDelegate extends LocalizationsDelegate<AppLocalizations> {
+  const _MidSentenceNameDelegate();
+
+  @override
+  bool isSupported(Locale locale) => locale.languageCode == 'en';
+
+  @override
+  Future<AppLocalizations> load(Locale locale) =>
+      SynchronousFuture<AppLocalizations>(_MidSentenceNameLocalizations());
+
+  @override
+  bool shouldReload(_MidSentenceNameDelegate old) => false;
+}
 
 class _MockBadgeRepository extends Mock implements BadgeRepository {}
 
@@ -398,6 +421,8 @@ void main() {
       bool disableAnimations = false,
       TextScaler? textScaler,
       Locale locale = const Locale('en'),
+      // Ahead of the app's own, so one of these wins for its type.
+      List<LocalizationsDelegate<dynamic>> extraDelegates = const [],
       bool renderHeader = true,
       MockAuthService? authService,
       bool isVanished = false,
@@ -556,7 +581,10 @@ void main() {
           ).overrideWith((ref) => monetizationLinksEnabled),
         ],
         child: MaterialApp(
-          localizationsDelegates: appLocalizationsDelegates,
+          localizationsDelegates: [
+            ...extraDelegates,
+            ...appLocalizationsDelegates,
+          ],
           supportedLocales: AppLocalizations.supportedLocales,
           locale: locale,
           theme: theme,
@@ -806,6 +834,7 @@ void main() {
         bool isPublicSupporter = false,
         SupporterRepository? ownMembership,
         Locale locale = const Locale('en'),
+        List<LocalizationsDelegate<dynamic>> extraDelegates = const [],
       }) async {
         await tester.pumpWidget(
           buildTestWidget(
@@ -820,6 +849,7 @@ void main() {
             ),
             supporterRepository: ownMembership,
             locale: locale,
+            extraDelegates: extraDelegates,
             // Holds the halo still so the tree can settle.
             disableAnimations: true,
           ),
@@ -967,6 +997,37 @@ void main() {
             );
           });
         }
+
+        testWidgets('keeps the space after a name in the middle of the '
+            'supporter headline', (tester) async {
+          final strings = _MidSentenceNameLocalizations();
+          await pumpHeader(
+            tester,
+            isOwnProfile: false,
+            isPublicSupporter: true,
+            extraDelegates: const [_MidSentenceNameDelegate()],
+          );
+          await openSupporterView(tester);
+
+          final headline = tester.widget<Text>(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is Text &&
+                  (widget.textSpan?.toPlainText().contains(
+                        strings.supporterLightboxBadge,
+                      ) ??
+                      false),
+            ),
+          );
+          // The display name is a widget, which plain text shows as U+FFFC.
+          expect(
+            headline.textSpan!.toPlainText(),
+            strings.supporterLightboxHeadline(
+              String.fromCharCode(PlaceholderSpan.placeholderCodeUnit),
+              strings.supporterLightboxBadge,
+            ),
+          );
+        });
 
         testWidgets('keeps the halo and wings at full opacity when the '
             'supporter view closes', (tester) async {
