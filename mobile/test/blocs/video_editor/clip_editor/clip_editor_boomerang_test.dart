@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:bloc/bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,10 +11,12 @@ import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_boomerang.dart';
+import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/services/video_editor/video_editor_boomerang_service.dart';
 import 'package:path/path.dart' as p;
 import 'package:pro_video_editor/pro_video_editor.dart'
     show
+        ChromaKey,
         ClipTransition,
         ClipTransitionType,
         EditorVideo,
@@ -22,6 +25,11 @@ import 'package:pro_video_editor/pro_video_editor.dart'
         VideoSpeedRampPoint;
 
 const _frame = Duration(microseconds: 33333);
+
+/// A key the clip was recorded with, still waiting to be baked.
+const _recordedKey = ClipChromaKey(
+  key: ChromaKey.greenScreen(backgroundColor: Color(0xFF203040)),
+);
 
 /// Records every `addError`, the path a failure takes to Crashlytics.
 class _RecordingObserver extends BlocObserver {
@@ -275,6 +283,31 @@ void main() {
         expect(state.clips.single.video!.file!.path, '/documents/clip.mp4');
       });
 
+      test('waits for a recorded green screen to bake', () async {
+        // Bounced first, the raw take would be keyed later as a boomerang
+        // whose record still points at the unkeyed footage.
+        var rendered = false;
+        final bloc = seeded(
+          [_clip().copyWith(captureChromaKey: _recordedKey)],
+          renderBoomerang: ({required sourceClip, required renderId}) {
+            rendered = true;
+            return _fakeBoomerang(sourceClip: sourceClip, renderId: renderId);
+          },
+        );
+        await pumpEventQueue();
+
+        bloc.add(const ClipEditorClipBoomerangRequested(clipId: 'clip'));
+        await pumpEventQueue();
+
+        expect(rendered, isFalse);
+        expect(bloc.state.isBoomeranging, isFalse);
+        expect(
+          bloc.state.clips.single.video!.file!.path,
+          '/documents/clip.mp4',
+        );
+        expect(bloc.state.clips.single.boomerang, isNull);
+      });
+
       test('reports a failed render and leaves the clip alone', () async {
         final errors = recordBlocErrors();
         final bloc = seeded(
@@ -386,9 +419,10 @@ void main() {
 
       Future<ClipEditorBloc> selecting(
         List<DivineVideoClip> clips,
-        List<String> ids,
-      ) async {
-        final bloc = seeded(clips);
+        List<String> ids, {
+        RenderBoomerangFn? renderBoomerang,
+      }) async {
+        final bloc = seeded(clips, renderBoomerang: renderBoomerang);
         bloc.add(ClipEditorMultiSelectStarted(ids.first));
         for (final id in ids.skip(1)) {
           bloc.add(ClipEditorMultiSelectClipToggled(id));
@@ -447,6 +481,78 @@ void main() {
         expect(state.clips.map((c) => c.id), ['a', 'b', 'c', 'd']);
         expect(state.clips[2].boomerang, isNotNull);
         expect(state.isMultiSelectMode, isFalse);
+      });
+
+      test('turns a single selected boomerang off instead of bouncing it '
+          'again', () async {
+        final source = File(p.join(temp.path, 'take.mp4'))
+          ..writeAsStringSync('take');
+        // Plays longer than a boomerang may be made from, as a boomerang of a
+        // long take does: turning it off must not be refused as too long.
+        final bounced =
+            _clip(
+              id: 'b',
+              videoPath: '/documents/b_boomerang.mp4',
+              duration: const Duration(seconds: 5),
+              trimStart: Duration.zero,
+              trimEnd: Duration.zero,
+            ).copyWith(
+              boomerang: ClipBoomerang(
+                sourcePath: source.path,
+                sourceDuration: const Duration(seconds: 4),
+                sourceTrimStart: const Duration(seconds: 1),
+                sourceTrimEnd: const Duration(milliseconds: 500),
+              ),
+            );
+        final bloc = await selecting(
+          [_clip(id: 'a'), bounced],
+          ['b'],
+          renderBoomerang: ({required sourceClip, required renderId}) =>
+              throw StateError('turning a boomerang off renders nothing'),
+        );
+
+        final state = await request(
+          bloc,
+          const ClipEditorSelectedClipsBoomerangRequested(),
+        );
+
+        final clip = state.clips[1];
+        expect(clip.video!.file!.path, source.path);
+        expect(clip.duration, const Duration(seconds: 4));
+        expect(clip.trimStart, const Duration(seconds: 1));
+        expect(clip.trimEnd, const Duration(milliseconds: 500));
+        expect(clip.boomerang, isNull);
+        expect(
+          state.lastBoomerangResult,
+          isA<ClipBoomerangSuccess>()
+              .having((r) => r.bounced, 'bounced', isFalse)
+              .having((r) => r.clipId, 'clipId', 'b'),
+        );
+        expect(state.isMultiSelectMode, isFalse);
+      });
+
+      test('does not bounce a single selected clip whose recorded green '
+          'screen is still to bake', () async {
+        var rendered = false;
+        final clips = fourClips();
+        clips[2] = clips[2].copyWith(captureChromaKey: _recordedKey);
+        final bloc = await selecting(
+          clips,
+          ['c'],
+          renderBoomerang: ({required sourceClip, required renderId}) {
+            rendered = true;
+            return _fakeBoomerang(sourceClip: sourceClip, renderId: renderId);
+          },
+        );
+        expect(bloc.state.canBoomerangSelection, isFalse);
+
+        bloc.add(const ClipEditorSelectedClipsBoomerangRequested());
+        await pumpEventQueue();
+
+        expect(rendered, isFalse);
+        expect(bloc.state.clips[2].boomerang, isNull);
+        expect(bloc.state.lastBoomerangResult, isNull);
+        expect(bloc.state.isMultiSelectMode, isTrue);
       });
 
       test('does nothing for clips with a gap between them', () async {

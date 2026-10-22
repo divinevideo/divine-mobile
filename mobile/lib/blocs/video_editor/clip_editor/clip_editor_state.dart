@@ -453,6 +453,9 @@ class ClipEditorState extends Equatable {
   /// Whether the clips selected in multi-select can bounce as one boomerang:
   /// neighbours on the timeline, since the way back has to retrace exactly
   /// the way there, and footage rather than a still when only one is picked.
+  ///
+  /// Not while a picked clip waits for its recorded green screen to bake: the
+  /// bounce, or the merge before it, would render the raw take.
   bool get canBoomerangSelection {
     final indexes = [
       for (var i = 0; i < clips.length; i++)
@@ -461,6 +464,7 @@ class ClipEditorState extends Equatable {
     if (indexes.isEmpty || indexes.last - indexes.first + 1 != indexes.length) {
       return false;
     }
+    if (indexes.any((i) => clips[i].hasPendingCaptureChromaKey)) return false;
     return indexes.length > 1 || clips[indexes.single].canBoomerang;
   }
 

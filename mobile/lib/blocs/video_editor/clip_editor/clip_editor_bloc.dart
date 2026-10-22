@@ -2033,6 +2033,18 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       );
       return;
     }
+    // The action bar waits for a recorded green screen to bake: bounced
+    // first, the key would land on the boomerang while its record still
+    // points at the raw take.
+    if (clip.hasPendingCaptureChromaKey) {
+      Log.warning(
+        '⚠️ Refusing to bounce clip ${clip.id}: its recorded chroma key is '
+        'not baked yet',
+        name: 'ClipEditorBloc',
+        category: LogCategory.video,
+      );
+      return;
+    }
     if (clip.video?.file?.path == null) {
       Log.warning(
         '⚠️ Boomerang skipped: clip ${clip.id} has no local file',
@@ -2186,18 +2198,32 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     final selected = state.clips
         .where((c) => selectedIds.contains(c.id))
         .toList();
+
+    // One clip toggles as the clip toolbar does. Turning a boomerang off
+    // comes before the length check: the boomerang plays its footage twice,
+    // so it can be longer than the footage a new one may be made from.
+    if (selected.length == 1) {
+      final clip = selected.single;
+      final record = clip.boomerang;
+      if (record == null &&
+          _rejectTooLongBoomerang(clip.playbackDuration, emit)) {
+        return;
+      }
+      emit(state.copyWith(isMultiSelectMode: false, selectedClipIds: const {}));
+      if (record != null) {
+        _restoreFromBoomerang(clip, record, emit);
+      } else {
+        await _bounceClip(clip, emit);
+      }
+      return;
+    }
+
     final playback = selected.fold(
       Duration.zero,
       (sum, clip) => sum + clip.playbackDuration,
     );
     // Stays in multi-select so the user can pick fewer clips.
     if (_rejectTooLongBoomerang(playback, emit)) return;
-
-    if (selected.length == 1) {
-      emit(state.copyWith(isMultiSelectMode: false, selectedClipIds: const {}));
-      await _bounceClip(selected.single, emit);
-      return;
-    }
 
     Log.info(
       '🪃 Bouncing ${selected.length} selected clip(s) as one boomerang',

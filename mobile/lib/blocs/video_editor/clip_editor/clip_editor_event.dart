@@ -367,6 +367,7 @@ class ClipEditorClipBoomerangRequested extends ClipEditorEvent {
 /// Turn the clips selected in multi-select into one boomerang that plays all
 /// of them forward and then all of them backward.
 ///
+/// A single selected clip toggles as [ClipEditorClipBoomerangRequested] does.
 /// Only a selection of neighbouring clips can bounce; see
 /// [ClipEditorState.canBoomerangSelection].
 class ClipEditorSelectedClipsBoomerangRequested extends ClipEditorEvent {
