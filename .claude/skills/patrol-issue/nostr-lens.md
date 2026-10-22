@@ -69,7 +69,7 @@ Three rules before any command:
 
 1. **Close stdin.** Append `</dev/null` to every `nak` call. Under zsh a backgrounded `nak serve` never starts listening without it, and `nak event` waits on stdin.
 2. **An empty result is not a zero.** Read stderr. `nak` exits 3 only when every relay fails to connect; with several relays a partial failure still exits 0. An AUTH-gated relay queried without `--auth` exits **0** with no events and `CLOSED: auth-required` on stderr. `2>/dev/null | jq -s length` turns all of these into a confident `0`. Before reporting "not on the relay", run the same query for an event you know is there.
-3. **Name the key.** Always pass `--sec`, from `nak key generate` or a designated test account read from the environment. Without it `nak` signs with a per-machine default key, and a bare `nak event <relay>` publishes a kind 1 "hello from the nostr army knife" under it.
+3. **Name the key.** Export `NOSTR_SECRET_KEY` for the designated test account, read from your credential manager rather than typed into a command. `nak` and every subcommand use it. Never pass the key as `--sec <value>`: shell expansion puts it in `argv`, where the process table and shell history expose it. Without a key `nak` signs with a per-machine default key, and a bare `nak event <relay>` publishes a kind 1 "hello from the nostr army knife" under it.
 
 | Need | Command |
 |---|---|
@@ -80,9 +80,9 @@ Three rules before any command:
 | How many, without downloading | `nak count …` (the number is printed on **stderr** as `<relay>: <n>`); ids only: `nak req --ids-only …` |
 | History past a relay's clamp | `nak req --paginate …` |
 | Relay limits and claimed NIPs | `nak relay <url>` (`limitation.auth_required`, `max_limit`, `max_subid_length`, `created_at_lower_limit` / `upper_limit`, `max_message_length`) |
-| AUTH-gated kinds (1059, 4) | `nak req --auth --sec $K -k 1059 -p <hex> …` |
-| Open a test account's gift wrap | `… \| nak gift unwrap --sec $RECIPIENT` prints the unsigned rumor. There is no `--from` flag, whatever `nak gift --help` shows |
-| Build a wrap the way Divine does | `nak event --sec $A -k 14 -c hi -p <B> \| nak gift wrap --sec $A -p <B> --use-our-identity-key --use-their-identity-key` (the flags stop a draft-NIP decoupled key from being used) |
+| AUTH-gated kinds (1059, 4) | `nak req --auth -k 1059 -p <hex> …` (with `NOSTR_SECRET_KEY` exported) |
+| Open a test account's gift wrap | `… \| nak gift unwrap` prints the unsigned rumor (export that account's `NOSTR_SECRET_KEY` for the command). There is no `--from` flag, whatever `nak gift --help` shows |
+| Build a wrap the way Divine does | `nak event -k 14 -c hi -p <B> \| nak gift wrap -p <B> --use-our-identity-key --use-their-identity-key` with the sender's `NOSTR_SECRET_KEY` exported (the flags stop a draft-NIP decoupled key from being used; `-p` is the recipient's public key, not a secret) |
 | Decode / build identifiers | `nak decode <npub\|nevent\|naddr>` / `nak encode …` |
 | NIP-98 request, Blossom, remote signer | `nak curl`, `nak blossom`, `nak bunker` |
 | A relay you control | `nak serve --port <p> [--auth] [--eager-auth] [--events seed.jsonl] </dev/null` (in memory; prints `relay running at ws://localhost:<p>`) |
@@ -167,6 +167,6 @@ production.
 ## 7. Safety
 
 - Production relays are public and permanent; a kind 5 is a request, not an eraser. Local or staging first. A production write needs the user's yes, a throwaway key, and content that reads as a test.
-- Never read, print or log a secret key: not the user's, not a test account's, not `nak key default`.
+- Never read, print or log a secret key: not the user's, not a test account's, not `nak key default`. Never put one in a command line; use `NOSTR_SECRET_KEY` from the credential manager.
 - Never put a pubkey beside an IP, location or email in any artifact. In public text state the property, not the value.
 - Write identifiers whole, hex and npub.
