@@ -44,32 +44,37 @@ class _SupporterRecognition extends StatelessWidget {
       },
       builder: (context, state) {
         if (!state.isSupporter) return const SizedBox.shrink();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          spacing: 8,
-          children: [
-            Text(
-              l10n.supporterTitle,
-              style: VineTheme.labelMediumFont(
-                color: context.vineColors.mutedText,
+        // The form's 16pt gap, carried here because the form leaves this
+        // section out of its spacing: most accounts never see it.
+        return Padding(
+          padding: const EdgeInsets.only(top: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 8,
+            children: [
+              Text(
+                l10n.supporterTitle,
+                style: VineTheme.labelMediumFont(
+                  color: context.vineColors.mutedText,
+                ),
               ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ProfileSwitchRow(
-                  label: l10n.supporterPublicRecognition,
-                  value: state.haloVisible,
-                  onChanged: state.snapshot == null || state.savingRecognition
-                      ? null
-                      : cubit.setPublicRecognition,
-                ),
-                ProfileFieldSupportingText(
-                  l10n.supporterPublicRecognitionBody,
-                ),
-              ],
-            ),
-          ],
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ProfileSwitchRow(
+                    label: l10n.supporterPublicRecognition,
+                    value: state.haloVisible,
+                    onChanged: state.snapshot == null || state.savingRecognition
+                        ? null
+                        : cubit.setPublicRecognition,
+                  ),
+                  ProfileFieldSupportingText(
+                    l10n.supporterPublicRecognitionBody,
+                  ),
+                ],
+              ),
+            ],
+          ),
         );
       },
     );

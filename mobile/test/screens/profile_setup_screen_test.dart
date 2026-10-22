@@ -884,6 +884,31 @@ void main() {
       });
     });
 
+    group('renders', () {
+      testWidgets('ends the form at the last field when the supporter '
+          'setting is hidden', (tester) async {
+        await pumpScreen(tester);
+        await tester.pumpAndSettle();
+        expect(find.byType(SupporterRecognitionSection), findsOneWidget);
+        expect(find.byType(DivineSwitch), findsNothing);
+
+        final form = find.ancestor(
+          of: find.byType(VerifiedAccountsSection),
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is Padding &&
+                widget.padding == const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          ),
+        );
+        final inset = tester.widget<Padding>(form).padding as EdgeInsets;
+        expect(
+          tester.getRect(form).bottom -
+              tester.getRect(find.byType(VerifiedAccountsSection)).bottom,
+          inset.bottom,
+        );
+      });
+    });
+
     group('seeding the form', () {
       testWidgets('fills from the cached profile before the relay answers', (
         tester,

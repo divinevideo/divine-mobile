@@ -107,6 +107,16 @@ void main() {
         expect(switchValue(tester), isFalse);
       });
 
+      testWidgets('keeps the form gap above the setting', (tester) async {
+        await pumpSection(tester, isSupporter: true);
+
+        expect(
+          tester.getTopLeft(find.text(l10n.supporterTitle)).dy -
+              tester.getTopLeft(find.byType(SupporterRecognitionSection)).dy,
+          16,
+        );
+      });
+
       testWidgets('shows nothing to anyone else', (tester) async {
         await pumpSection(tester, isSupporter: false);
 
