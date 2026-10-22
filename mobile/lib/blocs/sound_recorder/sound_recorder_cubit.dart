@@ -122,7 +122,11 @@ class SoundRecorderCubit extends Cubit<SoundRecorderState>
       await _start();
     } catch (error, stackTrace) {
       addError(error, stackTrace);
-      emitIfOpen(state.copyWith(status: SoundRecorderStatus.failed));
+      // A start the screen already gave up on is not a failure to show over
+      // whatever now covers it; the cancelled path below settles it to idle.
+      if (!_startCancelled) {
+        emitIfOpen(state.copyWith(status: SoundRecorderStatus.failed));
+      }
     } finally {
       _isTransitioning = false;
       if (_startCancelled && !_closing) {

@@ -372,6 +372,22 @@ void main() {
         expect(cubit.state.status, SoundRecorderStatus.idle);
       });
 
+      test('reports no failure for a start visibility stopped that then '
+          'fails natively', () async {
+        recorder
+          ..startGate = Completer<void>()
+          ..throwOnStart = true;
+        final cubit = build();
+        final starting = cubit.start();
+        await pumpEventQueue();
+
+        await cubit.stop();
+        recorder.startGate!.complete();
+        await starting;
+
+        expect(cubit.state.status, SoundRecorderStatus.idle);
+      });
+
       testWidgets('never announces or vibrates for a native start that '
           'visibility stopped', (tester) async {
         var vibrations = 0;
