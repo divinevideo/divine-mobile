@@ -61,20 +61,33 @@ class _NavigationVisitor extends RecursiveAstVisitor<void> {
   @override
   void visitMethodInvocation(MethodInvocation node) {
     final method = node.methodName.name;
-    if (navigationMethods.contains(method)) {
-      final location = _firstPositional(node.argumentList);
-      if (location != null && _isLiteralPath(location)) {
-        sites.add(
-          LiteralNavigationPathSite(
-            line: _lineInfo.getLocation(node.offset).lineNumber,
-            method: method,
-            location: location.toSource(),
-          ),
-        );
-      }
+    final location = switch (method) {
+      'safePop' => _namedArgument(node.argumentList, 'fallback'),
+      _ when navigationMethods.contains(method) => _firstPositional(
+        node.argumentList,
+      ),
+      _ => null,
+    };
+    if (location != null && _isLiteralPath(location)) {
+      sites.add(
+        LiteralNavigationPathSite(
+          line: _lineInfo.getLocation(node.offset).lineNumber,
+          method: method,
+          location: location.toSource(),
+        ),
+      );
     }
     super.visitMethodInvocation(node);
   }
+}
+
+Expression? _namedArgument(ArgumentList arguments, String name) {
+  for (final argument in arguments.arguments) {
+    if (argument is NamedExpression && argument.name.label.name == name) {
+      return argument.expression;
+    }
+  }
+  return null;
 }
 
 Expression? _firstPositional(ArgumentList arguments) {

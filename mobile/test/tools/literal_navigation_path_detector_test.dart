@@ -77,6 +77,22 @@ void a(BuildContext context) {
       ]);
     });
 
+    test('finds a literal safePop fallback but not its result', () {
+      final sites = findLiteralNavigationPathsInSource('''
+void a(BuildContext context) {
+  context.safePop(fallback: '/verify');
+  context.safePop(result: '/not-a-location');
+  context.safePop(result: '/not-a-location', fallback: VerifyPage.path);
+  context.safePop();
+}
+''');
+
+      expect(sites, hasLength(1));
+      expect(sites.single.method, 'safePop');
+      expect(sites.single.location, "'/verify'");
+      expect(sites.single.line, 2);
+    });
+
     test('ignores comments and dartdoc', () {
       final sites = findLiteralNavigationPathsInSource('''
 /// context.pushWithVideoPause('/profile/npub1...');
