@@ -46,7 +46,7 @@ class _SupporterAvatarHero extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: context.l10n.supporterLightboxBadge,
+      label: context.l10n.supporterTitle,
       child: GestureDetector(
         onTap: () => _showSupporterLightbox(
           context,

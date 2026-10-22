@@ -867,6 +867,26 @@ void main() {
       }
 
       group('renders', () {
+        testWidgets('labels the supporter avatar with the standalone title', (
+          tester,
+        ) async {
+          final semantics = tester.ensureSemantics();
+          try {
+            await pumpHeader(
+              tester,
+              isOwnProfile: false,
+              isPublicSupporter: true,
+            );
+
+            expect(
+              find.bySemanticsLabel(RegExp(RegExp.escape(l10n.supporterTitle))),
+              findsOneWidget,
+            );
+          } finally {
+            semantics.dispose();
+          }
+        });
+
         testWidgets("shows the halo and wings on someone else's public "
             'supporter profile', (tester) async {
           await pumpHeader(

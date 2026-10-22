@@ -102,6 +102,8 @@ void main() {
         await pumpSection(tester, isSupporter: true);
 
         expect(find.text(l10n.supporterPublicRecognition), findsOneWidget);
+        expect(find.text(l10n.supporterTitle), findsOneWidget);
+        expect(find.text(l10n.supporterLightboxBadge), findsNothing);
         expect(switchValue(tester), isFalse);
       });
 

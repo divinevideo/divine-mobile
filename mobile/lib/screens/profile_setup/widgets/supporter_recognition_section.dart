@@ -53,7 +53,7 @@ class _SupporterRecognition extends StatelessWidget {
           spacing: 8,
           children: [
             Text(
-              l10n.supporterLightboxBadge,
+              l10n.supporterTitle,
               style: VineTheme.labelMediumFont(
                 color: context.vineColors.mutedText,
               ),
