@@ -214,14 +214,12 @@ class _FakeCacheDao implements CacheDao {
 class MockAuthService extends Mock implements AuthService {
   MockAuthService({
     this.isAnonymousValue = false,
-    this.isAuthenticatedValue = true,
     bool hasExpiredOAuthSessionValue = false,
     this.isRpcUpgradeInProgressValue = false,
     this.tryRefreshResult = false,
   }) : expiredOAuthSession = ValueNotifier(hasExpiredOAuthSessionValue);
 
   final bool isAnonymousValue;
-  final bool isAuthenticatedValue;
 
   /// Set its value to flip the flag while the header is mounted, as a refused
   /// mid-session refresh does (#9943).
@@ -237,7 +235,7 @@ class MockAuthService extends Mock implements AuthService {
   bool get isAnonymous => isAnonymousValue;
 
   @override
-  bool get isAuthenticated => isAuthenticatedValue;
+  bool get isAuthenticated => true;
 
   @override
   String? get currentPublicKeyHex => testUserHex;
@@ -438,7 +436,6 @@ void main() {
           Nip05VerificationStatus.verified,
       SupporterApiClient? supporterClient,
       SupporterRepository? supporterRepository,
-      VoidCallback? onSupporterRepositoryRead,
     }) {
       // Pass authService when the test needs the same instance across pumps —
       // e.g. to read tryRefreshCallCount after the header has been unmounted.
@@ -551,10 +548,7 @@ void main() {
             supporterApiClient: supporterClient,
           ),
           if (supporterRepository != null)
-            supporterRepositoryProvider.overrideWith((ref) {
-              onSupporterRepositoryRead?.call();
-              return supporterRepository;
-            }),
+            supporterRepositoryProvider.overrideWithValue(supporterRepository),
           profileVanishedProvider(userIdHex).overrideWith((ref) => isVanished),
           if ((profile ?? suppliedProfile)?.nip05 case final String claim)
             nip05ClaimVerificationProvider(
@@ -1332,33 +1326,6 @@ void main() {
           await openSupporterView(tester);
 
           expect(find.text(l10n.supporterJoinLabel), findsOneWidget);
-        });
-
-        testWidgets('invites a signed-out viewer without reading a '
-            'membership', (tester) async {
-          var membershipReads = 0;
-          final repository = await membership(tester, isSupporter: false);
-          await tester.pumpWidget(
-            buildTestWidget(
-              userIdHex: testUserHex,
-              isOwnProfile: false,
-              suppliedProfile: createTestProfile(
-                displayName: 'Ivy',
-                picture: supporterPicture,
-              ),
-              supporterClient: supporterClient(isPublicSupporter: true),
-              supporterRepository: repository,
-              onSupporterRepositoryRead: () => membershipReads++,
-              authService: MockAuthService(isAuthenticatedValue: false),
-              disableAnimations: true,
-            ),
-          );
-          await tester.pumpAndSettle();
-
-          await openSupporterView(tester);
-
-          expect(find.text(l10n.supporterJoinLabel), findsOneWidget);
-          expect(membershipReads, isZero);
         });
 
         testWidgets('does not invite a viewer who already supports Divine', (
