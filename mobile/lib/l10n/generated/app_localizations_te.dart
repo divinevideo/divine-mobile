@@ -12914,8 +12914,7 @@ class AppLocalizationsTe extends AppLocalizations {
       'Let others see that you support Divine. This is optional and is not a verification badge.';
 
   @override
-  String get supporterTitle =>
-      'Divine మద్దతుదారులు\nఐచ్ఛిక నెలవారీ సభ్యత్వంతో ';
+  String get supporterTitle => 'Divine మద్దతుదారులు';
 
   @override
   String get supporterTileSubtitle => 'మద్దతు Divine.';
