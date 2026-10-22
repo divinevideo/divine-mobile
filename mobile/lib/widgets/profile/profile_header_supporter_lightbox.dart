@@ -76,10 +76,9 @@ HeroFlightShuttleBuilder _supporterShuttle(String? imageUrl, String userIdHex) {
   return (context, animation, _, _, _) => FittedBox(
     child: SupporterHaloWings(
       avatarSize: _supporterLightboxAvatarSize,
-      sparkles: CurvedAnimation(
-        parent: animation,
-        curve: _supporterSparkleReveal,
-      ),
+      // A driven tween, unlike a CurvedAnimation, adds no listener to the
+      // route animation that would outlive this flight.
+      sparkles: animation.drive(CurveTween(curve: _supporterSparkleReveal)),
       avatar: UserAvatar(
         imageUrl: imageUrl,
         placeholderSeed: userIdHex,
@@ -131,9 +130,11 @@ class _SupporterLightbox extends StatelessWidget {
     final padding = MediaQuery.paddingOf(context);
     final colors = context.vineColors;
     final route = ModalRoute.of(context)!.animation!;
+    // Driven rather than a CurvedAnimation, which would add a listener to the
+    // route animation on every rebuild and never remove it.
     final reveal = context.reduceMotion
         ? route
-        : CurvedAnimation(parent: route, curve: _supporterContentReveal);
+        : route.drive(CurveTween(curve: _supporterContentReveal));
     return BackdropFilter(
       filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
       // Text here needs a Material ancestor for its default style; the route
