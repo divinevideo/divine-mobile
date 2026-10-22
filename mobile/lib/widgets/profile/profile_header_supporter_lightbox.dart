@@ -307,19 +307,24 @@ class _SupporterLightboxAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const size = _supporterLightboxAvatarSize;
-    return Hero(
-      tag: _avatarHeroTag(userIdHex),
-      createRectTween: _supporterRectTween,
-      flightShuttleBuilder: _supporterShuttle(imageUrl, userIdHex),
-      child: SupporterHaloWings(
-        avatarSize: size,
-        sparkles: kAlwaysCompleteAnimation,
-        avatar: UserAvatar(
-          imageUrl: imageUrl,
-          placeholderSeed: userIdHex,
-          size: size,
-          cornerRadius: size * _avatarHeroCornerRatio,
-          previewDecodeSize: _headerAvatarSize,
+    // The wings make the group wider than some phones allow; scale it as one
+    // piece there rather than let the wings slide over the avatar.
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Hero(
+        tag: _avatarHeroTag(userIdHex),
+        createRectTween: _supporterRectTween,
+        flightShuttleBuilder: _supporterShuttle(imageUrl, userIdHex),
+        child: SupporterHaloWings(
+          avatarSize: size,
+          sparkles: kAlwaysCompleteAnimation,
+          avatar: UserAvatar(
+            imageUrl: imageUrl,
+            placeholderSeed: userIdHex,
+            size: size,
+            cornerRadius: size * _avatarHeroCornerRatio,
+            previewDecodeSize: _headerAvatarSize,
+          ),
         ),
       ),
     );

@@ -1095,6 +1095,40 @@ void main() {
           });
         }
 
+        testWidgets('keeps the wings clear of the avatar in the supporter '
+            'view on a narrow screen', (tester) async {
+          tester.view
+            ..physicalSize = const Size(320, 800)
+            ..devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+          await pumpHeader(
+            tester,
+            isOwnProfile: false,
+            isPublicSupporter: true,
+          );
+          await openSupporterView(tester);
+
+          // The supporter view's group, not the header's behind it.
+          final group = find.byWidgetPredicate(
+            (widget) =>
+                widget is SupporterHaloWings && widget.avatarSize == 192,
+          );
+          final avatar = tester.getRect(
+            find.descendant(of: group, matching: find.byType(UserAvatar)),
+          );
+          final rightWing = tester.getRect(
+            find.descendant(
+              of: group,
+              matching: find.image(
+                const AssetImage('assets/supporter/wing_right.png'),
+              ),
+            ),
+          );
+          // The wing tucks a few points behind the avatar by design.
+          expect(avatar.right - rightWing.left, lessThan(10));
+          expect(tester.takeException(), isNull);
+        });
+
         testWidgets('keeps the halo and wings at full opacity when the '
             'supporter view closes', (tester) async {
           await tester.pumpWidget(
