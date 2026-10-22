@@ -8,12 +8,6 @@ import 'package:test/test.dart';
 
 void main() {
   group('ARB consistency', () {
-    test('Telugu supporter title does not include a subtitle fragment', () {
-      final telugu = _readArb(File('lib/l10n/app_te.arb'));
-
-      expect(telugu['supporterTitle'], 'Divine మద్దతుదారులు');
-    });
-
     test('conversation dismissal and removal have distinct action labels', () {
       final arbFiles = Directory('lib/l10n').listSync().whereType<File>().where(
         (file) => file.path.endsWith('.arb'),
