@@ -8,6 +8,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:models/models.dart';
 import 'package:openvine/observability/crash_reporter.dart';
+import 'package:openvine/services/dm_video_auto_download_limits.dart';
 import 'package:openvine/services/dm_video_conversation_records.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
@@ -172,12 +173,6 @@ class DmVideoStore {
   static const String _partSuffix = '.part';
   static const String _legacyPlaybackDirName = 'dm_video_playback';
 
-  /// Left for a message whose download failed in a way that would repeat, so
-  /// no later session fetches it by itself either. Empty; it goes with its
-  /// message, or [maxAge] after it was left, and is never trimmed for the
-  /// cap.
-  static const String _failedSuffix = '.failed';
-
   /// Age past which a part file is taken as left by a crash: a younger one
   /// may still be being written, by this store or by the one an account
   /// switch replaced.
@@ -285,13 +280,13 @@ class DmVideoStore {
   /// beside the video keeps the read from being tried in later sessions too.
   final Set<String> _unreadableFrames = {};
 
-  /// Downloads nobody tapped for that failed, by message id, with when a card
-  /// may fetch it again by itself, or null when it may not this session.
-  final Map<String, DateTime?> _autoDownloadFailures = {};
-
-  /// How many downloads nobody tapped for started this session, by message id.
-  /// A withdrawn request still reached the sender's server and counts too.
-  final Map<String, int> _autoDownloadAttempts = {};
+  /// How often, and how soon after a failure, a card fetches a video by itself.
+  late final DmVideoAutoDownloadLimits _autoLimits = DmVideoAutoDownloadLimits(
+    maxTries: autoDownloadMaxTries,
+    retryAfter: autoDownloadRetryAfter,
+    now: _now,
+    ownerRemoved: () => _ownerRemoved,
+  );
 
   /// Marks around each frame read, so a decode that crashed the app is not
   /// tried again: nothing of a sender one of whose reads an earlier launch
@@ -878,7 +873,7 @@ class DmVideoStore {
   /// Whether [file] is an empty mark, of a failed download or of a sender
   /// whose frame read never finished: it ages, but is never trimmed.
   static bool _isMark(File file) =>
-      file.path.endsWith(_failedSuffix) ||
+      DmVideoAutoDownloadLimits.isFailureMark(file) ||
       DmVideoFrameReadMarks.isSenderMark(file);
 
   /// Fetches [message]'s video in turn with other downloads nobody tapped
@@ -966,13 +961,7 @@ class DmVideoStore {
         _lease(file);
       }
       // Count starts, including withdrawals, but not queued drops or cache hits.
-      if (maxBytes != null) {
-        _autoDownloadAttempts.update(
-          message.id,
-          (count) => count + 1,
-          ifAbsent: () => 1,
-        );
-      }
+      if (maxBytes != null) _autoLimits.started(message.id);
       final plaintext = await _fetchVideo(
         message,
         maxBytes: maxBytes,
@@ -1072,7 +1061,7 @@ class DmVideoStore {
       _lease(keptVideo);
       video = keptVideo;
       await _records.writeQuietly(message, dir);
-    } else if (_mayAutoDownload(dir, message.id) &&
+    } else if (_autoLimits.mayStart(dir, message.id) &&
         (declaredBytes == null || declaredBytes <= autoDownloadMaxBytes)) {
       try {
         video = await _autoVideoFor(message, wanted: stillWanted);
@@ -1085,17 +1074,12 @@ class DmVideoStore {
         // Its files go with it; there is nothing to remember or try again.
         return null;
       } on Object catch (error) {
-        final mayPass = error is DmVideoUnavailableException && error.mayPass;
-        if (!mayPass) {
-          // It would fail again, for whichever card asks next, in this
-          // session or a later one.
-          _autoDownloadFailures[message.id] = null;
-          await _rememberLastingFailure(dir, message);
-        } else if (wanted()) {
-          _autoDownloadFailures[message.id] = _now().add(
-            autoDownloadRetryAfter,
-          );
-        }
+        await _autoLimits.failed(
+          dir,
+          message.id,
+          mayPass: error is DmVideoUnavailableException && error.mayPass,
+          wanted: wanted(),
+        );
         // An expected failure no card waits for has no one to tell. Anything
         // else reaches the cards, which report it even once closed.
         if (!wanted() && error is DmVideoUnavailableException) return null;
@@ -1241,43 +1225,6 @@ class DmVideoStore {
   /// The message id a kept file is named after: its name up to the first dot.
   static String _messageIdOf(File file) =>
       file.uri.pathSegments.last.split('.').first;
-
-  bool _mayAutoDownload(Directory dir, String messageId) {
-    if ((_autoDownloadAttempts[messageId] ?? 0) >= autoDownloadMaxTries) {
-      return false;
-    }
-    if (!_autoDownloadFailures.containsKey(messageId)) {
-      if (!_failureMarkOf(dir, messageId).existsSync()) return true;
-      // An earlier session's download failed in a way that would repeat.
-      _autoDownloadFailures[messageId] = null;
-      return false;
-    }
-    final retryAt = _autoDownloadFailures[messageId];
-    return retryAt != null && !_now().isBefore(retryAt);
-  }
-
-  static File _failureMarkOf(Directory dir, String messageId) =>
-      File('${dir.path}/${dmVideoSafeName(messageId)}$_failedSuffix');
-
-  /// Leaves the mark that keeps later sessions from fetching [message]'s
-  /// video by themselves: its download failed in a way that would repeat.
-  Future<void> _rememberLastingFailure(Directory dir, DmMessage message) async {
-    // Writing it would bring a removed account's folder back.
-    if (_ownerRemoved) return;
-    final mark = _failureMarkOf(dir, message.id);
-    try {
-      await mark.create(recursive: true);
-      // Removed while it was written: keep nothing for that account.
-      if (_ownerRemoved) await _deleteQuietly(mark);
-    } on FileSystemException catch (error) {
-      Log.warning(
-        'Could not remember a failed video DM download: '
-        '${dmVideoFileErrorCause(error)}',
-        name: _logName,
-        category: LogCategory.video,
-      );
-    }
-  }
 
   Future<Directory> _ownerDirectory() async {
     final root = await _rootDirectory();
