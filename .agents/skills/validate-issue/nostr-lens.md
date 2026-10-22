@@ -58,10 +58,9 @@ where "the app follows the NIP" may have silently stopped being true:
 | 2026-05-28 | NIP-71 multiple audio tracks as `imeta` variants; `ov` flags the original, `waveform` is optional, clients should prefer them over in-video audio | 71.md:41-50, 94-100 |
 | 2026-05-28 | NIP-01: relays accept one endpoint when path segments change nothing (URL normalisation) | 01.md:111 |
 | 2026-06-15 | NIP-46 `logout` method: the signer SHOULD remove the session on request; the client MUST still delete its client-keypair on logout | 46.md:109, 133-135 |
-| 2026-06-23 | NIP-46 optional client metadata (`name`, `url`, `image`) in `connect`; a display hint, never authorization | 46.md:48, 115-127 |
+| 2026-06-23 | NIP-46 optional client metadata (`name`, `url`, `image`) in `connect`; a display hint, never authorization | 46.md:48, 115-123 |
 | 2026-06-28 | NIP-44 plaintext may exceed 65535 bytes (6-byte length prefix above it) | 44.md:87-91 |
 | 2026-07-15 | NIP-46: unknown methods MUST get an error reply (no silent timeout) | 46.md:164 |
-| 2026-08-01 | NIP-47: core NWC spec simplified; notifications (23197) and `pay_keysend` moved out to extensions, info/connect carry an `extensions` tag | 47.md:13, 49-64, 313, 392 |
 | 2026-08-24 | NIP-22: the ban on kind 1111 replies to kind 1 was removed | 22.md (line deleted in 13664fb) |
 | 2026-09-01 | NIP-42 / NIP-67: `EOSE` may carry an `auth` hint | 42.md:89 |
 | 2026-09-03 | NIP-78: relays SHOULD require NIP-42 AUTH for kind 78 / 30078 and serve them only to the authenticated owner | 78.md:21-24 |
@@ -85,7 +84,8 @@ Three rules before any command:
 | How many, without downloading | `nak count …` (the number is printed on **stderr** as `<relay>: <n>`); ids only: `nak req --ids-only …` |
 | History past a relay's clamp | `nak req --paginate …` |
 | Relay limits and claimed NIPs | `nak relay <url>` (`limitation.auth_required`, `max_limit`, `max_subid_length`, `created_at_lower_limit` / `upper_limit`, `max_message_length`) |
-| AUTH-gated kinds (1059, 4, 78/30078) | `nak req --auth -k 1059 -p <hex> …` (with `NOSTR_SECRET_KEY` exported) |
+| AUTH-gated kinds (1059, 4) | `nak req --auth -k 1059 -p <hex> …` (with `NOSTR_SECRET_KEY` exported) |
+| AUTH-gated app data (78/30078) | `nak req --auth -k 30078 -a <owner hex> …` (with the owner's `NOSTR_SECRET_KEY` exported; 30078 carries `d`, not `p`) |
 | Open a test account's gift wrap | `… \| nak gift unwrap` prints the unsigned rumor (export that account's `NOSTR_SECRET_KEY` for the command). There is no `--from` flag, whatever `nak gift --help` shows |
 | Build a wrap the way Divine does | `nak event -k 14 -c hi -p <B> \| nak gift wrap -p <B> --use-our-identity-key --use-their-identity-key` with the sender's `NOSTR_SECRET_KEY` exported (the flags stop a draft-NIP decoupled key from being used; `-p` is the recipient's public key, not a secret) |
 | Decode / build identifiers | `nak decode <npub\|nevent\|naddr>` / `nak encode …` |
@@ -126,7 +126,7 @@ conclusion.
 | Gift-wrap time | seal and wrap `created_at` randomised "up to two days in the past" (17.md:59); the canonical time is the rumor's (59.md:111) | A `since` cursor misses fresh wraps: a wrap built with `nak gift wrap` in testing was dated 36 h back. Order by the rumor's time |
 | Seal authorship | kind 13 pubkey MUST equal the rumor's pubkey (17.md:57) | Impersonation if unchecked |
 | DM routing | publish only to the recipient's kind 10050 relays; if none, "clients shouldn't try" (17.md:77); relays SHOULD serve kind 1059 only to p-tagged users via AUTH (17.md:81) | Sends to the general pool; "delivered" with no reader; a relay leaks DM metadata or an unauthenticated client reads an empty inbox |
-| AUTH | challenge lives for the connection; kind 22242 with `relay` + `challenge`; retry the REQ/EVENT after AUTH (42.md:41-111) | Empty DM inbox on relays that gate 1059/30078; first query after reconnect fails |
+| AUTH | challenge lives for the connection; kind 22242 with `relay` + `challenge`; retry the REQ/EVENT after AUTH (42.md:41-111) | Empty DM inbox for 1059, or an empty creator-sync library / refused 30078 publish, on relays that gate them; first query after reconnect fails |
 | Deletion | relays act only on same-pubkey targets (09.md:31); clients MUST check the pubkey before hiding (09.md:41); an `a` deletion covers versions up to its `created_at` (09.md:35); keep rebroadcasting the kind 5 (09.md:33) | Deleted items return from another relay or cache; a later edit survives the deletion; someone else's kind 5 hides your event |
 | Vanish | everything up to `created_at`, on tagged relays; no re-broadcast; kind 5 cannot undo (62.md:13-41) | Events newer than the boundary survive; re-publish is rejected |
 | Expiration | relays MAY keep, SHOULD NOT serve; clients SHOULD ignore expired (40.md:41-48) | Expired items shown from cache |
@@ -138,7 +138,7 @@ conclusion.
 | NIP-98 | `u` exactly equals the request URL including query; window ~60 s (98.md:42-43) | 401s from normalised URLs or device clock skew |
 | Blossom auth | kind 24242; `created_at` MUST be in the past, `expiration` in the future, `t` verb MUST match; header is Base64url without padding (BUD-11 at `hzrd149/blossom` b5bd280), unlike NIP-98's standard base64 | 401 on a device whose clock runs fast; 401 only for tokens whose base64 happens to contain `+ / =` |
 | NIP-46 | `remote-signer-pubkey` is not the user pubkey: call `get_public_key`; validate `secret` (46.md:9, 55-67) | Events signed or attributed to the wrong key; hijacked connect |
-| NIP-46 session teardown | `logout` is a courtesy hint; the client MUST still delete its client-keypair (46.md:133-135). Client metadata is unauthenticated and for display only (46.md:115-127) | A stale signer session survives logout; a signer trusts client metadata for authorization |
+| NIP-46 session teardown | `logout` is a courtesy hint; the client MUST still delete its client-keypair (46.md:133-135). Client metadata is unauthenticated and for display only (46.md:115-123) | A stale signer session survives logout; a signer trusts client metadata for authorization |
 | Signer readiness | repo rule, not a NIP: identity known ≠ signer ready | A publish attempted at `authenticated` fails once and is never retried |
 
 Divine-specific contracts (relay policy, REST lag, vanish boundary, moderation
