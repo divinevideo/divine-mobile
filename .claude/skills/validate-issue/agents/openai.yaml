@@ -1,0 +1,5 @@
+# Codex reads this file; Claude Code uses disable-model-invocation in SKILL.md.
+# Both keep the skill from starting on a prompt match: it runs only when
+# someone invokes $validate-issue (or /validate-issue in Claude Code).
+policy:
+  allow_implicit_invocation: false

@@ -69,7 +69,7 @@ How the tool gets phone logs on this toolchain (Xcode ≥ 26, CoreDevice), from
 signals, and the URIs the other tools need arrive as events. The helper in the
 `scripts/` directory beside this file keeps a run alive across separate shell
 calls. `<skill dir>` is the directory holding this file
-(`.claude/skills/patrol-issue`, or `.agents/skills/patrol-issue` for Codex);
+(`.claude/skills/validate-issue`, or `.agents/skills/validate-issue` for Codex);
 `<scratch>` is a directory outside the repo, such as your session's scratch
 directory. In a fresh worktree run `mise trust` in `mobile/` once first, or
 `mise exec` refuses to start:
@@ -145,7 +145,7 @@ ev 'WidgetsBinding.instance.rootElement?.widget.runtimeType.toString()'
 
 ## 5. Touch on a physical iPhone
 
-1. **VM-service pointer events** on a debug build. `handlePointerEvent(PointerDownEvent…)` then `PointerUpEvent` at a live widget's centre (`localToGlobal(size.center(Offset.zero))`, read at tap time: the keyboard and sliding sheets move targets), with a fresh `pointer` id per tap. Wait for the target to be on screen and still; poll transient UI such as snackbars every 200 ms rather than sleeping a fixed time. The default for an ad-hoc patrol; cannot reach native dialogs.
+1. **VM-service pointer events** on a debug build. `handlePointerEvent(PointerDownEvent…)` then `PointerUpEvent` at a live widget's centre (`localToGlobal(size.center(Offset.zero))`, read at tap time: the keyboard and sliding sheets move targets), with a fresh `pointer` id per tap. Wait for the target to be on screen and still; poll transient UI such as snackbars every 200 ms rather than sleeping a fixed time. The default for an ad-hoc validation run; cannot reach native dialogs.
 2. **`devicectl`.** Launch or foreground the app, screenshot, screen recording, pasteboard, appearance, location. No touch.
 3. **Patrol (XCUITest).** Real taps, system dialogs included, but on a physical iPhone the CLI runs release mode only (`patrol_cli` `ios_test_backend.dart`). That means the production bundle id, no VM service, and live logs from `idevicesyslog`, which Xcode 26 and later no longer feed. On the phone it is an ask-the-user item. When the flow is worth keeping as a regression test, write it for the repo's E2E harness instead (`e2e-test` skill, `local_stack/profile.sh`): Android emulator, plain `integration_test` suites, and new suites avoid Patrol.
 4. **The user's hand**, for camera, biometrics and anything else hardware.

@@ -1,10 +1,11 @@
 ---
-name: patrol-issue
-description: Use when handed a GitHub issue link in a Divine repo to validate before fixing, or asked to "patrol", "100% validate", "fully reproduce" or "watch the logs" for an issue on a device or simulator. Covers Flutter/Dart app behaviour, Nostr events, relays and NIP conformance.
+name: validate-issue
+description: Validate a Divine GitHub issue end to end before anyone fixes it, on a device or simulator, with every claim tagged by how it was observed. Runs only when invoked explicitly, as /validate-issue <issue-url> ($validate-issue in Codex). Covers Flutter/Dart app behaviour, Nostr events, relays and NIP conformance.
 argument-hint: <issue-url>
+disable-model-invocation: true
 ---
 
-# Patrol an issue
+# Validate an issue
 
 A claim is validated only by an observation that could have come out the other
 way. Every claim in the output carries the tag of how it was observed. "1.0"
@@ -13,6 +14,10 @@ means the required tags are present; it is never a number someone asserts.
 `$ARGUMENTS` is the issue URL. Work the phases in order. Each phase ends by
 printing its block; a block with an empty slot is an unfinished phase. Phases
 0-2 are read-only; Gate A (10-20 confirming questions) sits between 2 and 3.
+
+The skill never starts on its own. Someone types `/validate-issue <url>`
+(`$validate-issue` in Codex), and that is the opt-in to everything below,
+the question gate included.
 
 ## Standing facts (never ask for these)
 
@@ -38,7 +43,7 @@ Traps read: <the rules, repo skills and notes for this issue's area: DMs, feeds,
 Load divine-context the way the repo's `AGENTS.md` says, trust boundary first.
 A Zendesk-bot issue is report-only. An issue nobody in the org assigned or
 asked for is not started. Re-run the first three lines at every gate; PRs merge
-and issues close mid-patrol.
+and issues close mid-run.
 
 ## 1. Claim sheet
 
@@ -66,7 +71,7 @@ Then classify each claim and load the lens it names:
 
 ## Gate A: confirming questions (required before anything is built, launched or posted)
 
-This skill's rule for every patrol: decide no tiny thing alone, and ask 10-20
+This skill's rule for every run: decide no tiny thing alone, and ask 10-20
 confirming questions before reproducing or fixing. It overrides Auto Mode and
 any other lean toward fewer questions.
 
@@ -86,7 +91,7 @@ One question per row that applies:
 | Cause | Which hypothesis to test first, which layer you think is wrong |
 | Reported on | Build, OS, account state to match; LOCAL, STAGING or PRODUCTION |
 | Environment | Device or simulator, debug or profile, SHA, shared hardware |
-| Risk | Each action in the list below that this patrol would take |
+| Risk | Each action in the list below that this run would take |
 | Scope | Fix here or follow-up issue; adjacent findings; parity (Android, web) |
 | Product | "Should it…" decisions, copy, what counts as fixed |
 | Delivery | Test layer, PR shape, what to post on the issue and whether |

@@ -1,8 +1,8 @@
 // Fault-injecting WebSocket proxy for Nostr relay traffic.
 //
 // Puts a relay you control between the app and its relay so a refusal, a lost
-// OK or a slow EOSE happens on demand. Patrol tooling: run it from the skill
-// directory with `dart`; nothing in the app imports it.
+// OK or a slow EOSE happens on demand. Tooling for the validate-issue skill:
+// run it from the skill directory with `dart`; nothing in the app imports it.
 //
 //   dart relay-fault-proxy.dart --upstream ws://localhost:10547 [--listen 47801] [faults]
 //
