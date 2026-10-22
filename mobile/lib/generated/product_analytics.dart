@@ -1,8 +1,8 @@
 // @generated from analytics/event-contract.yaml.
-// Source contract commit: 58ec2aa4090d2f17ca0ef1e30d3602f5bd24f9d6
+// Source contract commit: 68380fb9b9f7cbb2d8f952a119ea460eb906342e
 // DO NOT EDIT. Update the contract and run analytics/codegen/generate.py.
 const String productAnalyticsV2ContractCommit =
-    '58ec2aa4090d2f17ca0ef1e30d3602f5bd24f9d6';
+    '68380fb9b9f7cbb2d8f952a119ea460eb906342e';
 const int productAnalyticsV2SchemaVersion = 2;
 const String productAnalyticsV2EventIdAlgorithm = 'sha256-rfc8785-v1';
 const bool? productAnalyticsV2ConsentDefaultEnabled = null;
@@ -17,6 +17,8 @@ const int productAnalyticsV2PlaybackSessionRecordedWatchedMsMinimum = 0;
 const int productAnalyticsV2PlaybackSessionRecordedWatchedMsMaximum = 86400000;
 const int productAnalyticsV2PlaybackSessionRecordedLoopCountMinimum = 0;
 const int productAnalyticsV2PlaybackSessionRecordedLoopCountMaximum = 1000;
+const int productAnalyticsV2FeedDepthRecordedDepthMinimum = 2;
+const int productAnalyticsV2FeedDepthRecordedDepthMaximum = 1000000;
 
 enum ProductAnalyticsV2Source {
   mobile('mobile'),
@@ -164,6 +166,34 @@ enum ProductAnalyticsV2RegistrationEntryPoint {
   unknown('unknown');
 
   const ProductAnalyticsV2RegistrationEntryPoint(this.wireName);
+  final String wireName;
+}
+
+enum ProductAnalyticsV2EngagementAction {
+  reactionSent('reaction_sent'),
+  commentSent('comment_sent'),
+  shareTapped('share_tapped'),
+  followAdded('follow_added');
+
+  const ProductAnalyticsV2EngagementAction(this.wireName);
+  final String wireName;
+}
+
+enum ProductAnalyticsV2FeedType {
+  home('home'),
+  forYou('for_you'),
+  following('following'),
+  list('list'),
+  newVines('new_vines'),
+  classics('classics'),
+  popular('popular'),
+  featured('featured'),
+  profile('profile'),
+  share('share'),
+  search('search'),
+  unknown('unknown');
+
+  const ProductAnalyticsV2FeedType(this.wireName);
   final String wireName;
 }
 
@@ -381,6 +411,44 @@ class ProductAnalyticsV2RegistrationStartedProperties {
   };
 }
 
+/// Wire event name: `engagement_recorded`.
+class ProductAnalyticsV2EngagementRecordedProperties {
+  const ProductAnalyticsV2EngagementRecordedProperties({
+    required this.action,
+    this.contentId,
+  });
+
+  final ProductAnalyticsV2EngagementAction action;
+  final String? contentId;
+
+  Map<String, Object?> toJson() => {
+    'action': action.wireName,
+    if (contentId != null) 'content_id': contentId,
+  };
+}
+
+/// Wire event name: `feed_depth_recorded`.
+class ProductAnalyticsV2FeedDepthRecordedProperties {
+  const ProductAnalyticsV2FeedDepthRecordedProperties({
+    required this.feedSessionId,
+    required this.feedType,
+    required this.surface,
+    required this.depth,
+  });
+
+  final String feedSessionId;
+  final ProductAnalyticsV2FeedType feedType;
+  final ProductAnalyticsV2Surface surface;
+  final int depth;
+
+  Map<String, Object?> toJson() => {
+    'feed_session_id': feedSessionId,
+    'feed_type': feedType.wireName,
+    'surface': surface.wireName,
+    'depth': depth,
+  };
+}
+
 sealed class ProductAnalyticsV2Event {
   const ProductAnalyticsV2Event({required this.envelope});
 
@@ -502,6 +570,38 @@ final class ProductAnalyticsV2RegistrationStartedEvent
 
   @override
   String get eventName => 'registration_started';
+
+  @override
+  Map<String, Object?> get propertiesJson => properties.toJson();
+}
+
+final class ProductAnalyticsV2EngagementRecordedEvent
+    extends ProductAnalyticsV2Event {
+  const ProductAnalyticsV2EngagementRecordedEvent({
+    required super.envelope,
+    required this.properties,
+  });
+
+  final ProductAnalyticsV2EngagementRecordedProperties properties;
+
+  @override
+  String get eventName => 'engagement_recorded';
+
+  @override
+  Map<String, Object?> get propertiesJson => properties.toJson();
+}
+
+final class ProductAnalyticsV2FeedDepthRecordedEvent
+    extends ProductAnalyticsV2Event {
+  const ProductAnalyticsV2FeedDepthRecordedEvent({
+    required super.envelope,
+    required this.properties,
+  });
+
+  final ProductAnalyticsV2FeedDepthRecordedProperties properties;
+
+  @override
+  String get eventName => 'feed_depth_recorded';
 
   @override
   Map<String, Object?> get propertiesJson => properties.toJson();

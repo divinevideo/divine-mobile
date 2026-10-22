@@ -779,6 +779,7 @@ void main() {
           // happens when FollowRepository publishes, so unblocking restores
           // the follow instead of costing it permanently.
           verifyNever(() => mockFollowRepository.follow(any()));
+          verifyNever(() => mockFollowRepository.followWithResult(any()));
           verifyNever(() => mockFollowRepository.unfollow(any()));
         },
       );

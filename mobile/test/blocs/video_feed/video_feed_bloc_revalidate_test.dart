@@ -424,6 +424,7 @@ void main() {
           status: VideoFeedStatus.success,
           mode: FeedMode.classic,
           videos: [_video('previous-source')],
+          feedSessionRevision: 4,
         ),
         act: (bloc) async {
           bloc.add(const VideoFeedModeChanged(FeedMode.latest));
@@ -435,6 +436,7 @@ void main() {
         expect: () => [
           isA<VideoFeedBlocState>()
               .having((state) => state.mode, 'mode', FeedMode.latest)
+              .having((state) => state.feedSessionRevision, 'feed session', 5)
               .having(
                 (state) => state.status,
                 'status',
@@ -447,6 +449,7 @@ void main() {
               ),
           isA<VideoFeedBlocState>()
               .having((state) => state.mode, 'mode', FeedMode.latest)
+              .having((state) => state.feedSessionRevision, 'feed session', 5)
               .having(
                 (state) => state.status,
                 'status',

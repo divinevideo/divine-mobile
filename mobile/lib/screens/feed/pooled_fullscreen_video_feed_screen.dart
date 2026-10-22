@@ -24,6 +24,7 @@ import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/foreground_idle_warmup_provider.dart';
 import 'package:openvine/router/route_paths.dart';
@@ -535,7 +536,7 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
     );
     final nextIndex = bloc.state.currentIndex + 1;
     if (nextIndex < bloc.state.videos.length) {
-      _animateToPage(nextIndex);
+      unawaited(_feedVideosKey.currentState?.advanceFromUserAction(nextIndex));
     }
   }
 
@@ -600,8 +601,10 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
 
     return BlocProvider<InlineCommentComposerCubit>(
       key: ValueKey(commentsRepository),
-      create: (_) =>
-          InlineCommentComposerCubit(commentsRepository: commentsRepository),
+      create: (_) => InlineCommentComposerCubit(
+        commentsRepository: commentsRepository,
+        consumptionAnalytics: ref.read(consumptionAnalyticsTrackerProvider),
+      ),
       child: MultiBlocProvider(
         providers: [
           BlocProvider.value(value: _autoAdvanceCubit),

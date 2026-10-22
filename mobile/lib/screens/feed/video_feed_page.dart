@@ -297,7 +297,7 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
     final nextIndex = _currentIndex + 1;
     if (nextIndex < videos.length) {
       _pendingTuningAutoAdvanceIndex = nextIndex;
-      _animateToPage(nextIndex);
+      unawaited(_feedVideosKey.currentState?.advanceFromUserAction(nextIndex));
     }
   }
 
@@ -594,6 +594,7 @@ class _VideoFeedViewState extends ConsumerState<VideoFeedView>
                             // For You, following, list, new and classic feeds
                             // are indistinguishable in view_traffic_sources.
                             sourceDetail: state.source.type.analyticsTag,
+                            feedSessionRevision: state.feedSessionRevision,
                             onActiveVideoChanged: (_, index) {
                               final isTuningAutoAdvance =
                                   _pendingTuningAutoAdvanceIndex == index;

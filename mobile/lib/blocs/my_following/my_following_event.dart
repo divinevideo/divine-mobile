@@ -27,7 +27,10 @@ sealed class MyFollowingEditRequested extends MyFollowingEvent {
 /// The user tapped Follow on [pubkey]. Always follows; a no-op if the account
 /// is already followed.
 final class MyFollowingFollowRequested extends MyFollowingEditRequested {
-  const MyFollowingFollowRequested(super.pubkey);
+  const MyFollowingFollowRequested(super.pubkey, {this.targetVideoId});
+
+  /// Video that supplied the follow affordance, when applicable.
+  final String? targetVideoId;
 }
 
 /// The user confirmed Unfollow on [pubkey]. Always unfollows; a no-op if the

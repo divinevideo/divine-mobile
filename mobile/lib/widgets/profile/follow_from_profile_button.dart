@@ -11,6 +11,7 @@ import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/blocs/others_followers/others_followers_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/widgets/unfollow_confirmation_sheet.dart';
@@ -52,6 +53,7 @@ class FollowFromProfileButton extends ConsumerWidget {
       create: (_) => MyFollowingBloc(
         followRepository: followRepository,
         contentBlocklistRepository: blocklistRepository,
+        consumptionAnalytics: ref.read(consumptionAnalyticsTrackerProvider),
       )..add(const MyFollowingListLoadRequested()),
       child: FollowFromProfileButtonView(
         pubkey: pubkey,

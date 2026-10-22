@@ -12,9 +12,12 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:notification_repository/notification_repository.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/notifications/bloc/notification_feed_bloc.dart';
 import 'package:openvine/services/app_badge_service.dart';
 import 'package:rxdart/rxdart.dart' hide NotificationKind;
+
+import '../helpers/recording_consumption_analytics.dart';
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
@@ -108,8 +111,10 @@ void main() {
   group('badge converges after tap -> read -> back', () {
     late _FakeNotificationRepository repository;
     late _MockFollowRepository followRepository;
+    late RecordingConsumptionAnalytics analytics;
 
     setUp(() {
+      analytics = RecordingConsumptionAnalytics();
       repository = _FakeNotificationRepository(
         NotificationPage(
           items: [_unreadLike('n1'), _unreadLike('n2'), _unreadFollow('n3')],
@@ -121,6 +126,7 @@ void main() {
     });
 
     tearDown(() async {
+      analytics.dispose();
       await repository.close();
     });
 
@@ -131,6 +137,9 @@ void main() {
           notificationRepository: repository,
           followRepository: followRepository,
           appBadgeClearer: const _NoopAppBadgeClearer(),
+          consumptionAnalytics: ConsumptionAnalyticsTracker(
+            analytics: () => analytics,
+          ),
         );
         addTearDown(bloc.close);
         final badge = NotificationBadgeCubit(repository: repository);
@@ -180,6 +189,9 @@ void main() {
           notificationRepository: repository,
           followRepository: followRepository,
           appBadgeClearer: const _NoopAppBadgeClearer(),
+          consumptionAnalytics: ConsumptionAnalyticsTracker(
+            analytics: () => analytics,
+          ),
         );
         addTearDown(bloc.close);
         final badge = NotificationBadgeCubit(repository: repository);
@@ -211,6 +223,9 @@ void main() {
         notificationRepository: repository,
         followRepository: followRepository,
         appBadgeClearer: const _NoopAppBadgeClearer(),
+        consumptionAnalytics: ConsumptionAnalyticsTracker(
+          analytics: () => analytics,
+        ),
       );
       addTearDown(bloc.close);
       final badge = NotificationBadgeCubit(repository: repository);

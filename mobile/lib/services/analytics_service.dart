@@ -43,6 +43,7 @@ class AnalyticsService implements BackgroundAwareService {
     String Function()? appVersion,
     DateTime Function()? now,
     bool? productAnalyticsEnabled,
+    bool? consumptionAnalyticsEnabled,
     @visibleForTesting bool? disableNostrPublishing,
   }) : _backgroundActivityManager = backgroundActivityManager,
        _viewEventPublisher = viewEventPublisher,
@@ -63,6 +64,9 @@ class AnalyticsService implements BackgroundAwareService {
                      'DEFAULT_ENV',
                    ).toUpperCase() ==
                    'STAGING'),
+       _consumptionAnalyticsEnabled =
+           consumptionAnalyticsEnabled ??
+           const bool.fromEnvironment('CONSUMPTION_ANALYTICS_ENABLED'),
        _disableNostrPublishing = disableNostrPublishing ?? false;
 
   static const Uuid _uuid = Uuid();
@@ -100,6 +104,11 @@ class AnalyticsService implements BackgroundAwareService {
   final String Function() _appVersion;
   final DateTime Function() _now;
   final bool _productAnalyticsEnabled;
+
+  /// Separate release gate for engagement and depth, default-off in every
+  /// environment. Enable only after contract/server acceptance and the recorded
+  /// consent and identity decisions. Existing playback uses its own release gate.
+  final bool _consumptionAnalyticsEnabled;
 
   /// Testing flag to disable Nostr publishing in unit tests.
   final bool _disableNostrPublishing;
@@ -407,6 +416,13 @@ class AnalyticsService implements BackgroundAwareService {
     await _productEventQueue?.clear();
   }
 
+  /// Identifies the current governed session without exposing account identity.
+  ///
+  /// Consumers reset their measurement state when this changes so navigation
+  /// depth cannot bridge login, account switches, or consent withdrawal.
+  String get productAnalyticsSessionId =>
+      _sessionIdOverride?.call() ?? _sessionId;
+
   void _rotateProductAnalyticsIdentity() {
     if (_anonymousIdOverride == null) _anonymousId = _uuid.v4();
     if (_sessionIdOverride == null) _sessionId = _uuid.v4();
@@ -455,6 +471,53 @@ class AnalyticsService implements BackgroundAwareService {
       ),
     ),
   );
+
+  /// Records a confirmed engagement or share intent without raw target pubkeys.
+  Future<String?> recordEngagement({
+    required ProductAnalyticsV2EngagementAction action,
+    String? contentId,
+  }) async {
+    if (!_consumptionAnalyticsEnabled) return null;
+    if (contentId != null &&
+        (contentId.length != 64 ||
+            !RegExp(r'^[0-9a-f]{64}$').hasMatch(contentId))) {
+      return null;
+    }
+    return _trackProductEvent(
+      (envelope) => ProductAnalyticsV2EngagementRecordedEvent(
+        envelope: envelope,
+        properties: ProductAnalyticsV2EngagementRecordedProperties(
+          action: action,
+          contentId: contentId,
+        ),
+      ),
+    );
+  }
+
+  /// Records deliberate navigation depth within one visible feed session.
+  Future<String?> recordFeedDepth({
+    required String feedSessionId,
+    required ProductAnalyticsV2FeedType feedType,
+    required ProductAnalyticsV2Surface surface,
+    required int depth,
+  }) async {
+    if (!_consumptionAnalyticsEnabled) return null;
+    if (depth < productAnalyticsV2FeedDepthRecordedDepthMinimum ||
+        depth > productAnalyticsV2FeedDepthRecordedDepthMaximum) {
+      return null;
+    }
+    return _trackProductEvent(
+      (envelope) => ProductAnalyticsV2FeedDepthRecordedEvent(
+        envelope: envelope,
+        properties: ProductAnalyticsV2FeedDepthRecordedProperties(
+          feedSessionId: feedSessionId,
+          feedType: feedType,
+          surface: surface,
+          depth: depth,
+        ),
+      ),
+    );
+  }
 
   /// Records a move between two surfaces.
   ///

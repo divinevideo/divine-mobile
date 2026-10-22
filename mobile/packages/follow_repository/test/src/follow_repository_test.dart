@@ -722,6 +722,42 @@ void main() {
         expect(repository.followingCount, 1);
       });
 
+      test('reports published and unchanged follow outcomes', () async {
+        final mockEvent = _MockEvent();
+        when(() => mockEvent.content).thenReturn('');
+        when(
+          () => mockNostrClient.sendContactList(
+            any(),
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).thenAnswer((_) async => mockEvent);
+        await repository.initialize();
+
+        expect(
+          await repository.followWithResult(testTargetPubkey),
+          FollowOutcome.published,
+        );
+        expect(repository.isFollowing(testTargetPubkey), isTrue);
+        expect(
+          await repository.followWithResult(testTargetPubkey),
+          FollowOutcome.unchanged,
+        );
+        expect(
+          await repository.followWithResult(testCurrentUserPubkey),
+          FollowOutcome.unchanged,
+        );
+        verify(
+          () => mockNostrClient.sendContactList(
+            any(),
+            any(),
+            tempRelays: any(named: 'tempRelays'),
+            targetRelays: any(named: 'targetRelays'),
+          ),
+        ).called(1);
+      });
+
       test('rolls back on broadcast failure', () async {
         when(
           () => mockNostrClient.sendContactList(
@@ -735,7 +771,7 @@ void main() {
         await repository.initialize();
         expect(repository.isFollowing(testTargetPubkey), isFalse);
         await expectLater(
-          repository.follow(testTargetPubkey),
+          repository.followWithResult(testTargetPubkey),
           throwsA(
             isA<Exception>().having(
               (e) => e.toString(),
@@ -790,7 +826,11 @@ void main() {
         stubContactListRead(timedOut: true);
 
         await repository.initialize();
-        await repository.follow(testTargetPubkey);
+        expect(
+          await repository.followWithResult(testTargetPubkey),
+          FollowOutcome.queued,
+        );
+        expect(repository.isFollowing(testTargetPubkey), isTrue);
 
         verifyNever(
           () => mockNostrClient.sendContactList(
@@ -4914,7 +4954,10 @@ void main() {
         );
 
         await repository.initialize();
-        await repository.follow(testTargetPubkey);
+        expect(
+          await repository.followWithResult(testTargetPubkey),
+          FollowOutcome.queued,
+        );
 
         expect(queuedAction, equals('follow'));
         expect(queuedPubkey, equals(testTargetPubkey));

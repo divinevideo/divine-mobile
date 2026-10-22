@@ -18,10 +18,12 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
 import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/providers/shell_obscured_provider.dart';
@@ -34,6 +36,7 @@ import 'package:openvine/widgets/feed_tuning/feed_tuning_swipe_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+import '../../helpers/recording_consumption_analytics.dart';
 import '../../helpers/test_provider_overrides.dart';
 import '../../test_data/video_test_data.dart';
 
@@ -830,6 +833,8 @@ void main() {
     testWidgets(
       'keeps the tuning receipt after the tuning-driven auto-advance',
       (tester) async {
+        final analytics = RecordingConsumptionAnalytics();
+        addTearDown(analytics.dispose);
         final videos = [
           createTestVideoEvent(id: 'video-0'),
           createTestVideoEvent(id: 'video-1'),
@@ -859,6 +864,9 @@ void main() {
         await tester.pumpWidget(
           testMaterialApp(
             additionalOverrides: [
+              consumptionAnalyticsTrackerProvider.overrideWithValue(
+                ConsumptionAnalyticsTracker(analytics: () => analytics),
+              ),
               isFeatureEnabledProvider(
                 FeatureFlag.feedTuning,
               ).overrideWith((_) => true),
@@ -891,6 +899,10 @@ void main() {
             ),
           ),
         ).called(1);
+
+        await tester.pump(const Duration(seconds: 1));
+        expect(analytics.events.single.name, 'feed_depth_recorded');
+        expect(analytics.events.single.parameters['depth'], 2);
 
         final feedVideos = tester.widget<FeedVideos>(find.byType(FeedVideos));
         feedVideos.onActiveVideoChanged!(videos[1], 1);

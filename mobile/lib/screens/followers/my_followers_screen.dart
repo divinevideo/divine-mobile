@@ -61,6 +61,7 @@ class MyFollowersScreen extends ConsumerWidget {
       child: RetainedBlocProvider<MyFollowingBloc, MyFollowingState>(
         dependencies: (followRepository, blocklistRepository),
         create: (snapshot) => MyFollowingBloc(
+          consumptionAnalytics: ref.read(consumptionAnalyticsTrackerProvider),
           followRepository: followRepository,
           contentBlocklistRepository: blocklistRepository,
           initialState: snapshot,

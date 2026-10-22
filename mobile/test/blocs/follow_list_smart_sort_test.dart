@@ -9,8 +9,11 @@ import 'package:openvine/blocs/follow_list_ranking.dart';
 import 'package:openvine/blocs/follow_list_sort.dart';
 import 'package:openvine/blocs/my_followers/my_followers_bloc.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
+import 'package:openvine/features/consumption_analytics/consumption_analytics_tracker.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:user_ranking/user_ranking.dart';
+
+import '../helpers/recording_consumption_analytics.dart';
 
 class _MockFollowRepository extends Mock implements FollowRepository {}
 
@@ -95,6 +98,9 @@ void main() {
       await updates.close();
     });
     MyFollowingBloc createBloc() => MyFollowingBloc(
+      consumptionAnalytics: ConsumptionAnalyticsTracker(
+        analytics: RecordingConsumptionAnalytics.new,
+      ),
       rankForList: true,
       followRepository: repository,
       contentBlocklistRepository: blocklist,
@@ -108,6 +114,9 @@ void main() {
 
     test('membership-only loading never reads ranking or refreshes', () async {
       final bloc = MyFollowingBloc(
+        consumptionAnalytics: ConsumptionAnalyticsTracker(
+          analytics: RecordingConsumptionAnalytics.new,
+        ),
         followRepository: repository,
         contentBlocklistRepository: blocklist,
         rankingSignalsLoader: loader,
@@ -308,6 +317,9 @@ void main() {
         (_) => const Stream<CacheResult<FollowingSnapshot>>.empty(),
       );
       final replacement = MyFollowingBloc(
+        consumptionAnalytics: ConsumptionAnalyticsTracker(
+          analytics: RecordingConsumptionAnalytics.new,
+        ),
         rankForList: true,
         followRepository: repository,
         contentBlocklistRepository: blocklist,

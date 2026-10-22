@@ -140,7 +140,8 @@ void main() {
     testWidgets('tapping Follow on a row follows it, never unfollows it', (
       tester,
     ) async {
-      when(() => mockFollowRepository.follow(any())).thenAnswer((_) async {});
+      when(() => mockFollowRepository.followWithResult(any()))
+          .thenAnswer((_) async => FollowOutcome.published);
       when(
         () => mockFollowRepository.unfollow(any()),
       ).thenAnswer((_) async {});
@@ -181,7 +182,8 @@ void main() {
       await tester.tap(_rowIcon(followingOne, DivineIconName.userPlus));
       await tester.pump();
 
-      verify(() => mockFollowRepository.follow(followingOne)).called(1);
+      verify(() => mockFollowRepository.followWithResult(followingOne))
+          .called(1);
       verifyNever(() => mockFollowRepository.unfollow(any()));
     });
   });

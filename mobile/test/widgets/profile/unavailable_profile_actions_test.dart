@@ -83,6 +83,7 @@ void main() {
 
         verify(() => followRepository.unfollow(_userIdHex)).called(1);
         verifyNever(() => followRepository.follow(any()));
+        verifyNever(() => followRepository.followWithResult(any()));
         expect(
           find.text(l10n.profileUnfollowedUser(l10n.profileUserFallback)),
           findsOneWidget,

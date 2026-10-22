@@ -317,6 +317,7 @@ final class VideoFeedBlocState extends Equatable {
     this.paginationCursor,
     this.currentIndex = 0,
     this.enrichmentRevision = 0,
+    this.feedSessionRevision = 0,
     this.tuningActionSequence = 0,
     this.lastTuningAction,
     this.coordination = const VideoFeedCoordination(),
@@ -397,6 +398,12 @@ final class VideoFeedBlocState extends Equatable {
   /// BLoC can suppress an otherwise valid state emission.
   final int enrichmentRevision;
 
+  /// Monotonic boundary for unique-video feed-depth analytics.
+  ///
+  /// Full source loads and collection refreshes increment this value. Pagination
+  /// and in-place enrichment keep it stable so depth continues within a session.
+  final int feedSessionRevision;
+
   /// The most recently committed feed-tuning swipe, for the UI's Undo
   /// snackbar. `null` until the user tunes a video.
   final VideoFeedTuningAction? lastTuningAction;
@@ -467,6 +474,7 @@ final class VideoFeedBlocState extends Equatable {
     bool clearPaginationCursor = false,
     int? currentIndex,
     int? enrichmentRevision,
+    int? feedSessionRevision,
     int? tuningActionSequence,
     VideoFeedTuningAction? lastTuningAction,
     VideoFeedCoordination? coordination,
@@ -492,6 +500,7 @@ final class VideoFeedBlocState extends Equatable {
           : (paginationCursor ?? this.paginationCursor),
       currentIndex: currentIndex ?? this.currentIndex,
       enrichmentRevision: enrichmentRevision ?? this.enrichmentRevision,
+      feedSessionRevision: feedSessionRevision ?? this.feedSessionRevision,
       tuningActionSequence: tuningActionSequence ?? this.tuningActionSequence,
       lastTuningAction: lastTuningAction ?? this.lastTuningAction,
     );
@@ -514,6 +523,7 @@ final class VideoFeedBlocState extends Equatable {
     paginationCursor,
     currentIndex,
     enrichmentRevision,
+    feedSessionRevision,
     tuningActionSequence,
     lastTuningAction,
     coordination,
