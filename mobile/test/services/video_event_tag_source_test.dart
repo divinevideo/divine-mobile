@@ -4,6 +4,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/personal_event_cache_service.dart';
 import 'package:openvine/services/video_event_tag_source.dart';
@@ -74,6 +75,41 @@ void main() {
       );
 
       expect(result, isEmpty);
+    });
+
+    test('drops the client tag carried on the video (#8176)', () {
+      final cache = _MockPersonalEventCacheService();
+      final video = VideoEvent(
+        id: eventId,
+        pubkey: pubkey,
+        createdAt: 1700000000,
+        content: 'caption',
+        timestamp: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+        nostrEventTags: [...tags, Nip89ClientTag.tag],
+      );
+
+      final result = sourceOriginalVideoTags(
+        video: video,
+        personalEventCache: cache,
+      );
+
+      expect(result, tags);
+    });
+
+    test('drops the client tag recovered from the personal cache (#8176)', () {
+      final cache = _MockPersonalEventCacheService();
+      final cachedEvent = Event(pubkey, 32222, [
+        ...tags,
+        ['client', 'OtherClient'],
+      ], 'caption');
+      when(() => cache.getEventById(eventId)).thenReturn(cachedEvent);
+
+      final result = sourceOriginalVideoTags(
+        video: videoWithoutTags(),
+        personalEventCache: cache,
+      );
+
+      expect(result, tags);
     });
   });
 }
