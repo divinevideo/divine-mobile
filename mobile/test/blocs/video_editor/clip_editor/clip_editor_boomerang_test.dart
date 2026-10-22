@@ -241,6 +241,68 @@ void main() {
         );
       });
 
+      test('turning it off gives back the sources the clip named', () async {
+        final source = File(p.join(temp.path, 'clip.mp4'))
+          ..writeAsStringSync('take');
+        const sources = [
+          C2paEditSource(path: '/documents/take.mp4'),
+          C2paEditSource(
+            path: '/documents/backdrop.png',
+            kind: C2paSourceKind.image,
+          ),
+        ];
+        final bloc = seeded([
+          _clip(videoPath: source.path).copyWith(derivedFrom: sources),
+        ]);
+
+        expect((await toggle(bloc)).clips.single.boomerang, isNotNull);
+        final clip = (await toggle(bloc)).clips.single;
+
+        expect(clip.boomerang, isNull);
+        expect(clip.derivedFrom, sources);
+      });
+
+      test('turning it off makes footage that was its own source so '
+          'again', () async {
+        final source = File(p.join(temp.path, 'clip.mp4'))
+          ..writeAsStringSync('take');
+        final bloc = seeded([_clip(videoPath: source.path)]);
+
+        // The boomerang names the footage it was bounced from.
+        final bounced = (await toggle(bloc)).clips.single;
+        expect(bounced.derivedFrom, [C2paEditSource(path: source.path)]);
+        final clip = (await toggle(bloc)).clips.single;
+
+        expect(clip.boomerang, isNull);
+        expect(clip.derivedFrom, isNull);
+      });
+
+      test('turning it off takes the sources from the record, not from the '
+          'boomerang', () async {
+        final source = File(p.join(temp.path, 'take.mp4'))
+          ..writeAsStringSync('take');
+        const recorded = [C2paEditSource(path: '/documents/take_raw.mp4')];
+        final bloc = seeded([
+          _clip(
+            videoPath: '/documents/clip_boomerang.mp4',
+            trimStart: Duration.zero,
+            trimEnd: Duration.zero,
+          ).copyWith(
+            derivedFrom: const [C2paEditSource(path: '/documents/other.mp4')],
+            boomerang: ClipBoomerang(
+              sourcePath: source.path,
+              sourceDuration: const Duration(seconds: 4),
+              sourceDerivedFrom: recorded,
+            ),
+          ),
+        ]);
+
+        final clip = (await toggle(bloc)).clips.single;
+
+        expect(clip.boomerang, isNull);
+        expect(clip.derivedFrom, recorded);
+      });
+
       test('keeps bouncing when the footage before it is gone', () async {
         final bounced =
             _clip(
