@@ -604,13 +604,14 @@ class DmVideoStore {
       },
       inFlight: inFlight,
     );
-    // Listed again where nothing awaits: a frame written during the lookups
-    // is seen too, and no file can be handed out between the check that it
-    // is free and its deletion.
+    // Marked before listing: a download under way has no file to list yet.
     for (final id in gone) {
       _markGoneInStores(File('${dir.path}/$id'));
     }
     if (!dir.existsSync()) return decided;
+    // Listed again where nothing awaits: a frame written during the lookups
+    // is seen too, and no file can be handed out between the check that it
+    // is free and its deletion.
     final files = dir.listSync().whereType<File>().toList();
     final leased = {for (final path in _leases.keys) _messageIdOf(File(path))};
     final now = _now();
