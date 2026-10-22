@@ -48,16 +48,29 @@ final class ChallengesRepository {
       final retained = await store.load(coordinate);
       final merged = {...retained, ...observation.records}.toList();
       if (!limits.accepts(merged)) return _unavailable(coordinate, observation);
-      // Do not prefilter by challenge parse: malformed signed replacements
-      // must remain in replay and can invalidate an older open definition.
-      await store.retain(coordinate, observation.records);
-      final decoded = merged.map<Object?>(jsonDecode).toList();
-      if (observation.completeness == ReadCompleteness.unavailable) {
+      // Decode independently so non-event wire input cannot permanently poison
+      // retained replay. Keep JSON objects even when challenge parsing fails:
+      // authenticated malformed replacements must invalidate older open rules.
+      final decoded = <String, Map<String, Object?>>{};
+      for (final body in merged) {
+        try {
+          final value = jsonDecode(body);
+          if (value is Map<String, Object?>) decoded[body] = value;
+        } on FormatException {
+          // Ignore malformed JSON, including legacy persisted junk records.
+        }
+      }
+      await store.retain(
+        coordinate,
+        observation.records.where(decoded.containsKey).toList(),
+      );
+      if (observation.records.any((body) => !decoded.containsKey(body)) ||
+          observation.completeness == ReadCompleteness.unavailable) {
         return _unavailable(coordinate, observation);
       }
       return ChallengeRead(
         view: reduceChallenge(
-          observation.revisionsComplete ? decoded : const [],
+          observation.revisionsComplete ? decoded.values.toList() : const [],
           coordinate,
           clock(),
           isVisible,

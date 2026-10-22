@@ -7,6 +7,87 @@ import 'synthetic.dart';
 
 void main() {
   group('known challenge reads', () {
+    for (final badRecord in ['{', '[]', 'null', 'true', '42', '"text"']) {
+      test(
+        'recovers from non-event input $badRecord without retaining it',
+        () async {
+          final h = ReadHarness();
+          final store = h.repository.store;
+          expect((await h.repository.refresh(h.coordinate)).view.state, 'open');
+          h.source.records = [badRecord];
+          expect(
+            (await h.repository.refresh(h.coordinate)).view.state,
+            'unavailable',
+          );
+          expect(await store.load(h.coordinate), isNot(contains(badRecord)));
+          h.source.records = [jsonEncode(h.definition)];
+          expect((await h.repository.refresh(h.coordinate)).view.state, 'open');
+          final restarted = ChallengesRepository(
+            source: h.source.read,
+            store: store,
+            clock: () => 150,
+            isVisible: (_) => true,
+          );
+          expect((await restarted.refresh(h.coordinate)).view.state, 'open');
+        },
+      );
+    }
+    test(
+      'legacy malformed JSON and nonobjects cannot poison retained replay',
+      () async {
+        final h = ReadHarness();
+        await h.repository.store.retain(h.coordinate, [
+          '{',
+          '[]',
+          'null',
+          '42',
+          '"text"',
+        ]);
+        final recovered = await h.repository.refresh(h.coordinate);
+        expect(recovered.view.state, 'open');
+        expect(recovered.observation.completeness, ReadCompleteness.complete);
+        final restarted = ChallengesRepository(
+          source: h.source.read,
+          store: h.repository.store,
+          clock: () => 150,
+          isVisible: (_) => true,
+        );
+        expect((await restarted.refresh(h.coordinate)).view.state, 'open');
+      },
+    );
+    test(
+      'bad JSON does not discard an authenticated unmarked newest revision',
+      () async {
+        final h = ReadHarness();
+        expect((await h.repository.refresh(h.coordinate)).view.state, 'open');
+        final newer = jsonEncode(
+          h.signer.sign(
+            createdAt: 101,
+            tags: [
+              ['d', 'synthetic:challenge'],
+            ],
+          ),
+        );
+        h.source.records = ['{', newer];
+        expect(
+          (await h.repository.refresh(h.coordinate)).view.state,
+          'unavailable',
+        );
+        expect(await h.repository.store.load(h.coordinate), contains(newer));
+        h.source.records = [jsonEncode(h.definition)];
+        final restarted = ChallengesRepository(
+          source: h.source.read,
+          store: h.repository.store,
+          clock: () => 150,
+          isVisible: (_) => true,
+        );
+        expect(
+          (await restarted.refresh(h.coordinate)).view.state,
+          'unavailable',
+        );
+      },
+    );
+
     test('partial revisions never report cached old rules as open', () async {
       final h = ReadHarness();
       expect((await h.repository.refresh(h.coordinate)).view.state, 'open');

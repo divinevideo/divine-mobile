@@ -131,6 +131,9 @@ final class ChallengeSubmissionRepository {
   }
 
   /// Rechecks current authority, persists exact signed bytes, then publishes.
+  /// Once insertion completes, first delivery uses the same gates as [retry].
+  /// Cancellation returns [SubmissionStatus.deliveryPaused] with retained work,
+  /// never a request to sign replacement consent.
   Future<SubmissionResult> submit(SubmissionReview review) =>
       _singleFlight('submit:${review.id}', () => _submit(review));
 
@@ -393,9 +396,8 @@ final class ChallengeSubmissionRepository {
           targets: {...relays, ...writableRelays()}.toList(),
         ),
       );
-      _checkLocal(review);
       _validateSigned(action.review, action.signedBody);
-      return await _deliver(action, newlySigned: true);
+      return await _deliver(action);
     } on SubmissionException catch (error) {
       return SubmissionResult(error.status, action);
     } on ContractError {
@@ -417,21 +419,16 @@ final class ChallengeSubmissionRepository {
       throw const SubmissionException(SubmissionStatus.readUnavailable);
     }
     if (current.view.definition!.status == 'cancelled') {
-      throw const SubmissionException(SubmissionStatus.reviewRequired);
+      throw const SubmissionException(SubmissionStatus.deliveryPaused);
     }
   }
 
-  Future<SubmissionResult> _deliver(
-    PendingChallengeAction action, {
-    bool newlySigned = false,
-  }) async {
+  Future<SubmissionResult> _deliver(PendingChallengeAction action) async {
     final review = action.review;
     try {
-      if (newlySigned) {
-        await _checkCurrent(review);
-      } else {
-        await _checkRetry(action);
-      }
+      // Durable verified consent has identical delivery gates on its first
+      // attempt and every retry; changes here must never request a new entry.
+      await _checkRetry(action);
       final event = _validateSigned(review, action.signedBody);
       if (review.withdrawalEntry == null && !reads.isVisible(event)) {
         throw const SubmissionException(SubmissionStatus.blocked);

@@ -135,13 +135,18 @@ enum SubmissionStatus {
   /// Consent, current rules, window, or current video revision differs.
   reviewRequired,
 
+  /// Current cancellation pauses persisted entry delivery. Keep the signed
+  /// action and retry it when allowed; this does not request new consent.
+  deliveryPaused,
+
   /// The active full signer identity changed.
   ownerChanged,
 
   /// Current policy denies the source or pinned video.
   blocked,
 
-  /// Current read was not complete enough to authorize a new action.
+  /// Current rules are unavailable or incomplete. Retain any signed action
+  /// and retry delivery when the read recovers; do not replace its consent.
   readUnavailable,
 
   /// Signer changed fields or returned invalid signature/protocol semantics.

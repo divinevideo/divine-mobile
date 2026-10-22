@@ -8,6 +8,164 @@ import 'submission_test.dart' show Harness;
 
 void main() {
   group('durable recovery boundaries', () {
+    for (final change in [
+      'deadline',
+      'rules',
+      'video',
+      'third-refresh-rules',
+      'third-refresh-deadline',
+    ]) {
+      test(
+        'first durable delivery survives $change change without new consent',
+        () async {
+          final h = Harness();
+          final review = await h.prepare();
+          final expectedBody = h.signFields(review.fields);
+          final expectedId =
+              (jsonDecode(expectedBody) as Map<String, Object?>)['id'];
+          void reviseRules() {
+            h.source.records = [
+              jsonEncode(
+                h.organizer.definition(
+                  createdAt: 180,
+                  content: 'Rules changed during durable delivery.',
+                ),
+              ),
+            ];
+          }
+
+          switch (change) {
+            case 'deadline':
+              h.store.onInsert = () => h.now = 200;
+            case 'rules':
+              h.store.onInsert = reviseRules;
+            case 'video':
+              h.store.onInsert = () => h.videoId = 'a' * 64;
+            case 'third-refresh-rules':
+            case 'third-refresh-deadline':
+              var reads = 0;
+              h.source.beforeRead = () async {
+                reads++;
+                if (reads == 3) {
+                  if (change == 'third-refresh-rules') {
+                    reviseRules();
+                  } else {
+                    h.now = 200;
+                  }
+                }
+              };
+          }
+          h.transport.outcomes = {h.relay: RelayOutcome.accepted};
+          final result = await h.repository.submit(review);
+          expect(result.status, SubmissionStatus.submitted);
+          expect(h.signatures, 1);
+          expect(result.action!.signedBody, expectedBody);
+          expect(h.transport.bodies, [expectedBody]);
+          expect(
+            (jsonDecode(h.transport.bodies.single)
+                as Map<String, Object?>)['id'],
+            expectedId,
+          );
+          final restarted = await h.createRepository().retry(review.id);
+          expect(restarted.status, SubmissionStatus.submitted);
+          expect(restarted.action!.signedBody, expectedBody);
+          expect(h.signatures, 1);
+          expect(h.transport.bodies, [expectedBody]);
+        },
+      );
+    }
+    for (final restriction in [
+      'owner',
+      'actor-policy',
+      'video-visibility',
+      'entry-visibility',
+      'cancelled',
+      'malformed',
+      'partial',
+      'failed-read',
+    ]) {
+      test(
+        'durable insertion preserves $restriction delivery safeguard',
+        () async {
+          final h = Harness();
+          final review = await h.prepare();
+          final body = h.signFields(review.fields);
+          h.store.onInsert = () {
+            switch (restriction) {
+              case 'owner':
+                h.owner = h.organizer.pubkey;
+              case 'actor-policy':
+                h.publicationAllowed = false;
+              case 'video-visibility':
+                h.hidden.add(h.video.id);
+              case 'entry-visibility':
+                h.hidden.add(
+                  (jsonDecode(body) as Map<String, Object?>)['id']! as String,
+                );
+              case 'cancelled':
+                h.source.records = [
+                  jsonEncode(
+                    h.organizer.definition(createdAt: 180, status: 'cancelled'),
+                  ),
+                ];
+              case 'malformed':
+                h.source.records = [
+                  jsonEncode(
+                    h.organizer.sign(
+                      createdAt: 180,
+                      tags: [
+                        ['d', 'synthetic:challenge'],
+                      ],
+                    ),
+                  ),
+                ];
+              case 'partial':
+                h.source.completeness = ReadCompleteness.partial;
+              case 'failed-read':
+                h.source.fail = true;
+            }
+          };
+          final expected = switch (restriction) {
+            'owner' => SubmissionStatus.ownerChanged,
+            'actor-policy' ||
+            'video-visibility' ||
+            'entry-visibility' => SubmissionStatus.blocked,
+            'cancelled' => SubmissionStatus.deliveryPaused,
+            _ => SubmissionStatus.readUnavailable,
+          };
+          final result = await h.repository.submit(review);
+          expect(result.status, expected);
+          expect(result.action!.signedBody, body);
+          expect(h.store.actions.values.single.signedBody, body);
+          expect(h.transport.bodies, isEmpty);
+          expect(h.signatures, 1);
+        },
+      );
+    }
+    test(
+      'cancelled durable delivery resumes the same bytes after reactivation',
+      () async {
+        final h = Harness();
+        final review = await h.prepare();
+        final body = (await h.repository.submit(review)).action!.signedBody;
+        h.source.records = [
+          jsonEncode(
+            h.organizer.definition(createdAt: 180, status: 'cancelled'),
+          ),
+        ];
+        final paused = await h.createRepository().retry(review.id);
+        expect(paused.status, SubmissionStatus.deliveryPaused);
+        expect(paused.action!.signedBody, body);
+        expect(h.transport.bodies, [body]);
+        h.source.records = [jsonEncode(h.organizer.definition(createdAt: 190))];
+        h.transport.outcomes = {h.relay: RelayOutcome.accepted};
+        final resumed = await h.createRepository().retry(review.id);
+        expect(resumed.status, SubmissionStatus.submitted);
+        expect(h.transport.bodies, [body, body]);
+        expect(h.signatures, 1);
+      },
+    );
+
     test(
       'same-second reentry never reuses a withdrawn event as new consent',
       () async {
@@ -130,7 +288,7 @@ void main() {
           expect(
             result.status,
             restriction == 'cancelled'
-                ? SubmissionStatus.reviewRequired
+                ? SubmissionStatus.deliveryPaused
                 : restriction == 'policy'
                 ? SubmissionStatus.blocked
                 : SubmissionStatus.readUnavailable,

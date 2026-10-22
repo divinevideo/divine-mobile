@@ -10,6 +10,9 @@ connection, database, signer key storage, global discovery or app UI.
 completion, revision-coverage and indexing metadata. The repository bounds raw
 record count and UTF-8 bytes before parsing. It retains authenticated malformed
 latest definitions instead of filtering them out by successful challenge parse.
+Malformed JSON and nonobject wire input are never newly retained; legacy
+instances of those records are skipped during replay. A malformed current
+observation is unavailable, but the next valid complete read can recover.
 Retained replay uses the protocol reducer and **current** visibility policy,
 including pinned snapshots, duplicate selection and unavailable winners.
 
@@ -53,9 +56,12 @@ and never signs. Persisted entry retries may proceed after the exclusive end,
 later active rules or later video metadata edits: the signed in-window consent
 and pinned video remain unchanged. Current cancellation, unavailable/malformed
 current definition, owner change or current policy restriction pauses delivery
-without deleting the action. This makes no claim about timely relay receipt or
-organizer eligibility. A newly signed action still rechecks current reviewed
-rules before its initial publication.
+without deleting the action. Cancellation returns `deliveryPaused` with the
+signed action; unavailable current rules return `readUnavailable`. Neither asks
+for replacement consent. This makes no claim about timely relay receipt or
+organizer eligibility. New signatures recheck current reviewed rules before and
+after signing, before durable insertion. Once insertion completes, the first
+publication uses exactly the same persisted-consent gates as a later retry.
 
 Withdrawals target one exact owned verified entry. Closure, cancellation and
 hidden video do not prevent withdrawal or retry; owner/action permission still
