@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
+import 'package:openvine/router/providers/router_location_provider.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -27,8 +28,9 @@ class VideoInteractionsRestrictionListener extends StatelessWidget {
           previous.accountRestrictionRevision !=
           current.accountRestrictionRevision,
       listener: (context, state) {
-        final router = GoRouter.of(context);
-        if (router.routerDelegate.currentConfiguration.uri.path !=
+        // Account Status is pushed, which the match list's uri does not
+        // reflect; routerLocationOf does.
+        if (routerLocationOf(GoRouter.of(context)).path !=
             AccountStatusScreen.path) {
           runDetached(
             context.pushNamed(AccountStatusScreen.routeName, extra: true),
