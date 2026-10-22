@@ -17,6 +17,7 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/blocs/video_editor/voice_over/voice_over_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/video_editor/voice_over_recorder_screen.dart';
+import 'package:openvine/widgets/audio/live_amplitude_waveform.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
 import 'package:openvine/widgets/video_editor/voice_over/voice_over_video_timeline.dart';
 
@@ -402,6 +403,28 @@ void main() {
     });
 
     group('waveform', () {
+      testWidgets('glides on each sample position, not on bar values', (
+        tester,
+      ) async {
+        const state = VoiceOverState(
+          status: VoiceOverStatus.recording,
+          waveformBars: [0.4, 0.8],
+          currentDuration: Duration(milliseconds: 300),
+        );
+        stub(state);
+
+        await tester.pumpWidget(buildSubject());
+
+        expect(
+          tester
+              .widget<LiveAmplitudeWaveform>(
+                find.byType(LiveAmplitudeWaveform),
+              )
+              .samplePosition,
+          state.currentDuration,
+        );
+      });
+
       testWidgets('animates while recording without leaking the ticker', (
         tester,
       ) async {

@@ -530,6 +530,20 @@ void main() {
         expect(File(recorder.path!).existsSync(), isFalse);
         expect(audioSession.resetCount, 1);
       });
+
+      test('does not discard the next take a stop ends', () async {
+        final cubit = build();
+        await cubit.start();
+        await recorder.emitLevel(0.5);
+        await cubit.cancel();
+
+        await cubit.start();
+        await recorder.emitLevel(0.5);
+        await cubit.stop();
+
+        expect(cubit.state.recordingPath, recorder.path);
+        expect(File(recorder.path!).existsSync(), isTrue);
+      });
     });
 
     group('close', () {

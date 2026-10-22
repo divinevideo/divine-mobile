@@ -32,6 +32,7 @@ import 'package:openvine/services/local_audio_event_publisher.dart';
 import 'package:openvine/services/local_audio_import_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
 import 'package:openvine/services/video_editor/voice_over_recorder_service.dart';
+import 'package:openvine/widgets/audio/public_audio_credit_editor.dart';
 import 'package:permissions_service/permissions_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sound_service/sound_service.dart';
@@ -570,6 +571,76 @@ void main() {
           );
         },
       );
+
+      testWidgets(
+        'system Back cancels a pending replacement without leaving the take',
+        (tester) async {
+          final router = await pumpView(tester);
+          await recordTake(tester);
+          final permission = Completer<PermissionStatus>();
+          when(permissions.checkMicrophoneStatus)
+              .thenAnswer((_) => permission.future);
+          await tester.tap(find.byKey(const Key('add_sound_record_again')));
+          await tester.pump();
+          await tester.binding.handlePopRoute();
+          await tester.pump();
+          permission.complete(PermissionStatus.granted);
+          await settleRecorder(tester);
+
+          expect(router.state.uri.path, '/add');
+          expect(
+            find.byKey(const Key('add_sound_record_again')),
+            findsOneWidget,
+          );
+        },
+      );
+
+      testWidgets('locks the public credit while a replacement starts', (
+        tester,
+      ) async {
+        await pumpView(tester);
+        await recordTake(tester);
+        await sharePublicly(tester);
+        IgnorePointer creditLock() => tester.widget<IgnorePointer>(
+          find
+              .ancestor(
+                of: find.byType(PublicAudioCreditEditor),
+                matching: find.byType(IgnorePointer),
+              )
+              .first,
+        );
+        expect(creditLock().ignoring, isFalse);
+        final permission = Completer<PermissionStatus>();
+        when(permissions.checkMicrophoneStatus)
+            .thenAnswer((_) => permission.future);
+        await tester.tap(find.byKey(const Key('add_sound_record_again')));
+        await tester.pump();
+
+        try {
+          expect(creditLock().ignoring, isTrue);
+        } finally {
+          permission.complete(PermissionStatus.granted);
+          await settleRecorder(tester);
+        }
+      });
+
+      testWidgets('a preview still loading cannot play after changing file', (
+        tester,
+      ) async {
+        await pumpView(tester);
+        await pickFile(tester);
+        audio.loadGate = Completer<void>();
+        await tester.tap(find.byKey(const Key('add_sound_preview')));
+        await tester.pump();
+        expect(audio.playCount, 0);
+        await tester.tap(find.byKey(const Key('add_sound_change_file')));
+        await tester.pumpAndSettle();
+
+        audio.loadGate!.complete();
+        await tester.pumpAndSettle();
+
+        expect(audio.playCount, 0);
+      });
 
       testWidgets(
         'a preview still loading cannot play after recording starts',
