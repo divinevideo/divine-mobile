@@ -8439,6 +8439,9 @@
   "devOptionsMinorReviewUnder13Subtitle": "Restricted account with parent-email-only instructions",
   "devOptionsMinorReviewClearedToast": "Minor account review simulation cleared",
   "devOptionsMinorReviewUnder13EnabledToast": "Simulated under-13 support case enabled",
+  "devOptionsAgeReviewClosureTitle": "Simulate age-review closure",
+  "devOptionsAgeReviewClosureSubtitle": "Banned account closed by age review, as seen on Account status",
+  "devOptionsAgeReviewClosureEnabledToast": "Simulated age-review closure enabled",
   "devOptionsMinorReviewResponseClockTitle": "Response clock",
   "devOptionsMinorReviewResponseClockRunning": "Running",
   "devOptionsMinorReviewResponseClockPaused": "Paused",
@@ -10209,6 +10212,30 @@
   "accountStatusBannedBody": "You can't post, comment, or send messages on Divine, and your videos have been taken down from Divine.",
   "@accountStatusBannedBody": {
     "description": "Explains that a ban takes content down from Divine without claiming physical deletion."
+  },
+  "accountStatusAgeClosureHeading": "Your account has been closed",
+  "@accountStatusAgeClosureHeading": {
+    "description": "Heading for an account closed by age review (support-trust-safety#260). Read mostly by kids; keep it plain."
+  },
+  "accountStatusAgeClosureBody": "You didn't do anything wrong. Divine has age rules to keep young people safe online: you need to be at least 13, and if you're under 16, you also need a parent's permission. Because of these rules, we've closed your account and removed your videos.",
+  "@accountStatusAgeClosureBody": {
+    "description": "Explains an age-review closure without saying which age the reader was judged to be, since most closures are a lapsed parent-consent window, not a confirmed under-13. Says videos were removed, not that all data was deleted."
+  },
+  "accountStatusAgeClosureRejoinBody": "You're welcome to join us again through Divine Greenlight. You need to be at least 13, with a parent's permission.",
+  "@accountStatusAgeClosureRejoinBody": {
+    "description": "The way back after an age-review closure: the Divine Greenlight program for 13-15 year olds with parental permission."
+  },
+  "accountStatusAgeClosureGreenlightCta": "Learn about Divine Greenlight",
+  "@accountStatusAgeClosureGreenlightCta": {
+    "description": "Button that opens the Divine Greenlight section of the kids policy page. 'Divine Greenlight' is a program name; do not translate it."
+  },
+  "accountStatusAgeClosureMistakeHeading": "Think we got this wrong?",
+  "@accountStatusAgeClosureMistakeHeading": {
+    "description": "Heading above the support contact on an age-review closure."
+  },
+  "accountStatusAgeClosureMistakeBody": "Ask a parent or guardian to contact us. If you're 16 or older, you can contact us yourself.",
+  "@accountStatusAgeClosureMistakeBody": {
+    "description": "Routes an age-review closure dispute to a parent, or to the account holder if they are 16 or older and were closed by mistake."
   },
   "accountStatusRestrictedHeading": "Your account is restricted",
   "@accountStatusRestrictedHeading": {

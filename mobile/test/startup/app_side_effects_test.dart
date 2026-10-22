@@ -9,6 +9,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
@@ -57,6 +58,13 @@ class _RecordingAnalytics implements AnalyticsEventSink {
   }) async {}
 }
 
+class _ActivePubkey extends Notifier<String?> {
+  @override
+  String? build() => _pubkey;
+
+  void set(String? pubkey) => state = pubkey;
+}
+
 // Full-length Nostr pubkey — never truncated.
 const String _pubkey =
     '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
@@ -73,6 +81,8 @@ void main() {
 
     authService = _MockAuthService();
     when(() => authService.isAuthenticated).thenReturn(true);
+    // AppRootSideEffects is built before AuthService.initialize() runs.
+    when(() => authService.authState).thenReturn(AuthState.checking);
     when(() => authService.currentPublicKeyHex).thenReturn(_pubkey);
     when(() => authService.authStateStream)
         .thenAnswer((_) => authStates.stream);
@@ -254,6 +264,46 @@ void main() {
 
       expect(notificationPreferencesSyncBuilds, 1);
       expect(pushNotificationSyncBuilds, 1);
+    });
+
+    // Signing in is opening the account, so the age-review closure notice is
+    // shown again after a sign-out it was not mounted to see
+    // (support-trust-safety#260).
+    testWidgets('lets the closure notice see a sign-out without the shell', (
+      tester,
+    ) async {
+      final active = NotifierProvider<_ActivePubkey, String?>(
+        _ActivePubkey.new,
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            ...baseOverrides(),
+            activeEnforcementPubkeyProvider.overrideWith(
+              (ref) => ref.watch(active),
+            ),
+          ],
+          child: const AppRootSideEffects(child: SizedBox.shrink()),
+        ),
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(SizedBox)),
+      );
+      container
+          .read(ageReviewClosureLaunchShownProvider.notifier)
+          .markShown(_pubkey);
+
+      container.read(active.notifier).set(null);
+      await tester.pump();
+      container.read(active.notifier).set(_pubkey);
+      await tester.pump();
+
+      expect(
+        container
+            .read(ageReviewClosureLaunchShownProvider.notifier)
+            .markShown(_pubkey),
+        isTrue,
+      );
     });
   });
 

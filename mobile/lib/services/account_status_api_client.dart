@@ -9,6 +9,21 @@ import 'package:openvine/services/nip98_auth_service.dart';
 
 enum FunnelcakeAccountStatus { active, suspended, banned }
 
+/// Why Funnelcake reports an enforcement, from a closed set it maps on the
+/// server. The free-text ban reason never leaves Funnelcake, since it can
+/// carry moderator notes or labels the account holder must not see.
+enum FunnelcakeEnforcementCategory { ageReview }
+
+/// An account's status as Funnelcake reported it, with the closed category it
+/// may name. [category] is null when Funnelcake names none, or one this client
+/// does not know.
+class FunnelcakeAccountStatusResponse {
+  const FunnelcakeAccountStatusResponse(this.status, {this.category});
+
+  final FunnelcakeAccountStatus status;
+  final FunnelcakeEnforcementCategory? category;
+}
+
 enum AccountStatusApiFailureKind {
   unauthorized,
   unavailable,
@@ -48,7 +63,15 @@ class AccountStatusApiClient {
   final http.Client _httpClient;
   final Duration _timeout;
 
-  Future<FunnelcakeAccountStatus> fetchStatus({
+  /// Reads [expectedPubkey]'s status from Funnelcake with a NIP-98 signed
+  /// request.
+  ///
+  /// Throws [AccountStatusApiException] when the request cannot be signed,
+  /// times out, fails to connect, is refused, or returns a response this
+  /// client cannot use: malformed, for another account, or with an unknown
+  /// status. Other transport errors, such as a failed TLS handshake, are not
+  /// wrapped and propagate as thrown.
+  Future<FunnelcakeAccountStatusResponse> fetchStatus({
     required String expectedPubkey,
   }) async {
     final uri = _baseUri.resolve('/api/users/$expectedPubkey/status');
@@ -119,7 +142,7 @@ class AccountStatusApiClient {
       );
     }
 
-    return switch (status) {
+    final parsedStatus = switch (status) {
       'active' => FunnelcakeAccountStatus.active,
       'suspended' => FunnelcakeAccountStatus.suspended,
       'banned' => FunnelcakeAccountStatus.banned,
@@ -128,6 +151,14 @@ class AccountStatusApiClient {
         'The account status response contained an unknown status.',
       ),
     };
+    // Unlike an unknown status, an unknown category is not a reason to doubt
+    // the response: the status it accompanies still stands, and the app shows
+    // that status's generic screen.
+    final category = switch (decoded['category']) {
+      'age_review' => FunnelcakeEnforcementCategory.ageReview,
+      _ => null,
+    };
+    return FunnelcakeAccountStatusResponse(parsedStatus, category: category);
   }
 
   void dispose() => _httpClient.close();

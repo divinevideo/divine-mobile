@@ -23,7 +23,8 @@ import 'package:openvine/widgets/support_contact_action.dart';
 /// Reachable from settings without a failed post, so a restricted user can
 /// find out what happened rather than discovering it by failing repeatedly.
 ///
-/// Renders from [AccountEnforcementKind] alone. Funnelcake deliberately omits
+/// Renders from [AccountEnforcementKind] and, for an age-review closure, the
+/// closed [AccountEnforcementCategory]. Funnelcake deliberately omits
 /// moderation reasons and administrative metadata from the self-status API.
 class AccountStatusScreen extends ConsumerStatefulWidget {
   static const routeName = 'account-status';
@@ -39,7 +40,8 @@ class AccountStatusScreen extends ConsumerStatefulWidget {
   /// Whether an authoritative publish response just confirmed enforcement.
   ///
   /// The publish result cannot distinguish suspended from banned, so it uses
-  /// generic restriction copy while the status refresh resolves.
+  /// generic restriction copy while the status refresh resolves, unless this
+  /// session already confirmed an age-review closure, which keeps its own.
   final bool publishRestrictionConfirmed;
   final OpenSupportMessages? openSupportMessages;
   final ComposeSupportEmail? composeEmail;
@@ -80,14 +82,18 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final async = ref.watch(accountEnforcementStatusProvider);
+    final lastConfirmed = ref.watch(lastConfirmedRestrictionProvider);
     final publishRestriction = widget.publishRestrictionConfirmed
-        ? AccountEnforcementKind.unknownRestriction
+        ? const AccountEnforcementStatus(
+            kind: AccountEnforcementKind.unknownRestriction,
+          )
         : null;
-    AccountEnforcementKind effectiveKind(AccountEnforcementKind kind) {
-      if (kind.isEnforced || kind == AccountEnforcementKind.signedOut) {
-        return kind;
+    AccountEnforcementStatus effective(AccountEnforcementStatus status) {
+      if (status.isEnforced ||
+          status.kind == AccountEnforcementKind.signedOut) {
+        return status;
       }
-      return publishRestriction ?? kind;
+      return publishRestriction ?? status;
     }
 
     return Scaffold(
@@ -107,40 +113,48 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
             // Show the spinner while refreshing rather than Riverpod's default
             // of holding the previous value on screen. A status cached before
             // the user was suspended must not remain visible while the refetch
-            // is in flight; not knowing yet is the honest state.
+            // is in flight; not knowing yet is the honest state. Publish
+            // evidence is the exception: a restriction is then known, so the
+            // loading branch shows it instead of the spinner.
             skipLoadingOnRefresh: false,
-            loading: () => publishRestriction == null
-                ? const Center(child: DivineCircularProgressIndicator())
-                : _StatusBody(
-                    kind: publishRestriction,
-                    openSupportMessages: widget.openSupportMessages,
-                    composeEmail: widget.composeEmail,
-                  ),
+            loading: () {
+              if (publishRestriction == null) {
+                return const Center(child: DivineCircularProgressIndicator());
+              }
+              // The publish result cannot tell a closure from any other ban,
+              // so a closure this session already confirmed keeps its own
+              // explanation instead of the generic paths it leaves out.
+              return _ExplainedStatus(
+                status: switch (lastConfirmed) {
+                  final known? when known.isAgeReviewClosure => known,
+                  _ => publishRestriction,
+                },
+                openSupportMessages: widget.openSupportMessages,
+                composeEmail: widget.composeEmail,
+              );
+            },
             // Keep a confirmed restriction through a failed read so its appeal
             // and exit paths survive a bad connection. Without a confirmed
             // result, report that the lookup is indeterminate rather than
             // presenting an all-clear that Funnelcake never returned.
             error: (_, _) {
-              final cachedKind = async.value?.kind;
-              final retainedKind = cachedKind?.isEnforced ?? false
-                  ? cachedKind
-                  : publishRestriction;
-              if (retainedKind == null) {
+              final retained = lastConfirmed ?? publishRestriction;
+              if (retained == null) {
                 return _UnavailableBody(
                   onRetry: () =>
                       ref.invalidate(accountEnforcementStatusProvider),
                 );
               }
-              return _StatusBody(
-                kind: retainedKind,
+              return _ExplainedStatus(
+                status: retained,
                 isLastKnown: true,
                 onRetry: () => ref.invalidate(accountEnforcementStatusProvider),
                 openSupportMessages: widget.openSupportMessages,
                 composeEmail: widget.composeEmail,
               );
             },
-            data: (status) => _StatusBody(
-              kind: effectiveKind(status.kind),
+            data: (status) => _ExplainedStatus(
+              status: effective(status),
               openSupportMessages: widget.openSupportMessages,
               composeEmail: widget.composeEmail,
             ),
@@ -149,6 +163,62 @@ class _AccountStatusScreenState extends ConsumerState<AccountStatusScreen> {
       ),
     );
   }
+}
+
+/// A [_StatusBody] that records an age-review closure it explains as shown,
+/// so the launch notice does not open Account Status again once the account
+/// backs out of it (support-trust-safety#260).
+class _ExplainedStatus extends ConsumerStatefulWidget {
+  const _ExplainedStatus({
+    required this.status,
+    this.isLastKnown = false,
+    this.onRetry,
+    this.openSupportMessages,
+    this.composeEmail,
+  });
+
+  final AccountEnforcementStatus status;
+  final bool isLastKnown;
+  final VoidCallback? onRetry;
+  final OpenSupportMessages? openSupportMessages;
+  final ComposeSupportEmail? composeEmail;
+
+  @override
+  ConsumerState<_ExplainedStatus> createState() => _ExplainedStatusState();
+}
+
+class _ExplainedStatusState extends ConsumerState<_ExplainedStatus> {
+  @override
+  void initState() {
+    super.initState();
+    _markIfClosure();
+  }
+
+  @override
+  void didUpdateWidget(_ExplainedStatus oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.status.isAgeReviewClosure) _markIfClosure();
+  }
+
+  void _markIfClosure() {
+    if (!widget.status.isAgeReviewClosure) return;
+    // Called while building, which may not modify a provider, so the mark
+    // waits for the frame.
+    addPostFrameCallbackIfMounted(() {
+      final pubkey = ref.read(activeEnforcementPubkeyProvider);
+      if (pubkey == null) return;
+      ref.read(ageReviewClosureLaunchShownProvider.notifier).markShown(pubkey);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => _StatusBody(
+    status: widget.status,
+    isLastKnown: widget.isLastKnown,
+    onRetry: widget.onRetry,
+    openSupportMessages: widget.openSupportMessages,
+    composeEmail: widget.composeEmail,
+  );
 }
 
 class _UnavailableBody extends StatelessWidget {
@@ -190,14 +260,17 @@ class _UnavailableBody extends StatelessWidget {
 
 class _StatusBody extends StatelessWidget {
   const _StatusBody({
-    this.kind,
+    required this.status,
     this.isLastKnown = false,
     this.onRetry,
     this.openSupportMessages,
     this.composeEmail,
   });
 
-  final AccountEnforcementKind? kind;
+  /// The status to explain. Its category, not a separate flag, decides
+  /// whether an age-review closure replaces the generic ban
+  /// (support-trust-safety#260), so the two cannot disagree.
+  final AccountEnforcementStatus status;
   final bool isLastKnown;
   final VoidCallback? onRetry;
   final OpenSupportMessages? openSupportMessages;
@@ -205,26 +278,33 @@ class _StatusBody extends StatelessWidget {
 
   /// Whether relay enforcement has anything to say about this account.
   ///
-  /// A null kind and [AccountEnforcementKind.noRestrictionReported] mean no
-  /// restriction to report; the relay reports a real one at the moment of
-  /// action, so neither is worth telling the user Divine does not know.
+  /// [AccountEnforcementKind.noRestrictionReported] means no restriction to
+  /// report; the relay reports a real one at the moment of action, so it is
+  /// not worth telling the user Divine does not know.
   bool get _hasEnforcementToReport =>
-      kind != null && kind != AccountEnforcementKind.noRestrictionReported;
+      status.kind != AccountEnforcementKind.noRestrictionReported;
 
   @override
   Widget build(BuildContext context) {
     if (!_hasEnforcementToReport) return const _AllClearBody();
 
     final l10n = context.l10n;
-    final isEnforced = kind!.isEnforced;
+    final kind = status.kind;
+    final isEnforced = kind.isEnforced;
+    final isAgeReviewClosure = status.isAgeReviewClosure;
     final colors = context.vineColors;
-    final body = l10n.accountEnforcementBody(kind!);
+    final heading = isAgeReviewClosure
+        ? l10n.accountStatusAgeClosureHeading
+        : l10n.accountEnforcementHeading(kind);
+    final body = isAgeReviewClosure
+        ? l10n.accountStatusAgeClosureBody
+        : l10n.accountEnforcementBody(kind);
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         Text(
-          l10n.accountEnforcementHeading(kind!),
+          heading,
           style: VineTheme.headlineSmallFont(color: colors.primaryText),
         ),
         if (body != null) ...[
@@ -250,7 +330,12 @@ class _StatusBody extends StatelessWidget {
             onPressed: onRetry,
           ),
         ],
-        if (isEnforced) ...[
+        if (isAgeReviewClosure)
+          _AgeReviewClosurePaths(
+            openSupportMessages: openSupportMessages,
+            composeEmail: composeEmail,
+          )
+        else if (isEnforced) ...[
           const SizedBox(height: 32),
           Text(
             l10n.accountStatusKeysUnaffectedHeading,
@@ -294,6 +379,64 @@ class _StatusBody extends StatelessWidget {
                 openExternalLink(context, AppConstants.accountPortabilityUrl),
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// The way back and the dispute path for an account closed by age review.
+///
+/// Leaves out the keys and move-account sections on purpose: most readers are
+/// kids, and the honest way back for them is Divine Greenlight, not taking the
+/// account to another app. The dispute path speaks to a parent, or to an account
+/// holder of 16 or older closed by mistake.
+class _AgeReviewClosurePaths extends StatelessWidget {
+  const _AgeReviewClosurePaths({this.openSupportMessages, this.composeEmail});
+
+  final OpenSupportMessages? openSupportMessages;
+  final ComposeSupportEmail? composeEmail;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.vineColors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 16),
+        Text(
+          l10n.accountStatusAgeClosureRejoinBody,
+          style: VineTheme.bodyMediumFont(color: colors.primaryText),
+        ),
+        const SizedBox(height: 16),
+        DivineButton(
+          label: l10n.accountStatusAgeClosureGreenlightCta,
+          expanded: true,
+          onPressed: () =>
+              openExternalLink(context, AppConstants.kidsGreenlightUrl),
+        ),
+        const SizedBox(height: 32),
+        Text(
+          l10n.accountStatusAgeClosureMistakeHeading,
+          style: VineTheme.titleMediumFont(color: colors.primaryText),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          l10n.accountStatusAgeClosureMistakeBody,
+          style: VineTheme.bodyMediumFont(color: colors.primaryText),
+        ),
+        const SizedBox(height: 16),
+        SupportContactAction(
+          openSupportMessages: openSupportMessages,
+          composeEmail: composeEmail,
+          builder: (context, isOpening, openSupport) => DivineButton(
+            label: l10n.supportContactSupport,
+            type: DivineButtonType.secondary,
+            expanded: true,
+            isLoading: isOpening,
+            onPressed: openSupport,
+          ),
+        ),
       ],
     );
   }

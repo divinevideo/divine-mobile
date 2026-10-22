@@ -20,9 +20,18 @@ import 'package:url_launcher_platform_interface/url_launcher_platform_interface.
 import '../../helpers/go_router.dart';
 import '../../helpers/url_launcher_test_double.dart';
 
+const _pubkey =
+    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
+const _closure = AccountEnforcementStatus(
+  kind: AccountEnforcementKind.banned,
+  category: AccountEnforcementCategory.ageReview,
+);
+
 Future<void> _pumpWith(
   WidgetTester tester,
   AccountEnforcementKind kind, {
+  AccountEnforcementCategory? category,
   MockGoRouter? goRouter,
   bool publishRestrictionConfirmed = false,
   OpenSupportMessages? openSupportMessages,
@@ -48,8 +57,10 @@ Future<void> _pumpWith(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
         accountEnforcementStatusProvider.overrideWith(
-          (ref) async => AccountEnforcementStatus(kind: kind),
+          (ref) async =>
+              AccountEnforcementStatus(kind: kind, category: category),
         ),
       ],
       child: goRouter == null
@@ -85,6 +96,341 @@ void main() {
 
       expect(find.text(l10n.accountStatusBannedHeading), findsOneWidget);
       expect(find.text(l10n.supportContactSupport), findsOneWidget);
+    });
+
+    testWidgets('a ban outside any category keeps the generic exit path', (
+      tester,
+    ) async {
+      await _pumpWith(tester, AccountEnforcementKind.banned);
+
+      expect(find.text(l10n.accountStatusAgeClosureHeading), findsNothing);
+      expect(find.text(l10n.accountStatusMoveAccount), findsOneWidget);
+      expect(
+        find.text(l10n.accountStatusKeysUnaffectedHeading),
+        findsOneWidget,
+      );
+    });
+
+    group('closed by age review (support-trust-safety#260)', () {
+      // The launch notice explains a closure once per session. One explained
+      // here counts, so backing out of this screen does not bring the notice.
+      testWidgets('counts as the closure having been shown', (tester) async {
+        await _pumpWith(
+          tester,
+          AccountEnforcementKind.banned,
+          category: AccountEnforcementCategory.ageReview,
+        );
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(AccountStatusScreen)),
+        );
+
+        expect(
+          container
+              .read(ageReviewClosureLaunchShownProvider.notifier)
+              .markShown(_pubkey),
+          isFalse,
+        );
+      });
+
+      // A rejected post opens this screen with the generic restriction while
+      // the status loads; the closure that then arrives counts as shown too.
+      testWidgets('counts a closure that replaces the restriction shown', (
+        tester,
+      ) async {
+        final answer = Completer<AccountEnforcementStatus>();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+              accountEnforcementStatusProvider.overrideWith(
+                (ref) => answer.future,
+              ),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: AccountStatusScreen(publishRestrictionConfirmed: true),
+            ),
+          ),
+        );
+        await tester.pump();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(AccountStatusScreen)),
+        );
+
+        answer.complete(_closure);
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.accountStatusAgeClosureHeading), findsOneWidget);
+        expect(
+          container
+              .read(ageReviewClosureLaunchShownProvider.notifier)
+              .markShown(_pubkey),
+          isFalse,
+        );
+      });
+
+      // A closure the session already confirmed is explained before this
+      // screen's own read answers, and through a failed one. Both count, or
+      // backing out to the tabs would open the screen a second time.
+      testWidgets('counts a closure explained while the status loads', (
+        tester,
+      ) async {
+        final load = Completer<AccountEnforcementStatus>();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+              accountRestrictionMemoryProvider.overrideWithValue(
+                AccountRestrictionMemory()..record(_pubkey, _closure),
+              ),
+              accountEnforcementStatusProvider.overrideWith(
+                (ref) => load.future,
+              ),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: AccountStatusScreen(publishRestrictionConfirmed: true),
+            ),
+          ),
+        );
+        await tester.pump();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(AccountStatusScreen)),
+        );
+
+        expect(find.text(l10n.accountStatusAgeClosureHeading), findsOneWidget);
+        expect(
+          container
+              .read(ageReviewClosureLaunchShownProvider.notifier)
+              .markShown(_pubkey),
+          isFalse,
+        );
+        load.complete(_closure);
+        await tester.pumpAndSettle();
+      });
+
+      testWidgets('counts a closure kept through a failed read', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+              accountRestrictionMemoryProvider.overrideWithValue(
+                AccountRestrictionMemory()..record(_pubkey, _closure),
+              ),
+              accountEnforcementStatusProvider.overrideWith(
+                (ref) async => throw const AccountStatusUnavailable(),
+              ),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: AccountStatusScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(AccountStatusScreen)),
+        );
+
+        expect(find.text(l10n.accountStatusAgeClosureHeading), findsOneWidget);
+        expect(
+          container
+              .read(ageReviewClosureLaunchShownProvider.notifier)
+              .markShown(_pubkey),
+          isFalse,
+        );
+      });
+
+      testWidgets('leaves the closure unshown for any other ban', (
+        tester,
+      ) async {
+        await _pumpWith(tester, AccountEnforcementKind.banned);
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(AccountStatusScreen)),
+        );
+
+        expect(
+          container
+              .read(ageReviewClosureLaunchShownProvider.notifier)
+              .markShown(_pubkey),
+          isTrue,
+        );
+      });
+
+      testWidgets('says why the account closed instead of the generic ban', (
+        tester,
+      ) async {
+        await _pumpWith(
+          tester,
+          AccountEnforcementKind.banned,
+          category: AccountEnforcementCategory.ageReview,
+        );
+
+        expect(find.text(l10n.accountStatusAgeClosureHeading), findsOneWidget);
+        expect(find.text(l10n.accountStatusAgeClosureBody), findsOneWidget);
+        expect(find.text(l10n.accountStatusBannedHeading), findsNothing);
+      });
+
+      // A kid should not be told the account "still belongs to you" or sent
+      // to move it elsewhere: the way back is Greenlight, not portability.
+      testWidgets('drops the keys and move-account paths', (tester) async {
+        await _pumpWith(
+          tester,
+          AccountEnforcementKind.banned,
+          category: AccountEnforcementCategory.ageReview,
+        );
+
+        expect(find.text(l10n.accountStatusMoveAccount), findsNothing);
+        expect(
+          find.text(l10n.accountStatusKeysUnaffectedHeading),
+          findsNothing,
+        );
+      });
+
+      testWidgets('asks a parent to reach support about a mistake', (
+        tester,
+      ) async {
+        await _pumpWith(
+          tester,
+          AccountEnforcementKind.banned,
+          category: AccountEnforcementCategory.ageReview,
+        );
+
+        expect(
+          find.text(l10n.accountStatusAgeClosureMistakeHeading),
+          findsOneWidget,
+        );
+        expect(
+          find.text(l10n.accountStatusAgeClosureMistakeBody),
+          findsOneWidget,
+        );
+        expect(find.text(l10n.supportContactSupport), findsOneWidget);
+        expect(find.text(l10n.accountStatusAppealHeading), findsNothing);
+        expect(find.text(l10n.accountStatusAppealBody), findsNothing);
+      });
+
+      testWidgets('Greenlight opens the 13-15 section of the kids page', (
+        tester,
+      ) async {
+        final originalPlatform = UrlLauncherPlatform.instance;
+        final launcher = UrlLauncherTestDouble();
+        UrlLauncherPlatform.instance = launcher;
+        addTearDown(() => UrlLauncherPlatform.instance = originalPlatform);
+
+        await _pumpWith(
+          tester,
+          AccountEnforcementKind.banned,
+          category: AccountEnforcementCategory.ageReview,
+        );
+        expect(
+          find.text(l10n.accountStatusAgeClosureRejoinBody),
+          findsOneWidget,
+        );
+        await tester.tap(find.text(l10n.accountStatusAgeClosureGreenlightCta));
+        await tester.pumpAndSettle();
+
+        expect(launcher.launched.single.url, AppConstants.kidsGreenlightUrl);
+      });
+
+      // A rejected like or upload opens the screen with publish evidence while
+      // the status reloads. That evidence cannot tell a closure from any other
+      // ban, so the reload must not swap in the generic paths a closure drops.
+      testWidgets(
+        'keeps the closure while a publish-confirmed screen reloads',
+        (
+          tester,
+        ) async {
+          final reload = Completer<AccountEnforcementStatus>();
+          var fetches = 0;
+          final container = ProviderContainer(
+            overrides: [
+              activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+              accountEnforcementStatusProvider.overrideWith((ref) {
+                fetches++;
+                return fetches == 1 ? Future.value(_closure) : reload.future;
+              }),
+            ],
+          );
+          addTearDown(container.dispose);
+          final settings = container.listen(
+            accountEnforcementStatusProvider,
+            (_, _) {},
+          );
+          addTearDown(settings.close);
+          await container.read(accountEnforcementStatusProvider.future);
+          tester.view.physicalSize = const Size(1080, 2600);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.reset);
+
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: container,
+              child: const MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: AccountStatusScreen(publishRestrictionConfirmed: true),
+              ),
+            ),
+          );
+          await tester.pump();
+
+          expect(fetches, 2);
+          expect(
+            find.text(l10n.accountStatusAgeClosureHeading),
+            findsOneWidget,
+          );
+          expect(find.text(l10n.accountStatusMoveAccount), findsNothing);
+          reload.complete(_closure);
+          await tester.pumpAndSettle();
+        },
+      );
+
+      // The usual case once the launch notice has let go of the status: the
+      // screen opens with nothing cached and only the session's memory.
+      testWidgets(
+        'explains a closure confirmed earlier while the status loads',
+        (
+          tester,
+        ) async {
+          final load = Completer<AccountEnforcementStatus>();
+          tester.view.physicalSize = const Size(1080, 2600);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.reset);
+
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+                accountRestrictionMemoryProvider.overrideWithValue(
+                  AccountRestrictionMemory()..record(_pubkey, _closure),
+                ),
+                accountEnforcementStatusProvider.overrideWith(
+                  (ref) => load.future,
+                ),
+              ],
+              child: const MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: AccountStatusScreen(publishRestrictionConfirmed: true),
+              ),
+            ),
+          );
+          await tester.pump();
+
+          expect(
+            find.text(l10n.accountStatusAgeClosureHeading),
+            findsOneWidget,
+          );
+          expect(find.text(l10n.accountStatusMoveAccount), findsNothing);
+          load.complete(_closure);
+          await tester.pumpAndSettle();
+        },
+      );
     });
 
     testWidgets('a publish-confirmed unknown restriction gets an appeal path', (
@@ -282,6 +628,7 @@ void main() {
       var call = 0;
       final container = ProviderContainer(
         overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
           accountEnforcementStatusProvider.overrideWith((ref) async {
             call++;
             return const AccountEnforcementStatus(
@@ -333,6 +680,7 @@ void main() {
       final pending = Completer<AccountEnforcementStatus>();
       final container = ProviderContainer(
         overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
           accountEnforcementStatusProvider.overrideWith((ref) {
             call++;
             if (call == 1) {
@@ -381,6 +729,7 @@ void main() {
         var call = 0;
         final container = ProviderContainer(
           overrides: [
+            activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
             accountEnforcementStatusProvider.overrideWith((ref) async {
               call++;
               if (call == 1) {
@@ -432,6 +781,7 @@ void main() {
       var call = 0;
       final container = ProviderContainer(
         overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
           accountEnforcementStatusProvider.overrideWith((ref) async {
             call++;
             if (call == 1) {
@@ -468,6 +818,93 @@ void main() {
       expect(find.text(l10n.accountStatusLastKnownBody), findsOneWidget);
       expect(find.text(l10n.accountStatusRetry), findsOneWidget);
       expect(find.text(l10n.supportContactSupport), findsOneWidget);
+    });
+
+    // A bad connection must not swap the closure explanation for the generic
+    // ban and its move-account path (support-trust-safety#260).
+    testWidgets('a failed refresh keeps an age-review closure explained', (
+      tester,
+    ) async {
+      var call = 0;
+      final container = ProviderContainer(
+        overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+          accountEnforcementStatusProvider.overrideWith((ref) async {
+            call++;
+            if (call == 1) {
+              return const AccountEnforcementStatus(
+                kind: AccountEnforcementKind.banned,
+                category: AccountEnforcementCategory.ageReview,
+              );
+            }
+            throw const AccountStatusUnavailable();
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final sub = container.listen(accountEnforcementStatusProvider, (_, _) {});
+      addTearDown(sub.close);
+      await container.read(accountEnforcementStatusProvider.future);
+
+      tester.view.physicalSize = const Size(1080, 2600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: AccountStatusScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.accountStatusAgeClosureHeading), findsOneWidget);
+      expect(find.text(l10n.accountStatusLastKnownBody), findsOneWidget);
+      expect(find.text(l10n.accountStatusMoveAccount), findsNothing);
+    });
+
+    // Once nothing keeps the status alive, as after the launch notice lets go
+    // of it, the next read starts with nothing cached. Its failure must not
+    // hide a closure this session already confirmed (support-trust-safety#260).
+    testWidgets('a failed first read keeps a closure confirmed earlier', (
+      tester,
+    ) async {
+      final memory = AccountRestrictionMemory()
+        ..record(
+          _pubkey,
+          const AccountEnforcementStatus(
+            kind: AccountEnforcementKind.banned,
+            category: AccountEnforcementCategory.ageReview,
+          ),
+        );
+      tester.view.physicalSize = const Size(1080, 2600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+            accountRestrictionMemoryProvider.overrideWithValue(memory),
+            accountEnforcementStatusProvider.overrideWith(
+              (ref) async => throw const AccountStatusUnavailable(),
+            ),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: AccountStatusScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.accountStatusAgeClosureHeading), findsOneWidget);
+      expect(find.text(l10n.accountStatusLastKnownBody), findsOneWidget);
+      expect(find.text(l10n.accountStatusUnavailableHeading), findsNothing);
     });
 
     testWidgets('an active account is offered no futile retry', (tester) async {

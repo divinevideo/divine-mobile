@@ -12,8 +12,10 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/account_enforcement_status.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
+import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/environment_provider.dart';
@@ -537,6 +539,24 @@ class _DeveloperOptionsScreenState
                     ),
                   ),
                 ),
+                // Kept apart from the response-clock rows above, which belong
+                // to the teen review simulation.
+                Divider(color: context.vineColors.outline, height: 32),
+                ListTile(
+                  title: Text(
+                    context.l10n.devOptionsAgeReviewClosureTitle,
+                    style: VineTheme.titleMediumFont(
+                      color: context.vineColors.primaryText,
+                    ),
+                  ),
+                  subtitle: Text(
+                    context.l10n.devOptionsAgeReviewClosureSubtitle,
+                    style: VineTheme.bodyMediumFont(
+                      color: context.vineColors.secondaryText,
+                    ),
+                  ),
+                  onTap: _simulateAgeReviewClosure,
+                ),
                 // Protected-minor (13-15) simulation (#5721): flips the
                 // debug-only ProtectedMinorOverrideService so QA can exercise
                 // the #175/#176 protections without a real approved-minor
@@ -816,6 +836,7 @@ class _DeveloperOptionsScreenState
     final service = ref.read(minorAccountReviewOverrideServiceProvider);
     await service.clearOverride();
     ref.invalidate(currentMinorAccountReviewStatusProvider);
+    ref.read(accountEnforcementDevOverrideProvider.notifier).clear();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       DivineSnackbarContainer.snackBar(
@@ -868,6 +889,24 @@ class _DeveloperOptionsScreenState
       context,
     ).showSnackBar(DivineSnackbarContainer.snackBar(toast));
     setState(() {});
+  }
+
+  /// Funnelcake cannot report an age-review closure yet, so this is the only
+  /// way to see its Account status copy (support-trust-safety#260).
+  void _simulateAgeReviewClosure() {
+    ref
+        .read(accountEnforcementDevOverrideProvider.notifier)
+        .simulate(
+          const AccountEnforcementStatus(
+            kind: AccountEnforcementKind.banned,
+            category: AccountEnforcementCategory.ageReview,
+          ),
+        );
+    ScaffoldMessenger.of(context).showSnackBar(
+      DivineSnackbarContainer.snackBar(
+        context.l10n.devOptionsAgeReviewClosureEnabledToast,
+      ),
+    );
   }
 
   Future<void> _simulateUnder13MinorReview() async {

@@ -1,5 +1,5 @@
 // ABOUTME: Client-side account enforcement state derived from Funnelcake's relay-backed status.
-// ABOUTME: Carries no moderation internals; the API deliberately returns status only.
+// ABOUTME: Carries no moderation internals: a status and, at most, a closed category.
 
 import 'package:openvine/services/account_status_api_client.dart';
 
@@ -28,11 +28,23 @@ enum AccountEnforcementKind {
       this == AccountEnforcementKind.unknownRestriction;
 }
 
+/// Why an account is enforced, from a closed set with reviewed copy for each.
+///
+/// This is not a moderation reason. Each value selects copy the client owns,
+/// so nothing stored by a moderator or a rule ever reaches the screen
+/// (support-trust-safety#200 R-7).
+enum AccountEnforcementCategory {
+  /// The account was closed by an age review: a suspected minor who was
+  /// denied, or whose parent-consent window ran out (support-trust-safety#260).
+  ageReview,
+}
+
 /// Enforcement state for the authenticated account, as reported by
 /// Funnelcake's self-authenticated status endpoint.
 ///
-/// Deliberately carries no reason or moderation metadata, for two reasons that
-/// are worth keeping apart because only the first survives a change of backend:
+/// Deliberately carries no free-text reason or moderation metadata, for two
+/// reasons that are worth keeping apart because only the first survives a
+/// change of backend:
 ///
 /// 1. Stored moderation reasons are internal operational metadata, not
 ///    reviewed or localised user copy. Account-level notices describe the
@@ -42,32 +54,45 @@ enum AccountEnforcementKind {
 ///    that in its own suite. This is why the omission is currently free.
 ///
 /// Reason (2) arrived with the move from Keycast to Funnelcake and reads like
-/// the whole story; it is not. Copy is chosen from [kind] alone. See #8304 for
-/// the account-level policy decision and `account_status_api_client_test.dart`
-/// for the client-side guard.
+/// the whole story; it is not. Copy is chosen from [kind] and, where set, the
+/// closed [category]. See #8304 for the account-level policy decision and
+/// `account_status_api_client_test.dart` for the client-side guard.
 class AccountEnforcementStatus {
-  const AccountEnforcementStatus({required this.kind});
+  const AccountEnforcementStatus({required this.kind, this.category});
 
   factory AccountEnforcementStatus.fromFunnelcake(
-    FunnelcakeAccountStatus status,
+    FunnelcakeAccountStatusResponse response,
   ) {
-    switch (status) {
-      case FunnelcakeAccountStatus.active:
-        return const AccountEnforcementStatus(
-          kind: AccountEnforcementKind.noRestrictionReported,
-        );
-      case FunnelcakeAccountStatus.suspended:
-        return const AccountEnforcementStatus(
-          kind: AccountEnforcementKind.suspended,
-        );
-      case FunnelcakeAccountStatus.banned:
-        return const AccountEnforcementStatus(
-          kind: AccountEnforcementKind.banned,
-        );
-    }
+    final kind = switch (response.status) {
+      FunnelcakeAccountStatus.active =>
+        AccountEnforcementKind.noRestrictionReported,
+      FunnelcakeAccountStatus.suspended => AccountEnforcementKind.suspended,
+      FunnelcakeAccountStatus.banned => AccountEnforcementKind.banned,
+    };
+    final category = switch (response.category) {
+      FunnelcakeEnforcementCategory.ageReview =>
+        AccountEnforcementCategory.ageReview,
+      null => null,
+    };
+    return AccountEnforcementStatus(kind: kind, category: category);
   }
 
   final AccountEnforcementKind kind;
 
+  /// Null when Funnelcake names no category or one this version does not
+  /// know, including every response from a Funnelcake that predates the field.
+  final AccountEnforcementCategory? category;
+
   bool get isEnforced => kind.isEnforced;
+
+  /// Whether the account was closed by age review. A suspension in that
+  /// category is an open case, which the review screens handle instead.
+  ///
+  /// A switch over every category, so a new one has to be decided here
+  /// before it compiles rather than falling through to the generic ban.
+  bool get isAgeReviewClosure => switch (category) {
+    AccountEnforcementCategory.ageReview =>
+      kind == AccountEnforcementKind.banned,
+    null => false,
+  };
 }
