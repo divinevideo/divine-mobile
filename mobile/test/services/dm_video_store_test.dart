@@ -4576,16 +4576,9 @@ void main() {
               throwsA(isA<DmVideoUnavailableException>()),
             );
             expect(removal, isNotNull);
-            expect(
-              File(
-                '${ownerDir().path}/${DmVideoStore.videoFileNameFor(message)}',
-              ).existsSync(),
-              isFalse,
-            );
-            expect(
-              ownerDir().listSync().map((file) => file.path),
-              everyElement(isNot(endsWith('.part'))),
-            );
+            // Neither the video, nor its part file, nor the record written
+            // before it.
+            expect(ownerDir().listSync(), isEmpty);
           } finally {
             deletionRoot.complete(root);
             await removal;
