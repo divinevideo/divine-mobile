@@ -98,7 +98,7 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Location access is used to enable Wi‑Fi-related features and nearby device discovery for optional offline sync.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Divine needs access to your microphone to record audio with videos.</string>
+	<string>Divine needs access to your microphone to record audio for your videos and sounds.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Photo library access is needed to save exported videos to your library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

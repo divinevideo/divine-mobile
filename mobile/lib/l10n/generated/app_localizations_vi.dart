@@ -4208,8 +4208,29 @@ class AppLocalizationsVi extends AppLocalizations {
   String get soundsAddSharePublicly => 'Chia sẻ công khai';
 
   @override
-  String get soundsImportPromptDescription =>
-      'Chọn một tệp âm thanh từ thiết bị của bạn. Giữ riêng tư trong Âm thanh của tôi, hoặc chia sẻ để mọi người trên Divine đều dùng được.';
+  String get soundsAddPromptDescription =>
+      'Chọn một tệp âm thanh hoặc ghi âm. Giữ riêng tư trong Âm thanh của tôi, hoặc chia sẻ để mọi người trên Divine đều dùng được.';
+
+  @override
+  String get soundsRecordAction => 'Ghi âm';
+
+  @override
+  String get soundsRecordAgainAction => 'Ghi lại';
+
+  @override
+  String soundsRecordingTitle(String dateTime) {
+    return 'Bản ghi $dateTime';
+  }
+
+  @override
+  String get soundsRecordPermissionBody => 'Cho phép truy cập micro để ghi âm.';
+
+  @override
+  String get soundsRecordFailed => 'Không ghi âm được. Thử lại nhé.';
+
+  @override
+  String get soundsShareTitleRequiredHint =>
+      'Đặt tiêu đề cho âm thanh để chia sẻ.';
 
   @override
   String get soundsImportUnsupportedFormat =>

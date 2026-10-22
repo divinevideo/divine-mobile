@@ -3990,8 +3990,28 @@ class AppLocalizationsKo extends AppLocalizations {
   String get soundsAddSharePublicly => '공개로 공유';
 
   @override
-  String get soundsImportPromptDescription =>
-      '기기에서 오디오 파일을 골라 주세요. 내 사운드에 비공개로 두거나, Divine의 누구나 쓸 수 있게 공유할 수 있어요.';
+  String get soundsAddPromptDescription =>
+      '오디오 파일을 고르거나 사운드를 녹음해 주세요. 내 사운드에 비공개로 두거나, Divine의 누구나 쓸 수 있게 공유할 수 있어요.';
+
+  @override
+  String get soundsRecordAction => '사운드 녹음';
+
+  @override
+  String get soundsRecordAgainAction => '다시 녹음';
+
+  @override
+  String soundsRecordingTitle(String dateTime) {
+    return '녹음 $dateTime';
+  }
+
+  @override
+  String get soundsRecordPermissionBody => '사운드를 녹음하려면 마이크 접근을 허용해 주세요.';
+
+  @override
+  String get soundsRecordFailed => '녹음하지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String get soundsShareTitleRequiredHint => '공유하려면 사운드 제목을 입력해 주세요.';
 
   @override
   String get soundsImportUnsupportedFormat =>

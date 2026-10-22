@@ -4319,8 +4319,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get soundsAddSharePublicly => 'Share publicly';
 
   @override
-  String get soundsImportPromptDescription =>
-      'Pick an audio file from your device. Keep it private in My Sounds, or share it so anyone on Divine can use it.';
+  String get soundsAddPromptDescription =>
+      'Pick an audio file or record a sound. Keep it private in My Sounds, or share it so anyone on Divine can use it.';
+
+  @override
+  String get soundsRecordAction => 'Record a sound';
+
+  @override
+  String get soundsRecordAgainAction => 'Record again';
+
+  @override
+  String soundsRecordingTitle(String dateTime) {
+    return 'Recording $dateTime';
+  }
+
+  @override
+  String get soundsRecordPermissionBody =>
+      'Allow microphone access to record a sound.';
+
+  @override
+  String get soundsRecordFailed => 'Couldn\'t record that. Try again.';
+
+  @override
+  String get soundsShareTitleRequiredHint =>
+      'Give your sound a title to share it.';
 
   @override
   String get soundsImportUnsupportedFormat =>

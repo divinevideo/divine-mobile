@@ -272,6 +272,91 @@ void main() {
       });
     });
 
+    group('importRecording', () {
+      late File recording;
+
+      setUp(() {
+        recording = File('${root.path}/sound_1.m4a')
+          ..writeAsBytesSync([4, 5, 6]);
+      });
+
+      test('moves the recording in and replaces the picked file', () async {
+        final cubit = build();
+        addTearDown(cubit.close);
+        await cubit.pickFileAndImport();
+        final picked = cubit.state.audio!;
+
+        await cubit.importRecording(path: recording.path, title: 'Recording');
+
+        expect(cubit.state.status, AddSoundStatus.ready);
+        expect(cubit.state.source, AddSoundSource.recording);
+        expect(cubit.state.audio!.title, 'Recording');
+        // The private title is a local date; a public share starts blank so
+        // it never publishes the recorder's timezone or language.
+        expect(cubit.state.attribution!.title, isEmpty);
+        expect(
+          await File(cubit.state.audio!.localFilePath!).readAsBytes(),
+          equals([4, 5, 6]),
+        );
+        expect(recording.existsSync(), isFalse);
+        expect(reclaimed, equals([picked.localFilePath]));
+      });
+
+      test('a recording that cannot be read keeps the current sound', () async {
+        durationFn = (file) async {
+          if (file.path.endsWith('.m4a')) throw const FormatException('empty');
+          return const Duration(seconds: 3);
+        };
+        final cubit = build();
+        addTearDown(cubit.close);
+        await cubit.pickFileAndImport();
+        final picked = cubit.state.audio!;
+
+        await cubit.importRecording(path: recording.path, title: 'Recording');
+
+        expect(cubit.state.failure, AddSoundFailure.unreadableFile);
+        expect(cubit.state.audio, same(picked));
+        expect(cubit.state.source, AddSoundSource.file);
+        expect(reclaimed, isEmpty);
+      });
+
+      test('is ignored while a save is in flight', () async {
+        final saving = Completer<SavedSoundSaveResult>();
+        final cubit = build(
+          saveSound: (audio, {String? personalLabel}) => saving.future,
+        );
+        addTearDown(cubit.close);
+        await cubit.pickFileAndImport();
+        final picked = cubit.state.audio!;
+        final save = cubit.save();
+        expect(cubit.state.status, AddSoundStatus.saving);
+
+        await cubit.importRecording(path: recording.path, title: 'Recording');
+        saving.complete(SavedSoundSaveResult.saved);
+        await save;
+
+        // The recorder still owns the file and deletes it itself.
+        expect(recording.existsSync(), isTrue);
+        expect(cubit.state.audio, same(picked));
+        expect(cubit.state.source, AddSoundSource.file);
+      });
+
+      test('is ignored once the sound was shared', () async {
+        stubPublish(() async => LocalAudioPublished(_publishedEvent()));
+        final cubit = await sharingCubit();
+        addTearDown(cubit.close);
+        await cubit.save();
+        expect(cubit.state.isPublished, isTrue);
+        final shared = cubit.state.audio!;
+
+        await cubit.importRecording(path: recording.path, title: 'Recording');
+
+        expect(recording.existsSync(), isTrue);
+        expect(cubit.state.audio, same(shared));
+        expect(cubit.state.status, AddSoundStatus.saved);
+      });
+    });
+
     group('updateAttribution', () {
       test('credits the publisher pubkey only while it is own work', () async {
         final cubit = await sharingCubit();

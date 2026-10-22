@@ -4235,8 +4235,30 @@ class AppLocalizationsSv extends AppLocalizations {
   String get soundsAddSharePublicly => 'Dela offentligt';
 
   @override
-  String get soundsImportPromptDescription =>
-      'Välj en ljudfil från din enhet. Behåll den privat i Mina ljud eller dela den så att alla på Divine kan använda den.';
+  String get soundsAddPromptDescription =>
+      'Välj en ljudfil eller spela in ett ljud. Behåll det privat i Mina ljud eller dela det så att alla på Divine kan använda det.';
+
+  @override
+  String get soundsRecordAction => 'Spela in ett ljud';
+
+  @override
+  String get soundsRecordAgainAction => 'Spela in igen';
+
+  @override
+  String soundsRecordingTitle(String dateTime) {
+    return 'Inspelning $dateTime';
+  }
+
+  @override
+  String get soundsRecordPermissionBody =>
+      'Tillåt åtkomst till mikrofonen för att spela in ett ljud.';
+
+  @override
+  String get soundsRecordFailed => 'Kunde inte spela in. Försök igen.';
+
+  @override
+  String get soundsShareTitleRequiredHint =>
+      'Ge ditt ljud en titel för att dela det.';
 
   @override
   String get soundsImportUnsupportedFormat =>

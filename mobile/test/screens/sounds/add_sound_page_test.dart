@@ -1,10 +1,11 @@
-// ABOUTME: Widget tests for the Add sound screen: pick, preview, save privately
-// ABOUTME: under a name, or share publicly with a credit and land in My Sounds.
+// ABOUTME: Widget tests for the Add sound screen: pick or record, preview, save
+// ABOUTME: privately under a name, or share publicly and land in My Sounds.
 
 import 'dart:async';
 import 'dart:io';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -18,6 +19,7 @@ import 'package:openvine/blocs/add_sound/add_sound_cubit.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sound_media_probe.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_bloc.dart';
 import 'package:openvine/blocs/saved_sounds/saved_sounds_scope.dart';
+import 'package:openvine/blocs/sound_recorder/sound_recorder_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/audio_share_attribution.dart';
 import 'package:openvine/models/saved_sound.dart';
@@ -29,10 +31,51 @@ import 'package:openvine/screens/sounds/add_sound_page.dart';
 import 'package:openvine/services/local_audio_event_publisher.dart';
 import 'package:openvine/services/local_audio_import_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
+import 'package:openvine/services/video_editor/voice_over_recorder_service.dart';
+import 'package:openvine/widgets/audio/public_audio_credit_editor.dart';
+import 'package:permissions_service/permissions_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sound_service/sound_service.dart';
 
 class _MockPublisher extends Mock implements LocalAudioEventPublisher {}
+
+class _MockPermissionsService extends Mock implements PermissionsService {}
+
+class _FakeAudioSessionService extends AudioSessionService {
+  @override
+  Future<void> resetAudioSession() async {}
+}
+
+class _FakeRecorder implements VoiceOverRecorderService {
+  final _levels = StreamController<double>.broadcast();
+  bool throwOnStart = false;
+  String? path;
+  Completer<void>? stopGate;
+
+  @override
+  Stream<double> get amplitudeStream => _levels.stream;
+
+  @override
+  Stream<void> get systemPauses => const Stream.empty();
+
+  @override
+  Future<void> start(String path) async {
+    this.path = path;
+    File(path).writeAsBytesSync([7, 8, 9]);
+    if (throwOnStart) throw VoiceOverRecorderException('mic unavailable');
+  }
+
+  @override
+  Future<String?> stop() async {
+    await stopGate?.future;
+    return path;
+  }
+
+  @override
+  Future<void> dispose() => _levels.close();
+
+  void emitLevel(double level) => _levels.add(level);
+}
 
 class _FakeAudioEvent extends Fake implements AudioEvent {}
 
@@ -41,10 +84,14 @@ class _FakeAttribution extends Fake implements AudioShareAttribution {}
 class _FakeAudioPlaybackService extends Fake implements AudioPlaybackService {
   final loadedPaths = <String>[];
   Completer<void>? _playing;
+  Completer<void>? stopGate;
+  Completer<void>? loadGate;
+  int playCount = 0;
 
   @override
   Future<Duration?> loadAudioFromFile(String filePath) async {
     loadedPaths.add(filePath);
+    await loadGate?.future;
     return const Duration(seconds: 3);
   }
 
@@ -52,13 +99,19 @@ class _FakeAudioPlaybackService extends Fake implements AudioPlaybackService {
   Future<void> seek(Duration position) async {}
 
   @override
-  Future<void> play() => (_playing = Completer<void>()).future;
+  Future<void> play() {
+    playCount++;
+    return (_playing = Completer<void>()).future;
+  }
 
   @override
   Future<void> pause() async => _resolvePlay();
 
   @override
-  Future<void> stop() async => _resolvePlay();
+  Future<void> stop() async {
+    await stopGate?.future;
+    _resolvePlay();
+  }
 
   void _resolvePlay() {
     final playing = _playing;
@@ -103,6 +156,23 @@ class _FakeImportService extends LocalAudioImportService {
       duration: 3,
     );
   }
+
+  /// Moves the recording like the real service, without probing it.
+  @override
+  Future<AudioEvent> importRecording({
+    required String recordingPath,
+    required String title,
+  }) async {
+    final file = File(recordingPath).renameSync('${storageDir.path}/rec.m4a');
+    return AudioEvent.fromLocalImport(
+      id: 'local_import_recording',
+      filePath: file.path,
+      createdAt: 1,
+      title: title,
+      mimeType: 'audio/mp4',
+      duration: 2,
+    );
+  }
 }
 
 const _self =
@@ -134,6 +204,8 @@ void main() {
   late List<String> reclaimed;
   late _FakeAudioPlaybackService audio;
   late _MockPublisher publisher;
+  late _MockPermissionsService permissions;
+  late _FakeRecorder recorder;
   late AppLocalizations l10n;
   AudioImportPickedFile? nextPick;
 
@@ -151,6 +223,12 @@ void main() {
     reclaimed = <String>[];
     audio = _FakeAudioPlaybackService();
     publisher = _MockPublisher();
+    permissions = _MockPermissionsService();
+    recorder = _FakeRecorder();
+    when(
+      permissions.checkMicrophoneStatus,
+    ).thenAnswer((_) async => PermissionStatus.granted);
+    when(permissions.openAppSettings).thenAnswer((_) async => true);
     l10n = lookupAppLocalizations(const Locale('en'));
     nextPick = AudioImportPickedFile(path: source.path, name: 'beat.mp3');
     when(
@@ -218,17 +296,29 @@ void main() {
       tester,
       savedSoundsService: savedSoundsService,
       page: Builder(
-        builder: (context) => BlocProvider(
-          create: (_) => AddSoundCubit(
-            importService: _FakeImportService(storageDir),
-            pickFile: () async => nextPick,
-            saveSound: context.read<SavedSoundsBloc>().saveSound,
-            reclaimAudio: (path) async => reclaimed.add(path),
-            viewerAccountId: () => _self,
-            publisher: () => publisher,
-            publisherName: 'Alice',
-            publisherPubkey: _self,
-          ),
+        builder: (context) => MultiBlocProvider(
+          providers: [
+            BlocProvider(
+              create: (_) => AddSoundCubit(
+                importService: _FakeImportService(storageDir),
+                pickFile: () async => nextPick,
+                saveSound: context.read<SavedSoundsBloc>().saveSound,
+                reclaimAudio: (path) async => reclaimed.add(path),
+                viewerAccountId: () => _self,
+                publisher: () => publisher,
+                publisherName: 'Alice',
+                publisherPubkey: _self,
+              ),
+            ),
+            BlocProvider(
+              create: (_) => SoundRecorderCubit(
+                permissionsService: permissions,
+                audioSessionService: _FakeAudioSessionService(),
+                recorder: recorder,
+                scratchDirectoryProvider: () async => root,
+              ),
+            ),
+          ],
           child: const AddSoundView(),
         ),
       ),
@@ -238,6 +328,23 @@ void main() {
   Future<void> pickFile(WidgetTester tester) async {
     await tester.tap(find.byKey(const Key('add_sound_pick')));
     await tester.pumpAndSettle();
+  }
+
+  /// Stopping the recorder awaits cancelling its level subscription, which
+  /// resolves through the root zone's microtask queue: that needs a real
+  /// event-loop turn before the fake-async pump can carry the rest through.
+  Future<void> settleRecorder(WidgetTester tester) async {
+    await tester.runAsync(pumpEventQueue);
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> recordTake(WidgetTester tester) async {
+    await tester.tap(find.byKey(const Key('add_sound_record')));
+    await tester.pumpAndSettle();
+    recorder.emitLevel(0.6);
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('add_sound_stop_recording')));
+    await settleRecorder(tester);
   }
 
   Future<void> sharePublicly(WidgetTester tester) async {
@@ -325,8 +432,9 @@ void main() {
         await pumpView(tester);
 
         expect(find.text(l10n.soundsAddSound), findsOneWidget);
-        expect(find.text(l10n.soundsImportPromptDescription), findsOneWidget);
+        expect(find.text(l10n.soundsAddPromptDescription), findsOneWidget);
         expect(find.byKey(const Key('add_sound_pick')), findsOneWidget);
+        expect(find.byKey(const Key('add_sound_record')), findsOneWidget);
         expect(find.byKey(const Key('add_sound_save')), findsNothing);
       });
 
@@ -370,6 +478,240 @@ void main() {
     });
 
     group('interactions', () {
+      testWidgets('system Back during native stop discards the pending take', (
+        tester,
+      ) async {
+        final router = await pumpView(tester);
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+        recorder.emitLevel(0.6);
+        await tester.pump();
+        recorder.stopGate = Completer<void>();
+        await tester.tap(find.byKey(const Key('add_sound_stop_recording')));
+        await tester.pump();
+
+        await tester.binding.handlePopRoute();
+        await tester.pump();
+        recorder.stopGate!.complete();
+        await settleRecorder(tester);
+
+        expect(router.state.uri.path, '/add');
+        expect(find.byKey(const Key('add_sound_pick')), findsOneWidget);
+        expect(find.byKey(const Key('add_sound_record_again')), findsNothing);
+        expect(File(recorder.path!).existsSync(), isFalse);
+      });
+
+      testWidgets('locks the previous take while a replacement starts', (
+        tester,
+      ) async {
+        await pumpView(tester);
+        await recordTake(tester);
+        expect(saveButton(tester).onPressed, isNotNull);
+        final permission = Completer<PermissionStatus>();
+        when(permissions.checkMicrophoneStatus)
+            .thenAnswer((_) => permission.future);
+        await tester.tap(find.byKey(const Key('add_sound_record_again')));
+        await tester.pump();
+
+        try {
+          expect(saveButton(tester).onPressed, isNull);
+          expect(
+            tester
+                .widget<DivineIconButton>(
+                  find.byKey(const Key('add_sound_preview')),
+                )
+                .onPressed,
+            isNull,
+          );
+          expect(
+            tester
+                .widget<DivineTextField>(
+                  find.byKey(const Key('add_sound_name_field')),
+                )
+                .enabled,
+            isFalse,
+          );
+          expect(
+            tester
+                .widget<DivineSwitchTile>(
+                  find.byKey(const Key('add_sound_share_publicly')),
+                )
+                .onChanged,
+            isNull,
+          );
+        } finally {
+          permission.complete(PermissionStatus.granted);
+          await settleRecorder(tester);
+        }
+      });
+
+      testWidgets(
+        'Back cancels a pending replacement without leaving the take',
+        (tester) async {
+          final router = await pumpView(tester);
+          await recordTake(tester);
+          final permission = Completer<PermissionStatus>();
+          when(permissions.checkMicrophoneStatus)
+              .thenAnswer((_) => permission.future);
+          await tester.tap(find.byKey(const Key('add_sound_record_again')));
+          await tester.pump();
+          await tester.tap(
+            find.bySemanticsIdentifier(
+              DiVineAppBarLeading.backButtonSemanticId,
+            ),
+          );
+          await tester.pump();
+          permission.complete(PermissionStatus.granted);
+          await settleRecorder(tester);
+
+          expect(router.state.uri.path, '/add');
+          expect(
+            find.byKey(const Key('add_sound_record_again')),
+            findsOneWidget,
+          );
+        },
+      );
+
+      testWidgets(
+        'system Back cancels a pending replacement without leaving the take',
+        (tester) async {
+          final router = await pumpView(tester);
+          await recordTake(tester);
+          final permission = Completer<PermissionStatus>();
+          when(permissions.checkMicrophoneStatus)
+              .thenAnswer((_) => permission.future);
+          await tester.tap(find.byKey(const Key('add_sound_record_again')));
+          await tester.pump();
+          await tester.binding.handlePopRoute();
+          await tester.pump();
+          permission.complete(PermissionStatus.granted);
+          await settleRecorder(tester);
+
+          expect(router.state.uri.path, '/add');
+          expect(
+            find.byKey(const Key('add_sound_record_again')),
+            findsOneWidget,
+          );
+        },
+      );
+
+      testWidgets('locks the public credit while a replacement starts', (
+        tester,
+      ) async {
+        await pumpView(tester);
+        await recordTake(tester);
+        await sharePublicly(tester);
+        IgnorePointer creditLock() => tester.widget<IgnorePointer>(
+          find
+              .ancestor(
+                of: find.byType(PublicAudioCreditEditor),
+                matching: find.byType(IgnorePointer),
+              )
+              .first,
+        );
+        expect(creditLock().ignoring, isFalse);
+        final permission = Completer<PermissionStatus>();
+        when(permissions.checkMicrophoneStatus)
+            .thenAnswer((_) => permission.future);
+        await tester.tap(find.byKey(const Key('add_sound_record_again')));
+        await tester.pump();
+
+        try {
+          expect(creditLock().ignoring, isTrue);
+        } finally {
+          permission.complete(PermissionStatus.granted);
+          await settleRecorder(tester);
+        }
+      });
+
+      testWidgets('a preview still loading cannot play after changing file', (
+        tester,
+      ) async {
+        await pumpView(tester);
+        await pickFile(tester);
+        audio.loadGate = Completer<void>();
+        await tester.tap(find.byKey(const Key('add_sound_preview')));
+        await tester.pump();
+        expect(audio.playCount, 0);
+        await tester.tap(find.byKey(const Key('add_sound_change_file')));
+        await tester.pumpAndSettle();
+
+        audio.loadGate!.complete();
+        await tester.pumpAndSettle();
+
+        expect(audio.playCount, 0);
+      });
+
+      testWidgets(
+        'a preview still loading cannot play after recording starts',
+        (tester) async {
+          await pumpView(tester);
+          await recordTake(tester);
+          audio.loadGate = Completer<void>();
+          await tester.tap(find.byKey(const Key('add_sound_preview')));
+          await tester.pump();
+          expect(audio.playCount, 0);
+          await tester.tap(find.byKey(const Key('add_sound_record_again')));
+          await settleRecorder(tester);
+
+          audio.loadGate!.complete();
+          await settleRecorder(tester);
+
+          expect(audio.playCount, 0);
+        },
+      );
+
+      testWidgets(
+        'keeps the waveform moving for equal samples after the buffer fills',
+        (
+          tester,
+        ) async {
+          tester.binding.platformDispatcher.accessibilityFeaturesTestValue =
+              const FakeAccessibilityFeatures();
+          addTearDown(
+            tester
+                .binding
+                .platformDispatcher
+                .clearAccessibilityFeaturesTestValue,
+          );
+          await pumpView(tester);
+          await tester.tap(find.byKey(const Key('add_sound_record')));
+          await tester.pumpAndSettle();
+          await tester.pump(SoundRecorderCubit.amplitudeInterval);
+          for (var i = 0; i < 256; i++) {
+            recorder.emitLevel(0.5);
+          }
+          await tester.pump();
+          await tester.pump();
+          await tester.pump(SoundRecorderCubit.amplitudeInterval);
+          final boundary = tester.renderObject<RenderRepaintBoundary>(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is RepaintBoundary &&
+                  widget.child is SizedBox &&
+                  (widget.child! as SizedBox).height == 120,
+            ),
+          );
+          Future<List<int>?> pixels() => tester.runAsync(() async {
+            final image = await boundary.toImage();
+            try {
+              return (await image.toByteData())!.buffer.asUint8List();
+            } finally {
+              image.dispose();
+            }
+          });
+          final before = (await pixels())!;
+          expect(before.any((byte) => byte != 0), isTrue);
+
+          recorder.emitLevel(0.5);
+          await tester.pump();
+
+          final after = (await pixels())!;
+          expect(after.length, before.length);
+          expect(after, isNot(orderedEquals(before)));
+        },
+      );
+
       testWidgets('previews the picked file through the player', (
         tester,
       ) async {
@@ -601,6 +943,420 @@ void main() {
             allowAudioReuse: any(named: 'allowAudioReuse'),
           ),
         ).called(1);
+      });
+
+      testWidgets('records a sound and saves it privately', (tester) async {
+        await pumpView(tester);
+
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('add_sound_pick')), findsNothing);
+        expect(find.byKey(const Key('add_sound_save')), findsNothing);
+
+        recorder.emitLevel(0.6);
+        await tester.pump();
+        await tester.tap(find.byKey(const Key('add_sound_stop_recording')));
+        await settleRecorder(tester);
+
+        expect(find.byKey(const Key('add_sound_record_again')), findsOneWidget);
+        expect(find.textContaining('Recording '), findsOneWidget);
+
+        await tester.tap(find.byKey(const Key('add_sound_save')));
+        await tester.pumpAndSettle();
+
+        final saved = librarySounds().single.audio;
+        expect(saved.title, startsWith('Recording '));
+        expect(saved.mimeType, 'audio/mp4');
+        expect(File(recorder.path!).existsSync(), isFalse);
+      });
+
+      testWidgets('says why sharing a recording waits for a title', (
+        tester,
+      ) async {
+        await pumpView(tester);
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+        recorder.emitLevel(0.6);
+        await tester.pump();
+        await tester.tap(find.byKey(const Key('add_sound_stop_recording')));
+        await settleRecorder(tester);
+
+        await sharePublicly(tester);
+
+        expect(find.text(l10n.soundsShareTitleRequiredHint), findsOneWidget);
+        expect(saveButton(tester).onPressed, isNull);
+
+        await tester.enterText(
+          find.descendant(
+            of: find.byKey(const Key('audio_credit_title')),
+            matching: find.byType(TextField),
+          ),
+          'Beatbox',
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.soundsShareTitleRequiredHint), findsNothing);
+        expect(saveButton(tester).onPressed, isNotNull);
+      });
+
+      testWidgets('back while recording cancels it and stays', (tester) async {
+        final router = await pumpView(tester);
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.bySemanticsIdentifier(DiVineAppBarLeading.backButtonSemanticId),
+        );
+        await settleRecorder(tester);
+
+        expect(router.state.uri.path, '/add');
+        expect(find.byKey(const Key('add_sound_record')), findsOneWidget);
+        expect(File(recorder.path!).existsSync(), isFalse);
+      });
+
+      testWidgets('system back while recording cancels it and stays', (
+        tester,
+      ) async {
+        final router = await pumpView(tester);
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+
+        // Android back and predictive back reach the PopScope, not the app
+        // bar's button.
+        await tester.binding.handlePopRoute();
+        await settleRecorder(tester);
+
+        expect(router.state.uri.path, '/add');
+        expect(find.byKey(const Key('add_sound_record')), findsOneWidget);
+        expect(File(recorder.path!).existsSync(), isFalse);
+      });
+
+      testWidgets('shows the elapsed time against the length limit', (
+        tester,
+      ) async {
+        await pumpView(tester);
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+
+        // The cubit reads the test's fake clock, which pump advances.
+        await tester.pump(const Duration(seconds: 7));
+        recorder.emitLevel(0.4);
+        await tester.pumpAndSettle();
+
+        expect(find.text('0:07 / 5:00'), findsOneWidget);
+      });
+
+      testWidgets('records again from the button beside a recorded sound', (
+        tester,
+      ) async {
+        await pumpView(tester);
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+        recorder.emitLevel(0.6);
+        await tester.pump();
+        await tester.tap(find.byKey(const Key('add_sound_stop_recording')));
+        await settleRecorder(tester);
+
+        await tester.tap(find.text(l10n.soundsRecordAgainAction));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.byKey(const Key('add_sound_stop_recording')),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('says so every time the recorder fails to start', (
+        tester,
+      ) async {
+        recorder.throwOnStart = true;
+        await pumpView(tester);
+
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await settleRecorder(tester);
+        expect(find.text(l10n.soundsRecordFailed), findsOneWidget);
+
+        // Let the first snackbar time out so the second has to be a new one.
+        await tester.pump(const Duration(seconds: 5));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.soundsRecordFailed), findsNothing);
+
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await settleRecorder(tester);
+        expect(find.text(l10n.soundsRecordFailed), findsOneWidget);
+      });
+
+      testWidgets('points to settings when the microphone is refused', (
+        tester,
+      ) async {
+        when(
+          permissions.checkMicrophoneStatus,
+        ).thenAnswer((_) async => PermissionStatus.requiresSettings);
+        await pumpView(tester);
+
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('add_sound_open_settings')));
+
+        expect(find.text(l10n.soundsRecordPermissionBody), findsOneWidget);
+        expect(recorder.path, isNull);
+        verify(permissions.openAppSettings).called(1);
+      });
+
+      testWidgets('hides the microphone notice once a file is picked', (
+        tester,
+      ) async {
+        when(
+          permissions.checkMicrophoneStatus,
+        ).thenAnswer((_) async => PermissionStatus.requiresSettings);
+        await pumpView(tester);
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.soundsRecordPermissionBody), findsOneWidget);
+
+        await pickFile(tester);
+
+        expect(find.text(l10n.soundsRecordPermissionBody), findsNothing);
+      });
+
+      testWidgets('locks the file picker while the microphone starts', (
+        tester,
+      ) async {
+        final permission = Completer<PermissionStatus>();
+        when(
+          permissions.checkMicrophoneStatus,
+        ).thenAnswer((_) => permission.future);
+        await pumpView(tester);
+
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pump();
+
+        expect(
+          tester
+              .widget<DivineButton>(find.byKey(const Key('add_sound_pick')))
+              .onPressed,
+          isNull,
+        );
+
+        permission.complete(PermissionStatus.granted);
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('add_sound_stop_recording')),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('stops a recording another screen covers and keeps it', (
+        tester,
+      ) async {
+        await pumpView(tester);
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+        recorder.emitLevel(0.6);
+        await tester.pump();
+
+        final navigator = Navigator.of(
+          tester.element(find.byType(AddSoundView)),
+        );
+        navigator.push(
+          MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: Text('covering')),
+          ),
+        );
+        // The covered page notices on the frames of the push, so the recorder
+        // settles after them.
+        await tester.pumpAndSettle();
+        await settleRecorder(tester);
+        navigator.pop();
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('add_sound_record_again')), findsOneWidget);
+        expect(File(recorder.path!).existsSync(), isFalse);
+      });
+
+      testWidgets(
+        'does not start capture under a covering screen after permission',
+        (
+          tester,
+        ) async {
+          final permission = Completer<PermissionStatus>();
+          when(permissions.checkMicrophoneStatus)
+              .thenAnswer((_) => permission.future);
+          await pumpView(tester);
+          final context = tester.element(find.byType(AddSoundView));
+          final cubit = context.read<SoundRecorderCubit>();
+          await tester.tap(find.byKey(const Key('add_sound_record')));
+          await tester.pump();
+          Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(
+              builder: (_) => const Scaffold(body: Text('covering')),
+            ),
+          );
+          await tester.pump();
+
+          permission.complete(PermissionStatus.granted);
+          await tester.pumpAndSettle();
+          await settleRecorder(tester);
+
+          expect(cubit.state.isRecording, isFalse);
+          expect(recorder.path, isNull);
+        },
+      );
+
+      testWidgets('stops a recording when the app is hidden and keeps it', (
+        tester,
+      ) async {
+        addTearDown(
+          () => tester.binding.handleAppLifecycleStateChanged(
+            AppLifecycleState.resumed,
+          ),
+        );
+        await pumpView(tester);
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+        recorder.emitLevel(0.6);
+        await tester.pump();
+
+        tester.binding
+          ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+          ..handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+        await settleRecorder(tester);
+        tester.binding
+          ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+          ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('add_sound_record_again')), findsOneWidget);
+      });
+
+      testWidgets(
+        'rechecks visibility after stopping a preview before recording again',
+        (
+          tester,
+        ) async {
+          await pumpView(tester);
+          await tester.tap(find.byKey(const Key('add_sound_record')));
+          await tester.pumpAndSettle();
+          recorder.emitLevel(0.6);
+          await tester.pump();
+          await tester.tap(find.byKey(const Key('add_sound_stop_recording')));
+          await settleRecorder(tester);
+          final context = tester.element(find.byType(AddSoundView));
+          final cubit = context.read<SoundRecorderCubit>();
+          await tester.tap(find.byKey(const Key('add_sound_preview')));
+          await tester.pumpAndSettle();
+          audio.stopGate = Completer<void>();
+          await tester.tap(find.byKey(const Key('add_sound_record_again')));
+          await tester.pump();
+          Navigator.of(context).push<void>(
+            MaterialPageRoute<void>(
+              builder: (_) => const Scaffold(body: Text('covering')),
+            ),
+          );
+          await tester.pump();
+
+          audio.stopGate!.complete();
+          await settleRecorder(tester);
+
+          expect(cubit.state.isRecording, isFalse);
+        },
+      );
+
+      testWidgets(
+        'does not record when the app is hidden while a preview stops',
+        (tester) async {
+          addTearDown(
+            () => tester.binding.handleAppLifecycleStateChanged(
+              AppLifecycleState.resumed,
+            ),
+          );
+          await pumpView(tester);
+          await tester.tap(find.byKey(const Key('add_sound_record')));
+          await tester.pumpAndSettle();
+          recorder.emitLevel(0.6);
+          await tester.pump();
+          await tester.tap(find.byKey(const Key('add_sound_stop_recording')));
+          await settleRecorder(tester);
+          final context = tester.element(find.byType(AddSoundView));
+          final cubit = context.read<SoundRecorderCubit>();
+          await tester.tap(find.byKey(const Key('add_sound_preview')));
+          await tester.pumpAndSettle();
+          audio.stopGate = Completer<void>();
+          await tester.tap(find.byKey(const Key('add_sound_record_again')));
+          await tester.pump();
+          // The recorder is still idle here, so hiding has nothing to stop:
+          // only the recheck after the preview stops can keep the mic off.
+          tester.binding
+            ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+            ..handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+          await tester.pump();
+
+          audio.stopGate!.complete();
+          await settleRecorder(tester);
+
+          expect(cubit.state.isRecording, isFalse);
+        },
+      );
+
+      testWidgets(
+        'does not record when a save starts while a preview stops',
+        (tester) async {
+          final service = _HeldSavedSoundsService(sharedPreferences);
+          await pumpView(tester, savedSoundsService: service);
+          await tester.tap(find.byKey(const Key('add_sound_record')));
+          await tester.pumpAndSettle();
+          recorder.emitLevel(0.6);
+          await tester.pump();
+          await tester.tap(find.byKey(const Key('add_sound_stop_recording')));
+          await settleRecorder(tester);
+          final context = tester.element(find.byType(AddSoundView));
+          final cubit = context.read<SoundRecorderCubit>();
+          await tester.tap(find.byKey(const Key('add_sound_preview')));
+          await tester.pumpAndSettle();
+          audio.stopGate = Completer<void>();
+          await tester.tap(find.byKey(const Key('add_sound_record_again')));
+          await tester.pump();
+          await tester.tap(find.byKey(const Key('add_sound_save')));
+          await tester.pump();
+          expect(service.isHolding, isTrue);
+
+          audio.stopGate!.complete();
+          // Not settleRecorder: the save spinner keeps animating while the
+          // Sounds write is held, so pumpAndSettle would never return.
+          await tester.pump();
+          await tester.runAsync(pumpEventQueue);
+          await tester.pump();
+
+          expect(cubit.state.isRecording, isFalse);
+          service.release();
+          await tester.pumpAndSettle();
+        },
+      );
+
+      testWidgets('titles a recording in 24-hour time when the device uses '
+          'it', (tester) async {
+        tester.binding.platformDispatcher.alwaysUse24HourFormatTestValue = true;
+        addTearDown(
+          tester.binding.platformDispatcher.clearAlwaysUse24HourTestValue,
+        );
+        await pumpView(tester);
+        // The test value does not notify the view, so MediaQuery would keep
+        // reading the old setting without a metrics change.
+        tester.binding.handleMetricsChanged();
+        await tester.pump();
+        await tester.tap(find.byKey(const Key('add_sound_record')));
+        await tester.pumpAndSettle();
+        recorder.emitLevel(0.6);
+        await tester.pump();
+        await tester.tap(find.byKey(const Key('add_sound_stop_recording')));
+        await settleRecorder(tester);
+
+        await tester.tap(find.byKey(const Key('add_sound_save')));
+        await tester.pumpAndSettle();
+
+        final title = librarySounds().single.audio.title;
+        expect(title, startsWith('Recording '));
+        expect(title, matches(RegExp(r' \d{2}:\d{2}$')));
       });
 
       testWidgets('blocks back navigation while sharing', (tester) async {

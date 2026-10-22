@@ -4,6 +4,47 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/local_audio_import_service.dart';
 import 'package:path/path.dart' as p;
 
+/// Real `dart:io` files, created outside any [IOOverrides] zone.
+final _realFiles = _PlainIOOverrides();
+
+final class _PlainIOOverrides extends IOOverrides {}
+
+/// A file whose rename fails the way it does across file systems (EXDEV),
+/// which is the only way to reach the import's copy-then-delete fallback.
+class _CrossDeviceFile implements File {
+  _CrossDeviceFile(this._file);
+
+  final File _file;
+  int renameCalls = 0;
+
+  @override
+  String get path => _file.path;
+
+  @override
+  bool existsSync() => _file.existsSync();
+
+  @override
+  Future<File> rename(String newPath) async {
+    renameCalls++;
+    throw FileSystemException(
+      'Cannot rename file',
+      _file.path,
+      const OSError('Cross-device link', 18),
+    );
+  }
+
+  @override
+  Future<File> copy(String newPath) => _file.copy(newPath);
+
+  @override
+  Future<FileSystemEntity> delete({bool recursive = false}) =>
+      _file.delete(recursive: recursive);
+
+  @override
+  Object? noSuchMethod(Invocation invocation) =>
+      throw UnimplementedError('$invocation');
+}
+
 void main() {
   group(LocalAudioImportService, () {
     late Directory tempDir;
@@ -162,6 +203,96 @@ void main() {
             LocalAudioImportFailureReason.unsupportedType,
           ),
         ),
+      );
+    });
+
+    group('importRecording', () {
+      test(
+        'moves the recording into library storage under its title',
+        () async {
+          final recording = File('${sourceDir.path}/recording_1.m4a')
+            ..writeAsBytesSync([5, 6, 7]);
+          final service = LocalAudioImportService(
+            storageRootProvider: () async => storageDir,
+            durationResolver: (_) async => const Duration(milliseconds: 4200),
+          );
+
+          final event = await service.importRecording(
+            recordingPath: recording.path,
+            title: 'Recording Oct 20 2:32 PM',
+          );
+
+          expect(event.title, equals('Recording Oct 20 2:32 PM'));
+          expect(event.mimeType, equals('audio/mp4'));
+          expect(event.duration, equals(4.2));
+          expect(p.dirname(event.localFilePath!), equals(storageDir.path));
+          expect(
+            await File(event.localFilePath!).readAsBytes(),
+            equals([5, 6, 7]),
+          );
+          // The scratch recording is consumed, not copied.
+          expect(recording.existsSync(), isFalse);
+        },
+      );
+
+      test(
+        'falls back to copy and delete when the rename crosses file systems',
+        () async {
+          final recording = File('${sourceDir.path}/recording_3.m4a')
+            ..writeAsBytesSync([8, 9]);
+          final service = LocalAudioImportService(
+            storageRootProvider: () async => storageDir,
+            durationResolver: (_) async => const Duration(seconds: 1),
+          );
+          final opened = <_CrossDeviceFile>[];
+
+          final event = await IOOverrides.runZoned(
+            () => service.importRecording(
+              recordingPath: recording.path,
+              title: 'Recording',
+            ),
+            createFile: (path) {
+              final file = _CrossDeviceFile(_realFiles.createFile(path));
+              opened.add(file);
+              return file;
+            },
+          );
+
+          final source = opened.firstWhere((f) => f.path == recording.path);
+          expect(source.renameCalls, 1);
+          expect(p.dirname(event.localFilePath!), equals(storageDir.path));
+          expect(
+            await File(event.localFilePath!).readAsBytes(),
+            equals([8, 9]),
+          );
+          expect(recording.existsSync(), isFalse);
+        },
+      );
+
+      test(
+        'a recording that cannot be decoded leaves no file behind',
+        () async {
+          final recording = File('${sourceDir.path}/recording_2.m4a')
+            ..writeAsBytesSync([1]);
+          final service = LocalAudioImportService(
+            storageRootProvider: () async => storageDir,
+            durationResolver: (_) async => throw const FormatException('empty'),
+          );
+
+          await expectLater(
+            service.importRecording(recordingPath: recording.path, title: 'x'),
+            throwsA(
+              isA<LocalAudioImportException>().having(
+                (error) => error.reason,
+                'reason',
+                LocalAudioImportFailureReason.decodeFailed,
+              ),
+            ),
+          );
+
+          expect(storageDir.listSync(recursive: true), isEmpty);
+          expect(recording.existsSync(), isFalse);
+        },
       );
     });
   });

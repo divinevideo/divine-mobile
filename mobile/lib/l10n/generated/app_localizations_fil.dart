@@ -4267,8 +4267,30 @@ class AppLocalizationsFil extends AppLocalizations {
   String get soundsAddSharePublicly => 'I-share sa publiko';
 
   @override
-  String get soundsImportPromptDescription =>
-      'Pumili ng audio file mula sa device mo. Itago ito nang private sa Mga Sound Ko, o i-share para magamit ng kahit sino sa Divine.';
+  String get soundsAddPromptDescription =>
+      'Pumili ng audio file o mag-record ng sound. Itago ito nang private sa Mga Sound Ko, o i-share para magamit ng kahit sino sa Divine.';
+
+  @override
+  String get soundsRecordAction => 'Mag-record ng sound';
+
+  @override
+  String get soundsRecordAgainAction => 'I-record ulit';
+
+  @override
+  String soundsRecordingTitle(String dateTime) {
+    return 'Recording $dateTime';
+  }
+
+  @override
+  String get soundsRecordPermissionBody =>
+      'Payagan ang access sa mikropono para makapag-record ng sound.';
+
+  @override
+  String get soundsRecordFailed => 'Hindi na-record. Subukan ulit.';
+
+  @override
+  String get soundsShareTitleRequiredHint =>
+      'Bigyan ng title ang sound mo para ma-share ito.';
 
   @override
   String get soundsImportUnsupportedFormat =>

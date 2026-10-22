@@ -1,5 +1,5 @@
-// ABOUTME: Cubit for the library's Add sound flow: imports a picked file and
-// ABOUTME: saves it to My Sounds, optionally sharing it publicly first.
+// ABOUTME: Cubit for the library's Add sound flow: imports a picked file or a
+// ABOUTME: recording and saves it to My Sounds, optionally sharing it first.
 
 import 'package:bloc/bloc.dart';
 import 'package:meta/meta.dart';
@@ -40,6 +40,15 @@ typedef SavedSoundSaver = Future<SavedSoundSaveResult> Function(
   String? personalLabel,
 });
 
+/// An import in flight: where it comes from, the sound it replaces, and the
+/// account it is bound to.
+typedef _ImportStart = ({
+  AddSoundSource source,
+  AudioEvent? previous,
+  AddSoundSource? previousSource,
+  String? accountId,
+});
+
 /// Reclaims a library audio file once nothing references it.
 typedef AudioImportReclaimer = Future<void> Function(String audioFilePath);
 
@@ -50,9 +59,10 @@ typedef ViewerAccountIdReader = String? Function();
 /// a relay client or signer that arrived after the page opened is used.
 typedef LocalAudioPublisherReader = LocalAudioEventPublisher Function();
 
-/// Drives one Add sound: pick a file, copy it into library storage, let the
-/// user preview it, then save it to My Sounds — privately under an optional
-/// name, or shared publicly as a reusable Kind 1063 with a credit.
+/// Drives one Add sound: pick a file or take over a recording, move it into
+/// library storage, let the user preview it, then save it to My Sounds —
+/// privately under an optional name, or shared publicly as a reusable Kind
+/// 1063 with a credit.
 ///
 /// The cubit is Flutter-free: the picker, the durable save, the publisher, the
 /// file reclaimer, and the account reader are all injected, so the whole
@@ -112,19 +122,16 @@ class AddSoundCubit extends Cubit<AddSoundState>
 
   /// Opens the picker and copies the chosen file into library storage.
   ///
-  /// A cancelled or failed pick keeps the file picked before it, still bound
-  /// to the account that imported it; a successful one replaces it and
-  /// reclaims the replaced copy.
+  /// A cancelled or failed pick keeps the sound picked or recorded before it,
+  /// still bound to the account that imported it; a successful one replaces
+  /// it and reclaims the replaced copy.
   Future<void> pickFileAndImport() async {
     if (state.isBusy || state.isPublished) return;
-    final previous = state.audio;
+    final import = _beginImport(AddSoundSource.file);
 
-    final accountId = _viewerAccountId();
-    emitIfOpen(state.copyWith(status: AddSoundStatus.importing, failure: null));
-
-    final AudioImportPickedFile? picked;
+    final AudioImportPickedFile? pick;
     try {
-      picked = await _pickFile();
+      pick = await _pickFile();
     } catch (error, stackTrace) {
       // The Android picker throws when it cannot copy the chosen file (#10065).
       Log.error(
@@ -134,23 +141,79 @@ class AddSoundCubit extends Cubit<AddSoundState>
         error: error,
         stackTrace: stackTrace,
       );
-      _failImport(AddSoundFailure.unreadableFile);
+      _failImport(import, AddSoundFailure.unreadableFile);
       return;
     }
 
-    if (picked == null) {
-      emitIfOpen(state.copyWith(status: _restingStatus));
+    if (pick == null) {
+      emitIfOpen(
+        state.copyWith(status: _restingStatus, source: import.previousSource),
+      );
       return;
     }
+    final picked = pick;
 
-    final AudioEvent audio;
-    try {
-      audio = await _importService.importAudioFile(
+    await _completeImport(
+      import,
+      () => _importService.importAudioFile(
         sourcePath: picked.path,
         displayName: picked.name,
-      );
+      ),
+    );
+  }
+
+  /// Takes over the microphone recording at [path] as the sound to add, under
+  /// [title] while it stays private; a public share starts with an empty
+  /// title for the person to fill in.
+  ///
+  /// The recording is moved into library storage rather than copied, so the
+  /// recorder's scratch file does not outlive a successful import. Otherwise
+  /// it behaves like a pick: it replaces the current sound and reclaims its
+  /// copy, while a failure keeps the current sound. Ignored while the screen
+  /// is busy or the sound was already shared; the recorder then discards its
+  /// own file.
+  Future<void> importRecording({
+    required String path,
+    required String title,
+  }) async {
+    if (state.isBusy || state.isPublished) return;
+    final import = _beginImport(AddSoundSource.recording);
+    await _completeImport(
+      import,
+      () => _importService.importRecording(recordingPath: path, title: title),
+    );
+  }
+
+  /// Marks an import from [source] as started, remembering what a cancelled
+  /// or failed import falls back to and which account it is bound to.
+  _ImportStart _beginImport(AddSoundSource source) {
+    final import = (
+      source: source,
+      previous: state.audio,
+      previousSource: state.source,
+      accountId: _viewerAccountId(),
+    );
+    emitIfOpen(
+      state.copyWith(
+        status: AddSoundStatus.importing,
+        source: source,
+        failure: null,
+      ),
+    );
+    return import;
+  }
+
+  /// Runs [importAudio] and, unless it failed or the account changed while it
+  /// ran, makes its result the sound to add.
+  Future<void> _completeImport(
+    _ImportStart import,
+    Future<AudioEvent> Function() importAudio,
+  ) async {
+    final AudioEvent audio;
+    try {
+      audio = await importAudio();
     } on LocalAudioImportException catch (error) {
-      _failImport(_reasonFor(error));
+      _failImport(import, _reasonFor(error));
       return;
     } catch (error, stackTrace) {
       Log.error(
@@ -160,16 +223,17 @@ class AddSoundCubit extends Cubit<AddSoundState>
         error: error,
         stackTrace: stackTrace,
       );
-      _failImport(AddSoundFailure.unreadableFile);
+      _failImport(import, AddSoundFailure.unreadableFile);
       return;
     }
 
+    final previous = import.previous;
     // close() already reclaimed the previous copy.
     if (isClosed) {
       await _reclaim(audio);
       return;
     }
-    if (_viewerAccountId() != accountId) {
+    if (_viewerAccountId() != import.accountId) {
       emitIfOpen(const AddSoundState(failure: AddSoundFailure.accountChanged));
       await _reclaim(audio);
       if (previous != null) await _reclaim(previous);
@@ -180,12 +244,18 @@ class AddSoundCubit extends Cubit<AddSoundState>
       AddSoundState(
         status: AddSoundStatus.ready,
         audio: audio,
-        accountId: accountId,
+        accountId: import.accountId,
+        source: import.source,
         sharePublicly: state.sharePublicly,
         // The credit opens as the publisher's own work: that is the case
         // sharing exists for, and turning it off is one tap.
         attribution: AudioShareAttribution(
-          title: audio.title ?? '',
+          // A recording's title is a local date and time in the app's
+          // language: fine for the private copy, but published it would give
+          // away the recorder's timezone and language. A share starts blank.
+          title: import.source == AddSoundSource.recording
+              ? ''
+              : audio.title ?? '',
           creatorName: _publisherName,
           creatorPubkey: _publisherPubkey,
           publicTags: const [],
@@ -363,8 +433,14 @@ class AddSoundCubit extends Cubit<AddSoundState>
 
   bool _accountChanged() => _viewerAccountId() != state.accountId;
 
-  void _failImport(AddSoundFailure failure) {
-    emitIfOpen(state.copyWith(status: _restingStatus, failure: failure));
+  void _failImport(_ImportStart import, AddSoundFailure failure) {
+    emitIfOpen(
+      state.copyWith(
+        status: _restingStatus,
+        source: import.previousSource,
+        failure: failure,
+      ),
+    );
   }
 
   void _failSave(AddSoundFailure failure) {

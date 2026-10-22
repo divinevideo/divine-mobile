@@ -60,6 +60,13 @@ abstract class VoiceOverRecorderService {
   /// `0.0` is silence and `1.0` is the loudest level the meter represents.
   Stream<double> get amplitudeStream;
 
+  /// Emits each time the system pauses capture on its own — a phone call,
+  /// Siri, or another app taking audio focus.
+  ///
+  /// Capture does not resume by itself afterwards, so a caller still showing
+  /// a running recording would be wrong.
+  Stream<void> get systemPauses;
+
   /// Releases native recorder resources.
   ///
   /// Throws a [VoiceOverRecorderException] if the recorder fails to release.
@@ -87,6 +94,13 @@ class RecordVoiceOverRecorderService implements VoiceOverRecorderService {
   Stream<double> get amplitudeStream => _recorder
       .onAmplitudeChanged(VoiceOverRecorderService.amplitudeInterval)
       .map(_normalize);
+
+  // Nothing here pauses the recorder, so every pause comes from the system.
+  @override
+  Stream<void> get systemPauses => _recorder
+      .onStateChanged()
+      .where((state) => state == RecordState.pause)
+      .map((_) {});
 
   @override
   Future<void> start(String path) async {

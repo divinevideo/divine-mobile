@@ -17,6 +17,7 @@ class PublicAudioCreditEditor extends StatefulWidget {
   const PublicAudioCreditEditor({
     required this.attribution,
     required this.onChanged,
+    this.emptyTitleHint,
     super.key,
   });
 
@@ -25,6 +26,11 @@ class PublicAudioCreditEditor extends StatefulWidget {
 
   /// Receives the edited credit on every change.
   final ValueChanged<AudioShareAttribution> onChanged;
+
+  /// Shown under the title field while it is empty, for an owner whose
+  /// credit opens without a title and would otherwise leave the person
+  /// guessing why it cannot be shared.
+  final String? emptyTitleHint;
 
   @override
   State<PublicAudioCreditEditor> createState() =>
@@ -101,6 +107,9 @@ class _PublicAudioCreditEditorState extends State<PublicAudioCreditEditor> {
             key: const Key('audio_credit_title'),
             controller: _titleController,
             labelText: context.l10n.soundCreditTitleLabel,
+            helperText: widget.attribution.title.trim().isEmpty
+                ? widget.emptyTitleHint
+                : null,
             filled: true,
             textInputAction: .next,
             onChanged: (value) => _update(title: value),

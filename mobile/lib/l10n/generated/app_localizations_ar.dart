@@ -4225,8 +4225,30 @@ class AppLocalizationsAr extends AppLocalizations {
   String get soundsAddSharePublicly => 'مشاركة علنية';
 
   @override
-  String get soundsImportPromptDescription =>
-      'يمكن اختيار ملف صوتي من الجهاز، ثم إبقاؤه خاصًا في «أصواتي» أو مشاركته ليستخدمه أي شخص على Divine.';
+  String get soundsAddPromptDescription =>
+      'يمكن اختيار ملف صوتي أو تسجيل صوت، ثم إبقاؤه خاصًا في «أصواتي» أو مشاركته ليستخدمه أي شخص على Divine.';
+
+  @override
+  String get soundsRecordAction => 'تسجيل صوت';
+
+  @override
+  String get soundsRecordAgainAction => 'إعادة التسجيل';
+
+  @override
+  String soundsRecordingTitle(String dateTime) {
+    return 'تسجيل $dateTime';
+  }
+
+  @override
+  String get soundsRecordPermissionBody =>
+      'يلزم السماح بالوصول إلى الميكروفون لتسجيل صوت.';
+
+  @override
+  String get soundsRecordFailed => 'تعذّر التسجيل. يُرجى المحاولة مرة أخرى.';
+
+  @override
+  String get soundsShareTitleRequiredHint =>
+      'يلزم إعطاء الصوت عنوانًا لمشاركته.';
 
   @override
   String get soundsImportUnsupportedFormat =>

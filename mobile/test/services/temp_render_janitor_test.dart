@@ -51,6 +51,7 @@ void main() {
         'divine_player_memory',
         'divine_player_audio_assets',
         'divine_player_audio_memory',
+        'sound_recordings',
       ]);
     });
 

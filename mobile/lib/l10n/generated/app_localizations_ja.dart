@@ -3974,8 +3974,28 @@ class AppLocalizationsJa extends AppLocalizations {
   String get soundsAddSharePublicly => '一般に公開';
 
   @override
-  String get soundsImportPromptDescription =>
-      'デバイスから音声ファイルを選んでください。マイサウンドに非公開で保存するか、Divine の誰でも使えるように共有できます。';
+  String get soundsAddPromptDescription =>
+      '音声ファイルを選ぶか、サウンドを録音してください。マイサウンドに非公開で保存するか、Divine の誰でも使えるように共有できます。';
+
+  @override
+  String get soundsRecordAction => 'サウンドを録音';
+
+  @override
+  String get soundsRecordAgainAction => 'もう一度録音';
+
+  @override
+  String soundsRecordingTitle(String dateTime) {
+    return '録音 $dateTime';
+  }
+
+  @override
+  String get soundsRecordPermissionBody => 'サウンドを録音するにはマイクへのアクセスを許可してください。';
+
+  @override
+  String get soundsRecordFailed => '録音できませんでした。もう一度お試しください。';
+
+  @override
+  String get soundsShareTitleRequiredHint => '共有するにはサウンドにタイトルを付けてください。';
 
   @override
   String get soundsImportUnsupportedFormat =>

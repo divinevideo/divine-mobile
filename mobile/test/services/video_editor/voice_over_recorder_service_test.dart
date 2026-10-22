@@ -1,5 +1,5 @@
-// ABOUTME: Unit tests for RecordVoiceOverRecorderService.
-// ABOUTME: Covers start/stop/dispose forwarding and amplitude normalization.
+// ABOUTME: Unit tests for RecordVoiceOverRecorderService: start/stop/dispose
+// ABOUTME: forwarding, system-pause filtering and amplitude normalization.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -95,6 +95,22 @@ void main() {
         );
       },
     );
+
+    group('systemPauses', () {
+      // The recorder reports its own start and stop on the same stream, so
+      // passing those through would end every take as it begins.
+      test('emits only when the recorder is paused', () async {
+        when(recorder.onStateChanged).thenAnswer(
+          (_) => Stream.fromIterable(const [
+            RecordState.record,
+            RecordState.pause,
+            RecordState.stop,
+          ]),
+        );
+
+        expect(await service.systemPauses.toList(), hasLength(1));
+      });
+    });
 
     group('amplitudeStream normalization', () {
       Future<List<double>> normalize(List<double> dbValues) {

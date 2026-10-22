@@ -7189,7 +7189,7 @@ abstract class AppLocalizations {
   /// **'Tap Use Sound on a video to save it here.'**
   String get soundsSavedEmptyDescription;
 
-  /// Label of the button above the My Sounds list that adds an audio file from the device, and the title of the screen it opens.
+  /// Label of the button above the My Sounds list that adds a sound, picked from the device or recorded, and the title of the screen it opens.
   ///
   /// In en, this message translates to:
   /// **'Add sound'**
@@ -7201,11 +7201,47 @@ abstract class AppLocalizations {
   /// **'Share publicly'**
   String get soundsAddSharePublicly;
 
-  /// Shown on the Add sound screen before a file is picked. Explains the file can stay private or be shared publicly.
+  /// Shown on the Add sound screen before a sound is picked or recorded. Names both ways to add one and explains it can stay private or be shared publicly.
   ///
   /// In en, this message translates to:
-  /// **'Pick an audio file from your device. Keep it private in My Sounds, or share it so anyone on Divine can use it.'**
-  String get soundsImportPromptDescription;
+  /// **'Pick an audio file or record a sound. Keep it private in My Sounds, or share it so anyone on Divine can use it.'**
+  String get soundsAddPromptDescription;
+
+  /// Button on the Add sound screen that starts recording a sound with the microphone.
+  ///
+  /// In en, this message translates to:
+  /// **'Record a sound'**
+  String get soundsRecordAction;
+
+  /// Small button next to a sound recorded on the Add sound screen; replaces it with a new recording.
+  ///
+  /// In en, this message translates to:
+  /// **'Record again'**
+  String get soundsRecordAgainAction;
+
+  /// Default title of a sound recorded on the Add sound screen, shown until the user names it.
+  ///
+  /// In en, this message translates to:
+  /// **'Recording {dateTime}'**
+  String soundsRecordingTitle(String dateTime);
+
+  /// Shown on the Add sound screen when microphone access was refused, below the 'Microphone access needed' title and above an Open settings button.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow microphone access to record a sound.'**
+  String get soundsRecordPermissionBody;
+
+  /// Snackbar on the Add sound screen when the microphone recorder fails to start or stop.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t record that. Try again.'**
+  String get soundsRecordFailed;
+
+  /// Helper text under the empty Sound title field on the Add sound screen while a recording is set to be shared publicly. Explains why the Share sound button is disabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Give your sound a title to share it.'**
+  String get soundsShareTitleRequiredHint;
 
   /// Shown when the picked file's extension is not a supported audio container.
   ///

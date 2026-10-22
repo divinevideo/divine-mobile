@@ -111,7 +111,8 @@ abstract final class TempRenderPatterns {
   ];
 }
 
-/// Temporary-directory subtrees that hold only regenerable render output.
+/// Temporary-directory subtrees that hold only regenerable render output or
+/// scratch files nothing owns once the screen that wrote them is gone.
 abstract final class TempRenderDirectories {
   /// Speed-render cache (`ClipSpeedRenderService`), keyed by clip and speed
   /// and rebuilt on demand.
@@ -127,8 +128,19 @@ abstract final class TempRenderDirectories {
     'divine_player_audio_memory',
   ];
 
+  /// Microphone recordings from the Add sound screen (`SoundRecorderCubit`).
+  /// A finished take is moved into library storage straight away, and the
+  /// recorder deletes one it cancels or nobody claims. Apart from the take
+  /// being recorded while that screen is open, a file here was cut off by
+  /// the app being killed mid-recording.
+  static const soundRecordings = 'sound_recordings';
+
   /// Every directory name that is safe to count and clear wholesale.
-  static const List<String> all = [speedClips, ...playerScratch];
+  static const List<String> all = [
+    speedClips,
+    ...playerScratch,
+    soundRecordings,
+  ];
 }
 
 /// Best-effort janitor for regenerable temp render files.
