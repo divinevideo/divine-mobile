@@ -1,0 +1,16 @@
+name: challenge_protocol
+description: Pure Dart verified Divine challenge convention v1 and participant templates.
+version: 0.1.0
+publish_to: none
+resolution: workspace
+environment:
+  sdk: ^3.13.0
+dependencies:
+  bech32: ^0.2.2
+  bip340: ^0.3.0
+  characters: ^1.4.1
+  crypto: ^3.0.7
+  unorm_dart: 0.3.2
+dev_dependencies:
+  test: ^1.31.0
+  very_good_analysis: ^10.2.0
