@@ -3653,6 +3653,9 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         clearCaptureChromaKey: true,
         clearForwardVideoPath: true,
         clearReversedVideoPath: true,
+        // The key is baked onto the bounced footage; turning the boomerang
+        // off would bring back the unkeyed clip and drop it.
+        clearBoomerang: true,
         derivedFrom: sources,
         clearDerivedFrom: sources == null,
       );
