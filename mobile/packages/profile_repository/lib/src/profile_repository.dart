@@ -55,9 +55,9 @@ typedef _ProfileRead = ({UserProfile? profile, bool conclusive});
 const _nip50SearchTimeout = Duration(seconds: 5);
 const _nip50RelayQueryTimeout = Duration(milliseconds: 4500);
 
-// Caps the people-search lookup of who owns a typed Divine username. It runs
-// beside the local and REST phases, so it only holds back the REST yield when
-// the name server or the owner's profile is slower than the REST search.
+// Caps each step of the people-search lookup of who owns a typed Divine
+// username: the name server's NIP-05 answer, which runs beside the local and
+// REST phases, and the search that confirms the owner is discoverable.
 const _usernameOwnerSearchTimeout = Duration(seconds: 3);
 
 // Divine usernames resolve as `<username>@divine.video` and are published as
@@ -215,6 +215,11 @@ class ProfileRepository implements ProfileReader {
   String get _usernameClaimUrl => '$_nameServerBaseUrl/api/username/claim';
 
   String get _usernameCheckUrl => '$_nameServerBaseUrl/api/username/check';
+
+  /// The name server's NIP-05 directory: an exact, active-only read, unlike
+  /// [_usernameCheckUrl], which judges free names against a budget shared
+  /// with claims.
+  String get _nip05DirectoryUrl => '$_nameServerBaseUrl/.well-known/nostr.json';
 
   String get _usernameByPubkeyUrl =>
       '$_nameServerBaseUrl/api/username/by-pubkey';
@@ -2328,8 +2333,8 @@ class ProfileRepository implements ProfileReader {
   ///
   /// When the first-page [query] names a Divine username (`alice`,
   /// `@alice`, `alice.divine.video`), the name server is asked who owns it
-  /// while the other sources run. That account leads every yield from the
-  /// REST phase on and is reported as
+  /// while the other sources run. If people search lists that account, it
+  /// leads every yield from the REST phase on and is reported as
   /// [ProgressiveSearchResult.usernameOwnerPubkey]: the search index can miss
   /// an owner whose visible name differs from the handle, and other profiles
   /// can claim the same NIP-05.
@@ -2356,10 +2361,15 @@ class ProfileRepository implements ProfileReader {
     int? nextRestOffset;
     var restHasMore = false;
     String? ownerPubkey;
-    // The owner is not known to have videos, so a video-only search skips it.
-    final ownerLookup = offset == 0 && !hasVideos
-        ? _lookUpSearchUsernameOwner(trimmed)
+    // Pinning needs people search to confirm the owner is discoverable. The
+    // owner is not known to have videos, so a video-only search skips it.
+    final ownerLookup =
+        offset == 0 &&
+            !hasVideos &&
+            (_funnelcakeApiClient?.isAvailable ?? false)
+        ? _lookUpUsernameOwner(trimmed)
         : null;
+    final restPubkeys = <String>{};
 
     List<UserProfile> rank(List<UserProfile> profiles) => _applyFilter(
       trimmed,
@@ -2437,6 +2447,7 @@ class ProfileRepository implements ProfileReader {
         nextRestOffset = offset + restResults.length;
         restHasMore = restResults.length == limit;
         for (final result in restResults) {
+          restPubkeys.add(result.pubkey);
           final cached = resultMap[result.pubkey];
           final serverRevision = result.createdAt;
           // Compare event revisions before conversion: an older API can omit
@@ -2482,7 +2493,13 @@ class ProfileRepository implements ProfileReader {
 
     // The owner joins the REST yield, so it never lands above profiles that
     // claim its handle after they were shown.
-    final owner = await ownerLookup;
+    final candidate = await ownerLookup;
+    if (_isSearchCancelled(cancellationToken)) return;
+    final owner = candidate == null
+        ? null
+        : restPubkeys.contains(candidate.pubkey)
+        ? resultMap[candidate.pubkey]
+        : await _discoverableUsernameOwner(candidate);
     if (_isSearchCancelled(cancellationToken)) return;
     if (owner != null) {
       resultMap.putIfAbsent(owner.pubkey, () => owner);
@@ -2716,7 +2733,7 @@ class ProfileRepository implements ProfileReader {
     final name = profile.name?.trim().toLowerCase() ?? '';
     final displayName = profile.displayName?.trim().toLowerCase() ?? '';
     final nip05 = profile.nip05?.trim().toLowerCase() ?? '';
-    final nip05Name = _nip05Handle(nip05);
+    final nip05Name = nip05.split('@').first;
 
     if (pubkey == queryHex ||
         {pubkey, name, displayName, nip05, nip05Name}.contains(
@@ -2748,20 +2765,6 @@ class ProfileRepository implements ProfileReader {
   static bool _hasWordPrefix(String value, String query) =>
       value.split(RegExp(r'\s+')).any((word) => word.startsWith(query));
 
-  /// The handle a lowercased [nip05] identifier names: its local part, or
-  /// for a root identifier `_@domain` the domain, which for a Divine-hosted
-  /// `_@alice.divine.video` is the username `alice`.
-  static String _nip05Handle(String nip05) {
-    final at = nip05.indexOf('@');
-    if (at < 0) return nip05;
-    final local = nip05.substring(0, at);
-    if (local != '_') return local;
-    final domain = nip05.substring(at + 1);
-    return domain.endsWith(_divineNip05Suffix)
-        ? domain.substring(0, domain.length - _divineNip05Suffix.length)
-        : domain;
-  }
-
   /// The Divine username a people-search [query] names, or `null`.
   ///
   /// Accepts the forms people type or paste for a handle: `alice`, `@alice`,
@@ -2786,19 +2789,34 @@ class ProfileRepository implements ProfileReader {
     };
   }
 
-  /// The profile of the account that owns the Divine username [query]
-  /// names, or `null` when it names none, nobody owns it, or the lookup
-  /// fails or outlasts [_usernameOwnerSearchTimeout].
+  /// The username [query] names and the pubkey the name server's NIP-05
+  /// directory resolves it to, or `null` when it names none, nobody holds it,
+  /// or the lookup fails or outlasts [_usernameOwnerSearchTimeout].
   ///
-  /// Never throws: search goes on without the owner.
-  Future<UserProfile?> _lookUpSearchUsernameOwner(String query) async {
+  /// Throws nothing a failing network can cause: search goes on without the
+  /// owner.
+  Future<({String username, String pubkey})?> _lookUpUsernameOwner(
+    String query,
+  ) async {
     final username = _divineUsernameInQuery(query);
     if (username == null) return null;
     try {
-      return await _usernameOwnerProfile(
-        username,
-      ).timeout(_usernameOwnerSearchTimeout);
-    } on Object catch (e) {
+      final response = await _httpClient
+          .get(
+            Uri.parse(
+              _nip05DirectoryUrl,
+            ).replace(queryParameters: {'name': username}),
+          )
+          .timeout(_usernameOwnerSearchTimeout);
+      if (response.statusCode != 200) return null;
+      final body = jsonDecode(response.body) as Object?;
+      final names = body is Map<String, dynamic> ? body['names'] : null;
+      final pubkey = names is Map<String, dynamic> ? names[username] : null;
+      if (pubkey is! String || !NostrHexUtils.isValidPubkey(pubkey)) {
+        return null;
+      }
+      return (username: username, pubkey: pubkey.toLowerCase());
+    } on Exception catch (e) {
       Log.warning(
         'Username owner lookup failed (${e.runtimeType})',
         name: 'ProfileRepository.searchUsersProgressive',
@@ -2808,21 +2826,36 @@ class ProfileRepository implements ProfileReader {
     }
   }
 
-  Future<UserProfile?> _usernameOwnerProfile(String username) async {
-    final response = await _httpClient.get(
-      Uri.parse('$_usernameCheckUrl/$username'),
-    );
-    if (response.statusCode != 200) return null;
-    final body = jsonDecode(response.body) as Object?;
-    // Only an active claim is an owner; pending and reserved names are not.
-    if (body is! Map<String, dynamic> || body['status'] != 'active') {
+  /// The owner's profile when the first page of people search for its Divine
+  /// NIP-05 lists it, otherwise `null`. Profiles that copy the identifier come
+  /// back from the same query, ranked by followers.
+  ///
+  /// The name server keeps a username active after its account is banned,
+  /// suspended, deactivated, vanished or made private; people search drops
+  /// those accounts, so asking it keeps the pin from showing anyone search
+  /// would hide.
+  Future<UserProfile?> _discoverableUsernameOwner(
+    ({String username, String pubkey}) candidate,
+  ) async {
+    try {
+      final results = await _funnelcakeApiClient!
+          .searchProfiles(
+            query: '${candidate.username}$_divineNip05Suffix',
+            sortBy: profileSearchSortFollowers,
+          )
+          .timeout(_usernameOwnerSearchTimeout);
+      for (final result in results) {
+        if (result.pubkey == candidate.pubkey) return result.toUserProfile();
+      }
+      return null;
+    } on Exception catch (e) {
+      Log.warning(
+        'Username owner discovery check failed (${e.runtimeType})',
+        name: 'ProfileRepository.searchUsersProgressive',
+        category: LogCategory.api,
+      );
       return null;
     }
-    final pubkey = body['pubkey'];
-    if (pubkey is! String || !NostrHexUtils.isValidPubkey(pubkey)) return null;
-    final ownerPubkey = pubkey.toLowerCase();
-    return await getCachedProfile(pubkey: ownerPubkey) ??
-        await fetchFreshProfile(pubkey: ownerPubkey);
   }
 
   /// Hex pubkey for a complete `npub1…` [query], `null` for anything else.

@@ -4495,6 +4495,10 @@ void main() {
             timeout: any(named: 'timeout'),
           ),
         ).thenAnswer((_) async => []);
+        // Nobody holds the names these tests search for.
+        when(
+          () => mockHttpClient.get(any()),
+        ).thenAnswer((_) async => Response('{"names":{}}', 200));
       });
 
       void stubRestResults(List<ProfileSearchResult> results) {
@@ -5036,34 +5040,6 @@ void main() {
       test('does not match a prefix', () {
         expect(ProfileRepository.isExactSearchMatch(profile, 'ali'), isFalse);
       });
-
-      test('matches the username of a Divine-hosted root NIP-05', () {
-        final divineProfile = profile.copyWith(
-          name: 'AC555',
-          nip05: '_@alice.divine.video',
-        );
-
-        expect(
-          ProfileRepository.isExactSearchMatch(divineProfile, 'alice'),
-          isTrue,
-        );
-      });
-
-      test('matches the domain of any other root NIP-05', () {
-        final rootProfile = profile.copyWith(
-          name: 'Jack',
-          nip05: '_@jack.example',
-        );
-
-        expect(
-          ProfileRepository.isExactSearchMatch(rootProfile, 'jack.example'),
-          isTrue,
-        );
-        expect(
-          ProfileRepository.isExactSearchMatch(rootProfile, '_'),
-          isFalse,
-        );
-      });
     });
 
     group('searchUsersProgressive username owner', () {
@@ -5072,14 +5048,14 @@ void main() {
 
       final ownerPubkey = 'f' * 64;
       final impostorPubkey = 'e' * 64;
-      final ownerProfile = UserProfile(
+      final ownerResult = ProfileSearchResult(
         pubkey: ownerPubkey,
         name: 'AC555',
         displayName: 'AC555',
         nip05: '_@alice.divine.video',
         createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
-        eventId: 'a' * 64,
-        rawData: const {},
+        followerCount: 315,
+        videoCount: 136,
       );
       final impostorResult = ProfileSearchResult(
         pubkey: impostorPubkey,
@@ -5090,20 +5066,32 @@ void main() {
         followerCount: 0,
         videoCount: 21,
       );
-      final checkUri = Uri.parse('$_testNameServer/api/username/check/alice');
+      final directoryUri = Uri.parse(
+        '$_testNameServer/.well-known/nostr.json?name=alice',
+      );
 
-      void stubNameServer(Object? body, {int statusCode = 200}) {
+      void stubDirectory(Object? body, {int statusCode = 200}) {
         when(
-          () => mockHttpClient.get(checkUri),
+          () => mockHttpClient.get(directoryUri),
         ).thenAnswer((_) async => Response(jsonEncode(body), statusCode));
       }
 
-      void stubOwnerClaim() => stubNameServer({
-        'available': false,
-        'status': 'active',
-        'code': 'taken',
-        'pubkey': ownerPubkey,
+      void stubOwnerHoldsAlice() => stubDirectory({
+        'names': {'alice': ownerPubkey},
       });
+
+      Future<List<ProfileSearchResult>> discoverySearch() =>
+          mockFunnelcakeClient.searchProfiles(
+            query: 'alice.divine.video',
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            sortBy: any(named: 'sortBy'),
+            hasVideos: any(named: 'hasVideos'),
+          );
+
+      void stubDiscovery(List<ProfileSearchResult> results) {
+        when(discoverySearch).thenAnswer((_) async => results);
+      }
 
       setUp(() {
         mockFunnelcakeClient = MockFunnelcakeApiClient();
@@ -5121,9 +5109,6 @@ void main() {
           () => mockUserProfilesDao.getAllProfiles(),
         ).thenAnswer((_) async => []);
         when(
-          () => mockUserProfilesDao.getProfile(ownerPubkey),
-        ).thenAnswer((_) async => ownerProfile);
-        when(
           () => mockNostrClient.queryUsers(
             any(),
             limit: any(named: 'limit'),
@@ -5139,13 +5124,15 @@ void main() {
         );
       });
 
-      test('puts the owner first although REST search missed it', () async {
-        stubOwnerClaim();
+      test('pins the owner that people search lists for its handle', () async {
+        stubOwnerHoldsAlice();
+        stubDiscovery([impostorResult, ownerResult]);
 
         final emissions = await repository
             .searchUsersProgressive(query: 'alice', sortBy: 'followers')
             .toList();
 
+        expect(emissions, isNotEmpty);
         for (final emission in emissions) {
           expect(emission.usernameOwnerPubkey, ownerPubkey);
           expect(emission.profiles.map((p) => p.pubkey), [
@@ -5153,14 +5140,56 @@ void main() {
             impostorPubkey,
           ]);
         }
-        expect(emissions, isNotEmpty);
+        expect(emissions.last.profiles.first.restFollowerCount, 315);
+      });
+
+      test(
+        'takes the owner from the REST page without searching again',
+        () async {
+          stubOwnerHoldsAlice();
+          when(
+            () => mockFunnelcakeClient.searchProfiles(
+              query: 'alice',
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+              hasVideos: any(named: 'hasVideos'),
+            ),
+          ).thenAnswer((_) async => [impostorResult, ownerResult]);
+
+          final result = await repository
+              .searchUsersProgressive(query: 'alice', sortBy: 'followers')
+              .last;
+
+          expect(result.usernameOwnerPubkey, ownerPubkey);
+          expect(result.profiles.first.pubkey, ownerPubkey);
+          verifyNever(discoverySearch);
+        },
+      );
+
+      test('does not pin an owner that people search hides', () async {
+        stubOwnerHoldsAlice();
+        stubDiscovery([impostorResult]);
+
+        final result = await repository
+            .searchUsersProgressive(query: 'alice', sortBy: 'followers')
+            .last;
+
+        expect(result.usernameOwnerPubkey, isNull);
+        expect(result.profiles.map((p) => p.pubkey), [impostorPubkey]);
+        verify(discoverySearch).called(1);
       });
 
       test('pins the owner when its visible identity does not match', () async {
-        stubOwnerClaim();
-        when(() => mockUserProfilesDao.getProfile(ownerPubkey)).thenAnswer(
-          (_) async => ownerProfile.copyWith(nip05: 'ac@elsewhere.example'),
-        );
+        stubOwnerHoldsAlice();
+        stubDiscovery([
+          ProfileSearchResult(
+            pubkey: ownerPubkey,
+            name: 'AC555',
+            nip05: 'ac@elsewhere.example',
+            createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+          ),
+        ]);
 
         final result = await repository
             .searchUsersProgressive(query: 'alice', sortBy: 'followers')
@@ -5170,7 +5199,8 @@ void main() {
       });
 
       test('pins the owner without a server sort', () async {
-        stubOwnerClaim();
+        stubOwnerHoldsAlice();
+        stubDiscovery([ownerResult]);
 
         final result = await repository
             .searchUsersProgressive(query: 'alice')
@@ -5182,33 +5212,9 @@ void main() {
         ]);
       });
 
-      test('fetches an owner that is not cached', () async {
-        stubOwnerClaim();
-        when(
-          () => mockUserProfilesDao.getProfile(ownerPubkey),
-        ).thenAnswer((_) async => null);
-        when(
-          () => mockUserProfilesDao.upsertProfile(any()),
-        ).thenAnswer((_) async {});
-        when(() => mockFunnelcakeClient.getUserProfile(ownerPubkey)).thenAnswer(
-          (_) async => UserProfileFound(
-            profile: UserProfileData.fromJson(ownerPubkey, const {
-              'name': 'AC555',
-              'nip05': '_@alice.divine.video',
-            }),
-          ),
-        );
-
-        final result = await repository
-            .searchUsersProgressive(query: 'alice', sortBy: 'followers')
-            .last;
-
-        expect(result.profiles.first.pubkey, ownerPubkey);
-        expect(result.profiles.first.name, 'AC555');
-      });
-
       test('drops a blocked owner', () async {
-        stubOwnerClaim();
+        stubOwnerHoldsAlice();
+        stubDiscovery([ownerResult]);
         final blockingRepository = ProfileRepository(
           nostrClient: mockNostrClient,
           userProfilesDao: mockUserProfilesDao,
@@ -5225,6 +5231,41 @@ void main() {
         expect(result.profiles.map((p) => p.pubkey), [impostorPubkey]);
       });
 
+      test('yields the pin when REST adds nothing new', () async {
+        stubOwnerHoldsAlice();
+        when(() => mockUserProfilesDao.getAllProfiles()).thenAnswer(
+          (_) async => [
+            UserProfile(
+              pubkey: ownerPubkey,
+              displayName: 'Alice Chan',
+              createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+              eventId: 'a' * 64,
+              rawData: const {},
+            ),
+          ],
+        );
+        when(
+          () => mockFunnelcakeClient.searchProfiles(
+            query: 'alice',
+            limit: any(named: 'limit'),
+            offset: any(named: 'offset'),
+            sortBy: any(named: 'sortBy'),
+            hasVideos: any(named: 'hasVideos'),
+          ),
+        ).thenAnswer((_) async => [ownerResult]);
+
+        final emissions = await repository
+            .searchUsersProgressive(query: 'alice', sortBy: 'followers')
+            .toList();
+
+        expect(
+          emissions.where(
+            (e) => !e.isComplete && e.usernameOwnerPubkey == ownerPubkey,
+          ),
+          hasLength(1),
+        );
+      });
+
       for (final (description, query) in [
         ('an @-handle', '@alice'),
         ('a Divine address', 'alice@divine.video'),
@@ -5232,14 +5273,15 @@ void main() {
         ('a Divine subdomain', 'Alice.divine.video'),
       ]) {
         test('reads the username from $description', () async {
-          stubOwnerClaim();
+          stubOwnerHoldsAlice();
+          stubDiscovery([ownerResult]);
 
           final result = await repository
               .searchUsersProgressive(query: query, sortBy: 'followers')
               .last;
 
           expect(result.usernameOwnerPubkey, ownerPubkey);
-          verify(() => mockHttpClient.get(checkUri)).called(1);
+          verify(() => mockHttpClient.get(directoryUri)).called(1);
         });
       }
 
@@ -5281,19 +5323,41 @@ void main() {
         verifyNever(() => mockHttpClient.get(any()));
       });
 
+      test(
+        'does not ask the name server when people search is unavailable',
+        () async {
+          when(() => mockFunnelcakeClient.isAvailable).thenReturn(false);
+
+          await repository
+              .searchUsersProgressive(query: 'alice', sortBy: 'followers')
+              .toList();
+
+          verifyNever(() => mockHttpClient.get(any()));
+        },
+      );
+
       for (final (description, body, statusCode) in [
-        ('a free name', {'available': true}, 200),
+        ('a free name', {'names': <String, Object>{}}, 200),
         (
-          'a pending claim',
-          {'status': 'pending_confirmation', 'pubkey': 'f' * 64},
+          'a malformed owner key',
+          {
+            'names': {'alice': 'xyz'},
+          },
           200,
         ),
-        ('a malformed owner key', {'status': 'active', 'pubkey': 'xyz'}, 200),
+        ('a body without names', {'error': 'nope'}, 200),
         ('a non-object body', <Object>[], 200),
-        ('a server error', {'status': 'active', 'pubkey': 'f' * 64}, 500),
+        (
+          'a server error',
+          {
+            'names': {'alice': 'f' * 64},
+          },
+          500,
+        ),
       ]) {
         test('searches without an owner for $description', () async {
-          stubNameServer(body, statusCode: statusCode);
+          stubDirectory(body, statusCode: statusCode);
+          stubDiscovery([ownerResult]);
 
           final result = await repository
               .searchUsersProgressive(query: 'alice', sortBy: 'followers')
@@ -5301,12 +5365,13 @@ void main() {
 
           expect(result.usernameOwnerPubkey, isNull);
           expect(result.profiles.map((p) => p.pubkey), [impostorPubkey]);
+          verifyNever(discoverySearch);
         });
       }
 
-      test('searches without an owner when the lookup fails', () async {
+      test('searches without an owner when the name server fails', () async {
         when(
-          () => mockHttpClient.get(checkUri),
+          () => mockHttpClient.get(directoryUri),
         ).thenThrow(ClientException('offline'));
 
         final result = await repository
@@ -5317,10 +5382,25 @@ void main() {
         expect(result.profiles.map((p) => p.pubkey), [impostorPubkey]);
       });
 
+      test(
+        'searches without an owner when the discovery check fails',
+        () async {
+          stubOwnerHoldsAlice();
+          when(discoverySearch).thenThrow(const FunnelcakeException('down'));
+
+          final result = await repository
+              .searchUsersProgressive(query: 'alice', sortBy: 'followers')
+              .last;
+
+          expect(result.usernameOwnerPubkey, isNull);
+          expect(result.profiles.map((p) => p.pubkey), [impostorPubkey]);
+        },
+      );
+
       test('stops waiting for a name server that does not answer', () {
         fakeAsync((async) {
           when(
-            () => mockHttpClient.get(checkUri),
+            () => mockHttpClient.get(directoryUri),
           ).thenAnswer((_) => Completer<Response>().future);
           List<ProgressiveSearchResult>? emissions;
           unawaited(
@@ -5340,6 +5420,56 @@ void main() {
             impostorPubkey,
           ]);
         });
+      });
+
+      test('stops when cancelled while the name server answers', () async {
+        final directory = Completer<Response>();
+        when(
+          () => mockHttpClient.get(directoryUri),
+        ).thenAnswer((_) => directory.future);
+        stubDiscovery([ownerResult]);
+        final token = SearchCancellationToken('owner-lookup');
+        final emissions = repository
+            .searchUsersProgressive(
+              query: 'alice',
+              sortBy: 'followers',
+              cancellationToken: token,
+            )
+            .toList();
+        await pumpEventQueue();
+
+        token.cancel();
+        directory.complete(
+          Response(
+            jsonEncode({
+              'names': {'alice': ownerPubkey},
+            }),
+            200,
+          ),
+        );
+
+        expect(await emissions, isEmpty);
+        verifyNever(discoverySearch);
+      });
+
+      test('stops when cancelled during the discovery check', () async {
+        stubOwnerHoldsAlice();
+        final discovery = Completer<List<ProfileSearchResult>>();
+        when(discoverySearch).thenAnswer((_) => discovery.future);
+        final token = SearchCancellationToken('owner-discovery');
+        final emissions = repository
+            .searchUsersProgressive(
+              query: 'alice',
+              sortBy: 'followers',
+              cancellationToken: token,
+            )
+            .toList();
+        await pumpEventQueue();
+
+        token.cancel();
+        discovery.complete([ownerResult]);
+
+        expect(await emissions, isEmpty);
       });
     });
 
@@ -5626,6 +5756,10 @@ void main() {
 
         setUp(() {
           mockFunnelcakeClient = MockFunnelcakeApiClient();
+          // Nobody holds the names these tests search for.
+          when(
+            () => mockHttpClient.get(any()),
+          ).thenAnswer((_) async => Response('{"names":{}}', 200));
         });
 
         test('cancellation after delayed REST prevents relay work', () async {
@@ -6011,6 +6145,10 @@ void main() {
         setUp(() {
           mockFunnelcakeClient = MockFunnelcakeApiClient();
           when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+          // Nobody holds the names these tests search for.
+          when(
+            () => mockHttpClient.get(any()),
+          ).thenAnswer((_) async => Response('{"names":{}}', 200));
           when(
             () => mockUserProfilesDao.getAllProfiles(),
           ).thenAnswer((_) async => []);
@@ -6220,6 +6358,10 @@ void main() {
         setUp(() {
           mockFunnelcakeClient = MockFunnelcakeApiClient();
           when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+          // Nobody holds the names these tests search for.
+          when(
+            () => mockHttpClient.get(any()),
+          ).thenAnswer((_) async => Response('{"names":{}}', 200));
         });
 
         test('records success on every source when all succeed', () async {
