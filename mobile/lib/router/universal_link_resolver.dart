@@ -23,8 +23,7 @@ String? divineUrlToPushRoute(Uri uri) {
   if (host != 'divine.video' && host != 'www.divine.video') return null;
 
   final deepLink = DeepLinkService.parseDeepLink(uri.toString());
-  return deepLinkRouterPath(deepLink) ??
-      _invalidPeopleListRoute(uri, deepLink);
+  return deepLinkRouterPath(deepLink) ?? _invalidPeopleListRoute(uri, deepLink);
 }
 
 /// The in-app location [deepLink] addresses, or null when it names none.

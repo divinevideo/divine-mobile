@@ -52,7 +52,8 @@ void main() {
             ...routes,
             GoRoute(
               path: ExploreScreen.pathTabSubpath,
-              builder: (_, state) => Text('tab:${state.pathParameters['name']}'),
+              builder: (_, state) =>
+                  Text('tab:${state.pathParameters['name']}'),
             ),
           ],
         );
