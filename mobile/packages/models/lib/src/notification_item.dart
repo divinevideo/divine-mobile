@@ -8,6 +8,7 @@ import 'package:text_sanitizer/text_sanitizer.dart';
 
 part 'video_notification.dart';
 part 'actor_notification.dart';
+part 'announcement_notification.dart';
 
 /// Notification kinds matching the Figma design spec.
 enum NotificationKind {
@@ -19,6 +20,9 @@ enum NotificationKind {
   repost,
   mention,
   system,
+
+  /// A public announcement fetched from Divine's trusted catalog.
+  announcement,
 
   /// A creator the user subscribed to ("belled") posted a new video.
   ///
