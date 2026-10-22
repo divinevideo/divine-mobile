@@ -12139,6 +12139,13 @@ class AppLocalizationsFr extends AppLocalizations {
       'Garde une copie de chaque nouvel enregistrement dans ta galerie. Les autres apps et les sauvegardes photo dans le cloud peuvent la voir.';
 
   @override
+  String get settingsMirrorFrontCamera => 'Effet miroir caméra avant';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Enregistre les clips de la caméra avant tels que l\'aperçu les montre. Le texte dans le plan se lit à l\'envers.';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

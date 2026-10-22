@@ -11919,6 +11919,13 @@ class AppLocalizationsAr extends AppLocalizations {
       'يحفظ نسخة من كل تسجيل جديد في معرض الصور. يمكن للتطبيقات الأخرى وخدمات النسخ الاحتياطي للصور على السحابة رؤيتها هناك.';
 
   @override
+  String get settingsMirrorFrontCamera => 'عكس الكاميرا الأمامية';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'يحفظ مقاطع الكاميرا الأمامية كما تظهر في المعاينة. تظهر النصوص في اللقطة معكوسة.';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

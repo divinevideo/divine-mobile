@@ -12012,6 +12012,13 @@ class AppLocalizationsNl extends AppLocalizations {
       'Zet een kopie van elke nieuwe opname in je galerij. Andere apps en fotoback-ups in de cloud kunnen die daar zien.';
 
   @override
+  String get settingsMirrorFrontCamera => 'Frontcamera spiegelen';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Slaat clips van de frontcamera op zoals de preview ze laat zien. Tekst in beeld staat dan in spiegelschrift.';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

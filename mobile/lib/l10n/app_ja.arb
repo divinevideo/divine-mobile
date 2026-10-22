@@ -3238,6 +3238,8 @@
   "generalSettingsHoldToRecordSubtitle": "長押しすると録画が始まり、離すと止まります",
   "settingsBackUpRecordings": "録画をギャラリーにバックアップ",
   "settingsBackUpRecordingsSubtitle": "新しい録画のコピーをギャラリーに保存します。他のアプリやクラウドの写真バックアップからも見えます。",
+  "settingsMirrorFrontCamera": "前面カメラのミラー反転",
+  "settingsMirrorFrontCameraSubtitle": "前面カメラのクリップをプレビューと同じ向きで保存します。映っている文字は左右反転します。",
   "contentFiltersAdultContent": "アダルトコンテンツ",
   "contentFiltersViolenceGore": "暴力とグロテスク",
   "contentFiltersSubstances": "薬物",

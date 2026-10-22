@@ -6015,6 +6015,8 @@
   "generalSettingsHoldToRecordSubtitle": "Mula merakam apabila anda tekan dan tahan, kemudian berhenti apabila anda lepaskan",
   "settingsBackUpRecordings": "Sandarkan rakaman ke galeri",
   "settingsBackUpRecordingsSubtitle": "Menyimpan salinan setiap rakaman baharu dalam galeri anda. Apl lain dan sandaran foto awan boleh melihatnya di sana.",
+  "settingsMirrorFrontCamera": "Cerminkan kamera hadapan",
+  "settingsMirrorFrontCameraSubtitle": "Menyimpan klip kamera hadapan seperti yang dipaparkan dalam pratonton. Teks dalam rakaman akan kelihatan terbalik.",
   "uploadPublishedCountMessage": "{count, plural, =1{Video diterbitkan ke profil anda} other{{count} video diterbitkan ke profil anda}}",
   "@uploadPublishedCountMessage": {
     "description": "Snackbar shown after one or more background uploads succeed, e.g. after a re-auth redirect during which uploads completed.",

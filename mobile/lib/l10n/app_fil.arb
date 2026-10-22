@@ -2760,6 +2760,8 @@
   "generalSettingsHoldToRecordSubtitle": "Magsisimulang mag-record kapag pinindot nang matagal at titigil kapag inalis",
   "settingsBackUpRecordings": "I-back up ang mga recording sa gallery",
   "settingsBackUpRecordingsSubtitle": "Nagse-save ng kopya ng bawat bagong recording sa gallery mo. Makikita ito roon ng ibang app at ng mga cloud photo backup.",
+  "settingsMirrorFrontCamera": "I-mirror ang camera sa harap",
+  "settingsMirrorFrontCameraSubtitle": "Sine-save ang mga clip mula sa camera sa harap nang kagaya ng nasa preview. Mababaligtad ang text sa shot.",
   "settingsBadgesTitle": "Mga Badge",
   "settingsBadgesSubtitle": "Tanggapin ang mga award at tingnan ang status ng issued badge.",
   "badgesTitle": "Mga Badge",

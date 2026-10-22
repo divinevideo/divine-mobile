@@ -3245,6 +3245,8 @@
   "generalSettingsHoldToRecordSubtitle": "Rekaman dimulai saat menahan dan berhenti saat dilepas",
   "settingsBackUpRecordings": "Cadangkan rekaman ke galeri",
   "settingsBackUpRecordingsSubtitle": "Menyimpan salinan setiap rekaman baru ke galerimu. Aplikasi lain dan cadangan foto di cloud bisa melihatnya di sana.",
+  "settingsMirrorFrontCamera": "Cerminkan kamera depan",
+  "settingsMirrorFrontCameraSubtitle": "Menyimpan klip kamera depan persis seperti di pratinjau. Teks di dalam bidikan akan terbaca terbalik.",
   "contentFiltersAdultContent": "KONTEN DEWASA",
   "contentFiltersViolenceGore": "KEKERASAN & SADIS",
   "contentFiltersSubstances": "ZAT TERLARANG",

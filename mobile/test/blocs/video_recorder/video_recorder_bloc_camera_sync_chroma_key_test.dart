@@ -117,6 +117,7 @@ void main() {
           enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
           preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
           videoStabilizationMode: any(named: 'videoStabilizationMode'),
+          mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
         ),
       ).thenAnswer((_) async => reportCameraUpdate(forceCameraRebuild: true));
       when(
@@ -292,6 +293,7 @@ void main() {
               enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
               preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
               videoStabilizationMode: any(named: 'videoStabilizationMode'),
+              mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
             ),
           ).called(1);
 

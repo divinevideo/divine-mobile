@@ -6015,6 +6015,8 @@
   "generalSettingsHoldToRecordSubtitle": "دبا کر رکھنے پر ریکارڈنگ شروع ہو، چھوڑنے پر رک جائے",
   "settingsBackUpRecordings": "ریکارڈنگز کا گیلری میں بیک اپ",
   "settingsBackUpRecordingsSubtitle": "ہر نئی ریکارڈنگ کی ایک کاپی آپ کی گیلری میں محفوظ کرتا ہے۔ دوسری ایپس اور کلاؤڈ فوٹو بیک اپس اسے وہاں دیکھ سکتے ہیں۔",
+  "settingsMirrorFrontCamera": "سامنے والے کیمرے کو مرر کریں",
+  "settingsMirrorFrontCameraSubtitle": "سامنے والے کیمرے کے کلپس کو ویسے ہی محفوظ کرتا ہے جیسے پیش نظارہ میں نظر آتے ہیں۔ شاٹ میں موجود تحریر الٹی نظر آئے گی۔",
   "uploadPublishedCountMessage": "{count, plural, =1{ویڈیو آپ کے پروفائل پر شائع ہو گئی} other{{count} ویڈیوز آپ کے پروفائل پر شائع ہو گئیں}}",
   "@uploadPublishedCountMessage": {
     "description": "Snackbar shown after one or more background uploads succeed, e.g. after a re-auth redirect during which uploads completed.",

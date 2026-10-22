@@ -3238,6 +3238,8 @@
   "generalSettingsHoldToRecordSubtitle": "يبدأ التسجيل عند الضغط المطوّل ويتوقف عند الإفراج",
   "settingsBackUpRecordings": "النسخ الاحتياطي للتسجيلات في معرض الصور",
   "settingsBackUpRecordingsSubtitle": "يحفظ نسخة من كل تسجيل جديد في معرض الصور. يمكن للتطبيقات الأخرى وخدمات النسخ الاحتياطي للصور على السحابة رؤيتها هناك.",
+  "settingsMirrorFrontCamera": "عكس الكاميرا الأمامية",
+  "settingsMirrorFrontCameraSubtitle": "يحفظ مقاطع الكاميرا الأمامية كما تظهر في المعاينة. تظهر النصوص في اللقطة معكوسة.",
   "contentFiltersAdultContent": "محتوى للبالغين",
   "contentFiltersViolenceGore": "العنف والدماء",
   "contentFiltersSubstances": "المواد",

@@ -3245,6 +3245,8 @@
   "generalSettingsHoldToRecordSubtitle": "Înregistrarea începe când ții apăsat și se oprește când eliberezi",
   "settingsBackUpRecordings": "Salvează înregistrările în galerie",
   "settingsBackUpRecordingsSubtitle": "Salvează o copie a fiecărei înregistrări noi în galeria ta. Alte aplicații și backupurile foto din cloud o pot vedea acolo.",
+  "settingsMirrorFrontCamera": "Oglindește camera frontală",
+  "settingsMirrorFrontCameraSubtitle": "Salvează clipurile de pe camera frontală așa cum apar în previzualizare. Textul din cadru se citește invers.",
   "contentFiltersAdultContent": "CONȚINUT PENTRU ADULȚI",
   "contentFiltersViolenceGore": "VIOLENȚĂ ȘI SÂNGE",
   "contentFiltersSubstances": "SUBSTANȚE",

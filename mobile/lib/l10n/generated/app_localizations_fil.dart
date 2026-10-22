@@ -12055,6 +12055,13 @@ class AppLocalizationsFil extends AppLocalizations {
       'Nagse-save ng kopya ng bawat bagong recording sa gallery mo. Makikita ito roon ng ibang app at ng mga cloud photo backup.';
 
   @override
+  String get settingsMirrorFrontCamera => 'I-mirror ang camera sa harap';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Sine-save ang mga clip mula sa camera sa harap nang kagaya ng nasa preview. Mababaligtad ang text sa shot.';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

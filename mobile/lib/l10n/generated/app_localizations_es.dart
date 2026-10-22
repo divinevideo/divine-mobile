@@ -12079,6 +12079,13 @@ class AppLocalizationsEs extends AppLocalizations {
       'Guarda una copia de cada grabación nueva en tu galería. Otras apps y los respaldos de fotos en la nube pueden verla ahí.';
 
   @override
+  String get settingsMirrorFrontCamera => 'Espejar cámara frontal';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Guarda los clips de la cámara frontal tal como se ven en la vista previa. El texto en la toma se lee al revés.';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

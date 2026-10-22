@@ -20061,6 +20061,18 @@ abstract class AppLocalizations {
   /// **'Keeps a copy of each new recording in your gallery. Other apps and cloud photo backups can see it there.'**
   String get settingsBackUpRecordingsSubtitle;
 
+  /// Title of the Create & Share setting that saves front camera recordings mirrored, the way the camera preview shows them. Off by default, which saves them the way other people see the person filming.
+  ///
+  /// In en, this message translates to:
+  /// **'Mirror front camera'**
+  String get settingsMirrorFrontCamera;
+
+  /// Subtitle of the Mirror front camera setting. Must say that clips are saved as the preview shows them, and that any text in the shot then reads backwards.
+  ///
+  /// In en, this message translates to:
+  /// **'Saves front camera clips the way the preview shows them. Text in the shot reads backwards.'**
+  String get settingsMirrorFrontCameraSubtitle;
+
   /// Snackbar shown after one or more background uploads succeed, e.g. after a re-auth redirect during which uploads completed.
   ///
   /// In en, this message translates to:

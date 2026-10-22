@@ -32,6 +32,7 @@ import 'package:openvine/screens/settings/content_preferences_screen.dart';
 import 'package:openvine/screens/settings/crossposting_settings_screen.dart';
 import 'package:openvine/screens/settings/general_settings_screen.dart';
 import 'package:openvine/screens/settings/legal_screen.dart';
+import 'package:openvine/screens/settings/mirror_front_camera_setting.dart';
 import 'package:openvine/screens/settings/monetization_links_settings_screen.dart';
 import 'package:openvine/screens/settings/recording_gallery_backup_setting.dart';
 import 'package:openvine/screens/settings/storage/storage_management_page.dart';
@@ -118,8 +119,10 @@ class CreatingSettingsScreen extends ConsumerWidget {
         const HoldToRecordSetting(),
         if (!kIsWeb &&
             (defaultTargetPlatform == TargetPlatform.iOS ||
-                defaultTargetPlatform == TargetPlatform.android))
+                defaultTargetPlatform == TargetPlatform.android)) ...[
+          const MirrorFrontCameraSetting(),
           const MusicModeSetting(),
+        ],
         if (!kIsWeb && defaultTargetPlatform != TargetPlatform.linux)
           const AudioDeviceSetting(),
         const AudioSharingSetting(),

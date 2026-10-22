@@ -12185,6 +12185,14 @@ class AppLocalizationsPl extends AppLocalizations {
       'Zapisuje kopię każdego nowego nagrania w galerii. Inne aplikacje i kopie zapasowe zdjęć w chmurze mogą ją tam zobaczyć.';
 
   @override
+  String get settingsMirrorFrontCamera =>
+      'Odbicie lustrzane przedniego aparatu';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Zapisuje klipy z przedniego aparatu tak, jak widać je w podglądzie. Tekst w kadrze będzie odwrócony.';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

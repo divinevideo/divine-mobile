@@ -11959,6 +11959,13 @@ class AppLocalizationsMs extends AppLocalizations {
       'Menyimpan salinan setiap rakaman baharu dalam galeri anda. Apl lain dan sandaran foto awan boleh melihatnya di sana.';
 
   @override
+  String get settingsMirrorFrontCamera => 'Cerminkan kamera hadapan';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Menyimpan klip kamera hadapan seperti yang dipaparkan dalam pratonton. Teks dalam rakaman akan kelihatan terbalik.';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

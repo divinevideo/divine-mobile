@@ -11352,6 +11352,13 @@ class AppLocalizationsJa extends AppLocalizations {
       '新しい録画のコピーをギャラリーに保存します。他のアプリやクラウドの写真バックアップからも見えます。';
 
   @override
+  String get settingsMirrorFrontCamera => '前面カメラのミラー反転';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      '前面カメラのクリップをプレビューと同じ向きで保存します。映っている文字は左右反転します。';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

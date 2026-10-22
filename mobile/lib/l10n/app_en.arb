@@ -8441,6 +8441,14 @@
   "@settingsBackUpRecordingsSubtitle": {
     "description": "Subtitle of the gallery backup setting. Must say that other apps and cloud photo backups can see the copies in the gallery. Kept to about three lines; the delete dialogs say that gallery copies stay."
   },
+  "settingsMirrorFrontCamera": "Mirror front camera",
+  "@settingsMirrorFrontCamera": {
+    "description": "Title of the Create & Share setting that saves front camera recordings mirrored, the way the camera preview shows them. Off by default, which saves them the way other people see the person filming."
+  },
+  "settingsMirrorFrontCameraSubtitle": "Saves front camera clips the way the preview shows them. Text in the shot reads backwards.",
+  "@settingsMirrorFrontCameraSubtitle": {
+    "description": "Subtitle of the Mirror front camera setting. Must say that clips are saved as the preview shows them, and that any text in the shot then reads backwards."
+  },
   "uploadPublishedCountMessage": "{count, plural, =1{Video published to your profile} other{{count} videos published to your profile}}",
   "@uploadPublishedCountMessage": {
     "description": "Snackbar shown after one or more background uploads succeed, e.g. after a re-auth redirect during which uploads completed.",

@@ -24,6 +24,7 @@ import 'package:openvine/models/video_recorder/video_recorder_state.dart';
 import 'package:openvine/models/video_recorder/video_recorder_timer_duration.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/services/front_camera_mirror_preference_service.dart';
 import 'package:openvine/services/music_mode_preference_service.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/video_recorder/camera/camera_base_service.dart';
@@ -3870,6 +3871,7 @@ void main() {
             enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
             preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
             videoStabilizationMode: any(named: 'videoStabilizationMode'),
+            mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
           ),
         ).thenAnswer((_) async {});
         when(
@@ -4012,6 +4014,7 @@ void main() {
               enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
               preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
               videoStabilizationMode: any(named: 'videoStabilizationMode'),
+              mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
             ),
             () => cameraService.handleAppLifecycleState(
               AppLifecycleState.paused,
@@ -4086,6 +4089,7 @@ void main() {
               enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
               preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
               videoStabilizationMode: any(named: 'videoStabilizationMode'),
+              mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
             ),
           ).thenThrow(Exception('camera boom')),
           build: buildTraced,
@@ -4109,6 +4113,7 @@ void main() {
               enableAutoLensSwitch: true,
               preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
               videoStabilizationMode: any(named: 'videoStabilizationMode'),
+              mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
             ),
           ).called(1);
         },
@@ -4131,6 +4136,53 @@ void main() {
               enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
               preferUnprocessedAudio: true,
               videoStabilizationMode: any(named: 'videoStabilizationMode'),
+              mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'opens the camera unmirrored while Mirror front camera was never set',
+        build: buildBloc,
+        act: (bloc) => bloc.add(const VideoRecorderInitializeRequested()),
+        verify: (_) {
+          verify(
+            () => cameraService.initialize(
+              videoQuality: any(named: 'videoQuality'),
+              initialLens: any(named: 'initialLens'),
+              enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
+              preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
+              videoStabilizationMode: any(named: 'videoStabilizationMode'),
+              // Matched rather than passed: a literal `false` equals the
+              // parameter default, which the analyzer flags as redundant.
+              mirrorFrontCameraOutput: any(
+                named: 'mirrorFrontCameraOutput',
+                that: isFalse,
+              ),
+            ),
+          ).called(1);
+        },
+      );
+
+      blocTest<VideoRecorderBloc, VideoRecorderBlocState>(
+        'opens the camera mirrored when Mirror front camera is on',
+        setUp: () {
+          when(
+            () => prefs.getBool(FrontCameraMirrorPreferenceService.prefsKey),
+          ).thenReturn(true);
+        },
+        build: buildBloc,
+        act: (bloc) => bloc.add(const VideoRecorderInitializeRequested()),
+        verify: (_) {
+          verify(
+            () => cameraService.initialize(
+              videoQuality: any(named: 'videoQuality'),
+              initialLens: any(named: 'initialLens'),
+              enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
+              preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
+              videoStabilizationMode: any(named: 'videoStabilizationMode'),
+              mirrorFrontCameraOutput: true,
             ),
           ).called(1);
         },
@@ -4194,6 +4246,7 @@ void main() {
               enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
               preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
               videoStabilizationMode: any(named: 'videoStabilizationMode'),
+              mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
             ),
           );
         },
@@ -4296,6 +4349,9 @@ void main() {
                     ),
                     videoStabilizationMode: captureAny(
                       named: 'videoStabilizationMode',
+                    ),
+                    mirrorFrontCameraOutput: any(
+                      named: 'mirrorFrontCameraOutput',
                     ),
                   ),
                 ).captured.single
@@ -4400,6 +4456,7 @@ void main() {
                 enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
                 preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
                 videoStabilizationMode: any(named: 'videoStabilizationMode'),
+                mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
               ),
             ).thenAnswer((_) => opening.future.then((_) => cameraOpen = true));
             final bloc = buildBloc();
@@ -4795,6 +4852,7 @@ void main() {
               enableAutoLensSwitch: any(named: 'enableAutoLensSwitch'),
               preferUnprocessedAudio: any(named: 'preferUnprocessedAudio'),
               videoStabilizationMode: any(named: 'videoStabilizationMode'),
+              mirrorFrontCameraOutput: any(named: 'mirrorFrontCameraOutput'),
             ),
           ).thenAnswer((_) async {});
           when(

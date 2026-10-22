@@ -11903,6 +11903,13 @@ class AppLocalizationsVi extends AppLocalizations {
       'Lưu một bản sao của mỗi bản quay mới vào thư viện ảnh của bạn. Ứng dụng khác và bản sao lưu ảnh trên đám mây có thể thấy nó ở đó.';
 
   @override
+  String get settingsMirrorFrontCamera => 'Lật gương camera trước';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Lưu clip từ camera trước đúng như bản xem trước hiển thị. Chữ trong khung hình sẽ bị ngược.';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

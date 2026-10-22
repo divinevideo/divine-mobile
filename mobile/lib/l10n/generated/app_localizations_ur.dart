@@ -11951,6 +11951,13 @@ class AppLocalizationsUr extends AppLocalizations {
       'ہر نئی ریکارڈنگ کی ایک کاپی آپ کی گیلری میں محفوظ کرتا ہے۔ دوسری ایپس اور کلاؤڈ فوٹو بیک اپس اسے وہاں دیکھ سکتے ہیں۔';
 
   @override
+  String get settingsMirrorFrontCamera => 'سامنے والے کیمرے کو مرر کریں';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'سامنے والے کیمرے کے کلپس کو ویسے ہی محفوظ کرتا ہے جیسے پیش نظارہ میں نظر آتے ہیں۔ شاٹ میں موجود تحریر الٹی نظر آئے گی۔';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

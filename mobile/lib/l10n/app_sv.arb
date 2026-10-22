@@ -3245,6 +3245,8 @@
   "generalSettingsHoldToRecordSubtitle": "Inspelning startar när du håller inne och stannar när du släpper",
   "settingsBackUpRecordings": "Säkerhetskopiera inspelningar till galleriet",
   "settingsBackUpRecordingsSubtitle": "Sparar en kopia av varje ny inspelning i ditt galleri. Andra appar och fotosäkerhetskopior i molnet kan se den där.",
+  "settingsMirrorFrontCamera": "Spegelvänd främre kamera",
+  "settingsMirrorFrontCameraSubtitle": "Sparar klipp från den främre kameran så som förhandsvisningen visar dem. Text i bilden blir spegelvänd.",
   "contentFiltersAdultContent": "VUXENINNEHÅLL",
   "contentFiltersViolenceGore": "VÅLD OCH BLOD",
   "contentFiltersSubstances": "SUBSTANSER",

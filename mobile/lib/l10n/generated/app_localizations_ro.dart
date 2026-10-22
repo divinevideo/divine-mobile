@@ -12203,6 +12203,13 @@ class AppLocalizationsRo extends AppLocalizations {
       'Salvează o copie a fiecărei înregistrări noi în galeria ta. Alte aplicații și backupurile foto din cloud o pot vedea acolo.';
 
   @override
+  String get settingsMirrorFrontCamera => 'Oglindește camera frontală';
+
+  @override
+  String get settingsMirrorFrontCameraSubtitle =>
+      'Salvează clipurile de pe camera frontală așa cum apar în previzualizare. Textul din cadru se citește invers.';
+
+  @override
   String uploadPublishedCountMessage(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

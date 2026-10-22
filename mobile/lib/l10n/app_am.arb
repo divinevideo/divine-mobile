@@ -186,6 +186,8 @@
   "generalSettingsHoldToRecordSubtitle": "ሲይዙ ቀረጻ ይጀምራል፣ ሲለቁ ይቆማል",
   "settingsBackUpRecordings": "ቀረጻዎችን ወደ ጋለሪ ምትኬ ማስቀመጥ",
   "settingsBackUpRecordingsSubtitle": "የእያንዳንዱን አዲስ ቀረጻ ቅጂ በጋለሪዎ ያስቀምጣል። ሌሎች መተግበሪያዎች እና የደመና የፎቶ ምትኬዎች እዚያ ሊያዩት ይችላሉ።",
+  "settingsMirrorFrontCamera": "የፊት ካሜራ ማንጸባረቅ",
+  "settingsMirrorFrontCameraSubtitle": "የፊት ካሜራ ቅንጥቦችን ቅድመ ዕይታው በሚያሳያቸው መልኩ ያስቀምጣል። በቀረጻው ውስጥ ያለ ጽሑፍ ተገልብጦ ይነበባል።",
   "contentPreferencesTitle": "የይዘት ምርጫዎች",
   "@contentPreferencesTitle": {
     "description": "Content preferences screen app bar title"

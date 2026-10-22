@@ -2784,6 +2784,8 @@
   "generalSettingsHoldToRecordSubtitle": "길게 누르면 녹화가 시작되고, 놓으면 멈춰요",
   "settingsBackUpRecordings": "녹화본을 갤러리에 백업",
   "settingsBackUpRecordingsSubtitle": "새 녹화본마다 갤러리에 사본을 저장해요. 다른 앱과 클라우드 사진 백업에서도 볼 수 있어요.",
+  "settingsMirrorFrontCamera": "전면 카메라 좌우 반전",
+  "settingsMirrorFrontCameraSubtitle": "전면 카메라 클립을 미리보기에서 보이는 그대로 저장해요. 화면 속 글자는 좌우가 뒤집혀 보여요.",
   "contentFiltersAdultContent": "성인 콘텐츠",
   "contentFiltersViolenceGore": "폭력 및 잔혹 묘사",
   "contentFiltersSubstances": "약물",

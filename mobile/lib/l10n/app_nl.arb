@@ -3245,6 +3245,8 @@
   "generalSettingsHoldToRecordSubtitle": "Opname start wanneer je ingedrukt houdt en stopt wanneer je loslaat",
   "settingsBackUpRecordings": "Opnames back-uppen naar je galerij",
   "settingsBackUpRecordingsSubtitle": "Zet een kopie van elke nieuwe opname in je galerij. Andere apps en fotoback-ups in de cloud kunnen die daar zien.",
+  "settingsMirrorFrontCamera": "Frontcamera spiegelen",
+  "settingsMirrorFrontCameraSubtitle": "Slaat clips van de frontcamera op zoals de preview ze laat zien. Tekst in beeld staat dan in spiegelschrift.",
   "contentFiltersAdultContent": "INHOUD VOOR VOLWASSENEN",
   "contentFiltersViolenceGore": "GEWELD & BLOED",
   "contentFiltersSubstances": "MIDDELEN",
