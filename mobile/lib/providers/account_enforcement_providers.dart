@@ -122,12 +122,12 @@ accountEnforcementStatusProvider =
         final devOverride = ref.watch(accountEnforcementDevOverrideProvider);
         if (devOverride != null) return devOverride;
       }
-      if (pubkey == null) throw const AccountStatusUnavailable();
+      if (pubkey == null) throw const AccountStatusSignerNotReady();
 
       final authService = ref.watch(authServiceProvider);
       ref.watch(currentAuthRpcCapabilityProvider);
       if (!authService.canPublishNostrWritesNow) {
-        throw const AccountStatusUnavailable();
+        throw const AccountStatusSignerNotReady();
       }
 
       final repository = ref.watch(accountEnforcementRepositoryProvider);

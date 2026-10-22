@@ -32,3 +32,13 @@ class AccountStatusUnavailable implements Exception {
   @override
   String toString() => 'AccountStatusUnavailable';
 }
+
+/// Thrown when the account cannot sign the status request yet, as while a
+/// remote signer is still connecting. No request was sent, so nothing failed
+/// beyond waiting.
+class AccountStatusSignerNotReady extends AccountStatusUnavailable {
+  const AccountStatusSignerNotReady();
+
+  @override
+  String toString() => 'AccountStatusSignerNotReady';
+}

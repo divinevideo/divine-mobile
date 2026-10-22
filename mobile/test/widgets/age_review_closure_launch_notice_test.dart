@@ -94,6 +94,24 @@ GoRouter _router() => GoRouter(
   ],
 );
 
+Future<void> _pumpApp(
+  WidgetTester tester,
+  ProviderContainer container,
+  GoRouter router,
+) async {
+  await tester.pumpWidget(
+    UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp.router(
+        localizationsDelegates: appLocalizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: router,
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
 class _Flag extends Notifier<bool> {
   @override
   bool build() => false;
@@ -322,6 +340,41 @@ void main() {
       expect(find.text('account-status'), findsOneWidget);
     });
 
+    // An answer already cached arrives inside the listen call, before the
+    // notice holds the subscription, so letting go of it needs its own step.
+    testWidgets('lets go of a status that was already cached when it mounts', (
+      tester,
+    ) async {
+      var fetches = 0;
+      final container = ProviderContainer(
+        overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+          accountEnforcementStatusProvider.overrideWith((ref) async {
+            fetches++;
+            return const AccountEnforcementStatus(
+              kind: AccountEnforcementKind.noRestrictionReported,
+            );
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+      final keepAlive = container.listen(
+        accountEnforcementStatusProvider,
+        (_, _) {},
+      );
+      await container.read(accountEnforcementStatusProvider.future);
+      final router = _router();
+      addTearDown(router.dispose);
+      await _pumpApp(tester, container, router);
+
+      keepAlive.close();
+      await tester.pumpAndSettle();
+      container.invalidate(accountEnforcementStatusProvider);
+      await tester.pumpAndSettle();
+
+      expect(fetches, 1);
+    });
+
     // A refetch in flight still carries the previous answer. Stopping on it
     // would miss a closure that the refetch is about to report.
     testWidgets('waits for a refetch in flight rather than its stale value', (
@@ -482,6 +535,63 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(phase, SchedulerPhase.postFrameCallbacks);
+    });
+
+    // A failure that never clears, such as a remote signer declining the
+    // request, would otherwise ask again on every resume all session.
+    testWidgets('stops reading once a retry has failed too', (tester) async {
+      var fetches = 0;
+      final container = ProviderContainer(
+        overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+          accountEnforcementStatusProvider.overrideWith((ref) async {
+            fetches++;
+            if (fetches <= 2) throw const AccountStatusUnavailable();
+            return _closure;
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+      final router = _router();
+      addTearDown(router.dispose);
+      await _pumpApp(tester, container, router);
+
+      container.invalidate(accountEnforcementStatusProvider);
+      await tester.pumpAndSettle();
+      container.invalidate(accountEnforcementStatusProvider);
+      await tester.pumpAndSettle();
+
+      expect(fetches, 2);
+      expect(find.text('account-status'), findsNothing);
+    });
+
+    // A signer that cannot sign yet sent nothing, so it is not a failed read.
+    // Counting it would spend the retry before the first real request.
+    testWidgets('does not count a signer that is not ready yet', (
+      tester,
+    ) async {
+      var fetches = 0;
+      final container = ProviderContainer(
+        overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+          accountEnforcementStatusProvider.overrideWith((ref) async {
+            fetches++;
+            if (fetches <= 2) throw const AccountStatusSignerNotReady();
+            return _closure;
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+      final router = _router();
+      addTearDown(router.dispose);
+      await _pumpApp(tester, container, router);
+
+      container.invalidate(accountEnforcementStatusProvider);
+      await tester.pumpAndSettle();
+      container.invalidate(accountEnforcementStatusProvider);
+      await tester.pumpAndSettle();
+
+      expect(find.text('account-status'), findsOneWidget);
     });
 
     // The notice lets go of the status once it has answered, so the screen it

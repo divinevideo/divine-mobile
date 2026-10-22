@@ -2,14 +2,17 @@
 // ABOUTME: was closed by age review, so the closure is explained on launch.
 
 import 'package:flutter/widgets.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/models/account_enforcement_status.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
+import 'package:openvine/repositories/account_enforcement_repository.dart';
 import 'package:openvine/router/providers/router_location_provider.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
+import 'package:openvine/widgets/age_review_closure_launch_notice_cubit.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Takes an account closed by age review to Account Status when the app
@@ -26,83 +29,99 @@ import 'package:unified_logger/unified_logger.dart';
 /// scheduling a post does on its way to the drafts. A closure costs one more,
 /// because Account Status reads again when it opens. Settings, the account's
 /// own profile and Account Status otherwise fetch it when opened. A failed
-/// fetch keeps listening, so every resume refetch tries again until one
-/// answers.
-class AgeReviewClosureLaunchNotice extends ConsumerStatefulWidget {
+/// read gets one retry, on the next resume or when the signer becomes ready;
+/// [AgeReviewClosureLaunchNoticeCubit] holds that policy.
+class AgeReviewClosureLaunchNotice extends StatelessWidget {
   const AgeReviewClosureLaunchNotice({required this.child, super.key});
 
   final Widget child;
 
   @override
-  ConsumerState<AgeReviewClosureLaunchNotice> createState() =>
-      _AgeReviewClosureLaunchNoticeState();
+  Widget build(BuildContext context) => BlocProvider(
+    create: (_) => AgeReviewClosureLaunchNoticeCubit(),
+    child: _LaunchStatusReader(child: child),
+  );
 }
 
-class _AgeReviewClosureLaunchNoticeState
-    extends ConsumerState<AgeReviewClosureLaunchNotice> {
+/// Feeds the launch status reads to the cubit, lets go of the status once the
+/// cubit stops reading, and shows the closure when the cubit finds one.
+class _LaunchStatusReader extends ConsumerStatefulWidget {
+  const _LaunchStatusReader({required this.child});
+
+  final Widget child;
+
+  @override
+  ConsumerState<_LaunchStatusReader> createState() =>
+      _LaunchStatusReaderState();
+}
+
+class _LaunchStatusReaderState extends ConsumerState<_LaunchStatusReader> {
   ProviderSubscription<AsyncValue<AccountEnforcementStatus>>? _status;
-  bool _answered = false;
 
   @override
   void initState() {
     super.initState();
     // For a local key, starting the read signs its request synchronously.
     // Waiting for the first frame keeps that out of the frame's build.
-    addPostFrameCallbackIfMounted(_listen);
+    addPostFrameCallbackIfMounted(_read);
   }
 
-  void _listen() {
+  void _read() {
+    final notice = context.read<AgeReviewClosureLaunchNoticeCubit>();
     _status = ref.listenManual<AsyncValue<AccountEnforcementStatus>>(
       accountEnforcementStatusProvider,
       (_, next) {
-        // Only the launch answer matters. Letting go of the provider after it
-        // means a resume refetch costs nothing unless something else is
-        // showing the status.
-        //
         // The answer is a settled value for a signed-in account. signedOut is
         // what the provider reports while a session is still being restored,
         // and a value carried over while the provider reloads belongs to the
-        // state before; stopping on either would miss the closure.
-        if (next case AsyncData(:final value, isLoading: false)
-            when value.kind != AccountEnforcementKind.signedOut) {
-          _answered = true;
-          _status?.close();
-          if (value.isAgeReviewClosure) _showOnce();
+        // state before; stopping on either would miss the closure. A signer
+        // that is not ready yet sent no request, so it is not a failed read.
+        switch (next) {
+          case AsyncData(:final value, isLoading: false)
+              when value.kind != AccountEnforcementKind.signedOut:
+            notice.answered(value);
+          case AsyncError(:final error, isLoading: false)
+              when error is! AccountStatusSignerNotReady:
+            notice.readFailed();
+          default:
         }
+        // Letting go of the provider means a resume refetch costs nothing
+        // unless something else is showing the status.
+        if (!notice.state.isReading) _status?.close();
       },
       fireImmediately: true,
     );
     // A status already cached answers synchronously inside listenManual,
     // before _status is assigned, so close it here in that case.
-    if (_answered) _status?.close();
+    if (!notice.state.isReading) _status?.close();
   }
 
-  void _showOnce() {
-    // A listener can fire during a build, and a build may neither navigate
-    // nor modify a provider. So marking it shown waits for the frame too,
-    // which also means a notice whose shell is gone by then is not marked.
-    addPostFrameCallbackIfMounted(() {
-      final pubkey = ref.read(activeEnforcementPubkeyProvider);
-      if (pubkey == null) return;
-      final shown = ref.read(ageReviewClosureLaunchShownProvider.notifier);
-      if (!shown.markShown(pubkey)) return;
-      // Account Status is reached by push, which the match list's uri does not
-      // reflect; routerLocationOf does.
-      final router = GoRouter.of(context);
-      if (routerLocationOf(router).path == AccountStatusScreen.path) return;
-      runDetached(
-        context.pushNamed(AccountStatusScreen.routeName),
-        'open account status for age-review closure',
-        logName: 'AgeReviewClosureLaunchNotice',
-        category: LogCategory.ui,
-      );
-    });
-    // A post-frame callback does not ask for a frame, and an answer arriving
-    // from the network rebuilds nothing, so on a still screen the push would
-    // wait for whatever draws next.
-    WidgetsBinding.instance.ensureVisualUpdate();
+  void _show(BuildContext context) {
+    final pubkey = ref.read(activeEnforcementPubkeyProvider);
+    if (pubkey == null) return;
+    final shown = ref.read(ageReviewClosureLaunchShownProvider.notifier);
+    if (!shown.markShown(pubkey)) return;
+    // Account Status is reached by push, which the match list's uri does not
+    // reflect; routerLocationOf does.
+    final router = GoRouter.of(context);
+    if (routerLocationOf(router).path == AccountStatusScreen.path) return;
+    runDetached(
+      context.pushNamed(AccountStatusScreen.routeName),
+      'open account status for age-review closure',
+      logName: 'AgeReviewClosureLaunchNotice',
+      category: LogCategory.ui,
+    );
   }
 
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) =>
+      BlocListener<
+        AgeReviewClosureLaunchNoticeCubit,
+        AgeReviewClosureLaunchNoticeState
+      >(
+        listenWhen: (_, current) =>
+            current.status == AgeReviewClosureLaunchNoticeStatus.closureFound,
+        listener: (context, _) => _show(context),
+        child: widget.child,
+      );
 }

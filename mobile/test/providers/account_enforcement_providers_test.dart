@@ -265,9 +265,11 @@ void main() {
       );
       addTearDown(subscription.close);
 
+      // Not ready rather than failed, so the launch notice does not spend
+      // its one retry on a read that never left the device.
       await expectLater(
         container.read(accountEnforcementStatusProvider.future),
-        throwsA(isA<AccountStatusUnavailable>()),
+        throwsA(isA<AccountStatusSignerNotReady>()),
       );
       expect(client.requestedPubkeys, isEmpty);
     });
