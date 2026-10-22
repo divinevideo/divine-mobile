@@ -1,7 +1,6 @@
 // ABOUTME: Normalizes public authors at the people-list URL boundary.
 // ABOUTME: Shares that route policy without changing profile identifier rules.
 
-import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 
 /// Returns a complete lowercase public key for a people-list author.
@@ -16,7 +15,5 @@ String? normalizePeopleListOwner(String identifier) {
       ? lowercase
       : identifier;
   final owner = normalizePublicIdentifier(normalizedInput)?.hexPubkey;
-  return owner != null && NostrKeyUtils.isValidKey(owner)
-      ? owner.toLowerCase()
-      : null;
+  return owner?.toLowerCase();
 }

@@ -1,12 +1,14 @@
-// ABOUTME: Pins that normalizePublicIdentifier rejects a damaged nprofile,
-// ABOUTME: that normalizeToHex canonicalizes hex casing so every consumer
-// ABOUTME: agrees on identity regardless of deep-link encoding, and that
-// ABOUTME: withoutPublicIdentifier excludes by resolved hex, not by text
+// ABOUTME: Pins that normalizePublicIdentifier rejects a damaged npub or
+// ABOUTME: nprofile, that normalizeToHex canonicalizes hex casing so every
+// ABOUTME: consumer agrees on identity regardless of deep-link encoding, and
+// ABOUTME: that withoutPublicIdentifier excludes by resolved hex, not by text
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
+
+import '../helpers/test_pubkeys.dart';
 
 void main() {
   const selfHex =
@@ -34,6 +36,18 @@ void main() {
           'nprofile1qqs2hn00zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3rlcpq8lsejkj42';
 
       expect(normalizePublicIdentifier(nprofile), isNull);
+    });
+
+    // The decoder answers a failed checksum with an empty string, which is
+    // not a pubkey either.
+    test('returns null for an npub1 whose checksum does not verify', () {
+      expect(normalizePublicIdentifier(syntheticMisspelledNpub), isNull);
+    });
+
+    test('returns null for an npub1 that does not carry a 32-byte key', () {
+      final shortKey = NostrKeyUtils.encodePubKey('11');
+
+      expect(normalizePublicIdentifier(shortKey), isNull);
     });
   });
 
