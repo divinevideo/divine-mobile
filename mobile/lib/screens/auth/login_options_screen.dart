@@ -18,6 +18,7 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_result.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/auth/email_verification_screen.dart';
 import 'package:openvine/screens/auth/nostr_connect_screen.dart';
 import 'package:openvine/screens/key_import_screen.dart';
@@ -253,7 +254,7 @@ class _SignInContentState extends ConsumerState<_SignInContent> {
       if (!mounted) return;
 
       if (result.success) {
-        context.go('/');
+        context.go(RoutePaths.root);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -297,7 +298,7 @@ class _SignInContentState extends ConsumerState<_SignInContent> {
       if (!mounted) return;
 
       if (result.success) {
-        context.go('/');
+        context.go(RoutePaths.root);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

@@ -31,9 +31,6 @@ class CreateAccountScreen extends ConsumerStatefulWidget {
   /// Route name for this screen.
   static const String routeName = 'create-account';
 
-  /// Route path for this screen (relative, under /welcome).
-  static const String path = '/create-account';
-
   const CreateAccountScreen({super.key});
 
   @override

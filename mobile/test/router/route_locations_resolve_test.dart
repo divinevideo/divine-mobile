@@ -160,8 +160,10 @@ const _notLocations = {
   'followingNewSubject',
   // A route pattern with an :npub placeholder; its builder is checked instead.
   'profileUnavailablePins',
-  // Not registered: the route normalizer rewrites it to /notifications/0.
+  // Not registered. The redirect and route normalizer rewrite them: `root`
+  // to welcome or the home feed, `notifications` to /notifications/0.
   'notifications',
+  'root',
 };
 
 void main() {

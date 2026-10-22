@@ -9,6 +9,7 @@ import 'package:openvine/blocs/profile_editor/profile_editor_bloc.dart';
 import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/profile_setup/widgets/widgets.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/profile/nostr_info_sheet_content.dart';
@@ -352,13 +353,11 @@ class _ProfileSetupScreenViewState
         context.pop();
         return;
       }
-      final authService = ref.read(authServiceProvider);
-      final currentPubkey = authService.currentPublicKeyHex;
-      if (currentPubkey != null) {
-        final npub = authService.currentNpub;
-        context.go('/profile/$npub');
+      final npub = ref.read(authServiceProvider).currentNpub;
+      if (npub != null) {
+        context.go(RoutePaths.profileForNpub(npub));
       } else {
-        context.go('/home/0');
+        context.go(RoutePaths.videoFeedForIndex(0));
       }
     });
   }

@@ -13,6 +13,7 @@ import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/profile_setup/widgets/profile_setup_upload_errors.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/profile_editor/username_status_indicator.dart';
@@ -302,7 +303,7 @@ class _ProfileSetupListenersState extends ConsumerState<ProfileSetupListeners> {
                 if (context.canPop()) {
                   context.pop(true);
                 } else {
-                  context.go('/');
+                  context.go(RoutePaths.root);
                 }
               }
             } else if (state.status ==

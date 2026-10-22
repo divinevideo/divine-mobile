@@ -468,7 +468,7 @@ class _EmailVerificationScreenState
     if (context.canPop()) {
       context.pop();
     } else {
-      context.go('/');
+      context.go(RoutePaths.root);
     }
   }
 
@@ -479,7 +479,7 @@ class _EmailVerificationScreenState
     // mode) so a later cold start doesn't restore the user into a dead flow.
     await _clearPendingVerification();
     if (!mounted) return;
-    context.go('/');
+    context.go(RoutePaths.root);
   }
 
   Future<void> _handleSignInRecovery(

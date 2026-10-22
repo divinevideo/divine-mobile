@@ -75,6 +75,10 @@ abstract final class RoutePaths {
   static const relayDiagnostic = '/relay-diagnostic';
   static const relaySettings = '/relay-settings';
   static const resetPassword = '/reset-password';
+
+  /// The router's redirect and route normalizer decide where this lands.
+  static const root = '/';
+
   static const safetySettings = '/safety-settings';
   static const secureAccount = '/secure-account';
   static const settings = '/settings';
