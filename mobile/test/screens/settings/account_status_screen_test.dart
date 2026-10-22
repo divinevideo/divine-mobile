@@ -146,12 +146,10 @@ void main() {
                 (ref) => answer.future,
               ),
             ],
-            child: MaterialApp(
+            child: const MaterialApp(
               localizationsDelegates: appLocalizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
-              home: const AccountStatusScreen(
-                publishRestrictionConfirmed: true,
-              ),
+              home: AccountStatusScreen(publishRestrictionConfirmed: true),
             ),
           ),
         );
