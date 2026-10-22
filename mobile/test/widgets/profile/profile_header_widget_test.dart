@@ -3,6 +3,7 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:badge_repository/badge_repository.dart';
 import 'package:bloc_test/bloc_test.dart';
@@ -904,6 +905,36 @@ void main() {
           );
 
           expect(find.byType(SupporterHaloWings), findsOneWidget);
+        });
+
+        testWidgets('holds the halo level and the wings even under reduced '
+            'motion', (tester) async {
+          // pumpHeader turns animations off.
+          await pumpHeader(
+            tester,
+            isOwnProfile: false,
+            isPublicSupporter: true,
+          );
+
+          List<Matrix4> transformsAbove(String asset) => tester
+              .widgetList<Transform>(
+                find.ancestor(
+                  of: find.image(AssetImage(asset)),
+                  matching: find.byType(Transform),
+                ),
+              )
+              .map((transform) => transform.transform)
+              .toList();
+          double tilt(Matrix4 matrix) =>
+              math.atan2(matrix.entry(1, 0), matrix.entry(0, 0));
+
+          final halo = transformsAbove('assets/supporter/halo.png');
+          expect(halo, isNotEmpty);
+          expect(halo, everyElement(Matrix4.identity()));
+          final leftWing = transformsAbove('assets/supporter/wing_left.png');
+          final rightWing = transformsAbove('assets/supporter/wing_right.png');
+          expect(tilt(leftWing.first), isNot(0));
+          expect(tilt(leftWing.first), closeTo(-tilt(rightWing.first), 1e-9));
         });
 
         testWidgets("shows no halo on someone else's profile without public "

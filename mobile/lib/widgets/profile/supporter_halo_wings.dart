@@ -214,6 +214,8 @@ class _SupporterHaloWingsState extends State<SupporterHaloWings>
     final wingTop = size * _Geometry.wingTop;
     final haloWidth = size * _Geometry.haloWidth;
     final haloHeight = size * _Geometry.haloHeight;
+    // The loop's first frame is mid-swing; without motion, hold a level pose.
+    final still = context.reduceMotion;
 
     // The box claims the wings' width so nothing beside it can crowd them.
     // The halo is left to overflow upward into the empty middle of the nav
@@ -223,7 +225,7 @@ class _SupporterHaloWingsState extends State<SupporterHaloWings>
       onVisibilityChanged: _onVisibilityChanged,
       child: _AnimatedPart(
         animation: _controller,
-        builder: (t) => _Group(t: t, avatarSize: size),
+        builder: (t) => _Group(t: t, avatarSize: size, still: still),
         // Its own boundary keeps the static avatar from repainting as the
         // group moves.
         child: RepaintBoundary(
@@ -259,7 +261,7 @@ class _SupporterHaloWingsState extends State<SupporterHaloWings>
                     opacity: widget.reveal ?? kAlwaysCompleteAnimation,
                     child: _AnimatedPart(
                       animation: _controller,
-                      builder: (t) => _Wing(t: t, isLeft: true),
+                      builder: (t) => _Wing(t: t, isLeft: true, still: still),
                       child: const _PartImage('assets/supporter/wing_left.png'),
                     ),
                   ),
@@ -273,7 +275,7 @@ class _SupporterHaloWingsState extends State<SupporterHaloWings>
                     opacity: widget.reveal ?? kAlwaysCompleteAnimation,
                     child: _AnimatedPart(
                       animation: _controller,
-                      builder: (t) => _Wing(t: t, isLeft: false),
+                      builder: (t) => _Wing(t: t, isLeft: false, still: still),
                       child: const _PartImage(
                         'assets/supporter/wing_right.png',
                       ),
@@ -296,7 +298,8 @@ class _SupporterHaloWingsState extends State<SupporterHaloWings>
                     opacity: widget.reveal ?? kAlwaysCompleteAnimation,
                     child: _AnimatedPart(
                       animation: _controller,
-                      builder: (t) => _Halo(t: t, avatarSize: size),
+                      builder: (t) =>
+                          _Halo(t: t, avatarSize: size, still: still),
                       child: const _PartImage('assets/supporter/halo.png'),
                     ),
                   ),
@@ -317,17 +320,20 @@ abstract class _PartTransform {
 }
 
 class _Wing implements _PartTransform {
-  _Wing({required this.t, required this.isLeft});
+  _Wing({required this.t, required this.isLeft, required this.still});
 
   final double t;
   final bool isLeft;
+
+  /// Holds both wings at the middle of their swing.
+  final bool still;
 
   @override
   Matrix4 get matrix {
     final phase = isLeft ? t : t - _Motion.wingPhaseLag;
     const mid = (_Motion.wingLowRadians + _Motion.wingHighRadians) / 2;
     const amplitude = (_Motion.wingLowRadians - _Motion.wingHighRadians) / 2;
-    final drop = mid + math.sin(phase * 2 * math.pi) * amplitude;
+    final drop = still ? mid : mid + math.sin(phase * 2 * math.pi) * amplitude;
     // Tipping down swings the inner edge below the pivot into the avatar.
     return Matrix4.rotationZ(isLeft ? -drop : drop);
   }
@@ -339,13 +345,17 @@ class _Wing implements _PartTransform {
 }
 
 class _Halo implements _PartTransform {
-  _Halo({required this.t, required this.avatarSize});
+  _Halo({required this.t, required this.avatarSize, required this.still});
 
   final double t;
   final double avatarSize;
 
+  /// Holds the halo level at its resting height.
+  final bool still;
+
   @override
   Matrix4 get matrix {
+    if (still) return Matrix4.identity();
     final angle = t * 2 * math.pi;
     final bob = -math.sin(angle) * avatarSize * _Motion.haloBobFraction;
     final tilt = math.sin(angle + math.pi / 2) * _Motion.haloTiltRadians;
@@ -376,13 +386,17 @@ class _Sparkle implements _PartTransform {
 }
 
 class _Group implements _PartTransform {
-  _Group({required this.t, required this.avatarSize});
+  _Group({required this.t, required this.avatarSize, required this.still});
 
   final double t;
   final double avatarSize;
 
+  /// Leaves the group, and so the avatar, untransformed.
+  final bool still;
+
   @override
   Matrix4 get matrix {
+    if (still) return Matrix4.identity();
     final angle = (t - _Motion.groupPhaseLag) * 2 * math.pi;
     final bob = -math.sin(angle) * avatarSize * _Motion.groupBobFraction;
     final tilt = math.sin(angle + math.pi / 2) * _Motion.groupTiltRadians;
