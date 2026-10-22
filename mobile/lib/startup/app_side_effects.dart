@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/feed_playback_performance_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
@@ -50,6 +51,12 @@ class AppRootSideEffects extends ConsumerWidget {
     // Retains parameter-free route context for support diagnostics. It must be
     // active before the user enters Settings or the Support Center.
     ref.watch(supportRouteTrailProvider);
+
+    // Remembers which accounts were shown their age-review closure on launch.
+    // It forgets an account when it signs out, and signing out unmounts the
+    // shell, so only a host here can see that happen: a provider nothing
+    // listens to is paused and misses it. Building it reads no service.
+    ref.watch(ageReviewClosureLaunchShownProvider);
 
     // Mirrors the authenticated pubkey into Zendesk, and into Firebase
     // Analytics + Crashlytics. Cheap to activate: `authServiceProvider` is

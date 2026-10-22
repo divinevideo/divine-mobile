@@ -79,13 +79,15 @@ final accountEnforcementDevOverrideProvider =
 /// In memory on purpose, so the notice comes back on the next cold launch
 /// (support-trust-safety#260). Within a session it stops the notice from
 /// pushing again when the shell mounts again; resume refetches do not reach
-/// the notice once it has answered. The set lives in the account's container,
-/// which an account switch rebuilds, so switching back to a closed account
-/// shows the notice again. Signing out and back in keeps the container, and
-/// with it the mark.
+/// the notice once it has answered. Any change of account empties it, signing
+/// out included, because signing in or switching to an account is opening it:
+/// a closed account that comes back is told again.
 class AgeReviewClosureLaunchShown extends Notifier<Set<String>> {
   @override
-  Set<String> build() => const {};
+  Set<String> build() {
+    ref.watch(activeEnforcementPubkeyProvider);
+    return const {};
+  }
 
   /// Records [pubkey] and returns whether this is its first showing.
   bool markShown(String pubkey) {

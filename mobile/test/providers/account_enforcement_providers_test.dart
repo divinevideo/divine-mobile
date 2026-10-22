@@ -58,7 +58,7 @@ class _ActivePubkey extends Notifier<String?> {
   @override
   String? build() => _pubkeyA;
 
-  void switchTo(String pubkey) => state = pubkey;
+  void switchTo(String? pubkey) => state = pubkey;
 }
 
 const _pubkeyA =
@@ -394,6 +394,62 @@ void main() {
         );
       expect(memory.read(_pubkeyA)?.isEnforced, isTrue);
       expect(memory.read(_pubkeyB), isNull);
+    });
+  });
+
+  group('ageReviewClosureLaunchShownProvider', () {
+    test('marks an account shown once', () {
+      final container = ProviderContainer(
+        overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkeyA),
+        ],
+      );
+      addTearDown(container.dispose);
+      final shown = container.read(
+        ageReviewClosureLaunchShownProvider.notifier,
+      );
+
+      expect(shown.markShown(_pubkeyA), isTrue);
+      expect(shown.markShown(_pubkeyA), isFalse);
+    });
+
+    // Signing in is opening the account, so a closed account that signs out
+    // and back in is told again (support-trust-safety#260). AppRootSideEffects
+    // keeps the set active, which is what lets it see the sign-out at all: a
+    // provider nothing listens to is paused and would miss it.
+    test('forgets the mark when the account signs out', () async {
+      final active = NotifierProvider<_ActivePubkey, String?>(
+        _ActivePubkey.new,
+      );
+      final container = ProviderContainer(
+        overrides: [
+          activeEnforcementPubkeyProvider.overrideWith(
+            (ref) => ref.watch(active),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final keepActive = container.listen(
+        ageReviewClosureLaunchShownProvider,
+        (_, _) {},
+      );
+      addTearDown(keepActive.close);
+      container
+          .read(ageReviewClosureLaunchShownProvider.notifier)
+          .markShown(_pubkeyA);
+
+      container.read(active.notifier).switchTo(null);
+      // Signing out and back in are separate moments, not one synchronous
+      // swap the provider could miss.
+      await container.pump();
+      container.read(active.notifier).switchTo(_pubkeyA);
+
+      expect(
+        container
+            .read(ageReviewClosureLaunchShownProvider.notifier)
+            .markShown(_pubkeyA),
+        isTrue,
+      );
     });
   });
 
