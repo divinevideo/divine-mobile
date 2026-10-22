@@ -15,13 +15,7 @@ String? normalizePeopleListOwner(String identifier) {
           identifier == identifier.toUpperCase()
       ? lowercase
       : identifier;
-  final String? owner;
-  try {
-    owner = normalizePublicIdentifier(normalizedInput)?.hexPubkey;
-  } on FormatException {
-    // Preserve the URL boundary's rejection of non-UTF-8 nprofile relay hints.
-    return null;
-  }
+  final owner = normalizePublicIdentifier(normalizedInput)?.hexPubkey;
   return owner != null && NostrKeyUtils.isValidKey(owner)
       ? owner.toLowerCase()
       : null;

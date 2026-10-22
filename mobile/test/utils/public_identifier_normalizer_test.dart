@@ -1,14 +1,41 @@
-// ABOUTME: Pins that normalizeToHex canonicalizes hex casing so every
-// ABOUTME: consumer agrees on identity regardless of deep-link encoding, and
-// ABOUTME: that withoutPublicIdentifier excludes by resolved hex, not by text
+// ABOUTME: Pins that normalizePublicIdentifier rejects a damaged nprofile,
+// ABOUTME: that normalizeToHex canonicalizes hex casing so every consumer
+// ABOUTME: agrees on identity regardless of deep-link encoding, and that
+// ABOUTME: withoutPublicIdentifier excludes by resolved hex, not by text
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 
 void main() {
   const selfHex =
       'abcdef11111111111111111111111111111111111111111111111111111111ff';
+
+  group('normalizePublicIdentifier', () {
+    test('decodes an nprofile1 to its pubkey and relay hints', () {
+      final nprofile = NIP19Tlv.encodeNprofile(
+        Nprofile(pubkey: selfHex, relays: ['wss://relay.example']),
+      );
+
+      final normalized = normalizePublicIdentifier(nprofile);
+
+      expect(normalized?.hexPubkey, selfHex);
+      expect(normalized?.relayHints, ['wss://relay.example']);
+    });
+
+    // A profile link's segment reaches this from route redirects and widget
+    // builds, so a damaged reference has to come back as "not a pubkey"
+    // rather than as an exception.
+    test('returns null for an nprofile1 whose relay entry is malformed', () {
+      // Crafted by bech32-encoding the pubkey entry for [selfHex] followed by
+      // the relay entry [1, 1, 0xff], whose one byte is not valid UTF-8.
+      const nprofile =
+          'nprofile1qqs2hn00zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3rlcpq8lsejkj42';
+
+      expect(normalizePublicIdentifier(nprofile), isNull);
+    });
+  });
 
   group('normalizeToHex', () {
     // The profile body decides own-vs-other by raw hex equality
