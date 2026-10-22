@@ -980,6 +980,14 @@ class DmVideoStore {
       await _writeAtomically(file, plaintext);
     } on Object {
       _release(file);
+      // A record written for a video that never landed describes nothing.
+      try {
+        _deleteOrphanedSatellites(file.parent, {
+          for (final path in _leases.keys) _messageIdOf(File(path)),
+        });
+      } on FileSystemException {
+        // No folder to list: the next prune deletes what is left.
+      }
       rethrow;
     }
     // An account switch disposes the store while a download can still land.

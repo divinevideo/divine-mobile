@@ -358,6 +358,47 @@ void main() {
 
     group('videoFor', () {
       test(
+        'keeps the record of a frame whose video it could not store',
+        () async {
+          final store = createStore();
+          final message = _videoMessage();
+          keptFile('${message.id}.preview.jpg', _frame, keptAt: now);
+          Directory(
+            '${ownerDir().path}/${DmVideoStore.videoFileNameFor(message)}/x',
+          ).createSync(recursive: true);
+
+          await expectLater(
+            store.videoFor(message),
+            throwsA(isA<DmVideoStorageException>()),
+          );
+
+          expect(
+            keptFiles().map((file) => file.uri.pathSegments.last),
+            containsAll([
+              '${message.id}.preview.jpg',
+              '${message.id}.conversation',
+            ]),
+          );
+        },
+      );
+
+      test('keeps no record of a video it could not store', () async {
+        final store = createStore();
+        final message = _videoMessage();
+        // A folder where the video goes makes storing it fail.
+        Directory(
+          '${ownerDir().path}/${DmVideoStore.videoFileNameFor(message)}/x',
+        ).createSync(recursive: true);
+
+        await expectLater(
+          store.videoFor(message),
+          throwsA(isA<DmVideoStorageException>()),
+        );
+
+        expect(keptFiles(), isEmpty);
+      });
+
+      test(
         'fetches again a kept video past its age that nothing uses, rather '
         'than hand it out',
         () async {
