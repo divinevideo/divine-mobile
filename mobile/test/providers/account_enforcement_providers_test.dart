@@ -89,7 +89,7 @@ ProviderContainer _container({
 
 /// A read that failed, as opposed to one that was never sent because the
 /// signer was not ready. The launch notice counts only the first.
-final _failedRead = isA<AccountStatusUnavailable>().having(
+final Matcher _failedRead = isA<AccountStatusUnavailable>().having(
   (error) => error is AccountStatusSignerNotReady,
   'is a signer not ready yet',
   isFalse,

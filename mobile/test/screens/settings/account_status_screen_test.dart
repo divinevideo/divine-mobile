@@ -132,6 +132,46 @@ void main() {
         );
       });
 
+      // A rejected post opens this screen with the generic restriction while
+      // the status loads; the closure that then arrives counts as shown too.
+      testWidgets('counts a closure that replaces the restriction shown', (
+        tester,
+      ) async {
+        final answer = Completer<AccountEnforcementStatus>();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+              accountEnforcementStatusProvider.overrideWith(
+                (ref) => answer.future,
+              ),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: const AccountStatusScreen(
+                publishRestrictionConfirmed: true,
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(AccountStatusScreen)),
+        );
+
+        answer.complete(_closure);
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.accountStatusAgeClosureHeading), findsOneWidget);
+        expect(
+          container
+              .read(ageReviewClosureLaunchShownProvider.notifier)
+              .markShown(_pubkey),
+          isFalse,
+        );
+      });
+
       testWidgets('leaves the closure unshown for any other ban', (
         tester,
       ) async {

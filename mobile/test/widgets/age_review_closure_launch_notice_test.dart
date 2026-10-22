@@ -719,6 +719,37 @@ void main() {
       expect(find.byType(AccountStatusScreen), findsNothing);
     });
 
+    // Navigation can also return to the tabs by replacing the covering page
+    // rather than popping it, which updates the route differently.
+    testWidgets('waits for the tabs when navigation goes back to them', (
+      tester,
+    ) async {
+      final answer = Completer<AccountEnforcementStatus>();
+      final container = ProviderContainer(
+        overrides: [
+          activeEnforcementPubkeyProvider.overrideWithValue(_pubkey),
+          accountEnforcementStatusProvider.overrideWith(
+            (ref) => answer.future,
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      final router = _router();
+      addTearDown(router.dispose);
+      await _pumpApp(tester, container, router);
+
+      unawaited(router.push('/recorder'));
+      await tester.pumpAndSettle();
+      answer.complete(_closure);
+      await tester.pumpAndSettle();
+      expect(find.text('account-status'), findsNothing);
+
+      router.go('/');
+      await tester.pumpAndSettle();
+
+      expect(find.text('account-status'), findsOneWidget);
+    });
+
     // The app-update dialog opens over the shell at launch. It is a pageless
     // route, which leaves the navigator differently from a page.
     testWidgets('waits for a dialog over the tabs to close', (tester) async {
