@@ -41,9 +41,10 @@ ProfileRepository.searchUsersProgressive    mobile/packages/profile_repository/
   Phase 3 (offset==0): nostrClient.queryUsers    NIP-50 WS, 4.5s relay budget + 5s guard
   Each phase records a SearchSourceStatus in the result envelope.
   Final yield: _enrichFromCache + _applyFilter (exact > prefix > word >
-               substring relevance, followers/videos as tie-breaker, block
-               filter, follow boost behind exact matches); envelope carries
-               nextRestOffset/restHasMore
+               substring relevance, then Funnelcake's order within a tier
+               for sortBy=relevance, or followers/videos for
+               sortBy=followers; block filter, follow boost behind exact
+               matches); envelope carries nextRestOffset/restHasMore
         ↓
 NostrClient.queryUsers                      mobile/packages/nostr_client/
   • tempRelays = [relay.nostr.band, search.nos.today, nostr.wine]
@@ -59,6 +60,19 @@ keeps broader server search from filling people results with accounts whose
 visible identity does not match. Other callers of `SearchUtils.matchProfile`
 can still use that helper's broader bio matching. Callers without `sortBy`
 retain their configured filter, or the display-name fallback when none is set.
+
+### Order within a relevance tier
+
+The search screen and people pickers (`UserSearchBloc`) ask Funnelcake for
+`sort_by=relevance`. Funnelcake orders those results by how literally they
+match, then puts profiles with followers or videos ahead of ones with neither
+and ranks the rest by followers, videos, loops, a profile picture and recent
+activity. Within each of the app's own relevance tiers, the repository keeps
+that server order; profiles only the local cache or NIP-50 found come after
+the server's in the same tier. A `sort_by=followers` search, which other callers
+still use, orders a tier by the REST follower and video counts instead. The
+tiers themselves still come first, so an exact match leads a busier partial
+match.
 
 ### Username owner
 

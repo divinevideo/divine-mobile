@@ -308,7 +308,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
           _searchRunner?.call(
             query: query,
             limit: _pageSize,
-            sortBy: profileSearchSortFollowers,
+            sortBy: profileSearchSortRelevance,
             hasVideos: hasVideos,
             boostPubkeys: followedPubkeys,
             cancellationToken: cancellationToken,
@@ -316,7 +316,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
           repository!.searchUsersProgressive(
             query: query,
             limit: _pageSize,
-            sortBy: profileSearchSortFollowers,
+            sortBy: profileSearchSortRelevance,
             hasVideos: hasVideos,
             boostPubkeys: followedPubkeys,
             cancellationToken: cancellationToken,
@@ -520,7 +520,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
             query: state.query,
             limit: _pageSize,
             offset: state.offset,
-            sortBy: profileSearchSortFollowers,
+            sortBy: profileSearchSortRelevance,
             hasVideos: hasVideos,
           )
           .last; // Stream always emits at least once for non-empty queries.

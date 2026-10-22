@@ -874,7 +874,7 @@ void main() {
         () => mockProfileRepository.searchUsersProgressive(
           query: 'sam',
           limit: 50,
-          sortBy: 'followers',
+          sortBy: 'relevance',
           boostPubkeys: {followedPubkey},
           cancellationToken: any(named: 'cancellationToken'),
         ),
