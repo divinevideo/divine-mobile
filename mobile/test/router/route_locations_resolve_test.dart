@@ -160,6 +160,10 @@ const _notLocations = {
   'followingNewSubject',
   // A route pattern with an :npub placeholder; its builder is checked instead.
   'profileUnavailablePins',
+  // Web and Share addresses. No route is registered at them: the deep-link
+  // service maps them onto an in-app location (peopleListForId with an
+  // owner query), which is checked itself.
+  'peopleListByAuthorFor',
   // Not registered. The redirect and route normalizer rewrite them: `root`
   // to welcome or the home feed, `notifications` to /notifications/0.
   'notifications',
