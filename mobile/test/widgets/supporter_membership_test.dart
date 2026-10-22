@@ -29,6 +29,7 @@ class _MockAuth extends Mock implements AuthService {}
 void main() {
   const pubkey =
       'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  final l10n = lookupAppLocalizations(const Locale('en'));
 
   group('own account membership', () {
     testWidgets('signed-out compact entry supplies its own Material', (
@@ -75,7 +76,6 @@ void main() {
           ),
         ),
       );
-      final l10n = lookupAppLocalizations(const Locale('en'));
       expect(find.text(l10n.supporterTileSubtitle), findsOneWidget);
     });
 
@@ -183,8 +183,8 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(find.text('Divine Supporters'), findsOneWidget);
-      expect(find.text('Become a supporter'), findsNothing);
+      expect(find.text(l10n.supporterTitle), findsOneWidget);
+      expect(find.text(l10n.supporterJoinLabel), findsNothing);
       current = second;
       container.invalidate(supporterRepositoryProvider);
       await tester.pumpAndSettle();
@@ -197,8 +197,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(first.isSupporter, isTrue);
       expect(second.isSupporter, isFalse);
-      expect(find.text('Supporter'), findsNothing);
-      expect(find.text('Become a supporter'), findsOneWidget);
+      expect(find.text(l10n.supporterBadgeLabel), findsNothing);
+      expect(find.text(l10n.supporterJoinLabel), findsOneWidget);
       await tester.pumpWidget(const SizedBox.shrink());
     });
 
@@ -264,11 +264,11 @@ void main() {
           await tester.pumpAndSettle();
           if (source == AuthenticationSource.amber) {
             expect(requests, 0);
-            expect(find.text('Divine Supporters'), findsOneWidget);
+            expect(find.text(l10n.supporterTitle), findsOneWidget);
           } else if (!succeeds) {
             expect(requests, 1);
-            expect(find.text('Divine Supporters'), findsOneWidget);
-            expect(find.text('Become a supporter'), findsNothing);
+            expect(find.text(l10n.supporterTitle), findsOneWidget);
+            expect(find.text(l10n.supporterJoinLabel), findsNothing);
           } else {
             expect(requests, 1);
             expect(repo.isSupporter, isTrue);
@@ -295,7 +295,7 @@ void main() {
               ),
             );
             await tester.pumpAndSettle();
-            expect(find.text('Supporter'), findsOneWidget);
+            expect(find.text(l10n.supporterBadgeLabel), findsOneWidget);
           }
           await tester.pumpWidget(const SizedBox.shrink());
         },
