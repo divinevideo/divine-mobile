@@ -64,9 +64,17 @@ class AccountEnforcementDevOverride
     return null;
   }
 
-  void simulate(AccountEnforcementStatus status) => state = status;
+  // Each change starts the launch notice clean, so a closure simulated again
+  // in the same session is shown on launch again.
+  void simulate(AccountEnforcementStatus status) {
+    ref.invalidate(ageReviewClosureLaunchShownProvider);
+    state = status;
+  }
 
-  void clear() => state = null;
+  void clear() {
+    ref.invalidate(ageReviewClosureLaunchShownProvider);
+    state = null;
+  }
 }
 
 final accountEnforcementDevOverrideProvider =

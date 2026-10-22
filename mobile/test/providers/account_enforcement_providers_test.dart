@@ -453,6 +453,50 @@ void main() {
       expect(shown.markShown(_pubkeyA), isFalse);
     });
 
+    // Each developer simulation starts clean, so a closure simulated again
+    // in the same session is shown on launch again.
+    for (final (name, change) in [
+      (
+        'simulating',
+        (AccountEnforcementDevOverride override) => override.simulate(
+          const AccountEnforcementStatus(
+            kind: AccountEnforcementKind.banned,
+            category: AccountEnforcementCategory.ageReview,
+          ),
+        ),
+      ),
+      (
+        'clearing',
+        (AccountEnforcementDevOverride override) => override.clear(),
+      ),
+    ]) {
+      test('forgets the mark when $name a developer override', () {
+        final container = ProviderContainer(
+          overrides: [
+            activeEnforcementPubkeyProvider.overrideWithValue(_pubkeyA),
+          ],
+        );
+        addTearDown(container.dispose);
+        final keepActive = container.listen(
+          ageReviewClosureLaunchShownProvider,
+          (_, _) {},
+        );
+        addTearDown(keepActive.close);
+        container
+            .read(ageReviewClosureLaunchShownProvider.notifier)
+            .markShown(_pubkeyA);
+
+        change(container.read(accountEnforcementDevOverrideProvider.notifier));
+
+        expect(
+          container
+              .read(ageReviewClosureLaunchShownProvider.notifier)
+              .markShown(_pubkeyA),
+          isTrue,
+        );
+      });
+    }
+
     // Signing in is opening the account, so a closed account that signs out
     // and back in is told again (support-trust-safety#260). AppRootSideEffects
     // keeps the set active, which is what lets it see the sign-out at all: a
