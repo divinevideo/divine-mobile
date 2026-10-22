@@ -64,21 +64,24 @@ class SupporterMembershipScope extends ConsumerWidget {
     if (!auth.isAuthenticated) return child;
     ref.watch(currentAuthRpcCapabilityProvider);
     final repository = ref.watch(supporterRepositoryProvider);
-    // External signers may prompt. Passive entry must not interrupt browsing;
-    // opening Supporter settings explicitly still requests fresh private state.
     final canRefresh =
         auth.canPublishNostrWritesNow &&
-        switch (auth.authenticationSource) {
-          AuthenticationSource.divineOAuth ||
-          AuthenticationSource.importedKeys ||
-          AuthenticationSource.automatic => true,
-          _ => false,
-        };
-    ref.listen(appForegroundProvider, (_, foreground) {
-      if (foreground && canRefresh) unawaited(repository.refreshIfStale());
-    });
+        _signsWithoutPrompting(auth.authenticationSource);
+    ref
+      ..listen(appForegroundProvider, (_, foreground) {
+        if (foreground && canRefresh) unawaited(repository.refreshIfStale());
+      })
+      // A remote signer becomes usable after sign-in. Refresh then, rather
+      // than re-keying the cubit and remounting everything it wraps.
+      ..listen(currentAuthRpcCapabilityProvider, (_, _) {
+        final current = ref.read(authServiceProvider);
+        if (current.canPublishNostrWritesNow &&
+            _signsWithoutPrompting(current.authenticationSource)) {
+          unawaited(repository.refreshIfStale());
+        }
+      });
     return BlocProvider(
-      key: ValueKey((repository, canRefresh)),
+      key: ValueKey(repository),
       create: (_) {
         final cubit = SupporterCubit(repository: repository)
           ..start(loadStore: false);
@@ -89,6 +92,17 @@ class SupporterMembershipScope extends ConsumerWidget {
     );
   }
 }
+
+/// Whether [source] signs without a prompt, so the membership may refresh
+/// without being asked. External signers may prompt, and passive entry must
+/// not interrupt browsing; opening Supporter settings explicitly still
+/// requests fresh private state.
+bool _signsWithoutPrompting(AuthenticationSource source) => switch (source) {
+  AuthenticationSource.divineOAuth ||
+  AuthenticationSource.importedKeys ||
+  AuthenticationSource.automatic => true,
+  _ => false,
+};
 
 class _MembershipStatus extends StatelessWidget {
   const _MembershipStatus({required this.compact});

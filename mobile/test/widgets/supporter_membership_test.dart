@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -12,6 +13,7 @@ import 'package:http/testing.dart';
 import 'package:iap_repository/iap_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/supporter/supporter_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_rpc_capability.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -25,6 +27,26 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../helpers/l10n.dart';
 
 class _MockAuth extends Mock implements AuthService {}
+
+/// Stands in for whatever the membership scope wraps, reading its cubit as
+/// the profile does, so a test can tell whether that subtree was kept or
+/// rebuilt from scratch.
+class _ScopedContent extends StatefulWidget {
+  const _ScopedContent();
+
+  @override
+  State<_ScopedContent> createState() => _ScopedContentState();
+}
+
+class _ScopedContentState extends State<_ScopedContent> {
+  @override
+  Widget build(BuildContext context) {
+    context.select<SupporterCubit?, bool>(
+      (cubit) => cubit?.state.isSupporter ?? false,
+    );
+    return const SizedBox.shrink();
+  }
+}
 
 void main() {
   const pubkey =
@@ -301,5 +323,79 @@ void main() {
         },
       );
     }
+
+    testWidgets('refreshes when a remote signer becomes ready without '
+        'rebuilding what it wraps', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      var signerReady = false;
+      final capability = StreamController<AuthRpcCapability>();
+      addTearDown(capability.close);
+      final auth = _MockAuth();
+      when(() => auth.isAuthenticated).thenReturn(true);
+      when(
+        () => auth.authenticationSource,
+      ).thenReturn(AuthenticationSource.divineOAuth);
+      when(() => auth.canPublishNostrWritesNow).thenAnswer((_) => signerReady);
+      when(() => auth.authRpcCapability).thenAnswer(
+        (_) => signerReady
+            ? AuthRpcCapability.rpcReady
+            : AuthRpcCapability.unavailable,
+      );
+      when(
+        () => auth.authRpcCapabilityStream,
+      ).thenAnswer((_) => capability.stream);
+      var requests = 0;
+      final client = SupporterApiClient(
+        baseUri: Uri.parse('https://supporters.test'),
+        authHeaderProvider: ({required url, required method, payload}) async =>
+            (authorizationHeader: 'Nostr fixture', pubkey: pubkey),
+        httpClient: MockClient((_) async {
+          requests++;
+          return http.Response(
+            jsonEncode({
+              'status': 'active',
+              'entitlement': {'source': 'server', 'isActive': true},
+              'recognition': {'haloVisible': true},
+            }),
+            200,
+          );
+        }),
+      );
+      addTearDown(client.dispose);
+      final repo = SupporterRepository(
+        pubkey: pubkey,
+        validator: StubEntitlementValidator(),
+        prefs: await SharedPreferences.getInstance(),
+        apiClient: client,
+      );
+      addTearDown(repo.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authServiceProvider.overrideWithValue(auth),
+            currentAuthStateProvider.overrideWithValue(
+              AuthState.authenticated,
+            ),
+            supporterRepositoryProvider.overrideWithValue(repo),
+          ],
+          child: buildLocalizedWidget(
+            const Scaffold(
+              body: SupporterMembershipScope(child: _ScopedContent()),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      final content = tester.state(find.byType(_ScopedContent));
+      expect(requests, isZero);
+
+      signerReady = true;
+      capability.add(AuthRpcCapability.rpcReady);
+      await tester.pumpAndSettle();
+
+      expect(requests, 1);
+      expect(tester.state(find.byType(_ScopedContent)), same(content));
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
   });
 }
