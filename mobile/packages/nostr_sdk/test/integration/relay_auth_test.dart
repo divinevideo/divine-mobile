@@ -23,7 +23,7 @@ class MockRelay extends RelayBase {
 
     // Simulate auth challenge response if configured
     if (shouldSendAuthChallenge && message[0] == 'REQ') {
-      Future.delayed(Duration(milliseconds: 100), () {
+      Future.delayed(const Duration(milliseconds: 100), () {
         // Simulate AUTH challenge from relay
         onMessage?.call(this, ['AUTH', authChallenge]);
       });

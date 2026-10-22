@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:curated_list_repository/curated_list_repository.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -14,6 +15,10 @@ import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_relay_gateway.dart';
+import 'package:openvine/services/curated_lists/curated_list_publisher.dart';
+import 'package:openvine/services/curated_lists/curated_list_recovery_journal.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/curated_list_publish_stubs.dart';
 
@@ -79,9 +84,19 @@ void main() {
       setUpAll(() => registerFallbackValue(<Filter>[]));
 
       test('completes normally with the events received when the relay '
-          'stream closes', () async {
+          'stream closes after EOSE', () async {
         final relay = StreamController<Event>();
-        when(() => mockNostr.subscribe(any())).thenAnswer((_) => relay.stream);
+        void Function()? completeRead;
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((invocation) {
+          completeRead = invocation.namedArguments[#onEose] as void Function()?;
+          return relay.stream;
+        });
         final event = _event(content: '', pubkey: _ownerPubkey);
 
         final read = gateway.readOwnedLists(
@@ -90,6 +105,9 @@ void main() {
           cancelled: Completer<void>().future,
         );
         relay.add(event);
+        await pumpEventQueue();
+        expect(completeRead, isNotNull);
+        completeRead!();
         await relay.close();
 
         final result = await read;
@@ -97,12 +115,39 @@ void main() {
         expect(result.events, [same(event)]);
       });
 
+      test(
+        'bare stream teardown does not authorize completed relay reads',
+        () async {
+          final relay = StreamController<Event>();
+          when(
+            () => mockNostr.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer((_) => relay.stream);
+          final read = gateway.readOwnedLists(
+            _ownerPubkey,
+            timeout: const Duration(hours: 1),
+            cancelled: Completer<void>().future,
+          );
+          await relay.close();
+
+          expect((await read).completedNormally, isFalse);
+          expect(relay.hasListener, isFalse);
+        },
+      );
+
       test('reports an incomplete read and stops listening when the '
           'timeout fires first', () {
         fakeAsync((async) {
           final relay = StreamController<Event>();
           when(
-            () => mockNostr.subscribe(any()),
+            () => mockNostr.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
           ).thenAnswer((_) => relay.stream);
           final event = _event(content: '', pubkey: _ownerPubkey);
           ({List<Event> events, bool completedNormally})? result;
@@ -130,7 +175,13 @@ void main() {
 
       test('ends as incomplete as soon as it is cancelled', () async {
         final relay = StreamController<Event>();
-        when(() => mockNostr.subscribe(any())).thenAnswer((_) => relay.stream);
+        when(
+          () => mockNostr.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        ).thenAnswer((_) => relay.stream);
         final cancel = Completer<void>();
 
         final read = gateway.readOwnedLists(
@@ -172,7 +223,429 @@ void main() {
       });
     });
 
+    group('ownership across signing and publication', () {
+      late SharedPreferences prefs;
+      setUp(() async {
+        SharedPreferences.setMockInitialValues({});
+        prefs = await SharedPreferences.getInstance();
+        when(
+          () => mockAuth.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        ).thenAnswer(
+          (invocation) async => _event(
+            content: invocation.namedArguments[#content] as String,
+            pubkey: _ownerPubkey,
+            tags: invocation.namedArguments[#tags] as List<List<String>>,
+          ),
+        );
+        when(() => mockNostr.publishEvent(any())).thenAnswer(
+          (invocation) async => PublishSuccess(
+            event: invocation.positionalArguments.single as Event,
+          ),
+        );
+        when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
+          (invocation) async => acceptedOutcome(
+            invocation.positionalArguments.single as Event,
+          ),
+        );
+      });
+
+      Future<bool> publish(
+        CuratedList source, {
+        bool confirmed = false,
+        bool Function(CuratedList)? authorized,
+        bool Function()? sessionCurrent,
+        void Function()? afterPersist,
+        void Function()? afterRecoveryBarrier,
+        void Function(CuratedList, Event)? onAccepted,
+      }) {
+        var stored = source;
+        return CuratedListPublisher(
+          client: mockNostr,
+          gateway: gateway,
+          publishClock: CuratedListPublishClock(),
+          findList: (coordinate) =>
+              stored.authorScopedId == coordinate ? stored : null,
+          persistList: (current, replacement) async {
+            if (stored != current) return false;
+            stored = replacement;
+            afterPersist?.call();
+            return true;
+          },
+          recoveryJournal: CuratedListRecoveryJournal(
+            prefs: prefs,
+            runCurrent: (operation) async {
+              final result = await operation();
+              afterRecoveryBarrier?.call();
+              return result;
+            },
+          ),
+          isCurrentSession: sessionCurrent ?? () => true,
+          isPublicationAuthorized: authorized ?? (_) => true,
+          onPublicationAccepted: onAccepted,
+        ).publish(source, confirmed: confirmed);
+      }
+
+      group('positive publication authority', () {
+        test('missing authority refuses before signing or dispatch', () async {
+          expect(await publish(_list(), authorized: (_) => false), isFalse);
+          verifyNever(
+            () => mockAuth.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
+            ),
+          );
+          verifyNever(() => mockNostr.publishEvent(any()));
+          verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+        });
+
+        test('authority retired during signing cannot dispatch', () async {
+          var authorized = true;
+          when(
+            () => mockAuth.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
+            ),
+          ).thenAnswer((invocation) async {
+            authorized = false;
+            return _event(
+              content: invocation.namedArguments[#content] as String,
+              pubkey: _ownerPubkey,
+              tags: invocation.namedArguments[#tags] as List<List<String>>,
+            );
+          });
+          expect(
+            await publish(_list(), authorized: (_) => authorized),
+            isFalse,
+          );
+          verifyNever(() => mockNostr.publishEvent(any()));
+          verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+        });
+
+        test('authority retired during persistence cannot dispatch', () async {
+          var authorized = true;
+          expect(
+            await publish(
+              _list(),
+              authorized: (_) => authorized,
+              afterPersist: () => authorized = false,
+            ),
+            isFalse,
+          );
+          verifyNever(() => mockNostr.publishEvent(any()));
+          verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+        });
+
+        test('authority retired across ticket cannot dispatch', () async {
+          var authorized = true;
+          final source = _list(isPublic: true).copyWith(
+            pendingVisibility: CuratedListVisibility.fromList(
+              _list(),
+              relayAccepted: true,
+            ),
+          );
+          expect(
+            await publish(
+              source,
+              authorized: (_) => authorized,
+              afterRecoveryBarrier: () => authorized = false,
+            ),
+            isFalse,
+          );
+          verifyNever(() => mockNostr.publishEvent(any()));
+          verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+        });
+
+        test(
+          'unconfirmed dispatch never advances acknowledged authority',
+          () async {
+            var acknowledged = false;
+            expect(
+              await publish(_list(), onAccepted: (_, _) => acknowledged = true),
+              isTrue,
+            );
+            expect(acknowledged, isFalse);
+            verify(() => mockNostr.publishEvent(any())).called(1);
+          },
+        );
+
+        test(
+          'current confirmed acceptance advances exact target once',
+          () async {
+            final acceptedTargets = <CuratedList>[];
+            final acceptedEvents = <Event>[];
+            final source = _list();
+            expect(
+              await publish(
+                source,
+                confirmed: true,
+                onAccepted: (target, event) {
+                  acceptedTargets.add(target);
+                  acceptedEvents.add(event);
+                },
+              ),
+              isTrue,
+            );
+            expect(acceptedTargets, [source]);
+            expect(acceptedEvents.single.pubkey, _ownerPubkey);
+            verify(() => mockNostr.publishEventAwaitOk(any())).called(1);
+          },
+        );
+
+        test(
+          'retired dispatched ACK keeps recovery without granting authority',
+          () async {
+            var current = true;
+            var acknowledged = false;
+            when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
+              (invocation) async {
+                current = false;
+                return acceptedOutcome(
+                  invocation.positionalArguments.single as Event,
+                );
+              },
+            );
+            final source = _list(isPublic: true).copyWith(
+              pendingVisibility: CuratedListVisibility.fromList(
+                _list(),
+                relayAccepted: true,
+              ),
+            );
+            expect(
+              await publish(
+                source,
+                confirmed: true,
+                sessionCurrent: () => current,
+                onAccepted: (_, _) => acknowledged = true,
+              ),
+              isFalse,
+            );
+            expect(acknowledged, isFalse);
+            final journal = CuratedListRecoveryJournal(
+              prefs: prefs,
+              runCurrent: (operation) => operation(),
+            );
+            expect(
+              journal
+                  .record(_ownerPubkey, source.id)
+                  ?.visibility
+                  ?.relayAccepted,
+              isTrue,
+            );
+            verify(() => mockNostr.publishEventAwaitOk(any())).called(1);
+          },
+        );
+
+        test(
+          'newer revision during dispatch keeps ACK without committing stale target',
+          () async {
+            var authorized = true;
+            var persisted = 0;
+            var acknowledged = false;
+            when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
+              (invocation) async {
+                authorized = false;
+                return acceptedOutcome(
+                  invocation.positionalArguments.single as Event,
+                );
+              },
+            );
+            final source = _list(isPublic: true).copyWith(
+              pendingVisibility: CuratedListVisibility.fromList(
+                _list(),
+                relayAccepted: true,
+              ),
+            );
+            expect(
+              await publish(
+                source,
+                confirmed: true,
+                authorized: (_) => authorized,
+                afterPersist: () => persisted += 1,
+                onAccepted: (_, _) => acknowledged = true,
+              ),
+              isFalse,
+            );
+            expect(persisted, 1);
+            expect(acknowledged, isFalse);
+            final journal = CuratedListRecoveryJournal(
+              prefs: prefs,
+              runCurrent: (operation) => operation(),
+            );
+            expect(
+              journal
+                  .record(_ownerPubkey, source.id)
+                  ?.visibility
+                  ?.relayAccepted,
+              isTrue,
+            );
+            verify(() => mockNostr.publishEventAwaitOk(any())).called(1);
+          },
+        );
+      });
+
+      for (final isPublic in [false, true]) {
+        test(
+          'rejects foreign ${isPublic ? 'public' : 'private'} record before signing or sealing',
+          () async {
+            final foreign = _list(
+              isPublic: isPublic,
+            ).copyWith(pubkey: _strangerPubkey);
+            expect(
+              await gateway.signList(
+                foreign,
+                ownerPubkey: _ownerPubkey,
+                createdAt: () => 1786000000,
+              ),
+              isNull,
+            );
+            expect(await publish(foreign), isFalse);
+            verifyNever(
+              () => mockAuth.createAndSignEvent(
+                kind: any(named: 'kind'),
+                content: any(named: 'content'),
+                tags: any(named: 'tags'),
+                createdAt: any(named: 'createdAt'),
+              ),
+            );
+            verifyNever(mockSigner.getPublicKey);
+            verifyNever(() => mockSigner.nip44Encrypt(any(), any()));
+            verifyNever(() => mockNostr.publishEvent(any()));
+            verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+          },
+        );
+        for (final confirmed in [false, true]) {
+          test(
+            'rejects wrong signed author for ${isPublic ? 'public' : 'private'} ${confirmed ? 'confirmed' : 'queued'} publication',
+            () async {
+              when(
+                () => mockAuth.createAndSignEvent(
+                  kind: any(named: 'kind'),
+                  content: any(named: 'content'),
+                  tags: any(named: 'tags'),
+                  createdAt: any(named: 'createdAt'),
+                ),
+              ).thenAnswer(
+                (_) async => _event(content: '', pubkey: _strangerPubkey),
+              );
+              expect(
+                await publish(
+                  _list(isPublic: isPublic),
+                  confirmed: confirmed,
+                ),
+                isFalse,
+              );
+              verifyNever(() => mockNostr.publishEvent(any()));
+              verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+            },
+          );
+        }
+        test(
+          'refuses ${isPublic ? 'public' : 'private'} dispatch if account changes while signing',
+          () async {
+            final signed = Completer<Event?>();
+            when(
+              () => mockAuth.createAndSignEvent(
+                kind: any(named: 'kind'),
+                content: any(named: 'content'),
+                tags: any(named: 'tags'),
+                createdAt: any(named: 'createdAt'),
+              ),
+            ).thenAnswer((_) => signed.future);
+            final pending = publish(_list(isPublic: isPublic));
+            await pumpEventQueue();
+            when(
+              () => mockAuth.currentPublicKeyHex,
+            ).thenReturn(_strangerPubkey);
+            signed.complete(_event(content: '', pubkey: _ownerPubkey));
+            expect(await pending, isFalse);
+            verifyNever(() => mockNostr.publishEvent(any()));
+            verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+          },
+        );
+      }
+      test('refuses dispatch after lease retirement during signing', () async {
+        var active = true;
+        gateway = CuratedListRelayGateway(
+          nostrService: mockNostr,
+          authService: mockAuth,
+          isCurrentSession: () => active,
+        );
+        final signed = Completer<Event?>();
+        when(
+          () => mockAuth.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
+          ),
+        ).thenAnswer((_) => signed.future);
+        final pending = publish(_list(isPublic: true));
+        await pumpEventQueue();
+        active = false;
+        signed.complete(_event(content: '', pubkey: _ownerPubkey));
+        expect(await pending, isFalse);
+        verifyNever(() => mockNostr.publishEvent(any()));
+        verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+      });
+      for (final confirmed in [false, true]) {
+        test(
+          'matching signed owner reaches ${confirmed ? 'confirmed' : 'queued'} dispatch',
+          () async {
+            expect(
+              await publish(_list(isPublic: true), confirmed: confirmed),
+              isTrue,
+            );
+            if (confirmed) {
+              verify(() => mockNostr.publishEventAwaitOk(any())).called(1);
+              verifyNever(() => mockNostr.publishEvent(any()));
+            } else {
+              verify(() => mockNostr.publishEvent(any())).called(1);
+              verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+            }
+          },
+        );
+      }
+      test(
+        'private sealing refuses a foreign owner before signer access',
+        () async {
+          expect(
+            await gateway.sealItemTags(
+              _list().copyWith(pubkey: _strangerPubkey),
+            ),
+            isNull,
+          );
+          verifyNever(mockSigner.getPublicKey);
+          verifyNever(() => mockSigner.nip44Encrypt(any(), any()));
+        },
+      );
+    });
+
     group('unsealItemTags', () {
+      test('malformed decrypted JSON never enters support logs', () async {
+        const privatePayload = '[PRIVATE_ITEM_PAYLOAD_INVALID_JSON';
+        final logs = LogCaptureService();
+        await logs.clearAllLogs();
+        when(
+          () => mockSigner.nip44Decrypt(any(), any()),
+        ).thenAnswer((_) async => privatePayload);
+        final result = await gateway.unsealItemTags(
+          _event(content: sealForTest(privatePayload), pubkey: _ownerPubkey),
+        );
+        expect(result.status, UnsealItemTagsStatus.failed);
+        final captured = await logs.getAllLogsAsText();
+        expect(captured.join('\n'), contains('FormatException'));
+        expect(captured.join('\n'), isNot(contains(privatePayload)));
+      });
+
       test('recovers the tags it sealed', () async {
         final sealed = await gateway.sealItemTags(_list());
 
@@ -242,6 +715,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).thenAnswer(
           (i) async => Event(
@@ -251,8 +725,8 @@ void main() {
             i.namedArguments[#content] as String,
           ),
         );
-        when(() => mockNostr.publishEvent(any())).thenAnswer(
-          (i) async => PublishSuccess(event: i.positionalArguments[0] as Event),
+        when(() => mockNostr.publishEventAwaitOk(any())).thenAnswer(
+          (i) async => acceptedOutcome(i.positionalArguments.single as Event),
         );
       });
 
@@ -260,7 +734,9 @@ void main() {
         await gateway.redactPlaintextListEvent(_plaintextEventId);
 
         final redaction =
-            verify(() => mockNostr.publishEvent(captureAny())).captured.single
+            verify(
+                  () => mockNostr.publishEventAwaitOk(captureAny()),
+                ).captured.single
                 as Event;
         expect(redaction.kind, EventKind.eventDeletion);
         expect(redaction.tags, contains(equals(['e', _plaintextEventId])));
@@ -282,6 +758,7 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).thenAnswer((_) async => null);
 
@@ -289,7 +766,112 @@ void main() {
           gateway.redactPlaintextListEvent(_plaintextEventId),
           completes,
         );
-        verifyNever(() => mockNostr.publishEvent(any()));
+        verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+      });
+    });
+
+    group('publishListDeletion', () {
+      Event deletion({String pubkey = _ownerPubkey}) => Event(
+        pubkey,
+        EventKind.eventDeletion,
+        [
+          ['a', '30005:$pubkey:list-1'],
+          ['k', '30005'],
+        ],
+        'Deleted curated list list-1',
+      );
+
+      void stubSigning(Future<Event?> Function() sign) {
+        when(
+          () => mockAuth.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((_) => sign());
+      }
+
+      test('publishes the deletion once a relay accepts it', () async {
+        final signed = deletion();
+        stubSigning(() async => signed);
+        when(
+          () => mockNostr.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => acceptedOutcome(signed));
+
+        expect(
+          await gateway.publishListDeletion(
+            'list-1',
+            ownerPubkey: _ownerPubkey,
+          ),
+          isTrue,
+        );
+        verify(() => mockNostr.publishEventAwaitOk(signed)).called(1);
+      });
+
+      test('reports failure when no relay accepts the deletion', () async {
+        final signed = deletion();
+        stubSigning(() async => signed);
+        when(
+          () => mockNostr.publishEventAwaitOk(any()),
+        ).thenAnswer((_) async => rejectedOutcome(signed));
+
+        expect(
+          await gateway.publishListDeletion(
+            'list-1',
+            ownerPubkey: _ownerPubkey,
+          ),
+          isFalse,
+        );
+      });
+
+      test('refuses another account without signing', () async {
+        stubSigning(() async => deletion());
+
+        expect(
+          await gateway.publishListDeletion(
+            'list-1',
+            ownerPubkey: _strangerPubkey,
+          ),
+          isFalse,
+        );
+        verifyNever(
+          () => mockAuth.createAndSignEvent(
+            kind: any(named: 'kind'),
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        );
+      });
+
+      test('drops a deletion when the account changed while signing', () async {
+        var active = _ownerPubkey;
+        when(() => mockAuth.currentPublicKeyHex).thenAnswer((_) => active);
+        stubSigning(() async {
+          active = _strangerPubkey;
+          return deletion();
+        });
+
+        expect(
+          await gateway.publishListDeletion(
+            'list-1',
+            ownerPubkey: _ownerPubkey,
+          ),
+          isFalse,
+        );
+        verifyNever(() => mockNostr.publishEventAwaitOk(any()));
+      });
+
+      test('drops a deletion signed by another account', () async {
+        stubSigning(() async => deletion(pubkey: _strangerPubkey));
+
+        expect(
+          await gateway.publishListDeletion(
+            'list-1',
+            ownerPubkey: _ownerPubkey,
+          ),
+          isFalse,
+        );
+        verifyNever(() => mockNostr.publishEventAwaitOk(any()));
       });
     });
   });

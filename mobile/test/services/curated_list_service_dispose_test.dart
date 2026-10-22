@@ -16,6 +16,8 @@ import 'package:openvine/services/curated_list_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+import '../helpers/committed_list_account.dart';
+import '../helpers/curated_list_auth_fixture.dart';
 import '../helpers/curated_list_publish_stubs.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -23,7 +25,8 @@ class _MockNostrClient extends Mock implements NostrClient {}
 class _MockAuthService extends Mock implements AuthService {}
 
 const _owner =
-    '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+    '79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798';
+const _strandedId = 'stranded_list';
 
 void main() {
   group(CuratedListService, () {
@@ -32,6 +35,7 @@ void main() {
     late SharedPreferences prefs;
     late StreamController<Event> relay;
     late MockNostrSigner signer;
+    void Function()? relayEose;
 
     setUpAll(() => registerFallbackValue(<Filter>[]));
 
@@ -46,8 +50,8 @@ void main() {
       // A list that never reached a relay, so a completed sync backs it up.
       final now = DateTime(2026, 10, 18);
       final stranded = CuratedList(
-        id: CuratedListService.defaultListId,
-        name: 'My List',
+        id: _strandedId,
+        name: 'Stranded List',
         videoEventIds: const ['local-only-video'],
         pubkey: _owner,
         createdAt: now,
@@ -58,25 +62,89 @@ void main() {
         CuratedListService.listsStorageKey: jsonEncode([stranded.toJson()]),
       });
       prefs = await SharedPreferences.getInstance();
+      await stubCommittedListAccount(auth: auth, preferences: prefs);
 
       relay = StreamController<Event>.broadcast();
-      when(() => client.subscribe(any())).thenAnswer((_) => relay.stream);
+      relayEose = null;
+      when(
+        () => client.subscribe(
+          any(),
+          closeOnEose: true,
+          onEose: any(named: 'onEose'),
+        ),
+      ).thenAnswer((invocation) {
+        relayEose = invocation.namedArguments[#onEose] as void Function()?;
+        return relay.stream;
+      });
+      addTearDown(relay.close);
     });
 
-    CuratedListService buildService() => CuratedListService(
-      nostrService: client,
-      authService: auth,
-      prefs: prefs,
-    );
+    CuratedListService buildService({AuthService? account}) {
+      final service = CuratedListService(
+        nostrService: client,
+        authService: account ?? auth,
+        prefs: prefs,
+      );
+      addTearDown(service.dispose);
+      return service;
+    }
+
+    Future<void> finishRelay() async {
+      await pumpEventQueue();
+      expect(relayEose, isNotNull);
+      relayEose!();
+      await relay.close();
+    }
 
     group('dispose', () {
+      test(
+        'a raw relay close stays incomplete and a new EOSE snapshot can retry',
+        () async {
+          final service = buildService();
+          final before = prefs.getString(CuratedListService.listsStorageKey);
+          final sync = service.fetchUserListsFromRelays();
+          await pumpEventQueue();
+          expect(relayEose, isNotNull);
+
+          await relay.close();
+          await sync;
+
+          expect(prefs.getString(CuratedListService.listsStorageKey), before);
+          expect(service.getListById(_strandedId)!.nostrEventId, isNull);
+          verifyNever(() => signer.nip44Encrypt(any(), any()));
+          verifyNever(() => client.publishEventAwaitOk(any()));
+
+          // A new connection may finish the same ordinary fetch without a
+          // forced refresh; the incomplete earlier snapshot must not gate it.
+          relay = StreamController<Event>.broadcast();
+          relayEose = null;
+          addTearDown(relay.close);
+          final retry = service.fetchUserListsFromRelays();
+          await pumpEventQueue();
+          await finishRelay();
+          await retry;
+
+          final backedUp = service.getListById(_strandedId)!;
+          expect(backedUp.nostrEventId, isNotNull);
+          expect(backedUp.videoEventIds, ['local-only-video']);
+          verify(() => client.publishEventAwaitOk(any())).called(1);
+          verify(
+            () => client.subscribe(
+              any(),
+              closeOnEose: true,
+              onEose: any(named: 'onEose'),
+            ),
+          ).called(2);
+        },
+      );
+
       test('does not encrypt after disposal during signer lookup', () async {
         final pubkey = Completer<String?>();
         when(signer.getPublicKey).thenAnswer((_) => pubkey.future);
         final service = buildService();
         final sync = service.fetchUserListsFromRelays();
         await pumpEventQueue();
-        await relay.close();
+        await finishRelay();
         await pumpEventQueue();
         verify(signer.getPublicKey).called(1);
 
@@ -97,7 +165,7 @@ void main() {
             ['d', 'relay_list'],
           ], sealForTest('[]')),
         );
-        await relay.close();
+        await finishRelay();
         await pumpEventQueue();
         verify(signer.getPublicKey).called(1);
 
@@ -118,7 +186,7 @@ void main() {
           final service = buildService();
           final sync = service.fetchUserListsFromRelays();
           await pumpEventQueue();
-          await relay.close();
+          await finishRelay();
           await pumpEventQueue();
           verify(() => signer.nip44Encrypt(any(), any())).called(1);
 
@@ -131,6 +199,7 @@ void main() {
               kind: any(named: 'kind'),
               content: any(named: 'content'),
               tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
             ),
           );
           verifyNever(() => client.publishEventAwaitOk(any()));
@@ -144,18 +213,20 @@ void main() {
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).thenAnswer((_) => signed.future);
         final service = buildService();
         final sync = service.fetchUserListsFromRelays();
         await pumpEventQueue();
-        await relay.close();
+        await finishRelay();
         await pumpEventQueue();
         verify(
           () => auth.createAndSignEvent(
             kind: any(named: 'kind'),
             content: any(named: 'content'),
             tags: any(named: 'tags'),
+            createdAt: any(named: 'createdAt'),
           ),
         ).called(1);
 
@@ -188,7 +259,7 @@ void main() {
           await pumpEventQueue();
           relay.add(
             Event(_owner, 30005, const [
-              ['d', CuratedListService.defaultListId],
+              ['d', 'relay_list'],
             ], sealForTest('[["e","relay-only-video"]]')),
           );
           await pumpEventQueue();
@@ -217,7 +288,7 @@ void main() {
               ], sealForTest('[["e","relay-only-video"]]')),
             );
           }
-          await relay.close();
+          await finishRelay();
           await pumpEventQueue();
           verify(() => signer.nip44Decrypt(any(), any())).called(1);
 
@@ -244,11 +315,21 @@ void main() {
           CuratedListService.listsStorageKey,
           jsonEncode([published.toJson()]),
         );
+        final service = buildService();
+        final baseline = await stubReadableCuratedDefault(
+          auth: auth,
+          client: client,
+        );
+        final hydrated = service.fetchUserListsFromRelays();
+        await pumpEventQueue();
+        relay.add(baseline);
+        await finishRelay();
+        await hydrated;
+        expect(service.getDefaultList()!.nostrEventId, baseline.id);
         final ok = Completer<PublishOutcome>();
         when(
           () => client.publishEventAwaitOk(any()),
         ).thenAnswer((_) => ok.future);
-        final service = buildService();
         final deleted = service.deleteOwnedList(
           CuratedListService.defaultListId,
         );
@@ -276,12 +357,17 @@ void main() {
       test('finishes initializing quietly when disposed while My List is '
           'being published', () async {
         await prefs.remove(CuratedListService.listsStorageKey);
+        when(() => auth.isAuthenticated).thenReturn(false);
+        final fresh = await createFreshCuratedListAccount(
+          preferences: prefs,
+          client: client,
+        );
         final ok = Completer<PublishOutcome>();
         when(
           () => client.publishEventAwaitOk(any()),
         ).thenAnswer((_) => ok.future);
         await LogCaptureService().clearAllLogs();
-        final service = buildService();
+        final service = buildService(account: fresh.auth);
         final initialized = service.initialize();
         await pumpEventQueue();
         final published =
@@ -305,7 +391,13 @@ void main() {
 
         await service.fetchUserListsFromRelays();
 
-        verifyNever(() => client.subscribe(any()));
+        verifyNever(
+          () => client.subscribe(
+            any(),
+            closeOnEose: true,
+            onEose: any(named: 'onEose'),
+          ),
+        );
       });
 
       test('does not save lists when a publish it started finishes after '
@@ -317,7 +409,7 @@ void main() {
         final service = buildService();
         final sync = service.fetchUserListsFromRelays();
         await pumpEventQueue();
-        await relay.close();
+        await finishRelay();
         await pumpEventQueue();
         final published =
             verify(
@@ -357,7 +449,7 @@ void main() {
         final service = buildService();
         final sync = service.fetchUserListsFromRelays();
         await pumpEventQueue();
-        await relay.close();
+        await finishRelay();
         await pumpEventQueue();
         final first =
             verify(
@@ -381,6 +473,7 @@ void main() {
           prefs: prefs,
           relaySyncTimeout: const Duration(hours: 1),
         );
+        addTearDown(service.dispose);
         var finished = false;
         unawaited(
           service.fetchUserListsFromRelays().then((_) => finished = true),
@@ -398,6 +491,73 @@ void main() {
     // An account switch signs the next account in, which clears the shared
     // lists key, before it disposes the leaving account's container.
     group('suspend', () {
+      test(
+        'suspend and resume during relay decryption cannot merge or publish',
+        () async {
+          final unsealed = Completer<String?>();
+          final entered = Completer<void>();
+          when(() => signer.nip44Decrypt(any(), any())).thenAnswer((_) {
+            if (!entered.isCompleted) entered.complete();
+            return unsealed.future;
+          });
+          final service = buildService();
+          final before = prefs.getString(CuratedListService.listsStorageKey);
+          final sync = service.fetchUserListsFromRelays();
+          await pumpEventQueue();
+          relay.add(
+            Event(_owner, 30005, const [
+              ['d', 'cancelled_private'],
+            ], sealForTest('[["e","relay-video"]]')),
+          );
+          await finishRelay();
+          await entered.future;
+
+          service.suspend();
+          service.resume();
+          unsealed.complete('[["e","relay-video"]]');
+          await sync;
+
+          expect(prefs.getString(CuratedListService.listsStorageKey), before);
+          expect(service.getListById('cancelled_private'), isNull);
+          verifyNever(() => signer.nip44Encrypt(any(), any()));
+          verifyNever(
+            () => auth.createAndSignEvent(
+              kind: any(named: 'kind'),
+              content: any(named: 'content'),
+              tags: any(named: 'tags'),
+              createdAt: any(named: 'createdAt'),
+            ),
+          );
+          verifyNever(() => client.publishEventAwaitOk(any()));
+        },
+      );
+
+      test(
+        'an immediately resumed service cannot merge its cancelled sync',
+        () async {
+          final service = buildService();
+          final before = prefs.getString(CuratedListService.listsStorageKey);
+          final sync = service.fetchUserListsFromRelays();
+          await pumpEventQueue();
+          relay.add(
+            Event(_owner, 30005, const [
+              ['d', 'cancelled_list'],
+              ['title', 'Cancelled relay result'],
+              ['e', 'relay-video'],
+            ], 'A public list'),
+          );
+          await pumpEventQueue();
+
+          service.suspend();
+          service.resume();
+          await sync;
+
+          expect(prefs.getString(CuratedListService.listsStorageKey), before);
+          expect(service.getListById('cancelled_list'), isNull);
+          verifyNever(() => client.publishEventAwaitOk(any()));
+        },
+      );
+
       test('keeps an in-flight sync from saving while another account signs '
           'in', () async {
         final service = buildService();
@@ -428,6 +588,7 @@ void main() {
           prefs: prefs,
           relaySyncTimeout: const Duration(hours: 1),
         );
+        addTearDown(service.dispose);
         var finished = false;
         unawaited(
           service.fetchUserListsFromRelays().then((_) => finished = true),
@@ -447,7 +608,7 @@ void main() {
 
         service.resume();
         await service.addVideoToList(
-          CuratedListService.defaultListId,
+          _strandedId,
           'another-video',
         );
 

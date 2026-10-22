@@ -385,8 +385,8 @@ class _DeletionProgressSheetContent extends StatelessWidget {
 ///   whether the content sweep could not confirm every existing post, then lets
 ///   the app-scoped recovery owner submit. A lost response is ambiguous, so the
 ///   caller must keep the user gated from the receipt rather than returning to
-///   normal account use (#8583). Returns true when the owner already completed
-///   the account's destructive sign-out.
+///   normal account use (#8583). Returns true when the owner handles
+///   local sign-out and its recovery outcome.
 /// [confirmedPubkey] - When set, aborts before any step if the signed-in
 ///   account no longer matches, binding deletion to the confirmed account
 /// [screenName] - Name of the calling screen for logging
@@ -827,9 +827,9 @@ Future<void> executeAccountDeletion({
         );
         return;
       }
-      var ownerCompletedSignOut = false;
+      var ownerHandledSignOut = false;
       try {
-        ownerCompletedSignOut = await onDeletionSubmitted(
+        ownerHandledSignOut = await onDeletionSubmitted(
           attempt,
           eventId,
           result.contentQueryFailed || result.contentDeletionIncomplete,
@@ -860,11 +860,10 @@ Future<void> executeAccountDeletion({
 
       if (stopCleanupIfAccountChanged()) return;
       dismissProgressSheet();
-      // An immediate completed response means the app-scoped owner already ran
-      // the completed recovery path: it signed out and deleted local data, and
-      // the completed recovery screen reports the result. The processing copy
-      // would contradict that, so only the processing outcome is announced here.
-      if (!ownerCompletedSignOut) {
+      // The app-scoped owner presents completed deletion or incomplete sign-out
+      // through its recovery screen. Legacy callers still announce processing
+      // and perform sign-out here when they have not delegated that outcome.
+      if (!ownerHandledSignOut) {
         showDurableDeletionOutcome(processingDeletionText, offerCancel: false);
         await authService.signOut();
       }

@@ -347,6 +347,15 @@ class AccountDeletionRecoveryCubit extends Cubit<AccountDeletionRecoveryState>
     }
   }
 
+  /// Retrying an accepted deletion must retain its durable processing receipt.
+  Future<void> retrySignOut() async {
+    if (state.attempt?.status == AccountDeletionAttemptStatus.processing) {
+      await switchAccount();
+    } else {
+      await signOut();
+    }
+  }
+
   Future<void> signOut() async {
     if (state.status == AccountDeletionRecoveryStatus.signingOut) return;
     final attempt = state.attempt;

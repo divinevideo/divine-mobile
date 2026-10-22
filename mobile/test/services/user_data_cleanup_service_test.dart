@@ -1,6 +1,7 @@
 // ABOUTME: Tests for UserDataCleanupService identity change detection and cleanup
 // ABOUTME: Validates that user-specific data is cleared when switching accounts
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:creator_sync/creator_sync.dart';
@@ -12,8 +13,10 @@ import 'package:openvine/models/known_account.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
+import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/creator_sync/prefs_sync_state_store.dart';
+import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
 import 'package:openvine/services/language_preference_service.dart';
 import 'package:openvine/services/messages_preference_service.dart';
@@ -27,6 +30,7 @@ import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/services/video_provenance_filter_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockSyncIndexClient extends Mock implements SyncIndexClient {}
 
@@ -125,6 +129,126 @@ void main() {
 
         expect(service.shouldClearDataForUser('any_pubkey'), isTrue);
       });
+    });
+
+    group('account preferences after live services reset', () {
+      test(
+        'accepts an empty account state and preserves device preferences',
+        () async {
+          await prefs.setBool('analytics_enabled', true);
+
+          expect(
+            UserDataCleanupService.hasRetainedUserSpecificDataAfterReset(prefs),
+            isFalse,
+          );
+          expect(prefs.getBool('analytics_enabled'), isTrue);
+        },
+      );
+
+      test('accepts only the completed empty filter migration state', () async {
+        await prefs.setBool(
+          ContentFilterService.filterMigratedStorageKey,
+          true,
+        );
+
+        expect(
+          UserDataCleanupService.hasRetainedUserSpecificDataAfterReset(prefs),
+          isFalse,
+        );
+        expect(
+          prefs.get(ContentFilterService.filterMigratedStorageKey),
+          isTrue,
+        );
+        // The terminal exception must not disable the incoming-account sweep.
+        expect(service.shouldClearDataForUser('4' * 64), isTrue);
+      });
+
+      for (final marker in <({String name, Object value})>[
+        (name: 'incomplete', value: false),
+        (name: 'string', value: 'true'),
+        (name: 'integer', value: 1),
+        (name: 'list', value: <String>['true']),
+      ]) {
+        test('rejects a ${marker.name} filter migration marker', () async {
+          SharedPreferences.setMockInitialValues({
+            ContentFilterService.filterMigratedStorageKey: marker.value,
+          });
+          prefs = await SharedPreferences.getInstance();
+
+          expect(
+            UserDataCleanupService.hasRetainedUserSpecificDataAfterReset(prefs),
+            isTrue,
+          );
+          expect(
+            prefs.get(ContentFilterService.filterMigratedStorageKey),
+            marker.value,
+          );
+        });
+      }
+
+      for (final payload in ['{}', 'unreadable filter settings']) {
+        test('rejects retained filter settings: $payload', () async {
+          await prefs.setBool(
+            ContentFilterService.filterMigratedStorageKey,
+            true,
+          );
+          await prefs.setString(
+            ContentFilterService.filterPrefsStorageKey,
+            payload,
+          );
+
+          expect(
+            UserDataCleanupService.hasRetainedUserSpecificDataAfterReset(prefs),
+            isTrue,
+          );
+          expect(
+            prefs.getString(ContentFilterService.filterPrefsStorageKey),
+            payload,
+          );
+        });
+      }
+
+      test(
+        'rejects a retained legacy adult setting with a completed marker',
+        () async {
+          await prefs.setBool(
+            ContentFilterService.filterMigratedStorageKey,
+            true,
+          );
+          await prefs.setInt(
+            ContentFilterService.legacyAdultContentPreferenceStorageKey,
+            0,
+          );
+
+          expect(
+            UserDataCleanupService.hasRetainedUserSpecificDataAfterReset(prefs),
+            isTrue,
+          );
+          expect(
+            prefs.getInt(
+              ContentFilterService.legacyAdultContentPreferenceStorageKey,
+            ),
+            0,
+          );
+        },
+      );
+
+      test(
+        'rejects other retained account preferences with an empty filter',
+        () async {
+          await prefs.setBool(
+            ContentFilterService.filterMigratedStorageKey,
+            true,
+          );
+          await prefs.setString(LanguagePreferenceService.prefsKey, 'es');
+
+          expect(
+            UserDataCleanupService.hasRetainedUserSpecificDataAfterReset(prefs),
+            isTrue,
+          );
+          expect(prefs.getString(LanguagePreferenceService.prefsKey), 'es');
+        },
+      );
     });
 
     group('clearUserSpecificData', () {
@@ -236,7 +360,7 @@ void main() {
 
       test('clears all user-specific keys from SharedPreferences', () async {
         // Set up some user-specific data
-        await prefs.setStringList('curated_lists', ['list1']);
+        await prefs.setString('curated_lists', '[]');
         await prefs.setStringList('subscribed_list_ids', ['sub1']);
         await prefs.setString('seen_video_ids', 'video1');
         await prefs.setBool('age_verified_16_plus', true);
@@ -586,7 +710,7 @@ void main() {
 
       test('returns count of cleared keys', () async {
         // Set up some user-specific data
-        await prefs.setStringList('curated_lists', ['list1']);
+        await prefs.setString('curated_lists', '[]');
         await prefs.setString('seen_video_ids', 'video1');
         await prefs.setBool('age_verified_16_plus', true);
 
@@ -602,7 +726,7 @@ void main() {
       });
 
       test('accepts reason parameter for tracking', () async {
-        await prefs.setStringList('curated_lists', ['list1']);
+        await prefs.setString('curated_lists', '[]');
 
         // Should complete without error with various reasons
         final count1 = await service.clearUserSpecificData(
@@ -611,7 +735,7 @@ void main() {
         expect(count1, equals(1));
 
         // Reset data
-        await prefs.setStringList('curated_lists', ['list1']);
+        await prefs.setString('curated_lists', '[]');
 
         final count2 = await service.clearUserSpecificData(
           reason: 'identity_change',
@@ -629,7 +753,7 @@ void main() {
           );
           await prefs.setString('relay_discovery_npub1abc', 'relay_data');
           // Also set a static user-specific key
-          await prefs.setStringList('curated_lists', ['list1']);
+          await prefs.setString('curated_lists', '[]');
 
           // Default isIdentityChange=false (same-user logout)
           await service.clearUserSpecificData(reason: 'explicit_logout');
@@ -677,7 +801,7 @@ void main() {
       test(
         'does not include scoped cache keys in identity-change count',
         () async {
-          await prefs.setStringList('curated_lists', ['list1']);
+          await prefs.setString('curated_lists', '[]');
           await prefs.setString('vine_drafts', '{"drafts": []}');
           await prefs.setString('following_list_abc123', '["pubkey1"]');
           await prefs.setString('relay_discovery_npub1abc', 'data');
@@ -787,7 +911,7 @@ void main() {
 
         await expectLater(
           service.clearUserSpecificData(deleteUserData: true),
-          throwsA(isA<StateError>()),
+          throwsA(isA<UserDataCleanupException>()),
         );
       });
 
@@ -804,8 +928,63 @@ void main() {
 
         await expectLater(
           service.clearUserSpecificData(isIdentityChange: true),
-          throwsA(isA<StateError>()),
+          throwsA(isA<UserDataCleanupException>()),
         );
+      });
+
+      test('logs only the type of an unexpected cleanup failure', () async {
+        await LogCaptureService().clearAllLogs();
+        const privateContents = 'private cleanup cause sentinel';
+        service.onDatabaseCleanup =
+            ({
+              String? userPubkey,
+              bool deleteUserData = false,
+              bool preserveActiveSession = false,
+              bool forgetAccount = false,
+            }) async {
+              throw StateError(privateContents);
+            };
+
+        await expectLater(
+          service.clearUserSpecificData(isIdentityChange: true),
+          throwsA(isA<UserDataCleanupException>()),
+        );
+
+        final messages = LogCaptureService()
+            .getRecentLogs()
+            .map((entry) => entry.message)
+            .toList();
+        expect(
+          messages,
+          contains('Account data cleanup failed (StateError)'),
+        );
+        expect(messages.join('\n'), isNot(contains(privateContents)));
+      });
+
+      test('preserves an existing typed required cleanup failure', () async {
+        const privateContents = 'private cleanup cause sentinel';
+        const cause = FormatException('Invalid cached row', privateContents);
+        const failure = UserDataCleanupException(
+          'Required cleanup blocked',
+          cause,
+        );
+        service.onDatabaseCleanup =
+            ({
+              String? userPubkey,
+              bool deleteUserData = false,
+              bool preserveActiveSession = false,
+              bool forgetAccount = false,
+            }) async {
+              throw failure;
+            };
+
+        await expectLater(
+          service.clearUserSpecificData(isIdentityChange: true),
+          throwsA(same(failure)),
+        );
+        expect(failure.cause, same(cause));
+        expect(failure.toString(), 'Required cleanup blocked');
+        expect(failure.toString(), isNot(contains(privateContents)));
       });
 
       test('claimLegacyRows calls onClaimLegacyRows callback', () async {
@@ -875,6 +1054,92 @@ void main() {
           );
           expect(await deletedStore.read(), isNull);
           expect(await otherStore.read(), '["two"]');
+        },
+      );
+
+      test(
+        'a queued inactive retry cannot broaden changed cleanup intent',
+        () async {
+          final removed = 'a' * 64;
+          final active = 'b' * 64;
+          await prefs.setString('current_user_pubkey_hex', active);
+          await prefs.setString('vine_drafts', 'active drafts');
+          await PendingAccountCleanup(
+            userPubkey: removed,
+            isIdentityChange: false,
+            deleteUserData: true,
+            preserveActiveSession: true,
+          ).record(prefs);
+          final gate = Completer<int>();
+          final held = CuratedListSessionCoordinator.forPreferences(prefs)
+              .writes
+              .runExclusive(() => gate.future);
+          final pending = service.clearUserSpecificData(
+            userPubkey: removed,
+            deleteUserData: true,
+          );
+          final failsClosed = expectLater(
+            pending,
+            throwsA(isA<UserDataCleanupException>()),
+          );
+          await PendingAccountCleanup(
+            userPubkey: active,
+            isIdentityChange: false,
+            deleteUserData: true,
+          ).record(prefs);
+          gate.complete(0);
+          await held;
+          await failsClosed;
+          expect(prefs.getString('vine_drafts'), 'active drafts');
+          expect(PendingAccountCleanup.read(prefs)!.userPubkey, active);
+        },
+      );
+
+      test(
+        'resuming inactive removal preserves the active account scope',
+        () async {
+          final removed = 'a' * 64;
+          final active = 'b' * 64;
+          await prefs.setString('current_user_pubkey_hex', active);
+          await prefs.setString('vine_drafts', '{"drafts": ["active"]}');
+          await service.markOwnerScopedLegacyDataForUser(active);
+          var failDatabase = true;
+          final scopes = <bool>[];
+          service.onDatabaseCleanup =
+              ({
+                userPubkey,
+                deleteUserData = false,
+                preserveActiveSession = false,
+                bool forgetAccount = false,
+              }) async {
+                scopes.add(preserveActiveSession);
+                if (failDatabase) throw StateError('database unavailable');
+              };
+          await expectLater(
+            service.deleteAccountData(
+              removed,
+              userNpub: NostrKeyUtils.encodePubKey(removed),
+              preserveActiveSession: true,
+            ),
+            throwsStateError,
+          );
+          final storedIntent = prefs.getString(
+            PendingAccountCleanup.storageKey,
+          )!;
+          expect(storedIntent, contains('"version":2'));
+          expect(
+            PendingAccountCleanup.read(prefs)!.preserveActiveSession,
+            isTrue,
+          );
+          failDatabase = false;
+          await service.clearUserSpecificData(
+            userPubkey: removed,
+            deleteUserData: true,
+          );
+          expect(scopes, [true, true]);
+          expect(prefs.getString('current_user_pubkey_hex'), active);
+          expect(prefs.getString('vine_drafts'), '{"drafts": ["active"]}');
+          expect(prefs.containsKey(PendingAccountCleanup.storageKey), isFalse);
         },
       );
 

@@ -4,6 +4,7 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -18,12 +19,15 @@ import 'package:unified_logger/unified_logger.dart';
 /// This is the web-canonical public URL shape for NIP-51 kind 30005 lists,
 /// which are addressed by author + d-tag. Unlike the internal
 /// `/list/:listId` route — which relies on route extras and locally stored
-/// lists — this screen fetches the list from relays, so deep links to lists
-/// the user has never seen still open.
+/// lists — this screen needs only the path: it reuses a warm
+/// [discoveredList] when its author and d-tag match, and otherwise fetches
+/// the list from relays, so deep links to lists the user has never seen
+/// still open.
 class CuratedListByAuthorScreen extends ConsumerWidget {
   const CuratedListByAuthorScreen({
     required this.authorPubkey,
     required this.listId,
+    this.discoveredList,
     super.key,
   });
 
@@ -44,8 +48,23 @@ class CuratedListByAuthorScreen extends ConsumerWidget {
   /// List d-tag identifier.
   final String listId;
 
+  /// Discovery data for a warm route; accepted only for this exact author and ID.
+  final CuratedList? discoveredList;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final initial = discoveredList;
+    if (initial != null &&
+        initial.pubkey == authorPubkey &&
+        initial.id == listId) {
+      return CuratedListFeedScreen(
+        listId: initial.id,
+        listName: initial.name,
+        videoIds: initial.videoEventIds,
+        authorPubkey: authorPubkey,
+        discoveredList: initial,
+      );
+    }
     final listAsync = ref.watch(
       publicCuratedListProvider(authorPubkey: authorPubkey, listId: listId),
     );

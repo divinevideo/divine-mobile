@@ -12,6 +12,7 @@ import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/npub_hex.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -239,6 +240,16 @@ class WelcomeBloc extends Bloc<WelcomeEvent, WelcomeState> {
         name: 'WelcomeBloc',
         category: LogCategory.auth,
       );
+    } on UserDataCleanupException catch (e, stackTrace) {
+      // Cleanup failed before an incoming session could become active. Keep
+      // the selected account and login actions so the user can retry safely.
+      addError(e, stackTrace);
+      emit(
+        state.copyWith(
+          status: WelcomeStatus.accountCleanupFailed,
+          clearSigningIn: true,
+        ),
+      );
     } on SessionExpiredException catch (e, stackTrace) {
       Log.warning(
         'WelcomeBloc: session expired for ${pubkeyForLogs(account.pubkeyHex)} '
@@ -329,6 +340,16 @@ class WelcomeBloc extends Bloc<WelcomeEvent, WelcomeState> {
       await _authService.signInForAccount(
         previous.pubkeyHex,
         previous.authSource,
+      );
+    } on UserDataCleanupException catch (e, stackTrace) {
+      // Cleanup failed before an incoming session could become active. Keep
+      // the selected account and login actions so the user can retry safely.
+      addError(e, stackTrace);
+      emit(
+        state.copyWith(
+          status: WelcomeStatus.accountCleanupFailed,
+          clearSigningIn: true,
+        ),
       );
     } on SessionExpiredException catch (e, stackTrace) {
       await _recoverToLoginOptions(

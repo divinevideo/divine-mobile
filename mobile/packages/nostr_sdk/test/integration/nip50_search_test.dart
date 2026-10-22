@@ -99,7 +99,7 @@ void main() {
       });
 
       // Allow microtasks to complete
-      await Future<void>.delayed(Duration(milliseconds: 50));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
       nostr.relayPool.unsubscribe(subscriptionId);
 
       expect(
@@ -127,7 +127,9 @@ void main() {
 
     test('Should combine search with other filters', () async {
       final sinceTimestamp =
-          DateTime.now().subtract(Duration(days: 7)).millisecondsSinceEpoch ~/
+          DateTime.now()
+              .subtract(const Duration(days: 7))
+              .millisecondsSinceEpoch ~/
           1000;
 
       mockRelay.eventsToReturn = [
@@ -156,7 +158,7 @@ void main() {
         events.add(event);
       });
 
-      await Future<void>.delayed(Duration(milliseconds: 50));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
       nostr.relayPool.unsubscribe(subscriptionId);
 
       expect(events.isNotEmpty, isTrue);
@@ -198,7 +200,7 @@ void main() {
         events.add(event);
       });
 
-      await Future<void>.delayed(Duration(milliseconds: 50));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
       nostr.relayPool.unsubscribe(subscriptionId);
 
       // Non-supporting relays return no events — no crash
@@ -216,7 +218,7 @@ void main() {
         'bitcoin',
         kinds: [1],
         limit: 10,
-        timeout: Duration(milliseconds: 200),
+        timeout: const Duration(milliseconds: 200),
       );
 
       expect(

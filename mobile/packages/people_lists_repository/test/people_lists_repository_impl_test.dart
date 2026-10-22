@@ -4,29 +4,47 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:clock/clock.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:hive_ce/hive_ce.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:test/test.dart';
 
 import 'helpers/hive_test_home.dart';
+import 'helpers/in_memory_followed_people_lists_store.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {
   _MockNostrClient() {
+    when(() => isDisposed).thenReturn(false);
     // Self-registered so the stub below works without each file needing its
     // own `setUpAll`. Idempotent.
     registerFallbackValue(Duration.zero);
+    registerFallbackValue(<String>[]);
+    registerFallbackValue(<int>[]);
     // The reconcile that precedes a publish goes through `queryEventsDetailed`
     // so it can tell a relay's "I hold nothing" apart from an answer nobody
     // gave (#8273). Mirror whatever `queryEvents` is stubbed to return, as a
     // *settled* answer — the state every existing test describes. Tests about
     // the inconclusive read override this with `timedOut` or `noRelays`.
-    when(() => queryEvents(any())).thenAnswer((_) async => <Event>[]);
+    when(
+      () => queryEvents(
+        any(),
+        tempRelays: any(named: 'tempRelays'),
+        relayTypes: any(named: 'relayTypes'),
+        useCache: any(named: 'useCache'),
+        timeout: any(named: 'timeout'),
+      ),
+    ).thenAnswer((_) async => <Event>[]);
     when(
       () => queryEventsDetailed(
         any(),
+        tempRelays: any(named: 'tempRelays'),
+        relayTypes: any(named: 'relayTypes'),
+        useCache: any(named: 'useCache'),
         requireAllRelaysSettled: true,
         timeout: any(named: 'timeout'),
       ),
@@ -38,6 +56,10 @@ class _MockNostrClient extends Mock implements NostrClient {
                 kPublicPeopleListsRelayReadTimeout
             ? await queryEvents(
                 filters,
+                tempRelays:
+                    invocation.namedArguments[#tempRelays] as List<String>?,
+                relayTypes: invocation.namedArguments[#relayTypes] as List<int>,
+                useCache: invocation.namedArguments[#useCache] as bool,
                 timeout: kPublicPeopleListsRelayReadTimeout,
               )
             : await queryEvents(filters),
@@ -49,6 +71,8 @@ class _MockNostrClient extends Mock implements NostrClient {
 }
 
 class _FakeEvent extends Fake implements Event {}
+
+class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
 
 class _FakeFilter extends Fake implements Filter {}
 
@@ -63,6 +87,51 @@ const _memberC =
     '5555555555555555555555555555555555555555555555555555555555555555';
 const _blockedOwnerPubkey =
     '4444444444444444444444444444444444444444444444444444444444444444';
+
+/// A follow store whose writes fail, as a full disk would make them.
+class _FailingFollowStore extends InMemoryFollowedPeopleListsStore {
+  @override
+  Future<void> add({
+    required String viewerPubkey,
+    required FollowedPeopleListRef ref,
+  }) async {
+    throw const FileSystemException('disk full');
+  }
+}
+
+/// A cache that cannot delete a followed-list copy.
+class _CopyRemovalFailingCache extends LocalPeopleListsCache {
+  _CopyRemovalFailingCache({required super.openBox});
+
+  @override
+  Future<void> removeFollowedCopy({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required String listId,
+  }) async {
+    throw HiveError('box is closed');
+  }
+}
+
+class _PausedRefreshCache extends LocalPeopleListsCache {
+  _PausedRefreshCache({required super.openBox});
+  final entered = Completer<void>();
+  final release = Completer<void>();
+  @override
+  Future<void> refreshFollowedCopy({
+    required String viewerPubkey,
+    required String ownerPubkey,
+    required UserList list,
+  }) async {
+    entered.complete();
+    await release.future;
+    await super.refreshFollowedCopy(
+      viewerPubkey: viewerPubkey,
+      ownerPubkey: ownerPubkey,
+      list: list,
+    );
+  }
+}
 
 const int _peopleListKind = 30000;
 const int _deletionKind = 5;
@@ -107,14 +176,30 @@ void main() {
     PeopleListsRepositoryImpl buildRepository({
       required NostrClient nostrClient,
       LocalPeopleListsCache? cache,
+      FollowedPeopleListsStore? followedListsStore,
       BlockedPeopleListOwnerFilter? blockFilter,
+      FunnelcakeApiClient? funnelcakeApiClient,
+      List<String> discoveryRelayUrls = const [],
+      Set<String> additionalExcludedPublicDTags = const {},
     }) {
       return PeopleListsRepositoryImpl(
         nostrClient: nostrClient,
         cache: cache ?? LocalPeopleListsCache(openBox: makeOpener()),
+        followedListsStore:
+            followedListsStore ?? InMemoryFollowedPeopleListsStore(),
         blockFilter: blockFilter,
+        funnelcakeApiClient: funnelcakeApiClient,
+        discoveryRelayUrls: discoveryRelayUrls,
+        additionalExcludedPublicDTags: additionalExcludedPublicDTags,
       );
     }
+
+    /// A Funnelcake profile for [pubkey] with [videos] posted on Divine.
+    UserProfileFound divineProfile(String pubkey, {required int videos}) =>
+        UserProfileFound(
+          profile: UserProfileData(pubkey: pubkey),
+          stats: ProfileStatsData(videoCount: videos, reactionCount: 0),
+        );
 
     Event signedEvent({
       required int kind,
@@ -554,6 +639,739 @@ void main() {
       });
     });
 
+    group('updateListInfo', () {
+      _MockNostrClient clientHolding(Event remote) {
+        final client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(_ownerPubkey);
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: true,
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => (events: [remote], timedOut: false, noRelays: false),
+        );
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((
+          invocation,
+        ) async {
+          final event = invocation.positionalArguments.first as Event;
+          return _accepted(event: event);
+        });
+        return client;
+      }
+
+      test(
+        'future revision exhaustion preserves the source '
+        'and allows later retry',
+        () async {
+          final instant = DateTime.utc(2026, 10, 4);
+          final stamp = instant.millisecondsSinceEpoch ~/ 1000;
+          final remote = signedEvent(
+            kind: _peopleListKind,
+            tags: const [
+              ['d', 'shared-list'],
+              ['title', 'Source'],
+              ['p', _memberA, 'wss://relay.example', 'friend'],
+            ],
+            content: 'private ciphertext',
+            createdAt: stamp + 60,
+          );
+          final client = clientHolding(remote);
+          final repository = buildRepository(nostrClient: client);
+          await withClock(Clock.fixed(instant), () async {
+            final result = await repository.updateListInfo(
+              ownerPubkey: _ownerPubkey,
+              listId: 'shared-list',
+              name: 'Later',
+            );
+            expect(result.submitted, isFalse);
+            verifyNever(() => client.publishEventAwaitOk(any()));
+            final stored = (await repository.readLists(
+              ownerPubkey: _ownerPubkey,
+            )).single;
+            expect(stored.name, 'Source');
+            expect(stored.nostrEventId, remote.id);
+            expect(stored.pubkeys, [_memberA]);
+          });
+          await withClock(
+            Clock.fixed(instant.add(const Duration(seconds: 120))),
+            () async {
+              final result = await repository.updateListInfo(
+                ownerPubkey: _ownerPubkey,
+                listId: 'shared-list',
+                name: 'Later',
+              );
+              expect(result.submitted, isTrue);
+              expect(
+                (await repository.readLists(
+                  ownerPubkey: _ownerPubkey,
+                )).single.name,
+                'Later',
+              );
+            },
+          );
+        },
+      );
+
+      test(
+        'rapid replacements stop at the client budget '
+        'without corrupting the last send',
+        () async {
+          final instant = DateTime.utc(2026, 10, 4);
+          final stamp = instant.millisecondsSinceEpoch ~/ 1000;
+          final remote = signedEvent(
+            kind: _peopleListKind,
+            tags: const [
+              ['d', 'shared-list'],
+              ['title', 'Source'],
+              ['p', _memberA],
+            ],
+            createdAt: stamp,
+          );
+          final client = clientHolding(remote);
+          final repository = buildRepository(nostrClient: client);
+          await withClock(Clock.fixed(instant), () async {
+            for (var n = 1; n <= 60; n++) {
+              expect(
+                (await repository.updateListInfo(
+                  ownerPubkey: _ownerPubkey,
+                  listId: 'shared-list',
+                  name: 'Edit $n',
+                )).submitted,
+                isTrue,
+              );
+            }
+            expect(
+              (await repository.updateListInfo(
+                ownerPubkey: _ownerPubkey,
+                listId: 'shared-list',
+                name: 'Edit 61',
+              )).submitted,
+              isFalse,
+            );
+            final events = verify(
+              () => client.publishEventAwaitOk(captureAny()),
+            ).captured.cast<Event>();
+            expect(events, hasLength(60));
+            expect(
+              events.map((event) => event.createdAt),
+              List.generate(60, (index) => stamp + index + 1),
+            );
+            final stored = (await repository.readLists(
+              ownerPubkey: _ownerPubkey,
+            )).single;
+            expect(stored.name, 'Edit 60');
+            expect(stored.updatedAt.millisecondsSinceEpoch ~/ 1000, stamp + 60);
+          });
+        },
+      );
+
+      test('a failed ACK reserves its revision before a later edit', () async {
+        final instant = DateTime.utc(2026, 10, 4);
+        final stamp = instant.millisecondsSinceEpoch ~/ 1000;
+        final remote = signedEvent(
+          kind: _peopleListKind,
+          tags: const [
+            ['d', 'shared-list'],
+            ['title', 'Source'],
+            ['p', _memberA],
+          ],
+          content: 'private ciphertext',
+          createdAt: stamp,
+        );
+        final client = clientHolding(remote);
+        final events = <Event>[];
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((call) async {
+          final event = call.positionalArguments.single as Event;
+          events.add(event);
+          if (events.length == 1) {
+            return PublishOutcome(
+              eventId: event.id,
+              acceptedBy: const [],
+              rejectedBy: const {},
+              noResponseFrom: const ['wss://relay.example'],
+            );
+          }
+          return _accepted(event: event);
+        });
+        final repository = buildRepository(nostrClient: client);
+        await withClock(Clock.fixed(instant), () async {
+          final first = await repository.updateListInfo(
+            ownerPubkey: _ownerPubkey,
+            listId: 'shared-list',
+            name: 'Unacknowledged',
+          );
+          expect(first.status, PeopleListPublishStatus.failed);
+          final unchanged = (await repository.readLists(
+            ownerPubkey: _ownerPubkey,
+          )).single;
+          expect(unchanged.name, 'Source');
+          expect(unchanged.nostrEventId, remote.id);
+          expect(unchanged.updatedAt.millisecondsSinceEpoch ~/ 1000, stamp);
+          final second = await repository.updateListInfo(
+            ownerPubkey: _ownerPubkey,
+            listId: 'shared-list',
+            name: 'Acknowledged',
+          );
+          expect(second.status, PeopleListPublishStatus.submitted);
+          expect(events.map((event) => event.createdAt), [
+            stamp + 1,
+            stamp + 2,
+          ]);
+          final stored = (await repository.readLists(
+            ownerPubkey: _ownerPubkey,
+          )).single;
+          expect(stored.name, 'Acknowledged');
+          expect(stored.updatedAt.millisecondsSinceEpoch ~/ 1000, stamp + 2);
+          expect(stored.pubkeys, [_memberA]);
+          expect(events.last.content, 'private ciphertext');
+        });
+      });
+
+      test(
+        'review9747 accepted rename actually replaces '
+        'the previous lower event id',
+        () async {
+          await withClock(Clock.fixed(DateTime.utc(2026, 10, 4)), () async {
+            final stamp =
+                DateTime.utc(2026, 10, 4).millisecondsSinceEpoch ~/ 1000;
+            var remote = signedEvent(
+              kind: _peopleListKind,
+              tags: const [
+                ['d', 'shared-list'],
+                ['title', 'Shared'],
+                ['alt', 'Written by another client'],
+                ['p', _memberA, 'wss://relay.example', 'friend'],
+              ],
+              content: 'nip44-encrypted-private-members',
+              createdAt: stamp,
+            );
+            remote = signedEvent(
+              kind: remote.kind,
+              tags: remote.tags,
+              content: remote.content,
+              createdAt: stamp,
+            );
+            var name = '';
+            for (var n = 0; n < 1000; n++) {
+              name = 'Renamed-$n';
+              final payload = Event(
+                _ownerPubkey,
+                remote.kind,
+                [
+                  for (final tag in remote.tags)
+                    if (tag.first == 'title') ['title', name] else tag,
+                ],
+                remote.content,
+                createdAt: stamp,
+              );
+              if (payload.id.compareTo(remote.id) > 0) break;
+            }
+            final client = _MockNostrClient();
+            when(() => client.publicKey).thenReturn(_ownerPubkey);
+            when(
+              () => client.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: true,
+                timeout: any(named: 'timeout'),
+              ),
+            ).thenAnswer(
+              (_) async => (events: [remote], timedOut: false, noRelays: false),
+            );
+            when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
+              final sent = i.positionalArguments.first as Event;
+              if (sent.createdAt > remote.createdAt ||
+                  (sent.createdAt == remote.createdAt &&
+                      sent.id.compareTo(remote.id) < 0)) {
+                remote = sent;
+              }
+              return _accepted(event: sent);
+            });
+            final repository = buildRepository(nostrClient: client);
+            expect(
+              (await repository.updateListInfo(
+                ownerPubkey: _ownerPubkey,
+                listId: 'shared-list',
+                name: name,
+              )).submitted,
+              isTrue,
+            );
+            expect(remote.tags, contains(equals(['title', name])));
+          });
+        },
+      );
+
+      test(
+        'review9747 monotonic replacement rename add remove delete '
+        'preserves source',
+        () async {
+          await withClock(Clock.fixed(DateTime.utc(2026, 10, 4)), () async {
+            final client = _MockNostrClient();
+            when(() => client.publicKey).thenReturn(_ownerPubkey);
+            final stamp =
+                DateTime.utc(2026, 10, 4).millisecondsSinceEpoch ~/ 1000;
+            var remote = signedEvent(
+              kind: _peopleListKind,
+              tags: const [
+                ['d', 'shared-list'],
+                ['title', 'Shared'],
+                ['p', _memberA, 'wss://relay.example', 'friend'],
+                ['p', _memberA, 'wss://second.example', 'other-hint'],
+                ['expiration', '2000000000'],
+              ],
+              content: 'nip44-encrypted-private-members',
+              createdAt: stamp,
+            );
+            final sentEvents = <Event>[];
+            when(
+              () => client.queryEventsDetailed(
+                any(),
+                requireAllRelaysSettled: true,
+                timeout: any(named: 'timeout'),
+              ),
+            ).thenAnswer(
+              (_) async => (events: [remote], timedOut: false, noRelays: false),
+            );
+            when(() => client.publishEventAwaitOk(any())).thenAnswer((i) async {
+              final sent = i.positionalArguments.first as Event;
+              sentEvents.add(sent);
+              if (sent.kind == _peopleListKind &&
+                  (sent.createdAt > remote.createdAt ||
+                      (sent.createdAt == remote.createdAt &&
+                          sent.id.compareTo(remote.id) < 0))) {
+                remote = sent;
+              }
+              return _accepted(event: sent);
+            });
+            final repository = buildRepository(nostrClient: client);
+            var previous = stamp;
+            Future<void> assertRevision(PeopleListPublishResult result) async {
+              expect(result.submitted, isTrue);
+              expect(sentEvents.last.createdAt, greaterThan(previous));
+              previous = sentEvents.last.createdAt;
+              final cached = (await repository.readLists(
+                ownerPubkey: _ownerPubkey,
+              )).single;
+              expect(cached.updatedAt.millisecondsSinceEpoch ~/ 1000, previous);
+              expect(remote.id, sentEvents.last.id);
+              expect(
+                remote.tags,
+                contains(equals(const ['expiration', '2000000000'])),
+              );
+              expect(remote.content, 'nip44-encrypted-private-members');
+              expect(cached.pubkeys.length, cached.pubkeys.toSet().length);
+              final survivorTags = remote.tags.where(
+                (tag) => tag.first == 'p' && tag[1] == _memberA,
+              );
+              if (cached.pubkeys.contains(_memberA)) {
+                expect(survivorTags.length, 2);
+              } else {
+                expect(survivorTags, isEmpty);
+              }
+            }
+
+            await assertRevision(
+              await repository.updateListInfo(
+                ownerPubkey: _ownerPubkey,
+                listId: 'shared-list',
+                name: 'Renamed',
+              ),
+            );
+            await assertRevision(
+              await repository.addPubkey(
+                ownerPubkey: _ownerPubkey,
+                listId: 'shared-list',
+                pubkey: _memberB,
+              ),
+            );
+            await assertRevision(
+              await repository.removePubkey(
+                ownerPubkey: _ownerPubkey,
+                listId: 'shared-list',
+                pubkey: _memberA,
+              ),
+            );
+            expect(remote.tags, isNot(contains(equals(const ['p', _memberA]))));
+            expect(remote.tags, contains(equals(const ['p', _memberB])));
+            expect(
+              (await repository.deleteList(
+                ownerPubkey: _ownerPubkey,
+                listId: 'shared-list',
+              )).submitted,
+              isTrue,
+            );
+            expect(sentEvents.last.createdAt, greaterThan(previous));
+            expect(
+              sentEvents.last.tags,
+              contains(equals(const ['a', '30000:$_ownerPubkey:shared-list'])),
+            );
+          });
+        },
+      );
+
+      Event sharedList({String? description}) => signedEvent(
+        kind: _peopleListKind,
+        tags: [
+          const ['d', 'shared-list'],
+          const ['title', 'Shared'],
+          if (description != null) ['description', description],
+          const ['alt', 'Written by another client'],
+          const ['p', _memberA, 'wss://relay.example', 'friend'],
+        ],
+        content: 'nip44-encrypted-private-members',
+        createdAt: 1000,
+      );
+
+      test('rewrites the title and description over the source event and '
+          'caches the result', () async {
+        final client = clientHolding(sharedList(description: 'Old words'));
+        final repository = buildRepository(nostrClient: client);
+
+        final result = await repository.updateListInfo(
+          ownerPubkey: _ownerPubkey,
+          listId: 'shared-list',
+          name: '  Renamed  ',
+          description: ' New words ',
+        );
+
+        expect(result.status, PeopleListPublishStatus.submitted);
+        final published =
+            verify(
+                  () => client.publishEventAwaitOk(captureAny()),
+                ).captured.single
+                as Event;
+        expect(published.tags, const [
+          ['d', 'shared-list'],
+          ['title', 'Renamed'],
+          ['description', 'New words'],
+          ['alt', 'Written by another client'],
+          ['p', _memberA, 'wss://relay.example', 'friend'],
+        ]);
+        expect(published.content, 'nip44-encrypted-private-members');
+
+        final stored = await repository.readLists(ownerPubkey: _ownerPubkey);
+        expect(stored.single.name, 'Renamed');
+        expect(stored.single.description, 'New words');
+        expect(stored.single.pubkeys, const [_memberA]);
+      });
+
+      test('drops the description when given a blank one', () async {
+        final client = clientHolding(sharedList(description: 'Old words'));
+        final repository = buildRepository(nostrClient: client);
+
+        final result = await repository.updateListInfo(
+          ownerPubkey: _ownerPubkey,
+          listId: 'shared-list',
+          name: 'Shared',
+          description: '   ',
+        );
+
+        expect(result.status, PeopleListPublishStatus.submitted);
+        final published =
+            verify(
+                  () => client.publishEventAwaitOk(captureAny()),
+                ).captured.single
+                as Event;
+        expect(
+          published.tags.any((tag) => tag.first == 'description'),
+          isFalse,
+        );
+        final stored = await repository.readLists(ownerPubkey: _ownerPubkey);
+        expect(stored.single.description, isNull);
+      });
+
+      test('returns noop, publishing nothing, when nothing changes', () async {
+        final client = clientHolding(sharedList(description: 'Old words'));
+        final repository = buildRepository(nostrClient: client);
+
+        final result = await repository.updateListInfo(
+          ownerPubkey: _ownerPubkey,
+          listId: 'shared-list',
+          name: 'Shared ',
+          description: ' Old words',
+        );
+
+        expect(result.status, PeopleListPublishStatus.noop);
+        verifyNever(() => client.publishEventAwaitOk(any()));
+      });
+
+      test('returns failed for a list the owner does not have', () async {
+        final client = clientHolding(sharedList());
+        final repository = buildRepository(nostrClient: client);
+
+        final result = await repository.updateListInfo(
+          ownerPubkey: _ownerPubkey,
+          listId: 'no-such-list',
+          name: 'Renamed',
+        );
+
+        expect(result.status, PeopleListPublishStatus.failed);
+        verifyNever(() => client.publishEventAwaitOk(any()));
+      });
+
+      test('returns failed when the relay refuses the replacement', () async {
+        final client = clientHolding(sharedList());
+        when(
+          () => client.publishEventAwaitOk(any()),
+        ).thenAnswer(
+          (invocation) async => PublishOutcome(
+            eventId: (invocation.positionalArguments.single as Event).id,
+            acceptedBy: const [],
+            rejectedBy: const {'wss://relay.example': 'rejected'},
+            noResponseFrom: const [],
+          ),
+        );
+        final repository = buildRepository(nostrClient: client);
+
+        final result = await repository.updateListInfo(
+          ownerPubkey: _ownerPubkey,
+          listId: 'shared-list',
+          name: 'Renamed',
+        );
+
+        expect(result.status, PeopleListPublishStatus.failed);
+        final stored = await repository.readLists(ownerPubkey: _ownerPubkey);
+        expect(stored.single.name, 'Shared');
+      });
+
+      test(
+        'refuses an info edit when the cached list has no complete source',
+        () async {
+          final remote = sharedList();
+          final cache = LocalPeopleListsCache(openBox: makeOpener());
+          await cache.putList(
+            ownerPubkey: _ownerPubkey,
+            list: Nip51PeopleListCodec.decode(remote)!,
+            receivedAt: DateTime.utc(2026),
+          );
+          final client = _MockNostrClient();
+          final repository = buildRepository(nostrClient: client, cache: cache);
+
+          final result = await repository.updateListInfo(
+            ownerPubkey: _ownerPubkey,
+            listId: 'shared-list',
+            name: 'Renamed',
+          );
+
+          expect(result.status, PeopleListPublishStatus.failed);
+          verifyNever(() => client.publishEventAwaitOk(any()));
+          expect(
+            (await repository.readLists(ownerPubkey: _ownerPubkey)).single.name,
+            'Shared',
+          );
+        },
+      );
+
+      test('a thrown read releases the next queued write', () async {
+        final remote = sharedList();
+        final client = clientHolding(remote);
+        final read =
+            Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+        var reads = 0;
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: true,
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((_) {
+          reads++;
+          if (reads == 1) return read.future;
+          return Future.value((
+            events: [remote],
+            timedOut: false,
+            noRelays: false,
+          ));
+        });
+        final repository = buildRepository(nostrClient: client);
+        final add = repository.addPubkey(
+          ownerPubkey: _ownerPubkey,
+          listId: 'shared-list',
+          pubkey: _memberB,
+        );
+        final addFails = expectLater(
+          add,
+          completion(
+            isA<PeopleListPublishResult>()
+                .having(
+                  (result) => result.status,
+                  'status',
+                  PeopleListPublishStatus.failed,
+                )
+                .having((result) => result.error, 'error', isA<StateError>()),
+          ),
+        );
+        final rename = repository.updateListInfo(
+          ownerPubkey: _ownerPubkey,
+          listId: 'shared-list',
+          name: 'Renamed',
+        );
+        await pumpEventQueue();
+        expect(reads, 1);
+
+        read.completeError(StateError('read failed'));
+        await addFails;
+        expect((await rename).status, PeopleListPublishStatus.submitted);
+        expect(reads, 2);
+        final published =
+            verify(
+                  () => client.publishEventAwaitOk(captureAny()),
+                ).captured.single
+                as Event;
+        expect(published.tags, contains(equals(const ['title', 'Renamed'])));
+      });
+
+      test('waits for an add still publishing, so the rename carries the '
+          'member', () async {
+        // Without the shared owner write queue the rename read the row before
+        // the add had landed, and its event reached the relay without the
+        // member while the cache kept the member and the old name.
+        final client = clientHolding(sharedList());
+        final addPublished = Completer<PublishOutcome>();
+        var publishes = 0;
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((invocation) {
+          final event = invocation.positionalArguments.first as Event;
+          publishes++;
+          if (publishes == 1) return addPublished.future;
+          return Future.value(_accepted(event: event));
+        });
+        final repository = buildRepository(nostrClient: client);
+
+        final add = repository.addPubkey(
+          ownerPubkey: _ownerPubkey,
+          listId: 'shared-list',
+          pubkey: _memberB,
+        );
+        // The add reads the relay and the cache before it publishes.
+        for (var turns = 0; publishes == 0 && turns < 50; turns++) {
+          await pumpEventQueue();
+        }
+        expect(publishes, 1, reason: 'the add is on the wire');
+        final rename = repository.updateListInfo(
+          ownerPubkey: _ownerPubkey,
+          listId: 'shared-list',
+          name: 'Renamed',
+        );
+        await pumpEventQueue(times: 200);
+        expect(publishes, 1, reason: 'the rename waits for the add');
+
+        final addEvent =
+            verify(
+                  () => client.publishEventAwaitOk(captureAny()),
+                ).captured.single
+                as Event;
+        addPublished.complete(_accepted(event: addEvent));
+        expect((await add).status, PeopleListPublishStatus.submitted);
+        expect((await rename).status, PeopleListPublishStatus.submitted);
+
+        final renameEvent =
+            verify(
+                  () => client.publishEventAwaitOk(captureAny()),
+                ).captured.single
+                as Event;
+        expect(
+          renameEvent.tags,
+          containsAll(const <List<String>>[
+            ['title', 'Renamed'],
+            ['p', _memberB],
+          ]),
+        );
+        final stored = await repository.readLists(ownerPubkey: _ownerPubkey);
+        expect(stored.single.name, 'Renamed');
+        expect(stored.single.pubkeys, containsAll(const [_memberA, _memberB]));
+      });
+
+      test('metadata waits for another list of the same owner to finish '
+          'publishing', () async {
+        final remote = sharedList();
+        final other = signedEvent(
+          kind: _peopleListKind,
+          tags: const [
+            ['d', 'other-list'],
+            ['title', 'Other'],
+            ['p', _memberC, 'wss://relay.example', 'friend'],
+          ],
+          content: 'other-private-members',
+          createdAt: 1000,
+        );
+        final client = clientHolding(remote);
+        var reads = 0;
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            requireAllRelaysSettled: true,
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((_) async {
+          reads++;
+          return (events: [remote, other], timedOut: false, noRelays: false);
+        });
+        final accepted = Completer<PublishOutcome>();
+        var publishes = 0;
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((call) {
+          publishes++;
+          if (publishes == 1) return accepted.future;
+          return Future.value(
+            _accepted(event: call.positionalArguments.single as Event),
+          );
+        });
+        final repository = buildRepository(nostrClient: client);
+        final add = repository.addPubkey(
+          ownerPubkey: _ownerPubkey,
+          listId: 'shared-list',
+          pubkey: _memberB,
+        );
+        for (var turns = 0; publishes == 0 && turns < 50; turns++) {
+          await pumpEventQueue();
+        }
+        expect(publishes, 1, reason: 'the member edit is awaiting relay ACK');
+        final rename = repository.updateListInfo(
+          ownerPubkey: _ownerPubkey,
+          listId: 'other-list',
+          name: 'Renamed other',
+        );
+        await pumpEventQueue(times: 200);
+        expect(publishes, 1, reason: 'the owner queue includes both lists');
+        expect(reads, 1, reason: 'the second owner-wide read must wait too');
+
+        final addEvent =
+            verify(
+                  () => client.publishEventAwaitOk(captureAny()),
+                ).captured.single
+                as Event;
+        accepted.complete(_accepted(event: addEvent));
+        expect((await add).status, PeopleListPublishStatus.submitted);
+        expect((await rename).status, PeopleListPublishStatus.submitted);
+        expect(reads, 2);
+        final renamed =
+            verify(
+                  () => client.publishEventAwaitOk(captureAny()),
+                ).captured.single
+                as Event;
+        expect(
+          renamed.tags,
+          contains(equals(const ['title', 'Renamed other'])),
+        );
+        expect(
+          renamed.tags,
+          contains(
+            equals(const ['p', _memberC, 'wss://relay.example', 'friend']),
+          ),
+        );
+        expect(renamed.content, 'other-private-members');
+        final stored = await repository.readLists(ownerPubkey: _ownerPubkey);
+        expect(
+          stored.singleWhere((list) => list.id == 'shared-list').pubkeys,
+          containsAll(const [_memberA, _memberB]),
+        );
+        expect(
+          stored.singleWhere((list) => list.id == 'other-list').name,
+          'Renamed other',
+        );
+      });
+    });
+
     group('removePubkey', () {
       test(
         'returns noop and does not publish when pubkey is not in list',
@@ -792,6 +1610,26 @@ void main() {
         expect(result.status, equals(PeopleListPublishStatus.failed));
         verifyNever(() => client.publishEventAwaitOk(any()));
       });
+
+      test(
+        'updateListInfo does not publish when the reconcile is inconclusive',
+        () async {
+          final client = publishingClient();
+          final repository = buildRepository(nostrClient: client);
+          final listId = await seedList(repository);
+          clearInteractions(client);
+          stubReconcile(client, timedOut: true);
+
+          final result = await repository.updateListInfo(
+            ownerPubkey: _ownerPubkey,
+            listId: listId,
+            name: 'Renamed',
+          );
+
+          expect(result.status, equals(PeopleListPublishStatus.failed));
+          verifyNever(() => client.publishEventAwaitOk(any()));
+        },
+      );
 
       test(
         'removePubkey does not publish when the reconcile is inconclusive',
@@ -1102,6 +1940,38 @@ void main() {
     });
 
     group('syncOwner', () {
+      test(
+        'does not bind another author as the owner replacement source',
+        () async {
+          final client = _MockNostrClient();
+          final foreign = Event(
+            _memberA,
+            _peopleListKind,
+            const [
+              ['d', 'foreign'],
+              ['title', 'Other owner'],
+              ['p', _memberB],
+            ],
+            '',
+            createdAt: 2000,
+          );
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: true,
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer(
+            (_) async => (events: [foreign], timedOut: false, noRelays: false),
+          );
+          final repository = buildRepository(nostrClient: client);
+          await repository.syncOwner(ownerPubkey: _ownerPubkey);
+          expect(
+            await repository.readLists(ownerPubkey: _ownerPubkey),
+            isEmpty,
+          );
+        },
+      );
       for (final unavailable in [(true, false), (false, true)]) {
         test(
           'owner read refuses inconclusive empty cache $unavailable',
@@ -1373,42 +2243,589 @@ void main() {
 
     for (final newestFirst in [false, true]) {
       for (final empty in [false, true]) {
-        test(
-          'review regression hides outdated search revision '
-          'empty:$empty newestFirst:$newestFirst',
-          () async {
-            final client = _MockNostrClient();
-            final older = signedEvent(
-              kind: 30000,
-              tags: const [
-                ['d', 'crew'],
-                ['title', 'Skaters'],
-                ['p', _memberA],
-              ],
-              createdAt: 100,
-            );
-            final newer = signedEvent(
-              kind: 30000,
-              tags: [
-                ['d', 'crew'],
-                ['title', if (empty) 'Skaters' else 'Surfers'],
-                if (!empty) ['p', _memberA],
-              ],
-              createdAt: 200,
-            );
-            when(
-              () => client.queryEvents(any(), timeout: any(named: 'timeout')),
-            ).thenAnswer(
-              (_) async => newestFirst ? [newer, older] : [older, newer],
-            );
-            final repository = buildRepository(nostrClient: client);
-            expect(
-              await repository.searchPublicLists('skate').toList(),
-              isEmpty,
-            );
-          },
+        test('review regression hides outdated search revision '
+            'empty:$empty newestFirst:$newestFirst', () async {
+          final client = _MockNostrClient();
+          final older = signedEvent(
+            kind: 30000,
+            tags: const [
+              ['d', 'crew'],
+              ['title', 'Skaters'],
+              ['p', _memberA],
+            ],
+            createdAt: 100,
+          );
+          final newer = signedEvent(
+            kind: 30000,
+            tags: [
+              ['d', 'crew'],
+              ['title', if (empty) 'Skaters' else 'Surfers'],
+              if (!empty) ['p', _memberA],
+            ],
+            createdAt: 200,
+          );
+          when(
+            () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+          ).thenAnswer(
+            (_) async => newestFirst ? [newer, older] : [older, newer],
+          );
+          final repository = buildRepository(nostrClient: client);
+          expect(await repository.searchPublicLists('skate').toList(), isEmpty);
+        });
+      }
+    }
+
+    group('configured public exclusions', () {
+      const tag = 'synthetic-machine-set';
+      late _MockNostrClient client;
+      setUp(() {
+        client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(_ownerPubkey);
+        final event = signedEvent(
+          kind: _peopleListKind,
+          tags: [
+            ['d', tag],
+            ['title', 'Synthetic crew'],
+            ['p', _memberA],
+          ],
+        );
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((_) async => [event]);
+      });
+
+      test(
+        'configured d-tag is omitted from search and discovery only',
+        () async {
+          final repository = buildRepository(
+            nostrClient: client,
+            additionalExcludedPublicDTags: {tag},
+          );
+          expect(await repository.discoverPublicLists(), isEmpty);
+          expect(await repository.searchPublicLists('crew').toList(), isEmpty);
+          final direct = await repository.fetchPublicList(
+            ownerPubkey: _ownerPubkey,
+            listId: tag,
+          );
+          expect(direct?.id, tag);
+          expect(direct?.pubkeys, [_memberA]);
+          await repository.syncOwner(ownerPubkey: _ownerPubkey);
+          final owned = await repository.readLists(ownerPubkey: _ownerPubkey);
+          expect(owned.single.id, tag);
+          expect(owned.single.isEditable, isTrue);
+        },
+      );
+
+      test(
+        'unconfigured d-tag remains ordinary owner-authored curation',
+        () async {
+          final repository = buildRepository(nostrClient: client);
+          expect((await repository.discoverPublicLists()).single.list.id, tag);
+          expect(
+            (await repository.searchPublicLists('crew').first).single.list.id,
+            tag,
+          );
+        },
+      );
+
+      test(
+        'copies exclusions so later caller mutations cannot change policy',
+        () async {
+          final exclusions = <String>{tag};
+          final repository = buildRepository(
+            nostrClient: client,
+            additionalExcludedPublicDTags: exclusions,
+          );
+          exclusions.clear();
+          expect(await repository.discoverPublicLists(), isEmpty);
+          expect(await repository.searchPublicLists('crew').toList(), isEmpty);
+        },
+      );
+    });
+
+    group('discoverPublicLists', () {
+      const secondOwner =
+          '4444444444444444444444444444444444444444444444444444444444444444';
+
+      Event peopleEvent({
+        required String pubkey,
+        required String dTag,
+        required String title,
+        required List<String> pubkeys,
+        int? createdAt,
+      }) {
+        return Event(
+          pubkey,
+          _peopleListKind,
+          [
+            ['d', dTag],
+            ['title', title],
+            for (final pk in pubkeys) ['p', pk],
+          ],
+          '',
+          createdAt: createdAt,
         );
       }
+
+      const thirdOwner =
+          '5555555555555555555555555555555555555555555555555555555555555555';
+
+      test('reads the discovery relays alone, without the cache', () async {
+        final client = _MockNostrClient();
+        final repository = buildRepository(
+          nostrClient: client,
+          discoveryRelayUrls: const ['wss://relay.example'],
+        );
+
+        await repository.discoverPublicLists();
+
+        verify(
+          () => client.queryEvents(
+            any(),
+            tempRelays: ['wss://relay.example'],
+            relayTypes: const [RelayType.temp],
+            useCache: false,
+            timeout: any(named: 'timeout'),
+          ),
+        ).called(1);
+      });
+
+      test('reads the whole pool when no discovery relay is set', () async {
+        final client = _MockNostrClient();
+        final repository = buildRepository(nostrClient: client);
+
+        await repository.discoverPublicLists();
+
+        // No tempRelays, no relayTypes, the cache on: the defaults, which
+        // the mock only matches when the call passed exactly those.
+        verify(
+          () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).called(1);
+      });
+
+      test('keeps the lists whose author has posted on Divine', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Crew',
+              pubkeys: const [_memberA],
+            ),
+            peopleEvent(
+              pubkey: secondOwner,
+              dTag: 'friends',
+              title: 'Friends',
+              pubkeys: const [_memberA],
+            ),
+            peopleEvent(
+              pubkey: thirdOwner,
+              dTag: 'strangers',
+              title: 'Strangers',
+              pubkeys: const [_memberA],
+            ),
+          ],
+        );
+        final api = _MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(true);
+        when(() => api.getBulkProfiles(any())).thenAnswer(
+          (_) async => BulkProfilesResponse(
+            profiles: {
+              _ownerPubkey: divineProfile(_ownerPubkey, videos: 3),
+              // Known to Funnelcake, never posted here.
+              secondOwner: divineProfile(secondOwner, videos: 0),
+              // The third owner is unknown to Funnelcake: absent.
+            },
+          ),
+        );
+        final repository = buildRepository(
+          nostrClient: client,
+          funnelcakeApiClient: api,
+        );
+
+        final results = await repository.discoverPublicLists();
+
+        expect(results.map((result) => result.list.id), equals(['crew']));
+        verify(
+          () => api.getBulkProfiles(
+            any(that: unorderedEquals([_ownerPubkey, secondOwner, thirdOwner])),
+          ),
+        ).called(1);
+      });
+
+      test('asks about the authors a hundred at a time', () async {
+        final client = _MockNostrClient();
+        final owners = [
+          for (var i = 1; i <= 150; i++) i.toRadixString(16).padLeft(64, '0'),
+        ];
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            for (final owner in owners)
+              peopleEvent(
+                pubkey: owner,
+                dTag: 'crew',
+                title: 'Crew',
+                pubkeys: const [_memberA],
+              ),
+          ],
+        );
+        final api = _MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(true);
+        when(() => api.getBulkProfiles(any())).thenAnswer((invocation) async {
+          final asked = invocation.positionalArguments.first as List<String>;
+          return BulkProfilesResponse(
+            profiles: {
+              for (final pubkey in asked)
+                pubkey: divineProfile(pubkey, videos: 1),
+            },
+          );
+        });
+        final repository = buildRepository(
+          nostrClient: client,
+          funnelcakeApiClient: api,
+        );
+
+        final results = await repository.discoverPublicLists();
+
+        expect(results, hasLength(150));
+        final pages = verify(
+          () => api.getBulkProfiles(captureAny()),
+        ).captured.cast<List<String>>();
+        expect(pages.map((page) => page.length), equals([100, 50]));
+      });
+
+      test('keeps every list when the author check fails', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Crew',
+              pubkeys: const [_memberA],
+            ),
+            peopleEvent(
+              pubkey: secondOwner,
+              dTag: 'friends',
+              title: 'Friends',
+              pubkeys: const [_memberA],
+            ),
+          ],
+        );
+        final api = _MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(true);
+        when(() => api.getBulkProfiles(any())).thenThrow(
+          const FunnelcakeApiException(
+            message: 'Server error',
+            statusCode: 500,
+          ),
+        );
+        final repository = buildRepository(
+          nostrClient: client,
+          funnelcakeApiClient: api,
+        );
+
+        final results = await repository.discoverPublicLists();
+
+        expect(
+          results.map((result) => result.list.id),
+          unorderedEquals(['crew', 'friends']),
+        );
+      });
+
+      test('skips the author check without Funnelcake', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Crew',
+              pubkeys: const [_memberA],
+            ),
+          ],
+        );
+        final api = _MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(false);
+        final repository = buildRepository(
+          nostrClient: client,
+          funnelcakeApiClient: api,
+        );
+
+        final results = await repository.discoverPublicLists();
+
+        expect(results.map((result) => result.list.id), equals(['crew']));
+        verifyNever(() => api.getBulkProfiles(any()));
+      });
+
+      test('reads with the shared public-lists budget', () async {
+        final client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(_ownerPubkey);
+        final repository = buildRepository(nostrClient: client);
+
+        await repository.discoverPublicLists();
+
+        verify(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: kPublicPeopleListsRelayReadTimeout,
+          ),
+        ).called(1);
+      });
+
+      test("skips other clients' machinery sets", () async {
+        // A titled mute set is still a mute set: nothing to browse.
+        final client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(_ownerPubkey);
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'mute',
+              title: 'Mute',
+              pubkeys: const [_memberA],
+            ),
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'dm-contacts',
+              title: 'dm-contacts',
+              pubkeys: const [_memberA],
+            ),
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Crew',
+              pubkeys: const [_memberA],
+            ),
+          ],
+        );
+
+        final repository = buildRepository(nostrClient: client);
+
+        final results = await repository.discoverPublicLists();
+
+        expect(results.map((r) => r.list.id), equals(['crew']));
+      });
+
+      test('returns lists newest first without a text filter', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'older',
+              title: 'Older crew',
+              pubkeys: [secondOwner],
+              createdAt: 1000,
+            ),
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'newer',
+              title: 'Newer crew',
+              pubkeys: [secondOwner],
+              createdAt: 2000,
+            ),
+          ],
+        );
+
+        final repository = buildRepository(nostrClient: client);
+
+        final results = await repository.discoverPublicLists();
+
+        expect(results, hasLength(2));
+        expect(results.first.list.name, equals('Newer crew'));
+        expect(results.last.list.name, equals('Older crew'));
+      });
+
+      test('drops lists authored by excludeAuthor', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'mine',
+              title: 'My own list',
+              pubkeys: [secondOwner],
+            ),
+            peopleEvent(
+              pubkey: secondOwner,
+              dTag: 'theirs',
+              title: 'Someone else',
+              pubkeys: [_ownerPubkey],
+            ),
+          ],
+        );
+
+        final repository = buildRepository(nostrClient: client);
+
+        final results = await repository.discoverPublicLists(
+          excludeAuthor: _ownerPubkey,
+        );
+
+        expect(results, hasLength(1));
+        expect(results.single.ownerPubkey, equals(secondOwner));
+      });
+
+      test('keeps the newest event per addressable coordinate', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Stale name',
+              pubkeys: [secondOwner],
+              createdAt: 1000,
+            ),
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Fresh name',
+              pubkeys: [secondOwner],
+              createdAt: 2000,
+            ),
+          ],
+        );
+
+        final repository = buildRepository(nostrClient: client);
+
+        final results = await repository.discoverPublicLists();
+
+        expect(results, hasLength(1));
+        expect(results.single.list.name, equals('Fresh name'));
+      });
+
+      test('returns empty when the relay has nothing', () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((_) async => const []);
+
+        final repository = buildRepository(nostrClient: client);
+
+        expect(await repository.discoverPublicLists(), isEmpty);
+      });
+    });
+
+    for (final newestFirst in [false, true]) {
+      test('discovery keeps an empty latest revision hidden '
+          '(newestFirst: $newestFirst)', () async {
+        final client = _MockNostrClient();
+        final older = signedEvent(
+          kind: _peopleListKind,
+          tags: const [
+            ['d', 'crew'],
+            ['title', 'Crew'],
+            ['p', _memberA],
+          ],
+          createdAt: 100,
+        );
+        final newer = signedEvent(
+          kind: _peopleListKind,
+          tags: const [
+            ['d', 'crew'],
+            ['title', 'Crew'],
+          ],
+          createdAt: 200,
+        );
+        when(
+          () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer(
+          (_) async => newestFirst ? [newer, older] : [older, newer],
+        );
+        final repository = buildRepository(nostrClient: client);
+        expect(await repository.discoverPublicLists(), isEmpty);
+      });
+
+      test('search does not revive a matching old name after rename '
+          '(newestFirst: $newestFirst)', () async {
+        final client = _MockNostrClient();
+        final older = signedEvent(
+          kind: _peopleListKind,
+          tags: const [
+            ['d', 'crew'],
+            ['title', 'Skaters'],
+            ['p', _memberA],
+          ],
+          createdAt: 100,
+        );
+        final newer = signedEvent(
+          kind: _peopleListKind,
+          tags: const [
+            ['d', 'crew'],
+            ['title', 'Surfers'],
+            ['p', _memberA],
+          ],
+          createdAt: 200,
+        );
+        when(
+          () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).thenAnswer(
+          (_) async => newestFirst ? [newer, older] : [older, newer],
+        );
+        final repository = buildRepository(nostrClient: client);
+        expect(await repository.searchPublicLists('skate').toList(), isEmpty);
+        final matches = await repository.searchPublicLists('surf').toList();
+        expect(matches.single.single.list.name, 'Surfers');
+      });
     }
 
     group('fetchPublicList', () {
@@ -1502,6 +2919,43 @@ void main() {
           },
         );
       }
+
+      test('reads every relay and skips the author check', () async {
+        // A list named by coordinate cannot be noise: a deep link or a shared
+        // link may name one only a public relay holds.
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(pubkey: _ownerPubkey, dTag: 'crew', title: 'Crew'),
+          ],
+        );
+        final api = _MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(true);
+        final repository = buildRepository(
+          nostrClient: client,
+          funnelcakeApiClient: api,
+          discoveryRelayUrls: const ['wss://relay.example'],
+        );
+
+        final list = await repository.fetchPublicList(
+          ownerPubkey: _ownerPubkey,
+          listId: 'crew',
+        );
+
+        expect(list?.name, equals('Crew'));
+        // No tempRelays, no relayTypes, the cache on: the defaults, which
+        // the mock only matches when the call passed exactly those.
+        verify(
+          () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+        ).called(1);
+        verifyNever(() => api.getBulkProfiles(any()));
+      });
 
       test('queries by author and d tag and returns the match', () async {
         final client = _MockNostrClient();
@@ -1640,13 +3094,120 @@ void main() {
         );
       }
 
+      test('reads the discovery relays alone', () async {
+        final client = _MockNostrClient();
+        final repository = buildRepository(
+          nostrClient: client,
+          discoveryRelayUrls: const ['wss://relay.example'],
+        );
+
+        await repository.searchPublicLists('crew').toList();
+
+        verify(
+          () => client.queryEvents(
+            any(),
+            tempRelays: ['wss://relay.example'],
+            relayTypes: const [RelayType.temp],
+            useCache: false,
+            timeout: any(named: 'timeout'),
+          ),
+        ).called(1);
+      });
+
+      test("keeps the viewer's own list whatever Funnelcake says", () async {
+        final client = _MockNostrClient();
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Crew',
+              pubkeys: const [_memberA],
+            ),
+            peopleEvent(
+              pubkey: secondOwner,
+              dTag: 'crew',
+              title: 'Crew too',
+              pubkeys: const [_memberA],
+            ),
+          ],
+        );
+        final api = _MockFunnelcakeApiClient();
+        when(() => api.isAvailable).thenReturn(true);
+        // Neither owner has posted; only the viewer's own list is kept, and
+        // the viewer is not even asked about.
+        when(
+          () => api.getBulkProfiles(any()),
+        ).thenAnswer((_) async => const BulkProfilesResponse(profiles: {}));
+        final repository = buildRepository(
+          nostrClient: client,
+          funnelcakeApiClient: api,
+        );
+
+        final results = await repository
+            .searchPublicLists('crew', viewerPubkey: _ownerPubkey)
+            .toList();
+
+        expect(
+          results.single.map((r) => r.ownerPubkey),
+          equals([_ownerPubkey]),
+        );
+        verify(() => api.getBulkProfiles([secondOwner])).called(1);
+      });
+
+      test("skips other clients' machinery sets", () async {
+        final client = _MockNostrClient();
+        when(() => client.publicKey).thenReturn(_ownerPubkey);
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'dm-archive',
+              title: 'Archive crew',
+              pubkeys: const [_memberA],
+            ),
+            peopleEvent(
+              pubkey: secondOwner,
+              dTag: 'synthetic-machine-set',
+              title: 'Health crew',
+              pubkeys: const [_memberA],
+            ),
+          ],
+        );
+
+        final repository = buildRepository(
+          nostrClient: client,
+          additionalExcludedPublicDTags: {'synthetic-machine-set'},
+        );
+
+        final emissions = await repository.searchPublicLists('crew').toList();
+
+        expect(emissions, isEmpty);
+      });
+
       test(
         'queries 500 candidates independently of the result limit',
         () async {
           final client = _MockNostrClient();
           when(() => client.publicKey).thenReturn(_ownerPubkey);
           when(
-            () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+            () => client.queryEvents(
+              any(),
+              useCache: any(named: 'useCache'),
+              timeout: any(named: 'timeout'),
+            ),
           ).thenAnswer((_) async => const []);
 
           final repository = buildRepository(nostrClient: client);
@@ -1657,6 +3218,7 @@ void main() {
             () => client.queryEvents(
               captureAny(),
               useCache: any(named: 'useCache'),
+              timeout: any(named: 'timeout'),
             ),
           ).captured.cast<List<Filter>>();
           expect(capturedFilters, hasLength(1));
@@ -1666,26 +3228,75 @@ void main() {
         },
       );
 
-      test('emits empty stream for a blank query', () async {
+      test('keeps the candidate window through discovery filtering and '
+          'cuts final search results deterministically', () async {
         final client = _MockNostrClient();
+        final candidates = <Event>[
+          for (var index = 0; index < 50; index++)
+            peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'unrelated-$index',
+              title: 'Not the requested group',
+              pubkeys: const [_memberA],
+              createdAt: 1710000200 - index,
+            ),
+          peopleEvent(
+            pubkey: _ownerPubkey,
+            dTag: 'b-matching',
+            title: 'Crew B',
+            pubkeys: const [_memberA],
+            createdAt: 1710000000,
+          ),
+          peopleEvent(
+            pubkey: _ownerPubkey,
+            dTag: 'a-matching',
+            title: 'Crew A',
+            pubkeys: const [_memberB],
+            createdAt: 1710000000,
+          ),
+        ];
+        when(
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((invocation) async {
+          final filters = invocation.positionalArguments.single as List<Filter>;
+          return candidates.take(filters.single.limit!).toList();
+        });
         final repository = buildRepository(nostrClient: client);
 
-        final emissions = await repository.searchPublicLists('').toList();
+        final emissions = await repository
+            .searchPublicLists('crew', limit: 1)
+            .toList();
 
-        expect(emissions, isEmpty);
-        verifyNever(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
-        );
+        expect(emissions, hasLength(1));
+        expect(emissions.single, hasLength(1));
+        expect(emissions.single.single.list.id, 'a-matching');
+        expect(emissions.single.single.ownerPubkey, _ownerPubkey);
       });
 
-      test('emits empty stream for a whitespace-only query', () async {
-        final client = _MockNostrClient();
-        final repository = buildRepository(nostrClient: client);
+      for (final (query, description) in [
+        ('', 'blank'),
+        ('   ', 'whitespace-only'),
+      ]) {
+        test('emits empty stream for a $description query', () async {
+          final client = _MockNostrClient();
+          final repository = buildRepository(nostrClient: client);
 
-        final emissions = await repository.searchPublicLists('   ').toList();
+          final emissions = await repository.searchPublicLists(query).toList();
 
-        expect(emissions, isEmpty);
-      });
+          expect(emissions, isEmpty);
+          verifyNever(
+            () => client.queryEvents(
+              any(),
+              useCache: any(named: 'useCache'),
+              timeout: any(named: 'timeout'),
+            ),
+          );
+        });
+      }
 
       test('emits a single match with the owner pubkey preserved', () async {
         final client = _MockNostrClient();
@@ -1698,7 +3309,11 @@ void main() {
           pubkeys: const [_memberA, _memberB],
         );
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer((_) async => [event]);
 
         final repository = buildRepository(nostrClient: client);
@@ -1737,7 +3352,11 @@ void main() {
           pubkeys: const [_memberA],
         );
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer((_) async => [empty, full]);
 
         final repository = buildRepository(nostrClient: client);
@@ -1760,7 +3379,11 @@ void main() {
           pubkeys: const [_memberA],
         );
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer((_) async => [block]);
 
         final repository = buildRepository(nostrClient: client);
@@ -1787,7 +3410,11 @@ void main() {
           pubkeys: const [_memberB],
         );
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer((_) async => [blocked, allowed]);
 
         final repository = buildRepository(
@@ -1828,7 +3455,11 @@ void main() {
             pubkeys: const [_memberA],
           );
           when(
-            () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+            () => client.queryEvents(
+              any(),
+              useCache: any(named: 'useCache'),
+              timeout: any(named: 'timeout'),
+            ),
           ).thenAnswer((_) async => [byName, byDescription, nonMatching]);
 
           final repository = buildRepository(nostrClient: client);
@@ -1861,7 +3492,11 @@ void main() {
           pubkeys: const [_memberB],
         );
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer((_) async => [fromOwner, fromSecondOwner]);
 
         final repository = buildRepository(nostrClient: client);
@@ -1885,41 +3520,61 @@ void main() {
         );
       });
 
-      test('keeps the newest event when duplicates share an addressable '
-          'coordinate', () async {
-        final client = _MockNostrClient();
-        when(() => client.publicKey).thenReturn(_ownerPubkey);
+      // Relay/cache merge order is not guaranteed (queryEvents builds
+      // an EventMemBox with sortAfterAdd: false), and the cache holding
+      // the newer version while a lagging relay serves the older one
+      // produces newest-first order. Fed oldest-first only, the dedup
+      // guard can be deleted outright and the test stays green.
+      for (final newestFirst in [false, true]) {
+        test(
+          newestFirst
+              ? 'keeps the newest event when the newer one arrives first'
+              : 'keeps the newest event when duplicates share an addressable '
+                    'coordinate',
+          () async {
+            final client = _MockNostrClient();
+            when(() => client.publicKey).thenReturn(_ownerPubkey);
 
-        final older = peopleEvent(
-          pubkey: _ownerPubkey,
-          dTag: 'crew',
-          title: 'Crew',
-          pubkeys: const [_memberA],
-          createdAt: 1710000000,
+            final older = peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Crew',
+              pubkeys: const [_memberA],
+              createdAt: 1710000000,
+            );
+            final newer = peopleEvent(
+              pubkey: _ownerPubkey,
+              dTag: 'crew',
+              title: 'Crew Updated',
+              pubkeys: const [_memberA, _memberB],
+              createdAt: 1710000500,
+            );
+            when(
+              () => client.queryEvents(
+                any(),
+                useCache: any(named: 'useCache'),
+                timeout: any(named: 'timeout'),
+              ),
+            ).thenAnswer(
+              (_) async => newestFirst ? [newer, older] : [older, newer],
+            );
+
+            final repository = buildRepository(nostrClient: client);
+
+            final emissions = await repository
+                .searchPublicLists('crew')
+                .toList();
+
+            expect(emissions, hasLength(1));
+            expect(emissions.single, hasLength(1));
+            expect(emissions.single.single.list.name, equals('Crew Updated'));
+            expect(
+              emissions.single.single.list.pubkeys,
+              equals(const [_memberA, _memberB]),
+            );
+          },
         );
-        final newer = peopleEvent(
-          pubkey: _ownerPubkey,
-          dTag: 'crew',
-          title: 'Crew Updated',
-          pubkeys: const [_memberA, _memberB],
-          createdAt: 1710000500,
-        );
-        when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
-        ).thenAnswer((_) async => [older, newer]);
-
-        final repository = buildRepository(nostrClient: client);
-
-        final emissions = await repository.searchPublicLists('crew').toList();
-
-        expect(emissions, hasLength(1));
-        expect(emissions.single, hasLength(1));
-        expect(emissions.single.single.list.name, equals('Crew Updated'));
-        expect(
-          emissions.single.single.list.pubkeys,
-          equals(const [_memberA, _memberB]),
-        );
-      });
+      }
 
       test('uses the lowest event id when duplicate revisions tie', () async {
         final client = _MockNostrClient();
@@ -1948,7 +3603,11 @@ void main() {
                   '00000000000000000000000000000000'
                   '00000000000000000000000000000000';
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer((_) async => [lowerId, higherId]);
 
         final repository = buildRepository(nostrClient: client);
@@ -1971,7 +3630,11 @@ void main() {
           pubkeys: const [_memberA],
         );
         when(
-          () => client.queryEvents(any(), useCache: any(named: 'useCache')),
+          () => client.queryEvents(
+            any(),
+            useCache: any(named: 'useCache'),
+            timeout: any(named: 'timeout'),
+          ),
         ).thenAnswer((_) async => [event]);
 
         final repository = buildRepository(nostrClient: client);
@@ -2022,6 +3685,694 @@ void main() {
         expect(emissions.first, isEmpty);
         expect(emissions.last, hasLength(1));
         expect(emissions.last.single.pubkeys, equals(const [_memberA]));
+      });
+    });
+    group('followed lists', () {
+      const viewer =
+          '6666666666666666666666666666666666666666666666666666666666666666';
+      const otherOwner =
+          '7777777777777777777777777777777777777777777777777777777777777777';
+
+      UserList listOf(
+        String id, {
+        String name = 'Crew',
+        List<String> pubkeys = const [_memberA],
+        DateTime? updatedAt,
+        bool isEditable = true,
+      }) {
+        final stamp = updatedAt ?? DateTime.utc(2026);
+        return UserList(
+          id: id,
+          name: name,
+          pubkeys: pubkeys,
+          createdAt: stamp,
+          updatedAt: stamp,
+          isEditable: isEditable,
+        );
+      }
+
+      Event peopleEvent({
+        required String pubkey,
+        required String dTag,
+        required List<String> members,
+        required int createdAt,
+        String title = 'Crew',
+      }) {
+        return Event(
+          pubkey,
+          _peopleListKind,
+          [
+            ['d', dTag],
+            ['title', title],
+            for (final member in members) ['p', member],
+          ],
+          '',
+          createdAt: createdAt,
+        );
+      }
+
+      group('followList', () {
+        for (final withOwnedRows in [false, true]) {
+          test('keeps a read-only followed copy without publishing or changing '
+              'owned lists (owned rows: $withOwnedRows)', () async {
+            final client = _MockNostrClient();
+            final cache = LocalPeopleListsCache(openBox: makeOpener());
+            final owned = {
+              viewer: listOf('viewer-owned'),
+              _ownerPubkey: listOf('owner-owned'),
+            };
+            if (withOwnedRows) {
+              for (final entry in owned.entries) {
+                await cache.putList(
+                  ownerPubkey: entry.key,
+                  list: entry.value,
+                  receivedAt: DateTime.utc(2026),
+                );
+              }
+            }
+            final repository = buildRepository(
+              nostrClient: client,
+              cache: cache,
+            );
+
+            await repository.followList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              list: listOf('crew'),
+            );
+
+            final followed = await repository.readFollowedLists(
+              viewerPubkey: viewer,
+            );
+            expect(followed, hasLength(1));
+            expect(followed.single.ownerPubkey, equals(_ownerPubkey));
+            expect(followed.single.list.id, equals('crew'));
+            expect(followed.single.list.isEditable, isFalse);
+            expect(
+              await repository.readLists(ownerPubkey: viewer),
+              withOwnedRows ? [owned[viewer]!] : isEmpty,
+            );
+            expect(
+              await repository.readLists(ownerPubkey: _ownerPubkey),
+              withOwnedRows ? [owned[_ownerPubkey]!] : isEmpty,
+            );
+            verifyNever(() => client.publishEvent(any()));
+            verifyNever(() => client.publishEventAwaitOk(any()));
+          });
+        }
+
+        test(
+          'lists follows oldest first, whatever their coordinates',
+          () async {
+            final repository = buildRepository(nostrClient: _MockNostrClient());
+            for (final id in ['zebra', 'apple']) {
+              await repository.followList(
+                viewerPubkey: viewer,
+                ownerPubkey: _ownerPubkey,
+                list: listOf(id),
+              );
+            }
+
+            final followed = await repository.readFollowedLists(
+              viewerPubkey: viewer,
+            );
+
+            expect(followed.map((f) => f.list.id), equals(['zebra', 'apple']));
+          },
+        );
+
+        test(
+          'following again keeps its place and takes the new copy',
+          () async {
+            final repository = buildRepository(nostrClient: _MockNostrClient());
+            for (final id in ['early', 'late']) {
+              await repository.followList(
+                viewerPubkey: viewer,
+                ownerPubkey: _ownerPubkey,
+                list: listOf(id),
+              );
+            }
+
+            await repository.followList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              list: listOf('early', name: 'Renamed'),
+            );
+
+            final followed = await repository.readFollowedLists(
+              viewerPubkey: viewer,
+            );
+            expect(followed.map((f) => f.list.id), equals(['early', 'late']));
+            expect(followed.first.list.name, equals('Renamed'));
+          },
+        );
+
+        test('reports a follow that could not be recorded', () async {
+          final cache = LocalPeopleListsCache(openBox: makeOpener());
+          final repository = buildRepository(
+            nostrClient: _MockNostrClient(),
+            cache: cache,
+            followedListsStore: _FailingFollowStore(),
+          );
+
+          await expectLater(
+            repository.followList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              list: listOf('crew'),
+            ),
+            throwsA(isA<FileSystemException>()),
+          );
+
+          expect(
+            await repository.readFollowedLists(viewerPubkey: viewer),
+            isEmpty,
+          );
+          // The copy written ahead of the follow is taken back out.
+          expect(await cache.readFollowedCopies(viewerPubkey: viewer), isEmpty);
+        });
+      });
+
+      group('unfollowList', () {
+        test('removes only the named follow', () async {
+          final repository = buildRepository(nostrClient: _MockNostrClient());
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('keep'),
+          );
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('drop'),
+          );
+
+          await repository.unfollowList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            listId: 'drop',
+          );
+
+          final followed = await repository.readFollowedLists(
+            viewerPubkey: viewer,
+          );
+          expect(followed.map((f) => f.list.id), equals(['keep']));
+        });
+
+        test('holds even when the copy cannot be removed', () async {
+          final repository = buildRepository(
+            nostrClient: _MockNostrClient(),
+            cache: _CopyRemovalFailingCache(openBox: makeOpener()),
+          );
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('crew'),
+          );
+
+          await expectLater(
+            repository.unfollowList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              listId: 'crew',
+            ),
+            completes,
+          );
+
+          expect(
+            await repository.readFollowedLists(viewerPubkey: viewer),
+            isEmpty,
+          );
+        });
+      });
+
+      group('readFollowedLists', () {
+        test('leaves out a list whose owner is blocked', () async {
+          final repository = buildRepository(
+            nostrClient: _MockNostrClient(),
+            blockFilter: (pubkey) => pubkey == _blockedOwnerPubkey,
+          );
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('fine'),
+          );
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _blockedOwnerPubkey,
+            list: listOf('blocked'),
+          );
+
+          final followed = await repository.readFollowedLists(
+            viewerPubkey: viewer,
+          );
+
+          expect(followed.map((f) => f.list.id), equals(['fine']));
+        });
+      });
+
+      group('isFollowingList', () {
+        test(
+          'holds for the follow itself, whatever the copy or owner',
+          () async {
+            final cache = LocalPeopleListsCache(openBox: makeOpener());
+            final repository = buildRepository(
+              nostrClient: _MockNostrClient(),
+              cache: cache,
+              blockFilter: (owner) => owner == _ownerPubkey,
+            );
+            Future<bool> following() => repository.isFollowingList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              listId: 'crew',
+            );
+
+            expect(await following(), isFalse);
+
+            await repository.followList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              list: listOf('crew'),
+            );
+            // Blocked owner: left out of readFollowedLists, still followed.
+            expect(await following(), isTrue);
+            expect(
+              await repository.readFollowedLists(viewerPubkey: viewer),
+              isEmpty,
+            );
+
+            // A cache reset takes the copy, not the follow.
+            await cache.clearFollowedCopies(viewerPubkey: viewer);
+            expect(await following(), isTrue);
+
+            await repository.unfollowList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              listId: 'crew',
+            );
+            expect(await following(), isFalse);
+          },
+        );
+      });
+
+      group('watchFollowedLists', () {
+        test('emits on follow and unfollow, without blocked owners', () async {
+          final repository = buildRepository(
+            nostrClient: _MockNostrClient(),
+            blockFilter: (pubkey) => pubkey == _blockedOwnerPubkey,
+          );
+          final emissions = <List<String>>[];
+          final subscription = repository
+              .watchFollowedLists(viewerPubkey: viewer)
+              .listen((lists) {
+                emissions.add([for (final f in lists) f.list.id]);
+              });
+          addTearDown(subscription.cancel);
+          await pumpEventQueue();
+
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('crew'),
+          );
+          await pumpEventQueue();
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _blockedOwnerPubkey,
+            list: listOf('blocked'),
+          );
+          await pumpEventQueue();
+          await repository.unfollowList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            listId: 'crew',
+          );
+          await pumpEventQueue();
+
+          expect(emissions.first, isEmpty);
+          expect(emissions, contains(equals(['crew'])));
+          expect(emissions.last, isEmpty);
+          expect(
+            emissions.expand((ids) => ids),
+            isNot(contains('blocked')),
+          );
+        });
+
+        test('reaches a listener holding another repository instance over '
+            'the same store and box', () async {
+          final opener = makeOpener();
+          final store = InMemoryFollowedPeopleListsStore();
+          final listening = buildRepository(
+            nostrClient: _MockNostrClient(),
+            cache: LocalPeopleListsCache(openBox: opener),
+            followedListsStore: store,
+          );
+          final writing = buildRepository(
+            nostrClient: _MockNostrClient(),
+            cache: LocalPeopleListsCache(openBox: opener),
+            followedListsStore: store,
+          );
+          final emissions = <List<String>>[];
+          final subscription = listening
+              .watchFollowedLists(viewerPubkey: viewer)
+              .listen((lists) {
+                emissions.add([for (final f in lists) f.list.id]);
+              });
+          addTearDown(subscription.cancel);
+          await pumpEventQueue();
+
+          await writing.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('crew'),
+          );
+          await pumpEventQueue();
+
+          expect(emissions.last, equals(['crew']));
+        });
+      });
+
+      group('syncFollowedLists', () {
+        test(
+          'canceled relay completion keeps the previous followed copy',
+          () async {
+            final read = Completer<List<Event>>();
+            final entered = Completer<void>();
+            final client = _MockNostrClient();
+            when(
+              () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+            ).thenAnswer((_) {
+              entered.complete();
+              return read.future;
+            });
+            final repository = buildRepository(nostrClient: client);
+            await repository.followList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              list: listOf('crew'),
+            );
+            var canceled = false;
+            final sync = repository.syncFollowedLists(
+              viewerPubkey: viewer,
+              isCancelled: () => canceled,
+            );
+            await entered.future;
+            canceled = true;
+            read.complete([
+              peopleEvent(
+                pubkey: _ownerPubkey,
+                dTag: 'crew',
+                members: const [_memberA, _memberB],
+                createdAt: 1800000100,
+              ),
+            ]);
+            await sync;
+            expect(
+              (await repository.readFollowedLists(
+                viewerPubkey: viewer,
+              )).single.list.pubkeys,
+              [_memberA],
+            );
+          },
+        );
+
+        test(
+          'unfollow after follow recheck leaves no late copy',
+          () async {
+            final client = _MockNostrClient();
+            when(
+              () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+            ).thenAnswer(
+              (_) async => [
+                peopleEvent(
+                  pubkey: _ownerPubkey,
+                  dTag: 'crew',
+                  members: const [_memberA, _memberB],
+                  createdAt: 1800000100,
+                ),
+              ],
+            );
+            final cache = _PausedRefreshCache(openBox: makeOpener());
+            final repository = buildRepository(
+              nostrClient: client,
+              cache: cache,
+            );
+            await repository.followList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              list: listOf('crew'),
+            );
+            final sync = repository.syncFollowedLists(viewerPubkey: viewer);
+            await cache.entered.future;
+            final unfollow = repository.unfollowList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              listId: 'crew',
+            );
+            await pumpEventQueue();
+            cache.release.complete();
+            await sync;
+            await unfollow;
+            expect(
+              await cache.readFollowedCopies(viewerPubkey: viewer),
+              isEmpty,
+            );
+          },
+        );
+
+        test('asks relays nothing when nothing is followed', () async {
+          final client = _MockNostrClient();
+          final repository = buildRepository(nostrClient: client);
+
+          await repository.syncFollowedLists(viewerPubkey: viewer);
+
+          verifyNever(
+            () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+          );
+        });
+
+        test('asks for the followed coordinates in one filter', () async {
+          final client = _MockNostrClient();
+          when(
+            () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+          ).thenAnswer((_) async => <Event>[]);
+          final repository = buildRepository(nostrClient: client);
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('crew'),
+          );
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: otherOwner,
+            list: listOf('friends'),
+          );
+
+          await repository.syncFollowedLists(viewerPubkey: viewer);
+
+          final filter =
+              (verify(
+                        () => client.queryEvents(
+                          captureAny(),
+                          timeout: kPublicPeopleListsRelayReadTimeout,
+                        ),
+                      ).captured.single
+                      as List<Filter>)
+                  .single;
+          expect(filter.kinds, equals([_peopleListKind]));
+          expect(filter.authors, unorderedEquals([_ownerPubkey, otherOwner]));
+          expect(filter.d, unorderedEquals(['crew', 'friends']));
+        });
+
+        test("takes the owner's newer revision, read-only", () async {
+          final client = _MockNostrClient();
+          when(
+            () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+          ).thenAnswer(
+            (_) async => [
+              peopleEvent(
+                pubkey: _ownerPubkey,
+                dTag: 'crew',
+                members: const [_memberA],
+                createdAt: 1800000000,
+              ),
+              peopleEvent(
+                pubkey: _ownerPubkey,
+                dTag: 'crew',
+                members: const [_memberA, _memberB],
+                createdAt: 1800000100,
+                title: 'Crew, grown',
+              ),
+            ],
+          );
+          final repository = buildRepository(nostrClient: client);
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('crew'),
+          );
+
+          await repository.syncFollowedLists(viewerPubkey: viewer);
+
+          final followed = await repository.readFollowedLists(
+            viewerPubkey: viewer,
+          );
+          expect(followed.single.list.name, equals('Crew, grown'));
+          expect(followed.single.list.pubkeys, equals([_memberA, _memberB]));
+          expect(followed.single.list.isEditable, isFalse);
+        });
+
+        test("ignores another owner's list that shares a followed d tag "
+            'and events that do not decode', () async {
+          final client = _MockNostrClient();
+          when(
+            () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+          ).thenAnswer(
+            (_) async => [
+              // `otherOwner` is followed for `friends`, not for `crew`.
+              peopleEvent(
+                pubkey: otherOwner,
+                dTag: 'crew',
+                members: const [_memberC],
+                createdAt: 1800000100,
+              ),
+              Event(otherOwner, _peopleListKind, const [], ''),
+            ],
+          );
+          final repository = buildRepository(nostrClient: client);
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('crew'),
+          );
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: otherOwner,
+            list: listOf('friends'),
+          );
+
+          await repository.syncFollowedLists(viewerPubkey: viewer);
+
+          final followed = await repository.readFollowedLists(
+            viewerPubkey: viewer,
+          );
+          expect(
+            followed.map((f) => f.addressableId),
+            equals([
+              '$_peopleListKind:$_ownerPubkey:crew',
+              '$_peopleListKind:$otherOwner:friends',
+            ]),
+          );
+          expect(followed.first.list.pubkeys, equals([_memberA]));
+        });
+
+        test('a follow outlives a wiped cache, and the sync brings its copy '
+            'back in place', () async {
+          final client = _MockNostrClient();
+          when(
+            () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+          ).thenAnswer(
+            (_) async => [
+              peopleEvent(
+                pubkey: _ownerPubkey,
+                dTag: 'first',
+                members: const [_memberA],
+                createdAt: 1800000000,
+              ),
+              peopleEvent(
+                pubkey: _ownerPubkey,
+                dTag: 'second',
+                members: const [_memberB],
+                createdAt: 1800000000,
+              ),
+            ],
+          );
+          final cache = LocalPeopleListsCache(openBox: makeOpener());
+          final repository = buildRepository(nostrClient: client, cache: cache);
+          for (final id in ['second', 'first']) {
+            await repository.followList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              list: listOf(id),
+            );
+          }
+
+          // What "Reset app data" does to this box: every copy is gone.
+          await cache.clearFollowedCopies(viewerPubkey: viewer);
+          expect(
+            await repository.readFollowedLists(viewerPubkey: viewer),
+            isEmpty,
+          );
+
+          await repository.syncFollowedLists(viewerPubkey: viewer);
+
+          final followed = await repository.readFollowedLists(
+            viewerPubkey: viewer,
+          );
+          expect(followed.map((f) => f.list.id), equals(['second', 'first']));
+          expect(followed.first.list.pubkeys, equals([_memberB]));
+          expect(followed.first.list.isEditable, isFalse);
+        });
+
+        test('keeps the stored copies when the relay read fails', () async {
+          final client = _MockNostrClient();
+          when(
+            () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+          ).thenThrow(Exception('relay down'));
+          final repository = buildRepository(nostrClient: client);
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('crew'),
+          );
+
+          await expectLater(
+            repository.syncFollowedLists(viewerPubkey: viewer),
+            completes,
+          );
+
+          final followed = await repository.readFollowedLists(
+            viewerPubkey: viewer,
+          );
+          expect(followed.single.list.pubkeys, equals([_memberA]));
+        });
+
+        test('does not bring back a list unfollowed during the read', () async {
+          final client = _MockNostrClient();
+          late PeopleListsRepositoryImpl repository;
+          when(
+            () => client.queryEvents(any(), timeout: any(named: 'timeout')),
+          ).thenAnswer((_) async {
+            await repository.unfollowList(
+              viewerPubkey: viewer,
+              ownerPubkey: _ownerPubkey,
+              listId: 'crew',
+            );
+            return [
+              peopleEvent(
+                pubkey: _ownerPubkey,
+                dTag: 'crew',
+                members: const [_memberA, _memberB],
+                createdAt: 1800000100,
+              ),
+            ];
+          });
+          final cache = LocalPeopleListsCache(openBox: makeOpener());
+          repository = buildRepository(nostrClient: client, cache: cache);
+          await repository.followList(
+            viewerPubkey: viewer,
+            ownerPubkey: _ownerPubkey,
+            list: listOf('crew'),
+          );
+
+          await repository.syncFollowedLists(viewerPubkey: viewer);
+
+          expect(
+            await repository.readFollowedLists(viewerPubkey: viewer),
+            isEmpty,
+          );
+          expect(await cache.readFollowedCopies(viewerPubkey: viewer), isEmpty);
+        });
       });
     });
   });

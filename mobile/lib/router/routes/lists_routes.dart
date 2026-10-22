@@ -13,15 +13,15 @@ import 'package:openvine/features/people_lists/view/people_list_members_screen.d
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/router/route_error_screen.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
-import 'package:openvine/screens/discover_lists_screen.dart';
+import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/saved_videos_screen.dart';
 import 'package:openvine/screens/user_list_people_screen.dart';
-import 'package:openvine/utils/nostr_key_utils.dart';
-import 'package:openvine/utils/public_identifier_normalizer.dart';
+import 'package:openvine/utils/people_list_owner.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 List<RouteBase> listsRoutes(Ref ref) {
@@ -50,6 +50,7 @@ List<RouteBase> listsRoutes(Ref ref) {
           listName: extra?.listName ?? ctx.l10n.routeDefaultListName,
           videoIds: extra?.videoIds,
           authorPubkey: extra?.authorPubkey,
+          discoveredList: extra?.list,
         );
       },
     ),
@@ -69,16 +70,20 @@ List<RouteBase> listsRoutes(Ref ref) {
             listId.isEmpty) {
           return RouteErrorScreen(message: ctx.l10n.routeInvalidListId);
         }
-        return CuratedListByAuthorScreen(authorPubkey: pubkey, listId: listId);
+        return CuratedListByAuthorScreen(
+          authorPubkey: pubkey,
+          listId: listId,
+          discoveredList: extraAs<CuratedListRouteExtra>(st.extra)?.list,
+        );
       },
     ),
 
-    // DISCOVER LISTS route (browse public NIP-51 kind 30005 lists)
-    // Outside shell so the screen's own AppBar is shown without the shell AppBar
+    // DISCOVER LISTS is absorbed by the Explore Lists tab: the tab IS the
+    // discovery surface now. The old URL keeps working for bookmarks and
+    // shared links by landing on that tab.
     GoRoute(
-      path: DiscoverListsScreen.path,
-      name: DiscoverListsScreen.routeName,
-      builder: (ctx, st) => const DiscoverListsScreen(),
+      path: RoutePaths.discoverLists,
+      redirect: (context, state) => ExploreScreen.pathForTab('lists'),
     ),
 
     // CREATE PEOPLE LIST route. Must come before /people-lists/:listId so
@@ -217,26 +222,11 @@ String? _peopleListsRedirectIfDisabled(Ref ref, GoRouterState state) {
   final owners = uri.queryParametersAll['owner'];
   if (owners == null) return (pubkey: null, invalid: false);
   if (owners.length != 1) return (pubkey: null, invalid: true);
-  final identifier = owners.single;
-  final lowercase = identifier.toLowerCase();
-  // Bech32 accepts uniform uppercase as well as lowercase. Keep mixed-case
-  // input unchanged so its invalid checksum/casing is still rejected.
-  final publicIdentifier =
-      (lowercase.startsWith('npub1') || lowercase.startsWith('nprofile1')) &&
-          identifier == identifier.toUpperCase()
-      ? lowercase
-      : identifier;
-  final String? normalized;
-  try {
-    normalized = normalizePublicIdentifier(publicIdentifier)?.hexPubkey;
-  } on FormatException {
-    // An nprofile relay hint that is not UTF-8 throws from the decoder.
+  final normalized = normalizePeopleListOwner(owners.single);
+  if (normalized == null) {
     return (pubkey: null, invalid: true);
   }
-  if (normalized == null || !NostrKeyUtils.isValidKey(normalized)) {
-    return (pubkey: null, invalid: true);
-  }
-  return (pubkey: normalized.toLowerCase(), invalid: false);
+  return (pubkey: normalized, invalid: false);
 }
 
 Widget _buildPeopleList(

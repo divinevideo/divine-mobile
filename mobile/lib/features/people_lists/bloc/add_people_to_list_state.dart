@@ -1,6 +1,6 @@
 // ABOUTME: State for AddPeopleToListCubit backing the add-people picker.
-// ABOUTME: Holds candidates, search query, and selection; derives a filtered
-// ABOUTME: and sorted visibleCandidates list for the UI.
+// ABOUTME: Holds candidates and the search query; derives the filtered
+// ABOUTME: visibleCandidates list for the UI.
 
 import 'package:equatable/equatable.dart';
 import 'package:openvine/features/people_lists/models/people_list_candidate.dart';
@@ -34,7 +34,6 @@ class AddPeopleToListState extends Equatable {
     this.loadRevision = 0,
     this.query = '',
     this.candidates = const [],
-    this.selectedPubkeys = const {},
   });
 
   /// Lifecycle status driving UI reactions.
@@ -59,12 +58,6 @@ class AddPeopleToListState extends Equatable {
 
   /// Candidates in first-visible ranked order. Later arrivals append.
   final List<PeopleListCandidate> candidates;
-
-  /// Pubkeys the user has toggled on in this session.
-  ///
-  /// Candidates already in the target list are not tracked here — they are
-  /// surfaced via [PeopleListCandidate.isAlreadyInList] instead.
-  final Set<String> selectedPubkeys;
 
   /// Candidates filtered by [query]. Always derived; never cached.
   ///
@@ -94,7 +87,6 @@ class AddPeopleToListState extends Equatable {
     int? loadRevision,
     String? query,
     List<PeopleListCandidate>? candidates,
-    Set<String>? selectedPubkeys,
   }) {
     return AddPeopleToListState(
       status: status ?? this.status,
@@ -105,7 +97,6 @@ class AddPeopleToListState extends Equatable {
       loadRevision: loadRevision ?? this.loadRevision,
       query: query ?? this.query,
       candidates: candidates ?? this.candidates,
-      selectedPubkeys: selectedPubkeys ?? this.selectedPubkeys,
     );
   }
 
@@ -114,7 +105,6 @@ class AddPeopleToListState extends Equatable {
     status,
     query,
     candidates,
-    selectedPubkeys,
     rankingSignals,
     candidatePositions,
     rankingCandidatePubkeys,

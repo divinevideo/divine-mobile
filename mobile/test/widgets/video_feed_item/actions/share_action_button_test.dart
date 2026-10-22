@@ -24,6 +24,7 @@ import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
+import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/router/route_paths.dart';
@@ -31,10 +32,11 @@ import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/inbox/widgets/moderation_identity.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
 import 'package:openvine/services/crossposting_api_client.dart';
+import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/user_ranking/user_ranking_signals_loader.dart';
 import 'package:openvine/services/video_sharing_service.dart';
-import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/crosspost_sheet.dart';
+import 'package:openvine/widgets/select_list_sheet/select_list_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/actions/share_action_button.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
@@ -56,6 +58,23 @@ class _MockVideoSharingService extends Mock implements VideoSharingService {}
 
 class _MockCrosspostingApiClient extends Mock
     implements CrosspostingApiClient {}
+
+class _MockCuratedListService extends Mock implements CuratedListService {
+  @override
+  bool recoveryNeedsRepair = false;
+}
+
+/// Set before each test; read by [_FakeCuratedListsState].
+_MockCuratedListService? _fakeListService;
+
+/// Stands in for the real notifier, whose build would sync with relays.
+class _FakeCuratedListsState extends CuratedListsState {
+  @override
+  CuratedListService? get service => _fakeListService;
+
+  @override
+  Future<List<CuratedList>> build() async => const [];
+}
 
 class _FakeVideoEvent extends Fake implements VideoEvent {}
 
@@ -374,8 +393,9 @@ void main() {
         tester,
       ) async {
         final mockAuth = createMockAuthService();
-        when(() => mockVideoSharingService.generateShareUrl(any()))
-            .thenReturn('https://divine.video/v/test');
+        when(
+          () => mockVideoSharingService.generateShareUrl(any()),
+        ).thenReturn('https://divine.video/v/test');
 
         await tester.pumpWidget(
           testMaterialApp(
@@ -479,6 +499,12 @@ void main() {
               videoSharingServiceProvider.overrideWith(
                 (ref) => mockVideoSharingService,
               ),
+              curatedListsStateProvider.overrideWith(
+                _FakeCuratedListsState.new,
+              ),
+              myListsWithThumbnailsProvider.overrideWith(
+                (ref) async => const <CuratedList>[],
+              ),
               if (goRouter != null)
                 goRouterProvider.overrideWithValue(goRouter),
               ...?additionalOverrides,
@@ -502,8 +528,9 @@ void main() {
           tester,
         ) async {
           final goRouter = MockGoRouter();
-          when(() => goRouter.push<void>(any(), extra: any(named: 'extra')))
-              .thenAnswer((_) async {});
+          when(
+            () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+          ).thenAnswer((_) async {});
 
           await pumpOwnerSheet(tester, goRouter: goRouter);
 
@@ -519,16 +546,20 @@ void main() {
           ).called(1);
         });
 
-        testWidgets('tapping Add to List opens the list selection dialog', (
+        testWidgets('tapping Add to List opens the list picker sheet', (
           tester,
         ) async {
+          _fakeListService = _MockCuratedListService();
+          when(
+            () => _fakeListService!.pickerListsForOwner(any()),
+          ).thenReturn(const []);
+          when(() => _fakeListService!.isCurrentSession).thenReturn(true);
           await pumpOwnerSheet(tester);
 
           await tester.tap(find.text(l10n.shareSheetAddToList));
-          await tester.pump();
-          await tester.pump(const Duration(milliseconds: 100));
+          await tester.pumpAndSettle();
 
-          expect(find.byType(SelectListDialog), findsOneWidget);
+          expect(find.byType(SelectListSheetBody), findsOneWidget);
         });
 
         testWidgets('opening Share does not request crosspost signing', (
@@ -634,8 +665,9 @@ void main() {
           'Crosspost waits for connections instead of routing to setup',
           (tester) async {
             final goRouter = MockGoRouter();
-            when(() => goRouter.push<void>(any(), extra: any(named: 'extra')))
-                .thenAnswer((_) async {});
+            when(
+              () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+            ).thenAnswer((_) async {});
             final client = _MockCrosspostingApiClient();
             final connections = Completer<List<CrosspostingConnection>>();
             when(client.getConnections).thenAnswer((_) => connections.future);
@@ -690,8 +722,9 @@ void main() {
           tester,
         ) async {
           final goRouter = MockGoRouter();
-          when(() => goRouter.push<void>(any(), extra: any(named: 'extra')))
-              .thenAnswer((_) async {});
+          when(
+            () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+          ).thenAnswer((_) async {});
           final pending = Completer<void>();
           final client = _MockCrosspostingApiClient();
           when(client.getConnections).thenAnswer((_) async => const []);
@@ -708,8 +741,9 @@ void main() {
           );
           await tester.tap(find.text(l10n.shareSheetCrosspost));
           await tester.pumpAndSettle();
-          verify(() => goRouter.push<void>(RoutePaths.crosspostingSettings))
-              .called(1);
+          verify(
+            () => goRouter.push<void>(RoutePaths.crosspostingSettings),
+          ).called(1);
           pending.complete();
           await tester.pump();
         });
@@ -723,8 +757,9 @@ void main() {
             controller.updateInterval = const Duration(minutes: 1);
             addTearDown(controller.notifyNow);
             final goRouter = MockGoRouter();
-            when(() => goRouter.push<void>(any(), extra: any(named: 'extra')))
-                .thenAnswer((_) async {});
+            when(
+              () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+            ).thenAnswer((_) async {});
             final sink = _RecordingAnalyticsSink();
             final client = _MockCrosspostingApiClient();
             when(client.getConnections).thenAnswer((_) async => const []);
@@ -755,8 +790,9 @@ void main() {
           tester,
         ) async {
           final goRouter = MockGoRouter();
-          when(() => goRouter.push<void>(any(), extra: any(named: 'extra')))
-              .thenAnswer((_) async {});
+          when(
+            () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+          ).thenAnswer((_) async {});
 
           final sink = _RecordingAnalyticsSink();
           final client = _MockCrosspostingApiClient();
@@ -793,8 +829,9 @@ void main() {
             equals({'surface': 'share_sheet', 'cta': 'crosspost_row'}),
           );
 
-          verify(() => goRouter.push<void>(RoutePaths.crosspostingSettings))
-              .called(1);
+          verify(
+            () => goRouter.push<void>(RoutePaths.crosspostingSettings),
+          ).called(1);
           final tapEvents = sink.events
               .where((event) => event.name == 'crosspost_cta_tapped')
               .toList();
@@ -809,12 +846,14 @@ void main() {
           'Crosspost records the row tap even when connections fail',
           (tester) async {
             final goRouter = MockGoRouter();
-            when(() => goRouter.push<void>(any(), extra: any(named: 'extra')))
-                .thenAnswer((_) async {});
+            when(
+              () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+            ).thenAnswer((_) async {});
             final sink = _RecordingAnalyticsSink();
             final client = _MockCrosspostingApiClient();
-            when(client.getConnections)
-                .thenThrow(const CrosspostingApiException('offline'));
+            when(
+              client.getConnections,
+            ).thenThrow(const CrosspostingApiException('offline'));
 
             await pumpOwnerSheet(
               tester,
@@ -830,8 +869,9 @@ void main() {
             await tester.pump();
             await tester.pump(const Duration(milliseconds: 100));
 
-            verify(() => goRouter.push<void>(RoutePaths.crosspostingSettings))
-                .called(1);
+            verify(
+              () => goRouter.push<void>(RoutePaths.crosspostingSettings),
+            ).called(1);
             expect(sink.events.map((event) => event.name), [
               'crosspost_cta_shown',
               'crosspost_cta_tapped',
@@ -864,8 +904,9 @@ void main() {
 
         setUp(() {
           l10n = lookupAppLocalizations(const Locale('en'));
-          when(() => mockVideoSharingService.recentlySharedWith)
-              .thenReturn([alice, bob]);
+          when(
+            () => mockVideoSharingService.recentlySharedWith,
+          ).thenReturn([alice, bob]);
         });
 
         // #8421: the "Share with" row is a DM send target — tapping a contact
@@ -890,8 +931,9 @@ void main() {
             bool isVanished = false,
             List<Override> extraOverrides = const [],
           }) async {
-            when(() => mockVideoSharingService.recentlySharedWith)
-                .thenReturn([contact]);
+            when(
+              () => mockVideoSharingService.recentlySharedWith,
+            ).thenReturn([contact]);
 
             await tester.pumpWidget(
               testMaterialApp(
@@ -903,8 +945,9 @@ void main() {
                   videoSharingServiceProvider.overrideWith(
                     (ref) => mockVideoSharingService,
                   ),
-                  profileVanishedProvider(contact.pubkey)
-                      .overrideWith((ref) => isVanished),
+                  profileVanishedProvider(
+                    contact.pubkey,
+                  ).overrideWith((ref) => isVanished),
                   ...extraOverrides,
                 ],
                 mockAuthService: createMockAuthService(),
@@ -1040,8 +1083,9 @@ void main() {
               '22222222222222222222222222222222';
           final hydration = Completer<Map<String, UserProfile>>();
           when(() => mockVideoSharingService.recentlySharedWith).thenReturn([]);
-          when(() => mockFollowRepository.followingPubkeys)
-              .thenReturn([unknownPubkey]);
+          when(
+            () => mockFollowRepository.followingPubkeys,
+          ).thenReturn([unknownPubkey]);
           when(
             () => mockProfileRepository.fetchBatchProfiles(
               pubkeys: [unknownPubkey],
@@ -1461,8 +1505,9 @@ void main() {
             );
 
             setUp(() {
-              when(() => mockVideoSharingService.recentlySharedWith)
-                  .thenReturn([alice, bob, carol]);
+              when(
+                () => mockVideoSharingService.recentlySharedWith,
+              ).thenReturn([alice, bob, carol]);
             });
 
             testWidgets(

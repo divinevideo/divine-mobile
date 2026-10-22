@@ -163,7 +163,6 @@ es/libraryClipsUnarchived/count:1/many # declined: other is acceptable for curre
 es/libraryGridSizeColumns/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 es/libraryTrashAutoDeletes/daysLeft:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 es/libraryTrashEmptyConfirmMessage/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
-es/listPersonCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 es/messageRequestMessageCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 es/monetizationSettingsConfiguredCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 es/monetizationTipsSettingsConfiguredCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
@@ -230,7 +229,6 @@ fr/libraryClipsUnarchived/count:1/many # declined: other is acceptable for curre
 fr/libraryGridSizeColumns/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 fr/libraryTrashAutoDeletes/daysLeft:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 fr/libraryTrashEmptyConfirmMessage/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
-fr/listPersonCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 fr/messageRequestMessageCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 fr/monetizationSettingsConfiguredCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 fr/monetizationTipsSettingsConfiguredCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
@@ -294,7 +292,6 @@ it/libraryClipsUnarchived/count:1/many # declined: other is acceptable for curre
 it/libraryGridSizeColumns/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 it/libraryTrashAutoDeletes/daysLeft:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 it/libraryTrashEmptyConfirmMessage/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
-it/listPersonCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 it/messageRequestMessageCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 it/monetizationSettingsConfiguredCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 it/monetizationTipsSettingsConfiguredCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
@@ -392,7 +389,6 @@ pt/libraryClipsUnarchived/count:1/many # declined: other is acceptable for curre
 pt/libraryGridSizeColumns/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 pt/libraryTrashAutoDeletes/daysLeft:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 pt/libraryTrashEmptyConfirmMessage/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
-pt/listPersonCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 pt/messageRequestMessageCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 pt/monetizationSettingsConfiguredCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).
 pt/monetizationTipsSettingsConfiguredCount/count:1/many # declined: other is acceptable for current large-number surfaces; revisit if distinct wording is needed (#7755).

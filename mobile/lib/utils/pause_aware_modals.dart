@@ -143,6 +143,9 @@ extension PauseAwareModals on BuildContext {
     bool tapOutsideToDismiss = true,
     Widget Function(BuildContext context, Widget child)? contentWrapper,
     DraggableScrollableController? draggableController,
+    EdgeInsetsGeometry? headerPadding,
+    DivineIconButton? headerLeadingAction,
+    DivineIconButton? headerTrailingAction,
   }) {
     final container = ProviderScope.containerOf(this, listen: false);
     final overlayNotifier = container.read(overlayVisibilityProvider.notifier);
@@ -204,6 +207,9 @@ extension PauseAwareModals on BuildContext {
       tapOutsideToDismiss: tapOutsideToDismiss,
       contentWrapper: contentWrapper,
       draggableController: draggableController,
+      headerPadding: headerPadding,
+      headerLeadingAction: headerLeadingAction,
+      headerTrailingAction: headerTrailingAction,
       onShow: () => overlayNotifier.setBottomSheetOpenForOwner(
         bottomSheetOwner,
         isOpen: true,

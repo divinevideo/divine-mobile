@@ -22,15 +22,18 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/screens/saved_videos_screen.dart';
 import 'package:openvine/services/curated_list_service.dart';
-import 'package:openvine/widgets/add_to_list_dialog.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 import 'package:openvine/widgets/profile/profile_lists_grid.dart';
 import 'package:openvine/widgets/video_thumbnail_widget.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
-class _MockCuratedListService extends Mock implements CuratedListService {}
+class _MockCuratedListService extends Mock implements CuratedListService {
+  @override
+  bool recoveryNeedsRepair = false;
+}
 
 class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
     implements PeopleListsBloc {}
@@ -38,14 +41,21 @@ class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
 List<CuratedList> _fakeLists = [];
 Completer<List<CuratedList>>? _videoLoad;
 _MockCuratedListService? _fakeService;
+bool _failInitialization = false;
+int _initializationAttempts = 0;
 
 class _FakeCuratedListsState extends CuratedListsState {
   @override
   CuratedListService? get service => _fakeService;
 
   @override
-  Future<List<CuratedList>> build() async =>
-      _videoLoad == null ? _fakeLists : await _videoLoad!.future;
+  Future<List<CuratedList>> build() async {
+    _initializationAttempts++;
+    if (_failInitialization && _initializationAttempts == 1) {
+      throw Exception('local list initialization failed');
+    }
+    return _videoLoad == null ? _fakeLists : await _videoLoad!.future;
+  }
 }
 
 CuratedList _videoList(String id) => CuratedList(
@@ -83,6 +93,8 @@ void main() {
     setUp(() {
       _fakeLists = [];
       _videoLoad = null;
+      _failInitialization = false;
+      _initializationAttempts = 0;
       enabled = true;
       peopleBloc = _MockPeopleListsBloc();
       when(() => peopleBloc.state).thenReturn(
@@ -448,6 +460,48 @@ void main() {
       expect(pushedRoute, equals(SavedVideosScreen.path));
     });
     group('renders', () {
+      testWidgets(
+        'initialization failure offers local retry before video list actions',
+        (tester) async {
+          _failInitialization = true;
+          _fakeLists = [_videoList('retry-list')];
+          when(() => mockListService.myLists).thenReturn(_fakeLists);
+          when(() => peopleBloc.state).thenReturn(
+            PeopleListsState(
+              status: PeopleListsStatus.ready,
+              ownerPubkey: owner,
+              lists: [personList],
+            ),
+          );
+          await tester.pumpWidget(buildSubject());
+          await tester.pumpAndSettle();
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          expect(find.text(l10n.listErrorLoading), findsOneWidget);
+          expect(find.text('Video retry-list'), findsNothing);
+          expect(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is DivineListThumbnail &&
+                  widget.name == 'Video retry-list',
+            ),
+            findsNothing,
+          );
+          // Independent Main affordances survive a video recovery failure.
+          expect(find.text(l10n.listNewVideoList), findsOneWidget);
+          expect(find.text(l10n.listNewPeopleList), findsOneWidget);
+          expect(find.text('Friends'), findsOneWidget);
+          expect(find.text(l10n.shareMenuBookmarks), findsOneWidget);
+
+          await tester.tap(find.text(l10n.searchTryAgain));
+          await tester.pumpAndSettle();
+          expect(_initializationAttempts, 2);
+          expect(find.text(l10n.listErrorLoading), findsNothing);
+          expect(find.text(l10n.listNewVideoList), findsOneWidget);
+          expect(find.text('Video retry-list'), findsOneWidget);
+          expect(find.text('Friends'), findsOneWidget);
+        },
+      );
+
       testWidgets("shows both columns of the viewer's lists", (tester) async {
         when(
           () => mockListService.myLists,
@@ -473,6 +527,144 @@ void main() {
           tester.getTopLeft(find.text('Video skate')).dx,
           lessThan(tester.getTopLeft(find.text('People crew')).dx),
         );
+      });
+
+      testWidgets(
+        'wide profile keeps creation labels readable and actions accessible with large text',
+        (tester) async {
+          const surfaceWidth = 650.0;
+          await tester.binding.setSurfaceSize(const Size(surfaceWidth, 1800));
+          addTearDown(() => tester.binding.setSurfaceSize(null));
+          tester.platformDispatcher.textScaleFactorTestValue = 3;
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+          await tester.pumpWidget(buildSubject());
+          await tester.pumpAndSettle();
+
+          final videoButton = find.widgetWithText(
+            DivineButton,
+            'New video list',
+          );
+          final peopleButton = find.widgetWithText(
+            DivineButton,
+            'New people list',
+          );
+          final videoBounds = tester.getRect(videoButton);
+          final peopleBounds = tester.getRect(peopleButton);
+          for (final label in ['New video list', 'New people list']) {
+            final paragraph = tester.renderObject<RenderParagraph>(
+              find.descendant(
+                of: find.text(label),
+                matching: find.byType(RichText),
+              ),
+            );
+            expect(paragraph.didExceedMaxLines, isFalse, reason: label);
+          }
+          expect(videoBounds.width, surfaceWidth - 32);
+          expect(peopleBounds.width, videoBounds.width);
+          expect(peopleBounds.left, videoBounds.left);
+          expect(videoBounds.bottom, lessThan(peopleBounds.top));
+          expect(videoButton.hitTestable(), findsOneWidget);
+          expect(peopleButton.hitTestable(), findsOneWidget);
+          expect(tester.takeException(), isNull);
+
+          await tester.tap(peopleButton);
+          await tester.pumpAndSettle();
+          expect(pushedRoute, CreatePeopleListPage.path);
+          expect(find.text('create people'), findsOneWidget);
+        },
+      );
+
+      testWidgets('recovery pauses creation and preserves video browsing', (
+        tester,
+      ) async {
+        mockListService.recoveryNeedsRepair = true;
+        when(() => mockListService.myLists).thenReturn([_videoList('skate')]);
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+        final create = tester.widget<DivineButton>(
+          find.ancestor(
+            of: find.text(l10n.listNewVideoList),
+            matching: find.byType(DivineButton),
+          ),
+        );
+        expect(create.onPressed, isNull);
+        expect(find.text(l10n.shareMenuBookmarks), findsOneWidget);
+        final peopleCreate = tester.widget<DivineButton>(
+          find.ancestor(
+            of: find.text(l10n.listNewPeopleList),
+            matching: find.byType(DivineButton),
+          ),
+        );
+        expect(peopleCreate.onPressed, isNotNull);
+        await tester.tap(find.text('Video skate'));
+        await tester.pumpAndSettle();
+        expect(pushedRoute, '/list/skate');
+        expect(find.byType(ListInfoForm), findsNothing);
+      });
+
+      testWidgets('video recovery leaves people-list navigation usable', (
+        tester,
+      ) async {
+        mockListService.recoveryNeedsRepair = true;
+        whenListen(
+          peopleBloc,
+          const Stream<PeopleListsState>.empty(),
+          initialState: PeopleListsState(
+            status: PeopleListsStatus.ready,
+            ownerPubkey: owner,
+            lists: [_peopleList('crew')],
+          ),
+        );
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('People crew'));
+        await tester.pumpAndSettle();
+        expect(pushedRoute, '/people-lists/crew');
+      });
+
+      testWidgets('refreshes the recovery notice after service changes', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(ProfileListsGrid)),
+        );
+        mockListService.recoveryNeedsRepair = true;
+        container.invalidate(curatedListsStateProvider);
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+
+        mockListService.recoveryNeedsRepair = false;
+        container.invalidate(curatedListsStateProvider);
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.listRecoveryReadOnly), findsNothing);
+        final create = tester.widget<DivineButton>(
+          find.ancestor(
+            of: find.text(l10n.listNewVideoList),
+            matching: find.byType(DivineButton),
+          ),
+        );
+        expect(create.onPressed, isNotNull);
+      });
+
+      testWidgets('video recovery preserves independent people creation', (
+        tester,
+      ) async {
+        mockListService.recoveryNeedsRepair = true;
+        await tester.pumpWidget(buildSubject());
+        await tester.pumpAndSettle();
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.listRecoveryReadOnly), findsOneWidget);
+        expect(find.text(l10n.shareMenuBookmarks), findsOneWidget);
+        await tester.tap(find.text(l10n.listNewPeopleList));
+        await tester.pumpAndSettle();
+        expect(pushedRoute, CreatePeopleListPage.path);
+        expect(find.byType(ListInfoForm), findsNothing);
       });
 
       testWidgets('keeps an owned list visible before it has any videos', (
@@ -515,7 +707,7 @@ void main() {
     });
 
     group('navigation', () {
-      testWidgets('opens the create dialog from the create button', (
+      testWidgets('opens the create sheet from the create button', (
         tester,
       ) async {
         await tester.binding.setSurfaceSize(const Size(800, 1200));
@@ -523,13 +715,13 @@ void main() {
         await tester.pumpWidget(buildSubject());
         await tester.pumpAndSettle();
         final l10n = lookupAppLocalizations(const Locale('en'));
-        expect(find.byType(CreateListDialog), findsNothing);
+        expect(find.byType(ListInfoForm), findsNothing);
 
         await tester.tap(find.text(l10n.listNewVideoList));
         await tester.pumpAndSettle();
 
-        expect(find.byType(CreateListDialog), findsOneWidget);
-        // Main retains a type-specific creation label; the existing dialog
+        expect(find.byType(ListInfoForm), findsOneWidget);
+        // Main retains its type-specific creation label; the approved sheet
         // keeps its own title and confirmation action.
         expect(find.text(l10n.listNewVideoList), findsOneWidget);
         expect(find.text(l10n.listCreateNewList), findsOneWidget);

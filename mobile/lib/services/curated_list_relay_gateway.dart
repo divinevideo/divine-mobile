@@ -16,28 +16,33 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/filter.dart';
-import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/curated_lists/curated_list_relay_snapshot_reader.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 enum UnsealItemTagsStatus { notSealed, unsealed, failed }
 
-// Keeps the read alive past nostr_sdk's 8s subscription silence probe and 10s
-// teardown repair floor so a repaired relay can still answer this request.
-const Duration kPublicCuratedListsRelayReadTimeout = Duration(seconds: 12);
-
 final class UnsealedItemTags {
-  const UnsealedItemTags._(this.status, [this.tags]);
+  const UnsealedItemTags._(
+    this.status, [
+    this.tags,
+    this.hasCompleteItemSnapshot = false,
+  ]);
 
   const UnsealedItemTags.notSealed() : this._(UnsealItemTagsStatus.notSealed);
 
-  const UnsealedItemTags.unsealed(List<List<String>> tags)
-    : this._(UnsealItemTagsStatus.unsealed, tags);
+  const UnsealedItemTags.unsealed(
+    List<List<String>> tags, {
+    bool hasCompleteItemSnapshot = false,
+  }) : this._(UnsealItemTagsStatus.unsealed, tags, hasCompleteItemSnapshot);
 
   const UnsealedItemTags.failed() : this._(UnsealItemTagsStatus.failed);
 
   final UnsealItemTagsStatus status;
   final List<List<String>>? tags;
+
+  /// Positive raw completeness, distinct from permissive legacy decoding.
+  final bool hasCompleteItemSnapshot;
 }
 
 /// The relay side of curated lists: reads public lists, seals and unseals
@@ -49,14 +54,17 @@ class CuratedListRelayGateway {
   CuratedListRelayGateway({
     required NostrClient nostrService,
     required AuthService authService,
+    bool Function()? isCurrentSession,
   }) : _nostrService = nostrService,
-       _authService = authService;
+       _authService = authService,
+       _isCurrentSession = isCurrentSession;
 
   final NostrClient _nostrService;
   final AuthService _authService;
+  final bool Function()? _isCurrentSession;
 
   String? currentAuthenticatedPubkey() {
-    if (!_authService.isAuthenticated) {
+    if (!(_isCurrentSession?.call() ?? true) || !_authService.isAuthenticated) {
       return null;
     }
 
@@ -70,7 +78,7 @@ class CuratedListRelayGateway {
 
   /// Reads [ownerPubkey]'s kind 30005 lists from relays.
   ///
-  /// `completedNormally` is true only when the relay stream closed by itself.
+  /// `completedNormally` requires EOSE followed by the bounded stream closing.
   /// The read reports an incomplete one when it errors, when [timeout] passes,
   /// or when [cancelled] completes first; the events received until then are
   /// returned either way.
@@ -78,63 +86,21 @@ class CuratedListRelayGateway {
     String ownerPubkey, {
     required Duration timeout,
     required Future<void> cancelled,
+    void Function(Event event)? onEventObserved,
   }) async {
-    final completer = Completer<bool>();
-    final events = <Event>[];
-    StreamSubscription<Event>? relaySubscription;
-    Timer? timeoutTimer;
-    // Stops listening before the caller resumes, so no event lands in
-    // [events] while the caller is still reading it.
-    void finish({required bool completedNormally}) {
-      if (completer.isCompleted) return;
-      timeoutTimer?.cancel();
-      unawaited(relaySubscription?.cancel());
-      relaySubscription = null;
-      completer.complete(completedNormally);
-    }
-
-    unawaited(cancelled.then((_) => finish(completedNormally: false)));
-    try {
-      Log.debug(
-        '📋 Subscribing with filter: authors=[${pubkeyForLogs(ownerPubkey)}], kinds=[30005]',
-        name: 'CuratedListRelayGateway',
-        category: LogCategory.system,
-      );
-      final filter = Filter(authors: [ownerPubkey], kinds: [30005]);
-      final subscription = _nostrService.subscribe([filter]);
-      timeoutTimer = Timer(timeout, () {
-        Log.debug(
-          'Relay sync timeout reached, processing received events',
-          name: 'CuratedListRelayGateway',
-          category: LogCategory.system,
+    final snapshot =
+        await CuratedListRelaySnapshotReader(
+          nostrClient: _nostrService,
+        ).read(
+          ownerPubkey: ownerPubkey,
+          timeout: timeout,
+          cancelled: cancelled,
+          onEventObserved: onEventObserved,
         );
-        finish(completedNormally: false);
-      });
-      relaySubscription = subscription.listen(
-        (event) {
-          events.add(event);
-          Log.debug(
-            'Received list event from relay: ${event.id}',
-            name: 'CuratedListRelayGateway',
-            category: LogCategory.system,
-          );
-        },
-        onDone: () => finish(completedNormally: true),
-        onError: (Object error) {
-          Log.error(
-            'Error fetching lists from relay: $error',
-            name: 'CuratedListRelayGateway',
-            category: LogCategory.system,
-          );
-          finish(completedNormally: false);
-        },
-        cancelOnError: true,
-      );
-      final completedNormally = await completer.future;
-      return (events: events, completedNormally: completedNormally);
-    } finally {
-      finish(completedNormally: false);
-    }
+    return (
+      events: snapshot.events,
+      completedNormally: snapshot.completedNormally,
+    );
   }
 
   /// NIP-44 encrypts [list]'s item tags to their owner.
@@ -150,9 +116,9 @@ class CuratedListRelayGateway {
     bool Function()? canRun,
   }) async {
     final ownerPubkey = currentAuthenticatedPubkey();
-    if (ownerPubkey == null || ownerPubkey.isEmpty) {
+    if (ownerPubkey == null || list.pubkey != ownerPubkey) {
       Log.warning(
-        'Cannot seal private list ${list.id} - no authenticated pubkey',
+        'Cannot seal private list ${list.id} - authenticated owner does not match',
         name: 'CuratedListRelayGateway',
         category: LogCategory.system,
       );
@@ -173,7 +139,9 @@ class CuratedListRelayGateway {
     final signer = _nostrService.signer;
     final signerPubkey = await signer.getPublicKey();
     if (canRun != null && !canRun()) return null;
-    if (signerPubkey == null || signerPubkey != ownerPubkey) {
+    if (currentAuthenticatedPubkey() != ownerPubkey ||
+        signerPubkey == null ||
+        signerPubkey != ownerPubkey) {
       Log.error(
         'Cannot seal private list ${list.id} - signer does not match the '
         'authenticated account',
@@ -184,6 +152,7 @@ class CuratedListRelayGateway {
     }
 
     final sealed = await signer.nip44Encrypt(signerPubkey, plaintext);
+    if (currentAuthenticatedPubkey() != ownerPubkey) return null;
     if (sealed == null) {
       Log.error(
         'NIP-44 encryption failed for private list ${list.id}',
@@ -206,13 +175,16 @@ class CuratedListRelayGateway {
   /// Yields lists immediately as they arrive, completes on EOSE, and times out
   /// after [timeout] so a silent subscription can trigger relay repair before
   /// the caller gives up.
-  /// Handles deduplication by 'd' tag (keeps newest version)
+  /// Deduplicates per author and d-tag (keeps the newest version): every
+  /// account owns a `my_vine_list`, so the d-tag alone would collapse them.
   /// Use [until] to paginate backwards (set to oldest createdAt from previous batch)
-  /// Use [limit] to control how many events to request (default: 500)
-  /// Use [excludeIds] to skip lists already known (for pagination)
+  /// Use [limit] to control how many events to request (default:
+  /// [kPublicListsRelayWindow], the window search reads too)
+  /// Use [excludeIds] to skip lists already known (for pagination), keyed by
+  /// [CuratedList.authorScopedId]
   Stream<List<CuratedList>> streamPublicListsFromRelays({
     DateTime? until,
-    int limit = 500,
+    int limit = kPublicListsRelayWindow,
     Set<String>? excludeIds,
     Duration timeout = kPublicCuratedListsRelayReadTimeout,
   }) {
@@ -223,8 +195,8 @@ class CuratedListRelayGateway {
       category: LogCategory.system,
     );
 
-    // Track lists by d-tag for deduplication (keep newest)
-    final listsByDTag = <String, CuratedList>{};
+    // Track lists per author and d-tag for deduplication (keep newest)
+    final listsByAuthorScopedId = <String, CuratedList>{};
     final skipIds = excludeIds ?? <String>{};
     var totalEventsReceived = 0;
     var listsWithVideos = 0;
@@ -288,32 +260,38 @@ class CuratedListRelayGateway {
       final curatedList = _eventToCuratedList(event);
 
       // Track rejected lists for summary (don't log each one)
-      if (curatedList == null || curatedList.videoEventIds.isEmpty) {
+      if (curatedList == null || !curatedList.hasVideos) {
         rejectedCount++;
       }
 
-      if (curatedList != null && curatedList.videoEventIds.isNotEmpty) {
-        listsWithVideos++;
-        final dTag = curatedList.id;
+      if (curatedList != null) {
+        if (curatedList.hasVideos) listsWithVideos++;
+        final key = curatedList.authorScopedId;
 
         // Skip lists we already know about (for pagination)
-        if (skipIds.contains(dTag)) {
+        if (skipIds.contains(key)) {
           return;
         }
 
-        final existing = listsByDTag[dTag];
+        final existing = listsByAuthorScopedId[key];
 
-        // Keep newest version
-        if (existing == null ||
-            curatedList.updatedAt.isAfter(existing.updatedAt)) {
-          listsByDTag[dTag] = curatedList;
+        // Keep the newest revision even when it is empty. Otherwise an older
+        // populated copy can revive a list whose videos have been removed.
+        if (existing == null || _replacesList(curatedList, existing)) {
+          listsByAuthorScopedId[key] = curatedList;
+          if (!curatedList.hasVideos && !(existing?.hasVideos ?? false)) {
+            return;
+          }
 
           // Yield current accumulated list sorted by video count
-          final sortedLists = listsByDTag.values.toList()
-            ..sort(
-              (a, b) =>
-                  b.videoEventIds.length.compareTo(a.videoEventIds.length),
-            );
+          final sortedLists =
+              listsByAuthorScopedId.values
+                  .where((list) => list.hasVideos)
+                  .toList()
+                ..sort(
+                  (a, b) =>
+                      b.videoEventIds.length.compareTo(a.videoEventIds.length),
+                );
           controller.add(sortedLists);
         }
       }
@@ -327,7 +305,7 @@ class CuratedListRelayGateway {
               '${timeout.inSeconds}s';
           Log.warning(
             '📋 $message: received $totalEventsReceived events, '
-            '$listsWithVideos had videos, ${listsByDTag.length} unique lists',
+            '$listsWithVideos had videos, ${listsByAuthorScopedId.length} unique lists',
             name: 'CuratedListRelayGateway',
             category: LogCategory.system,
           );
@@ -342,7 +320,7 @@ class CuratedListRelayGateway {
               Log.info(
                 '📋 EOSE received for public curated lists: '
                 '$totalEventsReceived events, $listsWithVideos had videos, '
-                '${listsByDTag.length} unique lists',
+                '${listsByAuthorScopedId.length} unique lists',
                 name: 'CuratedListRelayGateway',
                 category: LogCategory.system,
               );
@@ -367,7 +345,7 @@ class CuratedListRelayGateway {
               Log.info(
                 '📋 Public curated lists relay stream closed: '
                 '$totalEventsReceived events, $listsWithVideos had videos, '
-                '${listsByDTag.length} unique lists',
+                '${listsByAuthorScopedId.length} unique lists',
                 name: 'CuratedListRelayGateway',
                 category: LogCategory.system,
               );
@@ -394,7 +372,7 @@ class CuratedListRelayGateway {
           Log.info(
             '📋 Public curated lists relay read cancelled: '
             '$totalEventsReceived events, $listsWithVideos had videos, '
-            '${listsByDTag.length} unique lists',
+            '${listsByAuthorScopedId.length} unique lists',
             name: 'CuratedListRelayGateway',
             category: LogCategory.system,
           );
@@ -669,7 +647,8 @@ class CuratedListRelayGateway {
 
     try {
       final signer = _nostrService.signer;
-      if (await signer.getPublicKey() != ownerPubkey) {
+      if (await signer.getPublicKey() != ownerPubkey ||
+          currentAuthenticatedPubkey() != ownerPubkey) {
         return const UnsealedItemTags.failed();
       }
       if (canRun != null && !canRun()) {
@@ -678,17 +657,26 @@ class CuratedListRelayGateway {
       final plaintext = CuratedListConverter.isNip44Payload(event.content)
           ? await signer.nip44Decrypt(ownerPubkey, event.content)
           : await signer.decrypt(ownerPubkey, event.content);
-      if (plaintext == null) return const UnsealedItemTags.failed();
+      if (currentAuthenticatedPubkey() != ownerPubkey || plaintext == null) {
+        return const UnsealedItemTags.failed();
+      }
 
       final decoded = jsonDecode(plaintext);
       if (decoded is! List) return const UnsealedItemTags.failed();
-      return UnsealedItemTags.unsealed([
-        for (final dynamic tag in decoded)
-          if (tag is List) tag.map((dynamic value) => '$value').toList(),
-      ]);
+      return UnsealedItemTags.unsealed(
+        [
+          for (final dynamic tag in decoded)
+            if (tag is List) tag.map((dynamic value) => '$value').toList(),
+        ],
+        hasCompleteItemSnapshot: decoded.every(
+          (dynamic tag) =>
+              tag is List && tag.every((dynamic value) => value is String),
+        ),
+      );
     } on Object catch (e) {
       Log.debug(
-        'Content of list event ${event.id} is not sealed item tags: $e',
+        'Content of list event ${event.id} is not sealed item tags '
+        '(${e.runtimeType})',
         name: 'CuratedListRelayGateway',
         category: LogCategory.system,
       );
@@ -714,61 +702,134 @@ class CuratedListRelayGateway {
   /// version up to the request's `created_at`, which would take the sealed
   /// replacement down with the original.
   ///
-  /// Best effort by contract. NIP-09 is a request relays SHOULD honour, and
-  /// anything that already read the public copy keeps it, so the caller must
-  /// not gate the flip on the result — the flip is already committed by the
-  /// time this runs.
-  Future<void> redactPlaintextListEvent(String plaintextEventId) async {
+  /// Relay acceptance confirms the request, not erasure. NIP-09 is advisory,
+  /// and anything that already read the public copy keeps it. A false result
+  /// retains the caller's durable retry; it never undoes accepted privacy.
+  Future<bool> redactPlaintextListEvent(
+    String plaintextEventId, {
+    String? ownerPubkey,
+    int? createdAt,
+  }) async {
+    final owner = ownerPubkey ?? currentAuthenticatedPubkey();
+    if (owner == null || currentAuthenticatedPubkey() != owner) return false;
     final event = await _authService.createAndSignEvent(
       kind: EventKind.eventDeletion,
       content: '',
+      createdAt: createdAt,
       tags: [
         ['e', plaintextEventId],
         ['k', '30005'],
       ],
     );
-    if (event == null) {
+    if (event == null ||
+        event.pubkey != owner ||
+        currentAuthenticatedPubkey() != owner) {
       Log.warning(
         'Could not sign redaction for public list event $plaintextEventId',
         name: 'CuratedListRelayGateway',
         category: LogCategory.system,
       );
-      return;
+      return false;
     }
 
-    final result = await _nostrService.publishEvent(event);
-    final failureReason = result.failureReason;
-    if (failureReason != null) {
+    final outcome = await _nostrService.publishEventAwaitOk(event);
+    if (!outcome.acceptedByAny) {
       Log.warning(
         'Failed to redact public list event $plaintextEventId: '
-        '$failureReason',
+        '${outcome.summary}',
         name: 'CuratedListRelayGateway',
         category: LogCategory.system,
       );
     }
+    return outcome.acceptedByAny;
   }
 
-  Future<bool> publishListDeletion(String listId) async {
+  /// Signs public tags or sealed private items after validating the owner.
+  Future<Event?> signList(
+    CuratedList list, {
+    required String ownerPubkey,
+    required int Function() createdAt,
+  }) async {
+    if (list.pubkey != ownerPubkey ||
+        currentAuthenticatedPubkey() != ownerPubkey) {
+      return null;
+    }
+    final String content;
+    final List<List<String>> tags;
+    if (list.isPublic) {
+      content = list.description ?? 'Curated video list: ${list.name}';
+      tags = CuratedListConverter.toEventTags(list);
+    } else {
+      final sealed = await sealItemTags(list);
+      if (sealed == null) return null;
+      content = sealed;
+      tags = CuratedListConverter.toPrivateMetadataTags(list);
+    }
+    if (currentAuthenticatedPubkey() != ownerPubkey) return null;
+    final timestamp = createdAt();
+    final event = await _authService.createAndSignEvent(
+      kind: 30005,
+      content: content,
+      tags: tags,
+      createdAt: timestamp,
+    );
+    if (event == null ||
+        event.pubkey != ownerPubkey ||
+        currentAuthenticatedPubkey() != ownerPubkey) {
+      return null;
+    }
+    // A canonical-default grant covers precisely the requested payload, not
+    // whatever an external signer returns for the same owner coordinate.
+    if (list.id == 'my_vine_list' &&
+        (event.kind != 30005 ||
+            event.createdAt != timestamp ||
+            event.content != content ||
+            (jsonEncode(event.tags) != jsonEncode(tags) &&
+                (Nip89ClientTag.hasClientTag(tags) ||
+                    jsonEncode(event.tags) !=
+                        jsonEncode([...tags, Nip89ClientTag.tag]))) ||
+            !event.isValid ||
+            !event.isSigned)) {
+      return null;
+    }
+    return event;
+  }
+
+  Future<bool> publishListDeletion(
+    String listId, {
+    required String ownerPubkey,
+    int? createdAt,
+    bool Function()? isAuthorized,
+  }) async {
     final currentPubkey = currentAuthenticatedPubkey();
-    if (currentPubkey == null || currentPubkey.isEmpty) {
+    if (currentPubkey == null ||
+        currentPubkey != ownerPubkey ||
+        !(isAuthorized?.call() ?? true)) {
       return false;
     }
 
     final event = await _authService.createAndSignEvent(
       kind: EventKind.eventDeletion,
       content: 'Deleted curated list $listId',
+      createdAt: createdAt,
       tags: [
         ['a', '30005:$currentPubkey:$listId'],
         ['k', '30005'],
       ],
     );
-    if (event == null) return false;
+    if (event == null ||
+        event.pubkey != ownerPubkey ||
+        currentAuthenticatedPubkey() != ownerPubkey ||
+        !(isAuthorized?.call() ?? true)) {
+      return false;
+    }
 
     // Confirmed, for the same reason as the confirmed publish path: both
     // callers drop or flip local state when this returns false, and a queued
     // deletion that lands after the rollback would delete the list the user
     // still has.
     final outcome = await _nostrService.publishEventAwaitOk(event);
+    if (currentAuthenticatedPubkey() != ownerPubkey) return false;
     if (outcome.acceptedByAny) return true;
 
     Log.warning(

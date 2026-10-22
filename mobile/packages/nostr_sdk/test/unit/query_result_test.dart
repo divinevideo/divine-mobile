@@ -8,8 +8,8 @@ void main() {
   group(QueryResult, () {
     group('isComplete', () {
       test('is true when endedBy is QueryEnd.complete', () {
-        final result = QueryResult(
-          events: const [],
+        final result = const QueryResult(
+          events: [],
           endedBy: QueryEnd.complete,
         );
 
@@ -32,8 +32,8 @@ void main() {
 
     group('field defaults', () {
       test('possiblyCapped and confirmedExhaustive default to false', () {
-        final result = QueryResult(
-          events: const [],
+        final result = const QueryResult(
+          events: [],
           endedBy: QueryEnd.complete,
         );
 
@@ -43,8 +43,8 @@ void main() {
 
       test('possiblyCapped and confirmedExhaustive are set independently '
           '(possiblyCapped true, confirmedExhaustive false)', () {
-        final result = QueryResult(
-          events: const [],
+        final result = const QueryResult(
+          events: [],
           endedBy: QueryEnd.complete,
           possiblyCapped: true,
           confirmedExhaustive: false,
@@ -56,8 +56,8 @@ void main() {
 
       test('possiblyCapped and confirmedExhaustive are set independently '
           '(possiblyCapped false, confirmedExhaustive true)', () {
-        final result = QueryResult(
-          events: const [],
+        final result = const QueryResult(
+          events: [],
           endedBy: QueryEnd.complete,
           possiblyCapped: false,
           confirmedExhaustive: true,
@@ -71,8 +71,8 @@ void main() {
 
   group(PagedQueryResult, () {
     test('stoppedBy defaults to null when the walk completed', () {
-      final result = PagedQueryResult(
-        events: const [],
+      final result = const PagedQueryResult(
+        events: [],
         isComplete: true,
         pages: 2,
       );

@@ -17,25 +17,43 @@ import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
+import 'package:openvine/widgets/follow_list_button.dart';
+import 'package:openvine/widgets/list_info_sheet/list_info_form.dart';
 import 'package:riverpod/misc.dart' show Override;
 
 import '../helpers/finders.dart';
 import '../helpers/go_router.dart';
 import '../helpers/test_provider_overrides.dart';
 
-class _MockCuratedListService extends Mock implements CuratedListService {}
+class _MockCuratedListService extends Mock implements CuratedListService {
+  @override
+  bool recoveryNeedsRepair = false;
+}
 
 class _TestCuratedListsState extends CuratedListsState {
-  _TestCuratedListsState(this._mockService, this._list);
+  _TestCuratedListsState(this._resolveService, this._list);
 
-  final CuratedListService? _mockService;
+  final CuratedListService? Function() _resolveService;
   final CuratedList _list;
 
   @override
-  CuratedListService? get service => _mockService;
+  CuratedListService? get service => _resolveService();
 
   @override
   Future<List<CuratedList>> build() async => [_list];
+}
+
+class _DeferredCuratedListsState extends CuratedListsState {
+  _DeferredCuratedListsState(this._service, this._read);
+
+  final CuratedListService _service;
+  final Future<List<CuratedList>> _read;
+
+  @override
+  CuratedListService get service => _service;
+
+  @override
+  Future<List<CuratedList>> build() => _read;
 }
 
 VideoEvent _videoEvent({String id = 'video-one'}) => VideoEvent(
@@ -75,7 +93,7 @@ void main() {
     Widget buildSubject({
       String listId = 'external-list',
       String listName = 'External List',
-      String? authorPubkey = 'external-pubkey',
+      String? authorPubkey,
       List<String>? videoIds = const [],
       bool isPublic = true,
       MockGoRouter? goRouter,
@@ -83,6 +101,7 @@ void main() {
       bool overrideVideoEvents = true,
       List<VideoEvent> videoEvents = const [],
       CuratedList? discoveredList,
+      CuratedListsState Function()? curatedListsState,
     }) {
       final list = CuratedList(
         id: listId,
@@ -106,7 +125,8 @@ void main() {
         overrides: [
           ...getStandardTestOverrides(),
           curatedListsStateProvider.overrideWith(
-            () => _TestCuratedListsState(mockService, list),
+            curatedListsState ??
+                () => _TestCuratedListsState(() => mockService, list),
           ),
           // Keep the real subscribed-list cache out of the tile chain, as
           // the grid's own tests do: its sync would hit unstubbed service
@@ -215,7 +235,6 @@ void main() {
           buildSubject(
             listId: 'owned-list',
             listName: 'Puppets',
-            authorPubkey: null,
             videoIds: null,
             isPublic: false,
           ),
@@ -249,7 +268,6 @@ void main() {
         await tester.pumpWidget(
           buildSubject(
             listName: 'Subscribed List',
-            authorPubkey: null,
             videoIds: null,
           ),
         );
@@ -303,6 +321,11 @@ void main() {
       testWidgets('offers no report on your own uncached discovered list', (
         tester,
       ) async {
+        when(() => mockService.isOwnedList('$listAuthor:external-list'))
+            .thenReturn(false);
+        when(() => mockService.isSubscribedToList('$listAuthor:external-list'))
+            .thenReturn(false);
+
         // A deep link can resolve before the background owner-list sync.
         // The local store is ready but does not contain this list yet.
         final auth = createMockAuthService(
@@ -323,12 +346,17 @@ void main() {
         expect(findByTooltip(l10n.curatedListActionsTooltip), findsNothing);
       });
 
-      testWidgets("reports someone else's list from its menu", (
-        tester,
-      ) async {
+      Future<void> pumpUncachedDiscoveredList(
+        WidgetTester tester, {
+        required String viewer,
+      }) async {
+        when(() => mockService.isOwnedList('$listAuthor:external-list'))
+            .thenReturn(false);
+        when(() => mockService.isSubscribedToList('$listAuthor:external-list'))
+            .thenReturn(false);
         final auth = createMockAuthService(
           authState: AuthState.authenticated,
-          currentPublicKeyHex: 'a' * 64,
+          currentPublicKeyHex: viewer,
         );
         await tester.pumpWidget(
           buildSubject(
@@ -339,18 +367,161 @@ void main() {
         );
         await tester.pump();
         await tester.pump();
+      }
 
-        await tester.tap(findByTooltip(l10n.curatedListActionsTooltip));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text(l10n.listReportAction));
-        await tester.pumpAndSettle();
+      testWidgets(
+        'offers no follow pill on your own uncached discovered list',
+        (tester) async {
+          // Search opens an unclaimed draft under the viewer's own pubkey,
+          // and following it would cache their own list a second time.
+          await pumpUncachedDiscoveredList(tester, viewer: listAuthor);
 
-        expect(find.text(l10n.reportWhyReporting), findsOneWidget);
+          expect(find.byType(FollowListButton), findsNothing);
+        },
+      );
+
+      testWidgets(
+        "offers the follow pill on someone else's uncached discovered list",
+        (tester) async {
+          await pumpUncachedDiscoveredList(tester, viewer: 'a' * 64);
+
+          expect(find.byType(FollowListButton), findsOneWidget);
+        },
+      );
+
+      testWidgets('waits for owner state before offering a report', (
+        tester,
+      ) async {
+        when(() => mockService.isOwnedList('$listAuthor:external-list'))
+            .thenReturn(false);
+        when(() => mockService.isSubscribedToList('$listAuthor:external-list'))
+            .thenReturn(false);
+        final read = Completer<List<CuratedList>>();
+        final auth = createMockAuthService(
+          authState: AuthState.authenticated,
+          currentPublicKeyHex: 'a' * 64,
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            authorPubkey: listAuthor,
+            discoveredList: reportableList(),
+            curatedListsState: () =>
+                _DeferredCuratedListsState(mockService, read.future),
+            extraOverrides: [
+              authServiceProvider.overrideWithValue(auth),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(findByTooltip(l10n.curatedListActionsTooltip), findsNothing);
+
+        read.complete([]);
+        await tester.pump();
+        await tester.pump();
+        expect(findByTooltip(l10n.curatedListActionsTooltip), findsOneWidget);
+      });
+
+      testWidgets('does not offer a report without a known author', (
+        tester,
+      ) async {
+        final list = CuratedList(
+          id: 'external-list',
+          name: 'External List',
+          videoEventIds: const [],
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+          nostrEventId: listEventId,
+        );
+        await tester.pumpWidget(buildSubject(discoveredList: list));
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('External List'), findsWidgets);
+        expect(findByTooltip(l10n.curatedListActionsTooltip), findsNothing);
+      });
+
+      testWidgets('does not offer a report without a resolved event', (
+        tester,
+      ) async {
+        when(() => mockService.isOwnedList('$listAuthor:external-list'))
+            .thenReturn(false);
+        when(() => mockService.isSubscribedToList('$listAuthor:external-list'))
+            .thenReturn(false);
+        final list = CuratedList(
+          id: 'external-list',
+          name: 'External List',
+          videoEventIds: const [],
+          pubkey: listAuthor,
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            authorPubkey: listAuthor,
+            discoveredList: list,
+            extraOverrides: [
+              publicCuratedListProvider(
+                authorPubkey: listAuthor,
+                listId: list.id,
+              ).overrideWith((ref) async => null),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('External List'), findsWidgets);
+        expect(findByTooltip(l10n.curatedListActionsTooltip), findsNothing);
+      });
+
+      testWidgets("reports someone else's list from its menu", (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        try {
+          when(() => mockService.isOwnedList('$listAuthor:external-list'))
+              .thenReturn(false);
+          when(
+            () => mockService.isSubscribedToList('$listAuthor:external-list'),
+          ).thenReturn(false);
+
+          final auth = createMockAuthService(
+            authState: AuthState.authenticated,
+            currentPublicKeyHex: 'a' * 64,
+          );
+          await tester.pumpWidget(
+            buildSubject(
+              authorPubkey: listAuthor,
+              discoveredList: reportableList(),
+              extraOverrides: [authServiceProvider.overrideWithValue(auth)],
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          await tester.tap(findByTooltip(l10n.curatedListActionsTooltip));
+          await tester.pumpAndSettle();
+          tester.semantics.tap(
+            find.semantics.byPredicate(
+              (node) => node.identifier == 'list_report_option',
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          expect(find.text(l10n.reportWhyReporting), findsOneWidget);
+        } finally {
+          semantics.dispose();
+        }
       });
 
       testWidgets(
         'looks the list up to report it when opened without its event',
         (tester) async {
+          when(() => mockService.isOwnedList('$listAuthor:external-list'))
+              .thenReturn(false);
+          when(
+            () => mockService.isSubscribedToList('$listAuthor:external-list'),
+          ).thenReturn(false);
+
           await tester.pumpWidget(
             buildSubject(
               authorPubkey: listAuthor,
@@ -369,6 +540,67 @@ void main() {
           await tester.pumpAndSettle();
 
           expect(find.text(l10n.listReportAction), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'a discovered list cannot use a different author local list',
+        (
+          tester,
+        ) async {
+          final author = 'a' * 64;
+          final viewer = 'b' * 64;
+          const listId = 'my_vine_list';
+          final local = CuratedList(
+            id: listId,
+            name: 'My own list',
+            pubkey: viewer,
+            videoEventIds: const [],
+            createdAt: DateTime(2026),
+            updatedAt: DateTime(2026),
+          );
+          final discovered = local.copyWith(
+            name: 'Discovered list',
+            pubkey: author,
+            description: 'The selected author list.',
+            videoEventIds: const ['selected-video'],
+          );
+          when(() => mockService.getListById(listId)).thenReturn(local);
+          when(() => mockService.isOwnedList(listId)).thenReturn(true);
+          when(() => mockService.isSubscribedToList(listId)).thenReturn(true);
+          when(() => mockService.isOwnedList('$author:$listId'))
+              .thenReturn(false);
+          when(() => mockService.isSubscribedToList('$author:$listId'))
+              .thenReturn(false);
+          var selectedVideoReads = 0;
+          var localVideoReads = 0;
+          await tester.pumpWidget(
+            buildSubject(
+              listId: listId,
+              listName: discovered.name,
+              authorPubkey: author,
+              videoIds: discovered.videoEventIds,
+              discoveredList: discovered,
+              overrideVideoEvents: false,
+              extraOverrides: [
+                videoEventsByIdsProvider(discovered.videoEventIds)
+                    .overrideWith((ref) {
+                      selectedVideoReads++;
+                      return Stream.value(const []);
+                    }),
+                curatedListVideoEventsProvider(listId).overrideWith((ref) {
+                  localVideoReads++;
+                  return Stream.value(const []);
+                }),
+              ],
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(selectedVideoReads, 1);
+          expect(localVideoReads, 0);
+          expect(find.text('The selected author list.'), findsOneWidget);
+          expect(find.text(l10n.listFollowButton), findsOneWidget);
+          expect(findByTooltip(l10n.curatedListActionsTooltip), findsNothing);
         },
       );
 
@@ -491,6 +723,74 @@ void main() {
         ).called(1);
       });
 
+      testWidgets('following a discovered author list uses its coordinate', (
+        tester,
+      ) async {
+        final author = 'a' * 64;
+        final coordinate = '$author:external-list';
+        isSubscribed = false;
+        final discovered = CuratedList(
+          id: 'external-list',
+          name: 'External List',
+          pubkey: author,
+          videoEventIds: const [],
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        );
+        when(() => mockService.isOwnedList(coordinate)).thenReturn(false);
+        when(
+          () => mockService.isSubscribedToList(coordinate),
+        ).thenAnswer((_) => isSubscribed);
+        when(
+          () => mockService.subscribeToList(coordinate, discovered),
+        ).thenAnswer((_) async => true);
+
+        await tester.pumpWidget(
+          buildSubject(authorPubkey: author, discoveredList: discovered),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        await tester.tap(find.text(l10n.listFollowButton));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => mockService.subscribeToList(coordinate, discovered),
+        ).called(1);
+      });
+
+      testWidgets('unfollowing an author list already stored keeps its id', (
+        tester,
+      ) async {
+        final author = 'a' * 64;
+        final stored = CuratedList(
+          id: 'external-list',
+          name: 'External List',
+          pubkey: author,
+          videoEventIds: const [],
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        );
+        when(() => mockService.getListById('external-list')).thenReturn(stored);
+        when(() => mockService.unsubscribeFromList('external-list')).thenAnswer(
+          (_) async {
+            isSubscribed = false;
+            return true;
+          },
+        );
+
+        await tester.pumpWidget(buildSubject(authorPubkey: author));
+        await tester.pump();
+        await tester.pump();
+
+        await tester.tap(find.text(l10n.listFollowingButton));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => mockService.unsubscribeFromList('external-list'),
+        ).called(1);
+      });
+
       testWidgets('hides the share action for a private or unknown list', (
         tester,
       ) async {
@@ -525,6 +825,120 @@ void main() {
         ).called(1);
         expect(find.text(l10n.listFollowButton), findsOneWidget);
       });
+
+      for (final following in [false, true]) {
+        testWidgets(
+          'a rejected ${following ? 'unfollow' : 'follow'} reports failure '
+          'and preserves the subscription state',
+          (tester) async {
+            isSubscribed = following;
+            final list = CuratedList(
+              id: 'external-list',
+              name: 'External List',
+              pubkey: 'external-pubkey',
+              videoEventIds: const [],
+              createdAt: DateTime(2026),
+              updatedAt: DateTime(2026),
+            );
+            if (following) {
+              when(() => mockService.unsubscribeFromList('external-list'))
+                  .thenAnswer((_) async => false);
+            } else {
+              when(() => mockService.subscribeToList('external-list', list))
+                  .thenAnswer((_) async => false);
+            }
+            await tester.pumpWidget(buildSubject(discoveredList: list));
+            await tester.pumpAndSettle();
+            final pill = following
+                ? l10n.listFollowingButton
+                : l10n.listFollowButton;
+
+            await tester.tap(find.text(pill));
+            await tester.pumpAndSettle();
+
+            expect(find.text(pill), findsOneWidget);
+            expect(
+              find.text(l10n.discoverListsFailedToUpdateSubscription),
+              findsOneWidget,
+            );
+            if (following) {
+              verify(() => mockService.unsubscribeFromList('external-list'))
+                  .called(1);
+              verifyNever(
+                () => mockService.subscribeToList('external-list', list),
+              );
+            } else {
+              verify(() => mockService.subscribeToList('external-list', list))
+                  .called(1);
+              verifyNever(
+                () => mockService.unsubscribeFromList('external-list'),
+              );
+            }
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
+
+      testWidgets('a subscription result cannot update a replacement account', (
+        tester,
+      ) async {
+        var owner = 'a' * 64;
+        final auth = createMockAuthService(currentPublicKeyHex: owner);
+        when(() => auth.currentPublicKeyHex).thenAnswer((_) => owner);
+        final result = Completer<bool>();
+        when(() => mockService.unsubscribeFromList('external-list'))
+            .thenAnswer((_) => result.future);
+        await tester.pumpWidget(
+          buildSubject(
+            extraOverrides: [authServiceProvider.overrideWithValue(auth)],
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.listFollowingButton));
+        await tester.pump();
+
+        owner = 'b' * 64;
+        result.complete(false);
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SnackBar), findsNothing);
+        expect(find.text(l10n.listFollowingButton), findsOneWidget);
+        verify(() => mockService.unsubscribeFromList('external-list'))
+            .called(1);
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets(
+        'a rejected subscription result cannot report failure to a replacement service',
+        (
+          tester,
+        ) async {
+          final openingService = mockService;
+          final result = Completer<bool>();
+          when(() => openingService.unsubscribeFromList('external-list'))
+              .thenAnswer((_) => result.future);
+          await tester.pumpWidget(buildSubject());
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.listFollowingButton));
+          await tester.pump();
+
+          mockService = _MockCuratedListService();
+          when(() => mockService.isSubscribedToList('external-list'))
+              .thenReturn(true);
+          when(() => mockService.isOwnedList('external-list'))
+              .thenReturn(false);
+          await tester.pump();
+          result.complete(false);
+          await tester.pumpAndSettle();
+
+          expect(find.text(l10n.listFollowingButton), findsOneWidget);
+          verify(() => openingService.unsubscribeFromList('external-list'))
+              .called(1);
+          verifyNever(() => mockService.unsubscribeFromList('external-list'));
+          expect(find.byType(SnackBar), findsNothing);
+          expect(tester.takeException(), isNull);
+        },
+      );
 
       testWidgets('viewer never sees the owner actions menu', (tester) async {
         isSubscribed = false;
@@ -661,6 +1075,38 @@ void main() {
 
         expect(find.text(l10n.listRemoveVideosButton(0)), findsNothing);
         expect(find.text(l10n.listManageVideosAction), findsOneWidget);
+      });
+
+      testWidgets("edit list info opens the sheet on the list's own values", (
+        tester,
+      ) async {
+        stubOwnedList(name: 'Puppets', isPublic: false);
+        await tester.binding.setSurfaceSize(const Size(800, 1200));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+
+        await tester.pumpWidget(
+          buildSubject(listId: 'owned-list', listName: 'Puppets'),
+        );
+        await tester.pump();
+        await tester.pump();
+        await openOwnerSheet(tester);
+        await tester.tap(find.text(l10n.listEditInfoAction));
+        await tester.pumpAndSettle();
+
+        final form = find.byType(ListInfoForm);
+        expect(form, findsOneWidget);
+        expect(
+          find.descendant(of: form, matching: find.text('Puppets')),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: form,
+            matching: find.text(l10n.listPrivateListSubtitle),
+          ),
+          findsOneWidget,
+        );
+        expect(find.bySemanticsLabel(l10n.listSave), findsOneWidget);
       });
 
       testWidgets('sheet hides share for a list without an author', (

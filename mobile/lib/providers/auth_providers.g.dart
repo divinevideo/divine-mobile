@@ -471,6 +471,76 @@ abstract class _$CurrentAuthState extends $Notifier<AuthState> {
   }
 }
 
+/// Terminal account proof, assigned only after native storage and the host
+/// frame have committed. A repeated auth enum cannot represent that boundary.
+
+@ProviderFor(CurrentAccountActivationReceipt)
+final currentAccountActivationReceiptProvider =
+    CurrentAccountActivationReceiptProvider._();
+
+/// Terminal account proof, assigned only after native storage and the host
+/// frame have committed. A repeated auth enum cannot represent that boundary.
+final class CurrentAccountActivationReceiptProvider
+    extends
+        $NotifierProvider<
+          CurrentAccountActivationReceipt,
+          AccountActivationReceipt?
+        > {
+  /// Terminal account proof, assigned only after native storage and the host
+  /// frame have committed. A repeated auth enum cannot represent that boundary.
+  CurrentAccountActivationReceiptProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'currentAccountActivationReceiptProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$currentAccountActivationReceiptHash();
+
+  @$internal
+  @override
+  CurrentAccountActivationReceipt create() => CurrentAccountActivationReceipt();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AccountActivationReceipt? value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AccountActivationReceipt?>(value),
+    );
+  }
+}
+
+String _$currentAccountActivationReceiptHash() =>
+    r'00d2670307c76c0039260348b6a1bd6d7be4d919';
+
+/// Terminal account proof, assigned only after native storage and the host
+/// frame have committed. A repeated auth enum cannot represent that boundary.
+
+abstract class _$CurrentAccountActivationReceipt
+    extends $Notifier<AccountActivationReceipt?> {
+  AccountActivationReceipt? build();
+  @$mustCallSuper
+  @override
+  WhenComplete runBuild() {
+    final ref =
+        this.ref as $Ref<AccountActivationReceipt?, AccountActivationReceipt?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AccountActivationReceipt?, AccountActivationReceipt?>,
+              AccountActivationReceipt?,
+              Object?,
+              Object?
+            >;
+    return element.handleCreate(ref, build);
+  }
+}
+
 /// Current RPC capability, kept in sync with
 /// [AuthService.authRpcCapabilityStream].
 ///

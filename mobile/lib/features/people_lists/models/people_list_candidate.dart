@@ -1,6 +1,6 @@
 // ABOUTME: Display model for a candidate person in the people-list picker.
-// ABOUTME: Captures relationship flags (following/follower/mutual) and
-// ABOUTME: whether the candidate is already a member of the target list.
+// ABOUTME: Captures relationship flags (following/follower/mutual); list
+// ABOUTME: membership is read live from PeopleListsBloc, not stored here.
 
 import 'package:equatable/equatable.dart';
 
@@ -18,7 +18,6 @@ class PeopleListCandidate extends Equatable {
     this.avatarUrl,
     this.isFollowing = false,
     this.isFollower = false,
-    this.isAlreadyInList = false,
   });
 
   /// Full-hex Nostr pubkey. Never truncated.
@@ -45,12 +44,6 @@ class PeopleListCandidate extends Equatable {
   /// Whether this pubkey currently follows the authenticated user.
   final bool isFollower;
 
-  /// Whether this candidate is already a member of the target people list.
-  ///
-  /// The UI should render these rows as pre-checked and disabled so the
-  /// user cannot double-add them through the picker.
-  final bool isAlreadyInList;
-
   /// Whether the authenticated user and this candidate mutually follow.
   bool get isMutual => isFollowing && isFollower;
 
@@ -61,7 +54,6 @@ class PeopleListCandidate extends Equatable {
     String? avatarUrl,
     bool? isFollowing,
     bool? isFollower,
-    bool? isAlreadyInList,
   }) {
     return PeopleListCandidate(
       pubkey: pubkey,
@@ -70,7 +62,6 @@ class PeopleListCandidate extends Equatable {
       avatarUrl: avatarUrl ?? this.avatarUrl,
       isFollowing: isFollowing ?? this.isFollowing,
       isFollower: isFollower ?? this.isFollower,
-      isAlreadyInList: isAlreadyInList ?? this.isAlreadyInList,
     );
   }
 
@@ -82,6 +73,5 @@ class PeopleListCandidate extends Equatable {
     avatarUrl,
     isFollowing,
     isFollower,
-    isAlreadyInList,
   ];
 }

@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:keycast_flutter/keycast_flutter.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/sensitive_uri_for_logs.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -1067,7 +1068,25 @@ class EmailVerificationCubit extends Cubit<EmailVerificationState> {
         await Future<void>.delayed(const Duration(milliseconds: 600));
 
         // Now sign in — this triggers GoRouter redirect to home
-        await _authService.signInWithDivineOAuth(session);
+        try {
+          await _authService.signInWithDivineOAuth(session);
+        } on UserDataCleanupException {
+          // The code is already redeemed and `_cleanup()` made this exchange
+          // stale, so the generic handler below would drop the failure.
+          Log.error(
+            'Sign-in blocked after email verification: account cleanup failed',
+            name: 'EmailVerificationCubit',
+            category: LogCategory.auth,
+          );
+          if (isClosed) return;
+          emit(
+            const EmailVerificationState(
+              status: EmailVerificationStatus.failure,
+              errorCode: EmailVerificationError.signInFailed,
+            ),
+          );
+          return;
+        }
 
         // Verify sign-in actually succeeded (signInWithDivineOAuth catches
         // errors internally and sets state to unauthenticated without throwing)

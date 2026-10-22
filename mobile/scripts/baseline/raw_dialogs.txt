@@ -14,7 +14,6 @@ lib/screens/auth/create_account_screen.dart	1
 lib/screens/auth/nostr_connect_screen.dart	1
 lib/screens/category_gallery_screen.dart	1
 lib/screens/curated_list_feed_screen.dart	1
-lib/screens/explore/tabs/explore_lists_tab.dart	1
 lib/screens/inbox/conversation/widgets/reaction_picker_overlay.dart	1
 lib/screens/inbox/inbox_view.dart	1
 lib/screens/inbox/new_message_sheet.dart	1
@@ -22,11 +21,9 @@ lib/screens/profile_setup/widgets/profile_setup_listeners.dart	2
 lib/screens/user_list_people_screen.dart	1
 lib/utils/external_link_launcher.dart	1
 lib/utils/pause_aware_modals.dart	2
-lib/widgets/add_to_list_dialog.dart	1
 lib/widgets/age_verification_dialog.dart	1
 lib/widgets/library/drafts_tab.dart	1
 lib/widgets/owner_video_delete_confirmation_dialog.dart	1
 lib/widgets/profile_editor/username_status_indicator.dart	1
 lib/widgets/save_original_progress_sheet.dart	1
-lib/widgets/video_feed_item/actions/share_action_button.dart	1
 lib/widgets/watermark_download_progress_sheet.dart	1

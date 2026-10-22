@@ -2715,6 +2715,7 @@ void main() {
         'closeOnEose releases the relay subscription and closes the stream',
         () async {
           void Function()? onEose;
+          final completionOrder = <String>[];
           when(
             () => mockNostr.subscribe(
               any(),
@@ -2738,14 +2739,62 @@ void main() {
               Filter(kinds: [EventKind.textNote]),
             ],
             closeOnEose: true,
+            onEose: () {
+              expect(client.activeSubscriptionCount, 1);
+              completionOrder.add('EOSE');
+            },
+          );
+          final observed = stream.listen(
+            (_) {},
+            onDone: () => completionOrder.add('done'),
           );
           final done = expectLater(stream, emitsDone);
 
           onEose!();
 
           await done;
+          await observed.cancel();
+          expect(completionOrder, ['EOSE', 'done']);
           verify(() => mockNostr.unsubscribe(any())).called(1);
           expect(client.activeSubscriptionCount, 0);
+        },
+      );
+
+      test(
+        'teardown closes a bounded stream without reporting relay EOSE',
+        () async {
+          when(
+            () => mockNostr.subscribe(
+              any(),
+              any(),
+              id: any(named: 'id'),
+              tempRelays: any(named: 'tempRelays'),
+              targetRelays: any(named: 'targetRelays'),
+              relayTypes: any(named: 'relayTypes'),
+              sendAfterAuth: any(named: 'sendAfterAuth'),
+              onEose: any(named: 'onEose'),
+              onClosed: any(named: 'onClosed'),
+            ),
+          ).thenAnswer(
+            (invocation) => invocation.namedArguments[#id] as String,
+          );
+          when(() => mockNostr.unsubscribe(any())).thenReturn(null);
+          var reportedEose = false;
+          final stream = client.subscribe(
+            [
+              Filter(kinds: [30005]),
+            ],
+            closeOnEose: true,
+            onEose: () => reportedEose = true,
+          );
+          final done = expectLater(stream, emitsDone);
+
+          await client.closeAllSubscriptions();
+          await done;
+
+          expect(reportedEose, isFalse);
+          expect(client.activeSubscriptionCount, 0);
+          verify(() => mockNostr.unsubscribe(any())).called(1);
         },
       );
 

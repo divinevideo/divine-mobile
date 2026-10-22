@@ -1401,34 +1401,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Không có video nào';
 
   @override
-  String get exploreDiscoverLists => 'Khám phá danh sách';
-
-  @override
-  String get exploreAboutLists => 'Về danh sách';
-
-  @override
-  String get exploreAboutListsDescription =>
-      'Danh sách giúp bạn sắp xếp và tuyển chọn nội dung Divine theo hai cách:';
-
-  @override
   String get explorePeopleLists => 'Danh sách người';
 
   @override
-  String get explorePeopleListsDescription =>
-      'Theo dõi nhóm nhà sáng tạo và xem video mới nhất của họ';
-
-  @override
   String get exploreVideoLists => 'Danh sách video';
-
-  @override
-  String get exploreVideoListsDescription =>
-      'Tạo danh sách phát từ những video yêu thích để xem sau';
-
-  @override
-  String get exploreMyLists => 'Danh sách của tôi';
-
-  @override
-  String get exploreSubscribedLists => 'Danh sách đã đăng ký';
 
   @override
   String get exploreErrorLoadingLists =>
@@ -3900,17 +3876,11 @@ class AppLocalizationsVi extends AppLocalizations {
   String get peopleListsAddToList => 'Thêm vào danh sách';
 
   @override
-  String get peopleListsSheetTitle => 'Thêm vào danh sách';
-
-  @override
   String get peopleListsEmptyTitle => 'Chưa có danh sách nào';
 
   @override
   String get peopleListsEmptySubtitle =>
       'Tạo một danh sách để bắt đầu nhóm mọi người.';
-
-  @override
-  String get peopleListsCreateList => 'Tạo danh sách';
 
   @override
   String get peopleListsNewListTitle => 'Danh sách mới';
@@ -3990,14 +3960,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get peopleListsAddPeopleRetry => 'Thử lại';
-
-  @override
-  String get peopleListsAddButton => 'Thêm';
-
-  @override
-  String peopleListsAddButtonWithCount(int count) {
-    return 'Thêm $count';
-  }
 
   @override
   String peopleListsInNLists(int count) {
@@ -4934,45 +4896,18 @@ class AppLocalizationsVi extends AppLocalizations {
   String get reportClose => 'Đóng';
 
   @override
-  String get listAddToList => 'Thêm vào danh sách';
-
-  @override
   String listVideoCount(int count) {
     return '$count video';
-  }
-
-  @override
-  String listPersonCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count người',
-      one: '1 người',
-    );
-    return '$_temp0';
   }
 
   @override
   String get listByAuthorPrefix => 'Bởi ';
 
   @override
-  String get listNewList => 'Danh sách mới';
-
-  @override
   String get listDone => 'Xong';
 
   @override
   String get listErrorLoading => 'Lỗi khi tải danh sách';
-
-  @override
-  String listRemovedFrom(String name) {
-    return 'Đã xóa khỏi $name';
-  }
-
-  @override
-  String listAddedTo(String name) {
-    return 'Đã thêm vào $name';
-  }
 
   @override
   String get listCreateNewList => 'Tạo danh sách mới';
@@ -4985,13 +4920,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get listDescriptionLabel => 'Mô tả (không bắt buộc)';
-
-  @override
-  String get listPublicList => 'Danh sách công khai';
-
-  @override
-  String get listPublicListSubtitle =>
-      'Người khác có thể theo dõi và xem danh sách này';
 
   @override
   String get listPrivateListSubtitle =>
@@ -5100,9 +5028,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String listShareSubject(String name) {
     return '$name trên Divine';
   }
-
-  @override
-  String get listCancel => 'Hủy';
 
   @override
   String get listCreate => 'Tạo';
@@ -6170,33 +6095,6 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get discoverListsFailedToUpdateSubscription =>
       'Không cập nhật được đăng ký. Vui lòng thử lại.';
-
-  @override
-  String get discoverListsTitle => 'Khám phá danh sách';
-
-  @override
-  String get discoverListsFailedToLoad => 'Không tải được danh sách';
-
-  @override
-  String get discoverListsLoading => 'Đang khám phá danh sách công khai...';
-
-  @override
-  String get discoverListsRelayTimeout =>
-      'Relay không trả về danh sách kịp lúc. Thử lại nhé.';
-
-  @override
-  String get discoverListsServiceUnavailable => 'Dịch vụ không khả dụng.';
-
-  @override
-  String get discoverListsEmptyTitle =>
-      'Không tìm thấy danh sách công khai nào';
-
-  @override
-  String get discoverListsEmptySubtitle =>
-      'Quay lại sau để xem danh sách mới nhé';
-
-  @override
-  String get discoverListsByAuthorPrefix => 'bởi';
 
   @override
   String get curatedListEmptyTitle => 'Chưa có video nào trong danh sách này';
@@ -13758,10 +13656,6 @@ class AppLocalizationsVi extends AppLocalizations {
       'Tài khoản hoặc quyền truy cập danh sách của bạn đã thay đổi. Mở lại trang này để tiếp tục.';
 
   @override
-  String get peopleListsSearchConnectionsHint =>
-      'Tìm người theo dõi và người bạn đang theo dõi';
-
-  @override
   String get listMemberNamesSeparator => ', ';
 
   @override
@@ -14062,4 +13956,97 @@ class AppLocalizationsVi extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Đã đăng $time';
   }
+
+  @override
+  String get listPrivateConversionTooLarge =>
+      'Danh sách này quá lớn để chuyển sang riêng tư. Hãy xóa bớt một số video trước. Các chỉnh sửa của bạn vẫn ở đây và chưa được lưu.';
+
+  @override
+  String get listsDiscoveryLoadingLabel => 'Đang tải danh sách';
+
+  @override
+  String get listsDiscoveryEmpty =>
+      'Lần này chẳng thấy danh sách nào. Kéo để làm mới.';
+
+  @override
+  String get listSearchPeopleUnavailable =>
+      'Danh sách người hiện không khả dụng.';
+
+  @override
+  String get listSearchVideosUnavailable =>
+      'Danh sách video hiện không khả dụng.';
+
+  @override
+  String get authAccountCleanupFailed =>
+      'Không thể xóa dữ liệu của tài khoản trước. Hãy thử lại.';
+
+  @override
+  String get peopleListsAddPeopleSearchHint => 'Tìm người';
+
+  @override
+  String peopleListsRemovePersonSemanticLabel(String name) {
+    return 'Xóa $name khỏi danh sách';
+  }
+
+  @override
+  String get peopleListsMembershipUpdateFailed =>
+      'Không cập nhật được danh sách. Vui lòng thử lại.';
+
+  @override
+  String peopleListsAddPersonSemanticLabel(String name) {
+    return 'Thêm $name vào danh sách';
+  }
+
+  @override
+  String get listAddCollaboratorTitle => 'Thêm cộng tác viên';
+
+  @override
+  String get listMakePublicLabel => 'Đặt công khai';
+
+  @override
+  String get listCollaboratorSearchHint => 'Tìm trên Divine...';
+
+  @override
+  String get listCollaboratorsNone => 'Không có';
+
+  @override
+  String get listMakePublicSubtitle => 'Cho người khác xem danh sách này';
+
+  @override
+  String get listVideoNotAdded =>
+      'Danh sách của bạn đã được tạo, nhưng video này chưa được thêm.';
+
+  @override
+  String get listPrivateCollaboratorsWarning =>
+      'Đặt danh sách này ở chế độ riêng tư cũng sẽ xóa các cộng tác viên. Chỉ bạn mới có thể thêm video.';
+
+  @override
+  String get listVideoPendingSync =>
+      'Danh sách và video của bạn đã được lưu tại đây. Video đang chờ đồng bộ.';
+
+  @override
+  String get listRetrySync => 'Đồng bộ ngay';
+
+  @override
+  String get listPermissionsUnconfirmed =>
+      'Không thể xác nhận thay đổi này. Hãy thử lại.';
+
+  @override
+  String get listRecoveryPending =>
+      'Danh sách này có các thay đổi đang chờ đồng bộ.';
+
+  @override
+  String get listPermissionsRecoveryPending =>
+      'Thay đổi đã được chấp nhận. Nhấn Đồng bộ ngay để hoàn tất lưu. Việc chỉnh sửa tạm dừng cho đến lúc đó.';
+
+  @override
+  String get listRecoveryReadOnly =>
+      'Một số thay đổi đã lưu trong danh sách video cần được khôi phục. Bạn có thể xem danh sách video, nhưng việc chỉnh sửa đang tạm dừng.';
+
+  @override
+  String get listAddToLists => 'Thêm vào danh sách';
+
+  @override
+  String get accountDeletionProcessingSignOutFailed =>
+      'Tài khoản của bạn đang được xử lý xóa, nhưng chúng tôi chưa thể đăng xuất cho bạn. Hãy thử lại.';
 }

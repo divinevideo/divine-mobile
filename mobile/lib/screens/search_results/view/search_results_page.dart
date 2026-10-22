@@ -146,6 +146,10 @@ class _SearchResultsScope extends ConsumerWidget {
     final peopleListSearchEnabled =
         profileListFeaturesEnabled && curatedListsEnabled;
 
+    // Bind discovery to the current viewer, including before their first post.
+    ref.watch(currentAuthStateProvider);
+    final viewerPubkey = ref.watch(authServiceProvider).currentPublicKeyHex;
+
     return Stack(
       children: [
         Offstage(
@@ -165,6 +169,7 @@ class _SearchResultsScope extends ConsumerWidget {
                   curatedListRepository,
                   peopleListsRepository,
                   peopleListSearchEnabled,
+                  viewerPubkey,
                 )),
                 providers: [
                   BlocProvider(
@@ -221,6 +226,8 @@ class _SearchResultsScope extends ConsumerWidget {
                             peopleListSearchEnabled: peopleListSearchEnabled,
                             policy: listThumbnailPolicy,
                             controller: controller,
+                            // The viewer's own lists remain discoverable before posting.
+                            viewerPubkey: viewerPubkey,
                             child: _BlocklistRefreshListener(
                               child: Scaffold(
                                 // bg/surface — matches SearchResultsView's body background so the
@@ -337,6 +344,7 @@ class _ListSearchPolicyScope extends StatefulWidget {
     required this.peopleListSearchEnabled,
     required this.policy,
     required this.controller,
+    required this.viewerPubkey,
     required this.child,
   });
 
@@ -345,6 +353,7 @@ class _ListSearchPolicyScope extends StatefulWidget {
   final bool peopleListSearchEnabled;
   final Object policy;
   final TextEditingController controller;
+  final String? viewerPubkey;
   final Widget child;
 
   @override
@@ -358,6 +367,7 @@ class _ListSearchPolicyScopeState extends State<_ListSearchPolicyScope> {
     curatedListRepository: widget.repository,
     peopleListsRepository: widget.peopleRepository,
     peopleListSearchEnabled: widget.peopleListSearchEnabled,
+    viewerPubkey: widget.viewerPubkey,
   );
 
   @override

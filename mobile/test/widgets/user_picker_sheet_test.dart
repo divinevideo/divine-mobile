@@ -236,6 +236,102 @@ void main() {
         },
       );
 
+      for (final scenario in [
+        (
+          name: 'the owner changes',
+          readiness: NostrSessionReadiness.identityKnown(pubkey: 'e' * 64),
+        ),
+        (
+          name: 'sign-out starts',
+          readiness: NostrSessionReadiness.tearingDown(pubkey: 'f' * 64),
+        ),
+      ]) {
+        testWidgets(
+          'a captured chip removal is inert after ${scenario.name}',
+          (tester) async {
+            final session = _TestNostrSession();
+            final removable = UserProfile(
+              pubkey: 'a' * 64,
+              displayName: 'First collaborator',
+              rawData: const {},
+              createdAt: DateTime.utc(2026),
+              eventId: 'c' * 64,
+            );
+            final retained = UserProfile(
+              pubkey: 'b' * 64,
+              displayName: 'Second collaborator',
+              rawData: const {},
+              createdAt: DateTime.utc(2026),
+              eventId: 'd' * 64,
+            );
+            final toggled = <String>[];
+            await tester.pumpWidget(
+              ProviderScope(
+                overrides: [
+                  nostrSessionProvider.overrideWith(() => session),
+                  userRankingSignalsLoaderProvider.overrideWithValue(
+                    rankingLoader,
+                  ),
+                  _noVanishedProfiles,
+                  profileRepositoryProvider.overrideWithValue(
+                    _createMockProfileRepository(),
+                  ),
+                  followRepositoryProvider.overrideWithValue(
+                    _createMockFollowRepository(),
+                  ),
+                ],
+                child: MaterialApp(
+                  localizationsDelegates: appLocalizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  home: Scaffold(
+                    body: UserPickerSheet(
+                      title: 'Collaborators',
+                      filterMode: UserPickerFilterMode.allUsers,
+                      initialSelectedProfiles: [removable, retained],
+                      showSelectedProfiles: true,
+                      onUserToggled: (profile) => toggled.add(profile.pubkey),
+                    ),
+                  ),
+                ),
+              ),
+            );
+            await tester.pumpAndSettle();
+            await tester.tap(
+              find.bySemanticsLabel('Remove First collaborator'),
+            );
+            await tester.pumpAndSettle();
+            expect(toggled, [removable.pubkey]);
+            expect(find.text('First collaborator'), findsNothing);
+            expect(find.text('Second collaborator'), findsOneWidget);
+
+            // Chip removal completes after its reverse animation. Retain the
+            // parent callback to exercise a completion after session retirement.
+            final selectedRow = tester.widget(
+              find.byWidgetPredicate(
+                (widget) =>
+                    widget.runtimeType.toString() == '_SelectedChipsRow',
+              ),
+            );
+            final onRemove =
+                (selectedRow as dynamic).onRemove as ValueChanged<UserProfile>;
+            session.update(scenario.readiness);
+            // No frame has unmounted the old view yet: the account gate must
+            // reject this callback even while its State is still mounted.
+            expect(() => onRemove(retained), returnsNormally);
+            expect(toggled, [removable.pubkey]);
+            await tester.pumpAndSettle();
+            expect(find.byType(TextField), findsNothing);
+            // A callback retained beyond disposal must also be harmless.
+            expect(() => onRemove(retained), returnsNormally);
+            session.selectOwner('f' * 64);
+            await tester.pumpAndSettle();
+            expect(find.byType(TextField), findsNothing);
+            expect(toggled, [removable.pubkey]);
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
+
       testWidgets(
         'preserves search text when same-owner ranking dependencies change',
         (tester) async {
@@ -292,6 +388,61 @@ void main() {
     });
 
     group('renders', () {
+      testWidgets(
+        'stored nonmutual collaborator can be removed',
+        (tester) async {
+          final former = UserProfile(
+            pubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+            name: 'Former mutual',
+            rawData: const {'name': 'Former mutual'},
+            createdAt: DateTime(2026),
+            eventId: 'former-profile',
+          );
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                nostrSessionProvider.overrideWith(_TestNostrSession.new),
+                userRankingSignalsLoaderProvider.overrideWithValue(
+                  rankingLoader,
+                ),
+                _noVanishedProfiles,
+                profileRepositoryProvider.overrideWithValue(
+                  _createMockProfileRepository(cachedProfiles: [former]),
+                ),
+                followRepositoryProvider.overrideWithValue(
+                  _createMockFollowRepository(),
+                ),
+                contentBlocklistRepositoryProvider.overrideWithValue(
+                  _createMockContentBlocklistRepository(),
+                ),
+              ],
+              child: MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Scaffold(
+                  body: UserPickerSheet(
+                    title: 'Collaborators',
+                    filterMode: UserPickerFilterMode.mutualFollowsOnly,
+                    initialSelectedProfiles: [former],
+                    showSelectedProfiles: true,
+                    onUserToggled: (_) {},
+                  ),
+                ),
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          expect(
+            find.text('Former mutual'),
+            findsOneWidget,
+            reason: 'An existing collaborator remains revocable even after they cease to be a mutual follow',
+          );
+          await tester.tap(find.bySemanticsLabel('Remove Former mutual'));
+          await tester.pumpAndSettle();
+          expect(find.text('Former mutual'), findsNothing);
+        },
+      );
+
       testWidgets('header describes cancel and confirm actions', (
         tester,
       ) async {
@@ -767,28 +918,38 @@ void main() {
       testWidgets('ranking failure still excludes ineligible mutuals', (
         tester,
       ) async {
-        final messages = <String>[];
-        final previousDebugPrint = debugPrint;
-        debugPrint = (message, {wrapWidth}) {
-          if (message != null) messages.add(message);
-        };
-        try {
-          when(() => rankingLoader.load(any()))
-              .thenThrow(StateError('local signals'));
-          when(() => rankingLoader.isEligible(a)).thenReturn(false);
-          await pumpLocal(
-            tester,
-            profiles: [profile(a, 'Blocked'), profile(b, 'Visible')],
-          );
-          expect(rows(tester), ['Visible']);
-          expect(tester.takeException(), isNull);
-          expect(
-            messages.single,
-            contains('Failed to load follow ranking: Bad state: local signals'),
-          );
-        } finally {
-          debugPrint = previousDebugPrint;
-        }
+        final previousCategories = Set<LogCategory>.from(
+          UnifiedLogger.enabledCategories,
+        );
+        UnifiedLogger.enableCategories({LogCategory.relay});
+        addTearDown(() => UnifiedLogger.enableCategories(previousCategories));
+        final logCapture = LogCaptureService();
+        await logCapture.clearAllLogs();
+        addTearDown(logCapture.clearAllLogs);
+        when(() => rankingLoader.load(any()))
+            .thenThrow(StateError('local signals'));
+        when(() => rankingLoader.isEligible(a)).thenReturn(false);
+        await pumpLocal(
+          tester,
+          profiles: [profile(a, 'Blocked'), profile(b, 'Visible')],
+        );
+        expect(rows(tester), ['Visible']);
+        expect(tester.takeException(), isNull);
+        final rankingFailures = logCapture
+            .getRecentLogs()
+            .where(
+              (entry) =>
+                  entry.name == 'UserPickerSheet' &&
+                  entry.level == LogLevel.error &&
+                  entry.message.startsWith('Failed to load follow ranking:'),
+            )
+            .toList();
+        expect(rankingFailures, hasLength(1));
+        expect(rankingFailures.single.category, LogCategory.system);
+        expect(
+          rankingFailures.single.message,
+          contains('Failed to load follow ranking: Bad state: local signals'),
+        );
       });
     });
 

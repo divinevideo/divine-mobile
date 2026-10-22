@@ -69,7 +69,6 @@ void main() {
       mockBlocklistRepository = _MockContentBlocklistRepository();
       mockGoRouter = MockGoRouter();
       mockDmUnreadCountCubit = _MockDmUnreadCountCubit();
-      when(() => mockDmUnreadCountCubit.state).thenReturn(0);
 
       when(
         () => mockDmRepository.watchAcceptedConversations(
@@ -114,6 +113,7 @@ void main() {
       testWidgets(
         'does not start or stop the subscription — auth-scoped (#2931)',
         (tester) async {
+          when(() => mockDmUnreadCountCubit.state).thenReturn(0);
           await tester.pumpWidget(
             testMaterialApp(
               home: MultiBlocProvider(
@@ -158,6 +158,7 @@ void main() {
 
     group('renders', () {
       testWidgets('renders $InboxView', (tester) async {
+        when(() => mockDmUnreadCountCubit.state).thenReturn(0);
         await tester.pumpWidget(
           testMaterialApp(
             home: MultiBlocProvider(
@@ -275,6 +276,7 @@ void main() {
         'recreates the bloc bound to the ready repo when the provider hands '
         'over a fresh instance',
         (tester) async {
+          when(() => mockDmUnreadCountCubit.state).thenReturn(0);
           final readyRepo = _MockDmRepository();
           // Model the signed-out/teardown instance (empty pubkey).
           stubInbox(mockDmRepository, userPubkey: '');
@@ -311,6 +313,7 @@ void main() {
       testWidgets(
         'keeps the same bloc when the repository identity does not change',
         (tester) async {
+          when(() => mockDmUnreadCountCubit.state).thenReturn(0);
           stubInbox(mockDmRepository, userPubkey: testPubkey);
 
           // Both swap states resolve to the same instance.
@@ -350,6 +353,7 @@ void main() {
         'a profileRepository flip refreshes only the conversation bloc '
         'dependency, tearing down nothing',
         (tester) async {
+          when(() => mockDmUnreadCountCubit.state).thenReturn(0);
           stubInbox(mockDmRepository, userPubkey: testPubkey);
           final readyProfileRepo = _MockProfileRepository();
           // The bloc subscribes to the vanished set on every repository swap,

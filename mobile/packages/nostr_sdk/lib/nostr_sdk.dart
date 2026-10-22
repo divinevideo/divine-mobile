@@ -50,11 +50,11 @@ export 'nostr.dart';
 export 'relay/event_filter.dart';
 export 'relay/event_verify_isolate.dart';
 export 'relay/publish_outcome.dart';
+export 'relay/query_outcome.dart';
+export 'relay/query_result.dart';
 export 'relay/relay.dart';
 export 'relay/relay_base.dart';
 export 'relay/relay_diagnostics.dart';
-export 'relay/query_outcome.dart';
-export 'relay/query_result.dart';
 // Relay management
 export 'relay/relay_mode.dart';
 export 'relay/relay_pool.dart';

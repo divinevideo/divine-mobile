@@ -120,13 +120,11 @@ class AddPeopleToListCubitFactory {
   final UserRankingSignalsLoader _rankingSignalsLoader;
 
   AddPeopleToListCubit create({
-    required List<String> existingMemberPubkeys,
     AddPeopleToListState initialState = const AddPeopleToListState(),
   }) => AddPeopleToListCubit(
     followRepository: _followRepository,
     profileRepository: _profileRepository,
     rankingSignalsLoader: _rankingSignalsLoader,
-    existingMemberPubkeys: existingMemberPubkeys,
     initialState: initialState,
   );
 }

@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/people_list_owner.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/utils/relay_url_utils.dart';
 import 'package:openvine/utils/sensitive_uri_for_logs.dart';
@@ -18,10 +19,15 @@ enum DeepLinkType {
   hashtag,
   search,
   list,
+  peopleList,
   savedVideos,
   signerCallback,
   unknown,
 }
+
+/// The addressed view of a people list. Canonical author/d-tag URLs always
+/// select detail, even when their d-tag is `members` or `add-people`.
+enum PeopleListLinkView { detail, members, addPeople }
 
 /// Represents a parsed deep link
 class DeepLink {
@@ -33,6 +39,7 @@ class DeepLink {
     this.searchTerm,
     this.listPubkey,
     this.listId,
+    this.peopleListView = PeopleListLinkView.detail,
     this.signerCallbackRelay,
     this.index,
     this.autoOpenComments = false,
@@ -53,8 +60,11 @@ class DeepLink {
   /// lowercase hex (NIP-51 kind 30005 lists are addressed by author + d-tag).
   final String? listPubkey;
 
-  /// The d-tag identifier of a `/list/:pubkey/:listId` link.
+  /// The d-tag identifier of an authored video-list or people-list link.
   final String? listId;
+
+  /// Query-qualified internal-shaped links may address the roster or picker.
+  final PeopleListLinkView peopleListView;
   final String? signerCallbackRelay;
   final int? index; // Optional video index for feed view
 
@@ -77,6 +87,9 @@ class DeepLink {
         return 'DeepLink(type: search, searchTerm: $searchTerm$indexStr)';
       case DeepLinkType.list:
         return 'DeepLink(type: list, listPubkey: $listPubkey, '
+            'listId: $listId)';
+      case DeepLinkType.peopleList:
+        return 'DeepLink(type: peopleList, listPubkey: $listPubkey, '
             'listId: $listId)';
       case DeepLinkType.savedVideos:
         return 'DeepLink(type: savedVideos)';
@@ -330,6 +343,78 @@ class DeepLinkService {
         );
         return DeepLink(
           type: DeepLinkType.list,
+          listPubkey: listPubkey,
+          listId: listId,
+        );
+      }
+
+      // Handle /people-lists/{listId}?owner={pubkey} — NIP-51 kind 30000
+      // people lists in the in-app route's own shape, addressed by author +
+      // d-tag like the video lists above, with the author in the query.
+      // Without an owner the path names the viewer's own list, which nobody
+      // else can open, so it is not a link worth following.
+      final owners = uri.queryParametersAll['owner'];
+      final queryQualifiedPeopleListView =
+          pathSegments.length == 3 &&
+          owners != null &&
+          (pathSegments[2] == 'members' || pathSegments[2] == 'add-people');
+      if ((pathSegments.length == 2 || queryQualifiedPeopleListView) &&
+          pathSegments[0] == 'people-lists') {
+        final listId = pathSegments[1];
+        final listPubkey = owners != null && owners.length == 1
+            ? normalizePeopleListOwner(owners.single)
+            : null;
+        if (listId.isEmpty || listPubkey == null) {
+          Log.warning(
+            'Ignoring people list deep link with invalid owner or id: '
+            '${_describeUriForLogs(uri)}',
+            name: 'DeepLinkService',
+            category: LogCategory.ui,
+          );
+          return const DeepLink(type: DeepLinkType.unknown);
+        }
+        Log.info(
+          '📱 Parsed people list deep link: '
+          '${pubkeyForLogs(listPubkey)}/$listId',
+          name: 'DeepLinkService',
+          category: LogCategory.ui,
+        );
+        return DeepLink(
+          type: DeepLinkType.peopleList,
+          listPubkey: listPubkey,
+          listId: listId,
+          peopleListView: !queryQualifiedPeopleListView
+              ? PeopleListLinkView.detail
+              : pathSegments[2] == 'members'
+              ? PeopleListLinkView.members
+              : PeopleListLinkView.addPeople,
+        );
+      }
+
+      // Handle /people-lists/{pubkey}/{listId} — the same list at the web's
+      // address, mirroring /list/{pubkey}/{listId}: the shape the Share
+      // action sends and divine.video routes. It lands on the in-app route
+      // above with the author moved into the query.
+      if (pathSegments.length == 3 && pathSegments[0] == 'people-lists') {
+        final listPubkey = normalizePeopleListOwner(pathSegments[1]);
+        final listId = pathSegments[2];
+        if (listPubkey == null || listId.isEmpty) {
+          Log.warning(
+            'Ignoring people list deep link with invalid author or id: '
+            '${_describeUriForLogs(uri)}',
+            name: 'DeepLinkService',
+            category: LogCategory.ui,
+          );
+          return const DeepLink(type: DeepLinkType.unknown);
+        }
+        Log.info(
+          '📱 Parsed people list deep link: '
+          '${pubkeyForLogs(listPubkey)}/$listId',
+          name: 'DeepLinkService',
+          category: LogCategory.ui,
+        );
+        return DeepLink(
+          type: DeepLinkType.peopleList,
           listPubkey: listPubkey,
           listId: listId,
         );

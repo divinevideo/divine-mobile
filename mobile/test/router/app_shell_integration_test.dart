@@ -15,6 +15,8 @@ import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
@@ -31,6 +33,7 @@ import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/hashtag_service.dart';
 import 'package:openvine/widgets/vine_bottom_nav.dart';
+import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/test_provider_overrides.dart';
@@ -53,6 +56,9 @@ class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
     implements PeopleListsBloc {}
 
 class _MockHashtagService extends Mock implements HashtagService {}
+
+class _MockPeopleListsRepository extends Mock
+    implements PeopleListsRepository {}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -91,6 +97,27 @@ void main() {
     return service;
   }
 
+  PeopleListsRepository mockPeopleListsRepository() {
+    final repository = _MockPeopleListsRepository();
+    when(
+      () => repository.readFollowedLists(
+        viewerPubkey: any(named: 'viewerPubkey'),
+      ),
+    ).thenAnswer((_) async => const []);
+    when(
+      () => repository.watchFollowedLists(
+        viewerPubkey: any(named: 'viewerPubkey'),
+      ),
+    ).thenAnswer((_) => Stream.value(const []));
+    when(
+      () => repository.syncFollowedLists(
+        viewerPubkey: any(named: 'viewerPubkey'),
+        isCancelled: any(named: 'isCancelled'),
+      ),
+    ).thenAnswer((_) async {});
+    return repository;
+  }
+
   // The shell reads SharedPreferences, the app version and the relay-status
   // surface through Riverpod. A bare ProviderContainer throws inside
   // AppShellSideEffects before anything renders.
@@ -100,6 +127,14 @@ void main() {
         mockSharedPreferences: prefs,
         mockAuthService: authenticatedAuth(),
         mockNostrService: createMockNostrServiceWithRelayStatus(),
+      ),
+      // Exercise navigation with lists enabled, independently of build flags.
+      isFeatureEnabledProvider(FeatureFlag.curatedLists)
+          .overrideWithValue(true),
+      // Home reads and watches followed lists even for the ordinary feed.
+      // Navigation tests supply no followed lists instead of opening Hive.
+      peopleListsRepositoryProvider.overrideWithValue(
+        mockPeopleListsRepository(),
       ),
       currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
       // Both gates redirect off the tab routes while unresolved.

@@ -44,6 +44,100 @@ void main() {
   });
 
   group('PersonalEventsDao', () {
+    group('explicit retry retention', () {
+      Event intent(int at, {String dTag = 'list', String pubkey = owner}) =>
+          createEvent(
+            createdAt: at,
+            kind: 30005,
+            pubkey: pubkey,
+            tags: [
+              ['d', dTag],
+            ],
+          );
+      test(
+        'keeps only the newest coordinate and preserves other owners',
+        () async {
+          final first = intent(10);
+          final newer = intent(20);
+          final otherList = intent(15, dTag: 'other');
+          final foreign = intent(15, pubkey: otherOwner);
+          for (final event in [first, newer, first, otherList, foreign]) {
+            await dao.upsertPersonalEvent(event, retainForRetry: true);
+          }
+          expect(
+            (await dao.getRetryEvent(
+              pubkey: owner,
+              kind: 30005,
+              dTag: 'list',
+            ))?.id,
+            newer.id,
+          );
+          expect(await dao.getById(pubkey: owner, id: first.id), isNull);
+          expect(await dao.countForOwner(owner), 2);
+          expect(await dao.countForOwner(otherOwner), 1);
+        },
+      );
+      test(
+        'survives the ordinary durable cap and ordinary cache refresh',
+        () async {
+          final retained = intent(1);
+          await dao.upsertPersonalEvent(retained, retainForRetry: true);
+          await dao.upsertPersonalEvent(retained);
+          for (var i = 0; i <= maxDurablePersonalEventsPerOwner; i++) {
+            await dao.upsertPersonalEvent(createEvent(createdAt: i + 100));
+          }
+          expect(
+            (await dao.getRetryEvent(
+              pubkey: owner,
+              kind: 30005,
+              dTag: 'list',
+            ))?.id,
+            retained.id,
+          );
+          expect(
+            await dao.countForOwner(owner),
+            maxDurablePersonalEventsPerOwner + 1,
+          );
+        },
+      );
+      test('malformed retry evidence survives ordinary cache reads', () async {
+        final retained = intent(1);
+        await dao.upsertPersonalEvent(retained, retainForRetry: true);
+        await database.customStatement(
+          'UPDATE personal_events SET tags = ? WHERE id = ?',
+          ['not json', retained.id],
+        );
+        expect(await dao.getAllForOwner(owner), isEmpty);
+        expect(await dao.countForOwner(owner), 1);
+        await expectLater(
+          dao.getRetryEvent(pubkey: owner, kind: 30005, dTag: 'list'),
+          throwsFormatException,
+        );
+        expect(await dao.countForOwner(owner), 1);
+      });
+
+      test('rejects non-addressable and ambiguous coordinates', () async {
+        for (final event in [
+          createEvent(createdAt: 1),
+          createEvent(createdAt: 1, kind: 30005),
+          createEvent(
+            createdAt: 1,
+            kind: 30005,
+            tags: [
+              ['d', 'a'],
+              ['d', 'b'],
+            ],
+          ),
+        ]) {
+          await expectLater(
+            dao.upsertPersonalEvent(event, retainForRetry: true),
+            throwsArgumentError,
+          );
+        }
+        expect(await dao.countForOwner(owner), 0);
+      });
+    });
+
     group('upsertPersonalEvent', () {
       test('stores an event and reads it back intact', () async {
         final event = createEvent(

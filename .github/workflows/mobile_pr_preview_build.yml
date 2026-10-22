@@ -51,7 +51,9 @@ jobs:
         env:
           # Preview builds expose the public test rooms directly in Messages.
           FF_CONCORD_CHAT: "true"
+          DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS: ${{ vars.DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS }}
         run: |
+          python3 scripts/write_public_people_list_defines.py --output build/public_people_list_defines.json
           flutter build web \
             --release \
             --tree-shake-icons \
@@ -60,6 +62,7 @@ jobs:
             --dart-define=BACKEND_URL=https://api.divine.video \
             --dart-define=ENVIRONMENT=production \
             --dart-define="FF_CONCORD_CHAT=$FF_CONCORD_CHAT" \
+            --dart-define-from-file=build/public_people_list_defines.json \
             --no-source-maps
 
       - name: Check web bundle file sizes

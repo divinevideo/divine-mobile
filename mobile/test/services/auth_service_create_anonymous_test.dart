@@ -83,6 +83,40 @@ void main() {
       expect(prefetchCalls, 0);
     });
 
+    for (final useFixedKey in [false, true]) {
+      test('anonymous creation preserves cleanup failure '
+          '(fixed key: $useFixedKey) and does not accept terms', () async {
+        when(
+          () => mockCleanupService.shouldClearDataForUser(any()),
+        ).thenReturn(true);
+        when(
+          () => mockCleanupService.clearUserSpecificData(
+            reason: any(named: 'reason'),
+            isIdentityChange: any(named: 'isIdentityChange'),
+            userPubkey: any(named: 'userPubkey'),
+            deleteUserData: any(named: 'deleteUserData'),
+          ),
+        ).thenThrow(
+          const UserDataCleanupException('Account cache unavailable'),
+        );
+        final authService = createAuthService();
+        addTearDown(authService.dispose);
+
+        await expectLater(
+          useFixedKey
+              ? authService.createAnonymousAccountFromPrivateKeyHex('a' * 64)
+              : authService.createAnonymousAccount(),
+          throwsA(isA<UserDataCleanupException>()),
+        );
+
+        expect(authService.isAuthenticated, isFalse);
+        expect(authService.currentIdentity, isNull);
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getString('terms_accepted_at'), isNull);
+        expect(prefs.getBool('age_verified_16_plus'), isNot(true));
+      });
+    }
+
     test('createAnonymousAccount preserves both account markers with a real '
         'UserDataCleanupService', () async {
       // The mocked cleanup service above answers shouldClearDataForUser with

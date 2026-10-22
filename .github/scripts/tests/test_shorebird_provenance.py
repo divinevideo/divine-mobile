@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import os
+import shlex
 import subprocess
 import tempfile
 import unittest
@@ -10,6 +11,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = REPO_ROOT / "mobile" / "scripts" / "shorebird_provenance.rb"
+POLICY_NAME = "DIVINE_PUBLIC_PEOPLE_LIST_EXCLUDED_D_TAGS"
 
 # Throwaway P-256 public keys, generated for this test. Public halves only,
 # and they sign nothing — they exist so the digest comparison has two
@@ -129,6 +131,143 @@ class ShorebirdProvenanceTest(unittest.TestCase):
             capture_output=True,
         )
 
+    def prepare_patch_policy(self, policy: str = "[]") -> subprocess.CompletedProcess[str]:
+        # Execute the actual Codemagic gate with the real Ruby authenticator and
+        # policy writer. Only the already-fetched record and temporary output
+        # paths replace remote/build inputs; no network operation is needed.
+        contents = (REPO_ROOT / "codemagic.yaml").read_text()
+        step = contents.split("    - &fetch_and_verify_shorebird_provenance\n", 1)[1]
+        gate = step.split("        PUBLIC_PEOPLE_LIST_POLICY_REQUIRED=", 1)[1]
+        gate = "PUBLIC_PEOPLE_LIST_POLICY_REQUIRED=" + gate.split(
+            "        ruby scripts/shorebird_provenance.rb verify", 1
+        )[0]
+        gate = gate.replace("${{ inputs.RELEASE_VERSION }}", "1.2.3+456")
+        gate = gate.replace("build/shorebird/dart_defines.json", shlex.quote(str(self.defines)))
+        return subprocess.run(
+            ["bash", "-c", "set -euo pipefail\n" + gate],
+            cwd=REPO_ROOT / "mobile",
+            env={
+                **self.environment,
+                "PROVENANCE_PATH": str(self.record),
+                "SHOREBIRD_PLATFORM": "ios",
+                "CM_REPO_SLUG": "divinevideo/divine-mobile",
+                POLICY_NAME: policy,
+            },
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+
+    def test_legacy_release_keeps_policy_absent_from_actual_patch_defines(self) -> None:
+        baseline = self.defines.read_bytes()
+        self.assertEqual(0, self.emit().returncode)
+        old_insertion = subprocess.run(
+            ["python3", str(REPO_ROOT / "mobile/scripts/write_public_people_list_defines.py"),
+             "--output", str(self.defines), "--merge"],
+            env={**self.environment, POLICY_NAME: "[]"},
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+        self.assertEqual(0, old_insertion.returncode, old_insertion.stderr)
+        self.assertEqual("[]", json.loads(self.defines.read_text())[POLICY_NAME])
+
+        # The original unconditional insertion really fails strict verification,
+        # even for an empty policy; the fix must change compilation, not forgive it.
+        drift = self.verify()
+        self.assertNotEqual(0, drift.returncode)
+        self.assertIn(POLICY_NAME, drift.stderr)
+        self.defines.write_bytes(baseline)
+
+        result = self.prepare_patch_policy('["new-policy"]')
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual(baseline, self.defines.read_bytes())
+        self.assertNotIn(POLICY_NAME, json.loads(self.defines.read_text()))
+        verified = self.verify()
+        self.assertEqual(0, verified.returncode, verified.stderr)
+
+    def test_current_release_inserts_and_verifies_the_recorded_policy(self) -> None:
+        defines = json.loads(self.defines.read_text())
+        defines[POLICY_NAME] = '["first","second"]'
+        self.defines.write_text(json.dumps(defines))
+        self.assertEqual(0, self.emit().returncode)
+        defines.pop(POLICY_NAME)
+        self.defines.write_text(json.dumps(defines))
+
+        result = self.prepare_patch_policy('["second","first","first"]')
+        self.assertEqual(0, result.returncode, result.stderr)
+        self.assertEqual('["first","second"]', json.loads(self.defines.read_text())[POLICY_NAME])
+        verified = self.verify()
+        self.assertEqual(0, verified.returncode, verified.stderr)
+
+    def test_patch_policy_drift_remains_strict_and_does_not_log_values(self) -> None:
+        defines = json.loads(self.defines.read_text())
+        defines[POLICY_NAME] = "[]"
+        self.defines.write_text(json.dumps(defines))
+        self.assertEqual(0, self.emit().returncode)
+
+        prepared = self.prepare_patch_policy('["private-policy-tag"]')
+        self.assertEqual(0, prepared.returncode, prepared.stderr)
+        drift = self.verify()
+        self.assertNotEqual(0, drift.returncode)
+        self.assertIn(POLICY_NAME, drift.stderr)
+        self.assertNotIn("private-policy-tag", drift.stdout + drift.stderr)
+        self.assertFalse(self.env_output.exists())
+
+    def test_patch_policy_shape_cannot_hide_unknown_or_missing_other_keys(self) -> None:
+        self.assertEqual(0, self.emit().returncode)
+        baseline = json.loads(self.defines.read_text())
+        for altered in ({**baseline, "UNRECORDED_KEY": "value"}, {"SECRET_TOKEN": "release-secret"}):
+            with self.subTest(keys=sorted(altered)):
+                self.defines.write_text(json.dumps(altered))
+                prepared = self.prepare_patch_policy()
+                self.assertEqual(0, prepared.returncode, prepared.stderr)
+                self.assertEqual(altered, json.loads(self.defines.read_text()))
+                drift = self.verify()
+                self.assertNotEqual(0, drift.returncode)
+                self.assertIn("release configuration drifted", drift.stderr)
+                self.assertFalse(self.env_output.exists())
+
+    def test_forged_policy_presence_is_rejected_before_changing_defines(self) -> None:
+        defines = json.loads(self.defines.read_text())
+        defines[POLICY_NAME] = "[]"
+        self.defines.write_text(json.dumps(defines))
+        self.assertEqual(0, self.emit().returncode)
+        record = json.loads(self.record.read_text())
+        record["config_fingerprints"].pop(POLICY_NAME)
+        self.record.write_text(json.dumps(record))
+        baseline = self.defines.read_bytes()
+
+        result = self.prepare_patch_policy()
+        self.assertNotEqual(0, result.returncode)
+        self.assertIn("provenance authentication failed", result.stderr)
+        self.assertEqual(baseline, self.defines.read_bytes())
+        self.assertEqual("", result.stdout)
+        self.assertFalse(self.env_output.exists())
+
+    def test_policy_shape_requires_matching_authenticated_release_context(self) -> None:
+        self.assertEqual(0, self.emit().returncode)
+        original = json.loads(self.record.read_text())
+        baseline = self.defines.read_bytes()
+        changes = (
+            ("schema_version", 99, "unsupported release provenance schema"),
+            ("platform", "android", "platform does not match"),
+            ("release_version", "9.9.9+999", "version does not match"),
+            ("patchable", False, "verified release configuration is unavailable"),
+            ("config_fingerprint_key_id", "other-key", "different configuration fingerprint key"),
+            ("config_fingerprints", [], "config_fingerprints is invalid"),
+        )
+        for field, value, message in changes:
+            with self.subTest(field=field):
+                record = {**original, field: value}
+                record["record_hmac"] = self._recompute_hmac(record)
+                self.record.write_text(json.dumps(record))
+                result = self.prepare_patch_policy()
+                self.assertNotEqual(0, result.returncode)
+                self.assertIn(message, result.stderr)
+                self.assertEqual(baseline, self.defines.read_bytes())
+                self.assertEqual("", result.stdout)
+
     def test_fingerprint_is_stable_and_contains_no_values(self) -> None:
         second_record = self.root / "second.json"
         self.assertEqual(0, self.emit().returncode)
@@ -168,13 +307,22 @@ class ShorebirdProvenanceTest(unittest.TestCase):
 
     def test_verify_rejects_source_override_with_a_different_tree(self) -> None:
         self.assertEqual(0, self.emit().returncode)
-        different_commit = subprocess.run(
-            ["git", "rev-parse", "HEAD^"],
+        history = subprocess.run(
+            ["git", "log", "-64", "--format=%H%x09%T", self.head],
             cwd=REPO_ROOT,
             check=True,
             text=True,
             capture_output=True,
-        ).stdout.strip()
+        ).stdout.splitlines()
+        # Replayed contributor commits can legitimately be empty. Pin an
+        # actually different tree so this case never tests an allowed override.
+        current_tree = history[0].split("\t")[1]
+        different_commit = next(
+            (commit for commit, tree in (line.split("\t") for line in history)
+             if tree != current_tree),
+            None,
+        )
+        self.assertIsNotNone(different_commit, "source-override fixture needs a different tree")
 
         mismatch = self.verify(release_commit=different_commit)
         self.assertNotEqual(0, mismatch.returncode)

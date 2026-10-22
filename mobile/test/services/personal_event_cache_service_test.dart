@@ -244,6 +244,59 @@ void main() {
       },
     );
 
+    test(
+      'cache clearing preserves outbound intents until owner deletion',
+      () async {
+        final retained = createEvent(pubkey: userPubkey, id: hexId(207));
+        final other = createEvent(pubkey: otherPubkey, id: hexId(208));
+        for (final event in [retained, other]) {
+          await database.personalEventsDao.upsertPersonalEvent(
+            event,
+            retainForRetry: true,
+          );
+        }
+        await service.initialize(userPubkey);
+        await service.clearCache();
+        expect(
+          await database.personalEventsDao.getById(
+            pubkey: userPubkey,
+            id: retained.id,
+          ),
+          isNotNull,
+        );
+        await service.clearAllAccounts();
+        expect(
+          await database.personalEventsDao.getById(
+            pubkey: userPubkey,
+            id: retained.id,
+          ),
+          isNotNull,
+        );
+        expect(
+          await database.personalEventsDao.getById(
+            pubkey: otherPubkey,
+            id: other.id,
+          ),
+          isNotNull,
+        );
+        await database.personalEventsDao.deleteAllForOwner(userPubkey);
+        expect(
+          await database.personalEventsDao.getById(
+            pubkey: userPubkey,
+            id: retained.id,
+          ),
+          isNull,
+        );
+        expect(
+          await database.personalEventsDao.getById(
+            pubkey: otherPubkey,
+            id: other.id,
+          ),
+          isNotNull,
+        );
+      },
+    );
+
     test('cache recovery clears the mirror and every owner', () async {
       final userEvent = createEvent(pubkey: userPubkey, id: hexId(205));
       final otherEvent = createEvent(pubkey: otherPubkey, id: hexId(206));
