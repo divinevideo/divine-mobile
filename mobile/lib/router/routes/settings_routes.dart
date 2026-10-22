@@ -9,6 +9,7 @@ import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/screens/feature_flag_screen.dart';
 import 'package:openvine/models/authentication_source.dart';
+import 'package:openvine/prototypes/dm_inbox_tabs/dm_inbox_tabs_prototype_screen.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/router/go_router_page_name.dart';
@@ -295,6 +296,12 @@ List<RouteBase> settingsRoutes(Ref ref) {
       path: ClipRecoveryScreen.path,
       name: ClipRecoveryScreen.routeName,
       builder: (_, _) => const ClipRecoveryScreen(),
+    ),
+    // PROTOTYPE (#8076): four-tab DM inbox on fixture data. Remove with it.
+    GoRoute(
+      path: DmInboxTabsPrototypeScreen.path,
+      name: DmInboxTabsPrototypeScreen.routeName,
+      builder: (_, _) => const DmInboxTabsPrototypeScreen(),
     ),
     GoRoute(
       path: DeveloperOptionsScreen.path,
