@@ -39,7 +39,6 @@ class BadgeDismissalSync {
       payloadEntriesKey: 'decisions',
       entryValueKey: 'hidden',
       cacheKeyPrefix: 'badge_dismissal_event_',
-      defaultMergeRule: AccountStateMergeRule.falseWinsTie,
     ),
   );
 

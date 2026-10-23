@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:account_state_repository/account_state_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -93,6 +94,12 @@ final accountDmStateProvider = Provider<AccountStateRepository?>((ref) {
     pubkey: pubkey,
     signer: () => client.signer,
     namespace: 'divine/dm-dismissals/v1',
+    perFieldSnapshots: true,
+    storage: DriftAccountStateStorage(
+      ref.watch(databaseProvider).accountSyncDao,
+      owner: pubkey,
+      namespace: 'divine/dm-dismissals/v1',
+    ),
   );
   ref.onDispose(() => unawaited(repository.close()));
   void startWhenReady(NostrSessionReadiness session) {

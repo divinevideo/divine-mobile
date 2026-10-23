@@ -985,6 +985,12 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
           );
         }
 
+        if ((deleteUserData || forgetAccount) && userPubkey != null) {
+          await requiredCleanup(
+            'accountSync',
+            () => db.accountSyncDao.clearAccount(userPubkey),
+          );
+        }
         // Per-user data cleanup (#2999): only on destructive paths
         if (deleteUserData && userPubkey != null) {
           Future<void> requiredDelete(

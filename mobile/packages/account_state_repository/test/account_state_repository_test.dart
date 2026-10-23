@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:account_state_repository/account_state_repository.dart';
+import 'package:crypto/crypto.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -99,6 +100,7 @@ void main() {
     SharedPreferences? preferences,
     NostrSigner Function()? getSigner,
     Map<String, AccountStateMergeRule> rules = const {},
+    bool perFieldSnapshots = false,
   }) {
     final repository = AccountStateRepository(
       nostrClient: client,
@@ -107,6 +109,7 @@ void main() {
       signer: getSigner ?? () => signer,
       namespace: 'divine:test-settings',
       mergeRules: rules,
+      perFieldSnapshots: perFieldSnapshots,
     );
     repositories.add(repository);
     return repository;
@@ -180,6 +183,205 @@ void main() {
       await incoming.close();
       await statuses.close();
     });
+    test('sharded snapshots sync beyond one NIP44 plaintext limit', () async {
+      final phone = device(perFieldSnapshots: true);
+      await phone.setValues({
+        for (var i = 0; i < 400; i++)
+          '${i.toString().padLeft(64, '0')}:${'b' * 64}': {
+            'through': i,
+            'known': ['c' * 64],
+          },
+      });
+      await phone.synchronize();
+      expect(relay, hasLength(400));
+      final desktop = device(perFieldSnapshots: true);
+      await desktop.synchronize();
+      expect(desktop.values, phone.values);
+      expect(relay, hasLength(400));
+      await phone.setValue(phone.values.keys.first, null);
+      await phone.synchronize();
+      expect(relay, hasLength(401));
+      await desktop.synchronize();
+      expect(desktop.values, phone.values);
+      expect(relay, hasLength(401));
+    });
+
+    test(
+      'opaque shard addresses hide tuples and cross-device edits reuse the learned address',
+      () async {
+        final key = '${'a' * 64},${'b' * 64}';
+        final phone = device(perFieldSnapshots: true);
+        await phone.setValue(key, {
+          'through': 1,
+          'known': ['c' * 64],
+        });
+        await phone.synchronize();
+        final tag = relay.single.dTagValue;
+        expect(
+          tag,
+          matches(RegExp(r'^divine:test-settings/field/[0-9a-f]{64}$')),
+        );
+        expect(tag, isNot(contains('a' * 64)));
+        expect(
+          tag,
+          isNot(contains(sha256.convert(utf8.encode(key)).toString())),
+        );
+        final desktop = device(perFieldSnapshots: true);
+        await desktop.synchronize();
+        await desktop.setValue(key, null);
+        await desktop.synchronize();
+        expect(relay.last.dTagValue, tag);
+        await phone.synchronize();
+        expect(phone.contains(key), true);
+        expect(phone.value(key), null);
+      },
+    );
+    test(
+      'partitioned initial opaque addresses converge on one canonical address',
+      () async {
+        final phone = device(perFieldSnapshots: true);
+        await phone.setValue('tuple', true);
+        await phone.synchronize();
+        final first = relay.single;
+        relay.clear();
+        final desktop = device(perFieldSnapshots: true);
+        await desktop.setValue('tuple', false);
+        await desktop.synchronize();
+        final second = relay.single;
+        expect(first.dTagValue, isNot(second.dTagValue));
+        relay.add(first);
+        await phone.synchronize();
+        await desktop.synchronize();
+        final canonical = ([first.dTagValue, second.dTagValue]..sort()).first;
+        await desktop.setValue('tuple', null);
+        await desktop.synchronize();
+        expect(relay.last.dTagValue, canonical);
+        await phone.synchronize();
+        expect(phone.values, desktop.values);
+        final published = relay.length;
+        await desktop.synchronize();
+        expect(relay, hasLength(published));
+      },
+    );
+    test(
+      'partial shard acknowledgments survive restart without republishing successful fields',
+      () async {
+        final preferences = store();
+        final phone = device(preferences: preferences, perFieldSnapshots: true);
+        await phone.setValues({'a': true, 'b': null});
+        var attempts = 0;
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((call) async {
+          final event = call.positionalArguments[0] as Event;
+          attempts++;
+          if (attempts != 2) relay.add(event);
+          return PublishOutcome(
+            eventId: event.id,
+            acceptedBy: attempts == 2 ? [] : ['wss://relay.example'],
+            rejectedBy: const {},
+            noResponseFrom: const [],
+          );
+        });
+        await expectLater(
+          phone.synchronize(),
+          throwsA(isA<AccountStateException>()),
+        );
+        final acknowledged = relay.single;
+        expect(phone.hasPendingChanges, true);
+        await phone.close();
+        final restarted = device(
+          preferences: preferences,
+          perFieldSnapshots: true,
+        );
+        await restarted.synchronize();
+        expect(relay, hasLength(2));
+        expect(
+          relay.where((event) => event.id == acknowledged.id),
+          hasLength(1),
+        );
+        expect(restarted.hasPendingChanges, false);
+        final originalIds = relay.map((event) => event.id).toSet();
+        relay.clear();
+        await restarted.synchronize();
+        expect(relay.map((event) => event.id).toSet(), originalIds);
+      },
+    );
+    test(
+      'oversize individual shard stays pending and does not truncate intent',
+      () async {
+        final phone = device(perFieldSnapshots: true);
+        await phone.setValue('large', 'x' * 65536);
+        await expectLater(
+          phone.synchronize(),
+          throwsA(
+            isA<AccountStateException>().having(
+              (error) => error.message,
+              'message',
+              contains('plaintext limit'),
+            ),
+          ),
+        );
+        expect(phone.value('large'), hasLength(65536));
+        expect(phone.hasPendingChanges, true);
+        expect(relay, isEmpty);
+      },
+    );
+
+    test(
+      'refused opaque-address persistence cannot reach a signer or transport',
+      () async {
+        var writes = 0;
+        var refuse = true;
+        final preferences = store(
+          writeSucceeds: () {
+            writes++;
+            return !(refuse && writes == 4);
+          },
+        );
+        final phone = device(preferences: preferences, perFieldSnapshots: true);
+        await phone.setValue('tuple', true);
+        await expectLater(
+          phone.synchronize(),
+          throwsA(isA<AccountStateException>()),
+        );
+        expect(relay, isEmpty);
+        expect(phone.hasPendingChanges, true);
+        refuse = false;
+        await phone.synchronize();
+        expect(relay, hasLength(1));
+      },
+    );
+    test(
+      'source received while opaque addresses save fences the first shard',
+      () async {
+        late SharedPreferences preferences;
+        var inject = false;
+        final newer = await snapshot({}, version: 2);
+        preferences = store(
+          beforeWrite: () async {
+            final raw = preferences.getString(
+              'account_state_divine:test-settings_${pubkey}_state',
+            );
+            if (inject &&
+                raw != null &&
+                ((jsonDecode(raw) as Map)['fieldTags'] as Map).isNotEmpty) {
+              inject = false;
+              incoming.add(newer);
+              await pumpEventQueue();
+            }
+          },
+        );
+        final phone = device(preferences: preferences, perFieldSnapshots: true);
+        await phone.start();
+        await pumpEventQueue();
+        inject = true;
+        await phone.setValue('tuple', true);
+        await pumpEventQueue();
+        await expectLater(phone.synchronize(), throwsFormatException);
+        expect(relay, isEmpty);
+        expect(phone.hasPendingChanges, true);
+      },
+    );
+
     test(
       'offline choice persists before publication and retries after restart',
       () async {
@@ -831,82 +1033,92 @@ void main() {
     });
 
     group('publication and storage failure fences', () {
-      for (final window in [
-        'encryption',
-        'signing',
-        'final signer check',
-        'queued source write',
-        'failed source write',
-      ]) {
-        test(
-          'newer schema received during $window prevents prepared publication',
-          () async {
-            final controlled = _Signer();
-            Future<void>? diskGate;
-            Exception? sourceWriteError;
-            final preferences = store(
-              writeError: () => sourceWriteError,
-              beforeWrite: () async {
-                await diskGate;
-              },
-            );
-            final phone = device(
-              preferences: preferences,
-              getSigner: () => controlled,
-            );
-            await phone.start();
-            await pumpEventQueue();
-            final gate = Completer<void>();
-            final reached = Completer<void>();
-            final signerWindow = window.endsWith('source write')
-                ? 'final signer check'
-                : window;
-            controlled.onPreparation = (stage) {
-              if (stage == signerWindow && !reached.isCompleted) {
-                reached.complete();
+      for (final sharded in [false, true]) {
+        for (final window in [
+          'encryption',
+          'signing',
+          'final signer check',
+          'queued source write',
+          'failed source write',
+        ]) {
+          test(
+            'newer schema received during $window prevents prepared publication (sharded: $sharded)',
+            () async {
+              final controlled = _Signer();
+              Future<void>? diskGate;
+              Exception? sourceWriteError;
+              final preferences = store(
+                writeError: () => sourceWriteError,
+                beforeWrite: () async {
+                  await diskGate;
+                },
+              );
+              final phone = device(
+                preferences: preferences,
+                getSigner: () => controlled,
+                perFieldSnapshots: sharded,
+              );
+              await phone.start();
+              await pumpEventQueue();
+              final gate = Completer<void>();
+              final reached = Completer<void>();
+              final signerWindow = window.endsWith('source write')
+                  ? 'final signer check'
+                  : window;
+              controlled.onPreparation = (stage) {
+                if (stage == signerWindow && !reached.isCompleted) {
+                  reached.complete();
+                }
+              };
+              if (window == 'encryption') controlled.encryptGate = gate.future;
+              if (window == 'signing') controlled.signingGate = gate.future;
+              if (signerWindow == 'final signer check') {
+                controlled.holdPublicKeyAt = controlled.publicKeyCalls + 2;
+                controlled.publicKeyGate = gate.future;
               }
-            };
-            if (window == 'encryption') controlled.encryptGate = gate.future;
-            if (window == 'signing') controlled.signingGate = gate.future;
-            if (signerWindow == 'final signer check') {
-              controlled.holdPublicKeyAt = controlled.publicKeyCalls + 2;
-              controlled.publicKeyGate = gate.future;
-            }
-            await phone.setValue('choice', true);
-            await reached.future;
-            final pendingDisk = Completer<void>();
-            if (window == 'queued source write') diskGate = pendingDisk.future;
-            if (window == 'failed source write') {
-              sourceWriteError = PlatformException(code: 'storage_unavailable');
-            }
-            incoming.add(await snapshot({}, version: 2));
-            await pumpEventQueue();
-            sourceWriteError = null;
-            gate.complete();
-            await pumpEventQueue();
-            if (window == 'queued source write') {
+              await phone.setValue('choice', true);
+              await reached.future;
+              final pendingDisk = Completer<void>();
+              if (window == 'queued source write') {
+                diskGate = pendingDisk.future;
+              }
+              if (window == 'failed source write') {
+                sourceWriteError = PlatformException(
+                  code: 'storage_unavailable',
+                );
+              }
+              incoming.add(await snapshot({}, version: 2));
+              await pumpEventQueue();
+              sourceWriteError = null;
+              gate.complete();
+              await pumpEventQueue();
+              if (window == 'queued source write') {
+                expect(
+                  relay,
+                  isEmpty,
+                  reason: 'publication must fence queued source persistence',
+                );
+                diskGate = null;
+                pendingDisk.complete();
+                await pumpEventQueue();
+              }
               expect(
                 relay,
                 isEmpty,
-                reason: 'publication must fence queued source persistence',
+                reason: 'a newer schema must not be replaced with version one',
               );
-              diskGate = null;
-              pendingDisk.complete();
-              await pumpEventQueue();
-            }
-            expect(
-              relay,
-              isEmpty,
-              reason: 'a newer schema must not be replaced with version one',
-            );
-            expect(phone.hasPendingChanges, true);
-            await phone.close();
-            await expectLater(
-              device(preferences: preferences).synchronize(),
-              throwsFormatException,
-            );
-          },
-        );
+              expect(phone.hasPendingChanges, true);
+              await phone.close();
+              await expectLater(
+                device(
+                  preferences: preferences,
+                  perFieldSnapshots: sharded,
+                ).synchronize(),
+                throwsFormatException,
+              );
+            },
+          );
+        }
       }
       for (final hasPrevious in [false, true]) {
         test(

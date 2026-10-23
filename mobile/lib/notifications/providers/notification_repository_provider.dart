@@ -58,6 +58,7 @@ final notificationRepositoryProvider = Provider<NotificationRepository?>((ref) {
     profileRepository: profileRepository,
     notificationsDao: db.notificationsDao,
     userPubkey: userPubkey,
+    readStateDao: ref.watch(databaseProvider).accountSyncDao,
     pendingReadPreferences: ref.watch(sharedPreferencesProvider),
     // Engine-backed blocked-author filter.
     blockFilter: createBlockedAuthorFilter(ref),

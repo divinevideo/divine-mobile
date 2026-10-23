@@ -215,9 +215,9 @@ class NotificationRepository {
   /// best-effort load from [notificationsDao] so the inbox can render
   /// cached items before the first REST call resolves. Tests pass `false`
   /// to keep the snapshot at [NotificationPage.empty] for deterministic
-  /// assertions. [pendingReadPreferences] enables the durable account-owned
-  /// read journal and startup retry; production must supply it. Without a
-  /// store, the legacy acknowledged online mutation behavior is retained.
+  /// assertions. [readStateDao] enables the durable account-owned journal.
+  /// [pendingReadPreferences] is only the legacy migration source. Without a
+  /// journal, acknowledged online mutation behavior is retained.
   NotificationRepository({
     required FunnelcakeApiClient funnelcakeApiClient,
     required ProfileRepository profileRepository,
@@ -228,6 +228,7 @@ class NotificationRepository {
     Duration authHeadersTimeout = defaultAuthHeadersTimeout,
     bool hydrateOnStart = true,
     SharedPreferences? pendingReadPreferences,
+    AccountSyncDao? readStateDao,
     Duration readStateRetryDelay = const Duration(seconds: 5),
   }) : _funnelcakeApiClient = funnelcakeApiClient,
        _profileRepository = profileRepository,
@@ -237,9 +238,21 @@ class NotificationRepository {
        _authHeadersProvider = authHeadersProvider,
        _authHeadersTimeout = authHeadersTimeout,
        _pendingReadPreferences = pendingReadPreferences,
+       _readStateDao = readStateDao,
        _readStateRetryDelay = readStateRetryDelay {
-    _restoreDurableReads();
-    if (pendingReadPreferences != null) unawaited(flushPendingReadState());
+    _readReady = _restoreDurableReads();
+    // Construction/listening remains available even with a failed storage open;
+    // mutations still await the original failure and cannot claim durability.
+    unawaited(
+      _readReady.catchError((Object error) {
+        Log.warning(
+          'Notification read storage unavailable (${error.runtimeType})',
+          name: 'NotificationRepository',
+          category: LogCategory.storage,
+        );
+      }),
+    );
+    if (readStateDao != null) unawaited(flushPendingReadState());
     if (hydrateOnStart) {
       unawaited(_hydrateFromCache());
     }
@@ -261,6 +274,8 @@ class NotificationRepository {
   final AuthHeadersProvider? _authHeadersProvider;
   final Duration _authHeadersTimeout;
   final SharedPreferences? _pendingReadPreferences;
+  final AccountSyncDao? _readStateDao;
+  late final Future<void> _readReady;
   final Set<String> _durableReadIds = {};
   final Set<String> _pendingReadIds = {};
   final Map<String, List<String>> _cachedNotificationIds = {};
@@ -270,45 +285,70 @@ class NotificationRepository {
       'notification_read_state_v1_$pubkey';
   String get _readStateKey => readStateStorageKey(_userPubkey);
 
-  void _restoreDurableReads() {
+  Future<void> _restoreDurableReads() async {
+    final dao = _readStateDao;
+    if (dao == null) return;
+    final rows = await dao.readNotificationReads(_userPubkey);
+    _durableReadIds.addAll(rows.map((row) => row.notificationId));
+    _pendingReadIds.addAll(
+      rows.where((row) => row.pending).map((row) => row.notificationId),
+    );
+    for (final row in await dao.readNotificationMembers(_userPubkey)) {
+      _cachedNotificationIds
+          .putIfAbsent(row.cacheId, () => [])
+          .add(row.notificationId);
+    }
     final raw = _pendingReadPreferences?.getString(_readStateKey);
     if (raw == null) return;
-    final decoded = jsonDecode(raw) as Map<String, dynamic>;
-    _durableReadIds.addAll((decoded['read'] as List).cast<String>());
-    _pendingReadIds.addAll((decoded['pending'] as List).cast<String>());
-    final cached = decoded['cachedIds'] as Map?;
-    if (cached != null) {
-      for (final entry in cached.entries) {
-        _cachedNotificationIds[entry.key as String] = (entry.value as List)
-            .cast<String>();
-      }
+    final Set<String> read;
+    final Set<String> pending;
+    final Map<String, List<String>> cached;
+    try {
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      read = (decoded['read'] as List).cast<String>().toSet();
+      pending = (decoded['pending'] as List).cast<String>().toSet();
+      cached = {
+        for (final entry in ((decoded['cachedIds'] as Map?) ?? {}).entries)
+          entry.key as String: (entry.value as List).cast<String>().toList(),
+      };
+    } on Object catch (error) {
+      // Preserve the unreadable migration source untouched. New intent uses
+      // Drift; a future recovery can inspect this source without losing it.
+      Log.warning(
+        'Unreadable legacy notification read journal preserved '
+        '(${error.runtimeType})',
+        name: 'NotificationRepository',
+        category: LogCategory.storage,
+      );
+      return;
     }
+    for (final entry in cached.entries) {
+      _cachedNotificationIds[entry.key] = {
+        ...?_cachedNotificationIds[entry.key],
+        ...entry.value,
+      }.toList();
+    }
+    await _saveDurableReads(
+      {..._durableReadIds, ...read, ...pending},
+      {..._pendingReadIds, ...pending},
+    );
+    await _pendingReadPreferences!.remove(_readStateKey);
   }
 
   Future<void> _saveDurableReads(Set<String> read, Set<String> pending) async {
-    final retained = Set<String>.of(read);
     final queued = Set<String>.of(pending);
-    final preferences = _pendingReadPreferences!;
-    final previous = preferences.getString(_readStateKey);
-    final saved = await preferences.setString(
-      _readStateKey,
-      jsonEncode({
-        'read': retained.toList()..sort(),
-        'pending': queued.toList()..sort(),
-        'cachedIds': _cachedNotificationIds,
-      }),
+    final retained = {
+      ...queued,
+      ...read.intersection(
+        _cachedNotificationIds.values.expand((ids) => ids).toSet(),
+      ),
+    };
+    await _readStateDao!.writeNotificationReads(
+      _userPubkey,
+      retained,
+      queued,
+      _cachedNotificationIds,
     );
-    if (!saved) {
-      // SharedPreferences updates its in-memory cache before reporting a
-      // platform refusal. Restore it so a new repository cannot load a read
-      // that was never accepted by durable storage.
-      if (previous == null) {
-        await preferences.remove(_readStateKey);
-      } else {
-        await preferences.setString(_readStateKey, previous);
-      }
-      throw StateError('Notification read state was not saved');
-    }
     _durableReadIds
       ..clear()
       ..addAll(retained);
@@ -354,7 +394,7 @@ class NotificationRepository {
         cacheIds.add(entry.key);
       }
     }
-    // The preferences record is authoritative even if a disposable cache
+    // The Drift journal is authoritative even if a disposable cache
     // row is missing or its write fails. Refreshes overlay this durable set.
     for (final id in cacheIds) {
       try {
@@ -394,7 +434,10 @@ class NotificationRepository {
   Future<void> _durableReadTail = Future<void>.value();
 
   Future<void> _enqueueDurableReadMutation(Future<void> Function() operation) {
-    final result = _durableReadTail.then((_) => operation());
+    final result = _durableReadTail.then((_) async {
+      await _readReady;
+      await operation();
+    });
     _durableReadTail = result.then<void>((_) {}, onError: (_, _) {});
     return result;
   }
@@ -404,7 +447,18 @@ class NotificationRepository {
   Future<void> flushPendingReadState() {
     final running = _pendingReadFlush;
     if (running != null) return running;
-    final operation = _flushPendingReadState();
+    final operation = (() async {
+      try {
+        await _readReady;
+        await _flushPendingReadState();
+      } on Object catch (error) {
+        Log.warning(
+          'Notification read retry storage unavailable (${error.runtimeType})',
+          name: 'NotificationRepository',
+          category: LogCategory.storage,
+        );
+      }
+    })();
     _pendingReadFlush = operation;
     return operation.whenComplete(() {
       if (identical(_pendingReadFlush, operation)) _pendingReadFlush = null;
@@ -419,7 +473,7 @@ class NotificationRepository {
   }
 
   Future<void> _flushPendingReadState() async {
-    if (_pendingReadPreferences == null) return;
+    if (_readStateDao == null) return;
     while (!_closed) {
       await _durableReadTail;
       if (_closed || _pendingReadIds.isEmpty) return;
@@ -682,6 +736,7 @@ class NotificationRepository {
         ? cursorId
         : cursorId ?? feed.lastCursorId;
     final isFirstPage = effectiveCursor == null;
+    if (_readStateDao != null) await _readReady;
 
     try {
       final response = isFirstPage
@@ -887,13 +942,25 @@ class NotificationRepository {
   /// the next REST arrival replaces them with fully enriched items.
   Future<void> _hydrateFromCache() async {
     try {
+      await _readReady;
       if (_snapshot.value.items.isNotEmpty) return;
       final rows = await _notificationsDao.getAllNotifications(
         limit: _pageSize,
         ownerPubkey: _userPubkey,
       );
       // Closed while reading: an account switch tore this repository down.
-      if (_closed || rows.isEmpty) return;
+      if (_closed) return;
+      if (_readStateDao != null) {
+        await _enqueueDurableReadMutation(() async {
+          final cache = await _notificationsDao.getAllNotifications(
+            ownerPubkey: _userPubkey,
+          );
+          final retained = cache.map((row) => row.id).toSet();
+          _cachedNotificationIds.removeWhere((id, _) => !retained.contains(id));
+          await _saveDurableReads(_durableReadIds, _pendingReadIds);
+        });
+      }
+      if (rows.isEmpty) return;
       if (_snapshot.value.items.isNotEmpty) return;
       final items = _overlayDurableReads(
         rows.map(_rowToPlaceholder).whereType<NotificationItem>().map((item) {
@@ -1132,7 +1199,7 @@ class NotificationRepository {
   /// active source of truth; the cache is a fallback, not a critical
   /// path.
   Future<void> _persistSnapshot(List<NotificationItem> items) {
-    if (_pendingReadPreferences == null) return _persistSnapshotNow(items);
+    if (_readStateDao == null) return _persistSnapshotNow(items);
     return _enqueueDurableReadMutation(() async {
       if (_closed) return;
       final previous = Map<String, List<String>>.of(_cachedNotificationIds);
@@ -1496,7 +1563,7 @@ class NotificationRepository {
   Future<void> markAsRead(List<String> ids) async {
     if (ids.isEmpty) return;
     _throwIfClosed();
-    if (_pendingReadPreferences != null) {
+    if (_readStateDao != null) {
       final captured = _expandServerNotificationIds(
         [for (final feed in _liveFeeds.toList()) ...feed.snapshot.value.items],
         ids.toSet(),
@@ -1596,7 +1663,7 @@ class NotificationRepository {
         authHeaders: authHeaders,
       );
 
-      if (_pendingReadPreferences != null) {
+      if (_readStateDao != null) {
         await _enqueueDurableReadMutation(
           () => _saveDurableReads(
             {..._durableReadIds, ...knownIds},

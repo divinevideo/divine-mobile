@@ -22,6 +22,7 @@ import 'dart:convert';
 
 import 'package:meta/meta.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// One relay's part of a catch-up window that it may have withheld at its
 /// result cap and that has not been read yet: its events at or above
@@ -650,13 +651,36 @@ class DmSyncState {
   /// Keys removed only by explicit account-data erasure.
   static Iterable<String> readStateStorageKeys(String pubkey) => [
     readStateStorageKey(pubkey),
+    '${readStateStorageKey(pubkey)}_quarantine',
   ];
 
   Map<String, dynamic> _readState(String pubkey) {
     final raw = _prefs.getString(readStateStorageKey(pubkey));
-    return raw == null
-        ? <String, dynamic>{}
-        : jsonDecode(raw) as Map<String, dynamic>;
+    if (raw == null) return {};
+    try {
+      final state = jsonDecode(raw) as Map<String, dynamic>;
+      if (state['revision'] is! int ||
+          state['pending'] is! bool ||
+          state['cursors'] is! Map) {
+        throw const FormatException('Invalid DM read journal');
+      }
+      (state['cursors'] as Map).cast<String, int>().forEach((key, value) {});
+      final boundaries = state['boundaryIds'];
+      if (boundaries != null) {
+        for (final entry in (boundaries as Map).entries) {
+          entry.key as String;
+          (entry.value as List).cast<String>().toSet();
+        }
+      }
+      return state;
+    } on Object catch (error) {
+      Log.warning(
+        'Unreadable DM read journal preserved (${error.runtimeType})',
+        name: 'DmSyncState',
+        category: LogCategory.storage,
+      );
+      return {};
+    }
   }
 
   /// Durable revision not yet acknowledged by a relay; zero when idle.
@@ -722,6 +746,17 @@ class DmSyncState {
   Future<void> _saveReadState(String pubkey, String value) async {
     final key = readStateStorageKey(pubkey);
     final previous = _prefs.getString(key);
+    if (previous != null && _readState(pubkey).isEmpty) {
+      final quarantine = '${key}_quarantine';
+      // Never overwrite an earlier unreadable source without preserving it.
+      if (_prefs.getString(quarantine) != null &&
+          _prefs.getString(quarantine) != previous) {
+        throw StateError('DM read recovery source already exists');
+      }
+      if (!await _prefs.setString(quarantine, previous)) {
+        throw StateError('DM read recovery source was not saved');
+      }
+    }
     final saved = await _prefs.setString(key, value);
     if (saved) return;
     if (_prefs.getString(key) == value) {

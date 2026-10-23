@@ -137,6 +137,38 @@ void main() {
       },
     );
 
+    test(
+      'v27 gains durable account journals without losing existing rows',
+      () async {
+        final schema = await verifier.schemaAt(27);
+        schema.rawDatabase.execute(
+          "INSERT INTO sound_request_states (owner_pubkey,section,record_key,value) VALUES (?,?,?,?)",
+          ['a' * 64, 'jobs', 'pending', 'keep'],
+        );
+        final db = AppDatabase(schema.newConnection());
+        addTearDown(db.close);
+        await verifier.migrateAndValidate(db, 28);
+        await db.accountSyncDao.writeNotificationReads(
+          'a' * 64,
+          {'raw'},
+          {'raw'},
+          {
+            'group': ['raw'],
+          },
+        );
+        expect(
+          (await db.accountSyncDao.readNotificationReads(
+            'a' * 64,
+          )).single.pending,
+          isTrue,
+        );
+        expect(
+          (await db.soundRequestStateDao.readAccount('a' * 64)).single.value,
+          'keep',
+        );
+      },
+    );
+
     test('a v21 database gains my_followers', () async {
       final schema = await verifier.schemaAt(21);
       final db = AppDatabase(schema.newConnection());

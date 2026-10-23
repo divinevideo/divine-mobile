@@ -36,6 +36,8 @@ class _MockAppDatabase extends Mock implements AppDatabase {}
 
 class _MockNotificationsDao extends Mock implements NotificationsDao {}
 
+class _MockAccountSyncDao extends Mock implements AccountSyncDao {}
+
 class _MockAuthService extends Mock implements AuthService {}
 
 class _MockContentBlocklistRepository extends Mock
@@ -110,6 +112,16 @@ void main() {
       );
       final database = _MockAppDatabase();
       when(() => database.notificationsDao).thenReturn(dao);
+      final readState = _MockAccountSyncDao();
+      when(() => database.accountSyncDao).thenReturn(readState);
+      when(() => readState.readNotificationReads(ownerPubkey))
+          .thenAnswer((_) async => []);
+      when(() => readState.readNotificationMembers(ownerPubkey))
+          .thenAnswer((_) async => []);
+      when(
+        () =>
+            readState.writeNotificationReads(ownerPubkey, any(), any(), any()),
+      ).thenAnswer((_) async {});
 
       final authService = _MockAuthService();
       when(() => authService.currentPublicKeyHex).thenReturn(ownerPubkey);

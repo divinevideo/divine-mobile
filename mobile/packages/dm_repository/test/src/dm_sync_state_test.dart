@@ -42,6 +42,25 @@ void main() {
       state = DmSyncState(prefs);
     });
 
+    for (final corrupt in [
+      '{',
+      '{"revision":"bad","pending":true,"cursors":[]}',
+    ]) {
+      test(
+        'corrupt read intent is preserved before recovery: $corrupt',
+        () async {
+          final key = DmSyncState.readStateStorageKey(pkA);
+          await prefs.setString(key, corrupt);
+          expect(state.readCursors(pkA), isEmpty);
+          expect(state.pendingReadRevision(pkA), 0);
+          expect(prefs.getString(key), corrupt);
+          await state.rememberReadCursors(pkA, {'tuple': 100});
+          expect(state.readCursors(pkA), {'tuple': 100});
+          expect(prefs.getString('${key}_quarantine'), corrupt);
+        },
+      );
+    }
+
     test(
       'boundary IDs survive restart and only merge at their own cursor',
       () async {

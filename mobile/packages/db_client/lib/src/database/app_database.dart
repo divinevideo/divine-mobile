@@ -100,6 +100,9 @@ const legacyV1NormalizationRepairIndexes = <String>[
     ScheduledPosts,
     ConcordStoreEntries,
     SoundRequestStates,
+    AccountSyncRecords,
+    NotificationReads,
+    NotificationReadMembers,
   ],
   daos: [
     UserProfilesDao,
@@ -138,6 +141,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     ScheduledPostsDao,
     ConcordStoreDao,
     SoundRequestStateDao,
+    AccountSyncDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -348,6 +352,11 @@ class AppDatabase extends _$AppDatabase {
         if (!await _tableExists('my_followers')) {
           await m.createTable(myFollowers);
         }
+      }
+      if (from < 28 && to >= 28) {
+        await m.createTable(accountSyncRecords);
+        await m.createTable(notificationReads);
+        await m.createTable(notificationReadMembers);
       }
       // The same holds for the v26 column.
       if (to < 26 &&

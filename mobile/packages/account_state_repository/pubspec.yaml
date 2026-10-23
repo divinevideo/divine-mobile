@@ -8,13 +8,19 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
+  db_client:
+    path: ../db_client
   nostr_client:
     path: ../nostr_client
   nostr_sdk:
     path: ../nostr_sdk
   shared_preferences: ^2.5.3
+  unified_logger:
+    path: ../unified_logger
 
 dev_dependencies:
+  crypto: ^3.0.6
+  drift: ^2.34.0
   fake_async: ^1.3.3
   flutter:
     sdk: flutter

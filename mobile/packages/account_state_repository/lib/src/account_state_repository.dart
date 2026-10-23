@@ -2,12 +2,14 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
+import 'package:account_state_repository/src/account_state_storage.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// A field's conflict policy. Latest writes use deterministic value ties.
-enum AccountStateMergeRule { latest, numericMaximum, falseWinsTie }
+enum AccountStateMergeRule { latest, numericMaximum }
 
 class AccountStateException implements Exception {
   const AccountStateException(this.message, {this.retryable = false});
@@ -34,6 +36,8 @@ class AccountStateRepository {
     String payloadEntriesKey = 'entries',
     String entryValueKey = 'value',
     String? cacheKeyPrefix,
+    this.perFieldSnapshots = false,
+    AccountStateStorage? storage,
     Map<String, AccountStateMergeRule> mergeRules = const {},
     AccountStateMergeRule defaultMergeRule = AccountStateMergeRule.latest,
   }) : _client = nostrClient,
@@ -45,10 +49,14 @@ class AccountStateRepository {
        _mergeRules = Map.of(mergeRules),
        _defaultMergeRule = defaultMergeRule {
     _restore();
+    _ready = storage == null ? Future<void>.value() : _restoreStorage(storage);
   }
 
   final String pubkey;
   final String namespace;
+  final bool perFieldSnapshots;
+  AccountStateStorage? _storage;
+  late final Future<void> _ready;
   final NostrClient _client;
   final SharedPreferences _preferences;
   final NostrSigner Function() _signer;
@@ -58,9 +66,11 @@ class AccountStateRepository {
   final Map<String, AccountStateMergeRule> _mergeRules;
   final AccountStateMergeRule _defaultMergeRule;
   Map<String, _Entry> _entries = {};
+  final _fieldTags = <String, String>{};
   List<Event> _events = [];
   final _receivedSources = <String, Event>{};
   final _decoded = <String, Map<String, _Entry>>{};
+  final _verifiedSources = <String, String>{};
   final _controller = StreamController<Map<String, Object?>>.broadcast();
   Future<void> _writes = Future<void>.value();
   Future<void> _syncs = Future<void>.value();
@@ -155,6 +165,7 @@ class AccountStateRepository {
   }
 
   Future<void> start() async {
+    await _ready;
     _ensureOpen();
     if (_started) return;
     _started = true;
@@ -272,6 +283,7 @@ class AccountStateRepository {
     Future<void> Function()? beforeMerge,
     void Function()? onReconciled,
   }) async {
+    await _ready;
     if (_closed) return;
     await _persistReceivedSources();
     if (_closed) return;
@@ -319,6 +331,14 @@ class AccountStateRepository {
       );
       final retained = <Event>[];
       if (candidates.isNotEmpty) retained.add(candidates.first);
+      if (perFieldSnapshots) {
+        final tags = <String>{};
+        for (final event in candidates) {
+          if (tags.add(event.dTagValue) && !retained.contains(event)) {
+            retained.add(event);
+          }
+        }
+      }
       final missing = merged.keys.toSet();
       for (final event in candidates) {
         final contributed = snapshots[event.id]!.entries
@@ -359,6 +379,17 @@ class AccountStateRepository {
     // New sources arriving during decoding must be decoded before any repair.
     if (_hasNewSources(snapshots.keys.toSet())) {
       _backgroundSync();
+      return;
+    }
+    if (perFieldSnapshots) {
+      await _publishFields(
+        signer,
+        publishing,
+        candidates,
+        snapshots,
+        read.events,
+        revision,
+      );
       return;
     }
     Event? confirmed;
@@ -430,11 +461,193 @@ class AccountStateRepository {
     });
   }
 
+  bool _isFieldTag(String tag) =>
+      RegExp('^${RegExp.escape(namespace)}/field/[0-9a-f]{64}\$').hasMatch(tag);
+
+  void _learnFieldTag(String key, String tag) {
+    final previous = _fieldTags[key];
+    if (previous == null || tag.compareTo(previous) < 0) _fieldTags[key] = tag;
+  }
+
+  String _newFieldTag() {
+    final random = math.Random.secure();
+    final address = List.generate(
+      32,
+      (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ).join();
+    return '$namespace/field/$address';
+  }
+
+  Future<void> _publishFields(
+    NostrSigner signer,
+    Map<String, _Entry> publishing,
+    List<Event> candidates,
+    Map<String, Map<String, _Entry>> snapshots,
+    List<Event> remoteEvents,
+    int revision,
+  ) async {
+    final sources = snapshots.keys.toSet();
+    final keys = publishing.keys.toList()..sort();
+    if (keys.any((key) => !_fieldTags.containsKey(key))) {
+      await _write(() async {
+        final previous = Map<String, String>.of(_fieldTags);
+        for (final key in keys) {
+          _fieldTags.putIfAbsent(key, _newFieldTag);
+        }
+        try {
+          // Save all new opaque addresses in one transaction before signing.
+          await _save(_entries, _events, pending: _pending);
+        } on Object {
+          _fieldTags
+            ..clear()
+            ..addAll(previous);
+          rethrow;
+        }
+      });
+    }
+    for (final key in keys) {
+      if (_closed) return;
+      if (_hasNewSources(sources)) {
+        _backgroundSync();
+        return;
+      }
+      final tag = _fieldTags[key]!;
+      final matching = candidates.where((event) => event.dTagValue == tag);
+      final latest = matching.isEmpty ? null : matching.first;
+      final field = {key: publishing[key]!};
+      Event? confirmed;
+      if (latest == null || !_same(field, snapshots[latest.id]!)) {
+        final plaintext = jsonEncode({
+          'version': 1,
+          _payloadEntriesKey: _encode(field),
+        });
+        if (utf8.encode(plaintext).length > 65535) {
+          Log.warning(
+            'Account state field exceeds NIP-44 plaintext limit; pending intent retained',
+            name: 'AccountStateRepository',
+            category: LogCategory.system,
+          );
+          throw const AccountStateException(
+            'Account state field exceeds NIP-44 plaintext limit',
+          );
+        }
+        final content = await _signerRequest(
+          () => signer.nip44Encrypt(pubkey, plaintext),
+          'Could not encrypt account state',
+        );
+        if (_closed) return;
+        if (content == null || content.isEmpty) {
+          throw const AccountStateException('Could not encrypt account state');
+        }
+        final unsigned = Event(
+          pubkey,
+          EventKind.appSpecificData,
+          [
+            ['d', tag],
+          ],
+          content,
+          createdAt: math.max(
+            DateTime.now().millisecondsSinceEpoch ~/ 1000,
+            (latest?.createdAt ?? 0) + 1,
+          ),
+        );
+        final expected = unsigned.id;
+        final signed = await _signerRequest(
+          () => signer.signEvent(unsigned),
+          'Could not sign account state',
+        );
+        if (_closed) return;
+        if (signed == null || signed.id != expected || !_belongs(signed)) {
+          throw const AccountStateException('Could not sign account state');
+        }
+        await _checkedSigner();
+        if (_closed || !await _confirmCurrent(signed, sources)) return;
+        confirmed = signed;
+        _remember(signed.id, field);
+      } else if (!remoteEvents.any((event) => event.id == latest.id)) {
+        await _checkedSigner();
+        if (_closed || !await _confirmCurrent(latest, sources)) return;
+        confirmed = latest;
+      }
+      if (confirmed != null) {
+        final accepted = confirmed;
+        // Commit every acknowledged shard independently. A later refusal or
+        // network failure must not republish already acknowledged siblings.
+        await _write(() async {
+          final events = _unionEvents([
+            ..._events.where(
+              (event) => event.dTagValue != tag || !sources.contains(event.id),
+            ),
+            accepted,
+          ]);
+          await _save(_entries, events, pending: _pending);
+          if (!_closed) _installSources(events);
+        });
+        sources.add(accepted.id);
+      }
+    }
+    await _write(() async {
+      if (_closed || _hasNewSources(sources)) return;
+      final pending = revision != _revision && _pending;
+      await _save(_entries, _events, pending: pending);
+      if (!_closed) _pending = pending;
+    });
+  }
+
+  void _restoreFieldTags(Object? value) {
+    if (value == null) return;
+    for (final entry in (value as Map<String, dynamic>).entries) {
+      final tag = entry.value as String;
+      if (!_isFieldTag(tag)) {
+        throw const FormatException('Invalid local shard address');
+      }
+      _learnFieldTag(entry.key, tag);
+    }
+  }
+
+  Future<void> _restoreStorage(AccountStateStorage storage) async {
+    final saved = await storage.read();
+    if (saved != null) {
+      final data = jsonDecode(saved) as Map<String, dynamic>;
+      if (data['version'] != 1) {
+        throw const FormatException('Unsupported durable account state');
+      }
+      final entries = _parse(data['entries']);
+      _restoreFieldTags(data['fieldTags']);
+      _merge(entries, _entries);
+      _entries = entries;
+      _pending = _pending || data['pending'] == true;
+      _events = _unionEvents([..._parseEvents(data['events']), ..._events]);
+    }
+    _storage = storage;
+    await _save(_entries, _events, pending: _pending);
+    // Only retire readable migration inputs after the durable transaction.
+    for (final key in [_stateKey, _cacheKey]) {
+      final raw = _preferences.getString(key);
+      if (raw == null) continue;
+      try {
+        final decoded = jsonDecode(raw);
+        if (key == _stateKey) {
+          final data = decoded as Map<String, dynamic>;
+          if (data['version'] != 1) continue;
+          _parse(data['entries']);
+          _parseEvents(data['events']);
+        } else {
+          _parseEvents(decoded);
+        }
+      } on Object {
+        continue;
+      }
+      await _preferences.remove(key);
+    }
+    _emit();
+  }
+
   List<Filter> get _filters => [
     Filter(
       authors: [pubkey],
       kinds: [EventKind.appSpecificData],
-      d: [namespace],
+      d: perFieldSnapshots ? null : [namespace],
     ),
   ];
 
@@ -466,6 +679,8 @@ class AccountStateRepository {
       _receivedSources.remove(source.id);
     }
     _events = _unionEvents([...persisted, ..._receivedSources.values]);
+    final ids = _events.map((event) => event.id).toSet();
+    _verifiedSources.removeWhere((id, _) => !ids.contains(id));
   }
 
   Future<bool> _confirmCurrent(Event event, Set<String> sources) async {
@@ -518,6 +733,12 @@ class AccountStateRepository {
       throw const FormatException('Unsupported account state');
     }
     final entries = _parse(payload[_payloadEntriesKey]);
+    if (event.dTagValue != namespace) {
+      if (entries.length != 1 || !_isFieldTag(event.dTagValue)) {
+        throw const FormatException('Invalid account state shard');
+      }
+      _learnFieldTag(entries.keys.single, event.dTagValue);
+    }
     _remember(event.id, entries);
     return entries;
   }
@@ -561,9 +782,15 @@ class AccountStateRepository {
           throw const FormatException('Invalid local account state');
         }
         _entries = _parse(data['entries']);
+        _restoreFieldTags(data['fieldTags']);
         _pending = data['pending'] == true;
         _events = _parseEvents(data['events']);
-      } on Object catch (_) {
+      } on Object catch (error) {
+        Log.warning(
+          'Unreadable legacy account journal preserved (${error.runtimeType})',
+          name: 'AccountStateRepository',
+          category: LogCategory.storage,
+        );
         _entries = {};
         _pending = false;
         _events = [];
@@ -590,12 +817,22 @@ class AccountStateRepository {
     for (final event in events)
       if (_belongs(event)) event.id: event,
   }.values.toList();
-  bool _belongs(Event event) =>
-      event.pubkey == pubkey &&
-      event.kind == EventKind.appSpecificData &&
-      event.dTagValue == namespace &&
-      event.isValid &&
-      event.isSigned;
+  bool _belongs(Event event) {
+    if (event.pubkey != pubkey ||
+        event.kind != EventKind.appSpecificData ||
+        !(event.dTagValue == namespace ||
+            (perFieldSnapshots && _isFieldTag(event.dTagValue)))) {
+      return false;
+    }
+    // Event is mutable in nostr_sdk. Reuse verification only when every
+    // serialized signed byte is unchanged, never merely by ID/object identity.
+    final fingerprint = jsonEncode(event.toJson());
+    if (_verifiedSources[event.id] == fingerprint) return true;
+    if (!event.isValid || !event.isSigned) return false;
+    _verifiedSources[event.id] = fingerprint;
+    return true;
+  }
+
   static int _newestFirst(Event left, Event right) {
     final time = right.createdAt.compareTo(left.createdAt);
     return time == 0 ? left.id.compareTo(right.id) : time;
@@ -610,8 +847,14 @@ class AccountStateRepository {
       'version': 1,
       'entries': _encode(entries),
       'pending': pending,
+      'fieldTags': _fieldTags,
       'events': events,
     });
+    final storage = _storage;
+    if (storage != null) {
+      await storage.write(encoded);
+      return;
+    }
     final previous = _preferences.getString(_stateKey);
     try {
       if (!await _preferences.setString(_stateKey, encoded)) {
@@ -639,7 +882,10 @@ class AccountStateRepository {
   }
 
   Future<void> _write(Future<void> Function() operation) {
-    final result = _writes.then((_) => operation());
+    final result = _writes.then((_) async {
+      await _ready;
+      await operation();
+    });
     _writes = result.then<void>((_) {}, onError: (Object _, StackTrace _) {});
     return result;
   }
@@ -710,6 +956,14 @@ class AccountStateRepository {
     _clearRetry();
     await _incoming?.cancel();
     await _statuses?.cancel();
+    // Drain local storage, including asynchronous migration, before an owner
+    // erasure can delete its rows. Network acknowledgments never gate close.
+    try {
+      await _ready;
+    } on Object {
+      /* Preserve the original readiness error. */
+    }
+    await _writes;
     await _controller.close();
   }
 }
