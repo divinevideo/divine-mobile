@@ -73,7 +73,8 @@ class AudioOverlayFadeTest {
     @Test
     fun `a volume curve moves in a straight line between its points`() {
         val curve = AudioOverlayVolumeCurve.fromMap(
-            mapOf("volumeCurve" to doubleArrayOf(1000.0, 1.0, 1250.0, 0.25, 3000.0, 0.25, 3500.0, 1.0))
+            // A plain list, as the Dart side sends it.
+            mapOf("volumeCurve" to listOf(1000.0, 1, 1250.0, 0.25, 3000, 0.25, 3500.0, 1.0))
         )!!
 
         assertEquals(1.0, curve.volumeAt(0.0), 1e-9)

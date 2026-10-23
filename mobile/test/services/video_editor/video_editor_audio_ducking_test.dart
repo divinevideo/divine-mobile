@@ -108,6 +108,44 @@ void main() {
         },
       );
 
+      test(
+        'leaves out a sound that never plays while the take talks',
+        () async {
+          final curves = await ducking.curvesFor([
+            voiceOver,
+            music.copyWith(
+              startTime: const Duration(seconds: 4),
+              endTime: const Duration(seconds: 6),
+            ),
+          ], videoDuration: const Duration(seconds: 6));
+
+          expect(curves, isEmpty);
+        },
+      );
+
+      test('measures again after a measurement failed', () async {
+        var attempts = 0;
+        final flaky = VideoEditorAudioDucking(
+          measure: (tracks, {videoDuration}) async {
+            attempts++;
+            if (attempts == 1) throw const AudioNoTrackException();
+            return talking();
+          },
+        );
+
+        expect(
+          await flaky.curvesFor([voiceOver, music], videoDuration: null),
+          isEmpty,
+        );
+        final retried = await flaky.curvesFor([
+          voiceOver,
+          music,
+        ], videoDuration: null);
+
+        expect(attempts, 2);
+        expect(retried['music'], isNotNull);
+      });
+
       test('ducks nothing when the take cannot be measured', () async {
         final failing = VideoEditorAudioDucking(
           measure: (tracks, {videoDuration}) async =>

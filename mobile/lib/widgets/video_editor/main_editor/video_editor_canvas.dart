@@ -739,6 +739,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// ones the export bakes in.
   final VideoEditorAudioDucking _audioDucking = VideoEditorAudioDucking();
 
+  /// Bumped by every audio sync, so a sync that waited on the voice-over
+  /// measurement does not put back tracks a newer sync already replaced.
+  int _audioSyncGeneration = 0;
+
   /// Last position dispatched to BLoC — avoids flooding with duplicates.
   Duration _lastReportedPosition = Duration.zero;
 
@@ -1909,6 +1913,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// timeline item, and the source is clipped to the sound's own start offset
   /// plus the window length.
   Future<void> _syncStopMotionAudio() async {
+    final generation = ++_audioSyncGeneration;
     final overlayState = context.read<TimelineOverlayBloc>().state;
     final isVoiceOverPreview = _isVoiceOverPreview;
     final audioById = {for (final e in overlayState.audioTracks) e.id: e};
@@ -1919,7 +1924,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         context.read<ClipEditorBloc>().state.clips,
       ),
     );
-    if (!mounted) return;
+    if (!mounted || generation != _audioSyncGeneration) return;
 
     final tracks = <StopMotionAudioPreviewTrack>[];
     for (final item in overlayState.items) {
@@ -2041,6 +2046,15 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       return;
     }
     if (!_isPlayerInitialized) return;
+    final generation = ++_audioSyncGeneration;
+    final player = _videoPlayer!;
+    // Whether this sync is still the latest for the player it started on. A
+    // sync waits on the voice-over measurement and on asset extraction, and
+    // a newer one (an undo right after a move) or a released player must win.
+    bool isCurrent() =>
+        mounted &&
+        generation == _audioSyncGeneration &&
+        identical(_videoPlayer, player);
 
     final overlayState = context.read<TimelineOverlayBloc>().state;
     // Captured before the loop can await: the track builders below await the
@@ -2058,7 +2072,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
     if (soundItems.isEmpty || audioEvents.isEmpty) {
       _loadedAudioTrackIds = const [];
-      await _videoPlayer!.removeAllAudioTracks();
+      await player.removeAllAudioTracks();
       Log.info(
         '🎵 Audio cleared',
         name: 'VideoEditorCanvas',
@@ -2074,7 +2088,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       audioById,
       videoDuration: outputEnd,
     );
-    if (!mounted) return;
+    if (!isCurrent()) return;
 
     final tracks = <AudioTrack>[];
     final trackIds = <String>[];
@@ -2157,15 +2171,16 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       }
     }
 
+    if (!isCurrent()) return;
     if (tracks.isEmpty) {
       _loadedAudioTrackIds = const [];
-      await _videoPlayer!.removeAllAudioTracks();
+      await player.removeAllAudioTracks();
       return;
     }
 
     try {
       _loadedAudioTrackIds = const [];
-      await _videoPlayer!.setAudioTracks(tracks);
+      await player.setAudioTracks(tracks);
       _loadedAudioTrackIds = trackIds;
     } catch (e, stackTrace) {
       Log.error(

@@ -17,10 +17,19 @@ class _Harness {
     required bool initialEnabled,
     required double initialVolume,
     required bool hasVoiceOver,
+    Locale? locale,
+    double textScale = 1,
   }) {
     return MaterialApp.router(
+      locale: locale,
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(textScale)),
+        child: child!,
+      ),
       routerConfig: GoRouter(
         routes: [
           GoRoute(
@@ -63,6 +72,8 @@ Future<_Harness> _open(
   bool initialEnabled = false,
   double initialVolume = 0.25,
   bool hasVoiceOver = true,
+  Locale? locale,
+  double textScale = 1,
 }) async {
   final harness = _Harness();
   await tester.pumpWidget(
@@ -70,6 +81,8 @@ Future<_Harness> _open(
       initialEnabled: initialEnabled,
       initialVolume: initialVolume,
       hasVoiceOver: hasVoiceOver,
+      locale: locale,
+      textScale: textScale,
     ),
   );
   await tester.tap(find.text('open'));
@@ -118,6 +131,21 @@ void main() {
         expect(_slider(tester).onChanged, isNotNull);
         expect(find.text('75%'), findsOneWidget);
       });
+    });
+
+    testWidgets('keeps the percentage on a phone at a large text size', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      // Malay has the longest "How much quieter".
+      await _open(tester, locale: const Locale('ms'), textScale: 2);
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('75%'), findsOneWidget);
     });
 
     group('interactions', () {

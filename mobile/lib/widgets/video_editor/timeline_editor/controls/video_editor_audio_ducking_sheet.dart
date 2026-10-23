@@ -183,11 +183,16 @@ class _StrengthControl extends StatelessWidget {
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              spacing: 8,
               children: [
-                Text(
-                  l10n.videoEditorDuckingStrengthLabel,
-                  style: VineTheme.bodyMediumFont(
-                    color: context.vineColors.primaryText,
+                // Wraps under large text sizes and long translations, so the
+                // percentage stays on the sheet.
+                Expanded(
+                  child: Text(
+                    l10n.videoEditorDuckingStrengthLabel,
+                    style: VineTheme.bodyMediumFont(
+                      color: context.vineColors.primaryText,
+                    ),
                   ),
                 ),
                 Text(
