@@ -242,8 +242,8 @@ Future<void> routeNotificationTap({
   required ProviderContainer container,
   required String? tapTargetType,
   required String? tapTargetValue,
+  required NotificationOpenSource openSource,
   String? messageId,
-  NotificationOpenSource openSource = NotificationOpenSource.localTap,
 }) async {
   // Keep provider initialization and analytics off the navigation critical path.
   scheduleMicrotask(() {

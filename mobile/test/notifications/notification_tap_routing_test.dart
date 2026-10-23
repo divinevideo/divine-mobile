@@ -2,6 +2,7 @@
 // ABOUTME: Proves follow/mention are no longer dropped and that the push path
 // ABOUTME: shares the same routing contract as in-app notification rows.
 
+import 'package:analytics/analytics.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -93,6 +94,7 @@ void main() {
       addTearDown(container.dispose);
 
       await app.routeNotificationTap(
+        openSource: NotificationOpenSource.localTap,
         referencedAddress: null,
         referencedEventId: null,
         eventId: null,
