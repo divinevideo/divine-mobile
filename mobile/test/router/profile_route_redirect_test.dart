@@ -483,6 +483,23 @@ void main() {
         );
       });
 
+      test('leaves an npub that names no key alone', () {
+        for (final npub in [
+          syntheticMisspelledNpub,
+          NostrKeyUtils.encodePubKey('11'),
+        ]) {
+          expect(
+            profileOwnerRedirectTarget(
+              location: ProfileScreenRouter.pathForNpub(npub),
+              matchedTemplate: ProfileScreenRouter.pathWithNpub,
+              currentPublicKeyHex: meHex,
+            ),
+            isNull,
+            reason: npub,
+          );
+        }
+      });
+
       test('leaves a route registered under another user profile alone', () {
         expect(
           profileOwnerRedirectTarget(

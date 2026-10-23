@@ -45,6 +45,19 @@ class NIP19Tlv {
     }
   }
 
+  /// The relay a TLV relay entry names, or null when its bytes are not UTF-8.
+  static String? _decodeRelay(List<int> bytes) {
+    try {
+      return utf8.decode(bytes);
+    } on FormatException {
+      return null;
+    }
+  }
+
+  /// Decodes an `nprofile1` string, or returns null when it is not one.
+  ///
+  /// A relay entry that is not UTF-8 makes the whole string invalid, as
+  /// [decodeNaddr] already treats it, so a caller gets null, not an exception.
   static Nprofile? decodeNprofile(String text) {
     List<int> buf = _decodePreHandle(text);
 
@@ -62,7 +75,8 @@ class NIP19Tlv {
       if (tlvData.typ == TLVType.defaultType) {
         pubkey = HEX.encode(tlvData.data);
       } else if (tlvData.typ == TLVType.relay) {
-        var relay = utf8.decode(tlvData.data);
+        final relay = _decodeRelay(tlvData.data);
+        if (relay == null) return null;
         relays.add(relay);
       }
     }
@@ -74,6 +88,11 @@ class NIP19Tlv {
     return null;
   }
 
+  /// Decodes an `nevent1` string, or returns null when it is not one.
+  ///
+  /// A relay entry that is not UTF-8, or a kind entry too short to read,
+  /// makes the whole string invalid, as [decodeNaddr] already treats it, so a
+  /// caller gets null, not an exception.
   static Nevent? decodeNevent(String text) {
     List<int> buf = _decodePreHandle(text);
 
@@ -93,9 +112,14 @@ class NIP19Tlv {
       if (tlvData.typ == TLVType.defaultType) {
         id = HEX.encode(tlvData.data);
       } else if (tlvData.typ == TLVType.relay) {
-        var relay = utf8.decode(tlvData.data);
+        final relay = _decodeRelay(tlvData.data);
+        if (relay == null) return null;
         relays.add(relay);
       } else if (tlvData.typ == TLVType.kind) {
+        // NIP-19 encodes the kind as a 32-bit big-endian integer; a shorter
+        // entry cannot be read, while a longer one reads its first four
+        // bytes, as decodeNaddr does.
+        if (tlvData.data.length < 4) return null;
         Uint8List byteList = Uint8List.fromList(tlvData.data);
         var byteData = ByteData.sublistView(byteList);
         kind = byteData.getInt32(0, Endian.big);

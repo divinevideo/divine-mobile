@@ -49,14 +49,12 @@ NormalizedPublicIdentifier? normalizePublicIdentifier(
     return NormalizedPublicIdentifier(hexPubkey: identifier.toLowerCase());
   }
 
-  // Try npub format
+  // Try npub format. The decoder returns an empty string for a failed
+  // checksum and does not check that the payload is a 32-byte key.
   if (identifier.startsWith('npub1')) {
-    try {
-      final hexKey = NostrKeyUtils.decode(identifier);
-      return NormalizedPublicIdentifier(hexPubkey: hexKey);
-    } catch (e) {
-      return null;
-    }
+    final hexKey = NostrKeyUtils.decode(identifier);
+    if (!NostrKeyUtils.isValidKey(hexKey)) return null;
+    return NormalizedPublicIdentifier(hexPubkey: hexKey);
   }
 
   // Try nprofile format

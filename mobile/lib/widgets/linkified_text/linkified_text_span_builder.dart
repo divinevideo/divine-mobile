@@ -445,13 +445,10 @@ class LinkifiedTextSpanBuilder {
     }
 
     if (lower.startsWith('nevent1')) {
-      try {
-        final decoded = NIP19Tlv.decodeNevent(normalized);
-        final id = decoded?.id;
-        if (id != null && id.isNotEmpty) return id;
-      } catch (_) {
-        return normalized;
-      }
+      // Only a full event id unwraps to the route; a short id stays wrapped
+      // so the route layer rejects it rather than reading it as a stable id.
+      final id = NIP19Tlv.decodeNevent(normalized)?.id;
+      if (id != null && id.length == 64) return id;
     }
 
     return normalized;

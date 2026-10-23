@@ -3811,6 +3811,30 @@ void main() {
       );
 
       test(
+        'omits a straddling nprofile whose relay entry is malformed',
+        () async {
+          // The pubkey entry for validPubkey, then the relay entry
+          // [1, 1, 0xff], whose one byte is not valid UTF-8.
+          const nprofile =
+              'nprofile1qqsqzg69v7y6hn00qy352euf40x77qfrg4ncn27dauqjx3t83x4u'
+              'mmcpq8lsl2lwgk';
+          final lead = 'word ' * 20;
+          stubNotifications([
+            makeNotification(
+              notificationType: 'comment',
+              sourceKind: 1,
+              content: '${lead}nostr:$nprofile tail',
+            ),
+          ]);
+          stubProfiles({});
+
+          final page = await repository.getNotifications();
+          final item = page.items.single as VideoNotification;
+          expect(item.commentText, equals('${lead.trimRight()}...'));
+        },
+      );
+
+      test(
         'keeps a leading naddr that the quote UI renders as a video label',
         () async {
           final naddr = NIP19Tlv.encodeNaddr(

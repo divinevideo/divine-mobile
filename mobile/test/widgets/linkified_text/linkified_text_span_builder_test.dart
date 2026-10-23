@@ -268,6 +268,46 @@ void main() {
       expect(tapped, equals([malformedNote, malformedNevent]));
     });
 
+    // A checksum-valid nevent whose id is only five bytes decodes to a short
+    // hex string. It must reach the route as the whole nevent, not that
+    // short hex, so the route layer rejects it instead of reading it as a
+    // stable id and opening whatever video carries that d-tag.
+    test('routes a short-id nevent by its full reference', () {
+      const nevent = 'nevent1qqzs5zcvp58qneeql7';
+      final tapped = <String>[];
+
+      final spans = LinkifiedTextSpanBuilder(
+        text: 'watch nostr:$nevent',
+        defaultStyle: defaultStyle,
+        linkStyle: linkStyle,
+        videoLabel: 'View video',
+        onVideoTap: tapped.add,
+      ).build();
+
+      for (final span in spans.tappableSpans) {
+        span.tap();
+      }
+
+      expect(tapped, equals([nevent]));
+    });
+
+    // A valid checksum can still wrap a damaged TLV entry, and this runs while
+    // building text other people wrote, so the reference stays text.
+    test('leaves an nprofile whose relay entry is malformed as plain text', () {
+      // Crafted by bech32-encoding the pubkey entry for 'd' * 64 followed by
+      // the relay entry [1, 1, 0xff], whose one byte is not valid UTF-8.
+      const nprofile =
+          'nprofile1qqsdmhwamhwamhwamhwamhwamhwamhwamhwamhwamhwamhwamhwamhgpq8lsqzzlhs';
+
+      final spans = const LinkifiedTextSpanBuilder(
+        text: 'hi nostr:$nprofile',
+        defaultStyle: defaultStyle,
+        linkStyle: linkStyle,
+      ).build();
+
+      expect(spans.tappableSpans, isEmpty);
+    });
+
     // The bech32 alternative is `[a-z0-9]+` with no way to know where the
     // payload ends, so a reference immediately followed by another
     // alphanumeric character — a stray character an importer left behind, or a
