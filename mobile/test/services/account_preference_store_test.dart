@@ -48,6 +48,108 @@ void main() {
     await repository.close();
   });
 
+  group('content filter projection notifications', () {
+    for (final mode in ['legacy', 'unbound port', 'bound port']) {
+      test(
+        '$mode applies a local choice and notifies once per effective change',
+        () async {
+          final unbound = AccountPreferenceStore(preferences);
+          final filters = ContentFilterService(
+            ageVerificationService: AgeVerificationService(
+              preferences: preferences,
+            ),
+            accountPreferences: mode == 'legacy'
+                ? null
+                : mode == 'unbound port'
+                ? unbound
+                : store,
+          );
+          await filters.initialize();
+          var notifications = 0;
+          filters.addListener(() => notifications++);
+          await filters.setPreference(
+            ContentLabel.flashingLights,
+            ContentFilterPreference.hide,
+          );
+          await pumpEventQueue();
+          expect(
+            filters.getPreference(ContentLabel.flashingLights),
+            ContentFilterPreference.hide,
+          );
+          expect(notifications, 1);
+          await filters.setPreference(
+            ContentLabel.flashingLights,
+            ContentFilterPreference.hide,
+          );
+          await pumpEventQueue();
+          expect(notifications, 1);
+          filters.dispose();
+          unbound.dispose();
+        },
+      );
+    }
+    test('remote changes and resets refresh once without echo or unrelated notifications', () async {
+      final filters = ContentFilterService(
+        ageVerificationService: AgeVerificationService(
+          preferences: preferences,
+        ),
+        accountPreferences: store,
+      );
+      await filters.initialize();
+      var notifications = 0;
+      filters.addListener(() => notifications++);
+      repository.receive({'content_filter/flashing-lights': 'hide'});
+      await pumpEventQueue();
+      expect(
+        filters.getPreference(ContentLabel.flashingLights),
+        ContentFilterPreference.hide,
+      );
+      expect(notifications, 1);
+      repository.receive({
+        'content_filter/flashing-lights': 'hide',
+        'app_locale': 'es',
+      });
+      await pumpEventQueue();
+      expect(notifications, 1);
+      repository.receive({'content_filter/flashing-lights': null});
+      await pumpEventQueue();
+      expect(
+        filters.getPreference(ContentLabel.flashingLights),
+        ContentFilterPreference.warn,
+      );
+      expect(notifications, 2);
+      expect(repository.localWrites, 0);
+      filters.dispose();
+    });
+    test('a held category write cannot affect an incoming account', () async {
+      final filters = ContentFilterService(
+        ageVerificationService: AgeVerificationService(
+          preferences: preferences,
+        ),
+        accountPreferences: store,
+      );
+      await filters.initialize();
+      final gate = Completer<void>();
+      repository.pendingWrite = gate;
+      final mutation = filters.setPreference(
+        ContentLabel.flashingLights,
+        ContentFilterPreference.hide,
+      );
+      final cancelled = expectLater(mutation, throwsStateError);
+      final incoming = FakeAccountState(_accountB);
+      await store.bind(incoming);
+      gate.complete();
+      await cancelled;
+      expect(incoming.values, isEmpty);
+      expect(
+        filters.getPreference(ContentLabel.flashingLights),
+        ContentFilterPreference.warn,
+      );
+      filters.dispose();
+      await incoming.close();
+    });
+  });
+
   group('account preference projection', () {
     test('untouched defaults are never seeded or published', () async {
       final host = DivineHostFilterService(
