@@ -67,6 +67,7 @@ while IFS= read -r path; do
   # Twelve suites have this maintainable production dependency closure.
   case "$path" in
     # FOCUSED_SCOPE_START — parsed by service_suite_scope_detector.dart.
+    mobile/packages/account_state_repository/*|\
     mobile/packages/cache_sync/*|\
     mobile/packages/db_client/*|\
     mobile/packages/dm_repository/*|\

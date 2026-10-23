@@ -5,13 +5,16 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:creator_sync/creator_sync.dart';
+import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:notification_repository/notification_repository.dart';
 import 'package:openvine/features/hashtag_follows/data/shared_preferences_hashtag_subscription_store.dart';
 import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/services/account_label_service.dart';
+import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
 import 'package:openvine/services/auth/pending_account_cleanup.dart';
 import 'package:openvine/services/content_filter_service.dart';
@@ -495,7 +498,7 @@ void main() {
       });
 
       test(
-        'keeps the viewer stats visibility choices across an identity change',
+        'clears the outgoing account stats projection on an identity change',
         () async {
           await prefs.setBool(
             StatsVisibilityPreferences.showTotalLoopsKey,
@@ -525,15 +528,15 @@ void main() {
           );
           expect(
             prefs.getBool(StatsVisibilityPreferences.showTotalLoopsKey),
-            isFalse,
+            isNull,
           );
           expect(
             prefs.getBool(StatsVisibilityPreferences.showVideoLoopsKey),
-            isTrue,
+            isNull,
           );
           expect(
             prefs.getBool(StatsVisibilityPreferences.showPublishedDateKey),
-            isTrue,
+            isNull,
           );
         },
       );
@@ -1006,6 +1009,73 @@ void main() {
     });
 
     group('deleteAccountData', () {
+      test(
+        'removes sync journals only when their account is deleted',
+        () async {
+          final deletedPubkey = 'a' * 64;
+          final otherPubkey = 'b' * 64;
+          final deletedKeys = [
+            'account_state_divine/preferences/v1_${deletedPubkey}_state',
+            'account_state_divine/preferences/v1_$deletedPubkey',
+            'badge_dismissal_event_${deletedPubkey}_state',
+            'badge_dismissal_event_$deletedPubkey',
+            ...DmSyncState.readStateStorageKeys(deletedPubkey),
+            NotificationRepository.readStateStorageKey(deletedPubkey),
+          ];
+          final otherKey =
+              'account_state_divine/preferences/v1_${otherPubkey}_state';
+          for (final key in [...deletedKeys, otherKey]) {
+            await prefs.setString(key, '{}');
+          }
+          await prefs.setBool(
+            AccountPreferenceStore.migrationStorageKey(deletedPubkey),
+            true,
+          );
+          await prefs.setBool(
+            AccountPreferenceStore.migrationStorageKey(otherPubkey),
+            true,
+          );
+          await prefs.setString(
+            AccountPreferenceStore.projectionOwnerStorageKey,
+            deletedPubkey,
+          );
+          await service.clearUserSpecificData(
+            isIdentityChange: true,
+            userPubkey: deletedPubkey,
+          );
+          for (final key in [...deletedKeys, otherKey]) {
+            expect(prefs.containsKey(key), isTrue);
+          }
+          await service.deleteAccountData(
+            deletedPubkey,
+            userNpub: NostrKeyUtils.encodePubKey(deletedPubkey),
+            preserveActiveSession: true,
+          );
+          for (final key in deletedKeys) {
+            expect(prefs.containsKey(key), isFalse, reason: key);
+          }
+          expect(prefs.containsKey(otherKey), isTrue);
+          expect(
+            prefs.containsKey(
+              AccountPreferenceStore.migrationStorageKey(deletedPubkey),
+            ),
+            isFalse,
+          );
+          expect(
+            prefs.getBool(
+              AccountPreferenceStore.migrationStorageKey(otherPubkey),
+            ),
+            isTrue,
+          );
+          expect(
+            prefs.containsKey(
+              AccountPreferenceStore.projectionOwnerStorageKey,
+            ),
+            isFalse,
+          );
+        },
+      );
+
       test('removes only the deleted account hashtag follows', () async {
         final deletedPubkey = 'a' * 64;
         final otherPubkey = 'b' * 64;

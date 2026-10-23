@@ -3,14 +3,19 @@
 
 import 'dart:convert';
 
+import 'package:account_state_repository/account_state_repository.dart';
 import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:creator_sync/creator_sync.dart';
+import 'package:dm_repository/dm_repository.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:notification_repository/notification_repository.dart';
 import 'package:openvine/constants/terms_acceptance_keys.dart';
+import 'package:openvine/features/appearance/repositories/appearance_repository.dart';
 import 'package:openvine/features/hashtag_follows/data/shared_preferences_hashtag_subscription_store.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/services/account_label_service.dart';
+import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
 import 'package:openvine/services/auth/following_prefetch_marker.dart';
@@ -27,7 +32,9 @@ import 'package:openvine/services/curated_lists/curated_list_session_coordinator
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
 import 'package:openvine/services/dm_video_blur_preference_service.dart';
+import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
 import 'package:openvine/services/language_preference_service.dart';
+import 'package:openvine/services/locale_preference_service.dart';
 import 'package:openvine/services/messages_preference_service.dart';
 import 'package:openvine/services/minor_account_review_status_store.dart';
 import 'package:openvine/services/moderation_label_service.dart';
@@ -35,6 +42,7 @@ import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
 import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/services/sound_library_service.dart';
+import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/services/subtitle_language_preference_service.dart';
 import 'package:openvine/services/video_provenance_filter_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -204,6 +212,12 @@ class UserDataCleanupService {
     SubtitleLanguagePreferenceService.targetLanguageStorageKey,
     SubtitleLanguagePreferenceService.keepOriginalLanguagesStorageKey,
     AudioSharingPreferenceService.prefsKey,
+    LocalePreferenceService.prefsKey,
+    AppearanceRepository.preferenceKey,
+    FeedAspectRatioPreferenceService.prefsKey,
+    StatsVisibilityPreferences.showTotalLoopsKey,
+    StatsVisibilityPreferences.showVideoLoopsKey,
+    StatsVisibilityPreferences.showPublishedDateKey,
     // Per-category filter choices. The migration flag travels with the
     // preferences it guards: clearing one without the other leaves the next
     // account with an empty map instead of the defaults.
@@ -444,6 +458,21 @@ class UserDataCleanupService {
     await remove(MinorAccountReviewStatusStore.storageKey(userPubkey));
     await remove(MessagesPreferenceService.storageKey(userPubkey));
     await remove(DmVideoBlurPreferenceService.storageKey(userPubkey));
+    for (final key in AccountStateRepository.localAccountKeys(
+      _prefs,
+      userPubkey,
+    )) {
+      await remove(key);
+    }
+    for (final key in DmSyncState.readStateStorageKeys(userPubkey)) {
+      await remove(key);
+    }
+    await remove(NotificationRepository.readStateStorageKey(userPubkey));
+    await remove(AccountPreferenceStore.migrationStorageKey(userPubkey));
+    if (_prefs.getString(AccountPreferenceStore.projectionOwnerStorageKey) ==
+        userPubkey) {
+      await remove(AccountPreferenceStore.projectionOwnerStorageKey);
+    }
     await remove(RelayDiscoveryService.cacheStorageKey(userNpub));
 
     await onDatabaseCleanup?.call(
@@ -672,6 +701,21 @@ class UserDataCleanupService {
     if (deleteUserData && userPubkey != null && userPubkey.isNotEmpty) {
       await remove(PrefsCuratedListStore.pendingDefaultDeletionKey(userPubkey));
       await remove(SavedSoundsService.accountStorageKey(userPubkey));
+      for (final key in AccountStateRepository.localAccountKeys(
+        _prefs,
+        userPubkey,
+      )) {
+        await remove(key);
+      }
+      for (final key in DmSyncState.readStateStorageKeys(userPubkey)) {
+        await remove(key);
+      }
+      await remove(NotificationRepository.readStateStorageKey(userPubkey));
+      await remove(AccountPreferenceStore.migrationStorageKey(userPubkey));
+      if (_prefs.getString(AccountPreferenceStore.projectionOwnerStorageKey) ==
+          userPubkey) {
+        await remove(AccountPreferenceStore.projectionOwnerStorageKey);
+      }
       for (final kind in SyncItemKind.values) {
         await remove(PrefsSyncStateStore.appliedStorageKey(kind, userPubkey));
       }
