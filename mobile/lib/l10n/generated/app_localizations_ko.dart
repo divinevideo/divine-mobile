@@ -9543,6 +9543,35 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorReverseFailed => '클립을 역재생할 수 없었습니다. 다시 시도해 주세요.';
 
   @override
+  String get videoEditorBoomerangLabel => '부메랑';
+
+  @override
+  String get videoEditorBoomerangClipSemanticLabel => '선택한 클립의 부메랑 전환';
+
+  @override
+  String get videoEditorBoomerangSelectedClipsSemanticLabel =>
+      '선택한 클립을 하나의 부메랑으로 만들기';
+
+  @override
+  String get videoEditorBoomerangProgressLabel => '잠시만요. 부메랑을 만들고 있어요';
+
+  @override
+  String videoEditorBoomerangTooLong(String seconds) {
+    return '부메랑은 영상을 두 번 재생해요. 먼저 $seconds초 이하로 잘라 주세요.';
+  }
+
+  @override
+  String get videoEditorBoomerangNoLocalFile =>
+      '부메랑을 만들 수 없어요: 클립을 로컬에서 사용할 수 없어요.';
+
+  @override
+  String get videoEditorBoomerangOriginalMissing =>
+      '원본 영상이 없어서 이 클립은 부메랑으로 유지돼요.';
+
+  @override
+  String get videoEditorBoomerangFailed => '부메랑을 만들 수 없었어요. 다시 시도해 주세요.';
+
+  @override
   String get videoEditorStabilizeLabel => '흔들림 보정';
 
   @override

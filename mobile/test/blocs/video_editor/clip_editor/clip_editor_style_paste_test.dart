@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' show EqualizerSettings;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/clip_boomerang.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_style.dart';
 import 'package:openvine/services/video_editor/chroma_key_bake_service.dart';
@@ -147,6 +148,42 @@ void main() {
         '/documents/b_key.mp4',
       ]);
       expect(state.isPastingClipStyle, isFalse);
+    });
+
+    test('a color mask baked onto a boomerang drops its record', () async {
+      // The key lands on the bounced footage. Turning the boomerang off would
+      // put back the footage before it, unkeyed, and drop the mask.
+      final bloc = seeded(
+        [
+          _clip('a').copyWith(
+            boomerang: const ClipBoomerang(
+              sourcePath: '/documents/a_take.mp4',
+              sourceDuration: Duration(seconds: 1),
+            ),
+          ),
+        ],
+        bakeChromaKey:
+            ({
+              required sourceClip,
+              required chromaKey,
+              required renderId,
+            }) async => (
+              video: EditorVideo.file('/documents/a_key.mp4'),
+              source: sourceClip.video!.file!.path,
+            ),
+      );
+      await pumpEventQueue();
+
+      final state = await paste(
+        bloc,
+        ['a'],
+        ClipStyle.of(_clip('x', chromaKey: _key)),
+      );
+
+      final clip = state.clips.single;
+      expect(clip.chromaKey, _key);
+      expect(clip.video?.file?.path, '/documents/a_key.mp4');
+      expect(clip.boomerang, isNull);
     });
 
     test(

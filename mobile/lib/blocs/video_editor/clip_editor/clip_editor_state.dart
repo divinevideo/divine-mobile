@@ -33,6 +33,10 @@ class ClipEditorState extends Equatable {
     this.stabilizeRenderId,
     this.stabilizeProgress,
     this.lastStabilizeResult,
+    this.isBoomeranging = false,
+    this.boomerangingClipId,
+    this.boomerangRenderId,
+    this.lastBoomerangResult,
     this.isTransforming = false,
     this.transformingClipId,
     this.lastTransformResult,
@@ -198,6 +202,24 @@ class ClipEditorState extends Equatable {
   /// Consumed by the widget layer to reload the clip after a success and to
   /// report a failure.
   final ClipStabilizeResult? lastStabilizeResult;
+
+  /// Whether a boomerang is rendering, for one clip or for the clips selected
+  /// in multi-select.
+  final bool isBoomeranging;
+
+  /// The clip whose boomerang renders while [isBoomeranging], or `null` while
+  /// a selection of clips bounces as one.
+  final String? boomerangingClipId;
+
+  /// The render task the progress overlay follows while [isBoomeranging].
+  /// A selection moves it from the merge of the clips on to their boomerang.
+  final String? boomerangRenderId;
+
+  /// Last completed boomerang result.
+  ///
+  /// Consumed by the widget layer to commit the clip list to editor history
+  /// (on success) or to report why nothing changed.
+  final ClipBoomerangResult? lastBoomerangResult;
 
   /// Whether a transform (crop/rotate/flip) render operation is running.
   final bool isTransforming;
@@ -428,6 +450,27 @@ class ClipEditorState extends Equatable {
   /// Total wall-clock duration of all clips (respecting trim and playback speed).
   Duration get totalDuration => compositionDuration(clips);
 
+  /// Whether the clips selected in multi-select can bounce as one boomerang:
+  /// neighbours on the timeline, since the way back has to retrace exactly
+  /// the way there.
+  ///
+  /// One clip on its own toggles as the clip toolbar does, so it has to be
+  /// footage rather than a still and must not wait for its recorded green
+  /// screen to bake. Several are merged first, and the merge bakes such a key
+  /// before it renders.
+  bool get canBoomerangSelection {
+    final indexes = [
+      for (var i = 0; i < clips.length; i++)
+        if (selectedClipIds.contains(clips[i].id)) i,
+    ];
+    if (indexes.isEmpty || indexes.last - indexes.first + 1 != indexes.length) {
+      return false;
+    }
+    if (indexes.length > 1) return true;
+    final clip = clips[indexes.single];
+    return clip.canBoomerang && !clip.hasPendingCaptureChromaKey;
+  }
+
   /// Whether an asynchronous clip operation may still publish a composition.
   /// A temporary loop trim must not enter that operation's saved snapshot.
   bool get hasPendingClipOperation =>
@@ -435,6 +478,7 @@ class ClipEditorState extends Equatable {
       isSplitting ||
       isReversing ||
       isStabilizing ||
+      isBoomeranging ||
       isTransforming ||
       isChromaKeying ||
       isBakingCapturedChromaKeys ||
@@ -473,6 +517,11 @@ class ClipEditorState extends Equatable {
     String? reversingClipId,
     bool clearReversingClipId = false,
     ClipReverseResult? lastReverseResult,
+    bool? isBoomeranging,
+    String? boomerangingClipId,
+    String? boomerangRenderId,
+    bool clearBoomerangingClipId = false,
+    ClipBoomerangResult? lastBoomerangResult,
     bool? isStabilizing,
     String? stabilizingClipId,
     bool clearStabilizingClipId = false,
@@ -578,6 +627,14 @@ class ClipEditorState extends Equatable {
           ? null
           : (stabilizeProgress ?? this.stabilizeProgress),
       lastStabilizeResult: lastStabilizeResult ?? this.lastStabilizeResult,
+      isBoomeranging: isBoomeranging ?? this.isBoomeranging,
+      boomerangingClipId: clearBoomerangingClipId
+          ? null
+          : (boomerangingClipId ?? this.boomerangingClipId),
+      boomerangRenderId: clearBoomerangingClipId
+          ? null
+          : (boomerangRenderId ?? this.boomerangRenderId),
+      lastBoomerangResult: lastBoomerangResult ?? this.lastBoomerangResult,
       isTransforming: isTransforming ?? this.isTransforming,
       transformingClipId: clearTransformingClipId
           ? null
@@ -701,6 +758,11 @@ class ClipEditorState extends Equatable {
     stabilizeProgress,
     // Identity-only: each ClipStabilizeResult is a fresh instance.
     identityHashCode(lastStabilizeResult),
+    isBoomeranging,
+    boomerangingClipId,
+    boomerangRenderId,
+    // Identity-only: each ClipBoomerangResult is a fresh instance.
+    identityHashCode(lastBoomerangResult),
     isTransforming,
     transformingClipId,
     identityHashCode(lastTransformResult),
@@ -838,6 +900,52 @@ final class ClipReverseDiscarded extends ClipReverseResult {}
 
 /// Reverse render failed.
 final class ClipReverseFailure extends ClipReverseResult {}
+
+// === BOOMERANG RESULT ===
+
+/// One-shot signal describing the outcome of a boomerang toggle.
+sealed class ClipBoomerangResult {}
+
+/// The clip [clipId] became a boomerang ([bounced] true) or got back the
+/// clip it was made from (false). [ClipEditorState.clips] already holds it.
+///
+/// [previousClips] is the list as it was immediately before, so the widget
+/// layer can move markers and sounds after it by however much the timeline
+/// grew or shrank.
+final class ClipBoomerangSuccess extends ClipBoomerangResult {
+  ClipBoomerangSuccess({
+    required this.previousClips,
+    required this.clipId,
+    required this.bounced,
+  });
+
+  final List<DivineVideoClip> previousClips;
+  final String clipId;
+  final bool bounced;
+}
+
+/// The footage would play longer than [VideoEditorConstants.maxDuration] as
+/// a boomerang, so nothing was rendered: the export would cut the way back
+/// off. [maxSourceDuration] is the longest footage that still fits.
+final class ClipBoomerangTooLong extends ClipBoomerangResult {
+  ClipBoomerangTooLong({required this.maxSourceDuration});
+
+  final Duration maxSourceDuration;
+}
+
+/// The clip has no locally available file to bounce.
+final class ClipBoomerangNoLocalFile extends ClipBoomerangResult {}
+
+/// Turning the boomerang off found the footage it was made from gone, so the
+/// clip keeps bouncing. Retrying cannot bring the file back.
+final class ClipBoomerangOriginalMissing extends ClipBoomerangResult {}
+
+/// The render finished but the clip, or a selected clip, was removed or
+/// changed in the meantime.
+final class ClipBoomerangDiscarded extends ClipBoomerangResult {}
+
+/// Rendering the boomerang failed; the timeline is untouched.
+final class ClipBoomerangFailure extends ClipBoomerangResult {}
 
 // === STABILIZE RESULT ===
 

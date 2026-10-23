@@ -10295,6 +10295,38 @@ class AppLocalizationsTe extends AppLocalizations {
       'క్లిప్‌ను రివర్స్ చేయడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.';
 
   @override
+  String get videoEditorBoomerangLabel => 'బూమరాంగ్';
+
+  @override
+  String get videoEditorBoomerangClipSemanticLabel =>
+      'ఎంచుకున్న క్లిప్ కోసం బూమరాంగ్‌ని టోగుల్ చేయండి';
+
+  @override
+  String get videoEditorBoomerangSelectedClipsSemanticLabel =>
+      'ఎంచుకున్న క్లిప్‌లను ఒకే బూమరాంగ్‌గా మార్చండి';
+
+  @override
+  String get videoEditorBoomerangProgressLabel =>
+      'ఒక్క క్షణం, మేము మీ బూమరాంగ్‌ను తయారు చేస్తున్నాము';
+
+  @override
+  String videoEditorBoomerangTooLong(String seconds) {
+    return 'బూమరాంగ్ మీ ఫుటేజ్‌ను రెండుసార్లు ప్లే చేస్తుంది. ముందుగా దీన్ని $seconds సె లేదా అంతకంటే తక్కువకు ట్రిమ్ చేయండి.';
+  }
+
+  @override
+  String get videoEditorBoomerangNoLocalFile =>
+      'బూమరాంగ్ చేయలేరు: క్లిప్ స్థానికంగా అందుబాటులో లేదు.';
+
+  @override
+  String get videoEditorBoomerangOriginalMissing =>
+      'అసలు ఫుటేజ్ ఇక లేదు, కాబట్టి ఈ క్లిప్ బూమరాంగ్‌గానే ఉంటుంది.';
+
+  @override
+  String get videoEditorBoomerangFailed =>
+      'బూమరాంగ్ చేయడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.';
+
+  @override
   String get videoEditorStabilizeLabel => 'స్థిరీకరించు';
 
   @override

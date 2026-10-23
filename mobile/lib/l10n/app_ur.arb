@@ -5113,6 +5113,14 @@
     "description": "Snackbar message shown when a reverse is requested for a clip that has no locally available file."
   },
   "videoEditorReverseFailed": "کلپ الٹی نہیں ہو سکی۔ براہ کرم دوبارہ کوشش کریں۔",
+  "videoEditorBoomerangLabel": "بومرینگ",
+  "videoEditorBoomerangClipSemanticLabel": "منتخب کلپ کا بومرینگ ٹوگل کریں",
+  "videoEditorBoomerangSelectedClipsSemanticLabel": "منتخب کلپس کو ایک بومرینگ بنائیں",
+  "videoEditorBoomerangProgressLabel": "ایک لمحہ، ہم آپ کا بومرینگ بنا رہے ہیں",
+  "videoEditorBoomerangTooLong": "بومرینگ آپ کی فوٹیج دو بار چلاتا ہے۔ پہلے اسے {seconds} سیکنڈ یا اس سے کم کر لیں۔",
+  "videoEditorBoomerangNoLocalFile": "بومرینگ نہیں بن سکتا: کلپ مقامی طور پر دستیاب نہیں ہے۔",
+  "videoEditorBoomerangOriginalMissing": "اصل فوٹیج اب موجود نہیں، اس لیے یہ کلپ بومرینگ ہی رہے گی۔",
+  "videoEditorBoomerangFailed": "بومرینگ نہیں بن سکا۔ براہ کرم دوبارہ کوشش کریں۔",
   "@videoEditorReverseFailed": {
     "description": "Snackbar message shown when reversing a clip fails during rendering."
   },

@@ -5113,6 +5113,14 @@
     "description": "Snackbar message shown when a reverse is requested for a clip that has no locally available file."
   },
   "videoEditorReverseFailed": "Không đảo ngược được clip. Vui lòng thử lại.",
+  "videoEditorBoomerangLabel": "Boomerang",
+  "videoEditorBoomerangClipSemanticLabel": "Bật/tắt boomerang cho clip đã chọn",
+  "videoEditorBoomerangSelectedClipsSemanticLabel": "Biến các clip đã chọn thành một boomerang",
+  "videoEditorBoomerangProgressLabel": "Một chút thôi, bọn mình đang tạo boomerang cho bạn",
+  "videoEditorBoomerangTooLong": "Boomerang phát đoạn phim của bạn hai lần. Hãy cắt xuống còn {seconds} giây hoặc ngắn hơn trước.",
+  "videoEditorBoomerangNoLocalFile": "Không thể tạo boomerang: clip không có sẵn trên máy.",
+  "videoEditorBoomerangOriginalMissing": "Đoạn phim gốc không còn nữa, nên clip này vẫn là boomerang.",
+  "videoEditorBoomerangFailed": "Không tạo được boomerang. Vui lòng thử lại.",
   "@videoEditorReverseFailed": {
     "description": "Snackbar message shown when reversing a clip fails during rendering."
   },

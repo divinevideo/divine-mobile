@@ -464,17 +464,23 @@ extension VideoEditorExtensions on ProImageEditorState {
   /// grown ones, so one undo takes the sound away together with the stills
   /// it belongs to. They are not grown: their windows were cut to the new
   /// footage in the first place.
+  ///
+  /// [replacedClipIds] are clips the edit rendered into new files under the
+  /// same ids; sounds anchored to them are released rather than rebased (see
+  /// [releaseAudioAnchors]).
   void setLengthenedClipState({
     required List<DivineVideoClip> previousClips,
     required List<DivineVideoClip> clips,
     List<AudioEvent> addedAudioTracks = const [],
     List<Duration>? timelineMarkers,
+    Set<String> replacedClipIds = const {},
   }) {
     final currentTracks = stateManager.audioTracks;
     final grownTracks = _grownAudioTracks(
       currentTracks: currentTracks,
       previousClips: previousClips,
       clips: clips,
+      replacedClipIds: replacedClipIds,
     );
 
     if (identical(grownTracks, currentTracks) && addedAudioTracks.isEmpty) {
@@ -489,8 +495,8 @@ extension VideoEditorExtensions on ProImageEditorState {
   }
 
   /// The sounds after an edit that turns [previousClips] into [clips]: anchored
-  /// sounds follow their clip, and a window that covered the old end grows onto
-  /// the new one (#6401).
+  /// sounds follow their clip, those of [replacedClipIds] are released, and a
+  /// window that covered the old end grows onto the new one (#6401).
   ///
   /// Returns [currentTracks] itself when nothing moved, so a caller can tell
   /// that from a change with `identical`. Pass the list it already holds — the
@@ -499,8 +505,12 @@ extension VideoEditorExtensions on ProImageEditorState {
     required List<AudioEvent> currentTracks,
     required List<DivineVideoClip> previousClips,
     required List<DivineVideoClip> clips,
+    Set<String> replacedClipIds = const {},
   }) => growAudioToCompositionEnd(
-    rebaseAnchoredAudioForClipState(clips, currentTracks),
+    rebaseAnchoredAudioForClipState(
+      clips,
+      releaseAudioAnchors(currentTracks, replacedClipIds),
+    ),
     previousDuration: compositionDuration(previousClips),
     duration: compositionDuration(clips),
     maxDuration: VideoEditorConstants.maxDuration,
@@ -571,10 +581,15 @@ extension VideoEditorExtensions on ProImageEditorState {
   /// entry (undo point). When `true`, mutates the current meta in-place
   /// — use this during ongoing drags to keep the meta current without
   /// polluting the undo stack.
+  ///
+  /// [replacedClipIds] are clips the edit rendered into new files under the
+  /// same ids; sounds anchored to them are released rather than rebased (see
+  /// [releaseAudioAnchors]).
   void setClipState(
     List<DivineVideoClip> clips, {
     bool skipUpdateHistory = false,
     List<Duration>? timelineMarkers,
+    Set<String> replacedClipIds = const {},
   }) {
     final serialized = clips.map((c) => c.toJson()).toList();
 
@@ -584,7 +599,10 @@ extension VideoEditorExtensions on ProImageEditorState {
     // actually moved - `rebaseAnchoredAudioForClipState` returns the same
     // list instance otherwise.
     final currentTracks = stateManager.audioTracks;
-    final rebasedTracks = rebaseAnchoredAudioForClipState(clips, currentTracks);
+    final rebasedTracks = rebaseAnchoredAudioForClipState(
+      clips,
+      releaseAudioAnchors(currentTracks, replacedClipIds),
+    );
     final audioChanged = !identical(rebasedTracks, currentTracks);
     final serializedAudio = audioChanged
         ? rebasedTracks.map((e) => e.toJson()).toList()

@@ -20,6 +20,7 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/clip_boomerang.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_stabilization.dart';
 import 'package:openvine/models/video_editor/clip_style.dart';
@@ -786,6 +787,7 @@ void main() {
       expect(controls.onFreezeFrame, isNull);
       expect(controls.onSpeed, isNull);
       expect(controls.onReversed, isNull);
+      expect(controls.onBoomerang, isNull);
       expect(controls.onStabilize, isNull);
       expect(controls.onDetach, isNull);
       expect(controls.onExtractAudio, isNull);
@@ -945,6 +947,83 @@ void main() {
               )
               .onStabilize,
           isNull,
+        );
+      });
+    });
+
+    group('boomerang', () {
+      testWidgets('dispatches ClipEditorClipBoomerangRequested when pressed', (
+        tester,
+      ) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        when(
+          () => bloc.state,
+        ).thenReturn(ClipEditorState(clips: [clip('clip-1')]));
+        await tester.pumpWidget(build());
+
+        await scrollUntilTappable(
+          tester,
+          find.bySemanticsLabel(l10n.videoEditorBoomerangClipSemanticLabel),
+          100,
+        );
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorBoomerangClipSemanticLabel),
+        );
+        await tester.pump();
+
+        verify(
+          () => bloc.add(
+            const ClipEditorClipBoomerangRequested(clipId: 'clip-1'),
+          ),
+        ).called(1);
+      });
+
+      testWidgets('shows a boomerang highlighted and Reverse greyed out', (
+        tester,
+      ) async {
+        when(() => bloc.state).thenReturn(
+          ClipEditorState(
+            clips: [
+              clip('clip-1').copyWith(
+                boomerang: const ClipBoomerang(
+                  sourcePath: '/tmp/take.mp4',
+                  sourceDuration: Duration(seconds: 2),
+                ),
+              ),
+            ],
+          ),
+        );
+        await tester.pumpWidget(build());
+
+        // A boomerang plays the same backwards, so reversing it changes
+        // nothing the viewer can see.
+        final controls = tester.widget<VideoEditorTimelineControls>(
+          find.byType(VideoEditorTimelineControls),
+        );
+        expect(controls.isBoomerang, isTrue);
+        expect(controls.isReverseDisabled, isTrue);
+        expect(controls.isBoomeranging, isFalse);
+      });
+
+      testWidgets('shows as busy only while the current clip renders', (
+        tester,
+      ) async {
+        when(() => bloc.state).thenReturn(
+          ClipEditorState(
+            clips: [clip('clip-1'), clip('clip-2')],
+            isBoomeranging: true,
+            boomerangingClipId: 'clip-1',
+          ),
+        );
+        await tester.pumpWidget(build());
+
+        expect(
+          tester
+              .widget<VideoEditorTimelineControls>(
+                find.byType(VideoEditorTimelineControls),
+              )
+              .isBoomeranging,
+          isTrue,
         );
       });
     });

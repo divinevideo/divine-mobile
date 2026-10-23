@@ -9933,6 +9933,37 @@ class AppLocalizationsTr extends AppLocalizations {
       'Klip tersine çevrilemedi. Lütfen tekrar deneyin.';
 
   @override
+  String get videoEditorBoomerangLabel => 'Bumerang';
+
+  @override
+  String get videoEditorBoomerangClipSemanticLabel =>
+      'Seçili klip için bumerangı aç veya kapat';
+
+  @override
+  String get videoEditorBoomerangSelectedClipsSemanticLabel =>
+      'Seçili klipleri tek bir bumeranga dönüştür';
+
+  @override
+  String get videoEditorBoomerangProgressLabel =>
+      'Bir saniye, bumerangını hazırlıyoruz';
+
+  @override
+  String videoEditorBoomerangTooLong(String seconds) {
+    return 'Bumerang görüntüyü iki kez oynatır. Önce $seconds sn veya daha kısa olacak şekilde kırp.';
+  }
+
+  @override
+  String get videoEditorBoomerangNoLocalFile =>
+      'Bumerang yapılamıyor: klip yerel olarak kullanılamıyor.';
+
+  @override
+  String get videoEditorBoomerangOriginalMissing =>
+      'Orijinal görüntü artık yok, bu yüzden bu klip bumerang olarak kalacak.';
+
+  @override
+  String get videoEditorBoomerangFailed => 'Bumerang yapılamadı. Tekrar dene.';
+
+  @override
   String get videoEditorStabilizeLabel => 'Sabitle';
 
   @override

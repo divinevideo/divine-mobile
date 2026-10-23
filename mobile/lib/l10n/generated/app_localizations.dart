@@ -17003,6 +17003,54 @@ abstract class AppLocalizations {
   /// **'Could not reverse clip. Please try again.'**
   String get videoEditorReverseFailed;
 
+  /// Label of the clip toolbar action, and of the multi-select action, that makes a clip play forward and then backward. Turns it off again when the clip already is a boomerang.
+  ///
+  /// In en, this message translates to:
+  /// **'Boomerang'**
+  String get videoEditorBoomerangLabel;
+
+  /// Screen reader label for the Boomerang action in the clip toolbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Toggle boomerang for selected clip'**
+  String get videoEditorBoomerangClipSemanticLabel;
+
+  /// Screen reader label for the Boomerang action in the multi-select toolbar, which turns the selected neighbouring clips into one clip that plays all of them forward and then backward.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn selected clips into one boomerang'**
+  String get videoEditorBoomerangSelectedClipsSemanticLabel;
+
+  /// Shown while a boomerang is being rendered.
+  ///
+  /// In en, this message translates to:
+  /// **'One moment, we\'re making your boomerang'**
+  String get videoEditorBoomerangProgressLabel;
+
+  /// Snackbar shown when the footage is too long to become a boomerang: a boomerang plays it forward and backward, so it would run past the longest video. {seconds} is the longest footage that still fits, already formatted with one or two decimals, like 3.15.
+  ///
+  /// In en, this message translates to:
+  /// **'A boomerang plays your footage twice. Trim it to {seconds} s or less first.'**
+  String videoEditorBoomerangTooLong(String seconds);
+
+  /// Snackbar message shown when a boomerang is requested for a clip that has no locally available file.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot make a boomerang: clip is not locally available.'**
+  String get videoEditorBoomerangNoLocalFile;
+
+  /// Snackbar message shown when the user turns a boomerang off but the footage it was made from is no longer on the device. The clip keeps playing as a boomerang. Retrying cannot bring the file back, so the message must not suggest trying again.
+  ///
+  /// In en, this message translates to:
+  /// **'The original footage is gone, so this clip stays a boomerang.'**
+  String get videoEditorBoomerangOriginalMissing;
+
+  /// Snackbar message shown when rendering a boomerang fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not make a boomerang. Please try again.'**
+  String get videoEditorBoomerangFailed;
+
   /// Label of the clip toolbar action that steadies shaky footage. Turns it off again when the clip is already stabilized.
   ///
   /// In en, this message translates to:

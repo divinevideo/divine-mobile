@@ -866,6 +866,42 @@ void main() {
     });
   });
 
+  group(shiftTimelineMarkersForResize, () {
+    const markers = [
+      Duration(seconds: 1),
+      Duration(seconds: 2),
+      Duration(milliseconds: 2500),
+      Duration(seconds: 3),
+    ];
+
+    test('moves markers from the point on when the timeline grows', () {
+      expect(
+        shiftTimelineMarkersForResize(
+          markers: markers,
+          at: const Duration(seconds: 2),
+          by: const Duration(seconds: 1),
+        ),
+        equals(const [
+          Duration(seconds: 1),
+          Duration(seconds: 3),
+          Duration(milliseconds: 3500),
+          Duration(seconds: 4),
+        ]),
+      );
+    });
+
+    test('drops markers in the span taken out and moves later ones back', () {
+      expect(
+        shiftTimelineMarkersForResize(
+          markers: markers,
+          at: const Duration(seconds: 2),
+          by: const Duration(seconds: -1),
+        ),
+        equals(const [Duration(seconds: 1), Duration(seconds: 2)]),
+      );
+    });
+  });
+
   group('DivineVideoClip.playbackDuration', () {
     test('null speed → same as trimmedDuration', () {
       final clip = _clip('a', 10);

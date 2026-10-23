@@ -10017,6 +10017,38 @@ class AppLocalizationsSv extends AppLocalizations {
       'Kunde inte vända klippet baklänges. Försök igen.';
 
   @override
+  String get videoEditorBoomerangLabel => 'Bumerang';
+
+  @override
+  String get videoEditorBoomerangClipSemanticLabel =>
+      'Aktivera eller inaktivera bumerang för valt klipp';
+
+  @override
+  String get videoEditorBoomerangSelectedClipsSemanticLabel =>
+      'Gör de markerade klippen till en bumerang';
+
+  @override
+  String get videoEditorBoomerangProgressLabel =>
+      'Ett ögonblick, vi gör din bumerang';
+
+  @override
+  String videoEditorBoomerangTooLong(String seconds) {
+    return 'En bumerang spelar upp materialet två gånger. Korta det till $seconds s eller mindre först.';
+  }
+
+  @override
+  String get videoEditorBoomerangNoLocalFile =>
+      'Kan inte göra en bumerang: klippet är inte tillgängligt lokalt.';
+
+  @override
+  String get videoEditorBoomerangOriginalMissing =>
+      'Originalmaterialet finns inte längre, så klippet förblir en bumerang.';
+
+  @override
+  String get videoEditorBoomerangFailed =>
+      'Kunde inte göra en bumerang. Försök igen.';
+
+  @override
   String get videoEditorStabilizeLabel => 'Stabilisera';
 
   @override

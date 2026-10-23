@@ -10173,6 +10173,38 @@ class AppLocalizationsFr extends AppLocalizations {
       'Impossible d\'inverser le clip. Veuillez réessayer.';
 
   @override
+  String get videoEditorBoomerangLabel => 'Boomerang';
+
+  @override
+  String get videoEditorBoomerangClipSemanticLabel =>
+      'Activer ou désactiver le boomerang du clip sélectionné';
+
+  @override
+  String get videoEditorBoomerangSelectedClipsSemanticLabel =>
+      'Transformer les clips sélectionnés en un boomerang';
+
+  @override
+  String get videoEditorBoomerangProgressLabel =>
+      'Un instant, on prépare ton boomerang';
+
+  @override
+  String videoEditorBoomerangTooLong(String seconds) {
+    return 'Un boomerang lit ta vidéo deux fois. Raccourcis-la d\'abord à $seconds s ou moins.';
+  }
+
+  @override
+  String get videoEditorBoomerangNoLocalFile =>
+      'Impossible de créer un boomerang : le clip n\'est pas disponible localement.';
+
+  @override
+  String get videoEditorBoomerangOriginalMissing =>
+      'Les images d\'origine ne sont plus là, ce clip reste donc un boomerang.';
+
+  @override
+  String get videoEditorBoomerangFailed =>
+      'Impossible de créer le boomerang. Réessaie.';
+
+  @override
   String get videoEditorStabilizeLabel => 'Stabiliser';
 
   @override

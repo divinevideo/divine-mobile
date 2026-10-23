@@ -4,6 +4,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:path/path.dart' as p;
+import 'package:unified_logger/unified_logger.dart';
 
 /// What kind of media an edited video was made from.
 enum C2paSourceKind {
@@ -52,6 +53,40 @@ class C2paEditSource {
           C2paSourceKind.video,
       recordingSha256: json['recordingSha256'] as String?,
     );
+  }
+
+  /// Restores a list of sources written by [toJson], degrading to `null`
+  /// when [raw] is not a list or any entry can't be read, so one unreadable
+  /// field does not abort a whole draft load.
+  ///
+  /// The whole list is dropped, never just the bad entry: a partial list would
+  /// sign an edit against part of its history. `null` makes the media its own
+  /// source, and an editor render has no manifest, so an edit of it stays
+  /// unsigned.
+  static List<C2paEditSource>? listFromJson(
+    Object? raw,
+    String documentsPath, {
+    bool useOriginalPath = false,
+  }) {
+    if (raw is! List) return null;
+    try {
+      return [
+        for (final source in raw.cast<Map<String, dynamic>>())
+          C2paEditSource.fromJson(
+            source,
+            documentsPath,
+            useOriginalPath: useOriginalPath,
+          ),
+      ];
+    } catch (error, stackTrace) {
+      Log.error(
+        'Dropping unparseable C2PA sources; the media is its own source',
+        name: 'C2paEditSource',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
   }
 
   /// Path of the source file.

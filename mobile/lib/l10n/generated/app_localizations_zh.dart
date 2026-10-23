@@ -9431,6 +9431,32 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorReverseFailed => '无法倒放片段，请重试。';
 
   @override
+  String get videoEditorBoomerangLabel => '回旋镖';
+
+  @override
+  String get videoEditorBoomerangClipSemanticLabel => '切换选中片段的回旋镖效果';
+
+  @override
+  String get videoEditorBoomerangSelectedClipsSemanticLabel => '将选中片段做成一个回旋镖';
+
+  @override
+  String get videoEditorBoomerangProgressLabel => '稍等，正在制作你的回旋镖';
+
+  @override
+  String videoEditorBoomerangTooLong(String seconds) {
+    return '回旋镖会把画面播放两遍。请先剪到 $seconds 秒以内。';
+  }
+
+  @override
+  String get videoEditorBoomerangNoLocalFile => '无法制作回旋镖：片段不在本地。';
+
+  @override
+  String get videoEditorBoomerangOriginalMissing => '原始素材已不存在，因此该片段会保持回旋镖效果。';
+
+  @override
+  String get videoEditorBoomerangFailed => '无法制作回旋镖，请重试。';
+
+  @override
   String get videoEditorStabilizeLabel => '防抖';
 
   @override

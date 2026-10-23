@@ -173,6 +173,27 @@ List<Duration> shiftTimelineMarkersForInsertion({
   required Duration by,
 }) => markers.map((marker) => marker < at ? marker : marker + by).toList();
 
+/// Moves every marker at or after [at] by [by]: what growing the timeline at
+/// [at] by [by] does to them, or, with a negative [by], what taking out the
+/// span that starts at [at] does. A marker inside that span goes with it.
+///
+/// For an edit that keeps a clip's start and the footage at its start but
+/// changes how long it plays, like turning a boomerang on or off.
+List<Duration> shiftTimelineMarkersForResize({
+  required List<Duration> markers,
+  required Duration at,
+  required Duration by,
+}) {
+  if (!by.isNegative) {
+    return shiftTimelineMarkersForInsertion(markers: markers, at: at, by: by);
+  }
+  final removedEnd = at - by;
+  return [
+    for (final marker in markers)
+      if (marker < at) marker else if (marker >= removedEnd) marker + by,
+  ];
+}
+
 /// Re-aligns anchored (extracted, not-yet-moved) audio tracks to their
 /// source clips after a clip edit (trim, reorder, or ripple from an earlier
 /// clip's trim).
@@ -267,6 +288,31 @@ List<AudioEvent> rebaseAnchoredAudioForClipState(
   }
 
   return changed ? result : audioTracks;
+}
+
+/// [audioTracks] with their anchors to [clipIds] released.
+///
+/// An anchored sound's [AudioEvent.startOffset] is measured in its clip's
+/// file. An edit that renders a clip into a new file under the same id starts
+/// that file's time over, so [rebaseAnchoredAudioForClipState] would move the
+/// sound off the picture it came from. Released, the sound stays where it
+/// plays, as it does after a speed change ([audioAtSpeed]).
+///
+/// Returns the original list instance when no track is anchored to them.
+List<AudioEvent> releaseAudioAnchors(
+  List<AudioEvent> audioTracks,
+  Set<String> clipIds,
+) {
+  if (!audioTracks.any((track) => clipIds.contains(track.anchorClipId))) {
+    return audioTracks;
+  }
+  return [
+    for (final track in audioTracks)
+      if (clipIds.contains(track.anchorClipId))
+        track.copyWith(clearAnchorClipId: true)
+      else
+        track,
+  ];
 }
 
 /// [track] played at [speed], its window rescaled so it plays the same

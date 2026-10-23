@@ -12,6 +12,7 @@ import 'package:models/models.dart'
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/clip_gallery_backup.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/clip_boomerang.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:openvine/models/video_editor/clip_stabilization.dart';
@@ -61,6 +62,7 @@ class DivineVideoClip {
     this.chromaKeySourcePath,
     this.captureChromaKey,
     this.stabilization,
+    this.boomerang,
     this.derivedFrom,
     this.recordingSha256,
     this.galleryBackup,
@@ -299,6 +301,15 @@ class DivineVideoClip {
   /// longer describes how to undo it.
   final ClipStabilization? stabilization;
 
+  /// Set when [video] plays its footage forward and then backward, recording
+  /// what it was rendered from so turning the boomerang off restores the clip.
+  ///
+  /// Like [stabilization] it is cleared whenever another operation re-renders
+  /// the clip (transform, reverse, stabilize, green screen) or it becomes a
+  /// new logical clip (split, duplicate): the footage keeps bouncing, but the
+  /// record no longer describes how to undo it.
+  final ClipBoomerang? boomerang;
+
   /// The files this clip's [video] was edited from, when it is an editor
   /// intermediate rather than media in its own right.
   ///
@@ -371,7 +382,9 @@ class DivineVideoClip {
 
   /// This clip with the bake of its recorded key, [keyed], swapped in: the
   /// keyed file, the key, the raw take as its source, and the keyed poster.
-  /// Everything else on this copy, such as trims or edits, stays.
+  /// Everything else on this copy, such as trims or edits, stays, except a
+  /// boomerang record: the key is baked onto the bounced footage, and turning
+  /// the boomerang off would put the unkeyed take back.
   DivineVideoClip withCapturedChromaKeyBake(DivineVideoClip keyed) => copyWith(
     video: keyed.video,
     chromaKey: keyed.chromaKey,
@@ -379,6 +392,7 @@ class DivineVideoClip {
     clearCaptureChromaKey: true,
     clearForwardVideoPath: true,
     clearReversedVideoPath: true,
+    clearBoomerang: true,
     derivedFrom: keyed.derivedFrom,
     thumbnailPath: keyed.thumbnailPath,
     thumbnailTimestamp: keyed.thumbnailTimestamp,
@@ -416,6 +430,11 @@ class DivineVideoClip {
   /// (e.g. a draft persisted before frames were cleared). A clip with a
   /// [video] is never "still-based".
   bool get isStopMotion => video == null && stopMotionFrames != null;
+
+  /// Whether this clip can play forward and then backward: footage, not a
+  /// still standing in for a detached clip or holding a frame, which would
+  /// look the same either way.
+  bool get canBoomerang => video != null && !isPlaceholder && !isFreezeFrame;
 
   /// The rendered [video], asserting it exists.
   ///
@@ -638,6 +657,11 @@ class DivineVideoClip {
     yield* (stabilization?.sourceDerivedFrom ?? const <C2paEditSource>[]).map(
       (source) => source.path,
     );
+    // The footage before the bounce, kept to turn the boomerang off again.
+    yield boomerang?.sourcePath;
+    yield* (boomerang?.sourceDerivedFrom ?? const <C2paEditSource>[]).map(
+      (source) => source.path,
+    );
     yield chromaKey?.backgroundImagePath;
     yield captureChromaKey?.backgroundImagePath;
     // An edit is signed against these, so they live as long as the clip.
@@ -738,6 +762,8 @@ class DivineVideoClip {
     bool clearCaptureChromaKey = false,
     ClipStabilization? stabilization,
     bool clearStabilization = false,
+    ClipBoomerang? boomerang,
+    bool clearBoomerang = false,
     List<C2paEditSource>? derivedFrom,
     bool clearDerivedFrom = false,
     String? recordingSha256,
@@ -823,6 +849,9 @@ class DivineVideoClip {
       stabilization: isNewLogicalClip || clearStabilization
           ? null
           : (stabilization ?? this.stabilization),
+      boomerang: isNewLogicalClip || clearBoomerang
+          ? null
+          : (boomerang ?? this.boomerang),
       derivedFrom: clearDerivedFrom ? null : (derivedFrom ?? this.derivedFrom),
       recordingSha256: clearRecordingSha256
           ? null
@@ -889,6 +918,7 @@ class DivineVideoClip {
       if (captureChromaKey != null)
         'captureChromaKey': captureChromaKey!.toJson(),
       if (stabilization case final record?) 'stabilization': record.toJson(),
+      if (boomerang case final record?) 'boomerang': record.toJson(),
       if (derivedFrom case final sources?)
         'derivedFrom': [for (final source in sources) source.toJson()],
       if (recordingSha256 != null) 'recordingSha256': recordingSha256,
@@ -1058,7 +1088,12 @@ class DivineVideoClip {
         documentsPath,
         useOriginalPath: useOriginalPath,
       ),
-      derivedFrom: _derivedFromFromJson(
+      boomerang: ClipBoomerang.fromJson(
+        json['boomerang'],
+        documentsPath,
+        useOriginalPath: useOriginalPath,
+      ),
+      derivedFrom: C2paEditSource.listFromJson(
         json['derivedFrom'],
         documentsPath,
         useOriginalPath: useOriginalPath,
@@ -1170,40 +1205,6 @@ class DivineVideoClip {
       Log.error(
         'Dropping unparseable placeholder fill; the rendered still is '
         'unaffected',
-        name: 'DivineVideoClip',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      return null;
-    }
-  }
-
-  /// Parses the persisted [derivedFrom] sources, degrading to `null` when any
-  /// entry can't be read. Same rationale as [_transitionFromJson]: one
-  /// unreadable field must not abort a whole draft load.
-  ///
-  /// The whole list is dropped, never just the bad entry: a partial list would
-  /// sign an edit against part of its history. `null` makes the clip's own
-  /// file the source, and an editor render has no manifest, so an edit of it
-  /// stays unsigned.
-  static List<C2paEditSource>? _derivedFromFromJson(
-    Object? raw,
-    String documentsPath, {
-    required bool useOriginalPath,
-  }) {
-    if (raw is! List) return null;
-    try {
-      return [
-        for (final source in raw.cast<Map<String, dynamic>>())
-          C2paEditSource.fromJson(
-            source,
-            documentsPath,
-            useOriginalPath: useOriginalPath,
-          ),
-      ];
-    } catch (error, stackTrace) {
-      Log.error(
-        'Dropping unparseable derivedFrom sources; the clip is its own source',
         name: 'DivineVideoClip',
         error: error,
         stackTrace: stackTrace,

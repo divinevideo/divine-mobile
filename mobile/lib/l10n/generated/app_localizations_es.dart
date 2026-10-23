@@ -10118,6 +10118,38 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se pudo invertir el clip. Por favor, inténtalo de nuevo.';
 
   @override
+  String get videoEditorBoomerangLabel => 'Bumerán';
+
+  @override
+  String get videoEditorBoomerangClipSemanticLabel =>
+      'Activar o desactivar el bumerán del clip seleccionado';
+
+  @override
+  String get videoEditorBoomerangSelectedClipsSemanticLabel =>
+      'Convertir los clips seleccionados en un bumerán';
+
+  @override
+  String get videoEditorBoomerangProgressLabel =>
+      'Un momento, estamos armando tu bumerán';
+
+  @override
+  String videoEditorBoomerangTooLong(String seconds) {
+    return 'Un bumerán reproduce tu video dos veces. Recortalo primero a $seconds s o menos.';
+  }
+
+  @override
+  String get videoEditorBoomerangNoLocalFile =>
+      'No se puede hacer el bumerán: el clip no está disponible localmente.';
+
+  @override
+  String get videoEditorBoomerangOriginalMissing =>
+      'El video original ya no está, así que este clip sigue siendo un bumerán.';
+
+  @override
+  String get videoEditorBoomerangFailed =>
+      'No se pudo hacer el bumerán. Probá de nuevo.';
+
+  @override
   String get videoEditorStabilizeLabel => 'Estabilizar';
 
   @override

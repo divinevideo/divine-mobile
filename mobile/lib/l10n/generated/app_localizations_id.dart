@@ -9930,6 +9930,38 @@ class AppLocalizationsId extends AppLocalizations {
       'Tidak dapat membalik klip. Silakan coba lagi.';
 
   @override
+  String get videoEditorBoomerangLabel => 'Bumerang';
+
+  @override
+  String get videoEditorBoomerangClipSemanticLabel =>
+      'Aktifkan atau nonaktifkan bumerang untuk klip yang dipilih';
+
+  @override
+  String get videoEditorBoomerangSelectedClipsSemanticLabel =>
+      'Jadikan klip yang dipilih satu bumerang';
+
+  @override
+  String get videoEditorBoomerangProgressLabel =>
+      'Tunggu sebentar, kami sedang membuat bumerangmu';
+
+  @override
+  String videoEditorBoomerangTooLong(String seconds) {
+    return 'Bumerang memutar rekamanmu dua kali. Potong dulu menjadi $seconds dtk atau kurang.';
+  }
+
+  @override
+  String get videoEditorBoomerangNoLocalFile =>
+      'Tidak dapat membuat bumerang: klip tidak tersedia secara lokal.';
+
+  @override
+  String get videoEditorBoomerangOriginalMissing =>
+      'Rekaman aslinya sudah tidak ada, jadi klip ini tetap menjadi bumerang.';
+
+  @override
+  String get videoEditorBoomerangFailed =>
+      'Tidak dapat membuat bumerang. Coba lagi.';
+
+  @override
   String get videoEditorStabilizeLabel => 'Stabilkan';
 
   @override

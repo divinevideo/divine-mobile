@@ -5915,6 +5915,14 @@
     "description": "Snackbar message shown when a reverse is requested for a clip that has no locally available file."
   },
   "videoEditorReverseFailed": "క్లిప్‌ను రివర్స్ చేయడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
+  "videoEditorBoomerangLabel": "బూమరాంగ్",
+  "videoEditorBoomerangClipSemanticLabel": "ఎంచుకున్న క్లిప్ కోసం బూమరాంగ్‌ని టోగుల్ చేయండి",
+  "videoEditorBoomerangSelectedClipsSemanticLabel": "ఎంచుకున్న క్లిప్‌లను ఒకే బూమరాంగ్‌గా మార్చండి",
+  "videoEditorBoomerangProgressLabel": "ఒక్క క్షణం, మేము మీ బూమరాంగ్‌ను తయారు చేస్తున్నాము",
+  "videoEditorBoomerangTooLong": "బూమరాంగ్ మీ ఫుటేజ్‌ను రెండుసార్లు ప్లే చేస్తుంది. ముందుగా దీన్ని {seconds} సె లేదా అంతకంటే తక్కువకు ట్రిమ్ చేయండి.",
+  "videoEditorBoomerangNoLocalFile": "బూమరాంగ్ చేయలేరు: క్లిప్ స్థానికంగా అందుబాటులో లేదు.",
+  "videoEditorBoomerangOriginalMissing": "అసలు ఫుటేజ్ ఇక లేదు, కాబట్టి ఈ క్లిప్ బూమరాంగ్‌గానే ఉంటుంది.",
+  "videoEditorBoomerangFailed": "బూమరాంగ్ చేయడం సాధ్యపడలేదు. దయచేసి మళ్లీ ప్రయత్నించండి.",
   "@videoEditorReverseFailed": {
     "description": "Snackbar message shown when reversing a clip fails during rendering."
   },

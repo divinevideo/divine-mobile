@@ -10107,6 +10107,37 @@ class AppLocalizationsBg extends AppLocalizations {
       'Клипът не можа да се обърне. Моля, опитайте отново.';
 
   @override
+  String get videoEditorBoomerangLabel => 'Бумеранг';
+
+  @override
+  String get videoEditorBoomerangClipSemanticLabel =>
+      'Включване или изключване на бумеранг за избрания клип';
+
+  @override
+  String get videoEditorBoomerangSelectedClipsSemanticLabel =>
+      'Превърни избраните клипове в един бумеранг';
+
+  @override
+  String get videoEditorBoomerangProgressLabel => 'Момент, правим бумеранга ти';
+
+  @override
+  String videoEditorBoomerangTooLong(String seconds) {
+    return 'Бумерангът пуска записа два пъти. Първо го съкрати до $seconds с или по-малко.';
+  }
+
+  @override
+  String get videoEditorBoomerangNoLocalFile =>
+      'Не може да се направи бумеранг: клипът не е наличен локално.';
+
+  @override
+  String get videoEditorBoomerangOriginalMissing =>
+      'Оригиналният запис вече го няма, затова клипът остава бумеранг.';
+
+  @override
+  String get videoEditorBoomerangFailed =>
+      'Бумерангът не можа да се направи. Опитай отново.';
+
+  @override
   String get videoEditorStabilizeLabel => 'Стабилизиране';
 
   @override

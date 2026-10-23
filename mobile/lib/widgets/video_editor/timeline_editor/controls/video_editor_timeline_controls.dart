@@ -49,6 +49,10 @@ class VideoEditorTimelineControls extends StatelessWidget {
     this.hasBlendMode = false,
     this.onReversed,
     this.isReversed = false,
+    this.isReverseDisabled = false,
+    this.onBoomerang,
+    this.isBoomerang = false,
+    this.isBoomeranging = false,
     this.onStabilize,
     this.isStabilized = false,
     this.isStabilizing = false,
@@ -224,6 +228,23 @@ class VideoEditorTimelineControls extends StatelessWidget {
 
   final VoidCallback? onReversed;
   final bool isReversed;
+
+  /// Whether Reverse should be shown disabled: a boomerang plays the same
+  /// backwards as forwards. Greyed rather than removed, so the actions after
+  /// it stay put.
+  final bool isReverseDisabled;
+
+  /// Turns the clip into a boomerang that plays forward and then backward, or
+  /// back into the clip it was made from when [isBoomerang].
+  final VoidCallback? onBoomerang;
+
+  /// Whether the clip is a boomerang, which highlights the action the way
+  /// [isReversed] does.
+  final bool isBoomerang;
+
+  /// Whether the clip's boomerang is rendering, which shows the action as a
+  /// spinner.
+  final bool isBoomeranging;
 
   /// Steadies a shaky clip, or restores it when [isStabilized].
   final VoidCallback? onStabilize;
@@ -464,8 +485,17 @@ class VideoEditorTimelineControls extends StatelessWidget {
             icon: .arrowCounterClockwise,
             label: context.l10n.videoEditorReverseLabel,
             semanticLabel: context.l10n.videoEditorReverseClipSemanticLabel,
-            onPressed: onReversed,
+            onPressed: isReverseDisabled ? null : onReversed,
             type: isReversed ? .primary : .secondary,
+          ),
+        if (onBoomerang != null)
+          TimelineActionButton(
+            icon: .arrowUUpRight,
+            label: context.l10n.videoEditorBoomerangLabel,
+            semanticLabel: context.l10n.videoEditorBoomerangClipSemanticLabel,
+            onPressed: isBoomeranging ? null : onBoomerang,
+            isLoading: isBoomeranging,
+            type: isBoomerang ? .primary : .secondary,
           ),
         if (onStabilize != null)
           TimelineActionButton(

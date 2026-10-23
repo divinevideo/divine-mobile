@@ -10001,6 +10001,38 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذّر عكس المقطع. يرجى المحاولة مجددًا.';
 
   @override
+  String get videoEditorBoomerangLabel => 'بوميرانغ';
+
+  @override
+  String get videoEditorBoomerangClipSemanticLabel =>
+      'تبديل تأثير البوميرانغ للمقطع المحدد';
+
+  @override
+  String get videoEditorBoomerangSelectedClipsSemanticLabel =>
+      'تحويل المقاطع المحددة إلى بوميرانغ واحد';
+
+  @override
+  String get videoEditorBoomerangProgressLabel =>
+      'لحظة من فضلك، نحن نصنع البوميرانغ الخاص بك';
+
+  @override
+  String videoEditorBoomerangTooLong(String seconds) {
+    return 'يعرض البوميرانغ اللقطات مرتين. يجب قصّها أولًا إلى $seconds ث أو أقل.';
+  }
+
+  @override
+  String get videoEditorBoomerangNoLocalFile =>
+      'لا يمكن إنشاء بوميرانغ: المقطع غير متاح محليًا.';
+
+  @override
+  String get videoEditorBoomerangOriginalMissing =>
+      'لم تعد اللقطات الأصلية موجودة، لذا سيبقى هذا المقطع بوميرانغ.';
+
+  @override
+  String get videoEditorBoomerangFailed =>
+      'تعذّر إنشاء البوميرانغ. يرجى المحاولة مجددًا.';
+
+  @override
   String get videoEditorStabilizeLabel => 'تثبيت';
 
   @override

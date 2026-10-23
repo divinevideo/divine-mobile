@@ -350,6 +350,30 @@ class ClipEditorClipStabilizeRequested extends ClipEditorEvent {
   List<Object?> get props => [clipId];
 }
 
+// === BOOMERANG ===
+
+/// Toggle the boomerang of the clip with [clipId]: render it to play forward
+/// and then backward when it is not a boomerang, restore the clip it was made
+/// from when it is.
+class ClipEditorClipBoomerangRequested extends ClipEditorEvent {
+  const ClipEditorClipBoomerangRequested({required this.clipId});
+
+  final String clipId;
+
+  @override
+  List<Object?> get props => [clipId];
+}
+
+/// Turn the clips selected in multi-select into one boomerang that plays all
+/// of them forward and then all of them backward.
+///
+/// A single selected clip toggles as [ClipEditorClipBoomerangRequested] does.
+/// Only a selection of neighbouring clips can bounce; see
+/// [ClipEditorState.canBoomerangSelection].
+class ClipEditorSelectedClipsBoomerangRequested extends ClipEditorEvent {
+  const ClipEditorSelectedClipsBoomerangRequested();
+}
+
 // === TRANSFORM ===
 
 /// Request that the clip with [clipId] be re-rendered with [transform]

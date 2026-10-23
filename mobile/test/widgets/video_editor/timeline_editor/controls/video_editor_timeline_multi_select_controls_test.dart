@@ -109,7 +109,7 @@ void main() {
           .firstWhere((b) => b.semanticLabel == label);
     }
 
-    testWidgets('renders the selection count and Merge/Delete/Done', (
+    testWidgets('renders the selection count and Merge/Boomerang/Delete/Done', (
       tester,
     ) async {
       when(() => bloc.state).thenReturn(
@@ -127,6 +127,7 @@ void main() {
         findsOneWidget,
       );
       expect(find.text(l10n.videoEditorMergeLabel), findsOneWidget);
+      expect(find.text(l10n.videoEditorBoomerangLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorDeleteLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorDoneLabel), findsOneWidget);
     });
@@ -174,6 +175,54 @@ void main() {
       ).called(1);
     });
 
+    testWidgets('Boomerang dispatches a request for neighbouring clips', (
+      tester,
+    ) async {
+      when(() => bloc.state).thenReturn(
+        ClipEditorState(
+          clips: [_clip('a'), _clip('b'), _clip('c')],
+          isMultiSelectMode: true,
+          selectedClipIds: const {'b', 'c'},
+        ),
+      );
+
+      await tester.pumpWidget(build());
+
+      await tester.tap(
+        find.bySemanticsLabel(
+          l10n.videoEditorBoomerangSelectedClipsSemanticLabel,
+        ),
+      );
+      await tester.pump();
+
+      verify(
+        () => bloc.add(const ClipEditorSelectedClipsBoomerangRequested()),
+      ).called(1);
+    });
+
+    testWidgets('Boomerang is disabled for clips with a gap between them', (
+      tester,
+    ) async {
+      // The way back retraces the way there, which a gap would break.
+      when(() => bloc.state).thenReturn(
+        ClipEditorState(
+          clips: [_clip('a'), _clip('b'), _clip('c')],
+          isMultiSelectMode: true,
+          selectedClipIds: const {'a', 'c'},
+        ),
+      );
+
+      await tester.pumpWidget(build());
+
+      expect(
+        buttonWithLabel(
+          tester,
+          l10n.videoEditorBoomerangSelectedClipsSemanticLabel,
+        ).onPressed,
+        isNull,
+      );
+    });
+
     testWidgets('Delete is disabled when every clip is selected', (
       tester,
     ) async {
@@ -192,6 +241,28 @@ void main() {
         l10n.videoEditorDeleteSelectedClipsSemanticLabel,
       );
       expect(delete.onPressed, isNull);
+    });
+
+    testWidgets('every action but Done is disabled while a boomerang '
+        'renders', (tester) async {
+      when(() => bloc.state).thenReturn(
+        ClipEditorState(
+          clips: [_clip('a'), _clip('b'), _clip('c')],
+          isMultiSelectMode: true,
+          selectedClipIds: const {'a', 'b'},
+          isBoomeranging: true,
+        ),
+      );
+
+      await tester.pumpWidget(build());
+
+      for (final label in [
+        l10n.videoEditorMergeSelectedClipsSemanticLabel,
+        l10n.videoEditorBoomerangSelectedClipsSemanticLabel,
+        l10n.videoEditorDeleteSelectedClipsSemanticLabel,
+      ]) {
+        expect(buttonWithLabel(tester, label).onPressed, isNull);
+      }
     });
 
     testWidgets('Merge and Delete are disabled while merging', (tester) async {
