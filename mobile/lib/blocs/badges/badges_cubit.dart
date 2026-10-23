@@ -53,10 +53,15 @@ class BadgesCubit extends Cubit<BadgesState> {
   /// gone from the dashboard — the user asked to be rid of it, so both
   /// halves have to go.
   Future<void> rejectAward(BadgeAwardViewData award) {
-    return _runAction(BadgeActionStatus.hiding, () async {
-      if (award.isAccepted) await _repository.removeAward(award);
-      await _repository.hideAward(award.definitionCoordinate);
-    });
+    return _runAction(
+      BadgeActionStatus.hiding,
+      () async {
+        if (award.isAccepted) await _repository.removeAward(award);
+        await _repository.hideAward(award.definitionCoordinate);
+      },
+      // Unpinning may succeed even when syncing the dismissal fails.
+      refreshOnError: award.isAccepted,
+    );
   }
 
   /// Restores a hidden award across the account’s devices.
@@ -71,7 +76,7 @@ class BadgesCubit extends Cubit<BadgesState> {
     );
   }
 
-  Future<void> _loadDashboard() async {
+  Future<void> _loadDashboard({BadgeActionStatus? actionStatus}) async {
     try {
       final dashboard = await _repository.loadDashboard();
       // The dashboard load cannot be cancelled, so it can resolve after the
@@ -83,9 +88,11 @@ class BadgesCubit extends Cubit<BadgesState> {
           // Clears a previous action's outcome, the way the catch below
           // already does. Leaving it set outlived a pull to refresh. An
           // in-flight action keeps its status: it still gates the buttons.
-          actionStatus: state.hasSettledAction
-              ? BadgeActionStatus.idle
-              : state.actionStatus,
+          actionStatus:
+              actionStatus ??
+              (state.hasSettledAction
+                  ? BadgeActionStatus.idle
+                  : state.actionStatus),
           awarded: dashboard.awarded,
           issued: dashboard.issued,
           created: dashboard.created,
@@ -98,7 +105,7 @@ class BadgesCubit extends Cubit<BadgesState> {
       emit(
         state.copyWith(
           status: BadgesStatus.error,
-          actionStatus: BadgeActionStatus.idle,
+          actionStatus: actionStatus ?? BadgeActionStatus.idle,
         ),
       );
     }
@@ -106,8 +113,9 @@ class BadgesCubit extends Cubit<BadgesState> {
 
   Future<void> _runAction(
     BadgeActionStatus actionStatus,
-    Future<void> Function() action,
-  ) async {
+    Future<void> Function() action, {
+    bool refreshOnError = false,
+  }) async {
     emit(
       state.copyWith(
         actionStatus: actionStatus,
@@ -133,6 +141,10 @@ class BadgesCubit extends Cubit<BadgesState> {
     } catch (error, stackTrace) {
       addError(error, stackTrace);
       if (isClosed) return;
+      if (refreshOnError) {
+        await _loadDashboard(actionStatus: BadgeActionStatus.error);
+        return;
+      }
       emit(
         state.copyWith(
           actionStatus: BadgeActionStatus.error,

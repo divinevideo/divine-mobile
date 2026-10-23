@@ -207,6 +207,44 @@ void main() {
     );
 
     blocTest<BadgesCubit, BadgesState>(
+      'failed hiding after unpinning refreshes acceptance and retains error',
+      setUp: () {
+        when(() => repository.removeAward(any())).thenAnswer((_) async {});
+        when(() => repository.hideAward(any())).thenThrow(
+          Exception('incomplete decisions read'),
+        );
+        when(repository.loadDashboard).thenAnswer((_) async => dashboard);
+      },
+      build: () => BadgesCubit(repository: repository),
+      seed: () => BadgesState(
+        status: BadgesStatus.loaded,
+        awarded: [_awardViewData(isAccepted: true)],
+      ),
+      act: (cubit) => cubit.rejectAward(_awardViewData(isAccepted: true)),
+      verify: (cubit) {
+        expect(cubit.state.awarded.single.isAccepted, isFalse);
+        expect(cubit.state.actionStatus, BadgeActionStatus.error);
+      },
+      errors: () => [isA<Exception>()],
+    );
+
+    blocTest<BadgesCubit, BadgesState>(
+      'failed rejection and failed reconciliation leave a retryable error',
+      setUp: () {
+        when(() => repository.removeAward(any())).thenAnswer((_) async {});
+        when(() => repository.hideAward(any())).thenThrow(Exception('hide'));
+        when(repository.loadDashboard).thenThrow(Exception('reload'));
+      },
+      build: () => BadgesCubit(repository: repository),
+      act: (cubit) => cubit.rejectAward(_awardViewData(isAccepted: true)),
+      verify: (cubit) {
+        expect(cubit.state.status, BadgesStatus.error);
+        expect(cubit.state.actionStatus, BadgeActionStatus.error);
+      },
+      errors: () => [isA<Exception>(), isA<Exception>()],
+    );
+
+    blocTest<BadgesCubit, BadgesState>(
       'unhideAward restores a dismissed award then refreshes dashboard',
       setUp: () {
         when(() => repository.unhideAward(any())).thenAnswer((_) async {});

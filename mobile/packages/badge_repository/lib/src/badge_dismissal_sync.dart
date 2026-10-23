@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
@@ -39,21 +40,25 @@ class BadgeDismissalSync {
   final _decoded = <String, Map<String, _Decision>>{};
   Future<void> _pending = Future<void>.value();
 
-  Future<Set<String>> load(String pubkey, Set<String> local) =>
-      _serialize(() async {
-        try {
-          return await _reconcile(pubkey, local);
-        } on Object catch (_) {
-          // Never log decrypted settings or remote payloads. A read failure
-          // must not prevent viewing badges or overwrite unreadable state.
-          Log.warning(
-            'Badge decisions unavailable; retaining local choices',
-            name: 'BadgeDismissalSync',
-            category: LogCategory.relay,
-          );
-          return local;
-        }
-      });
+  /// Starts the relay read while legacy local choices are being resolved.
+  Future<Set<String>> load(String pubkey, FutureOr<Set<String>> local) {
+    // Observe errors while queued; awaiting below still propagates them.
+    final localFuture = Future<Set<String>>.value(local)..ignore();
+    return _serialize(() async {
+      try {
+        return await _reconcile(pubkey, localFuture);
+      } on Object catch (_) {
+        // Never log decrypted settings or remote payloads. A read failure
+        // must not prevent viewing badges or overwrite unreadable state.
+        Log.warning(
+          'Badge decisions unavailable; retaining local choices',
+          name: 'BadgeDismissalSync',
+          category: LogCategory.relay,
+        );
+        return localFuture;
+      }
+    });
+  }
 
   /// Mutations require a complete readable snapshot and relay confirmation.
   /// An offline or refused mutation leaves the previous choice intact.
@@ -74,25 +79,18 @@ class BadgeDismissalSync {
 
   Future<Set<String>> _reconcile(
     String pubkey,
-    Set<String> local, {
+    FutureOr<Set<String>> local, {
     String? coordinate,
     bool? hidden,
   }) async {
     final signer = _signer();
-    if (await signer.getPublicKey() != pubkey) {
-      throw const BadgeDismissalSyncException('Signer does not match account');
-    }
-    final result = await _client.queryEventsDetailed(
-      [
-        Filter(
-          authors: [pubkey],
-          kinds: [EventKind.appSpecificData],
-          d: [_dTag],
-        ),
-      ],
-      useCache: false,
-      requireAllRelaysSettled: true,
-    );
+    final localFuture = Future<Set<String>>.value(local);
+    final readFuture = _read(pubkey, signer);
+    // Observe both errors immediately; legacy migration can fail before the
+    // relay read finishes, and neither failure may escape unhandled.
+    await Future.wait<void>([localFuture, readFuture]);
+    final localChoices = await localFuture;
+    final result = await readFuture;
     final complete = !result.noRelays && !result.timedOut;
     if (!complete && coordinate != null) {
       throw const BadgeDismissalSyncException(
@@ -114,7 +112,7 @@ class BadgeDismissalSync {
     final decisions = <String, _Decision>{
       // Old local dismissals have no timestamp. A known account decision,
       // including an undo, takes precedence over this one-time migration.
-      for (final legacy in local) legacy: (hidden: true, updatedAt: 0),
+      for (final legacy in localChoices) legacy: (hidden: true, updatedAt: 0),
     };
     Map<String, _Decision>? latestDecisions;
     final snapshots = <String, Map<String, _Decision>>{};
@@ -165,6 +163,26 @@ class BadgeDismissalSync {
       for (final entry in decisions.entries)
         if (entry.value.hidden) entry.key,
     };
+  }
+
+  Future<({List<Event> events, bool timedOut, bool noRelays})> _read(
+    String pubkey,
+    NostrSigner signer,
+  ) async {
+    if (await signer.getPublicKey() != pubkey) {
+      throw const BadgeDismissalSyncException('Signer does not match account');
+    }
+    return _client.queryEventsDetailed(
+      [
+        Filter(
+          authors: [pubkey],
+          kinds: [EventKind.appSpecificData],
+          d: [_dTag],
+        ),
+      ],
+      useCache: false,
+      requireAllRelaysSettled: true,
+    );
   }
 
   Future<Event> _publish(
@@ -232,6 +250,8 @@ class BadgeDismissalSync {
     } on FormatException {
       throw const FormatException('Invalid badge decisions');
     }
+    // Do not rewrite a newer schema: consolidation would discard fields and
+    // semantics this client cannot preserve.
     if (payload is! Map<String, dynamic> ||
         payload['version'] != 1 ||
         payload['decisions'] is! Map<String, dynamic>) {

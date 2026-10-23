@@ -412,6 +412,7 @@ class BadgeRepository {
   ) async {
     final pubkey = _requireCurrentPubkey();
     final awardsFuture = _queryAwardsForRecipient(pubkey);
+    final dismissedFuture = _dismissedCoordinates(pubkey, awardsFuture);
     final profileBadgesFuture = memo.profileBadges(
       pubkey,
       () => _latestProfileBadges(pubkey),
@@ -421,6 +422,7 @@ class BadgeRepository {
     final results = await Future.wait<Object?>([
       awardsFuture,
       profileBadgesFuture,
+      dismissedFuture,
     ]);
     final awards = results[0]! as List<Nip58BadgeAward>;
     final profileBadges = results[1] as Nip58ProfileBadges?;
@@ -442,7 +444,7 @@ class BadgeRepository {
       newestPerCoordinate.keys.toSet(),
     );
 
-    final dismissedCoordinates = await _dismissedCoordinates(pubkey, awards);
+    final dismissedCoordinates = results[2]! as Set<String>;
     final definitions = await _definitionsByCoordinate(memo, [
       for (final award in awards) award.definitionCoordinate,
       for (final ref in pinnedWithoutAward) ref.definitionCoordinate,
@@ -1563,10 +1565,13 @@ class BadgeRepository {
 
   Future<Set<String>> _dismissedCoordinates(
     String pubkey,
-    List<Nip58BadgeAward> awards,
+    Future<List<Nip58BadgeAward>> awards,
   ) async {
-    final local = await _localDismissedCoordinates(pubkey, awards);
-    final dismissed = await _dismissalSync.load(pubkey, local);
+    final localFuture = awards.then(
+      (awards) => _localDismissedCoordinates(pubkey, awards),
+    );
+    final dismissed = await _dismissalSync.load(pubkey, localFuture);
+    final local = await localFuture;
     if (local.isNotEmpty || dismissed.isNotEmpty) {
       await _writeDismissedCoordinates(pubkey, dismissed);
     }

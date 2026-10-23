@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:badge_repository/src/badge_dismissal_sync.dart';
@@ -136,6 +137,30 @@ void main() {
   }
 
   group('load / setHidden', () {
+    test(
+      'a queued local-read error reaches its caller without leaking',
+      () async {
+        final read =
+            Completer<({List<Event> events, bool timedOut, bool noRelays})>();
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer((_) => read.future);
+        final first = phone.load(pubkey, {});
+        final local = Completer<Set<String>>();
+        final queued = phone.load(pubkey, local.future);
+        final failure = expectLater(queued, throwsStateError);
+        local.completeError(StateError('local preferences unavailable'));
+        await pumpEventQueue();
+        read.complete((events: <Event>[], timedOut: false, noRelays: false));
+        expect(await first, isEmpty);
+        await failure;
+      },
+    );
+
     test(
       'rejection and undo reach another device without sharing storage',
       () async {

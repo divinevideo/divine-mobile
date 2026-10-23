@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:badge_repository/badge_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -62,6 +64,33 @@ void main() {
           );
         },
       );
+    });
+
+    test('loads decisions while awards are still pending', () async {
+      final awards = Completer<List<Event>>();
+      var decisionsStarted = false;
+      when(() => nostrClient.queryEvents(any())).thenAnswer((call) async {
+        final filters = call.positionalArguments.single as List<Filter>;
+        return filters.first.kinds?.contains(EventKind.badgeAward) == true
+            ? awards.future
+            : <Event>[];
+      });
+      when(
+        () => nostrClient.queryEventsDetailed(
+          any(),
+          useCache: false,
+          requireAllRelaysSettled: true,
+        ),
+      ).thenAnswer((_) async {
+        decisionsStarted = true;
+        return (events: <Event>[], timedOut: false, noRelays: false);
+      });
+      final loading = repository.loadAwardedBadges();
+      await pumpEventQueue();
+      final startedBeforeAwards = decisionsStarted;
+      awards.complete([]);
+      await loading;
+      expect(startedBeforeAwards, isTrue);
     });
 
     test('loadAwardedBadges marks awards accepted by profile badges', () async {
