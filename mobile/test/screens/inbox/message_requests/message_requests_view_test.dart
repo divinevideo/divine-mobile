@@ -476,7 +476,7 @@ void main() {
 
         when(
           () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
-        ).thenAnswer((_) async => null);
+        ).thenAnswer((_) async {});
 
         await tester.pumpWidget(
           testMaterialApp(

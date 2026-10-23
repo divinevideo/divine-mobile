@@ -1473,7 +1473,7 @@ void main() {
 
         when(
           () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
-        ).thenAnswer((_) async => null);
+        ).thenAnswer((_) async {});
 
         await tester.tap(find.byType(ConversationTile));
         await tester.pump();
@@ -1514,8 +1514,7 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 350));
 
-        when(() => mockGoRouter.push<void>(any()))
-            .thenAnswer((_) async => null);
+        when(() => mockGoRouter.push<void>(any())).thenAnswer((_) async {});
 
         await tester.tap(find.byType(MessageRequestsBanner));
         await tester.pump();
@@ -1615,7 +1614,7 @@ void main() {
         ).thenAnswer((_) async => contact(bobPubkey, 'Bob'));
         when(
           () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
-        ).thenAnswer((_) async => null);
+        ).thenAnswer((_) async {});
       });
 
       /// Opens the Messages tab and taps the compose button.
@@ -3009,7 +3008,7 @@ void main() {
         final pin = supportPin();
         when(
           () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
-        ).thenAnswer((_) async => null);
+        ).thenAnswer((_) async {});
 
         await tester.pumpWidget(
           buildSubject(
