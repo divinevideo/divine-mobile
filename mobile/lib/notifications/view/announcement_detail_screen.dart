@@ -4,7 +4,9 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/router/route_paths.dart';
 
 /// Displays a current, validated catalog announcement.
 class AnnouncementDetailScreen extends StatelessWidget {
@@ -33,7 +35,8 @@ class AnnouncementDetailScreen extends StatelessWidget {
       appBar: DiVineAppBar(
         title: l10n.notificationFromDivine,
         showBackButton: true,
-        onBackPressed: () => Navigator.of(context).maybePop(),
+        onBackPressed: () =>
+            context.safePop(fallback: RoutePaths.notificationsForIndex(0)),
       ),
       body: SafeArea(
         child: Align(
