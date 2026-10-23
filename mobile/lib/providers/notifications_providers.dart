@@ -308,10 +308,9 @@ PushNotificationSessionCoordinator? pushNotificationSync(Ref ref) {
     final pushService = ref.read(pushNotificationServiceProvider);
     if (pushService != null) {
       unawaited(
-        pushService.handleForegroundMessage({
-          ...message.data,
-          NotificationPayloadKeys.messageId: ?message.messageId,
-        }),
+        pushService.handleForegroundMessage(
+          fcmPayloadWithMessageId(message.data, message.messageId),
+        ),
       );
     }
     ref.read(notificationRefreshCoordinatorProvider)?.schedulePushRefresh();

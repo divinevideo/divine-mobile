@@ -23,7 +23,7 @@ import 'package:openvine/providers/shorebird_availability_provider.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
 import 'package:openvine/services/bandwidth_tracker_service.dart';
 import 'package:openvine/services/notification_helpers.dart'
-    show NotificationPayloadKeys, parseFcmPayload;
+    show fcmPayloadWithMessageId, parseFcmPayload;
 import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/video_format_preference.dart';
 import 'package:openvine/startup/app_bootstrap.dart';
@@ -272,10 +272,12 @@ StartupCoordinator createStartupCoordinator(ProviderContainer container) {
         final initialMessage = await FirebaseMessaging.instance
             .getInitialMessage();
         if (initialMessage != null) {
-          final parsed = parseFcmPayload({
-            ...initialMessage.data,
-            NotificationPayloadKeys.messageId: ?initialMessage.messageId,
-          });
+          final parsed = parseFcmPayload(
+            fcmPayloadWithMessageId(
+              initialMessage.data,
+              initialMessage.messageId,
+            ),
+          );
           if (parsed != null) {
             Log.info(
               'App launched from push notification (type: '
@@ -333,10 +335,10 @@ StartupCoordinator createStartupCoordinator(ProviderContainer container) {
         // Handle taps on notifications while app is in background
         FirebaseMessaging.onMessageOpenedApp.listen(
           (message) => runDetached(
-            routeBackgroundPushTap({
-              ...message.data,
-              NotificationPayloadKeys.messageId: ?message.messageId,
-            }, liveContainer: liveContainer),
+            routeBackgroundPushTap(
+              fcmPayloadWithMessageId(message.data, message.messageId),
+              liveContainer: liveContainer,
+            ),
             'route a background push tap',
             logName: 'main',
             category: LogCategory.system,

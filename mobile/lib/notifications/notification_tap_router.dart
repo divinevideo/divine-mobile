@@ -25,8 +25,8 @@ import 'package:openvine/services/deep_link_service.dart';
 import 'package:openvine/services/firebase_initialization.dart';
 import 'package:openvine/services/notification_helpers.dart'
     show
-        NotificationPayloadKeys,
         NotificationWireValues,
+        fcmPayloadWithMessageId,
         localNotificationTapPayload,
         parseFcmPayload;
 import 'package:openvine/services/notification_target_resolver.dart';
@@ -78,10 +78,7 @@ Future<void> handleFirebaseMessagingBackgroundMessage(
   // notification for data-only messages so we don't double-render (#4731).
   if (!shouldRenderLocalPushNotification(message)) return;
 
-  final data = {
-    ...message.data,
-    NotificationPayloadKeys.messageId: ?message.messageId,
-  };
+  final data = fcmPayloadWithMessageId(message.data, message.messageId);
   final title = data['title'] as String? ?? 'Divine';
   final body = data['body'] as String? ?? '';
 

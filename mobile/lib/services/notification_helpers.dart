@@ -72,6 +72,16 @@ abstract class NotificationWireValues {
   static const String appRoute = 'app_route';
 }
 
+/// Returns an FCM message's [data] with its transport [messageId] added under
+/// [NotificationPayloadKeys.messageId].
+///
+/// Every `RemoteMessage` entry point goes through this so none of them drops
+/// the key that tap analytics deduplicates on.
+Map<String, dynamic> fcmPayloadWithMessageId(
+  Map<String, dynamic> data,
+  String? messageId,
+) => {...data, NotificationPayloadKeys.messageId: ?messageId};
+
 /// Whether a parsed payload carries any routable target.
 ///
 /// Campaigns are routable through [NotificationPayloadKeys.tapTargetType] and
