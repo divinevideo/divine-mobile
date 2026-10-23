@@ -21429,6 +21429,48 @@ abstract class AppLocalizations {
   /// **'Become a supporter'**
   String get supporterJoinLabel;
 
+  /// Headline of another user's supporter lightbox. {name} is their display name; {badge} is supporterLightboxBadge, shown in the accent color. Keep both placeholders; reorder freely.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is a {badge}'**
+  String supporterLightboxHeadline(String name, String badge);
+
+  /// Highlighted status name inserted into supporterLightboxHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Divine Supporter'**
+  String get supporterLightboxBadge;
+
+  /// No description provided for @supporterLightboxBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Supporting the independent app for a more open, creative internet.'**
+  String get supporterLightboxBody;
+
+  /// No description provided for @supporterLightboxBenefitIndependent.
+  ///
+  /// In en, this message translates to:
+  /// **'Helps keep Divine independent'**
+  String get supporterLightboxBenefitIndependent;
+
+  /// No description provided for @supporterLightboxBenefitFeatures.
+  ///
+  /// In en, this message translates to:
+  /// **'Supports new exciting features'**
+  String get supporterLightboxBenefitFeatures;
+
+  /// No description provided for @supporterLightboxBenefitCommunity.
+  ///
+  /// In en, this message translates to:
+  /// **'Powers a more creative community'**
+  String get supporterLightboxBenefitCommunity;
+
+  /// No description provided for @supporterLightboxMaybeLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Maybe later'**
+  String get supporterLightboxMaybeLater;
+
   /// No description provided for @supporterPublicRecognition.
   ///
   /// In en, this message translates to:

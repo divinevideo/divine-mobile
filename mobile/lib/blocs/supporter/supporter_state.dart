@@ -42,7 +42,7 @@ enum SupporterFailure {
 class SupporterState extends Equatable {
   const SupporterState({
     this.snapshot,
-    this.savingRecognition = false,
+    this.requestedHaloVisible,
     this.tiers = const [],
     this.entitlement = SupporterEntitlement.inactive,
     this.status = SupporterStatus.idle,
@@ -51,7 +51,10 @@ class SupporterState extends Equatable {
   });
 
   final SupporterAccountSnapshot? snapshot;
-  final bool savingRecognition;
+
+  /// The public recognition being saved, shown until the save settles so the
+  /// setting flips as soon as it is changed. Null when nothing is saving.
+  final bool? requestedHaloVisible;
 
   /// Purchasable supporter tiers loaded from the store.
   final List<SupporterTier> tiers;
@@ -66,6 +69,11 @@ class SupporterState extends Equatable {
   final bool awaitingPurchaseConfirmation;
 
   bool get isSupporter => entitlement.isSupporter;
+  bool get savingRecognition => requestedHaloVisible != null;
+
+  /// Whether supporter status shows publicly, including a change still saving.
+  bool get haloVisible =>
+      requestedHaloVisible ?? snapshot?.haloVisible ?? false;
   bool get isConfirmedInactive =>
       snapshot?.status == SupporterServerStatus.expired;
   bool get isBusy =>
@@ -78,7 +86,8 @@ class SupporterState extends Equatable {
 
   SupporterState copyWith({
     SupporterAccountSnapshot? snapshot,
-    bool? savingRecognition,
+    bool? requestedHaloVisible,
+    bool clearRequestedHaloVisible = false,
     List<SupporterTier>? tiers,
     SupporterEntitlement? entitlement,
     SupporterStatus? status,
@@ -88,7 +97,9 @@ class SupporterState extends Equatable {
   }) {
     return SupporterState(
       snapshot: snapshot ?? this.snapshot,
-      savingRecognition: savingRecognition ?? this.savingRecognition,
+      requestedHaloVisible: clearRequestedHaloVisible
+          ? null
+          : requestedHaloVisible ?? this.requestedHaloVisible,
       awaitingPurchaseConfirmation:
           awaitingPurchaseConfirmation ?? this.awaitingPurchaseConfirmation,
       tiers: tiers ?? this.tiers,
@@ -101,7 +112,7 @@ class SupporterState extends Equatable {
   @override
   List<Object?> get props => [
     snapshot,
-    savingRecognition,
+    requestedHaloVisible,
     tiers,
     entitlement,
     status,

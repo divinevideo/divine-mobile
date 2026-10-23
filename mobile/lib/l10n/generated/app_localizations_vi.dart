@@ -12736,6 +12736,32 @@ class AppLocalizationsVi extends AppLocalizations {
   String get supporterJoinLabel => 'Become a supporter';
 
   @override
+  String supporterLightboxHeadline(String name, String badge) {
+    return '$name là $badge';
+  }
+
+  @override
+  String get supporterLightboxBadge => 'Người ủng hộ Divine';
+
+  @override
+  String get supporterLightboxBody =>
+      'Ủng hộ ứng dụng độc lập vì một internet cởi mở và sáng tạo hơn.';
+
+  @override
+  String get supporterLightboxBenefitIndependent => 'Giúp Divine luôn độc lập';
+
+  @override
+  String get supporterLightboxBenefitFeatures =>
+      'Hỗ trợ những tính năng mới thú vị';
+
+  @override
+  String get supporterLightboxBenefitCommunity =>
+      'Tiếp sức cho cộng đồng sáng tạo hơn';
+
+  @override
+  String get supporterLightboxMaybeLater => 'Để sau';
+
+  @override
   String get supporterPublicRecognition => 'Show my Supporter badge publicly';
 
   @override

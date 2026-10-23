@@ -6524,6 +6524,27 @@
       }
     }
   },
+  "supporterLightboxHeadline": "{name} 是 {badge}",
+  "@supporterLightboxHeadline": {
+    "description": "Headline of another user's supporter lightbox. {name} is their display name; {badge} is supporterLightboxBadge, shown in the accent color. Keep both placeholders; reorder freely.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "badge": {
+        "type": "String"
+      }
+    }
+  },
+  "supporterLightboxBadge": "Divine 支持者",
+  "@supporterLightboxBadge": {
+    "description": "Highlighted status name inserted into supporterLightboxHeadline."
+  },
+  "supporterLightboxBody": "支持这款独立应用，让互联网更开放、更有创意。",
+  "supporterLightboxBenefitIndependent": "帮助 Divine 保持独立",
+  "supporterLightboxBenefitFeatures": "支持令人兴奋的新功能",
+  "supporterLightboxBenefitCommunity": "助力更有创意的社区",
+  "supporterLightboxMaybeLater": "以后再说",
   "supporterTitle": "Divine 支持者",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."

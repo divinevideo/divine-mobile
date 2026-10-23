@@ -9460,6 +9460,20 @@
   "supporterRecognitionDisclaimer": "Divine confirms supporter status after the store verifies your purchase. Public recognition is optional. A Supporter badge is not identity verification.",
   "supporterBadgeLabel": "Supporter",
   "supporterJoinLabel": "Become a supporter",
+  "supporterLightboxHeadline": "{name} is a {badge}",
+  "@supporterLightboxHeadline": {
+    "description": "Headline of another user's supporter lightbox. {name} is their display name; {badge} is supporterLightboxBadge, shown in the accent color. Keep both placeholders; reorder freely.",
+    "placeholders": { "name": { "type": "String" }, "badge": { "type": "String" } }
+  },
+  "supporterLightboxBadge": "Divine Supporter",
+  "@supporterLightboxBadge": {
+    "description": "Highlighted status name inserted into supporterLightboxHeadline."
+  },
+  "supporterLightboxBody": "Supporting the independent app for a more open, creative internet.",
+  "supporterLightboxBenefitIndependent": "Helps keep Divine independent",
+  "supporterLightboxBenefitFeatures": "Supports new exciting features",
+  "supporterLightboxBenefitCommunity": "Powers a more creative community",
+  "supporterLightboxMaybeLater": "Maybe later",
   "supporterPublicRecognition": "Show my Supporter badge publicly",
   "supporterPublicRecognitionBody": "Let others see that you support Divine. This is optional and is not a verification badge.",
   "supporterTitle": "Divine Supporters",

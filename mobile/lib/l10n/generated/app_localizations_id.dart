@@ -12698,6 +12698,33 @@ class AppLocalizationsId extends AppLocalizations {
   String get supporterJoinLabel => 'Become a supporter';
 
   @override
+  String supporterLightboxHeadline(String name, String badge) {
+    return '$name adalah $badge';
+  }
+
+  @override
+  String get supporterLightboxBadge => 'Pendukung Divine';
+
+  @override
+  String get supporterLightboxBody =>
+      'Mendukung aplikasi independen untuk internet yang lebih terbuka dan kreatif.';
+
+  @override
+  String get supporterLightboxBenefitIndependent =>
+      'Membantu Divine tetap independen';
+
+  @override
+  String get supporterLightboxBenefitFeatures =>
+      'Mendukung fitur-fitur baru yang seru';
+
+  @override
+  String get supporterLightboxBenefitCommunity =>
+      'Menghidupkan komunitas yang lebih kreatif';
+
+  @override
+  String get supporterLightboxMaybeLater => 'Nanti saja';
+
+  @override
   String get supporterPublicRecognition => 'Show my Supporter badge publicly';
 
   @override

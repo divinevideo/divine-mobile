@@ -64,10 +64,12 @@ class _ProfileNameAndBio extends StatelessWidget {
             ],
           ),
         ),
-        if (!isVanished && isOwnProfile)
-          const SupporterMembership(compact: true)
-        else if (!isVanished)
-          PublicSupporterBadge(pubkey: userIdHex),
+        // Supporter status shows as the halo and wings around the avatar;
+        // this entry invites the owner to join and hides once they have.
+        if (!isVanished &&
+            isOwnProfile &&
+            !_showsSupporterTreatment(context, isOwnProfile: true))
+          const SupporterMembership(compact: true),
         Skeleton.keep(child: _ProfileBadgesBlock(userIdHex: userIdHex)),
         Padding(
           padding: inset,

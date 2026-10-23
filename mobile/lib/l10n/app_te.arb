@@ -7567,7 +7567,21 @@
       }
     }
   },
-  "supporterTitle": "Divine మద్దతుదారులు\nఐచ్ఛిక నెలవారీ సభ్యత్వంతో ",
+  "supporterLightboxHeadline": "{name} ఒక {badge}",
+  "@supporterLightboxHeadline": {
+    "description": "Headline of another user's supporter lightbox. {name} is their display name; {badge} is supporterLightboxBadge, shown in the accent color. Keep both placeholders; reorder freely.",
+    "placeholders": { "name": { "type": "String" }, "badge": { "type": "String" } }
+  },
+  "supporterLightboxBadge": "Divine మద్దతుదారు",
+  "@supporterLightboxBadge": {
+    "description": "Highlighted status name inserted into supporterLightboxHeadline."
+  },
+  "supporterLightboxBody": "మరింత ఓపెన్, సృజనాత్మక ఇంటర్నెట్ కోసం స్వతంత్ర యాప్‌కు మద్దతు ఇస్తున్నారు.",
+  "supporterLightboxBenefitIndependent": "Divine స్వతంత్రంగా ఉండేందుకు సహాయపడుతుంది",
+  "supporterLightboxBenefitFeatures": "కొత్త ఆసక్తికరమైన ఫీచర్లకు మద్దతు ఇస్తుంది",
+  "supporterLightboxBenefitCommunity": "మరింత సృజనాత్మక కమ్యూనిటీకి శక్తినిస్తుంది",
+  "supporterLightboxMaybeLater": "బహుశా తర్వాత",
+  "supporterTitle": "Divine మద్దతుదారులు",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."
   },

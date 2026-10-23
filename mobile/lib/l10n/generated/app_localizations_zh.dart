@@ -12006,6 +12006,29 @@ class AppLocalizationsZh extends AppLocalizations {
   String get supporterJoinLabel => 'Become a supporter';
 
   @override
+  String supporterLightboxHeadline(String name, String badge) {
+    return '$name 是 $badge';
+  }
+
+  @override
+  String get supporterLightboxBadge => 'Divine 支持者';
+
+  @override
+  String get supporterLightboxBody => '支持这款独立应用，让互联网更开放、更有创意。';
+
+  @override
+  String get supporterLightboxBenefitIndependent => '帮助 Divine 保持独立';
+
+  @override
+  String get supporterLightboxBenefitFeatures => '支持令人兴奋的新功能';
+
+  @override
+  String get supporterLightboxBenefitCommunity => '助力更有创意的社区';
+
+  @override
+  String get supporterLightboxMaybeLater => '以后再说';
+
+  @override
   String get supporterPublicRecognition => 'Show my Supporter badge publicly';
 
   @override

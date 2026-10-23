@@ -3451,6 +3451,27 @@
       }
     }
   },
+  "supporterLightboxHeadline": "{name} adalah {badge}",
+  "@supporterLightboxHeadline": {
+    "description": "Headline of another user's supporter lightbox. {name} is their display name; {badge} is supporterLightboxBadge, shown in the accent color. Keep both placeholders; reorder freely.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "badge": {
+        "type": "String"
+      }
+    }
+  },
+  "supporterLightboxBadge": "Pendukung Divine",
+  "@supporterLightboxBadge": {
+    "description": "Highlighted status name inserted into supporterLightboxHeadline."
+  },
+  "supporterLightboxBody": "Mendukung aplikasi independen untuk internet yang lebih terbuka dan kreatif.",
+  "supporterLightboxBenefitIndependent": "Membantu Divine tetap independen",
+  "supporterLightboxBenefitFeatures": "Mendukung fitur-fitur baru yang seru",
+  "supporterLightboxBenefitCommunity": "Menghidupkan komunitas yang lebih kreatif",
+  "supporterLightboxMaybeLater": "Nanti saja",
   "supporterTitle": "Pendukung Divine",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."

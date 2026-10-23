@@ -12790,6 +12790,31 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supporterJoinLabel => 'Become a supporter';
 
   @override
+  String supporterLightboxHeadline(String name, String badge) {
+    return '$name من $badge';
+  }
+
+  @override
+  String get supporterLightboxBadge => 'داعمي Divine';
+
+  @override
+  String get supporterLightboxBody =>
+      'دعمٌ للتطبيق المستقل من أجل إنترنت أكثر انفتاحًا وإبداعًا.';
+
+  @override
+  String get supporterLightboxBenefitIndependent =>
+      'يساعد على بقاء Divine مستقلًا';
+
+  @override
+  String get supporterLightboxBenefitFeatures => 'يدعم ميزات جديدة ومثيرة';
+
+  @override
+  String get supporterLightboxBenefitCommunity => 'يغذّي مجتمعًا أكثر إبداعًا';
+
+  @override
+  String get supporterLightboxMaybeLater => 'ربما لاحقًا';
+
+  @override
   String get supporterPublicRecognition => 'Show my Supporter badge publicly';
 
   @override

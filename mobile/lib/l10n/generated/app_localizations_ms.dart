@@ -12791,6 +12791,33 @@ class AppLocalizationsMs extends AppLocalizations {
   String get supporterJoinLabel => 'Become a supporter';
 
   @override
+  String supporterLightboxHeadline(String name, String badge) {
+    return '$name ialah $badge';
+  }
+
+  @override
+  String get supporterLightboxBadge => 'Penyokong Divine';
+
+  @override
+  String get supporterLightboxBody =>
+      'Menyokong aplikasi bebas untuk internet yang lebih terbuka dan kreatif.';
+
+  @override
+  String get supporterLightboxBenefitIndependent =>
+      'Membantu Divine kekal bebas';
+
+  @override
+  String get supporterLightboxBenefitFeatures =>
+      'Menyokong ciri baharu yang menarik';
+
+  @override
+  String get supporterLightboxBenefitCommunity =>
+      'Menyemarakkan komuniti yang lebih kreatif';
+
+  @override
+  String get supporterLightboxMaybeLater => 'Mungkin nanti';
+
+  @override
   String get supporterPublicRecognition => 'Show my Supporter badge publicly';
 
   @override

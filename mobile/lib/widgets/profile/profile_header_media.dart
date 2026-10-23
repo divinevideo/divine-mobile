@@ -443,6 +443,7 @@ class _ProfileAvatarWithColor extends StatelessWidget {
     required this.showSkeleton,
     this.profileColor,
     this.pendingActions = const [],
+    this.isOwnProfile = false,
     this.onActionTap,
   });
 
@@ -465,6 +466,11 @@ class _ProfileAvatarWithColor extends StatelessWidget {
   /// Called when the label or avatar is tapped.
   final VoidCallback? onActionTap;
 
+  /// Whether this is the viewer's own profile, which reflects their own
+  /// membership and opens their own supporter view. That view has no public
+  /// setting; it lives in Edit Profile and the Supporter screen.
+  final bool isOwnProfile;
+
   @override
   Widget build(BuildContext context) {
     const avatarSize = _headerAvatarSize;
@@ -478,7 +484,7 @@ class _ProfileAvatarWithColor extends StatelessWidget {
         size: avatarSize,
       );
       final hasAvatar = imageUrl != null && imageUrl!.isNotEmpty;
-      avatar = hasAvatar
+      final plainAvatar = hasAvatar
           ? GestureDetector(
               onTap: () => _showAvatarLightbox(
                 context,
@@ -496,6 +502,25 @@ class _ProfileAvatarWithColor extends StatelessWidget {
               ),
             )
           : avatarWidget;
+      // Status arrives after the header renders; the halo and wings fade in
+      // around the avatar, which stays put.
+      final isSupporter = _showsSupporterTreatment(
+        context,
+        isOwnProfile: isOwnProfile,
+      );
+      avatar = SupporterReveal(
+        visible: isSupporter,
+        builder: (context, reveal) => isSupporter
+            ? _SupporterAvatarHero(
+                imageUrl: imageUrl,
+                userIdHex: userIdHex,
+                avatarSize: avatarSize,
+                avatar: avatarWidget,
+                reveal: reveal,
+                isOwnProfile: isOwnProfile,
+              )
+            : plainAvatar,
+      );
     }
 
     if (pendingActions.isEmpty) return avatar;
@@ -701,6 +726,20 @@ void _showAvatarLightbox(
   required String userIdHex,
   String? imageUrl,
 }) {
+  _pushAvatarLightbox(
+    context,
+    _AvatarLightbox(imageUrl: imageUrl, userIdHex: userIdHex),
+    'open avatar lightbox',
+  );
+}
+
+/// Pushes [lightbox], which the header avatar's Hero flies into, over the
+/// whole app.
+void _pushAvatarLightbox(
+  BuildContext context,
+  Widget lightbox,
+  String description,
+) {
   // Push on the root navigator so the full-screen blurred backdrop covers the
   // bottom navigation bar: on the own-profile tab the nearest navigator is the
   // StatefulShellRoute branch, confined to the Scaffold body. (The previous
@@ -709,17 +748,21 @@ void _showAvatarLightbox(
   // from the current PageRoute of nested navigators, so the header avatar
   // (branch) and the lightbox (root) are matched. A PageRoute — not a
   // PopupRoute like showGeneralDialog — is required for the HeroController.
-  Navigator.of(context, rootNavigator: true).push<void>(
-    PageRouteBuilder<void>(
-      opaque: false,
-      barrierColor: VineTheme.transparent,
-      barrierDismissible: true,
-      barrierLabel: context.l10n.profileAvatarLightboxBarrierLabel,
-      pageBuilder: (context, _, _) =>
-          _AvatarLightbox(imageUrl: imageUrl, userIdHex: userIdHex),
-      transitionsBuilder: (context, animation, _, child) =>
-          FadeTransition(opacity: animation, child: child),
+  _runProfileDetached(
+    _awaitProfileResult(
+      Navigator.of(context, rootNavigator: true).push<void>(
+        PageRouteBuilder<void>(
+          opaque: false,
+          barrierColor: VineTheme.transparent,
+          barrierDismissible: true,
+          barrierLabel: context.l10n.profileAvatarLightboxBarrierLabel,
+          pageBuilder: (_, _, _) => lightbox,
+          transitionsBuilder: (context, animation, _, child) =>
+              FadeTransition(opacity: animation, child: child),
+        ),
+      ),
     ),
+    description,
   );
 }
 

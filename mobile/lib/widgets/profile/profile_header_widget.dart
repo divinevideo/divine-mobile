@@ -14,7 +14,11 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/my_profile/my_profile_bloc.dart';
 import 'package:openvine/blocs/other_profile/other_profile_bloc.dart';
+import 'package:openvine/blocs/supporter/public_supporter_cubit.dart';
+import 'package:openvine/blocs/supporter/supporter_cubit.dart';
+import 'package:openvine/blocs/supporter/supporter_state.dart';
 import 'package:openvine/constants/semantic_ids.dart';
+import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/monetization/monetization_analytics.dart';
@@ -28,12 +32,14 @@ import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/providers/og_viner_cache_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/badges/badge_editor_screen.dart';
 import 'package:openvine/screens/badges/badges_screen.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
+import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/utils/clipboard_utils.dart';
 import 'package:openvine/utils/deferred_login_options_navigator.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -52,6 +58,7 @@ import 'package:openvine/widgets/profile/profile_following_stat.dart';
 import 'package:openvine/widgets/profile/profile_stats_row_widget.dart';
 import 'package:openvine/widgets/profile/profile_support_sheet.dart';
 import 'package:openvine/widgets/profile/profile_website_row.dart';
+import 'package:openvine/widgets/profile/supporter_halo_wings.dart';
 import 'package:openvine/widgets/profile/verified_accounts_row.dart';
 import 'package:openvine/widgets/profile_badge_explanation_sheet.dart';
 import 'package:openvine/widgets/special_profile_checkmark.dart';
@@ -65,6 +72,7 @@ import 'package:skeletonizer/skeletonizer.dart';
 
 part 'profile_header_identity.dart';
 part 'profile_header_media.dart';
+part 'profile_header_supporter_lightbox.dart';
 
 void _runProfileDetached(Future<void> operation, String description) {
   runDetached(
@@ -398,52 +406,61 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
           // people-list pill, stats row, and action buttons sit as
           // siblings outside the skeleton so they remain tappable
           // during the loading window (#4183 review).
-          Skeletonizer(
-            enabled: showIdentitySkeleton,
-            enableSwitchAnimation: true,
-            effect: vineSkeletonEffectOf(context),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Centered avatar with action label pill
-                Center(
-                  child: _ProfileAvatarWithColor(
-                    imageUrl: profilePictureUrl,
-                    userIdHex: widget.userIdHex,
-                    showSkeleton: showIdentitySkeleton,
-                    profileColor: profileColor,
-                    pendingActions: pendingActions,
-                    onActionTap: pendingActions.isEmpty
-                        ? null
-                        : pendingActions.first ==
-                              ProfileActionType.accountRestricted
-                        ? () => context.push(RoutePaths.accountStatus)
-                        : () => _showActionsSheet(
-                            context,
-                            pendingActions,
-                            secureAccountPromptDismissal,
-                          ),
-                  ),
-                ),
-
-                // Name, NIP-05, and bio. Horizontal inset lives on the
-                // children so the badge row can scroll edge-to-edge.
-                Padding(
-                  padding: const EdgeInsets.only(top: 32, bottom: 16),
-                  child: _ProfileNameAndBio(
-                    profile: effectiveProfile,
-                    userIdHex: widget.userIdHex,
-                    about: about,
-                    displayNameHint: displayNameHint,
-                    isVanished: isVanished,
-                    accentColor: profileColor,
-                    isOwnProfile: widget.isOwnProfile,
-                    monetizationLinks: monetizationLinksForCurrentStorefront(
-                      effectiveProfile?.enabledMonetizationLinks ?? const [],
+          // The supporter status sits above the skeleton, whose switch to
+          // content remounts its child, so it loads alongside the profile
+          // and survives that switch.
+          _SupporterStatusScope(
+            pubkey: widget.userIdHex,
+            isOwnProfile: widget.isOwnProfile,
+            enabled: !isVanished,
+            child: Skeletonizer(
+              enabled: showIdentitySkeleton,
+              enableSwitchAnimation: true,
+              effect: vineSkeletonEffectOf(context),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Centered avatar with action label pill
+                  Center(
+                    child: _ProfileAvatarWithColor(
+                      imageUrl: profilePictureUrl,
+                      userIdHex: widget.userIdHex,
+                      showSkeleton: showIdentitySkeleton,
+                      profileColor: profileColor,
+                      pendingActions: pendingActions,
+                      isOwnProfile: widget.isOwnProfile,
+                      onActionTap: pendingActions.isEmpty
+                          ? null
+                          : pendingActions.first ==
+                                ProfileActionType.accountRestricted
+                          ? () => context.push(RoutePaths.accountStatus)
+                          : () => _showActionsSheet(
+                              context,
+                              pendingActions,
+                              secureAccountPromptDismissal,
+                            ),
                     ),
                   ),
-                ),
-              ],
+
+                  // Name, NIP-05, and bio. Horizontal inset lives on the
+                  // children so the badge row can scroll edge-to-edge.
+                  Padding(
+                    padding: const EdgeInsets.only(top: 32, bottom: 16),
+                    child: _ProfileNameAndBio(
+                      profile: effectiveProfile,
+                      userIdHex: widget.userIdHex,
+                      about: about,
+                      displayNameHint: displayNameHint,
+                      isVanished: isVanished,
+                      accentColor: profileColor,
+                      isOwnProfile: widget.isOwnProfile,
+                      monetizationLinks: monetizationLinksForCurrentStorefront(
+                        effectiveProfile?.enabledMonetizationLinks ?? const [],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           if (!widget.isOwnProfile) ...[

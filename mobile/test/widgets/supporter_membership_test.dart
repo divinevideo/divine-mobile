@@ -1,10 +1,11 @@
-// ABOUTME: Tests persistent own-account acknowledgement and public opt-in badges.
+// ABOUTME: Tests own-account membership entries in settings and on the profile.
 // ABOUTME: Covers refresh without store work and suppression of external prompts.
 
 import 'dart:async';
 import 'dart:convert';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -12,6 +13,7 @@ import 'package:http/testing.dart';
 import 'package:iap_repository/iap_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/supporter/supporter_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_rpc_capability.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -26,9 +28,30 @@ import '../helpers/l10n.dart';
 
 class _MockAuth extends Mock implements AuthService {}
 
+/// Stands in for whatever the membership scope wraps, reading its cubit as
+/// the profile does, so a test can tell whether that subtree was kept or
+/// rebuilt from scratch.
+class _ScopedContent extends StatefulWidget {
+  const _ScopedContent();
+
+  @override
+  State<_ScopedContent> createState() => _ScopedContentState();
+}
+
+class _ScopedContentState extends State<_ScopedContent> {
+  @override
+  Widget build(BuildContext context) {
+    context.select<SupporterCubit?, bool>(
+      (cubit) => cubit?.state.isSupporter ?? false,
+    );
+    return const SizedBox.shrink();
+  }
+}
+
 void main() {
   const pubkey =
       'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  final l10n = lookupAppLocalizations(const Locale('en'));
 
   group('own account membership', () {
     testWidgets('signed-out compact entry supplies its own Material', (
@@ -75,7 +98,6 @@ void main() {
           ),
         ),
       );
-      final l10n = lookupAppLocalizations(const Locale('en'));
       expect(find.text(l10n.supporterTileSubtitle), findsOneWidget);
     });
 
@@ -183,8 +205,8 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(find.text('Divine Supporters'), findsOneWidget);
-      expect(find.text('Become a supporter'), findsNothing);
+      expect(find.text(l10n.supporterTitle), findsOneWidget);
+      expect(find.text(l10n.supporterJoinLabel), findsNothing);
       current = second;
       container.invalidate(supporterRepositoryProvider);
       await tester.pumpAndSettle();
@@ -197,8 +219,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(first.isSupporter, isTrue);
       expect(second.isSupporter, isFalse);
-      expect(find.text('Supporter'), findsNothing);
-      expect(find.text('Become a supporter'), findsOneWidget);
+      expect(find.text(l10n.supporterBadgeLabel), findsNothing);
+      expect(find.text(l10n.supporterJoinLabel), findsOneWidget);
       await tester.pumpWidget(const SizedBox.shrink());
     });
 
@@ -264,111 +286,116 @@ void main() {
           await tester.pumpAndSettle();
           if (source == AuthenticationSource.amber) {
             expect(requests, 0);
-            expect(find.text('Divine Supporters'), findsOneWidget);
+            expect(find.text(l10n.supporterTitle), findsOneWidget);
           } else if (!succeeds) {
             expect(requests, 1);
-            expect(find.text('Divine Supporters'), findsOneWidget);
-            expect(find.text('Become a supporter'), findsNothing);
+            expect(find.text(l10n.supporterTitle), findsOneWidget);
+            expect(find.text(l10n.supporterJoinLabel), findsNothing);
           } else {
             expect(requests, 1);
-            expect(find.text('Supporter'), findsOneWidget);
+            expect(repo.isSupporter, isTrue);
+            // The halo and wings mark a supporter's profile instead.
+            expect(find.byType(ActionChip), findsNothing);
             expect(repo.snapshot?.haloVisible, isFalse);
+
+            // Settings still acknowledges the membership.
+            await tester.pumpWidget(
+              ProviderScope(
+                overrides: [
+                  authServiceProvider.overrideWithValue(auth),
+                  currentAuthStateProvider.overrideWithValue(
+                    AuthState.authenticated,
+                  ),
+                  currentAuthRpcCapabilityProvider.overrideWithValue(
+                    AuthRpcCapability.rpcReady,
+                  ),
+                  supporterRepositoryProvider.overrideWithValue(repo),
+                ],
+                child: buildLocalizedWidget(
+                  const Scaffold(body: SupporterMembership()),
+                ),
+              ),
+            );
+            await tester.pumpAndSettle();
+            expect(find.text(l10n.supporterBadgeLabel), findsOneWidget);
           }
           await tester.pumpWidget(const SizedBox.shrink());
         },
       );
     }
-  });
 
-  group('public profile recognition', () {
-    for (final visible in [true, false]) {
-      testWidgets('renders only an opted-in public result: $visible', (
-        tester,
-      ) async {
-        var signatures = 0;
-        final client = SupporterApiClient(
-          baseUri: Uri.parse('https://supporters.test'),
-          authHeaderProvider: ({required url, required method, payload}) async {
-            signatures++;
-            return null;
-          },
-          httpClient: MockClient(
-            (_) async => http.Response(
-              jsonEncode({
-                'supporters': visible
-                    ? [
-                        {'pubkey': pubkey, 'haloVisible': true},
-                      ]
-                    : [],
-              }),
-              200,
+    testWidgets('refreshes when a remote signer becomes ready without '
+        'rebuilding what it wraps', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      var signerReady = false;
+      final capability = StreamController<AuthRpcCapability>();
+      addTearDown(capability.close);
+      final auth = _MockAuth();
+      when(() => auth.isAuthenticated).thenReturn(true);
+      when(
+        () => auth.authenticationSource,
+      ).thenReturn(AuthenticationSource.divineOAuth);
+      when(() => auth.canPublishNostrWritesNow).thenAnswer((_) => signerReady);
+      when(() => auth.authRpcCapability).thenAnswer(
+        (_) => signerReady
+            ? AuthRpcCapability.rpcReady
+            : AuthRpcCapability.unavailable,
+      );
+      when(
+        () => auth.authRpcCapabilityStream,
+      ).thenAnswer((_) => capability.stream);
+      var requests = 0;
+      final client = SupporterApiClient(
+        baseUri: Uri.parse('https://supporters.test'),
+        authHeaderProvider: ({required url, required method, payload}) async =>
+            (authorizationHeader: 'Nostr fixture', pubkey: pubkey),
+        httpClient: MockClient((_) async {
+          requests++;
+          return http.Response(
+            jsonEncode({
+              'status': 'active',
+              'entitlement': {'source': 'server', 'isActive': true},
+              'recognition': {'haloVisible': true},
+            }),
+            200,
+          );
+        }),
+      );
+      addTearDown(client.dispose);
+      final repo = SupporterRepository(
+        pubkey: pubkey,
+        validator: StubEntitlementValidator(),
+        prefs: await SharedPreferences.getInstance(),
+        apiClient: client,
+      );
+      addTearDown(repo.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            authServiceProvider.overrideWithValue(auth),
+            currentAuthStateProvider.overrideWithValue(
+              AuthState.authenticated,
+            ),
+            supporterRepositoryProvider.overrideWithValue(repo),
+          ],
+          child: buildLocalizedWidget(
+            const Scaffold(
+              body: SupporterMembershipScope(child: _ScopedContent()),
             ),
           ),
-        );
-        addTearDown(client.dispose);
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [supporterApiClientProvider.overrideWithValue(client)],
-            child: buildLocalizedWidget(
-              const Scaffold(body: PublicSupporterBadge(pubkey: pubkey)),
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-        expect(find.text('Supporter'), visible ? findsOneWidget : findsNothing);
-        expect(signatures, 0);
-        await tester.pumpWidget(const SizedBox.shrink());
-      });
-    }
+        ),
+      );
+      await tester.pump();
+      final content = tester.state(find.byType(_ScopedContent));
+      expect(requests, isZero);
 
-    for (final (mode, theme, colors) in [
-      ('light', VineTheme.lightTheme, VineTheme.lightColors),
-      ('dark', VineTheme.theme, VineTheme.darkColors),
-    ]) {
-      testWidgets('badge tints its heart with $mode primary text', (
-        tester,
-      ) async {
-        final client = SupporterApiClient(
-          baseUri: Uri.parse('https://supporters.test'),
-          authHeaderProvider: ({
-            required url,
-            required method,
-            payload,
-          }) async => null,
-          httpClient: MockClient(
-            (_) async => http.Response(
-              jsonEncode({
-                'supporters': [
-                  {'pubkey': pubkey, 'haloVisible': true},
-                ],
-              }),
-              200,
-            ),
-          ),
-        );
-        addTearDown(client.dispose);
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [supporterApiClientProvider.overrideWithValue(client)],
-            child: MaterialApp(
-              theme: theme,
-              localizationsDelegates: appLocalizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: const Scaffold(body: PublicSupporterBadge(pubkey: pubkey)),
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
+      signerReady = true;
+      capability.add(AuthRpcCapability.rpcReady);
+      await tester.pumpAndSettle();
 
-        final heart = tester.widget<DivineIcon>(
-          find.descendant(
-            of: find.byType(Chip),
-            matching: find.byType(DivineIcon),
-          ),
-        );
-        expect(heart.color, equals(colors.primaryText));
-        await tester.pumpWidget(const SizedBox.shrink());
-      });
-    }
+      expect(requests, 1);
+      expect(tester.state(find.byType(_ScopedContent)), same(content));
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
   });
 }

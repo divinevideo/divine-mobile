@@ -3561,6 +3561,27 @@
       }
     }
   },
+  "supporterLightboxHeadline": "{name} е от {badge}",
+  "@supporterLightboxHeadline": {
+    "description": "Headline of another user's supporter lightbox. {name} is their display name; {badge} is supporterLightboxBadge, shown in the accent color. Keep both placeholders; reorder freely.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "badge": {
+        "type": "String"
+      }
+    }
+  },
+  "supporterLightboxBadge": "поддръжниците на Divine",
+  "@supporterLightboxBadge": {
+    "description": "Highlighted status name inserted into supporterLightboxHeadline."
+  },
+  "supporterLightboxBody": "Подкрепя независимото приложение за по-отворен и креативен интернет.",
+  "supporterLightboxBenefitIndependent": "Помага Divine да остане независим",
+  "supporterLightboxBenefitFeatures": "Подкрепя нови вълнуващи функции",
+  "supporterLightboxBenefitCommunity": "Захранва по-креативна общност",
+  "supporterLightboxMaybeLater": "Може би по-късно",
   "supporterTitle": "Поддръжници на Divine",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."

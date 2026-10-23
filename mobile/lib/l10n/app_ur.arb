@@ -6524,6 +6524,27 @@
       }
     }
   },
+  "supporterLightboxHeadline": "{name} ایک {badge} ہیں",
+  "@supporterLightboxHeadline": {
+    "description": "Headline of another user's supporter lightbox. {name} is their display name; {badge} is supporterLightboxBadge, shown in the accent color. Keep both placeholders; reorder freely.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "badge": {
+        "type": "String"
+      }
+    }
+  },
+  "supporterLightboxBadge": "Divine سپورٹر",
+  "@supporterLightboxBadge": {
+    "description": "Highlighted status name inserted into supporterLightboxHeadline."
+  },
+  "supporterLightboxBody": "زیادہ کھلے اور تخلیقی انٹرنیٹ کے لیے آزاد ایپ کی سپورٹ۔",
+  "supporterLightboxBenefitIndependent": "Divine کو آزاد رکھنے میں مدد",
+  "supporterLightboxBenefitFeatures": "نئے دلچسپ فیچرز کی سپورٹ",
+  "supporterLightboxBenefitCommunity": "زیادہ تخلیقی کمیونٹی کو تقویت",
+  "supporterLightboxMaybeLater": "شاید بعد میں",
   "supporterTitle": "Divine سپورٹرز",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."

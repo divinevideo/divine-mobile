@@ -11,6 +11,7 @@ import 'package:openvine/blocs/supporter/supporter_cubit.dart';
 import 'package:openvine/blocs/supporter/supporter_state.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/l10n/supporter_failure_l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/screens/settings/settings_screen.dart';
@@ -106,7 +107,7 @@ class _SupporterScreenViewState extends State<SupporterScreenView> {
                       subtitle: Text(
                         context.l10n.supporterPublicRecognitionBody,
                       ),
-                      value: state.snapshot?.haloVisible ?? false,
+                      value: state.haloVisible,
                       onChanged:
                           state.snapshot == null || state.savingRecognition
                           ? null
@@ -437,7 +438,7 @@ class _FailureBanner extends StatelessWidget {
           color: VineTheme.accentOrange,
         ),
         const SizedBox(width: 8),
-        Expanded(child: Text(_message(context, failure))),
+        Expanded(child: Text(failure.message(context.l10n))),
         DivineIconButton(
           icon: DivineIconName.x,
           type: DivineIconButtonType.ghostSecondary,
@@ -446,26 +447,6 @@ class _FailureBanner extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  String _message(BuildContext context, SupporterFailure failure) {
-    final l10n = context.l10n;
-    switch (failure) {
-      case SupporterFailure.storeUnavailable:
-        return l10n.supporterErrorStoreUnavailable;
-      case SupporterFailure.purchaseFailed:
-        return l10n.supporterErrorPurchaseFailed;
-      case SupporterFailure.purchasePending:
-        return l10n.supporterErrorPurchasePending;
-      case SupporterFailure.restoreFailed:
-        return l10n.supporterErrorRestoreFailed;
-      case SupporterFailure.ownershipConflict:
-        return l10n.supporterErrorOwnershipConflict;
-      case SupporterFailure.verificationUnavailable:
-        return l10n.supporterErrorVerificationUnavailable;
-      case SupporterFailure.unknown:
-        return l10n.supporterErrorUnknown;
-    }
   }
 }
 

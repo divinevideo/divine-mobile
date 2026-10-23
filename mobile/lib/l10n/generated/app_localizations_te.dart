@@ -13134,6 +13134,33 @@ class AppLocalizationsTe extends AppLocalizations {
   String get supporterJoinLabel => 'Become a supporter';
 
   @override
+  String supporterLightboxHeadline(String name, String badge) {
+    return '$name ఒక $badge';
+  }
+
+  @override
+  String get supporterLightboxBadge => 'Divine మద్దతుదారు';
+
+  @override
+  String get supporterLightboxBody =>
+      'మరింత ఓపెన్, సృజనాత్మక ఇంటర్నెట్ కోసం స్వతంత్ర యాప్‌కు మద్దతు ఇస్తున్నారు.';
+
+  @override
+  String get supporterLightboxBenefitIndependent =>
+      'Divine స్వతంత్రంగా ఉండేందుకు సహాయపడుతుంది';
+
+  @override
+  String get supporterLightboxBenefitFeatures =>
+      'కొత్త ఆసక్తికరమైన ఫీచర్లకు మద్దతు ఇస్తుంది';
+
+  @override
+  String get supporterLightboxBenefitCommunity =>
+      'మరింత సృజనాత్మక కమ్యూనిటీకి శక్తినిస్తుంది';
+
+  @override
+  String get supporterLightboxMaybeLater => 'బహుశా తర్వాత';
+
+  @override
   String get supporterPublicRecognition => 'Show my Supporter badge publicly';
 
   @override
@@ -13141,8 +13168,7 @@ class AppLocalizationsTe extends AppLocalizations {
       'Let others see that you support Divine. This is optional and is not a verification badge.';
 
   @override
-  String get supporterTitle =>
-      'Divine మద్దతుదారులు\nఐచ్ఛిక నెలవారీ సభ్యత్వంతో ';
+  String get supporterTitle => 'Divine మద్దతుదారులు';
 
   @override
   String get supporterTileSubtitle => 'మద్దతు Divine.';

@@ -534,6 +534,7 @@ flutter:
     - assets/seed_media/classic_viner_avatars/jerome-jarre.png
     - assets/stickers/
     - assets/stickers/i18n/
+    - assets/supporter/
     - shorebird.yaml
 
   # Fragment shaders. `chroma_key.frag` powers the video editor's live

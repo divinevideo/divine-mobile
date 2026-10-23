@@ -6524,6 +6524,27 @@
       }
     }
   },
+  "supporterLightboxHeadline": "{name} là {badge}",
+  "@supporterLightboxHeadline": {
+    "description": "Headline of another user's supporter lightbox. {name} is their display name; {badge} is supporterLightboxBadge, shown in the accent color. Keep both placeholders; reorder freely.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "badge": {
+        "type": "String"
+      }
+    }
+  },
+  "supporterLightboxBadge": "Người ủng hộ Divine",
+  "@supporterLightboxBadge": {
+    "description": "Highlighted status name inserted into supporterLightboxHeadline."
+  },
+  "supporterLightboxBody": "Ủng hộ ứng dụng độc lập vì một internet cởi mở và sáng tạo hơn.",
+  "supporterLightboxBenefitIndependent": "Giúp Divine luôn độc lập",
+  "supporterLightboxBenefitFeatures": "Hỗ trợ những tính năng mới thú vị",
+  "supporterLightboxBenefitCommunity": "Tiếp sức cho cộng đồng sáng tạo hơn",
+  "supporterLightboxMaybeLater": "Để sau",
   "supporterTitle": "Người ủng hộ Divine",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."

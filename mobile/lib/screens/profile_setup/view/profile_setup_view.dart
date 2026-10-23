@@ -203,6 +203,8 @@ class _ProfileSetupScreenViewState
                                           controller: _websiteController,
                                         ),
                                         const VerifiedAccountsSection(),
+                                        if (!widget.isNewUser)
+                                          const SupporterRecognitionSection(),
                                       ],
                                     ),
                                   ),

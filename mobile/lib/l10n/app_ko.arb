@@ -2990,6 +2990,27 @@
       }
     }
   },
+  "supporterLightboxHeadline": "{name}님은 {badge}예요",
+  "@supporterLightboxHeadline": {
+    "description": "Headline of another user's supporter lightbox. {name} is their display name; {badge} is supporterLightboxBadge, shown in the accent color. Keep both placeholders; reorder freely.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "badge": {
+        "type": "String"
+      }
+    }
+  },
+  "supporterLightboxBadge": "Divine 서포터",
+  "@supporterLightboxBadge": {
+    "description": "Highlighted status name inserted into supporterLightboxHeadline."
+  },
+  "supporterLightboxBody": "더 열려 있고 창의적인 인터넷을 위해 독립 앱을 후원하고 있어요.",
+  "supporterLightboxBenefitIndependent": "Divine의 독립을 지켜요",
+  "supporterLightboxBenefitFeatures": "새롭고 신나는 기능을 지원해요",
+  "supporterLightboxBenefitCommunity": "더 창의적인 커뮤니티에 힘을 보태요",
+  "supporterLightboxMaybeLater": "나중에",
   "supporterTitle": "Divine 서포터",
   "@supporterTitle": {
     "description": "Title of the supporter subscription settings screen and its settings tile."

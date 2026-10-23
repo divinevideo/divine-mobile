@@ -12,6 +12,7 @@ export 'profile_setup_rows.dart';
 export 'profile_setup_upload_errors.dart';
 export 'public_key_row.dart';
 export 'save_button.dart';
+export 'supporter_recognition_section.dart';
 export 'username_field.dart';
 export 'verified_accounts_section.dart';
 export 'website_field.dart';
