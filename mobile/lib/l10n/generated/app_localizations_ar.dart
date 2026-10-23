@@ -10031,6 +10031,29 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'خفض تدريجي';
 
   @override
+  String get videoEditorDuckingLabel => 'خفض تلقائي';
+
+  @override
+  String get videoEditorDuckingSemanticLabel => 'خفض الصوت المحدد أثناء الكلام';
+
+  @override
+  String get videoEditorDuckingSheetTitle => 'إفساح المجال للأصوات';
+
+  @override
+  String get videoEditorDuckingSwitchLabel => 'خفض الصوت أثناء الكلام';
+
+  @override
+  String get videoEditorDuckingDescription =>
+      'ينخفض كلما تحدّث التعليق الصوتي، ثم يعود.';
+
+  @override
+  String get videoEditorDuckingNoVoiceOverHint =>
+      'عند تسجيل تعليق صوتي، ينخفض هذا الصوت أثناء الكلام.';
+
+  @override
+  String get videoEditorDuckingStrengthLabel => 'مقدار الخفض';
+
+  @override
   String get videoEditorVoiceEffectLabel => 'الصوت';
 
   @override

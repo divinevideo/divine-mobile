@@ -91,6 +91,8 @@ class AudioEvent {
     this.voiceEffect = VoiceEffect.none,
     this.noiseReduction = false,
     this.equalizer = EqualizerSettings.none,
+    this.ducksUnderVoiceOver = false,
+    this.duckingVolume = defaultDuckingVolume,
     this.originalUrl,
     this.originalMimeType,
     this.allowsReuse = true,
@@ -99,6 +101,10 @@ class AudioEvent {
   }) : assert(
          playbackSpeed > 0 && playbackSpeed < double.infinity,
          'playbackSpeed must be finite and greater than 0',
+       ),
+       assert(
+         duckingVolume >= 0 && duckingVolume <= 1,
+         'duckingVolume must be between 0 and 1',
        ),
        title = sanitizeUtf16OrNull(title),
        source = sanitizeUtf16OrNull(source),
@@ -367,6 +373,11 @@ class AudioEvent {
           Map<String, dynamic>.from(equalizer),
         ),
         _ => EqualizerSettings.none,
+      },
+      ducksUnderVoiceOver: json['duck'] as bool? ?? false,
+      duckingVolume: switch ((json['duckVolume'] as num?)?.toDouble()) {
+        final double volume when volume >= 0 && volume <= 1 => volume,
+        _ => defaultDuckingVolume,
       },
       originalUrl: json['originalUrl'] as String?,
       originalMimeType: json['originalMimeType'] as String?,
@@ -761,6 +772,22 @@ class AudioEvent {
   /// state, never published to Nostr.
   final EqualizerSettings equalizer;
 
+  /// Whether the track gets quieter while a voice-over talks and comes back
+  /// up when it stops; see [duckingVolume].
+  ///
+  /// A voice-over itself never ducks. Local-only editor state, never
+  /// published to Nostr.
+  final bool ducksUnderVoiceOver;
+
+  /// How loud the track stays while a voice-over talks, as a share of its
+  /// [volume]: `0.25` plays it at a quarter. Only heard while
+  /// [ducksUnderVoiceOver] is set. Local-only editor state, never published
+  /// to Nostr.
+  final double duckingVolume;
+
+  /// The [duckingVolume] of a track the user has not set one for.
+  static const double defaultDuckingVolume = 0.25;
+
   /// The sound as recorded, bundled or published, when [url] names a
   /// processed copy of it — one with [voiceEffect] or [noiseReduction]
   /// applied. `null` while the track plays that sound itself.
@@ -958,6 +985,8 @@ class AudioEvent {
     VoiceEffect? voiceEffect,
     bool? noiseReduction,
     EqualizerSettings? equalizer,
+    bool? ducksUnderVoiceOver,
+    double? duckingVolume,
     String? originalUrl,
     bool clearOriginalUrl = false,
     String? originalMimeType,
@@ -1001,6 +1030,8 @@ class AudioEvent {
       voiceEffect: voiceEffect ?? this.voiceEffect,
       noiseReduction: noiseReduction ?? this.noiseReduction,
       equalizer: equalizer ?? this.equalizer,
+      ducksUnderVoiceOver: ducksUnderVoiceOver ?? this.ducksUnderVoiceOver,
+      duckingVolume: duckingVolume ?? this.duckingVolume,
       originalUrl: clearOriginalUrl ? null : (originalUrl ?? this.originalUrl),
       originalMimeType: clearOriginalMimeType
           ? null
@@ -1026,7 +1057,9 @@ class AudioEvent {
         other.fadeInDuration == fadeInDuration &&
         other.fadeOutDuration == fadeOutDuration &&
         other.playbackSpeed == playbackSpeed &&
-        other.equalizer == equalizer;
+        other.equalizer == equalizer &&
+        other.ducksUnderVoiceOver == ducksUnderVoiceOver &&
+        other.duckingVolume == duckingVolume;
   }
 
   @override
@@ -1040,6 +1073,8 @@ class AudioEvent {
     fadeOutDuration,
     playbackSpeed,
     equalizer,
+    ducksUnderVoiceOver,
+    duckingVolume,
   );
 
   @override
@@ -1092,6 +1127,8 @@ class AudioEvent {
     if (!voiceEffect.isNone) 'voiceEffect': voiceEffect.toJson(),
     if (noiseReduction) 'noiseReduction': true,
     if (!equalizer.isNone) 'equalizer': equalizer.toJson(),
+    if (ducksUnderVoiceOver) 'duck': true,
+    if (duckingVolume != defaultDuckingVolume) 'duckVolume': duckingVolume,
     'originalUrl': ?originalUrl,
     'originalMimeType': ?originalMimeType,
   };

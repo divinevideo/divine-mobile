@@ -10062,6 +10062,30 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'فیڈ آؤٹ';
 
   @override
+  String get videoEditorDuckingLabel => 'ڈکنگ';
+
+  @override
+  String get videoEditorDuckingSemanticLabel =>
+      'جب کوئی بولے تو منتخب آواز کم کریں';
+
+  @override
+  String get videoEditorDuckingSheetTitle => 'آوازوں کے لیے جگہ';
+
+  @override
+  String get videoEditorDuckingSwitchLabel => 'جب کوئی بولے تو کم کریں';
+
+  @override
+  String get videoEditorDuckingDescription =>
+      'جب بھی وائس اوور بولتا ہے یہ دھیما ہو جاتا ہے، پھر واپس آ جاتا ہے۔';
+
+  @override
+  String get videoEditorDuckingNoVoiceOverHint =>
+      'وائس اوور ریکارڈ کریں، پھر جب بھی آپ بولیں گے یہ آواز دھیمی ہو جائے گی۔';
+
+  @override
+  String get videoEditorDuckingStrengthLabel => 'کتنا دھیما';
+
+  @override
   String get videoEditorVoiceEffectLabel => 'آواز';
 
   @override

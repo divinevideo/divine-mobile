@@ -10143,6 +10143,30 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Fade out';
 
   @override
+  String get videoEditorDuckingLabel => 'Ducking';
+
+  @override
+  String get videoEditorDuckingSemanticLabel =>
+      'Abaixar o som selecionado enquanto alguém fala';
+
+  @override
+  String get videoEditorDuckingSheetTitle => 'Espaço para as vozes';
+
+  @override
+  String get videoEditorDuckingSwitchLabel => 'Abaixar enquanto alguém fala';
+
+  @override
+  String get videoEditorDuckingDescription =>
+      'Fica mais baixo sempre que a narração fala e depois volta.';
+
+  @override
+  String get videoEditorDuckingNoVoiceOverHint =>
+      'Grave uma narração e este som vai abaixar sempre que você falar.';
+
+  @override
+  String get videoEditorDuckingStrengthLabel => 'Quanto mais baixo';
+
+  @override
   String get videoEditorVoiceEffectLabel => 'Voz';
 
   @override

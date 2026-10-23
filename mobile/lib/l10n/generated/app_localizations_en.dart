@@ -10161,6 +10161,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Fade out';
 
   @override
+  String get videoEditorDuckingLabel => 'Ducking';
+
+  @override
+  String get videoEditorDuckingSemanticLabel =>
+      'Lower the selected sound while someone talks';
+
+  @override
+  String get videoEditorDuckingSheetTitle => 'Make room for voices';
+
+  @override
+  String get videoEditorDuckingSwitchLabel => 'Lower while someone talks';
+
+  @override
+  String get videoEditorDuckingDescription =>
+      'Gets quieter whenever the voice-over talks, then comes back up.';
+
+  @override
+  String get videoEditorDuckingNoVoiceOverHint =>
+      'Record a voice-over and this sound gets quieter whenever you talk.';
+
+  @override
+  String get videoEditorDuckingStrengthLabel => 'How much quieter';
+
+  @override
   String get videoEditorVoiceEffectLabel => 'Voice';
 
   @override

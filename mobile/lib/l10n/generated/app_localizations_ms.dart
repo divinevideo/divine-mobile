@@ -10070,6 +10070,31 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Keluar perlahan';
 
   @override
+  String get videoEditorDuckingLabel => 'Ducking';
+
+  @override
+  String get videoEditorDuckingSemanticLabel =>
+      'Perlahankan bunyi yang dipilih semasa seseorang bercakap';
+
+  @override
+  String get videoEditorDuckingSheetTitle => 'Beri ruang untuk suara';
+
+  @override
+  String get videoEditorDuckingSwitchLabel =>
+      'Perlahankan semasa seseorang bercakap';
+
+  @override
+  String get videoEditorDuckingDescription =>
+      'Menjadi perlahan setiap kali suara latar bercakap, kemudian kembali semula.';
+
+  @override
+  String get videoEditorDuckingNoVoiceOverHint =>
+      'Rakam suara latar dan bunyi ini akan menjadi perlahan setiap kali anda bercakap.';
+
+  @override
+  String get videoEditorDuckingStrengthLabel => 'Berapa banyak lebih perlahan';
+
+  @override
   String get videoEditorVoiceEffectLabel => 'Suara';
 
   @override

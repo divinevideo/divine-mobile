@@ -10108,6 +10108,30 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Uitfaden';
 
   @override
+  String get videoEditorDuckingLabel => 'Ducking';
+
+  @override
+  String get videoEditorDuckingSemanticLabel =>
+      'Geselecteerd geluid zachter zetten terwijl iemand praat';
+
+  @override
+  String get videoEditorDuckingSheetTitle => 'Ruimte voor stemmen';
+
+  @override
+  String get videoEditorDuckingSwitchLabel => 'Zachter terwijl iemand praat';
+
+  @override
+  String get videoEditorDuckingDescription =>
+      'Wordt zachter zodra de voice-over praat en komt daarna terug.';
+
+  @override
+  String get videoEditorDuckingNoVoiceOverHint =>
+      'Neem een voice-over op en dit geluid wordt zachter zodra je praat.';
+
+  @override
+  String get videoEditorDuckingStrengthLabel => 'Hoeveel zachter';
+
+  @override
   String get videoEditorVoiceEffectLabel => 'Stem';
 
   @override

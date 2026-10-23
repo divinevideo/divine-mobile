@@ -35,6 +35,7 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dar
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/layer_blend_mode_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/layer_style_actions.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_audio_ducking_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_audio_fade_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_clip_speed_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_equalizer_sheet.dart';
@@ -751,8 +752,8 @@ TuneAdjustmentMatrix _reSet(TuneAdjustmentMatrix m, String setId) {
   );
 }
 
-/// Controls for sound overlays: delete, edit, fade, voice, equalizer, speed,
-/// duplicate, split, and done.
+/// Controls for sound overlays: delete, edit, fade, ducking, voice,
+/// equalizer, speed, duplicate, split, and done.
 class _SoundOverlayControls extends StatelessWidget {
   const _SoundOverlayControls({required this.item});
 
@@ -762,23 +763,34 @@ class _SoundOverlayControls extends StatelessWidget {
   Widget build(BuildContext context) {
     // Every sound with audio to process can change voice: voice-overs,
     // music, bundled, published and imported sounds and extracted clip audio.
-    final (canChangeVoice, hasVoiceEffect, hasEqualizer, hasSpeed) = context
-        .select((TimelineOverlayBloc bloc) {
-          final track = bloc.state.audioTracks
-              .where((track) => track.id == item.id)
-              .firstOrNull;
-          return (
-            track?.originalSource != null,
-            track?.hasVoiceProcessing ?? false,
-            !(track?.equalizer.isNone ?? true),
-            (track?.playbackSpeed ?? 1) != 1,
-          );
-        });
+    final (
+      canChangeVoice,
+      hasVoiceEffect,
+      hasEqualizer,
+      hasSpeed,
+      isVoiceOver,
+      isDucking,
+    ) = context.select((TimelineOverlayBloc bloc) {
+      final track = bloc.state.audioTracks
+          .where((track) => track.id == item.id)
+          .firstOrNull;
+      return (
+        track?.originalSource != null,
+        track?.hasVoiceProcessing ?? false,
+        !(track?.equalizer.isNone ?? true),
+        (track?.playbackSpeed ?? 1) != 1,
+        track?.isVoiceOver ?? false,
+        track?.ducksUnderVoiceOver ?? false,
+      );
+    });
     return VideoEditorTimelineControls(
       onDelete: () => _removeSound(context: context),
       onEdit: () => _editSound(context: context),
       onFade: () => _fadeSound(context: context),
       hasFade: item.hasFade,
+      // A voice-over is what the other sounds duck under, never one of them.
+      onDucking: isVoiceOver ? null : () => _duckSound(context: context),
+      isDucking: isDucking,
       onVoiceEffect: canChangeVoice
           ? () => _changeVoice(context: context)
           : null,
@@ -866,6 +878,57 @@ class _SoundOverlayControls extends StatelessWidget {
                   ? t.copyWith(
                       fadeInDuration: result.fadeIn,
                       fadeOutDuration: result.fadeOut,
+                    )
+                  : t,
+            )
+            .map((e) => e.toJson())
+            .toList(),
+      },
+    );
+  }
+
+  /// Opens the ducking sheet of the sound. A confirmed change becomes one
+  /// undo step; the preview and the export then plan the dips from the
+  /// voice-overs on the timeline.
+  Future<void> _duckSound({required BuildContext context}) async {
+    final editor = VideoEditorScope.of(context).editor;
+    if (editor == null) return;
+
+    final tracks = editor.stateManager.audioTracks;
+    final sound = tracks.where((t) => t.id == item.id).firstOrNull;
+    if (sound == null) return;
+
+    final result = await VineBottomSheet.show<AudioDuckingSelection>(
+      context: context,
+      expanded: false,
+      scrollable: false,
+      isScrollControlled: true,
+      body: VideoEditorAudioDuckingSheet(
+        initialEnabled: sound.ducksUnderVoiceOver,
+        initialVolume: sound.duckingVolume,
+        hasVoiceOver: tracks.any((t) => t.isVoiceOver),
+      ),
+    );
+    if (result == null || !context.mounted) return;
+
+    // Re-read the tracks after the async gap: another edit (an undo, a
+    // finished extraction) may have changed them while the sheet was open.
+    final current = editor.stateManager.audioTracks;
+    final latest = current.where((t) => t.id == item.id).firstOrNull;
+    if (latest == null ||
+        (latest.ducksUnderVoiceOver == result.enabled &&
+            latest.duckingVolume == result.volume)) {
+      return;
+    }
+    editor.addHistory(
+      meta: {
+        ...editor.stateManager.activeMeta,
+        VideoEditorConstants.audioStateHistoryKey: current
+            .map(
+              (t) => t.id == item.id
+                  ? t.copyWith(
+                      ducksUnderVoiceOver: result.enabled,
+                      duckingVolume: result.volume,
                     )
                   : t,
             )

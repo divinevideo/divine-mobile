@@ -69,4 +69,23 @@ class AudioOverlayFadeTest {
         assertTrue(AudioOverlayFade.fromMap(emptyMap()).isNone)
         assertFalse(AudioOverlayFade(fadeInMs = 0, fadeOutMs = 1).isNone)
     }
+
+    @Test
+    fun `a volume curve moves in a straight line between its points`() {
+        val curve = AudioOverlayVolumeCurve.fromMap(
+            mapOf("volumeCurve" to doubleArrayOf(1000.0, 1.0, 1250.0, 0.25, 3000.0, 0.25, 3500.0, 1.0))
+        )!!
+
+        assertEquals(1.0, curve.volumeAt(0.0), 1e-9)
+        assertEquals(0.625, curve.volumeAt(1125.0), 1e-9)
+        assertEquals(0.25, curve.volumeAt(2000.0), 1e-9)
+        assertEquals(0.625, curve.volumeAt(3250.0), 1e-9)
+        assertEquals(1.0, curve.volumeAt(9000.0), 1e-9)
+    }
+
+    @Test
+    fun `a track without a volume curve has none`() {
+        assertEquals(null, AudioOverlayVolumeCurve.fromMap(emptyMap()))
+        assertEquals(null, AudioOverlayVolumeCurve.fromMap(mapOf("volumeCurve" to listOf(1.0))))
+    }
 }

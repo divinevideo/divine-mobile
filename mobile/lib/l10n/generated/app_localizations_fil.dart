@@ -10140,6 +10140,30 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Fade out';
 
   @override
+  String get videoEditorDuckingLabel => 'Ducking';
+
+  @override
+  String get videoEditorDuckingSemanticLabel =>
+      'Hinaan ang napiling sound habang may nagsasalita';
+
+  @override
+  String get videoEditorDuckingSheetTitle => 'Bigyang-daan ang mga boses';
+
+  @override
+  String get videoEditorDuckingSwitchLabel => 'Hinaan habang may nagsasalita';
+
+  @override
+  String get videoEditorDuckingDescription =>
+      'Humihina tuwing nagsasalita ang voice over, tapos babalik.';
+
+  @override
+  String get videoEditorDuckingNoVoiceOverHint =>
+      'Mag-record ng voice over at hihina ang sound na ito tuwing nagsasalita ka.';
+
+  @override
+  String get videoEditorDuckingStrengthLabel => 'Gaano kahina';
+
+  @override
   String get videoEditorVoiceEffectLabel => 'Boses';
 
   @override

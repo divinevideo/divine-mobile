@@ -6,8 +6,9 @@ import AVFoundation
 /// synced to the main video timeline. Drift correction keeps audio
 /// aligned within ``driftThreshold``.
 ///
-/// A track's ``AudioOverlayFade`` is played by an `AVAudioMix` on its player
-/// item, whose volume ramps run in the item's own time: sample-exact, and
+/// A track's ``AudioOverlayFade`` and ``AudioOverlayVolumeCurve`` are played
+/// by an `AVAudioMix` on its player item, whose volume ramps run in the
+/// item's own time: sample-exact, and
 /// untouched by seeks, rate changes and the 0.2 s position sync. Its
 /// ``AudioEqualizer`` is rendered into a copy of its sound that the player
 /// plays instead; see ``EqualizedAudioFile``.
@@ -125,6 +126,7 @@ final class AudioOverlayManager {
                 trackIndex: index,
                 baseVolume: vol,
                 fade: AudioOverlayFade(map: map),
+                volumeCurve: AudioOverlayVolumeCurve(map: map),
                 equalizer: equalizer
             )
             let equalizedFile = equalizer.flatMap { equalizedFiles[copyKey(for: entry, $0)] }
@@ -509,7 +511,8 @@ final class AudioOverlayManager {
     /// [attachMix].
     private func applyVolume(to entry: AudioOverlayEntry) {
         let holdsSilent =
-            (entry.isAwaitingMix && entry.fade.fadeInSec > 0) || entry.isAwaitingEqualizer
+            (entry.isAwaitingMix && (entry.fade.fadeInSec > 0 || entry.volumeCurve != nil))
+            || entry.isAwaitingEqualizer
         entry.player.volume = holdsSilent ? 0 : min(entry.baseVolume, 1)
     }
 
@@ -525,7 +528,7 @@ final class AudioOverlayManager {
     /// at once and never holds a fading track silent while it reloads.
     private func attachMix(to entry: AudioOverlayEntry) {
         guard let item = entry.player.currentItem else { return }
-        guard !entry.fade.isNone || entry.boost > 1 else {
+        guard !entry.fade.isNone || entry.boost > 1 || entry.volumeCurve != nil else {
             item.audioMix = nil
             return
         }
@@ -592,7 +595,8 @@ final class AudioOverlayManager {
         item.audioMix = mix
         log.debug(
             "Audio overlay track \(entry.trackIndex): fade in \(entry.fade.fadeInSec)s, " +
-                "fade out \(entry.fade.fadeOutSec)s, boost \(boost) attached",
+                "fade out \(entry.fade.fadeOutSec)s, boost \(boost), " +
+                "\(entry.volumeCurve?.timesSec.count ?? 0) curve points attached",
             name: logName
         )
     }
@@ -617,12 +621,12 @@ final class AudioOverlayManager {
                 entry.videoSec(
                     ofFileSec: entry.playingStartSec + fileDuration.seconds - entry.trackStartSec))
         }
-        let level = Double(entry.boost)
-        guard let audibleSec = ends.min() else {
-            let fadeInOnly = AudioOverlayFade(fadeInSec: entry.fade.fadeInSec, fadeOutSec: 0)
-            return fadeInOnly.ramps(audibleSec: entry.fade.fadeInSec, level: level)
-        }
-        return entry.fade.ramps(audibleSec: audibleSec, level: level)
+        return entry.fade.ramps(
+            audibleSec: ends.min(),
+            level: Double(entry.boost),
+            curve: entry.volumeCurve,
+            videoStartSec: entry.videoStartSec
+        )
     }
 
     /// A player item for [url] that keeps the pitch of a track played at its
@@ -725,6 +729,8 @@ final class AudioOverlayEntry {
     /// The track's volume before its fade is applied, above 1 when boosted.
     var baseVolume: Float
     let fade: AudioOverlayFade
+    /// Scales the volume over the video timeline; nil keeps it constant.
+    let volumeCurve: AudioOverlayVolumeCurve?
     /// Whether the fade and boost's audio mix is still loading.
     var isAwaitingMix: Bool = false
     /// What the mix is built from, once loaded for `item`; see `attachMix`.
@@ -761,6 +767,7 @@ final class AudioOverlayEntry {
         trackIndex: Int,
         baseVolume: Float = 1.0,
         fade: AudioOverlayFade = AudioOverlayFade(fadeInSec: 0, fadeOutSec: 0),
+        volumeCurve: AudioOverlayVolumeCurve? = nil,
         equalizer: AudioEqualizer? = nil
     ) {
         self.player = player
@@ -773,6 +780,7 @@ final class AudioOverlayEntry {
         self.trackIndex = trackIndex
         self.baseVolume = baseVolume
         self.fade = fade
+        self.volumeCurve = volumeCurve
         self.equalizer = equalizer
     }
 

@@ -10019,6 +10019,30 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Giảm dần';
 
   @override
+  String get videoEditorDuckingLabel => 'Giảm tự động';
+
+  @override
+  String get videoEditorDuckingSemanticLabel =>
+      'Giảm âm thanh đã chọn khi có người nói';
+
+  @override
+  String get videoEditorDuckingSheetTitle => 'Nhường chỗ cho giọng nói';
+
+  @override
+  String get videoEditorDuckingSwitchLabel => 'Giảm khi có người nói';
+
+  @override
+  String get videoEditorDuckingDescription =>
+      'Nhỏ lại mỗi khi phần lồng tiếng nói, rồi trở lại như cũ.';
+
+  @override
+  String get videoEditorDuckingNoVoiceOverHint =>
+      'Ghi âm lồng tiếng và âm thanh này sẽ nhỏ lại mỗi khi bạn nói.';
+
+  @override
+  String get videoEditorDuckingStrengthLabel => 'Giảm bao nhiêu';
+
+  @override
   String get videoEditorVoiceEffectLabel => 'Giọng';
 
   @override

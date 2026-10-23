@@ -10190,6 +10190,30 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Ausblenden';
 
   @override
+  String get videoEditorDuckingLabel => 'Ducking';
+
+  @override
+  String get videoEditorDuckingSemanticLabel =>
+      'Ausgewählten Sound leiser machen, während jemand spricht';
+
+  @override
+  String get videoEditorDuckingSheetTitle => 'Platz für Stimmen';
+
+  @override
+  String get videoEditorDuckingSwitchLabel => 'Leiser, während jemand spricht';
+
+  @override
+  String get videoEditorDuckingDescription =>
+      'Wird leiser, sobald das Voiceover spricht, und kommt danach wieder.';
+
+  @override
+  String get videoEditorDuckingNoVoiceOverHint =>
+      'Nimm ein Voiceover auf, dann wird dieser Sound leiser, sobald du sprichst.';
+
+  @override
+  String get videoEditorDuckingStrengthLabel => 'Wie viel leiser';
+
+  @override
   String get videoEditorVoiceEffectLabel => 'Stimme';
 
   @override

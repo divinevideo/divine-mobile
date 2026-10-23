@@ -1961,6 +1961,56 @@ void main() {
       });
     });
 
+    group('ducking', () {
+      final ducked = AudioEvent(
+        id: 'duck-id-12345678901234567890123456789012345678901234567890123',
+        pubkey: testPubkey,
+        createdAt: 1700000000,
+        url: 'https://example.com/audio.aac',
+        ducksUnderVoiceOver: true,
+        duckingVolume: 0.4,
+      );
+
+      test('is off by default and left out of json', () {
+        final plain = AudioEvent(
+          id: 'plain-id-1234567890123456789012345678901234567890123456789012',
+          pubkey: testPubkey,
+          createdAt: 1700000000,
+        );
+
+        expect(plain.ducksUnderVoiceOver, isFalse);
+        expect(plain.duckingVolume, AudioEvent.defaultDuckingVolume);
+        expect(plain.toJson(), isNot(contains('duck')));
+        expect(plain.toJson(), isNot(contains('duckVolume')));
+      });
+
+      test('survives a toJson/fromJson roundtrip', () {
+        final restored = AudioEvent.fromJson(ducked.toJson());
+        expect(restored.ducksUnderVoiceOver, isTrue);
+        expect(restored.duckingVolume, 0.4);
+      });
+
+      test('falls back to the default for a volume out of range', () {
+        final json = ducked.toJson()..['duckVolume'] = 3;
+        expect(
+          AudioEvent.fromJson(json).duckingVolume,
+          AudioEvent.defaultDuckingVolume,
+        );
+      });
+
+      test('is part of equality, so a ducking-only edit is a change', () {
+        expect(ducked.copyWith(ducksUnderVoiceOver: false), isNot(ducked));
+        expect(ducked.copyWith(duckingVolume: 0.5), isNot(ducked));
+      });
+
+      test('is never published in Kind 1063 tags', () {
+        expect(
+          ducked.toTags(),
+          ducked.copyWith(ducksUnderVoiceOver: false).toTags(),
+        );
+      });
+    });
+
     group('voice processing', () {
       final processed = AudioEvent(
         id: '${AudioEvent.localImportMarker}_voice_over_1',

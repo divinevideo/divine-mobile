@@ -800,6 +800,57 @@ void main() {
       expect(equalizerButton().type, TimelineActionButtonType.primary);
     });
 
+    testWidgets('offers ducking for every sound but a voice-over and '
+        'highlights it once the sound ducks', (tester) async {
+      const music = TimelineOverlayItem(
+        id: 'sound-1',
+        type: TimelineOverlayType.sound,
+        startTime: Duration.zero,
+        endTime: Duration(seconds: 4),
+      );
+      const recording = TimelineOverlayItem(
+        id: '${VoiceOverCubit.voiceOverIdPrefix}_1-100-0',
+        type: TimelineOverlayType.sound,
+        startTime: Duration.zero,
+        endTime: Duration(seconds: 4),
+      );
+      Finder duckingButton() => find.byWidgetPredicate(
+        (w) =>
+            w is TimelineActionButton &&
+            w.semanticLabel == l10n.videoEditorDuckingSemanticLabel,
+      );
+      final sound = AudioEvent(id: music.id, pubkey: 'pub', createdAt: 0);
+      final take = AudioEvent(
+        id: recording.id,
+        pubkey: 'local_import',
+        createdAt: 0,
+        url: '/docs/voice_over_recordings/voice_over_1.m4a',
+      );
+      when(
+        () => overlayBloc.state,
+      ).thenReturn(TimelineOverlayState(audioTracks: [sound, take]));
+
+      await tester.pumpWidget(build(music));
+      expect(
+        tester.widget<TimelineActionButton>(duckingButton()).type,
+        TimelineActionButtonType.secondary,
+      );
+
+      await tester.pumpWidget(build(recording));
+      expect(duckingButton(), findsNothing);
+
+      when(() => overlayBloc.state).thenReturn(
+        TimelineOverlayState(
+          audioTracks: [sound.copyWith(ducksUnderVoiceOver: true), take],
+        ),
+      );
+      await tester.pumpWidget(build(music.copyWith(label: 'rebuilt')));
+      expect(
+        tester.widget<TimelineActionButton>(duckingButton()).type,
+        TimelineActionButtonType.primary,
+      );
+    });
+
     testWidgets('offers speed for a sound and highlights it once the sound '
         'plays faster or slower', (tester) async {
       const item = TimelineOverlayItem(

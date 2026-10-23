@@ -17117,6 +17117,48 @@ abstract class AppLocalizations {
   /// **'Fade out'**
   String get videoEditorFadeOutLabel;
 
+  /// Caption of the button in the sound's timeline controls that opens the sheet where the sound can be set to get quieter automatically while a voice-over talks (audio ducking).
+  ///
+  /// In en, this message translates to:
+  /// **'Ducking'**
+  String get videoEditorDuckingLabel;
+
+  /// Accessibility label for the Ducking button in the sound's timeline controls.
+  ///
+  /// In en, this message translates to:
+  /// **'Lower the selected sound while someone talks'**
+  String get videoEditorDuckingSemanticLabel;
+
+  /// Title of the bottom sheet where a sound can be set to get quieter automatically while a voice-over talks, so the voice can be heard.
+  ///
+  /// In en, this message translates to:
+  /// **'Make room for voices'**
+  String get videoEditorDuckingSheetTitle;
+
+  /// Label of the switch that makes the selected sound get quieter automatically whenever a voice-over talks.
+  ///
+  /// In en, this message translates to:
+  /// **'Lower while someone talks'**
+  String get videoEditorDuckingSwitchLabel;
+
+  /// Explains the ducking switch below its label, shown when the video already has a voice-over.
+  ///
+  /// In en, this message translates to:
+  /// **'Gets quieter whenever the voice-over talks, then comes back up.'**
+  String get videoEditorDuckingDescription;
+
+  /// Explains the ducking switch below its label while the video has no voice-over yet.
+  ///
+  /// In en, this message translates to:
+  /// **'Record a voice-over and this sound gets quieter whenever you talk.'**
+  String get videoEditorDuckingNoVoiceOverHint;
+
+  /// Label of the slider for how much quieter the sound gets while a voice-over talks, shown next to a percentage.
+  ///
+  /// In en, this message translates to:
+  /// **'How much quieter'**
+  String get videoEditorDuckingStrengthLabel;
+
   /// Label of the timeline action that changes how the selected sound sounds — a voice-over, music or any other track.
   ///
   /// In en, this message translates to:

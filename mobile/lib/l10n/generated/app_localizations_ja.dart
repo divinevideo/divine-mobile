@@ -9563,6 +9563,28 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'フェードアウト';
 
   @override
+  String get videoEditorDuckingLabel => 'ダッキング';
+
+  @override
+  String get videoEditorDuckingSemanticLabel => '話している間、選択したサウンドの音量を下げる';
+
+  @override
+  String get videoEditorDuckingSheetTitle => '声を聞きやすく';
+
+  @override
+  String get videoEditorDuckingSwitchLabel => '話している間は音量を下げる';
+
+  @override
+  String get videoEditorDuckingDescription => 'ナレーションが話すたびに音量が下がり、終わると戻ります。';
+
+  @override
+  String get videoEditorDuckingNoVoiceOverHint =>
+      'ナレーションを録音すると、話すたびにこのサウンドの音量が下がります。';
+
+  @override
+  String get videoEditorDuckingStrengthLabel => '下げる量';
+
+  @override
   String get videoEditorVoiceEffectLabel => 'ボイス';
 
   @override

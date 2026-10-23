@@ -10,9 +10,11 @@ import 'package:http/testing.dart';
 import 'package:models/models.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/services/video_editor/render_audio_fetcher.dart';
+import 'package:openvine/services/video_editor/video_editor_audio_ducking.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
 import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show AudioLevelEnvelope;
 import 'package:unified_logger/unified_logger.dart';
 
 const _missingUrl = 'https://example.com/missing';
@@ -462,6 +464,48 @@ void main() {
 
         expect(result.single.fadeInDuration, equals(Duration.zero));
         expect(result.single.fadeOutDuration, equals(Duration.zero));
+      });
+    });
+
+    group('ducking', () {
+      test('lowers a ducking track wherever the voice-over talks', () async {
+        final ducking = VideoEditorAudioDucking(
+          // Talks from 1 s to 2 s.
+          measure: (tracks, {videoDuration}) async => AudioLevelEnvelope(
+            Float32List(300)..fillRange(100, 200, 0.5),
+            levelsPerSecond: 100,
+          ),
+        );
+        const voiceId = '${AudioEvent.voiceOverIdPrefix}_1';
+
+        final result = await resolveRenderAudioTracks(
+          [
+            _fileTrack(id: 'music', path: '/tmp/music.mp3'),
+            _fileTrack(id: voiceId, path: '/tmp/voice.m4a'),
+          ],
+          logName: 'test',
+          ducking: ducking,
+          audioEvents: [
+            AudioEvent(
+              id: 'music',
+              pubkey: 'pubkey',
+              createdAt: 0,
+              ducksUnderVoiceOver: true,
+              duckingVolume: 0.2,
+            ),
+            AudioEvent(
+              id: voiceId,
+              pubkey: 'pubkey',
+              createdAt: 0,
+              url: '/tmp/voice.m4a',
+            ),
+          ],
+        );
+
+        final curve = result[0].volumeCurve!;
+        expect(curve.volumeAt(const Duration(milliseconds: 1500)), 0.2);
+        expect(curve.volumeAt(const Duration(seconds: 3)), 1);
+        expect(result[1].volumeCurve, isNull);
       });
     });
 

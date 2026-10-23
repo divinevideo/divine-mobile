@@ -9977,6 +9977,30 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Yavaş çıkış';
 
   @override
+  String get videoEditorDuckingLabel => 'Ses kısma';
+
+  @override
+  String get videoEditorDuckingSemanticLabel =>
+      'Biri konuşurken seçili sesi kıs';
+
+  @override
+  String get videoEditorDuckingSheetTitle => 'Seslere yer aç';
+
+  @override
+  String get videoEditorDuckingSwitchLabel => 'Biri konuşurken kıs';
+
+  @override
+  String get videoEditorDuckingDescription =>
+      'Dış ses her konuştuğunda kısılır, sonra geri gelir.';
+
+  @override
+  String get videoEditorDuckingNoVoiceOverHint =>
+      'Dış ses kaydet, sen konuştukça bu ses kısılsın.';
+
+  @override
+  String get videoEditorDuckingStrengthLabel => 'Ne kadar kısılsın';
+
+  @override
   String get videoEditorVoiceEffectLabel => 'Ses';
 
   @override

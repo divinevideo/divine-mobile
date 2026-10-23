@@ -9,6 +9,8 @@ class VideoEditorTimelineControls extends StatelessWidget {
     this.onEdit,
     this.onFade,
     this.hasFade = false,
+    this.onDucking,
+    this.isDucking = false,
     this.onVoiceEffect,
     this.hasVoiceEffect = false,
     this.onEqualizer,
@@ -81,6 +83,14 @@ class VideoEditorTimelineControls extends StatelessWidget {
   /// Whether the selected sound already fades in or out, which highlights
   /// the action so the fade is visible from the timeline.
   final bool hasFade;
+
+  /// Opens the sheet that lets the selected sound get quieter while a
+  /// voice-over talks. Sounds other than voice-overs only.
+  final VoidCallback? onDucking;
+
+  /// Whether the selected sound already ducks under the voice-over, which
+  /// highlights the action.
+  final bool isDucking;
 
   /// Opens the voice effect sheet. Sounds only.
   final VoidCallback? onVoiceEffect;
@@ -309,6 +319,14 @@ class VideoEditorTimelineControls extends StatelessWidget {
             semanticLabel: context.l10n.videoEditorFadeSoundSemanticLabel,
             onPressed: onFade,
             type: hasFade ? .primary : .secondary,
+          ),
+        if (onDucking != null)
+          TimelineActionButton(
+            icon: .chatCircle,
+            label: context.l10n.videoEditorDuckingLabel,
+            semanticLabel: context.l10n.videoEditorDuckingSemanticLabel,
+            onPressed: onDucking,
+            type: isDucking ? .primary : .secondary,
           ),
         if (onVoiceEffect != null)
           TimelineActionButton(

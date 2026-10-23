@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:openvine/models/video_editor/audio_fade.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show AudioVolumeCurve;
 import 'package:sound_service/sound_service.dart';
 
 /// One timeline sound scheduled against the stop-motion preview clock.
@@ -17,6 +18,7 @@ class StopMotionAudioPreviewTrack {
     this.fadeIn = Duration.zero,
     this.fadeOut = Duration.zero,
     this.speed = 1,
+    this.volumeCurve,
   });
 
   /// Timeline item id of the sound.
@@ -45,7 +47,13 @@ class StopMotionAudioPreviewTrack {
   /// unchanged pitch.
   final double speed;
 
-  bool get _hasFade => fadeIn > Duration.zero || fadeOut > Duration.zero;
+  /// Scales [volume] over the editor timeline, such as the dips of a sound
+  /// that ducks under the voice-over; `null` keeps it constant.
+  final AudioVolumeCurve? volumeCurve;
+
+  /// Whether the volume changes while the sound plays.
+  bool get _changesVolume =>
+      fadeIn > Duration.zero || fadeOut > Duration.zero || volumeCurve != null;
 }
 
 /// Creates the per-track player; injectable for tests.
@@ -224,12 +232,14 @@ class StopMotionAudioPreview {
     }
   }
 
-  /// Sets [scheduled]'s volume to its fade at [position], when that changed.
+  /// Sets [scheduled]'s volume to its fade and volume curve at [position],
+  /// when that changed.
   Future<void> _applyFade(_ScheduledTrack scheduled, Duration position) async {
     final track = scheduled.track;
-    if (!track._hasFade) return;
+    if (!track._changesVolume) return;
     final volume =
         track.volume *
+        (track.volumeCurve?.volumeAt(position) ?? 1) *
         audioFadeGain(
           position: position - track.windowStart,
           length: track.windowEnd - track.windowStart,

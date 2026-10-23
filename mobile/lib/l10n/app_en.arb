@@ -7160,6 +7160,34 @@
   "@videoEditorFadeOutLabel": {
     "description": "Label of the slider for how long a sound falls from full volume to silence before it ends."
   },
+  "videoEditorDuckingLabel": "Ducking",
+  "@videoEditorDuckingLabel": {
+    "description": "Caption of the button in the sound's timeline controls that opens the sheet where the sound can be set to get quieter automatically while a voice-over talks (audio ducking)."
+  },
+  "videoEditorDuckingSemanticLabel": "Lower the selected sound while someone talks",
+  "@videoEditorDuckingSemanticLabel": {
+    "description": "Accessibility label for the Ducking button in the sound's timeline controls."
+  },
+  "videoEditorDuckingSheetTitle": "Make room for voices",
+  "@videoEditorDuckingSheetTitle": {
+    "description": "Title of the bottom sheet where a sound can be set to get quieter automatically while a voice-over talks, so the voice can be heard."
+  },
+  "videoEditorDuckingSwitchLabel": "Lower while someone talks",
+  "@videoEditorDuckingSwitchLabel": {
+    "description": "Label of the switch that makes the selected sound get quieter automatically whenever a voice-over talks."
+  },
+  "videoEditorDuckingDescription": "Gets quieter whenever the voice-over talks, then comes back up.",
+  "@videoEditorDuckingDescription": {
+    "description": "Explains the ducking switch below its label, shown when the video already has a voice-over."
+  },
+  "videoEditorDuckingNoVoiceOverHint": "Record a voice-over and this sound gets quieter whenever you talk.",
+  "@videoEditorDuckingNoVoiceOverHint": {
+    "description": "Explains the ducking switch below its label while the video has no voice-over yet."
+  },
+  "videoEditorDuckingStrengthLabel": "How much quieter",
+  "@videoEditorDuckingStrengthLabel": {
+    "description": "Label of the slider for how much quieter the sound gets while a voice-over talks, shown next to a percentage."
+  },
   "videoEditorVoiceEffectLabel": "Voice",
   "@videoEditorVoiceEffectLabel": {
     "description": "Label of the timeline action that changes how the selected sound sounds — a voice-over, music or any other track."
