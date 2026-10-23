@@ -755,7 +755,6 @@ void main() {
           await tester.pump();
 
           expect(find.byType(SupporterMembership), findsNothing);
-          expect(find.byType(SupporterHaloWings), findsNothing);
         },
       );
     }
@@ -870,6 +869,7 @@ void main() {
       Future<void> pumpHeader(
         WidgetTester tester, {
         required bool isOwnProfile,
+        bool isVanished = false,
         bool isPublicSupporter = false,
         SupporterRepository? ownMembership,
         Locale locale = const Locale('en'),
@@ -880,6 +880,7 @@ void main() {
           buildTestWidget(
             userIdHex: testUserHex,
             isOwnProfile: isOwnProfile,
+            isVanished: isVanished,
             suppliedProfile: createTestProfile(
               displayName: 'Ivy',
               picture: supporterPicture,
@@ -908,6 +909,51 @@ void main() {
       }
 
       group('renders', () {
+        for (final ownProfile in [false, true]) {
+          testWidgets(
+            'keeps supporter treatment off '
+            '${ownProfile ? 'your own' : "someone else's"} vanished profile',
+            (tester) async {
+              final ownMembership = ownProfile
+                  ? await membership(
+                      tester,
+                      isSupporter: true,
+                      haloVisible: true,
+                    )
+                  : null;
+              await pumpHeader(
+                tester,
+                isOwnProfile: ownProfile,
+                isPublicSupporter: true,
+                ownMembership: ownMembership,
+              );
+              expect(find.byType(SupporterHaloWings), findsOneWidget);
+
+              // Override values belong to the provider container. Compare a
+              // fresh vanished-profile fixture, not the first cached value.
+              await tester.pumpWidget(const SizedBox.shrink());
+              await tester.pump();
+              await pumpHeader(
+                tester,
+                isOwnProfile: ownProfile,
+                isVanished: true,
+                isPublicSupporter: true,
+                ownMembership: ownMembership,
+              );
+
+              expect(
+                ProviderScope.containerOf(
+                  tester.element(find.byType(ProfileHeaderWidget)),
+                  listen: false,
+                ).read(profileVanishedProvider(testUserHex)),
+                isTrue,
+              );
+              expect(find.byType(SupporterHaloWings), findsNothing);
+              expect(find.byType(SupporterMembership), findsNothing);
+            },
+          );
+        }
+
         for (final confirmedExpired in [false, true]) {
           testWidgets(
             '${confirmedExpired ? 'keeps server-confirmed expiry' : 'uses public recognition after local cache expiry'} '
