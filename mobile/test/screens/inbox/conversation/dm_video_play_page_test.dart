@@ -404,6 +404,43 @@ void main() {
             },
           );
 
+          testWidgets(
+            'when the file has no name before its extension, without '
+            'marking every character',
+            (tester) async {
+              final unnamed = '${File(expectedClipPath()).parent.path}/.mp4';
+              stubKeptVideo(() async {
+                File(unnamed)
+                  ..createSync(recursive: true)
+                  ..writeAsBytesSync(const [1, 2, 3]);
+                return unnamed;
+              });
+              installMockDivineVideoPlayer(
+                onMethodCall: (call) async {
+                  if (call.method == 'setClips') {
+                    throw PlatformException(
+                      code: 'source',
+                      message: 'cannot open $unnamed',
+                    );
+                  }
+                  return null;
+                },
+                streamHandler: _PlayerEvents(),
+              );
+
+              await tester.pumpWidget(host());
+              await tester.pump();
+              await tester.runAsync(pumpEventQueue);
+              await tester.pump();
+
+              expect(
+                '${recorder.errors.single}',
+                contains('source: cannot open [REDACTED]'),
+              );
+              expectNoFileIn(recorder.errors);
+            },
+          );
+
           testWidgets('and still reports a programming error at start', (
             tester,
           ) async {
