@@ -28,7 +28,8 @@ import 'package:openvine/screens/inbox/conversation/widgets/encrypted_video_card
 ///
 /// When the user chose to blur video previews, a trusted card other than
 /// the user's own still downloads, but shows a blurhash instead of its frame
-/// until the video is played.
+/// until the video is played. A video its sender marked sensitive is blurred
+/// the same way whether or not the user chose to, and says so.
 class DmVideoPreviewScope extends ConsumerWidget {
   /// Creates a [DmVideoPreviewScope] for [message].
   const DmVideoPreviewScope({
@@ -94,8 +95,10 @@ class DmVideoPreviewScope extends ConsumerWidget {
       );
     }
     final memory = ref.watch(dmVideoPreviewMemoryProvider);
+    final markedSensitive = message.isMarkedSensitive;
     final blurUntilPlayed =
-        !isOwn && ref.watch(dmVideoBlurPreviewsEnabledProvider);
+        !isOwn &&
+        (markedSensitive || ref.watch(dmVideoBlurPreviewsEnabledProvider));
     return BlocProvider(
       // A new account, or blurring turned on or off, starts a fresh read.
       key: ValueKey((store, memory, message.id, blurUntilPlayed)),
@@ -119,9 +122,15 @@ class DmVideoPreviewScope extends ConsumerWidget {
                 (state.framePath, state.blurred, state.frameBlurhash),
             builder: (context, preview) {
               final (framePath, blurred, frameBlurhash) = preview;
-              return blurred
-                  ? builder(context, null, DmVideoHold.blurred, frameBlurhash)
-                  : builder(context, framePath, null, null);
+              if (!blurred) return builder(context, framePath, null, null);
+              return builder(
+                context,
+                null,
+                markedSensitive
+                    ? DmVideoHold.markedSensitive
+                    : DmVideoHold.blurred,
+                frameBlurhash,
+              );
             },
           ),
     );

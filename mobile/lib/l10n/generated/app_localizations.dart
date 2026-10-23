@@ -6301,6 +6301,12 @@ abstract class AppLocalizations {
   /// **'Tap to load'**
   String get dmVideoCardTapToLoad;
 
+  /// Short hint on a blurred video message card in a DM thread whose sender marked the video sensitive with a content warning. The card stays blurred until the user taps to play it, even when they did not turn on blurring.
+  ///
+  /// In en, this message translates to:
+  /// **'Marked sensitive by sender'**
+  String get dmVideoCardMarkedSensitive;
+
   /// Short hint on a blurred video message card in a DM thread, shown when the user turned on 'Blur video previews in messages'. Tapping plays the video, after which the card shows its preview.
   ///
   /// In en, this message translates to:

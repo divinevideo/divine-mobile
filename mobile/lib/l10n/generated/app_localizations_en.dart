@@ -3771,6 +3771,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dmVideoCardTapToLoad => 'Tap to load';
 
   @override
+  String get dmVideoCardMarkedSensitive => 'Marked sensitive by sender';
+
+  @override
   String get dmVideoCardTapToWatch => 'Tap to watch';
 
   @override

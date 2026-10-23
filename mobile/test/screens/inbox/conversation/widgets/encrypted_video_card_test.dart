@@ -307,6 +307,50 @@ void main() {
         },
       );
 
+      testWidgets("keeps a sender-marked card's blurhash, shows no frame and "
+          'says the sender marked it', (tester) async {
+        await tester.pumpWidget(
+          _host(
+            EncryptedVideoCard(
+              fileMetadata: _videoMetadata(),
+              isSent: false,
+              framePath: framePath,
+              hold: DmVideoHold.markedSensitive,
+            ),
+          ),
+        );
+
+        expect(find.byType(BlurhashDisplay), findsOneWidget);
+        expect(_keptFrame(framePath), findsNothing);
+        expect(find.text(strings.dmVideoCardMarkedSensitive), findsOneWidget);
+      });
+
+      testWidgets(
+        'blurs a sender-marked card with the blurhash read from its frame',
+        (tester) async {
+          const frameBlurhash = 'LEHV6nWB2yk8pyo0adR*.7kCMdnj';
+          await tester.pumpWidget(
+            _host(
+              EncryptedVideoCard(
+                fileMetadata: _videoMetadata(blurhash: null),
+                isSent: false,
+                framePath: framePath,
+                hold: DmVideoHold.markedSensitive,
+                frameBlurhash: frameBlurhash,
+              ),
+            ),
+          );
+
+          expect(
+            tester
+                .widget<BlurhashDisplay>(find.byType(BlurhashDisplay))
+                .blurhash,
+            frameBlurhash,
+          );
+          expect(_keptFrame(framePath), findsNothing);
+        },
+      );
+
       testWidgets(
         'shows a placeholder, never the frame, while a blurred card has no '
         'blurhash',

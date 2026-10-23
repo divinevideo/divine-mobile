@@ -625,6 +625,7 @@ const _knownUntranslatedDebt = <String>{
   'safetySettingsBlurDmVideoPreviews',
   'safetySettingsBlurDmVideoPreviewsSubtitle',
   'dmVideoCardTapToWatch',
+  'dmVideoCardMarkedSensitive',
 
   // Group inbox preview sender prefix (#8428). The separator after the name is
   // a per-locale convention (a space before the colon in French, a full-width

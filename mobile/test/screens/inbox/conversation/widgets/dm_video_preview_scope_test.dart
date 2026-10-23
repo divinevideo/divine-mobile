@@ -43,7 +43,7 @@ const _frameBlurhash = 'LEHV6nWB2yk8pyo0adR*.7kCMdnj';
 final String _sender = 'b' * 64;
 final String _owner = 'd' * 64;
 
-DmMessage _videoMessage() => DmMessage(
+DmMessage _videoMessage({List<List<String>> tags = const []}) => DmMessage(
   id: 'a' * 64,
   conversationId: 'conversation',
   senderPubkey: _sender,
@@ -51,6 +51,7 @@ DmMessage _videoMessage() => DmMessage(
   createdAt: 1757385263,
   giftWrapId: 'c' * 64,
   messageKind: 15,
+  tags: tags,
   fileMetadata: const DmFileMetadata(
     fileType: 'video/mp4',
     encryptionAlgorithm: 'aes-gcm',
@@ -82,6 +83,7 @@ void main() {
 
   Widget host({
     required bool accepted,
+    DmMessage? message,
     bool isOwn = false,
     bool blocked = false,
     bool muted = false,
@@ -103,7 +105,7 @@ void main() {
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       home: DmVideoPreviewScope(
-        message: _videoMessage(),
+        message: message ?? _videoMessage(),
         isOwn: isOwn,
         accepted: accepted,
         blocked: blocked,
@@ -471,6 +473,118 @@ void main() {
             accepted: false,
             relationship: Stream.value(FollowRelationship.followsYou),
             blur: blur,
+            memory: memory,
+            built: built,
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expectNoStoreRead();
+        expect(built.last, (null, DmVideoHold.request));
+      });
+    });
+
+    group('marked sensitive by its sender', () {
+      final marked = _videoMessage(
+        tags: const [
+          ['content-warning'],
+        ],
+      );
+      late DmVideoPreviewMemory memory;
+
+      setUp(() => memory = DmVideoPreviewMemory());
+      tearDown(() => memory.dispose());
+
+      testWidgets(
+        'blurs it, though the user did not choose to blur, and still '
+        'downloads it',
+        (tester) async {
+          final built = <(String?, DmVideoHold?)>[];
+          await tester.pumpWidget(
+            host(
+              accepted: true,
+              message: marked,
+              memory: memory,
+              built: built,
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          expectDownloadedOnce();
+          expect(built, isNotEmpty);
+          expect(built, everyElement((null, DmVideoHold.markedSensitive)));
+        },
+      );
+
+      testWidgets('says the sender marked it when the user also blurs', (
+        tester,
+      ) async {
+        SharedPreferences.setMockInitialValues({
+          DmVideoBlurPreferenceService.storageKey(_owner): true,
+        });
+        final blur = DmVideoBlurPreferenceService(
+          await SharedPreferences.getInstance(),
+          account: _owner,
+        );
+        addTearDown(blur.dispose);
+        final built = <(String?, DmVideoHold?)>[];
+        await tester.pumpWidget(
+          host(
+            accepted: true,
+            message: marked,
+            blur: blur,
+            memory: memory,
+            built: built,
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(built.last, (null, DmVideoHold.markedSensitive));
+      });
+
+      testWidgets("never blurs the user's own video", (tester) async {
+        final built = <(String?, DmVideoHold?)>[];
+        await tester.pumpWidget(
+          host(
+            accepted: true,
+            isOwn: true,
+            message: marked,
+            memory: memory,
+            built: built,
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(built.last, (_framePath, null));
+      });
+
+      testWidgets('shows the frame once its video is played', (tester) async {
+        final built = <(String?, DmVideoHold?)>[];
+        await tester.pumpWidget(
+          host(accepted: true, message: marked, memory: memory, built: built),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(built.last, (null, DmVideoHold.markedSensitive));
+
+        memory.markWatched(marked.id);
+        await tester.pump();
+        await tester.pump();
+
+        expect(built.last, (_framePath, null));
+      });
+
+      testWidgets('still asks for a tap on a request', (tester) async {
+        final built = <(String?, DmVideoHold?)>[];
+        await tester.pumpWidget(
+          host(
+            accepted: false,
+            message: marked,
+            relationship: Stream.value(FollowRelationship.followsYou),
             memory: memory,
             built: built,
           ),

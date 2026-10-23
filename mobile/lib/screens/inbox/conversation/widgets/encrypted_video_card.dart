@@ -34,18 +34,23 @@ enum DmVideoHold {
   /// The user blurs previews from people they trust: the video still
   /// downloads, but the card shows a blurhash until it is played.
   blurred,
+
+  /// The sender marked the video sensitive, so the card blurs it as for
+  /// [blurred], whether or not the user chose to blur previews.
+  markedSensitive,
 }
 
 /// Card for an encrypted video file message.
 ///
 /// It shows [framePath], a frame this device read from the video it keeps,
 /// once there is one; until then the sender's blurhash, decoded on the device;
-/// and with neither a neutral play placeholder. A [DmVideoHold.blurred] card
-/// never shows the frame: it shows the sender's blurhash, else
-/// [frameBlurhash], else the placeholder. It never fetches the sender's
-/// encrypted thumbnail (`DmFileMetadata.thumbnailUrl`): that is encrypted under
-/// the same key and nonce as the video, so reading it would reuse the GCM
-/// nonce. The frame and blurhash are as private as the video and never logged.
+/// and with neither a neutral play placeholder. A [DmVideoHold.blurred] or
+/// [DmVideoHold.markedSensitive] card never shows the frame: it shows the
+/// sender's blurhash, else [frameBlurhash], else the placeholder. It never
+/// fetches the sender's encrypted thumbnail (`DmFileMetadata.thumbnailUrl`):
+/// that is encrypted under the same key and nonce as the video, so reading it
+/// would reuse the GCM nonce. The frame and blurhash are as private as the
+/// video and never logged.
 /// Playback is owned by the video DM play page, opened through [onTap].
 class EncryptedVideoCard extends StatefulWidget {
   const EncryptedVideoCard({
@@ -76,12 +81,12 @@ class EncryptedVideoCard extends StatefulWidget {
   final String? framePath;
 
   /// Why the card holds back its preview, null when it does not. A held card
-  /// shows no frame, keeps a blurhash only for a request or a blurred card,
-  /// and says why.
+  /// shows no frame, keeps a blurhash only for a request or a blurred or
+  /// sender-marked card, and says why.
   final DmVideoHold? hold;
 
-  /// A blurhash read from the kept frame, which a [DmVideoHold.blurred] card
-  /// shows when the sender sent none.
+  /// A blurhash read from the kept frame, which a [DmVideoHold.blurred] or
+  /// [DmVideoHold.markedSensitive] card shows when the sender sent none.
   final String? frameBlurhash;
 
   /// Opens playback. When null the card is not interactive, so it never
@@ -102,7 +107,8 @@ class _EncryptedVideoCardState extends State<EncryptedVideoCard> {
         : metadataBlurhash;
     final blurhash = switch (hold) {
       null || DmVideoHold.request => senderBlurhash,
-      DmVideoHold.blurred => senderBlurhash ?? widget.frameBlurhash,
+      DmVideoHold.blurred ||
+      DmVideoHold.markedSensitive => senderBlurhash ?? widget.frameBlurhash,
       DmVideoHold.blocked || DmVideoHold.muted => null,
     };
     final framePath = hold == null ? widget.framePath : null;
@@ -112,6 +118,7 @@ class _EncryptedVideoCardState extends State<EncryptedVideoCard> {
       DmVideoHold.blocked => context.l10n.dmVideoCardHiddenSenderBlocked,
       DmVideoHold.muted => context.l10n.dmVideoCardHiddenSenderMuted,
       DmVideoHold.blurred => context.l10n.dmVideoCardTapToWatch,
+      DmVideoHold.markedSensitive => context.l10n.dmVideoCardMarkedSensitive,
     };
     final preview = framePath == null && blurhash == null
         ? _EncryptedVideoPlaceholderCard(hint: hint)
