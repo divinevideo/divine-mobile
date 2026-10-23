@@ -1,6 +1,7 @@
 // ABOUTME: Test timestamp backdating functionality
 // ABOUTME: Verifies NostrTimestamp generates acceptable timestamps for relays
 
+import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 
@@ -16,8 +17,12 @@ void main() {
 
     test('should apply drift tolerance correctly', () {
       const driftTolerance = 300; // 5 minutes
-      final timestamp = NostrTimestamp.now(driftTolerance: driftTolerance);
-      final currentTime = DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000;
+      final fixedClock = Clock.fixed(DateTime.utc(2026, 10, 23, 12));
+      final timestamp = NostrTimestamp.now(
+        driftTolerance: driftTolerance,
+        clock: fixedClock,
+      );
+      final currentTime = fixedClock.now().millisecondsSinceEpoch ~/ 1000;
 
       // Should be exactly driftTolerance seconds behind current time
       expect(timestamp, equals(currentTime - driftTolerance));
@@ -49,8 +54,12 @@ void main() {
 
     test('Kind 0 timestamp should be 5 minutes behind current time', () {
       final tolerance = NostrTimestamp.getDriftToleranceForKind(0);
-      final timestamp = NostrTimestamp.now(driftTolerance: tolerance);
-      final currentTime = DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000;
+      final fixedClock = Clock.fixed(DateTime.utc(2026, 10, 23, 12));
+      final timestamp = NostrTimestamp.now(
+        driftTolerance: tolerance,
+        clock: fixedClock,
+      );
+      final currentTime = fixedClock.now().millisecondsSinceEpoch ~/ 1000;
 
       // Should be exactly 5 minutes (300 seconds) behind
       expect(timestamp, equals(currentTime - 300));

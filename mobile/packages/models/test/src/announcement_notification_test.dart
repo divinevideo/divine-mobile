@@ -17,36 +17,38 @@ void main() {
         learnMoreUrl: Uri.parse('https://divine.video/news'),
       );
 
-  test('namespaces identity and sanitizes display text', () {
-    final item = create();
-    expect(item.id, 'announcement:12345678-1234-4123-8123-123456789012');
-    expect(item.announcementId, '12345678-1234-4123-8123-123456789012');
-    expect(item.type, NotificationKind.announcement);
-    expect(item.title, 'News�');
-    expect(item.body, 'Hello');
-    expect(item.isRead, isFalse);
-    expect(item.sourceEventIds, isEmpty);
-    expect(item.notificationIds, isEmpty);
-  });
+  group('AnnouncementNotification construction and copyWith', () {
+    test('namespaces identity and sanitizes display text', () {
+      final item = create();
+      expect(item.id, 'announcement:12345678-1234-4123-8123-123456789012');
+      expect(item.announcementId, '12345678-1234-4123-8123-123456789012');
+      expect(item.type, NotificationKind.announcement);
+      expect(item.title, 'News�');
+      expect(item.body, 'Hello');
+      expect(item.isRead, isFalse);
+      expect(item.sourceEventIds, isEmpty);
+      expect(item.notificationIds, isEmpty);
+    });
 
-  test('takes an immutable defensive copy of platform selection', () {
-    final platforms = ['ios'];
-    final item = create(platforms: platforms);
-    platforms.add('android');
-    expect(item.platforms, ['ios']);
-    expect(() => item.platforms.add('web'), throwsUnsupportedError);
-  });
+    test('takes an immutable defensive copy of platform selection', () {
+      final platforms = ['ios'];
+      final item = create(platforms: platforms);
+      platforms.add('android');
+      expect(item.platforms, ['ios']);
+      expect(() => item.platforms.add('web'), throwsUnsupportedError);
+    });
 
-  test('copyWith changes read state and preserves announcement metadata', () {
-    final item = create(platforms: ['ios']);
-    final updated = item.copyWith(isRead: true);
-    expect(updated.isRead, isTrue);
-    expect(item.isRead, isFalse);
-    expect(updated.copyWith(isRead: false), item);
-    expect(updated.copyWith(), updated);
-    expect(updated.expiresAt, expiresAt);
-    expect(updated.timestamp, publishedAt);
-    expect(updated.minimumAppVersion, '1.0.0');
-    expect(updated.learnMoreUrl, Uri.parse('https://divine.video/news'));
+    test('copyWith changes read state and preserves announcement metadata', () {
+      final item = create(platforms: ['ios']);
+      final updated = item.copyWith(isRead: true);
+      expect(updated.isRead, isTrue);
+      expect(item.isRead, isFalse);
+      expect(updated.copyWith(isRead: false), item);
+      expect(updated.copyWith(), updated);
+      expect(updated.expiresAt, expiresAt);
+      expect(updated.timestamp, publishedAt);
+      expect(updated.minimumAppVersion, '1.0.0');
+      expect(updated.learnMoreUrl, Uri.parse('https://divine.video/news'));
+    });
   });
 }

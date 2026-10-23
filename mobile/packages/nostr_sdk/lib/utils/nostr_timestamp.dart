@@ -1,6 +1,8 @@
 // ABOUTME: Utility for consistent Nostr timestamp generation with clock drift handling
 // ABOUTME: Ensures all timestamps are UTC-based and compatible with relay validation
 
+import 'package:clock/clock.dart';
+
 /// Utility class for generating Nostr-compatible timestamps
 ///
 /// Handles:
@@ -48,12 +50,16 @@ class NostrTimestamp {
   ///
   /// [driftTolerance] - Number of seconds to subtract from current time
   ///                    (default: 30 seconds, max: 30 days)
-  static int now({int driftTolerance = defaultClockDriftTolerance}) {
+  /// [clock] supplies the time source, allowing exact backdate tests.
+  static int now({
+    int driftTolerance = defaultClockDriftTolerance,
+    Clock clock = const Clock(),
+  }) {
     // Clamp drift tolerance to reasonable bounds
     final adjustedDrift = driftTolerance.clamp(0, maxClockDrift);
 
     // Always use UTC to ensure timezone consistency
-    final nowUtc = DateTime.now().toUtc();
+    final nowUtc = clock.now().toUtc();
     final timestamp = nowUtc.millisecondsSinceEpoch ~/ 1000;
 
     // Subtract drift tolerance to ensure relay acceptance
