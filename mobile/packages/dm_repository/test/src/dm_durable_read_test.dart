@@ -23,11 +23,16 @@ class _BlockingReadState extends DmSyncState {
   @override
   Future<void> rememberReadCursors(
     String pubkey,
-    Map<String, int> cursors,
-  ) async {
+    Map<String, int> cursors, {
+    Map<String, Set<String>> boundaryMessageIds = const {},
+  }) async {
     captured.complete();
     await release.future;
-    await super.rememberReadCursors(pubkey, cursors);
+    await super.rememberReadCursors(
+      pubkey,
+      cursors,
+      boundaryMessageIds: boundaryMessageIds,
+    );
   }
 }
 

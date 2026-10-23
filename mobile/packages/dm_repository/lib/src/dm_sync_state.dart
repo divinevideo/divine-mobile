@@ -669,16 +669,37 @@ class DmSyncState {
   Map<String, int> readCursors(String pubkey) =>
       ((_readState(pubkey)['cursors'] as Map?) ?? {}).cast<String, int>();
 
+  /// IDs observed at a retained cursor; null for older timestamp-only journals.
+  Set<String>? readBoundaryMessageIds(String pubkey, String tuple) {
+    final boundary = (_readState(pubkey)['boundaryIds'] as Map?)?[tuple];
+    return boundary == null ? null : (boundary as List).cast<String>().toSet();
+  }
+
   /// Records the exact read boundaries before changing local cache rows.
   Future<void> rememberReadCursors(
     String pubkey,
-    Map<String, int> cursors,
-  ) async {
+    Map<String, int> cursors, {
+    Map<String, Set<String>> boundaryMessageIds = const {},
+  }) async {
     final state = _readState(pubkey);
+    final boundaries = Map<String, dynamic>.of(
+      (state['boundaryIds'] as Map?)?.cast<String, dynamic>() ?? {},
+    );
     final merged = Map<String, int>.of(readCursors(pubkey));
     for (final entry in cursors.entries) {
       final previous = merged[entry.key] ?? 0;
-      if (entry.value > previous) merged[entry.key] = entry.value;
+      if (entry.value > previous) {
+        merged[entry.key] = entry.value;
+        boundaries.remove(entry.key);
+      }
+      final known = boundaryMessageIds[entry.key];
+      if (known != null && entry.value >= previous) {
+        boundaries[entry.key] = {
+          if (entry.value == previous && boundaries[entry.key] is List)
+            ...(boundaries[entry.key] as List).cast<String>(),
+          ...known,
+        }.toList()..sort();
+      }
     }
     await _saveReadState(
       pubkey,
@@ -686,6 +707,7 @@ class DmSyncState {
         'revision': (state['revision'] as int? ?? 0) + 1,
         'pending': true,
         'cursors': merged,
+        'boundaryIds': boundaries,
       }),
     );
   }

@@ -514,7 +514,9 @@ END
         await (select(attachedDatabase.directMessages)..where(
               (t) =>
                   t.conversationId.equals(id) &
-                  t.ownerPubkey.equals(ownerPubkey) &
+                  (t.ownerPubkey.equals(ownerPubkey) |
+                      t.ownerPubkey.equals('') |
+                      t.ownerPubkey.isNull()) &
                   t.createdAt.isBiggerOrEqualValue(boundaryTimestamp),
             ))
             .get();
@@ -586,6 +588,47 @@ END
     );
     return rows > 0;
   }
+
+  /// Advances a locally captured read boundary while keeping distinct incoming
+  /// messages in its final second unread. Numeric cursors remain monotonic.
+  Future<bool> applyReadBoundary(
+    String id,
+    int timestamp, {
+    required String ownerPubkey,
+    required Set<String> knownMessageIds,
+  }) => attachedDatabase.transaction(() async {
+    final row = await getConversation(id, ownerPubkey: ownerPubkey);
+    if (row == null) return false;
+    final candidates =
+        await (select(attachedDatabase.directMessages)..where(
+              (t) =>
+                  t.conversationId.equals(id) &
+                  (t.ownerPubkey.equals(ownerPubkey) |
+                      t.ownerPubkey.equals('') |
+                      t.ownerPubkey.isNull()) &
+                  t.createdAt.equals(timestamp),
+            ))
+            .get();
+    final unknownIncoming = candidates.any(
+      (message) =>
+          message.senderPubkey != ownerPubkey &&
+          !knownMessageIds.contains(message.id),
+    );
+    final applied = await applyReadCursor(
+      id,
+      timestamp,
+      ownerPubkey: ownerPubkey,
+    );
+    if (unknownIncoming &&
+        row.lastMessageTimestamp == timestamp &&
+        (row.lastReadTimestamp ?? 0) <= timestamp) {
+      await (update(conversations)..where(
+            (t) => t.id.equals(id) & _visibleToOwner(t, ownerPubkey),
+          ))
+          .write(const ConversationsCompanion(isRead: Value(false)));
+    }
+    return applied;
+  });
 
   /// Advances the read cursor for [id] to `max(existing, timestamp)` and, when
   /// the cursor then covers the latest message, marks the conversation read.

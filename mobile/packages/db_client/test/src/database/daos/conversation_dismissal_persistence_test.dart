@@ -68,6 +68,40 @@ void main() {
       await database.conversationsDao.clearForAccountSwitch(owner);
     }
 
+    test('synced dismissal sees unknown same-second legacy messages', () async {
+      await database.directMessagesDao.insertMessage(
+        id: 'legacy-new',
+        conversationId: id,
+        senderPubkey: peer,
+        content: 'legacy',
+        createdAt: 100,
+        giftWrapId: 'legacy-wrap',
+      );
+      await database.conversationsDao.upsertConversation(
+        id: id,
+        participantPubkeys: '["$owner","$peer"]',
+        isGroup: false,
+        createdAt: 100,
+        lastMessageTimestamp: 100,
+        isRead: false,
+      );
+      await database.conversationsDao.applySyncedDismissal(
+        id,
+        ownerPubkey: owner,
+        dismissed: true,
+        boundaryTimestamp: 100,
+        knownMessageIds: {'known'},
+      );
+      expect(await isDismissed(), isFalse);
+      expect(
+        (await database.conversationsDao.getConversation(
+          id,
+          ownerPubkey: owner,
+        ))!.isRead,
+        isFalse,
+      );
+    });
+
     test(
       'synced boundary precedes history; a same-second new ID restores it',
       () async {

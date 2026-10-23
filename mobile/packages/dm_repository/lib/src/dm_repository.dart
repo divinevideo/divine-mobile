@@ -677,14 +677,20 @@ class DmRepository {
     unawaited(_applyAccountDismissals());
   }
 
-  Future<void> _applyAccountDismissals({String? conversationId}) {
+  Future<void> _applyAccountDismissals({
+    String? conversationId,
+    String? ownerPubkey,
+  }) {
     final state = _accountStateRepository;
-    final owner = _ownerPubkey;
+    final owner = ownerPubkey ?? _ownerPubkey;
     final generation = _resetGeneration;
-    if (state == null || owner == null || state.pubkey != owner) {
+    if (state == null ||
+        owner == null ||
+        state.pubkey != owner ||
+        _ownerPubkey != owner) {
       return Future<void>.value();
     }
-    final result = _dismissalTail.then((_) async {
+    Future<void> reconcile() async {
       if (_disposed ||
           generation != _resetGeneration ||
           _ownerPubkey != owner) {
@@ -762,7 +768,12 @@ class DmRepository {
           );
         }
       }
-    });
+    }
+
+    // Ingest already owns a Drift transaction. Waiting behind an outside
+    // reconciliation here would wait for the transaction's own database lock.
+    if (conversationId != null) return reconcile();
+    final result = _dismissalTail.then((_) => reconcile());
     return _dismissalTail = result.then<void>(
       (_) {},
       onError: (Object error, StackTrace stack) {
@@ -10693,7 +10704,7 @@ class DmRepository {
     final written = _syncState == null
         ? await _conversationsDao.markAsRead(conversationId, ownerPubkey: owner)
         : boundary != null &&
-              await _conversationsDao.applyReadCursor(
+              await _applyReadCursorPreservingBoundary(
                 conversationId,
                 boundary,
                 ownerPubkey: owner,
@@ -10736,7 +10747,7 @@ class DmRepository {
       );
     } else {
       for (final entry in boundaries.entries) {
-        if (await _conversationsDao.applyReadCursor(
+        if (await _applyReadCursorPreservingBoundary(
           entry.key,
           entry.value,
           ownerPubkey: owner,
@@ -10788,7 +10799,11 @@ class DmRepository {
         throw StateError('Conversation is no longer available.');
       }
       if (dismissed) {
-        await _syncState?.rememberReadCursors(owner, {key: boundary.timestamp});
+        await _syncState?.rememberReadCursors(
+          owner,
+          {key: boundary.timestamp},
+          boundaryMessageIds: {key: boundary.knownMessageIds},
+        );
       }
       await state?.setValue(
         key,
@@ -10832,16 +10847,28 @@ class DmRepository {
     );
     final cursors = <String, int>{};
     final boundaries = <String, int>{};
+    final knownIds = <String, Set<String>>{};
     for (final row in rows) {
       if (!ids.contains(row.id)) continue;
       final tuple = _participantTupleKey(row.participantPubkeys);
       if (tuple == null) continue;
-      final last = row.lastMessageTimestamp ?? 0;
       final read = row.lastReadTimestamp ?? 0;
-      cursors[tuple] = last > read ? last : read;
+      final captured = await _conversationsDao.captureDismissalBoundary(
+        row.id,
+        ownerPubkey: owner,
+      );
+      if (captured == null) continue;
+      cursors[tuple] = captured.timestamp > read ? captured.timestamp : read;
+      knownIds[tuple] = captured.knownMessageIds;
       boundaries[row.id] = cursors[tuple]!;
     }
-    if (cursors.isNotEmpty) await sync.rememberReadCursors(owner, cursors);
+    if (cursors.isNotEmpty) {
+      await sync.rememberReadCursors(
+        owner,
+        cursors,
+        boundaryMessageIds: knownIds,
+      );
+    }
     return boundaries;
   }
 
@@ -11023,7 +11050,7 @@ class DmRepository {
       final pubkeys = tupleKey.split(',');
       if (pubkeys.length < 2) continue;
       final conversationId = computeConversationId(pubkeys);
-      final applied = await _conversationsDao.applyReadCursor(
+      final applied = await _applyReadCursorPreservingBoundary(
         conversationId,
         cursor,
         ownerPubkey: _ownerPubkey,
@@ -11037,6 +11064,71 @@ class DmRepository {
     }
   }
 
+  Future<bool> _applyReadCursorPreservingBoundary(
+    String id,
+    int cursor, {
+    required String? ownerPubkey,
+  }) async {
+    final owner = ownerPubkey;
+    if (owner == null ||
+        ((_syncState?.readCursors(owner).isEmpty ?? true) &&
+            _accountStateRepository == null)) {
+      return _conversationsDao.applyReadCursor(
+        id,
+        cursor,
+        ownerPubkey: ownerPubkey,
+      );
+    }
+    final row = await _conversationsDao.getConversation(
+      id,
+      ownerPubkey: owner,
+    );
+    final tuple = row == null
+        ? null
+        : _participantTupleKey(row.participantPubkeys);
+    if (tuple != null) {
+      final retained = _syncState?.readCursors(owner)[tuple];
+      Set<String>? known;
+      if (retained == cursor) {
+        known = _syncState?.readBoundaryMessageIds(owner, tuple);
+      }
+      final state = _accountStateRepository;
+      if (known == null && state != null && state.pubkey == owner) {
+        final value = state.value(tuple);
+        if (value is Map &&
+            value['through'] == cursor &&
+            value['known'] is List) {
+          final ids = value['known'] as List;
+          if (ids.every((id) => id is String)) {
+            known = ids.cast<String>().toSet();
+          }
+        }
+      }
+      if (known != null) {
+        return _conversationsDao.applyReadBoundary(
+          id,
+          cursor,
+          ownerPubkey: owner,
+          knownMessageIds: known,
+        );
+      }
+      // Older journals cannot reconstruct IDs. Preserve an existing unread
+      // exception at their equal cursor rather than undoing a restoration.
+      if (retained == cursor &&
+          row != null &&
+          !row.isRead &&
+          row.lastReadTimestamp == cursor &&
+          row.lastMessageTimestamp == cursor) {
+        return true;
+      }
+    }
+    return _conversationsDao.applyReadCursor(
+      id,
+      cursor,
+      ownerPubkey: ownerPubkey,
+    );
+  }
+
   /// Applies a read-marker cursor that arrived before [conversationId] had a
   /// row (#4977) as soon as an ingested message creates or updates it.
   ///
@@ -11048,7 +11140,10 @@ class DmRepository {
     String conversationId, {
     required String ownerPubkey,
   }) async {
-    await _applyAccountDismissals(conversationId: conversationId);
+    await _applyAccountDismissals(
+      conversationId: conversationId,
+      ownerPubkey: ownerPubkey,
+    );
     final sync = _syncState;
     if (sync != null) {
       final row = await _conversationsDao.getConversation(
@@ -11068,7 +11163,7 @@ class DmRepository {
     }
     final cursor = _pendingReadCursors[conversationId];
     if (cursor == null) return;
-    await _conversationsDao.applyReadCursor(
+    await _applyReadCursorPreservingBoundary(
       conversationId,
       cursor,
       ownerPubkey: ownerPubkey,
@@ -11098,7 +11193,7 @@ class DmRepository {
       );
       for (final entry in floors.entries) {
         if (_ingestSessionEnded(pubkey, generation)) return;
-        await _conversationsDao.applyReadCursor(
+        await _applyReadCursorPreservingBoundary(
           entry.key,
           entry.value,
           ownerPubkey: pubkey,
@@ -11109,7 +11204,7 @@ class DmRepository {
         _pendingReadCursors.clear();
         for (final entry in pending.entries) {
           if (_ingestSessionEnded(pubkey, generation)) return;
-          await _conversationsDao.applyReadCursor(
+          await _applyReadCursorPreservingBoundary(
             entry.key,
             entry.value,
             ownerPubkey: pubkey,

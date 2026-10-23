@@ -466,8 +466,9 @@ class _FakeDmSyncState implements DmSyncState {
   @override
   Future<void> rememberReadCursors(
     String pubkey,
-    Map<String, int> cursors,
-  ) async {
+    Map<String, int> cursors, {
+    Map<String, Set<String>> boundaryMessageIds = const {},
+  }) async {
     final read = _reads.putIfAbsent(pubkey, () => {});
     for (final entry in cursors.entries) {
       if (entry.value > (read[entry.key] ?? 0)) read[entry.key] = entry.value;
@@ -479,6 +480,9 @@ class _FakeDmSyncState implements DmSyncState {
   Future<void> acknowledgeReadRevision(String pubkey, int revision) async {
     if (pendingReadRevision(pubkey) == revision) _readRevisions.remove(pubkey);
   }
+
+  @override
+  Set<String>? readBoundaryMessageIds(String pubkey, String tuple) => null;
 
   int? newestOverride;
   int? newestWireOverride;

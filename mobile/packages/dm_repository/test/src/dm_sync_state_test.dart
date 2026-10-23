@@ -43,6 +43,46 @@ void main() {
     });
 
     test(
+      'boundary IDs survive restart and only merge at their own cursor',
+      () async {
+        await state.rememberReadCursors(
+          pkA,
+          {'tuple': 100},
+          boundaryMessageIds: {
+            'tuple': {'known'},
+          },
+        );
+        await state.rememberReadCursors(
+          pkA,
+          {'tuple': 50},
+          boundaryMessageIds: {
+            'tuple': {'older'},
+          },
+        );
+        expect(DmSyncState(prefs).readBoundaryMessageIds(pkA, 'tuple'), {
+          'known',
+        });
+        await state.rememberReadCursors(
+          pkA,
+          {'tuple': 100},
+          boundaryMessageIds: {
+            'tuple': {'new'},
+          },
+        );
+        expect(state.readBoundaryMessageIds(pkA, 'tuple'), {'known', 'new'});
+        await state.rememberReadCursors(
+          pkA,
+          {'tuple': 200},
+          boundaryMessageIds: {
+            'tuple': {'latest'},
+          },
+        );
+        expect(state.readBoundaryMessageIds(pkA, 'tuple'), {'latest'});
+        expect(state.readCursors(pkA)['tuple'], 200);
+      },
+    );
+
+    test(
       'read journal survives cache cleanup and stale acknowledgments',
       () async {
         await state.rememberReadCursors(pkA, {'tuple': 100});

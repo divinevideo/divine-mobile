@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:account_state_repository/account_state_repository.dart';
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:drift/native.dart';
@@ -17,6 +18,75 @@ import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
+
+class _ReadState extends DmSyncState {
+  _ReadState(super._prefs);
+  bool blockNext = false;
+  final entered = Completer<void>();
+  final release = Completer<void>();
+  @override
+  Future<void> rememberReadCursors(
+    String pubkey,
+    Map<String, int> cursors, {
+    Map<String, Set<String>> boundaryMessageIds = const {},
+  }) async {
+    if (blockNext) {
+      blockNext = false;
+      entered.complete();
+      await release.future;
+    }
+    await super.rememberReadCursors(
+      pubkey,
+      cursors,
+      boundaryMessageIds: boundaryMessageIds,
+    );
+  }
+}
+
+class _OverlapDao extends ConversationsDao {
+  _OverlapDao(super.attachedDatabase);
+  static final _transactionZone = Object();
+  bool holdNextTransaction = false;
+  bool transactionHeld = false;
+  final entered = Completer<void>();
+  final release = Completer<void>();
+  final outsideQueryStarted = Completer<void>();
+
+  @override
+  Future<T> runInTransaction<T>(Future<T> Function() action) => runZoned(
+    () => super.runInTransaction(() async {
+      if (holdNextTransaction) {
+        holdNextTransaction = false;
+        await super.getAllConversations(ownerPubkey: _owner);
+        transactionHeld = true;
+        entered.complete();
+        await release.future;
+      }
+      return action();
+    }),
+    zoneValues: {_transactionZone: true},
+  );
+
+  @override
+  Future<List<ConversationRow>> getAllConversations({
+    int? limit,
+    int? offset,
+    String? ownerPubkey,
+  }) {
+    final result = super.getAllConversations(
+      limit: limit,
+      offset: offset,
+      ownerPubkey: ownerPubkey,
+    );
+    if (transactionHeld && Zone.current[_transactionZone] != true) {
+      if (!outsideQueryStarted.isCompleted) outsideQueryStarted.complete();
+      // Only a failed regression needs this escape hatch: the real outside
+      // DB query remains blocked until the ingestion transaction commits.
+      return result.timeout(const Duration(seconds: 1));
+    }
+    return result;
+  }
+}
 
 const _owner =
     'a4f5c1b2d3e4f5061728394a5b6c7d8e9f0a1b2c3d4e5f60718293a4b5c6d7e8';
@@ -42,13 +112,14 @@ void main() {
     'read-cursor retry for a marker that arrives before its conversation',
     () {
       late AppDatabase db;
-      late ConversationsDao conversationsDao;
+      late _OverlapDao conversationsDao;
+      late AccountStateRepository accountState;
       late DirectMessagesDao messagesDao;
       late _MockNostrClient nostrClient;
       late StreamController<Event> relay;
       late DmRepository repository;
       late Map<String, Event> rumorByWrapId;
-      late DmSyncState syncState;
+      late _ReadState syncState;
 
       /// The conversation the marker names — deliberately not created yet.
       final participants = [_owner, _peer]..sort();
@@ -56,9 +127,9 @@ void main() {
 
       setUp(() async {
         SharedPreferences.setMockInitialValues(<String, Object>{});
-        syncState = DmSyncState(await SharedPreferences.getInstance());
+        syncState = _ReadState(await SharedPreferences.getInstance());
         db = AppDatabase.test(NativeDatabase.memory());
-        conversationsDao = ConversationsDao(db);
+        conversationsDao = _OverlapDao(db);
         messagesDao = DirectMessagesDao(db);
         nostrClient = _MockNostrClient();
         relay = StreamController<Event>();
@@ -116,21 +187,31 @@ void main() {
           ),
         ).thenAnswer((_) => relay.stream);
 
+        accountState = AccountStateRepository(
+          nostrClient: nostrClient,
+          sharedPreferences: await SharedPreferences.getInstance(),
+          pubkey: _owner,
+          signer: () => LocalNostrSigner(_privateKey),
+          namespace: 'divine/dm-dismissals/v1',
+        );
         repository = DmRepository(
           nostrClient: nostrClient,
           directMessagesDao: messagesDao,
           conversationsDao: conversationsDao,
           userPubkey: _owner,
           syncState: syncState,
+          accountStateRepository: accountState,
           signer: LocalNostrSigner(_privateKey),
           rumorDecryptor: (_, giftWrap) async => rumorByWrapId[giftWrap.id],
           nip04Decryptor: (_, ciphertext) async => ciphertext,
         );
         await repository.startListening();
+        await repository.flushPendingReadState();
       });
 
       tearDown(() async {
         await repository.stopListening();
+        await accountState.close();
         await relay.close();
         await db.close();
       });
@@ -229,6 +310,132 @@ void main() {
         );
         return rows.where((r) => r.id == conversationId).firstOrNull;
       }
+
+      test(
+        'same-second arrival during durable read persistence remains unread',
+        () async {
+          await ingestConversation(messageAt: _baseCreatedAt + 100);
+          syncState.blockNext = true;
+          final read = repository.markConversationAsRead(conversationId);
+          await syncState.entered.future;
+          await ingestMessage(
+            wrapId: '1' * 64,
+            rumorId: '2' * 64,
+            sender: _peer,
+            messageAt: _baseCreatedAt + 100,
+          );
+          await messagesDao
+              .watchMessagesForConversation(conversationId, ownerPubkey: _owner)
+              .firstWhere((rows) => rows.length == 2)
+              .timeout(const Duration(seconds: 2));
+          syncState.release.complete();
+          expect(await read, isTrue);
+          expect((await conversation())!.isRead, isFalse);
+        },
+      );
+
+      test(
+        'remote timestamp-only marker keeps inherited same-second precision',
+        () async {
+          await ingestConversation(messageAt: _baseCreatedAt + 100);
+          await ingestMessage(
+            wrapId: '1' * 64,
+            rumorId: '2' * 64,
+            sender: _peer,
+            messageAt: _baseCreatedAt + 100,
+          );
+          await deliverReadMarker(
+            wrapId: '4' * 64,
+            rumorId: '5' * 64,
+            readAt: _baseCreatedAt + 100,
+          );
+          expect((await conversation())!.isRead, isTrue);
+        },
+      );
+
+      for (final legacy in [false, true]) {
+        test(
+          '${legacy ? 'NIP-04' : 'NIP-17'} same-second restore stays unread',
+          () async {
+            await ingestConversation(messageAt: _baseCreatedAt + 100);
+            await repository.setConversationDismissed(
+              conversationId,
+              dismissed: true,
+            );
+            await repository.flushPendingReadState();
+            if (legacy) {
+              relay.add(
+                Event.fromJson({
+                  'id': '3' * 64,
+                  'pubkey': _peer,
+                  'created_at': _baseCreatedAt + 100,
+                  'kind': EventKind.directMessage,
+                  'tags': [
+                    ['p', _owner],
+                  ],
+                  'content': 'new legacy message',
+                  'sig': '',
+                }),
+              );
+            } else {
+              await ingestMessage(
+                wrapId: '1' * 64,
+                rumorId: '2' * 64,
+                sender: _peer,
+                messageAt: _baseCreatedAt + 100,
+              );
+            }
+            await messagesDao
+                .watchMessagesForConversation(
+                  conversationId,
+                  ownerPubkey: _owner,
+                )
+                .firstWhere((rows) => rows.length == 2)
+                .timeout(const Duration(seconds: 2));
+            final row = (await conversation())!;
+            expect(row.isDismissed, isFalse);
+            expect(row.isRead, isFalse);
+            await deliverReadMarker(
+              wrapId: '4' * 64,
+              rumorId: '5' * 64,
+              readAt: _baseCreatedAt + 100,
+            );
+            expect((await conversation())!.isRead, isFalse);
+            expect(
+              await repository.markConversationAsRead(conversationId),
+              isTrue,
+            );
+            expect((await conversation())!.isRead, isTrue);
+          },
+        );
+      }
+
+      test(
+        'ingest cannot wait behind outside dismissal reconciliation',
+        () async {
+          conversationsDao.holdNextTransaction = true;
+          await ingestConversation(messageAt: _baseCreatedAt + 100);
+          await conversationsDao.entered.future.timeout(
+            const Duration(seconds: 2),
+          );
+          await accountState.setValue(participants.join(','), null);
+          await conversationsDao.outsideQueryStarted.future.timeout(
+            const Duration(seconds: 2),
+          );
+          conversationsDao.release.complete();
+          final committed = messagesDao
+              .watchMessagesForConversation(conversationId, ownerPubkey: _owner)
+              .firstWhere((rows) => rows.isNotEmpty);
+          try {
+            await committed.timeout(const Duration(milliseconds: 300));
+          } finally {
+            // Allow the deliberately timed-out outside query to settle on RED.
+            await committed.timeout(const Duration(seconds: 3));
+            conversationsDao.transactionHeld = false;
+            await repository.flushPendingReadState();
+          }
+        },
+      );
 
       test(
         'a marker landing before its conversation applies when the '
