@@ -29,34 +29,38 @@ void main() {
     content: content,
   );
 
-  test('deduplicates cache membership while preserving order', () {
-    final group = CommentLikeCacheCodec.decode(row(jsonEncode(payload())))!;
-    expect(group.actors.map((actor) => actor.pubkey), [pubkey, 'b' * 64]);
-    expect(group.notificationIds, ['like-1', 'like-2']);
-  });
+  group(CommentLikeCacheCodec, () {
+    group('decode', () {
+      test('deduplicates cache membership while preserving order', () {
+        final group = CommentLikeCacheCodec.decode(row(jsonEncode(payload())))!;
+        expect(group.actors.map((actor) => actor.pubkey), [pubkey, 'b' * 64]);
+        expect(group.notificationIds, ['like-1', 'like-2']);
+      });
 
-  test('invalid payloads are skipped instead of breaking hydration', () {
-    final invalid = [
-      '{broken',
-      'null',
-      '[]',
-      for (final change in <Map<String, Object?>>[
-        {'version': 2},
-        {'commentEventId': ''},
-        {'actorPubkeys': <String>[]},
-        {
-          'actorPubkeys': [pubkey, 42],
-        },
-        {
-          'notificationIds': ['unrelated'],
-        },
-        {'sourceEventIds': 'invalid'},
-        {'commentText': 42},
-      ])
-        jsonEncode({...payload(), ...change}),
-    ];
-    for (final content in invalid) {
-      expect(CommentLikeCacheCodec.decode(row(content)), isNull);
-    }
+      test('invalid payloads are skipped instead of breaking hydration', () {
+        final invalid = [
+          '{broken',
+          'null',
+          '[]',
+          for (final change in <Map<String, Object?>>[
+            {'version': 2},
+            {'commentEventId': ''},
+            {'actorPubkeys': <String>[]},
+            {
+              'actorPubkeys': [pubkey, 42],
+            },
+            {
+              'notificationIds': ['unrelated'],
+            },
+            {'sourceEventIds': 'invalid'},
+            {'commentText': 42},
+          ])
+            jsonEncode({...payload(), ...change}),
+        ];
+        for (final content in invalid) {
+          expect(CommentLikeCacheCodec.decode(row(content)), isNull);
+        }
+      });
+    });
   });
 }
