@@ -828,7 +828,8 @@ void main() {
     //   * queryEventsDetailed -- send/listener inbox resolution catches its
     //                            throw; RC3 re-declares the answered-empty
     //                            decision explicitly in its own group
-    //   * getAllConversations, both backfills, publishSelfApplicationMarkerDetailed
+    //   * getAllConversations, both backfills,
+    //     publishSelfApplicationMarkerDetailed
     //                         -- production CATCHES their throw and logs it, so
     //                            removing them keeps the suite green while
     //                            silently running it against an error branch
