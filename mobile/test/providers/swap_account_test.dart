@@ -312,6 +312,21 @@ void main() {
     await checked;
   });
 
+  // Frames a swap until it reaches the outgoing prune, so a test can then
+  // advance fake time past the swap's wait for it.
+  Future<void> drivePruneStart(Completer<void> pruneStarted) async {
+    final tester = activeTester!;
+    for (var frame = 0; !pruneStarted.isCompleted && frame < 250; frame += 1) {
+      await tester.runAsync(pumpEventQueue);
+      await tester.pump();
+    }
+    expect(
+      pruneStarted.isCompleted,
+      isTrue,
+      reason: 'Account switch must reach the outgoing prune',
+    );
+  }
+
   group('accountSwitchInitialLocation', () {
     test('retargets the leaving account own-profile route', () {
       expect(
@@ -1424,12 +1439,14 @@ void main() {
         );
         initial.read(dmVideoStoreProvider);
 
-        await swapAccount(
-          deviceScope: deviceScope,
-          controller: controller,
-          currentAuthService: currentAuthService,
-          account: account,
-          signIn: (_, _) async => events.add('sign in target'),
+        await driveSwap(
+          swapAccount(
+            deviceScope: deviceScope,
+            controller: controller,
+            currentAuthService: currentAuthService,
+            account: account,
+            signIn: (_, _) async => events.add('sign in target'),
+          ),
         );
         await tester.pump();
 
@@ -1441,7 +1458,11 @@ void main() {
       tester,
     ) async {
       final store = _MockDmVideoStore();
-      when(store.prune).thenAnswer((_) => Completer<void>().future);
+      final pruneStarted = Completer<void>();
+      when(store.prune).thenAnswer((_) {
+        if (!pruneStarted.isCompleted) pruneStarted.complete();
+        return Completer<void>().future;
+      });
       final events = <String>[];
       final initial = await pumpHost(
         tester,
@@ -1449,28 +1470,35 @@ void main() {
       );
       initial.read(dmVideoStoreProvider);
 
-      final swap = swapAccount(
-        deviceScope: deviceScope,
-        controller: controller,
-        currentAuthService: currentAuthService,
-        account: account,
-        signIn: (_, _) async => events.add('sign in target'),
+      final assertion = expectLater(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async => events.add('sign in target'),
+        ),
+        completes,
       );
-      await tester.pump();
+      await drivePruneStart(pruneStarted);
       expect(events, isEmpty);
 
       await tester.pump(const Duration(seconds: 5));
+      await driveSwap(assertion);
 
       expect(events, ['sign in target']);
-      await swap;
     });
 
     testWidgets(
       'logs an outgoing prune that fails after the swap stopped waiting',
       (tester) async {
         final store = _MockDmVideoStore();
+        final pruneStarted = Completer<void>();
         final pruning = Completer<void>();
-        when(store.prune).thenAnswer((_) => pruning.future);
+        when(store.prune).thenAnswer((_) {
+          if (!pruneStarted.isCompleted) pruneStarted.complete();
+          return pruning.future;
+        });
         final initial = await pumpHost(
           tester,
           accountOverrides: [dmVideoStoreProvider.overrideWithValue(store)],
@@ -1479,15 +1507,19 @@ void main() {
         await LogCaptureService().clearAllLogs();
         addTearDown(LogCaptureService().clearAllLogs);
 
-        final swap = swapAccount(
-          deviceScope: deviceScope,
-          controller: controller,
-          currentAuthService: currentAuthService,
-          account: account,
-          signIn: (_, _) async {},
+        final assertion = expectLater(
+          swapAccount(
+            deviceScope: deviceScope,
+            controller: controller,
+            currentAuthService: currentAuthService,
+            account: account,
+            signIn: (_, _) async {},
+          ),
+          completes,
         );
+        await drivePruneStart(pruneStarted);
         await tester.pump(const Duration(seconds: 5));
-        await swap;
+        await driveSwap(assertion);
         pruning.completeError(StateError('the prune failed late'));
         await tester.pump();
 
@@ -1513,12 +1545,14 @@ void main() {
       );
       initial.read(dmVideoStoreProvider);
 
-      await swapAccount(
-        deviceScope: deviceScope,
-        controller: controller,
-        currentAuthService: currentAuthService,
-        account: account,
-        signIn: (_, _) async => events.add('sign in target'),
+      await driveSwap(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async => events.add('sign in target'),
+        ),
       );
       await tester.pump();
 
