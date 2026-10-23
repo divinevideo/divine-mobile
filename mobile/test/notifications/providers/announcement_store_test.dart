@@ -12,6 +12,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class _Repository extends Mock implements AnnouncementsRepository {}
 
+class _CacheDao extends Mock implements CacheDao {}
+
 void main() {
   const alice =
       '31ef21a624ab5576f14705fdbb56bead914b20154baf8a47d7c28c8103718b04';
@@ -27,6 +29,24 @@ void main() {
   });
   tearDown(() => cache.close());
   group('readSeen, writeSeen, and clearOwner', () {
+    test(
+      'an unavailable optional cache does not fail initialization',
+      () async {
+        final unavailable = _CacheDao();
+        when(() => unavailable.readEntry(any())).thenThrow(
+          StateError('optional cache was not initialized'),
+        );
+        await CacheSync.init(dao: unavailable);
+        final store = SharedPreferencesAnnouncementStore(
+          prefs: prefs,
+          owner: alice,
+        );
+        expect(await store.readCatalog(), isNull);
+        await store.writeSeen(['announcement:seen']);
+        expect(await store.readSeen(), ['announcement:seen']);
+      },
+    );
+
     test(
       'retains a stale public cache for validated offline hydration',
       () async {

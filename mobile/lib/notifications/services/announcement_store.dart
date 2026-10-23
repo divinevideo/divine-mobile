@@ -21,10 +21,19 @@ class SharedPreferencesAnnouncementStore implements AnnouncementStore {
   String get _seenKey => '$storagePrefix$owner:seen';
 
   @override
-  Future<String?> readCatalog() async => (await CacheSync.readEntry<String>(
-    key: catalogCacheKey,
-    fromJson: (value) => value,
-  ))?.data;
+  Future<String?> readCatalog() async {
+    try {
+      return (await CacheSync.readEntry<String>(
+        key: catalogCacheKey,
+        fromJson: (value) => value,
+      ))?.data;
+    } on Object {
+      // CacheSync startup is optional, including its late DAO initialization.
+      // A missing cache must not poison catalog refresh or social mark-seen.
+      return null;
+    }
+  }
+
   @override
   Future<List<String>> readSeen() async => prefs.getStringList(_seenKey) ?? [];
   @override
