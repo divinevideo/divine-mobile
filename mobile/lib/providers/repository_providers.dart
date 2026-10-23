@@ -69,6 +69,7 @@ final badgeRepositoryProvider = Provider<BadgeRepository>((ref) {
     sharedPreferences: ref.watch(sharedPreferencesProvider),
     currentPubkey: () => authService.currentPublicKeyHex,
     signEvent: authService.createAndSignEvent,
+    signer: () => authService.requireIdentity,
     // Read through the repository rather than a snapshot: the hide buckets
     // are mutated in place, so a block made after this provider was built
     // still takes effect on the next badge load.

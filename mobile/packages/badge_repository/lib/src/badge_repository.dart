@@ -1,4 +1,5 @@
 import 'package:badge_repository/src/badge_coordinate.dart';
+import 'package:badge_repository/src/badge_dismissal_sync.dart';
 import 'package:badge_repository/src/nip58_badge_models.dart';
 import 'package:badge_repository/src/nip58_badge_parser.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -45,7 +46,7 @@ class BadgeDashboardData {
   final List<IssuedBadgeViewData> issued;
   final List<CreatedBadgeViewData> created;
 
-  /// Awards the user dismissed on this device.
+  /// Awards the user dismissed for this account.
   ///
   /// Kept alongside [awarded] rather than dropped, so a dismissal made by
   /// accident can be taken back.
@@ -333,17 +334,24 @@ class BadgeRepository {
     required SharedPreferences sharedPreferences,
     required BadgeCurrentPubkeyReader currentPubkey,
     required BadgeEventSigner signEvent,
+    required NostrSigner Function() signer,
     BadgeHiddenPubkeyReader? isHiddenPubkey,
   }) : _nostrClient = nostrClient,
        _sharedPreferences = sharedPreferences,
        _currentPubkey = currentPubkey,
        _signEvent = signEvent,
-       _isHiddenPubkey = isHiddenPubkey;
+       _isHiddenPubkey = isHiddenPubkey,
+       _dismissalSync = BadgeDismissalSync(
+         client: nostrClient,
+         preferences: sharedPreferences,
+         signer: signer,
+       );
 
   final NostrClient _nostrClient;
   final SharedPreferences _sharedPreferences;
   final BadgeCurrentPubkeyReader _currentPubkey;
   final BadgeEventSigner _signEvent;
+  final BadgeDismissalSync _dismissalSync;
 
   /// Null leaves awards unfiltered, which is what an anonymous or test
   /// repository wants — there is no blocklist to consult.
@@ -1277,8 +1285,14 @@ class BadgeRepository {
   /// awarded list.
   Future<void> unhideAward(String definitionCoordinate) async {
     final pubkey = _requireCurrentPubkey();
-    final dismissed = _storedDismissedCoordinates(pubkey);
-    if (dismissed.remove(definitionCoordinate)) {
+    final dismissed = await _dismissalSync.setHidden(
+      pubkey,
+      _storedDismissedCoordinates(pubkey),
+      definitionCoordinate,
+      hidden: false,
+    );
+    if (_storedDismissedCoordinates(pubkey).isNotEmpty ||
+        dismissed.isNotEmpty) {
       await _writeDismissedCoordinates(pubkey, dismissed);
     }
   }
@@ -1292,10 +1306,13 @@ class BadgeRepository {
   /// badges does.
   Future<void> hideAward(String definitionCoordinate) async {
     final pubkey = _requireCurrentPubkey();
-    final dismissed = _storedDismissedCoordinates(pubkey);
-    if (dismissed.add(definitionCoordinate)) {
-      await _writeDismissedCoordinates(pubkey, dismissed);
-    }
+    final dismissed = await _dismissalSync.setHidden(
+      pubkey,
+      _storedDismissedCoordinates(pubkey),
+      definitionCoordinate,
+      hidden: true,
+    );
+    await _writeDismissedCoordinates(pubkey, dismissed);
   }
 
   Future<List<Nip58BadgeAward>> _queryAwardsForRecipient(String pubkey) async {
@@ -1544,6 +1561,18 @@ class BadgeRepository {
     );
   }
 
+  Future<Set<String>> _dismissedCoordinates(
+    String pubkey,
+    List<Nip58BadgeAward> awards,
+  ) async {
+    final local = await _localDismissedCoordinates(pubkey, awards);
+    final dismissed = await _dismissalSync.load(pubkey, local);
+    if (local.isNotEmpty || dismissed.isNotEmpty) {
+      await _writeDismissedCoordinates(pubkey, dismissed);
+    }
+    return dismissed;
+  }
+
   /// The dismissed badge coordinates, absorbing dismissals still stored
   /// under the older award-event key.
   ///
@@ -1552,7 +1581,7 @@ class BadgeRepository {
   /// each id is retired only once its award has actually been seen — an
   /// award missing from this relay pass is left for a later load instead of
   /// being discarded.
-  Future<Set<String>> _dismissedCoordinates(
+  Future<Set<String>> _localDismissedCoordinates(
     String pubkey,
     List<Nip58BadgeAward> awards,
   ) async {

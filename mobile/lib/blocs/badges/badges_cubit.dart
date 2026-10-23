@@ -59,7 +59,7 @@ class BadgesCubit extends Cubit<BadgesState> {
     });
   }
 
-  /// Restores a locally hidden award.
+  /// Restores a hidden award across the account’s devices.
   ///
   /// Undoes the hiding only. A rejection that also unpinned the badge does
   /// not re-pin it: restoring the row puts the accept decision back in the

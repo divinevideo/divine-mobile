@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
+import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -14,6 +15,7 @@ void main() {
     late Event? Function() lastSignedEvent;
     late BadgeRepository repository;
     late Event? signedEvent;
+    late LocalNostrSigner dismissalSigner;
 
     setUpAll(() {
       registerFallbackValue(<Filter>[]);
@@ -25,6 +27,7 @@ void main() {
       preferences = await SharedPreferences.getInstance();
       nostrClient = _MockNostrClient();
       signedEvent = null;
+      dismissalSigner = LocalNostrSigner(_eventId(101));
       lastSignedEvent = () => signedEvent;
 
       when(() => nostrClient.queryEvents(any())).thenAnswer((_) async => []);
@@ -35,8 +38,19 @@ void main() {
         return _acceptedPublishOutcome(event);
       });
 
+      when(
+        () => nostrClient.queryEventsDetailed(
+          any(),
+          useCache: false,
+          requireAllRelaysSettled: true,
+        ),
+      ).thenAnswer(
+        (_) async => (events: <Event>[], timedOut: false, noRelays: false),
+      );
+
       repository = BadgeRepository(
         nostrClient: nostrClient,
+        signer: () => dismissalSigner,
         sharedPreferences: preferences,
         currentPubkey: () => _pubkey(1),
         signEvent: ({required kind, required content, required tags}) async {
@@ -472,7 +486,66 @@ void main() {
       });
     });
 
-    test('hideAward stores a local per-user dismissal', () async {
+    test('rejection follows the account to a second device', () async {
+      final coordinate = '30009:${_pubkey(2)}:daily-diviner';
+      final award = _awardEvent(
+        id: _eventId(11),
+        issuerPubkey: _pubkey(2),
+        definitionCoordinate: coordinate,
+        recipients: [_pubkey(1)],
+      );
+      final relayEvents = <Event>[];
+      when(() => nostrClient.publishEventAwaitOk(any())).thenAnswer((
+        call,
+      ) async {
+        final event = call.positionalArguments.single as Event;
+        relayEvents.add(event);
+        return _acceptedPublishOutcome(event);
+      });
+      when(() => nostrClient.queryEvents(any())).thenAnswer((call) async {
+        final filters = call.positionalArguments.single as List<Filter>;
+        return filters.first.kinds?.contains(EventKind.badgeAward) == true
+            ? [award]
+            : relayEvents;
+      });
+
+      when(
+        () => nostrClient.queryEventsDetailed(
+          any(),
+          useCache: false,
+          requireAllRelaysSettled: true,
+        ),
+      ).thenAnswer(
+        (_) async => (
+          events: relayEvents.toList(),
+          timedOut: false,
+          noRelays: false,
+        ),
+      );
+
+      await repository.hideAward(coordinate);
+
+      // A separate preferences instance models desktop with no phone storage.
+      SharedPreferences.setMockInitialValues({});
+      final desktop = BadgeRepository(
+        nostrClient: nostrClient,
+        signer: () => dismissalSigner,
+        sharedPreferences: await SharedPreferences.getInstance(),
+        currentPubkey: () => _pubkey(1),
+        signEvent: ({required kind, required content, required tags}) async =>
+            _event(
+              id: _eventId(901 + kind),
+              pubkey: _pubkey(1),
+              kind: kind,
+              content: content,
+              tags: tags,
+            ),
+      );
+
+      expect((await desktop.loadAwardedBadges()).single.isHidden, isTrue);
+    });
+
+    test('hideAward caches an account dismissal', () async {
       final award = _awardEvent(
         id: _eventId(11),
         issuerPubkey: _pubkey(2),
@@ -691,6 +764,7 @@ void main() {
       setUp(() {
         blocked = BadgeRepository(
           nostrClient: nostrClient,
+          signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => _pubkey(1),
           signEvent: ({required kind, required content, required tags}) async =>
@@ -1312,6 +1386,7 @@ void main() {
     test('acceptAward throws a StateError when signing fails', () async {
       final failingRepository = BadgeRepository(
         nostrClient: nostrClient,
+        signer: () => dismissalSigner,
         sharedPreferences: preferences,
         currentPubkey: () => _pubkey(1),
         signEvent: ({required kind, required content, required tags}) async =>
@@ -1377,6 +1452,7 @@ void main() {
       // rather than being satisfied by an unrelated null-signer StateError.
       final anonymousRepository = BadgeRepository(
         nostrClient: nostrClient,
+        signer: () => dismissalSigner,
         sharedPreferences: preferences,
         currentPubkey: () => null,
         signEvent: ({required kind, required content, required tags}) async =>
@@ -1620,6 +1696,7 @@ void main() {
       test('throws a StateError without a current pubkey', () async {
         final anonymous = BadgeRepository(
           nostrClient: nostrClient,
+          signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
           signEvent: ({required kind, required content, required tags}) async =>
@@ -1900,6 +1977,7 @@ void main() {
       test('throws a StateError without a current pubkey', () async {
         final anonymous = BadgeRepository(
           nostrClient: nostrClient,
+          signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
           signEvent: ({required kind, required content, required tags}) async =>
@@ -1977,6 +2055,7 @@ void main() {
       test('throws a StateError without a current pubkey', () async {
         final anonymous = BadgeRepository(
           nostrClient: nostrClient,
+          signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
           signEvent: ({required kind, required content, required tags}) async =>
@@ -2216,6 +2295,7 @@ void main() {
       test('reports no viewer award when signed out', () async {
         final anonymous = BadgeRepository(
           nostrClient: nostrClient,
+          signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
           signEvent: ({required kind, required content, required tags}) async =>
@@ -2548,6 +2628,7 @@ void main() {
       test('throws a StateError without a current pubkey', () async {
         final anonymous = BadgeRepository(
           nostrClient: nostrClient,
+          signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
           signEvent: ({required kind, required content, required tags}) async =>
@@ -2569,6 +2650,7 @@ void main() {
       test('throws a StateError when signing fails', () async {
         final unsigned = BadgeRepository(
           nostrClient: nostrClient,
+          signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => _pubkey(1),
           signEvent: ({required kind, required content, required tags}) async =>
@@ -2598,6 +2680,7 @@ void main() {
         () async {
           final stripped = BadgeRepository(
             nostrClient: nostrClient,
+            signer: () => dismissalSigner,
             sharedPreferences: preferences,
             currentPubkey: () => _pubkey(1),
             signEvent:
@@ -2701,6 +2784,7 @@ void main() {
       test('throws a StateError without a current pubkey', () async {
         final anonymous = BadgeRepository(
           nostrClient: nostrClient,
+          signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
           signEvent: ({required kind, required content, required tags}) async =>
@@ -2719,6 +2803,7 @@ void main() {
       test('throws a StateError when signing fails', () async {
         final unsigned = BadgeRepository(
           nostrClient: nostrClient,
+          signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => _pubkey(1),
           signEvent: ({required kind, required content, required tags}) async =>
@@ -2745,6 +2830,7 @@ void main() {
         () async {
           final stripped = BadgeRepository(
             nostrClient: nostrClient,
+            signer: () => dismissalSigner,
             sharedPreferences: preferences,
             currentPubkey: () => _pubkey(1),
             signEvent:
@@ -3143,6 +3229,7 @@ void main() {
       test('throws a StateError without a current pubkey', () async {
         final anonymous = BadgeRepository(
           nostrClient: nostrClient,
+          signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
           signEvent: ({required kind, required content, required tags}) async =>
@@ -3282,6 +3369,7 @@ void main() {
       test('throws a StateError without a current pubkey', () async {
         final anonymous = BadgeRepository(
           nostrClient: nostrClient,
+          signer: () => dismissalSigner,
           sharedPreferences: preferences,
           currentPubkey: () => null,
           signEvent: ({required kind, required content, required tags}) async =>
@@ -3637,4 +3725,6 @@ BadgeAwardViewData _byCoordinate(
 
 String _eventId(int seed) => seed.toRadixString(16).padLeft(64, '0');
 
-String _pubkey(int seed) => (seed + 100).toRadixString(16).padLeft(64, '0');
+final _pubkeys = <int, String>{};
+String _pubkey(int seed) =>
+    _pubkeys.putIfAbsent(seed, () => getPublicKey(_eventId(seed + 100)));
