@@ -3,13 +3,12 @@
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/my_followers/my_followers_bloc.dart';
 import 'package:openvine/blocs/others_followers/others_followers_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/router/router.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/widgets/profile/profile_stats_row_widget.dart';
 
 /// Page widget that creates the appropriate followers BLoC based on pubkey.
@@ -94,10 +93,10 @@ class _MyFollowersStatView extends ConsumerWidget {
           count: hasLoadedCount ? state.followerCount : initialCount,
           label: context.l10n.profileFollowersLabel,
           isLoading: (isLoading || !hasLoadedCount) && initialCount == null,
-          onTap: () => context.push(
-            FollowersScreenRouter.pathForPubkey(pubkey),
-            extra: displayName,
-          ),
+          onTap: () => FollowersRouteData(
+            pubkey: pubkey,
+            $extra: displayName,
+          ).push<void>(context),
         );
       },
     );
@@ -137,10 +136,10 @@ class _OthersFollowersStatView extends ConsumerWidget {
           count: hasLoadedCount ? state.followerCount : initialCount,
           label: context.l10n.profileFollowersLabel,
           isLoading: (isLoading || !hasLoadedCount) && initialCount == null,
-          onTap: () => context.push(
-            FollowersScreenRouter.pathForPubkey(pubkey),
-            extra: displayName,
-          ),
+          onTap: () => FollowersRouteData(
+            pubkey: pubkey,
+            $extra: displayName,
+          ).push<void>(context),
         );
       },
     );

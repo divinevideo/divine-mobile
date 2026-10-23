@@ -6,15 +6,14 @@ import 'dart:async';
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_time_formatter.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_name_builder.dart';
-import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 
@@ -37,11 +36,9 @@ class ChatMessageTile extends ConsumerWidget {
   void _openProfile(BuildContext context) {
     FocusScope.of(context).unfocus();
     unawaited(
-      context.push<void>(
-        OtherProfileScreen.pathForNpub(
-          NostrKeyUtils.encodePubKey(message.author),
-        ),
-      ),
+      OtherProfileRouteData(
+        npub: NostrKeyUtils.encodePubKey(message.author),
+      ).push<void>(context),
     );
   }
 

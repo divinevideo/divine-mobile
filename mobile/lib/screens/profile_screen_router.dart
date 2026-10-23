@@ -20,8 +20,8 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/router/routes/library_routes.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
-import 'package:openvine/screens/profile_setup/profile_setup.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/npub_hex.dart';
@@ -176,7 +176,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
 
   Future<void> _editProfile() async {
     // Navigate directly to edit-profile route (defined outside ShellRoute)
-    await context.push(ProfileSetupScreen.editPath);
+    await const EditProfileRouteData().push<void>(context);
   }
 
   Future<void> _shareProfile(

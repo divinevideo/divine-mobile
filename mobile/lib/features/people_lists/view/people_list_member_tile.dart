@@ -4,7 +4,6 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
@@ -13,7 +12,7 @@ import 'package:openvine/features/people_lists/view/people_list_member_avatar.da
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
-import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
@@ -131,7 +130,7 @@ class PeopleListMemberTile extends ConsumerWidget {
         : (profile?.shortDisplayNip05 ?? npub);
     final onTap = validPubkey
         ? () => runDetached(
-            context.push<void>(OtherProfileScreen.pathForNpub(npub)),
+            OtherProfileRouteData(npub: npub).push<void>(context),
             'open people list member profile',
             logName: 'PeopleListMemberTile',
             category: LogCategory.ui,

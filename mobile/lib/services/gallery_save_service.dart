@@ -317,16 +317,8 @@ class GallerySaveService {
   // temporary/cache roots need not match a standard sandbox-path pattern.
   // A native error can quote the file name alone, or a numbered copy of it,
   // and a kept video DM's file is named after its message.
-  static String _nativeDiagnostic(String? message, List<String?> paths) {
-    var text = message ?? 'no native message';
-    for (final path in paths) {
-      if (path == null || path.isEmpty) continue;
-      text = text.replaceAll(path, '[REDACTED]');
-      final stem = p.basenameWithoutExtension(path);
-      if (stem.isNotEmpty) text = text.replaceAll(stem, '[REDACTED]');
-    }
-    return redactFilesystemPaths(text);
-  }
+  static String _nativeDiagnostic(String? message, List<String?> paths) =>
+      redactFilesAndPaths(message ?? 'no native message', paths);
 
   // In a folder of its own, so two saves never share a copy.
   Future<File> _neutralCopyOf(File file) async {

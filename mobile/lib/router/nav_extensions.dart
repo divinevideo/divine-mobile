@@ -3,9 +3,8 @@
 
 import 'dart:async';
 
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -20,7 +19,7 @@ extension NavExtensions on BuildContext {
     final npub = NostrKeyUtils.encodePubKey(hexPubkey);
     // A push future is the eventual pop result; keep taps sync and log errors.
     unawaited(
-      push<void>(OtherProfileScreen.pathForNpub(npub)).catchError((
+      OtherProfileRouteData(npub: npub).push<void>(this).catchError((
         Object error,
         StackTrace stack,
       ) {
@@ -40,6 +39,6 @@ extension NavExtensions on BuildContext {
   /// Use this when you want the profile to become the new root.
   void goOtherProfile(String hexPubkey) {
     final npub = NostrKeyUtils.encodePubKey(hexPubkey);
-    go(OtherProfileScreen.pathForNpub(npub));
+    OtherProfileRouteData(npub: npub).go(this);
   }
 }
