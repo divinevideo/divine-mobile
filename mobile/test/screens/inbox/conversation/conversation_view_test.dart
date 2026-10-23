@@ -1985,8 +1985,8 @@ void main() {
         testWidgets('opens a chat with the remaining members', (tester) async {
           final goRouter = MockGoRouter();
           when(
-            () => goRouter.push<Object?>(any(), extra: any(named: 'extra')),
-          ).thenAnswer((_) async => null);
+            () => goRouter.push<void>(any(), extra: any(named: 'extra')),
+          ).thenAnswer((_) async {});
           when(() => mockBlocklist.isBlocked(bob)).thenReturn(true);
 
           await tester.pumpWidget(
@@ -2001,7 +2001,7 @@ void main() {
           await tester.pump();
 
           verify(
-            () => goRouter.push<Object?>(
+            () => goRouter.push<void>(
               ConversationPage.pathForId(
                 DmRepository.computeConversationId([
                   currentPubkey,

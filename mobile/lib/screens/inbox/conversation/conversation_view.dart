@@ -776,12 +776,10 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
       isBlockedByUs: ref.read(contentBlocklistRepositoryProvider).isBlocked,
     );
     runDetached(
-      context.push(
-        ConversationPage.pathForId(
-          DmRepository.computeConversationId([currentPubkey, ...remaining]),
-        ),
-        extra: remaining,
-      ),
+      ConversationRouteData(
+        id: DmRepository.computeConversationId([currentPubkey, ...remaining]),
+        $extra: remaining,
+      ).push<void>(context),
       'open DM conversation without blocked members',
       logName: 'ConversationView',
       category: LogCategory.ui,
