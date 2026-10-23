@@ -1,0 +1,5 @@
+<resources>
+    <style name="LabTheme" parent="android:style/Theme.Material.Light.NoActionBar"><item name="android:colorAccent">#168558</item></style>
+    <color name="surface">#FFF8F3</color>
+    <string name="widget_description">Prototype: a two-second moment of joy with Next, local Like, and Open.</string>
+</resources>

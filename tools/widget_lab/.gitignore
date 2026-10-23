@@ -1,0 +1,7 @@
+.build/
+ios/WidgetLab.xcodeproj/
+ios/Media/
+ios/.generated/
+android/assets/
+android/res/drawable-nodpi/
+__pycache__/
