@@ -23,6 +23,8 @@ typedef _Decision = ({bool hidden, int updatedAt});
 /// Per-badge timestamps let devices reconcile concurrent snapshots, including
 /// undos. The signed cache preserves acknowledged decisions across restarts
 /// and relay indexing delays; it must not expire while a relay is behind.
+/// This single-snapshot format is bounded by NIP-44 and relay event-size limits.
+/// Undo records cannot be pruned safely while older snapshots may still exist.
 class BadgeDismissalSync {
   BadgeDismissalSync({
     required NostrClient client,
@@ -44,20 +46,36 @@ class BadgeDismissalSync {
   Future<Set<String>> load(String pubkey, FutureOr<Set<String>> local) {
     // Observe errors while queued; awaiting below still propagates them.
     final localFuture = Future<Set<String>>.value(local)..ignore();
-    return _serialize(() async {
+    final displayed = Completer<Set<String>>();
+    final operation = _serialize(() async {
       try {
-        return await _reconcile(pubkey, localFuture);
+        return await _reconcile(
+          pubkey,
+          localFuture,
+          onRead: displayed.complete,
+        );
       } on Object catch (_) {
         // Never log decrypted settings or remote payloads. A read failure
         // must not prevent viewing badges or overwrite unreadable state.
         Log.warning(
-          'Badge decisions unavailable; retaining local choices',
+          displayed.isCompleted
+              ? 'Badge decisions read; relay repair deferred'
+              : 'Badge inputs unavailable; retaining local choices',
           name: 'BadgeDismissalSync',
           category: LogCategory.relay,
         );
         return localFuture;
       }
     });
+    unawaited(
+      operation.then(
+        (choices) {
+          if (!displayed.isCompleted) displayed.complete(choices);
+        },
+        onError: displayed.completeError,
+      ),
+    );
+    return displayed.future;
   }
 
   /// Mutations require a complete readable snapshot and relay confirmation.
@@ -82,6 +100,7 @@ class BadgeDismissalSync {
     FutureOr<Set<String>> local, {
     String? coordinate,
     bool? hidden,
+    void Function(Set<String>)? onRead,
   }) async {
     final signer = _signer();
     final localFuture = Future<Set<String>>.value(local);
@@ -98,12 +117,7 @@ class BadgeDismissalSync {
       );
     }
 
-    final cachedJson = _preferences.getString(_cacheKey(pubkey));
-    final cached = cachedJson == null
-        ? const <Event>[]
-        : (jsonDecode(cachedJson) as List<dynamic>).map(
-            (value) => Event.fromJson(value as Map<String, dynamic>),
-          );
+    final cached = _cachedEvents(pubkey);
     final candidates = {
       for (final event in [...result.events, ...cached])
         if (_belongsTo(event, pubkey)) event.id: event,
@@ -135,13 +149,14 @@ class BadgeDismissalSync {
       }
     }
 
-    if (complete && !_sameDecisions(decisions, latestDecisions ?? const {})) {
-      final signed = await _publish(signer, pubkey, decisions, latest);
-      await _cache(pubkey, [signed]);
-      _remember(signed.id, decisions);
-    } else if (latest != null) {
-      // An incomplete read cannot publish a consolidated snapshot. Retain
-      // each signed source needed for a current decision, including undos.
+    final hiddenChoices = {
+      for (final entry in decisions.entries)
+        if (entry.value.hidden) entry.key,
+    };
+    // Display verified decisions without waiting for best-effort relay repair.
+    onRead?.call(hiddenChoices);
+    if (latest != null) {
+      // Keep signed sources even if consolidation or its acknowledgment fails.
       final retained = <Event>[latest];
       final missing = decisions.keys.toSet();
       for (final event in candidates) {
@@ -159,10 +174,34 @@ class BadgeDismissalSync {
       }
       await _cache(pubkey, retained);
     }
-    return {
-      for (final entry in decisions.entries)
-        if (entry.value.hidden) entry.key,
-    };
+    if (complete && !_sameDecisions(decisions, latestDecisions ?? const {})) {
+      final signed = await _publish(signer, pubkey, decisions, latest);
+      await _cache(pubkey, [signed]);
+      _remember(signed.id, decisions);
+    } else if (complete &&
+        latest != null &&
+        !result.events.any((event) => event.id == latest.id)) {
+      // Reuse the original signature when relays have lost an acknowledged copy.
+      await _confirm(latest);
+    }
+    return hiddenChoices;
+  }
+
+  List<Event> _cachedEvents(String pubkey) {
+    final cachedJson = _preferences.getString(_cacheKey(pubkey));
+    if (cachedJson == null) return const [];
+    try {
+      return (jsonDecode(cachedJson) as List<dynamic>)
+          .map((value) => Event.fromJson(value as Map<String, dynamic>))
+          .toList();
+    } on Object catch (_) {
+      Log.warning(
+        'Invalid badge decision cache; recovering from relays',
+        name: 'BadgeDismissalSync',
+        category: LogCategory.relay,
+      );
+      return const [];
+    }
   }
 
   Future<({List<Event> events, bool timedOut, bool noRelays})> _read(
@@ -226,11 +265,15 @@ class BadgeDismissalSync {
         !_belongsTo(signed, pubkey)) {
       throw const BadgeDismissalSyncException('Could not sign decisions');
     }
+    await _confirm(signed);
+    return signed;
+  }
+
+  Future<void> _confirm(Event signed) async {
     final outcome = await _client.publishEventAwaitOk(signed);
     if (!outcome.acceptedByAny) {
       throw const BadgeDismissalSyncException('No relay confirmed decisions');
     }
-    return signed;
   }
 
   Future<Map<String, _Decision>> _decode(

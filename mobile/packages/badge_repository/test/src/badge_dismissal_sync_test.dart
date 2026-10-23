@@ -58,6 +58,7 @@ void main() {
   late List<Event> relayEvents;
   late bool timedOut;
   late bool rejectPublish;
+  void Function(Event)? onPublished;
   const coordinate =
       '30009:2222222222222222222222222222222222222222222222222222222222222222:first';
   const otherCoordinate =
@@ -75,6 +76,7 @@ void main() {
     relayEvents = [];
     timedOut = false;
     rejectPublish = false;
+    onPublished = null;
     when(
       () => client.queryEventsDetailed(
         any(),
@@ -95,7 +97,10 @@ void main() {
     });
     when(() => client.publishEventAwaitOk(any())).thenAnswer((call) async {
       final event = call.positionalArguments.single as Event;
-      if (!rejectPublish) relayEvents.add(event);
+      if (!rejectPublish) {
+        relayEvents.add(event);
+        onPublished?.call(event);
+      }
       return PublishOutcome(
         eventId: event.id,
         acceptedBy: rejectPublish ? const [] : const ['wss://relay.example'],
@@ -137,6 +142,73 @@ void main() {
   }
 
   group('load / setHidden', () {
+    test('display does not wait for consolidation acknowledgment', () async {
+      final acknowledgment = Completer<PublishOutcome>();
+      Event? pending;
+      when(() => client.publishEventAwaitOk(any())).thenAnswer((call) {
+        pending = call.positionalArguments.single as Event;
+        return acknowledgment.future;
+      });
+      var displayed = false;
+      final loading = phone.load(pubkey, {coordinate}).then((choices) {
+        displayed = true;
+        return choices;
+      });
+      await pumpEventQueue();
+      final displayedBeforeAcknowledgment = displayed;
+      acknowledgment.complete(
+        PublishOutcome(
+          eventId: pending!.id,
+          acceptedBy: const ['wss://relay.example'],
+          rejectedBy: const {},
+          noResponseFrom: const [],
+        ),
+      );
+      expect(await loading, {coordinate});
+      expect(displayedBeforeAcknowledgment, isTrue);
+    });
+
+    test('read decisions survive a refused consolidation write', () async {
+      relayEvents = [
+        await snapshot({
+          'version': 1,
+          'decisions': {
+            coordinate: {'hidden': true, 'updated_at': 1},
+          },
+        }),
+      ];
+      rejectPublish = true;
+      expect(await phone.load(pubkey, {otherCoordinate}), {
+        coordinate,
+        otherCoordinate,
+      });
+    });
+
+    test(
+      'resends the signed cache when a complete relay read has lost it',
+      () async {
+        await phone.setHidden(pubkey, {}, coordinate, hidden: true);
+        final original = relayEvents.single;
+        relayEvents.clear();
+        expect(await phone.load(pubkey, {coordinate}), {coordinate});
+        await pumpEventQueue();
+        expect(relayEvents.map((event) => event.id), [original.id]);
+        expect(await desktop.load(pubkey, {}), {coordinate});
+      },
+    );
+
+    test(
+      'a corrupt cache can recover through a complete read and mutation',
+      () async {
+        await phonePreferences.setString(
+          'badge_dismissal_event_$pubkey',
+          'invalid',
+        );
+        await phone.setHidden(pubkey, {}, coordinate, hidden: true);
+        expect(await desktop.load(pubkey, {}), {coordinate});
+      },
+    );
+
     test(
       'a queued local-read error reaches its caller without leaking',
       () async {
@@ -195,12 +267,22 @@ void main() {
     });
 
     test('migrates old dismissals without reversing a synced undo', () async {
+      final migration = Completer<void>();
+      onPublished = (_) {
+        if (!migration.isCompleted) migration.complete();
+      };
       expect(await phone.load(pubkey, {coordinate}), {coordinate});
+      await migration.future;
       expect(await desktop.load(pubkey, {}), {coordinate});
       await desktop.setHidden(pubkey, {coordinate}, coordinate, hidden: false);
+      final nextMigration = Completer<void>();
+      onPublished = (_) {
+        if (!nextMigration.isCompleted) nextMigration.complete();
+      };
       expect(await phone.load(pubkey, {coordinate, otherCoordinate}), {
         otherCoordinate,
       });
+      await nextMigration.future;
       expect(await desktop.load(pubkey, {}), {otherCoordinate});
     });
 
@@ -315,7 +397,12 @@ void main() {
           createdAt: undo.createdAt + 10,
         );
         relayEvents = [(await signer.signEvent(newerStale))!];
+        final consolidation = Completer<void>();
+        onPublished = (_) {
+          if (!consolidation.isCompleted) consolidation.complete();
+        };
         expect(await phone.load(pubkey, {}), {otherCoordinate});
+        await consolidation.future;
         expect(await desktop.load(pubkey, {coordinate, otherCoordinate}), {
           otherCoordinate,
         });
