@@ -392,7 +392,11 @@ class FullscreenFeedContent extends ConsumerStatefulWidget {
   /// Logical identity of the opened video, for DM controls and attribution.
   final String? initialVideoKey;
 
-  /// Lets another swipe retry discovery when no new page was playable yet.
+  /// Whether this feed continues the opened video into For You discovery.
+  ///
+  /// Another swipe past the end then retries discovery when no new page was
+  /// playable yet, and every video other than [initialVideoKey] is
+  /// attributed to For You.
   final bool loadMoreOnEndSwipe;
 
   /// Overrides the app-bar back action when the feed is embedded as a parent
