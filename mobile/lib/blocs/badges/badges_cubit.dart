@@ -142,8 +142,7 @@ class BadgesCubit extends Cubit<BadgesState> {
       addError(error, stackTrace);
       if (isClosed) return;
       if (refreshOnError) {
-        await _loadDashboard(actionStatus: BadgeActionStatus.error);
-        return;
+        return _loadDashboard(actionStatus: BadgeActionStatus.error);
       }
       emit(
         state.copyWith(
