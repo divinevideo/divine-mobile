@@ -300,8 +300,9 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
     if (isClosed ||
         emit.isDone ||
         event.request != _profileRequest ||
-        raw == null)
+        raw == null) {
       return;
+    }
     final latest = state;
     if (latest is! OtherProfileLoaded || raw.pubkey != pubkey) return;
     // REST projections may carry a synthetic DateTime.now timestamp. Only a

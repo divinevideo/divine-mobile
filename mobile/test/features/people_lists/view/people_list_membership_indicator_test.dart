@@ -37,7 +37,6 @@ void main() {
         initialState: state,
       );
       return ProviderScope(
-        overrides: const [],
         child: BlocProvider<PeopleListsBloc>.value(
           value: bloc,
           child: const MaterialApp(
