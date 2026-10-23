@@ -230,6 +230,8 @@ class NotificationRepository {
     SharedPreferences? pendingReadPreferences,
     AccountSyncDao? readStateDao,
     Duration readStateRetryDelay = const Duration(seconds: 5),
+    void Function(String owner, Future<void> Function() close)?
+    onAccountCreated,
   }) : _funnelcakeApiClient = funnelcakeApiClient,
        _profileRepository = profileRepository,
        _notificationsDao = notificationsDao,
@@ -241,6 +243,9 @@ class NotificationRepository {
        _readStateDao = readStateDao,
        _readStateRetryDelay = readStateRetryDelay {
     _readReady = _restoreDurableReads();
+    // The initial DAO read has yielded; register before migration or any
+    // hydration/read mutation can issue an account-owned write.
+    onAccountCreated?.call(_userPubkey, close);
     // Construction/listening remains available even with a failed storage open;
     // mutations still await the original failure and cannot claim durability.
     unawaited(
@@ -289,11 +294,14 @@ class NotificationRepository {
     final dao = _readStateDao;
     if (dao == null) return;
     final rows = await dao.readNotificationReads(_userPubkey);
+    if (_closed) return;
     _durableReadIds.addAll(rows.map((row) => row.notificationId));
     _pendingReadIds.addAll(
       rows.where((row) => row.pending).map((row) => row.notificationId),
     );
-    for (final row in await dao.readNotificationMembers(_userPubkey)) {
+    final members = await dao.readNotificationMembers(_userPubkey);
+    if (_closed) return;
+    for (final row in members) {
       _cachedNotificationIds
           .putIfAbsent(row.cacheId, () => [])
           .add(row.notificationId);
@@ -332,10 +340,11 @@ class NotificationRepository {
       {..._durableReadIds, ...read, ...pending},
       {..._pendingReadIds, ...pending},
     );
-    await _pendingReadPreferences!.remove(_readStateKey);
+    if (!_closed) await _pendingReadPreferences!.remove(_readStateKey);
   }
 
   Future<void> _saveDurableReads(Set<String> read, Set<String> pending) async {
+    if (_closed) return;
     final queued = Set<String>.of(pending);
     final retained = {
       ...queued,
@@ -431,6 +440,8 @@ class NotificationRepository {
     });
   }
 
+  // Tracks all local DAO writes; journal mutations serialize on this tail.
+  // HTTP/signer work stays outside.
   Future<void> _durableReadTail = Future<void>.value();
 
   Future<void> _enqueueDurableReadMutation(Future<void> Function() operation) {
@@ -516,6 +527,7 @@ class NotificationRepository {
 
   final Map<NotificationKind?, _NotificationFeed> _feeds = {};
   bool _closed = false;
+  Future<void>? _closing;
   Future<void> _readMutationTail = Future<void>.value();
 
   void _throwIfClosed() {
@@ -623,12 +635,14 @@ class NotificationRepository {
       .map((page) => page.items.where((n) => !n.isRead).length)
       .distinct();
 
-  /// Disposes the internal snapshot subject.
+  /// Disposes snapshots and joins already-issued local storage operations.
   ///
+  /// All callers share the same drain. Signer and HTTP requests are excluded.
   /// Called when the repository is no longer needed (e.g. on auth flip
   /// when a new repository instance replaces this one).
-  Future<void> close() async {
-    if (_closed) return;
+  Future<void> close() => _closing ??= _close();
+
+  Future<void> _close() async {
     _closed = true;
     _readRetryTimer?.cancel();
     _readRetryTimer = null;
@@ -639,6 +653,14 @@ class NotificationRepository {
     for (final feed in _liveFeeds.toList()) {
       await feed.snapshot.close();
     }
+    // Join issued storage and migration work before owner erasure. This tail
+    // contains local DAO operations only; signer/HTTP queues are not awaited.
+    try {
+      await _readReady;
+    } on Object {
+      // Read mutations still observe the original readiness failure.
+    }
+    await _durableReadTail;
   }
 
   /// Whether [close] has been called on this repository.
@@ -943,7 +965,7 @@ class NotificationRepository {
   Future<void> _hydrateFromCache() async {
     try {
       await _readReady;
-      if (_snapshot.value.items.isNotEmpty) return;
+      if (_closed || _snapshot.value.items.isNotEmpty) return;
       final rows = await _notificationsDao.getAllNotifications(
         limit: _pageSize,
         ownerPubkey: _userPubkey,
@@ -952,9 +974,11 @@ class NotificationRepository {
       if (_closed) return;
       if (_readStateDao != null) {
         await _enqueueDurableReadMutation(() async {
+          if (_closed) return;
           final cache = await _notificationsDao.getAllNotifications(
             ownerPubkey: _userPubkey,
           );
+          if (_closed) return;
           final retained = cache.map((row) => row.id).toSet();
           _cachedNotificationIds.removeWhere((id, _) => !retained.contains(id));
           for (final row in cache) {
@@ -969,7 +993,7 @@ class NotificationRepository {
           await _saveDurableReads(_durableReadIds, _pendingReadIds);
         });
       }
-      if (rows.isEmpty) return;
+      if (_closed || rows.isEmpty) return;
       if (_snapshot.value.items.isNotEmpty) return;
       final items = _overlayDurableReads(
         rows
@@ -1215,7 +1239,18 @@ class NotificationRepository {
   /// active source of truth; the cache is a fallback, not a critical
   /// path.
   Future<void> _persistSnapshot(List<NotificationItem> items) {
-    if (_readStateDao == null) return _persistSnapshotNow(items);
+    if (_readStateDao == null) {
+      if (_closed) return Future<void>.value();
+      // Preserve eager cache issuance on the legacy path while retaining its
+      // in-flight write in the local drain used by close/account erasure.
+      final write = _persistSnapshotNow(items);
+      _durableReadTail = Future.wait<void>([_durableReadTail, write])
+          .then<void>(
+            (_) {},
+            onError: (Object _, StackTrace _) {},
+          );
+      return write;
+    }
     return _enqueueDurableReadMutation(() async {
       if (_closed) return;
       final previous = Map<String, List<String>>.of(_cachedNotificationIds);
@@ -1237,7 +1272,7 @@ class NotificationRepository {
         );
         return;
       }
-      await _persistSnapshotNow(_overlayDurableReads(items));
+      if (!_closed) await _persistSnapshotNow(_overlayDurableReads(items));
     });
   }
 
@@ -1629,9 +1664,13 @@ class NotificationRepository {
         authHeaders: authHeaders,
       );
 
-      for (final id in notificationIds) {
-        await _notificationsDao.markAsRead(id, ownerPubkey: _userPubkey);
-      }
+      await _enqueueDurableReadMutation(() async {
+        if (_closed) return;
+        for (final id in notificationIds) {
+          if (_closed) return;
+          await _notificationsDao.markAsRead(id, ownerPubkey: _userPubkey);
+        }
+      });
     } catch (_) {
       _restoreReadFlags([...callTimeFlips, ...executionFlips]);
       rethrow;
@@ -1679,15 +1718,18 @@ class NotificationRepository {
         authHeaders: authHeaders,
       );
 
-      if (_readStateDao != null) {
-        await _enqueueDurableReadMutation(
-          () => _saveDurableReads(
+      await _enqueueDurableReadMutation(() async {
+        if (_closed) return;
+        if (_readStateDao != null) {
+          await _saveDurableReads(
             {..._durableReadIds, ...knownIds},
             _pendingReadIds.difference(knownIds),
-          ),
-        );
-      }
-      await _notificationsDao.markAllAsRead(ownerPubkey: _userPubkey);
+          );
+        }
+        if (!_closed) {
+          await _notificationsDao.markAllAsRead(ownerPubkey: _userPubkey);
+        }
+      });
     } catch (_) {
       _restoreReadFlags([...callTimeFlips, ...executionFlips]);
       rethrow;

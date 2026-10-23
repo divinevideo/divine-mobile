@@ -578,16 +578,16 @@ class UserDataCleanupService {
                   isIdentityChange: pending.isIdentityChange,
                   userPubkey: pending.userPubkey,
                   deleteUserData: pending.deleteUserData,
+                  forgetAccount: pending.forgetAccount,
                 );
-          // Only a full deletion also removes rows kept for a returning
-          // account; an identity-only retry cannot consume a new forget request.
-          if ((!forgetAccount || pending.deleteUserData) &&
-              pending.covers(
-                userPubkey: userPubkey,
-                isIdentityChange: isIdentityChange,
-                deleteUserData: deleteUserData,
-                preserveActiveSession: pending.preserveActiveSession,
-              )) {
+          // Replaying identity cleanup cannot consume a new forget request.
+          if (pending.covers(
+            userPubkey: userPubkey,
+            isIdentityChange: isIdentityChange,
+            deleteUserData: deleteUserData,
+            preserveActiveSession: pending.preserveActiveSession,
+            forgetAccount: forgetAccount,
+          )) {
             return resumedCount;
           }
         }
@@ -609,6 +609,7 @@ class UserDataCleanupService {
             isIdentityChange: isIdentityChange,
             deleteUserData: deleteUserData,
             preserveActiveSession: true,
+            forgetAccount: forgetAccount,
           );
       return preservesScope
           ? await _listSessions.writes.runExclusive(runCleanup)
@@ -650,11 +651,12 @@ class UserDataCleanupService {
       category: LogCategory.auth,
     );
 
-    final requiredCleanup = deleteUserData || isIdentityChange
+    final requiredCleanup = deleteUserData || isIdentityChange || forgetAccount
         ? PendingAccountCleanup(
             userPubkey: userPubkey,
             isIdentityChange: isIdentityChange,
             deleteUserData: deleteUserData,
+            forgetAccount: forgetAccount,
           )
         : null;
     // A refusal must stop before the first cache removal; otherwise a restart

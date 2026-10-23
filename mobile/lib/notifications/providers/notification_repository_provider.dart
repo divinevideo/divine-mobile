@@ -5,11 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:http/http.dart' as http;
 import 'package:notification_repository/notification_repository.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:openvine/services/nip98_http_client.dart';
@@ -53,11 +55,16 @@ final notificationRepositoryProvider = Provider<NotificationRepository?>((ref) {
   final authService = ref.watch(authServiceProvider);
   final userPubkey = authService.currentPublicKeyHex ?? '';
 
+  final writes = ref.watch(accountStateWriteBarrierProvider);
+  late Future<void> Function() close;
   final repository = NotificationRepository(
     funnelcakeApiClient: funnelcakeApiClient,
     profileRepository: profileRepository,
     notificationsDao: db.notificationsDao,
     userPubkey: userPubkey,
+    onAccountCreated: (owner, stop) {
+      close = owner.isEmpty ? stop : writes.register(owner, stop);
+    },
     readStateDao: ref.watch(databaseProvider).accountSyncDao,
     pendingReadPreferences: ref.watch(sharedPreferencesProvider),
     // Engine-backed blocked-author filter.
@@ -81,13 +88,14 @@ final notificationRepositoryProvider = Provider<NotificationRepository?>((ref) {
       return {'Authorization': token.authorizationHeader};
     },
   );
-  // Close the internal BehaviorSubject when this provider rebuilds or the
-  // container disposes (e.g. auth flip, account switch). The feed bloc and
-  // badge cubit swap away before this fires, but the refresh coordinator
-  // may still hold this instance across an in-flight refresh. That is
-  // benign: getNotifications emits to the snapshot before persisting, so a
-  // close-during-refresh fails on the emit with a StateError — before any
-  // DAO write — and the coordinator treats that as account-switch noise.
-  ref.onDispose(repository.close);
+  // Retain the exact owner drain across provider disposal. Erasure joins it;
+  // outstanding HTTP/signer requests never hold up the local storage barrier.
+  ref.onDispose(() {
+    runProviderDetached(
+      close(),
+      'close notification reads',
+      logName: 'NotificationRepository',
+    );
+  });
   return repository;
 });

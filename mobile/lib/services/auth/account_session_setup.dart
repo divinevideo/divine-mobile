@@ -46,6 +46,7 @@ extension _AccountSessionSetup on AuthService {
       return pending != null &&
           pending.userPubkey == incomingPubkey &&
           pending.isIdentityChange &&
+          !pending.forgetAccount &&
           !pending.deleteUserData;
     } on FormatException {
       // Malformed JSON enters the existing typed cleanup-failure path.

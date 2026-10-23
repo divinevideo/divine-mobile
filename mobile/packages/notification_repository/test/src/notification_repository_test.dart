@@ -25,6 +25,63 @@ class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 class _MockNotificationsDao extends Mock implements NotificationsDao {}
 
+class _HeldReadStateDao extends AccountSyncDao {
+  _HeldReadStateDao(super.attachedDatabase);
+  Completer<void>? readGate;
+  Completer<void>? readEntered;
+  Completer<void>? writeGate;
+  Completer<void>? writeEntered;
+
+  @override
+  Future<List<NotificationReadRow>> readNotificationReads(String owner) async {
+    if (!(readEntered?.isCompleted ?? true)) readEntered!.complete();
+    await readGate?.future;
+    return super.readNotificationReads(owner);
+  }
+
+  @override
+  Future<void> writeNotificationReads(
+    String owner,
+    Set<String> read,
+    Set<String> pending,
+    Map<String, List<String>> members,
+  ) async {
+    if (!(writeEntered?.isCompleted ?? true)) writeEntered!.complete();
+    await writeGate?.future;
+    await super.writeNotificationReads(owner, read, pending, members);
+  }
+}
+
+class _HeldNotificationsDao extends NotificationsDao {
+  _HeldNotificationsDao(super.attachedDatabase);
+  Completer<void>? cacheGate;
+  Completer<void>? cacheEntered;
+  Completer<void>? writeGate;
+  Completer<void>? writeEntered;
+
+  @override
+  Future<List<NotificationRow>> getAllNotifications({
+    int? limit,
+    String? ownerPubkey,
+  }) async {
+    if (limit == null && cacheGate != null) {
+      if (!(cacheEntered?.isCompleted ?? true)) cacheEntered!.complete();
+      await cacheGate!.future;
+    }
+    return super.getAllNotifications(limit: limit, ownerPubkey: ownerPubkey);
+  }
+
+  @override
+  Future<void> replaceAll(
+    List<NotificationCacheRow> rows, {
+    String? ownerPubkey,
+  }) async {
+    if (!(writeEntered?.isCompleted ?? true)) writeEntered!.complete();
+    await writeGate?.future;
+    await super.replaceAll(rows, ownerPubkey: ownerPubkey);
+  }
+}
+
 void main() {
   late _MockFunnelcakeApiClient funnelcakeApiClient;
   late _MockProfileRepository profileRepository;
@@ -278,6 +335,232 @@ void main() {
       readDatabase = AppDatabase.test(NativeDatabase.memory());
     });
     tearDown(() => readDatabase.close());
+    group('close local writes before owner erasure', () {
+      Future<void> erase(NotificationRepository repo) async {
+        await repo.close();
+        await readDatabase.accountSyncDao.clearAccount(userPubkey);
+        await readDatabase.notificationsDao.clearAll(ownerPubkey: userPubkey);
+      }
+
+      setUp(() {
+        when(
+          () => funnelcakeApiClient.markNotificationsRead(
+            pubkey: any(named: 'pubkey'),
+            notificationIds: any(named: 'notificationIds'),
+            authHeaders: any(named: 'authHeaders'),
+          ),
+        ).thenThrow(const FunnelcakeException('offline'));
+      });
+
+      test(
+        'held inner hydration cannot restore erased pending reads',
+        () async {
+          await readDatabase.accountSyncDao.writeNotificationReads(
+            userPubkey,
+            {'pending'},
+            {'pending'},
+            {},
+          );
+          final dao = _HeldNotificationsDao(readDatabase)
+            ..cacheGate = Completer<void>()
+            ..cacheEntered = Completer<void>();
+          final repo = NotificationRepository(
+            funnelcakeApiClient: funnelcakeApiClient,
+            profileRepository: profileRepository,
+            notificationsDao: dao,
+            userPubkey: userPubkey,
+            readStateDao: readDatabase.accountSyncDao,
+          );
+          await dao.cacheEntered!.future;
+          final erasing = erase(repo);
+          await pumpEventQueue();
+          dao.cacheGate!.complete();
+          await erasing;
+          await pumpEventQueue();
+          expect(
+            await readDatabase.accountSyncDao.readNotificationReads(userPubkey),
+            isEmpty,
+          );
+          expect(
+            await readDatabase.accountSyncDao.readNotificationMembers(
+              userPubkey,
+            ),
+            isEmpty,
+          );
+        },
+      );
+
+      test(
+        'repeated close joins an already issued durable read write',
+        () async {
+          final dao = _HeldReadStateDao(readDatabase);
+          final repo = NotificationRepository(
+            funnelcakeApiClient: funnelcakeApiClient,
+            profileRepository: profileRepository,
+            notificationsDao: notificationsDao,
+            userPubkey: userPubkey,
+            readStateDao: dao,
+            hydrateOnStart: false,
+          );
+          await repo.flushPendingReadState();
+          dao
+            ..writeGate = Completer<void>()
+            ..writeEntered = Completer<void>();
+          final reading = repo.markAsRead(['pending']);
+          await dao.writeEntered!.future;
+          unawaited(repo.close());
+          final erasing = erase(repo);
+          await pumpEventQueue();
+          dao.writeGate!.complete();
+          await reading;
+          await erasing;
+          expect(
+            await readDatabase.accountSyncDao.readNotificationReads(userPubkey),
+            isEmpty,
+          );
+        },
+      );
+
+      test(
+        'close joins held readiness and legacy migration before erasure',
+        () async {
+          SharedPreferences.setMockInitialValues({
+            NotificationRepository.readStateStorageKey(userPubkey): jsonEncode({
+              'read': ['legacy'],
+              'pending': ['legacy'],
+              'cachedIds': <String, List<String>>{},
+            }),
+          });
+          final prefs = await SharedPreferences.getInstance();
+          final dao = _HeldReadStateDao(readDatabase)
+            ..readGate = Completer<void>()
+            ..readEntered = Completer<void>();
+          final repo = NotificationRepository(
+            funnelcakeApiClient: funnelcakeApiClient,
+            profileRepository: profileRepository,
+            notificationsDao: notificationsDao,
+            userPubkey: userPubkey,
+            readStateDao: dao,
+            pendingReadPreferences: prefs,
+            hydrateOnStart: false,
+          );
+          await dao.readEntered!.future;
+          final erasing = erase(repo);
+          await pumpEventQueue();
+          dao.readGate!.complete();
+          await erasing;
+          await repo.flushPendingReadState();
+          expect(
+            await readDatabase.accountSyncDao.readNotificationReads(userPubkey),
+            isEmpty,
+          );
+        },
+      );
+
+      test(
+        'close joins an issued cache snapshot write without a durable journal',
+        () async {
+          final dao = _HeldNotificationsDao(readDatabase)
+            ..writeGate = Completer<void>()
+            ..writeEntered = Completer<void>();
+          final repo = NotificationRepository(
+            funnelcakeApiClient: funnelcakeApiClient,
+            profileRepository: profileRepository,
+            notificationsDao: dao,
+            userPubkey: userPubkey,
+            hydrateOnStart: false,
+          );
+          stubNotifications([
+            makeNotification(
+              id: 'cached',
+              notificationType: 'follow',
+              sourceKind: 3,
+            ),
+          ]);
+          await repo.getNotifications();
+          await dao.writeEntered!.future;
+          final erasing = erase(repo);
+          await pumpEventQueue();
+          dao.writeGate!.complete();
+          await erasing;
+          await pumpEventQueue();
+          expect(
+            await readDatabase.notificationsDao.getAllNotifications(
+              ownerPubkey: userPubkey,
+            ),
+            isEmpty,
+          );
+        },
+      );
+
+      test(
+        'late online mark-all acknowledgment cannot restore erased rows',
+        () async {
+          await readDatabase.accountSyncDao.writeNotificationReads(
+            userPubkey,
+            {},
+            {},
+            {
+              'cached': ['cached'],
+            },
+          );
+          await readDatabase.notificationsDao.replaceAll([
+            (
+              id: 'cached',
+              type: 'follow',
+              fromPubkey: validPubkey,
+              timestamp: 1700000000,
+              targetEventId: null,
+              videoAddressableId: null,
+              hasCommentTarget: false,
+              targetPubkey: null,
+              content: null,
+              isRead: false,
+            ),
+          ], ownerPubkey: userPubkey);
+          final response = Completer<MarkReadResponse>();
+          final submitted = Completer<void>();
+          when(
+            () => funnelcakeApiClient.markNotificationsRead(
+              pubkey: any(named: 'pubkey'),
+              authHeaders: any(named: 'authHeaders'),
+            ),
+          ).thenAnswer((_) {
+            submitted.complete();
+            return response.future;
+          });
+          final repo = NotificationRepository(
+            funnelcakeApiClient: funnelcakeApiClient,
+            profileRepository: profileRepository,
+            notificationsDao: readDatabase.notificationsDao,
+            userPubkey: userPubkey,
+            readStateDao: readDatabase.accountSyncDao,
+          );
+          await repo.watchSnapshot().firstWhere(
+            (page) => page.items.isNotEmpty,
+          );
+          final reading = repo.markAllAsRead();
+          await submitted.future;
+          // Closing must finish while the HTTP acknowledgment is still held.
+          await erase(repo);
+          response.complete(
+            const MarkReadResponse(success: true, markedCount: 1),
+          );
+          await reading;
+          expect(
+            await readDatabase.accountSyncDao.readNotificationReads(userPubkey),
+            isEmpty,
+          );
+          expect(
+            await readDatabase.accountSyncDao.readNotificationMembers(
+              userPubkey,
+            ),
+            isEmpty,
+          );
+        },
+      );
+    });
+
     for (final corrupt in ['{', '{"read":"bad","pending":[],"cachedIds":{}}']) {
       test('corrupt legacy read journal stays recoverable: $corrupt', () async {
         SharedPreferences.setMockInitialValues({
