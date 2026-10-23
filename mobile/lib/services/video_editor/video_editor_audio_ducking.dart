@@ -3,7 +3,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:models/models.dart' show AudioEvent;
-import 'package:openvine/services/video_editor/video_editor_audio_render.dart';
+import 'package:openvine/models/video_editor/audio_render_window.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
 

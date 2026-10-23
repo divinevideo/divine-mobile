@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/extensions/equalizer_settings_mapping.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
+import 'package:openvine/models/video_editor/audio_render_window.dart';
 import 'package:openvine/services/video_editor/render_audio_fetcher.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_ducking.dart';
 import 'package:openvine/services/video_editor/video_render_failures.dart';
@@ -117,24 +118,6 @@ AudioTrack? audioTrackFromMetaForRender(
     // dependency on a possibly-missing source duration, which previously
     // produced an invalid `[startOffset, 0]` source range.
     volume: track.volume,
-  );
-}
-
-/// Where the render places [track] on the exported video: its timeline
-/// window, or the whole video (both `null`, per [VideoAudioTrack]'s contract)
-/// when the window is missing or inverted.
-///
-/// A persisted track can carry an invalid window — e.g. a sound added before
-/// its duration was known ends up with endTime=0 (see _openMusicLibrary) — and
-/// still has to render instead of being dropped as a zero-length range. The
-/// voice-over measurement for ducking places the takes through this too, so
-/// they are measured where they play.
-({Duration? startTime, Duration? endTime}) renderWindowOf(AudioEvent track) {
-  final endTime = track.endTime;
-  final hasWindow = endTime != null && endTime > track.startTime;
-  return (
-    startTime: hasWindow ? track.startTime : null,
-    endTime: hasWindow ? endTime : null,
   );
 }
 

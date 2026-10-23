@@ -1917,13 +1917,17 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     final overlayState = context.read<TimelineOverlayBloc>().state;
     final isVoiceOverPreview = _isVoiceOverPreview;
     final audioById = {for (final e in overlayState.audioTracks) e.id: e};
-    final duckingCurves = await _duckingCurvesFor(
-      overlayState,
-      audioById,
-      videoDuration: renderedAudioEnd(
-        context.read<ClipEditorBloc>().state.clips,
-      ),
-    );
+    // Recording a voice-over mutes every sound, so the dips do not matter and
+    // the mute must not wait on measuring the takes.
+    final duckingCurves = isVoiceOverPreview
+        ? const <String, AudioVolumeCurve>{}
+        : await _duckingCurvesFor(
+            overlayState,
+            audioById,
+            videoDuration: renderedAudioEnd(
+              context.read<ClipEditorBloc>().state.clips,
+            ),
+          );
     if (!mounted || generation != _audioSyncGeneration) return;
 
     final tracks = <StopMotionAudioPreviewTrack>[];
@@ -2083,11 +2087,15 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
     // Index audio events by ID for fast lookup.
     final audioById = {for (final e in audioEvents) e.id: e};
-    final duckingCurves = await _duckingCurvesFor(
-      overlayState,
-      audioById,
-      videoDuration: outputEnd,
-    );
+    // Recording a voice-over mutes every sound, so the dips do not matter and
+    // the mute must not wait on measuring the takes.
+    final duckingCurves = isVoiceOverPreview
+        ? const <String, AudioVolumeCurve>{}
+        : await _duckingCurvesFor(
+            overlayState,
+            audioById,
+            videoDuration: outputEnd,
+          );
     if (!isCurrent()) return;
 
     final tracks = <AudioTrack>[];
