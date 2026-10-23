@@ -2,6 +2,8 @@
 
 import 'dart:async';
 
+import 'package:cache_sync/cache_sync.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:notification_repository/notification_repository.dart';
@@ -16,13 +18,41 @@ void main() {
   const bob =
       '9cedf5a0f75ba9be6541bf2b83c663c695431d548512ed9b42bf891a904d7b28';
   late SharedPreferences prefs;
+  late SqliteCacheStore cache;
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     prefs = await SharedPreferences.getInstance();
+    cache = SqliteCacheStore(NativeDatabase.memory());
+    await CacheSync.init(dao: cache.dao);
   });
+  tearDown(() => cache.close());
   group('readSeen, writeSeen, and clearOwner', () {
     test(
-      'seen IDs and catalogs belong to their complete account key',
+      'retains a stale public cache for validated offline hydration',
+      () async {
+        await CacheSync.write<String>(
+          key: SharedPreferencesAnnouncementStore.catalogCacheKey,
+          value: 'stale catalog envelope',
+          toJson: (value) => value,
+          ttl: const Duration(seconds: -1),
+        );
+        expect(
+          (await cache.dao.readEntry(
+            SharedPreferencesAnnouncementStore.catalogCacheKey,
+          ))?.isStale,
+          isTrue,
+        );
+        final store = SharedPreferencesAnnouncementStore(
+          prefs: prefs,
+          owner: alice,
+        );
+        expect(await store.readCatalog(), 'stale catalog envelope');
+        expect(prefs.getKeys(), isEmpty);
+      },
+    );
+
+    test(
+      'seen IDs belong to their account, public catalog is shared in cache_sync',
       () async {
         final a = SharedPreferencesAnnouncementStore(
           prefs: prefs,
@@ -33,8 +63,15 @@ void main() {
         await a.writeCatalog('catalog-a');
         expect(await a.readSeen(), ['announcement:first']);
         expect(await b.readSeen(), isEmpty);
-        expect(await b.readCatalog(), isNull);
+        expect(await b.readCatalog(), 'catalog-a');
+        expect(
+          (await cache.dao.readEntry(
+            SharedPreferencesAnnouncementStore.catalogCacheKey,
+          ))?.payload,
+          'catalog-a',
+        );
         expect(prefs.getKeys().every((key) => key.contains(alice)), isTrue);
+        expect(prefs.getKeys(), hasLength(1));
       },
     );
     test(
@@ -46,6 +83,7 @@ void main() {
         );
         final b = SharedPreferencesAnnouncementStore(prefs: prefs, owner: bob);
         await a.writeSeen(['announcement:old']);
+        await a.writeCatalog('public catalog');
         await b.writeSeen(['announcement:b']);
         final repository = _Repository();
         final finishing = Completer<void>();
@@ -61,6 +99,7 @@ void main() {
         await cleanup;
         expect(await a.readSeen(), isEmpty);
         expect(await b.readSeen(), ['announcement:b']);
+        expect(await b.readCatalog(), 'public catalog');
         verify(repository.close).called(1);
       },
     );

@@ -1,9 +1,13 @@
 // ABOUTME: Account-scoped official-message persistence and write draining.
 
+import 'package:cache_sync/cache_sync.dart';
 import 'package:notification_repository/announcements_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Account-scoped persistence; these public messages never need signing keys.
+/// Local seen preferences plus the shared, anonymous catalog cache.
+///
+/// Only the small seen-ID ledger belongs to the account. Public catalog bytes
+/// use cache_sync's bounded store once per device, not a preferences JSON blob.
 class SharedPreferencesAnnouncementStore implements AnnouncementStore {
   SharedPreferencesAnnouncementStore({
     required this.prefs,
@@ -13,19 +17,23 @@ class SharedPreferencesAnnouncementStore implements AnnouncementStore {
   final SharedPreferences prefs;
   final String owner;
   static const storagePrefix = 'divine_announcements:';
-  String get _catalogKey => '$storagePrefix$owner:catalog';
+  static const catalogCacheKey = 'public:divine_announcements:catalog:v1';
   String get _seenKey => '$storagePrefix$owner:seen';
 
   @override
-  Future<String?> readCatalog() async => prefs.getString(_catalogKey);
+  Future<String?> readCatalog() async => (await CacheSync.readEntry<String>(
+    key: catalogCacheKey,
+    fromJson: (value) => value,
+  ))?.data;
   @override
   Future<List<String>> readSeen() async => prefs.getStringList(_seenKey) ?? [];
   @override
-  Future<void> writeCatalog(String value) async {
-    if (!await prefs.setString(_catalogKey, value)) {
-      throw StateError('Could not persist announcement catalog');
-    }
-  }
+  Future<void> writeCatalog(String value) => CacheSync.write<String>(
+    key: catalogCacheKey,
+    value: value,
+    toJson: (value) => value,
+    ttl: const Duration(minutes: 5),
+  );
 
   @override
   Future<void> writeSeen(List<String> ids) async {
@@ -35,7 +43,9 @@ class SharedPreferencesAnnouncementStore implements AnnouncementStore {
   }
 
   Future<void> clear() async {
-    for (final key in [_seenKey, _catalogKey]) {
+    // Keep the account-independent public cache. Also discard any preference
+    // catalog from the pre-release adapter when removing an account.
+    for (final key in [_seenKey, '$storagePrefix$owner:catalog']) {
       if (!await prefs.remove(key)) {
         throw StateError('Could not clear announcement state');
       }

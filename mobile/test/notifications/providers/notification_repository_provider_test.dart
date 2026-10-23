@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:cache_sync/cache_sync.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
 import 'package:db_client/db_client.dart';
@@ -31,6 +32,8 @@ import 'package:profile_repository/profile_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
+
+class _MockCacheDao extends Mock implements CacheDao {}
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
@@ -69,6 +72,16 @@ void main() {
     setUp(() async {
       SharedPreferences.setMockInitialValues({});
       prefs = await SharedPreferences.getInstance();
+      final cache = _MockCacheDao();
+      when(() => cache.readEntry(any())).thenAnswer((_) async => null);
+      when(
+        () => cache.write(
+          key: any(named: 'key'),
+          payload: any(named: 'payload'),
+          ttl: any(named: 'ttl'),
+        ),
+      ).thenAnswer((_) async {});
+      await CacheSync.init(dao: cache);
     });
     const ownerPubkey =
         'a1b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012';
