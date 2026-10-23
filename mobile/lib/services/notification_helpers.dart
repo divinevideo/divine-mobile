@@ -27,6 +27,9 @@ abstract class NotificationPayloadKeys {
   /// locally-emitted payload under [notificationType].
   static const String wireType = 'type';
 
+  /// FCM transport ID, used locally to coalesce duplicate tap callbacks.
+  static const String messageId = 'messageId';
+
   /// The event acted upon (present for like/comment/repost; absent for
   /// follow/mention, which carry no `e` tag).
   static const String referencedEventId = 'referencedEventId';
@@ -108,6 +111,7 @@ bool isRoutableNotificationPayload({
 /// Nostr event. Other payloads return `null` only when they carry no event,
 /// address, or actor target.
 ({
+  String? messageId,
   String? referencedEventId,
   String? referencedAddress,
   String? eventId,
@@ -143,6 +147,7 @@ parseFcmPayload(Map<String, dynamic> data) {
   }
 
   return (
+    messageId: nonEmpty(NotificationPayloadKeys.messageId),
     referencedEventId: referencedEventId,
     referencedAddress: referencedAddress,
     eventId: eventId,
@@ -168,6 +173,7 @@ parseFcmPayload(Map<String, dynamic> data) {
 Map<String, dynamic> localNotificationTapPayload(Map<String, dynamic> data) {
   final parsed = parseFcmPayload(data);
   return {
+    NotificationPayloadKeys.messageId: ?parsed?.messageId,
     NotificationPayloadKeys.referencedEventId: parsed?.referencedEventId,
     NotificationPayloadKeys.referencedAddress: parsed?.referencedAddress,
     NotificationPayloadKeys.eventId: parsed?.eventId,

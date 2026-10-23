@@ -14,6 +14,7 @@ import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/services/app_badge_service.dart';
+import 'package:openvine/services/notification_helpers.dart';
 import 'package:openvine/services/notification_preferences_service.dart';
 import 'package:openvine/services/notification_service.dart';
 import 'package:openvine/services/push_notification_service.dart';
@@ -306,7 +307,12 @@ PushNotificationSessionCoordinator? pushNotificationSync(Ref ref) {
   ) {
     final pushService = ref.read(pushNotificationServiceProvider);
     if (pushService != null) {
-      unawaited(pushService.handleForegroundMessage(message.data));
+      unawaited(
+        pushService.handleForegroundMessage({
+          ...message.data,
+          NotificationPayloadKeys.messageId: ?message.messageId,
+        }),
+      );
     }
     ref.read(notificationRefreshCoordinatorProvider)?.schedulePushRefresh();
   });

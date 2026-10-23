@@ -4,6 +4,7 @@ export 'src/analytics_surface.dart';
 export 'src/error_analytics_tracker.dart';
 export 'src/feed_performance_tracker.dart';
 export 'src/firebase_analytics_event_sink.dart';
+export 'src/notification_analytics_tracker.dart';
 export 'src/page_load_history.dart';
 export 'src/page_load_observer.dart';
 export 'src/screen_analytics_service.dart';

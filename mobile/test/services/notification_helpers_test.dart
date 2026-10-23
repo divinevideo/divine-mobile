@@ -55,6 +55,21 @@ void main() {
   });
 
   group('parseFcmPayload', () {
+    test(
+      'preserves a transport ID through local notification normalization',
+      () {
+        final local = localNotificationTapPayload(const {
+          'type': 'campaign',
+          'messageId': 'transport-message-1',
+          'tapTargetType': 'app_route',
+          'tapTargetValue': '/following/new',
+        });
+        final parsed = parseFcmPayload(local);
+        expect(parsed?.messageId, 'transport-message-1');
+        expect(parsed?.tapTargetValue, '/following/new');
+      },
+    );
+
     test('returns null when the payload carries nothing routable', () {
       expect(parseFcmPayload(const {}), isNull);
       // A type with no event id and no sender pubkey is not routable.

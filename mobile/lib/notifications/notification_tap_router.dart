@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:analytics/analytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -11,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/notifications/routing/notification_tap_target.dart';
 import 'package:openvine/notifications/view/notifications_page.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/deep_link_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -22,7 +24,11 @@ import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/deep_link_service.dart';
 import 'package:openvine/services/firebase_initialization.dart';
 import 'package:openvine/services/notification_helpers.dart'
-    show NotificationWireValues, localNotificationTapPayload, parseFcmPayload;
+    show
+        NotificationPayloadKeys,
+        NotificationWireValues,
+        localNotificationTapPayload,
+        parseFcmPayload;
 import 'package:openvine/services/notification_target_resolver.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -72,7 +78,10 @@ Future<void> handleFirebaseMessagingBackgroundMessage(
   // notification for data-only messages so we don't double-render (#4731).
   if (!shouldRenderLocalPushNotification(message)) return;
 
-  final data = message.data;
+  final data = {
+    ...message.data,
+    NotificationPayloadKeys.messageId: ?message.messageId,
+  };
   final title = data['title'] as String? ?? 'Divine';
   final body = data['body'] as String? ?? '';
 
@@ -233,7 +242,25 @@ Future<void> routeNotificationTap({
   required ProviderContainer container,
   required String? tapTargetType,
   required String? tapTargetValue,
+  String? messageId,
+  NotificationOpenSource openSource = NotificationOpenSource.localTap,
 }) async {
+  // Keep provider initialization and analytics off the navigation critical path.
+  scheduleMicrotask(() {
+    try {
+      unawaited(
+        container
+            .read(notificationAnalyticsTrackerProvider)
+            .opened(
+              notificationType: notificationType,
+              source: openSource,
+              deduplicationKey: messageId ?? eventId,
+            ),
+      );
+    } on Object {
+      // The account container may have been disposed since the tap arrived.
+    }
+  });
   final (:target, :targetEventId, :videoCoordinate) = pushNotificationTapTarget(
     referencedAddress: referencedAddress,
     referencedEventId: referencedEventId,
@@ -296,6 +323,8 @@ Future<void> routeBackgroundPushTap(
     category: LogCategory.system,
   );
   await routeNotificationTap(
+    messageId: parsed.messageId,
+    openSource: NotificationOpenSource.osBackground,
     referencedAddress: parsed.referencedAddress,
     referencedEventId: parsed.referencedEventId,
     eventId: parsed.eventId,
