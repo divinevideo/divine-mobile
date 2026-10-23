@@ -93,8 +93,11 @@ something here.
 - **Query parameters keep their existing name.** The generator names a query
   parameter after its field in kebab-case, so `selectedPubkey` would become
   `selected-pubkey` and every existing link would stop being read. Annotate each
-  one with `@TypedQueryParameter(name: 'selectedPubkey')`, and keep it a
-  nullable `String`: a typed `bool` rejects any value but `true` or `false`,
+  one on its constructor parameter,
+  `({@TypedQueryParameter(name: 'selectedPubkey') this.selectedPubkey})`: the
+  annotation targets parameters only, and on the field the generator never
+  sees it, so the name stays kebab-case with only an analyzer warning. Keep it
+  a nullable `String`: a typed `bool` rejects any value but `true` or `false`,
   which sends the link to the same error screen as a bad path parameter.
 - **`extra` is `final Object? $extra`.** The generated factory casts
   `state.extra as T`, and a restored `extra` arrives as a decoded `Map`. With a
@@ -194,11 +197,12 @@ For filtering or sorting:
 )
 @immutable
 class ArticlesRouteData extends GoRouteData with $ArticlesRouteData {
-  const ArticlesRouteData({this.date, this.category});
+  const ArticlesRouteData({
+    @TypedQueryParameter(name: 'date') this.date,
+    @TypedQueryParameter(name: 'category') this.category,
+  });
 
-  @TypedQueryParameter(name: 'date')
   final String? date;
-  @TypedQueryParameter(name: 'category')
   final String? category;
 
   @override
