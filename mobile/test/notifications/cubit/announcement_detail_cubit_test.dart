@@ -13,45 +13,47 @@ void main() {
     expiresAt: DateTime.utc(2026, 11, 23),
   );
 
-  test('cold hydration resolves only the requested announcement', () async {
-    final snapshots = StreamController<List<AnnouncementNotification>>();
-    final cubit = AnnouncementDetailCubit(
-      announcementId: item.announcementId,
-      initialItems: const [],
-      snapshots: snapshots.stream,
-    );
-    addTearDown(cubit.close);
-    addTearDown(snapshots.close);
-    expect(cubit.state, isNull);
-    final hydrated = cubit.stream.first;
-    snapshots.add([item]);
-    expect(await hydrated, item);
-  });
+  group('AnnouncementDetailCubit snapshots', () {
+    test('cold hydration resolves only the requested announcement', () async {
+      final snapshots = StreamController<List<AnnouncementNotification>>();
+      final cubit = AnnouncementDetailCubit(
+        announcementId: item.announcementId,
+        initialItems: const [],
+        snapshots: snapshots.stream,
+      );
+      addTearDown(cubit.close);
+      addTearDown(snapshots.close);
+      expect(cubit.state, isNull);
+      final hydrated = cubit.stream.first;
+      snapshots.add([item]);
+      expect(await hydrated, item);
+    });
 
-  test('withdrawal clears a detail that is already open', () async {
-    final snapshots = StreamController<List<AnnouncementNotification>>();
-    final cubit = AnnouncementDetailCubit(
-      announcementId: item.announcementId,
-      initialItems: [item],
-      snapshots: snapshots.stream,
-    );
-    addTearDown(cubit.close);
-    addTearDown(snapshots.close);
-    expect(cubit.state, item);
-    final withdrawn = cubit.stream.first;
-    snapshots.add(const []);
-    expect(await withdrawn, isNull);
-  });
+    test('withdrawal clears a detail that is already open', () async {
+      final snapshots = StreamController<List<AnnouncementNotification>>();
+      final cubit = AnnouncementDetailCubit(
+        announcementId: item.announcementId,
+        initialItems: [item],
+        snapshots: snapshots.stream,
+      );
+      addTearDown(cubit.close);
+      addTearDown(snapshots.close);
+      expect(cubit.state, item);
+      final withdrawn = cubit.stream.first;
+      snapshots.add(const []);
+      expect(await withdrawn, isNull);
+    });
 
-  test('a different ID cannot supply the detail', () async {
-    final snapshots = StreamController<List<AnnouncementNotification>>();
-    final cubit = AnnouncementDetailCubit(
-      announcementId: '60b328b6-4390-47c1-9f45-43738f2bd790',
-      initialItems: [item],
-      snapshots: snapshots.stream,
-    );
-    addTearDown(cubit.close);
-    addTearDown(snapshots.close);
-    expect(cubit.state, isNull);
+    test('a different ID cannot supply the detail', () async {
+      final snapshots = StreamController<List<AnnouncementNotification>>();
+      final cubit = AnnouncementDetailCubit(
+        announcementId: '60b328b6-4390-47c1-9f45-43738f2bd790',
+        initialItems: [item],
+        snapshots: snapshots.stream,
+      );
+      addTearDown(cubit.close);
+      addTearDown(snapshots.close);
+      expect(cubit.state, isNull);
+    });
   });
 }

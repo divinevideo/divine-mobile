@@ -56,40 +56,45 @@ void main() {
     await catalog.close();
   });
 
-  test(
-    'All and badge include official rows, social tabs stay separate',
-    () async {
-      final all = await repository.watchSnapshot().first;
-      expect(all.items, [item]);
-      expect(all.hasMore, isFalse);
-      expect(all.nextCursor, isNull);
-      expect(await repository.watchUnreadCount().first, 1);
-      expect(
-        (await repository.watchSnapshot(filter: NotificationKind.like).first)
-            .items,
-        isEmpty,
-      );
-      catalog.add([item.copyWith(isRead: true)]);
-      expect(await repository.watchUnreadCount().first, 0);
-      verifyZeroInteractions(api);
-      verifyZeroInteractions(dao);
-    },
-  );
+  group('NotificationRepository announcement composition', () {
+    test(
+      'All and badge include official rows, social tabs stay separate',
+      () async {
+        final all = await repository.watchSnapshot().first;
+        expect(all.items, [item]);
+        expect(all.hasMore, isFalse);
+        expect(all.nextCursor, isNull);
+        expect(await repository.watchUnreadCount().first, 1);
+        expect(
+          (await repository.watchSnapshot(filter: NotificationKind.like).first)
+              .items,
+          isEmpty,
+        );
+        catalog.add([item.copyWith(isRead: true)]);
+        expect(await repository.watchUnreadCount().first, 0);
+        verifyZeroInteractions(api);
+        verifyZeroInteractions(dao);
+      },
+    );
 
-  test(
-    'opening an announcement never signs or writes a social read marker',
-    () async {
-      await repository.markAsRead([item.id]);
-      verify(() => announcements.markSeen([item.id])).called(1);
-      verifyZeroInteractions(api);
-      verifyZeroInteractions(dao);
-    },
-  );
+    test(
+      'opening an announcement never signs or writes a social read marker',
+      () async {
+        await repository.markAsRead([item.id]);
+        verify(() => announcements.markSeen([item.id])).called(1);
+        verifyZeroInteractions(api);
+        verifyZeroInteractions(dao);
+      },
+    );
 
-  test('closing the account drains its announcement repository once', () async {
-    await repository.close();
-    await repository.close();
-    verify(announcements.close).called(1);
-    await expectLater(repository.markAsRead([item.id]), throwsStateError);
+    test(
+      'closing the account drains its announcement repository once',
+      () async {
+        await repository.close();
+        await repository.close();
+        verify(announcements.close).called(1);
+        await expectLater(repository.markAsRead([item.id]), throwsStateError);
+      },
+    );
   });
 }
