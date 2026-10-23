@@ -519,6 +519,12 @@ void main() {
               captured.first,
               equals(CuratedListFeedScreen.pathForId('legacy')),
             );
+            expect(
+              captured.last,
+              isA<CuratedListRouteExtra>()
+                  .having((extra) => extra.listName, 'listName', 'Legacy List')
+                  .having((extra) => extra.list, 'list', unattributed),
+            );
           },
         );
       }

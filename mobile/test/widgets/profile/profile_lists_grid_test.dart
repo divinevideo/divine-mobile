@@ -18,6 +18,7 @@ import 'package:openvine/features/people_lists/view/create_people_list_page.dart
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
+import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/saved_videos_screen.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
@@ -76,6 +77,7 @@ void main() {
   group(ProfileListsGrid, () {
     late _MockCuratedListService mockListService;
     late String pushedRoute;
+    Object? pushedExtra;
     late _MockPeopleListsBloc peopleBloc;
     const owner =
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -103,6 +105,7 @@ void main() {
       _fakeService = mockListService;
       when(() => mockListService.myLists).thenReturn(const <CuratedList>[]);
       pushedRoute = '';
+      pushedExtra = null;
     });
 
     Widget buildSubject({ThemeData? theme, Override? hydrationOverride}) =>
@@ -145,6 +148,7 @@ void main() {
                     path: '/list/:listId',
                     builder: (_, state) {
                       pushedRoute = state.uri.toString();
+                      pushedExtra = state.extra;
                       return const Scaffold(body: Text('video list'));
                     },
                   ),
@@ -736,6 +740,14 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(pushedRoute, equals('/list/skate'));
+        expect(
+          pushedExtra,
+          isA<CuratedListRouteExtra>().having(
+            (extra) => extra.listName,
+            'listName',
+            'Video skate',
+          ),
+        );
       });
 
       testWidgets('opens the members view when a people card is tapped', (
