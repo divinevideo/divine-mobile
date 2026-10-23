@@ -5805,6 +5805,57 @@ class AppLocalizationsEs extends AppLocalizations {
       'Los mensajes se quedan aquí para que puedas leerlos o capturarlos. Desbloquea para responder.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Bloqueaste a $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Bloqueaste a $count personas acá',
+      many: 'Bloqueaste a $count personas acá',
+      one: 'Bloqueaste a $count persona acá',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Los mensajes se quedan acá para que puedas leerlos o capturarlos. Desbloqueá desde su perfil para responder.';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Los mensajes de estas personas están ocultos acá. Igual pueden ver lo que enviás.',
+      many: 'Los mensajes de estas personas están ocultos acá. Igual pueden ver lo que enviás.',
+      one: 'Los mensajes de esta persona están ocultos acá. Igual puede ver lo que enviás.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Chat nuevo sin estas personas',
+      many: 'Chat nuevo sin estas personas',
+      one: 'Chat nuevo sin esta persona',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'Mensaje oculto';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Mostrar';
+
+  @override
   String get dmUnresolvedThreadTitle => 'No se pudo cargar esta conversación';
 
   @override
@@ -5873,10 +5924,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String inboxRemoveConfirmBody(String displayName) {
     return 'Esto quita de tu bandeja de entrada tu conversación con $displayName. Si te vuelve a escribir, se inicia una conversación nueva.';
   }
-
-  @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'Esto quita la conversación grupal de tu bandeja de entrada. Si alguien vuelve a escribir en el grupo, se inicia una conversación nueva.';
 
   @override
   String get inboxRemoveConfirmConfirm => 'Eliminar';
@@ -14364,6 +14411,22 @@ class AppLocalizationsEs extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Publicado $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Salir del grupo';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => '¿Salir del grupo?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Desaparece de tu bandeja de entrada y los mensajes nuevos no lo van a traer de vuelta. Escribí de nuevo en el grupo para volver. Nadie más se entera.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Salir';
+
+  @override
+  String get inboxLeftGroup => 'Saliste del grupo';
 
   @override
   String get listPrivateConversionTooLarge =>

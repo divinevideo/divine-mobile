@@ -5619,6 +5619,54 @@ class AppLocalizationsAm extends AppLocalizations {
       'መልእክቶቹ እዚህ ይቆያሉ፣ ስለዚህ ማንበብ ወይም ቅጽበታዊ ገጽ እይታ ማንሳት ይችላሉ። ለመመለስ እገዳውን ያንሱ።';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return '$nameን አግደዋል';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'እዚህ $count ሰዎችን አግደዋል',
+      one: 'እዚህ $count ሰው አግደዋል',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'መልእክቶቹ እዚህ ይቆያሉ፣ ስለዚህ ማንበብ ወይም ቅጽበታዊ ገጽ እይታ ማንሳት ይችላሉ። ለመመለስ ከመገለጫቸው እገዳውን ያንሱ።';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'መልእክቶቻቸው እዚህ ተደብቀዋል። እነሱ ግን እርስዎ የሚልኩትን አሁንም ማየት ይችላሉ።',
+      one: 'መልእክቶቻቸው እዚህ ተደብቀዋል። እሳቸው ግን እርስዎ የሚልኩትን አሁንም ማየት ይችላሉ።',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ያለ እነሱ አዲስ ውይይት ይጀምሩ',
+      one: 'ያለ እሳቸው አዲስ ውይይት ይጀምሩ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'የተደበቀ መልእክት';
+
+  @override
+  String get dmHiddenMessageShowAction => 'ያሳዩ';
+
+  @override
   String get dmUnresolvedThreadTitle => 'ይህን ውይይት መጫን አልተቻለም';
 
   @override
@@ -5683,10 +5731,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String inboxRemoveConfirmBody(String displayName) {
     return 'ይህ ከ$displayName ጋር ያለህን ውይይት ከመልእክት ሳጥንህ ያስወግዳል። እንደገና መልእክት ከላከልህ አዲስ ውይይት ይጀምራል።';
   }
-
-  @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'ይህ የቡድን ውይይቱን ከመልእክት ሳጥንዎ ያስወግዳል። ማንኛውም ሰው እንደገና ለቡድኑ መልእክት ከላከ አዲስ ውይይት ይጀምራል።';
 
   @override
   String get inboxRemoveConfirmConfirm => 'አስወግድ';
@@ -13848,6 +13892,22 @@ class AppLocalizationsAm extends AppLocalizations {
   String userRowPosted(String time) {
     return 'የተለጠፈው $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'ከቡድኑ መውጣት';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'ከቡድኑ ይውጡ?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'ከመልእክት ሳጥንዎ ይወገዳል፣ አዲስ መልእክቶችም አይመልሱትም። እንደገና ለመቀላቀል በውስጡ ይጻፉ። ሌሎቹ አይነገራቸውም።';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'ይውጡ';
+
+  @override
+  String get inboxLeftGroup => 'ከቡድኑ ወጥተዋል';
 
   @override
   String get listPrivateConversionTooLarge =>

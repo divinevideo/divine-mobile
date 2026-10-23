@@ -2049,7 +2049,6 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "Ini menghapus percakapan grup dari kotak masukmu. Jika ada yang mengirim pesan lagi ke grup, percakapan baru dimulai.",
   "inboxRemoveConfirmConfirm": "Hapus",
   "inboxRemoveConfirmTitle": "Hapus percakapan?",
   "inboxRemovedConversation": "Percakapan dihapus",
@@ -5355,6 +5354,13 @@
   "inboxBlockedNoMessages": "Tidak ada pesan",
   "dmBlockedThreadTitle": "Kamu memblokir akun ini",
   "dmBlockedThreadBody": "Pesan tetap ada di sini agar kamu bisa membacanya atau membuat tangkapan layar. Buka blokir untuk membalas.",
+  "dmBlockedGroupMemberTitle": "Kamu memblokir {name}",
+  "dmBlockedGroupMembersTitle": "{count, plural, other{Kamu memblokir {count} orang di sini}}",
+  "dmBlockedGroupThreadBody": "Pesan tetap ada di sini agar kamu bisa membacanya atau membuat tangkapan layar. Buka blokir dari profil mereka untuk membalas.",
+  "dmBlockedGroupMembersBannerBody": "{count, plural, =1{Pesan orang ini disembunyikan di sini. Dia tetap bisa melihat apa yang kamu kirim.} other{Pesan mereka disembunyikan di sini. Mereka tetap bisa melihat apa yang kamu kirim.}}",
+  "dmStartChatWithoutBlockedAction": "{count, plural, =1{Mulai chat baru tanpa orang ini} other{Mulai chat baru tanpa mereka}}",
+  "dmHiddenMessageLabel": "Pesan tersembunyi",
+  "dmHiddenMessageShowAction": "Tampilkan",
   "dmUnresolvedThreadTitle": "Percakapan ini tidak dapat dimuat",
   "dmUnresolvedThreadBody": "Kembali, lalu buka lagi. Kamu bisa membalas setelah dimuat.",
   "verifyTitle": "Akun terverifikasi",
@@ -5776,6 +5782,11 @@
     }
   },
   "userRowPosted": "Diposting {time}",
+  "inboxActionLeaveGroup": "Keluar dari grup",
+  "inboxLeaveGroupConfirmTitle": "Keluar dari grup?",
+  "inboxLeaveGroupConfirmBody": "Grup ini hilang dari kotak masukmu, dan pesan baru tidak akan memunculkannya lagi. Tulis lagi di grup untuk bergabung kembali. Anggota lain tidak diberi tahu.",
+  "inboxLeaveGroupConfirmConfirm": "Keluar",
+  "inboxLeftGroup": "Kamu keluar dari grup",
 "listsDiscoveryEmpty": "Belum ada daftar yang muncul kali ini. Tarik untuk menyegarkan.",
 "listsDiscoveryLoadingLabel": "Memuat daftar",
 "listSearchPeopleUnavailable": "Daftar orang sedang tidak tersedia.",

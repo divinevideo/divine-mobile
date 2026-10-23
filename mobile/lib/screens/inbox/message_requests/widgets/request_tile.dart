@@ -9,6 +9,7 @@ import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_time_formatter.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
@@ -39,13 +40,19 @@ class RequestTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Rebuilds on any block, unblock or mute, so a member the viewer hides
+    // stops naming the row without a reload.
+    ref.watch(blocklistVersionProvider);
+    final blocklist = ref.read(contentBlocklistRepositoryProvider);
+
     // The member the row is named and pictured for: the peer of a one-to-one,
-    // and a room's first member that is not a moderation key, without
+    // and a room's first visible member that is not a moderation key, without
     // Divine's branding (#10151).
     final named = dmConversationNamedPeer(
       participantPubkeys: conversation.participantPubkeys,
       currentUserPubkey: currentUserPubkey,
       moderationPresentation: ref.watch(moderationPresentationResolverProvider),
+      isHidden: blocklist.shouldFilterFromDms,
     );
     final namedPubkey = named.pubkey;
 

@@ -102,6 +102,13 @@ void main() {
       );
 
       expect(name.name, equals(l10n.profileDeletedAccountName));
+      expect(name.isVanished, isTrue);
+    });
+
+    testWidgets('a member who still exists is not vanished', (tester) async {
+      final name = await resolve(tester, profile: profileNamed('Bob'));
+
+      expect(name.isVanished, isFalse);
     });
 
     testWidgets('an official moderation key is named for Divine, not by its '

@@ -65,11 +65,13 @@ void main() {
     };
 
     ({String pubkey, ModerationPresentation moderation}) namedPeerOf(
-      List<String> participantPubkeys,
-    ) => dmConversationNamedPeer(
+      List<String> participantPubkeys, {
+      Set<String> hidden = const {},
+    }) => dmConversationNamedPeer(
       participantPubkeys: participantPubkeys,
       currentUserPubkey: me,
       moderationPresentation: presentationOf,
+      isHidden: hidden.contains,
     );
 
     test('names a one-to-one for its peer, as that peer is presented', () {
@@ -108,6 +110,60 @@ void main() {
         namedPeerOf([me, official, former]),
         equals((pubkey: former, moderation: ModerationPresentation.former)),
       );
+    });
+
+    // #10150. Blocking one member keeps the room, so its title must not keep
+    // naming the person the viewer blocked.
+    group('with a hidden member', () {
+      const bob =
+          'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
+
+      test('skips a hidden first member for the next ordinary one', () {
+        expect(
+          namedPeerOf([me, alice, bob], hidden: {alice}),
+          equals((pubkey: bob, moderation: ModerationPresentation.ordinary)),
+        );
+      });
+
+      test('names a visible former key ahead of hidden ordinary members', () {
+        expect(
+          namedPeerOf([me, alice, bob, former], hidden: {alice, bob}),
+          equals((pubkey: former, moderation: ModerationPresentation.former)),
+        );
+      });
+
+      test('names a visible official key, unbranded, rather than a hidden '
+          'ordinary member', () {
+        expect(
+          namedPeerOf([me, alice, official], hidden: {alice}),
+          equals((
+            pubkey: official,
+            moderation: ModerationPresentation.ordinary,
+          )),
+        );
+      });
+
+      test('names the room as it would be with every other member hidden, '
+          'when there is nobody visible', () {
+        expect(
+          namedPeerOf(
+            [me, official, alice, bob],
+            hidden: {official, alice, bob},
+          ),
+          equals((pubkey: alice, moderation: ModerationPresentation.ordinary)),
+        );
+        expect(
+          namedPeerOf([me, official, former], hidden: {official, former}),
+          equals((pubkey: former, moderation: ModerationPresentation.former)),
+        );
+      });
+
+      test('names a one-to-one for its peer even when the peer is hidden', () {
+        expect(
+          namedPeerOf([me, alice], hidden: {alice}),
+          equals((pubkey: alice, moderation: ModerationPresentation.ordinary)),
+        );
+      });
     });
   });
 

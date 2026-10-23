@@ -2196,7 +2196,6 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "Това премахва груповия разговор от входящата ти кутия. Ако някой пише отново в групата, започва нов разговор.",
   "inboxRemoveConfirmConfirm": "Премахни",
   "inboxCollabInviteCardTitle": "Покана за сътрудник",
   "@inboxCollabInviteCardTitle": {
@@ -5472,6 +5471,13 @@
   "inboxBlockedNoMessages": "Няма съобщения",
   "dmBlockedThreadTitle": "Блокирахте този акаунт",
   "dmBlockedThreadBody": "Съобщенията остават тук, за да можете да ги прочетете или да направите екранна снимка. Отблокирайте, за да отговорите.",
+  "dmBlockedGroupMemberTitle": "Ти блокира {name}",
+  "dmBlockedGroupMembersTitle": "{count, plural, one{Ти блокира {count} човек тук} other{Ти блокира {count} души тук}}",
+  "dmBlockedGroupThreadBody": "Съобщенията остават тук, за да можеш да ги прочетеш или да направиш екранна снимка. Отблокирай от профила им, за да отговориш.",
+  "dmBlockedGroupMembersBannerBody": "{count, plural, one{Съобщенията на този човек са скрити тук. Този човек все още вижда какво изпращаш.} other{Съобщенията им са скрити тук. Те все още виждат какво изпращаш.}}",
+  "dmStartChatWithoutBlockedAction": "{count, plural, one{Започни нов чат без този човек} other{Започни нов чат без тях}}",
+  "dmHiddenMessageLabel": "Скрито съобщение",
+  "dmHiddenMessageShowAction": "Покажи",
   "dmUnresolvedThreadTitle": "Този разговор не се зареди",
   "dmUnresolvedThreadBody": "Върни се назад и го отвори отново. Ще можеш да отговориш, щом се зареди.",
   "verifyTitle": "Потвърдени профили",
@@ -5893,6 +5899,11 @@
     }
   },
   "userRowPosted": "Публикувано {time}",
+  "inboxActionLeaveGroup": "Напусни групата",
+  "inboxLeaveGroupConfirmTitle": "Да напуснеш групата?",
+  "inboxLeaveGroupConfirmBody": "Изчезва от входящата ти кутия и новите съобщения няма да я върнат. Пиши в нея отново, за да се присъединиш. Другите не получават известие.",
+  "inboxLeaveGroupConfirmConfirm": "Напусни",
+  "inboxLeftGroup": "Вече не си в групата",
 "listsDiscoveryEmpty": "Този път не изскочи нито един списък. Дръпни надолу за обновяване.",
 "listsDiscoveryLoadingLabel": "Зареждане на списъци",
 "listSearchPeopleUnavailable": "Списъците с хора не са достъпни в момента.",

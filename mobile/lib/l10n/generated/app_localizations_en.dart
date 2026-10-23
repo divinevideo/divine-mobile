@@ -5841,6 +5841,55 @@ class AppLocalizationsEn extends AppLocalizations {
       'Messages stay here so you can read or screenshot them. Unblock to reply.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'You blocked $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'You blocked $count people here',
+      one: 'You blocked 1 person here',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Messages stay here so you can read or screenshot them. Unblock them from their profile to reply.';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Their messages are hidden here. They can still see what you send.',
+      one: 'Their messages are hidden here. They can still see what you send.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Start a new chat without them',
+      one: 'Start a new chat without them',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'Hidden message';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Show';
+
+  @override
   String get dmUnresolvedThreadTitle => 'We couldn\'t load this conversation';
 
   @override
@@ -5906,10 +5955,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String inboxRemoveConfirmBody(String displayName) {
     return 'This removes your conversation with $displayName from your inbox. If they message you again, a new conversation starts.';
   }
-
-  @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'This removes the group conversation from your inbox. If anyone messages the group again, a new conversation starts.';
 
   @override
   String get inboxRemoveConfirmConfirm => 'Remove';
@@ -14293,6 +14338,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Posted $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Leave group';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Leave group?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'It leaves your inbox, and new messages won\'t bring it back. Write in it again to rejoin. The others aren\'t told.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Leave';
+
+  @override
+  String get inboxLeftGroup => 'Left group';
 
   @override
   String get listPrivateConversionTooLarge =>

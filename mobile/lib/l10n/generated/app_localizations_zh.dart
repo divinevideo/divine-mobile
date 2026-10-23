@@ -5403,6 +5403,52 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dmBlockedThreadBody => '消息会保留在这里，方便你查看或截图。解除屏蔽后即可回复。';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return '你已屏蔽$name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '你已屏蔽这个群聊里的$count人',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody => '消息会保留在这里，方便你查看或截图。在对方主页解除屏蔽后即可回复。';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '已屏蔽成员的消息在这里已隐藏。他们仍能看到你发送的内容。',
+      one: '该成员的消息在这里已隐藏。此人仍能看到你发送的内容。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '发起不含已屏蔽成员的新聊天',
+      one: '发起不含该成员的新聊天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => '已隐藏的消息';
+
+  @override
+  String get dmHiddenMessageShowAction => '显示';
+
+  @override
   String get dmUnresolvedThreadTitle => '无法加载此对话';
 
   @override
@@ -5466,10 +5512,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String inboxRemoveConfirmBody(String displayName) {
     return '这会从你的收件箱中移除你与 $displayName 的会话。如果对方再次给你发消息，会开始一个新会话。';
   }
-
-  @override
-  String get inboxRemoveConfirmBodyGroup =>
-      '这会从你的收件箱中移除这个群聊会话。如果有人再次在群里发消息，会开始一个新会话。';
 
   @override
   String get inboxRemoveConfirmConfirm => '删除';
@@ -13344,6 +13386,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String userRowPosted(String time) {
     return '发布于$time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => '退出群聊';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => '退出群聊？';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      '它会从你的收件箱中移除，新消息也不会让它回来。在群里再发一条消息即可重新加入。其他人不会收到通知。';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => '退出';
+
+  @override
+  String get inboxLeftGroup => '已退出群聊';
 
   @override
   String get listPrivateConversionTooLarge =>

@@ -3213,6 +3213,13 @@
     "description": "Title of the notice that replaces the message composer in a conversation with an account the viewer has blocked."
   },
   "dmBlockedThreadBody": "సందేశాలు ఇక్కడ ఉంటాయి కాబట్టి మీరు వాటిని చదవవచ్చు లేదా స్క్రీన్‌షాట్ చేయవచ్చు. ప్రత్యుత్తరం ఇవ్వడానికి అన్‌బ్లాక్ చేయండి.",
+  "dmBlockedGroupMemberTitle": "మీరు {name}ని బ్లాక్ చేసారు",
+  "dmBlockedGroupMembersTitle": "{count, plural, one{మీరు ఇక్కడ {count} వ్యక్తిని బ్లాక్ చేసారు} other{మీరు ఇక్కడ {count} మందిని బ్లాక్ చేసారు}}",
+  "dmBlockedGroupThreadBody": "సందేశాలు ఇక్కడ ఉంటాయి కాబట్టి మీరు వాటిని చదవవచ్చు లేదా స్క్రీన్‌షాట్ చేయవచ్చు. ప్రత్యుత్తరం ఇవ్వడానికి వారి ప్రొఫైల్ నుండి అన్‌బ్లాక్ చేయండి.",
+  "dmBlockedGroupMembersBannerBody": "{count, plural, one{వారి సందేశాలు ఇక్కడ దాచబడ్డాయి. మీరు పంపేవి వారు ఇప్పటికీ చూడగలరు.} other{వారి సందేశాలు ఇక్కడ దాచబడ్డాయి. మీరు పంపేవి వారు ఇప్పటికీ చూడగలరు.}}",
+  "dmStartChatWithoutBlockedAction": "{count, plural, one{వారు లేకుండా కొత్త చాట్ ప్రారంభించండి} other{వారు లేకుండా కొత్త చాట్ ప్రారంభించండి}}",
+  "dmHiddenMessageLabel": "దాచబడిన సందేశం",
+  "dmHiddenMessageShowAction": "చూపించండి",
   "@dmBlockedThreadBody": {
     "description": "Body of the notice replacing the composer in a blocked conversation. Explains that history is preserved and names unblocking as the way to reply again."
   },
@@ -3296,11 +3303,12 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "ఇది మీ ఇన్‌బాక్స్ నుండి సమూహ సంభాషణను తీసివేస్తుంది. ఎవరైనా గ్రూప్‌కి మళ్లీ మెసేజ్ చేస్తే, కొత్త సంభాషణ ప్రారంభమవుతుంది.",
-  "@inboxRemoveConfirmBodyGroup": {
-    "description": "Body of the remove-conversation confirmation for a GROUP thread. Names nobody, because a group has no single counterparty — the 1:1 wording `inboxRemoveConfirmBody` says 'your conversation with {displayName}', which would read as a conversation with the room's title. Mirrors `inboxRemoveConfirmBodyVanishedAccount`, which is name-free for the same reason."
-  },
   "inboxRemoveConfirmConfirm": "తీసివేయి",
+  "inboxActionLeaveGroup": "గ్రూప్ నుండి నిష్క్రమించండి",
+  "inboxLeaveGroupConfirmTitle": "గ్రూప్ నుండి నిష్క్రమించాలా?",
+  "inboxLeaveGroupConfirmBody": "ఇది మీ ఇన్‌బాక్స్ నుండి తొలగిపోతుంది, కొత్త సందేశాలు దీన్ని తిరిగి తీసుకురావు. మళ్లీ చేరడానికి ఇందులో మళ్లీ రాయండి. ఇతరులకు తెలియజేయబడదు.",
+  "inboxLeaveGroupConfirmConfirm": "నిష్క్రమించు",
+  "inboxLeftGroup": "గ్రూప్ నుండి నిష్క్రమించారు",
   "inboxCollabInviteCardTitle": "సహకారి ఆహ్వానం",
   "@inboxCollabInviteCardTitle": {
     "description": "Header label on a collaborator invite card in the DM conversation."

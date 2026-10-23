@@ -43,6 +43,28 @@ class ReactionPickerResult {
   final MessageAction? action;
 }
 
+/// The block row a group message's overlay offers for the member who sent it.
+class SenderBlockOption {
+  /// Construct an option for blocking or, once [isBlocked], unblocking a
+  /// member.
+  const SenderBlockOption({
+    required this.displayName,
+    required this.isBlocked,
+    this.isVanished = false,
+  });
+
+  /// What the row and its confirmation call the member; never empty.
+  final String displayName;
+
+  /// Whether the viewer already blocked the member, which turns the row into
+  /// Unblock.
+  final bool isBlocked;
+
+  /// Whether the member's account was deleted. The row then says "this
+  /// account" rather than naming a stand-in label.
+  final bool isVanished;
+}
+
 /// Shows the combined picker + actions overlay anchored on screen.
 ///
 /// Returns a [ReactionPickerResult] describing the user's choice, or
@@ -59,6 +81,7 @@ class ReactionPickerOverlay {
     bool isVideoShare = false,
     bool isEncryptedVideo = false,
     bool canAddToClips = false,
+    SenderBlockOption? senderBlock,
     List<String> emojis = kDefaultDmReactionEmojis,
   }) async {
     unawaited(HapticFeedback.mediumImpact());
@@ -100,6 +123,7 @@ class ReactionPickerOverlay {
                   isVideoShare: isVideoShare,
                   isEncryptedVideo: isEncryptedVideo,
                   canAddToClips: canAddToClips,
+                  senderBlock: senderBlock,
                   onSelected: (action) => sheetContext.popModalIfMounted(
                     ReactionPickerResult(action: action),
                   ),
@@ -232,6 +256,7 @@ class _ActionList extends StatelessWidget {
     required this.isVideoShare,
     required this.isEncryptedVideo,
     required this.canAddToClips,
+    required this.senderBlock,
     required this.onSelected,
   });
 
@@ -251,6 +276,9 @@ class _ActionList extends StatelessWidget {
   /// Whether adding the received encrypted video to the viewer's own clips
   /// is offered. The C2PA check decides whether it is accepted.
   final bool canAddToClips;
+
+  /// The block row for the member who sent the message; null offers none.
+  final SenderBlockOption? senderBlock;
   final ValueChanged<MessageAction> onSelected;
 
   @override
@@ -304,6 +332,24 @@ class _ActionList extends StatelessWidget {
           icon: DivineIconName.flag,
           label: l10n.dmMessageActionReport,
           onTap: () => onSelected(MessageAction.report),
+        ),
+      if (senderBlock case final sender?)
+        _ActionTile(
+          icon: sender.isBlocked
+              ? DivineIconName.prohibitInset
+              : DivineIconName.prohibit,
+          label: switch ((sender.isBlocked, sender.isVanished)) {
+            (true, true) => l10n.inboxActionUnblockVanishedAccount,
+            (true, false) => l10n.inboxActionUnblock(sender.displayName),
+            (false, true) => l10n.inboxActionBlockVanishedAccount,
+            (false, false) => l10n.inboxActionBlock(sender.displayName),
+          },
+          onTap: () => onSelected(
+            sender.isBlocked
+                ? MessageAction.unblockSender
+                : MessageAction.blockSender,
+          ),
+          color: sender.isBlocked ? null : VineTheme.error,
         ),
     ];
     return Column(

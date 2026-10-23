@@ -5901,6 +5901,60 @@ class AppLocalizationsPl extends AppLocalizations {
       'Wiadomości pozostają tutaj, żebyś mógł je przeczytać lub zrobić zrzut ekranu. Odblokuj, aby odpowiedzieć.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Zablokowano $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Zablokowano tu $count osoby',
+      many: 'Zablokowano tu $count osób',
+      few: 'Zablokowano tu $count osoby',
+      one: 'Zablokowano tu $count osobę',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Wiadomości zostają tutaj, więc możesz je przeczytać lub zrobić zrzut ekranu. Aby odpowiedzieć, odblokuj w profilu.';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ich wiadomości są tu ukryte. Nadal widzą to, co wysyłasz.',
+      many: 'Ich wiadomości są tu ukryte. Nadal widzą to, co wysyłasz.',
+      few: 'Ich wiadomości są tu ukryte. Nadal widzą to, co wysyłasz.',
+      one: 'Wiadomości tej osoby są tu ukryte. Nadal widzi to, co wysyłasz.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Rozpocznij nowy czat bez nich',
+      many: 'Rozpocznij nowy czat bez nich',
+      few: 'Rozpocznij nowy czat bez nich',
+      one: 'Rozpocznij nowy czat bez tej osoby',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'Ukryta wiadomość';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Pokaż';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Nie udało się wczytać tej rozmowy';
 
   @override
@@ -5967,10 +6021,6 @@ class AppLocalizationsPl extends AppLocalizations {
   String inboxRemoveConfirmBody(String displayName) {
     return 'To usuwa rozmowę z $displayName z Twojej skrzynki odbiorczej. Jeśli ta osoba znów do Ciebie napisze, rozpocznie się nowa rozmowa.';
   }
-
-  @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'To usuwa rozmowę grupową z Twojej skrzynki odbiorczej. Jeśli ktoś znów napisze w grupie, rozpocznie się nowa rozmowa.';
 
   @override
   String get inboxRemoveConfirmConfirm => 'Usuń';
@@ -14494,6 +14544,22 @@ class AppLocalizationsPl extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Opublikowano $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Opuść grupę';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Opuścić grupę?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Zniknie z Twojej skrzynki odbiorczej, a nowe wiadomości jej nie przywrócą. Napisz w niej ponownie, aby wrócić. Pozostali nie dostaną powiadomienia.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Opuść';
+
+  @override
+  String get inboxLeftGroup => 'Opuszczono grupę';
 
   @override
   String get listPrivateConversionTooLarge =>

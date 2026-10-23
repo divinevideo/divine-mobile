@@ -2052,7 +2052,6 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "Questo rimuove la conversazione di gruppo dalla tua posta in arrivo. Se qualcuno scrive di nuovo nel gruppo, inizia una nuova conversazione.",
   "inboxRemoveConfirmConfirm": "Rimuovi",
   "inboxRemoveConfirmTitle": "Rimuovere la conversazione?",
   "inboxRemovedConversation": "Conversazione rimossa",
@@ -5355,6 +5354,13 @@
   "inboxBlockedNoMessages": "Nessun messaggio",
   "dmBlockedThreadTitle": "Hai bloccato questo account",
   "dmBlockedThreadBody": "I messaggi restano qui così puoi leggerli o farne uno screenshot. Sblocca per rispondere.",
+  "dmBlockedGroupMemberTitle": "Hai bloccato {name}",
+  "dmBlockedGroupMembersTitle": "{count, plural, one{Hai bloccato {count} persona qui} many{Hai bloccato {count} persone qui} other{Hai bloccato {count} persone qui}}",
+  "dmBlockedGroupThreadBody": "I messaggi restano qui così puoi leggerli o farne uno screenshot. Per rispondere, sblocca dal profilo.",
+  "dmBlockedGroupMembersBannerBody": "{count, plural, one{I messaggi di questa persona sono nascosti qui. Può comunque vedere quello che invii.} many{I loro messaggi sono nascosti qui. Possono comunque vedere quello che invii.} other{I loro messaggi sono nascosti qui. Possono comunque vedere quello che invii.}}",
+  "dmStartChatWithoutBlockedAction": "{count, plural, one{Nuova chat senza questa persona} many{Avvia una nuova chat senza di loro} other{Avvia una nuova chat senza di loro}}",
+  "dmHiddenMessageLabel": "Messaggio nascosto",
+  "dmHiddenMessageShowAction": "Mostra",
   "dmUnresolvedThreadTitle": "Impossibile caricare questa conversazione",
   "dmUnresolvedThreadBody": "Torna indietro e riaprila. Potrai rispondere non appena si carica.",
   "verifyTitle": "Account verificati",
@@ -5776,6 +5782,11 @@
     }
   },
   "userRowPosted": "Pubblicato {time}",
+  "inboxActionLeaveGroup": "Esci dal gruppo",
+  "inboxLeaveGroupConfirmTitle": "Uscire dal gruppo?",
+  "inboxLeaveGroupConfirmBody": "Sparisce dalla tua posta in arrivo e i nuovi messaggi non lo riportano indietro. Scrivi di nuovo nel gruppo per rientrare. Nessun altro viene avvisato.",
+  "inboxLeaveGroupConfirmConfirm": "Esci",
+  "inboxLeftGroup": "Hai lasciato il gruppo",
 "listsDiscoveryEmpty": "Stavolta non è saltata fuori nessuna lista. Trascina per aggiornare.",
 "listsDiscoveryLoadingLabel": "Caricamento liste",
 "listSearchPeopleUnavailable": "Le liste di persone non sono disponibili al momento.",

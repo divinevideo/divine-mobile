@@ -5745,6 +5745,54 @@ class AppLocalizationsSv extends AppLocalizations {
       'Meddelandena stannar kvar så att du kan läsa dem eller ta en skärmbild. Häv blockeringen för att svara.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Du blockerade $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Du blockerade $count personer här',
+      one: 'Du blockerade $count person här',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Meddelandena stannar kvar så att du kan läsa dem eller ta en skärmbild. Häv blockeringen via deras profil för att svara.';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Deras meddelanden är dolda här. De kan fortfarande se det du skickar.',
+      one: 'Den här personens meddelanden är dolda här. Personen kan fortfarande se det du skickar.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Starta en ny chatt utan dem',
+      one: 'Ny chatt utan den här personen',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'Dolt meddelande';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Visa';
+
+  @override
   String get dmUnresolvedThreadTitle =>
       'Det gick inte att läsa in den här konversationen';
 
@@ -5811,10 +5859,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String inboxRemoveConfirmBody(String displayName) {
     return 'Det här tar bort din konversation med $displayName från din inkorg. Om personen skriver till dig igen startar en ny konversation.';
   }
-
-  @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'Det här tar bort gruppkonversationen från din inkorg. Om någon skriver i gruppen igen startar en ny konversation.';
 
   @override
   String get inboxRemoveConfirmConfirm => 'Ta bort';
@@ -14210,6 +14254,22 @@ class AppLocalizationsSv extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Publicerat $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Lämna gruppen';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Lämna gruppen?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Den försvinner från din inkorg och nya meddelanden tar inte tillbaka den. Skriv i den igen för att gå med på nytt. De andra får inget besked.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Lämna';
+
+  @override
+  String get inboxLeftGroup => 'Du lämnade gruppen';
 
   @override
   String get listPrivateConversionTooLarge =>

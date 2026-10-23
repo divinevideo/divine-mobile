@@ -148,7 +148,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 27;
+  int get schemaVersion => 28;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -366,6 +366,23 @@ class AppDatabase extends _$AppDatabase {
           'ALTER TABLE conversations DROP COLUMN retained_message_ids',
         );
       }
+      if (from < 28 && to >= 28) {
+        // The earlier group preview used v27 before the follower cache landed.
+        if (!await _tableExists('my_followers')) {
+          await m.createTable(myFollowers);
+        }
+        await _repairSchemaV28();
+      }
+      // The `from < 9` step creates removed_conversations from the current
+      // definition, so a target below v28 drops the v28 column again.
+      if (to < 28 &&
+          (await _columnNames(
+            'removed_conversations',
+          )).contains('rejoined_at')) {
+        await customStatement(
+          'ALTER TABLE removed_conversations DROP COLUMN rejoined_at',
+        );
+      }
     },
     beforeOpen: (details) async {
       // v1 databases are normalized by onUpgrade. This guarded path remains
@@ -385,6 +402,7 @@ class AppDatabase extends _$AppDatabase {
         await _repairSchemaV14();
         await _repairSchemaV20();
         await _repairConversationDismissals();
+        await _repairSchemaV28();
       }
 
       // Run cleanup of expired data on every app startup
@@ -555,6 +573,36 @@ class AppDatabase extends _$AppDatabase {
       'app_version',
       'TEXT NULL',
     );
+  }
+
+  /// Adds the rejoin marker to removed-conversation tombstones (#10150).
+  ///
+  /// Creates the table when a damaged database lacks it. A conversation
+  /// removed before v28 that a newer message has reopened since is on disk
+  /// again: it counts as rejoined at its removal, so a group the user can see
+  /// keeps receiving. One still removed stays NULL, so a group left before
+  /// v28 stays left until the user writes in it.
+  Future<void> _repairSchemaV28() async {
+    if (!await _tableExists('removed_conversations')) {
+      await createMigrator().createTable(removedConversations);
+      return;
+    }
+    if ((await _columnNames('removed_conversations')).contains('rejoined_at')) {
+      return;
+    }
+    await _addColumnIfMissing(
+      'removed_conversations',
+      'rejoined_at',
+      'INTEGER NULL',
+    );
+    await customStatement('''
+      UPDATE removed_conversations SET rejoined_at = removed_at
+      WHERE EXISTS (
+        SELECT 1 FROM conversations c
+        WHERE c.id = removed_conversations.conversation_id
+          AND c.owner_pubkey = removed_conversations.owner_pubkey
+      )
+    ''');
   }
 
   /// Adds the gift-wrap recipient set to the DM reaction queue (#7880).
@@ -1760,6 +1808,7 @@ class AppDatabase extends _$AppDatabase {
       'pending_product_events': ['owner_pubkey'],
       'dm_message_reactions': ['recipient_pubkeys'],
       'outgoing_dms': ['send_batch_id', 'environment'],
+      'removed_conversations': ['rejoined_at'],
       'personal_reactions': ['addressable_id'],
       'profile_statistics': ['follower_counts_updated_at'],
       'identity_events': ['source_created_at', 'source_event_id'],

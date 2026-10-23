@@ -5679,6 +5679,53 @@ class AppLocalizationsId extends AppLocalizations {
       'Pesan tetap ada di sini agar kamu bisa membacanya atau membuat tangkapan layar. Buka blokir untuk membalas.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Kamu memblokir $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Kamu memblokir $count orang di sini',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Pesan tetap ada di sini agar kamu bisa membacanya atau membuat tangkapan layar. Buka blokir dari profil mereka untuk membalas.';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Pesan mereka disembunyikan di sini. Mereka tetap bisa melihat apa yang kamu kirim.',
+      one: 'Pesan orang ini disembunyikan di sini. Dia tetap bisa melihat apa yang kamu kirim.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Mulai chat baru tanpa mereka',
+      one: 'Mulai chat baru tanpa orang ini',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'Pesan tersembunyi';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Tampilkan';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Percakapan ini tidak dapat dimuat';
 
   @override
@@ -5745,10 +5792,6 @@ class AppLocalizationsId extends AppLocalizations {
   String inboxRemoveConfirmBody(String displayName) {
     return 'Ini menghapus percakapanmu dengan $displayName dari kotak masukmu. Jika dia mengirim pesan lagi, percakapan baru dimulai.';
   }
-
-  @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'Ini menghapus percakapan grup dari kotak masukmu. Jika ada yang mengirim pesan lagi ke grup, percakapan baru dimulai.';
 
   @override
   String get inboxRemoveConfirmConfirm => 'Hapus';
@@ -14099,6 +14142,22 @@ class AppLocalizationsId extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Diposting $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Keluar dari grup';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Keluar dari grup?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Grup ini hilang dari kotak masukmu, dan pesan baru tidak akan memunculkannya lagi. Tulis lagi di grup untuk bergabung kembali. Anggota lain tidak diberi tahu.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Keluar';
+
+  @override
+  String get inboxLeftGroup => 'Kamu keluar dari grup';
 
   @override
   String get listPrivateConversionTooLarge =>

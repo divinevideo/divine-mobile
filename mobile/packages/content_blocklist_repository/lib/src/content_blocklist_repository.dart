@@ -12,6 +12,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:nostr_sdk/utils/nostr_timestamp.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -1435,10 +1436,16 @@ class ContentBlocklistRepository {
   List<T> filterContent<T>(List<T> content, String Function(T) getPubkey) =>
       content.where((item) => !shouldFilterFromFeeds(getPubkey(item))).toList();
 
-  /// Filter DM conversations where the other participant is blocked.
+  /// Filters [conversations] down to those that belong in the accepted inbox.
   ///
-  /// [userPubkey] is the current user's pubkey, used to identify which
-  /// participant is "the other one" in each conversation.
+  /// A conversation stays unless **every** participant other than
+  /// [userPubkey] is hidden by the viewer. A group the viewer already joined
+  /// stays theirs while anyone in it is still visible, so hiding one member
+  /// does not take the room away (#10150). Message requests use
+  /// [filterBlockedRequests], which is stricter. One-to-ones have a single
+  /// other participant, so both rules agree on them.
+  ///
+  /// Conversations with no participant but the viewer are dropped.
   ///
   /// Filters on [shouldFilterFromDms], not [shouldFilterFromFeeds]: a thread
   /// the viewer already received stays reachable even when the counterparty
@@ -1446,15 +1453,49 @@ class ContentBlocklistRepository {
   List<DmConversation> filterBlockedConversations(
     List<DmConversation> conversations, {
     required String userPubkey,
+  }) => _filterByHiddenParticipants(
+    conversations,
+    userPubkey: userPubkey,
+    hideWhenAnyParticipantHidden: false,
+  );
+
+  /// Filters [conversations] down to the message requests worth showing.
+  ///
+  /// A request is dropped when **any** participant other than [userPubkey] is
+  /// hidden by the viewer. The viewer has not joined it yet, so a person they
+  /// hid must not be able to reach them by adding them to a room with other
+  /// people (#10150). Once the viewer accepts, the thread follows
+  /// [filterBlockedConversations] instead.
+  ///
+  /// Conversations with no participant but the viewer are dropped.
+  ///
+  /// Filters on [shouldFilterFromDms], not [shouldFilterFromFeeds]: only the
+  /// viewer's own lists hide anything, never lists other people publish
+  /// (#7345).
+  List<DmConversation> filterBlockedRequests(
+    List<DmConversation> conversations, {
+    required String userPubkey,
+  }) => _filterByHiddenParticipants(
+    conversations,
+    userPubkey: userPubkey,
+    hideWhenAnyParticipantHidden: true,
+  );
+
+  List<DmConversation> _filterByHiddenParticipants(
+    List<DmConversation> conversations, {
+    required String userPubkey,
+    required bool hideWhenAnyParticipantHidden,
   }) {
-    return conversations.where((conv) {
-      final otherPubkey = conv.participantPubkeys.firstWhere(
-        (pk) => pk != userPubkey,
-        orElse: () => '',
+    return conversations.where((conversation) {
+      final others = conversation.participantPubkeys.where(
+        (pubkey) => !pubkeysEqual(pubkey, userPubkey),
       );
       // Exclude self-conversations (no "other" participant found).
-      if (otherPubkey.isEmpty) return false;
-      return !shouldFilterFromDms(otherPubkey);
+      if (others.isEmpty) return false;
+      final hidden = hideWhenAnyParticipantHidden
+          ? others.any(shouldFilterFromDms)
+          : others.every(shouldFilterFromDms);
+      return !hidden;
     }).toList();
   }
 

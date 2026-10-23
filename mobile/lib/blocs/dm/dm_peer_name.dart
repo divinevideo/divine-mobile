@@ -39,14 +39,22 @@ String dmConversationFirstPeer({
 /// one of them (#10151): it is named for its first member that is not a
 /// moderation key, and official branding is withdrawn from whoever names it.
 ///
-/// A room with no such member is named for a [ModerationPresentation.former]
-/// key ahead of an official one, keeping that key's neutral name: its author
-/// may be whoever holds the former key, and naming the room for an official
-/// key would show Divine's own profile (#9963).
+/// A room is never named for a member the viewer has hidden while another is
+/// visible (#10150): blocking someone keeps the room, so its title must not
+/// keep naming them. [isHidden] must answer from the viewer's own lists only
+/// (#7345) and is ignored for a one-to-one, whose peer is the conversation.
+/// When every other member is hidden the room is named from all of them.
+///
+/// Among the members considered, a room with no ordinary member is named for
+/// a [ModerationPresentation.former] key ahead of an official one, keeping
+/// that key's neutral name: its author may be whoever holds the former key,
+/// and naming the room for an official key would show Divine's own profile
+/// (#9963).
 ({String pubkey, ModerationPresentation moderation}) dmConversationNamedPeer({
   required List<String> participantPubkeys,
   required String currentUserPubkey,
   required ModerationPresentationResolver moderationPresentation,
+  required bool Function(String pubkey) isHidden,
 }) {
   final peers = dmConversationPeerPubkeys(
     participantPubkeys: participantPubkeys,
@@ -56,13 +64,15 @@ String dmConversationFirstPeer({
     final peer = peers.firstOrNull ?? participantPubkeys.first;
     return (pubkey: peer, moderation: moderationPresentation(peer));
   }
-  String? firstPresentedAs(ModerationPresentation presentation) => peers
+  final visible = peers.where((pubkey) => !isHidden(pubkey)).toList();
+  final candidates = visible.isEmpty ? peers : visible;
+  String? firstPresentedAs(ModerationPresentation presentation) => candidates
       .where((pubkey) => moderationPresentation(pubkey) == presentation)
       .firstOrNull;
   final named =
       firstPresentedAs(ModerationPresentation.ordinary) ??
       firstPresentedAs(ModerationPresentation.former) ??
-      peers.first;
+      candidates.first;
   return (
     pubkey: named,
     moderation: switch (moderationPresentation(named)) {

@@ -5808,6 +5808,54 @@ class AppLocalizationsBg extends AppLocalizations {
       'Съобщенията остават тук, за да можете да ги прочетете или да направите екранна снимка. Отблокирайте, за да отговорите.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Ти блокира $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ти блокира $count души тук',
+      one: 'Ти блокира $count човек тук',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Съобщенията остават тук, за да можеш да ги прочетеш или да направиш екранна снимка. Отблокирай от профила им, за да отговориш.';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Съобщенията им са скрити тук. Те все още виждат какво изпращаш.',
+      one: 'Съобщенията на този човек са скрити тук. Този човек все още вижда какво изпращаш.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Започни нов чат без тях',
+      one: 'Започни нов чат без този човек',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'Скрито съобщение';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Покажи';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Този разговор не се зареди';
 
   @override
@@ -5875,10 +5923,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String inboxRemoveConfirmBody(String displayName) {
     return 'Това премахва разговора ти с $displayName от входящата ти кутия. Ако ти пише отново, започва нов разговор.';
   }
-
-  @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'Това премахва груповия разговор от входящата ти кутия. Ако някой пише отново в групата, започва нов разговор.';
 
   @override
   String get inboxRemoveConfirmConfirm => 'Премахни';
@@ -14339,6 +14383,22 @@ class AppLocalizationsBg extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Публикувано $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Напусни групата';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Да напуснеш групата?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Изчезва от входящата ти кутия и новите съобщения няма да я върнат. Пиши в нея отново, за да се присъединиш. Другите не получават известие.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Напусни';
+
+  @override
+  String get inboxLeftGroup => 'Вече не си в групата';
 
   @override
   String get listPrivateConversionTooLarge =>

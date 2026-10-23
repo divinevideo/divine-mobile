@@ -2052,7 +2052,6 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "Dadurch wird die Gruppenunterhaltung aus deinem Posteingang entfernt. Wenn jemand wieder in die Gruppe schreibt, beginnt eine neue Unterhaltung.",
   "inboxRemoveConfirmConfirm": "Entfernen",
   "inboxRemoveConfirmTitle": "Unterhaltung entfernen?",
   "inboxRemovedConversation": "Unterhaltung entfernt",
@@ -5355,6 +5354,13 @@
   "inboxBlockedNoMessages": "Keine Nachrichten",
   "dmBlockedThreadTitle": "Du hast dieses Konto blockiert",
   "dmBlockedThreadBody": "Nachrichten bleiben hier, damit du sie lesen oder einen Screenshot machen kannst. Hebe die Blockierung auf, um zu antworten.",
+  "dmBlockedGroupMemberTitle": "Du hast {name} blockiert",
+  "dmBlockedGroupMembersTitle": "{count, plural, =1{Du hast hier 1 Person blockiert} other{Du hast hier {count} Personen blockiert}}",
+  "dmBlockedGroupThreadBody": "Nachrichten bleiben hier, damit du sie lesen oder einen Screenshot machen kannst. Hebe die Blockierung im jeweiligen Profil auf, um zu antworten.",
+  "dmBlockedGroupMembersBannerBody": "{count, plural, =1{Was diese Person schreibt, ist hier ausgeblendet. Was du sendest, sieht sie weiterhin.} other{Was sie schreiben, ist hier ausgeblendet. Was du sendest, sehen sie weiterhin.}}",
+  "dmStartChatWithoutBlockedAction": "{count, plural, =1{Neuer Chat ohne diese Person} other{Neuen Chat ohne sie starten}}",
+  "dmHiddenMessageLabel": "Ausgeblendete Nachricht",
+  "dmHiddenMessageShowAction": "Anzeigen",
   "dmUnresolvedThreadTitle": "Diese Unterhaltung konnte nicht geladen werden",
   "dmUnresolvedThreadBody": "Geh zurück und öffne sie erneut. Du kannst antworten, sobald sie geladen ist.",
   "verifyTitle": "Verifizierte Konten",
@@ -5776,6 +5782,11 @@
     }
   },
   "userRowPosted": "Gepostet {time}",
+  "inboxActionLeaveGroup": "Gruppe verlassen",
+  "inboxLeaveGroupConfirmTitle": "Gruppe verlassen?",
+  "inboxLeaveGroupConfirmBody": "Sie verschwindet aus deinem Posteingang, und neue Nachrichten holen sie nicht zurück. Schreib wieder in die Gruppe, um zurückzukommen. Die anderen erfahren nichts davon.",
+  "inboxLeaveGroupConfirmConfirm": "Verlassen",
+  "inboxLeftGroup": "Du hast die Gruppe verlassen",
 "listsDiscoveryEmpty": "Diesmal sind keine Listen aufgetaucht. Zieh nach unten zum Aktualisieren.",
 "listsDiscoveryLoadingLabel": "Listen werden geladen",
 "listSearchPeopleUnavailable": "Personenlisten sind gerade nicht verfügbar.",

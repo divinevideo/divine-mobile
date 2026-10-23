@@ -407,6 +407,21 @@ enum DmInboxResolution {
 /// delivery tell the two apart (#7317, #8443).
 typedef DmInboxLookup = ({List<String>? relays, DmInboxResolution state});
 
+/// What a group's inbox row shows once the senders a viewer hides are set
+/// aside (#10150), as [DmRepository.visibleActivityExcluding] reads it.
+///
+/// The three `lastMessage` fields describe the newest message someone outside
+/// the excluded set wrote, the viewer included, and are all null when no such
+/// message is stored. `hasUnread` is whether someone outside that set other
+/// than the viewer wrote after both the conversation's read cursor and the
+/// viewer's own newest message.
+typedef DmVisibleActivity = ({
+  String? lastMessageContent,
+  int? lastMessageTimestamp,
+  String? lastMessageSenderPubkey,
+  bool hasUnread,
+});
+
 /// Re-classifies a publish that a relay confirmed but which was routed to the
 /// default pool because the recipient's inbox could not be read.
 ///
@@ -3557,6 +3572,20 @@ class DmRepository {
         false;
   }
 
+  /// Whether another member's message stamped [createdAt] stays out of a
+  /// group the user left ([tombstone]).
+  ///
+  /// It is let back in only once the user has written in the group again,
+  /// and what members sent while the user was out stays out (#10150).
+  static bool _keptOutOfLeftGroup(
+    RemovedConversation? tombstone,
+    int createdAt,
+  ) {
+    if (tombstone == null) return false;
+    final rejoinedAt = tombstone.rejoinedAt;
+    return rejoinedAt == null || createdAt < rejoinedAt;
+  }
+
   /// Whether [tags] carries a `['k', <kind>]` hint naming [kind].
   static bool _hasKindHint(List<List<String>> tags, int kind) {
     final wanted = kind.toString();
@@ -4155,6 +4184,8 @@ class DmRepository {
         var inserted = false;
         var skippedByTransactionalGiftWrapDedup = false;
         var suppressedByRemovedConversation = false;
+        var suppressedByLeftGroup = false;
+        int? rejoinedAt;
         int? removedAt;
         // A peer's reply only opens a room while receiving rooms is on, so
         // putting one back under its parent ships behind the same flag.
@@ -4180,6 +4211,29 @@ class DmRepository {
               await _wasRemovedWithConversation(rumor.id, ownerPubkey)) {
             suppressedByRemovedConversation = true;
             return;
+          }
+          // A group the user left stays left until they write in it again,
+          // here or on another device (#10150), and comes back from the
+          // earliest such message: the user's own copies arrive out of order.
+          // A one-to-one reopens on any newer message, as before.
+          if (isGroup && removedAt != null) {
+            if (isSentByMe) {
+              await _removedConversationsDao?.markRejoined(
+                conversationId: conversationId,
+                ownerPubkey: ownerPubkey,
+                at: persistedCreatedAt,
+              );
+            } else {
+              final tombstone = await _removedConversationsDao?.tombstoneFor(
+                conversationId: conversationId,
+                ownerPubkey: ownerPubkey,
+              );
+              if (_keptOutOfLeftGroup(tombstone, persistedCreatedAt)) {
+                suppressedByLeftGroup = true;
+                rejoinedAt = tombstone?.rejoinedAt;
+                return;
+              }
+            }
           }
 
           inserted = await _directMessagesDao.insertMessage(
@@ -4243,10 +4297,10 @@ class DmRepository {
             conversationId,
             ownerPubkey: ownerPubkey,
           );
-          // A newer message reopens a removed conversation: the row is
-          // recreated above, while the tombstone is deliberately kept so
-          // replayed history stamped at or before the removal stays
-          // suppressed. #7804.
+          // A newer message reopens a removed one-to-one, and the user's own
+          // reopens a left group: the row is recreated above, while the
+          // tombstone is deliberately kept so replayed history stamped at or
+          // before the removal stays suppressed. #7804.
 
           // An early reaction is filed under the 1:1 of its reactor and the
           // target's author. For a one-to-one message that is this
@@ -4300,6 +4354,26 @@ class DmRepository {
           Log.debug(
             'Skipping NIP-17 gift wrap ${giftWrapEvent.id}: already persisted '
             'during transaction',
+            category: LogCategory.system,
+          );
+          return;
+        }
+        if (suppressedByLeftGroup) {
+          // Never final, so never ledgered, rejoined or not: the user's own
+          // copy of an earlier message in the group may still be on its way
+          // (gift wraps are backdated up to two days, history pages newest
+          // first), and it moves the rejoin back, so a member message stamped
+          // after it has to get in on a later replay. The cost is a
+          // re-decrypt on each replay of every member message kept out after
+          // the removal.
+          final keptOutBecause = rejoinedAt == null
+              ? 'they have not written in it since'
+              : 'createdAt $persistedCreatedAt is before they wrote in it '
+                    'again at $rejoinedAt';
+          Log.debug(
+            'Kept NIP-17 DM ${rumor.id} out of group $conversationId the '
+            'user left at $removedAt: $keptOutBecause; not ledgered, so a '
+            'replay after an earlier rejoin re-evaluates it',
             category: LogCategory.system,
           );
           return;
@@ -6086,6 +6160,12 @@ class DmRepository {
   /// thread is invisible in the inbox and the user cannot find the failed
   /// bubble to retry or delete it. Established threads are left untouched.
   /// Non-throwing: visibility is best-effort on an already-failing path.
+  ///
+  /// A group the user left while the send was out, which the send therefore
+  /// did not rejoin, stays left: listed again, it would hear nothing from its
+  /// members (#10150), and the leave took the queued send with it. Counted by
+  /// [participants], as the send's rejoin is: a group send to one member is a
+  /// one-to-one, which reopens on any newer message.
   Future<void> _ensureConversationVisibleAfterSendFailure({
     required String conversationId,
     required List<String> participants,
@@ -6098,6 +6178,15 @@ class DmRepository {
         ownerPubkey: _userPubkey,
       );
       if (existing != null) return;
+      if (participants.length > 2 &&
+          await _isLeftConversation(conversationId)) {
+        Log.debug(
+          'Not surfacing group $conversationId after a failed send: the '
+          'user left it while the send was out',
+          category: LogCategory.system,
+        );
+        return;
+      }
       final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       await _conversationsDao.runInTransaction(() async {
         await _upsertSentConversationAndMarkRead(
@@ -7295,6 +7384,18 @@ class DmRepository {
     // `WHERE dm_protocol = 'nip04'` matches nothing.
     await _clearLatchOnAdvertisedInbox(row.conversationId, inbox.state);
 
+    // Recovered group rows share the group's conversationId rather than the
+    // pair id, even when no conversation row survives. A row queued after
+    // Leave may have escaped its queue deletion: cancel it before sending,
+    // not only before local persistence on a successful send.
+    final pairParticipants = [_userPubkey, row.recipientPubkey]..sort();
+    final isGroupRow =
+        row.conversationId != computeConversationId(pairParticipants);
+    if (isGroupRow && await _isLeftConversation(row.conversationId)) {
+      await dao.deleteById(rumorId);
+      return const NIP17SendResult.failure('group send cancelled by Leave');
+    }
+
     final publishResult = await _sendRumorWithTimeout(
       rumor: rumor,
       recipientPubkey: row.recipientPubkey,
@@ -7323,14 +7424,6 @@ class DmRepository {
       // retry row.
       try {
         final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-        // Recovered rows may belong to a GROUP send (one queue row per
-        // recipient, all sharing the group conversationId). Derive the
-        // topology instead of hardcoding 1:1: the pair id differing from the
-        // row's conversationId proves a group row, and the rumor's p-tags
-        // carry the other members when no conversation row survives.
-        final pairParticipants = [_userPubkey, row.recipientPubkey]..sort();
-        final isGroupRow =
-            row.conversationId != computeConversationId(pairParticipants);
         var persistedLocally = false;
         String? protocol;
         await _conversationsDao.runInTransaction(() async {
@@ -7361,6 +7454,19 @@ class DmRepository {
             Log.info(
               'Recovered publish for $rumorId landed after the sender '
               'stopped that delivery; dropped its stopped-delivery record.',
+              category: LogCategory.system,
+            );
+            return;
+          }
+          // A group row queued just after the user left escaped the leave,
+          // which takes queued sends with it. It goes now, and the group stays
+          // out rather than coming back unable to hear its members (#10150).
+          if (isGroupRow && await _isLeftConversation(row.conversationId)) {
+            await dao.deleteById(rumorId);
+            Log.info(
+              'Recovered publish for $rumorId landed in group '
+              '${row.conversationId}, which the user left; dropped its row '
+              'and skipped the local persist.',
               category: LogCategory.system,
             );
             return;
@@ -8448,33 +8554,6 @@ class DmRepository {
     final conversationId = computeConversationId(participants);
     final outgoingDao = _outgoingDmsDao;
 
-    // Resolve every recipient's kind-10050 DM inbox concurrently BEFORE the
-    // per-recipient send loop. Each wrap must route to its own recipient's
-    // inbox (NIP-17), and OK-confirm below is only meaningful against that
-    // inbox. Doing this up front (rather than one await per loop iteration)
-    // keeps N sequential ~5s inbox queries from stacking and delaying the
-    // visible group bubble. Resolution never throws (it degrades to null →
-    // default pool), so a failed lookup just falls back.
-    //
-    // Resolved through the DETAILED reader: routing only needs the relays, but
-    // this fan-out also REPORTS delivery, and `absent` and `unreadable` both
-    // route to the pool while meaning opposite things (#8434). Kept per
-    // recipient rather than collapsed to one batch verdict because NIP-17
-    // states the rule per recipient — "the relays listed in the recipient's
-    // kind 10050 event" (17.md:77) — and the queue already holds one row per
-    // member, so a readable sibling stays genuinely delivered.
-    final inboxByRecipient = <String, DmInboxLookup>{};
-    await Future.wait([
-      for (final pubkey in recipientPubkeys)
-        resolveDmInboxRelaysDetailed(
-          pubkey,
-        ).then((inbox) => inboxByRecipient[pubkey] = inbox),
-    ]);
-
-    // One destination for every self-copy in the batch — it is addressed to
-    // the sender, not to a recipient, so it does not vary per wrap.
-    final selfWrapRelays = await _selfWrapTargetRelays();
-
     // Per-recipient durable handle for the queue row. The wire rumor is shared
     // across the batch, so the rumor id alone can no longer key a row: the
     // queue tracks per-recipient delivery, and `enqueue` is `insertOrIgnore`,
@@ -8549,6 +8628,24 @@ class DmRepository {
 
     for (final recipient in recipientPubkeys) {
       queueIds.add(_groupQueueId(groupRumor.id, recipient));
+    }
+
+    // Writing in a group the user left, or starting a new chat with the same
+    // people, brings it back from this message's own time (#10150). Recorded
+    // before anything is queued or published: the confirms below run one
+    // recipient at a time, and a member's reply that lands meanwhile must not
+    // be kept out. A send that later fails still counts; the user wrote.
+    // One recipient makes a one-to-one, which reopens without a rejoin.
+    if (participants.length > 2) {
+      await _removedConversationsDao?.markRejoined(
+        conversationId: conversationId,
+        ownerPubkey: _userPubkey,
+        at: batchCreatedAt,
+        // Establish the local rejoin before relay discovery can suspend us.
+        // A Leave completed during discovery must remain left, not be
+        // mistaken for the removal this send intended to rejoin.
+        isLocalSend: true,
+      );
     }
 
     // Enqueue every sibling before publish so an app crash mid-send leaves a
@@ -8632,6 +8729,25 @@ class DmRepository {
       }
     }
 
+    // Resolve relays only after the local rejoin and queue writes. Leave can
+    // then cancel this send while discovery is pending; the pre-publish
+    // checks below observe its tombstone and deleted queue rows.
+    // Resolve every recipient concurrently so discovery does not stack one
+    // timeout per member. Resolve the self-copy's destination in the same
+    // stage so the post-enqueue interval stays within one inbox budget, as
+    // the interrupted-send retry guard assumes. The detailed reader
+    // distinguishes an absent inbox from an unreadable one (#8434).
+    final inboxByRecipient = <String, DmInboxLookup>{};
+    final (_, selfWrapRelays) = await (
+      Future.wait([
+        for (final pubkey in recipientPubkeys)
+          resolveDmInboxRelaysDetailed(
+            pubkey,
+          ).then((inbox) => inboxByRecipient[pubkey] = inbox),
+      ]),
+      _selfWrapTargetRelays(),
+    ).wait;
+
     // Delivery below is per-recipient and NOT atomic: a mid-loop publish
     // failure can leave the group partially delivered. That is a reliability/UX
     // concern only, not a safety leak for the #176 restriction — the
@@ -8654,6 +8770,17 @@ class DmRepository {
     final joinedRecovery = <int>{};
     for (var i = 0; i < recipientPubkeys.length; i++) {
       final pubkey = recipientPubkeys[i];
+      // Leave can delete only the siblings already queued when it runs.
+      // Copies queued afterwards must also be cancelled before publication.
+      if (participants.length > 2 &&
+          await _isLeftConversation(conversationId)) {
+        await outgoingDao?.deleteById(queueIds[i]);
+        cancelledBeforePublish.add(i);
+        results.add(
+          const NIP17SendResult.failure('group send cancelled by Leave'),
+        );
+        continue;
+      }
       // Cancel interlock, mirroring _recoverFullSendLocked's pre-publish row
       // re-read: each publish can take up to the OK-confirm timeout, a long
       // window in which the user may delete the whole batch. Re-read the
@@ -8751,6 +8878,25 @@ class DmRepository {
       ];
 
       await _conversationsDao.runInTransaction(() async {
+        // A Leave that landed after the rejoin above found nothing to rejoin,
+        // but before every sibling was queued, took only the rows queued
+        // before it. The leave wins: the rest go too, and the group stays out
+        // rather than coming back unable to hear its members (#10150).
+        if (participants.length > 2 &&
+            await _isLeftConversation(conversationId)) {
+          if (outgoingDao != null) {
+            for (final queueId in queueIds) {
+              await outgoingDao.deleteById(queueId);
+            }
+          }
+          Log.info(
+            'Group publish landed after the user left conversation '
+            '$conversationId; dropped the batch and skipped the local persist.',
+            category: LogCategory.system,
+          );
+          return;
+        }
+
         // Cancel interlock (mirrors _recoverFullSendLocked, per successful
         // sibling): the user may have deleted the whole batch
         // (cancelOutgoingBatch) while the sequential per-recipient publishes
@@ -10118,6 +10264,37 @@ class DmRepository {
     return rows.map(_conversationFromRow).toList();
   }
 
+  /// For each conversation in [excludedSendersByConversation], what its inbox
+  /// row shows once that conversation's excluded senders are set aside
+  /// (#10150).
+  ///
+  /// Takes plain data: the caller decides whom to exclude, so this never
+  /// consults a block or mute list. Give each conversation only its own
+  /// members. A conversation the viewer has no row for is left out, and so is
+  /// every conversation while no owner is known. Only reads, so the stored row
+  /// and its read state stay as they are, and dropping a sender from the set
+  /// restores what the row showed before.
+  Future<Map<String, DmVisibleActivity>> visibleActivityExcluding(
+    Map<String, Set<String>> excludedSendersByConversation,
+  ) async {
+    final owner = _ownerPubkey;
+    if (owner == null || excludedSendersByConversation.isEmpty) return const {};
+    await _awaitInitialConversationMaintenance();
+    final rows = await _conversationsDao.visibleActivityExcluding(
+      excludedSendersByConversation,
+      ownerPubkey: owner,
+    );
+    return {
+      for (final MapEntry(key: id, value: row) in rows.entries)
+        id: (
+          lastMessageContent: row.content,
+          lastMessageTimestamp: row.createdAt,
+          lastMessageSenderPubkey: row.senderPubkey,
+          hasUnread: row.hasUnread,
+        ),
+    };
+  }
+
   /// Watch conversations where the user has sent at least one message.
   ///
   /// Supports pagination via [limit]. These conversations are never
@@ -10708,8 +10885,10 @@ class DmRepository {
   ///
   /// Records an owner-scoped tombstone first so relay replay cannot restore
   /// history at or before the removal time. The marker is kept for the
-  /// account's lifetime: a newer message recreates the conversation while
-  /// earlier history stays suppressed.
+  /// account's lifetime: a newer message recreates a one-to-one while earlier
+  /// history stays suppressed. Removing a group leaves it: other members'
+  /// messages stay out until the user writes in it again, and what they sent
+  /// in between stays out after that (#10150).
   ///
   /// The tombstone is written **only for a conversation that is on disk**. It
   /// is a record of what this device removed, not of what it was asked to
@@ -11601,6 +11780,11 @@ class DmRepository {
   /// room and is filed as one (#7338). Waiting for a row to exist made a
   /// room's first message collapse into a 1:1 with its speaker, so where it
   /// landed depended on who spoke first.
+  ///
+  /// A room the user left and has not written in since (#10150) resolves to
+  /// itself where its message would otherwise fall back to the one-to-one with
+  /// its sender, above the cap or while receiving rooms is off, and the
+  /// receive path keeps it out. A mention is still filed where it belongs.
   Future<List<String>> _resolveConversationParticipants(
     List<String> extractedParticipants,
     String senderPubkey, {
@@ -11624,15 +11808,15 @@ class DmRepository {
     );
     if (existingFull != null) return extractedParticipants;
 
+    final room = _inLowerCase(extractedParticipants);
+
     if (extractedParticipants.length > maxRoomParticipants) {
-      return canonical1to1;
+      return await _isLeftRoom(room) ? room : canonical1to1;
     }
 
     if (!extractedParticipants.every(NostrHexUtils.isValidPubkey)) {
       return canonical1to1;
     }
-
-    final room = _inLowerCase(extractedParticipants);
 
     final namesCurrentUser = room.any(
       (pubkey) => pubkeysEqual(pubkey, _userPubkey),
@@ -11648,7 +11832,24 @@ class DmRepository {
         return _homeOfMention(answered, senderPubkey).participants;
       }
     }
-    return _receivesPeerRooms() ? room : canonical1to1;
+    return _receivesPeerRooms() || await _isLeftRoom(room)
+        ? room
+        : canonical1to1;
+  }
+
+  /// Whether the user left [room] and has not written in it since (#10150).
+  Future<bool> _isLeftRoom(List<String> room) =>
+      _isLeftConversation(computeConversationId(room));
+
+  /// [_isLeftRoom] for the conversation with id [conversationId].
+  Future<bool> _isLeftConversation(String conversationId) async {
+    final owner = _ownerPubkey;
+    if (owner == null) return false;
+    final tombstone = await _removedConversationsDao?.tombstoneFor(
+      conversationId: conversationId,
+      ownerPubkey: owner,
+    );
+    return tombstone != null && tombstone.rejoinedAt == null;
   }
 
   /// Where a mention from [senderPubkey] of the conversation [answered]

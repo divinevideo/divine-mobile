@@ -2,12 +2,15 @@
 // ABOUTME: Verifies avatar, display name, "Sent a message request" subtitle,
 // ABOUTME: unread dot, and tap callback.
 
+import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/message_requests/widgets/request_tile.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -525,8 +528,9 @@ void main() {
 
       Future<void> pumpTile(
         WidgetTester tester,
-        DmConversation conversation,
-      ) async {
+        DmConversation conversation, {
+        List<Override> extraOverrides = const [],
+      }) async {
         await tester.pumpWidget(
           testMaterialApp(
             additionalOverrides: [
@@ -539,6 +543,7 @@ void main() {
                   ),
                 ),
               ),
+              ...extraOverrides,
             ],
             home: Scaffold(
               body: RequestTile(
@@ -575,6 +580,44 @@ void main() {
         await pumpTile(tester, createTestConversation());
 
         expect(find.text('Alice'), findsOneWidget);
+      });
+
+      // #10150. A request normally cannot hold a hidden member, but the row
+      // follows the viewer's lists as they change, like every other title.
+      testWidgets('names an untitled room for a member the viewer has not '
+          'blocked', (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final blocklist = ContentBlocklistRepository();
+        addTearDown(blocklist.dispose);
+        await tester.runAsync(
+          () => blocklist.blockUsers([otherPubkey], ourPubkey: currentPubkey),
+        );
+        expect(blocklist.isBlocked(otherPubkey), isTrue);
+
+        await pumpTile(
+          tester,
+          groupConversation(),
+          extraOverrides: [
+            contentBlocklistRepositoryProvider.overrideWithValue(blocklist),
+            userProfileReactiveProvider(third).overrideWith(
+              (ref) => Stream.value(
+                UserProfile(
+                  pubkey: third,
+                  displayName: 'Bob',
+                  rawData: const {},
+                  createdAt: now,
+                  eventId: 'c' * 64,
+                ),
+              ),
+            ),
+          ],
+        );
+
+        expect(
+          find.text(l10n.inboxGroupConversationTitle('Bob', 1)),
+          findsOneWidget,
+        );
+        expect(find.textContaining('Alice'), findsNothing);
       });
     });
 

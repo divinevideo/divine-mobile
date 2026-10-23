@@ -2800,8 +2800,12 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "Ini mengalih keluar perbualan kumpulan daripada peti masuk anda. Jika sesiapa menghantar mesej lagi dalam kumpulan itu, perbualan baharu akan bermula.",
   "inboxRemoveConfirmConfirm": "Alih Keluar",
+  "inboxActionLeaveGroup": "Keluar kumpulan",
+  "inboxLeaveGroupConfirmTitle": "Keluar kumpulan?",
+  "inboxLeaveGroupConfirmBody": "Ia hilang daripada peti masuk anda, dan mesej baharu tidak akan membawanya kembali. Tulis dalam kumpulan itu lagi untuk menyertainya semula. Ahli lain tidak dimaklumkan.",
+  "inboxLeaveGroupConfirmConfirm": "Keluar",
+  "inboxLeftGroup": "Anda telah keluar daripada kumpulan",
   "inboxCollabInviteCardTitle": "Jemputan kolaborator",
   "@inboxCollabInviteCardTitle": {
     "description": "Header label on a collaborator invite card in the DM conversation."
@@ -6646,6 +6650,13 @@
   "inboxBlockedNoMessages": "Tiada mesej",
   "dmBlockedThreadTitle": "Anda menyekat akaun ini",
   "dmBlockedThreadBody": "Mesej kekal di sini supaya anda boleh membacanya atau mengambil tangkap layar. Nyahsekat untuk membalas.",
+  "dmBlockedGroupMemberTitle": "Anda menyekat {name}",
+  "dmBlockedGroupMembersTitle": "{count, plural, other{Anda menyekat {count} orang di sini}}",
+  "dmBlockedGroupThreadBody": "Mesej kekal di sini supaya anda boleh membacanya atau mengambil tangkapan skrin. Nyahsekat melalui profil mereka untuk membalas.",
+  "dmBlockedGroupMembersBannerBody": "{count, plural, =1{Mesej orang ini disembunyikan di sini. Dia masih boleh melihat apa yang anda hantar.} other{Mesej mereka disembunyikan di sini. Mereka masih boleh melihat apa yang anda hantar.}}",
+  "dmStartChatWithoutBlockedAction": "{count, plural, =1{Sembang baharu tanpa orang ini} other{Sembang baharu tanpa mereka}}",
+  "dmHiddenMessageLabel": "Mesej tersembunyi",
+  "dmHiddenMessageShowAction": "Tunjuk",
   "dmUnresolvedThreadTitle": "Tidak dapat memuatkan perbualan ini",
   "dmUnresolvedThreadBody": "Kembali dan buka semula. Anda boleh membalas sebaik sahaja ia dimuatkan.",
   "verifyTitle": "Akaun disahkan",

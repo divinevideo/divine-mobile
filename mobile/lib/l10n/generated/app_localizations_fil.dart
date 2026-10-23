@@ -5790,6 +5790,54 @@ class AppLocalizationsFil extends AppLocalizations {
       'Nananatili rito ang mga mensahe para mabasa o ma-screenshot mo. Mag-unblock para makasagot.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Na-block mo si $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Na-block mo ang $count tao rito',
+      one: 'Na-block mo ang $count tao rito',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Nananatili rito ang mga mensahe para mabasa o ma-screenshot mo. I-unblock mula sa profile nila para makasagot.';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nakatago rito ang mga mensahe nila. Nakikita pa rin nila ang mga ipinapadala mo.',
+      one: 'Nakatago rito ang mga mensahe nila. Nakikita pa rin nila ang mga ipinapadala mo.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Bagong chat nang wala sila',
+      one: 'Bagong chat nang wala sila',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'Nakatagong mensahe';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Ipakita';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Hindi na-load ang usapang ito';
 
   @override
@@ -5856,10 +5904,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String inboxRemoveConfirmBody(String displayName) {
     return 'Aalisin nito sa iyong inbox ang usapan mo kay $displayName. Kung magme-message ulit siya, magsisimula ng bagong usapan.';
   }
-
-  @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'Aalisin nito sa iyong inbox ang group chat. Kung may magme-message ulit sa group, magsisimula ng bagong usapan.';
 
   @override
   String get inboxRemoveConfirmConfirm => 'Alisin';
@@ -14325,6 +14369,22 @@ class AppLocalizationsFil extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Na-post $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Umalis sa group';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Umalis sa group?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Mawawala ito sa inbox mo, at hindi na ito ibabalik ng mga bagong message. Mag-message ulit dito para bumalik. Hindi malalaman ng iba.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Umalis';
+
+  @override
+  String get inboxLeftGroup => 'Umalis ka sa group';
 
   @override
   String get listPrivateConversionTooLarge =>

@@ -248,10 +248,28 @@ void main() {
         await tester.tap(find.text('Show sheet'));
         await tester.pumpAndSettle();
 
-        expect(find.text(l10n.inboxActionRemove), findsOneWidget);
+        expect(find.text(l10n.inboxActionLeaveGroup), findsOneWidget);
         expect(find.text(l10n.inboxActionReport('Alice')), findsNothing);
         expect(find.text(l10n.inboxActionBlock('Alice')), findsNothing);
         expect(sheetRows(tester), hasLength(3));
+      });
+
+      // Removing a group leaves it until the user writes in it again
+      // (#10150), so the row says so rather than "Remove conversation".
+      testWidgets('offers Leave group, which returns remove', (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        ConversationAction? result;
+        await tester.pumpWidget(
+          buildSubject(onResult: (action) => result = action, isGroup: true),
+        );
+        await tester.tap(find.text('Show sheet'));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.inboxActionRemove), findsNothing);
+
+        await tester.tap(find.text(l10n.inboxActionLeaveGroup));
+        await tester.pumpAndSettle();
+
+        expect(result, equals(ConversationAction.remove));
       });
 
       testWidgets('a 1:1 still offers both', (tester) async {
@@ -262,6 +280,8 @@ void main() {
 
         expect(find.text(l10n.inboxActionReport('Alice')), findsOneWidget);
         expect(find.text(l10n.inboxActionBlock('Alice')), findsOneWidget);
+        expect(find.text(l10n.inboxActionRemove), findsOneWidget);
+        expect(find.text(l10n.inboxActionLeaveGroup), findsNothing);
       });
     });
   });

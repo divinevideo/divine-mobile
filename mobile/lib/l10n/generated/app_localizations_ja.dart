@@ -5433,6 +5433,51 @@ class AppLocalizationsJa extends AppLocalizations {
       'メッセージはここに残るので、読んだりスクリーンショットを撮ったりできます。返信するにはブロックを解除してください。';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return '$nameをブロックしました';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'このグループで$count人をブロックしました',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'メッセージはここに残るので、読んだりスクリーンショットを撮ったりできます。返信するには、プロフィールからブロックを解除してください。';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ブロックした人のメッセージは、ここでは非表示になります。あなたが送るメッセージは、ブロックした人にも引き続き表示されます。',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ブロックした人を除いて新しいチャットを開始',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => '非表示のメッセージ';
+
+  @override
+  String get dmHiddenMessageShowAction => '表示';
+
+  @override
   String get dmUnresolvedThreadTitle => 'この会話を読み込めませんでした';
 
   @override
@@ -5496,10 +5541,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String inboxRemoveConfirmBody(String displayName) {
     return '$displayNameとの会話が受信トレイから削除されます。相手からまたメッセージが届くと、新しい会話が始まります。';
   }
-
-  @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'このグループの会話が受信トレイから削除されます。誰かがまたグループにメッセージを送ると、新しい会話が始まります。';
 
   @override
   String get inboxRemoveConfirmConfirm => '削除';
@@ -13506,6 +13547,22 @@ class AppLocalizationsJa extends AppLocalizations {
   String userRowPosted(String time) {
     return '$timeに投稿';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'グループから退出';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'グループから退出しますか？';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      '受信トレイから消え、新しいメッセージが届いても戻りません。もう一度書き込むと再参加できます。ほかのメンバーには通知されません。';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => '退出';
+
+  @override
+  String get inboxLeftGroup => 'グループから退出しました';
 
   @override
   String get listPrivateConversionTooLarge =>

@@ -5911,6 +5911,57 @@ class AppLocalizationsRo extends AppLocalizations {
       'Mesajele rămân aici ca să le poți citi sau captura. Deblochează pentru a răspunde.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Ai blocat contul $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ai blocat $count de persoane aici',
+      few: 'Ai blocat $count persoane aici',
+      one: 'Ai blocat $count persoană aici',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Mesajele rămân aici ca să le poți citi sau captura. Deblochează din profil pentru a răspunde.';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Mesajele lor sunt ascunse aici. Încă pot vedea ce trimiți.',
+      few: 'Mesajele lor sunt ascunse aici. Încă pot vedea ce trimiți.',
+      one: 'Mesajele acestei persoane sunt ascunse aici. Încă poate vedea ce trimiți.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Conversație nouă fără aceste persoane',
+      few: 'Conversație nouă fără aceste persoane',
+      one: 'Conversație nouă fără această persoană',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'Mesaj ascuns';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Arată';
+
+  @override
   String get dmUnresolvedThreadTitle =>
       'Această conversație nu a putut fi încărcată';
 
@@ -5978,10 +6029,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String inboxRemoveConfirmBody(String displayName) {
     return 'Astfel, conversația ta cu $displayName este eliminată din inbox. Dacă îți scrie din nou, începe o conversație nouă.';
   }
-
-  @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'Astfel, conversația de grup este eliminată din inbox. Dacă cineva scrie din nou în grup, începe o conversație nouă.';
 
   @override
   String get inboxRemoveConfirmConfirm => 'Elimină';
@@ -14492,6 +14539,22 @@ class AppLocalizationsRo extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Publicat $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Părăsește grupul';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Părăsești grupul?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Dispare din inbox, iar mesajele noi nu îl mai aduc înapoi. Scrie din nou în grup ca să revii. Nu se trimite nicio notificare.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Părăsește';
+
+  @override
+  String get inboxLeftGroup => 'Ai părăsit grupul';
 
   @override
   String get listPrivateConversionTooLarge =>

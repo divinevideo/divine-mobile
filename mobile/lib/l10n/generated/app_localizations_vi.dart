@@ -5718,6 +5718,54 @@ class AppLocalizationsVi extends AppLocalizations {
       'Tin nhắn vẫn ở đây để bạn có thể đọc hoặc chụp màn hình. Bỏ chặn để trả lời.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Bạn đã chặn $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Bạn đã chặn $count người ở đây',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Tin nhắn vẫn ở đây để bạn có thể đọc hoặc chụp màn hình. Bỏ chặn từ hồ sơ của họ để trả lời.';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Tin nhắn của họ được ẩn ở đây. Họ vẫn có thể xem những gì bạn gửi.',
+      one: 'Tin nhắn của người này được ẩn ở đây. Người này vẫn có thể xem những gì bạn gửi.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Cuộc trò chuyện mới không có họ',
+      one: 'Trò chuyện mới không có người này',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'Tin nhắn đã ẩn';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Hiện';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Không tải được cuộc trò chuyện này';
 
   @override
@@ -5784,10 +5832,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String inboxRemoveConfirmBody(String displayName) {
     return 'Thao tác này xóa cuộc trò chuyện của bạn với $displayName khỏi hộp thư đến. Nếu họ nhắn tin cho bạn lần nữa, một cuộc trò chuyện mới sẽ bắt đầu.';
   }
-
-  @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'Thao tác này xóa cuộc trò chuyện nhóm khỏi hộp thư đến. Nếu có ai nhắn tin vào nhóm lần nữa, một cuộc trò chuyện mới sẽ bắt đầu.';
 
   @override
   String get inboxRemoveConfirmConfirm => 'Xóa';
@@ -14142,6 +14186,22 @@ class AppLocalizationsVi extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Đã đăng $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Rời nhóm';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Rời nhóm?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Nhóm sẽ biến mất khỏi hộp thư đến và tin nhắn mới sẽ không đưa nhóm trở lại. Hãy viết lại vào nhóm để tham gia lại. Những người khác sẽ không được thông báo.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Rời';
+
+  @override
+  String get inboxLeftGroup => 'Đã rời nhóm';
 
   @override
   String get listPrivateConversionTooLarge =>

@@ -2052,7 +2052,6 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "Det här tar bort gruppkonversationen från din inkorg. Om någon skriver i gruppen igen startar en ny konversation.",
   "inboxRemoveConfirmConfirm": "Ta bort",
   "inboxRemoveConfirmTitle": "Ta bort konversation?",
   "inboxRemovedConversation": "Konversation borttagen",
@@ -5355,6 +5354,13 @@
   "inboxBlockedNoMessages": "Inga meddelanden",
   "dmBlockedThreadTitle": "Du blockerade det här kontot",
   "dmBlockedThreadBody": "Meddelandena stannar kvar så att du kan läsa dem eller ta en skärmbild. Häv blockeringen för att svara.",
+  "dmBlockedGroupMemberTitle": "Du blockerade {name}",
+  "dmBlockedGroupMembersTitle": "{count, plural, one{Du blockerade {count} person här} other{Du blockerade {count} personer här}}",
+  "dmBlockedGroupThreadBody": "Meddelandena stannar kvar så att du kan läsa dem eller ta en skärmbild. Häv blockeringen via deras profil för att svara.",
+  "dmBlockedGroupMembersBannerBody": "{count, plural, one{Den här personens meddelanden är dolda här. Personen kan fortfarande se det du skickar.} other{Deras meddelanden är dolda här. De kan fortfarande se det du skickar.}}",
+  "dmStartChatWithoutBlockedAction": "{count, plural, one{Ny chatt utan den här personen} other{Starta en ny chatt utan dem}}",
+  "dmHiddenMessageLabel": "Dolt meddelande",
+  "dmHiddenMessageShowAction": "Visa",
   "dmUnresolvedThreadTitle": "Det gick inte att läsa in den här konversationen",
   "dmUnresolvedThreadBody": "Gå tillbaka och öppna den igen. Du kan svara så snart den har laddats.",
   "verifyTitle": "Verifierade konton",
@@ -5776,6 +5782,11 @@
     }
   },
   "userRowPosted": "Publicerat {time}",
+  "inboxActionLeaveGroup": "Lämna gruppen",
+  "inboxLeaveGroupConfirmTitle": "Lämna gruppen?",
+  "inboxLeaveGroupConfirmBody": "Den försvinner från din inkorg och nya meddelanden tar inte tillbaka den. Skriv i den igen för att gå med på nytt. De andra får inget besked.",
+  "inboxLeaveGroupConfirmConfirm": "Lämna",
+  "inboxLeftGroup": "Du lämnade gruppen",
 "listsDiscoveryEmpty": "Inga listor dök upp den här gången. Dra för att uppdatera.",
 "listsDiscoveryLoadingLabel": "Läser in listor",
 "listSearchPeopleUnavailable": "Personlistor är inte tillgängliga just nu.",

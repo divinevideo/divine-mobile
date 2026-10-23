@@ -1,6 +1,6 @@
 // dart format width=80
 import 'package:db_client/src/database/app_database.dart';
-import 'package:drift/drift.dart' hide isNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:drift_dev/api/migrations_native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -28,6 +28,115 @@ void main() {
   });
 
   group('schema validation', () {
+    test(
+      'v27 group preview gains followers without changing its rejoin marker',
+      () async {
+        final schema = await verifier.schemaAt(27);
+        // The earlier group preview used v27 for rejoined_at, before main
+        // assigned v27 to my_followers.
+        schema.rawDatabase.execute('DROP TABLE my_followers');
+        schema.rawDatabase.execute(
+          'ALTER TABLE removed_conversations ADD COLUMN rejoined_at INTEGER NULL',
+        );
+        final owner = 'a' * 64;
+        final follower = 'b' * 64;
+        final conversationId = 'c' * 64;
+        schema.rawDatabase.execute(
+          'INSERT INTO removed_conversations '
+          '(conversation_id, owner_pubkey, removed_at, rejoined_at) '
+          'VALUES (?, ?, ?, ?)',
+          [conversationId, owner, 100, 200],
+        );
+        final db = AppDatabase(schema.newConnection());
+        addTearDown(db.close);
+
+        await verifier.migrateAndValidate(db, 28);
+
+        expect(
+          (await db.removedConversationsDao.tombstoneFor(
+            conversationId: conversationId,
+            ownerPubkey: owner,
+          ))!.rejoinedAt,
+          200,
+        );
+        await db.myFollowersDao.upsertAll(
+          ownerPubkey: owner,
+          followers: [(pubkey: follower, followedAt: 1700000000)],
+          seenAt: 1700000100,
+        );
+        expect(await db.myFollowersDao.followersOf(owner), [
+          (pubkey: follower, followedAt: 1700000000),
+        ]);
+      },
+    );
+
+    test(
+      'canonical v27 followers and removal state survive the leave upgrade',
+      () async {
+        final schema = await verifier.schemaAt(27);
+        final owner = 'a' * 64;
+        final otherOwner = 'b' * 64;
+        final follower = 'c' * 64;
+        final reopened = 'd' * 64;
+        final stillRemoved = 'e' * 64;
+        for (final account in [owner, otherOwner]) {
+          schema.rawDatabase.execute(
+            'INSERT INTO my_followers '
+            '(owner_pubkey, follower_pubkey, followed_at, last_seen_at) '
+            'VALUES (?, ?, ?, ?)',
+            [account, follower, 1700000000, 1700000100],
+          );
+        }
+        for (final conversationId in [reopened, stillRemoved]) {
+          schema.rawDatabase.execute(
+            'INSERT INTO removed_conversations '
+            '(conversation_id, owner_pubkey, removed_at) VALUES (?, ?, ?)',
+            [conversationId, owner, 100],
+          );
+        }
+        schema.rawDatabase.execute(
+          'INSERT INTO conversations (id, participant_pubkeys, created_at, '
+          'owner_pubkey, is_group) VALUES (?, ?, ?, ?, ?)',
+          [reopened, '["$owner","$otherOwner"]', 150, owner, 1],
+        );
+        final db = AppDatabase(schema.newConnection());
+        addTearDown(db.close);
+
+        await verifier.migrateAndValidate(db, db.schemaVersion);
+
+        for (final account in [owner, otherOwner]) {
+          expect(await db.myFollowersDao.followersOf(account), [
+            (pubkey: follower, followedAt: 1700000000),
+          ]);
+        }
+        final followerRows = await db
+            .customSelect(
+              'SELECT last_seen_at FROM my_followers',
+            )
+            .get();
+        expect(followerRows, hasLength(2));
+        expect(
+          followerRows.map((row) => row.read<int>('last_seen_at')),
+          everyElement(1700000100),
+        );
+        final dao = db.removedConversationsDao;
+        expect(
+          (await dao.tombstoneFor(
+            conversationId: reopened,
+            ownerPubkey: owner,
+          ))!.rejoinedAt,
+          100,
+        );
+        final removed = await dao.tombstoneFor(
+          conversationId: stillRemoved,
+          ownerPubkey: owner,
+        );
+        expect(removed, isNotNull);
+        expect(removed!.removedAt, 100);
+        expect(removed.rejoinedAt, isNull);
+      },
+    );
+
     test('a v21 database gains my_followers', () async {
       final schema = await verifier.schemaAt(21);
       final db = AppDatabase(schema.newConnection());
@@ -106,12 +215,12 @@ void main() {
     });
 
     for (final version in [1, 11]) {
-      test('v$version schema migrates directly to v26', () async {
+      test('v$version schema migrates directly to v28', () async {
         final schema = await verifier.schemaAt(version);
         final db = AppDatabase(schema.newConnection());
         addTearDown(db.close);
 
-        await verifier.migrateAndValidate(db, 26);
+        await verifier.migrateAndValidate(db, 28);
         await db.conversationsDao.upsertConversation(
           id: 'upgraded',
           participantPubkeys: '["a","b"]',
@@ -151,9 +260,99 @@ void main() {
       });
     }
 
-    test('current schema version is 27', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 27);
+    test('current schema version is 28', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 28);
     });
+
+    test(
+      'a v26 conversation reopened since its removal counts as rejoined '
+      'at the removal after the v28 upgrade',
+      () async {
+        final schema = await verifier.schemaAt(26);
+        final owner = 'a' * 64;
+        final reopened = 'c' * 64;
+        final stillRemoved = 'd' * 64;
+        for (final conversationId in [reopened, stillRemoved]) {
+          schema.rawDatabase.execute(
+            'INSERT INTO removed_conversations '
+            '(conversation_id, owner_pubkey, removed_at) VALUES (?, ?, ?)',
+            [conversationId, owner, 100],
+          );
+        }
+        schema.rawDatabase.execute(
+          'INSERT INTO conversations (id, participant_pubkeys, created_at, '
+          'owner_pubkey, is_group) VALUES (?, ?, ?, ?, ?)',
+          [reopened, '["$owner","${'b' * 64}","${'e' * 64}"]', 150, owner, 1],
+        );
+        // Another account's copy of the room says nothing about this one.
+        schema.rawDatabase.execute(
+          'INSERT INTO conversations (id, participant_pubkeys, created_at, '
+          'owner_pubkey, is_group) VALUES (?, ?, ?, ?, ?)',
+          [stillRemoved, '["${'f' * 64}","${'b' * 64}"]', 150, 'f' * 64, 1],
+        );
+        final db = AppDatabase(schema.newConnection());
+        addTearDown(db.close);
+
+        await verifier.migrateAndValidate(db, 28);
+
+        final dao = db.removedConversationsDao;
+        expect(
+          (await dao.tombstoneFor(
+            conversationId: reopened,
+            ownerPubkey: owner,
+          ))!.rejoinedAt,
+          100,
+        );
+        final removed = await dao.tombstoneFor(
+          conversationId: stillRemoved,
+          ownerPubkey: owner,
+        );
+        expect(removed, isNotNull);
+        expect(removed!.rejoinedAt, isNull);
+      },
+    );
+
+    test(
+      'v26 removed conversations survive the v28 upgrade without a rejoin',
+      () async {
+        final schema = await verifier.schemaAt(26);
+        final owner = 'a' * 64;
+        final conversationId = 'c' * 64;
+        schema.rawDatabase.execute(
+          'INSERT INTO removed_conversations '
+          '(conversation_id, owner_pubkey, removed_at) VALUES (?, ?, ?)',
+          [conversationId, owner, 100],
+        );
+        final db = AppDatabase(schema.newConnection());
+        addTearDown(db.close);
+
+        await verifier.migrateAndValidate(db, 28);
+
+        final dao = db.removedConversationsDao;
+        final tombstone = await dao.tombstoneFor(
+          conversationId: conversationId,
+          ownerPubkey: owner,
+        );
+        expect(tombstone, isNotNull);
+        expect(tombstone!.removedAt, 100);
+        expect(tombstone.rejoinedAt, isNull);
+        expect(
+          await dao.markRejoined(
+            conversationId: conversationId,
+            ownerPubkey: owner,
+            at: 200,
+          ),
+          isTrue,
+        );
+        expect(
+          (await dao.tombstoneFor(
+            conversationId: conversationId,
+            ownerPubkey: owner,
+          ))!.rejoinedAt,
+          200,
+        );
+      },
+    );
 
     test(
       'v25 dismissals, read cursors and sound requests survive the v26 '
@@ -596,19 +795,17 @@ void main() {
       },
     );
 
-    test('v26 schema is valid and up to date', () async {
-      final schema = await verifier.schemaAt(26);
-      final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 26);
-      await db.close();
-    });
-
-    test('v27 schema is valid and up to date', () async {
-      final schema = await verifier.schemaAt(27);
-      final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 27);
-      await db.close();
-    });
+    for (final version in [26, 27, 28]) {
+      test(
+        'canonical v$version schema validates after upgrading to v28',
+        () async {
+          final schema = await verifier.schemaAt(version);
+          final db = AppDatabase(schema.newConnection());
+          addTearDown(db.close);
+          await verifier.migrateAndValidate(db, 28);
+        },
+      );
+    }
 
     test('v14 creates personal_events on a v12 database', () async {
       final schema = await verifier.schemaAt(12);
@@ -986,10 +1183,10 @@ void main() {
       },
     );
 
-    test('v8 schema migrates to v26', () async {
+    test('v8 schema migrates to v28', () async {
       final schema = await verifier.schemaAt(8);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 26);
+      await verifier.migrateAndValidate(db, 28);
       const conversationId =
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
           'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -1011,45 +1208,45 @@ void main() {
       await db.close();
     });
 
-    test('v7 schema migrates to v26', () async {
+    test('v7 schema migrates to v28', () async {
       final schema = await verifier.schemaAt(7);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 26);
+      await verifier.migrateAndValidate(db, 28);
       await db.close();
     });
 
-    test('v6 schema migrates to v26', () async {
+    test('v6 schema migrates to v28', () async {
       final schema = await verifier.schemaAt(6);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 26);
+      await verifier.migrateAndValidate(db, 28);
       await db.close();
     });
 
-    test('v5 schema migrates to v26', () async {
+    test('v5 schema migrates to v28', () async {
       final schema = await verifier.schemaAt(5);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 26);
+      await verifier.migrateAndValidate(db, 28);
       await db.close();
     });
 
-    test('v3 schema migrates to v26', () async {
+    test('v3 schema migrates to v28', () async {
       final schema = await verifier.schemaAt(3);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 26);
+      await verifier.migrateAndValidate(db, 28);
       await db.close();
     });
 
-    test('v2 schema migrates to v26', () async {
+    test('v2 schema migrates to v28', () async {
       final schema = await verifier.schemaAt(2);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 26);
+      await verifier.migrateAndValidate(db, 28);
       await db.close();
     });
 
-    test('legacy v1 schema migrates to v26', () async {
+    test('legacy v1 schema migrates to v28', () async {
       final schema = await verifier.schemaAt(1);
       final db = AppDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(db, 26);
+      await verifier.migrateAndValidate(db, 28);
       await db.close();
     });
 

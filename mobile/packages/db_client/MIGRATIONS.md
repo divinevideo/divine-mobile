@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 27** (see `app_database.dart`).
+**Version: 28** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -259,6 +259,23 @@ v24 shape (main v23 plus followers, without sound jobs), the v25 shape
 the missing dismissal and retained-conversation columns and table without
 recreating the follower table or losing follower timestamps. Upgrade tests exercise canonical v25/v26 and ranking-preview v24/v25/v26 shapes, replay after
 account cleanup, and owner isolation.
+
+Version 28 adds the nullable `removed_conversations.rejoined_at` (#10150): the
+time the user first wrote in a group again after leaving it. Leaving a group
+keeps it out of the inbox until then, and other members' messages stamped
+before it stay suppressed; a one-to-one still reopens on any newer message.
+Removing the conversation again clears it. A tombstone whose conversation is
+on disk again (a newer message reopened it under the earlier rule) is stamped
+rejoined at its removal, so a group the user can see keeps receiving; any other
+stays NULL, so a group removed before v28 stays left until the user writes in
+it. The step adds the column only when it is missing and checks `to` as well as
+`from`, like the v20 and v22 steps. The `from < 9` step creates the table
+from the current definition, so a migration test that stops below v28 drops the
+column again. The repair probe lists the column, and the guarded recovery adds
+it, or recreates the table when it is missing. Canonical v1–v27 snapshots remain
+unchanged; v27 retains the follower table. The v28 step also accepts the earlier
+group-preview v27 shape, creating its missing follower table while preserving
+existing removal and rejoin markers.
 
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only

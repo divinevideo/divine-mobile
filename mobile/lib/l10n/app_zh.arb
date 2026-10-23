@@ -2800,8 +2800,12 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "这会从你的收件箱中移除这个群聊会话。如果有人再次在群里发消息，会开始一个新会话。",
   "inboxRemoveConfirmConfirm": "删除",
+  "inboxActionLeaveGroup": "退出群聊",
+  "inboxLeaveGroupConfirmTitle": "退出群聊？",
+  "inboxLeaveGroupConfirmBody": "它会从你的收件箱中移除，新消息也不会让它回来。在群里再发一条消息即可重新加入。其他人不会收到通知。",
+  "inboxLeaveGroupConfirmConfirm": "退出",
+  "inboxLeftGroup": "已退出群聊",
   "inboxCollabInviteCardTitle": "合作邀请",
   "@inboxCollabInviteCardTitle": {
     "description": "Header label on a collaborator invite card in the DM conversation."
@@ -6646,6 +6650,13 @@
   "inboxBlockedNoMessages": "暂无消息",
   "dmBlockedThreadTitle": "你已屏蔽此账号",
   "dmBlockedThreadBody": "消息会保留在这里，方便你查看或截图。解除屏蔽后即可回复。",
+  "dmBlockedGroupMemberTitle": "你已屏蔽{name}",
+  "dmBlockedGroupMembersTitle": "{count, plural, other{你已屏蔽这个群聊里的{count}人}}",
+  "dmBlockedGroupThreadBody": "消息会保留在这里，方便你查看或截图。在对方主页解除屏蔽后即可回复。",
+  "dmBlockedGroupMembersBannerBody": "{count, plural, =1{该成员的消息在这里已隐藏。此人仍能看到你发送的内容。} other{已屏蔽成员的消息在这里已隐藏。他们仍能看到你发送的内容。}}",
+  "dmStartChatWithoutBlockedAction": "{count, plural, =1{发起不含该成员的新聊天} other{发起不含已屏蔽成员的新聊天}}",
+  "dmHiddenMessageLabel": "已隐藏的消息",
+  "dmHiddenMessageShowAction": "显示",
   "dmUnresolvedThreadTitle": "无法加载此对话",
   "dmUnresolvedThreadBody": "返回后重新打开。加载完成后即可回复。",
   "verifyTitle": "已验证账号",

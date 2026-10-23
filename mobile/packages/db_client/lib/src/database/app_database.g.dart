@@ -17780,11 +17780,23 @@ class $RemovedConversationsTable extends RemovedConversations
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _rejoinedAtMeta = const VerificationMeta(
+    'rejoinedAt',
+  );
+  @override
+  late final GeneratedColumn<int> rejoinedAt = GeneratedColumn<int>(
+    'rejoined_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     conversationId,
     ownerPubkey,
     removedAt,
+    rejoinedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -17828,6 +17840,12 @@ class $RemovedConversationsTable extends RemovedConversations
     } else if (isInserting) {
       context.missing(_removedAtMeta);
     }
+    if (data.containsKey('rejoined_at')) {
+      context.handle(
+        _rejoinedAtMeta,
+        rejoinedAt.isAcceptableOrUnknown(data['rejoined_at']!, _rejoinedAtMeta),
+      );
+    }
     return context;
   }
 
@@ -17849,6 +17867,10 @@ class $RemovedConversationsTable extends RemovedConversations
         DriftSqlType.int,
         data['${effectivePrefix}removed_at'],
       )!,
+      rejoinedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}rejoined_at'],
+      ),
     );
   }
 
@@ -17865,10 +17887,18 @@ class RemovedConversation extends DataClass
 
   /// Unix timestamp when the user removed the conversation.
   final int removedAt;
+
+  /// Unix timestamp the user wrote in a left group again from, never before
+  /// [removedAt], or null while they have not written in it again.
+  ///
+  /// Other members' messages stamped before it stay suppressed. Removing the
+  /// conversation again clears it.
+  final int? rejoinedAt;
   const RemovedConversation({
     required this.conversationId,
     required this.ownerPubkey,
     required this.removedAt,
+    this.rejoinedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -17876,6 +17906,9 @@ class RemovedConversation extends DataClass
     map['conversation_id'] = Variable<String>(conversationId);
     map['owner_pubkey'] = Variable<String>(ownerPubkey);
     map['removed_at'] = Variable<int>(removedAt);
+    if (!nullToAbsent || rejoinedAt != null) {
+      map['rejoined_at'] = Variable<int>(rejoinedAt);
+    }
     return map;
   }
 
@@ -17884,6 +17917,9 @@ class RemovedConversation extends DataClass
       conversationId: Value(conversationId),
       ownerPubkey: Value(ownerPubkey),
       removedAt: Value(removedAt),
+      rejoinedAt: rejoinedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(rejoinedAt),
     );
   }
 
@@ -17896,6 +17932,7 @@ class RemovedConversation extends DataClass
       conversationId: serializer.fromJson<String>(json['conversationId']),
       ownerPubkey: serializer.fromJson<String>(json['ownerPubkey']),
       removedAt: serializer.fromJson<int>(json['removedAt']),
+      rejoinedAt: serializer.fromJson<int?>(json['rejoinedAt']),
     );
   }
   @override
@@ -17905,6 +17942,7 @@ class RemovedConversation extends DataClass
       'conversationId': serializer.toJson<String>(conversationId),
       'ownerPubkey': serializer.toJson<String>(ownerPubkey),
       'removedAt': serializer.toJson<int>(removedAt),
+      'rejoinedAt': serializer.toJson<int?>(rejoinedAt),
     };
   }
 
@@ -17912,10 +17950,12 @@ class RemovedConversation extends DataClass
     String? conversationId,
     String? ownerPubkey,
     int? removedAt,
+    Value<int?> rejoinedAt = const Value.absent(),
   }) => RemovedConversation(
     conversationId: conversationId ?? this.conversationId,
     ownerPubkey: ownerPubkey ?? this.ownerPubkey,
     removedAt: removedAt ?? this.removedAt,
+    rejoinedAt: rejoinedAt.present ? rejoinedAt.value : this.rejoinedAt,
   );
   RemovedConversation copyWithCompanion(RemovedConversationsCompanion data) {
     return RemovedConversation(
@@ -17926,6 +17966,9 @@ class RemovedConversation extends DataClass
           ? data.ownerPubkey.value
           : this.ownerPubkey,
       removedAt: data.removedAt.present ? data.removedAt.value : this.removedAt,
+      rejoinedAt: data.rejoinedAt.present
+          ? data.rejoinedAt.value
+          : this.rejoinedAt,
     );
   }
 
@@ -17934,20 +17977,23 @@ class RemovedConversation extends DataClass
     return (StringBuffer('RemovedConversation(')
           ..write('conversationId: $conversationId, ')
           ..write('ownerPubkey: $ownerPubkey, ')
-          ..write('removedAt: $removedAt')
+          ..write('removedAt: $removedAt, ')
+          ..write('rejoinedAt: $rejoinedAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(conversationId, ownerPubkey, removedAt);
+  int get hashCode =>
+      Object.hash(conversationId, ownerPubkey, removedAt, rejoinedAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is RemovedConversation &&
           other.conversationId == this.conversationId &&
           other.ownerPubkey == this.ownerPubkey &&
-          other.removedAt == this.removedAt);
+          other.removedAt == this.removedAt &&
+          other.rejoinedAt == this.rejoinedAt);
 }
 
 class RemovedConversationsCompanion
@@ -17955,17 +18001,20 @@ class RemovedConversationsCompanion
   final Value<String> conversationId;
   final Value<String> ownerPubkey;
   final Value<int> removedAt;
+  final Value<int?> rejoinedAt;
   final Value<int> rowid;
   const RemovedConversationsCompanion({
     this.conversationId = const Value.absent(),
     this.ownerPubkey = const Value.absent(),
     this.removedAt = const Value.absent(),
+    this.rejoinedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   RemovedConversationsCompanion.insert({
     required String conversationId,
     required String ownerPubkey,
     required int removedAt,
+    this.rejoinedAt = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : conversationId = Value(conversationId),
        ownerPubkey = Value(ownerPubkey),
@@ -17974,12 +18023,14 @@ class RemovedConversationsCompanion
     Expression<String>? conversationId,
     Expression<String>? ownerPubkey,
     Expression<int>? removedAt,
+    Expression<int>? rejoinedAt,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
       if (conversationId != null) 'conversation_id': conversationId,
       if (ownerPubkey != null) 'owner_pubkey': ownerPubkey,
       if (removedAt != null) 'removed_at': removedAt,
+      if (rejoinedAt != null) 'rejoined_at': rejoinedAt,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -17988,12 +18039,14 @@ class RemovedConversationsCompanion
     Value<String>? conversationId,
     Value<String>? ownerPubkey,
     Value<int>? removedAt,
+    Value<int?>? rejoinedAt,
     Value<int>? rowid,
   }) {
     return RemovedConversationsCompanion(
       conversationId: conversationId ?? this.conversationId,
       ownerPubkey: ownerPubkey ?? this.ownerPubkey,
       removedAt: removedAt ?? this.removedAt,
+      rejoinedAt: rejoinedAt ?? this.rejoinedAt,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -18010,6 +18063,9 @@ class RemovedConversationsCompanion
     if (removedAt.present) {
       map['removed_at'] = Variable<int>(removedAt.value);
     }
+    if (rejoinedAt.present) {
+      map['rejoined_at'] = Variable<int>(rejoinedAt.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -18022,6 +18078,7 @@ class RemovedConversationsCompanion
           ..write('conversationId: $conversationId, ')
           ..write('ownerPubkey: $ownerPubkey, ')
           ..write('removedAt: $removedAt, ')
+          ..write('rejoinedAt: $rejoinedAt, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -31246,6 +31303,7 @@ typedef $$RemovedConversationsTableCreateCompanionBuilder =
       required String conversationId,
       required String ownerPubkey,
       required int removedAt,
+      Value<int?> rejoinedAt,
       Value<int> rowid,
     });
 typedef $$RemovedConversationsTableUpdateCompanionBuilder =
@@ -31253,6 +31311,7 @@ typedef $$RemovedConversationsTableUpdateCompanionBuilder =
       Value<String> conversationId,
       Value<String> ownerPubkey,
       Value<int> removedAt,
+      Value<int?> rejoinedAt,
       Value<int> rowid,
     });
 
@@ -31277,6 +31336,11 @@ class $$RemovedConversationsTableFilterComposer
 
   ColumnFilters<int> get removedAt => $composableBuilder(
     column: $table.removedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get rejoinedAt => $composableBuilder(
+    column: $table.rejoinedAt,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -31304,6 +31368,11 @@ class $$RemovedConversationsTableOrderingComposer
     column: $table.removedAt,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get rejoinedAt => $composableBuilder(
+    column: $table.rejoinedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$RemovedConversationsTableAnnotationComposer
@@ -31327,6 +31396,11 @@ class $$RemovedConversationsTableAnnotationComposer
 
   GeneratedColumn<int> get removedAt =>
       $composableBuilder(column: $table.removedAt, builder: (column) => column);
+
+  GeneratedColumn<int> get rejoinedAt => $composableBuilder(
+    column: $table.rejoinedAt,
+    builder: (column) => column,
+  );
 }
 
 class $$RemovedConversationsTableTableManager
@@ -31375,11 +31449,13 @@ class $$RemovedConversationsTableTableManager
                 Value<String> conversationId = const Value.absent(),
                 Value<String> ownerPubkey = const Value.absent(),
                 Value<int> removedAt = const Value.absent(),
+                Value<int?> rejoinedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RemovedConversationsCompanion(
                 conversationId: conversationId,
                 ownerPubkey: ownerPubkey,
                 removedAt: removedAt,
+                rejoinedAt: rejoinedAt,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -31387,11 +31463,13 @@ class $$RemovedConversationsTableTableManager
                 required String conversationId,
                 required String ownerPubkey,
                 required int removedAt,
+                Value<int?> rejoinedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => RemovedConversationsCompanion.insert(
                 conversationId: conversationId,
                 ownerPubkey: ownerPubkey,
                 removedAt: removedAt,
+                rejoinedAt: rejoinedAt,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

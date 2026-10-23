@@ -5755,6 +5755,53 @@ class AppLocalizationsMs extends AppLocalizations {
       'Mesej kekal di sini supaya anda boleh membacanya atau mengambil tangkap layar. Nyahsekat untuk membalas.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Anda menyekat $name';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Anda menyekat $count orang di sini',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Mesej kekal di sini supaya anda boleh membacanya atau mengambil tangkapan skrin. Nyahsekat melalui profil mereka untuk membalas.';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Mesej mereka disembunyikan di sini. Mereka masih boleh melihat apa yang anda hantar.',
+      one: 'Mesej orang ini disembunyikan di sini. Dia masih boleh melihat apa yang anda hantar.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Sembang baharu tanpa mereka',
+      one: 'Sembang baharu tanpa orang ini',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'Mesej tersembunyi';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Tunjuk';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Tidak dapat memuatkan perbualan ini';
 
   @override
@@ -5821,10 +5868,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String inboxRemoveConfirmBody(String displayName) {
     return 'Ini mengalih keluar perbualan anda dengan $displayName daripada peti masuk anda. Jika dia menghantar mesej lagi, perbualan baharu akan bermula.';
   }
-
-  @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'Ini mengalih keluar perbualan kumpulan daripada peti masuk anda. Jika sesiapa menghantar mesej lagi dalam kumpulan itu, perbualan baharu akan bermula.';
 
   @override
   String get inboxRemoveConfirmConfirm => 'Alih Keluar';
@@ -14200,6 +14243,22 @@ class AppLocalizationsMs extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Disiarkan $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Keluar kumpulan';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Keluar kumpulan?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Ia hilang daripada peti masuk anda, dan mesej baharu tidak akan membawanya kembali. Tulis dalam kumpulan itu lagi untuk menyertainya semula. Ahli lain tidak dimaklumkan.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Keluar';
+
+  @override
+  String get inboxLeftGroup => 'Anda telah keluar daripada kumpulan';
 
   @override
   String get listPrivateConversionTooLarge =>

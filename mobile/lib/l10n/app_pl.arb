@@ -2052,7 +2052,6 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "To usuwa rozmowę grupową z Twojej skrzynki odbiorczej. Jeśli ktoś znów napisze w grupie, rozpocznie się nowa rozmowa.",
   "inboxRemoveConfirmConfirm": "Usuń",
   "inboxRemoveConfirmTitle": "Usunąć rozmowę?",
   "inboxRemovedConversation": "Usunięto rozmowę",
@@ -5355,6 +5354,13 @@
   "inboxBlockedNoMessages": "Brak wiadomości",
   "dmBlockedThreadTitle": "Zablokowano to konto",
   "dmBlockedThreadBody": "Wiadomości pozostają tutaj, żebyś mógł je przeczytać lub zrobić zrzut ekranu. Odblokuj, aby odpowiedzieć.",
+  "dmBlockedGroupMemberTitle": "Zablokowano {name}",
+  "dmBlockedGroupMembersTitle": "{count, plural, one{Zablokowano tu {count} osobę} few{Zablokowano tu {count} osoby} many{Zablokowano tu {count} osób} other{Zablokowano tu {count} osoby}}",
+  "dmBlockedGroupThreadBody": "Wiadomości zostają tutaj, więc możesz je przeczytać lub zrobić zrzut ekranu. Aby odpowiedzieć, odblokuj w profilu.",
+  "dmBlockedGroupMembersBannerBody": "{count, plural, one{Wiadomości tej osoby są tu ukryte. Nadal widzi to, co wysyłasz.} few{Ich wiadomości są tu ukryte. Nadal widzą to, co wysyłasz.} many{Ich wiadomości są tu ukryte. Nadal widzą to, co wysyłasz.} other{Ich wiadomości są tu ukryte. Nadal widzą to, co wysyłasz.}}",
+  "dmStartChatWithoutBlockedAction": "{count, plural, one{Rozpocznij nowy czat bez tej osoby} few{Rozpocznij nowy czat bez nich} many{Rozpocznij nowy czat bez nich} other{Rozpocznij nowy czat bez nich}}",
+  "dmHiddenMessageLabel": "Ukryta wiadomość",
+  "dmHiddenMessageShowAction": "Pokaż",
   "dmUnresolvedThreadTitle": "Nie udało się wczytać tej rozmowy",
   "dmUnresolvedThreadBody": "Wróć i otwórz ją ponownie. Będzie można odpowiedzieć, gdy się wczyta.",
   "verifyTitle": "Zweryfikowane konta",
@@ -5776,6 +5782,11 @@
     }
   },
   "userRowPosted": "Opublikowano {time}",
+  "inboxActionLeaveGroup": "Opuść grupę",
+  "inboxLeaveGroupConfirmTitle": "Opuścić grupę?",
+  "inboxLeaveGroupConfirmBody": "Zniknie z Twojej skrzynki odbiorczej, a nowe wiadomości jej nie przywrócą. Napisz w niej ponownie, aby wrócić. Pozostali nie dostaną powiadomienia.",
+  "inboxLeaveGroupConfirmConfirm": "Opuść",
+  "inboxLeftGroup": "Opuszczono grupę",
 "listsDiscoveryEmpty": "Tym razem nie pojawiła się żadna lista. Pociągnij, aby odświeżyć.",
 "listsDiscoveryLoadingLabel": "Wczytywanie list",
 "listSearchPeopleUnavailable": "Listy osób są teraz niedostępne.",

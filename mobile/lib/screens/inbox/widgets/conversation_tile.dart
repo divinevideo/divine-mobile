@@ -7,10 +7,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
+import 'package:openvine/blocs/dm/dm_hidden_members.dart';
 import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_time_formatter.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
@@ -66,21 +68,36 @@ class ConversationTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Rebuilds on any block, unblock or mute, so unblocking brings a hidden
+    // member's name and last message back without a reload (#7025).
+    ref.watch(blocklistVersionProvider);
+    final blocklist = ref.read(contentBlocklistRepositoryProvider);
+
     // The member the row is named and pictured for: the peer of a one-to-one,
-    // and a room's first member that is not a moderation key, without
+    // and a room's first visible member that is not a moderation key, without
     // Divine's branding (#10151).
     final named = dmConversationNamedPeer(
       participantPubkeys: conversation.participantPubkeys,
       currentUserPubkey: currentUserPubkey,
       moderationPresentation: ref.watch(moderationPresentationResolverProvider),
+      isHidden: blocklist.shouldFilterFromDms,
     );
     final namedPubkey = named.pubkey;
-    // Any member, not the named one: a room is refused whole when any member
-    // is, so a room that includes a retired key is closed wherever it sorts.
-    final isClosedThread = dmConversationPeerPubkeys(
+    final peers = dmConversationPeerPubkeys(
       participantPubkeys: conversation.participantPubkeys,
       currentUserPubkey: currentUserPubkey,
-    ).any(isRetiredModerationAccount);
+    );
+    // Any member, not the named one: a room is refused whole when any member
+    // is, so a room that includes a retired key is closed wherever it sorts.
+    final isClosedThread = peers.any(isRetiredModerationAccount);
+
+    // A hidden member's last message hides here as it does in the thread.
+    final previewHidden = dmPreviewHidden(
+      conversation: conversation,
+      currentUserPubkey: currentUserPubkey,
+      isHidden: blocklist.shouldFilterFromDms,
+      isBlockedByUs: blocklist.isBlocked,
+    );
 
     final profileAsync = ref.watch(fetchUserProfileProvider(namedPubkey));
     final isResolving = ref.watch(
@@ -134,7 +151,8 @@ class ConversationTile extends ConsumerWidget {
       ),
     );
 
-    final senderPrefix = _lastSenderPrefix(context, ref);
+    // No "Name: " on a hidden preview: it would name the person hidden.
+    final senderPrefix = previewHidden ? null : _lastSenderPrefix(context, ref);
 
     final relativeTime = conversation.lastMessageTimestamp != null
         ? LocalizedTimeFormatter.formatConversationTimestamp(
@@ -267,10 +285,15 @@ class ConversationTile extends ConsumerWidget {
                       ] else if (conversation.lastMessageContent != null) ...[
                         const SizedBox(height: 4),
                         _ConversationPreviewText(
-                          payload: _previewPayload(
-                            context,
-                            conversation.lastMessageContent!,
-                          ),
+                          payload: previewHidden
+                              ? _PreviewPayload(
+                                  text: context.l10n.dmHiddenMessageLabel,
+                                  isDivineVideoShare: false,
+                                )
+                              : _previewPayload(
+                                  context,
+                                  conversation.lastMessageContent!,
+                                ),
                           emphasized: !conversation.isRead,
                           senderPrefix: senderPrefix,
                         ),

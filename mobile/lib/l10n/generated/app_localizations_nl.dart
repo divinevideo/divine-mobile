@@ -5773,6 +5773,54 @@ class AppLocalizationsNl extends AppLocalizations {
       'Berichten blijven hier staan zodat je ze kunt lezen of er een screenshot van kunt maken. Deblokkeer om te reageren.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'Je hebt $name geblokkeerd';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Je hebt hier $count mensen geblokkeerd',
+      one: 'Je hebt hier $count persoon geblokkeerd',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'Berichten blijven hier staan zodat je ze kunt lezen of er een screenshot van kunt maken. Deblokkeer via hun profiel om te reageren.';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Hun berichten zijn hier verborgen. Ze zien nog steeds wat je stuurt.',
+      one: 'De berichten van deze persoon zijn hier verborgen. Die ziet nog steeds wat je stuurt.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nieuwe chat starten zonder hen',
+      one: 'Nieuwe chat zonder deze persoon',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'Verborgen bericht';
+
+  @override
+  String get dmHiddenMessageShowAction => 'Tonen';
+
+  @override
   String get dmUnresolvedThreadTitle => 'Dit gesprek kon niet worden geladen';
 
   @override
@@ -5841,10 +5889,6 @@ class AppLocalizationsNl extends AppLocalizations {
   String inboxRemoveConfirmBody(String displayName) {
     return 'Hiermee verwijder je je gesprek met $displayName uit je inbox. Als deze persoon je weer een bericht stuurt, begint er een nieuw gesprek.';
   }
-
-  @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'Hiermee verwijder je het groepsgesprek uit je inbox. Als iemand weer een bericht naar de groep stuurt, begint er een nieuw gesprek.';
 
   @override
   String get inboxRemoveConfirmConfirm => 'Verwijderen';
@@ -14276,6 +14320,22 @@ class AppLocalizationsNl extends AppLocalizations {
   String userRowPosted(String time) {
     return 'Geplaatst $time';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'Groep verlaten';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'Groep verlaten?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'Hij verdwijnt uit je inbox en nieuwe berichten brengen hem niet terug. Schrijf er opnieuw in om weer mee te doen. De anderen krijgen geen melding.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'Verlaten';
+
+  @override
+  String get inboxLeftGroup => 'Je hebt de groep verlaten';
 
   @override
   String get listPrivateConversionTooLarge =>

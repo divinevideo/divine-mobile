@@ -2052,7 +2052,6 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "Astfel, conversația de grup este eliminată din inbox. Dacă cineva scrie din nou în grup, începe o conversație nouă.",
   "inboxRemoveConfirmConfirm": "Elimină",
   "inboxRemoveConfirmTitle": "Elimini conversația?",
   "inboxRemovedConversation": "Conversație eliminată",
@@ -5355,6 +5354,13 @@
   "inboxBlockedNoMessages": "Niciun mesaj",
   "dmBlockedThreadTitle": "Ai blocat acest cont",
   "dmBlockedThreadBody": "Mesajele rămân aici ca să le poți citi sau captura. Deblochează pentru a răspunde.",
+  "dmBlockedGroupMemberTitle": "Ai blocat contul {name}",
+  "dmBlockedGroupMembersTitle": "{count, plural, one{Ai blocat {count} persoană aici} few{Ai blocat {count} persoane aici} other{Ai blocat {count} de persoane aici}}",
+  "dmBlockedGroupThreadBody": "Mesajele rămân aici ca să le poți citi sau captura. Deblochează din profil pentru a răspunde.",
+  "dmBlockedGroupMembersBannerBody": "{count, plural, one{Mesajele acestei persoane sunt ascunse aici. Încă poate vedea ce trimiți.} few{Mesajele lor sunt ascunse aici. Încă pot vedea ce trimiți.} other{Mesajele lor sunt ascunse aici. Încă pot vedea ce trimiți.}}",
+  "dmStartChatWithoutBlockedAction": "{count, plural, one{Conversație nouă fără această persoană} few{Conversație nouă fără aceste persoane} other{Conversație nouă fără aceste persoane}}",
+  "dmHiddenMessageLabel": "Mesaj ascuns",
+  "dmHiddenMessageShowAction": "Arată",
   "dmUnresolvedThreadTitle": "Această conversație nu a putut fi încărcată",
   "dmUnresolvedThreadBody": "Revino și deschide-o din nou. Vei putea răspunde imediat ce se încarcă.",
   "verifyTitle": "Conturi verificate",
@@ -5776,6 +5782,11 @@
     }
   },
   "userRowPosted": "Publicat {time}",
+  "inboxActionLeaveGroup": "Părăsește grupul",
+  "inboxLeaveGroupConfirmTitle": "Părăsești grupul?",
+  "inboxLeaveGroupConfirmBody": "Dispare din inbox, iar mesajele noi nu îl mai aduc înapoi. Scrie din nou în grup ca să revii. Nu se trimite nicio notificare.",
+  "inboxLeaveGroupConfirmConfirm": "Părăsește",
+  "inboxLeftGroup": "Ai părăsit grupul",
 "listsDiscoveryEmpty": "De data asta n-a apărut nicio listă. Trage în jos pentru reîmprospătare.",
 "listsDiscoveryLoadingLabel": "Se încarcă listele",
 "listSearchPeopleUnavailable": "Listele de persoane nu sunt disponibile acum.",

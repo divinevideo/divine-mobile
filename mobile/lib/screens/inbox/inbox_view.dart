@@ -1085,10 +1085,28 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
     DmConversation conversation, {
     String? displayNameOverride,
   }) async {
-    final otherPubkey = dmConversationFirstPeer(
-      participantPubkeys: conversation.participantPubkeys,
-      currentUserPubkey: widget.currentUserPubkey,
-    );
+    final isGroup = conversation.isGroup;
+    // A group is named for the member its row is named for: the first one the
+    // viewer has not hidden (#10150), without Divine's branding (#10151). A
+    // one-to-one keeps its peer, whom Report and Block act on.
+    final named = isGroup
+        ? dmConversationNamedPeer(
+            participantPubkeys: conversation.participantPubkeys,
+            currentUserPubkey: widget.currentUserPubkey,
+            moderationPresentation: ref.read(
+              moderationPresentationResolverProvider,
+            ),
+            isHidden: ref
+                .read(contentBlocklistRepositoryProvider)
+                .shouldFilterFromDms,
+          )
+        : null;
+    final otherPubkey =
+        named?.pubkey ??
+        dmConversationFirstPeer(
+          participantPubkeys: conversation.participantPubkeys,
+          currentUserPubkey: widget.currentUserPubkey,
+        );
 
     // Match [ConversationTile]'s identity chain, so the row and the sheet it
     // opens cannot name two different accounts (#7380, #8185). A known
@@ -1120,7 +1138,9 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
     }
     if (!context.mounted) return;
 
-    final moderation = ref.read(moderationPresentationProvider(otherPubkey));
+    final moderation = named == null
+        ? ref.read(moderationPresentationProvider(otherPubkey))
+        : named.moderation;
     final String peerName;
     final knownName = dmPeerNameWithoutProfile(
       context,
@@ -1158,9 +1178,8 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
 
     if (!context.mounted) return;
 
-    // The sheet has to name what the row names. `otherPubkey` is an arbitrary
-    // member of a group, so a group resolves to the room's own title instead.
-    final isGroup = conversation.isGroup;
+    // The sheet has to name what the row names, so a group resolves to the
+    // room's own title.
     final displayName = dmConversationDisplayTitle(
       context,
       participantPubkeys: conversation.participantPubkeys,
@@ -1243,7 +1262,9 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
           );
           if (confirmed && context.mounted) {
             final messenger = ScaffoldMessenger.of(context);
-            final removedText = context.l10n.inboxRemovedConversation;
+            final removedText = isGroup
+                ? context.l10n.inboxLeftGroup
+                : context.l10n.inboxRemovedConversation;
             // Not an error: the repository protects a Divine Moderation
             // thread. Only reachable if the action was offered anyway, since
             // the sheet drops it for a protected peer (#8391).
@@ -1294,18 +1315,18 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
       builder: (context) => AlertDialog(
         backgroundColor: context.vineColors.card,
         title: Text(
-          context.l10n.inboxRemoveConfirmTitle,
+          isGroup
+              ? context.l10n.inboxLeaveGroupConfirmTitle
+              : context.l10n.inboxRemoveConfirmTitle,
           style: VineTheme.titleLargeFont(
             color: context.vineColors.primaryText,
           ),
         ),
         content: Text(
-          // The 1:1 body says "your conversation with {displayName}". A group
-          // title is the room's name, not a person, so that template would
-          // read as a conversation with the room — name nobody instead, the
-          // way the vanished body already does.
+          // Removing a group leaves it until the user writes in it again
+          // (#10150). The 1:1 body names the peer, which a room has not got.
           switch ((isGroup, isVanished)) {
-            (true, _) => context.l10n.inboxRemoveConfirmBodyGroup,
+            (true, _) => context.l10n.inboxLeaveGroupConfirmBody,
             (false, true) => context.l10n.inboxRemoveConfirmBodyVanishedAccount,
             (false, false) => context.l10n.inboxRemoveConfirmBody(displayName),
           },
@@ -1326,7 +1347,9 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
           TextButton(
             onPressed: () => context.popModalIfMounted(true),
             child: Text(
-              context.l10n.inboxRemoveConfirmConfirm,
+              isGroup
+                  ? context.l10n.inboxLeaveGroupConfirmConfirm
+                  : context.l10n.inboxRemoveConfirmConfirm,
               style: VineTheme.bodyMediumFont(color: VineTheme.error),
             ),
           ),

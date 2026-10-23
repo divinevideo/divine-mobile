@@ -2418,7 +2418,6 @@
       }
     }
   },
-  "inboxRemoveConfirmBodyGroup": "ይህ የቡድን ውይይቱን ከመልእክት ሳጥንዎ ያስወግዳል። ማንኛውም ሰው እንደገና ለቡድኑ መልእክት ከላከ አዲስ ውይይት ይጀምራል።",
   "inboxRemoveConfirmConfirm": "አስወግድ",
   "inboxCollabInviteCardTitle": "የተባባሪ ግብዣ",
   "@inboxCollabInviteCardTitle": {
@@ -5442,6 +5441,13 @@
   "inboxBlockedNoMessages": "መልእክቶች የሉም",
   "dmBlockedThreadTitle": "ይህን መለያ አግደዋል",
   "dmBlockedThreadBody": "መልእክቶቹ እዚህ ይቆያሉ፣ ስለዚህ ማንበብ ወይም ቅጽበታዊ ገጽ እይታ ማንሳት ይችላሉ። ለመመለስ እገዳውን ያንሱ።",
+  "dmBlockedGroupMemberTitle": "{name}ን አግደዋል",
+  "dmBlockedGroupMembersTitle": "{count, plural, one{እዚህ {count} ሰው አግደዋል} other{እዚህ {count} ሰዎችን አግደዋል}}",
+  "dmBlockedGroupThreadBody": "መልእክቶቹ እዚህ ይቆያሉ፣ ስለዚህ ማንበብ ወይም ቅጽበታዊ ገጽ እይታ ማንሳት ይችላሉ። ለመመለስ ከመገለጫቸው እገዳውን ያንሱ።",
+  "dmBlockedGroupMembersBannerBody": "{count, plural, one{መልእክቶቻቸው እዚህ ተደብቀዋል። እሳቸው ግን እርስዎ የሚልኩትን አሁንም ማየት ይችላሉ።} other{መልእክቶቻቸው እዚህ ተደብቀዋል። እነሱ ግን እርስዎ የሚልኩትን አሁንም ማየት ይችላሉ።}}",
+  "dmStartChatWithoutBlockedAction": "{count, plural, one{ያለ እሳቸው አዲስ ውይይት ይጀምሩ} other{ያለ እነሱ አዲስ ውይይት ይጀምሩ}}",
+  "dmHiddenMessageLabel": "የተደበቀ መልእክት",
+  "dmHiddenMessageShowAction": "ያሳዩ",
   "dmUnresolvedThreadTitle": "ይህን ውይይት መጫን አልተቻለም",
   "dmUnresolvedThreadBody": "ተመልሰው ውይይቱን እንደገና ይክፈቱ። ከተጫነ በኋላ መልስ መስጠት ይችላሉ።",
   "verifyTitle": "የተረጋገጡ መለያዎች",
@@ -5829,6 +5835,11 @@
     }
   },
   "userRowPosted": "የተለጠፈው {time}",
+  "inboxActionLeaveGroup": "ከቡድኑ መውጣት",
+  "inboxLeaveGroupConfirmTitle": "ከቡድኑ ይውጡ?",
+  "inboxLeaveGroupConfirmBody": "ከመልእክት ሳጥንዎ ይወገዳል፣ አዲስ መልእክቶችም አይመልሱትም። እንደገና ለመቀላቀል በውስጡ ይጻፉ። ሌሎቹ አይነገራቸውም።",
+  "inboxLeaveGroupConfirmConfirm": "ይውጡ",
+  "inboxLeftGroup": "ከቡድኑ ወጥተዋል",
 "listsDiscoveryEmpty": "በዚህ ጊዜ ምንም ዝርዝሮች አልተገኙም። ለማደስ ወደታች ይጎትቱ።",
 "listsDiscoveryLoadingLabel": "ዝርዝሮችን በመጫን ላይ",
 "listSearchPeopleUnavailable": "የሰዎች ዝርዝሮች በአሁኑ ጊዜ አይገኙም።",

@@ -5939,6 +5939,55 @@ class AppLocalizationsTe extends AppLocalizations {
       'సందేశాలు ఇక్కడ ఉంటాయి కాబట్టి మీరు వాటిని చదవవచ్చు లేదా స్క్రీన్‌షాట్ చేయవచ్చు. ప్రత్యుత్తరం ఇవ్వడానికి అన్‌బ్లాక్ చేయండి.';
 
   @override
+  String dmBlockedGroupMemberTitle(String name) {
+    return 'మీరు $nameని బ్లాక్ చేసారు';
+  }
+
+  @override
+  String dmBlockedGroupMembersTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'మీరు ఇక్కడ $count మందిని బ్లాక్ చేసారు',
+      one: 'మీరు ఇక్కడ $count వ్యక్తిని బ్లాక్ చేసారు',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmBlockedGroupThreadBody =>
+      'సందేశాలు ఇక్కడ ఉంటాయి కాబట్టి మీరు వాటిని చదవవచ్చు లేదా స్క్రీన్‌షాట్ చేయవచ్చు. ప్రత్యుత్తరం ఇవ్వడానికి వారి ప్రొఫైల్ నుండి అన్‌బ్లాక్ చేయండి.';
+
+  @override
+  String dmBlockedGroupMembersBannerBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'వారి సందేశాలు ఇక్కడ దాచబడ్డాయి. మీరు పంపేవి వారు ఇప్పటికీ చూడగలరు.',
+      one: 'వారి సందేశాలు ఇక్కడ దాచబడ్డాయి. మీరు పంపేవి వారు ఇప్పటికీ చూడగలరు.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String dmStartChatWithoutBlockedAction(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'వారు లేకుండా కొత్త చాట్ ప్రారంభించండి',
+      one: 'వారు లేకుండా కొత్త చాట్ ప్రారంభించండి',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dmHiddenMessageLabel => 'దాచబడిన సందేశం';
+
+  @override
+  String get dmHiddenMessageShowAction => 'చూపించండి';
+
+  @override
   String get dmUnresolvedThreadTitle => 'ఈ సంభాషణను లోడ్ చేయడం సాధ్యపడలేదు';
 
   @override
@@ -6006,10 +6055,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String inboxRemoveConfirmBody(String displayName) {
     return 'ఇది వారితో మీ సంభాషణను తీసివేస్తుంది$displayName. వారు మీకు మళ్లీ మెసేజ్ చేస్తే, కొత్త సంభాషణ ప్రారంభమవుతుంది.';
   }
-
-  @override
-  String get inboxRemoveConfirmBodyGroup =>
-      'ఇది మీ ఇన్‌బాక్స్ నుండి సమూహ సంభాషణను తీసివేస్తుంది. ఎవరైనా గ్రూప్‌కి మళ్లీ మెసేజ్ చేస్తే, కొత్త సంభాషణ ప్రారంభమవుతుంది.';
 
   @override
   String get inboxRemoveConfirmConfirm => 'తీసివేయి';
@@ -14558,6 +14603,22 @@ class AppLocalizationsTe extends AppLocalizations {
   String userRowPosted(String time) {
     return '$time పోస్ట్ చేయబడింది';
   }
+
+  @override
+  String get inboxActionLeaveGroup => 'గ్రూప్ నుండి నిష్క్రమించండి';
+
+  @override
+  String get inboxLeaveGroupConfirmTitle => 'గ్రూప్ నుండి నిష్క్రమించాలా?';
+
+  @override
+  String get inboxLeaveGroupConfirmBody =>
+      'ఇది మీ ఇన్‌బాక్స్ నుండి తొలగిపోతుంది, కొత్త సందేశాలు దీన్ని తిరిగి తీసుకురావు. మళ్లీ చేరడానికి ఇందులో మళ్లీ రాయండి. ఇతరులకు తెలియజేయబడదు.';
+
+  @override
+  String get inboxLeaveGroupConfirmConfirm => 'నిష్క్రమించు';
+
+  @override
+  String get inboxLeftGroup => 'గ్రూప్ నుండి నిష్క్రమించారు';
 
   @override
   String get listPrivateConversionTooLarge =>
