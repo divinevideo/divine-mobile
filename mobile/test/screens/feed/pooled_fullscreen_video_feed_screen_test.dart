@@ -540,6 +540,71 @@ void main() {
       },
     );
 
+    testWidgets(
+      'a single-video route restarts discovery for a newly signed-in viewer',
+      (tester) async {
+        final nativePlayer = _NativePlayerHarness(tester)..install();
+        addTearDown(nativePlayer.dispose);
+        final videos = createTestVideos(count: 2);
+        final requestedFor = <String?>[];
+        final repository = _MockDiscoveryVideosRepository();
+        when(
+          () => repository.getVideoDiscoveryPage(
+            userPubkey: any(named: 'userPubkey'),
+            cursor: any(named: 'cursor'),
+            preferredLanguages: any(named: 'preferredLanguages'),
+            viewerCountry: any(named: 'viewerCountry'),
+          ),
+        ).thenAnswer((call) async {
+          requestedFor.add(call.namedArguments[#userPubkey] as String?);
+          return HomeFeedResult(videos: videos, hasMore: false);
+        });
+        final videoService = createMockVideoEventService();
+        when(() => videoService.shouldHideVideo(any())).thenReturn(false);
+        when(() => videoService.filterVideoList(any())).thenAnswer(
+          (call) => call.positionalArguments.first as List<VideoEvent>,
+        );
+        String? viewerPubkey;
+        final authStates = StreamController<AuthState>.broadcast();
+        addTearDown(authStates.close);
+        final auth = createMockAuthService();
+        when(() => auth.currentPublicKeyHex).thenAnswer((_) => viewerPubkey);
+        when(() => auth.authStateStream).thenAnswer((_) => authStates.stream);
+        await tester.pumpWidget(
+          BlocProvider<VideoVolumeCubit>.value(
+            value: videoVolumeCubit,
+            child: testMaterialApp(
+              mockAuthService: auth,
+              mockProfileRepository: mockProfileRepository,
+              mockNip05VerificationService: mockNip05VerificationService,
+              additionalOverrides: [
+                pendingActionServiceProvider.overrideWithValue(null),
+                videosRepositoryProvider.overrideWithValue(repository),
+                videoEventServiceProvider.overrideWithValue(videoService),
+              ],
+              home: VideoDetailScreen(
+                videoId: videos.first.id,
+                initialVideo: videos.first,
+              ),
+            ),
+          ),
+        );
+        // Allow the bounded country-hint timeout used by the page loader.
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump();
+        expect(requestedFor, [null]);
+
+        viewerPubkey = testPubkey;
+        authStates.add(AuthState.authenticated);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump();
+        expect(requestedFor, [null, testPubkey]);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
+
     testWidgets('changing videos clears composer focus state', (tester) async {
       final nativePlayer = _NativePlayerHarness(tester)..install();
       addTearDown(nativePlayer.dispose);
