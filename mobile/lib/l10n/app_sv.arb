@@ -2745,6 +2745,8 @@
   "videoEditorTextColorSemanticLabel": "Textfärg",
   "videoEditorTextAlignmentSemanticLabel": "Textjustering",
   "videoEditorTextBackgroundSemanticLabel": "Textbakgrund",
+  "videoEditorTextDontWrap": "Bryt inte rader",
+  "videoEditorTextWrapAtEdges": "Radbryt vid kanterna",
   "videoEditorTextEffectsSemanticLabel": "Kontur och skugga",
   "videoEditorTextOutline": "Kontur",
   "videoEditorTextOutlineThickness": "Konturtjocklek",

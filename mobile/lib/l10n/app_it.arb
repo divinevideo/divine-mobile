@@ -2745,6 +2745,8 @@
   "videoEditorTextColorSemanticLabel": "Colore testo",
   "videoEditorTextAlignmentSemanticLabel": "Allineamento testo",
   "videoEditorTextBackgroundSemanticLabel": "Sfondo testo",
+  "videoEditorTextDontWrap": "Non andare a capo",
+  "videoEditorTextWrapAtEdges": "A capo ai bordi",
   "videoEditorTextEffectsSemanticLabel": "Contorno e ombra",
   "videoEditorTextOutline": "Contorno",
   "videoEditorTextOutlineThickness": "Spessore del contorno",

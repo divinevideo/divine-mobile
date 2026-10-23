@@ -9371,6 +9371,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Fundo do texto';
 
   @override
+  String get videoEditorTextDontWrap => 'Não quebrar';
+
+  @override
+  String get videoEditorTextWrapAtEdges => 'Quebrar nas bordas';
+
+  @override
   String get videoEditorTextEffectsSemanticLabel => 'Contorno e sombra';
 
   @override

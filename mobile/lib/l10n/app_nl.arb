@@ -2745,6 +2745,8 @@
   "videoEditorTextColorSemanticLabel": "Tekstkleur",
   "videoEditorTextAlignmentSemanticLabel": "Tekstuitlijning",
   "videoEditorTextBackgroundSemanticLabel": "Tekstachtergrond",
+  "videoEditorTextDontWrap": "Niet afbreken",
+  "videoEditorTextWrapAtEdges": "Afbreken bij de rand",
   "videoEditorTextEffectsSemanticLabel": "Contour en schaduw",
   "videoEditorTextOutline": "Contour",
   "videoEditorTextOutlineThickness": "Contourdikte",

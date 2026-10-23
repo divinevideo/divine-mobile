@@ -9302,6 +9302,12 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Latar belakang teks';
 
   @override
+  String get videoEditorTextDontWrap => 'Jangan balut teks';
+
+  @override
+  String get videoEditorTextWrapAtEdges => 'Balut teks di tepi';
+
+  @override
   String get videoEditorTextEffectsSemanticLabel => 'Garis luar dan bayang';
 
   @override

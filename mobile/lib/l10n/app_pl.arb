@@ -2745,6 +2745,8 @@
   "videoEditorTextColorSemanticLabel": "Kolor tekstu",
   "videoEditorTextAlignmentSemanticLabel": "Wyrównanie tekstu",
   "videoEditorTextBackgroundSemanticLabel": "Tło tekstu",
+  "videoEditorTextDontWrap": "Nie zawijaj",
+  "videoEditorTextWrapAtEdges": "Zawijaj przy krawędziach",
   "videoEditorTextEffectsSemanticLabel": "Obrys i cień",
   "videoEditorTextOutline": "Obrys",
   "videoEditorTextOutlineThickness": "Grubość obrysu",

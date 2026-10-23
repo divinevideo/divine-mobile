@@ -8769,6 +8769,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => '文字背景';
 
   @override
+  String get videoEditorTextDontWrap => '不换行';
+
+  @override
+  String get videoEditorTextWrapAtEdges => '在边缘换行';
+
+  @override
   String get videoEditorTextEffectsSemanticLabel => '描边和阴影';
 
   @override

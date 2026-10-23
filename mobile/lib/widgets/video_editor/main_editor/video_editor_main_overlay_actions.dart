@@ -16,8 +16,10 @@ import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_text_wrap_hint.dart';
 import 'package:openvine/widgets/video_editor/stop_motion/stop_motion_frame_commands.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
+import 'package:openvine/widgets/video_editor/video_editor_toolbar_chip.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Overlay actions for the video editor.
@@ -50,7 +52,8 @@ class VideoEditorMainOverlayActions extends StatelessWidget {
   }
 }
 
-/// Top row actions: close and done buttons, plus the stop-motion frames chip.
+/// Top row actions: close and done buttons, plus the stop-motion frames chip
+/// or the text wrap hint.
 class _TopActions extends ConsumerWidget {
   const _TopActions();
 
@@ -113,12 +116,16 @@ class _TopActions extends ConsumerWidget {
         closeSemanticLabel: context.l10n.videoEditorCloseEditorSemanticLabel,
         doneSemanticLabel:
             context.l10n.videoEditorContinueToPostDetailsSemanticLabel,
-        center: stopMotionData == null
-            ? null
-            : _StopMotionFramesChip(
-                clipId: stopMotionData.clipId,
-                value: stopMotionData.value,
-              ),
+        // The wrap hint is brief and only follows a text the user is
+        // sizing, so it takes the slot over from the frames chip meanwhile.
+        center: VideoEditorTextWrapHint(
+          fallback: stopMotionData == null
+              ? null
+              : _StopMotionFramesChip(
+                  clipId: stopMotionData.clipId,
+                  value: stopMotionData.value,
+                ),
+        ),
         onClose: close,
         onDone: hasLoopSuggestion ? null : () => _onDonePressed(context, scope),
       ),
@@ -299,59 +306,12 @@ class _StopMotionFramesChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = context.l10n.videoEditorStopMotionFramesCount(value);
-
-    return Semantics(
-      button: true,
-      value: context.l10n.videoEditorStopMotionFramesPerImageValueSemanticLabel(
-        value,
-      ),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => editStopMotionGlobalHold(context, clipId: clipId),
-        // Expand the hit area to the 48dp minimum touch target while the
-        // visible pill keeps its natural size, centred inside it. The
-        // width/height factors are essential: the toolbar row is laid out with
-        // loose (near-full-height) constraints, so a plain Center would grow to
-        // fill them and stretch the whole toolbar down the editor. Sizing to
-        // the child means the ConstrainedBox only enforces the 48dp minimum.
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-          child: Center(
-            widthFactor: 1,
-            heightFactor: 1,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: context.vineColors.surface.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  spacing: 6,
-                  children: [
-                    DivineIcon(
-                      icon: .imagesSquare,
-                      color: context.vineColors.mutedText,
-                      size: 16,
-                    ),
-                    Text(
-                      label,
-                      style: VineTheme.labelLargeFont(
-                        color: context.vineColors.primaryText,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
+    return VideoEditorToolbarChip(
+      icon: .imagesSquare,
+      label: context.l10n.videoEditorStopMotionFramesCount(value),
+      semanticValue: context.l10n
+          .videoEditorStopMotionFramesPerImageValueSemanticLabel(value),
+      onTap: () => editStopMotionGlobalHold(context, clipId: clipId),
     );
   }
 }

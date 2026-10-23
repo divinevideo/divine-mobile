@@ -9491,6 +9491,12 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Tło tekstu';
 
   @override
+  String get videoEditorTextDontWrap => 'Nie zawijaj';
+
+  @override
+  String get videoEditorTextWrapAtEdges => 'Zawijaj przy krawędziach';
+
+  @override
   String get videoEditorTextEffectsSemanticLabel => 'Obrys i cień';
 
   @override

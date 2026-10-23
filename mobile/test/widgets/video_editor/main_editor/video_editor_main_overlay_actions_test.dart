@@ -12,6 +12,7 @@ import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
+import 'package:openvine/blocs/video_editor/text_wrap_hint/text_wrap_hint_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
@@ -164,6 +165,7 @@ void main() {
                   providers: [
                     BlocProvider<VideoEditorMainBloc>.value(value: mockBloc),
                     BlocProvider<ClipEditorBloc>.value(value: clipEditorBloc),
+                    BlocProvider(create: (_) => TextWrapHintCubit()),
                     if (loopCubit == null)
                       BlocProvider(create: (_) => LoopSuggestionCubit())
                     else

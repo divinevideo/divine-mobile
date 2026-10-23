@@ -20,6 +20,7 @@ import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.d
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
+import 'package:openvine/blocs/video_editor/text_wrap_hint/text_wrap_hint_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -2377,6 +2378,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   ) async {
     if (_isImportingHistory || !_isInitialized) return;
 
+    context.read<TextWrapHintCubit>().layersChanged();
+
     // Directionless: the directional onUndo/onRedo pass owns stepping past an
     // orphan-only entry (this callback fires first, before onUndo/onRedo).
     _syncMainCapabilities(scope, bloc, allowOrphanStep: false);
@@ -2723,6 +2726,14 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // Listen for playback control requests from BLoC
     final editor = MultiBlocListener(
       listeners: [
+        // A text selected in the timeline keeps the toolbar's wrap hint up.
+        BlocListener<TimelineOverlayBloc, TimelineOverlayState>(
+          listenWhen: (previous, current) =>
+              previous.selectedItemId != current.selectedItemId,
+          listener: (context, state) => context
+              .read<TextWrapHintCubit>()
+              .layerSelected(state.selectedItemId),
+        ),
         BlocListener<VideoEditorEffectsCubit, VideoEditorEffectsState>(
           listenWhen: (previous, current) => !listEquals(
             previous.previewCustomEffects,
@@ -3511,6 +3522,15 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                       'persist removed layer history',
                     );
                   }
+                  // A text the user is sizing may now wrap at the video
+                  // edges; the toolbar offers to let it run past them.
+                  final isKeptText =
+                      removed is TextLayer &&
+                      captionCueIdOf(removed) == null &&
+                      !bloc.state.isLayerOverRemoveArea;
+                  context.read<TextWrapHintCubit>().layerTransformed(
+                    isKeptText ? removed.id : null,
+                  );
                   _selectedLayer = null;
                 }
 

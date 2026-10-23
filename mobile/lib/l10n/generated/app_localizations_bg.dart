@@ -9380,6 +9380,12 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Текстов фон';
 
   @override
+  String get videoEditorTextDontWrap => 'Без пренасяне';
+
+  @override
+  String get videoEditorTextWrapAtEdges => 'Пренасяне до краищата';
+
+  @override
   String get videoEditorTextEffectsSemanticLabel => 'Контур и сянка';
 
   @override

@@ -3353,6 +3353,8 @@
   "videoEditorTextColorSemanticLabel": "የጽሑፍ ቀለም",
   "videoEditorTextAlignmentSemanticLabel": "የጽሑፍ አሰላለፍ",
   "videoEditorTextBackgroundSemanticLabel": "የጽሑፍ ዳራ",
+  "videoEditorTextDontWrap": "ያለ መጠቅለል",
+  "videoEditorTextWrapAtEdges": "በጠርዞች ላይ መጠቅለል",
   "videoEditorTextEffectsSemanticLabel": "የጠርዝ መስመር እና ጥላ",
   "videoEditorTextOutline": "የጠርዝ መስመር",
   "videoEditorTextOutlineThickness": "የጠርዝ መስመር ውፍረት",

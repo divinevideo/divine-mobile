@@ -2907,6 +2907,8 @@
   "videoEditorStickerSearchHint": "البحث في الملصقات...",
   "videoEditorTextAlignmentSemanticLabel": "محاذاة النص",
   "videoEditorTextBackgroundSemanticLabel": "خلفية النص",
+  "videoEditorTextDontWrap": "بدون التفاف",
+  "videoEditorTextWrapAtEdges": "التفاف عند الحواف",
   "videoEditorTextEffectsSemanticLabel": "الحد الخارجي والظل",
   "videoEditorTextOutline": "الحد الخارجي",
   "videoEditorTextOutlineThickness": "سُمك الحد الخارجي",

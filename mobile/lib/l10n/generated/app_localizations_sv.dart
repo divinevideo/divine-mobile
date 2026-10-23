@@ -9293,6 +9293,12 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Textbakgrund';
 
   @override
+  String get videoEditorTextDontWrap => 'Bryt inte rader';
+
+  @override
+  String get videoEditorTextWrapAtEdges => 'Radbryt vid kanterna';
+
+  @override
   String get videoEditorTextEffectsSemanticLabel => 'Kontur och skugga';
 
   @override

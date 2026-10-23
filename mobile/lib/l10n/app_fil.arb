@@ -2038,6 +2038,8 @@
   "videoEditorTextColorSemanticLabel": "Kulay ng text",
   "videoEditorTextAlignmentSemanticLabel": "Alignment ng text",
   "videoEditorTextBackgroundSemanticLabel": "Background ng text",
+  "videoEditorTextDontWrap": "Huwag i-wrap",
+  "videoEditorTextWrapAtEdges": "I-wrap sa gilid",
   "videoEditorTextEffectsSemanticLabel": "Outline at anino",
   "videoEditorTextOutline": "Outline",
   "videoEditorTextOutlineThickness": "Kapal ng outline",
