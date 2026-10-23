@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:notification_repository/announcements_repository.dart';
 import 'package:test/test.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 const firstId = '12345678-1234-4123-8123-123456789012';
 const secondId = '22345678-1234-4123-8123-123456789012';
@@ -41,6 +42,25 @@ http.Response jsonResponse(String body, {Map<String, String>? headers}) =>
       200,
       headers: {'content-type': 'application/json; charset=utf-8', ...?headers},
     );
+
+/// Holds every request open until [close] aborts it, as IOClient does.
+class _HangingClient extends http.BaseClient {
+  final _response = Completer<http.StreamedResponse>();
+  bool sent = false;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    sent = true;
+    return _response.future;
+  }
+
+  @override
+  void close() {
+    if (!_response.isCompleted) {
+      _response.completeError(http.ClientException('aborted by close'));
+    }
+  }
+}
 
 void main() {
   late MemoryStore store;
@@ -380,6 +400,43 @@ void main() {
         }
       },
     );
+
+    test('logs the status of a rejected catalog response', () async {
+      create(
+        MockClient(
+          (_) async => http.Response(
+            '<html></html>',
+            404,
+            headers: {'content-type': 'text/html'},
+          ),
+        ),
+      );
+      await repository.refresh();
+
+      final entry = LogCaptureService().getRecentLogs().lastWhere(
+        (entry) => entry.name == 'AnnouncementsRepository',
+      );
+      expect(entry.level, LogLevel.warning);
+      expect(entry.message, contains('HTTP 404, text/html'));
+    });
+
+    test('does not log a refresh that close cut off', () async {
+      final client = _HangingClient();
+      create(client);
+      final refresh = repository.refresh();
+      await pumpEventQueue();
+      expect(client.sent, isTrue);
+
+      await repository.close();
+      await refresh;
+
+      expect(
+        LogCaptureService().getRecentLogs().where(
+          (entry) => entry.message.contains('aborted by close'),
+        ),
+        isEmpty,
+      );
+    });
 
     test(
       'successful empty catalog withdraws old rows and prunes seen IDs',
