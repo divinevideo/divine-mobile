@@ -14,6 +14,20 @@ import 'package:openvine/services/dm_video_store.dart';
 
 class _MockDmVideoStore extends Mock implements DmVideoStore {}
 
+/// A memory whose plays a test announces, to see who listens to them.
+class _PlaysMemory extends DmVideoPreviewMemory {
+  final played = StreamController<String>.broadcast();
+
+  @override
+  Stream<String> get watched => played.stream;
+
+  @override
+  void dispose() {
+    unawaited(played.close());
+    super.dispose();
+  }
+}
+
 const _framePath = '/kept/dm_videos/owner/clip.preview.jpg';
 
 DmMessage _videoMessage({String? id, String? blurhash}) => DmMessage(
@@ -197,6 +211,7 @@ void main() {
           stubPreview(_framePath);
           kept.add('f' * 64);
           await pumpEventQueue();
+          expect(cubit.state.status, DmVideoPreviewStatus.none);
           kept.add('a' * 64);
           await pumpEventQueue();
         },
@@ -233,6 +248,25 @@ void main() {
         ],
         errors: () => [isA<SocketException>()],
       );
+
+      test('does not start waiting once it is closing', () async {
+        final download = Completer<File?>();
+        when(
+          () => store.previewFor(
+            any(),
+            stillWanted: any(named: 'stillWanted'),
+          ),
+        ).thenAnswer((_) => download.future);
+        final cubit = createCubit();
+        final loading = cubit.load();
+
+        final closing = cubit.close();
+        download.complete(null);
+        await closing;
+        await loading;
+
+        expect(kept.hasListener, isFalse);
+      });
 
       test('stops waiting when closed', () async {
         stubPreview(null);
@@ -289,6 +323,17 @@ void main() {
         expect(cubit.state.blurred, isTrue);
       });
 
+      test('starts with the blurhash already read from its frame', () async {
+        await memory.frameBlurhashFor(
+          messageId: 'a' * 64,
+          framePath: keptFrame,
+        );
+        final cubit = createBlurringCubit();
+        addTearDown(cubit.close);
+
+        expect(cubit.state.frameBlurhash, frameBlurhash);
+      });
+
       test('starts unblurred for a video played this session', () {
         memory.markWatched('a' * 64);
         final cubit = createBlurringCubit();
@@ -303,6 +348,7 @@ void main() {
         act: (cubit) async {
           memory.markWatched('f' * 64);
           await pumpEventQueue();
+          expect(cubit.state.blurred, isTrue);
           memory.markWatched('a' * 64);
           await pumpEventQueue();
         },
@@ -367,13 +413,19 @@ void main() {
       );
 
       test('stops listening for plays once closed', () async {
-        final cubit = createBlurringCubit();
+        final plays = _PlaysMemory();
+        addTearDown(plays.dispose);
+        final cubit = DmVideoPreviewCubit(
+          message: _videoMessage(),
+          store: store,
+          memory: plays,
+          blurUntilPlayed: true,
+        );
+        expect(plays.played.hasListener, isTrue);
+
         await cubit.close();
 
-        memory.markWatched('a' * 64);
-        await pumpEventQueue();
-
-        expect(cubit.state.blurred, isTrue);
+        expect(plays.played.hasListener, isFalse);
       });
     });
   });

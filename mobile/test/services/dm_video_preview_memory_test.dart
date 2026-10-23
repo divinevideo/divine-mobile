@@ -74,6 +74,20 @@ void main() {
         expect(encoded.single, equals([1, 2, 3]));
       });
 
+      test('remembers the blurhash it read, for a card built again', () async {
+        final frame = File('${dir.path}/frame.jpg')..writeAsBytesSync([1]);
+        final memory = DmVideoPreviewMemory(
+          encodeBlurhash: (_) async => 'LEHV6nWB2yk8',
+        );
+        addTearDown(memory.dispose);
+        expect(memory.knownFrameBlurhashFor(first), isNull);
+
+        await memory.frameBlurhashFor(messageId: first, framePath: frame.path);
+
+        expect(memory.knownFrameBlurhashFor(first), 'LEHV6nWB2yk8');
+        expect(memory.knownFrameBlurhashFor(second), isNull);
+      });
+
       test('is null when the kept frame is gone', () async {
         var encodes = 0;
         final memory = DmVideoPreviewMemory(

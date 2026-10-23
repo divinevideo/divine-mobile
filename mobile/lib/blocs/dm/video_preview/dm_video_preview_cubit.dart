@@ -75,7 +75,7 @@ class DmVideoPreviewCubit extends Cubit<DmVideoPreviewState>
   /// It starts with a frame [store] already knows, so a card built again,
   /// such as one scrolled back into view, shows it from its first frame.
   /// With [blurUntilPlayed] it starts blurred unless [memory] has already
-  /// seen the video played.
+  /// seen the video played, with any blurhash [memory] already read.
   DmVideoPreviewCubit({
     required DmMessage message,
     required DmVideoStore? store,
@@ -89,6 +89,7 @@ class DmVideoPreviewCubit extends Cubit<DmVideoPreviewState>
            store?.knownPreviewPathFor(message),
            blurred:
                blurUntilPlayed && !(memory?.isWatched(message.id) ?? false),
+           frameBlurhash: memory?.knownFrameBlurhashFor(message.id),
          ),
        ) {
     if (state.blurred) {
@@ -101,13 +102,15 @@ class DmVideoPreviewCubit extends Cubit<DmVideoPreviewState>
   static DmVideoPreviewState _initialState(
     String? knownFramePath, {
     required bool blurred,
-  }) => knownFramePath == null
-      ? DmVideoPreviewState(blurred: blurred)
-      : DmVideoPreviewState(
-          status: DmVideoPreviewStatus.ready,
-          framePath: knownFramePath,
-          blurred: blurred,
-        );
+    required String? frameBlurhash,
+  }) => DmVideoPreviewState(
+    status: knownFramePath == null
+        ? DmVideoPreviewStatus.loading
+        : DmVideoPreviewStatus.ready,
+    framePath: knownFramePath,
+    blurred: blurred,
+    frameBlurhash: blurred ? frameBlurhash : null,
+  );
 
   final DmMessage _message;
 
@@ -197,8 +200,15 @@ class DmVideoPreviewCubit extends Cubit<DmVideoPreviewState>
 
   @override
   Future<void> close() async {
-    await _keptVideos?.cancel();
-    await _plays?.cancel();
-    return super.close();
+    // Cancel after `super.close()`, not before: awaiting a cancel first
+    // yields a microtask in which a [load] whose download just finished
+    // resumes, sees [isClosed] as false, and starts a wait nothing cancels.
+    final keptVideos = _keptVideos?.cancel();
+    final plays = _plays?.cancel();
+    _keptVideos = null;
+    _plays = null;
+    await super.close();
+    await keptVideos;
+    await plays;
   }
 }

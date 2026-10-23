@@ -232,7 +232,8 @@ class _PreviewSurface extends StatelessWidget {
   }
 }
 
-/// The sender's blurhash, decoded on the device.
+/// A blurhash, the sender's or one read from the kept frame, decoded on the
+/// device.
 class _Blurhash extends StatelessWidget {
   const _Blurhash({required this.blurhash});
 

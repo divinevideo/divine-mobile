@@ -27,6 +27,7 @@ class DmVideoPreviewMemory {
   final BlurhashEncoder _encodeBlurhash;
   final Set<String> _watched = {};
   final Map<String, Future<String?>> _frameBlurhashes = {};
+  final Map<String, String> _knownFrameBlurhashes = {};
   final StreamController<String> _watchedController =
       StreamController<String>.broadcast();
 
@@ -43,6 +44,11 @@ class DmVideoPreviewMemory {
     _watchedController.add(messageId);
   }
 
+  /// The blurhash already read from [messageId]'s kept frame, if any, so a
+  /// card built again shows it from its first frame.
+  String? knownFrameBlurhashFor(String messageId) =>
+      _knownFrameBlurhashes[messageId];
+
   /// A blurhash read from [framePath], the frame this device keeps for
   /// [messageId], or null when the frame is gone or cannot be encoded.
   ///
@@ -52,10 +58,10 @@ class DmVideoPreviewMemory {
     required String framePath,
   }) => _frameBlurhashes.putIfAbsent(
     messageId,
-    () => _readFrameBlurhash(framePath),
+    () => _readFrameBlurhash(messageId, framePath),
   );
 
-  Future<String?> _readFrameBlurhash(String framePath) async {
+  Future<String?> _readFrameBlurhash(String messageId, String framePath) async {
     final Uint8List bytes;
     try {
       bytes = await File(framePath).readAsBytes();
@@ -64,7 +70,9 @@ class DmVideoPreviewMemory {
       // shows its placeholder.
       return null;
     }
-    return _encodeBlurhash(bytes);
+    final blurhash = await _encodeBlurhash(bytes);
+    if (blurhash != null) _knownFrameBlurhashes[messageId] = blurhash;
+    return blurhash;
   }
 
   /// Stops announcing played messages.
