@@ -141,7 +141,25 @@ void main() {
           isA<ListSearchState>()
               .having((s) => s.status, 'status', ListSearchStatus.success)
               .having((s) => s.query, 'query', 'videos')
-              .having((s) => s.videoResults, 'videoResults', [testCuratedList]),
+              .having((s) => s.videoResults, 'videoResults', [testCuratedList])
+              .having(
+                (s) => s.videoStatus,
+                'videoStatus',
+                ListSearchSourceStatus.success,
+              )
+              .having(
+                (s) => s.peopleStatus,
+                'peopleStatus',
+                ListSearchSourceStatus.loading,
+              ),
+          ListSearchState(
+            status: ListSearchStatus.success,
+            query: 'videos',
+            requestedQuery: 'videos',
+            videoResults: [testCuratedList],
+            videoStatus: ListSearchSourceStatus.success,
+            peopleStatus: ListSearchSourceStatus.success,
+          ),
         ],
       );
 
@@ -252,7 +270,20 @@ void main() {
             'xyz',
           ),
           _searchState(status: ListSearchStatus.loading, query: 'xyz'),
-          _searchState(status: ListSearchStatus.success, query: 'xyz'),
+          const ListSearchState(
+            status: ListSearchStatus.loading,
+            query: 'xyz',
+            requestedQuery: 'xyz',
+            videoStatus: ListSearchSourceStatus.success,
+            peopleStatus: ListSearchSourceStatus.loading,
+          ),
+          const ListSearchState(
+            status: ListSearchStatus.success,
+            query: 'xyz',
+            requestedQuery: 'xyz',
+            videoStatus: ListSearchSourceStatus.success,
+            peopleStatus: ListSearchSourceStatus.success,
+          ),
         ],
       );
 
@@ -312,9 +343,19 @@ void main() {
             status: ListSearchStatus.loading,
             query: 'test',
           ),
-          _searchState(
+          const ListSearchState(
             status: ListSearchStatus.failure,
             query: 'test',
+            requestedQuery: 'test',
+            videoStatus: ListSearchSourceStatus.failure,
+            peopleStatus: ListSearchSourceStatus.loading,
+          ),
+          const ListSearchState(
+            status: ListSearchStatus.failure,
+            query: 'test',
+            requestedQuery: 'test',
+            videoStatus: ListSearchSourceStatus.failure,
+            peopleStatus: ListSearchSourceStatus.success,
           ),
         ],
         errors: () => [isA<Exception>()],
@@ -378,7 +419,25 @@ void main() {
           ),
           isA<ListSearchState>()
               .having((s) => s.status, 'status', ListSearchStatus.success)
-              .having((s) => s.videoResults, 'videoResults', [testCuratedList]),
+              .having((s) => s.videoResults, 'videoResults', [testCuratedList])
+              .having(
+                (s) => s.videoStatus,
+                'videoStatus',
+                ListSearchSourceStatus.success,
+              )
+              .having(
+                (s) => s.peopleStatus,
+                'peopleStatus',
+                ListSearchSourceStatus.loading,
+              ),
+          ListSearchState(
+            status: ListSearchStatus.success,
+            query: 'test',
+            requestedQuery: 'test',
+            videoResults: [testCuratedList],
+            videoStatus: ListSearchSourceStatus.success,
+            peopleStatus: ListSearchSourceStatus.success,
+          ),
         ],
       );
 
@@ -410,16 +469,36 @@ void main() {
             'vid',
           ),
           _searchState(status: ListSearchStatus.loading, query: 'vid'),
-          isA<ListSearchState>().having(
-            (s) => s.videoResults.length,
-            'videoResults.length',
-            1,
+          ListSearchState(
+            status: ListSearchStatus.success,
+            query: 'vid',
+            requestedQuery: 'vid',
+            videoResults: [testCuratedList],
+            videoStatus: ListSearchSourceStatus.success,
+            peopleStatus: ListSearchSourceStatus.loading,
           ),
-          isA<ListSearchState>().having(
-            (s) => s.videoResults.length,
-            'videoResults.length',
-            2,
+          ListSearchState(
+            status: ListSearchStatus.success,
+            query: 'vid',
+            requestedQuery: 'vid',
+            videoResults: [testCuratedList],
+            videoStatus: ListSearchSourceStatus.success,
+            peopleStatus: ListSearchSourceStatus.success,
           ),
+          isA<ListSearchState>()
+              .having((s) => s.status, 'status', ListSearchStatus.success)
+              .having((s) => s.query, 'query', 'vid')
+              .having((s) => s.videoResults.length, 'videoResults.length', 2)
+              .having(
+                (s) => s.videoStatus,
+                'videoStatus',
+                ListSearchSourceStatus.success,
+              )
+              .having(
+                (s) => s.peopleStatus,
+                'peopleStatus',
+                ListSearchSourceStatus.success,
+              ),
         ],
       );
     });
@@ -434,15 +513,26 @@ void main() {
         ),
         act: (bloc) => bloc.add(const ListSearchBlocklistChanged()),
         expect: () => [
-          isA<ListSearchState>().having(
-            (s) => s.status,
-            'status',
-            ListSearchStatus.loading,
+          const ListSearchState(
+            status: ListSearchStatus.loading,
+            query: 'videos',
+            requestedQuery: 'videos',
+            videoStatus: ListSearchSourceStatus.loading,
+            peopleStatus: ListSearchSourceStatus.loading,
           ),
-          isA<ListSearchState>().having(
-            (s) => s.status,
-            'status',
-            ListSearchStatus.success,
+          const ListSearchState(
+            status: ListSearchStatus.loading,
+            query: 'videos',
+            requestedQuery: 'videos',
+            videoStatus: ListSearchSourceStatus.success,
+            peopleStatus: ListSearchSourceStatus.loading,
+          ),
+          const ListSearchState(
+            status: ListSearchStatus.success,
+            query: 'videos',
+            requestedQuery: 'videos',
+            videoStatus: ListSearchSourceStatus.success,
+            peopleStatus: ListSearchSourceStatus.success,
           ),
         ],
         verify: (_) {
