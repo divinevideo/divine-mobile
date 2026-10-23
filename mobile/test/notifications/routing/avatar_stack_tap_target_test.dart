@@ -28,6 +28,21 @@ void main() {
       );
     }
 
+    test('official announcement has no actor profile target', () {
+      expect(
+        resolveAvatarStackTapTarget(
+          AnnouncementNotification(
+            announcementId: 'd7388b9c-b35c-4269-8fc5-fac5d7a454ad',
+            title: 'A small update',
+            body: 'Your website is ready.',
+            timestamp: DateTime.utc(2026, 10, 23),
+            expiresAt: DateTime.utc(2026, 11, 23),
+          ),
+        ),
+        isNull,
+      );
+    });
+
     test('grouped like opens the likers list', () {
       expect(
         resolveAvatarStackTapTarget(videoNotification(NotificationKind.like)),

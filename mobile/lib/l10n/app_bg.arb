@@ -5983,5 +5983,7 @@
   "accountDeletionProcessingSignOutFailed": "Изтриването на акаунта ти е в ход, но не успяхме да завършим излизането. Опитай отново.",
   "videoEditorLoopRepairSmoothed": "Цикълът е изгладен",
   "videoEditorLoopRepairProgress": "Подравняване на цикъла…",
-  "videoEditorLoopRepairTrimmed": "Цикълът е изгладен. Премахнати са {seconds} сек."
+  "videoEditorLoopRepairTrimmed": "Цикълът е изгладен. Премахнати са {seconds} сек.",
+  "notificationFromDivine": "От Divine",
+  "announcementUnavailable": "Това съобщение вече не е налично."
 }

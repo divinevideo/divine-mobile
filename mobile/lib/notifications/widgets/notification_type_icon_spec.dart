@@ -73,6 +73,7 @@ NotificationTypeIconSpec notificationTypeIconSpec(
       background: colors.accentChipYellow.container,
       foreground: colors.accentChipYellow.onContainer,
     ),
+    NotificationKind.announcement ||
     NotificationKind.system => NotificationTypeIconSpec(
       icon: DivineIconName.logo,
       background: colors.accentChipGreen.container,

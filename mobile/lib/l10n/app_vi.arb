@@ -7157,5 +7157,7 @@
   "accountDeletionProcessingSignOutFailed": "Tài khoản của bạn đang được xử lý xóa, nhưng chúng tôi chưa thể đăng xuất cho bạn. Hãy thử lại.",
   "videoEditorLoopRepairSmoothed": "Đã làm mượt vòng lặp",
   "videoEditorLoopRepairProgress": "Đang căn chỉnh vòng lặp…",
-  "videoEditorLoopRepairTrimmed": "Đã làm mượt vòng lặp. Đã cắt {seconds} giây."
+  "videoEditorLoopRepairTrimmed": "Đã làm mượt vòng lặp. Đã cắt {seconds} giây.",
+  "notificationFromDivine": "Từ Divine",
+  "announcementUnavailable": "Thông báo này không còn khả dụng."
 }

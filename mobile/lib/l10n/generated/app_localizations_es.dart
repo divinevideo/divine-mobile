@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -5844,9 +5843,12 @@ class AppLocalizationsEs extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Los mensajes de estas personas están ocultos acá. Igual pueden ver lo que enviás.',
-      many: 'Los mensajes de estas personas están ocultos acá. Igual pueden ver lo que enviás.',
-      one: 'Los mensajes de esta persona están ocultos acá. Igual puede ver lo que enviás.',
+      other:
+          'Los mensajes de estas personas están ocultos acá. Igual pueden ver lo que enviás.',
+      many:
+          'Los mensajes de estas personas están ocultos acá. Igual pueden ver lo que enviás.',
+      one:
+          'Los mensajes de esta persona están ocultos acá. Igual puede ver lo que enviás.',
     );
     return '$_temp0';
   }
@@ -6671,7 +6673,8 @@ class AppLocalizationsEs extends AppLocalizations {
           'Se guardaron $count clips sin su prueba, así que no pueden volver a tus clips.',
       many:
           'Se guardaron $count clips sin su prueba, así que no pueden volver a tus clips.',
-      one: 'Se guardó 1 clip sin su prueba, así que no puede volver a tus clips.',
+      one:
+          'Se guardó 1 clip sin su prueba, así que no puede volver a tus clips.',
     );
     return '$_temp0';
   }
@@ -11523,7 +11526,8 @@ class AppLocalizationsEs extends AppLocalizations {
       locale: localeName,
       other:
           'Esto bloquea las $count cuentas que llevan esta insignia ahora mismo. Sus publicaciones no van a aparecer en tus feeds y no les vamos a avisar.',
-      one: 'Esto bloquea la cuenta que lleva esta insignia ahora mismo. Sus publicaciones no van a aparecer en tus feeds y no le vamos a avisar.',
+      one:
+          'Esto bloquea la cuenta que lleva esta insignia ahora mismo. Sus publicaciones no van a aparecer en tus feeds y no le vamos a avisar.',
     );
     return '$_temp0';
   }
@@ -14178,13 +14182,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
-    String _temp0 = intl.Intl.selectLogic(
-      visibility,
-      {
-        'private': '$name, Privada, $count',
-        'other': '$name, $count',
-      },
-    );
+    String _temp0 = intl.Intl.selectLogic(visibility, {
+      'private': '$name, Privada, $count',
+      'other': '$name, $count',
+    });
     return '$_temp0';
   }
 
@@ -14596,4 +14597,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'Bucle suavizado. Se quitaron $seconds s.';
   }
+
+  @override
+  String get notificationFromDivine => 'De Divine';
+
+  @override
+  String get announcementUnavailable => 'Este anuncio ya no está disponible.';
 }

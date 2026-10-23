@@ -24080,6 +24080,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Loop smoothed. Removed {seconds} s.'**
   String videoEditorLoopRepairTrimmed(String seconds);
+
+  /// Official source label shown only on announcements from the Divine staff catalog.
+  ///
+  /// In en, this message translates to:
+  /// **'From Divine'**
+  String get notificationFromDivine;
+
+  /// Announcement detail empty state when the announcement has expired, was withdrawn, or is not cached.
+  ///
+  /// In en, this message translates to:
+  /// **'This announcement is no longer available.'**
+  String get announcementUnavailable;
 }
 
 class _AppLocalizationsDelegate

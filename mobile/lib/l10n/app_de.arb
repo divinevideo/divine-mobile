@@ -5866,5 +5866,7 @@
   "accountDeletionProcessingSignOutFailed": "Dein Konto wird gerade gelöscht, aber wir konnten dich nicht vollständig abmelden. Versuch es noch einmal.",
   "videoEditorLoopRepairSmoothed": "Loop geglättet",
   "videoEditorLoopRepairProgress": "Dein Loop wird ausgerichtet…",
-  "videoEditorLoopRepairTrimmed": "Loop geglättet. {seconds} s entfernt."
+  "videoEditorLoopRepairTrimmed": "Loop geglättet. {seconds} s entfernt.",
+  "notificationFromDivine": "Von Divine",
+  "announcementUnavailable": "Diese Mitteilung ist nicht mehr verfügbar."
 }

@@ -7157,5 +7157,7 @@
   "accountDeletionProcessingSignOutFailed": "آپ کا اکاؤنٹ حذف کرنے کی کارروائی جاری ہے، لیکن ہم آپ کو سائن آؤٹ نہیں کر سکے۔ دوبارہ کوشش کریں۔",
   "videoEditorLoopRepairSmoothed": "لوپ ہموار ہو گیا",
   "videoEditorLoopRepairProgress": "آپ کا لوپ سیدھا کیا جا رہا ہے…",
-  "videoEditorLoopRepairTrimmed": "لوپ ہموار ہو گیا۔ {seconds} سیکنڈ ہٹا دیے گئے۔"
+  "videoEditorLoopRepairTrimmed": "لوپ ہموار ہو گیا۔ {seconds} سیکنڈ ہٹا دیے گئے۔",
+  "notificationFromDivine": "Divine کی طرف سے",
+  "announcementUnavailable": "یہ اعلان اب دستیاب نہیں ہے۔"
 }

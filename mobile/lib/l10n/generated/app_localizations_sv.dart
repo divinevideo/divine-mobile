@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -5783,8 +5782,10 @@ class AppLocalizationsSv extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Deras meddelanden är dolda här. De kan fortfarande se det du skickar.',
-      one: 'Den här personens meddelanden är dolda här. Personen kan fortfarande se det du skickar.',
+      other:
+          'Deras meddelanden är dolda här. De kan fortfarande se det du skickar.',
+      one:
+          'Den här personens meddelanden är dolda här. Personen kan fortfarande se det du skickar.',
     );
     return '$_temp0';
   }
@@ -6604,7 +6605,8 @@ class AppLocalizationsSv extends AppLocalizations {
       locale: localeName,
       other:
           '$count klipp sparades utan sina bevis och kan därför inte komma tillbaka till dina klipp.',
-      one: '1 klipp sparades utan sitt bevis och kan därför inte komma tillbaka till dina klipp.',
+      one:
+          '1 klipp sparades utan sitt bevis och kan därför inte komma tillbaka till dina klipp.',
     );
     return '$_temp0';
   }
@@ -10778,7 +10780,8 @@ class AppLocalizationsSv extends AppLocalizations {
       locale: localeName,
       other:
           'Det gick inte att klistra in färgmasken på $count klipp. Resten av stilen är på plats.',
-      one: 'Det gick inte att klistra in färgmasken på 1 klipp. Resten av stilen är på plats.',
+      one:
+          'Det gick inte att klistra in färgmasken på 1 klipp. Resten av stilen är på plats.',
     );
     return '$_temp0';
   }
@@ -11406,7 +11409,8 @@ class AppLocalizationsSv extends AppLocalizations {
       locale: localeName,
       other:
           'Det här blockerar de $count konton som har den här badgen just nu. Deras inlägg visas inte i dina flöden och de meddelas inte.',
-      one: 'Det här blockerar kontot som har den här badgen just nu. Deras inlägg visas inte i dina flöden och de meddelas inte.',
+      one:
+          'Det här blockerar kontot som har den här badgen just nu. Deras inlägg visas inte i dina flöden och de meddelas inte.',
     );
     return '$_temp0';
   }
@@ -14026,13 +14030,10 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
-    String _temp0 = intl.Intl.selectLogic(
-      visibility,
-      {
-        'private': '$name, Privat, $count',
-        'other': '$name, $count',
-      },
-    );
+    String _temp0 = intl.Intl.selectLogic(visibility, {
+      'private': '$name, Privat, $count',
+      'other': '$name, $count',
+    });
     return '$_temp0';
   }
 
@@ -14440,4 +14441,11 @@ class AppLocalizationsSv extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'Loopen är mjukare. Tog bort $seconds s.';
   }
+
+  @override
+  String get notificationFromDivine => 'Från Divine';
+
+  @override
+  String get announcementUnavailable =>
+      'Det här meddelandet är inte längre tillgängligt.';
 }

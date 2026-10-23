@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -13666,13 +13665,10 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
-    String _temp0 = intl.Intl.selectLogic(
-      visibility,
-      {
-        'private': '$name፣ የግል፣ $count',
-        'other': '$name፣ $count',
-      },
-    );
+    String _temp0 = intl.Intl.selectLogic(visibility, {
+      'private': '$name፣ የግል፣ $count',
+      'other': '$name፣ $count',
+    });
     return '$_temp0';
   }
 
@@ -14069,4 +14065,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'ሉፑ ተስተካክሏል። $seconds ሰከንድ ተወግዷል።';
   }
+
+  @override
+  String get notificationFromDivine => 'ከDivine';
+
+  @override
+  String get announcementUnavailable => 'ይህ ማስታወቂያ ከእንግዲህ የለም።';
 }

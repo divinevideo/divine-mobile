@@ -5866,5 +5866,7 @@
   "accountDeletionProcessingSignOutFailed": "A exclusão da sua conta está em andamento, mas não conseguimos concluir a saída. Tente de novo.",
   "videoEditorLoopRepairSmoothed": "Loop suavizado",
   "videoEditorLoopRepairProgress": "Alinhando seu loop…",
-  "videoEditorLoopRepairTrimmed": "Loop suavizado. {seconds} s removidos."
+  "videoEditorLoopRepairTrimmed": "Loop suavizado. {seconds} s removidos.",
+  "notificationFromDivine": "Da Divine",
+  "announcementUnavailable": "Este anúncio não está mais disponível."
 }

@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -11381,7 +11380,8 @@ class AppLocalizationsAr extends AppLocalizations {
       locale: localeName,
       other:
           'ستُحظر $count حسابات تضع هذه الشارة الآن. لن تظهر منشوراتها في تغذياتك ولن يتم إبلاغها.',
-      one: 'سيُحظر الحساب الذي يضع هذه الشارة الآن. لن تظهر منشوراته في تغذياتك ولن يتم إبلاغه.',
+      one:
+          'سيُحظر الحساب الذي يضع هذه الشارة الآن. لن تظهر منشوراته في تغذياتك ولن يتم إبلاغه.',
     );
     return '$_temp0';
   }
@@ -14009,13 +14009,10 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
-    String _temp0 = intl.Intl.selectLogic(
-      visibility,
-      {
-        'private': '$name، خاصة، $count',
-        'other': '$name، $count',
-      },
-    );
+    String _temp0 = intl.Intl.selectLogic(visibility, {
+      'private': '$name، خاصة، $count',
+      'other': '$name، $count',
+    });
     return '$_temp0';
   }
 
@@ -14427,4 +14424,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'تم تنعيم التكرار. أُزيلت $seconds ث.';
   }
+
+  @override
+  String get notificationFromDivine => 'من Divine';
+
+  @override
+  String get announcementUnavailable => 'لم يعد هذا الإعلان متاحًا.';
 }

@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -5854,9 +5853,12 @@ class AppLocalizationsIt extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'I loro messaggi sono nascosti qui. Possono comunque vedere quello che invii.',
-      many: 'I loro messaggi sono nascosti qui. Possono comunque vedere quello che invii.',
-      one: 'I messaggi di questa persona sono nascosti qui. Può comunque vedere quello che invii.',
+      other:
+          'I loro messaggi sono nascosti qui. Possono comunque vedere quello che invii.',
+      many:
+          'I loro messaggi sono nascosti qui. Possono comunque vedere quello che invii.',
+      one:
+          'I messaggi di questa persona sono nascosti qui. Può comunque vedere quello che invii.',
     );
     return '$_temp0';
   }
@@ -6685,7 +6687,8 @@ class AppLocalizationsIt extends AppLocalizations {
           '$count clip sono stati salvati senza la loro prova, quindi non possono tornare tra i tuoi clip.',
       many:
           '$count clip sono stati salvati senza la loro prova, quindi non possono tornare tra i tuoi clip.',
-      one: '1 clip è stato salvato senza la sua prova, quindi non può tornare tra i tuoi clip.',
+      one:
+          '1 clip è stato salvato senza la sua prova, quindi non può tornare tra i tuoi clip.',
     );
     return '$_temp0';
   }
@@ -11544,7 +11547,8 @@ class AppLocalizationsIt extends AppLocalizations {
       locale: localeName,
       other:
           'Questo blocca i $count account che ora tengono questo badge sul profilo. I loro post non appariranno nei tuoi feed e non verranno avvisati.',
-      one: 'Questo blocca l\'account che ora tiene questo badge sul profilo. I suoi post non appariranno nei tuoi feed e non verrà avvisato.',
+      one:
+          'Questo blocca l\'account che ora tiene questo badge sul profilo. I suoi post non appariranno nei tuoi feed e non verrà avvisato.',
     );
     return '$_temp0';
   }
@@ -14195,13 +14199,10 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
-    String _temp0 = intl.Intl.selectLogic(
-      visibility,
-      {
-        'private': '$name, Privata, $count',
-        'other': '$name, $count',
-      },
-    );
+    String _temp0 = intl.Intl.selectLogic(visibility, {
+      'private': '$name, Privata, $count',
+      'other': '$name, $count',
+    });
     return '$_temp0';
   }
 
@@ -14612,4 +14613,11 @@ class AppLocalizationsIt extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'Loop reso più fluido. Rimossi $seconds s.';
   }
+
+  @override
+  String get notificationFromDivine => 'Da Divine';
+
+  @override
+  String get announcementUnavailable =>
+      'Questo annuncio non è più disponibile.';
 }

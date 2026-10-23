@@ -5866,5 +5866,7 @@
   "accountDeletionProcessingSignOutFailed": "Usuwanie twojego konta trwa, ale nie udało się dokończyć wylogowania. Spróbuj ponownie.",
   "videoEditorLoopRepairSmoothed": "Pętla wygładzona",
   "videoEditorLoopRepairProgress": "Wyrównywanie pętli…",
-  "videoEditorLoopRepairTrimmed": "Pętla wygładzona. Usunięto {seconds} s."
+  "videoEditorLoopRepairTrimmed": "Pętla wygładzona. Usunięto {seconds} s.",
+  "notificationFromDivine": "Od Divine",
+  "announcementUnavailable": "To ogłoszenie nie jest już dostępne."
 }

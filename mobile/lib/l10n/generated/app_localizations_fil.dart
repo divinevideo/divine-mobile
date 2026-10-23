@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -5828,8 +5827,10 @@ class AppLocalizationsFil extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Nakatago rito ang mga mensahe nila. Nakikita pa rin nila ang mga ipinapadala mo.',
-      one: 'Nakatago rito ang mga mensahe nila. Nakikita pa rin nila ang mga ipinapadala mo.',
+      other:
+          'Nakatago rito ang mga mensahe nila. Nakikita pa rin nila ang mga ipinapadala mo.',
+      one:
+          'Nakatago rito ang mga mensahe nila. Nakikita pa rin nila ang mga ipinapadala mo.',
     );
     return '$_temp0';
   }
@@ -11488,7 +11489,8 @@ class AppLocalizationsFil extends AppLocalizations {
       locale: localeName,
       other:
           'Iba-block nito ang $count account na kasalukuyang nag-claim ng badge na ito. Mawawala ang posts nila sa feeds mo, at hindi sila aabisuhan.',
-      one: 'Iba-block nito ang account na kasalukuyang nag-claim ng badge na ito. Mawawala ang posts nila sa feeds mo, at hindi sila aabisuhan.',
+      one:
+          'Iba-block nito ang account na kasalukuyang nag-claim ng badge na ito. Mawawala ang posts nila sa feeds mo, at hindi sila aabisuhan.',
     );
     return '$_temp0';
   }
@@ -14137,13 +14139,10 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
-    String _temp0 = intl.Intl.selectLogic(
-      visibility,
-      {
-        'private': '$name, Pribado, $count',
-        'other': '$name, $count',
-      },
-    );
+    String _temp0 = intl.Intl.selectLogic(visibility, {
+      'private': '$name, Pribado, $count',
+      'other': '$name, $count',
+    });
     return '$_temp0';
   }
 
@@ -14553,4 +14552,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'Mas maayos na ang loop. Inalis ang $seconds s.';
   }
+
+  @override
+  String get notificationFromDivine => 'Mula sa Divine';
+
+  @override
+  String get announcementUnavailable => 'Hindi na available ang anunsyong ito.';
 }

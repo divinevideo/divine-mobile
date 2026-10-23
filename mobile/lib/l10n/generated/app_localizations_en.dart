@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -6702,7 +6701,8 @@ class AppLocalizationsEn extends AppLocalizations {
       locale: localeName,
       other:
           '$count clips were saved without their proof, so they can\'t come back into your clips.',
-      one: '1 clip was saved without its proof, so it can\'t come back into your clips.',
+      one:
+          '1 clip was saved without its proof, so it can\'t come back into your clips.',
     );
     return '$_temp0';
   }
@@ -10869,7 +10869,8 @@ class AppLocalizationsEn extends AppLocalizations {
       locale: localeName,
       other:
           'Couldn\'t paste the color mask onto $count clips. The rest of the style is on.',
-      one: 'Couldn\'t paste the color mask onto 1 clip. The rest of the style is on.',
+      one:
+          'Couldn\'t paste the color mask onto 1 clip. The rest of the style is on.',
     );
     return '$_temp0';
   }
@@ -11491,7 +11492,8 @@ class AppLocalizationsEn extends AppLocalizations {
       locale: localeName,
       other:
           'This blocks the $count accounts currently claiming this badge. Their posts will leave your feeds, and they will not be notified.',
-      one: 'This blocks the account currently claiming this badge. Their posts will leave your feeds, and they will not be notified.',
+      one:
+          'This blocks the account currently claiming this badge. Their posts will leave your feeds, and they will not be notified.',
     );
     return '$_temp0';
   }
@@ -14109,13 +14111,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
-    String _temp0 = intl.Intl.selectLogic(
-      visibility,
-      {
-        'private': '$name, Private, $count',
-        'other': '$name, $count',
-      },
-    );
+    String _temp0 = intl.Intl.selectLogic(visibility, {
+      'private': '$name, Private, $count',
+      'other': '$name, $count',
+    });
     return '$_temp0';
   }
 
@@ -14523,4 +14522,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'Loop smoothed. Removed $seconds s.';
   }
+
+  @override
+  String get notificationFromDivine => 'From Divine';
+
+  @override
+  String get announcementUnavailable =>
+      'This announcement is no longer available.';
 }

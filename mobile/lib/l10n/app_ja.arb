@@ -5866,5 +5866,7 @@
   "accountDeletionProcessingSignOutFailed": "アカウントの削除は処理中ですが、ログアウトを完了できませんでした。もう一度お試しください。",
   "videoEditorLoopRepairSmoothed": "ループを滑らかにしました",
   "videoEditorLoopRepairProgress": "ループを揃えています…",
-  "videoEditorLoopRepairTrimmed": "ループを滑らかにしました。{seconds}秒を削除しました。"
+  "videoEditorLoopRepairTrimmed": "ループを滑らかにしました。{seconds}秒を削除しました。",
+  "notificationFromDivine": "Divineからのお知らせ",
+  "announcementUnavailable": "このお知らせは現在ご覧いただけません。"
 }

@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -5952,7 +5951,8 @@ class AppLocalizationsRo extends AppLocalizations {
       locale: localeName,
       other: 'Mesajele lor sunt ascunse aici. Încă pot vedea ce trimiți.',
       few: 'Mesajele lor sunt ascunse aici. Încă pot vedea ce trimiți.',
-      one: 'Mesajele acestei persoane sunt ascunse aici. Încă poate vedea ce trimiți.',
+      one:
+          'Mesajele acestei persoane sunt ascunse aici. Încă poate vedea ce trimiți.',
     );
     return '$_temp0';
   }
@@ -6783,7 +6783,8 @@ class AppLocalizationsRo extends AppLocalizations {
           '$count de clipuri au fost salvate fără dovada lor, așa că nu se pot întoarce printre clipurile tale.',
       few:
           '$count clipuri au fost salvate fără dovada lor, așa că nu se pot întoarce printre clipurile tale.',
-      one: '1 clip a fost salvat fără dovada lui, așa că nu se poate întoarce printre clipurile tale.',
+      one:
+          '1 clip a fost salvat fără dovada lui, așa că nu se poate întoarce printre clipurile tale.',
     );
     return '$_temp0';
   }
@@ -11644,7 +11645,8 @@ class AppLocalizationsRo extends AppLocalizations {
           'Asta blochează cele $count de conturi care poartă acum această insignă. Postările lor nu vor mai apărea în feedurile tale și nu vor fi notificate.',
       few:
           'Asta blochează cele $count conturi care poartă acum această insignă. Postările lor nu vor mai apărea în feedurile tale și nu vor fi notificate.',
-      one: 'Asta blochează contul care poartă acum această insignă. Postările lui nu vor mai apărea în feedurile tale și nu va fi notificat.',
+      one:
+          'Asta blochează contul care poartă acum această insignă. Postările lui nu vor mai apărea în feedurile tale și nu va fi notificat.',
     );
     return '$_temp0';
   }
@@ -14305,13 +14307,10 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
-    String _temp0 = intl.Intl.selectLogic(
-      visibility,
-      {
-        'private': '$name, Privată, $count',
-        'other': '$name, $count',
-      },
-    );
+    String _temp0 = intl.Intl.selectLogic(visibility, {
+      'private': '$name, Privată, $count',
+      'other': '$name, $count',
+    });
     return '$_temp0';
   }
 
@@ -14722,4 +14721,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'Buclă netezită. S-au eliminat $seconds s.';
   }
+
+  @override
+  String get notificationFromDivine => 'De la Divine';
+
+  @override
+  String get announcementUnavailable => 'Acest anunț nu mai este disponibil.';
 }

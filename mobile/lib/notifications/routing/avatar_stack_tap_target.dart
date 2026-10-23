@@ -80,6 +80,6 @@ AvatarStackTapTarget? resolveAvatarStackTapTarget(
     VideoNotification(:final actors) when actors.isNotEmpty =>
       OpenActorProfileTarget(actors.first.pubkey),
     ActorNotification(:final actor) => OpenActorProfileTarget(actor.pubkey),
-    VideoNotification() => null,
+    VideoNotification() || AnnouncementNotification() => null,
   };
 }

@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -13336,13 +13335,10 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
-    String _temp0 = intl.Intl.selectLogic(
-      visibility,
-      {
-        'private': '$name, 비공개, $count',
-        'other': '$name, $count',
-      },
-    );
+    String _temp0 = intl.Intl.selectLogic(visibility, {
+      'private': '$name, 비공개, $count',
+      'other': '$name, $count',
+    });
     return '$_temp0';
   }
 
@@ -13733,4 +13729,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return '루프를 다듬었어요. $seconds초를 잘라냈어요.';
   }
+
+  @override
+  String get notificationFromDivine => 'Divine의 소식';
+
+  @override
+  String get announcementUnavailable => '이 공지는 더 이상 볼 수 없습니다.';
 }

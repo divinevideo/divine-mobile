@@ -5866,5 +5866,7 @@
   "accountDeletionProcessingSignOutFailed": "Je account wordt verwijderd, maar we konden je niet volledig uitloggen. Probeer het opnieuw.",
   "videoEditorLoopRepairSmoothed": "Loop verbeterd",
   "videoEditorLoopRepairProgress": "Je loop wordt uitgelijnd…",
-  "videoEditorLoopRepairTrimmed": "Loop verbeterd. {seconds} s verwijderd."
+  "videoEditorLoopRepairTrimmed": "Loop verbeterd. {seconds} s verwijderd.",
+  "notificationFromDivine": "Van Divine",
+  "announcementUnavailable": "Deze aankondiging is niet meer beschikbaar."
 }

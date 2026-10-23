@@ -5866,5 +5866,7 @@
   "accountDeletionProcessingSignOutFailed": "Ștergerea contului tău este în curs, dar nu am putut finaliza deconectarea. Încearcă din nou.",
   "videoEditorLoopRepairSmoothed": "Buclă netezită",
   "videoEditorLoopRepairProgress": "Se aliniază bucla…",
-  "videoEditorLoopRepairTrimmed": "Buclă netezită. S-au eliminat {seconds} s."
+  "videoEditorLoopRepairTrimmed": "Buclă netezită. S-au eliminat {seconds} s.",
+  "notificationFromDivine": "De la Divine",
+  "announcementUnavailable": "Acest anunț nu mai este disponibil."
 }

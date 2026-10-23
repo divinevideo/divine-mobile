@@ -5866,5 +5866,7 @@
   "accountDeletionProcessingSignOutFailed": "Ditt konto håller på att raderas, men vi kunde inte slutföra utloggningen. Försök igen.",
   "videoEditorLoopRepairSmoothed": "Loopen är mjukare",
   "videoEditorLoopRepairProgress": "Justerar din loop…",
-  "videoEditorLoopRepairTrimmed": "Loopen är mjukare. Tog bort {seconds} s."
+  "videoEditorLoopRepairTrimmed": "Loopen är mjukare. Tog bort {seconds} s.",
+  "notificationFromDivine": "Från Divine",
+  "announcementUnavailable": "Det här meddelandet är inte längre tillgängligt."
 }

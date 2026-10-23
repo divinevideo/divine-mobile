@@ -7157,5 +7157,7 @@
   "accountDeletionProcessingSignOutFailed": "Pemadaman akaun anda sedang diproses, tetapi kami tidak dapat menyelesaikan log keluar. Cuba lagi.",
   "videoEditorLoopRepairSmoothed": "Gelung dilancarkan",
   "videoEditorLoopRepairProgress": "Menjajarkan gelung anda…",
-  "videoEditorLoopRepairTrimmed": "Gelung dilancarkan. {seconds} s dibuang."
+  "videoEditorLoopRepairTrimmed": "Gelung dilancarkan. {seconds} s dibuang.",
+  "notificationFromDivine": "Daripada Divine",
+  "announcementUnavailable": "Pengumuman ini tidak lagi tersedia."
 }

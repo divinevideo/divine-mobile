@@ -1,6 +1,5 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
-
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -5716,8 +5715,10 @@ class AppLocalizationsId extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Pesan mereka disembunyikan di sini. Mereka tetap bisa melihat apa yang kamu kirim.',
-      one: 'Pesan orang ini disembunyikan di sini. Dia tetap bisa melihat apa yang kamu kirim.',
+      other:
+          'Pesan mereka disembunyikan di sini. Mereka tetap bisa melihat apa yang kamu kirim.',
+      one:
+          'Pesan orang ini disembunyikan di sini. Dia tetap bisa melihat apa yang kamu kirim.',
     );
     return '$_temp0';
   }
@@ -11306,7 +11307,8 @@ class AppLocalizationsId extends AppLocalizations {
       locale: localeName,
       other:
           'Ini memblokir $count akun yang sedang mengklaim lencana ini. Postingan mereka akan keluar dari feed-mu, dan mereka tidak akan diberi tahu.',
-      one: 'Ini memblokir akun yang sedang mengklaim lencana ini. Postingannya akan keluar dari feed-mu, dan mereka tidak akan diberi tahu.',
+      one:
+          'Ini memblokir akun yang sedang mengklaim lencana ini. Postingannya akan keluar dari feed-mu, dan mereka tidak akan diberi tahu.',
     );
     return '$_temp0';
   }
@@ -13912,13 +13914,10 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
-    String _temp0 = intl.Intl.selectLogic(
-      visibility,
-      {
-        'private': '$name, Privat, $count',
-        'other': '$name, $count',
-      },
-    );
+    String _temp0 = intl.Intl.selectLogic(visibility, {
+      'private': '$name, Privat, $count',
+      'other': '$name, $count',
+    });
     return '$_temp0';
   }
 
@@ -14327,4 +14326,10 @@ class AppLocalizationsId extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'Loop diperhalus. $seconds dtk dihapus.';
   }
+
+  @override
+  String get notificationFromDivine => 'Dari Divine';
+
+  @override
+  String get announcementUnavailable => 'Pengumuman ini sudah tidak tersedia.';
 }

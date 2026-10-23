@@ -5866,5 +5866,7 @@
   "accountDeletionProcessingSignOutFailed": "La suppression de ton compte est en cours, mais nous n’avons pas pu te déconnecter. Réessaie.",
   "videoEditorLoopRepairSmoothed": "Boucle lissée",
   "videoEditorLoopRepairProgress": "Alignement de ta boucle…",
-  "videoEditorLoopRepairTrimmed": "Boucle lissée. {seconds} s retirées."
+  "videoEditorLoopRepairTrimmed": "Boucle lissée. {seconds} s retirées.",
+  "notificationFromDivine": "De Divine",
+  "announcementUnavailable": "Cette annonce n’est plus disponible."
 }
