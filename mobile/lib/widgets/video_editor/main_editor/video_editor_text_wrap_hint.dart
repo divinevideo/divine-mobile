@@ -17,8 +17,8 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 /// user who wants a word larger than the video is wide can turn that off for
 /// the layer, and the export then cuts the word off at the edges. The chip
 /// only appears while that choice makes a difference: while the edges wrap
-/// the layer, or while the layer already runs past them. Otherwise it shows
-/// [fallback], the widget the toolbar's centre slot holds without it.
+/// the layer, or while it runs past them and would wrap again. Otherwise it
+/// shows [fallback], the widget the toolbar's centre slot holds without it.
 ///
 /// It must sit in a `Flex`, such as the toolbar's row, since it ellipsizes
 /// its label instead of pushing the toolbar buttons apart.
@@ -41,27 +41,29 @@ class VideoEditorTextWrapHint extends StatelessWidget {
     final layer = layerId == null
         ? null
         : editor?.activeLayers
-              .whereType<TextLayer>()
-              .where(
-                (layer) => layer.id == layerId,
-              )
+              .where((layer) => layer.id == layerId)
               .firstOrNull;
-    // A burned-in caption takes its look from the caption track.
-    if (editor == null || layer == null || captionCueIdOf(layer) != null) {
-      return fallback ?? const SizedBox.shrink();
+    // Wrapping only changes anything while the edges would wrap the layer;
+    // a layer that runs past them is measured as if it wrapped again.
+    if (editor == null ||
+        layer is! TextLayer ||
+        textWrapHintLayerIdOf(layer) == null ||
+        !editor.textLayerWrapsAtBounds(
+          layer.copyWith(wrapAtLayerBounds: true),
+        )) {
+      return _Fallback(fallback);
     }
 
     final runsPastEdges = !layer.wrapAtLayerBounds;
-    if (!runsPastEdges && !editor.textLayerWrapsAtBounds(layer)) {
-      return fallback ?? const SizedBox.shrink();
-    }
-
     return Flexible(
       child: VideoEditorToolbarChip(
         icon: runsPastEdges ? .arrowBendDownLeft : .arrowRight,
         label: runsPastEdges
             ? context.l10n.videoEditorTextWrapAtEdges
             : context.l10n.videoEditorTextDontWrap,
+        // A screen reader that selected the text in the timeline hears the
+        // chip appear, and hears its new label after a tap.
+        liveRegion: true,
         onTap: () {
           editor.replaceLayer(
             index: editor.activeLayers.indexOf(layer),
@@ -71,5 +73,28 @@ class VideoEditorTextWrapHint extends StatelessWidget {
         },
       ),
     );
+  }
+}
+
+/// The id [TextWrapHintCubit] takes for [layer]: a text layer's own, or
+/// `null` for anything else.
+///
+/// A burned-in caption is a text layer too, but its look belongs to the
+/// caption track, so the hint never offers to change it.
+String? textWrapHintLayerIdOf(Layer? layer) =>
+    layer is TextLayer && !isCaptionCueLayer(layer) ? layer.id : null;
+
+/// The toolbar's centre slot without the hint, which may shrink like the
+/// hint does rather than push the toolbar buttons apart.
+class _Fallback extends StatelessWidget {
+  const _Fallback(this.child);
+
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = this.child;
+    if (child == null) return const SizedBox.shrink();
+    return Flexible(child: child);
   }
 }

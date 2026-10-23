@@ -18,6 +18,7 @@ import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.d
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
+import 'package:openvine/blocs/video_editor/text_wrap_hint/text_wrap_hint_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
@@ -280,6 +281,8 @@ void main() {
               BlocProvider<VideoEditorEffectsCubit>.value(value: effectsCubit),
               // Read by the same capability sync, before the clip reconcile.
               BlocProvider(create: (_) => VideoEditorAudioVisualizerCubit()),
+              // Read on every history change, before it is persisted.
+              BlocProvider(create: (_) => TextWrapHintCubit()),
             ],
             child: VideoEditorScope(
               editorKey: GlobalKey(),

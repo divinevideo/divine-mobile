@@ -3,6 +3,7 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/constants/text_scale_limits.dart';
 
 /// A tappable pill with an [icon] and a [label], sized for the centre slot
 /// of a `VideoEditorToolbar`.
@@ -16,6 +17,7 @@ class VideoEditorToolbarChip extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.semanticValue,
+    this.liveRegion = false,
     super.key,
   });
 
@@ -31,11 +33,16 @@ class VideoEditorToolbarChip extends StatelessWidget {
   /// Extra state a screen reader announces after [label].
   final String? semanticValue;
 
+  /// Whether a screen reader announces the chip when it appears or its
+  /// [label] changes, for a chip that comes and goes on its own.
+  final bool liveRegion;
+
   @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
       value: semanticValue,
+      liveRegion: liveRegion,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
@@ -69,12 +76,17 @@ class VideoEditorToolbarChip extends StatelessWidget {
                       size: 16,
                     ),
                     Flexible(
-                      child: Text(
-                        label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: VineTheme.labelLargeFont(
-                          color: context.vineColors.primaryText,
+                      // Capped like the editor's other chips, so a large
+                      // system font does not push the toolbar buttons out.
+                      child: MediaQuery.withClampedTextScaling(
+                        maxScaleFactor: chipLabelTextScaleLimit,
+                        child: Text(
+                          label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: VineTheme.labelLargeFont(
+                            color: context.vineColors.primaryText,
+                          ),
                         ),
                       ),
                     ),

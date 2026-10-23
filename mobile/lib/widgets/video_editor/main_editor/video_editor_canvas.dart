@@ -71,6 +71,7 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_cut_area_
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_feed_preview_overlay.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_setup_loading_indicator.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_text_wrap_hint.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/tune_set_timeline_ops.dart';
 import 'package:openvine/widgets/video_editor/video_editor_widget_layer_loader.dart';
@@ -2730,9 +2731,17 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         BlocListener<TimelineOverlayBloc, TimelineOverlayState>(
           listenWhen: (previous, current) =>
               previous.selectedItemId != current.selectedItemId,
-          listener: (context, state) => context
-              .read<TextWrapHintCubit>()
-              .layerSelected(state.selectedItemId),
+          listener: (context, state) {
+            final selectedId = state.selectedItemId;
+            final selected = selectedId == null
+                ? null
+                : scope.editor?.activeLayers
+                      .where((layer) => layer.id == selectedId)
+                      .firstOrNull;
+            context.read<TextWrapHintCubit>().layerSelected(
+              textWrapHintLayerIdOf(selected),
+            );
+          },
         ),
         BlocListener<VideoEditorEffectsCubit, VideoEditorEffectsState>(
           listenWhen: (previous, current) => !listEquals(
@@ -3524,12 +3533,10 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                   }
                   // A text the user is sizing may now wrap at the video
                   // edges; the toolbar offers to let it run past them.
-                  final isKeptText =
-                      removed is TextLayer &&
-                      captionCueIdOf(removed) == null &&
-                      !bloc.state.isLayerOverRemoveArea;
                   context.read<TextWrapHintCubit>().layerTransformed(
-                    isKeptText ? removed.id : null,
+                    bloc.state.isLayerOverRemoveArea
+                        ? null
+                        : textWrapHintLayerIdOf(removed),
                   );
                   _selectedLayer = null;
                 }
