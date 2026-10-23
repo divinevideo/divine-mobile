@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:analytics/analytics.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _RecordingSink implements AnalyticsEventSink {
   final events = <({String name, Map<String, Object> parameters})>[];
@@ -169,11 +170,19 @@ void main() {
     test(
       'sink failure is best effort and does not prevent a later open',
       () async {
+        final logs = LogCaptureService();
+        await logs.clearAllLogs();
         sink.fail = true;
         await tracker.opened(
           notificationType: 'mention',
           source: NotificationOpenSource.osBackground,
           deduplicationKey: 'retryable-delivery',
+        );
+        expect(
+          logs
+              .getRecentLogs(minLevel: LogLevel.warning)
+              .map((entry) => entry.name),
+          contains('NotificationAnalyticsTracker'),
         );
         sink.fail = false;
         await tracker.opened(

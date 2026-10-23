@@ -257,8 +257,13 @@ Future<void> routeNotificationTap({
               deduplicationKey: messageId ?? eventId,
             ),
       );
-    } on Object {
+    } on Object catch (error) {
       // The account container may have been disposed since the tap arrived.
+      Log.warning(
+        'Skipped notification open analytics: $error',
+        name: 'PushNotifications',
+        category: LogCategory.system,
+      );
     }
   });
   final (:target, :targetEventId, :videoCoordinate) = pushNotificationTapTarget(

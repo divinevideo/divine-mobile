@@ -2,6 +2,7 @@
 // ABOUTME: Deduplicates callbacks locally without exporting delivery identifiers.
 
 import 'package:analytics/src/analytics_event_sink.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// The callback that observed an actual tap, rather than message receipt.
 enum NotificationOpenSource {
@@ -86,8 +87,13 @@ class NotificationAnalyticsTracker {
         },
       );
       recorded = true;
-    } on Object {
+    } on Object catch (error) {
       // Analytics failure must never affect the notification's destination.
+      Log.warning(
+        'Notification open analytics failed: $error',
+        name: 'NotificationAnalyticsTracker',
+        category: LogCategory.system,
+      );
     } finally {
       if (!recorded && key != null && identical(_seen[key], reservation)) {
         _seen.remove(key);
