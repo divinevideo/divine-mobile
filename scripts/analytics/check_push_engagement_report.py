@@ -8,8 +8,8 @@ sql = report.read_text()
 prefix, rest = sql.split('-- BEGIN GA4 SOURCE', 1)
 _, suffix = rest.split('-- END GA4 SOURCE', 1)
 prefix = prefix.replace(
-    "DATE_SUB(CURRENT_DATE('UTC'), INTERVAL 30 DAY)", "DATE '2026-10-01'"
-).replace("DATE_SUB(CURRENT_DATE('UTC'), INTERVAL 3 DAY)", "DATE '2026-10-01'")
+    "DATE_SUB(CURRENT_DATE('UTC'), INTERVAL 31 DAY)", "DATE '2026-10-01'"
+).replace("DATE_SUB(CURRENT_DATE('UTC'), INTERVAL 4 DAY)", "DATE '2026-10-01'")
 rows = [
     ('a', 1, 2, '12:00:00', 'session_start', 0, None),
     ('a', 1, 2, '12:00:10', 'user_engagement', 10000, None),

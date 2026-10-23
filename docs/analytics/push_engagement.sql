@@ -1,7 +1,8 @@
 -- Descriptive notification attribution and return-use trends. No experiment.
 -- Closed daily exports only; timestamps and report dates are UTC.
-DECLARE start_date DATE DEFAULT DATE_SUB(CURRENT_DATE('UTC'), INTERVAL 30 DAY);
-DECLARE end_date DATE DEFAULT DATE_SUB(CURRENT_DATE('UTC'), INTERVAL 3 DAY);
+DECLARE start_date DATE DEFAULT DATE_SUB(CURRENT_DATE('UTC'), INTERVAL 31 DAY);
+-- end_date + 1 is observed too, so it also needs GA4's 72-hour late-event window.
+DECLARE end_date DATE DEFAULT DATE_SUB(CURRENT_DATE('UTC'), INTERVAL 4 DAY);
 ASSERT start_date <= end_date AS 'start_date must not exceed end_date';
 ASSERT DATE_DIFF(end_date, start_date, DAY) < 90 AS 'report window must be under 90 days';
 
