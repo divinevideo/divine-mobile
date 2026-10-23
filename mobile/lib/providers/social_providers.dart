@@ -14,6 +14,7 @@ import 'package:follow_repository/follow_repository.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/providers/account_preferences_provider.dart';
+import 'package:openvine/notifications/providers/announcement_providers.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_version_provider.dart';
@@ -916,6 +917,12 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
             () => deleteUserData
                 ? db.dmReactionsDao.deleteAllForOwner(userPubkey)
                 : db.dmReactionsDao.deleteNonRetryableForOwner(userPubkey),
+          );
+        }
+        if (userPubkey != null) {
+          await requiredCleanup(
+            'announcements',
+            () => ref.read(announcementOwnerCleanupProvider)(userPubkey),
           );
         }
         // Scoped to the leaving account so a switch does not wipe the other

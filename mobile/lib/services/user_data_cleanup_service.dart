@@ -15,6 +15,7 @@ import 'package:openvine/constants/terms_acceptance_keys.dart';
 import 'package:openvine/features/appearance/repositories/appearance_repository.dart';
 import 'package:openvine/features/hashtag_follows/data/shared_preferences_hashtag_subscription_store.dart';
 import 'package:openvine/models/known_account.dart';
+import 'package:openvine/notifications/services/announcement_store.dart';
 import 'package:openvine/services/account_label_service.dart';
 import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/age_verification_service.dart';
@@ -282,6 +283,7 @@ class UserDataCleanupService {
   /// families during identity changes because their scope prevents cross-user
   /// leakage. Targeted destructive removal uses each owner's key helper.
   static const List<String> identityChangePrefixes = [
+    SharedPreferencesAnnouncementStore.storagePrefix,
     CuratedListRecoveryJournal.storagePrefix,
     CuratedListRecoveryStorage.quarantinePrefix,
     CuratedListRelayEvidence.storagePrefix,

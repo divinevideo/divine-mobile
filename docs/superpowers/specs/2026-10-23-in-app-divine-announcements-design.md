@@ -2,8 +2,8 @@
 
 Date: 2026-10-23
 
-Status: Proposed design for owner review. Product implementation and deployment
-have not started.
+Status: Implementation in progress across divine-mobile and divine-engagement.
+Production provisioning and deployment have not started.
 
 ## Purpose and agreed scope
 
@@ -88,7 +88,8 @@ proposed as `https://announcements.divine.video`. This hostname is a design
 proposal, not a claim that DNS, a route, or a deployment exists.
 
 The public hostname exposes only `GET /v1/announcements` and its corresponding
-`HEAD`. All other paths and methods are rejected; it does not serve admin assets
+`HEAD`, plus an anonymous CORS preflight for conditional reads. All other paths
+and methods are rejected; it does not serve admin assets
 or admin APIs. The staff hostname retains its current Cloudflare Access JWT
 validation. Routing must reject unknown hosts before either app is selected.
 The public host must not become an alternate way to reach staff routes.

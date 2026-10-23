@@ -2,19 +2,23 @@
 // ABOUTME: Pins that disposing the account container stops its REST retries.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
 import 'package:fake_async/fake_async.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as models;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/models/environment_config.dart';
+import 'package:openvine/notifications/providers/announcement_providers.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -99,6 +103,7 @@ void main() {
       NotificationsDao? cacheDao,
       AccountSyncDao? accountDao,
       AccountStateWriteBarrier? writeBarrier,
+      http.Client? announcementClient,
     }) {
       final nostrClient = _MockNostrClient();
       when(() => nostrClient.configuredRelays).thenReturn(<String>[]);
@@ -155,6 +160,11 @@ void main() {
           if (writeBarrier != null)
             accountStateWriteBarrierProvider.overrideWithValue(writeBarrier),
           sharedPreferencesProvider.overrideWithValue(preferences),
+          announcementHttpClientFactoryProvider.overrideWithValue(
+            () =>
+                announcementClient ??
+                MockClient((_) async => http.Response('', 503)),
+          ),
           currentEnvironmentProvider.overrideWithValue(
             EnvironmentConfig.production,
           ),
@@ -223,6 +233,54 @@ void main() {
         );
       }
     });
+    test(
+      'iOS receives platform-targeted announcements over anonymous HTTP',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        addTearDown(() => debugDefaultTargetPlatformOverride = null);
+        final now = DateTime.now().toUtc();
+        final client = MockClient((request) async {
+          expect(
+            request.url.toString(),
+            'https://announcements.divine.video/v1/announcements',
+          );
+          expect(
+            request.headers.keys.map((key) => key.toLowerCase()),
+            isNot(contains('authorization')),
+          );
+          return http.Response(
+            jsonEncode({
+              'schemaVersion': 1,
+              'announcements': [
+                {
+                  'id': '9cf3daa0-d982-47a9-a942-c907c223b8b5',
+                  'title': 'Your profile has a home',
+                  'body': 'Find your website on your profile.',
+                  'publishedAt': now
+                      .subtract(const Duration(minutes: 1))
+                      .toIso8601String(),
+                  'expiresAt': now
+                      .add(const Duration(days: 1))
+                      .toIso8601String(),
+                  'platforms': ['ios'],
+                  'minimumAppVersion': '1.0.0',
+                  'learnMoreUrl': null,
+                },
+              ],
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
+        final container = createContainer(announcementClient: client);
+        final repository = container.read(notificationRepositoryProvider)!;
+        await repository.announcementsRepository!.refresh();
+        expect(
+          repository.announcementsRepository!.items.single.title,
+          'Your profile has a home',
+        );
+      },
+    );
 
     // An in-place account switch disposes the outgoing container while its
     // notification enrichment is still waiting on the REST API (#10291).

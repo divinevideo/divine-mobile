@@ -77,8 +77,7 @@ void main() {
     final announcement = item('current', 'Current announcement');
     when(() => repository.announcementsRepository).thenReturn(announcements);
     when(() => announcements.items).thenReturn(const []);
-    when(() => announcements.watchSnapshot())
-        .thenAnswer((_) => snapshots.stream);
+    when(announcements.watchSnapshot).thenAnswer((_) => snapshots.stream);
     final router = GoRouter(
       initialLocation: AnnouncementDetailScreen.pathForId('current'),
       routes: announcementRoutes(),
@@ -114,7 +113,7 @@ void main() {
     final repository = _MockNotificationRepository();
     when(() => repository.announcementsRepository).thenReturn(announcements);
     when(() => announcements.items).thenReturn([first, second]);
-    when(() => announcements.watchSnapshot()).thenAnswer(
+    when(announcements.watchSnapshot).thenAnswer(
       (_) => const Stream<List<AnnouncementNotification>>.empty(),
     );
     final router = GoRouter(
