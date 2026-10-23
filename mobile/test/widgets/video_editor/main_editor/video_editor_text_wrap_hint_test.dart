@@ -30,8 +30,8 @@ void main() {
       addTearDown(cubit.close);
     });
 
-    /// Shows the hint for [layer], whose wrapped layout the editor reports
-    /// as [wrapsAtEdges]; a [pinned] hint stands for a timeline selection.
+    /// Shows the hint for [layer]; [wrapsAtEdges] is whether the edges wrap
+    /// it with wrapping on. A [pinned] hint stands for a timeline selection.
     Future<void> pumpHint(
       WidgetTester tester,
       TextLayer layer, {
@@ -39,7 +39,14 @@ void main() {
       bool pinned = true,
     }) async {
       when(() => editor.activeLayers).thenReturn([layer]);
-      when(() => editor.textLayerWrapsAtBounds(any())).thenReturn(wrapsAtEdges);
+      // Like pro_image_editor, a layer that does not wrap never reports that
+      // the edges wrap it, so the hint has to measure it with wrapping on.
+      when(() => editor.textLayerWrapsAtBounds(any())).thenAnswer(
+        (invocation) =>
+            wrapsAtEdges &&
+            (invocation.positionalArguments.single as TextLayer)
+                .wrapAtLayerBounds,
+      );
       if (pinned) {
         cubit.layerSelected(layer.id);
       } else {
