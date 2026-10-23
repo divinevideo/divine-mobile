@@ -7,6 +7,7 @@ import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/video_loops/video_loops_cubit.dart';
 import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/models/view_traffic_source.dart'
     show ViewTrafficSource;
@@ -28,6 +29,7 @@ class DivineVideoMetricsTracker extends ConsumerStatefulWidget {
     this.position = 0,
     this.trafficSource = ViewTrafficSource.unknown,
     this.sourceDetail,
+    this.loopCounts,
     @visibleForTesting DateTime Function()? clock,
     super.key,
   }) : _clock = clock ?? DateTime.now;
@@ -56,6 +58,9 @@ class DivineVideoMetricsTracker extends ConsumerStatefulWidget {
   final Widget child;
   final ViewTrafficSource trafficSource;
   final String? sourceDetail;
+
+  /// Shared with the overlay; omitted by hosts without a public loop count.
+  final VideoLoopsCubit? loopCounts;
   final DateTime Function() _clock;
 
   @override
@@ -79,6 +84,7 @@ class _DivineVideoMetricsTrackerState
   bool _hasRecordedImpression = false;
   bool _hasRecordedProductImpression = false;
   Timer? _productImpressionTimer;
+  Timer? _watchUpdateTimer;
 
   /// Mount time, kept for the seen-impression's elapsed-since-active gate.
   DateTime? _mountedAt;
@@ -169,6 +175,13 @@ class _DivineVideoMetricsTrackerState
       // against it rather than dropped (#7243).
     }
 
+    if (controllerChanged && !videoChanged && !becameInactive) {
+      _flushSegment(
+        oldWidget.video,
+        productEndReason: ProductAnalyticsV2PlaybackEndReason.navigation,
+      );
+      _lastPosition = null;
+    }
     if (controllerChanged || videoChanged || becameInactive) {
       unawaited(_stateSubscription?.cancel());
       _stateSubscription = null;
@@ -217,7 +230,7 @@ class _DivineVideoMetricsTrackerState
   }
 
   void _handleState(DivineVideoPlayerState state) {
-    if (!widget.isActive) return;
+    if (!_isTracking) return;
 
     final now = widget._clock();
     final position = state.position;
@@ -228,9 +241,17 @@ class _DivineVideoMetricsTrackerState
       _isPlaying = true;
       _playIntervalStartedAt = now;
       _onPlaybackStarted();
+      widget.loopCounts?.setActive(true);
+      _watchUpdateTimer ??= Timer.periodic(
+        const Duration(seconds: 15),
+        (_) => _reportWhilePlaying(),
+      );
       _productPlaybackSessionId ??= const Uuid().v4();
     } else if (!state.isPlaying && _isPlaying) {
-      _closePlayInterval(now);
+      _closePlayInterval(
+        now,
+        suspendUpdates: state.status != PlaybackStatus.buffering,
+      );
       _recordProductPlayback(
         widget.video,
         duration > Duration.zero ? duration : _lastKnownDuration,
@@ -240,20 +261,26 @@ class _DivineVideoMetricsTrackerState
           _ => ProductAnalyticsV2PlaybackEndReason.paused,
         },
       );
+    } else if (!state.isPlaying && state.status != PlaybackStatus.buffering) {
+      // A pause/error may follow buffering, when watch time is already closed
+      // but the loop position and reporting timer are still retained.
+      _closePlayInterval(now);
     }
 
     // Count completed loops via position wrap-around. Only meaningful once a
     // session has started; a stale pre-session position must not fabricate
     // one.
-    if (_hasStartedPlayback &&
+    if (state.isPlaying &&
+        _hasStartedPlayback &&
         _lastPosition != null &&
         position < _lastPosition! &&
         position < const Duration(seconds: 1) &&
         duration > Duration.zero &&
         _lastPosition!.inMilliseconds > duration.inMilliseconds - 1000) {
       _wrapsTotal += 1;
+      widget.loopCounts?.loopCompleted();
     }
-    _lastPosition = position;
+    if (state.isPlaying) _lastPosition = position;
   }
 
   /// The view is counted here: one start-phase event, fired at the first
@@ -289,13 +316,31 @@ class _DivineVideoMetricsTrackerState
     );
   }
 
-  void _closePlayInterval(DateTime now) {
+  void _closePlayInterval(DateTime now, {bool suspendUpdates = true}) {
     final startedAt = _playIntervalStartedAt;
     if (startedAt != null) {
       _watchTotal += now.difference(startedAt);
       _playIntervalStartedAt = null;
     }
     _isPlaying = false;
+    // Seek-based native looping buffers briefly at the start of each lap.
+    // Keep its wrap position and reporting cadence across that interruption.
+    if (!suspendUpdates) return;
+    _lastPosition = null;
+    _watchUpdateTimer?.cancel();
+    _watchUpdateTimer = null;
+    widget.loopCounts?.setActive(false);
+  }
+
+  /// Reports a delta without ending playback or the product analytics session.
+  void _reportWhilePlaying() {
+    if (!_isTracking || !_isPlaying) return;
+    final now = widget._clock();
+    final startedAt = _playIntervalStartedAt;
+    if (startedAt != null) _watchTotal += now.difference(startedAt);
+    _playIntervalStartedAt = now;
+    _reportWatchSegment(widget.video, _lastKnownDuration);
+    unawaited(widget.loopCounts?.refresh());
   }
 
   /// Flush the watch/loop delta since the last flush as an end-phase event.
@@ -320,6 +365,10 @@ class _DivineVideoMetricsTrackerState
     _recordSeen(video, totalDuration);
     _recordProductPlayback(video, totalDuration, productEndReason);
 
+    _reportWatchSegment(video, totalDuration);
+  }
+
+  void _reportWatchSegment(VideoEvent video, Duration? totalDuration) {
     if (!_hasStartedPlayback) return;
 
     // Both figures are derived from the session totals and only then split

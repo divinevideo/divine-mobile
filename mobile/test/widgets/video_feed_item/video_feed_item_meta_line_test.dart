@@ -12,6 +12,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
+import 'package:openvine/blocs/video_loops/video_loops_cubit.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -25,6 +26,7 @@ import 'package:openvine/widgets/special_profile_checkmark.dart';
 import 'package:openvine/widgets/video_feed_item/video_feed_item.dart';
 import 'package:reposts_repository/reposts_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 import '../../helpers/test_provider_overrides.dart';
 
@@ -68,6 +70,8 @@ VideoEvent _video({
   );
 }
 
+class _MockVideosRepository extends Mock implements VideosRepository {}
+
 void main() {
   late _MockVideoInteractionsBloc mockInteractionsBloc;
   late _MockRepostsRepository mockRepostsRepository;
@@ -109,6 +113,7 @@ void main() {
     SharedPreferences? prefs,
     void Function()? onAuthorStatsLookup,
     Locale? locale,
+    VideoLoopsCubit? loopCounts,
   }) async {
     await tester.pumpWidget(
       testProviderScope(
@@ -140,11 +145,20 @@ void main() {
           home: Scaffold(
             body: BlocProvider<VideoInteractionsBloc>.value(
               value: mockInteractionsBloc,
-              child: VideoOverlayActions(
-                video: video,
-                isVisible: true,
-                isActive: true,
-              ),
+              child: loopCounts == null
+                  ? VideoOverlayActions(
+                      video: video,
+                      isVisible: true,
+                      isActive: true,
+                    )
+                  : BlocProvider<VideoLoopsCubit>.value(
+                      value: loopCounts,
+                      child: VideoOverlayActions(
+                        video: video,
+                        isVisible: true,
+                        isActive: true,
+                      ),
+                    ),
             ),
           ),
         ),
@@ -169,6 +183,36 @@ void main() {
           .videoOverlayTotalLoopsScope(StringUtils.formatCompactNumber(count));
 
   group('video card meta line', () {
+    testWidgets('updates the visible loop count without replacing the video', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showVideoLoopsKey: true,
+        StatsVisibilityPreferences.showTotalLoopsKey: false,
+        StatsVisibilityPreferences.showPublishedDateKey: false,
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final video = _video(rawTags: const {'views': '1'});
+      final repository = _MockVideosRepository();
+      when(() => repository.fetchLoopCount(video)).thenAnswer((_) async => 1);
+      final counts = VideoLoopsCubit(
+        video: video,
+        videosRepository: repository,
+      );
+      addTearDown(counts.close);
+      counts.setActive(true);
+      await pump(tester, video: video, prefs: prefs, loopCounts: counts);
+      expect(_metaLine(tester), '1 loop');
+      counts.loopCompleted();
+      expect(counts.state.count, 2);
+      await tester.pumpAndSettle();
+      expect(_metaLine(tester), '2 loops');
+      when(() => repository.fetchLoopCount(video)).thenAnswer((_) async => 8);
+      await counts.refresh();
+      await tester.pumpAndSettle();
+      expect(_metaLine(tester), '8 loops');
+    });
+
     testWidgets('shows all enabled details on one line under the username', (
       tester,
     ) async {

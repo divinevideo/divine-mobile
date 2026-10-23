@@ -11,6 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/video_loops/video_loops_cubit.dart';
 import 'package:openvine/generated/product_analytics.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/providers/analytics_providers.dart';
@@ -20,6 +21,9 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/widgets/divine_video_metrics_tracker.dart';
+import 'package:videos_repository/videos_repository.dart';
+
+class _MockVideosRepository extends Mock implements VideosRepository {}
 
 class _MockAuthService extends Mock implements AuthService {}
 
@@ -288,6 +292,161 @@ void main() {
 
       await controller.close();
     });
+
+    testWidgets(
+      'increments completed loops and refreshes only while visible and playing',
+      (tester) async {
+        final controller = _stubController(
+          isPlaying: true,
+          duration: const Duration(seconds: 6),
+        );
+        final repository = _MockVideosRepository();
+        when(() => repository.fetchLoopCount(_video))
+            .thenAnswer((_) async => 10);
+        final counts = VideoLoopsCubit(
+          video: _video,
+          videosRepository: repository,
+        );
+        addTearDown(counts.close);
+        final active = ValueNotifier(true);
+        final visible = ValueNotifier(true);
+        final video = ValueNotifier(_video);
+        addTearDown(active.dispose);
+        addTearDown(visible.dispose);
+        addTearDown(video.dispose);
+        await tester.pumpWidget(
+          _buildTrackerHarness(
+            authService: authService,
+            analyticsService: analyticsService,
+            seenVideosService: seenVideosService,
+            controller: controller.controller,
+            video: video,
+            isActive: active,
+            isFeedVisible: visible,
+            clock: () => now,
+            loopCounts: counts,
+          ),
+        );
+        await tester.pump();
+        expect(counts.state.count, 10);
+        controller.setState(
+          const DivineVideoPlayerState(
+            status: PlaybackStatus.playing,
+            duration: Duration(seconds: 6),
+            position: Duration(milliseconds: 5700),
+          ),
+        );
+        await tester.pump();
+        // Native seek-based looping can buffer at the wrap boundary.
+        controller.setState(
+          const DivineVideoPlayerState(
+            status: PlaybackStatus.buffering,
+            duration: Duration(seconds: 6),
+          ),
+        );
+        await tester.pump();
+        controller.setState(
+          const DivineVideoPlayerState(
+            status: PlaybackStatus.playing,
+            duration: Duration(seconds: 6),
+            position: Duration(milliseconds: 100),
+          ),
+        );
+        await tester.pump();
+        expect(counts.state.count, 11);
+        now = now.add(const Duration(seconds: 15));
+        await tester.pump(const Duration(seconds: 15));
+        verify(() => repository.fetchLoopCount(_video)).called(2);
+        visible.value = false;
+        await tester.pump();
+        now = now.add(const Duration(seconds: 30));
+        await tester.pump(const Duration(seconds: 30));
+        verifyNever(() => repository.fetchLoopCount(_video));
+        expect(counts.state.isActive, isFalse);
+        visible.value = true;
+        await tester.pump();
+        controller.setState(
+          const DivineVideoPlayerState(
+            status: PlaybackStatus.playing,
+            duration: Duration(seconds: 6),
+            position: Duration(milliseconds: 5700),
+          ),
+        );
+        await tester.pump();
+        controller.setState(
+          const DivineVideoPlayerState(
+            status: PlaybackStatus.buffering,
+            duration: Duration(seconds: 6),
+          ),
+        );
+        await tester.pump();
+        controller.setState(
+          const DivineVideoPlayerState(
+            status: PlaybackStatus.paused,
+            duration: Duration(seconds: 6),
+          ),
+        );
+        await tester.pump();
+        verify(() => repository.fetchLoopCount(_video)).called(1);
+        now = now.add(const Duration(seconds: 30));
+        await tester.pump(const Duration(seconds: 30));
+        verifyNever(() => repository.fetchLoopCount(_video));
+        expect(counts.state.count, 11);
+        expect(counts.state.isActive, isFalse);
+        controller.setState(
+          const DivineVideoPlayerState(
+            status: PlaybackStatus.playing,
+            duration: Duration(seconds: 6),
+            position: Duration(milliseconds: 100),
+          ),
+        );
+        await tester.pump();
+        expect(counts.state.count, 11);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await controller.close();
+      },
+    );
+
+    testWidgets(
+      'reports watch deltas while still playing, without another view start',
+      (tester) async {
+        final controller = _stubController(
+          isPlaying: true,
+          duration: const Duration(seconds: 6),
+        );
+        await tester.pumpWidget(
+          _buildTracker(
+            authService: authService,
+            analyticsService: analyticsService,
+            seenVideosService: seenVideosService,
+            controller: controller.controller,
+            isActive: true,
+            clock: () => now,
+          ),
+        );
+        now = now.add(const Duration(seconds: 15));
+        await tester.pump(const Duration(seconds: 15));
+        expect(_viewEndEvents(analyticsService), hasLength(1));
+        expect(
+          _viewEndEvents(analyticsService).single.watchDuration,
+          const Duration(seconds: 15),
+        );
+        now = now.add(const Duration(seconds: 15));
+        await tester.pump(const Duration(seconds: 15));
+        expect(_viewEndEvents(analyticsService), hasLength(2));
+        expect(
+          _viewEndEvents(analyticsService).last.watchDuration,
+          const Duration(seconds: 15),
+        );
+        expect(
+          analyticsService.events.where((e) => e.eventType == 'view_start'),
+          hasLength(1),
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        expect(_viewEndEvents(analyticsService), hasLength(2));
+        await controller.close();
+      },
+    );
 
     testWidgets('records one impression after one visible second', (
       tester,
@@ -1135,6 +1294,7 @@ Widget _buildTracker({
   required bool isActive,
   required DateTime Function() clock,
   AnalyticsEventSink? legacyAnalytics,
+  VideoLoopsCubit? loopCounts,
 }) {
   return ProviderScope(
     overrides: [
@@ -1149,6 +1309,7 @@ Widget _buildTracker({
       textDirection: TextDirection.ltr,
       child: DivineVideoMetricsTracker(
         video: _video,
+        loopCounts: loopCounts,
         controller: controller,
         isActive: isActive,
         trafficSource: ViewTrafficSource.home,
@@ -1172,6 +1333,7 @@ Widget _buildTrackerHarness({
   required DateTime Function() clock,
   ValueListenable<bool>? isFeedVisible,
   AnalyticsEventSink? legacyAnalytics,
+  VideoLoopsCubit? loopCounts,
 }) {
   return ProviderScope(
     overrides: [
@@ -1192,6 +1354,7 @@ Widget _buildTrackerHarness({
             valueListenable: isFeedVisible ?? _alwaysFeedVisible,
             builder: (context, feedVisible, _) => DivineVideoMetricsTracker(
               video: currentVideo,
+              loopCounts: loopCounts,
               controller: controller,
               isActive: active,
               isFeedVisible: feedVisible,

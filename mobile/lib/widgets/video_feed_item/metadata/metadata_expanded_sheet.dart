@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
+import 'package:openvine/blocs/video_loops/video_loops_cubit.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -51,6 +52,7 @@ class MetadataExpandedSheet extends StatelessWidget {
   /// relay. The cubit is scoped to the modal and auto-closed on dismiss.
   static Future<void> show(BuildContext context, VideoEvent video) {
     final interactionsBloc = context.read<VideoInteractionsBloc>();
+    final loopCounts = context.read<VideoLoopsCubit?>();
     final container = ProviderScope.containerOf(context, listen: false);
     final repostsRepository = container.read(repostsRepositoryProvider);
 
@@ -60,6 +62,8 @@ class MetadataExpandedSheet extends StatelessWidget {
       buildScrollBody: (scrollController) => MultiBlocProvider(
         providers: [
           BlocProvider<VideoInteractionsBloc>.value(value: interactionsBloc),
+          if (loopCounts != null)
+            BlocProvider<VideoLoopsCubit>.value(value: loopCounts),
           BlocProvider<VideoRepostersCubit>(
             create: (_) => VideoRepostersCubit(
               repostsRepository: repostsRepository,
