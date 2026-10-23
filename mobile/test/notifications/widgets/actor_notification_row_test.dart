@@ -113,6 +113,39 @@ void main() {
       },
     );
 
+    testWidgets(
+      'labels the grouped avatar stack with the profile it opens',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        await _pump(
+          tester,
+          notification: ActorNotification(
+            id: 'grouped-like',
+            type: NotificationKind.likeComment,
+            actor: _alice,
+            additionalActors: const [
+              ActorInfo(
+                pubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+                displayName: 'Bob',
+              ),
+            ],
+            timestamp: DateTime.now(),
+          ),
+        );
+        expect(
+          find.bySemanticsLabel(
+            _l10n.notificationsViewProfileSemanticLabel(_alice.displayName),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel(_l10n.notificationsViewProfilesSemanticLabel),
+          findsNothing,
+        );
+        handle.dispose();
+      },
+    );
+
     for (final (locale, expected) in [
       (
         const Locale('es'),

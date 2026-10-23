@@ -130,7 +130,11 @@ class _NotificationContent extends StatelessWidget {
             if (notification.additionalActors.isNotEmpty)
               Semantics(
                 button: true,
-                label: l10n.notificationsViewProfilesSemanticLabel,
+                // The stack opens the lead actor's profile, not a list of
+                // everyone in the group, so it is labelled as that one profile.
+                label: l10n.notificationsViewProfileSemanticLabel(
+                  notification.actor.displayName,
+                ),
                 child: GestureDetector(
                   onTap: onProfileTap,
                   child: NotificationAvatarStack(
