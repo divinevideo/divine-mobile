@@ -3306,7 +3306,7 @@
   "inboxRemoveConfirmConfirm": "తీసివేయి",
   "inboxActionLeaveGroup": "గ్రూప్ నుండి నిష్క్రమించండి",
   "inboxLeaveGroupConfirmTitle": "గ్రూప్ నుండి నిష్క్రమించాలా?",
-  "inboxLeaveGroupConfirmBody": "ఇది మీ ఇన్‌బాక్స్ నుండి తొలగిపోతుంది, కొత్త మెసేజ్‌లు దీన్ని తిరిగి తీసుకురావు. మళ్లీ చేరడానికి ఇందులో మళ్లీ రాయండి. ఇతరులకు తెలియజేయబడదు.",
+  "inboxLeaveGroupConfirmBody": "ఇది మీ ఇన్‌బాక్స్ నుండి తొలగిపోతుంది, కొత్త సందేశాలు దీన్ని తిరిగి తీసుకురావు. మళ్లీ చేరడానికి ఇందులో మళ్లీ రాయండి. ఇతరులకు తెలియజేయబడదు.",
   "inboxLeaveGroupConfirmConfirm": "నిష్క్రమించు",
   "inboxLeftGroup": "గ్రూప్ నుండి నిష్క్రమించారు",
   "inboxCollabInviteCardTitle": "సహకారి ఆహ్వానం",

@@ -5771,7 +5771,7 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get dmBlockedGroupThreadBody =>
-      'Mesej kekal di sini supaya anda boleh membacanya atau mengambil tangkap layar. Nyahsekat melalui profil mereka untuk membalas.';
+      'Mesej kekal di sini supaya anda boleh membacanya atau mengambil tangkapan skrin. Nyahsekat melalui profil mereka untuk membalas.';
 
   @override
   String dmBlockedGroupMembersBannerBody(int count) {

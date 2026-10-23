@@ -14523,7 +14523,7 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get inboxLeaveGroupConfirmBody =>
-      'ఇది మీ ఇన్‌బాక్స్ నుండి తొలగిపోతుంది, కొత్త మెసేజ్‌లు దీన్ని తిరిగి తీసుకురావు. మళ్లీ చేరడానికి ఇందులో మళ్లీ రాయండి. ఇతరులకు తెలియజేయబడదు.';
+      'ఇది మీ ఇన్‌బాక్స్ నుండి తొలగిపోతుంది, కొత్త సందేశాలు దీన్ని తిరిగి తీసుకురావు. మళ్లీ చేరడానికి ఇందులో మళ్లీ రాయండి. ఇతరులకు తెలియజేయబడదు.';
 
   @override
   String get inboxLeaveGroupConfirmConfirm => 'నిష్క్రమించు';
