@@ -160,7 +160,7 @@ class _MonetizationLinksSettingsViewState
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Center(
-                    child: CircularProgressIndicator(
+                    child: DivineCircularProgressIndicator(
                       semanticsLabel: context.l10n.commonLoading,
                     ),
                   ),
