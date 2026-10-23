@@ -16,6 +16,11 @@ const List<LayerMaskShape> editorMaskShapes = [
   LayerMaskShape.ellipse,
   LayerMaskShape.rectangle,
   LayerMaskShape.heart,
+  LayerMaskShape.star,
+  LayerMaskShape.triangle,
+  LayerMaskShape.diamond,
+  LayerMaskShape.hexagon,
+  LayerMaskShape.speechBubble,
   LayerMaskShape.linear,
 ];
 
@@ -104,9 +109,15 @@ LayerMask transferEditorMask(
 /// Switching from [previous] keeps where it is, how far it is turned, how
 /// soft its edge is and whether it is inverted, and its size between the
 /// shapes that have one, made smaller if the new shape, turned like that,
-/// would reach off the item. A new circle or heart is round on screen, two
-/// thirds of the item's shorter side across; a new rectangle covers most of
-/// the item, with rounded corners.
+/// would reach off the item. A shape other than a rectangle that was never
+/// stretched out of its own proportions takes those of the new shape
+/// instead, as long on its longer side, so a circle switched to a hexagon
+/// becomes a regular one.
+///
+/// A new shape has its own proportions on screen, two thirds of the item's
+/// shorter side along its longer side: a circle, a heart, a star, a diamond
+/// and a bubble as wide as high, a triangle equilateral and a hexagon
+/// regular. A new rectangle covers most of the item, with rounded corners.
 LayerMask editorMaskForShape(
   LayerMaskShape shape, {
   required Size boxSize,
@@ -119,7 +130,9 @@ LayerMask editorMaskForShape(
   final mask = LayerMask(
     shape: shape,
     center: previous?.center ?? const Offset(0.5, 0.5),
-    size: keepsSize ? previous.size : _defaultSize(shape, boxSize),
+    size: keepsSize
+        ? _switchedSize(previous, shape, boxSize)
+        : _defaultSize(shape, boxSize),
     rotation: previous?.rotation ?? 0,
     feather:
         previous?.feather ??
@@ -135,9 +148,43 @@ LayerMask editorMaskForShape(
 Size _defaultSize(LayerMaskShape shape, Size boxSize) {
   if (shape == LayerMaskShape.rectangle) return const Size(0.8, 0.8);
   if (boxSize.isEmpty) return const Size(0.6, 0.6);
-  final side = boxSize.shortestSide * 2 / 3;
-  return Size(side / boxSize.width, side / boxSize.height);
+  return _proportionalSize(shape, boxSize.shortestSide * 2 / 3, boxSize);
 }
+
+/// The size [previous] passes on to a mask of [shape] switched to from it.
+Size _switchedSize(LayerMask previous, LayerMaskShape shape, Size boxSize) {
+  if (boxSize.isEmpty) return previous.size;
+  final width = previous.size.width * boxSize.width;
+  final height = previous.size.height * boxSize.height;
+  final proportions = _aspectRatio(previous.shape);
+  // A rectangle has no proportions of its own: a new one fills most of the
+  // item, whatever the item's shape.
+  if (previous.shape == LayerMaskShape.rectangle ||
+      height <= 0 ||
+      ((width / height) - proportions).abs() > proportions * 1e-6) {
+    return previous.size;
+  }
+  return _proportionalSize(shape, math.max(width, height), boxSize);
+}
+
+/// A size of [shape] in its own proportions on a box of [boxSize], [longer]
+/// pixels along its longer side.
+Size _proportionalSize(LayerMaskShape shape, double longer, Size boxSize) {
+  final aspectRatio = _aspectRatio(shape);
+  final width = aspectRatio >= 1 ? longer : longer * aspectRatio;
+  return Size(
+    width / boxSize.width,
+    width / aspectRatio / boxSize.height,
+  );
+}
+
+/// How much wider than high [shape] is in its own proportions: an
+/// equilateral triangle, a regular hexagon, and the rest as wide as high.
+double _aspectRatio(LayerMaskShape shape) => switch (shape) {
+  LayerMaskShape.triangle => 2 / math.sqrt(3),
+  LayerMaskShape.hexagon => math.sqrt(3) / 2,
+  _ => 1,
+};
 
 /// [size] kept within [editorMaskMinSize] and [editorMaskMaxSize] on both
 /// sides.
@@ -245,8 +292,8 @@ Size _halfReach(LayerMask mask, Size boxSize) {
           math.sqrt(math.pow(width * cos, 2) + math.pow(height * sin, 2)),
           math.sqrt(math.pow(width * sin, 2) + math.pow(height * cos, 2)),
         )
-      // The bounds of the box the shape fills, which a heart or a rounded
-      // rectangle never reaches past.
+      // The bounds of the box the shape fills, which no other shape reaches
+      // past: each fills its box, and only an ellipse is measured exactly.
       : (width * cos + height * sin, width * sin + height * cos);
   return Size(x / boxSize.width, y / boxSize.height);
 }

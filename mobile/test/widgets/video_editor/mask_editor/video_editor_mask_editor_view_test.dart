@@ -252,9 +252,48 @@ void main() {
         expect(find.text(l10n.videoEditorShapeMaskCornersLabel), findsOne);
 
         await tester.tap(find.bySemanticsLabel(l10n.videoEditorShapeMaskHeart));
-        await tester.pump();
+        await tester.pumpAndSettle();
 
         expect(find.text(l10n.videoEditorShapeMaskCornersLabel), findsNothing);
+        expect(find.text(l10n.videoEditorShapeMaskSoftnessLabel), findsOne);
+      });
+
+      testWidgets('fits the panel to its sliders, leaving no room above them', (
+        tester,
+      ) async {
+        final panel = find.byWidgetPredicate(
+          (widget) =>
+              widget is SingleChildScrollView &&
+              widget.scrollDirection == Axis.vertical,
+        );
+        final insets = <double>[];
+        for (final mask in [
+          null,
+          const LayerMask(shape: LayerMaskShape.ellipse),
+          const LayerMask(shape: LayerMaskShape.rectangle),
+        ]) {
+          // A fresh editor each time: one keeps the mask it opened with.
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pumpWidget(buildEditor(initialMask: mask));
+          await tester.pumpAndSettle();
+
+          final content = find
+              .descendant(of: panel, matching: find.byType(Column))
+              .first;
+          final scrollable = tester.state<ScrollableState>(
+            find.descendant(of: panel, matching: find.byType(Scrollable)).first,
+          );
+          expect(
+            tester.getSize(panel).height,
+            videoEditorMaskPanelHeight(mask),
+          );
+          expect(scrollable.position.maxScrollExtent, 0, reason: '$mask');
+          insets.add(
+            tester.getTopLeft(content).dy - tester.getTopLeft(panel).dy,
+          );
+        }
+
+        expect(insets.toSet(), hasLength(1));
       });
 
       testWidgets('offers no sliders without a mask', (tester) async {

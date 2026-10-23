@@ -9138,6 +9138,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorShapeMaskHeart => 'ハート';
 
   @override
+  String get videoEditorShapeMaskStar => '星';
+
+  @override
+  String get videoEditorShapeMaskTriangle => '三角形';
+
+  @override
+  String get videoEditorShapeMaskDiamond => 'ひし形';
+
+  @override
+  String get videoEditorShapeMaskHexagon => '六角形';
+
+  @override
+  String get videoEditorShapeMaskSpeechBubble => '吹き出し';
+
+  @override
   String get videoEditorShapeMaskLinear => '線形';
 
   @override

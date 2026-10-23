@@ -9800,6 +9800,21 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorShapeMaskHeart => 'Serce';
 
   @override
+  String get videoEditorShapeMaskStar => 'Gwiazda';
+
+  @override
+  String get videoEditorShapeMaskTriangle => 'Trójkąt';
+
+  @override
+  String get videoEditorShapeMaskDiamond => 'Romb';
+
+  @override
+  String get videoEditorShapeMaskHexagon => 'Sześciokąt';
+
+  @override
+  String get videoEditorShapeMaskSpeechBubble => 'Dymek';
+
+  @override
   String get videoEditorShapeMaskLinear => 'Liniowa';
 
   @override

@@ -9678,6 +9678,21 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorShapeMaskHeart => 'Puso';
 
   @override
+  String get videoEditorShapeMaskStar => 'Bituin';
+
+  @override
+  String get videoEditorShapeMaskTriangle => 'Tatsulok';
+
+  @override
+  String get videoEditorShapeMaskDiamond => 'Diyamante';
+
+  @override
+  String get videoEditorShapeMaskHexagon => 'Heksagono';
+
+  @override
+  String get videoEditorShapeMaskSpeechBubble => 'Lobo';
+
+  @override
   String get videoEditorShapeMaskLinear => 'Linear';
 
   @override

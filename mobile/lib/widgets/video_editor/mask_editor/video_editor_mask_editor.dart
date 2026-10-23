@@ -133,6 +133,10 @@ Future<MaskEditorResult?> _runMaskEditor(
   if (wasPlaying) {
     mainBloc.add(const VideoEditorExternalPauseRequested(isPaused: true));
   }
+  // Set before the editor makes room for the panel, so it makes as much as
+  // the panel takes from the start.
+  final panelHeight = scope.maskPanelHeightNotifier;
+  panelHeight?.value = videoEditorMaskPanelHeight(initialMask);
   mainBloc.add(const VideoEditorMaskEditingChanged(isEditing: true));
 
   // The canvas resizes as the timeline collapses, and the editor rescales
@@ -154,7 +158,12 @@ Future<MaskEditorResult?> _runMaskEditor(
         initialMask: initialMask,
         resolveGeometry: resolveGeometry,
         canvasChanges: canvasChanges,
-        onChanged: onChanged,
+        onChanged: (mask) {
+          // The panel grows or shrinks with the sliders the mask brings, and
+          // the canvas with it.
+          panelHeight?.value = videoEditorMaskPanelHeight(mask);
+          onChanged(mask);
+        },
       ),
       transitionsBuilder: (_, animation, _, child) =>
           FadeTransition(opacity: animation, child: child),

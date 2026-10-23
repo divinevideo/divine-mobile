@@ -25,11 +25,46 @@ const double _handleTouchRadius = 32;
 /// The radius of a drawn resize handle.
 const double _handleRadius = 7;
 
-/// The height of the mask editor's panel, above the bottom safe area.
+/// The space the mask editor's panel leaves above and below what it shows.
+const EdgeInsets _panelPadding = EdgeInsets.only(top: 16, bottom: 12);
+
+/// The space the panel leaves at its sides. The row of shapes scrolls through
+/// it, out to the edges of the screen.
+const double _panelSideInset = 16;
+
+/// The height of the panel's row of shapes: a 52 dp tile, a 6 dp gap and one
+/// 16 dp line of its name.
+const double _shapeRowHeight = 52 + 6 + 16;
+
+/// The height a slider adds to the panel: the slider, as tall as its thumb,
+/// and the gap below it.
+const double _sliderRowHeight = 32 + 8;
+
+/// How long the mask editor's panel takes to grow or shrink when a slider
+/// comes or goes.
+const Duration videoEditorMaskPanelResizeDuration = Duration(
+  milliseconds: 240,
+);
+
+/// The height of the mask editor's panel for [mask], above the bottom safe
+/// area: the shapes along the bottom and, above them, a slider for each
+/// setting [mask] has.
 ///
 /// The editor keeps this much free below the canvas while the mask editor is
 /// open, so the video sits above the panel instead of under it.
-const double videoEditorMaskPanelHeight = 200;
+double videoEditorMaskPanelHeight(LayerMask? mask) {
+  // Every shape has a softness, and a rectangle its corners as well.
+  final sliders = mask == null ? 0 : (_showsCorners(mask) ? 2 : 1);
+  return _panelPadding.vertical + _shapeRowHeight + sliders * _sliderRowHeight;
+}
+
+/// The height of the mask editor's panel with every slider it can show.
+final double videoEditorMaskPanelMaxHeight = videoEditorMaskPanelHeight(
+  const LayerMask(shape: LayerMaskShape.rectangle),
+);
+
+/// Whether the panel offers how round the corners of [mask] are.
+bool _showsCorners(LayerMask? mask) => mask?.shape == LayerMaskShape.rectangle;
 
 /// The mask editor itself.
 ///
@@ -477,12 +512,13 @@ class _MaskEditorToolbar extends StatelessWidget {
   }
 }
 
-/// The shapes, the invert toggle and the sliders for the edge and the
-/// corners.
+/// The shapes and the invert toggle along the bottom, and above them the
+/// sliders for the edge and the corners while they apply.
 ///
 /// It fills the space the editor keeps free below the canvas while the mask
 /// editor is open ([videoEditorMaskPanelHeight]), so the whole video stays
-/// above it, where the shape can be seen and reached.
+/// above it, where the shape can be seen and reached. That space follows
+/// the sliders, so none is left empty above the shapes.
 class _MaskEditorPanel extends StatelessWidget {
   const _MaskEditorPanel({
     required this.mask,
@@ -507,18 +543,49 @@ class _MaskEditorPanel extends StatelessWidget {
       color: colors.surfaceContainerHigh,
       child: SafeArea(
         top: false,
-        child: SizedBox(
-          height: videoEditorMaskPanelHeight,
-          // A large system font can outgrow the fixed height; it scrolls
-          // then rather than overflow.
+        // Grows and shrinks with the sliders it shows, as the space the
+        // editor keeps for it does.
+        child: AnimatedContainer(
+          duration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : videoEditorMaskPanelResizeDuration,
+          curve: Curves.easeInOut,
+          height: videoEditorMaskPanelHeight(mask),
+          // Laid out from the bottom, so the shapes stay at the foot of the
+          // panel and the sliders sit above them. A large system font can
+          // outgrow the height; it scrolls then rather than overflow.
           child: SingleChildScrollView(
-            padding: const .fromLTRB(16, 16, 16, 12),
+            reverse: true,
+            padding: _panelPadding,
             child: Column(
               crossAxisAlignment: .stretch,
-              spacing: 8,
               children: [
+                _MaskSliderReveal(
+                  child: _showsCorners(mask)
+                      ? _MaskSlider(
+                          label: l10n.videoEditorShapeMaskCornersLabel,
+                          minLabel: l10n.videoEditorShapeMaskCornersSquare,
+                          maxLabel: l10n.videoEditorShapeMaskCornersRound,
+                          value: mask!.cornerRadius,
+                          onChanged: onCornerRadiusChanged,
+                        )
+                      : null,
+                ),
+                _MaskSliderReveal(
+                  child: mask == null
+                      ? null
+                      : _MaskSlider(
+                          label: l10n.videoEditorShapeMaskSoftnessLabel,
+                          minLabel: l10n.videoEditorShapeMaskSoftnessSharp,
+                          maxLabel: l10n.videoEditorShapeMaskSoftnessSoft,
+                          value: mask.feather.clamp(0.0, editorMaskMaxFeather),
+                          max: editorMaskMaxFeather,
+                          onChanged: onFeatherChanged,
+                        ),
+                ),
                 SingleChildScrollView(
                   scrollDirection: .horizontal,
+                  padding: const .symmetric(horizontal: _panelSideInset),
                   child: Row(
                     spacing: 8,
                     children: [
@@ -537,6 +604,12 @@ class _MaskEditorPanel extends StatelessWidget {
                             .ellipse => l10n.videoEditorShapeMaskCircle,
                             .rectangle => l10n.videoEditorShapeMaskRectangle,
                             .heart => l10n.videoEditorShapeMaskHeart,
+                            .star => l10n.videoEditorShapeMaskStar,
+                            .triangle => l10n.videoEditorShapeMaskTriangle,
+                            .diamond => l10n.videoEditorShapeMaskDiamond,
+                            .hexagon => l10n.videoEditorShapeMaskHexagon,
+                            .speechBubble =>
+                              l10n.videoEditorShapeMaskSpeechBubble,
                             .linear => l10n.videoEditorShapeMaskLinear,
                           },
                           selected: mask?.shape == shape,
@@ -562,28 +635,44 @@ class _MaskEditorPanel extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (mask != null)
-                  _MaskSlider(
-                    label: l10n.videoEditorShapeMaskSoftnessLabel,
-                    minLabel: l10n.videoEditorShapeMaskSoftnessSharp,
-                    maxLabel: l10n.videoEditorShapeMaskSoftnessSoft,
-                    value: mask.feather.clamp(0.0, editorMaskMaxFeather),
-                    max: editorMaskMaxFeather,
-                    onChanged: onFeatherChanged,
-                  ),
-                if (mask?.shape == LayerMaskShape.rectangle)
-                  _MaskSlider(
-                    label: l10n.videoEditorShapeMaskCornersLabel,
-                    minLabel: l10n.videoEditorShapeMaskCornersSquare,
-                    maxLabel: l10n.videoEditorShapeMaskCornersRound,
-                    value: mask!.cornerRadius,
-                    onChanged: onCornerRadiusChanged,
-                  ),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Shows [child] above the shapes, growing in from nothing as it appears and
+/// shrinking away as it goes; `null` shows nothing.
+class _MaskSliderReveal extends StatelessWidget {
+  const _MaskSliderReveal({required this.child});
+
+  final Widget? child;
+
+  @override
+  Widget build(BuildContext context) {
+    final child = this.child;
+    // Timed like the panel's own height, so the slider fills the room the
+    // panel makes for it.
+    return AnimatedSwitcher(
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : videoEditorMaskPanelResizeDuration,
+      switchInCurve: Curves.easeInOut,
+      switchOutCurve: Curves.easeInOut,
+      transitionBuilder: (child, animation) => SizeTransition(
+        sizeFactor: animation,
+        alignment: Alignment.bottomCenter,
+        child: FadeTransition(opacity: animation, child: child),
+      ),
+      child: child == null
+          ? const SizedBox(width: double.infinity)
+          : Padding(
+              padding: const .fromLTRB(_panelSideInset, 0, _panelSideInset, 8),
+              child: child,
+            ),
     );
   }
 }

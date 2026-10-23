@@ -196,6 +196,9 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   /// The timeline clip mask being changed, which the canvas previews.
   final _liveClipMaskNotifier = ValueNotifier<LiveClipMask?>(null);
 
+  /// How tall the mask editor's panel is, which the canvas makes room for.
+  final _maskPanelHeightNotifier = ValueNotifier<double>(0);
+
   /// The box the preview frame fills, which a clip mask is measured in.
   final _clipFrameTracker = VideoEditorFrameTracker();
 
@@ -429,6 +432,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     _liveVolumeNotifier.dispose();
     _liveEqualizerNotifier.dispose();
     _liveClipMaskNotifier.dispose();
+    _maskPanelHeightNotifier.dispose();
     _previewReleasedNotifier.dispose();
     super.dispose();
   }
@@ -1343,6 +1347,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
               cancelLiveVolumePreview: _cancelLiveVolumePreview,
               liveEqualizerNotifier: _liveEqualizerNotifier,
               liveClipMaskNotifier: _liveClipMaskNotifier,
+              maskPanelHeightNotifier: _maskPanelHeightNotifier,
               clipFrameTracker: _clipFrameTracker,
               previewReleasedNotifier: _previewReleasedNotifier,
               fromLibrary: widget.fromLibrary,

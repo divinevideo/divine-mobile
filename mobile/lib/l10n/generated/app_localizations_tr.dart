@@ -9522,6 +9522,21 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorShapeMaskHeart => 'Kalp';
 
   @override
+  String get videoEditorShapeMaskStar => 'Yıldız';
+
+  @override
+  String get videoEditorShapeMaskTriangle => 'Üçgen';
+
+  @override
+  String get videoEditorShapeMaskDiamond => 'Elmas';
+
+  @override
+  String get videoEditorShapeMaskHexagon => 'Altıgen';
+
+  @override
+  String get videoEditorShapeMaskSpeechBubble => 'Balon';
+
+  @override
   String get videoEditorShapeMaskLinear => 'Doğrusal';
 
   @override

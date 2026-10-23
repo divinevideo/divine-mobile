@@ -9052,6 +9052,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorShapeMaskHeart => '心形';
 
   @override
+  String get videoEditorShapeMaskStar => '星形';
+
+  @override
+  String get videoEditorShapeMaskTriangle => '三角形';
+
+  @override
+  String get videoEditorShapeMaskDiamond => '菱形';
+
+  @override
+  String get videoEditorShapeMaskHexagon => '六边形';
+
+  @override
+  String get videoEditorShapeMaskSpeechBubble => '气泡';
+
+  @override
   String get videoEditorShapeMaskLinear => '线性';
 
   @override

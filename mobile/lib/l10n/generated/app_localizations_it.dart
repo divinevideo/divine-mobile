@@ -9716,6 +9716,21 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorShapeMaskHeart => 'Cuore';
 
   @override
+  String get videoEditorShapeMaskStar => 'Stella';
+
+  @override
+  String get videoEditorShapeMaskTriangle => 'Triangolo';
+
+  @override
+  String get videoEditorShapeMaskDiamond => 'Rombo';
+
+  @override
+  String get videoEditorShapeMaskHexagon => 'Esagono';
+
+  @override
+  String get videoEditorShapeMaskSpeechBubble => 'Nuvoletta';
+
+  @override
   String get videoEditorShapeMaskLinear => 'Lineare';
 
   @override

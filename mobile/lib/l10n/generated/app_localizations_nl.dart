@@ -9645,6 +9645,21 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorShapeMaskHeart => 'Hart';
 
   @override
+  String get videoEditorShapeMaskStar => 'Ster';
+
+  @override
+  String get videoEditorShapeMaskTriangle => 'Driehoek';
+
+  @override
+  String get videoEditorShapeMaskDiamond => 'Ruit';
+
+  @override
+  String get videoEditorShapeMaskHexagon => 'Zeshoek';
+
+  @override
+  String get videoEditorShapeMaskSpeechBubble => 'Ballon';
+
+  @override
   String get videoEditorShapeMaskLinear => 'Lineair';
 
   @override

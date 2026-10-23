@@ -9602,6 +9602,21 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorShapeMaskHeart => 'Hjärta';
 
   @override
+  String get videoEditorShapeMaskStar => 'Stjärna';
+
+  @override
+  String get videoEditorShapeMaskTriangle => 'Triangel';
+
+  @override
+  String get videoEditorShapeMaskDiamond => 'Romb';
+
+  @override
+  String get videoEditorShapeMaskHexagon => 'Hexagon';
+
+  @override
+  String get videoEditorShapeMaskSpeechBubble => 'Pratbubbla';
+
+  @override
   String get videoEditorShapeMaskLinear => 'Linjär';
 
   @override

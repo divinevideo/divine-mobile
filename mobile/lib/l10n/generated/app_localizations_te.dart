@@ -9869,6 +9869,21 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorShapeMaskHeart => 'హృదయం';
 
   @override
+  String get videoEditorShapeMaskStar => 'నక్షత్రం';
+
+  @override
+  String get videoEditorShapeMaskTriangle => 'త్రిభుజం';
+
+  @override
+  String get videoEditorShapeMaskDiamond => 'వజ్రాకారం';
+
+  @override
+  String get videoEditorShapeMaskHexagon => 'షడ్భుజి';
+
+  @override
+  String get videoEditorShapeMaskSpeechBubble => 'మాటల బుడగ';
+
+  @override
   String get videoEditorShapeMaskLinear => 'రేఖీయ';
 
   @override

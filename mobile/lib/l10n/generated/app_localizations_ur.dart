@@ -9602,6 +9602,21 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorShapeMaskHeart => 'دل';
 
   @override
+  String get videoEditorShapeMaskStar => 'ستارہ';
+
+  @override
+  String get videoEditorShapeMaskTriangle => 'مثلث';
+
+  @override
+  String get videoEditorShapeMaskDiamond => 'معین';
+
+  @override
+  String get videoEditorShapeMaskHexagon => 'مسدس';
+
+  @override
+  String get videoEditorShapeMaskSpeechBubble => 'بلبلہ';
+
+  @override
   String get videoEditorShapeMaskLinear => 'لکیری';
 
   @override
