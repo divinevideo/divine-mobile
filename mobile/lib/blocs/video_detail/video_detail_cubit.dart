@@ -18,7 +18,7 @@ part 'video_detail_state.dart';
 class VideoDetailCubit extends Cubit<VideoDetailState>
     with CloseGuardedEmit<VideoDetailState> {
   VideoDetailCubit({
-    required VideosRepository videosRepository,
+    required VideosRepository Function() videosRepository,
     required bool Function() isRelayReady,
     required Stream<bool> Function() relayReadyStream,
   }) : _videosRepository = videosRepository,
@@ -33,7 +33,9 @@ class VideoDetailCubit extends Cubit<VideoDetailState>
   ];
   static const _searchTimeout = Duration(seconds: 30);
 
-  final VideosRepository _videosRepository;
+  // Resolve per attempt so replacement clients are used without discarding an
+  // already-resolved video or remounting its player when filters change.
+  final VideosRepository Function() _videosRepository;
   final bool Function() _isRelayReady;
   final Stream<bool> Function() _relayReadyStream;
   StreamSubscription<bool>? _relayReadySubscription;
@@ -133,7 +135,7 @@ class VideoDetailCubit extends Cubit<VideoDetailState>
         name: 'VideoDetailCubit',
         category: LogCategory.video,
       );
-      final lookup = await _videosRepository.lookupVideoForRouteId(
+      final lookup = await _videosRepository().lookupVideoForRouteId(
         state.routeId,
         fallbackRouteIds: state.fallbackRouteIds,
       );

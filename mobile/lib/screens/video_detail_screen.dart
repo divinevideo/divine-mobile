@@ -81,11 +81,11 @@ class VideoDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repository = ref.watch(videosRepositoryProvider);
     return BlocProvider(
-      key: ValueKey(repository),
       create: (_) => VideoDetailCubit(
-        videosRepository: repository,
+        // Read at lookup time, not in create: the repository can change after
+        // age verification or a filter toggle without resetting playback.
+        videosRepository: () => ref.read(videosRepositoryProvider),
         isRelayReady: () {
           final client = ref.read(nostrServiceProvider);
           return client.isInitialized && client.connectedRelayCount > 0;

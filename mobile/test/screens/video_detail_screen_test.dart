@@ -489,6 +489,47 @@ void main() {
     });
 
     group('video found', () {
+      testWidgets('preserves the player when the repository is replaced', (
+        tester,
+      ) async {
+        final video = createTestVideoEvent(id: 'a' * 64);
+        when(
+          () => mockVideosRepository.lookupVideoForRouteId(any()),
+        ).thenAnswer((_) async => VideoRouteFound(video));
+        final replacement = _MockVideosRepository();
+        when(
+          () => replacement.lookupVideoForRouteId(any()),
+        ).thenAnswer((_) async => VideoRouteFound(video));
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pump();
+        final player = tester.element(
+          find.byKey(const Key('video-feed-placeholder')),
+        );
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoDetailScreen)),
+        );
+        container.updateOverrides([
+          ...getStandardTestOverrides(
+            mockNostrService: mockNostrClient,
+            mockFollowRepository: mockFollowRepository,
+          ),
+          videoEventServiceProvider.overrideWithValue(mockVideoEventService),
+          contentBlocklistRepositoryProvider.overrideWithValue(
+            mockBlocklistRepository,
+          ),
+          videosRepositoryProvider.overrideWithValue(replacement),
+        ]);
+        await tester.pump();
+        await tester.pump();
+
+        expect(
+          tester.element(find.byKey(const Key('video-feed-placeholder'))),
+          same(player),
+        );
+        verifyNever(() => replacement.lookupVideoForRouteId(any()));
+      });
+
       testWidgets('renders supplied route video without fetching it again', (
         tester,
       ) async {
@@ -733,6 +774,46 @@ void main() {
     });
 
     group('video not found', () {
+      testWidgets('scheduled retries use the replacement repository', (
+        tester,
+      ) async {
+        when(
+          () => mockVideosRepository.lookupVideoForRouteId(any()),
+        ).thenAnswer((_) async => const VideoRouteMissing());
+        final replacement = _MockVideosRepository();
+        final video = createTestVideoEvent(id: 'b' * 64);
+        when(
+          () => replacement.lookupVideoForRouteId(any()),
+        ).thenAnswer((_) async => VideoRouteFound(video));
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pump();
+        expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoDetailScreen)),
+        );
+        container.updateOverrides([
+          ...getStandardTestOverrides(
+            mockNostrService: mockNostrClient,
+            mockFollowRepository: mockFollowRepository,
+          ),
+          videoEventServiceProvider.overrideWithValue(mockVideoEventService),
+          contentBlocklistRepositoryProvider.overrideWithValue(
+            mockBlocklistRepository,
+          ),
+          videosRepositoryProvider.overrideWithValue(replacement),
+        ]);
+        await tester.pump();
+        verifyNever(() => replacement.lookupVideoForRouteId(any()));
+        await tester.pump(const Duration(seconds: 2));
+        await tester.pump();
+
+        expect(find.byKey(const Key('video-feed-placeholder')), findsOneWidget);
+        verify(() => mockVideosRepository.lookupVideoForRouteId(any()))
+            .called(1);
+        verify(() => replacement.lookupVideoForRouteId(any())).called(1);
+      });
+
       Future<void> exhaustSearch(WidgetTester tester) async {
         for (final seconds in [2, 4, 8]) {
           await tester.pump(Duration(seconds: seconds));
