@@ -179,7 +179,9 @@ void main() {
     when(
       () => videoEventService.authorVideos(any()),
     ).thenReturn(const <VideoEvent>[]);
-    when(() => videoEventService.filterVideoList(any())).thenAnswer(
+    when(
+      () => videoEventService.filterVideoList(any(), includeFeedShape: false),
+    ).thenAnswer(
       (invocation) => invocation.positionalArguments.first as List<VideoEvent>,
     );
     when(() => videoEventService.shouldHideVideo(any())).thenReturn(false);

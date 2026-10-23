@@ -80,6 +80,11 @@ void main() {
         ]);
 
         expect(filtered.map((video) => video.id), equals(['square']));
+        final profileVideos = service.filterVideoList([
+          _video(id: 'square', dimensions: '640x640'),
+          _video(id: 'portrait', dimensions: '720x1280'),
+        ], includeFeedShape: false);
+        expect(profileVideos.map((video) => video.id), ['square', 'portrait']);
       },
     );
 

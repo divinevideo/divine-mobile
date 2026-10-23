@@ -11,12 +11,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
 import 'package:openvine/blocs/profile_shared/profile_video_offset_snapshot.dart';
 import 'package:openvine/constants/app_constants.dart';
+import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/repositories/profile_pins_repository.dart';
+import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
 import 'package:openvine/services/video_event_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:videos_repository/videos_repository.dart';
+
+class _MockNostrClient extends Mock implements NostrClient {}
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
 
@@ -78,6 +84,7 @@ VideoEvent _video(
   int? originalLikes,
   String? vineId,
   String? dTag,
+  String? dimensions,
 }) {
   return VideoEvent(
     id: id,
@@ -89,6 +96,7 @@ VideoEvent _video(
     originalLikes: originalLikes,
     vineId: vineId,
     addressableDTag: dTag,
+    dimensions: dimensions,
   );
 }
 
@@ -119,7 +127,7 @@ class _Harness {
   _Harness() {
     when(() => ves.authorVideos(any())).thenReturn(const <VideoEvent>[]);
     when(
-      () => ves.filterVideoList(any()),
+      () => ves.filterVideoList(any(), includeFeedShape: false),
     ).thenAnswer((i) => i.positionalArguments[0] as List<VideoEvent>);
     when(() => ves.isVideoEventKnownDeleted(any())).thenReturn(false);
     when(() => ves.subscribeToUserVideos(any())).thenAnswer((_) async {});
@@ -143,6 +151,7 @@ class _Harness {
       () => repo.getVideosByAddressableIds(
         any(),
         cacheResults: any(named: 'cacheResults'),
+        includeFeedShape: false,
       ),
     ).thenAnswer((_) async => const []);
   }
@@ -267,6 +276,81 @@ void main() {
           key: cacheKey,
           fromJson: ProfileVideoOffsetSnapshot.fromJson,
         );
+
+    for (final source in ['REST', 'relay', 'pin']) {
+      test('square-only keeps portrait profile videos from $source', () async {
+        SharedPreferences.setMockInitialValues({});
+        final preference = FeedAspectRatioPreferenceService(
+          await SharedPreferences.getInstance(),
+        );
+        await preference.setPreference(FeedAspectRatioPreference.squareOnly);
+        final service = VideoEventService(
+          _MockNostrClient(),
+          crashReporter: const SilentCrashReporter(),
+        )..setFeedAspectRatioPreferenceService(preference);
+        addTearDown(service.dispose);
+        addTearDown(preference.dispose);
+        final portrait = _video(
+          'portrait',
+          dTag: 'portrait',
+          dimensions: '720x1280',
+        );
+        // A feed caller drops the portrait video under this preference.
+        expect(service.filterVideoList([portrait]), isEmpty);
+        // Forward the flag the cubit passes, so the real preference decides.
+        when(
+          () => h.ves.filterVideoList(
+            any(),
+            includeFeedShape: any(named: 'includeFeedShape'),
+          ),
+        ).thenAnswer(
+          (i) => service.filterVideoList(
+            i.positionalArguments[0] as List<VideoEvent>,
+            includeFeedShape: i.namedArguments[#includeFeedShape] as bool,
+          ),
+        );
+        h.stubAuthorFeed(
+          _result(source == 'REST' ? [portrait] : [], hasMore: false),
+        );
+        if (source == 'relay') {
+          when(() => h.ves.authorVideos(any())).thenReturn([portrait]);
+          when(
+            () => h.repo.getAuthorFeed(
+              authorPubkey: any(named: 'authorPubkey'),
+              offset: any(named: 'offset'),
+              relaySeed: any(named: 'relaySeed'),
+              skipCache: any(named: 'skipCache'),
+            ),
+          ).thenAnswer(
+            (i) async => _result(
+              i.namedArguments[#relaySeed] as List<VideoEvent>,
+              hasMore: false,
+            ),
+          );
+        }
+        if (source == 'pin') {
+          when(
+            () => h.pins.fetch(_author),
+          ).thenAnswer((_) async => [_coordinate('portrait')]);
+          // The repository applies the same preference unless asked not to.
+          when(
+            () => h.repo.getVideosByAddressableIds(
+              any(),
+              cacheResults: true,
+              includeFeedShape: any(named: 'includeFeedShape'),
+            ),
+          ).thenAnswer(
+            (i) async => i.namedArguments[#includeFeedShape] == false
+                ? [portrait]
+                : const <VideoEvent>[],
+          );
+        }
+        final cubit = h.build();
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+        expect(cubit.state.videos.map((v) => v.id), ['portrait']);
+      });
+    }
 
     test('close unsubscribes the active profile feed subscription', () async {
       h.stubAuthorFeed(_result(const []));
@@ -1345,9 +1429,13 @@ void main() {
           () => h.pins.fetch(_author),
         ).thenAnswer((_) async => [_coordinate('old')]);
         when(
-          () => h.repo.getVideosByAddressableIds([
-            _coordinate('old'),
-          ], cacheResults: true),
+          () => h.repo.getVideosByAddressableIds(
+            [
+              _coordinate('old'),
+            ],
+            cacheResults: true,
+            includeFeedShape: false,
+          ),
         ).thenAnswer((_) async => [old]);
         h.stubAuthorFeed(
           _result([
@@ -1392,9 +1480,13 @@ void main() {
         ]);
         expect(cubit.state.unavailablePinnedCoordinates, [_coordinate('gone')]);
         verify(
-          () => h.repo.getVideosByAddressableIds([
-            _coordinate('gone'),
-          ], cacheResults: true),
+          () => h.repo.getVideosByAddressableIds(
+            [
+              _coordinate('gone'),
+            ],
+            cacheResults: true,
+            includeFeedShape: false,
+          ),
         ).called(1);
         // Offered for release; the repository answered that nothing says
         // the video is gone, so the slot stays taken.
@@ -1436,9 +1528,13 @@ void main() {
           () => h.pins.fetch(_author),
         ).thenAnswer((_) async => [_coordinate('gone')]);
         when(
-          () => h.repo.getVideosByAddressableIds([
-            _coordinate('gone'),
-          ], cacheResults: true),
+          () => h.repo.getVideosByAddressableIds(
+            [
+              _coordinate('gone'),
+            ],
+            cacheResults: true,
+            includeFeedShape: false,
+          ),
         ).thenAnswer((_) async => [stale]);
         when(
           () => h.pins.releaseDeleted([_coordinate('gone')]),
@@ -1523,7 +1619,11 @@ void main() {
           () => h.pins.fetch(_author),
         ).thenAnswer((_) async => [_coordinate('old')]);
         when(
-          () => h.repo.getVideosByAddressableIds(any(), cacheResults: true),
+          () => h.repo.getVideosByAddressableIds(
+            any(),
+            cacheResults: true,
+            includeFeedShape: false,
+          ),
         ).thenAnswer((_) async => [old]);
         final cubit = await buildReady(
           _result([_video('a', createdAt: 3000, dTag: 'a')], hasMore: true),
@@ -1579,9 +1679,13 @@ void main() {
           () => h.pins.fetch(_author),
         ).thenAnswer((_) async => [_coordinate('old')]);
         when(
-          () => h.repo.getVideosByAddressableIds([
-            _coordinate('old'),
-          ], cacheResults: true),
+          () => h.repo.getVideosByAddressableIds(
+            [
+              _coordinate('old'),
+            ],
+            cacheResults: true,
+            includeFeedShape: false,
+          ),
         ).thenAnswer((_) async => [if (resolveCount++ == 0) oldV1 else oldV2]);
         when(
           () => h.pins.unpin(_coordinate('old')),

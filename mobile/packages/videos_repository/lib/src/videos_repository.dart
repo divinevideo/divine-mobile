@@ -1670,10 +1670,13 @@ class VideosRepository {
   /// hydration under its own timeout or policy ([fetchVideoWithStats] does
   /// this so a slow Funnelcake call cannot block indefinitely on the relay
   /// fetch+hydrate path).
+  ///
+  /// [includeFeedShape] defaults to true for feeds. Direct opens opt out.
   Future<List<VideoEvent>> getVideosByIds(
     List<String> eventIds, {
     bool cacheResults = false,
     bool hydrateBulkStats = true,
+    bool includeFeedShape = true,
   }) async {
     if (eventIds.isEmpty) return [];
 
@@ -1717,7 +1720,10 @@ class VideosRepository {
       final event = eventMap[id];
       if (event == null) continue;
 
-      final video = _tryParseAndFilter(event);
+      final video = _tryParseAndFilter(
+        event,
+        includeFeedShape: includeFeedShape,
+      );
       if (video != null) videos.add(video);
     }
 
@@ -1752,6 +1758,9 @@ class VideosRepository {
   ///   Defaults to false to avoid cache bloat from pagination.
   ///   Set to true for first-page loads that should be cached.
   ///
+  /// [includeFeedShape] defaults to true. Profile pins opt out of feed shape
+  /// filtering while retaining the other visibility policies.
+  ///
   /// Returns a list of [VideoEvent] in the same order as [addressableIds].
   /// Videos that couldn't be found or failed to parse are omitted.
   ///
@@ -1762,6 +1771,7 @@ class VideosRepository {
   Future<List<VideoEvent>> getVideosByAddressableIds(
     List<String> addressableIds, {
     bool cacheResults = false,
+    bool includeFeedShape = true,
   }) async {
     if (addressableIds.isEmpty) return [];
 
@@ -1824,7 +1834,10 @@ class VideosRepository {
     }
     final foundVideos = <String, VideoEvent>{};
     for (final entry in latestEvents.entries) {
-      final video = _tryParseAndFilter(entry.value);
+      final video = _tryParseAndFilter(
+        entry.value,
+        includeFeedShape: includeFeedShape,
+      );
       if (video != null) foundVideos[entry.key] = video;
     }
 
@@ -1837,7 +1850,11 @@ class VideosRepository {
     if (missingIds.isNotEmpty &&
         _funnelcakeApiClient != null &&
         _funnelcakeApiClient.isAvailable) {
-      await _fetchMissingVideosFromFunnelcake(missingIds, foundVideos);
+      await _fetchMissingVideosFromFunnelcake(
+        missingIds,
+        foundVideos,
+        includeFeedShape: includeFeedShape,
+      );
     }
 
     // Build result list preserving original order
@@ -1857,8 +1874,9 @@ class VideosRepository {
   /// Groups missing IDs by author pubkey to batch API requests.
   Future<void> _fetchMissingVideosFromFunnelcake(
     List<String> missingIds,
-    Map<String, VideoEvent> foundVideos,
-  ) async {
+    Map<String, VideoEvent> foundVideos, {
+    required bool includeFeedShape,
+  }) async {
     // Group missing IDs by pubkey to batch queries
     final missingByPubkey = <String, List<String>>{};
     for (final addressableId in missingIds) {
@@ -1893,7 +1911,10 @@ class VideosRepository {
             if (!_hasAllowedTransportScheme(video)) continue;
             if (video.isExpired) continue;
 
-            final processed = _applyContentPreferences(video);
+            final processed = _applyContentPreferences(
+              video,
+              includeFeedShape: includeFeedShape,
+            );
             if (processed == null) continue;
 
             foundVideos[videoAddressableId] = processed;
@@ -1967,6 +1988,7 @@ class VideosRepository {
     Event event, {
     bool permissive = false,
     bool ignoreBlockFilter = false,
+    bool includeFeedShape = true,
     void Function(VideoEvent video)? onContentFiltered,
   }) {
     // Skip events that aren't valid video kinds
@@ -1995,7 +2017,10 @@ class VideosRepository {
     // Skip expired videos (NIP-40)
     if (video.isExpired) return null;
 
-    final permitted = _applyContentPreferences(video);
+    final permitted = _applyContentPreferences(
+      video,
+      includeFeedShape: includeFeedShape,
+    );
     if (permitted == null) onContentFiltered?.call(video);
     return permitted;
   }
@@ -3161,7 +3186,11 @@ class VideosRepository {
   /// feed context: notification taps and `divine.video/video/:id` deep-links.
   Future<VideoEvent?> fetchVideoWithStats(String eventId) async {
     if (eventId.isEmpty) return null;
-    final videos = await getVideosByIds([eventId], hydrateBulkStats: false);
+    final videos = await getVideosByIds(
+      [eventId],
+      hydrateBulkStats: false,
+      includeFeedShape: false,
+    );
     if (videos.isEmpty) return null;
     final hydrated = await _hydrateVideosWithBulkStats(
       videos,
@@ -3884,6 +3913,7 @@ class VideosRepository {
       event,
       permissive: permissive,
       ignoreBlockFilter: true,
+      includeFeedShape: false,
       onContentFiltered: onContentFiltered,
     );
     if (video == null) return null;
@@ -3905,6 +3935,7 @@ class VideosRepository {
         event,
         permissive: true,
         ignoreBlockFilter: true,
+        includeFeedShape: false,
         onContentFiltered: onContentFiltered,
       );
       if (video != null) {
