@@ -24,6 +24,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 class _MockAgeVerificationService extends Mock
     implements AgeVerificationService {}
 
+class _RefusingPreferences extends Mock implements SharedPreferences {}
+
 class _MockContentFilterService extends Mock implements ContentFilterService {}
 
 class _MockVideoEventService extends Mock implements VideoEventService {}
@@ -552,6 +554,37 @@ void main() {
             isTrue,
           );
         },
+      );
+
+      blocTest<SafetySettingsCubit, SafetySettingsState>(
+        'turns the switch back when the choice cannot be saved',
+        build: () {
+          final refusing = _RefusingPreferences();
+          when(() => refusing.getBool(any())).thenReturn(null);
+          when(
+            () => refusing.setBool(any(), any()),
+          ).thenAnswer((_) async => false);
+          return buildCubit(
+            dmVideoBlurPreferenceService: DmVideoBlurPreferenceService(
+              refusing,
+              account: account,
+            ),
+          );
+        },
+        act: (cubit) => cubit.setBlurDmVideoPreviews(true),
+        expect: () => [
+          isA<SafetySettingsState>().having(
+            (s) => s.blurDmVideoPreviews,
+            'blurDmVideoPreviews',
+            isTrue,
+          ),
+          isA<SafetySettingsState>().having(
+            (s) => s.blurDmVideoPreviews,
+            'blurDmVideoPreviews',
+            isFalse,
+          ),
+        ],
+        errors: () => [isA<DmVideoBlurPreferenceSaveException>()],
       );
 
       blocTest<SafetySettingsCubit, SafetySettingsState>(

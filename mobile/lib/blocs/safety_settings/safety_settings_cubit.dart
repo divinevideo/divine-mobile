@@ -1,6 +1,6 @@
 // ABOUTME: Screen-scoped Cubit for the SafetySettingsScreen moderation hub.
-// ABOUTME: Owns the three toggle prefs (age-verified, people-I-follow,
-// ABOUTME: divine-hosted-only) plus reactive labeler and blocklist lists.
+// ABOUTME: Owns its toggles (age, people I follow, Divine-hosted, verified,
+// ABOUTME: video preview blur) plus reactive labeler and blocklist lists.
 
 import 'dart:async';
 

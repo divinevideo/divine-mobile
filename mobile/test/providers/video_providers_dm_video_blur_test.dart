@@ -43,23 +43,40 @@ void main() {
       expect(container.read(dmVideoBlurPreferenceServiceProvider), isNull);
     });
 
-    test("reads the signed-in account's own choice", () async {
-      final firstContainer = await buildContainer(account: first);
-      final secondContainer = await buildContainer(account: second);
+    test(
+      "follows the signed-in account's own choice across a switch",
+      () async {
+        final container = await buildContainer(account: first);
+        final subscription = container.listen(
+          dmVideoBlurPreferenceServiceProvider,
+          (_, _) {},
+          fireImmediately: true,
+        );
+        addTearDown(subscription.close);
+        expect(
+          container
+              .read(dmVideoBlurPreferenceServiceProvider)!
+              .blurVideoPreviews,
+          isTrue,
+        );
 
-      expect(
-        firstContainer
-            .read(dmVideoBlurPreferenceServiceProvider)!
-            .blurVideoPreviews,
-        isTrue,
-      );
-      expect(
-        secondContainer
-            .read(dmVideoBlurPreferenceServiceProvider)!
-            .blurVideoPreviews,
-        isFalse,
-      );
-    });
+        container.read(_signedIn.notifier).state = second;
+        expect(
+          container
+              .read(dmVideoBlurPreferenceServiceProvider)!
+              .blurVideoPreviews,
+          isFalse,
+        );
+
+        container.read(_signedIn.notifier).state = first;
+        expect(
+          container
+              .read(dmVideoBlurPreferenceServiceProvider)!
+              .blurVideoPreviews,
+          isTrue,
+        );
+      },
+    );
   });
 
   group('dmVideoBlurPreviewsEnabledProvider', () {

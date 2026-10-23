@@ -20,7 +20,7 @@ import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 
-/// Page: bridges the seven moderation services + repositories into
+/// Page: bridges the moderation services and repositories into
 /// [SafetySettingsCubit].
 class SafetySettingsScreen extends ConsumerWidget {
   const SafetySettingsScreen({super.key});

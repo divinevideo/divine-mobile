@@ -49,6 +49,25 @@ void main() {
     });
 
     group('setBlurVideoPreviews', () {
+      test('keeps the latest of two quick choices', () async {
+        SharedPreferences.setMockInitialValues({
+          DmVideoBlurPreferenceService.storageKey(first): true,
+        });
+        final prefs = await SharedPreferences.getInstance();
+        final service = DmVideoBlurPreferenceService(prefs, account: first);
+
+        await Future.wait([
+          service.setBlurVideoPreviews(false),
+          service.setBlurVideoPreviews(true),
+        ]);
+
+        expect(service.blurVideoPreviews, isTrue);
+        expect(
+          DmVideoBlurPreferenceService(prefs, account: first).blurVideoPreviews,
+          isTrue,
+        );
+      });
+
       test('notifies listeners when the choice changes', () async {
         final service = DmVideoBlurPreferenceService(prefs, account: first);
         var notifications = 0;
@@ -76,7 +95,7 @@ void main() {
 
           await expectLater(
             service.setBlurVideoPreviews(true),
-            throwsStateError,
+            throwsA(isA<DmVideoBlurPreferenceSaveException>()),
           );
           expect(service.blurVideoPreviews, isFalse);
         },

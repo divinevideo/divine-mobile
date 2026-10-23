@@ -25,17 +25,29 @@ class DmVideoBlurPreferenceService extends ChangeNotifier {
   /// Whether trusted senders' video previews are blurred until played.
   bool get blurVideoPreviews => _blurVideoPreviews;
 
-  /// Stores [value] for this account and notifies listeners when it changed.
+  /// Makes [value] this account's choice and stores it.
   ///
-  /// Throws a [StateError] when the platform refuses the save; the previous
-  /// choice then stays in effect.
+  /// The choice takes effect at once, so of two quick changes the later one
+  /// wins. Throws a [DmVideoBlurPreferenceSaveException] when the platform
+  /// refuses the save; the previous choice is then back in effect.
   Future<void> setBlurVideoPreviews(bool value) async {
     if (_blurVideoPreviews == value) return;
-    final saved = await _prefs.setBool(storageKey(_account), value);
-    if (!saved) {
-      throw StateError('Video preview blur preference could not be saved');
-    }
     _blurVideoPreviews = value;
     notifyListeners();
+    if (await _prefs.setBool(storageKey(_account), value)) return;
+    _blurVideoPreviews = !value;
+    notifyListeners();
+    throw const DmVideoBlurPreferenceSaveException();
   }
+}
+
+/// The platform refused to store the video preview blur choice, for example
+/// because the disk is full. An expected failure, not a bug.
+class DmVideoBlurPreferenceSaveException implements Exception {
+  /// Creates a [DmVideoBlurPreferenceSaveException].
+  const DmVideoBlurPreferenceSaveException();
+
+  @override
+  String toString() =>
+      'DmVideoBlurPreferenceSaveException: the choice could not be saved';
 }
