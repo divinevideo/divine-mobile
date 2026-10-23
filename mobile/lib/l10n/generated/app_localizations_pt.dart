@@ -14582,4 +14582,11 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'A exclusão da sua conta está em andamento, mas não conseguimos concluir a saída. Tente de novo.';
+
+  @override
+  String get notificationFromDivine => 'Da Divine';
+
+  @override
+  String get announcementUnavailable =>
+      'Este anúncio não está mais disponível.';
 }

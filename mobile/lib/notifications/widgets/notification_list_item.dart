@@ -5,6 +5,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/notifications/widgets/actor_notification_row.dart';
+import 'package:openvine/notifications/widgets/announcement_notification_row.dart';
 import 'package:openvine/notifications/widgets/video_notification_row.dart';
 
 /// Displays a single notification row, dispatching on the sealed
@@ -43,6 +44,11 @@ class NotificationListItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (notification) {
+      final AnnouncementNotification announcement =>
+        AnnouncementNotificationRow(
+          notification: announcement,
+          onTap: onTap,
+        ),
       final VideoNotification video => VideoNotificationRow(
         notification: video,
         onTap: onTap,

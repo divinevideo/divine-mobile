@@ -111,6 +111,18 @@ void main() {
       expect(spec.foreground, equals(dark.accentChipYellow.onContainer));
     });
 
+    test('official announcements use the logo in both appearances', () {
+      for (final colors in [VineTheme.darkColors, VineTheme.lightColors]) {
+        final spec = notificationTypeIconSpec(
+          NotificationKind.announcement,
+          colors: colors,
+        );
+        expect(spec.icon, DivineIconName.logo);
+        expect(spec.background, colors.accentChipGreen.container);
+        expect(spec.foreground, colors.accentChipGreen.onContainer);
+      }
+    });
+
     test('system uses logo on the primary accent', () {
       final spec = notificationTypeIconSpec(
         NotificationKind.system,

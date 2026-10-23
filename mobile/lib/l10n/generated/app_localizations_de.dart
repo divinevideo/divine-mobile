@@ -14622,4 +14622,11 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Dein Konto wird gerade gelöscht, aber wir konnten dich nicht vollständig abmelden. Versuch es noch einmal.';
+
+  @override
+  String get notificationFromDivine => 'Von Divine';
+
+  @override
+  String get announcementUnavailable =>
+      'Diese Mitteilung ist nicht mehr verfügbar.';
 }

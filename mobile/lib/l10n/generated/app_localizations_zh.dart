@@ -13572,4 +13572,10 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       '你的账号删除请求正在处理中，但我们未能完成退出登录。请重试。';
+
+  @override
+  String get notificationFromDivine => '来自 Divine';
+
+  @override
+  String get announcementUnavailable => '此公告已不可用。';
 }

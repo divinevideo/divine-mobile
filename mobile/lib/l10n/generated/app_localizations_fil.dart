@@ -14577,4 +14577,10 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Pinoproseso ang pag-delete ng account mo, pero hindi ka namin ma-sign out. Subukan ulit.';
+
+  @override
+  String get notificationFromDivine => 'Mula sa Divine';
+
+  @override
+  String get announcementUnavailable => 'Hindi na available ang anunsyong ito.';
 }

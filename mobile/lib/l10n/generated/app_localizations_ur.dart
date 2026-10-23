@@ -14448,4 +14448,10 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'آپ کا اکاؤنٹ حذف کرنے کی کارروائی جاری ہے، لیکن ہم آپ کو سائن آؤٹ نہیں کر سکے۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get notificationFromDivine => 'Divine کی طرف سے';
+
+  @override
+  String get announcementUnavailable => 'یہ اعلان اب دستیاب نہیں ہے۔';
 }

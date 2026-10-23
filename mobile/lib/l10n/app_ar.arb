@@ -5871,5 +5871,7 @@
 "listPermissionsRecoveryPending": "تم قبول تغييرك. اضغط على زامن الآن لإكمال حفظه. التعديل متوقف حتى ذلك الحين.",
 "listRecoveryReadOnly": "تحتاج بعض التغييرات المحفوظة في قوائم الفيديو إلى استعادة. يمكن عرض قوائم الفيديو، لكن التعديل متوقف مؤقتًا.",
 "listAddToLists": "إضافة إلى القوائم",
-"accountDeletionProcessingSignOutFailed": "حذف الحساب قيد المعالجة، لكن تعذّر إكمال تسجيل الخروج. يرجى المحاولة مجددًا."
+"accountDeletionProcessingSignOutFailed": "حذف الحساب قيد المعالجة، لكن تعذّر إكمال تسجيل الخروج. يرجى المحاولة مجددًا.",
+  "notificationFromDivine": "من Divine",
+  "announcementUnavailable": "لم يعد هذا الإعلان متاحًا."
 }

@@ -24110,6 +24110,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your account deletion is processing, but we couldn’t finish signing you out. Try again.'**
   String get accountDeletionProcessingSignOutFailed;
+
+  /// Official source label shown only on announcements from the Divine staff catalog.
+  ///
+  /// In en, this message translates to:
+  /// **'From Divine'**
+  String get notificationFromDivine;
+
+  /// Announcement detail empty state when the announcement has expired, was withdrawn, or is not cached.
+  ///
+  /// In en, this message translates to:
+  /// **'This announcement is no longer available.'**
+  String get announcementUnavailable;
 }
 
 class _AppLocalizationsDelegate

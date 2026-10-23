@@ -11216,5 +11216,13 @@
   },
   "listAddToLists": "Add to lists",
   "accountDeletionProcessingSignOutFailed": "Your account deletion is processing, but we couldn’t finish signing you out. Try again.",
-  "@accountDeletionProcessingSignOutFailed": {"description": "An accepted account deletion continues on the server while local sign-out failed. Retrying signs out without resubmitting or clearing the deletion receipt."}
+  "@accountDeletionProcessingSignOutFailed": {"description": "An accepted account deletion continues on the server while local sign-out failed. Retrying signs out without resubmitting or clearing the deletion receipt."},
+  "notificationFromDivine": "From Divine",
+  "announcementUnavailable": "This announcement is no longer available.",
+  "@notificationFromDivine": {
+    "description": "Official source label shown only on announcements from the Divine staff catalog."
+  },
+  "@announcementUnavailable": {
+    "description": "Announcement detail empty state when the announcement has expired, was withdrawn, or is not cached."
+  }
 }

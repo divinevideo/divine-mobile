@@ -7162,5 +7162,7 @@
   "listPermissionsRecoveryPending": "更改已被接受。点击立即同步以完成保存。在此之前，编辑将暂停。",
   "listRecoveryReadOnly": "视频列表中保存的部分更改需要恢复。你可以查看视频列表，但编辑已暂停。",
   "listAddToLists": "加入列表",
-  "accountDeletionProcessingSignOutFailed": "你的账号删除请求正在处理中，但我们未能完成退出登录。请重试。"
+  "accountDeletionProcessingSignOutFailed": "你的账号删除请求正在处理中，但我们未能完成退出登录。请重试。",
+  "notificationFromDivine": "来自 Divine",
+  "announcementUnavailable": "此公告已不可用。"
 }

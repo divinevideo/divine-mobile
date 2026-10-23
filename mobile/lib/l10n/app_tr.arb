@@ -5871,5 +5871,7 @@
 "listPermissionsRecoveryPending": "Değişikliğin kabul edildi. Kaydetmeyi tamamlamak için Şimdi eşitle seçeneğine dokun. O zamana kadar düzenleme duraklatılır.",
 "listRecoveryReadOnly": "Video listelerindeki bazı kayıtlı değişikliklerin kurtarılması gerekiyor. Video listelerini görüntüleyebilirsin, ancak düzenleme duraklatıldı.",
 "listAddToLists": "Listelere ekle",
-"accountDeletionProcessingSignOutFailed": "Hesabının silinmesi işleniyor, ancak çıkışını tamamlayamadık. Tekrar dene."
+"accountDeletionProcessingSignOutFailed": "Hesabının silinmesi işleniyor, ancak çıkışını tamamlayamadık. Tekrar dene.",
+  "notificationFromDivine": "Divine’dan",
+  "announcementUnavailable": "Bu duyuru artık kullanılamıyor."
 }

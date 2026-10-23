@@ -5924,5 +5924,7 @@
 "listPermissionsRecoveryPending": "ለውጥዎ ተቀባይነት አግኝቷል። ማስቀመጡን ለማጠናቀቅ አሁን አመሳስልን ይንኩ። እስከዚያ ድረስ ማርትዕ ቆሟል።",
 "listRecoveryReadOnly": "በቪዲዮ ዝርዝሮች ላይ የተቀመጡ አንዳንድ ለውጦች መመለስ ያስፈልጋቸዋል። የቪዲዮ ዝርዝሮችን ማየት ይችላሉ፣ ግን ማርትዕ ለጊዜው ቆሟል።",
 "listAddToLists": "ወደ ዝርዝሮች ያክሉ",
-"accountDeletionProcessingSignOutFailed": "መለያዎን የመሰረዝ ሂደት በመካሄድ ላይ ነው፣ ግን ማስወጣት አልቻልንም። እንደገና ይሞክሩ።"
+"accountDeletionProcessingSignOutFailed": "መለያዎን የመሰረዝ ሂደት በመካሄድ ላይ ነው፣ ግን ማስወጣት አልቻልንም። እንደገና ይሞክሩ።",
+  "notificationFromDivine": "ከDivine",
+  "announcementUnavailable": "ይህ ማስታወቂያ ከእንግዲህ የለም።"
 }
