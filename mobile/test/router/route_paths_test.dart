@@ -67,6 +67,7 @@ void main() {
       expect(RoutePaths.relayDiagnostic, equals('/relay-diagnostic'));
       expect(RoutePaths.relaySettings, equals('/relay-settings'));
       expect(RoutePaths.resetPassword, equals('/reset-password'));
+      expect(RoutePaths.root, equals('/'));
       expect(RoutePaths.safetySettings, equals('/safety-settings'));
       expect(RoutePaths.secureAccount, equals('/secure-account'));
       expect(RoutePaths.settings, equals('/settings'));

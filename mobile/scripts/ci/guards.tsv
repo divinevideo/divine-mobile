@@ -150,6 +150,11 @@
 # this froze them at zero.
 🌀 Verify perpetual animations honor reduced motion	-	bash scripts/check_reduced_motion_gating.sh
 
+# Issues #3572 / #3335. Frozen at ZERO: a navigation call in mobile/lib whose
+# location is a string literal. A literal does not follow its route when the
+# route changes, and sampled literals broke navigation with every test green.
+🧭 Verify navigation never uses a literal path (frozen at zero)	-	bash scripts/check_literal_navigation_paths.sh
+
 # Issue #3630. Freezes the set of app_en.arb keys that nothing under mobile/lib
 # renders (lib only — a test cannot render a string, and a findsNothing
 # assertion is evidence the key is DEAD). An orphaned key is translated into

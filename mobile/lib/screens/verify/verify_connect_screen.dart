@@ -14,6 +14,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/screens/verify/verify_platform_labels.dart';
+import 'package:openvine/screens/verify/verify_screen.dart';
 import 'package:openvine/utils/clipboard_utils.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -221,7 +222,7 @@ class _ConnectScaffold extends StatelessWidget {
         title: title,
         showBackButton: true,
         onBackPressed: () {
-          if (canLeave) context.safePop(fallback: '/verify');
+          if (canLeave) context.safePop(fallback: VerifyPage.path);
         },
       ),
       body: body,

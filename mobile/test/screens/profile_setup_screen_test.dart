@@ -1351,6 +1351,22 @@ void main() {
         expect(find.text('Profile destination'), findsOneWidget);
       });
 
+      testWidgets('cancel goes home when only the hex identity is known', (
+        tester,
+      ) async {
+        when(() => mockAuthService.currentNpub).thenReturn(null);
+
+        await pumpScreenWithRouter(tester);
+        await tester.pumpAndSettle();
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.tap(find.text(l10n.commonCancel));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Home destination'), findsOneWidget);
+        expect(find.text('Profile destination'), findsNothing);
+      });
+
       /// The guard compares each field against a baseline the seeding path
       /// supplies. Seeding runs more than once — the cache fills the form and
       /// the relay's copy refreshes whatever the user has not touched — so the

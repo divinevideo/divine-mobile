@@ -65,6 +65,8 @@ const CategoriesPageRoute(size: 'small', color: 'blue').go(context);
 
 ## Navigation Methods
 
+Whatever the generic examples below show, never navigate with a literal path string in this repo: pass a `RoutePaths` constant or builder, or the screen's path builder. `mobile/scripts/check_literal_navigation_paths.sh` holds `mobile/lib` at zero (#3572).
+
 ### Prefer `go` Over `push`
 
 | Method | Use When |

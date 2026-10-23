@@ -21,6 +21,7 @@ import 'package:openvine/providers/community_content_label_provider.dart';
 import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/providers/og_viner_cache_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
@@ -1303,7 +1304,7 @@ class _ContentWarningDetailsSheet extends StatelessWidget {
                 onPressed: () {
                   Navigator.of(context).pop();
                   runDetached(
-                    context.push('/content-filters'),
+                    context.push(RoutePaths.contentFilters),
                     'open content filters',
                     logName: 'VideoFeedItem',
                     category: LogCategory.ui,
