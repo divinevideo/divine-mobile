@@ -290,6 +290,31 @@ List<AudioEvent> rebaseAnchoredAudioForClipState(
   return changed ? result : audioTracks;
 }
 
+/// [audioTracks] with their anchors to [clipIds] released.
+///
+/// An anchored sound's [AudioEvent.startOffset] is measured in its clip's
+/// file. An edit that renders a clip into a new file under the same id starts
+/// that file's time over, so [rebaseAnchoredAudioForClipState] would move the
+/// sound off the picture it came from. Released, the sound stays where it
+/// plays, as it does after a speed change ([audioAtSpeed]).
+///
+/// Returns the original list instance when no track is anchored to them.
+List<AudioEvent> releaseAudioAnchors(
+  List<AudioEvent> audioTracks,
+  Set<String> clipIds,
+) {
+  if (!audioTracks.any((track) => clipIds.contains(track.anchorClipId))) {
+    return audioTracks;
+  }
+  return [
+    for (final track in audioTracks)
+      if (clipIds.contains(track.anchorClipId))
+        track.copyWith(clearAnchorClipId: true)
+      else
+        track,
+  ];
+}
+
 /// [track] played at [speed], its window rescaled so it plays the same
 /// stretch of its sound: twice as fast takes half as long on the timeline.
 ///

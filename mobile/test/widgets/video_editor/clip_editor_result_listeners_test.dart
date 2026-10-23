@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -649,6 +650,131 @@ void main() {
           ),
         ).called(1);
         expect(committedClips().map((c) => c['durationMs']), [2000, 2000]);
+      });
+
+      group('a sound extracted from the clip', () {
+        final trimmed = _clip('a').copyWith(
+          duration: const Duration(seconds: 3),
+          trimStart: const Duration(seconds: 1),
+        );
+        final bounced = _clip('a').copyWith(
+          video: EditorVideo.file('/documents/a_boomerang.mp4'),
+          duration: const Duration(milliseconds: 3933),
+        );
+
+        AudioEvent extracted({
+          required String clipId,
+          required Duration startOffset,
+          required Duration startTime,
+          required Duration endTime,
+        }) => AudioEvent(
+          id: 'extracted_$clipId',
+          pubkey: '',
+          createdAt: 0,
+          url: '/documents/extracted_$clipId.m4a',
+          duration: 4,
+          startOffset: startOffset,
+          startTime: startTime,
+          endTime: endTime,
+          anchorClipId: clipId,
+        );
+
+        Future<List<AudioEvent>> commit(
+          WidgetTester tester, {
+          required List<AudioEvent> tracks,
+          required List<DivineVideoClip> previousClips,
+          required List<DivineVideoClip> clips,
+          required bool isBounced,
+        }) async {
+          when(() => stateManager.activeMeta).thenReturn({
+            VideoEditorConstants.audioStateHistoryKey: [
+              for (final track in tracks) track.toJson(),
+            ],
+          });
+          whenListen(
+            clipBloc,
+            Stream.value(
+              ClipEditorState(
+                clips: clips,
+                lastBoomerangResult: ClipBoomerangSuccess(
+                  previousClips: previousClips,
+                  clipId: 'a',
+                  bounced: isBounced,
+                ),
+              ),
+            ),
+            initialState: const ClipEditorState(),
+          );
+          await tester.pumpWidget(build());
+          await tester.pump();
+
+          final meta =
+              verify(
+                    () => editor.addHistory(meta: captureAny(named: 'meta')),
+                  ).captured.single
+                  as Map<String, dynamic>;
+          return [
+            for (final json
+                in meta[VideoEditorConstants.audioStateHistoryKey]
+                    as List<dynamic>)
+              AudioEvent.fromJson(json as Map<String, dynamic>),
+          ];
+        }
+
+        testWidgets('stays on its picture when turning it on', (tester) async {
+          final sound = extracted(
+            clipId: 'a',
+            startOffset: const Duration(seconds: 1),
+            startTime: Duration.zero,
+            endTime: const Duration(seconds: 2),
+          );
+
+          final tracks = await commit(
+            tester,
+            tracks: [
+              sound,
+              extracted(
+                clipId: 'b',
+                startOffset: Duration.zero,
+                startTime: const Duration(seconds: 2),
+                endTime: const Duration(seconds: 3),
+              ),
+            ],
+            previousClips: [trimmed, _clip('b')],
+            clips: [bounced, _clip('b')],
+            isBounced: true,
+          );
+
+          expect(tracks.first.startTime, Duration.zero);
+          expect(tracks.first.startOffset, sound.startOffset);
+          expect(tracks.first.endTime, sound.endTime);
+          expect(tracks.first.anchorClipId, isNull);
+          // The sound of the clip after it still follows that clip.
+          expect(tracks.last.startTime, const Duration(milliseconds: 3933));
+          expect(tracks.last.anchorClipId, 'b');
+        });
+
+        testWidgets('keeps its sound when turning it off', (tester) async {
+          final sound = extracted(
+            clipId: 'a',
+            startOffset: Duration.zero,
+            startTime: Duration.zero,
+            endTime: const Duration(milliseconds: 3933),
+          );
+
+          final tracks = await commit(
+            tester,
+            tracks: [sound],
+            previousClips: [bounced, _clip('b')],
+            clips: [trimmed, _clip('b')],
+            isBounced: false,
+          );
+
+          expect(tracks.single.startTime, Duration.zero);
+          expect(tracks.single.startOffset, Duration.zero);
+          expect(tracks.single.endTime, sound.endTime);
+          expect(tracks.single.anchorClipId, isNull);
+        });
       });
 
       Future<void> pumpResult(

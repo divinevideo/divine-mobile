@@ -231,6 +231,9 @@ class _ClipBoomerangResultListener extends StatelessWidget {
 /// move with it, and markers on a way back that was taken out go with it.
 /// Turning it on only makes the composition longer, so it is written with
 /// [VideoEditorExtensions.setLengthenedClipState], as a freeze frame is.
+///
+/// A sound extracted from the clip stays where it plays but lets go of the
+/// clip: its offsets are measured in the file the render replaced.
 void _commitBoomerang(
   BuildContext context,
   ClipEditorState state,
@@ -250,9 +253,14 @@ void _commitBoomerang(
   // What the clip stands in for: itself as it was, or the clips a selection
   // boomerang was made from.
   final ids = {for (final c in state.clips) c.id};
-  final replaced = previousClips
-      .where((c) => c.id == clipId || !ids.contains(c.id))
-      .fold(Duration.zero, (total, c) => total + c.playbackDuration);
+  final replacedClips = [
+    for (final c in previousClips)
+      if (c.id == clipId || !ids.contains(c.id)) c,
+  ];
+  final replaced = replacedClips.fold(
+    Duration.zero,
+    (total, c) => total + c.playbackDuration,
+  );
   final playback = state.clips[index].playbackDuration;
   final markers = shiftTimelineMarkersForResize(
     markers: overlayBloc.state.timelineMarkers,
@@ -261,14 +269,20 @@ void _commitBoomerang(
   );
 
   overlayBloc.add(TimelineMarkersRebased(markers));
+  final replacedClipIds = {for (final c in replacedClips) c.id};
   if (bounced) {
     editor.setLengthenedClipState(
       previousClips: previousClips,
       clips: state.clips,
       timelineMarkers: markers,
+      replacedClipIds: replacedClipIds,
     );
   } else {
-    editor.setClipState(state.clips, timelineMarkers: markers);
+    editor.setClipState(
+      state.clips,
+      timelineMarkers: markers,
+      replacedClipIds: replacedClipIds,
+    );
   }
 }
 
