@@ -563,9 +563,9 @@ class VideosRepository {
 
   /// Fetches the current public playback total without a feed-cache lookup.
   ///
-  /// Bulk statistics use no-store responses and expose computed loops separately
-  /// from archival loops. Preserve view-based totals when larger, so an existing
-  /// public count does not shrink when a video starts reporting playthroughs.
+  /// Bulk statistics use no-store responses and separate computed loops from
+  /// archival loops. Preserve larger view-based totals so an existing public
+  /// count does not shrink when a video starts reporting playthroughs.
   Future<int?> fetchLoopCount(VideoEvent video) async {
     final client = _funnelcakeApiClient;
     if (client == null || !client.isAvailable) return null;
