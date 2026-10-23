@@ -14,18 +14,27 @@ import 'package:openvine/notifications/view/announcement_detail_screen.dart';
 import 'package:openvine/router/fade_upwards_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-List<RouteBase> announcementRoutes() => [
-  GoRoute(
-    path: AnnouncementDetailScreen.path,
-    name: AnnouncementDetailScreen.routeName,
-    pageBuilder: (_, state) => fadeUpwardsPage(
-      state: state,
-      child: _AnnouncementDetailPage(
-        announcementId: state.pathParameters['id']!,
-      ),
-    ),
-  ),
-];
+part 'announcement_routes.g.dart';
+
+List<RouteBase> announcementRoutes() => $appRoutes;
+
+@TypedGoRoute<AnnouncementDetailRouteData>(
+  path: AnnouncementDetailScreen.path,
+  name: AnnouncementDetailScreen.routeName,
+)
+class AnnouncementDetailRouteData extends GoRouteData
+    with $AnnouncementDetailRouteData {
+  const AnnouncementDetailRouteData({required this.id});
+
+  final String id;
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      fadeUpwardsPage(
+        state: state,
+        child: _AnnouncementDetailPage(announcementId: id),
+      );
+}
 
 class _AnnouncementDetailPage extends ConsumerWidget {
   const _AnnouncementDetailPage({required this.announcementId});
