@@ -450,6 +450,60 @@ void main() {
       );
     });
 
+    group('VideoEditorTextGradientChanged', () {
+      const gradient = TextGradient(
+        colors: [Color(0xFF34BBF1), Color(0xFF8568FF)],
+        angle: 1,
+      );
+
+      blocTest<VideoEditorTextBloc, VideoEditorTextState>(
+        'fills the letters with the gradient and remembers it',
+        build: buildBloc,
+        act: (bloc) => bloc.add(const VideoEditorTextGradientChanged(gradient)),
+        expect: () => [
+          isA<VideoEditorTextState>()
+              .having((s) => s.gradient, 'gradient', gradient)
+              .having((s) => s.gradientToRestore, 'restore', gradient),
+        ],
+      );
+
+      blocTest<VideoEditorTextBloc, VideoEditorTextState>(
+        'keeps the gradient to restore when the letters go back to one color',
+        build: () => buildBloc(
+          initialState: const VideoEditorTextState(
+            gradient: gradient,
+            lastGradient: gradient,
+          ),
+        ),
+        act: (bloc) => bloc.add(const VideoEditorTextGradientChanged(null)),
+        expect: () => [
+          isA<VideoEditorTextState>()
+              .having((s) => s.gradient, 'gradient', isNull)
+              .having((s) => s.gradientToRestore, 'restore', gradient),
+        ],
+      );
+
+      blocTest<VideoEditorTextBloc, VideoEditorTextState>(
+        'takes the gradient of the layer it edits',
+        build: buildBloc,
+        act: (bloc) => bloc.add(
+          const VideoEditorTextInitFromLayer(
+            text: 'Hi',
+            alignment: TextAlign.center,
+            color: Colors.white,
+            backgroundStyle: LayerBackgroundMode.onlyColor,
+            selectedFontIndex: 0,
+            gradient: gradient,
+          ),
+        ),
+        expect: () => [
+          isA<VideoEditorTextState>()
+              .having((s) => s.gradient, 'gradient', gradient)
+              .having((s) => s.gradientToRestore, 'restore', gradient),
+        ],
+      );
+    });
+
     group('VideoEditorTextEffectsPanelToggled', () {
       blocTest<VideoEditorTextBloc, VideoEditorTextState>(
         'opens the outline and shadow panel when closed',

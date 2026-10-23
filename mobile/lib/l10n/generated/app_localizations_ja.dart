@@ -8860,6 +8860,66 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorTextShadowColor => '影の色';
 
   @override
+  String get videoEditorTextFillSolid => '単色';
+
+  @override
+  String get videoEditorTextFillGradient => 'グラデーション';
+
+  @override
+  String get videoEditorTextGradientPresets => 'プリセット';
+
+  @override
+  String get videoEditorTextGradientColors => '色';
+
+  @override
+  String get videoEditorTextGradientAddColor => '色を追加';
+
+  @override
+  String get videoEditorTextGradientRemoveColor => '最後の色を削除';
+
+  @override
+  String get videoEditorTextGradientSunset => '夕焼け';
+
+  @override
+  String get videoEditorTextGradientOcean => 'オーシャン';
+
+  @override
+  String get videoEditorTextGradientRainbow => 'レインボー';
+
+  @override
+  String get videoEditorTextGradientMint => 'ミント';
+
+  @override
+  String get videoEditorTextGradientCandy => 'キャンディ';
+
+  @override
+  String get videoEditorTextGradientAurora => 'オーロラ';
+
+  @override
+  String get videoEditorTextGradientLeftToRight => '左から右';
+
+  @override
+  String get videoEditorTextGradientTopLeftToBottomRight => '左上から右下';
+
+  @override
+  String get videoEditorTextGradientTopToBottom => '上から下';
+
+  @override
+  String get videoEditorTextGradientTopRightToBottomLeft => '右上から左下';
+
+  @override
+  String get videoEditorTextGradientRightToLeft => '右から左';
+
+  @override
+  String get videoEditorTextGradientBottomRightToTopLeft => '右下から左上';
+
+  @override
+  String get videoEditorTextGradientBottomToTop => '下から上';
+
+  @override
+  String get videoEditorTextGradientBottomLeftToTopRight => '左下から右上';
+
+  @override
   String get videoEditorFontSemanticLabel => 'フォント';
 
   @override

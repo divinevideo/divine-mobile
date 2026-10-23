@@ -1,7 +1,7 @@
-// ABOUTME: The look of a free-form text overlay — font, colors, background
-// ABOUTME: mode, alignment, size, outline and shadow, and enter/leave/loop
-// ABOUTME: animation — as one serializable unit that can be lifted off a layer
-// ABOUTME: and applied to another (#7742).
+// ABOUTME: The look of a free-form text overlay — font, colors or gradient,
+// ABOUTME: background mode, alignment, size, outline and shadow, and
+// ABOUTME: enter/leave/loop animation — as one serializable unit that can be
+// ABOUTME: lifted off a layer and applied to another (#7742).
 
 import 'dart:math';
 
@@ -15,7 +15,7 @@ import 'package:openvine/models/video_editor/layer_slide_point.dart';
 import 'package:openvine/models/video_editor/text_effects.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
-    show LayerBackgroundMode, TextLayer;
+    show LayerBackgroundMode, TextGradient, TextLayer;
 import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 
 /// A title treatment: everything about a text overlay's look except the text
@@ -41,6 +41,7 @@ class TitleStyle extends Equatable {
     this.align = TextAlign.center,
     this.fontScale = 1,
     this.effects = TextEffects.none,
+    this.gradient,
     this.enter = const [],
     this.leave = const [],
     this.loop = const [],
@@ -64,6 +65,7 @@ class TitleStyle extends Equatable {
       align: layer.align,
       fontScale: layer.fontScale,
       effects: TextEffects.of(layer),
+      gradient: layer.hasGradient ? layer.gradient : null,
       enter: layer.divineEnterAnimations,
       leave: layer.divineLeaveAnimations,
       loop: layer.divineLoopAnimations,
@@ -104,6 +106,7 @@ class TitleStyle extends Equatable {
       ),
       fontScale: (fontScale as num?)?.toDouble() ?? 1,
       effects: TextEffects.fromJson(json['effects']),
+      gradient: _gradientFromJson(json['gradient']),
       enter: enter,
       leave: leave,
       loop: loop,
@@ -136,6 +139,10 @@ class TitleStyle extends Equatable {
 
   /// The outline and shadow drawn around the text.
   final TextEffects effects;
+
+  /// The color gradient that fills the letters in place of [color], or
+  /// `null` when they are filled with [color].
+  final TextGradient? gradient;
 
   /// Animations played when the layer appears.
   final List<pve.LayerAnimation> enter;
@@ -192,6 +199,8 @@ class TitleStyle extends Equatable {
           align: align,
           fontScale: fontScale,
         );
+    // Set in place: `copyWith` cannot take a gradient away.
+    restyled.gradient = gradient;
     // `TextLayer.copyWith` returns a `TextLayer`, so the animation write —
     // typed on the base `Layer` — hands back the same subtype.
     return restyled.withDivineAnimations(
@@ -214,6 +223,7 @@ class TitleStyle extends Equatable {
     'align': align.name,
     'fontScale': fontScale,
     'effects': effects.toJson(),
+    if (gradient case final gradient?) 'gradient': _gradientToJson(gradient),
     'enter': [for (final animation in enter) animation.toMap()],
     'leave': [for (final animation in leave) animation.toMap()],
     'loop': [for (final animation in loop) animation.toMap()],
@@ -231,6 +241,7 @@ class TitleStyle extends Equatable {
     align,
     fontScale,
     effects,
+    gradient,
     enter,
     leave,
     loop,
@@ -301,6 +312,35 @@ pve.LayerAnimation? _animationFromJson(Object? json) {
     wiggleAngle: (wiggleAngle as num?)?.toDouble(),
     bounceHeight: (bounceHeight as num?)?.toDouble(),
   );
+}
+
+Map<String, Object?> _gradientToJson(TextGradient gradient) =>
+    <String, Object?>{
+      'colors': [for (final color in gradient.colors) color.toARGB32()],
+      'stops': ?gradient.stops,
+      'angle': gradient.angle,
+    };
+
+/// Decodes a [_gradientToJson] map; `null` when [json] is absent or does not
+/// describe a gradient that can be drawn. An unreadable gradient leaves the
+/// letters in the style's color rather than hiding the whole style.
+TextGradient? _gradientFromJson(Object? json) {
+  if (json is! Map) return null;
+  final colors = json['colors'];
+  final stops = json['stops'];
+  final angle = json['angle'];
+  if (colors is! List || !colors.every((color) => color is int)) return null;
+  if (stops != null &&
+      (stops is! List || !stops.every((stop) => stop is num))) {
+    return null;
+  }
+  if (angle is! num || !angle.isFinite) return null;
+  final gradient = TextGradient(
+    colors: [for (final color in colors) colorFromArgb32(color as int)],
+    stops: (stops as List?)?.map((stop) => (stop as num).toDouble()).toList(),
+    angle: angle.toDouble(),
+  );
+  return gradient.isValid ? gradient : null;
 }
 
 Map<String, Object?> _offsetToJson(Offset offset) => <String, Object?>{

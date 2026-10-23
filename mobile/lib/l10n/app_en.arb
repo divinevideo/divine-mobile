@@ -6472,6 +6472,86 @@
   "videoEditorTextShadow": "Shadow",
   "videoEditorTextShadowStrength": "Shadow strength",
   "videoEditorTextShadowColor": "Shadow color",
+  "videoEditorTextFillSolid": "Solid",
+  "@videoEditorTextFillSolid": {
+    "description": "Tab in the text color panel of the video editor that fills the letters with a single color."
+  },
+  "videoEditorTextFillGradient": "Gradient",
+  "@videoEditorTextFillGradient": {
+    "description": "Tab in the text color panel of the video editor that fills the letters with a color gradient. Also read out as the value of the text color button while a gradient is on."
+  },
+  "videoEditorTextGradientPresets": "Presets",
+  "@videoEditorTextGradientPresets": {
+    "description": "Section header over the ready-made color gradients a text can be filled with."
+  },
+  "videoEditorTextGradientColors": "Colors",
+  "@videoEditorTextGradientColors": {
+    "description": "Section header over the colors of the text's gradient, each of which can be changed."
+  },
+  "videoEditorTextGradientAddColor": "Add color",
+  "@videoEditorTextGradientAddColor": {
+    "description": "Screen reader label of the button that adds a color to the end of the text's gradient."
+  },
+  "videoEditorTextGradientRemoveColor": "Remove last color",
+  "@videoEditorTextGradientRemoveColor": {
+    "description": "Screen reader label of the button that removes the last color of the text's gradient."
+  },
+  "videoEditorTextGradientSunset": "Sunset",
+  "@videoEditorTextGradientSunset": {
+    "description": "Screen reader name of a ready-made yellow, orange and pink text gradient."
+  },
+  "videoEditorTextGradientOcean": "Ocean",
+  "@videoEditorTextGradientOcean": {
+    "description": "Screen reader name of a ready-made blue to purple text gradient."
+  },
+  "videoEditorTextGradientRainbow": "Rainbow",
+  "@videoEditorTextGradientRainbow": {
+    "description": "Screen reader name of a ready-made text gradient through pink, orange, yellow, lime, blue and purple."
+  },
+  "videoEditorTextGradientMint": "Mint",
+  "@videoEditorTextGradientMint": {
+    "description": "Screen reader name of a ready-made green to lime text gradient."
+  },
+  "videoEditorTextGradientCandy": "Candy",
+  "@videoEditorTextGradientCandy": {
+    "description": "Screen reader name of a ready-made pink to lavender text gradient."
+  },
+  "videoEditorTextGradientAurora": "Aurora",
+  "@videoEditorTextGradientAurora": {
+    "description": "Screen reader name of a ready-made green, blue and purple text gradient."
+  },
+  "videoEditorTextGradientLeftToRight": "Left to right",
+  "@videoEditorTextGradientLeftToRight": {
+    "description": "Screen reader name of the direction a text's color gradient runs in."
+  },
+  "videoEditorTextGradientTopLeftToBottomRight": "Top left to bottom right",
+  "@videoEditorTextGradientTopLeftToBottomRight": {
+    "description": "Screen reader name of the direction a text's color gradient runs in."
+  },
+  "videoEditorTextGradientTopToBottom": "Top to bottom",
+  "@videoEditorTextGradientTopToBottom": {
+    "description": "Screen reader name of the direction a text's color gradient runs in."
+  },
+  "videoEditorTextGradientTopRightToBottomLeft": "Top right to bottom left",
+  "@videoEditorTextGradientTopRightToBottomLeft": {
+    "description": "Screen reader name of the direction a text's color gradient runs in."
+  },
+  "videoEditorTextGradientRightToLeft": "Right to left",
+  "@videoEditorTextGradientRightToLeft": {
+    "description": "Screen reader name of the direction a text's color gradient runs in."
+  },
+  "videoEditorTextGradientBottomRightToTopLeft": "Bottom right to top left",
+  "@videoEditorTextGradientBottomRightToTopLeft": {
+    "description": "Screen reader name of the direction a text's color gradient runs in."
+  },
+  "videoEditorTextGradientBottomToTop": "Bottom to top",
+  "@videoEditorTextGradientBottomToTop": {
+    "description": "Screen reader name of the direction a text's color gradient runs in."
+  },
+  "videoEditorTextGradientBottomLeftToTopRight": "Bottom left to top right",
+  "@videoEditorTextGradientBottomLeftToTopRight": {
+    "description": "Screen reader name of the direction a text's color gradient runs in."
+  },
   "videoEditorFontSemanticLabel": "Font",
   "videoEditorFontCategorySans": "Sans serif",
   "@videoEditorFontCategorySans": {

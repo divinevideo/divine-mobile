@@ -9565,6 +9565,70 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorTextShadowColor => 'నీడ రంగు';
 
   @override
+  String get videoEditorTextFillSolid => 'ఒకే రంగు';
+
+  @override
+  String get videoEditorTextFillGradient => 'గ్రేడియంట్';
+
+  @override
+  String get videoEditorTextGradientPresets => 'ప్రీసెట్‌లు';
+
+  @override
+  String get videoEditorTextGradientColors => 'రంగులు';
+
+  @override
+  String get videoEditorTextGradientAddColor => 'రంగును జోడించండి';
+
+  @override
+  String get videoEditorTextGradientRemoveColor => 'చివరి రంగును తీసివేయండి';
+
+  @override
+  String get videoEditorTextGradientSunset => 'సూర్యాస్తమయం';
+
+  @override
+  String get videoEditorTextGradientOcean => 'సముద్రం';
+
+  @override
+  String get videoEditorTextGradientRainbow => 'ఇంద్రధనుస్సు';
+
+  @override
+  String get videoEditorTextGradientMint => 'పుదీనా';
+
+  @override
+  String get videoEditorTextGradientCandy => 'క్యాండీ';
+
+  @override
+  String get videoEditorTextGradientAurora => 'అరోరా';
+
+  @override
+  String get videoEditorTextGradientLeftToRight => 'ఎడమ నుండి కుడికి';
+
+  @override
+  String get videoEditorTextGradientTopLeftToBottomRight =>
+      'పై ఎడమ నుండి కింది కుడికి';
+
+  @override
+  String get videoEditorTextGradientTopToBottom => 'పై నుండి కిందికి';
+
+  @override
+  String get videoEditorTextGradientTopRightToBottomLeft =>
+      'పై కుడి నుండి కింది ఎడమకు';
+
+  @override
+  String get videoEditorTextGradientRightToLeft => 'కుడి నుండి ఎడమకు';
+
+  @override
+  String get videoEditorTextGradientBottomRightToTopLeft =>
+      'కింది కుడి నుండి పై ఎడమకు';
+
+  @override
+  String get videoEditorTextGradientBottomToTop => 'కింది నుండి పైకి';
+
+  @override
+  String get videoEditorTextGradientBottomLeftToTopRight =>
+      'కింది ఎడమ నుండి పై కుడికి';
+
+  @override
   String get videoEditorFontSemanticLabel => 'ఫాంట్';
 
   @override

@@ -1,9 +1,12 @@
-// ABOUTME: Preview text that draws an outline and shadow the way a text layer
-// ABOUTME: does, for the title and caption style tiles (#9558).
+// ABOUTME: Preview text that draws an outline, a shadow and a gradient fill
+// ABOUTME: the way a text layer does, for the title and caption style tiles
+// ABOUTME: (#9558, #10398).
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/video_editor/text_effects.dart';
+import 'package:pro_image_editor/pro_image_editor.dart' show TextGradient;
 
 /// [text] in [style] with [effects]: the outline under the glyphs and the
 /// shadow beneath both, scaled to the rendered font size as a text layer
@@ -22,6 +25,7 @@ class TextEffectsPreviewText extends StatelessWidget {
     this.overflow,
     this.highlightRange,
     this.highlightColor,
+    this.gradient,
     super.key,
   });
 
@@ -50,6 +54,11 @@ class TextEffectsPreviewText extends StatelessWidget {
 
   /// The fill color of [highlightRange].
   final Color? highlightColor;
+
+  /// A color gradient that fills the glyphs, [highlightRange] included, in
+  /// place of the color of [style]; the outline and shadow keep their own
+  /// colors.
+  final TextGradient? gradient;
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +103,29 @@ class TextEffectsPreviewText extends StatelessWidget {
       );
     }
 
-    if (!effects.hasOutline) return line(style.copyWith(shadows: shadows));
+    final gradient = this.gradient;
+    final hasGradient = gradient != null && gradient.isValid;
+
+    Widget fill(TextStyle style) {
+      if (!hasGradient) return line(style);
+      return ShaderMask(
+        blendMode: BlendMode.srcIn,
+        shaderCallback: gradient.createShader,
+        child: line(style),
+      );
+    }
+
+    if (!effects.hasOutline) {
+      if (!hasGradient) return line(style.copyWith(shadows: shadows));
+      // The gradient would tint the shadow as well, so clear glyphs cast it
+      // beneath the gradient ones.
+      return Stack(
+        children: [
+          line(style.copyWith(shadows: shadows, color: VineTheme.transparent)),
+          fill(style),
+        ],
+      );
+    }
 
     return Stack(
       children: [
@@ -109,7 +140,7 @@ class TextEffectsPreviewText extends StatelessWidget {
               ..color = effects.outlineColor,
           ),
         ),
-        line(style),
+        fill(style),
       ],
     );
   }

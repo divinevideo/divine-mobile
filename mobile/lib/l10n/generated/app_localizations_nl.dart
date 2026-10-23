@@ -9351,6 +9351,70 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorTextShadowColor => 'Schaduwkleur';
 
   @override
+  String get videoEditorTextFillSolid => 'Effen';
+
+  @override
+  String get videoEditorTextFillGradient => 'Verloop';
+
+  @override
+  String get videoEditorTextGradientPresets => 'Voorinstellingen';
+
+  @override
+  String get videoEditorTextGradientColors => 'Kleuren';
+
+  @override
+  String get videoEditorTextGradientAddColor => 'Kleur toevoegen';
+
+  @override
+  String get videoEditorTextGradientRemoveColor => 'Laatste kleur verwijderen';
+
+  @override
+  String get videoEditorTextGradientSunset => 'Zonsondergang';
+
+  @override
+  String get videoEditorTextGradientOcean => 'Oceaan';
+
+  @override
+  String get videoEditorTextGradientRainbow => 'Regenboog';
+
+  @override
+  String get videoEditorTextGradientMint => 'Munt';
+
+  @override
+  String get videoEditorTextGradientCandy => 'Snoep';
+
+  @override
+  String get videoEditorTextGradientAurora => 'Noorderlicht';
+
+  @override
+  String get videoEditorTextGradientLeftToRight => 'Van links naar rechts';
+
+  @override
+  String get videoEditorTextGradientTopLeftToBottomRight =>
+      'Van linksboven naar rechtsonder';
+
+  @override
+  String get videoEditorTextGradientTopToBottom => 'Van boven naar beneden';
+
+  @override
+  String get videoEditorTextGradientTopRightToBottomLeft =>
+      'Van rechtsboven naar linksonder';
+
+  @override
+  String get videoEditorTextGradientRightToLeft => 'Van rechts naar links';
+
+  @override
+  String get videoEditorTextGradientBottomRightToTopLeft =>
+      'Van rechtsonder naar linksboven';
+
+  @override
+  String get videoEditorTextGradientBottomToTop => 'Van beneden naar boven';
+
+  @override
+  String get videoEditorTextGradientBottomLeftToTopRight =>
+      'Van linksonder naar rechtsboven';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Lettertype';
 
   @override

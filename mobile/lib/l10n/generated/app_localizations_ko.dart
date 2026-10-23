@@ -8878,6 +8878,66 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorTextShadowColor => '그림자 색상';
 
   @override
+  String get videoEditorTextFillSolid => '단색';
+
+  @override
+  String get videoEditorTextFillGradient => '그라데이션';
+
+  @override
+  String get videoEditorTextGradientPresets => '프리셋';
+
+  @override
+  String get videoEditorTextGradientColors => '색상';
+
+  @override
+  String get videoEditorTextGradientAddColor => '색상 추가';
+
+  @override
+  String get videoEditorTextGradientRemoveColor => '마지막 색상 삭제';
+
+  @override
+  String get videoEditorTextGradientSunset => '노을';
+
+  @override
+  String get videoEditorTextGradientOcean => '바다';
+
+  @override
+  String get videoEditorTextGradientRainbow => '무지개';
+
+  @override
+  String get videoEditorTextGradientMint => '민트';
+
+  @override
+  String get videoEditorTextGradientCandy => '캔디';
+
+  @override
+  String get videoEditorTextGradientAurora => '오로라';
+
+  @override
+  String get videoEditorTextGradientLeftToRight => '왼쪽에서 오른쪽';
+
+  @override
+  String get videoEditorTextGradientTopLeftToBottomRight => '왼쪽 위에서 오른쪽 아래';
+
+  @override
+  String get videoEditorTextGradientTopToBottom => '위에서 아래';
+
+  @override
+  String get videoEditorTextGradientTopRightToBottomLeft => '오른쪽 위에서 왼쪽 아래';
+
+  @override
+  String get videoEditorTextGradientRightToLeft => '오른쪽에서 왼쪽';
+
+  @override
+  String get videoEditorTextGradientBottomRightToTopLeft => '오른쪽 아래에서 왼쪽 위';
+
+  @override
+  String get videoEditorTextGradientBottomToTop => '아래에서 위';
+
+  @override
+  String get videoEditorTextGradientBottomLeftToTopRight => '왼쪽 아래에서 오른쪽 위';
+
+  @override
   String get videoEditorFontSemanticLabel => '폰트';
 
   @override

@@ -8,12 +8,12 @@ import 'package:openvine/blocs/video_editor/text_editor/video_editor_text_bloc.d
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/video_editor/text_effects.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
+import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_color_panel.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_effects_panel.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_font_selector.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_overlay_controls.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_style_bar.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_text_editor_scope.dart';
-import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -76,6 +76,7 @@ class _VideoTextEditorScreenState extends State<VideoTextEditorScreen> {
         backgroundStyle: layer.colorMode,
         selectedFontIndex: max(0, fontIndex),
         effects: TextEffects.of(layer),
+        gradient: layer.hasGradient ? layer.gradient : null,
       ),
     );
   }
@@ -129,13 +130,12 @@ class _BottomPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (showFontSelector, showEffectsPanel, showBottomPanel, color) = context
+    final (showFontSelector, showEffectsPanel, showBottomPanel) = context
         .select(
           (VideoEditorTextBloc bloc) => (
             bloc.state.showFontSelector,
             bloc.state.showEffectsPanel,
             bloc.state.showsPanel,
-            bloc.state.color,
           ),
         );
 
@@ -174,15 +174,7 @@ class _BottomPanel extends StatelessWidget {
                   )
                 : showEffectsPanel
                 ? const VideoEditorTextEffectsPanel()
-                : VideoEditorColorPickerSheet(
-                    selectedColor: color,
-                    onColorSelected: (color) {
-                      editorKey.currentState?.primaryColor = color;
-                      context.read<VideoEditorTextBloc>().add(
-                        VideoEditorTextColorSelected(color),
-                      );
-                    },
-                  ),
+                : const VideoEditorTextColorPanel(),
           ),
         ],
       ),

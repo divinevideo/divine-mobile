@@ -1,11 +1,12 @@
-// ABOUTME: Tests for TextEffectsPreviewText's highlighted range: only the fill
-// ABOUTME: is recolored, so the outline pass keeps its stroke.
+// ABOUTME: Tests for TextEffectsPreviewText: only the fill takes the
+// ABOUTME: highlight color or the gradient; outline and shadow keep theirs.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/text_effects.dart';
 import 'package:openvine/widgets/video_editor/text_effects_preview_text.dart';
+import 'package:pro_image_editor/pro_image_editor.dart' show TextGradient;
 
 void main() {
   group(TextEffectsPreviewText, () {
@@ -60,6 +61,81 @@ void main() {
 
       // The stroke pass first, then the fill pass on top.
       expect(litPerPass(tester), [null, 'It']);
+    });
+
+    group('gradient', () {
+      const gradient = TextGradient(
+        colors: [Color(0xFF34BBF1), Color(0xFF8568FF)],
+      );
+
+      Future<void> pumpGradient(
+        WidgetTester tester, {
+        required TextEffects effects,
+      }) {
+        return tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Center(
+              child: TextEffectsPreviewText(
+                'Do It For',
+                style: style,
+                effects: effects,
+                gradient: gradient,
+              ),
+            ),
+          ),
+        );
+      }
+
+      /// The shadows of the passes drawn through the gradient, and of the
+      /// passes drawn outside it.
+      ({List<Shadow> filled, List<Shadow> outside}) shadowsByPass(
+        WidgetTester tester,
+      ) {
+        final filled = find.descendant(
+          of: find.byType(ShaderMask),
+          matching: find.byType(Text),
+        );
+        final outside = find.byWidgetPredicate(
+          (widget) =>
+              widget is Text &&
+              !filled.evaluate().any((element) => element.widget == widget),
+        );
+        List<Shadow> shadows(Finder finder) => [
+          for (final text in tester.widgetList<Text>(finder))
+            ...?text.style?.shadows,
+        ];
+        return (filled: shadows(filled), outside: shadows(outside));
+      }
+
+      testWidgets('leaves the shadow out of the gradient', (tester) async {
+        await pumpGradient(
+          tester,
+          effects: const TextEffects(shadowStrength: 0.5),
+        );
+
+        final shadows = shadowsByPass(tester);
+        expect(find.byType(ShaderMask), findsOneWidget);
+        expect(shadows.filled, isEmpty);
+        expect(shadows.outside, isNotEmpty);
+      });
+
+      testWidgets('leaves the outline out of the gradient', (tester) async {
+        await pumpGradient(
+          tester,
+          effects: const TextEffects(outlineThickness: 0.5),
+        );
+
+        final masked = tester.widget<Text>(
+          find.descendant(
+            of: find.byType(ShaderMask),
+            matching: find.byType(Text),
+          ),
+        );
+        expect(masked.style?.foreground, isNull);
+        expect(find.byType(Text), findsNWidgets(2));
+      });
     });
   });
 }

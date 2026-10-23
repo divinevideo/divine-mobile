@@ -9401,6 +9401,70 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorTextShadowColor => 'Shadow color';
 
   @override
+  String get videoEditorTextFillSolid => 'Solid';
+
+  @override
+  String get videoEditorTextFillGradient => 'Gradient';
+
+  @override
+  String get videoEditorTextGradientPresets => 'Presets';
+
+  @override
+  String get videoEditorTextGradientColors => 'Colors';
+
+  @override
+  String get videoEditorTextGradientAddColor => 'Add color';
+
+  @override
+  String get videoEditorTextGradientRemoveColor => 'Remove last color';
+
+  @override
+  String get videoEditorTextGradientSunset => 'Sunset';
+
+  @override
+  String get videoEditorTextGradientOcean => 'Ocean';
+
+  @override
+  String get videoEditorTextGradientRainbow => 'Rainbow';
+
+  @override
+  String get videoEditorTextGradientMint => 'Mint';
+
+  @override
+  String get videoEditorTextGradientCandy => 'Candy';
+
+  @override
+  String get videoEditorTextGradientAurora => 'Aurora';
+
+  @override
+  String get videoEditorTextGradientLeftToRight => 'Left to right';
+
+  @override
+  String get videoEditorTextGradientTopLeftToBottomRight =>
+      'Top left to bottom right';
+
+  @override
+  String get videoEditorTextGradientTopToBottom => 'Top to bottom';
+
+  @override
+  String get videoEditorTextGradientTopRightToBottomLeft =>
+      'Top right to bottom left';
+
+  @override
+  String get videoEditorTextGradientRightToLeft => 'Right to left';
+
+  @override
+  String get videoEditorTextGradientBottomRightToTopLeft =>
+      'Bottom right to top left';
+
+  @override
+  String get videoEditorTextGradientBottomToTop => 'Bottom to top';
+
+  @override
+  String get videoEditorTextGradientBottomLeftToTopRight =>
+      'Bottom left to top right';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Font';
 
   @override

@@ -9314,6 +9314,70 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorTextShadowColor => 'Warna bayang';
 
   @override
+  String get videoEditorTextFillSolid => 'Padu';
+
+  @override
+  String get videoEditorTextFillGradient => 'Gradien';
+
+  @override
+  String get videoEditorTextGradientPresets => 'Pratetap';
+
+  @override
+  String get videoEditorTextGradientColors => 'Warna';
+
+  @override
+  String get videoEditorTextGradientAddColor => 'Tambah warna';
+
+  @override
+  String get videoEditorTextGradientRemoveColor => 'Buang warna terakhir';
+
+  @override
+  String get videoEditorTextGradientSunset => 'Matahari terbenam';
+
+  @override
+  String get videoEditorTextGradientOcean => 'Lautan';
+
+  @override
+  String get videoEditorTextGradientRainbow => 'Pelangi';
+
+  @override
+  String get videoEditorTextGradientMint => 'Pudina';
+
+  @override
+  String get videoEditorTextGradientCandy => 'Gula-gula';
+
+  @override
+  String get videoEditorTextGradientAurora => 'Aurora';
+
+  @override
+  String get videoEditorTextGradientLeftToRight => 'Kiri ke kanan';
+
+  @override
+  String get videoEditorTextGradientTopLeftToBottomRight =>
+      'Kiri atas ke kanan bawah';
+
+  @override
+  String get videoEditorTextGradientTopToBottom => 'Atas ke bawah';
+
+  @override
+  String get videoEditorTextGradientTopRightToBottomLeft =>
+      'Kanan atas ke kiri bawah';
+
+  @override
+  String get videoEditorTextGradientRightToLeft => 'Kanan ke kiri';
+
+  @override
+  String get videoEditorTextGradientBottomRightToTopLeft =>
+      'Kanan bawah ke kiri atas';
+
+  @override
+  String get videoEditorTextGradientBottomToTop => 'Bawah ke atas';
+
+  @override
+  String get videoEditorTextGradientBottomLeftToTopRight =>
+      'Kiri bawah ke kanan atas';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Fon';
 
   @override

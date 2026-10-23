@@ -9305,6 +9305,70 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorTextShadowColor => 'Skuggfärg';
 
   @override
+  String get videoEditorTextFillSolid => 'Enfärgad';
+
+  @override
+  String get videoEditorTextFillGradient => 'Övertoning';
+
+  @override
+  String get videoEditorTextGradientPresets => 'Förinställningar';
+
+  @override
+  String get videoEditorTextGradientColors => 'Färger';
+
+  @override
+  String get videoEditorTextGradientAddColor => 'Lägg till färg';
+
+  @override
+  String get videoEditorTextGradientRemoveColor => 'Ta bort sista färgen';
+
+  @override
+  String get videoEditorTextGradientSunset => 'Solnedgång';
+
+  @override
+  String get videoEditorTextGradientOcean => 'Hav';
+
+  @override
+  String get videoEditorTextGradientRainbow => 'Regnbåge';
+
+  @override
+  String get videoEditorTextGradientMint => 'Mint';
+
+  @override
+  String get videoEditorTextGradientCandy => 'Godis';
+
+  @override
+  String get videoEditorTextGradientAurora => 'Norrsken';
+
+  @override
+  String get videoEditorTextGradientLeftToRight => 'Från vänster till höger';
+
+  @override
+  String get videoEditorTextGradientTopLeftToBottomRight =>
+      'Från övre vänstra till nedre högra hörnet';
+
+  @override
+  String get videoEditorTextGradientTopToBottom => 'Uppifrån och ned';
+
+  @override
+  String get videoEditorTextGradientTopRightToBottomLeft =>
+      'Från övre högra till nedre vänstra hörnet';
+
+  @override
+  String get videoEditorTextGradientRightToLeft => 'Från höger till vänster';
+
+  @override
+  String get videoEditorTextGradientBottomRightToTopLeft =>
+      'Från nedre högra till övre vänstra hörnet';
+
+  @override
+  String get videoEditorTextGradientBottomToTop => 'Nedifrån och upp';
+
+  @override
+  String get videoEditorTextGradientBottomLeftToTopRight =>
+      'Från nedre vänstra till övre högra hörnet';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Typsnitt';
 
   @override
