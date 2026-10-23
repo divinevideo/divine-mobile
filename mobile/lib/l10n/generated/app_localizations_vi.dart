@@ -9277,6 +9277,70 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorTextShadowColor => 'Màu bóng';
 
   @override
+  String get videoEditorTextFillSolid => 'Đơn sắc';
+
+  @override
+  String get videoEditorTextFillGradient => 'Chuyển màu';
+
+  @override
+  String get videoEditorTextGradientPresets => 'Mẫu có sẵn';
+
+  @override
+  String get videoEditorTextGradientColors => 'Màu';
+
+  @override
+  String get videoEditorTextGradientAddColor => 'Thêm màu';
+
+  @override
+  String get videoEditorTextGradientRemoveColor => 'Xóa màu cuối';
+
+  @override
+  String get videoEditorTextGradientSunset => 'Hoàng hôn';
+
+  @override
+  String get videoEditorTextGradientOcean => 'Đại dương';
+
+  @override
+  String get videoEditorTextGradientRainbow => 'Cầu vồng';
+
+  @override
+  String get videoEditorTextGradientMint => 'Bạc hà';
+
+  @override
+  String get videoEditorTextGradientCandy => 'Kẹo ngọt';
+
+  @override
+  String get videoEditorTextGradientAurora => 'Cực quang';
+
+  @override
+  String get videoEditorTextGradientLeftToRight => 'Từ trái sang phải';
+
+  @override
+  String get videoEditorTextGradientTopLeftToBottomRight =>
+      'Từ trên trái xuống dưới phải';
+
+  @override
+  String get videoEditorTextGradientTopToBottom => 'Từ trên xuống dưới';
+
+  @override
+  String get videoEditorTextGradientTopRightToBottomLeft =>
+      'Từ trên phải xuống dưới trái';
+
+  @override
+  String get videoEditorTextGradientRightToLeft => 'Từ phải sang trái';
+
+  @override
+  String get videoEditorTextGradientBottomRightToTopLeft =>
+      'Từ dưới phải lên trên trái';
+
+  @override
+  String get videoEditorTextGradientBottomToTop => 'Từ dưới lên trên';
+
+  @override
+  String get videoEditorTextGradientBottomLeftToTopRight =>
+      'Từ dưới trái lên trên phải';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Phông chữ';
 
   @override

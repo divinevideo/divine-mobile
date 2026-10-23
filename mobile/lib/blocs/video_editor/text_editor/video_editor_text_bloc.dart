@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/video_editor/text_effects.dart';
+import 'package:openvine/models/video_editor/text_gradient_presets.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_extensions.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -30,6 +31,7 @@ class VideoEditorTextBloc
     on<VideoEditorTextColorPickerToggled>(_onColorPickerToggled);
     on<VideoEditorTextEffectsChanged>(_onEffectsChanged);
     on<VideoEditorTextEffectsPanelToggled>(_onEffectsPanelToggled);
+    on<VideoEditorTextGradientChanged>(_onGradientChanged);
     on<VideoEditorTextClosePanels>(_onClosePanels);
     on<VideoEditorTextInitFromLayer>(_onInitFromLayer);
   }
@@ -135,6 +137,22 @@ class VideoEditorTextBloc
     emit(state.copyWith(effects: event.effects));
   }
 
+  /// Fills the letters with a gradient, or with a single color again, and
+  /// remembers the gradient for switching back to it.
+  void _onGradientChanged(
+    VideoEditorTextGradientChanged event,
+    Emitter<VideoEditorTextState> emit,
+  ) {
+    final gradient = event.gradient;
+    emit(
+      state.copyWith(
+        gradient: gradient,
+        clearGradient: gradient == null,
+        lastGradient: gradient,
+      ),
+    );
+  }
+
   /// Toggles the outline and shadow panel visibility.
   void _onEffectsPanelToggled(
     VideoEditorTextEffectsPanelToggled event,
@@ -182,6 +200,8 @@ class VideoEditorTextBloc
         backgroundStyle: event.backgroundStyle,
         selectedFontIndex: event.selectedFontIndex,
         effects: event.effects,
+        gradient: event.gradient,
+        lastGradient: event.gradient,
       ),
     );
   }

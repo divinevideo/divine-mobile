@@ -165,6 +165,31 @@ void main() {
         expect(colorSwatch, isNotEmpty);
       });
 
+      testWidgets('shows the gradient across the letters', (tester) async {
+        const gradient = TextGradient(
+          colors: [Color(0xFF34BBF1), Color(0xFF8568FF)],
+        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.pumpWidget(
+          buildWidget(state: const VideoEditorTextState(gradient: gradient)),
+        );
+        await tester.pump();
+
+        final swatches = tester
+            .widgetList<Container>(find.byType(Container))
+            .map((container) => container.decoration)
+            .whereType<BoxDecoration>()
+            .where((decoration) => decoration.shape == BoxShape.circle);
+        expect(swatches.single.gradient?.colors, gradient.colors);
+        final button = find.bySemanticsLabel(
+          l10n.videoEditorTextColorSemanticLabel,
+        );
+        expect(
+          tester.getSemantics(button).value,
+          l10n.videoEditorTextFillGradient,
+        );
+      });
+
       testWidgets('tapping toggles color picker', (tester) async {
         await tester.pumpWidget(buildWidget());
         await tester.pump();

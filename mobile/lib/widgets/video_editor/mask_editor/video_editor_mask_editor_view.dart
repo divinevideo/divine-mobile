@@ -538,6 +538,15 @@ class _MaskEditorPanel extends StatelessWidget {
                             .rectangle => l10n.videoEditorShapeMaskRectangle,
                             .heart => l10n.videoEditorShapeMaskHeart,
                             .linear => l10n.videoEditorShapeMaskLinear,
+                            // TODO(#10396): Name these once the panel offers
+                            // them; editorMaskShapes does not list them yet.
+                            .star ||
+                            .triangle ||
+                            .diamond ||
+                            .hexagon ||
+                            .speechBubble => throw StateError(
+                              '$shape is not an editor mask shape yet',
+                            ),
                           },
                           selected: mask?.shape == shape,
                           onTap: () => onShapeSelected(shape),

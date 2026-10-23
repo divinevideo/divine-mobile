@@ -360,6 +360,13 @@ class VideoEditorConstants {
     Color(0xFF34BBF1),
   ];
 
+  /// The fewest colors a text gradient runs through (#10398).
+  static const int minTextGradientColors = 2;
+
+  /// The most colors a text gradient runs through: as many as the rainbow
+  /// preset (`TextGradientPreset.rainbow`) has.
+  static const int maxTextGradientColors = 6;
+
   /// The color a new audio visualizer draws in; it can pick any of [colors].
   static const Color audioVisualizerDefaultColor = VineTheme.vineGreen;
 

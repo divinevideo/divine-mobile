@@ -9295,6 +9295,70 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorTextShadowColor => 'لون الظل';
 
   @override
+  String get videoEditorTextFillSolid => 'لون واحد';
+
+  @override
+  String get videoEditorTextFillGradient => 'تدرّج';
+
+  @override
+  String get videoEditorTextGradientPresets => 'إعدادات جاهزة';
+
+  @override
+  String get videoEditorTextGradientColors => 'الألوان';
+
+  @override
+  String get videoEditorTextGradientAddColor => 'إضافة لون';
+
+  @override
+  String get videoEditorTextGradientRemoveColor => 'إزالة آخر لون';
+
+  @override
+  String get videoEditorTextGradientSunset => 'غروب الشمس';
+
+  @override
+  String get videoEditorTextGradientOcean => 'محيط';
+
+  @override
+  String get videoEditorTextGradientRainbow => 'قوس قزح';
+
+  @override
+  String get videoEditorTextGradientMint => 'نعناع';
+
+  @override
+  String get videoEditorTextGradientCandy => 'حلوى';
+
+  @override
+  String get videoEditorTextGradientAurora => 'شفق قطبي';
+
+  @override
+  String get videoEditorTextGradientLeftToRight => 'من اليسار إلى اليمين';
+
+  @override
+  String get videoEditorTextGradientTopLeftToBottomRight =>
+      'من أعلى اليسار إلى أسفل اليمين';
+
+  @override
+  String get videoEditorTextGradientTopToBottom => 'من الأعلى إلى الأسفل';
+
+  @override
+  String get videoEditorTextGradientTopRightToBottomLeft =>
+      'من أعلى اليمين إلى أسفل اليسار';
+
+  @override
+  String get videoEditorTextGradientRightToLeft => 'من اليمين إلى اليسار';
+
+  @override
+  String get videoEditorTextGradientBottomRightToTopLeft =>
+      'من أسفل اليمين إلى أعلى اليسار';
+
+  @override
+  String get videoEditorTextGradientBottomToTop => 'من الأسفل إلى الأعلى';
+
+  @override
+  String get videoEditorTextGradientBottomLeftToTopRight =>
+      'من أسفل اليسار إلى أعلى اليمين';
+
+  @override
   String get videoEditorFontSemanticLabel => 'الخط';
 
   @override

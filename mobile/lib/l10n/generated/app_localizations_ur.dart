@@ -9316,6 +9316,70 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorTextShadowColor => 'سائے کا رنگ';
 
   @override
+  String get videoEditorTextFillSolid => 'ایک رنگ';
+
+  @override
+  String get videoEditorTextFillGradient => 'گریڈینٹ';
+
+  @override
+  String get videoEditorTextGradientPresets => 'تیار شدہ';
+
+  @override
+  String get videoEditorTextGradientColors => 'رنگ';
+
+  @override
+  String get videoEditorTextGradientAddColor => 'رنگ شامل کریں';
+
+  @override
+  String get videoEditorTextGradientRemoveColor => 'آخری رنگ ہٹائیں';
+
+  @override
+  String get videoEditorTextGradientSunset => 'غروبِ آفتاب';
+
+  @override
+  String get videoEditorTextGradientOcean => 'سمندر';
+
+  @override
+  String get videoEditorTextGradientRainbow => 'قوسِ قزح';
+
+  @override
+  String get videoEditorTextGradientMint => 'پودینہ';
+
+  @override
+  String get videoEditorTextGradientCandy => 'کینڈی';
+
+  @override
+  String get videoEditorTextGradientAurora => 'شفقِ قطبی';
+
+  @override
+  String get videoEditorTextGradientLeftToRight => 'بائیں سے دائیں';
+
+  @override
+  String get videoEditorTextGradientTopLeftToBottomRight =>
+      'اوپر بائیں سے نیچے دائیں';
+
+  @override
+  String get videoEditorTextGradientTopToBottom => 'اوپر سے نیچے';
+
+  @override
+  String get videoEditorTextGradientTopRightToBottomLeft =>
+      'اوپر دائیں سے نیچے بائیں';
+
+  @override
+  String get videoEditorTextGradientRightToLeft => 'دائیں سے بائیں';
+
+  @override
+  String get videoEditorTextGradientBottomRightToTopLeft =>
+      'نیچے دائیں سے اوپر بائیں';
+
+  @override
+  String get videoEditorTextGradientBottomToTop => 'نیچے سے اوپر';
+
+  @override
+  String get videoEditorTextGradientBottomLeftToTopRight =>
+      'نیچے بائیں سے اوپر دائیں';
+
+  @override
   String get videoEditorFontSemanticLabel => 'فانٹ';
 
   @override

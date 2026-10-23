@@ -84,6 +84,18 @@ class VideoEditorTextEffectsChanged extends VideoEditorTextEvent {
   List<Object?> get props => [effects];
 }
 
+/// Triggered when the letters get a color gradient, or a single color again
+/// when [gradient] is `null`.
+class VideoEditorTextGradientChanged extends VideoEditorTextEvent {
+  const VideoEditorTextGradientChanged(this.gradient);
+
+  /// The new gradient, or `null` for a single color.
+  final TextGradient? gradient;
+
+  @override
+  List<Object?> get props => [gradient];
+}
+
 /// Triggered when the outline and shadow panel visibility is toggled.
 class VideoEditorTextEffectsPanelToggled extends VideoEditorTextEvent {
   const VideoEditorTextEffectsPanelToggled();
@@ -104,6 +116,7 @@ class VideoEditorTextInitFromLayer extends VideoEditorTextEvent {
     required this.backgroundStyle,
     required this.selectedFontIndex,
     this.effects = TextEffects.none,
+    this.gradient,
   });
 
   /// The text content of the layer.
@@ -124,6 +137,9 @@ class VideoEditorTextInitFromLayer extends VideoEditorTextEvent {
   /// The outline and shadow the layer draws.
   final TextEffects effects;
 
+  /// The color gradient that fills the letters of the layer, if any.
+  final TextGradient? gradient;
+
   @override
   List<Object?> get props => [
     text,
@@ -132,5 +148,6 @@ class VideoEditorTextInitFromLayer extends VideoEditorTextEvent {
     backgroundStyle,
     selectedFontIndex,
     effects,
+    gradient,
   ];
 }

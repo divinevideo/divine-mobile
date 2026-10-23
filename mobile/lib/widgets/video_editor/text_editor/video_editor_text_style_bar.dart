@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/text_editor/video_editor_text_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/text_gradient_presets.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_extensions.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_text_editor_scope.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -108,7 +109,8 @@ class VideoEditorTextStyleBar extends StatelessWidget {
                     previous.showEffectsPanel != current.showEffectsPanel ||
                     previous.backgroundStyle != current.backgroundStyle ||
                     previous.alignment != current.alignment ||
-                    previous.color != current.color,
+                    previous.color != current.color ||
+                    previous.gradient != current.gradient,
                 builder: (context, state) {
                   return Row(
                     spacing: 16,
@@ -122,6 +124,7 @@ class VideoEditorTextStyleBar extends StatelessWidget {
                             semanticsLabel:
                                 context.l10n.videoEditorTextColorSemanticLabel,
                             color: state.color,
+                            gradient: state.gradient,
                             onTap: () => _toggleColorPicker(context, state),
                           ),
                           DivineIconButton(
@@ -183,23 +186,28 @@ class VideoEditorTextStyleBar extends StatelessWidget {
   }
 }
 
-/// Color swatch button showing the current text color.
+/// Color swatch button showing the current text color, or the gradient
+/// across the letters.
 class _ColorSwatchButton extends StatelessWidget {
   const _ColorSwatchButton({
     required this.semanticsLabel,
     required this.color,
+    this.gradient,
     this.onTap,
   });
 
   final String semanticsLabel;
   final Color color;
+  final TextGradient? gradient;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final dimension = DivineIcon.scaleSize(context, 20);
+    final gradient = this.gradient;
     return Semantics(
       label: semanticsLabel,
+      value: gradient == null ? null : context.l10n.videoEditorTextFillGradient,
       button: true,
       child: InkWell(
         onTap: onTap,
@@ -220,7 +228,11 @@ class _ColorSwatchButton extends StatelessWidget {
             child: Container(
               width: dimension,
               height: dimension,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              decoration: BoxDecoration(
+                color: gradient == null ? color : null,
+                gradient: gradient?.swatch,
+                shape: BoxShape.circle,
+              ),
             ),
           ),
         ),

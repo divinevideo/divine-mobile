@@ -16,8 +16,10 @@ import 'package:openvine/blocs/video_editor/text_editor/video_editor_text_bloc.d
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/text_effects.dart';
+import 'package:openvine/models/video_editor/text_gradient_presets.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/screens/video_editor/video_text_editor_screen.dart';
+import 'package:openvine/widgets/video_editor/text_editor/text_gradient_controls.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_effects_panel.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_font_selector.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_overlay_controls.dart';
@@ -75,6 +77,7 @@ void main() {
     registerFallbackValue(
       const VideoEditorTextAlignmentChanged(TextAlign.center),
     );
+    registerFallbackValue(const VideoEditorTextGradientChanged(null));
   });
 
   tearDownAll(() {
@@ -371,6 +374,125 @@ void main() {
         await tester.pump();
 
         expect(editor(tester).selectedTextStyle.shadows, isNotEmpty);
+      });
+    });
+
+    group('Gradient', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final sunset = TextGradientPreset.sunset.withAngle(0);
+
+      TextEditorState editor(WidgetTester tester) =>
+          tester.state<TextEditorState>(find.byType(TextEditor));
+
+      List<TextGradient?> dispatchedGradients() =>
+          verify(
+                () => mockBloc.add(
+                  captureAny(that: isA<VideoEditorTextGradientChanged>()),
+                ),
+              ).captured
+              .cast<VideoEditorTextGradientChanged>()
+              .map((e) => e.gradient)
+              .toList();
+
+      testWidgets('dispatches the gradient of the edited layer', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            layer: TextLayer(
+              text: 'Test',
+              textStyle: const TextStyle(),
+              gradient: sunset,
+            ),
+          ),
+        );
+        await tester.pump();
+
+        final event =
+            verify(
+                  () => mockBloc.add(
+                    captureAny(that: isA<VideoEditorTextInitFromLayer>()),
+                  ),
+                ).captured.first
+                as VideoEditorTextInitFromLayer;
+        expect(event.gradient, sunset);
+      });
+
+      testWidgets('shows the palette while the letters have one color', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(state: const VideoEditorTextState(showColorPicker: true)),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(VideoEditorColorPickerSheet), findsOneWidget);
+        expect(find.byType(TextGradientControls), findsNothing);
+      });
+
+      testWidgets('switches the letters to the gradient they had last', (
+        tester,
+      ) async {
+        final ocean = TextGradientPreset.ocean.withAngle(1);
+        await tester.pumpWidget(
+          buildWidget(
+            state: VideoEditorTextState(
+              showColorPicker: true,
+              lastGradient: ocean,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorTextFillGradient),
+        );
+        await tester.pump();
+
+        expect(editor(tester).gradient, ocean);
+        expect(dispatchedGradients(), [ocean]);
+      });
+
+      testWidgets('switches the letters back to one color', (tester) async {
+        await tester.pumpWidget(
+          buildWidget(
+            state: VideoEditorTextState(
+              showColorPicker: true,
+              gradient: sunset,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        editor(tester).setGradient(sunset);
+
+        await tester.tap(find.bySemanticsLabel(l10n.videoEditorTextFillSolid));
+        await tester.pump();
+
+        expect(editor(tester).gradient, isNull);
+        expect(dispatchedGradients(), [null]);
+      });
+
+      testWidgets('writes a ready-made gradient to the live editor', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            state: VideoEditorTextState(
+              showColorPicker: true,
+              gradient: sunset,
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorTextGradientMint),
+        );
+        await tester.pump();
+
+        final mint = TextGradientPreset.mint.withAngle(0);
+        expect(editor(tester).gradient, mint);
+        expect(dispatchedGradients(), [mint]);
       });
     });
 

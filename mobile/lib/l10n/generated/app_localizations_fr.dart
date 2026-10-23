@@ -9456,6 +9456,71 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorTextShadowColor => 'Couleur de l\'ombre';
 
   @override
+  String get videoEditorTextFillSolid => 'Uni';
+
+  @override
+  String get videoEditorTextFillGradient => 'Dégradé';
+
+  @override
+  String get videoEditorTextGradientPresets => 'Préréglages';
+
+  @override
+  String get videoEditorTextGradientColors => 'Couleurs';
+
+  @override
+  String get videoEditorTextGradientAddColor => 'Ajouter une couleur';
+
+  @override
+  String get videoEditorTextGradientRemoveColor =>
+      'Supprimer la dernière couleur';
+
+  @override
+  String get videoEditorTextGradientSunset => 'Coucher de soleil';
+
+  @override
+  String get videoEditorTextGradientOcean => 'Océan';
+
+  @override
+  String get videoEditorTextGradientRainbow => 'Arc-en-ciel';
+
+  @override
+  String get videoEditorTextGradientMint => 'Menthe';
+
+  @override
+  String get videoEditorTextGradientCandy => 'Bonbon';
+
+  @override
+  String get videoEditorTextGradientAurora => 'Aurore';
+
+  @override
+  String get videoEditorTextGradientLeftToRight => 'De gauche à droite';
+
+  @override
+  String get videoEditorTextGradientTopLeftToBottomRight =>
+      'D\'en haut à gauche vers en bas à droite';
+
+  @override
+  String get videoEditorTextGradientTopToBottom => 'De haut en bas';
+
+  @override
+  String get videoEditorTextGradientTopRightToBottomLeft =>
+      'D\'en haut à droite vers en bas à gauche';
+
+  @override
+  String get videoEditorTextGradientRightToLeft => 'De droite à gauche';
+
+  @override
+  String get videoEditorTextGradientBottomRightToTopLeft =>
+      'D\'en bas à droite vers en haut à gauche';
+
+  @override
+  String get videoEditorTextGradientBottomToTop => 'De bas en haut';
+
+  @override
+  String get videoEditorTextGradientBottomLeftToTopRight =>
+      'D\'en bas à gauche vers en haut à droite';
+
+  @override
   String get videoEditorFontSemanticLabel => 'Police';
 
   @override

@@ -318,6 +318,7 @@ class _StyledSample extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         textAlign: style.align,
         effects: style.effects,
+        gradient: style.gradient,
         style: style.font(fontSize: fontSize, color: style.color),
       ),
     );
