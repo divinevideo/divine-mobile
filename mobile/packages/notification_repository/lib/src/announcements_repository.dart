@@ -85,6 +85,7 @@ class AnnouncementsRepository {
   Future<void>? _refresh;
   Future<void> _writes = Future.value();
   Future<void>? _closeFuture;
+  Timer? _eligibilityTimer;
   bool _closed = false;
 
   /// Current eligible announcements, newest first, with local seen state.
@@ -114,7 +115,8 @@ class AnnouncementsRepository {
     return List.unmodifiable(eligible);
   }
 
-  /// Latest applied snapshot, seeded with an empty list before initialization.
+  /// Current snapshot, updated at publication and expiry without a fetch.
+  /// Seeded with an empty list before initialization.
   Stream<List<AnnouncementNotification>> watchSnapshot() => _snapshots.stream;
 
   /// Hydrates cache and account seen state without automatically fetching.
@@ -282,10 +284,21 @@ class AnnouncementsRepository {
   }
 
   void _pruneSeen() {
-    final retainedIds = (_catalog ?? const <AnnouncementNotification>[])
-        .map((item) => item.id)
+    final catalog = _catalog;
+    if (catalog != null) {
+      final retainedIds = catalog.map((item) => item.id).toSet();
+      _seen = _seen.intersection(retainedIds);
+      return;
+    }
+    // A missing or unreadable catalog cannot prove an ID was withdrawn.
+    _seen = _seen
+        .where(
+          (id) =>
+              id.startsWith('announcement:') &&
+              _uuid.hasMatch(id.substring('announcement:'.length)),
+        )
+        .take(_maximumItems)
         .toSet();
-    _seen = _seen.intersection(retainedIds);
   }
 
   Future<void> _persist(Future<void> Function() write) {
@@ -296,7 +309,23 @@ class AnnouncementsRepository {
   }
 
   void _emit() {
-    if (!_closed) _snapshots.add(items);
+    if (_closed) return;
+    _eligibilityTimer?.cancel();
+    _eligibilityTimer = null;
+    final now = _clock.now().toUtc();
+    DateTime? nextBoundary;
+    for (final item in _catalog ?? const <AnnouncementNotification>[]) {
+      for (final boundary in [item.timestamp, item.expiresAt]) {
+        if (boundary.isAfter(now) &&
+            (nextBoundary == null || boundary.isBefore(nextBoundary))) {
+          nextBoundary = boundary;
+        }
+      }
+    }
+    if (nextBoundary != null) {
+      _eligibilityTimer = Timer(nextBoundary.difference(now), _emit);
+    }
+    _snapshots.add(items);
   }
 
   /// Stops new work immediately and drains writes before cleanup may proceed.
@@ -304,6 +333,8 @@ class AnnouncementsRepository {
   Future<void> close() {
     if (_closeFuture != null) return _closeFuture!;
     _closed = true;
+    _eligibilityTimer?.cancel();
+    _eligibilityTimer = null;
     _httpClient.close();
     return _closeFuture = () async {
       await _writes;
