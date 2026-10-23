@@ -2,14 +2,13 @@
 // ABOUTME: Opens existing hashtag pages and supports explicit unfollow actions.
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/features/hashtag_follows/cubit/hashtag_follows_cubit.dart';
 import 'package:openvine/features/hashtag_follows/view/hashtag_follows_scope.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/route_paths.dart';
-import 'package:openvine/screens/hashtag_screen_router.dart';
+import 'package:openvine/router/routes/search_routes.dart';
 
 class FollowedHashtagsPage extends StatelessWidget {
   const FollowedHashtagsPage({super.key});
@@ -73,9 +72,9 @@ class _FollowedHashtagsView extends StatelessWidget {
                     color: context.vineColors.primaryText,
                   ),
                 ),
-                onTap: () => context.push(
-                  HashtagScreenRouter.pathForTag(tag.displayTag),
-                ),
+                onTap: () => HashtagRouteData(
+                  tag: tag.displayTag,
+                ).push<void>(context),
                 trailing: DivineButton(
                   label: context.l10n.unfollowConfirmButton,
                   size: DivineButtonSize.small,

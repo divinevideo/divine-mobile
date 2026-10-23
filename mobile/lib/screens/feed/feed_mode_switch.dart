@@ -3,11 +3,10 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
-import 'package:openvine/features/hashtag_follows/view/followed_hashtags_page.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/router/routes/search_routes.dart';
 import 'package:openvine/screens/feed/feed_settings_menu.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
@@ -101,7 +100,7 @@ class FeedModeSwitch extends StatelessWidget {
     if (selected == null || !context.mounted) return;
 
     if (selected == 'manageHashtags' && context.mounted) {
-      await context.push(FollowedHashtagsPage.path);
+      await const FollowedHashtagsRouteData().push<void>(context);
       return;
     }
     // The sheet hands back the option's value, not the source: resolve it

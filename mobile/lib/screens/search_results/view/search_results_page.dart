@@ -52,6 +52,9 @@ class SearchResultsPage extends ConsumerStatefulWidget {
   /// Query parameter used to opt a prefilled route into mount focus.
   static const requestFocusQueryParameter = 'focus';
 
+  /// The [requestFocusQueryParameter] value that requests mount focus.
+  static const requestFocusQueryValue = '1';
+
   /// Build a path with the given query and explicit mount-focus intent.
   static String pathForQuery(
     String query, {
@@ -59,18 +62,19 @@ class SearchResultsPage extends ConsumerStatefulWidget {
   }) {
     final encodedQuery = Uri.encodeComponent(query);
     if (!requestFocusOnMount) return '$pathPrefix/$encodedQuery';
-    return '$pathPrefix/$encodedQuery?$requestFocusQueryParameter=1';
+    return '$pathPrefix/$encodedQuery'
+        '?$requestFocusQueryParameter=$requestFocusQueryValue';
   }
 
   /// Build a path that opens search without a prefilled query.
   static String pathForEmptyQuery({required bool requestFocusOnMount}) {
     if (!requestFocusOnMount) return emptyPath;
-    return '$emptyPath?$requestFocusQueryParameter=1';
+    return '$emptyPath?$requestFocusQueryParameter=$requestFocusQueryValue';
   }
 
   /// Returns whether a routed prefilled search should claim keyboard focus.
   static bool requestFocusOnMountForRoute(Uri uri) =>
-      uri.queryParameters[requestFocusQueryParameter] == '1';
+      uri.queryParameters[requestFocusQueryParameter] == requestFocusQueryValue;
 
   @override
   ConsumerState<SearchResultsPage> createState() => _SearchResultsPageState();

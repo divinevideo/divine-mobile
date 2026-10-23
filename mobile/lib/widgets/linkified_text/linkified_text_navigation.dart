@@ -2,8 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/router/nav_extensions.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
-import 'package:openvine/screens/hashtag_screen_router.dart';
-import 'package:openvine/screens/search_results/view/search_results_page.dart';
+import 'package:openvine/router/routes/search_routes.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -22,7 +21,7 @@ final class LinkifiedTextNavigation {
     beforeNavigate?.call();
     _pushDetached(
       context,
-      HashtagScreenRouter.pathForTag(hashtag),
+      HashtagRouteData(tag: hashtag).location,
       description: 'navigate to hashtag feed',
     );
   }
@@ -34,7 +33,7 @@ final class LinkifiedTextNavigation {
   }) {
     _pushAfterModalPop(
       context,
-      HashtagScreenRouter.pathForTag(hashtag),
+      HashtagRouteData(tag: hashtag).location,
       beforeNavigate: beforeNavigate,
     );
   }
@@ -94,7 +93,7 @@ final class LinkifiedTextNavigation {
     beforeNavigate?.call();
     _pushDetached(
       context,
-      SearchResultsPage.pathForQuery(username, requestFocusOnMount: false),
+      SearchQueryRouteData(query: username).location,
       description: 'navigate to search results',
     );
   }
@@ -106,7 +105,7 @@ final class LinkifiedTextNavigation {
   }) {
     _pushAfterModalPop(
       context,
-      SearchResultsPage.pathForQuery(username, requestFocusOnMount: false),
+      SearchQueryRouteData(query: username).location,
       beforeNavigate: beforeNavigate,
     );
   }
