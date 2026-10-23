@@ -198,6 +198,7 @@ class MessageBubble extends StatefulWidget {
     this.isClip = false,
     this.encryptedVideoFramePath,
     this.encryptedVideoHold,
+    this.encryptedVideoFrameBlurhash,
     this.senderName,
     this.isSenderNameResolving = false,
     super.key,
@@ -279,6 +280,10 @@ class MessageBubble extends StatefulWidget {
   /// Why the [EncryptedVideoCard] holds back its preview, null when it does
   /// not.
   final DmVideoHold? encryptedVideoHold;
+
+  /// A blurhash read from the kept frame, for a blurred [EncryptedVideoCard]
+  /// whose sender sent none.
+  final String? encryptedVideoFrameBlurhash;
 
   /// Who wrote this message, for a thread where the title does not say: a
   /// group, whose title names the room. Null for a bubble that needs no
@@ -560,6 +565,8 @@ class _MessageBubbleState extends State<MessageBubble> {
                                 isClip: widget.isClip,
                                 framePath: widget.encryptedVideoFramePath,
                                 hold: widget.encryptedVideoHold,
+                                frameBlurhash:
+                                    widget.encryptedVideoFrameBlurhash,
                                 onTap: isFailedOwnSend
                                     ? null
                                     : onOpenEncryptedVideo,

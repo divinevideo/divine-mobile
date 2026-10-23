@@ -2275,6 +2275,7 @@ class _MessageList extends StatelessWidget {
           Widget bubbleWith({
             String? encryptedVideoFramePath,
             DmVideoHold? encryptedVideoHold,
+            String? encryptedVideoFrameBlurhash,
           }) => MessageBubble(
             message: message.content,
             timestamp: LocalizedTimeFormatter.formatMessageTime(
@@ -2348,21 +2349,23 @@ class _MessageList extends StatelessWidget {
                 : null,
             encryptedVideoFramePath: encryptedVideoFramePath,
             encryptedVideoHold: encryptedVideoHold,
+            encryptedVideoFrameBlurhash: encryptedVideoFrameBlurhash,
           );
           final sender = message.senderPubkey.toLowerCase();
+          final isOwn = pubkeysEqual(sender, currentPubkey);
           final bubble = message.fileMetadata?.isVideo == true
               ? DmVideoPreviewScope(
                   message: message,
-                  accepted:
-                      pubkeysEqual(sender, currentPubkey) ||
-                      (hasOwnMessage && isOneToOneWith(sender)),
+                  isOwn: isOwn,
+                  accepted: isOwn || (hasOwnMessage && isOneToOneWith(sender)),
                   blocked:
                       blockedSenders.contains(sender) &&
                       !mutedSenders.contains(sender),
                   muted: mutedSenders.contains(sender),
-                  builder: (_, framePath, hold) => bubbleWith(
+                  builder: (_, framePath, hold, frameBlurhash) => bubbleWith(
                     encryptedVideoFramePath: framePath,
                     encryptedVideoHold: hold,
+                    encryptedVideoFrameBlurhash: frameBlurhash,
                   ),
                 )
               : bubbleWith();

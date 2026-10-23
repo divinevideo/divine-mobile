@@ -262,6 +262,72 @@ void main() {
         expect(find.text(strings.dmVideoCardTapToLoad), findsOneWidget);
       });
 
+      testWidgets("keeps a blurred card's blurhash, shows no frame and offers "
+          'to play it', (tester) async {
+        await tester.pumpWidget(
+          _host(
+            EncryptedVideoCard(
+              fileMetadata: _videoMetadata(),
+              isSent: false,
+              framePath: framePath,
+              hold: DmVideoHold.blurred,
+            ),
+          ),
+        );
+
+        expect(find.byType(BlurhashDisplay), findsOneWidget);
+        expect(_keptFrame(framePath), findsNothing);
+        expect(find.text(strings.dmVideoCardTapToWatch), findsOneWidget);
+      });
+
+      testWidgets(
+        'blurs with the blurhash read from the frame when the sender sent '
+        'none',
+        (tester) async {
+          const frameBlurhash = 'LEHV6nWB2yk8pyo0adR*.7kCMdnj';
+          await tester.pumpWidget(
+            _host(
+              EncryptedVideoCard(
+                fileMetadata: _videoMetadata(blurhash: null),
+                isSent: false,
+                framePath: framePath,
+                hold: DmVideoHold.blurred,
+                frameBlurhash: frameBlurhash,
+              ),
+            ),
+          );
+
+          expect(
+            tester
+                .widget<BlurhashDisplay>(find.byType(BlurhashDisplay))
+                .blurhash,
+            frameBlurhash,
+          );
+          expect(_keptFrame(framePath), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'shows a placeholder, never the frame, while a blurred card has no '
+        'blurhash',
+        (tester) async {
+          await tester.pumpWidget(
+            _host(
+              EncryptedVideoCard(
+                fileMetadata: _videoMetadata(blurhash: null),
+                isSent: false,
+                framePath: framePath,
+                hold: DmVideoHold.blurred,
+              ),
+            ),
+          );
+
+          expect(find.byType(BlurhashDisplay), findsNothing);
+          expect(_keptFrame(framePath), findsNothing);
+          expect(find.text(strings.dmVideoCardTapToWatch), findsOneWidget);
+        },
+      );
+
       for (final (hold, hint) in [
         (DmVideoHold.blocked, strings.dmVideoCardHiddenSenderBlocked),
         (DmVideoHold.muted, strings.dmVideoCardHiddenSenderMuted),
@@ -463,6 +529,29 @@ void main() {
       );
 
       expect(find.text(strings.dmVideoCardTapToLoad), findsOneWidget);
+    });
+
+    testWidgets('passes the blurhash read from the frame to its card', (
+      tester,
+    ) async {
+      const frameBlurhash = 'LEHV6nWB2yk8pyo0adR*.7kCMdnj';
+      await tester.pumpWidget(
+        _host(
+          MessageBubble(
+            message: _videoMessage().content,
+            timestamp: '2:30 PM',
+            isSent: false,
+            fileMetadata: _videoMetadata(blurhash: null),
+            encryptedVideoHold: DmVideoHold.blurred,
+            encryptedVideoFrameBlurhash: frameBlurhash,
+          ),
+        ),
+      );
+
+      expect(
+        tester.widget<BlurhashDisplay>(find.byType(BlurhashDisplay)).blurhash,
+        frameBlurhash,
+      );
     });
 
     testWidgets('forwards a card tap to onOpenEncryptedVideo', (tester) async {

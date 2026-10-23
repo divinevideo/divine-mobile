@@ -18,15 +18,30 @@ import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/dm_video_preview_scope.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/encrypted_video_card.dart'
     show DmVideoHold;
+import 'package:openvine/services/dm_video_blur_preference_service.dart';
+import 'package:openvine/services/dm_video_preview_memory.dart';
 import 'package:openvine/services/dm_video_store.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockDmVideoStore extends Mock implements DmVideoStore {}
+
+/// Answers a frame's blurhash without reading the file: a widget test runs
+/// on a fake clock, where real file IO never completes.
+class _FrameBlurhashMemory extends DmVideoPreviewMemory {
+  @override
+  Future<String?> frameBlurhashFor({
+    required String messageId,
+    required String framePath,
+  }) async => _frameBlurhash;
+}
 
 /// Stands in for the follower cache the real follow relationship watches.
 final _followerCache = StateProvider<int>((ref) => 0);
 
 const _framePath = '/kept/dm_videos/owner/clip.preview.jpg';
+const _frameBlurhash = 'LEHV6nWB2yk8pyo0adR*.7kCMdnj';
 final String _sender = 'b' * 64;
+final String _owner = 'd' * 64;
 
 DmMessage _videoMessage() => DmMessage(
   id: 'a' * 64,
@@ -67,13 +82,19 @@ void main() {
 
   Widget host({
     required bool accepted,
+    bool isOwn = false,
     bool blocked = false,
     bool muted = false,
     Stream<FollowRelationship>? relationship,
+    DmVideoBlurPreferenceService? blur,
+    DmVideoPreviewMemory? memory,
     List<(String?, DmVideoHold?)>? built,
+    List<String?>? frameBlurhashes,
   }) => ProviderScope(
     overrides: [
       dmVideoStoreProvider.overrideWithValue(store),
+      dmVideoBlurPreferenceServiceProvider.overrideWithValue(blur),
+      dmVideoPreviewMemoryProvider.overrideWithValue(memory),
       followRelationshipProvider.overrideWith(
         (ref, pubkey) => relationship ?? Stream.value(FollowRelationship.none),
       ),
@@ -83,11 +104,13 @@ void main() {
       supportedLocales: AppLocalizations.supportedLocales,
       home: DmVideoPreviewScope(
         message: _videoMessage(),
+        isOwn: isOwn,
         accepted: accepted,
         blocked: blocked,
         muted: muted,
-        builder: (context, framePath, hold) {
+        builder: (context, framePath, hold, frameBlurhash) {
           built?.add((framePath, hold));
+          frameBlurhashes?.add(frameBlurhash);
           return Text('${framePath ?? 'no frame'} ${hold?.name ?? 'shown'}');
         },
       ),
@@ -226,6 +249,8 @@ void main() {
             ProviderScope(
               overrides: [
                 dmVideoStoreProvider.overrideWithValue(store),
+                dmVideoBlurPreferenceServiceProvider.overrideWithValue(null),
+                dmVideoPreviewMemoryProvider.overrideWithValue(null),
                 followRelationshipProvider.overrideWith((ref, pubkey) {
                   ref.watch(_followerCache);
                   final controller = StreamController<FollowRelationship>();
@@ -238,10 +263,11 @@ void main() {
                 supportedLocales: AppLocalizations.supportedLocales,
                 home: DmVideoPreviewScope(
                   message: _videoMessage(),
+                  isOwn: false,
                   accepted: false,
                   blocked: false,
                   muted: false,
-                  builder: (context, framePath, hold) =>
+                  builder: (context, framePath, hold, frameBlurhash) =>
                       Text(framePath ?? 'no frame'),
                 ),
               ),
@@ -279,6 +305,8 @@ void main() {
           ProviderScope(
             overrides: [
               dmVideoStoreProvider.overrideWithValue(store),
+              dmVideoBlurPreferenceServiceProvider.overrideWithValue(null),
+              dmVideoPreviewMemoryProvider.overrideWithValue(null),
               followRelationshipProvider.overrideWith(
                 (ref, pubkey) => Stream.value(FollowRelationship.none),
               ),
@@ -290,10 +318,11 @@ void main() {
                 valueListenable: blocked,
                 builder: (context, isBlocked, _) => DmVideoPreviewScope(
                   message: _videoMessage(),
+                  isOwn: false,
                   accepted: true,
                   blocked: isBlocked,
                   muted: false,
-                  builder: (context, framePath, hold) {
+                  builder: (context, framePath, hold, frameBlurhash) {
                     built.add((framePath, hold));
                     return Text(framePath ?? 'no frame');
                   },
@@ -321,6 +350,136 @@ void main() {
         expect(find.text('$_framePath shown'), findsOneWidget);
         expect(built.first, (null, null));
         expect(built.last, (_framePath, null));
+      });
+    });
+
+    group('blurring until played', () {
+      late DmVideoBlurPreferenceService blur;
+      late DmVideoPreviewMemory memory;
+
+      setUp(() async {
+        SharedPreferences.setMockInitialValues({
+          DmVideoBlurPreferenceService.storageKey(_owner): true,
+        });
+        blur = DmVideoBlurPreferenceService(
+          await SharedPreferences.getInstance(),
+          account: _owner,
+        );
+        memory = DmVideoPreviewMemory(
+          encodeBlurhash: (_) async => _frameBlurhash,
+        );
+      });
+
+      tearDown(() {
+        blur.dispose();
+        memory.dispose();
+      });
+
+      testWidgets(
+        "blurs a trusted sender's video, which still downloads, when the user "
+        'chose to',
+        (tester) async {
+          final built = <(String?, DmVideoHold?)>[];
+          await tester.pumpWidget(
+            host(accepted: true, blur: blur, memory: memory, built: built),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          expectDownloadedOnce();
+          expect(built, isNotEmpty);
+          expect(built, everyElement((null, DmVideoHold.blurred)));
+        },
+      );
+
+      testWidgets("never blurs the user's own video", (tester) async {
+        final built = <(String?, DmVideoHold?)>[];
+        await tester.pumpWidget(
+          host(
+            accepted: true,
+            isOwn: true,
+            blur: blur,
+            memory: memory,
+            built: built,
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(built.last, (_framePath, null));
+      });
+
+      testWidgets('shows the frame once its video is played', (tester) async {
+        final built = <(String?, DmVideoHold?)>[];
+        await tester.pumpWidget(
+          host(accepted: true, blur: blur, memory: memory, built: built),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(built.last, (null, DmVideoHold.blurred));
+
+        memory.markWatched(_videoMessage().id);
+        await tester.pump();
+        await tester.pump();
+
+        expect(built.last, (_framePath, null));
+      });
+
+      testWidgets('blurs a shown card once the user turns blurring on', (
+        tester,
+      ) async {
+        await blur.setBlurVideoPreviews(false);
+        final built = <(String?, DmVideoHold?)>[];
+        await tester.pumpWidget(
+          host(accepted: true, blur: blur, memory: memory, built: built),
+        );
+        await tester.pump();
+        await tester.pump();
+        expect(built.last, (_framePath, null));
+
+        await blur.setBlurVideoPreviews(true);
+        await tester.pump();
+        await tester.pump();
+
+        expect(built.last, (null, DmVideoHold.blurred));
+      });
+
+      testWidgets('passes the blurhash read from the kept frame', (
+        tester,
+      ) async {
+        final frameMemory = _FrameBlurhashMemory();
+        addTearDown(frameMemory.dispose);
+        final frameBlurhashes = <String?>[];
+        await tester.pumpWidget(
+          host(
+            accepted: true,
+            blur: blur,
+            memory: frameMemory,
+            frameBlurhashes: frameBlurhashes,
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(frameBlurhashes.last, _frameBlurhash);
+      });
+
+      testWidgets('still asks for a tap on a request', (tester) async {
+        final built = <(String?, DmVideoHold?)>[];
+        await tester.pumpWidget(
+          host(
+            accepted: false,
+            relationship: Stream.value(FollowRelationship.followsYou),
+            blur: blur,
+            memory: memory,
+            built: built,
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expectNoStoreRead();
+        expect(built.last, (null, DmVideoHold.request));
       });
     });
   });

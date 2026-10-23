@@ -19,6 +19,7 @@ import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
+import 'package:openvine/services/dm_video_preview_memory.dart';
 import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/gallery_save_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
@@ -147,6 +148,45 @@ void main() {
   );
 
   group(DmVideoPlayPage, () {
+    group('open', () {
+      testWidgets('records the video as played, so its card stops blurring', (
+        tester,
+      ) async {
+        final memory = DmVideoPreviewMemory();
+        addTearDown(memory.dispose);
+        stubKeptVideo(() => Completer<String>().future);
+        installMockDivineVideoPlayer();
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              dmVideoStoreProvider.overrideWithValue(store),
+              gallerySaveServiceProvider.overrideWithValue(gallerySaveService),
+              dmVideoPreviewMemoryProvider.overrideWithValue(memory),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Builder(
+                builder: (context) => TextButton(
+                  onPressed: () =>
+                      DmVideoPlayPage.open(context, _videoMessage()),
+                  child: const Text('play'),
+                ),
+              ),
+            ),
+          ),
+        );
+        expect(memory.isWatched(_videoMessage().id), isFalse);
+
+        await tester.tap(find.text('play'));
+        await tester.pump();
+        await tester.pump();
+
+        expect(memory.isWatched(_videoMessage().id), isTrue);
+        expect(find.byType(DmVideoPlayPage), findsOneWidget);
+      });
+    });
+
     testWidgets('shows a progress state while decrypting, then the player', (
       tester,
     ) async {

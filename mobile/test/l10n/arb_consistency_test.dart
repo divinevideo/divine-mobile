@@ -624,6 +624,7 @@ const _knownUntranslatedDebt = <String>{
   // English ships first and waits for the human translation pass.
   'safetySettingsBlurDmVideoPreviews',
   'safetySettingsBlurDmVideoPreviewsSubtitle',
+  'dmVideoCardTapToWatch',
 
   // Group inbox preview sender prefix (#8428). The separator after the name is
   // a per-locale convention (a space before the colon in French, a full-width

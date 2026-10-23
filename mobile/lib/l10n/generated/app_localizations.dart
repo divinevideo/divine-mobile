@@ -6301,6 +6301,12 @@ abstract class AppLocalizations {
   /// **'Tap to load'**
   String get dmVideoCardTapToLoad;
 
+  /// Short hint on a blurred video message card in a DM thread, shown when the user turned on 'Blur video previews in messages'. Tapping plays the video, after which the card shows its preview.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to watch'**
+  String get dmVideoCardTapToWatch;
+
   /// Short hint on a video message card in a DM thread whose sender the user blocked. The card shows no preview; tapping still plays the video.
   ///
   /// In en, this message translates to:

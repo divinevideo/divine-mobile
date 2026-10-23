@@ -3625,6 +3625,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get dmVideoCardTapToLoad => 'Tap to load';
 
   @override
+  String get dmVideoCardTapToWatch => 'Tap to watch';
+
+  @override
   String get dmVideoCardHiddenSenderBlocked => 'Hidden: sender blocked';
 
   @override

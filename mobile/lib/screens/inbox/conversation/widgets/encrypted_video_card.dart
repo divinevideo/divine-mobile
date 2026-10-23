@@ -1,5 +1,5 @@
 // ABOUTME: Conversation card for an encrypted (kind 15) video DM: the frame
-// ABOUTME: this device keeps, else the sender's blurhash; never a remote image.
+// ABOUTME: this device keeps, else a blurhash; never a remote image.
 
 import 'dart:io';
 
@@ -30,13 +30,19 @@ enum DmVideoHold {
 
   /// The user muted the sender.
   muted,
+
+  /// The user blurs previews from people they trust: the video still
+  /// downloads, but the card shows a blurhash until it is played.
+  blurred,
 }
 
 /// Card for an encrypted video file message.
 ///
 /// It shows [framePath], a frame this device read from the video it keeps,
 /// once there is one; until then the sender's blurhash, decoded on the device;
-/// and with neither a neutral play placeholder. It never fetches the sender's
+/// and with neither a neutral play placeholder. A [DmVideoHold.blurred] card
+/// never shows the frame: it shows the sender's blurhash, else
+/// [frameBlurhash], else the placeholder. It never fetches the sender's
 /// encrypted thumbnail (`DmFileMetadata.thumbnailUrl`): that is encrypted under
 /// the same key and nonce as the video, so reading it would reuse the GCM
 /// nonce. The frame and blurhash are as private as the video and never logged.
@@ -48,6 +54,7 @@ class EncryptedVideoCard extends StatefulWidget {
     this.isClip = false,
     this.framePath,
     this.hold,
+    this.frameBlurhash,
     this.onTap,
     super.key,
   });
@@ -69,8 +76,13 @@ class EncryptedVideoCard extends StatefulWidget {
   final String? framePath;
 
   /// Why the card holds back its preview, null when it does not. A held card
-  /// shows no frame, keeps the blurhash only for a request, and says why.
+  /// shows no frame, keeps a blurhash only for a request or a blurred card,
+  /// and says why.
   final DmVideoHold? hold;
+
+  /// A blurhash read from the kept frame, which a [DmVideoHold.blurred] card
+  /// shows when the sender sent none.
+  final String? frameBlurhash;
 
   /// Opens playback. When null the card is not interactive, so it never
   /// becomes a dead tap target.
@@ -85,18 +97,21 @@ class _EncryptedVideoCardState extends State<EncryptedVideoCard> {
   Widget build(BuildContext context) {
     final hold = widget.hold;
     final metadataBlurhash = widget.fileMetadata.blurhash;
-    final blurhash =
-        metadataBlurhash == null ||
-            metadataBlurhash.isEmpty ||
-            (hold != null && hold != DmVideoHold.request)
+    final senderBlurhash = metadataBlurhash == null || metadataBlurhash.isEmpty
         ? null
         : metadataBlurhash;
+    final blurhash = switch (hold) {
+      null || DmVideoHold.request => senderBlurhash,
+      DmVideoHold.blurred => senderBlurhash ?? widget.frameBlurhash,
+      DmVideoHold.blocked || DmVideoHold.muted => null,
+    };
     final framePath = hold == null ? widget.framePath : null;
     final hint = switch (hold) {
       null => null,
       DmVideoHold.request => context.l10n.dmVideoCardTapToLoad,
       DmVideoHold.blocked => context.l10n.dmVideoCardHiddenSenderBlocked,
       DmVideoHold.muted => context.l10n.dmVideoCardHiddenSenderMuted,
+      DmVideoHold.blurred => context.l10n.dmVideoCardTapToWatch,
     };
     final preview = framePath == null && blurhash == null
         ? _EncryptedVideoPlaceholderCard(hint: hint)
