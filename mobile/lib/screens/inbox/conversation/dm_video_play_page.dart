@@ -5,21 +5,25 @@ import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show DmMessage;
 import 'package:openvine/blocs/dm/video_playback/dm_video_playback_cubit.dart';
+import 'package:openvine/config/bug_report_config.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/dm_clip_save_scope.dart';
+import 'package:openvine/utils/detached_future.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Plays a received encrypted video DM.
 ///
-/// The page wires [DmVideoPlaybackCubit]; the cubit owns the decrypted temp
-/// file and deletes it when the page closes. The key and nonce never leave
-/// the message metadata.
+/// The page wires [DmVideoPlaybackCubit], which plays the video the account
+/// keeps on this device, downloading and decrypting it the first time. The key
+/// and nonce never leave the message metadata.
 class DmVideoPlayPage extends ConsumerWidget {
   /// Creates a play page for [message], a kind 15 video DM.
   const DmVideoPlayPage({
@@ -51,17 +55,17 @@ class DmVideoPlayPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Both services are stateless and account-independent.
-    final decryptor = ref.watch(dmVideoDecryptorProvider);
+    // The store is the signed-in account's, so a switch rebuilds the cubit.
+    final store = ref.watch(dmVideoStoreProvider);
     final gallerySaveService = ref.watch(gallerySaveServiceProvider);
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          key: ValueKey((decryptor, gallerySaveService)),
+          key: ValueKey((store, gallerySaveService)),
           create: (_) {
             final cubit = DmVideoPlaybackCubit(
               message: message,
-              decryptor: decryptor,
+              store: store,
               gallerySaveService: gallerySaveService,
             );
             unawaited(cubit.load());
@@ -247,7 +251,7 @@ class _Unavailable extends StatelessWidget {
 
 /// Plays the decrypted clip on a loop, in its own shape. Owns the native
 /// player controller; a player failure, at start or later, is reported to the
-/// cubit, which deletes the clip.
+/// cubit, which shows the clip as unavailable and keeps the kept video.
 class _Player extends StatefulWidget {
   const _Player();
 
@@ -262,6 +266,7 @@ class _PlayerState extends State<_Player> {
   static const _errorGrace = Duration(seconds: 3);
 
   DivineVideoPlayerController? _controller;
+  String? _path;
   StreamSubscription<DivineVideoPlayerState>? _stateSubscription;
   Timer? _errorGraceTimer;
 
@@ -276,6 +281,7 @@ class _PlayerState extends State<_Player> {
   }
 
   Future<void> _start(String path) async {
+    _path = path;
     final controller = DivineVideoPlayerController(
       useTexture: true,
       debugLabel: 'dm_video_play',
@@ -286,9 +292,25 @@ class _PlayerState extends State<_Player> {
       await controller.setLooping(looping: true);
       await controller.play();
     } catch (error, stackTrace) {
-      await controller.dispose();
+      // Torn down after the failure is told: a teardown that fails too must
+      // not leave the page loading.
+      runDetached(
+        controller.dispose(),
+        'dispose a DM video player that failed to start',
+        logName: 'DmVideoPlayPage',
+        category: LogCategory.video,
+      );
       if (mounted) {
-        context.read<DmVideoPlaybackCubit>().playbackFailed(error, stackTrace);
+        context.read<DmVideoPlaybackCubit>().playbackFailed(
+          _PlayerFailure(
+            error is PlatformException
+                ? '${error.code}: ${error.message}'
+                : '${error.runtimeType}: $error',
+            path,
+          ),
+          stackTrace,
+          cause: error,
+        );
       }
       return;
     }
@@ -329,7 +351,7 @@ class _PlayerState extends State<_Player> {
     unawaited(_stateSubscription?.cancel());
     _stateSubscription = null;
     context.read<DmVideoPlaybackCubit>().playbackFailed(
-      _PlayerFailure(state.errorMessage),
+      _PlayerFailure(state.errorMessage, _path),
       StackTrace.current,
     );
   }
@@ -356,12 +378,23 @@ class _PlayerState extends State<_Player> {
   }
 }
 
-/// The native player reported an error after playback started.
+/// The player could not start the kept video, or failed while playing it.
 class _PlayerFailure implements Exception {
-  const _PlayerFailure(this.message);
+  /// Keeps [path] and the file's name out of [text]: they name the account
+  /// and the message, and a native player can quote either.
+  _PlayerFailure(String? text, String? path)
+    : message = text == null ? null : _withoutFile(text, path);
 
   /// The player's diagnostic text, when it gave one.
   final String? message;
+
+  static String _withoutFile(String text, String? path) {
+    if (path == null) return redactFilesystemPaths(text);
+    final name = path.split('/').last.split('.').first;
+    return redactFilesystemPaths(
+      text.replaceAll(path, '[REDACTED]'),
+    ).replaceAll(name, '[REDACTED]');
+  }
 
   @override
   String toString() => 'Video player failed: ${message ?? 'unknown error'}';

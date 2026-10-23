@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -14,10 +15,11 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/generated/app_localizations_en.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
-import 'package:openvine/services/dm_video_decryptor.dart';
+import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/gallery_save_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
@@ -25,9 +27,20 @@ import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 import '../../../helpers/divine_video_player_channel.dart';
 import '../../../mocks/mock_path_provider_platform.dart';
 
-class _MockDmVideoDecryptor extends Mock implements DmVideoDecryptor {}
+class _MockDmVideoStore extends Mock implements DmVideoStore {}
 
 class _MockGallerySaveService extends Mock implements GallerySaveService {}
+
+/// Records the errors blocs created while it is the observer add.
+class _ErrorRecorder extends BlocObserver {
+  final List<Object> errors = [];
+
+  @override
+  void onError(BlocBase<dynamic> bloc, Object error, StackTrace stackTrace) {
+    errors.add(error);
+    super.onError(bloc, error, stackTrace);
+  }
+}
 
 /// Native player events the test sends once the controller is listening.
 class _PlayerEvents extends MockStreamHandler {
@@ -68,7 +81,7 @@ DmMessage _videoMessage() => DmMessage(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  late _MockDmVideoDecryptor decryptor;
+  late _MockDmVideoStore store;
   late _MockGallerySaveService gallerySaveService;
   late Directory tempDir;
   late PathProviderPlatform originalPathProvider;
@@ -80,7 +93,7 @@ void main() {
   });
 
   setUp(() {
-    decryptor = _MockDmVideoDecryptor();
+    store = _MockDmVideoStore();
     gallerySaveService = _MockGallerySaveService();
     tempDir = Directory.systemTemp.createTempSync('dm_video_play_page_');
     originalPathProvider = PathProviderPlatform.instance;
@@ -109,24 +122,18 @@ void main() {
   });
 
   String expectedClipPath() =>
-      '${tempDir.path}/${DmVideoDecryptor.playbackDirName}/'
-      '${DmVideoDecryptor.clipFileNameFor(_videoMessage())}';
+      '${tempDir.path}/${DmVideoStore.dirName}/owner/'
+      '${DmVideoStore.videoFileNameFor(_videoMessage())}';
 
-  void stubDecrypt(Future<String> Function() answer) {
-    when(() => decryptor.decryptToFile(any())).thenAnswer((_) => answer());
-  }
-
-  void stubDelete() {
-    when(() => decryptor.deleteClip(any())).thenAnswer((invocation) {
-      final path = invocation.positionalArguments.first as String;
-      final file = File(path);
-      if (file.existsSync()) file.deleteSync();
-    });
+  void stubKeptVideo(Future<String> Function() answer) {
+    when(
+      () => store.videoFor(any()),
+    ).thenAnswer((_) async => File(await answer()));
   }
 
   Widget host({bool canAddToClips = false}) => ProviderScope(
     overrides: [
-      dmVideoDecryptorProvider.overrideWithValue(decryptor),
+      dmVideoStoreProvider.overrideWithValue(store),
       gallerySaveServiceProvider.overrideWithValue(gallerySaveService),
     ],
     child: MaterialApp(
@@ -144,7 +151,7 @@ void main() {
       tester,
     ) async {
       final completer = Completer<String>();
-      stubDecrypt(() => completer.future);
+      stubKeptVideo(() => completer.future);
       installMockDivineVideoPlayer();
 
       await tester.pumpWidget(host());
@@ -164,9 +171,8 @@ void main() {
       expect(find.byType(DivineVideoPlayer), findsOneWidget);
     });
 
-    testWidgets('removes the decrypted temp file on dispose', (tester) async {
-      stubDelete();
-      stubDecrypt(() async {
+    testWidgets('keeps the video when the page closes', (tester) async {
+      stubKeptVideo(() async {
         File(expectedClipPath())
           ..createSync(recursive: true)
           ..writeAsBytesSync(const [1, 2, 3]);
@@ -183,12 +189,11 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
 
-      expect(File(expectedClipPath()).existsSync(), isFalse);
-      verify(() => decryptor.deleteClip(expectedClipPath())).called(1);
+      expect(File(expectedClipPath()).existsSync(), isTrue);
     });
 
     testWidgets('shows an error state when decrypt fails', (tester) async {
-      stubDecrypt(() async => throw Exception('decrypt failed'));
+      stubKeptVideo(() async => throw Exception('decrypt failed'));
       installMockDivineVideoPlayer();
 
       await tester.pumpWidget(host());
@@ -209,8 +214,7 @@ void main() {
 
       /// Opens the page on a decrypted clip and waits for the player.
       Future<void> openPlayer(WidgetTester tester) async {
-        stubDelete();
-        stubDecrypt(() async {
+        stubKeptVideo(() async {
           File(expectedClipPath())
             ..createSync(recursive: true)
             ..writeAsBytesSync(const [1, 2, 3]);
@@ -295,6 +299,189 @@ void main() {
         expect(size.width / size.height, closeTo(9 / 16, 0.01));
       });
 
+      group(
+        "keeps the kept file's path and name out of the error it records",
+        () {
+          late _ErrorRecorder recorder;
+
+          setUp(() {
+            final previous = Bloc.observer;
+            recorder = _ErrorRecorder();
+            // Before the page builds its cubit, which takes the observer then.
+            Bloc.observer = recorder;
+            addTearDown(() => Bloc.observer = previous);
+          });
+
+          void expectNoFileIn(Iterable<Object> errors) {
+            final recorded = errors.map((error) => '$error').join('\n');
+            expect(recorded, isNotEmpty);
+            // The folder is named after the account in production.
+            expect(
+              recorded,
+              isNot(contains('${DmVideoStore.dirName}/owner')),
+            );
+            expect(recorded, isNot(contains(_videoMessage().id)));
+          }
+
+          testWidgets('when the player fails after starting', (tester) async {
+            await openPlayer(tester);
+            final quoting = {
+              'status': 'error',
+              'errorMessage': 'Cannot open ${expectedClipPath()}',
+            };
+
+            events
+              ..emit(quoting)
+              ..emit(quoting);
+            await tester.pump(const Duration(seconds: 3));
+            await tester.pump();
+
+            expectNoFileIn(recorder.errors);
+          });
+
+          testWidgets('when the player cannot take the file', (tester) async {
+            stubKeptVideo(() async {
+              File(expectedClipPath())
+                ..createSync(recursive: true)
+                ..writeAsBytesSync(const [1, 2, 3]);
+              return expectedClipPath();
+            });
+            installMockDivineVideoPlayer(
+              onMethodCall: (call) async {
+                if (call.method == 'setClips') {
+                  throw PlatformException(
+                    code: 'source',
+                    message: 'No file named ${_videoMessage().id}.mp4',
+                  );
+                }
+                return null;
+              },
+              streamHandler: _PlayerEvents(),
+            );
+
+            await tester.pumpWidget(host());
+            await tester.pump();
+            // The failed player's teardown answers on real platform channels.
+            await tester.runAsync(pumpEventQueue);
+            await tester.pump();
+
+            expectNoFileIn(recorder.errors);
+          });
+
+          testWidgets(
+            'when the player cannot start for a reason of its own, which it '
+            'names',
+            (tester) async {
+              stubKeptVideo(() async {
+                File(expectedClipPath())
+                  ..createSync(recursive: true)
+                  ..writeAsBytesSync(const [1, 2, 3]);
+                return expectedClipPath();
+              });
+              installMockDivineVideoPlayer(
+                onMethodCall: (call) async {
+                  if (call.method == 'setClips') {
+                    throw MissingPluginException();
+                  }
+                  return null;
+                },
+                streamHandler: _PlayerEvents(),
+              );
+
+              await tester.pumpWidget(host());
+              await tester.pump();
+              await tester.runAsync(pumpEventQueue);
+              await tester.pump();
+
+              final error = recorder.errors.single;
+              // Through the same scrub as a platform error.
+              expect(
+                '$error',
+                startsWith('Video player failed: MissingPluginException'),
+              );
+              // An expected failure stays out of the crash reporter.
+              expect(asReportableError(error, context: 'test'), isNull);
+            },
+          );
+
+          testWidgets('and still reports a programming error at start', (
+            tester,
+          ) async {
+            TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+                .setMockMethodCallHandler(
+                  const MethodChannel('divine_video_player'),
+                  // A reply of the wrong shape, which the player casts.
+                  (call) async => call.method == 'create'
+                      ? <String, Object?>{'textureId': 'one'}
+                      : null,
+                );
+            stubKeptVideo(() async {
+              File(expectedClipPath())
+                ..createSync(recursive: true)
+                ..writeAsBytesSync(const [1, 2, 3]);
+              return expectedClipPath();
+            });
+            installMockDivineVideoPlayer(streamHandler: _PlayerEvents());
+
+            await tester.pumpWidget(host());
+            await tester.pump();
+            await tester.runAsync(pumpEventQueue);
+            await tester.pump();
+
+            final error = recorder.errors.single;
+            // What the app's bloc observer forwards to the crash reporter.
+            expect(asReportableError(error, context: 'test'), isNotNull);
+            expect('$error', contains('Video player failed'));
+            expect('$error', contains('TypeError'));
+          });
+        },
+      );
+
+      testWidgets(
+        'tells the viewer the video could not be opened when the player that '
+        'failed to start cannot be torn down either',
+        (tester) async {
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+              .setMockMethodCallHandler(
+                const MethodChannel('divine_video_player'),
+                (call) async {
+                  if (call.method == 'create') {
+                    return <String, Object?>{'textureId': 1};
+                  }
+                  if (call.method == 'dispose') {
+                    throw PlatformException(code: 'dispose');
+                  }
+                  return null;
+                },
+              );
+          stubKeptVideo(() async {
+            File(expectedClipPath())
+              ..createSync(recursive: true)
+              ..writeAsBytesSync(const [1, 2, 3]);
+            return expectedClipPath();
+          });
+          installMockDivineVideoPlayer(
+            onMethodCall: (call) async {
+              if (call.method == 'setClips') {
+                throw PlatformException(code: 'source');
+              }
+              return null;
+            },
+            streamHandler: _PlayerEvents(),
+          );
+
+          await tester.pumpWidget(host());
+          await tester.pump();
+          await tester.runAsync(pumpEventQueue);
+          await tester.pump();
+
+          expect(
+            find.text(AppLocalizationsEn().dmVideoUnavailable),
+            findsOneWidget,
+          );
+        },
+      );
+
       testWidgets(
         'tells the viewer the video could not be opened when the player fails '
         'after starting, instead of leaving a black screen',
@@ -312,7 +499,6 @@ void main() {
             find.text(AppLocalizationsEn().dmVideoUnavailable),
             findsOneWidget,
           );
-          verify(() => decryptor.deleteClip(expectedClipPath())).called(1);
         },
       );
     });
@@ -322,8 +508,7 @@ void main() {
         'keeps playing when the player recovers from a decoder error, as '
         'Android retries one',
         (tester) async {
-          stubDelete();
-          stubDecrypt(() async {
+          stubKeptVideo(() async {
             File(expectedClipPath())
               ..createSync(recursive: true)
               ..writeAsBytesSync(const [1, 2, 3]);
@@ -348,7 +533,6 @@ void main() {
             find.text(AppLocalizationsEn().dmVideoUnavailable),
             findsNothing,
           );
-          verifyNever(() => decryptor.deleteClip(any()));
         },
       );
     });
@@ -360,15 +544,17 @@ void main() {
         WidgetTester tester, {
         required bool canAddToClips,
       }) async {
-        stubDelete();
-        stubDecrypt(() async {
+        stubKeptVideo(() async {
           File(expectedClipPath())
             ..createSync(recursive: true)
             ..writeAsBytesSync(const [1, 2, 3]);
           return expectedClipPath();
         });
         when(
-          () => gallerySaveService.saveVideoToGallery(any()),
+          () => gallerySaveService.saveVideoToGallery(
+            any(),
+            copyUnderNeutralName: true,
+          ),
         ).thenAnswer((_) async => const GallerySaveSuccess());
         installMockDivineVideoPlayer();
 
@@ -389,7 +575,12 @@ void main() {
         await tester.tap(find.text(l10n.shareSheetSaveToGallery));
         await tester.pumpAndSettle();
 
-        verify(() => gallerySaveService.saveVideoToGallery(any())).called(1);
+        verify(
+          () => gallerySaveService.saveVideoToGallery(
+            any(),
+            copyUnderNeutralName: true,
+          ),
+        ).called(1);
       });
 
       testWidgets('saves straight to the gallery when clips are not offered', (
@@ -401,7 +592,12 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text(l10n.shareSheetAddToClips), findsNothing);
-        verify(() => gallerySaveService.saveVideoToGallery(any())).called(1);
+        verify(
+          () => gallerySaveService.saveVideoToGallery(
+            any(),
+            copyUnderNeutralName: true,
+          ),
+        ).called(1);
       });
     });
   });

@@ -78,20 +78,9 @@ class VideoRouteRef {
     }
 
     if (lower.startsWith('nevent1')) {
-      // decodeNevent runs its TLV loop outside any try/catch, unlike
-      // decodeNaddr. A string whose bech32 checksum is valid but whose TLV
-      // payload is malformed reaches getInt32 on a short kind entry or
-      // utf8.decode on invalid bytes, and throws. This parse runs inside a
-      // go_router builder, where a throw escapes as Flutter's ErrorWidget
-      // rather than the route error screen — errorBuilder only covers
-      // route-matching failures.
-      try {
-        final eventId = NIP19Tlv.decodeNevent(trimmed)?.id;
-        if (!NostrHexUtils.isValidEventId(eventId)) return null;
-        return VideoRouteRef(eventId: eventId);
-      } on Object catch (_) {
-        return null;
-      }
+      final eventId = NIP19Tlv.decodeNevent(trimmed)?.id;
+      if (!NostrHexUtils.isValidEventId(eventId)) return null;
+      return VideoRouteRef(eventId: eventId);
     }
 
     if (lower.startsWith('naddr1')) {

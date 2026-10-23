@@ -258,6 +258,16 @@ void main() {
       expect(badgeRecipientPubkey(nprofile), isNull);
     });
 
+    test('rejects an nprofile whose relay entry is malformed', () {
+      // The pubkey entry for _pubkey(1), then the relay entry [1, 1, 0xff],
+      // whose one byte is not valid UTF-8.
+      const nprofile =
+          'nprofile1qqsqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq'
+          'qegpq8ls0az230';
+
+      expect(badgeRecipientPubkey(nprofile), isNull);
+    });
+
     test('rejects an npub that does not decode', () {
       expect(badgeRecipientPubkey('npub1notbech32'), isNull);
     });

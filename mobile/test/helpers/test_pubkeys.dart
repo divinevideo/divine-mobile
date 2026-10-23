@@ -33,3 +33,8 @@ const syntheticTestNpub =
 /// See [syntheticTestNpub] for why this is a literal rather than computed.
 const syntheticOtherTestNpub =
     'npub1etlt40k2l6atajh7h2lv4l46hm90aw47etlt40k2l6atajh7h2lqx4end5';
+
+/// [syntheticOtherTestNpub] with its last character changed: the one-character
+/// slip of a hand-copied link, which the bech32 checksum rejects.
+const syntheticMisspelledNpub =
+    'npub1etlt40k2l6atajh7h2lv4l46hm90aw47etlt40k2l6atajh7h2lqx4endq';

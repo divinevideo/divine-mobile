@@ -3807,6 +3807,15 @@ class AppLocalizationsRo extends AppLocalizations {
   String get dmClipBadge => 'Clip';
 
   @override
+  String get dmVideoCardTapToLoad => 'Tap to load';
+
+  @override
+  String get dmVideoCardHiddenSenderBlocked => 'Hidden: sender blocked';
+
+  @override
+  String get dmVideoCardHiddenSenderMuted => 'Hidden: sender muted';
+
+  @override
   String get dmClipChecking =>
       'Verificăm dacă acest clip a fost filmat cu Divine…';
 
@@ -9515,6 +9524,70 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorTextShadowColor => 'Culoarea umbrei';
+
+  @override
+  String get videoEditorTextFillSolid => 'Uniformă';
+
+  @override
+  String get videoEditorTextFillGradient => 'Gradient';
+
+  @override
+  String get videoEditorTextGradientPresets => 'Presetări';
+
+  @override
+  String get videoEditorTextGradientColors => 'Culori';
+
+  @override
+  String get videoEditorTextGradientAddColor => 'Adaugă culoare';
+
+  @override
+  String get videoEditorTextGradientRemoveColor => 'Elimină ultima culoare';
+
+  @override
+  String get videoEditorTextGradientSunset => 'Apus';
+
+  @override
+  String get videoEditorTextGradientOcean => 'Ocean';
+
+  @override
+  String get videoEditorTextGradientRainbow => 'Curcubeu';
+
+  @override
+  String get videoEditorTextGradientMint => 'Mentă';
+
+  @override
+  String get videoEditorTextGradientCandy => 'Bomboană';
+
+  @override
+  String get videoEditorTextGradientAurora => 'Auroră';
+
+  @override
+  String get videoEditorTextGradientLeftToRight => 'De la stânga la dreapta';
+
+  @override
+  String get videoEditorTextGradientTopLeftToBottomRight =>
+      'Din stânga sus în dreapta jos';
+
+  @override
+  String get videoEditorTextGradientTopToBottom => 'De sus în jos';
+
+  @override
+  String get videoEditorTextGradientTopRightToBottomLeft =>
+      'Din dreapta sus în stânga jos';
+
+  @override
+  String get videoEditorTextGradientRightToLeft => 'De la dreapta la stânga';
+
+  @override
+  String get videoEditorTextGradientBottomRightToTopLeft =>
+      'Din dreapta jos în stânga sus';
+
+  @override
+  String get videoEditorTextGradientBottomToTop => 'De jos în sus';
+
+  @override
+  String get videoEditorTextGradientBottomLeftToTopRight =>
+      'Din stânga jos în dreapta sus';
 
   @override
   String get videoEditorFontSemanticLabel => 'Font';

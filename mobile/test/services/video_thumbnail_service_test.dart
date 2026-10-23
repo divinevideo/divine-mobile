@@ -7,12 +7,14 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 // Not exported from pro_video_editor's barrel — imported via path so we can
 // subclass MethodChannelProVideoEditor and skip its EventChannel subscription.
 // May need updating on pro_video_editor upgrades.
 import 'package:pro_video_editor/core/platform/native_method_channel.dart';
 import 'package:pro_video_editor/core/platform/platform_interface.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Fresh ProVideoEditor-compatible instance for tests.
 ///
@@ -25,6 +27,27 @@ import 'package:pro_video_editor/core/platform/platform_interface.dart';
 class _NoopInitProVideoEditor extends MethodChannelProVideoEditor {
   @override
   Stream<dynamic> initializeStream() => const Stream.empty();
+}
+
+class _RecordingCrashReporter implements CrashReporter {
+  final errors = <Object>[];
+  final reasons = <String?>[];
+
+  @override
+  void log(String message) {}
+
+  @override
+  Future<void> setCustomKey(String key, Object value) async {}
+
+  @override
+  Future<void> recordError(
+    Object error,
+    StackTrace? stack, {
+    String? reason,
+  }) async {
+    errors.add(error);
+    reasons.add(reason);
+  }
 }
 
 void main() {
@@ -133,6 +156,166 @@ void main() {
         expect(result, isNull); // Expected because it's not a real video
 
         await videoFile.delete();
+      });
+    });
+
+    group('crash reports', () {
+      late CrashReporter originalReporter;
+      late _RecordingCrashReporter reporter;
+
+      setUp(() {
+        originalReporter = VideoThumbnailService.crashReporter;
+        reporter = _RecordingCrashReporter();
+        VideoThumbnailService.crashReporter = reporter;
+      });
+
+      tearDown(() => VideoThumbnailService.crashReporter = originalReporter);
+
+      test('name no file the frames were taken from', () async {
+        // Named the way a clip added from a DM is: after its message.
+        final video = File('${tempDir.path}/dm_clip_${'a' * 64}.mp4')
+          ..writeAsBytesSync([1, 2, 3, 4]);
+        addTearDown(video.deleteSync);
+        var framesFail = false;
+        var metadataFails = false;
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(channel, (call) async {
+              switch (call.method) {
+                case 'getMetadata' when !metadataFails:
+                  return <String, Object?>{
+                    'duration': 6000,
+                    'width': 1080,
+                    'height': 1920,
+                  };
+                case 'getThumbnails' when !framesFail:
+                  return <Uint8List>[];
+              }
+              throw PlatformException(code: 'decode');
+            });
+
+        // No frame, a frame read that fails, and a last frame that fails.
+        await VideoThumbnailService.extractThumbnail(videoPath: video.path);
+        framesFail = true;
+        await VideoThumbnailService.extractThumbnail(videoPath: video.path);
+        metadataFails = true;
+        await VideoThumbnailService.extractLastFrame(videoPath: video.path);
+
+        expect(reporter.reasons, hasLength(3));
+        for (final reason in reporter.reasons) {
+          expect(reason, isNot(contains('a' * 64)));
+          expect(reason, isNot(contains(tempDir.path)));
+        }
+      });
+
+      // pro_video_editor's iOS thumbnail generator quotes the path of a file
+      // that went missing; a native error can also name the file alone.
+      for (final (quoted, nativeMessage) in [
+        ('the path', (String path) => 'Video file not found at path: $path'),
+        (
+          'the file name',
+          (String path) => 'Cannot open ${path.split('/').last}',
+        ),
+      ]) {
+        test(
+          'record and log a native error without $quoted it quotes',
+          () async {
+            // Named the way a clip added from a DM is: after its message.
+            final video = File('${tempDir.path}/dm_clip_${'b' * 64}.mp4')
+              ..writeAsBytesSync([1, 2, 3, 4]);
+            addTearDown(video.deleteSync);
+            final failing = PlatformException(
+              code: 'THUMBNAIL_ERROR',
+              message: nativeMessage(video.path),
+            );
+            var metadataFails = false;
+            TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+                .setMockMethodCallHandler(channel, (call) async {
+                  if (call.method == 'getMetadata' && !metadataFails) {
+                    return <String, Object?>{
+                      'duration': 6000,
+                      'width': 1080,
+                      'height': 1920,
+                    };
+                  }
+                  throw failing;
+                });
+            await LogCaptureService().clearAllLogs();
+            addTearDown(LogCaptureService().clearAllLogs);
+
+            // A frame read that fails, and a last frame that fails.
+            await VideoThumbnailService.extractThumbnail(videoPath: video.path);
+            metadataFails = true;
+            await VideoThumbnailService.extractLastFrame(videoPath: video.path);
+
+            expect(reporter.errors, hasLength(2));
+            for (final error in reporter.errors) {
+              expect('$error', contains('THUMBNAIL_ERROR'));
+              expect('$error', isNot(contains('b' * 64)));
+              expect('$error', isNot(contains(tempDir.path)));
+            }
+            final failures = LogCaptureService()
+                .getRecentLogs()
+                .map((entry) => '${entry.message} ${entry.error}')
+                .where(
+                  (line) =>
+                      line.startsWith('Thumbnail bytes extraction error') ||
+                      line.startsWith('Last-frame fallback failed'),
+                )
+                .toList();
+            // The frame read logs once per try; the last frame once.
+            expect(failures.map((line) => line.split(':').first).toSet(), {
+              'Thumbnail bytes extraction error',
+              'Last-frame fallback failed',
+            });
+            for (final line in failures) {
+              expect(line, contains('THUMBNAIL_ERROR'));
+              expect(line, isNot(contains('b' * 64)));
+              expect(line, isNot(contains(tempDir.path)));
+            }
+            final nativeFailures = LogCaptureService()
+                .getRecentLogs()
+                .map((entry) => '${entry.message} ${entry.error}')
+                .where((line) => line.contains('THUMBNAIL_ERROR'))
+                .toList();
+            expect(
+              nativeFailures,
+              contains(contains('getSingleThumbnail(position: .last) failed')),
+            );
+            for (final line in nativeFailures) {
+              expect(line, isNot(contains('b' * 64)));
+              expect(line, isNot(contains(tempDir.path)));
+            }
+          },
+        );
+      }
+    });
+
+    group('extractLastFrame', () {
+      test('names every frame it keeps apart, even at once', () async {
+        final video = File('${tempDir.path}/clip.mp4')
+          ..writeAsBytesSync([1, 2, 3, 4]);
+        addTearDown(video.deleteSync);
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+              channel,
+              (call) async => call.method == 'getThumbnails'
+                  ? [
+                      Uint8List.fromList([9, 9, 9]),
+                    ]
+                  : null,
+            );
+
+        final frames = await Future.wait([
+          for (var i = 0; i < 20; i++)
+            VideoThumbnailService.extractLastFrame(videoPath: video.path),
+        ]);
+        addTearDown(() {
+          for (final frame in frames.nonNulls) {
+            if (File(frame).existsSync()) File(frame).deleteSync();
+          }
+        });
+
+        expect(frames.nonNulls.toSet(), hasLength(20));
       });
     });
 

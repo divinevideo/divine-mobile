@@ -1485,6 +1485,28 @@ void main() {
         ]);
       });
 
+      test(
+        'sweeps kept video DMs with the same accounts kept, even as the only '
+        'sweep wired',
+        () async {
+          final videoSweeps = <Set<String>>[];
+          service
+            ..onConversationSweep = null
+            ..onKeptDmVideoSweep = (keep) async {
+              videoSweeps.add(keep);
+              return 0;
+            };
+          await rememberAccounts([knownPubkey]);
+          await prefs.setString('current_user_pubkey_hex', activePubkey);
+
+          await service.sweepRowsOfUnknownAccounts();
+
+          expect(videoSweeps, [
+            {knownPubkey, activePubkey},
+          ]);
+        },
+      );
+
       test('a failing conversation sweep still sweeps queued views', () async {
         final viewSweeps = <Set<String>>[];
         service.onConversationSweep = (_) async =>

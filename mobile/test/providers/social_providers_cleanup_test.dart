@@ -29,6 +29,7 @@ import 'package:openvine/models/known_account.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/followed_people_lists_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
+import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/personal_event_cache_clear_provider.dart';
 import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
@@ -40,6 +41,8 @@ import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
+import 'package:openvine/services/dm_video_store.dart';
+import 'package:openvine/services/gallery_save_service.dart';
 import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/services/sound_library_service.dart';
 import 'package:openvine/services/upload_manager.dart';
@@ -48,6 +51,7 @@ import 'package:openvine/services/video_provenance_filter_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
+import 'package:permissions_service/permissions_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:upload_repository/upload_repository.dart' as hive_model;
 
@@ -59,6 +63,8 @@ class _MockDmRepository extends Mock implements DmRepository {}
 class _MockBlossomUploadService extends Mock implements BlossomUploadService {}
 
 class _MockNostrClient extends Mock implements NostrClient {}
+
+class _MockPermissionsService extends Mock implements PermissionsService {}
 
 const _pubkeyA =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -192,6 +198,12 @@ void main() {
             await service.loadCustomSounds();
             return service;
           }),
+          gallerySaveServiceProvider.overrideWithValue(
+            GallerySaveService(
+              permissionsService: _MockPermissionsService(),
+              copyRoot: () => Directory('${tempDir.path}/gallery_copies'),
+            ),
+          ),
         ],
       );
     });
@@ -2916,6 +2928,148 @@ void main() {
         expect(await hasQueuedView(forgottenPubkey), isFalse);
         expect(await hasQueuedView(_pubkeyA), isTrue);
       });
+    });
+
+    group('kept video DMs', () {
+      const forgottenPubkey =
+          'f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0';
+
+      File keptVideoOf(String owner) => File(
+        '${tempDir.path}/cache/${DmVideoStore.dirName}/$owner/clip.mp4',
+      )..createSync(recursive: true);
+
+      UserDataCleanupService readCleanupService() {
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        return subscription.read();
+      }
+
+      test('launch removes gallery copies a killed save left behind', () async {
+        final copies = Directory('${tempDir.path}/gallery_copies');
+        File('${copies.path}/left/Divine_1.mov')
+          ..createSync(recursive: true)
+          ..writeAsBytesSync([9, 9, 9]);
+        final deleted = Completer<void>();
+        final watcher = tempDir.watch(events: FileSystemEvent.delete).listen((
+          event,
+        ) {
+          if (event.path == copies.path && !deleted.isCompleted) {
+            deleted.complete();
+          }
+        });
+        addTearDown(watcher.cancel);
+
+        readCleanupService();
+        await deleted.future.timeout(
+          const Duration(seconds: 5),
+          onTimeout: () => fail('the leftover copies were never removed'),
+        );
+
+        expect(copies.existsSync(), isFalse);
+      });
+
+      test('launch removes obsolete decrypted playback clips only', () async {
+        final legacy = Directory('${tempDir.path}/dm_video_playback')
+          ..createSync();
+        File('${legacy.path}/clip.mp4').writeAsBytesSync([1, 2, 3]);
+        final unrelated = File('${tempDir.path}/unrelated.mp4')
+          ..writeAsBytesSync([4, 5, 6]);
+        final deleted = Completer<void>();
+        final watcher = tempDir.watch(events: FileSystemEvent.delete).listen((
+          event,
+        ) {
+          if (event.path == legacy.path && !deleted.isCompleted) {
+            deleted.complete();
+          }
+        });
+        addTearDown(watcher.cancel);
+
+        readCleanupService();
+        await deleted.future.timeout(const Duration(seconds: 5));
+
+        expect(legacy.existsSync(), isFalse);
+        expect(unrelated.existsSync(), isTrue);
+      });
+
+      test(
+        'persisted identity without a live store does not suppress expiry',
+        () async {
+          await prefs.setString('current_user_pubkey_hex', _pubkeyA);
+          final active = keptVideoOf(_pubkeyA);
+          final inactive = keptVideoOf(_pubkeyB);
+          final old = DateTime.now().subtract(const Duration(days: 31));
+          active.setLastModifiedSync(old);
+          inactive.setLastModifiedSync(old);
+
+          await readCleanupService().onKeptDmVideoSweep!({_pubkeyA, _pubkeyB});
+
+          expect(active.existsSync(), isFalse);
+          expect(inactive.existsSync(), isFalse);
+        },
+      );
+
+      test("removing an account deletes only that account's videos", () async {
+        final removed = keptVideoOf(_pubkeyA);
+        final staying = keptVideoOf(_pubkeyB);
+
+        await readCleanupService().onDatabaseCleanup!(
+          userPubkey: _pubkeyA,
+          forgetAccount: true,
+        );
+
+        expect(removed.existsSync(), isFalse);
+        expect(staying.existsSync(), isTrue);
+      });
+
+      test("deleting an account deletes that account's videos", () async {
+        final deleted = keptVideoOf(_pubkeyA);
+
+        await readCleanupService().onDatabaseCleanup!(
+          userPubkey: _pubkeyA,
+          deleteUserData: true,
+        );
+
+        expect(deleted.existsSync(), isFalse);
+      });
+
+      test("an account switch keeps the departing account's videos", () async {
+        final kept = keptVideoOf(_pubkeyA);
+
+        await readCleanupService().onDatabaseCleanup!(userPubkey: _pubkeyA);
+
+        expect(kept.existsSync(), isTrue);
+      });
+
+      test(
+        'the launch sweep deletes the videos of an account the device no '
+        'longer knows',
+        () async {
+          final forgotten = keptVideoOf(forgottenPubkey);
+          final known = keptVideoOf(_pubkeyA);
+          await prefs.setString(
+            kKnownAccountsKey,
+            jsonEncode([
+              KnownAccount(
+                pubkeyHex: _pubkeyA,
+                authSource: AuthenticationSource.importedKeys,
+                addedAt: DateTime.utc(2026),
+                lastUsedAt: DateTime.utc(2026),
+              ).toJson(),
+            ]),
+          );
+
+          readCleanupService();
+          for (var i = 0; i < 20 && forgotten.existsSync(); i++) {
+            await pumpEventQueue();
+          }
+
+          expect(forgotten.existsSync(), isFalse);
+          expect(known.existsSync(), isTrue);
+        },
+      );
     });
   });
 }

@@ -5,6 +5,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/painting.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/generated/app_localizations.dart';
+import 'package:openvine/models/video_editor/text_gradient_presets.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
@@ -65,6 +66,55 @@ extension TextEditorTextAlign on TextAlign {
     TextAlign.left || TextAlign.start => l10n.textAlignLeft,
     TextAlign.right || TextAlign.end => l10n.textAlignRight,
     _ => l10n.textAlignCenter,
+  };
+}
+
+/// Extension on [TextGradientPreset] for text editor UI purposes.
+extension TextEditorGradientPreset on TextGradientPreset {
+  /// Returns the localized name of this preset, read out by screen readers.
+  String localizedName(AppLocalizations l10n) => switch (this) {
+    TextGradientPreset.sunset => l10n.videoEditorTextGradientSunset,
+    TextGradientPreset.ocean => l10n.videoEditorTextGradientOcean,
+    TextGradientPreset.rainbow => l10n.videoEditorTextGradientRainbow,
+    TextGradientPreset.mint => l10n.videoEditorTextGradientMint,
+    TextGradientPreset.candy => l10n.videoEditorTextGradientCandy,
+    TextGradientPreset.aurora => l10n.videoEditorTextGradientAurora,
+  };
+}
+
+/// Extension on [TextGradientDirection] for text editor UI purposes.
+extension TextEditorGradientDirection on TextGradientDirection {
+  /// Returns the arrow pointing the way the gradient runs.
+  DivineIconName get icon => switch (this) {
+    TextGradientDirection.leftToRight => .arrowRight,
+    TextGradientDirection.topLeftToBottomRight => .arrowDownRight,
+    TextGradientDirection.topToBottom => .arrowDown,
+    TextGradientDirection.topRightToBottomLeft => .arrowDownLeft,
+    TextGradientDirection.rightToLeft => .arrowLeft,
+    TextGradientDirection.bottomRightToTopLeft => .arrowUpLeft,
+    TextGradientDirection.bottomToTop => .arrowUp,
+    TextGradientDirection.bottomLeftToTopRight => .arrowUpRight,
+  };
+
+  /// Returns the localized name of this direction, read out by screen
+  /// readers.
+  String localizedName(AppLocalizations l10n) => switch (this) {
+    TextGradientDirection.leftToRight =>
+      l10n.videoEditorTextGradientLeftToRight,
+    TextGradientDirection.topLeftToBottomRight =>
+      l10n.videoEditorTextGradientTopLeftToBottomRight,
+    TextGradientDirection.topToBottom =>
+      l10n.videoEditorTextGradientTopToBottom,
+    TextGradientDirection.topRightToBottomLeft =>
+      l10n.videoEditorTextGradientTopRightToBottomLeft,
+    TextGradientDirection.rightToLeft =>
+      l10n.videoEditorTextGradientRightToLeft,
+    TextGradientDirection.bottomRightToTopLeft =>
+      l10n.videoEditorTextGradientBottomRightToTopLeft,
+    TextGradientDirection.bottomToTop =>
+      l10n.videoEditorTextGradientBottomToTop,
+    TextGradientDirection.bottomLeftToTopRight =>
+      l10n.videoEditorTextGradientBottomLeftToTopRight,
   };
 }
 

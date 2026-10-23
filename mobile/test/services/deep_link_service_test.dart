@@ -7,6 +7,8 @@ import 'package:openvine/services/deep_link_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+import '../helpers/test_pubkeys.dart';
+
 void main() {
   group('legacy invite links', () {
     test('parse without writing the code to diagnostics', () async {
@@ -365,6 +367,15 @@ void main() {
 
       test('ignores a people list address whose author is not a key', () {
         const url = 'https://divine.video/people-lists/not-a-key/crew';
+
+        final result = DeepLinkService.parseDeepLink(url);
+
+        expect(result.type, equals(DeepLinkType.unknown));
+      });
+
+      test('ignores a list link whose author npub does not decode', () {
+        const url =
+            'https://divine.video/list/$syntheticMisspelledNpub/my-vines';
 
         final result = DeepLinkService.parseDeepLink(url);
 

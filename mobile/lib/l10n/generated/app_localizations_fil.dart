@@ -3714,6 +3714,15 @@ class AppLocalizationsFil extends AppLocalizations {
   String get dmClipBadge => 'Clip';
 
   @override
+  String get dmVideoCardTapToLoad => 'Tap to load';
+
+  @override
+  String get dmVideoCardHiddenSenderBlocked => 'Hidden: sender blocked';
+
+  @override
+  String get dmVideoCardHiddenSenderMuted => 'Hidden: sender muted';
+
+  @override
   String get dmClipChecking =>
       'Tinitingnan kung kinunan sa Divine ang clip na ito…';
 
@@ -9377,6 +9386,70 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorTextShadowColor => 'Kulay ng anino';
+
+  @override
+  String get videoEditorTextFillSolid => 'Solid';
+
+  @override
+  String get videoEditorTextFillGradient => 'Gradient';
+
+  @override
+  String get videoEditorTextGradientPresets => 'Mga preset';
+
+  @override
+  String get videoEditorTextGradientColors => 'Mga kulay';
+
+  @override
+  String get videoEditorTextGradientAddColor => 'Magdagdag ng kulay';
+
+  @override
+  String get videoEditorTextGradientRemoveColor => 'Alisin ang huling kulay';
+
+  @override
+  String get videoEditorTextGradientSunset => 'Paglubog ng araw';
+
+  @override
+  String get videoEditorTextGradientOcean => 'Karagatan';
+
+  @override
+  String get videoEditorTextGradientRainbow => 'Bahaghari';
+
+  @override
+  String get videoEditorTextGradientMint => 'Mint';
+
+  @override
+  String get videoEditorTextGradientCandy => 'Kendi';
+
+  @override
+  String get videoEditorTextGradientAurora => 'Aurora';
+
+  @override
+  String get videoEditorTextGradientLeftToRight => 'Mula kaliwa pakanan';
+
+  @override
+  String get videoEditorTextGradientTopLeftToBottomRight =>
+      'Mula kaliwang itaas pakanang ibaba';
+
+  @override
+  String get videoEditorTextGradientTopToBottom => 'Mula itaas pababa';
+
+  @override
+  String get videoEditorTextGradientTopRightToBottomLeft =>
+      'Mula kanang itaas pakaliwang ibaba';
+
+  @override
+  String get videoEditorTextGradientRightToLeft => 'Mula kanan pakaliwa';
+
+  @override
+  String get videoEditorTextGradientBottomRightToTopLeft =>
+      'Mula kanang ibaba pakaliwang itaas';
+
+  @override
+  String get videoEditorTextGradientBottomToTop => 'Mula ibaba pataas';
+
+  @override
+  String get videoEditorTextGradientBottomLeftToTopRight =>
+      'Mula kaliwang ibaba pakanang itaas';
 
   @override
   String get videoEditorFontSemanticLabel => 'Font';

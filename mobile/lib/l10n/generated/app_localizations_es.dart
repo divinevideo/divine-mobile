@@ -3737,6 +3737,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get dmClipBadge => 'Clip';
 
   @override
+  String get dmVideoCardTapToLoad => 'Tap to load';
+
+  @override
+  String get dmVideoCardHiddenSenderBlocked => 'Hidden: sender blocked';
+
+  @override
+  String get dmVideoCardHiddenSenderMuted => 'Hidden: sender muted';
+
+  @override
   String get dmClipChecking => 'Comprobando que este clip se grabó con Divine…';
 
   @override
@@ -9397,6 +9406,70 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get videoEditorTextShadowColor => 'Color de la sombra';
+
+  @override
+  String get videoEditorTextFillSolid => 'Sólido';
+
+  @override
+  String get videoEditorTextFillGradient => 'Degradado';
+
+  @override
+  String get videoEditorTextGradientPresets => 'Predefinidos';
+
+  @override
+  String get videoEditorTextGradientColors => 'Colores';
+
+  @override
+  String get videoEditorTextGradientAddColor => 'Agregar color';
+
+  @override
+  String get videoEditorTextGradientRemoveColor => 'Quitar el último color';
+
+  @override
+  String get videoEditorTextGradientSunset => 'Atardecer';
+
+  @override
+  String get videoEditorTextGradientOcean => 'Océano';
+
+  @override
+  String get videoEditorTextGradientRainbow => 'Arcoíris';
+
+  @override
+  String get videoEditorTextGradientMint => 'Menta';
+
+  @override
+  String get videoEditorTextGradientCandy => 'Caramelo';
+
+  @override
+  String get videoEditorTextGradientAurora => 'Aurora';
+
+  @override
+  String get videoEditorTextGradientLeftToRight => 'De izquierda a derecha';
+
+  @override
+  String get videoEditorTextGradientTopLeftToBottomRight =>
+      'De arriba a la izquierda a abajo a la derecha';
+
+  @override
+  String get videoEditorTextGradientTopToBottom => 'De arriba abajo';
+
+  @override
+  String get videoEditorTextGradientTopRightToBottomLeft =>
+      'De arriba a la derecha a abajo a la izquierda';
+
+  @override
+  String get videoEditorTextGradientRightToLeft => 'De derecha a izquierda';
+
+  @override
+  String get videoEditorTextGradientBottomRightToTopLeft =>
+      'De abajo a la derecha a arriba a la izquierda';
+
+  @override
+  String get videoEditorTextGradientBottomToTop => 'De abajo arriba';
+
+  @override
+  String get videoEditorTextGradientBottomLeftToTopRight =>
+      'De abajo a la izquierda a arriba a la derecha';
 
   @override
   String get videoEditorFontSemanticLabel => 'Fuente';

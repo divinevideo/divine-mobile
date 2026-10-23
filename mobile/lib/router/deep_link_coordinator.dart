@@ -7,7 +7,6 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/router/universal_link_resolver.dart';
-import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
@@ -219,10 +218,8 @@ class DeepLinkCoordinator {
 
         switch (deepLink.type) {
           case DeepLinkType.video:
-            if (deepLink.videoRef != null) {
-              final targetPath = VideoDetailScreen.pathForId(
-                deepLink.videoRef!,
-              );
+            final targetPath = deepLinkRouterPath(deepLink);
+            if (targetPath != null) {
               Log.info(
                 '📱 Navigating to video: $targetPath'
                 '${deepLink.autoOpenComments ? " (open comments)" : ""}',
@@ -275,17 +272,8 @@ class DeepLinkCoordinator {
               );
             }
           case DeepLinkType.profile:
-            if (deepLink.npub != null) {
-              // Mirror universalLinkToRouterPath: no index → grid mode
-              // (/profile/<npub>), explicit index → feed mode
-              // (/profile/<npub>/<index>). The old `index ?? 0` form always
-              // produced a feed-mode path, which disagreed with the
-              // resolver's grid-mode redirect for index-less universal links
-              // and caused a spurious second navigation.
-              final index = deepLink.index;
-              final targetPath = index != null
-                  ? ProfileScreenRouter.pathForIndex(deepLink.npub!, index)
-                  : ProfileScreenRouter.pathForNpub(deepLink.npub!);
+            final targetPath = deepLinkRouterPath(deepLink);
+            if (targetPath != null) {
               Log.info(
                 '📱 Navigating to profile: $targetPath',
                 name: 'DeepLinkHandler',
@@ -333,10 +321,8 @@ class DeepLinkCoordinator {
               );
             }
           case DeepLinkType.hashtag:
-            if (deepLink.hashtag != null) {
-              final targetPath = HashtagScreenRouter.pathForTag(
-                deepLink.hashtag!,
-              );
+            final targetPath = deepLinkRouterPath(deepLink);
+            if (targetPath != null) {
               Log.info(
                 '📱 Navigating to hashtag: $targetPath',
                 name: 'DeepLinkHandler',
@@ -384,11 +370,8 @@ class DeepLinkCoordinator {
               );
             }
           case DeepLinkType.search:
-            if (deepLink.searchTerm != null) {
-              final targetPath = SearchResultsPage.pathForQuery(
-                deepLink.searchTerm!,
-                requestFocusOnMount: false,
-              );
+            final targetPath = deepLinkRouterPath(deepLink);
+            if (targetPath != null) {
               Log.info(
                 '📱 Navigating to search: $targetPath',
                 name: 'DeepLinkHandler',
@@ -439,17 +422,11 @@ class DeepLinkCoordinator {
               );
             }
           case DeepLinkType.list:
-            final listPubkey = deepLink.listPubkey;
-            final listId = deepLink.listId;
-            if (listId != null && listId.isNotEmpty) {
+            final targetPath = deepLinkRouterPath(deepLink);
+            if (targetPath != null) {
               _navigateToListRoute(
                 currentLocation: currentLocation,
-                targetPath: listPubkey == null || listPubkey.isEmpty
-                    ? CuratedListFeedScreen.pathForId(listId)
-                    : CuratedListByAuthorScreen.pathFor(
-                        pubkey: listPubkey,
-                        listId: listId,
-                      ),
+                targetPath: targetPath,
                 familyPrefix: '${CuratedListFeedScreen.basePath}/',
               );
             } else {

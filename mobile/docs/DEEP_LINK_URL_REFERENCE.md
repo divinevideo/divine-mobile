@@ -23,7 +23,7 @@ Opens a specific video in full-screen player.
 **Pattern**: `https://divine.video/video/{videoId}`
 
 **Parameters**:
-- `videoId` (required): 64-character hexadecimal Nostr event ID
+- `videoId` (required): a 64-character hex event id, a NIP-19 `note1`, `nevent1` or `naddr1`, a raw NIP-33 `kind:pubkey:d-tag` coordinate of a video kind, or a first-party stable id (the video's `d` tag)
 
 **Examples**:
 ```
@@ -50,7 +50,7 @@ Opens user profile in grid view showing all videos.
 **Pattern**: `https://divine.video/profile/{npub}`
 
 **Parameters**:
-- `npub` (required): Nostr public key in npub1... format OR hex pubkey
+- `npub` (required): a public key as an `npub1`, an `nprofile1` or 64-character hex in either case. An identifier that does not decode to a 32-byte key shows "Invalid profile ID".
 
 **Examples**:
 ```
@@ -59,7 +59,7 @@ https://divine.video/profile/a1b2c3d4e5f6... (hex pubkey also works)
 ```
 
 **Mobile Behavior**:
-- Navigates to `/profile/{npub}/0`
+- Navigates to `/profile/{npub}`
 - Opens ProfileScreen
 - Shows grid of user's videos
 - Displays profile info (avatar, name, bio)
@@ -79,7 +79,7 @@ Opens user profile in feed view starting at a specific video.
 **Pattern**: `https://divine.video/profile/{npub}/{index}`
 
 **Parameters**:
-- `npub` (required): Nostr public key in npub1... format
+- `npub` (required): any identifier form the grid link accepts
 - `index` (required): 0-based video index to start playing
 
 **Examples**:
@@ -233,7 +233,7 @@ Opens a curated video list.
 
 **Parameters**:
 - `listId` (required): Curated list d-tag or local list ID
-- `pubkey` (optional): List author public key for authored web-canonical URLs
+- `pubkey` (optional): List author public key for authored web-canonical URLs, as 64-character hex in either case, an `npub1` or an `nprofile1`. The app resolves it to lowercase hex before querying relays; an author that is not a key shows "Invalid list ID" without a query.
 
 **Examples**:
 ```
@@ -287,7 +287,7 @@ parsing alone does not install that server association.
 | URL Pattern | View | Mobile Route | Purpose |
 |-------------|------|--------------|---------|
 | `/video/{id}` | Player | `/video/{id}` | Play specific video |
-| `/profile/{npub}` | Grid | `/profile/{npub}/0` | User's videos (grid) |
+| `/profile/{npub}` | Grid | `/profile/{npub}` | User's videos (grid) |
 | `/profile/{npub}/{i}` | Feed | `/profile/{npub}/{i}` | User's videos (feed) |
 | `/hashtag/{tag}` | Grid | `/hashtag/{tag}` | Tagged videos (grid) |
 | `/hashtag/{tag}/{i}` | Feed | `/hashtag/{tag}/{i}` | Tagged videos (feed) |
@@ -311,14 +311,17 @@ parsing alone does not install that server association.
 - Example: "nostr tutorial" → `/search/nostr%20tutorial`
 
 ### Profile IDs
-- Accept both **npub** and **hex** formats
+- Accept **npub**, **nprofile** and **hex** formats
 - npub: `npub1abc...xyz` (Bech32 encoded)
-- hex: `a1b2c3d4e5f6...` (64-char hex string)
+- nprofile: `nprofile1abc...xyz` (Bech32 encoded, with relay hints)
+- hex: `a1b2c3d4e5f6...` (64-char hex string, either case)
+- An identifier that does not decode to a 32-byte key is rejected
 
 ### Video IDs
-- Must be 64-character hexadecimal
-- Nostr event ID format
-- Example: `059fb12899fbab94d2087351d6f03ec15fb0d4266bcb049a0529f86464b84631`
+- A 64-character hex event id, e.g. `059fb12899fbab94d2087351d6f03ec15fb0d4266bcb049a0529f86464b84631`
+- A NIP-19 `note1`, `nevent1` or `naddr1`
+- A raw NIP-33 `kind:pubkey:d-tag` coordinate of a video kind
+- A first-party stable id (the video's `d` tag)
 
 ## Navigation Behavior
 
@@ -480,7 +483,7 @@ payloads in `test/fixtures/deep_links/` for offline routing coverage tests.
 
 4. **URL Encoding**: Always URL-encode search terms but NOT hashtags or npubs.
 
-5. **Case Sensitivity**: Hashtags and search terms are case-insensitive. Profile IDs and video IDs are case-sensitive (hex).
+5. **Case Sensitivity**: Hashtags and search terms are case-insensitive. Hex profile and video ids are accepted in either case; emit bech32 ids (`npub1`, `nevent1`, …) in lowercase.
 
 6. **Invalid Index**: If index > video count, show last video or return to grid.
 

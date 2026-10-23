@@ -6283,6 +6283,24 @@ abstract class AppLocalizations {
   /// **'Clip'**
   String get dmClipBadge;
 
+  /// Short hint on a video message card in a DM thread from someone the user does not follow and has not replied to, or a group member they do not follow. The video is not downloaded or previewed until the user taps it.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to load'**
+  String get dmVideoCardTapToLoad;
+
+  /// Short hint on a video message card in a DM thread whose sender the user blocked. The card shows no preview; tapping still plays the video.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden: sender blocked'**
+  String get dmVideoCardHiddenSenderBlocked;
+
+  /// Short hint on a video message card in a DM thread whose sender the user muted. The card shows no preview; tapping still plays the video.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden: sender muted'**
+  String get dmVideoCardHiddenSenderMuted;
+
   /// SnackBar shown while a clip received in a DM is downloaded and its C2PA content credential is checked, before it is added to the clip library.
   ///
   /// In en, this message translates to:
@@ -15814,6 +15832,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Shadow color'**
   String get videoEditorTextShadowColor;
+
+  /// Tab in the text color panel of the video editor that fills the letters with a single color.
+  ///
+  /// In en, this message translates to:
+  /// **'Solid'**
+  String get videoEditorTextFillSolid;
+
+  /// Tab in the text color panel of the video editor that fills the letters with a color gradient. Also read out as the value of the text color button while a gradient is on.
+  ///
+  /// In en, this message translates to:
+  /// **'Gradient'**
+  String get videoEditorTextFillGradient;
+
+  /// Section header over the ready-made color gradients a text can be filled with.
+  ///
+  /// In en, this message translates to:
+  /// **'Presets'**
+  String get videoEditorTextGradientPresets;
+
+  /// Section header over the colors of the text's gradient, each of which can be changed.
+  ///
+  /// In en, this message translates to:
+  /// **'Colors'**
+  String get videoEditorTextGradientColors;
+
+  /// Screen reader label of the button that adds a color to the end of the text's gradient.
+  ///
+  /// In en, this message translates to:
+  /// **'Add color'**
+  String get videoEditorTextGradientAddColor;
+
+  /// Screen reader label of the button that removes the last color of the text's gradient.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove last color'**
+  String get videoEditorTextGradientRemoveColor;
+
+  /// Screen reader name of a ready-made yellow, orange and pink text gradient.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunset'**
+  String get videoEditorTextGradientSunset;
+
+  /// Screen reader name of a ready-made blue to purple text gradient.
+  ///
+  /// In en, this message translates to:
+  /// **'Ocean'**
+  String get videoEditorTextGradientOcean;
+
+  /// Screen reader name of a ready-made text gradient through pink, orange, yellow, lime, blue and purple.
+  ///
+  /// In en, this message translates to:
+  /// **'Rainbow'**
+  String get videoEditorTextGradientRainbow;
+
+  /// Screen reader name of a ready-made green to lime text gradient.
+  ///
+  /// In en, this message translates to:
+  /// **'Mint'**
+  String get videoEditorTextGradientMint;
+
+  /// Screen reader name of a ready-made pink to lavender text gradient.
+  ///
+  /// In en, this message translates to:
+  /// **'Candy'**
+  String get videoEditorTextGradientCandy;
+
+  /// Screen reader name of a ready-made green, blue and purple text gradient.
+  ///
+  /// In en, this message translates to:
+  /// **'Aurora'**
+  String get videoEditorTextGradientAurora;
+
+  /// Screen reader name of the direction a text's color gradient runs in.
+  ///
+  /// In en, this message translates to:
+  /// **'Left to right'**
+  String get videoEditorTextGradientLeftToRight;
+
+  /// Screen reader name of the direction a text's color gradient runs in.
+  ///
+  /// In en, this message translates to:
+  /// **'Top left to bottom right'**
+  String get videoEditorTextGradientTopLeftToBottomRight;
+
+  /// Screen reader name of the direction a text's color gradient runs in.
+  ///
+  /// In en, this message translates to:
+  /// **'Top to bottom'**
+  String get videoEditorTextGradientTopToBottom;
+
+  /// Screen reader name of the direction a text's color gradient runs in.
+  ///
+  /// In en, this message translates to:
+  /// **'Top right to bottom left'**
+  String get videoEditorTextGradientTopRightToBottomLeft;
+
+  /// Screen reader name of the direction a text's color gradient runs in.
+  ///
+  /// In en, this message translates to:
+  /// **'Right to left'**
+  String get videoEditorTextGradientRightToLeft;
+
+  /// Screen reader name of the direction a text's color gradient runs in.
+  ///
+  /// In en, this message translates to:
+  /// **'Bottom right to top left'**
+  String get videoEditorTextGradientBottomRightToTopLeft;
+
+  /// Screen reader name of the direction a text's color gradient runs in.
+  ///
+  /// In en, this message translates to:
+  /// **'Bottom to top'**
+  String get videoEditorTextGradientBottomToTop;
+
+  /// Screen reader name of the direction a text's color gradient runs in.
+  ///
+  /// In en, this message translates to:
+  /// **'Bottom left to top right'**
+  String get videoEditorTextGradientBottomLeftToTopRight;
 
   /// No description provided for @videoEditorFontSemanticLabel.
   ///

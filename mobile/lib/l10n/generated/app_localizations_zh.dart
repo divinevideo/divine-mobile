@@ -3454,6 +3454,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dmClipBadge => '片段';
 
   @override
+  String get dmVideoCardTapToLoad => 'Tap to load';
+
+  @override
+  String get dmVideoCardHiddenSenderBlocked => 'Hidden: sender blocked';
+
+  @override
+  String get dmVideoCardHiddenSenderMuted => 'Hidden: sender muted';
+
+  @override
   String get dmClipChecking => '正在确认这个片段是否用 Divine 拍摄…';
 
   @override
@@ -8779,6 +8788,66 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorTextShadowColor => '阴影颜色';
+
+  @override
+  String get videoEditorTextFillSolid => '纯色';
+
+  @override
+  String get videoEditorTextFillGradient => '渐变';
+
+  @override
+  String get videoEditorTextGradientPresets => '预设';
+
+  @override
+  String get videoEditorTextGradientColors => '颜色';
+
+  @override
+  String get videoEditorTextGradientAddColor => '添加颜色';
+
+  @override
+  String get videoEditorTextGradientRemoveColor => '移除最后一种颜色';
+
+  @override
+  String get videoEditorTextGradientSunset => '日落';
+
+  @override
+  String get videoEditorTextGradientOcean => '海洋';
+
+  @override
+  String get videoEditorTextGradientRainbow => '彩虹';
+
+  @override
+  String get videoEditorTextGradientMint => '薄荷';
+
+  @override
+  String get videoEditorTextGradientCandy => '糖果';
+
+  @override
+  String get videoEditorTextGradientAurora => '极光';
+
+  @override
+  String get videoEditorTextGradientLeftToRight => '从左到右';
+
+  @override
+  String get videoEditorTextGradientTopLeftToBottomRight => '从左上到右下';
+
+  @override
+  String get videoEditorTextGradientTopToBottom => '从上到下';
+
+  @override
+  String get videoEditorTextGradientTopRightToBottomLeft => '从右上到左下';
+
+  @override
+  String get videoEditorTextGradientRightToLeft => '从右到左';
+
+  @override
+  String get videoEditorTextGradientBottomRightToTopLeft => '从右下到左上';
+
+  @override
+  String get videoEditorTextGradientBottomToTop => '从下到上';
+
+  @override
+  String get videoEditorTextGradientBottomLeftToTopRight => '从左下到右上';
 
   @override
   String get videoEditorFontSemanticLabel => '字体';

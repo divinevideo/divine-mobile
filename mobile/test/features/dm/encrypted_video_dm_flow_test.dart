@@ -16,6 +16,7 @@ import 'package:nostr_sdk/nip17/file_encryption.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
+import 'package:openvine/services/dm_video_store.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
 import '../../mocks/mock_path_provider_platform.dart';
@@ -216,13 +217,20 @@ void main() {
         expect(received.isFileMessage, isTrue);
         expect(received.fileMetadata!.isVideo, isTrue);
 
-        final clip = await DmVideoDecryptor(
-          dio: dio,
-          encryption: FileEncryption(),
-        ).decryptToFile(received);
+        final store = DmVideoStore(
+          ownerPubkey: _recipientPubkey,
+          fetchVideo: DmVideoDecryptor(
+            dio: dio,
+            encryption: FileEncryption(),
+          ).decrypt,
+          readFrame: (_) async => null,
+          rootDirectory: () async => tempDir,
+        );
+        addTearDown(store.dispose);
+        final kept = await store.videoFor(received);
 
-        // The decrypted plaintext equals the original input, byte for byte.
-        expect(File(clip).readAsBytesSync(), equals(plaintext));
+        // The kept plaintext equals the original input, byte for byte.
+        expect(kept.readAsBytesSync(), equals(plaintext));
       },
     );
 
@@ -267,7 +275,7 @@ void main() {
           DmVideoDecryptor(
             dio: dio,
             encryption: FileEncryption(),
-          ).decryptToFile(tamperedMessage),
+          ).decrypt(tamperedMessage),
           throwsA(isA<Exception>()),
         );
       },

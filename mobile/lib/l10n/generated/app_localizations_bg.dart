@@ -3744,6 +3744,15 @@ class AppLocalizationsBg extends AppLocalizations {
   String get dmClipBadge => 'Клип';
 
   @override
+  String get dmVideoCardTapToLoad => 'Tap to load';
+
+  @override
+  String get dmVideoCardHiddenSenderBlocked => 'Hidden: sender blocked';
+
+  @override
+  String get dmVideoCardHiddenSenderMuted => 'Hidden: sender muted';
+
+  @override
   String get dmClipChecking => 'Проверяваме дали клипът е заснет с Divine…';
 
   @override
@@ -9390,6 +9399,70 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorTextShadowColor => 'Цвят на сянката';
+
+  @override
+  String get videoEditorTextFillSolid => 'Плътен';
+
+  @override
+  String get videoEditorTextFillGradient => 'Градиент';
+
+  @override
+  String get videoEditorTextGradientPresets => 'Шаблони';
+
+  @override
+  String get videoEditorTextGradientColors => 'Цветове';
+
+  @override
+  String get videoEditorTextGradientAddColor => 'Добави цвят';
+
+  @override
+  String get videoEditorTextGradientRemoveColor => 'Премахни последния цвят';
+
+  @override
+  String get videoEditorTextGradientSunset => 'Залез';
+
+  @override
+  String get videoEditorTextGradientOcean => 'Океан';
+
+  @override
+  String get videoEditorTextGradientRainbow => 'Дъга';
+
+  @override
+  String get videoEditorTextGradientMint => 'Мента';
+
+  @override
+  String get videoEditorTextGradientCandy => 'Бонбон';
+
+  @override
+  String get videoEditorTextGradientAurora => 'Полярно сияние';
+
+  @override
+  String get videoEditorTextGradientLeftToRight => 'Отляво надясно';
+
+  @override
+  String get videoEditorTextGradientTopLeftToBottomRight =>
+      'От горе вляво към долу вдясно';
+
+  @override
+  String get videoEditorTextGradientTopToBottom => 'Отгоре надолу';
+
+  @override
+  String get videoEditorTextGradientTopRightToBottomLeft =>
+      'От горе вдясно към долу вляво';
+
+  @override
+  String get videoEditorTextGradientRightToLeft => 'Отдясно наляво';
+
+  @override
+  String get videoEditorTextGradientBottomRightToTopLeft =>
+      'От долу вдясно към горе вляво';
+
+  @override
+  String get videoEditorTextGradientBottomToTop => 'Отдолу нагоре';
+
+  @override
+  String get videoEditorTextGradientBottomLeftToTopRight =>
+      'От долу вляво към горе вдясно';
 
   @override
   String get videoEditorFontSemanticLabel => 'Шрифт';

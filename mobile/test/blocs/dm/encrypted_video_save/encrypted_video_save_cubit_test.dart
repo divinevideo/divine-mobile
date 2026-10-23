@@ -1,18 +1,25 @@
 // ABOUTME: Unit tests for EncryptedVideoSaveCubit.
-// ABOUTME: Covers requiring a decrypt first, the save outcomes, and the
-// ABOUTME: deletion of the temp clip before the save settles.
+// ABOUTME: Covers saving the kept video to the gallery, the save outcomes, and
+// ABOUTME: a save with no account signed in.
 
+import 'dart:async';
+import 'dart:io';
+
+import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/dm/encrypted_video_save/encrypted_video_save_cubit.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
+import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/gallery_save_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
-class _MockDmVideoDecryptor extends Mock implements DmVideoDecryptor {}
+class _MockDmVideoStore extends Mock implements DmVideoStore {}
 
 class _MockGallerySaveService extends Mock implements GallerySaveService {}
+
+const _keptPath = '/kept/dm_videos/owner/clip.mp4';
 
 DmMessage _videoMessage() => DmMessage(
   id: 'a' * 64,
@@ -32,86 +39,166 @@ DmMessage _videoMessage() => DmMessage(
 );
 
 void main() {
-  late _MockDmVideoDecryptor decryptor;
+  late _MockDmVideoStore store;
   late _MockGallerySaveService gallerySaveService;
 
   setUpAll(() {
     registerFallbackValue(_videoMessage());
     registerFallbackValue(EditorVideo.file(''));
-    registerFallbackValue('');
+    registerFallbackValue(File(''));
   });
 
   setUp(() {
-    decryptor = _MockDmVideoDecryptor();
+    store = _MockDmVideoStore();
     gallerySaveService = _MockGallerySaveService();
+    when(
+      () => store.videoFor(any()),
+    ).thenAnswer((_) async => File(_keptPath));
   });
 
   EncryptedVideoSaveCubit createCubit() => EncryptedVideoSaveCubit(
-    decryptor: decryptor,
+    resolveStore: () => store,
     gallerySaveService: gallerySaveService,
   );
 
+  void stubGallery(GallerySaveResult result) {
+    when(
+      () => gallerySaveService.saveVideoToGallery(
+        any(),
+        copyUnderNeutralName: true,
+      ),
+    ).thenAnswer((_) async => result);
+  }
+
   group(EncryptedVideoSaveCubit, () {
-    test('decrypts, saves, and deletes the temp clip on success', () async {
-      when(
-        () => decryptor.decryptToFile(any()),
-      ).thenAnswer((_) async => '/tmp/dm_video_playback/clip.mp4');
-      when(
-        () => gallerySaveService.saveVideoToGallery(any()),
-      ).thenAnswer((_) async => const GallerySaveSuccess());
-      final cubit = createCubit();
-      addTearDown(cubit.close);
+    group('save', () {
+      blocTest<EncryptedVideoSaveCubit, EncryptedVideoSaveState>(
+        'saves the kept video to the gallery',
+        setUp: () => stubGallery(const GallerySaveSuccess()),
+        build: createCubit,
+        act: (cubit) => cubit.save(_videoMessage()),
+        expect: () => const [
+          EncryptedVideoSaveState(status: DmVideoSaveStatus.saving),
+          EncryptedVideoSaveState(status: DmVideoSaveStatus.saved),
+        ],
+        verify: (_) {
+          final video =
+              verify(
+                    () => gallerySaveService.saveVideoToGallery(
+                      captureAny(),
+                      copyUnderNeutralName: true,
+                    ),
+                  ).captured.single
+                  as EditorVideo;
+          expect(video.file?.path, equals(_keptPath));
+        },
+      );
 
-      await cubit.save(_videoMessage());
+      blocTest<EncryptedVideoSaveCubit, EncryptedVideoSaveState>(
+        'reports permissionDenied',
+        setUp: () => stubGallery(const GallerySavePermissionDenied()),
+        build: createCubit,
+        act: (cubit) => cubit.save(_videoMessage()),
+        expect: () => const [
+          EncryptedVideoSaveState(status: DmVideoSaveStatus.saving),
+          EncryptedVideoSaveState(status: DmVideoSaveStatus.permissionDenied),
+        ],
+      );
 
-      expect(cubit.state.status, DmVideoSaveStatus.saved);
-      verify(() => decryptor.deleteClip('/tmp/dm_video_playback/clip.mp4'))
-          .called(1);
+      blocTest<EncryptedVideoSaveCubit, EncryptedVideoSaveState>(
+        'reports failed when the gallery save fails',
+        setUp: () => stubGallery(const GallerySaveFailure('disk full')),
+        build: createCubit,
+        act: (cubit) => cubit.save(_videoMessage()),
+        expect: () => const [
+          EncryptedVideoSaveState(status: DmVideoSaveStatus.saving),
+          EncryptedVideoSaveState(status: DmVideoSaveStatus.failed),
+        ],
+      );
+
+      blocTest<EncryptedVideoSaveCubit, EncryptedVideoSaveState>(
+        'reports failed when the video cannot be downloaded',
+        setUp: () => when(
+          () => store.videoFor(any()),
+        ).thenThrow(const DmVideoUnavailableException('hash mismatch')),
+        build: createCubit,
+        act: (cubit) => cubit.save(_videoMessage()),
+        expect: () => const [
+          EncryptedVideoSaveState(status: DmVideoSaveStatus.saving),
+          EncryptedVideoSaveState(status: DmVideoSaveStatus.failed),
+        ],
+        errors: () => [isA<DmVideoUnavailableException>()],
+      );
+
+      blocTest<EncryptedVideoSaveCubit, EncryptedVideoSaveState>(
+        'fails without downloading when no account is signed in',
+        build: () => EncryptedVideoSaveCubit(
+          resolveStore: () => null,
+          gallerySaveService: gallerySaveService,
+        ),
+        act: (cubit) => cubit.save(_videoMessage()),
+        expect: () => const [
+          EncryptedVideoSaveState(status: DmVideoSaveStatus.saving),
+          EncryptedVideoSaveState(status: DmVideoSaveStatus.failed),
+        ],
+        errors: () => [isA<DmVideoUnavailableException>()],
+        verify: (_) => verifyNever(() => store.videoFor(any())),
+      );
     });
 
-    test('reports permissionDenied', () async {
-      when(
-        () => decryptor.decryptToFile(any()),
-      ).thenAnswer((_) async => '/tmp/dm_video_playback/clip.mp4');
-      when(
-        () => gallerySaveService.saveVideoToGallery(any()),
-      ).thenAnswer((_) async => const GallerySavePermissionDenied());
-      final cubit = createCubit();
-      addTearDown(cubit.close);
+    group('holding the video', () {
+      test(
+        'holds the kept video while it saves and lets go once saved',
+        () async {
+          final saving = Completer<GallerySaveResult>();
+          when(
+            () => gallerySaveService.saveVideoToGallery(
+              any(),
+              copyUnderNeutralName: true,
+            ),
+          ).thenAnswer((_) => saving.future);
+          final cubit = createCubit();
+          addTearDown(cubit.close);
+          final save = cubit.save(_videoMessage());
+          await pumpEventQueue();
+          verifyNever(() => store.releaseVideo(any()));
 
-      await cubit.save(_videoMessage());
+          saving.complete(const GallerySaveSuccess());
+          await save;
 
-      expect(cubit.state.status, DmVideoSaveStatus.permissionDenied);
-    });
+          final released = verify(
+            () => store.releaseVideo(captureAny()),
+          ).captured;
+          expect((released.single as File).path, equals(_keptPath));
+        },
+      );
 
-    test('reports failed and deletes the clip when the save fails', () async {
-      when(
-        () => decryptor.decryptToFile(any()),
-      ).thenAnswer((_) async => '/tmp/dm_video_playback/clip.mp4');
-      when(
-        () => gallerySaveService.saveVideoToGallery(any()),
-      ).thenAnswer((_) async => const GallerySaveFailure('disk'));
-      final cubit = createCubit();
-      addTearDown(cubit.close);
+      test('lets go of the video when the save throws', () async {
+        when(
+          () => gallerySaveService.saveVideoToGallery(
+            any(),
+            copyUnderNeutralName: true,
+          ),
+        ).thenThrow(const FileSystemException('Cannot copy'));
+        final cubit = createCubit();
+        addTearDown(cubit.close);
 
-      await cubit.save(_videoMessage());
+        await cubit.save(_videoMessage());
 
-      expect(cubit.state.status, DmVideoSaveStatus.failed);
-      verify(() => decryptor.deleteClip('/tmp/dm_video_playback/clip.mp4'))
-          .called(1);
-    });
+        verify(() => store.releaseVideo(any())).called(1);
+      });
 
-    test('reports failed when decryption throws', () async {
-      when(
-        () => decryptor.decryptToFile(any()),
-      ).thenThrow(Exception('boom'));
-      final cubit = createCubit();
-      addTearDown(cubit.close);
+      test('lets go of nothing when there was no video to save', () async {
+        when(
+          () => store.videoFor(any()),
+        ).thenThrow(const DmVideoUnavailableException('hash mismatch'));
+        final cubit = createCubit();
+        addTearDown(cubit.close);
 
-      await cubit.save(_videoMessage());
+        await cubit.save(_videoMessage());
 
-      expect(cubit.state.status, DmVideoSaveStatus.failed);
-      verifyNever(() => decryptor.deleteClip(any()));
+        verifyNever(() => store.releaseVideo(any()));
+      });
     });
   });
 }

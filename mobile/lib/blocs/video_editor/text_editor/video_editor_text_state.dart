@@ -12,6 +12,8 @@ class VideoEditorTextState extends Equatable {
     this.showColorPicker = false,
     this.effects = TextEffects.none,
     this.showEffectsPanel = false,
+    this.gradient,
+    this.lastGradient,
   });
 
   /// The current text content.
@@ -49,6 +51,20 @@ class VideoEditorTextState extends Equatable {
   /// keyboard).
   final bool showEffectsPanel;
 
+  /// The color gradient that fills the letters in place of [color], or
+  /// `null` when they are filled with a single color.
+  final TextGradient? gradient;
+
+  /// The gradient the letters had last, kept while they are filled with a
+  /// single color so switching back to a gradient brings it back; `null`
+  /// before they had one.
+  final TextGradient? lastGradient;
+
+  /// The gradient the letters get when the user switches from a single color
+  /// to a gradient.
+  TextGradient get gradientToRestore =>
+      lastGradient ?? TextGradientPreset.initial;
+
   /// Whether any panel replaces the keyboard.
   bool get showsPanel =>
       showFontSelector || showColorPicker || showEffectsPanel;
@@ -64,6 +80,9 @@ class VideoEditorTextState extends Equatable {
     bool? showColorPicker,
     TextEffects? effects,
     bool? showEffectsPanel,
+    TextGradient? gradient,
+    bool clearGradient = false,
+    TextGradient? lastGradient,
   }) {
     return VideoEditorTextState(
       text: text ?? this.text,
@@ -75,6 +94,8 @@ class VideoEditorTextState extends Equatable {
       showColorPicker: showColorPicker ?? this.showColorPicker,
       effects: effects ?? this.effects,
       showEffectsPanel: showEffectsPanel ?? this.showEffectsPanel,
+      gradient: clearGradient ? null : gradient ?? this.gradient,
+      lastGradient: lastGradient ?? this.lastGradient,
     );
   }
 
@@ -89,5 +110,7 @@ class VideoEditorTextState extends Equatable {
     showColorPicker,
     effects,
     showEffectsPanel,
+    gradient,
+    lastGradient,
   ];
 }

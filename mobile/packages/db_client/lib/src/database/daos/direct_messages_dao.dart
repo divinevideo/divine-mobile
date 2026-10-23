@@ -82,6 +82,9 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
   /// A pending or refused own retraction is deliberately visible even though
   /// `is_deleted` is already true. The message disappears only after every
   /// recipient confirms the deletion.
+  ///
+  /// Never NULL, so [isRetracted] can negate it: a status that is NULL makes
+  /// `IN` NULL, and NOT NULL is NULL too.
   Expression<bool> _visibleInThread(
     $DirectMessagesTable t,
     String? ownerPubkey,
@@ -89,6 +92,7 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
     final uncertainOwnRetraction = ownerPubkey == null
         ? const Constant(false)
         : t.senderPubkey.equals(ownerPubkey) &
+              t.deletionPublishStatus.isNotNull() &
               t.deletionPublishStatus.isIn([deletionPending, deletionBlocked]);
     return t.isDeleted.equals(false) | uncertainOwnRetraction;
   }
@@ -494,6 +498,25 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
           (t) => t.id.equals(id) & _visibleToOwner(t, ownerPubkey),
         ))
         .getSingleOrNull();
+  }
+
+  /// Whether [rumorId] is retracted for [ownerPubkey]: its row stays, for
+  /// deduplication, but the thread no longer shows it. Your own retraction
+  /// counts only once delivered, as the thread shows the message until then.
+  /// False when there is no row.
+  Future<bool> isRetracted(
+    String rumorId, {
+    required String ownerPubkey,
+  }) async {
+    final query = selectOnly(directMessages)
+      ..addColumns([directMessages.id])
+      ..where(
+        directMessages.id.equals(rumorId) &
+            _visibleToOwner(directMessages, ownerPubkey) &
+            _visibleInThread(directMessages, ownerPubkey).not(),
+      )
+      ..limit(1);
+    return await query.getSingleOrNull() != null;
   }
 
   /// Check if a gift wrap event has already been processed (dedup).

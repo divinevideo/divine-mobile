@@ -19,8 +19,8 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
+import 'package:openvine/router/routes/library_routes.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
-import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/screens/profile_setup/profile_setup.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -239,7 +239,7 @@ class _ProfileScreenRouterState extends ConsumerState<ProfileScreenRouter>
   void _openClips() {
     // Navigate to clips route (defined outside ShellRoute)
     runDetached(
-      context.push<void>(LibraryScreen.draftsPath),
+      const LibraryDraftsRouteData().push<void>(context),
       'open profile clips',
       logName: 'ProfileScreenRouter',
       category: LogCategory.ui,

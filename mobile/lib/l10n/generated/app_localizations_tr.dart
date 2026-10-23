@@ -3634,6 +3634,15 @@ class AppLocalizationsTr extends AppLocalizations {
   String get dmClipBadge => 'Klip';
 
   @override
+  String get dmVideoCardTapToLoad => 'Tap to load';
+
+  @override
+  String get dmVideoCardHiddenSenderBlocked => 'Hidden: sender blocked';
+
+  @override
+  String get dmVideoCardHiddenSenderMuted => 'Hidden: sender muted';
+
+  @override
   String get dmClipChecking =>
       'Bu klibin Divine ile çekildiği kontrol ediliyor…';
 
@@ -9225,6 +9234,70 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorTextShadowColor => 'Gölge rengi';
+
+  @override
+  String get videoEditorTextFillSolid => 'Düz';
+
+  @override
+  String get videoEditorTextFillGradient => 'Gradyan';
+
+  @override
+  String get videoEditorTextGradientPresets => 'Hazır ayarlar';
+
+  @override
+  String get videoEditorTextGradientColors => 'Renkler';
+
+  @override
+  String get videoEditorTextGradientAddColor => 'Renk ekle';
+
+  @override
+  String get videoEditorTextGradientRemoveColor => 'Son rengi kaldır';
+
+  @override
+  String get videoEditorTextGradientSunset => 'Gün batımı';
+
+  @override
+  String get videoEditorTextGradientOcean => 'Okyanus';
+
+  @override
+  String get videoEditorTextGradientRainbow => 'Gökkuşağı';
+
+  @override
+  String get videoEditorTextGradientMint => 'Nane';
+
+  @override
+  String get videoEditorTextGradientCandy => 'Şeker';
+
+  @override
+  String get videoEditorTextGradientAurora => 'Kutup ışıkları';
+
+  @override
+  String get videoEditorTextGradientLeftToRight => 'Soldan sağa';
+
+  @override
+  String get videoEditorTextGradientTopLeftToBottomRight =>
+      'Sol üstten sağ alta';
+
+  @override
+  String get videoEditorTextGradientTopToBottom => 'Yukarıdan aşağıya';
+
+  @override
+  String get videoEditorTextGradientTopRightToBottomLeft =>
+      'Sağ üstten sol alta';
+
+  @override
+  String get videoEditorTextGradientRightToLeft => 'Sağdan sola';
+
+  @override
+  String get videoEditorTextGradientBottomRightToTopLeft =>
+      'Sağ alttan sol üste';
+
+  @override
+  String get videoEditorTextGradientBottomToTop => 'Aşağıdan yukarıya';
+
+  @override
+  String get videoEditorTextGradientBottomLeftToTopRight =>
+      'Sol alttan sağ üste';
 
   @override
   String get videoEditorFontSemanticLabel => 'Yazı tipi';

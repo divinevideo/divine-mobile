@@ -1,8 +1,9 @@
-// ABOUTME: Reads the display preview sent with an encrypted video DM: a
-// ABOUTME: blurhash of an early frame and the displayed size, never a thumbnail.
+// ABOUTME: Reads video DM previews: the blurhash and size sent with a video,
+// ABOUTME: and the frame a received video's card shows, kept on this device.
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' show Size;
 
 import 'package:blurhash_service/blurhash_service.dart';
@@ -36,6 +37,13 @@ const Size _previewFrameSize = Size.square(256);
 
 /// JPEG quality of that frame; a blurhash keeps only its broad colours.
 const int _previewFrameQuality = 75;
+
+/// Shape of the frame a received video's card shows: the card's 248x350 at
+/// 3x, so the frame arrives cropped the way the card would crop it.
+const Size dmVideoCardFrameSize = Size(744, 1050);
+
+/// JPEG quality of the card frame.
+const int _cardFrameQuality = 80;
 
 /// Reads the [DmVideoPreview] of [videoFile]: a blurhash of the frame Divine
 /// thumbnails at, and the size the video displays at.
@@ -71,14 +79,16 @@ Future<DmVideoPreview> readDmVideoPreview(
 ///
 /// The log names only the error's type and platform code: an error about the
 /// file can quote its path, and a picked attachment keeps its gallery name.
-Future<String?> _readPart(
+Future<T?> _readPart<T extends Object>(
   String part,
-  Future<String?> Function() read,
-  Duration timeout,
+  Future<T?> Function() read,
+  Duration? timeout,
   CrashReporter reporter,
 ) async {
   try {
-    return await read().timeout(
+    final pending = read();
+    if (timeout == null) return await pending;
+    return await pending.timeout(
       timeout,
       onTimeout: () {
         Log.warning(
@@ -114,19 +124,57 @@ Future<String?> _readPart(
   }
 }
 
-/// One decode at Divine's thumbnail time. Deliberately not the shared
-/// thumbnail service: its retries log the file path and crash-report it.
-Future<String?> _readBlurhash(String videoPath) async {
+/// Reads the frame [video]'s card shows, cropped to [dmVideoCardFrameSize].
+///
+/// Null when the frame fails or takes longer than [timeout]. With a null
+/// timeout, waits for the native reply: a caller owning the decoder and file
+/// must not release them merely because its UI stopped waiting. Never throws;
+/// it logs and reports like [readDmVideoPreview].
+Future<Uint8List?> readDmVideoCardFrame(
+  File video, {
+  Duration? timeout = dmVideoPreviewTimeout,
+  CrashReporter? reporter,
+}) => _readPart(
+  'card frame',
+  () => readDmVideoFrame(
+    video.path,
+    size: dmVideoCardFrameSize,
+    jpegQuality: _cardFrameQuality,
+  ),
+  timeout,
+  reporter ?? detachedFailureReporter,
+);
+
+/// Decodes the frame at Divine's thumbnail time from the video at
+/// [videoPath], cropped to [size]; null when the platform returns none.
+///
+/// One decode, on one decoder, so a playing video keeps its own. Deliberately
+/// not the shared thumbnail service: its retries log the file path and
+/// crash-report it.
+Future<Uint8List?> readDmVideoFrame(
+  String videoPath, {
+  required Size size,
+  required int jpegQuality,
+}) async {
   final frames = await ProVideoEditor.instance.getThumbnails(
     ThumbnailConfigs(
       video: EditorVideo.file(videoPath),
-      outputSize: _previewFrameSize,
+      outputSize: size,
       timestamps: const [VideoEditorConstants.defaultThumbnailExtractTime],
-      jpegQuality: _previewFrameQuality,
+      jpegQuality: jpegQuality,
+      maxParallelDecoders: 1,
     ),
   );
-  if (frames.isEmpty) return null;
-  return BlurhashService.generateBlurhash(frames.first);
+  return frames.isEmpty ? null : frames.first;
+}
+
+Future<String?> _readBlurhash(String videoPath) async {
+  final frame = await readDmVideoFrame(
+    videoPath,
+    size: _previewFrameSize,
+    jpegQuality: _previewFrameQuality,
+  );
+  return frame == null ? null : BlurhashService.generateBlurhash(frame);
 }
 
 Future<String?> _readDimensions(String videoPath) async {

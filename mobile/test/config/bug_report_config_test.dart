@@ -28,6 +28,20 @@ const _deepLinkLogLine =
     'segments=2, queryKeys=[code, state]';
 
 void main() {
+  group('redactFilesystemPaths', () {
+    test('redacts a sandbox path and leaves everything else', () {
+      final redacted = redactFilesystemPaths(
+        'setDataSource failed: '
+        '/data/user/0/co.openvine.app/cache/dm_videos/owner/message.mp4 '
+        'Caused by: OSStatus -12847',
+      );
+
+      expect(redacted, isNot(contains('dm_videos')));
+      expect(redacted, contains('setDataSource failed: [REDACTED]'));
+      expect(redacted, contains('Caused by: OSStatus -12847'));
+    });
+  });
+
   group('sanitizeDiagnosticText', () {
     test('redacts a bare NIP-05 domain fragment', () {
       const input = 'profile nip05: @example.test';

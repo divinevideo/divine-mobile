@@ -86,6 +86,13 @@ class DivineVideoClip {
 
   final String id;
 
+  /// Starts the id of a clip added from a received video DM. The rest of the
+  /// id, and so of the clip's file name, is the message id.
+  static const receivedDmClipIdPrefix = 'dm_clip_';
+
+  /// Whether this clip was added from a received video DM.
+  bool get isFromDirectMessage => id.startsWith(receivedDmClipIdPrefix);
+
   /// Rendered video for a normal clip, or `null` for a stop-motion clip whose
   /// source of truth is [stopMotionFrames] (an mp4 is rendered on demand at
   /// publish / gallery save).

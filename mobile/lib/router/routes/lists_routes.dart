@@ -19,6 +19,7 @@ import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/saved_videos_screen.dart';
 import 'package:openvine/screens/user_list_people_screen.dart';
 import 'package:openvine/utils/people_list_owner.dart';
+import 'package:openvine/utils/public_identifier_normalizer.dart';
 
 List<RouteBase> listsRoutes(Ref ref) {
   return [
@@ -58,16 +59,17 @@ List<RouteBase> listsRoutes(Ref ref) {
       path: CuratedListByAuthorScreen.path,
       name: CuratedListByAuthorScreen.routeName,
       builder: (ctx, st) {
-        final pubkey = st.pathParameters['pubkey'];
+        // Relays only accept a lowercase hex author, so an npub, an nprofile
+        // or uppercase hex is resolved here and anything else is refused.
+        final author = normalizePublicIdentifier(
+          st.pathParameters['pubkey'] ?? '',
+        )?.hexPubkey;
         final listId = st.pathParameters['listId'];
-        if (pubkey == null ||
-            pubkey.isEmpty ||
-            listId == null ||
-            listId.isEmpty) {
+        if (author == null || listId == null || listId.isEmpty) {
           return RouteErrorScreen(message: ctx.l10n.routeInvalidListId);
         }
         return CuratedListByAuthorScreen(
-          authorPubkey: pubkey,
+          authorPubkey: author,
           listId: listId,
           discoveredList: extraAs<CuratedListRouteExtra>(st.extra)?.list,
         );

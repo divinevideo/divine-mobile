@@ -1,6 +1,7 @@
 // ABOUTME: Tests for GallerySaveService result types and error handling
 // ABOUTME: Validates the gallery save result sealed class hierarchy
 
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
@@ -58,6 +59,24 @@ void main() {
 
       expect(reason, 'Storage full');
     });
+  });
+
+  group('GallerySaveService.roundedSize', () {
+    const mib = 1024 * 1024;
+    for (final (bytes, expected) in [
+      (0, '<1 MB'),
+      (mib - 1, '<1 MB'),
+      (mib, '1 MB'),
+      ((1.4 * mib).round(), '1 MB'),
+      ((9.6 * mib).round(), '10 MB'),
+      ((23.4 * mib).round(), '20 MB'),
+      ((54.9 * mib).round(), '50 MB'),
+      (100 * mib, '100 MB'),
+    ]) {
+      test('gives $bytes bytes as $expected', () {
+        expect(GallerySaveService.roundedSize(bytes), equals(expected));
+      });
+    }
   });
 
   group('GallerySaveService', () {
@@ -259,6 +278,203 @@ void main() {
           LogCaptureService().getRecentLogs().map((entry) => entry.message),
           contains(contains('(native: $nativeMessage)')),
         );
+      });
+    });
+
+    group('with copyUnderNeutralName', () {
+      const galChannel = MethodChannel('gal');
+
+      late Directory tempDir;
+      late Directory copies;
+      late GallerySaveService copyingService;
+      late File source;
+      late List<String> galleryPaths;
+      late List<List<int>> galleryBytes;
+      late Future<Object?> Function() galleryReply;
+
+      setUp(() async {
+        TestWidgetsFlutterBinding.ensureInitialized();
+        galleryPaths = [];
+        galleryBytes = [];
+        galleryReply = () async => null;
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(galChannel, (call) async {
+              if (call.method != 'putVideo') return true;
+              final args = call.arguments as Map<Object?, Object?>;
+              final path = args['path']! as String;
+              galleryPaths.add(path);
+              galleryBytes.add(File(path).readAsBytesSync());
+              return galleryReply();
+            });
+        await LogCaptureService().clearAllLogs();
+
+        tempDir = Directory.systemTemp.createTempSync('gallery_test_');
+        copies = Directory('${tempDir.path}/copies');
+        copyingService = GallerySaveService(
+          permissionsService: mockPermissionsService,
+          copyRoot: () => copies,
+        );
+        // Named the way a kept video DM is: after its message.
+        source = File('${tempDir.path}/${'a' * 64}.mov')
+          ..writeAsBytesSync([0, 1, 2, 3]);
+      });
+
+      tearDown(() async {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(galChannel, null);
+        await LogCaptureService().clearAllLogs();
+        tempDir.deleteSync(recursive: true);
+      });
+
+      test('hands the gallery a copy named like a Downloads save, with the '
+          "video's bytes, keeps the file and removes the copy", () async {
+        final result = await copyingService.saveVideoToGallery(
+          EditorVideo.file(source.path),
+          copyUnderNeutralName: true,
+        );
+
+        expect(result, isA<GallerySaveSuccess>());
+        final copy = File(galleryPaths.single);
+        expect(
+          copy.uri.pathSegments.last,
+          matches(RegExp(r'^Divine_\d+\.mov$')),
+        );
+        expect(galleryBytes.single, equals([0, 1, 2, 3]));
+        expect(copy.parent.existsSync(), isFalse);
+        expect(source.readAsBytesSync(), equals([0, 1, 2, 3]));
+      });
+
+      test('removes the copy when the gallery rejects it', () async {
+        galleryReply = () async =>
+            throw PlatformException(code: 'UNEXPECTED', message: 'rejected');
+
+        final result = await copyingService.saveVideoToGallery(
+          EditorVideo.file(source.path),
+          copyUnderNeutralName: true,
+        );
+
+        expect(result, isA<GallerySaveFailure>());
+        expect(File(galleryPaths.single).parent.existsSync(), isFalse);
+        expect(source.existsSync(), isTrue);
+      });
+
+      test("keeps the copy's path out of a native failure", () async {
+        galleryReply = () async => throw PlatformException(
+          code: 'UNEXPECTED',
+          message: 'Cannot save ${galleryPaths.single}',
+        );
+
+        await copyingService.saveVideoToGallery(
+          EditorVideo.file(source.path),
+          copyUnderNeutralName: true,
+        );
+
+        final logs = LogCaptureService().getRecentLogs();
+        expect(
+          logs.map((entry) => entry.message),
+          contains(contains('Cannot save')),
+        );
+        for (final entry in logs) {
+          expect(
+            '${entry.message} ${entry.error}',
+            isNot(contains(galleryPaths.single)),
+          );
+        }
+      });
+
+      test(
+        'logs where an unexpected failure happened, but not its text',
+        () async {
+          // A file where the copies go makes creating their folder fail.
+          File(copies.path).writeAsStringSync('');
+
+          final result = await copyingService.saveVideoToGallery(
+            EditorVideo.file(source.path),
+            copyUnderNeutralName: true,
+          );
+
+          expect(result, isA<GallerySaveFailure>());
+          final entry = LogCaptureService().getRecentLogs().singleWhere(
+            (entry) => entry.message.startsWith(
+              'Unexpected error saving video to gallery',
+            ),
+          );
+          expect(entry.stackTrace, isNotNull);
+          expect(entry.message, isNot(contains(copies.path)));
+        },
+      );
+
+      test('removes copies a save that never ended left behind, before its '
+          'first copy', () async {
+        // As an earlier run of the app leaves them when it is killed mid-save.
+        final leftover = File('${copies.path}/left/Divine_1.mov')
+          ..createSync(recursive: true)
+          ..writeAsBytesSync([9, 9, 9]);
+
+        await copyingService.saveVideoToGallery(
+          EditorVideo.file(source.path),
+          copyUnderNeutralName: true,
+        );
+
+        expect(leftover.parent.existsSync(), isFalse);
+        expect(galleryBytes.single, equals([0, 1, 2, 3]));
+      });
+
+      test(
+        'fails only the future it returns when it cannot reach the copies, '
+        'as on the web, so the launch that asks still starts',
+        () async {
+          final unreachable = GallerySaveService(
+            permissionsService: mockPermissionsService,
+            copyRoot: () => throw UnsupportedError('_Namespace'),
+          );
+
+          final deleted = unreachable.deleteLeftoverCopies();
+
+          await expectLater(deleted, throwsUnsupportedError);
+        },
+      );
+
+      test('removes copies a killed save left behind when asked at launch, '
+          'before any save', () async {
+        final leftover = File('${copies.path}/left/Divine_1.mov')
+          ..createSync(recursive: true)
+          ..writeAsBytesSync([9, 9, 9]);
+
+        await copyingService.deleteLeftoverCopies();
+
+        expect(leftover.parent.existsSync(), isFalse);
+      });
+
+      test('never removes a copy a save still running uses', () async {
+        final firstAtGallery = Completer<void>();
+        final firstSaveHeld = Completer<void>();
+        galleryReply = () async {
+          if (galleryPaths.length == 1) {
+            firstAtGallery.complete();
+            await firstSaveHeld.future;
+          }
+          return null;
+        };
+
+        final first = copyingService.saveVideoToGallery(
+          EditorVideo.file(source.path),
+          copyUnderNeutralName: true,
+        );
+        await firstAtGallery.future.timeout(
+          const Duration(seconds: 5),
+          onTimeout: () => fail('the first save never reached the gallery'),
+        );
+        final second = await copyingService.saveVideoToGallery(
+          EditorVideo.file(source.path),
+          copyUnderNeutralName: true,
+        );
+        final firstCopyKept = File(galleryPaths.first).existsSync();
+        firstSaveHeld.complete();
+
+        expect(firstCopyKept, isTrue);
+        expect(second, isA<GallerySaveSuccess>());
+        expect(await first, isA<GallerySaveSuccess>());
       });
     });
   });

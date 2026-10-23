@@ -1,40 +1,76 @@
-// ABOUTME: Fetches a received encrypted video DM and decrypts it for playback.
-// ABOUTME: Bounded Blossom download, hash check, AES-GCM decrypt to a temp file.
+// ABOUTME: Fetches a received encrypted video DM and decrypts it.
+// ABOUTME: Bounded Blossom download, hash check, AES-GCM decrypt to bytes.
 
-import 'dart:io';
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show compute;
 import 'package:meta/meta.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip17/file_encryption.dart';
 import 'package:openvine/services/dm_video_encryption.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:unified_logger/unified_logger.dart';
 
-/// Thrown when a received encrypted video cannot be turned into a clip for a
-/// reason other than transport: it is too large, its hash does not match the
-/// sender's `x` tag, or the message carries no video metadata.
+/// Thrown when a received encrypted video cannot be kept or played: it is too
+/// large, its hash does not match the sender's `x` tag, or the message
+/// carries no video metadata; or, with [mayPass], the network or the storage
+/// failed.
 class DmVideoUnavailableException implements Exception {
   /// Creates a [DmVideoUnavailableException] with a diagnostic [message].
-  const DmVideoUnavailableException(this.message);
+  const DmVideoUnavailableException(this.message, {this.mayPass = false});
 
   /// Diagnostic text. Never contains the decryption key or nonce.
   final String message;
+
+  /// Whether trying again later may work: the network or the storage
+  /// failed, not the video itself.
+  final bool mayPass;
 
   @override
   String toString() => 'DmVideoUnavailableException: $message';
 }
 
-/// Turns a received encrypted video DM into a locally playable file.
+/// Thrown when a download stopped at a size or time limit its caller set,
+/// which a download without that limit may not reach.
+class DmVideoLimitException extends DmVideoUnavailableException {
+  /// Creates a [DmVideoLimitException] with a diagnostic [message].
+  const DmVideoLimitException(super.message, {super.mayPass});
+}
+
+/// Thrown when a download stopped because its caller no longer wanted it,
+/// which says nothing about the video.
+class DmVideoWithdrawnException extends DmVideoUnavailableException {
+  /// Creates a [DmVideoWithdrawnException].
+  const DmVideoWithdrawnException()
+    : super('the download was no longer wanted', mayPass: true);
+}
+
+/// Thrown when a video's message was retracted by its sender or removed with
+/// its conversation: its video is neither fetched nor handed out.
+class DmVideoGoneException extends DmVideoUnavailableException {
+  /// Creates a [DmVideoGoneException].
+  const DmVideoGoneException() : super('the message was retracted or removed');
+
+  @override
+  String toString() => 'DmVideoGoneException: $message';
+}
+
+/// Thrown when a kept video or frame could not be written to the device.
+/// Trying again later may work, once there is room; downloading the video
+/// again at once would only fail the same way.
+class DmVideoStorageException extends DmVideoUnavailableException {
+  /// Creates a [DmVideoStorageException] with a diagnostic [message].
+  const DmVideoStorageException(super.message) : super(mayPass: true);
+}
+
+/// Downloads and decrypts a received encrypted video DM.
 ///
 /// The ciphertext is a public Blossom blob, so the download carries no viewer
 /// auth header. The decryption key and nonce come from the gift-wrapped
-/// kind 15 tags and are never logged or persisted by this service. The
-/// decrypted plaintext is written only to a message-scoped file under
-/// [playbackDirName] in the platform temp directory — never into the media
-/// cache — and callers delete it with [deleteClip] when they are done.
+/// kind 15 tags and are never logged or persisted by this service; the
+/// plaintext is returned to the caller, `DmVideoStore`, which keeps it in the
+/// account's own folder, never in the media cache.
 class DmVideoDecryptor {
   /// Creates a [DmVideoDecryptor].
   ///
@@ -44,9 +80,13 @@ class DmVideoDecryptor {
   /// The receive path fetches a URL chosen by the sender, so the client is
   /// given finite timeouts. A caller-injected client that already set a
   /// timeout keeps it.
-  DmVideoDecryptor({Dio? dio, FileEncryption? encryption})
-    : _dio = dio ?? Dio(),
-      _encryption = encryption ?? FileEncryption() {
+  DmVideoDecryptor({
+    Dio? dio,
+    FileEncryption? encryption,
+    Duration wantedCheckInterval = const Duration(seconds: 1),
+  }) : _dio = dio ?? Dio(),
+       _encryption = encryption ?? FileEncryption(),
+       _wantedCheckInterval = wantedCheckInterval {
     _dio.options
       ..connectTimeout ??= connectTimeout
       ..receiveTimeout ??= receiveTimeout;
@@ -58,139 +98,243 @@ class DmVideoDecryptor {
   /// Maximum idle time between chunks while downloading the ciphertext.
   static const Duration receiveTimeout = Duration(seconds: 30);
 
-  /// Temp subdirectory that holds decrypted clips.
-  static const String playbackDirName = 'dm_video_playback';
+  /// Redirects followed to reach the ciphertext, each checked for HTTPS.
+  static const int maxRedirects = 5;
+
+  static const Set<int> _redirectStatuses = {301, 302, 303, 307, 308};
+
+  static final RegExp _hexKey = RegExp(r'^[0-9a-fA-F]{64}$');
+  static final RegExp _hexNonce = RegExp(r'^[0-9a-fA-F]{24}$');
 
   final Dio _dio;
   final FileEncryption _encryption;
-  int _clipSequence = 0;
 
-  /// Temp file name for [message]'s decrypted clip number [sequence].
-  ///
-  /// Keyed on the full message id plus a per-decrypt [sequence], so the play
-  /// page and a concurrent save of the same message never share a path and
-  /// one cannot delete the clip the other is still reading. The extension
-  /// comes from [dmVideoFileExtensionFor] so the native decoder sees a
-  /// container it recognises.
-  static String clipFileNameFor(DmMessage message, {int sequence = 0}) {
-    final extension = dmVideoFileExtensionFor(
-      message.fileMetadata?.fileType ?? '',
-    );
-    final safeId = message.id.replaceAll(RegExp('[^A-Za-z0-9]'), '');
-    return 'dm_video_${safeId}_$sequence.$extension';
-  }
+  /// How often a download whose caller may stop wanting it asks again, so a
+  /// stalled one, which reports no progress, still stops.
+  final Duration _wantedCheckInterval;
 
-  /// Downloads, verifies, and decrypts [message]'s video, returning the path
-  /// of the decrypted temp file.
+  /// Downloads, verifies, and decrypts [message]'s video, returning the
+  /// plaintext.
   ///
-  /// Throws a [DmVideoUnavailableException] when the message is not a video,
-  /// the ciphertext exceeds [dmVideoMaxCiphertextBytes], or its SHA-256 does
-  /// not match the sender's `x` tag; an [ArgumentError] for a non-HTTPS URL;
-  /// a [DioException] if the download fails or times out; and whatever
+  /// The download is cut off past [maxBytes] of ciphertext, which defaults to
+  /// [dmVideoMaxCiphertextBytes], and, when [timeLimit] is given, once it has
+  /// run that long; a host can otherwise trickle bytes forever. Once
+  /// [limitsApply] says no, as when someone taps play on the video, the
+  /// download carries on as if neither limit was given. When [stillWanted] is
+  /// given it is asked as the download progresses, and the download stops
+  /// once it says no.
+  ///
+  /// Throws a [DmVideoUnavailableException] when the message is not a video
+  /// or carries a malformed key or nonce (checked before any download, and
+  /// never quoted), the ciphertext exceeds [maxBytes], the download outlasts
+  /// [timeLimit], or
+  /// the ciphertext's SHA-256 does not match the sender's `x` tag; also when
+  /// the URL is not HTTPS or the download fails or stalls, naming the kind of
+  /// failure and any HTTP status but never the address, which links the
+  /// sender's upload to this recipient. Throws whatever
   /// [FileEncryption.decrypt] throws when the ciphertext does not
-  /// authenticate. No plaintext file is left behind on any failure.
+  /// authenticate.
   @useResult
-  Future<String> decryptToFile(DmMessage message) async {
+  Future<Uint8List> decrypt(
+    DmMessage message, {
+    int? maxBytes,
+    Duration? timeLimit,
+    bool Function()? limitsApply,
+    bool Function()? stillWanted,
+  }) async {
     final metadata = message.fileMetadata;
     if (metadata == null || !metadata.isVideo) {
       throw const DmVideoUnavailableException('message is not a video');
     }
-
-    final ciphertext = await _download(message.content);
-
-    final expectedHash = metadata.fileHash.toLowerCase();
-    if (expectedHash.isNotEmpty &&
-        HashUtil.sha256Hash(ciphertext) != expectedHash) {
+    if (!_hexKey.hasMatch(metadata.decryptionKey) ||
+        !_hexNonce.hasMatch(metadata.decryptionNonce)) {
       throw const DmVideoUnavailableException(
-        'ciphertext hash does not match the x tag',
+        'the message carries a malformed key or nonce',
       );
     }
 
-    final plaintext = await _encryption.decrypt(
+    final ciphertext = await _download(
+      message.content,
+      maxBytes: maxBytes ?? dmVideoMaxCiphertextBytes,
+      timeLimit: timeLimit,
+      limitsApply: limitsApply,
+      stillWanted: stillWanted,
+    );
+    if (stillWanted != null && !stillWanted()) {
+      throw const DmVideoWithdrawnException();
+    }
+
+    return compute(_verifyAndDecrypt, (
       ciphertext: ciphertext,
+      expectedHash: metadata.fileHash.toLowerCase(),
       hexKey: metadata.decryptionKey,
       hexNonce: metadata.decryptionNonce,
-    );
-
-    final path = await _clipPathFor(
-      clipFileNameFor(message, sequence: _clipSequence++),
-    );
-    try {
-      final file = File(path);
-      await file.parent.create(recursive: true);
-      await file.writeAsBytes(plaintext, flush: true);
-    } catch (_) {
-      deleteClip(path);
-      rethrow;
-    }
-    return path;
+      encryption: _encryption,
+    ));
   }
 
-  /// Best-effort synchronous delete of a decrypted clip at [path].
-  ///
-  /// Never throws: a leftover temp file must not mask the caller's outcome.
-  void deleteClip(String path) {
-    try {
-      final file = File(path);
-      if (file.existsSync()) file.deleteSync();
-    } catch (error, stackTrace) {
-      Log.warning(
-        'Could not delete decrypted video temp file',
-        name: 'DmVideoDecryptor',
-        category: LogCategory.video,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-  }
-
-  Future<String> _clipPathFor(String fileName) async {
-    final dir = await getTemporaryDirectory();
-    return '${dir.path}/$playbackDirName/$fileName';
-  }
-
-  /// Fetches the ciphertext at [url], refusing anything but `https` and
-  /// aborting as soon as the body exceeds [dmVideoMaxCiphertextBytes].
-  Future<Uint8List> _download(String url) async {
+  /// Fetches the ciphertext at [url], refusing anything but `https`, on the
+  /// first request and on every redirect, and aborting as soon as the body
+  /// exceeds [maxBytes] or the download outlasts [timeLimit], while
+  /// [limitsApply] says those apply.
+  Future<Uint8List> _download(
+    String url, {
+    required int maxBytes,
+    Duration? timeLimit,
+    bool Function()? limitsApply,
+    bool Function()? stillWanted,
+  }) async {
     final uri = Uri.tryParse(url);
-    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
-      throw ArgumentError.value(url, 'url', 'must be an https URL');
+    if (uri == null || !_isHttps(uri)) {
+      throw const DmVideoUnavailableException('the video is not on HTTPS');
     }
 
+    bool limited() => limitsApply?.call() ?? true;
+    int sizeLimit() => limited() ? maxBytes : dmVideoMaxCiphertextBytes;
     final cancelToken = CancelToken();
-    var oversized = false;
-    final Response<List<int>> response;
+    // The size the download had reached, or announced, past its limit.
+    int? oversizedAt;
+    var outlasted = false;
+    var unwanted = false;
+    final deadline = timeLimit == null
+        ? null
+        : Timer(timeLimit, () {
+            if (!limited()) return;
+            outlasted = true;
+            cancelToken.cancel('encrypted video download took too long');
+          });
+    final wantedCheck = stillWanted == null
+        ? null
+        : Timer.periodic(_wantedCheckInterval, (_) {
+            if (stillWanted()) return;
+            unwanted = true;
+            cancelToken.cancel('encrypted video no longer wanted');
+          });
+    late final Response<List<int>> response;
+    // Redirect bodies count too, so a chain of redirects cannot multiply it.
+    var consumed = 0;
     try {
-      response = await _dio.get<List<int>>(
-        url,
-        options: Options(responseType: ResponseType.bytes),
-        cancelToken: cancelToken,
-        onReceiveProgress: (received, total) {
-          if (received > dmVideoMaxCiphertextBytes ||
-              total > dmVideoMaxCiphertextBytes) {
-            oversized = true;
-            cancelToken.cancel('encrypted video exceeds size limit');
-          }
-        },
-      );
+      var target = url;
+      for (var redirects = 0; ; redirects++) {
+        final hop = await _dio.get<List<int>>(
+          target,
+          options: Options(
+            responseType: ResponseType.bytes,
+            // The client would follow a redirect to plain HTTP unchecked, so
+            // each hop is followed, and checked, here.
+            followRedirects: false,
+            validateStatus: (status) => status != null && status < 400,
+          ),
+          cancelToken: cancelToken,
+          onReceiveProgress: (received, total) {
+            final limit = sizeLimit();
+            if (consumed + received > limit || consumed + total > limit) {
+              oversizedAt = consumed + (total > received ? total : received);
+              cancelToken.cancel('encrypted video exceeds size limit');
+            } else if (stillWanted != null && !stillWanted()) {
+              unwanted = true;
+              cancelToken.cancel('encrypted video no longer wanted');
+            }
+          },
+        );
+        if (!_redirectStatuses.contains(hop.statusCode)) {
+          response = hop;
+          break;
+        }
+        consumed += hop.data?.length ?? 0;
+        if (redirects == maxRedirects) {
+          throw const DmVideoUnavailableException(
+            'the video redirected too many times',
+          );
+        }
+        final location = Uri.tryParse(hop.headers.value('location') ?? '');
+        final resolved = location == null
+            ? null
+            : Uri.parse(target).resolveUri(location);
+        if (resolved == null || !_isHttps(resolved)) {
+          throw const DmVideoUnavailableException(
+            'the video redirected away from HTTPS',
+          );
+        }
+        target = resolved.toString();
+      }
     } on DioException catch (error) {
-      if (oversized && CancelToken.isCancel(error)) {
-        throw const DmVideoUnavailableException(
-          'ciphertext exceeds the size limit',
+      final reached = oversizedAt;
+      if (reached != null && CancelToken.isCancel(error)) {
+        throw _tooLarge(reached);
+      }
+      if (unwanted && CancelToken.isCancel(error)) {
+        throw const DmVideoWithdrawnException();
+      }
+      if (outlasted && CancelToken.isCancel(error)) {
+        throw const DmVideoLimitException(
+          'the download outlasted its time limit',
+          mayPass: true,
         );
       }
-      rethrow;
+      // Dio's text carries the nested error, which can quote the URL or its
+      // host: keep the kind of failure and the status only.
+      final status = error.response?.statusCode;
+      // A blob that is missing or refused stays so; a timeout, a busy server
+      // or a dropped connection may pass.
+      final lasting =
+          status != null &&
+          status >= 400 &&
+          status < 500 &&
+          status != 408 &&
+          status != 429;
+      throw DmVideoUnavailableException(
+        'the download failed: ${error.type.name}'
+        '${status == null ? '' : ', HTTP $status'}',
+        mayPass: !lasting,
+      );
+    } finally {
+      deadline?.cancel();
+      wantedCheck?.cancel();
     }
 
     final data = response.data;
     if (data == null || data.isEmpty) {
       throw const DmVideoUnavailableException('empty ciphertext body');
     }
-    if (data.length > dmVideoMaxCiphertextBytes) {
-      throw const DmVideoUnavailableException(
-        'ciphertext exceeds the size limit',
-      );
+    if (consumed + data.length > sizeLimit()) {
+      throw _tooLarge(consumed + data.length);
     }
     return data is Uint8List ? data : Uint8List.fromList(data);
   }
+
+  static bool _isHttps(Uri uri) => uri.scheme == 'https' && uri.host.isNotEmpty;
+
+  /// The failure for a download stopped past its size limit at [bytes]: one
+  /// that still fits the largest a video can be passed only its caller's.
+  static DmVideoUnavailableException _tooLarge(int bytes) =>
+      bytes <= dmVideoMaxCiphertextBytes
+      ? const DmVideoLimitException('ciphertext exceeds the size limit')
+      : const DmVideoUnavailableException('ciphertext exceeds the size limit');
+}
+
+/// What [_verifyAndDecrypt] needs, sent to the isolate it runs in.
+typedef _DecryptJob = ({
+  Uint8List ciphertext,
+  String expectedHash,
+  String hexKey,
+  String hexNonce,
+  FileEncryption encryption,
+});
+
+/// Checks [job]'s ciphertext against the sender's hash and decrypts it. Run
+/// off the UI isolate: both are pure Dart, about a second for 20 MB even on a
+/// laptop, and a card can now start one without a tap.
+Future<Uint8List> _verifyAndDecrypt(_DecryptJob job) async {
+  if (job.expectedHash.isNotEmpty &&
+      HashUtil.sha256Hash(job.ciphertext) != job.expectedHash) {
+    throw const DmVideoUnavailableException(
+      'ciphertext hash does not match the x tag',
+    );
+  }
+  return job.encryption.decrypt(
+    ciphertext: job.ciphertext,
+    hexKey: job.hexKey,
+    hexNonce: job.hexNonce,
+  );
 }

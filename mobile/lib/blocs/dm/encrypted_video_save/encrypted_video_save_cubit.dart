@@ -1,5 +1,5 @@
-// ABOUTME: Cubit that decrypts an encrypted video DM and saves it to the
-// ABOUTME: gallery from the conversation's message actions.
+// ABOUTME: Cubit that saves a received encrypted video DM to the gallery from
+// ABOUTME: the conversation's message actions, using the video kept on device.
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,6 +8,7 @@ import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/dm/video_playback/dm_video_playback_cubit.dart'
     show DmVideoSaveStatus;
 import 'package:openvine/services/dm_video_decryptor.dart';
+import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/gallery_save_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
@@ -26,34 +27,48 @@ class EncryptedVideoSaveState extends Equatable {
   List<Object?> get props => [status];
 }
 
-/// Decrypts a received encrypted video DM straight to the device gallery.
+/// Saves a received encrypted video DM to the device gallery.
 ///
-/// The plaintext temp file is always removed before the save settles.
+/// The video comes from the [DmVideoStore] of the account signed in when the
+/// save starts, which downloads and decrypts it the first time and keeps it.
+/// The save holds it until the gallery has its copy.
 class EncryptedVideoSaveCubit extends Cubit<EncryptedVideoSaveState>
     with CloseGuardedEmit<EncryptedVideoSaveState> {
   /// Creates an [EncryptedVideoSaveCubit].
   EncryptedVideoSaveCubit({
-    required DmVideoDecryptor decryptor,
+    required DmVideoStoreResolver resolveStore,
     required GallerySaveService gallerySaveService,
-  }) : _decryptor = decryptor,
+  }) : _resolveStore = resolveStore,
        _gallerySaveService = gallerySaveService,
        super(const EncryptedVideoSaveState());
 
-  final DmVideoDecryptor _decryptor;
+  final DmVideoStoreResolver _resolveStore;
   final GallerySaveService _gallerySaveService;
 
-  /// Decrypts [message]'s video and saves it to the gallery. A second call
-  /// while a save is running is dropped.
+  /// Saves [message]'s video to the gallery, downloading and decrypting it
+  /// the first time. A second call while a save is running is dropped.
   Future<void> save(DmMessage message) async {
     if (state.status == DmVideoSaveStatus.saving) return;
     emit(const EncryptedVideoSaveState(status: DmVideoSaveStatus.saving));
 
-    String? path;
     try {
-      path = await _decryptor.decryptToFile(message);
-      final result = await _gallerySaveService.saveVideoToGallery(
-        EditorVideo.file(path),
-      );
+      final store = _resolveStore();
+      if (store == null) {
+        throw const DmVideoUnavailableException(
+          'no account is signed in, or this is the web',
+        );
+      }
+      final video = await store.videoFor(message);
+      final GallerySaveResult result;
+      try {
+        result = await _gallerySaveService.saveVideoToGallery(
+          EditorVideo.file(video.path),
+          // The kept file is named after its message.
+          copyUnderNeutralName: true,
+        );
+      } finally {
+        store.releaseVideo(video);
+      }
       emitIfOpen(
         EncryptedVideoSaveState(
           status: switch (result) {
@@ -68,8 +83,6 @@ class EncryptedVideoSaveCubit extends Cubit<EncryptedVideoSaveState>
       emitIfOpen(
         const EncryptedVideoSaveState(status: DmVideoSaveStatus.failed),
       );
-    } finally {
-      if (path != null) _decryptor.deleteClip(path);
     }
   }
 }

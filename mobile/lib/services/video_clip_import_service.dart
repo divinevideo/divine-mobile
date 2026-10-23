@@ -246,6 +246,11 @@ class VideoClipImportService {
   /// duplicate or overwriting edits made to it since, and restores it when it
   /// is in the trash.
   ///
+  /// [beforeSave], when given, is awaited just before the clip is saved to
+  /// the library, once the lookups, the copy and its frames are done, so the
+  /// caller can still refuse: an error it throws fails the import and deletes
+  /// the copy and its frames.
+  ///
   /// [source] is copied, never moved; the caller still owns it.
   Future<VideoClipImportResult> importReceivedClip({
     required File source,
@@ -254,14 +259,18 @@ class VideoClipImportService {
     required String c2paManifestId,
     models.AspectRatio? targetAspectRatio,
     List<String> contributorPubkeys = const [],
+    Future<void> Function()? beforeSave,
   }) {
     return _importVerifiedClip(
       source: source,
-      clipId: 'dm_clip_${messageId.replaceAll(RegExp('[^a-zA-Z0-9]'), '')}',
+      clipId:
+          '${DivineVideoClip.receivedDmClipIdPrefix}'
+          '${messageId.replaceAll(RegExp('[^a-zA-Z0-9]'), '')}',
       c2paManifestId: c2paManifestId,
       senderPubkey: senderPubkey,
       targetAspectRatio: targetAspectRatio,
       contributorPubkeys: contributorPubkeys,
+      beforeSave: beforeSave,
     );
   }
 
@@ -368,6 +377,7 @@ class VideoClipImportService {
     String? senderPubkey,
     String? videoHash,
     models.AspectRatio? targetAspectRatio,
+    Future<void> Function()? beforeSave,
   }) async {
     final documentsPath = await _getDocumentsPath();
     if (documentsPath.isEmpty) {
@@ -401,6 +411,8 @@ class VideoClipImportService {
     final importedAt = _now();
 
     File? copiedVideo;
+    String? thumbnailPath;
+    String? ghostFramePath;
     try {
       final hash = videoHash ?? await _hashFile(source.path);
       final PublishedClipSource? published;
@@ -437,7 +449,8 @@ class VideoClipImportService {
         videoPath: copiedVideo.path,
         targetTimestamp: _thumbnailTimestampFor(duration),
       );
-      final ghostFramePath = await _extractLastFrame(
+      thumbnailPath = thumbnail?.path;
+      ghostFramePath = await _extractLastFrame(
         videoPath: copiedVideo.path,
         videoDuration: duration,
       );
@@ -481,25 +494,34 @@ class VideoClipImportService {
         ],
       );
 
+      await beforeSave?.call();
       await _clipLibraryService.saveClip(clip);
       return VideoClipImportSuccess(clip);
     } on FileSystemException catch (e) {
       Log.warning(
-        'Failed to copy imported clip into documents: $e',
+        'Failed to copy imported clip into documents: ${_failureKind(e)}',
         name: _logName,
         category: LogCategory.video,
       );
-      if (copiedVideo != null) await _deleteQuietly(copiedVideo);
+      await _deleteAllQuietly([
+        copiedVideo?.path,
+        thumbnailPath,
+        ghostFramePath,
+      ]);
       return const VideoClipImportFailure(
         VideoClipImportFailureReason.copyFailed,
       );
     } catch (e) {
       Log.warning(
-        'Failed to save imported clip: $e',
+        'Failed to save imported clip: ${_failureKind(e)}',
         name: _logName,
         category: LogCategory.video,
       );
-      if (copiedVideo != null) await _deleteQuietly(copiedVideo);
+      await _deleteAllQuietly([
+        copiedVideo?.path,
+        thumbnailPath,
+        ghostFramePath,
+      ]);
       return const VideoClipImportFailure(
         VideoClipImportFailureReason.saveFailed,
       );
@@ -585,6 +607,13 @@ class VideoClipImportService {
     return 'Clip $month ${local.day}, $hour12:$minute $marker';
   }
 
+  // The source can be a kept video DM, named after its account and message,
+  // and the copy is named after the message, so a failure is logged by kind
+  // only: an error's text can quote either path.
+  static String _failureKind(Object error) => error is FileSystemException
+      ? '${error.runtimeType} (OS code: ${error.osError?.errorCode})'
+      : '${error.runtimeType}';
+
   Future<File> _copyVideoIntoDocuments(
     File source,
     String documentsPath,
@@ -636,7 +665,7 @@ class VideoClipImportService {
       return await _readVideoMetadata(EditorVideo.file(copiedVideo.path));
     } catch (e) {
       Log.warning(
-        'Failed to read video metadata for ${copiedVideo.path}: $e',
+        'Failed to read video metadata: ${_failureKind(e)}',
         name: _logName,
         category: LogCategory.video,
       );
@@ -672,6 +701,13 @@ class VideoClipImportService {
       if (file.existsSync()) await file.delete();
     } on FileSystemException {
       // Best effort: the library's orphan sweep reclaims a leftover copy.
+    }
+  }
+
+  /// Deletes what an import that failed had written, the files at [paths].
+  Future<void> _deleteAllQuietly(List<String?> paths) async {
+    for (final path in paths) {
+      if (path != null) await _deleteQuietly(File(path));
     }
   }
 

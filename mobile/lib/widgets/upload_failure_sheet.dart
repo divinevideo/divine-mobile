@@ -11,7 +11,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/publish_error_kind_l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/router/route_paths.dart';
-import 'package:openvine/screens/library_screen.dart';
+import 'package:openvine/router/routes/library_routes.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_preview_screen.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
@@ -76,7 +76,10 @@ Future<void> showUploadFailureSheet(
         actionLabel: context.l10n.contentWarningView,
         onActionPressed: () {
           messenger.hideCurrentSnackBar();
-          pushDetached(LibraryScreen.draftsPath, viewDescription);
+          pushDetached(
+            const LibraryDraftsRouteData().location,
+            viewDescription,
+          );
         },
       ),
     );

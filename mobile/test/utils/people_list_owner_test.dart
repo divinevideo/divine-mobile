@@ -54,8 +54,11 @@ void main() {
         owner,
       );
       expect(normalizePeopleListOwner('me'), isNull);
+    });
+
+    test('shares complete-key validation with profile normalization', () {
       final shortNpub = NostrKeyUtils.encodePubKey('11');
-      expect(normalizeToHex(shortNpub), '11');
+      expect(normalizeToHex(shortNpub), isNull);
       expect(normalizePeopleListOwner(shortNpub), isNull);
     });
   });

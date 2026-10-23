@@ -23,9 +23,7 @@ String? profileOwnerRedirectTarget({
   final npub = route?.npub;
   if (npub == null || npub.isEmpty) return null;
   final targetHex = npubToHexOrNull(npub);
-  if (npub != 'me' && (targetHex == null || targetHex.length != 64)) {
-    return null;
-  }
+  if (npub != 'me' && targetHex == null) return null;
 
   final isOwnProfile = routeIdentifiesUser(npub, currentPublicKeyHex);
   return switch (route?.type) {

@@ -750,5 +750,19 @@ void main() {
       expect(find.byType(DivineCircularProgressIndicator), findsOneWidget);
       expect(find.byType(ProfileScaffold), findsNothing);
     });
+
+    // A one-character slip in a shared link names nobody. Read as another
+    // user, it left the route waiting for a redirect that never came.
+    testWidgets('a misspelled npub link reports an invalid profile', (
+      tester,
+    ) async {
+      await pumpGridRoute(tester, syntheticMisspelledNpub, settle: false);
+
+      expect(
+        find.text(lookupAppLocalizations(const Locale('en')).profileInvalidId),
+        findsOneWidget,
+      );
+      expect(find.byType(DivineCircularProgressIndicator), findsNothing);
+    });
   });
 }

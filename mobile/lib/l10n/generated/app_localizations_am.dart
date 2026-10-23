@@ -3614,6 +3614,15 @@ class AppLocalizationsAm extends AppLocalizations {
   String get dmClipBadge => 'ክሊፕ';
 
   @override
+  String get dmVideoCardTapToLoad => 'Tap to load';
+
+  @override
+  String get dmVideoCardHiddenSenderBlocked => 'Hidden: sender blocked';
+
+  @override
+  String get dmVideoCardHiddenSenderMuted => 'Hidden: sender muted';
+
+  @override
   String get dmClipChecking => 'ይህ ክሊፕ በDivine መቀረጹን በማረጋገጥ ላይ…';
 
   @override
@@ -9099,6 +9108,66 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorTextShadowColor => 'የጥላ ቀለም';
+
+  @override
+  String get videoEditorTextFillSolid => 'ነጠላ ቀለም';
+
+  @override
+  String get videoEditorTextFillGradient => 'ግራዲየንት';
+
+  @override
+  String get videoEditorTextGradientPresets => 'ዝግጁ ቅንብሮች';
+
+  @override
+  String get videoEditorTextGradientColors => 'ቀለሞች';
+
+  @override
+  String get videoEditorTextGradientAddColor => 'ቀለም ያክሉ';
+
+  @override
+  String get videoEditorTextGradientRemoveColor => 'የመጨረሻውን ቀለም ያስወግዱ';
+
+  @override
+  String get videoEditorTextGradientSunset => 'ጀንበር ስትጠልቅ';
+
+  @override
+  String get videoEditorTextGradientOcean => 'ውቅያኖስ';
+
+  @override
+  String get videoEditorTextGradientRainbow => 'ቀስተ ደመና';
+
+  @override
+  String get videoEditorTextGradientMint => 'ናና';
+
+  @override
+  String get videoEditorTextGradientCandy => 'ከረሜላ';
+
+  @override
+  String get videoEditorTextGradientAurora => 'የዋልታ ብርሃን';
+
+  @override
+  String get videoEditorTextGradientLeftToRight => 'ከግራ ወደ ቀኝ';
+
+  @override
+  String get videoEditorTextGradientTopLeftToBottomRight => 'ከላይ ግራ ወደ ታች ቀኝ';
+
+  @override
+  String get videoEditorTextGradientTopToBottom => 'ከላይ ወደ ታች';
+
+  @override
+  String get videoEditorTextGradientTopRightToBottomLeft => 'ከላይ ቀኝ ወደ ታች ግራ';
+
+  @override
+  String get videoEditorTextGradientRightToLeft => 'ከቀኝ ወደ ግራ';
+
+  @override
+  String get videoEditorTextGradientBottomRightToTopLeft => 'ከታች ቀኝ ወደ ላይ ግራ';
+
+  @override
+  String get videoEditorTextGradientBottomToTop => 'ከታች ወደ ላይ';
+
+  @override
+  String get videoEditorTextGradientBottomLeftToTopRight => 'ከታች ግራ ወደ ላይ ቀኝ';
 
   @override
   String get videoEditorFontSemanticLabel => 'ቅርጸ-ቁምፊ';

@@ -12,7 +12,7 @@ import 'package:openvine/models/video_editor/text_effects.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
-    show LayerBackgroundMode, TextLayer;
+    show LayerBackgroundMode, TextGradient, TextLayer;
 import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 
 void main() {
@@ -49,6 +49,11 @@ void main() {
     shadowStrength: 0.25,
     shadowColor: Color(0x80000000),
   );
+  const gradient = TextGradient(
+    colors: [Color(0xFFFFF140), Color(0xFFFF7640), Color(0xFFFF7FAF)],
+    stops: [0, 0.4, 1],
+    angle: 1.5,
+  );
 
   // Font index 0 is Inter, the one editor font bundled with the app: any
   // other index asks google_fonts to fetch when the font is called, which
@@ -62,6 +67,7 @@ void main() {
     align: TextAlign.left,
     fontScale: 1.6,
     effects: effects,
+    gradient: gradient,
     enter: [enterFade, enterSlide],
     leave: [leaveScale],
     loop: [loopWiggle],
@@ -81,6 +87,7 @@ void main() {
           fontScale: 1.6,
           outlineWidth: effects.outlineWidth,
           outlineColor: effects.outlineColor,
+          gradient: gradient,
           animations: [
             enterFade,
             enterSlide,
@@ -231,6 +238,20 @@ void main() {
         );
       });
 
+      test('keeps a style whose gradient it cannot read, without it', () {
+        final json = style.toJson()
+          ..['gradient'] = {
+            'colors': [0xFFFFF140],
+            'angle': 0,
+          };
+
+        final decoded = TitleStyle.fromJson(json);
+
+        expect(decoded, isNotNull);
+        expect(decoded?.gradient, isNull);
+        expect(decoded?.color, style.color);
+      });
+
       test('defaults the optional fields a stored row may lack', () {
         final decoded = TitleStyle.fromJson({
           'fontIndex': VideoEditorConstants.textFonts.length,
@@ -243,6 +264,7 @@ void main() {
         expect(decoded?.fontScale, 1);
         expect(decoded?.customSecondaryColor, isFalse);
         expect(decoded?.effects, TextEffects.none);
+        expect(decoded?.gradient, isNull);
         expect(decoded?.enter, isEmpty);
         expect(decoded?.leave, isEmpty);
         expect(decoded?.loop, isEmpty);
@@ -293,6 +315,7 @@ void main() {
         expect(result.outlineWidth, effects.outlineWidth);
         expect(result.outlineColor, effects.outlineColor);
         expect(result.textStyle?.shadows, effects.shadows);
+        expect(result.gradient, gradient);
 
         expect(result.divineEnterAnimations, [enterFade, enterSlide]);
         expect(result.divineLeaveAnimations, [leaveScale]);
@@ -342,6 +365,24 @@ void main() {
 
         expect(result.hasOutline, isFalse);
         expect(result.textStyle?.shadows, isEmpty);
+      });
+
+      test('clears the gradient a plain style is applied over', () {
+        const plain = TitleStyle(
+          fontIndex: 0,
+          color: Color(0xFFFFFFFF),
+          background: Color(0xFF000000),
+          colorMode: LayerBackgroundMode.onlyColor,
+        );
+
+        final result = plain.applyTo(
+          target()..gradient = gradient,
+          canvasSize: canvas,
+          totalDuration: total,
+        );
+
+        expect(result.gradient, isNull);
+        expect(result.color, plain.color);
       });
     });
   });

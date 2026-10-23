@@ -104,21 +104,10 @@ NostrSearchTarget? resolveNostrSearchTarget(String rawQuery) {
     return NostrAmbiguousTarget(lower);
   }
 
-  // npub1 / nprofile1. The decoder returns an empty string rather than null
-  // for a truncated bech32 payload, so the decoded value is re-validated
-  // here — otherwise a half-typed npub would classify as a real profile.
-  // The nprofile decoder also utf8-decodes relay entries outside any
-  // try/catch, so a checksum-valid paste with a non-UTF-8 relay entry throws
-  // instead of returning null; that is not an identifier either.
-  final NormalizedPublicIdentifier? profile;
-  try {
-    profile = normalizePublicIdentifier(query);
-  } on FormatException {
-    return null;
-  }
-  if (profile != null && NostrHexUtils.isValidPubkey(profile.hexPubkey)) {
-    return NostrProfileTarget(profile.hexPubkey);
-  }
+  // npub1 / nprofile1. The normalizer returns null for anything that is not
+  // a full key, so a half-typed npub never classifies as a profile.
+  final profile = normalizePublicIdentifier(query);
+  if (profile != null) return NostrProfileTarget(profile.hexPubkey);
 
   return null;
 }

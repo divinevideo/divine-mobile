@@ -107,7 +107,7 @@ void main() {
 
     test('rejects an nprofile whose relay entry is not valid text', () {
       // Valid checksum, pubkey entry intact, relay entry with bytes that are
-      // not UTF-8. The SDK decodes relay entries without a try/catch, so this
+      // not UTF-8. The SDK rejects a string with a damaged entry, so this
       // must come back as "not an identifier" rather than an exception.
       final tlv = <int>[
         TLVType.defaultType,

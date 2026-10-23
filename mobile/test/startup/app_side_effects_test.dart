@@ -17,9 +17,11 @@ import 'package:openvine/providers/notifications_providers.dart';
 import 'package:openvine/providers/relay_list_repository_provider.dart';
 import 'package:openvine/providers/relay_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/scheduled_posts_providers.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
+import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
 import 'package:openvine/router/providers/route_normalization_provider.dart';
 import 'package:openvine/router/providers/support_route_trail_provider.dart';
@@ -99,6 +101,7 @@ void main() {
     void Function()? onBlockedFollowReconcilerBuilt,
     void Function()? onNotificationPreferencesSyncBuilt,
     void Function()? onPushNotificationSyncBuilt,
+    void Function(String?)? onDmVideoStoreBuilt,
   }) => [
     authServiceProvider.overrideWithValue(authService),
     analyticsIdentityCoordinatorProvider.overrideWithValue(
@@ -115,6 +118,10 @@ void main() {
     ),
     outgoingDmRetryServiceProvider.overrideWithValue(null),
     dmReactionRetryServiceProvider.overrideWithValue(null),
+    dmVideoStoreProvider.overrideWith((ref) {
+      onDmVideoStoreBuilt?.call(ref.watch(currentAccountIdProvider));
+      return null;
+    }),
     viewEventRetryServiceProvider.overrideWithValue(null),
     productEventQueueProvider.overrideWithValue(_MockProductEventQueue()),
     profileSaveRetryServiceProvider.overrideWithValue(null),
@@ -146,6 +153,31 @@ void main() {
   ];
 
   group(AppRootSideEffects, () {
+    testWidgets('activates kept-video cleanup before any chat opens and on '
+        'account changes', (tester) async {
+      when(() => authService.authState).thenReturn(AuthState.authenticated);
+      final owners = <String?>[];
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: baseOverrides(onDmVideoStoreBuilt: owners.add),
+          child: const AppRootSideEffects(child: SizedBox.shrink()),
+        ),
+      );
+      await tester.pump();
+      expect(owners, [_pubkey]);
+
+      final otherOwner = 'a' * 64;
+      when(() => authService.currentPublicKeyHex).thenReturn(otherOwner);
+      authStates.add(AuthState.authenticating);
+      await tester.pumpAndSettle();
+      expect(owners, [_pubkey, otherOwner]);
+
+      when(() => authService.currentPublicKeyHex).thenReturn(null);
+      authStates.add(AuthState.unauthenticated);
+      await tester.pumpAndSettle();
+      expect(owners, [_pubkey, otherOwner, null]);
+    });
+
     testWidgets(
       'mirrors the restored identity without the bottom-nav shell mounted',
       (tester) async {
