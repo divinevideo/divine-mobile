@@ -172,14 +172,13 @@ class _VideoDetailViewState extends ConsumerState<_VideoDetailView> {
       final container = ProviderScope.containerOf(context, listen: false);
       _discoveryRepository = SingleVideoFeedRepository(
         video: video,
-        loadPage: ({cursor, until}) async {
+        loadPage: ({cursor}) async {
           final hints = await readFeedViewerPreferenceHints(container.read);
           return container
               .read(videosRepositoryProvider)
               .getVideoDiscoveryPage(
                 userPubkey: pubkey,
                 cursor: cursor,
-                until: until,
                 preferredLanguages: hints.preferredLanguages,
                 viewerCountry: hints.viewerCountry,
               );

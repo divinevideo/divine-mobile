@@ -464,7 +464,6 @@ void main() {
           () => repository.getVideoDiscoveryPage(
             userPubkey: any(named: 'userPubkey'),
             cursor: any(named: 'cursor'),
-            until: any(named: 'until'),
             preferredLanguages: any(named: 'preferredLanguages'),
             viewerCountry: any(named: 'viewerCountry'),
           ),

@@ -13873,7 +13873,7 @@ void main() {
     });
 
     test(
-      'video discovery continues popular fallback without a Gorse cursor',
+      'video discovery exposes popular fallback without a continuation cursor',
       () async {
         final mockFunnelcakeClient = MockFunnelcakeApiClient();
         final popular = _createVideoStats(
@@ -13894,15 +13894,15 @@ void main() {
           funnelcakeApiClient: mockFunnelcakeClient,
         );
         final result = await repo.getVideoDiscoveryPage(
-          userPubkey: 'viewer',
-          until: 1700000000,
+          userPubkey: null,
           limit: 10,
         );
         expect(result.videos.single.id, 'popular-continuation');
+        expect(result.paginationCursor, isNull);
+        expect(result.hasMore, isNull);
         verify(
           () => mockFunnelcakeClient.getWatchingVideos(
             limit: 10,
-            before: 1700000000,
           ),
         ).called(1);
         verifyNever(

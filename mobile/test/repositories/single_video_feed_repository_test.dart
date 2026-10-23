@@ -28,7 +28,7 @@ void main() {
         final page = Completer<HomeFeedResult>();
         final repository = SingleVideoFeedRepository(
           video: anchor,
-          loadPage: ({cursor, until}) => page.future,
+          loadPage: ({cursor}) => page.future,
         );
         addTearDown(repository.dispose);
         final videos = StreamIterator(repository.watchView(source));
@@ -48,9 +48,8 @@ void main() {
         final calls = <String?>[];
         final repository = SingleVideoFeedRepository(
           video: anchor,
-          loadPage: ({cursor, until}) async {
+          loadPage: ({cursor}) async {
             calls.add(cursor);
-            expect(until, isNull);
             return cursor == null
                 ? HomeFeedResult(
                     videos: [
@@ -82,28 +81,31 @@ void main() {
     );
 
     test(
-      'popular fallback paginates from recommendation age, excluding anchor',
+      'popular fallback without a cursor stops rather than skipping newer videos',
       () async {
-        final boundaries = <int?>[];
+        var calls = 0;
         final repository = SingleVideoFeedRepository(
           video: anchor,
-          loadPage: ({cursor, until}) async {
+          loadPage: ({cursor}) async {
             expect(cursor, isNull);
-            boundaries.add(until);
-            return until == null
-                ? HomeFeedResult(
-                    videos: [
-                      _video('b', createdAt: 300),
-                      _video('c', createdAt: 200),
-                    ],
-                  )
-                : const HomeFeedResult(videos: []);
+            calls++;
+            // Engagement order can put an old classic before newer videos.
+            return HomeFeedResult(
+              videos: [
+                _video('classic', createdAt: 2),
+                _video('recent', createdAt: 300),
+              ],
+            );
           },
         );
         addTearDown(repository.dispose);
         await repository.loadMore(source);
         await repository.loadMore(source);
-        expect(boundaries, [null, 200]);
+        expect(calls, 1);
+        await expectLater(
+          repository.watchView(source).map((videos) => videos.map((v) => v.id)),
+          emits(['anchor', 'classic', 'recent']),
+        );
         await expectLater(repository.watchHasMore(source), emits(false));
       },
     );
@@ -115,7 +117,7 @@ void main() {
         var calls = 0;
         final repository = SingleVideoFeedRepository(
           video: anchor,
-          loadPage: ({cursor, until}) {
+          loadPage: ({cursor}) {
             calls++;
             return page.future;
           },
@@ -133,7 +135,7 @@ void main() {
       var calls = 0;
       final repository = SingleVideoFeedRepository(
         video: anchor,
-        loadPage: ({cursor, until}) async {
+        loadPage: ({cursor}) async {
           if (calls++ == 0) throw Exception('offline');
           return HomeFeedResult(videos: [_video('next')], hasMore: false);
         },
@@ -154,7 +156,7 @@ void main() {
       () async {
         final repository = SingleVideoFeedRepository(
           video: anchor,
-          loadPage: ({cursor, until}) async => HomeFeedResult(
+          loadPage: ({cursor}) async => HomeFeedResult(
             videos: [_video('b')],
             paginationCursor: 'same',
             hasMore: true,
@@ -172,7 +174,7 @@ void main() {
         var hidden = <String>{'blocked'};
         final repository = SingleVideoFeedRepository(
           video: anchor,
-          loadPage: ({cursor, until}) async => HomeFeedResult(
+          loadPage: ({cursor}) async => HomeFeedResult(
             videos: [_video('blocked'), _video('safe')],
             hasMore: false,
           ),
@@ -194,21 +196,21 @@ void main() {
     );
 
     test(
-      'stops timestamp pagination when the fallback repeats the oldest page',
+      'a page claiming more without a continuation cursor is terminal',
       () async {
         var calls = 0;
         final repository = SingleVideoFeedRepository(
           video: anchor,
-          loadPage: ({cursor, until}) async {
+          loadPage: ({cursor}) async {
             calls++;
-            return HomeFeedResult(videos: [_video('b')]);
+            return HomeFeedResult(videos: [_video('b')], hasMore: true);
           },
         );
         addTearDown(repository.dispose);
         await repository.loadMore(source);
         await repository.loadMore(source);
         await repository.loadMore(source);
-        expect(calls, 2);
+        expect(calls, 1);
         await expectLater(repository.watchHasMore(source), emits(false));
       },
     );
@@ -218,7 +220,7 @@ void main() {
       () async {
         final repository = SingleVideoFeedRepository(
           video: anchor,
-          loadPage: ({cursor, until}) async => cursor == null
+          loadPage: ({cursor}) async => cursor == null
               ? HomeFeedResult(
                   videos: [anchor],
                   hasMore: true,
@@ -243,7 +245,7 @@ void main() {
         var calls = 0;
         final repository = SingleVideoFeedRepository(
           video: anchor,
-          loadPage: ({cursor, until}) async => HomeFeedResult(
+          loadPage: ({cursor}) async => HomeFeedResult(
             videos: [_video('hidden-${calls++}')],
             hasMore: true,
             paginationCursor: 'page-$calls',
@@ -262,7 +264,7 @@ void main() {
       final page = Completer<HomeFeedResult>();
       final repository = SingleVideoFeedRepository(
         video: anchor,
-        loadPage: ({cursor, until}) => page.future,
+        loadPage: ({cursor}) => page.future,
       );
       final pending = repository.loadMore(source);
       await repository.dispose();

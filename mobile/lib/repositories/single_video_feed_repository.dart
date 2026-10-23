@@ -9,10 +9,9 @@ import 'package:rxdart/rxdart.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
 
-/// Loads a discovery page using its opaque cursor or legacy time boundary.
+/// Loads a discovery page using its opaque cursor.
 typedef DiscoveryPageLoader = Future<HomeFeedResult> Function({
   String? cursor,
-  int? until,
 });
 
 /// A single-video route's independently paginated discovery feed.
@@ -39,7 +38,6 @@ class SingleVideoFeedRepository implements FeedRepository {
   final List<VideoEvent> _recommendations = [];
   final Set<String> _cursors = {};
   String? _cursor;
-  int? _until;
   bool _started = false;
   bool _loading = false;
   bool _disposed = false;
@@ -86,7 +84,7 @@ class SingleVideoFeedRepository implements FeedRepository {
       // A duplicate-only or filtered page provides no next item to swipe to.
       // Drain a bounded number of pages now instead of waiting for a page change.
       for (var page = 0; page < _maxPagesPerLoad; page++) {
-        final result = await _loadPage(cursor: _cursor, until: _until);
+        final result = await _loadPage(cursor: _cursor);
         if (_disposed) return;
 
         final known = {
@@ -105,17 +103,10 @@ class SingleVideoFeedRepository implements FeedRepository {
         if (cursor != null && cursor.isNotEmpty) {
           _hasMore.add(result.hasMore != false && _cursors.add(cursor));
           _cursor = cursor;
-          _until = null;
-        } else if (result.hasMore == null && result.videos.isNotEmpty) {
-          // Popular fallback has no cursor metadata. Derive its boundary from
-          // the raw discovery page, never the potentially much older anchor.
-          final oldest = result.videos
-              .map((v) => v.createdAt)
-              .reduce((a, b) => a < b ? a : b);
-          _hasMore.add(_until == null || oldest < _until!);
-          _until = oldest;
-          _cursor = null;
         } else {
+          // Like the home For You feed, stop when the source has no cursor.
+          // Popular is engagement-ordered, so its oldest publication time is
+          // not a safe boundary: it would skip newer, lower-ranked videos.
           _hasMore.add(false);
         }
         final visibleAfter =
