@@ -435,11 +435,11 @@ void main() {
             requests++;
             return jsonResponse(
               catalog([
-                announcement(expiresAt: '2026-10-24T00:00:00Z'),
+                announcement(expiresAt: '2026-10-23T12:00:00Z'),
                 announcement(
                   id: secondId,
-                  publishedAt: '2026-10-24T00:00:00Z',
-                  expiresAt: '2026-10-25T00:00:00Z',
+                  publishedAt: '2026-10-23T12:00:00Z',
+                  expiresAt: '2026-10-24T00:00:00Z',
                 ),
               ]),
             );
@@ -453,7 +453,7 @@ void main() {
           unawaited(repository.refresh());
           async.flushMicrotasks();
           expect(snapshots.last, [firstId]);
-          async.elapse(const Duration(days: 1));
+          async.elapse(const Duration(hours: 12));
           expect(snapshots.last, [secondId]);
           final replayed = <List<String>>[];
           final replay = repository.watchSnapshot().listen((items) {
@@ -462,7 +462,7 @@ void main() {
           async.flushMicrotasks();
           expect(replayed.single, [secondId]);
           unawaited(replay.cancel());
-          async.elapse(const Duration(days: 1));
+          async.elapse(const Duration(hours: 12));
           expect(snapshots.last, isEmpty);
           expect(requests, 1);
         } finally {
@@ -493,6 +493,56 @@ void main() {
       expect(async.nonPeriodicTimerCount, 0);
     });
   });
+
+  for (final lifetime in [30, 90]) {
+    test('bounds timer waits for a $lifetime-day announcement', () {
+      fakeAsync((async) {
+        final expires = now.add(Duration(days: lifetime));
+        final snapshots = <List<String>>[];
+        var requests = 0;
+        create(
+          MockClient((_) async {
+            requests++;
+            return jsonResponse(
+              catalog([
+                announcement(
+                  publishedAt: now.toIso8601String(),
+                  expiresAt: expires.toIso8601String(),
+                ),
+              ]),
+            );
+          }),
+          clock: async.getClock(now),
+        );
+        final subscription = repository.watchSnapshot().listen((items) {
+          snapshots.add(items.map((item) => item.announcementId).toList());
+        });
+        try {
+          unawaited(repository.refresh());
+          async.flushMicrotasks();
+          expect(snapshots.last, [firstId]);
+          for (var day = 0; day < lifetime - 1; day++) {
+            expect(
+              async.pendingTimers.single.duration,
+              lessThanOrEqualTo(const Duration(days: 1)),
+            );
+            async.elapse(const Duration(days: 1));
+            expect(snapshots.last, [firstId]);
+          }
+          async.elapse(const Duration(days: 1) - const Duration(seconds: 1));
+          expect(snapshots.last, [firstId]);
+          async.elapse(const Duration(seconds: 1));
+          expect(snapshots.last, isEmpty);
+          expect(async.pendingTimers, isEmpty);
+          expect(requests, 1);
+        } finally {
+          unawaited(subscription.cancel());
+          unawaited(repository.close());
+          async.flushMicrotasks();
+        }
+      });
+    });
+  }
 
   test('coalesces concurrent refreshes', () async {
     final response = Completer<http.Response>();
