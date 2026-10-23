@@ -142,6 +142,35 @@ void main() {
     });
 
     test(
+      'deduplicates a repeated background tap by its transport message ID',
+      () async {
+        final sink = _RecordingSink();
+        final container = ProviderContainer(
+          overrides: [
+            goRouterProvider.overrideWithValue(routerA),
+            notificationAnalyticsTrackerProvider.overrideWithValue(
+              NotificationAnalyticsTracker(
+                sink: sink,
+                collectionAllowed: () async => true,
+                privacyBoundary: () => 'test',
+              ),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        containerA.dispose();
+        final tap = fcmPayloadWithMessageId(campaignTap, 'transport-message-1');
+
+        await routeBackgroundPushTap(tap, liveContainer: () => container);
+        await routeBackgroundPushTap(tap, liveContainer: () => container);
+        await pumpEventQueue();
+
+        // Campaigns carry no event ID, so only the message ID can merge these.
+        expect(sink.events, hasLength(1));
+      },
+    );
+
+    test(
       'routes a background tap through the container that is live when it '
       'arrives',
       () async {

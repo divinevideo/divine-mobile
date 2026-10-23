@@ -609,6 +609,26 @@ void main() {
       expect(events, isEmpty);
     });
 
+    test('carries the transport message ID into the tap event', () async {
+      final events = <NotificationTapEvent>[];
+      final sub = service.notificationTapStream.listen(events.add);
+      addTearDown(sub.cancel);
+
+      service.handleNotificationTapPayload(
+        jsonEncode(
+          localNotificationTapPayload(const {
+            'type': 'like',
+            'eventId': 'source_event',
+            'messageId': 'transport-message-1',
+          }),
+        ),
+      );
+
+      await pumpEventQueue();
+
+      expect(events.single.messageId, equals('transport-message-1'));
+    });
+
     test('emits a follow tap via senderPubkey (no referencedEventId)', () async {
       final events = <NotificationTapEvent>[];
       final sub = service.notificationTapStream.listen(events.add);
@@ -880,12 +900,21 @@ void main() {
         tapTargetType: 'app_route',
         tapTargetValue: '/notifications',
       );
+      const differsByMessageId = NotificationTapEvent(
+        messageId: 'transport-message-1',
+        referencedEventId: 'abc123',
+        referencedAddress: '34236:owner:vine',
+        notificationType: 'reply',
+        tapTargetType: 'app_route',
+        tapTargetValue: '/following/new',
+      );
 
       expect(first, equals(second));
       expect(first.hashCode, equals(second.hashCode));
       expect(first, isNot(equals(third)));
       expect(first, isNot(equals(differsByAddress)));
       expect(first, isNot(equals(differsByTarget)));
+      expect(first, isNot(equals(differsByMessageId)));
     });
   });
 }
