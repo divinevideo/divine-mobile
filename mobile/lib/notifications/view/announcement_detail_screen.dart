@@ -17,13 +17,12 @@ class AnnouncementDetailScreen extends StatelessWidget {
   });
 
   static const routeName = 'announcement-detail';
-  static const path = '/announcements/:id';
+  static const path = '${RoutePaths.announcementDetailBase}/:id';
 
   final AnnouncementNotification? announcement;
   final Future<void> Function(Uri url)? onLearnMore;
 
-  static String pathForId(String id) =>
-      '/announcements/${Uri.encodeComponent(id)}';
+  static String pathForId(String id) => RoutePaths.announcementDetailForId(id);
 
   @override
   Widget build(BuildContext context) {
