@@ -34,6 +34,7 @@ class NotificationAnalyticsTracker {
     'campaign',
     'direct_message',
     'new_post',
+    'list_add',
   };
   static const _maxRememberedOpens = 256;
 

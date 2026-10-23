@@ -9,7 +9,7 @@ receipt alone does not record an open. New parameters are:
 
 | Parameter | Values |
 | --- | --- |
-| `notification_type` | like, comment, follow, mention, repost, campaign, direct_message, new_post, unknown |
+| `notification_type` | like, comment, follow, mention, repost, campaign, direct_message, new_post, list_add, unknown |
 | `open_source` | os_cold_start, local_cold_start, os_background, local_tap |
 
 `local_tap` identifies a local-notification callback; it does not assert the app

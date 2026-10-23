@@ -91,6 +91,14 @@ void main() {
       },
     );
 
+    test('records list-add opens under their own routed type', () async {
+      await tracker.opened(
+        notificationType: 'list_add',
+        source: NotificationOpenSource.localTap,
+      );
+      expect(sink.events.single.parameters['notification_type'], 'list_add');
+    });
+
     test('does not record when collection is disabled', () async {
       allowed = false;
       await tracker.opened(
