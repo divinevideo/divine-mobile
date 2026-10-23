@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/notifications/notification_tap_router.dart' as app;
 import 'package:openvine/notifications/routing/notification_tap_target.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/router/router.dart';
 
 void main() {
@@ -89,7 +90,18 @@ void main() {
       );
       addTearDown(router.dispose);
       final container = ProviderContainer(
-        overrides: [goRouterProvider.overrideWithValue(router)],
+        overrides: [
+          goRouterProvider.overrideWithValue(router),
+          // Without this the tap's analytics microtask builds the real
+          // AnalyticsService, database, and auth providers.
+          notificationAnalyticsTrackerProvider.overrideWithValue(
+            NotificationAnalyticsTracker(
+              sink: const NoOpAnalyticsEventSink(),
+              collectionAllowed: () async => false,
+              privacyBoundary: () => 'test',
+            ),
+          ),
+        ],
       );
       addTearDown(container.dispose);
 
