@@ -323,7 +323,13 @@ class AnnouncementsRepository {
       }
     }
     if (nextBoundary != null) {
-      _eligibilityTimer = Timer(nextBoundary.difference(now), _emit);
+      final remaining = nextBoundary.difference(now);
+      // Browser timers overflow for long catalog lifetimes; recheck daily.
+      const maximumDelay = Duration(days: 1);
+      _eligibilityTimer = Timer(
+        remaining > maximumDelay ? maximumDelay : remaining,
+        _emit,
+      );
     }
     _snapshots.add(items);
   }
