@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_ce/hive.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/notification_settings/notification_settings_cubit.dart';
 import 'package:openvine/models/notification_preferences.dart';
 import 'package:openvine/services/account_preference_store.dart';
@@ -11,6 +14,10 @@ import 'support/fake_account_state.dart';
 
 const _account =
     '1111111111111111111111111111111111111111111111111111111111111111';
+const _incoming =
+    '2222222222222222222222222222222222222222222222222222222222222222';
+
+class _Box extends Mock implements Box<dynamic> {}
 
 class _MemoryPushStore implements NotificationPreferencesStore {
   NotificationPreferences saved = const NotificationPreferences();
@@ -62,6 +69,81 @@ class _MemoryPushStore implements NotificationPreferencesStore {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   group('account notification preferences', () {
+    for (final mode in [
+      'held initial load',
+      'cached migration',
+      'unawaited reload',
+    ]) {
+      test(
+        '$mode reads the incoming account without async cancellation errors',
+        () async {
+          SharedPreferences.setMockInitialValues({
+            'current_user_pubkey_hex': _account,
+          });
+          final port = AccountPreferenceStore(
+            await SharedPreferences.getInstance(),
+          );
+          final outgoing = FakeAccountState(_account);
+          final incoming = FakeAccountState(_incoming);
+          await incoming.setValue('notifications/commentsEnabled', false);
+          await port.bind(outgoing);
+          final box = _Box();
+          when(() => box.get(any())).thenReturn(
+            jsonEncode(
+              const NotificationPreferences(likesEnabled: false).toJson(),
+            ),
+          );
+          when(() => box.put(any(), any())).thenAnswer((_) async {});
+          when(() => box.delete(any())).thenAnswer((_) async {});
+          final opened = Completer<void>();
+          final release = Completer<Box<dynamic>>();
+          var owner = _account;
+          final service = NotificationPreferencesService(
+            store: HiveNotificationPreferencesStore(
+              openBox: () {
+                if (!opened.isCompleted) opened.complete();
+                return release.future;
+              },
+              openDirtyBox: () async => box,
+            ),
+            currentPubkey: () => owner,
+            publishPreferences: (_, _) async => true,
+            accountPreferences: port,
+          );
+          late NotificationSettingsCubit cubit;
+          final errors = <Object>[];
+          await runZonedGuarded(() async {
+            cubit = NotificationSettingsCubit(preferencesService: service);
+            if (mode == 'cached migration') {
+              release.complete(box);
+              await cubit.load();
+            }
+            Future<void>? load;
+            if (mode == 'unawaited reload') {
+              outgoing.receive({'notifications/likesEnabled': false});
+              await opened.future;
+            } else {
+              load = cubit.load().catchError(errors.add);
+              if (mode != 'cached migration') await opened.future;
+            }
+            owner = _incoming;
+            await port.bind(incoming);
+            if (!release.isCompleted) release.complete(box);
+            await load;
+            await pumpEventQueue();
+          }, (error, _) => errors.add(error));
+          expect(errors, isEmpty);
+          expect(cubit.state.preferences.commentsEnabled, isFalse);
+          expect(cubit.state.preferences.likesEnabled, isTrue);
+          expect(incoming.values, {'notifications/commentsEnabled': false});
+          await cubit.close();
+          service.dispose();
+          port.dispose();
+          await outgoing.close();
+          await incoming.close();
+        },
+      );
+    }
     test(
       'remote flags refresh settings and push registration without echo; reset persists null',
       () async {

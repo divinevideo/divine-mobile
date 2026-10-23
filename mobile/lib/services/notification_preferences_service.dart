@@ -327,6 +327,9 @@ class NotificationPreferencesService {
   _publishPreferences;
   final void Function(String pubkey)? _onStillDirty;
 
+  /// Reads the active account after migration, including if it changed while
+  /// Hive was opening. Stale reads cancel migration without failing UI refreshes;
+  /// mutations retain their own initiating-account lease.
   Future<NotificationPreferences> loadPreferences() async {
     final account = _accountPreferences;
     if (account == null || !account.isBound) return _store.loadPreferences();
@@ -343,9 +346,11 @@ class NotificationPreferencesService {
         } on Object {
           // A missing/corrupt legacy cache cannot replace account state.
         }
-        if (!_disposed) {
+        if (!_disposed && write.isCurrent) {
           final defaults = const NotificationPreferences().toJson();
-          await write.seedLegacyNotificationPreferences({
+          // Seeding captures the fixed repository synchronously and cancels its
+          // projection on a switch. Reads do not need mutation-lease errors.
+          await account.seedLegacyNotificationPreferences({
             if (legacy != null)
               for (final entry in legacy.toJson().entries)
                 if (entry.value != defaults[entry.key])
@@ -354,7 +359,6 @@ class NotificationPreferencesService {
         }
       }());
     }
-    write.ensureCurrent();
     return NotificationPreferences.fromJson({
       for (final field in AccountPreferenceRegistry.notificationFields)
         if (account.read('notifications/$field') is bool)
