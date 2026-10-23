@@ -541,6 +541,76 @@ void main() {
     );
 
     testWidgets(
+      'a single-video route recovers its anchor before appending For You',
+      (tester) async {
+        final nativePlayer = _NativePlayerHarness(tester)..install();
+        addTearDown(nativePlayer.dispose);
+        final videos = createTestVideos(count: 2);
+        final page = Completer<HomeFeedResult>();
+        final repository = _MockDiscoveryVideosRepository();
+        var lookups = 0;
+        when(
+          () => repository.lookupVideoForRouteId(
+            any(),
+            fallbackRouteIds: any(named: 'fallbackRouteIds'),
+          ),
+        ).thenAnswer((_) async {
+          lookups++;
+          return lookups == 1
+              ? const VideoRouteMissing()
+              : VideoRouteFound(videos.first);
+        });
+        when(
+          () => repository.getVideoDiscoveryPage(
+            userPubkey: any(named: 'userPubkey'),
+            cursor: any(named: 'cursor'),
+            preferredLanguages: any(named: 'preferredLanguages'),
+            viewerCountry: any(named: 'viewerCountry'),
+          ),
+        ).thenAnswer((_) => page.future);
+        final videoService = createMockVideoEventService();
+        when(() => videoService.shouldHideVideo(any())).thenReturn(false);
+        when(() => videoService.filterVideoList(any())).thenAnswer(
+          (call) => call.positionalArguments.first as List<VideoEvent>,
+        );
+        await tester.pumpWidget(
+          BlocProvider<VideoVolumeCubit>.value(
+            value: videoVolumeCubit,
+            child: testMaterialApp(
+              mockProfileRepository: mockProfileRepository,
+              mockNip05VerificationService: mockNip05VerificationService,
+              additionalOverrides: [
+                pendingActionServiceProvider.overrideWithValue(null),
+                videosRepositoryProvider.overrideWithValue(repository),
+                videoEventServiceProvider.overrideWithValue(videoService),
+              ],
+              home: VideoDetailScreen(
+                videoId: videos.first.id,
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        expect(find.byType(FullscreenFeedContent), findsNothing);
+        await tester.pump(const Duration(seconds: 2));
+        await tester.pump();
+        expect(lookups, 2);
+        final feedContext = tester.element(find.byType(FullscreenFeedContent));
+        final bloc = feedContext.read<FullscreenFeedBloc>();
+        expect(bloc.state.videos, [videos.first]);
+        page.complete(HomeFeedResult(videos: videos, hasMore: false));
+        // Allow the bounded country-hint timeout used by the page loader.
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump();
+        expect(bloc.state.videos, videos);
+        expect(bloc.state.currentVideo, videos.first);
+        expect(nativeFeed(tester).videos, videos);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
+
+    testWidgets(
       'a single-video route restarts discovery for a newly signed-in viewer',
       (tester) async {
         final nativePlayer = _NativePlayerHarness(tester)..install();

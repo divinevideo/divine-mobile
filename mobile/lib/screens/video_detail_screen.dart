@@ -28,7 +28,6 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/takeover_close_button.dart';
 import 'package:openvine/widgets/tv_static_message_screen.dart';
-import 'package:unified_logger/unified_logger.dart';
 
 class VideoDetailRouteExtra {
   const VideoDetailRouteExtra({
@@ -267,15 +266,15 @@ class _VideoDetailViewState extends ConsumerState<_VideoDetailView> {
             if (builder != null) return builder(video);
             final repository = _repositoryFor(video);
             return PooledFullscreenVideoFeedScreen(
-                  key: ValueKey(repository),
-                  source: SingleVideoViewSource(video),
-                  feedRepository: repository,
-                  initialIndex: 0,
-                  contextTitle: context.l10n.videoDetailContextTitle,
-                  trafficSource: ViewTrafficSource.share,
-                  autoOpenComments: screen.autoOpenComments,
-                  dmReplyContext: screen.dmReplyContext,
-                );
+              key: ValueKey(repository),
+              source: SingleVideoViewSource(video),
+              feedRepository: repository,
+              initialIndex: 0,
+              contextTitle: context.l10n.videoDetailContextTitle,
+              trafficSource: ViewTrafficSource.share,
+              autoOpenComments: screen.autoOpenComments,
+              dmReplyContext: screen.dmReplyContext,
+            );
         }
       },
     );
