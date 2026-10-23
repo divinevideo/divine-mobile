@@ -18,10 +18,13 @@ Future<void> showProfileSupportSheet({
   final appStoreTipPolicy = usesAppleAppStoreTipPolicy;
   final visibleLinks = monetizationLinksForCurrentStorefront(links);
   final tipLinks = visibleLinks
-      .where((link) => link.category == MonetizationLinkCategory.tip)
+      .where((link) => link.provider.category == MonetizationLinkCategory.tip)
       .toList(growable: false);
   final subscriptionLinks = visibleLinks
-      .where((link) => link.category == MonetizationLinkCategory.subscription)
+      .where(
+        (link) =>
+            link.provider.category == MonetizationLinkCategory.subscription,
+      )
       .toList(growable: false);
 
   return VineBottomSheet.show<void>(

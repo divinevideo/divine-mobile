@@ -10,8 +10,8 @@ import 'package:openvine/l10n/l10n.dart';
 /// attention, and nothing for a pending or successful one.
 ///
 /// [failedMessage] is the copy for a failed operation. A cancelled one always
-/// reads as a changed session, since the bloc cancels when the account or repository changes, or
-/// the bloc closes before the request completes.
+/// reads as a changed session, since the bloc cancels when the account or
+/// repository changes, or the bloc closes before the request completes.
 ///
 /// Wrapped in a live region so the message is announced when it appears: the
 /// buttons that trigger these operations lose focus to a spinner meanwhile, so
