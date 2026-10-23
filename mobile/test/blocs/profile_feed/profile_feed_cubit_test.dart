@@ -277,78 +277,79 @@ void main() {
           fromJson: ProfileVideoOffsetSnapshot.fromJson,
         );
 
-    for (final isOwner in [false, true]) {
-      for (final source in ['REST', 'relay', 'pin']) {
-        test(
-          'square-only keeps portrait profile videos from $source (owner=$isOwner)',
-          () async {
-            SharedPreferences.setMockInitialValues({});
-            final preference = FeedAspectRatioPreferenceService(
-              await SharedPreferences.getInstance(),
-            );
-            await preference.setPreference(
-              FeedAspectRatioPreference.squareOnly,
-            );
-            final service =
-                VideoEventService(
-                    _MockNostrClient(),
-                    crashReporter: const SilentCrashReporter(),
-                  )
-                  ..setFeedAspectRatioPreferenceService(preference)
-                  ..setCurrentUserPubkeyProvider(
-                    () => isOwner ? _author : 'c' * 64,
-                  );
-            addTearDown(service.dispose);
-            addTearDown(preference.dispose);
-            when(() => h.ves.filterVideoList(any(), includeFeedShape: false))
-                .thenAnswer(
-                  (i) => service.filterVideoList(
-                    i.positionalArguments[0] as List<VideoEvent>,
-                    includeFeedShape: false,
-                  ),
-                );
-            final portrait = _video(
-              'portrait',
-              dTag: 'portrait',
-              dimensions: '720x1280',
-            );
-            h.stubAuthorFeed(
-              _result(source == 'REST' ? [portrait] : [], hasMore: false),
-            );
-            if (source == 'relay') {
-              when(() => h.ves.authorVideos(any())).thenReturn([portrait]);
-              when(
-                () => h.repo.getAuthorFeed(
-                  authorPubkey: any(named: 'authorPubkey'),
-                  offset: any(named: 'offset'),
-                  relaySeed: any(named: 'relaySeed'),
-                  skipCache: any(named: 'skipCache'),
-                ),
-              ).thenAnswer(
-                (i) async => _result(
-                  i.namedArguments[#relaySeed] as List<VideoEvent>,
-                  hasMore: false,
-                ),
-              );
-            }
-            if (source == 'pin') {
-              when(() => h.pins.fetch(_author))
-                  .thenAnswer((_) async => [_coordinate('portrait')]);
-              when(
-                () => h.repo.getVideosByAddressableIds(
-                  any(),
-                  cacheResults: true,
-                  includeFeedShape: false,
-                ),
-              ).thenAnswer((_) async => [portrait]);
-            }
-            final cubit = h.build();
-            addTearDown(cubit.close);
-            await pumpEventQueue();
-            expect(cubit.state.videos.map((v) => v.id), ['portrait']);
-          },
+    for (final source in ['REST', 'relay', 'pin']) {
+      test('square-only keeps portrait profile videos from $source', () async {
+        SharedPreferences.setMockInitialValues({});
+        final preference = FeedAspectRatioPreferenceService(
+          await SharedPreferences.getInstance(),
         );
-      }
+        await preference.setPreference(FeedAspectRatioPreference.squareOnly);
+        final service = VideoEventService(
+          _MockNostrClient(),
+          crashReporter: const SilentCrashReporter(),
+        )..setFeedAspectRatioPreferenceService(preference);
+        addTearDown(service.dispose);
+        addTearDown(preference.dispose);
+        final portrait = _video(
+          'portrait',
+          dTag: 'portrait',
+          dimensions: '720x1280',
+        );
+        // A feed caller drops the portrait video under this preference.
+        expect(service.filterVideoList([portrait]), isEmpty);
+        // Forward the flag the cubit passes, so the real preference decides.
+        when(
+          () => h.ves.filterVideoList(
+            any(),
+            includeFeedShape: any(named: 'includeFeedShape'),
+          ),
+        ).thenAnswer(
+          (i) => service.filterVideoList(
+            i.positionalArguments[0] as List<VideoEvent>,
+            includeFeedShape: i.namedArguments[#includeFeedShape] as bool,
+          ),
+        );
+        h.stubAuthorFeed(
+          _result(source == 'REST' ? [portrait] : [], hasMore: false),
+        );
+        if (source == 'relay') {
+          when(() => h.ves.authorVideos(any())).thenReturn([portrait]);
+          when(
+            () => h.repo.getAuthorFeed(
+              authorPubkey: any(named: 'authorPubkey'),
+              offset: any(named: 'offset'),
+              relaySeed: any(named: 'relaySeed'),
+              skipCache: any(named: 'skipCache'),
+            ),
+          ).thenAnswer(
+            (i) async => _result(
+              i.namedArguments[#relaySeed] as List<VideoEvent>,
+              hasMore: false,
+            ),
+          );
+        }
+        if (source == 'pin') {
+          when(
+            () => h.pins.fetch(_author),
+          ).thenAnswer((_) async => [_coordinate('portrait')]);
+          // The repository applies the same preference unless asked not to.
+          when(
+            () => h.repo.getVideosByAddressableIds(
+              any(),
+              cacheResults: true,
+              includeFeedShape: any(named: 'includeFeedShape'),
+            ),
+          ).thenAnswer(
+            (i) async => i.namedArguments[#includeFeedShape] == false
+                ? [portrait]
+                : const <VideoEvent>[],
+          );
+        }
+        final cubit = h.build();
+        addTearDown(cubit.close);
+        await pumpEventQueue();
+        expect(cubit.state.videos.map((v) => v.id), ['portrait']);
+      });
     }
 
     test('close unsubscribes the active profile feed subscription', () async {
