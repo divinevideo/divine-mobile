@@ -561,12 +561,16 @@ void main() {
         ),
       );
       await tester.pump();
-      tester
-          .widget<InlineCommentComposerBar>(
-            find.byType(InlineCommentComposerBar),
-          )
-          .onFocusChanged!(true);
+      final composerField = find.descendant(
+        of: find.byType(InlineCommentComposerBar),
+        matching: find.byType(EditableText),
+      );
+      await tester.showKeyboard(composerField);
       await tester.pump();
+      expect(
+        tester.widget<EditableText>(composerField).focusNode.hasFocus,
+        isTrue,
+      );
       expect(
         tester
             .widget<Scaffold>(find.byType(Scaffold).first)
@@ -578,18 +582,65 @@ void main() {
       stateController.add(next);
       await tester.pump();
       expect(
+        tester.widget<EditableText>(composerField).focusNode.hasFocus,
+        isFalse,
+      );
+      expect(
         tester
             .widget<Scaffold>(find.byType(Scaffold).first)
             .resizeToAvoidBottomInset,
         isFalse,
       );
-      expect(
-        tester.widget<FeedVideos>(find.byType(FeedVideos)).isActive,
-        isTrue,
-      );
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
     });
+
+    testWidgets(
+      'leaving the shared DM reel resumes playback paused for a reply',
+      (tester) async {
+        final nativePlayer = _NativePlayerHarness(tester)..install();
+        addTearDown(nativePlayer.dispose);
+        final videos = createTestVideos(count: 2);
+        final initial = FullscreenFeedState(
+          status: FullscreenFeedStatus.ready,
+          videos: videos,
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            state: initial,
+            mockAuthService: createMockAuthService(
+              authState: AuthState.authenticated,
+              currentPublicKeyHex: testPubkey,
+            ),
+            additionalOverrides: [
+              pendingActionServiceProvider.overrideWithValue(null),
+            ],
+            dmReplyContext: sharedReelDmContext(),
+            initialVideoKey: videos.first.feedDedupKey,
+          ),
+        );
+        await tester.pump();
+        tester
+            .widget<ReelReplyBridge>(find.byType(ReelReplyBridge))
+            .setComposerFocused(true);
+        await tester.pump();
+        expect(
+          tester.widget<FeedVideos>(find.byType(FeedVideos)).isActive,
+          isFalse,
+        );
+        final next = initial.copyWith(currentIndex: 1);
+        when(() => mockBloc.state).thenReturn(next);
+        stateController.add(next);
+        await tester.pump();
+        expect(find.byType(ReelReplyBridge), findsNothing);
+        expect(
+          tester.widget<FeedVideos>(find.byType(FeedVideos)).isActive,
+          isTrue,
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
 
     testWidgets(
       'recommendation swipes record For You rather than share depth',
