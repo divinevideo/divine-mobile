@@ -1541,6 +1541,7 @@ void main() {
             () => mockClaimsRepository.resolveClaims(
               pubkey: testPubkey,
               freshTags: any(named: 'freshTags'),
+              cached: null,
               renderedClaims: const [aliceClaim],
             ),
           ).called(1);
@@ -1745,7 +1746,7 @@ void main() {
             () => claims.resolveClaims(
               pubkey: testPubkey,
               freshTags: const [],
-              renderedClaims: const [],
+              cached: null,
             ),
           ).thenAnswer((_) async => const [claim]);
           final bloc = OtherProfileBloc(

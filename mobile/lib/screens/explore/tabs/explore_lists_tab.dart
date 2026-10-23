@@ -65,9 +65,7 @@ class _ExploreListsTabState extends ConsumerState<ExploreListsTab>
     final viewerPubkey = ref.watch(authServiceProvider).currentPublicKeyHex;
 
     if (service == null && !curatedState.hasError) {
-      return _LoadingGallery(
-        showCreationActions: true,
-      );
+      return const _LoadingGallery(showCreationActions: true);
     }
 
     return BlocProvider(
@@ -433,17 +431,17 @@ class _LoadingGallery extends StatelessWidget {
             if (showCreationActions) const _ExploreCreationHeader(),
             Semantics(
               label: context.l10n.listsDiscoveryLoadingLabel,
-              child: ListSkeletonizer(
+              child: const ListSkeletonizer(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   spacing: 16,
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: _SkeletonCards(
                         card: DivineListThumbnailSkeleton.videos(),
                       ),
                     ),
-                    const Expanded(
+                    Expanded(
                       child: _SkeletonCards(
                         card: DivineListThumbnailSkeleton.people(),
                       ),

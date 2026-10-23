@@ -77,7 +77,6 @@ void main() {
     late _MockCuratedListService mockListService;
     late String pushedRoute;
     late _MockPeopleListsBloc peopleBloc;
-    var enabled = true;
     const owner =
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
     final personList = UserList(
@@ -93,7 +92,6 @@ void main() {
       _videoLoad = null;
       _failInitialization = false;
       _initializationAttempts = 0;
-      enabled = true;
       peopleBloc = _MockPeopleListsBloc();
       when(() => peopleBloc.state).thenReturn(
         const PeopleListsState(
@@ -276,9 +274,9 @@ void main() {
     });
 
     testWidgets(
-      'master off hides people controls and retains video and bookmarks',
+      'sign-out hides people controls and retains video and bookmarks',
       (tester) async {
-        enabled = false;
+        when(() => peopleBloc.state).thenReturn(const PeopleListsState());
         await tester.pumpWidget(buildSubject());
         await tester.pumpAndSettle();
         expect(find.text('New people list'), findsNothing);

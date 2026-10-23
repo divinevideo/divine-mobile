@@ -104,7 +104,7 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
     final cachedProfile = await _profileRepository.getCachedProfile(
       pubkey: pubkey,
     );
-    if (!_isCurrentRequest(request, emit)) return;
+    if (isClosed || emit.isDone || request != _profileRequest) return;
     // Carry claims through the reload so chips do not vanish and re-pop
     // while the verifier revalidates (#3936). Read AFTER the await so an
     // authoritative claims resolve landing during the cache read is not
@@ -121,7 +121,7 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
       final freshProfile = await _profileRepository.fetchFreshProfile(
         pubkey: pubkey,
       );
-      if (!_isCurrentRequest(request, emit)) return;
+      if (isClosed || emit.isDone || request != _profileRequest) return;
       final latestClaims = _claimsFromState(state);
       if (freshProfile != null) {
         emit(
@@ -156,7 +156,7 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
         );
       }
     } catch (e) {
-      if (!_isCurrentRequest(request, emit)) return;
+      if (isClosed || emit.isDone || request != _profileRequest) return;
       if (cachedProfile != null && !_profileRepository.isVanished(pubkey)) {
         emit(
           OtherProfileLoaded(
@@ -211,7 +211,7 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
       final freshProfile = await _profileRepository.fetchFreshProfile(
         pubkey: pubkey,
       );
-      if (!_isCurrentRequest(request, emit)) return;
+      if (isClosed || emit.isDone || request != _profileRequest) return;
       if (freshProfile != null) {
         emit(
           OtherProfileLoaded(
@@ -237,7 +237,7 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
         );
       }
     } catch (e) {
-      if (!_isCurrentRequest(request, emit)) return;
+      if (isClosed || emit.isDone || request != _profileRequest) return;
       if (_profileRepository.isVanished(pubkey)) {
         emit(
           const OtherProfileError(errorType: OtherProfileErrorType.notFound),
@@ -262,9 +262,6 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
     }
   }
 
-  bool _isCurrentRequest(int request, Emitter<OtherProfileState> emit) =>
-      !isClosed && !emit.isDone && request == _profileRequest;
-
   void _requestSupportLinks(int request) {
     if (_loadSupportLinks) add(_SupportLinksRequested(request));
   }
@@ -275,7 +272,7 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
     _SupportLinksRequested event,
     Emitter<OtherProfileState> emit,
   ) async {
-    if (!_isCurrentRequest(event.request, emit)) return;
+    if (isClosed || emit.isDone || event.request != _profileRequest) return;
     UserProfile? raw;
     try {
       raw = await _profileRepository.fetchFreshProfile(
@@ -283,7 +280,7 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
         requireRawKind0: true,
       );
     } on Exception catch (error, stackTrace) {
-      if (!_isCurrentRequest(event.request, emit)) return;
+      if (isClosed || emit.isDone || event.request != _profileRequest) return;
       if (_profileRepository.isVanished(pubkey)) {
         emit(
           const OtherProfileError(errorType: OtherProfileErrorType.notFound),
@@ -300,7 +297,11 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
       emit(const OtherProfileError(errorType: OtherProfileErrorType.notFound));
       return;
     }
-    if (!_isCurrentRequest(event.request, emit) || raw == null) return;
+    if (isClosed ||
+        emit.isDone ||
+        event.request != _profileRequest ||
+        raw == null)
+      return;
     final latest = state;
     if (latest is! OtherProfileLoaded || raw.pubkey != pubkey) return;
     // REST projections may carry a synthetic DateTime.now timestamp. Only a

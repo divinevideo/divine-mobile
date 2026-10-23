@@ -1,8 +1,6 @@
 // ABOUTME: Verifies retired people-list overrides cannot hide list actions.
 // ABOUTME: Caller control and tile navigation remain independently available.
 
-import 'dart:async';
-
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -63,10 +61,8 @@ void main() {
         );
         // Keep the same service and saved preferences while visiting settings.
         final context = tester.element(find.byType(UserProfileTile));
-        unawaited(
-          Navigator.of(context).push<void>(
-            MaterialPageRoute(builder: (_) => const FeatureFlagScreen()),
-          ),
+        Navigator.of(context).push<void>(
+          MaterialPageRoute(builder: (_) => const FeatureFlagScreen()),
         );
         await tester.pumpAndSettle();
         expect(find.text('Feature Flags'), findsOneWidget);
