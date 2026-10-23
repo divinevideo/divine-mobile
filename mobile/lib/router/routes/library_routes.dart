@@ -1,63 +1,101 @@
 // ABOUTME: Library routes (drafts / clips / clips-only / sounds tabs, add sound)
-// ABOUTME: Split from app_router.dart (#4508)
+// ABOUTME: Typed with go_router_builder; conventions in .claude/rules/routing.md.
 
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/router/fade_upwards_page.dart';
 import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/screens/sounds/add_sound_page.dart';
 
-List<RouteBase> libraryRoutes() {
-  return [
-    GoRoute(
-      path: LibraryScreen.draftsPath,
-      name: LibraryScreen.draftsRouteName,
-      pageBuilder: (_, state) =>
-          fadeUpwardsPage(state: state, child: const LibraryScreen()),
-    ),
-    GoRoute(
-      path: LibraryScreen.clipsPath,
-      name: LibraryScreen.clipsRouteName,
-      pageBuilder: (_, state) => fadeUpwardsPage(
+part 'library_routes.g.dart';
+
+List<RouteBase> libraryRoutes() => $appRoutes;
+
+@TypedGoRoute<LibraryDraftsRouteData>(
+  path: LibraryScreen.draftsPath,
+  name: LibraryScreen.draftsRouteName,
+)
+class LibraryDraftsRouteData extends GoRouteData with $LibraryDraftsRouteData {
+  const LibraryDraftsRouteData();
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      fadeUpwardsPage(state: state, child: const LibraryScreen());
+}
+
+@TypedGoRoute<LibraryClipsRouteData>(
+  path: LibraryScreen.clipsPath,
+  name: LibraryScreen.clipsRouteName,
+)
+class LibraryClipsRouteData extends GoRouteData with $LibraryClipsRouteData {
+  const LibraryClipsRouteData();
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      fadeUpwardsPage(
         state: state,
         child: const LibraryScreen(initialTabIndex: 1),
-      ),
-    ),
-    GoRoute(
-      path: LibraryScreen.clipsOnlyPath,
-      name: LibraryScreen.clipsOnlyRouteName,
-      pageBuilder: (_, state) => fadeUpwardsPage(
+      );
+}
+
+@TypedGoRoute<LibraryClipsOnlyRouteData>(
+  path: LibraryScreen.clipsOnlyPath,
+  name: LibraryScreen.clipsOnlyRouteName,
+)
+class LibraryClipsOnlyRouteData extends GoRouteData
+    with $LibraryClipsOnlyRouteData {
+  const LibraryClipsOnlyRouteData({
+    @TypedQueryParameter(name: 'type') this.type,
+  });
+
+  /// Scopes the clips to the recorder's mode (stop-motion vs normal), as a
+  /// [LibraryClipTypeFilter.queryValue]; absent lists both types, the
+  /// standalone default.
+  final String? type;
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      fadeUpwardsPage(
         state: state,
-        // `type` scopes the clips to the recorder's mode (stop-motion vs normal);
-        // absent → both types (the standalone default).
         child: LibraryScreen(
           initialTabIndex: 1,
           tabsMode: LibraryTabsMode.withoutSounds,
           // The recorder session owns the autosave draft, so listing it here
           // would offer the user their own live session to reopen.
           includeAutosaveDraft: false,
-          clipTypeFilter: LibraryClipTypeFilter.fromQuery(
-            state.uri.queryParameters['type'],
-          ),
+          clipTypeFilter: LibraryClipTypeFilter.fromQuery(type),
         ),
-      ),
+      );
+}
+
+@TypedGoRoute<LibrarySoundsRouteData>(
+  path: LibraryScreen.soundsPath,
+  name: LibraryScreen.soundsRouteName,
+  routes: [
+    // Nested so back from Add sound lands on the Sounds tab, where the added
+    // sound is already listed.
+    TypedGoRoute<AddSoundRouteData>(
+      path: AddSoundPage.subpath,
+      name: AddSoundPage.routeName,
     ),
-    GoRoute(
-      path: LibraryScreen.soundsPath,
-      name: LibraryScreen.soundsRouteName,
-      pageBuilder: (_, state) => fadeUpwardsPage(
+  ],
+)
+class LibrarySoundsRouteData extends GoRouteData with $LibrarySoundsRouteData {
+  const LibrarySoundsRouteData();
+
+  @override
+  Page<void> buildPage(BuildContext context, GoRouterState state) =>
+      fadeUpwardsPage(
         state: state,
         child: const LibraryScreen(initialTabIndex: 2),
-      ),
-      routes: [
-        // Nested so back from Add sound lands on the Sounds tab, where the
-        // added sound is already listed.
-        GoRoute(
-          path: AddSoundPage.subpath,
-          name: AddSoundPage.routeName,
-          builder: (_, _) => const AddSoundPage(),
-        ),
-      ],
-    ),
-  ];
+      );
+}
+
+class AddSoundRouteData extends GoRouteData with $AddSoundRouteData {
+  const AddSoundRouteData();
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const AddSoundPage();
 }

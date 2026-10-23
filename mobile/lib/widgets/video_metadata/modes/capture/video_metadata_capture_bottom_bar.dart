@@ -7,8 +7,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/router/routes/library_routes.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
-import 'package:openvine/screens/library_screen.dart';
 import 'package:openvine/services/gallery_save_service.dart';
 import 'package:openvine/utils/gallery_save_utils.dart';
 import 'package:openvine/widgets/video_metadata/scheduled_time_format.dart';
@@ -76,7 +76,8 @@ class VideoMetadataCaptureBottomBar extends ConsumerWidget {
           : context.l10n.videoMetadataFailedToSaveSnackbar,
       error: !draftSaved,
       actionLabel: context.l10n.videoMetadataGoToLibraryButton,
-      onActionPressed: () => router.push(LibraryScreen.draftsPath),
+      onActionPressed: () =>
+          router.push(const LibraryDraftsRouteData().location),
     );
 
     if (draftSaved) {

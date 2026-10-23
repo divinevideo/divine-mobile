@@ -17,6 +17,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/saved_sound.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/creator_sync_provider.dart';
+import 'package:openvine/router/routes/library_routes.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/screens/sounds/add_sound_page.dart';
 import 'package:openvine/utils/delete_result_localization.dart';
@@ -387,7 +388,7 @@ class _SoundsTabState extends ConsumerState<SoundsTab>
   Future<void> _onAddSoundTap() async {
     await _stopPreview();
     if (!mounted) return;
-    await context.push<void>(AddSoundPage.path);
+    await const AddSoundRouteData().push<void>(context);
   }
 
   Future<void> _onOpenDetails(SavedSound sound) async {

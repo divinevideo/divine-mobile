@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/blocs/clips_library/clips_library_bloc.dart';
 import 'package:openvine/blocs/video_recorder/video_recorder_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -178,7 +179,7 @@ void main() {
           builder: (_, _) => const _StubScreen(label: 'metadata'),
         ),
         GoRoute(
-          path: '/library-clips',
+          path: LibraryScreen.clipsOnlyPath,
           name: LibraryScreen.clipsOnlyRouteName,
           builder: (_, _) => const _StubScreen(label: 'library'),
         ),
@@ -302,6 +303,42 @@ void main() {
             const VideoRecorderRecordingLockedForNavigation(),
           ),
         ).called(1);
+      });
+
+      testWidgets('openRecorderLibrary scopes the library to stop-motion '
+          'clips in stop-motion mode', (tester) async {
+        when(() => recorderBloc.state).thenReturn(
+          const VideoRecorderBlocState(
+            recorderMode: VideoRecorderMode.stopMotion,
+          ),
+        );
+
+        await tester.pumpWidget(buildHarness());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('open-library')));
+        await tester.pumpAndSettle();
+
+        final library = GoRouterState.of(tester.element(find.text('library')));
+        expect(
+          library.uri.queryParameters['type'],
+          equals(LibraryClipTypeFilter.stopMotion.queryValue),
+        );
+      });
+
+      testWidgets('openRecorderLibrary scopes the library to video clips '
+          'in capture mode', (tester) async {
+        await tester.pumpWidget(buildHarness());
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const Key('open-library')));
+        await tester.pumpAndSettle();
+
+        final library = GoRouterState.of(tester.element(find.text('library')));
+        expect(
+          library.uri.queryParameters['type'],
+          equals(LibraryClipTypeFilter.video.queryValue),
+        );
       });
 
       testWidgets('openVideoEditorFromRecorder mutes clips in lip-sync mode', (
