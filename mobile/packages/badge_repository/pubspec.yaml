@@ -11,6 +11,8 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
+  account_state_repository:
+    path: ../account_state_repository
   meta: ^1.17.0
   nostr_client:
     path: ../nostr_client

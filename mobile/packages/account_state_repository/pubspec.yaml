@@ -1,0 +1,21 @@
+name: account_state_repository
+description: Encrypted durable account-owned state with per-field reconciliation.
+version: 0.0.1
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  nostr_client:
+    path: ../nostr_client
+  nostr_sdk:
+    path: ../nostr_sdk
+  shared_preferences: ^2.5.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  mocktail: ^1.0.4
+  very_good_analysis: ^10.2.0

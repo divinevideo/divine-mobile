@@ -141,7 +141,51 @@ void main() {
     ))!;
   }
 
+  Future<Set<String>> flushedSetHidden(
+    BadgeDismissalSync sync,
+    String account,
+    Set<String> local,
+    String coordinate, {
+    required bool hidden,
+  }) async {
+    final result = await sync.setHidden(
+      account,
+      local,
+      coordinate,
+      hidden: hidden,
+    );
+    await sync.synchronize(account);
+    return result;
+  }
+
   group('load / setHidden', () {
+    test(
+      'offline rejection and Undo commit without a network acknowledgment',
+      () async {
+        timedOut = true;
+        expect(await phone.setHidden(pubkey, {}, coordinate, hidden: true), {
+          coordinate,
+        });
+        phone = BadgeDismissalSync(
+          client: client,
+          preferences: phonePreferences,
+          signer: () => signer,
+        );
+        expect(await phone.load(pubkey, {}), {coordinate});
+        expect(
+          await phone.setHidden(
+            pubkey,
+            {coordinate},
+            coordinate,
+            hidden: false,
+          ),
+          isEmpty,
+        );
+        timedOut = false;
+        await phone.synchronize(pubkey);
+        expect(await desktop.load(pubkey, {}), isEmpty);
+      },
+    );
     test('display does not wait for consolidation acknowledgment', () async {
       final acknowledgment = Completer<PublishOutcome>();
       Event? pending;
@@ -187,7 +231,7 @@ void main() {
     test(
       'resends the signed cache when a complete relay read has lost it',
       () async {
-        await phone.setHidden(pubkey, {}, coordinate, hidden: true);
+        await flushedSetHidden(phone, pubkey, {}, coordinate, hidden: true);
         final original = relayEvents.single;
         relayEvents.clear();
         expect(await phone.load(pubkey, {coordinate}), {coordinate});
@@ -204,7 +248,7 @@ void main() {
           'badge_dismissal_event_$pubkey',
           'invalid',
         );
-        await phone.setHidden(pubkey, {}, coordinate, hidden: true);
+        await flushedSetHidden(phone, pubkey, {}, coordinate, hidden: true);
         expect(await desktop.load(pubkey, {}), {coordinate});
       },
     );
@@ -236,9 +280,10 @@ void main() {
     test(
       'rejection and undo reach another device without sharing storage',
       () async {
-        await phone.setHidden(pubkey, {}, coordinate, hidden: true);
+        await flushedSetHidden(phone, pubkey, {}, coordinate, hidden: true);
         expect(await desktop.load(pubkey, {}), {coordinate});
-        await desktop.setHidden(
+        await flushedSetHidden(
+          desktop,
           pubkey,
           {coordinate},
           coordinate,
@@ -249,7 +294,7 @@ void main() {
     );
 
     test('published decisions are encrypted to the account', () async {
-      await phone.setHidden(pubkey, {}, coordinate, hidden: true);
+      await flushedSetHidden(phone, pubkey, {}, coordinate, hidden: true);
       final event = relayEvents.single;
       expect(event.kind, EventKind.appSpecificData);
       expect(event.isSigned, isTrue);
@@ -274,7 +319,13 @@ void main() {
       expect(await phone.load(pubkey, {coordinate}), {coordinate});
       await migration.future;
       expect(await desktop.load(pubkey, {}), {coordinate});
-      await desktop.setHidden(pubkey, {coordinate}, coordinate, hidden: false);
+      await flushedSetHidden(
+        desktop,
+        pubkey,
+        {coordinate},
+        coordinate,
+        hidden: false,
+      );
       final nextMigration = Completer<void>();
       onPublished = (_) {
         if (!nextMigration.isCompleted) nextMigration.complete();
@@ -287,8 +338,14 @@ void main() {
     });
 
     test('reads remote decisions before editing another badge', () async {
-      await phone.setHidden(pubkey, {}, coordinate, hidden: true);
-      await desktop.setHidden(pubkey, {}, otherCoordinate, hidden: true);
+      await flushedSetHidden(phone, pubkey, {}, coordinate, hidden: true);
+      await flushedSetHidden(
+        desktop,
+        pubkey,
+        {},
+        otherCoordinate,
+        hidden: true,
+      );
       expect(await phone.load(pubkey, {coordinate}), {
         coordinate,
         otherCoordinate,
@@ -298,14 +355,20 @@ void main() {
     test(
       'keeps an acknowledged write through stale reads and a restart',
       () async {
-        await phone.setHidden(pubkey, {}, coordinate, hidden: true);
+        await flushedSetHidden(phone, pubkey, {}, coordinate, hidden: true);
         relayEvents.clear();
         phone = BadgeDismissalSync(
           client: client,
           preferences: phonePreferences,
           signer: () => signer,
         );
-        await phone.setHidden(pubkey, {coordinate}, coordinate, hidden: false);
+        await flushedSetHidden(
+          phone,
+          pubkey,
+          {coordinate},
+          coordinate,
+          hidden: false,
+        );
         expect(await phone.load(pubkey, {coordinate}), isEmpty);
       },
     );
@@ -313,26 +376,29 @@ void main() {
     test('does not publish over an incomplete relay read', () async {
       timedOut = true;
       await expectLater(
-        phone.setHidden(pubkey, {}, coordinate, hidden: true),
-        throwsA(isA<BadgeDismissalSyncException>()),
+        flushedSetHidden(phone, pubkey, {}, coordinate, hidden: true),
+        throwsA(isA<Exception>()),
       );
       expect(relayEvents, isEmpty);
       expect(await phone.load(pubkey, {coordinate}), {coordinate});
     });
 
-    test('rejected publish does not record a successful dismissal', () async {
+    test('rejected publish retains a durable dismissal for retry', () async {
       rejectPublish = true;
       await expectLater(
-        phone.setHidden(pubkey, {}, coordinate, hidden: true),
-        throwsA(isA<BadgeDismissalSyncException>()),
+        flushedSetHidden(phone, pubkey, {}, coordinate, hidden: true),
+        throwsA(isA<Exception>()),
       );
-      expect(await phone.load(pubkey, {}), isEmpty);
+      expect(await phone.load(pubkey, {}), {coordinate});
+      rejectPublish = false;
+      await phone.synchronize(pubkey);
+      expect(await desktop.load(pubkey, {}), {coordinate});
     });
 
     test(
       'another account cannot decrypt or reuse the local decisions',
       () async {
-        await phone.setHidden(pubkey, {}, coordinate, hidden: true);
+        await flushedSetHidden(phone, pubkey, {}, coordinate, hidden: true);
         final otherSigner = LocalNostrSigner('2'.padLeft(64, '0'));
         final otherPubkey = (await otherSigner.getPublicKey())!;
         final otherAccount = BadgeDismissalSync(
@@ -345,7 +411,7 @@ void main() {
     );
 
     test('edits advance beyond the latest known timestamp', () async {
-      await phone.setHidden(pubkey, {}, coordinate, hidden: true);
+      await flushedSetHidden(phone, pubkey, {}, coordinate, hidden: true);
       final first = relayEvents.single;
       // A known future timestamp makes the +1 requirement deterministic,
       // independent of how long encryption takes on a shared runner.
@@ -357,14 +423,20 @@ void main() {
         createdAt: 4102444800,
       );
       relayEvents = [(await signer.signEvent(ahead))!];
-      await phone.setHidden(pubkey, {coordinate}, coordinate, hidden: false);
+      await flushedSetHidden(
+        phone,
+        pubkey,
+        {coordinate},
+        coordinate,
+        hidden: false,
+      );
       expect(relayEvents.last.createdAt, 4102444801);
       expect(await desktop.load(pubkey, {}), isEmpty);
     });
     test(
       'unavailable decryption preserves local choices without publishing',
       () async {
-        await phone.setHidden(pubkey, {}, coordinate, hidden: true);
+        await flushedSetHidden(phone, pubkey, {}, coordinate, hidden: true);
         signer.refuseDecrypt = true;
         expect(await desktop.load(pubkey, {otherCoordinate}), {
           otherCoordinate,
@@ -376,13 +448,20 @@ void main() {
     test(
       'merges a cached undo with a newer stale snapshot from another device',
       () async {
-        await phone.setHidden(pubkey, {}, coordinate, hidden: true);
+        await flushedSetHidden(phone, pubkey, {}, coordinate, hidden: true);
         await desktop.load(pubkey, {});
         final oldSnapshot = relayEvents.single;
-        await phone.setHidden(pubkey, {coordinate}, coordinate, hidden: false);
+        await flushedSetHidden(
+          phone,
+          pubkey,
+          {coordinate},
+          coordinate,
+          hidden: false,
+        );
         final undo = relayEvents.last;
         relayEvents = [oldSnapshot];
-        await desktop.setHidden(
+        await flushedSetHidden(
+          desktop,
           pubkey,
           {coordinate},
           otherCoordinate,
@@ -437,7 +516,7 @@ void main() {
             otherCoordinate,
           });
           await expectLater(
-            phone.setHidden(pubkey, {}, coordinate, hidden: true),
+            flushedSetHidden(phone, pubkey, {}, coordinate, hidden: true),
             throwsFormatException,
           );
           expect(relayEvents, hasLength(1));
@@ -449,7 +528,7 @@ void main() {
       relayEvents = [await snapshot({}, raw: 'private invalid JSON')];
       expect(await phone.load(pubkey, {coordinate}), {coordinate});
       await expectLater(
-        phone.setHidden(pubkey, {}, coordinate, hidden: true),
+        flushedSetHidden(phone, pubkey, {}, coordinate, hidden: true),
         throwsA(
           isA<FormatException>().having(
             (error) => error.source,
@@ -489,8 +568,8 @@ void main() {
         signer: () => LocalNostrSigner('2'.padLeft(64, '0')),
       );
       await expectLater(
-        mismatch.setHidden(pubkey, {}, coordinate, hidden: true),
-        throwsA(isA<BadgeDismissalSyncException>()),
+        flushedSetHidden(mismatch, pubkey, {}, coordinate, hidden: true),
+        throwsA(isA<Exception>()),
       );
       expect(relayEvents, isEmpty);
     });
@@ -498,8 +577,8 @@ void main() {
     test('encryption refusal does not change a decision', () async {
       signer.refuseEncrypt = true;
       await expectLater(
-        phone.setHidden(pubkey, {}, coordinate, hidden: true),
-        throwsA(isA<BadgeDismissalSyncException>()),
+        flushedSetHidden(phone, pubkey, {}, coordinate, hidden: true),
+        throwsA(isA<Exception>()),
       );
       expect(relayEvents, isEmpty);
     });
@@ -507,8 +586,8 @@ void main() {
     test('signing refusal does not change a decision', () async {
       signer.refuseSign = true;
       await expectLater(
-        phone.setHidden(pubkey, {}, coordinate, hidden: true),
-        throwsA(isA<BadgeDismissalSyncException>()),
+        flushedSetHidden(phone, pubkey, {}, coordinate, hidden: true),
+        throwsA(isA<Exception>()),
       );
       expect(relayEvents, isEmpty);
     });
@@ -518,8 +597,8 @@ void main() {
       () async {
         signer.changeSignedContent = true;
         await expectLater(
-          phone.setHidden(pubkey, {}, coordinate, hidden: true),
-          throwsA(isA<BadgeDismissalSyncException>()),
+          flushedSetHidden(phone, pubkey, {}, coordinate, hidden: true),
+          throwsA(isA<Exception>()),
         );
         expect(relayEvents, isEmpty);
       },
@@ -528,8 +607,8 @@ void main() {
     test('an unsigned event is not published', () async {
       signer.returnUnsigned = true;
       await expectLater(
-        phone.setHidden(pubkey, {}, coordinate, hidden: true),
-        throwsA(isA<BadgeDismissalSyncException>()),
+        flushedSetHidden(phone, pubkey, {}, coordinate, hidden: true),
+        throwsA(isA<Exception>()),
       );
       expect(relayEvents, isEmpty);
     });
@@ -542,15 +621,16 @@ void main() {
         when(
           () => preferences.setString(any(), any()),
         ).thenAnswer((_) async => false);
+        when(() => preferences.remove(any())).thenAnswer((_) async => true);
         final brokenCache = BadgeDismissalSync(
           client: client,
           preferences: preferences,
           signer: () => signer,
         );
         await expectLater(
-          brokenCache.setHidden(pubkey, {}, coordinate, hidden: true),
+          flushedSetHidden(brokenCache, pubkey, {}, coordinate, hidden: true),
           throwsA(
-            isA<BadgeDismissalSyncException>().having(
+            isA<Exception>().having(
               (error) => error.toString(),
               'description',
               contains('Could not save decisions'),
@@ -617,13 +697,20 @@ void main() {
     test(
       'an incomplete read retains every signed snapshot across restart',
       () async {
-        await phone.setHidden(pubkey, {}, coordinate, hidden: true);
+        await flushedSetHidden(phone, pubkey, {}, coordinate, hidden: true);
         await desktop.load(pubkey, {});
         final old = relayEvents.single;
-        await phone.setHidden(pubkey, {coordinate}, coordinate, hidden: false);
+        await flushedSetHidden(
+          phone,
+          pubkey,
+          {coordinate},
+          coordinate,
+          hidden: false,
+        );
         final undo = relayEvents.last;
         relayEvents = [old];
-        await desktop.setHidden(
+        await flushedSetHidden(
+          desktop,
           pubkey,
           {coordinate},
           otherCoordinate,

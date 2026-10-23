@@ -552,6 +552,7 @@ void main() {
       );
 
       await repository.hideAward(coordinate);
+      await repository.synchronizeAccountState();
 
       // A separate preferences instance models desktop with no phone storage.
       SharedPreferences.setMockInitialValues({});

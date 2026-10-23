@@ -1283,6 +1283,15 @@ class BadgeRepository {
     await _publishProfileBadges(remaining);
   }
 
+  /// Flushes durable account-owned badge choices after startup or reconnect.
+  Future<void> synchronizeAccountState() =>
+      _dismissalSync.synchronize(_requireCurrentPubkey());
+
+  Future<void> startAccountState() =>
+      _dismissalSync.start(_requireCurrentPubkey());
+
+  Future<void> closeAccountState() => _dismissalSync.close();
+
   /// Brings the dismissed badge at [definitionCoordinate] back into the
   /// awarded list.
   Future<void> unhideAward(String definitionCoordinate) async {
