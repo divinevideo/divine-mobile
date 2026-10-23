@@ -179,6 +179,9 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
     if (videoId != null) _seenVideoIds.add(videoId);
   }
 
+  ViewTrafficSource _trafficSourceFor(VideoEvent video) =>
+      widget.trafficSourceForVideo?.call(video) ?? widget.trafficSource;
+
   @override
   void initState() {
     super.initState();
@@ -438,9 +441,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
           if (!isProgrammaticActivation && _seenVideoIds.add(video.id)) {
             unawaited(
               _consumptionAnalytics.feedDepthReached(
-                trafficSource:
-                    widget.trafficSourceForVideo?.call(video) ??
-                    widget.trafficSource,
+                trafficSource: _trafficSourceFor(video),
                 feedSessionId: _feedSessionId,
                 depth: _seenVideoIds.length,
                 sourceDetail: widget.sourceDetail,
@@ -586,9 +587,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
                 isActive: isActive,
                 isFeedVisible: isFeedActive,
                 position: index,
-                trafficSource:
-                    widget.trafficSourceForVideo?.call(video) ??
-                    widget.trafficSource,
+                trafficSource: _trafficSourceFor(video),
                 sourceDetail: widget.sourceDetail,
                 child: _Overlay(
                   controller: controller,
