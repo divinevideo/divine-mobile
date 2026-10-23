@@ -7,6 +7,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -14,7 +15,8 @@ import 'package:videos_repository/videos_repository.dart';
 part 'video_detail_state.dart';
 
 /// Searches for a route's video while connections or indexing catch up.
-class VideoDetailCubit extends Cubit<VideoDetailState> {
+class VideoDetailCubit extends Cubit<VideoDetailState>
+    with CloseGuardedEmit<VideoDetailState> {
   VideoDetailCubit({
     required VideosRepository videosRepository,
     required bool Function() isRelayReady,
@@ -47,7 +49,7 @@ class VideoDetailCubit extends Cubit<VideoDetailState> {
   }) {
     if (isClosed) return;
     cancelSearch();
-    emit(
+    emitIfOpen(
       VideoDetailState(
         routeId: routeId,
         fallbackRouteIds: List.unmodifiable(fallbackRouteIds),
@@ -74,7 +76,7 @@ class VideoDetailCubit extends Cubit<VideoDetailState> {
   void cancelSearch() {
     _cancelResources();
     if (!isClosed) {
-      emit(
+      emitIfOpen(
         state.copyWith(
           generation: state.generation + 1,
           waitingForRelay: false,
@@ -97,7 +99,7 @@ class VideoDetailCubit extends Cubit<VideoDetailState> {
     if (state.status != VideoDetailStatus.hiddenBySettings || video == null) {
       return;
     }
-    emit(state.copyWith(status: VideoDetailStatus.ready, video: video));
+    emitIfOpen(state.copyWith(status: VideoDetailStatus.ready, video: video));
   }
 
   @override
@@ -111,7 +113,7 @@ class VideoDetailCubit extends Cubit<VideoDetailState> {
 
   void _loadDetached({bool allowRelayReadyRetry = true}) {
     final generation = state.generation + 1;
-    emit(state.copyWith(generation: generation));
+    emitIfOpen(state.copyWith(generation: generation));
     runDetached(
       _load(generation, allowRelayReadyRetry: allowRelayReadyRetry),
       'search for video',
@@ -140,10 +142,12 @@ class VideoDetailCubit extends Cubit<VideoDetailState> {
       switch (lookup) {
         case VideoRouteFound(:final video):
           cancelSearch();
-          emit(state.copyWith(status: VideoDetailStatus.ready, video: video));
+          emitIfOpen(
+            state.copyWith(status: VideoDetailStatus.ready, video: video),
+          );
         case VideoRouteHiddenByFilter(:final video):
           cancelSearch();
-          emit(
+          emitIfOpen(
             state.copyWith(
               status: VideoDetailStatus.hiddenBySettings,
               video: video,
@@ -181,7 +185,7 @@ class VideoDetailCubit extends Cubit<VideoDetailState> {
   bool _scheduleRetry() {
     if (state.retryCount >= _retryDelays.length) return false;
     final delay = _retryDelays[state.retryCount];
-    emit(state.copyWith(retryCount: state.retryCount + 1));
+    emitIfOpen(state.copyWith(retryCount: state.retryCount + 1));
     final generation = state.generation;
     Log.info(
       'Video lookup incomplete; searching again in ${delay.inSeconds}s '
@@ -199,18 +203,18 @@ class VideoDetailCubit extends Cubit<VideoDetailState> {
     _retryTimer?.cancel();
     _retryTimer = null;
     _cancelRelayReadySubscription();
-    emit(state.copyWith(waitingForRelay: false));
+    emitIfOpen(state.copyWith(waitingForRelay: false));
     _loadDetached(allowRelayReadyRetry: false);
   }
 
   bool _scheduleRelayReadyRetry() {
     if (state.waitingForRelay || state.hasRetriedAfterRelayReady) return false;
-    emit(state.copyWith(waitingForRelay: true));
+    emitIfOpen(state.copyWith(waitingForRelay: true));
     _cancelRelayReadySubscription();
     final generation = state.generation;
     void retryWhenReady() {
       if (!_isCurrent(generation)) return;
-      emit(state.copyWith(hasRetriedAfterRelayReady: true));
+      emitIfOpen(state.copyWith(hasRetriedAfterRelayReady: true));
       _retryLookup();
     }
 
@@ -244,6 +248,6 @@ class VideoDetailCubit extends Cubit<VideoDetailState> {
       category: LogCategory.video,
     );
     cancelSearch();
-    emit(state.copyWith(status: VideoDetailStatus.loadFailed));
+    emitIfOpen(state.copyWith(status: VideoDetailStatus.loadFailed));
   }
 }
