@@ -652,6 +652,7 @@ class DmSyncState {
   static Iterable<String> readStateStorageKeys(String pubkey) => [
     readStateStorageKey(pubkey),
     '${readStateStorageKey(pubkey)}_quarantine',
+    '${readStateStorageKey(pubkey)}_quarantine_history',
   ];
 
   Map<String, dynamic> _readState(String pubkey) {
@@ -748,25 +749,46 @@ class DmSyncState {
     final previous = _prefs.getString(key);
     if (previous != null && _readState(pubkey).isEmpty) {
       final quarantine = '${key}_quarantine';
-      // Never overwrite an earlier unreadable source without preserving it.
-      if (_prefs.getString(quarantine) != null &&
-          _prefs.getString(quarantine) != previous) {
-        throw StateError('DM read recovery source already exists');
-      }
-      if (!await _prefs.setString(quarantine, previous)) {
-        throw StateError('DM read recovery source was not saved');
-      }
-    }
-    final saved = await _prefs.setString(key, value);
-    if (saved) return;
-    if (_prefs.getString(key) == value) {
-      if (previous == null) {
-        await _prefs.remove(key);
+      final quarantined = _prefs.getString(quarantine);
+      if (quarantined == null || quarantined == previous) {
+        await _saveReadPreference(quarantine, previous);
       } else {
-        await _prefs.setString(key, previous);
+        final historyKey = '${key}_quarantine_history';
+        final raw = _prefs.getString(historyKey);
+        var history = <String>[];
+        if (raw != null) {
+          try {
+            history = (jsonDecode(raw) as List).cast<String>().toList();
+          } on Object {
+            history = [raw];
+          }
+        }
+        if (!history.contains(previous)) history.add(previous);
+        await _saveReadPreference(historyKey, jsonEncode(history));
       }
     }
-    throw StateError('DM read state was not saved');
+    await _saveReadPreference(key, value);
+  }
+
+  Future<void> _saveReadPreference(String key, String value) async {
+    final previous = _prefs.getString(key);
+    try {
+      if (!await _prefs.setString(key, value)) {
+        throw StateError('DM read state was not saved');
+      }
+    } on Object catch (error, stack) {
+      // Restore the eager SharedPreferences cache on rejected or thrown writes.
+      try {
+        if (previous == null) {
+          await _prefs.remove(key);
+        } else {
+          await _prefs.setString(key, previous);
+        }
+      } on Object {
+        // Preserve the original storage failure; rollback updates cache first.
+      }
+      Error.throwWithStackTrace(error, stack);
+    }
   }
 
   /// Removes all sync state for [pubkey]. Called on account switch.

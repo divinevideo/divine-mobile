@@ -107,6 +107,7 @@ class AccountPreferenceStore {
 
   final SharedPreferences _preferences;
   AccountStateRepository? _repository;
+  final _nativeWrites = <AccountStateRepository, Set<Future<void>>>{};
   StreamSubscription<Map<String, Object?>>? _subscription;
   bool _bound = false;
   bool _closed = false;
@@ -203,7 +204,8 @@ class AccountPreferenceStore {
             _preferences.getString(projectionOwnerStorageKey) ==
                 repository.pubkey);
     if (!_legacyOwnerMatches) {
-      await _preferences.setBool(
+      await _writeOwnedProjection(
+        repository,
         notificationMigrationStorageKey(repository.pubkey),
         true,
       );
@@ -251,7 +253,7 @@ class AccountPreferenceStore {
       }
       await repository.seed(legacy);
       if (_closed || generation != _generation) return;
-      await _preferences.setBool(marker, true);
+      await _writeOwnedProjection(repository, marker, true);
     }
     await _project(generation);
   }
@@ -272,7 +274,7 @@ class AccountPreferenceStore {
           entry.key: entry.value,
     });
     if (_closed || generation != _generation) return;
-    await _preferences.setBool(marker, true);
+    await _writeOwnedProjection(repository, marker, true);
     await _project(generation);
   }
 
@@ -290,22 +292,58 @@ class AccountPreferenceStore {
     });
   }
 
+  /// Invalidates only this repository's binding and drains native writes that
+  /// were already issued for it. Queued projections are generation-fenced;
+  /// another account's active write is never part of this owner's drain.
+  Future<void> stopProjection(AccountStateRepository repository) {
+    if (identical(_repository, repository)) detach();
+    return Future.wait<void>(
+      _nativeWrites[repository]?.toList() ?? const [],
+    );
+  }
+
+  Future<void> _writeOwnedProjection(
+    AccountStateRepository repository,
+    String key,
+    Object? value,
+  ) {
+    final pending = _nativeWrites.putIfAbsent(repository, () => {});
+    final write = _writeProjection(key, value);
+    pending.add(write);
+    void finished() {
+      pending.remove(write);
+      if (pending.isEmpty) _nativeWrites.remove(repository);
+    }
+
+    // Observe completion without replacing the operation's error for its
+    // caller or a concurrently awaiting cleanup barrier.
+    unawaited(
+      write.then<void>(
+        (_) => finished(),
+        onError: (Object _, StackTrace _) => finished(),
+      ),
+    );
+    return write;
+  }
+
   Future<void> _project(int generation) {
     final next = _projectionQueue.tail.then((_) async {
       if (_closed || generation != _generation) return;
       final repository = _repository;
       if (repository == null) return;
-      await _preferences.setString(
+      await _writeOwnedProjection(
+        repository,
         projectionOwnerStorageKey,
         repository.pubkey,
       );
       for (final key in AccountPreferenceRegistry.keys) {
         if (_closed || generation != _generation) return;
         if (key.contains('/')) continue;
-        await _writeProjection(key, read(key));
+        await _writeOwnedProjection(repository, key, read(key));
       }
       if (_closed || generation != _generation) return;
-      await _preferences.setStringList(
+      await _writeOwnedProjection(
+        repository,
         'subscribed_labeler_pubkeys',
         (read('subscribed_labeler_pubkeys')! as List).cast<String>(),
       );
@@ -315,7 +353,8 @@ class AccountPreferenceStore {
         final value = read('content_filter/${label.value}');
         if (value is String) categories[label.value] = value;
       }
-      await _preferences.setString(
+      await _writeOwnedProjection(
+        repository,
         'content_filter_prefs',
         jsonEncode(categories),
       );

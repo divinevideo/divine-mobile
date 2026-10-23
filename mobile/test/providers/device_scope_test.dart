@@ -1,10 +1,14 @@
 // ABOUTME: Tests that DeviceScope shares device singletons across containers so
 // ABOUTME: an account switch does not open a second DB connection.
 
+import 'dart:async';
+
 import 'package:app_update_repository/app_update_repository.dart';
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/database_provider.dart';
@@ -15,6 +19,7 @@ import 'package:openvine/providers/log_message_batcher_provider.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/shorebird_availability_provider.dart';
+import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/feed_mode_persistence.dart';
 import 'package:openvine/services/startup_performance_service.dart';
@@ -56,6 +61,58 @@ void main() {
   tearDown(() => database.close());
 
   group(DeviceScope, () {
+    test(
+      'swapped account container drains a disposed owner before erasure',
+      () async {
+        final owner = 'a' * 64;
+        final key = 'account_state_divine/preferences/v1_${owner}_state';
+        await prefs.setString(key, 'original');
+        final release = Completer<void>();
+        final write = () async {
+          await release.future;
+          await prefs.setString(key, 'late local write');
+        }();
+        final writerProvider = Provider<void>((ref) {
+          final close = ref
+              .read(accountStateWriteBarrierProvider)
+              .register(owner, () => write);
+          ref.onDispose(() => unawaited(close()));
+        });
+        final departing = buildAccountContainer(deviceScope);
+        departing.read(writerProvider);
+        departing.dispose();
+        final incoming = buildAccountContainer(deviceScope);
+        Future<void>? removal;
+        addTearDown(() async {
+          if (!release.isCompleted) release.complete();
+          await write;
+          await removal;
+          incoming.dispose();
+        });
+        final cleanup = incoming.read(userDataCleanupServiceProvider);
+        var erased = false;
+        cleanup.onDatabaseCleanup =
+            ({
+              String? userPubkey,
+              bool deleteUserData = false,
+              bool preserveActiveSession = false,
+              bool forgetAccount = false,
+            }) async {
+              erased = true;
+            };
+        removal = cleanup
+            .clearUserSpecificData(userPubkey: owner, forgetAccount: true)
+            .then((_) {});
+        await pumpEventQueue();
+        expect(erased, isFalse);
+        expect(prefs.getString(key), 'original');
+        release.complete();
+        await removal;
+        expect(erased, isTrue);
+        expect(prefs.containsKey(key), isFalse);
+      },
+    );
+
     test('every container reads the same shared database instance', () {
       final a = buildAccountContainer(deviceScope);
       addTearDown(a.dispose);

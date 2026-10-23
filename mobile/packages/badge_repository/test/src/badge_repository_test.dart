@@ -17,6 +17,7 @@ void main() {
     late BadgeRepository repository;
     late Event? signedEvent;
     late LocalNostrSigner dismissalSigner;
+    late Map<String, Future<void> Function()> accountClosers;
 
     setUpAll(() {
       registerFallbackValue(<Filter>[]);
@@ -28,6 +29,7 @@ void main() {
       preferences = await SharedPreferences.getInstance();
       nostrClient = _MockNostrClient();
       signedEvent = null;
+      accountClosers = {};
       dismissalSigner = LocalNostrSigner(_eventId(101));
       lastSignedEvent = () => signedEvent;
 
@@ -52,6 +54,7 @@ void main() {
       repository = BadgeRepository(
         nostrClient: nostrClient,
         signer: () => dismissalSigner,
+        onAccountCreated: (owner, close) => accountClosers[owner] = close,
         sharedPreferences: preferences,
         currentPubkey: () => _pubkey(1),
         signEvent: ({required kind, required content, required tags}) async {
@@ -608,6 +611,22 @@ void main() {
       );
 
       expect((await desktop.loadAwardedBadges()).single.isHidden, isTrue);
+    });
+
+    group('onAccountCreated', () {
+      test(
+        'forwards the exact account drain through the repository facade',
+        () async {
+          await repository.hideAward('30009:${_pubkey(2)}:daily-diviner');
+          expect(accountClosers.keys, [_pubkey(1)]);
+          await accountClosers[_pubkey(1)]!();
+          await expectLater(
+            repository.unhideAward('30009:${_pubkey(2)}:daily-diviner'),
+            throwsStateError,
+          );
+          await repository.closeAccountState();
+        },
+      );
     });
 
     test('hideAward caches an account dismissal', () async {

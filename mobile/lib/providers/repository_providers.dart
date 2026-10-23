@@ -65,18 +65,36 @@ part 'repository_providers.g.dart';
 final badgeRepositoryProvider = Provider<BadgeRepository>((ref) {
   final authService = ref.watch(authServiceProvider);
   final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
+  final accountWrites = ref.watch(accountStateWriteBarrierProvider);
+  final accountClosers = <Future<void> Function()>[];
   final repository = BadgeRepository(
     nostrClient: ref.watch(nostrServiceProvider),
     sharedPreferences: ref.watch(sharedPreferencesProvider),
     currentPubkey: () => authService.currentPublicKeyHex,
     signEvent: authService.createAndSignEvent,
     signer: () => authService.requireIdentity,
+    onAccountCreated: (owner, close) {
+      accountClosers.add(accountWrites.register(owner, close));
+    },
     // Read through the repository rather than a snapshot: the hide buckets
     // are mutated in place, so a block made after this provider was built
     // still takes effect on the next badge load.
     isHiddenPubkey: blocklistRepository.shouldFilterFromFeeds,
   );
-  ref.onDispose(repository.closeAccountState);
+  ref.onDispose(() {
+    for (final close in accountClosers) {
+      runProviderDetached(
+        close(),
+        'close badge account state',
+        logName: 'BadgeRepository',
+      );
+    }
+    runProviderDetached(
+      repository.closeAccountState(),
+      'close badge repository',
+      logName: 'BadgeRepository',
+    );
+  });
   return repository;
 });
 

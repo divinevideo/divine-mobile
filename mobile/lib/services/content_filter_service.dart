@@ -37,14 +37,16 @@ class ContentFilterService extends ChangeNotifier {
     );
   }
 
+  bool _disposed = false;
   final AccountPreferenceStore? _accountPreferences;
   StreamSubscription<void>? _accountSubscription;
   ContentFilterPreference _lastAccountAdultPreference =
       ContentFilterPreference.hide;
   late Map<ContentLabel, ContentFilterPreference> _lastEffectivePreferences;
-  Future<void> _pendingRevocation = Future<void>.value();
+  Future<void>? _pendingRevocation;
 
   void _captureEffectivePreferences() {
+    if (_disposed) return;
     _lastEffectivePreferences = allPreferences;
     _lastAccountAdultPreference = adultPlaybackPreference;
   }
@@ -52,9 +54,10 @@ class ContentFilterService extends ChangeNotifier {
   void _reloadAccountPreferences() => unawaited(_refreshEffectivePreferences());
 
   Future<void> _refreshEffectivePreferences() {
+    if (_disposed) return _pendingRevocation ?? Future<void>.value();
     final current = allPreferences;
     if (mapEquals(current, _lastEffectivePreferences)) {
-      return _pendingRevocation;
+      return _pendingRevocation ?? Future<void>.value();
     }
     final previous = _lastAccountAdultPreference;
     _lastEffectivePreferences = current;
@@ -62,16 +65,30 @@ class ContentFilterService extends ChangeNotifier {
     // Both the stream and a local setter can observe the same durable write.
     // Reconcile once, including the awaited adult-media revocation callback.
     // Later snapshots must retain any revocation that is still in flight.
-    _pendingRevocation = Future.wait<void>([
-      _pendingRevocation,
-      _notifyIfAdultPassiveAccessRevoked(previousAdultPreference: previous),
-    ]).then((_) {});
+    final revocation = _notifyIfAdultPassiveAccessRevoked(
+      previousAdultPreference: previous,
+    );
+    if (revocation != null) {
+      final previousPending = _pendingRevocation;
+      late final Future<void> pending;
+      pending =
+          Future.wait<void>([
+            ?previousPending,
+            revocation,
+          ]).then((_) {}).whenComplete(() {
+            if (identical(_pendingRevocation, pending)) {
+              _pendingRevocation = null;
+            }
+          });
+      _pendingRevocation = pending;
+    }
     notifyListeners();
-    return _pendingRevocation;
+    return _pendingRevocation ?? Future<void>.value();
   }
 
   @override
   void dispose() {
+    _disposed = true;
     unawaited(_accountSubscription?.cancel());
     super.dispose();
   }
@@ -548,14 +565,15 @@ class ContentFilterService extends ChangeNotifier {
     return changed;
   }
 
-  Future<void> _notifyIfAdultPassiveAccessRevoked({
+  Future<void>? _notifyIfAdultPassiveAccessRevoked({
     required ContentFilterPreference previousAdultPreference,
-  }) async {
+  }) {
     if (previousAdultPreference != ContentFilterPreference.show ||
-        adultPlaybackPreference == ContentFilterPreference.show) {
-      return;
+        adultPlaybackPreference == ContentFilterPreference.show ||
+        _onAdultMediaAccessRevoked == null) {
+      return null;
     }
-    await _notifyAdultMediaAccessRevoked();
+    return _notifyAdultMediaAccessRevoked();
   }
 
   Future<void> _notifyAdultMediaAccessRevoked() async {

@@ -206,10 +206,7 @@ void main() {
         ContentLabel.spoiler,
         ContentFilterPreference.hide,
       );
-      expect(
-        prefs.containsKey(ContentFilterService.filterPrefsStorageKey),
-        isTrue,
-      );
+      expect(prefs.getString('content_filter/spoiler'), 'hide');
       expect(
         filter.getPreference(ContentLabel.spoiler),
         ContentFilterPreference.hide,
@@ -237,6 +234,7 @@ void main() {
         filter.getPreference(ContentLabel.nudity),
         ContentFilterPreference.hide,
       );
+      expect(prefs.containsKey('content_filter/spoiler'), isFalse);
       expect(prefs.get(ContentFilterService.filterMigratedStorageKey), isTrue);
       expect(
         prefs.containsKey(ContentFilterService.filterPrefsStorageKey),

@@ -1,14 +1,18 @@
 import 'dart:async';
 
+import 'package:db_client/db_client.dart' hide Filter;
+import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/providers/account_preferences_provider.dart';
+import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/social_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _Client extends Mock implements NostrClient {}
@@ -18,6 +22,37 @@ class _Session extends NostrSession {
   final NostrSessionReadiness initial;
   @override
   NostrSessionReadiness build() => initial;
+}
+
+class _HeldDatabase extends AppDatabase {
+  _HeldDatabase() : super.test(NativeDatabase.memory());
+
+  late final _HeldAccountSyncDao _heldAccountSyncDao = _HeldAccountSyncDao(
+    this,
+  );
+
+  @override
+  _HeldAccountSyncDao get accountSyncDao => _heldAccountSyncDao;
+}
+
+class _HeldAccountSyncDao extends AccountSyncDao {
+  _HeldAccountSyncDao(super.attachedDatabase);
+
+  final entered = Completer<void>();
+  final release = Completer<void>();
+
+  @override
+  Future<void> writeState(
+    String owner,
+    String namespace,
+    Map<String, Map<String, String>> sections,
+  ) async {
+    if (!entered.isCompleted) {
+      entered.complete();
+      await release.future;
+    }
+    await super.writeState(owner, namespace, sections);
+  }
 }
 
 void main() {
@@ -104,6 +139,90 @@ void main() {
         await statuses.close();
       },
     );
+
+    for (final disposeFirst in [false, true]) {
+      test(
+        'forget drains local writes with provider disposed: $disposeFirst',
+        () async {
+          SharedPreferences.setMockInitialValues({});
+          final prefs = await SharedPreferences.getInstance();
+          final signer = LocalNostrSigner('1'.padLeft(64, '0'));
+          final owner = (await signer.getPublicKey())!;
+          final key = 'account_state_divine/preferences/v1_${owner}_state';
+          await prefs.setString(key, '{}');
+          final database = _HeldDatabase();
+          final client = _Client();
+          when(() => client.signer).thenReturn(signer);
+          final container = ProviderContainer(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(prefs),
+              databaseProvider.overrideWithValue(database),
+              nostrServiceProvider.overrideWithValue(client),
+              nostrSessionProvider.overrideWith(
+                () => _Session(
+                  NostrSessionReadiness.identityKnown(pubkey: owner),
+                ),
+              ),
+            ],
+          );
+          final binding = container.listen(accountDmStateProvider, (_, _) {});
+          final repository = binding.read()!;
+          Future<void>? cleanup;
+          addTearDown(() async {
+            if (!database.accountSyncDao.release.isCompleted) {
+              database.accountSyncDao.release.complete();
+            }
+            await cleanup;
+            binding.close();
+            container.dispose();
+            await repository.close();
+            await database.close();
+          });
+          await database.accountSyncDao.entered.future;
+          if (disposeFirst) {
+            container
+                .read(nostrSessionProvider.notifier)
+                .update(
+                  NostrSessionReadiness.tearingDown(pubkey: owner),
+                );
+            await container.pump();
+            expect(container.read(accountDmStateProvider), isNull);
+          }
+          var databaseErased = false;
+          final service = container.read(userDataCleanupServiceProvider);
+          service.onDatabaseCleanup =
+              ({
+                String? userPubkey,
+                bool deleteUserData = false,
+                bool preserveActiveSession = false,
+                bool forgetAccount = false,
+              }) async {
+                databaseErased = true;
+                await database.accountSyncDao.clearAccount(userPubkey!);
+              };
+          cleanup = service
+              .clearUserSpecificData(
+                userPubkey: owner,
+                forgetAccount: true,
+              )
+              .then((_) {});
+          await pumpEventQueue();
+          expect(databaseErased, isFalse);
+          expect(prefs.containsKey(key), isTrue);
+          database.accountSyncDao.release.complete();
+          await cleanup;
+          expect(databaseErased, isTrue);
+          expect(prefs.containsKey(key), isFalse);
+          expect(
+            await database.accountSyncDao.readState(
+              owner,
+              'divine/dm-dismissals/v1',
+            ),
+            isEmpty,
+          );
+        },
+      );
+    }
 
     test(
       'initial signed-out state never exposes prior account language',

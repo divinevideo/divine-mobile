@@ -1,8 +1,6 @@
 // ABOUTME: Binds explicit preference services to the active Nostr account.
 // ABOUTME: Keeps auth-dependent lifecycle wiring outside preference construction.
 
-import 'dart:async';
-
 import 'package:account_state_repository/account_state_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/providers/database_provider.dart';
@@ -10,6 +8,12 @@ import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/account_preference_store.dart';
+import 'package:openvine/services/account_state_write_barrier.dart';
+
+/// DeviceScope shares this instance across account-container swaps.
+final accountStateWriteBarrierProvider = Provider<AccountStateWriteBarrier>(
+  (_) => AccountStateWriteBarrier(),
+);
 
 final accountPreferenceStoreProvider = Provider<AccountPreferenceStore>((ref) {
   final store = AccountPreferenceStore(ref.watch(sharedPreferencesProvider));
@@ -40,9 +44,21 @@ final accountPreferenceSyncProvider = Provider<AccountStateRepository?>((ref) {
     signer: () => client.signer,
     namespace: 'divine/preferences/v1',
   );
+  final close = ref
+      .read(accountStateWriteBarrierProvider)
+      .register(
+        pubkey,
+        () => Future.wait<void>([
+          store.stopProjection(repository),
+          repository.close(),
+        ]).then((_) {}),
+      );
   ref.onDispose(() {
-    store.detach();
-    unawaited(repository.close());
+    runProviderDetached(
+      close(),
+      'close account preferences',
+      logName: 'AccountPreferences',
+    );
   });
   var bound = false;
   void startWhenReady(NostrSessionReadiness session) {
@@ -101,7 +117,19 @@ final accountDmStateProvider = Provider<AccountStateRepository?>((ref) {
       namespace: 'divine/dm-dismissals/v1',
     ),
   );
-  ref.onDispose(() => unawaited(repository.close()));
+  final close = ref
+      .read(accountStateWriteBarrierProvider)
+      .register(
+        pubkey,
+        repository.close,
+      );
+  ref.onDispose(
+    () => runProviderDetached(
+      close(),
+      'close conversation state',
+      logName: 'AccountPreferences',
+    ),
+  );
   void startWhenReady(NostrSessionReadiness session) {
     if (session.isReadyForActiveClient &&
         session.pubkey == pubkey &&

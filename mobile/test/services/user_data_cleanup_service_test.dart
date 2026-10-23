@@ -1089,85 +1089,135 @@ void main() {
 
     group('deleteAccountData', () {
       test(
-        'removes sync journals only when their account is deleted',
+        'a refused local write drain preserves journals before erasure',
         () async {
-          final deletedPubkey = 'a' * 64;
-          final otherPubkey = 'b' * 64;
-          final deletedKeys = [
-            'account_state_divine/preferences/v1_${deletedPubkey}_state',
-            'account_state_divine/preferences/v1_$deletedPubkey',
-            'badge_dismissal_event_${deletedPubkey}_state',
-            'badge_dismissal_event_$deletedPubkey',
-            ...DmSyncState.readStateStorageKeys(deletedPubkey),
-            NotificationRepository.readStateStorageKey(deletedPubkey),
-          ];
-          final otherKey =
-              'account_state_divine/preferences/v1_${otherPubkey}_state';
-          for (final key in [...deletedKeys, otherKey]) {
-            await prefs.setString(key, '{}');
-          }
-          await prefs.setBool(
-            AccountPreferenceStore.migrationStorageKey(deletedPubkey),
-            true,
+          final owner = 'a' * 64;
+          final key = 'account_state_divine/preferences/v1_${owner}_state';
+          await prefs.setString(key, 'retained');
+          const failure = UserDataCleanupException('local write drain failed');
+          final cleanup = UserDataCleanupService(
+            prefs,
+            onAccountStateWritesStop: (_) async {
+              throw failure;
+            },
           );
-          await prefs.setBool(
-            AccountPreferenceStore.migrationStorageKey(otherPubkey),
-            true,
-          );
-          await prefs.setBool(
-            AccountPreferenceStore.notificationMigrationStorageKey(
-              deletedPubkey,
+          var databaseErased = false;
+          cleanup.onDatabaseCleanup =
+              ({
+                String? userPubkey,
+                bool deleteUserData = false,
+                bool preserveActiveSession = false,
+                bool forgetAccount = false,
+              }) async {
+                databaseErased = true;
+              };
+          await expectLater(
+            cleanup.clearUserSpecificData(
+              userPubkey: owner,
+              forgetAccount: true,
             ),
-            true,
+            throwsA(same(failure)),
           );
-          await prefs.setString(
-            AccountPreferenceStore.projectionOwnerStorageKey,
-            deletedPubkey,
-          );
-          await service.clearUserSpecificData(
-            isIdentityChange: true,
-            userPubkey: deletedPubkey,
-          );
-          for (final key in [...deletedKeys, otherKey]) {
-            expect(prefs.containsKey(key), isTrue);
-          }
-          await service.deleteAccountData(
-            deletedPubkey,
-            userNpub: NostrKeyUtils.encodePubKey(deletedPubkey),
-            preserveActiveSession: true,
-          );
-          for (final key in deletedKeys) {
-            expect(prefs.containsKey(key), isFalse, reason: key);
-          }
-          expect(prefs.containsKey(otherKey), isTrue);
-          expect(
-            prefs.containsKey(
+          expect(prefs.getString(key), 'retained');
+          expect(databaseErased, isFalse);
+        },
+      );
+
+      for (final forget in [false, true]) {
+        test(
+          'removes sync journals only when their account is '
+          '${forget ? 'forgotten' : 'deleted'}',
+          () async {
+            final deletedPubkey = 'a' * 64;
+            final otherPubkey = 'b' * 64;
+            final deletedKeys = [
+              'account_state_divine/preferences/v1_${deletedPubkey}_state',
+              'account_state_divine/preferences/v1_$deletedPubkey',
+              'badge_dismissal_event_${deletedPubkey}_state',
+              'badge_dismissal_event_$deletedPubkey',
+              ...DmSyncState.readStateStorageKeys(deletedPubkey),
+              NotificationRepository.readStateStorageKey(deletedPubkey),
+            ];
+            final otherKey =
+                'account_state_divine/preferences/v1_${otherPubkey}_state';
+            final savedSoundsKey = SavedSoundsService.accountStorageKey(
+              deletedPubkey,
+            );
+            await prefs.setString(savedSoundsKey, '[]');
+            for (final key in [...deletedKeys, otherKey]) {
+              await prefs.setString(key, '{}');
+            }
+            await prefs.setBool(
+              AccountPreferenceStore.migrationStorageKey(deletedPubkey),
+              true,
+            );
+            await prefs.setBool(
+              AccountPreferenceStore.migrationStorageKey(otherPubkey),
+              true,
+            );
+            await prefs.setBool(
               AccountPreferenceStore.notificationMigrationStorageKey(
                 deletedPubkey,
               ),
-            ),
-            isFalse,
-          );
-          expect(
-            prefs.containsKey(
-              AccountPreferenceStore.migrationStorageKey(deletedPubkey),
-            ),
-            isFalse,
-          );
-          expect(
-            prefs.getBool(
-              AccountPreferenceStore.migrationStorageKey(otherPubkey),
-            ),
-            isTrue,
-          );
-          expect(
-            prefs.containsKey(
+              true,
+            );
+            await prefs.setString(
               AccountPreferenceStore.projectionOwnerStorageKey,
-            ),
-            isFalse,
-          );
-        },
-      );
+              deletedPubkey,
+            );
+            await service.clearUserSpecificData(
+              isIdentityChange: true,
+              userPubkey: deletedPubkey,
+            );
+            for (final key in [...deletedKeys, otherKey]) {
+              expect(prefs.containsKey(key), isTrue);
+            }
+            if (forget) {
+              await service.clearUserSpecificData(
+                userPubkey: deletedPubkey,
+                forgetAccount: true,
+              );
+            } else {
+              await service.deleteAccountData(
+                deletedPubkey,
+                userNpub: NostrKeyUtils.encodePubKey(deletedPubkey),
+                preserveActiveSession: true,
+              );
+            }
+            for (final key in deletedKeys) {
+              expect(prefs.containsKey(key), isFalse, reason: key);
+            }
+            expect(prefs.containsKey(otherKey), isTrue);
+            expect(prefs.containsKey(savedSoundsKey), forget);
+            expect(
+              prefs.containsKey(
+                AccountPreferenceStore.notificationMigrationStorageKey(
+                  deletedPubkey,
+                ),
+              ),
+              isFalse,
+            );
+            expect(
+              prefs.containsKey(
+                AccountPreferenceStore.migrationStorageKey(deletedPubkey),
+              ),
+              isFalse,
+            );
+            expect(
+              prefs.getBool(
+                AccountPreferenceStore.migrationStorageKey(otherPubkey),
+              ),
+              isTrue,
+            );
+            expect(
+              prefs.containsKey(
+                AccountPreferenceStore.projectionOwnerStorageKey,
+              ),
+              isFalse,
+            );
+          },
+        );
+      }
 
       test('removes only the deleted account hashtag follows', () async {
         final deletedPubkey = 'a' * 64;
@@ -1235,9 +1285,9 @@ void main() {
             preserveActiveSession: true,
           ).record(prefs);
           final gate = Completer<int>();
-          final held = CuratedListSessionCoordinator.forPreferences(prefs)
-              .writes
-              .runExclusive(() => gate.future);
+          final held = CuratedListSessionCoordinator.forPreferences(
+            prefs,
+          ).writes.runExclusive(() => gate.future);
           final pending = service.clearUserSpecificData(
             userPubkey: removed,
             deleteUserData: true,

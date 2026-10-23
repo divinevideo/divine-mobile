@@ -64,19 +64,20 @@ class LanguagePreferenceService implements Listenable {
   /// holder of this instance sees the incoming account's language.
   Future<void> reloadFromStorage() async {
     await initialize();
-    final previous = _customLanguage;
-
-    _customLanguage = null;
-    _initializeFuture = _loadPreference();
-    await _initializeFuture;
-
-    if (_customLanguage != previous) _notifyListeners();
+    await _loadPreference(notify: true);
   }
 
-  Future<void> _loadPreference() async {
+  void _setEffectiveLanguage(String? value, {bool notify = true}) {
+    if (_customLanguage == value) return;
+    _customLanguage = value;
+    if (notify) _notifyListeners();
+  }
+
+  Future<void> _loadPreference({bool notify = false}) async {
+    final String? value;
     try {
       final prefs = await SharedPreferences.getInstance();
-      _customLanguage =
+      value =
           (_accountPreferences == null
                   ? prefs.getString(prefsKey)
                   : _accountPreferences.read(prefsKey))
@@ -87,7 +88,9 @@ class LanguagePreferenceService implements Listenable {
         name: 'LanguagePreferenceService',
         category: LogCategory.system,
       );
+      return;
     }
+    _setEffectiveLanguage(value, notify: notify);
   }
 
   /// Set the content language preference.
@@ -107,10 +110,11 @@ class LanguagePreferenceService implements Listenable {
       } else {
         await prefs.setString(prefsKey, languageCode);
       }
-      _customLanguage = _accountPreferences == null
-          ? languageCode
-          : _accountPreferences.read(prefsKey) as String?;
-      _notifyListeners();
+      _setEffectiveLanguage(
+        _accountPreferences == null
+            ? languageCode
+            : _accountPreferences.read(prefsKey) as String?,
+      );
 
       Log.debug(
         'Content language set to: $languageCode',
@@ -140,8 +144,11 @@ class LanguagePreferenceService implements Listenable {
       } else {
         await prefs.remove(prefsKey);
       }
-      _customLanguage = null;
-      _notifyListeners();
+      _setEffectiveLanguage(
+        _accountPreferences == null
+            ? null
+            : _accountPreferences.read(prefsKey) as String?,
+      );
 
       Log.debug(
         'Content language cleared, using device default',

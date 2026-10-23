@@ -123,6 +123,63 @@ void main() {
     );
   });
 
+  group('onAccountCreated', () {
+    test('registers the exact owner before its first local write', () async {
+      final preferences = _MockPreferences();
+      when(() => preferences.getString(any())).thenReturn(null);
+      final drains = <Future<void>>[];
+      final registered = <String>[];
+      final sync = BadgeDismissalSync(
+        client: client,
+        preferences: preferences,
+        signer: () => signer,
+        onAccountCreated: (owner, close) {
+          registered.add(owner);
+          drains.add(close());
+        },
+      );
+      await expectLater(
+        sync.setHidden(pubkey, {}, coordinate, hidden: true),
+        throwsStateError,
+      );
+      await Future.wait(drains);
+      expect(registered, [pubkey]);
+      verifyNever(() => preferences.setString(any(), any()));
+      await sync.close();
+    });
+
+    test(
+      'an owner drain stops only that account and is registered once',
+      () async {
+        final closers = <String, Future<void> Function()>{};
+        final sync = BadgeDismissalSync(
+          client: client,
+          preferences: phonePreferences,
+          signer: () => signer,
+          onAccountCreated: (owner, close) {
+            expect(closers.containsKey(owner), isFalse);
+            closers[owner] = close;
+          },
+        );
+        await sync.setHidden(pubkey, {}, coordinate, hidden: true);
+        await sync.synchronize(pubkey);
+        await closers[pubkey]!();
+        await expectLater(
+          sync.setHidden(pubkey, {}, coordinate, hidden: false),
+          throwsStateError,
+        );
+        final other = (await LocalNostrSigner(
+          '2'.padLeft(64, '0'),
+        ).getPublicKey())!;
+        expect(await sync.setHidden(other, {}, otherCoordinate, hidden: true), {
+          otherCoordinate,
+        });
+        expect(closers.keys, {pubkey, other});
+        await sync.close();
+      },
+    );
+  });
+
   Future<Event> snapshot(Object payload, {int? createdAt, String? raw}) async {
     final content = (await signer.nip44Encrypt(
       pubkey,

@@ -4,8 +4,11 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/language_preference_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'support/fake_account_state.dart';
 
 void main() {
   group(LanguagePreferenceService, () {
@@ -15,6 +18,48 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       service = LanguagePreferenceService();
     });
+
+    for (final bound in [false, true]) {
+      test(
+        'account port deduplicates effective language changes, bound: $bound',
+        () async {
+          final prefs = await SharedPreferences.getInstance();
+          final store = AccountPreferenceStore(prefs);
+          final account = FakeAccountState('1' * 64);
+          if (bound) await store.bind(account);
+          final language = LanguagePreferenceService(accountPreferences: store);
+          addTearDown(language.dispose);
+          addTearDown(store.dispose);
+          addTearDown(account.close);
+          await language.initialize();
+          var notifications = 0;
+          language.addListener(() => notifications++);
+          await language.setContentLanguage('es');
+          await pumpEventQueue();
+          expect(notifications, 1);
+          await language.setContentLanguage('es');
+          await pumpEventQueue();
+          expect(notifications, 1);
+          await language.clearContentLanguage();
+          await pumpEventQueue();
+          expect(notifications, 2);
+          await language.clearContentLanguage();
+          await pumpEventQueue();
+          expect(notifications, 2);
+          if (bound) expect(account.localWrites, 4);
+          expect(store.read(LanguagePreferenceService.prefsKey), isNull);
+          if (bound) {
+            account.receive({'content_language': 'ja'});
+            await pumpEventQueue();
+            expect(language.declaredContentLanguage, 'ja');
+            expect(notifications, 3);
+            account.receive({'content_language': 'ja'});
+            await pumpEventQueue();
+            expect(notifications, 3);
+          }
+        },
+      );
+    }
 
     group('contentLanguage', () {
       test('returns device language code when no custom language is set', () {

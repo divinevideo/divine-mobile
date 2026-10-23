@@ -16,6 +16,7 @@ class _Preferences extends Mock implements SharedPreferences {}
 
 class _Signer extends LocalNostrSigner {
   _Signer() : super('1'.padLeft(64, '0'));
+  int decryptCalls = 0;
   bool decryptFails = false;
   Future<void>? decryptGate;
   bool encryptFails = false;
@@ -41,6 +42,7 @@ class _Signer extends LocalNostrSigner {
   bool signingFails = false;
   @override
   Future<String?> nip44Decrypt(String pubkey, String ciphertext) async {
+    decryptCalls++;
     await decryptGate;
     return decryptFails ? null : super.nip44Decrypt(pubkey, ciphertext);
   }
@@ -70,6 +72,19 @@ void main() {
   late StreamController<Event> incoming;
   late StreamController<Map<String, RelayConnectionStatus>> statuses;
   late List<AccountStateRepository> repositories;
+  late Map<AccountStateRepository, FakeAsync> lifecycleClocks;
+  FakeAsync? activeClock;
+  void withFakeClock(void Function(FakeAsync) body) {
+    fakeAsync((clock) {
+      activeClock = clock;
+      try {
+        body(clock);
+      } finally {
+        activeClock = null;
+      }
+    });
+  }
+
   SharedPreferences store({
     bool Function()? writeSucceeds,
     Exception? Function()? writeError,
@@ -102,6 +117,13 @@ void main() {
     Map<String, AccountStateMergeRule> rules = const {},
     bool perFieldSnapshots = false,
   }) {
+    // Subscription cancellation and the repository's local drain must share
+    // their lifecycle zone, including tests driven by fakeAsync.
+    if (repositories.isEmpty) {
+      incoming = StreamController<Event>.broadcast();
+      statuses =
+          StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+    }
     final repository = AccountStateRepository(
       nostrClient: client,
       sharedPreferences: preferences ?? store(),
@@ -112,6 +134,7 @@ void main() {
       perFieldSnapshots: perFieldSnapshots,
     );
     repositories.add(repository);
+    if (activeClock != null) lifecycleClocks[repository] = activeClock!;
     return repository;
   }
 
@@ -151,9 +174,7 @@ void main() {
       offline = false;
       incomplete = false;
       repositories = [];
-      incoming = StreamController<Event>.broadcast();
-      statuses =
-          StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+      lifecycleClocks = {};
       when(() => client.subscribe(any())).thenAnswer((_) => incoming.stream);
       when(() => client.relayStatusStream).thenAnswer((_) => statuses.stream);
       when(
@@ -187,11 +208,178 @@ void main() {
     });
     tearDown(() async {
       for (final repository in repositories) {
-        await repository.close();
+        final closing = repository.close();
+        final clock = lifecycleClocks[repository];
+        if (clock == null) {
+          await closing;
+        } else {
+          // Join the actual drain while driving its retained fake-zone tasks.
+          // Stream cancellation can cross the real zone between fake flushes.
+          final drained = Completer<void>();
+          unawaited(
+            closing.then(drained.complete, onError: drained.completeError),
+          );
+          while (!drained.isCompleted) {
+            clock.flushMicrotasks();
+            await pumpEventQueue();
+          }
+          await drained.future;
+        }
       }
       await incoming.close();
       await statuses.close();
     });
+    group('synchronize (cold shard replay)', () {
+      test(
+        'decoded fingerprints follow mutable sources and prune compacted sources',
+        () async {
+          final original = await snapshot({
+            'choice': {'value': true, 'updated_at': 1},
+          });
+          relay.add(original);
+          final controlled = _Signer();
+          final phone = device(getSigner: () => controlled);
+          await phone.synchronize();
+          expect(controlled.decryptCalls, 1);
+          final previousSignature = original.sig;
+          await signer.signEvent(original);
+          expect(original.sig, isNot(previousSignature));
+          await phone.synchronize();
+          expect(controlled.decryptCalls, 2);
+          final newer = await snapshot({
+            'choice': {'value': false, 'updated_at': 2},
+          }, createdAt: 2000);
+          relay
+            ..clear()
+            ..add(newer);
+          await phone.synchronize();
+          expect(controlled.decryptCalls, 3);
+          relay
+            ..clear()
+            ..add(original);
+          await phone.synchronize();
+          expect(controlled.decryptCalls, 4);
+          expect(phone.value('choice'), false);
+        },
+      );
+
+      test(
+        'coalesces duplicate replay and decrypts each retained shard once',
+        () async {
+          const count = 12;
+          final origin = device(perFieldSnapshots: true);
+          await origin.setValues({
+            for (var i = 0; i < count; i++) 'field-$i': i,
+          });
+          await origin.synchronize();
+          final replay = relay.toList();
+          final controlled = _Signer();
+          final cold = device(
+            perFieldSnapshots: true,
+            getSigner: () => controlled,
+          );
+          final firstRead = Completer<PagedQueryResult>();
+          var reads = 0;
+          when(() => client.readAllEvents(any())).thenAnswer((_) async {
+            reads++;
+            if (reads == 1) return firstRead.future;
+            return PagedQueryResult(events: replay, isComplete: true, pages: 1);
+          });
+          await cold.start();
+          await pumpEventQueue();
+          for (final event in replay) {
+            incoming
+              ..add(event)
+              ..add(Event.fromJson(event.toJson()));
+          }
+          await pumpEventQueue();
+          firstRead.complete(
+            PagedQueryResult(events: replay, isComplete: true, pages: 1),
+          );
+          await cold.synchronize();
+          await pumpEventQueue();
+          await cold.synchronize();
+          expect(cold.values, origin.values);
+          expect(
+            reads,
+            lessThanOrEqualTo(4),
+            reason: 'decryptions: ${controlled.decryptCalls}',
+          );
+          expect(controlled.decryptCalls, count);
+        },
+      );
+    });
+
+    group('setValue (unreadable journal recovery)', () {
+      test(
+        'failed quarantine is rolled back before journal replacement',
+        () async {
+          var savesWork = true;
+          final preferences = store(writeSucceeds: () => savesWork);
+          final key = 'account_state_divine:test-settings_${pubkey}_state';
+          final quarantine =
+              'account_state_quarantine_divine:test-settings_$pubkey';
+          await preferences.setString(key, '{source');
+          final phone = device(preferences: preferences);
+          savesWork = false;
+          await expectLater(
+            phone.setValue('choice', true),
+            throwsA(isA<AccountStateException>()),
+          );
+          expect(preferences.getString(key), '{source');
+          expect(preferences.getString(quarantine), isNull);
+          savesWork = true;
+          await phone.setValue('choice', true);
+          expect(jsonDecode(preferences.getString(quarantine)!), ['{source']);
+        },
+      );
+
+      test(
+        'a damaged quarantine is preserved along with repeated corrupt sources',
+        () async {
+          final preferences = store();
+          final key = 'account_state_divine:test-settings_${pubkey}_state';
+          final quarantine =
+              'account_state_quarantine_divine:test-settings_$pubkey';
+          await preferences.setString(quarantine, '{damaged-archive');
+          for (var i = 0; i < 2; i++) {
+            await preferences.setString(key, '{source');
+            final phone = device(preferences: preferences);
+            await phone.setValue('choice', true);
+            await phone.close();
+          }
+          expect(jsonDecode(preferences.getString(quarantine)!), [
+            '{damaged-archive',
+            '{source',
+          ]);
+        },
+      );
+
+      test('quarantines each corrupt journal before replacing it', () async {
+        final preferences = store();
+        final key = 'account_state_divine:test-settings_${pubkey}_state';
+        final quarantine =
+            'account_state_quarantine_divine:test-settings_$pubkey';
+        await preferences.setString(key, '{first');
+        final first = device(preferences: preferences);
+        await first.setValue('choice', true);
+        expect(jsonDecode(preferences.getString(quarantine)!), ['{first']);
+        await first.close();
+        await preferences.setString(key, '{second');
+        final second = device(preferences: preferences);
+        await second.setValue('choice', false);
+        expect(jsonDecode(preferences.getString(quarantine)!), [
+          '{first',
+          '{second',
+        ]);
+        expect(device(preferences: preferences).value('choice'), false);
+        expect(
+          AccountStateRepository.localAccountKeys(preferences, pubkey),
+          contains(quarantine),
+        );
+      });
+    });
+
     test('sharded snapshots sync beyond one NIP44 plaintext limit', () async {
       final phone = device(perFieldSnapshots: true);
       await phone.setValues({
@@ -677,7 +865,7 @@ void main() {
             noResponseFrom: const [],
           );
         });
-        fakeAsync((clock) {
+        withFakeClock((clock) {
           final phone = device();
           unawaited(phone.start());
           clock.flushMicrotasks();
@@ -709,7 +897,7 @@ void main() {
             noResponseFrom: const [],
           );
         });
-        fakeAsync((clock) {
+        withFakeClock((clock) {
           final phone = device();
           unawaited(phone.start());
           clock.flushMicrotasks();
@@ -749,7 +937,7 @@ void main() {
             published = call.positionalArguments[0] as Event;
             return acknowledgment.future;
           });
-          fakeAsync((clock) {
+          withFakeClock((clock) {
             acknowledgment = Completer<PublishOutcome>();
             final phone = device(preferences: preferences);
             unawaited(phone.start());
@@ -803,7 +991,7 @@ void main() {
                   ? PlatformException(code: 'storage_unavailable')
                   : null,
             );
-            fakeAsync((clock) {
+            withFakeClock((clock) {
               final phone = device(
                 preferences: preferences,
                 getSigner: () {
@@ -876,7 +1064,7 @@ void main() {
                 ? PlatformException(code: 'storage_unavailable')
                 : null,
           );
-          fakeAsync((clock) {
+          withFakeClock((clock) {
             final phone = device(
               preferences: preferences,
               getSigner: () => controlled,
@@ -936,7 +1124,7 @@ void main() {
             noResponseFrom: const [],
           );
         });
-        fakeAsync((clock) {
+        withFakeClock((clock) {
           final phone = device();
           unawaited(phone.start());
           clock.flushMicrotasks();
@@ -987,7 +1175,7 @@ void main() {
             reads++;
             return (events: relay.toList(), timedOut: false, noRelays: false);
           });
-          fakeAsync((clock) {
+          withFakeClock((clock) {
             final phone = device(getSigner: () => controlled);
             unawaited(phone.setValue('choice', true));
             clock.flushMicrotasks();
@@ -1022,7 +1210,7 @@ void main() {
             reads++;
             throw StateError('network unavailable');
           });
-          fakeAsync((clock) {
+          withFakeClock((clock) {
             final phone = device();
             unawaited(phone.start());
             clock.flushMicrotasks();
@@ -1051,7 +1239,7 @@ void main() {
           reads++;
           return (events: relay.toList(), timedOut: false, noRelays: false);
         });
-        fakeAsync((clock) {
+        withFakeClock((clock) {
           final phone = device();
           unawaited(phone.setValue('choice', true));
           clock.flushMicrotasks();

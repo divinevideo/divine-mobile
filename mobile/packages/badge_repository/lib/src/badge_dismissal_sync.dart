@@ -19,9 +19,14 @@ class BadgeDismissalSync {
     required NostrClient client,
     required SharedPreferences preferences,
     required NostrSigner Function() signer,
+    this.onAccountCreated,
   }) : _client = client,
        _preferences = preferences,
        _signer = signer;
+
+  /// Registers the exact owner's local write drain before any account work.
+  final void Function(String owner, Future<void> Function() close)?
+  onAccountCreated;
 
   final NostrClient _client;
   final SharedPreferences _preferences;
@@ -30,16 +35,20 @@ class BadgeDismissalSync {
 
   AccountStateRepository _account(String pubkey) => _accounts.putIfAbsent(
     pubkey,
-    () => AccountStateRepository(
-      nostrClient: _client,
-      sharedPreferences: _preferences,
-      pubkey: pubkey,
-      signer: _signer,
-      namespace: 'divine:badge-dismissals',
-      payloadEntriesKey: 'decisions',
-      entryValueKey: 'hidden',
-      cacheKeyPrefix: 'badge_dismissal_event_',
-    ),
+    () {
+      final account = AccountStateRepository(
+        nostrClient: _client,
+        sharedPreferences: _preferences,
+        pubkey: pubkey,
+        signer: _signer,
+        namespace: 'divine:badge-dismissals',
+        payloadEntriesKey: 'decisions',
+        entryValueKey: 'hidden',
+        cacheKeyPrefix: 'badge_dismissal_event_',
+      );
+      onAccountCreated?.call(pubkey, account.close);
+      return account;
+    },
   );
 
   Set<String> _hidden(AccountStateRepository account) => {

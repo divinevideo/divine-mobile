@@ -71,102 +71,109 @@ class _CappedRelay extends Relay {
 }
 
 void main() {
-  for (final sameSecond in [false, true]) {
-    test(
-      'real capped pager preserves discovery contract (same second: $sameSecond)',
-      () async {
-        SharedPreferences.setMockInitialValues({});
-        final prefs = await SharedPreferences.getInstance();
-        final signer = LocalNostrSigner('1'.padLeft(64, '0'));
-        final pubkey = (await signer.getPublicKey())!;
-        final stored = <Event>[];
-        const namespace = 'divine/dm-dismissals/v1';
-        for (var i = 1; i <= 3; i++) {
-          final content = (await signer.nip44Encrypt(
-            pubkey,
-            jsonEncode({
-              'version': 1,
-              'entries': {
-                'field$i': {'value': true, 'updated_at': i},
-              },
-            }),
-          ))!;
-          stored.add(
-            (await signer.signEvent(
-              Event(
-                pubkey,
-                EventKind.appSpecificData,
-                [
-                  ['d', '$namespace/field/${i.toString().padLeft(64, '0')}'],
-                ],
-                content,
-                createdAt: sameSecond ? 100 : 100 - i,
-              ),
-            ))!,
+  group('synchronize', () {
+    for (final sameSecond in [false, true]) {
+      test(
+        'real capped pager preserves discovery contract (same second: $sameSecond)',
+        () async {
+          SharedPreferences.setMockInitialValues({});
+          final prefs = await SharedPreferences.getInstance();
+          final signer = LocalNostrSigner('1'.padLeft(64, '0'));
+          final pubkey = (await signer.getPublicKey())!;
+          final stored = <Event>[];
+          const namespace = 'divine/dm-dismissals/v1';
+          for (var i = 1; i <= 3; i++) {
+            final content = (await signer.nip44Encrypt(
+              pubkey,
+              jsonEncode({
+                'version': 1,
+                'entries': {
+                  'field$i': {'value': true, 'updated_at': i},
+                },
+              }),
+            ))!;
+            stored.add(
+              (await signer.signEvent(
+                Event(
+                  pubkey,
+                  EventKind.appSpecificData,
+                  [
+                    ['d', '$namespace/field/${i.toString().padLeft(64, '0')}'],
+                  ],
+                  content,
+                  createdAt: sameSecond ? 100 : 100 - i,
+                ),
+              ))!,
+            );
+          }
+          final nostr = Nostr(
+            signer,
+            [],
+            (url) => RelayBase(url, RelayStatus(url)),
           );
-        }
-        final nostr = Nostr(
-          signer,
-          [],
-          (url) => RelayBase(url, RelayStatus(url)),
-        );
-        addTearDown(nostr.close);
-        final relay = _CappedRelay(stored);
-        expect(await nostr.relayPool.add(relay), true);
-        final manager = _Manager();
-        when(() => manager.connectedRelays).thenReturn([_CappedRelay.address]);
-        when(() => manager.diagnosticsSink).thenReturn(null);
-        final client = NostrClient.forTesting(
-          nostr: nostr,
-          relayManager: manager,
-        );
-        final repository = AccountStateRepository(
-          nostrClient: client,
-          sharedPreferences: prefs,
-          pubkey: pubkey,
-          signer: () => signer,
-          namespace: namespace,
-          perFieldSnapshots: true,
-        );
-        addTearDown(repository.close);
-        if (sameSecond) {
-          await repository.setValue('local', true);
-          await expectLater(
-            repository.synchronize(),
-            throwsA(
-              isA<AccountStateException>().having(
-                (e) => e.retryable,
-                'retryable',
-                true,
-              ),
-            ),
+          addTearDown(nostr.close);
+          final relay = _CappedRelay(stored);
+          expect(await nostr.relayPool.add(relay), true);
+          final manager = _Manager();
+          when(
+            () => manager.connectedRelays,
+          ).thenReturn([_CappedRelay.address]);
+          when(() => manager.diagnosticsSink).thenReturn(null);
+          final client = NostrClient.forTesting(
+            nostr: nostr,
+            relayManager: manager,
           );
-          expect(repository.hasPendingChanges, true);
+          final repository = AccountStateRepository(
+            nostrClient: client,
+            sharedPreferences: prefs,
+            pubkey: pubkey,
+            signer: () => signer,
+            namespace: namespace,
+            perFieldSnapshots: true,
+          );
+          addTearDown(repository.close);
+          if (sameSecond) {
+            await repository.setValue('local', true);
+            await expectLater(
+              repository.synchronize(),
+              throwsA(
+                isA<AccountStateException>().having(
+                  (e) => e.retryable,
+                  'retryable',
+                  true,
+                ),
+              ),
+            );
+            expect(repository.hasPendingChanges, true);
+            expect(
+              repository.values.keys.where((key) => key.startsWith('field')),
+              hasLength(2),
+            );
+            final journal =
+                jsonDecode(
+                      prefs.getString(
+                        'account_state_${namespace}_${pubkey}_state',
+                      )!,
+                    )
+                    as Map;
+            expect(journal['events'], hasLength(2));
+          } else {
+            await repository.synchronize();
+            expect(repository.values, {
+              'field1': true,
+              'field2': true,
+              'field3': true,
+            });
+            expect(repository.hasPendingChanges, false);
+          }
+          expect(relay.requests.length, greaterThan(1));
           expect(
-            repository.values.keys.where((key) => key.startsWith('field')),
-            hasLength(2),
+            relay.requests.every((filter) => filter['limit'] == 500),
+            true,
           );
-          final journal =
-              jsonDecode(
-                    prefs.getString(
-                      'account_state_${namespace}_${pubkey}_state',
-                    )!,
-                  )
-                  as Map;
-          expect(journal['events'], hasLength(2));
-        } else {
-          await repository.synchronize();
-          expect(repository.values, {
-            'field1': true,
-            'field2': true,
-            'field3': true,
-          });
-          expect(repository.hasPendingChanges, false);
-        }
-        expect(relay.requests.length, greaterThan(1));
-        expect(relay.requests.every((filter) => filter['limit'] == 500), true);
-        expect(relay.publications, 0);
-      },
-    );
-  }
+          expect(relay.publications, 0);
+        },
+      );
+    }
+  });
 }

@@ -1,6 +1,8 @@
 // ABOUTME: Tests for DmSyncState — persistence of per-pubkey DM sync
 // ABOUTME: boundaries (newestSyncedAt / oldestSyncedAt) in SharedPreferences.
 
+import 'dart:convert';
+
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -40,6 +42,67 @@ void main() {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       prefs = await SharedPreferences.getInstance();
       state = DmSyncState(prefs);
+    });
+
+    group('rememberReadCursors (repeated corruption)', () {
+      test(
+        'damaged history and repeat recovery preserve every source',
+        () async {
+          final key = DmSyncState.readStateStorageKey(pkA);
+          await prefs.setString('${key}_quarantine', '{first');
+          await prefs.setString(
+            '${key}_quarantine_history',
+            '{damaged-archive',
+          );
+          for (var i = 0; i < 2; i++) {
+            await prefs.setString(key, '{second');
+            await state.rememberReadCursors(pkA, {'tuple': 200});
+          }
+          expect(prefs.getString('${key}_quarantine'), '{first');
+          expect(jsonDecode(prefs.getString('${key}_quarantine_history')!), [
+            '{damaged-archive',
+            '{second',
+          ]);
+          expect(state.readCursors(pkA), {'tuple': 200});
+        },
+      );
+
+      test(
+        'refused history leaves the current and prior source intact',
+        () async {
+          final key = DmSyncState.readStateStorageKey(pkA);
+          await prefs.setString(key, '{second');
+          await prefs.setString('${key}_quarantine', '{first');
+          final original = SharedPreferencesStorePlatform.instance;
+          addTearDown(() => SharedPreferencesStorePlatform.instance = original);
+          SharedPreferencesStorePlatform.instance = _RefusingStore.withData({});
+          await expectLater(
+            state.rememberReadCursors(pkA, {'tuple': 200}),
+            throwsStateError,
+          );
+          expect(prefs.getString(key), '{second');
+          expect(prefs.getString('${key}_quarantine'), '{first');
+          expect(prefs.getString('${key}_quarantine_history'), isNull);
+        },
+      );
+
+      test(
+        'preserves earlier quarantine and recovers the second source',
+        () async {
+          final key = DmSyncState.readStateStorageKey(pkA);
+          await prefs.setString(key, '{first');
+          await state.rememberReadCursors(pkA, {'tuple': 100});
+          await prefs.setString(key, '{second');
+          await state.rememberReadCursors(pkA, {'tuple': 200});
+          expect(state.readCursors(pkA), {'tuple': 200});
+          expect(prefs.getString('${key}_quarantine'), '{first');
+          expect(prefs.getString('${key}_quarantine_history'), '["{second"]');
+          expect(
+            DmSyncState.readStateStorageKeys(pkA),
+            contains('${key}_quarantine_history'),
+          );
+        },
+      );
     });
 
     for (final corrupt in [

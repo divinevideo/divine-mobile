@@ -370,7 +370,7 @@ class NotificationPreferencesService {
     final account = _accountPreferences;
     final write = account?.captureWrite();
     final owner = _currentPubkey();
-    if (account != null) {
+    if (account != null && account.isBound) {
       ++_localMutations;
       ++_generation;
       ++_refreshRequest;
@@ -411,8 +411,11 @@ class NotificationPreferencesService {
       return;
     }
     await _store.savePreferences(prefs);
-    if (owner == null) return;
+    write?.ensureCurrent();
+    if (_disposed || owner == null || owner != _currentPubkey()) return;
     await _store.markDirty(owner, prefs);
+    write?.ensureCurrent();
+    if (_disposed || owner != _currentPubkey()) return;
     final outcome = await _publishAndClearDirtyPreferences(owner, prefs);
     if (outcome == NotificationPreferencesSyncOutcome.stillDirty) {
       _onStillDirty?.call(owner);
@@ -421,8 +424,8 @@ class NotificationPreferencesService {
 
   Future<void> resetToDefaults() async {
     final write = _accountPreferences?.captureWrite();
-    if (write != null) {
-      await write.writeValues({
+    if (_accountPreferences?.isBound ?? false) {
+      await write!.writeValues({
         for (final field in AccountPreferenceRegistry.notificationFields)
           'notifications/$field': null,
       });

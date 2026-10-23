@@ -34,6 +34,45 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('content filter storage reload', () {
+    testWidgets('cold construction retains no idle revocation future', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      // Construct in the widget zone without warming or pumping the service.
+      final filters = ContentFilterService(
+        ageVerificationService: AgeVerificationService(preferences: prefs),
+      );
+      addTearDown(filters.dispose);
+      await tester.runAsync(() async {
+        await filters.initialize();
+        await filters.reloadFromStorage().timeout(const Duration(seconds: 1));
+      });
+      expect(tester.takeException(), isNull);
+    });
+
+    test(
+      'disposed initialization does not access account age callbacks',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        var disposed = false;
+        final filters = ContentFilterService(
+          ageVerificationService: AgeVerificationService(
+            preferences: prefs,
+            isProtectedMinor: () {
+              if (disposed) throw StateError('account provider disposed');
+              return false;
+            },
+          ),
+        );
+        final initialization = filters.initialize();
+        filters.dispose();
+        disposed = true;
+        await expectLater(initialization, completes);
+      },
+    );
+
     for (final usePort in [false, true]) {
       test(
         '${usePort ? 'unbound port' : 'legacy'} cleanup notifies once for '

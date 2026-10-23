@@ -336,6 +336,8 @@ class BadgeRepository {
     required BadgeEventSigner signEvent,
     required NostrSigner Function() signer,
     BadgeHiddenPubkeyReader? isHiddenPubkey,
+    void Function(String owner, Future<void> Function() close)?
+    onAccountCreated,
   }) : _nostrClient = nostrClient,
        _sharedPreferences = sharedPreferences,
        _currentPubkey = currentPubkey,
@@ -345,6 +347,7 @@ class BadgeRepository {
          client: nostrClient,
          preferences: sharedPreferences,
          signer: signer,
+         onAccountCreated: onAccountCreated,
        );
 
   final NostrClient _nostrClient;

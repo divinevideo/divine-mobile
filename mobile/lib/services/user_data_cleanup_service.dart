@@ -56,11 +56,15 @@ import 'package:unified_logger/unified_logger.dart';
 /// detects identity changes and clears user-specific data to prevent
 /// data leakage between accounts.
 class UserDataCleanupService {
-  UserDataCleanupService(this._prefs)
+  UserDataCleanupService(this._prefs, {this.onAccountStateWritesStop})
     : _listSessions = CuratedListSessionCoordinator.forPreferences(_prefs);
 
   final SharedPreferences _prefs;
   final CuratedListSessionCoordinator _listSessions;
+
+  /// Drains account-local journal writers before removing their durable data.
+  /// The provider layer retains close operations even after provider disposal.
+  final Future<void> Function(String owner)? onAccountStateWritesStop;
 
   /// Optional callback invoked during cleanup to clear user-specific
   /// database tables (DMs, conversations, notifications, per-user DAOs).
@@ -408,6 +412,7 @@ class UserDataCleanupService {
     )) {
       throw const CuratedListRecoveryException();
     }
+    await onAccountStateWritesStop?.call(userPubkey);
     await CuratedListRecoveryJournal.invalidateOwner(_prefs, userPubkey);
     var clearedCount = 0;
 
@@ -655,6 +660,9 @@ class UserDataCleanupService {
     // A refusal must stop before the first cache removal; otherwise a restart
     // would lose the only evidence that database cleanup is still required.
     await requiredCleanup?.record(_prefs);
+    if ((deleteUserData || forgetAccount) && userPubkey != null) {
+      await onAccountStateWritesStop?.call(userPubkey);
+    }
 
     int clearedCount = 0;
     final clearedKeys = <String>[];
@@ -713,6 +721,27 @@ class UserDataCleanupService {
     if (deleteUserData && userPubkey != null && userPubkey.isNotEmpty) {
       await remove(PrefsCuratedListStore.pendingDefaultDeletionKey(userPubkey));
       await remove(SavedSoundsService.accountStorageKey(userPubkey));
+      for (final kind in SyncItemKind.values) {
+        await remove(PrefsSyncStateStore.appliedStorageKey(kind, userPubkey));
+      }
+      for (final key in AgeVerificationService.accountKeys(userPubkey)) {
+        await remove(key);
+      }
+      for (final key in [
+        SharedPreferencesHashtagSubscriptionStore.storageKey(userPubkey),
+        FollowingCacheRecord.storageKey(userPubkey),
+        followingPrefetchMarkerKey(userPubkey),
+        MinorAccountReviewStatusStore.storageKey(userPubkey),
+      ]) {
+        await remove(key);
+      }
+    }
+
+    // Forgetting an account removes its sync journals without deleting its
+    // retained libraries. An ordinary switch preserves every owner's journal.
+    if ((deleteUserData || forgetAccount) &&
+        userPubkey != null &&
+        userPubkey.isNotEmpty) {
       for (final key in AccountStateRepository.localAccountKeys(
         _prefs,
         userPubkey,
@@ -730,20 +759,6 @@ class UserDataCleanupService {
       if (_prefs.getString(AccountPreferenceStore.projectionOwnerStorageKey) ==
           userPubkey) {
         await remove(AccountPreferenceStore.projectionOwnerStorageKey);
-      }
-      for (final kind in SyncItemKind.values) {
-        await remove(PrefsSyncStateStore.appliedStorageKey(kind, userPubkey));
-      }
-      for (final key in AgeVerificationService.accountKeys(userPubkey)) {
-        await remove(key);
-      }
-      for (final key in [
-        SharedPreferencesHashtagSubscriptionStore.storageKey(userPubkey),
-        FollowingCacheRecord.storageKey(userPubkey),
-        followingPrefetchMarkerKey(userPubkey),
-        MinorAccountReviewStatusStore.storageKey(userPubkey),
-      ]) {
-        await remove(key);
       }
     }
 
@@ -773,7 +788,7 @@ class UserDataCleanupService {
         // database cleanup fails can expose the departing account's local DM
         // state to the incoming session. Ordinary same-account logout remains
         // best-effort unless it is explicitly destructive.
-        if (deleteUserData || isIdentityChange) {
+        if (deleteUserData || forgetAccount || isIdentityChange) {
           rethrow;
         }
       }

@@ -92,7 +92,9 @@ jobs:
     needs: changes
     if: ${{ needs.changes.outputs.focused == 'true' || needs.changes.outputs.app == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # A cold combined run spent ~15 minutes in Linux setup before per-suite
+    # builds and hit the 30-minute cap; allow the full suite to finish.
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: mobile/
@@ -173,7 +175,8 @@ jobs:
           fi
           for suite in "${suites[@]}"; do
             echo "── $suite"
-            xvfb-run -a flutter test "$suite" --tags service -d linux
+            # Dependencies were resolved once above; reuse that graph per suite.
+            xvfb-run -a flutter test --no-pub "$suite" --tags service -d linux
           done
   daily-signal:
     name: Publish daily service-test result

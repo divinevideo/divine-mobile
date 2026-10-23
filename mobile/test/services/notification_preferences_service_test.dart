@@ -1,17 +1,141 @@
 // ABOUTME: Tests persistence behavior for push notification preferences.
 // ABOUTME: Verifies dirty retry state survives notification cache cleanup.
 
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/models/notification_preferences.dart';
+import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/notification_preferences_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'support/fake_account_state.dart';
 
 class _MockHiveBox extends Mock implements Box<dynamic> {}
 
 void main() {
   setUpAll(() {
     registerFallbackValue(<String, dynamic>{});
+  });
+
+  group('unbound account preference port', () {
+    for (final reset in [false, true]) {
+      test(
+        'unbound mutation retains its account lease, reset: $reset',
+        () async {
+          SharedPreferences.setMockInitialValues({});
+          final account = AccountPreferenceStore(
+            await SharedPreferences.getInstance(),
+          );
+          final entered = Completer<void>();
+          final release = Completer<void>();
+          final store = _MemoryNotificationPreferencesStore()
+            ..beforeSave = () async {
+              entered.complete();
+              await release.future;
+            };
+          final firstOwner = 'a' * 64;
+          var owner = firstOwner;
+          final publishedOwners = <String>[];
+          final service = NotificationPreferencesService(
+            store: store,
+            currentPubkey: () => owner,
+            accountPreferences: account,
+            publishPreferences: (pubkey, _) async {
+              publishedOwners.add(pubkey);
+              return false;
+            },
+          );
+          final incoming = FakeAccountState('b' * 64);
+          addTearDown(service.dispose);
+          addTearDown(account.dispose);
+          addTearDown(incoming.close);
+          final mutation = reset
+              ? service.resetToDefaults()
+              : service.updatePreferences(
+                  const NotificationPreferences(commentsEnabled: false),
+                );
+          final cancelled = expectLater(mutation, throwsStateError);
+          await entered.future;
+          owner = incoming.pubkey;
+          await account.bind(incoming);
+          release.complete();
+          await cancelled;
+          expect(await store.loadDirty(firstOwner), isNull);
+          expect(publishedOwners, isNot(contains(firstOwner)));
+        },
+      );
+    }
+
+    test(
+      'unbound persistence failure is propagated before dirty publication',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final account = AccountPreferenceStore(
+          await SharedPreferences.getInstance(),
+        );
+        final failure = StateError('preference storage refused');
+        final store = _MemoryNotificationPreferencesStore()
+          ..beforeSave = () async {
+            throw failure;
+          };
+        final owner = 'a' * 64;
+        var published = false;
+        final service = NotificationPreferencesService(
+          store: store,
+          currentPubkey: () => owner,
+          accountPreferences: account,
+          publishPreferences: (_, _) async {
+            published = true;
+            return true;
+          },
+        );
+        addTearDown(service.dispose);
+        addTearDown(account.dispose);
+        await expectLater(
+          service.updatePreferences(
+            const NotificationPreferences(commentsEnabled: false),
+          ),
+          throwsA(same(failure)),
+        );
+        expect(await store.loadDirty(owner), isNull);
+        expect(published, isFalse);
+      },
+    );
+
+    test('saves and publishes the same legacy preference snapshot', () async {
+      SharedPreferences.setMockInitialValues({});
+      final account = AccountPreferenceStore(
+        await SharedPreferences.getInstance(),
+      );
+      final store = _MemoryNotificationPreferencesStore();
+      final published = <NotificationPreferences>[];
+      final owner = 'a' * 64;
+      final service = NotificationPreferencesService(
+        store: store,
+        currentPubkey: () => owner,
+        accountPreferences: account,
+        publishPreferences: (_, preferences) async {
+          published.add(preferences);
+          return false;
+        },
+      );
+      addTearDown(service.dispose);
+      addTearDown(account.dispose);
+      const choices = NotificationPreferences(commentsEnabled: false);
+      await service.updatePreferences(choices);
+      await pumpEventQueue();
+      expect(await service.loadPreferences(), choices);
+      expect(await store.loadDirty(owner), choices);
+      expect(published, [choices]);
+      await service.resetToDefaults();
+      await pumpEventQueue();
+      expect(await service.loadPreferences(), const NotificationPreferences());
+      expect(await store.loadDirty(owner), const NotificationPreferences());
+      expect(published, [choices, const NotificationPreferences()]);
+    });
   });
 
   group('clearPreferences', () {
@@ -216,6 +340,7 @@ class _MemoryNotificationPreferencesStore
   }
 
   NotificationPreferences? preferences;
+  Future<void> Function()? beforeSave;
   final dirty = <String, NotificationPreferences>{};
 
   @override
@@ -225,6 +350,7 @@ class _MemoryNotificationPreferencesStore
 
   @override
   Future<void> savePreferences(NotificationPreferences preferences) async {
+    await beforeSave?.call();
     this.preferences = preferences;
   }
 

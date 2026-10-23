@@ -69,7 +69,8 @@ class AccountStateRepository {
   final _fieldTags = <String, String>{};
   List<Event> _events = [];
   final _receivedSources = <String, Event>{};
-  final _decoded = <String, Map<String, _Entry>>{};
+  final _decoded =
+      <String, ({String fingerprint, Map<String, _Entry> entries})>{};
   final _verifiedSources = <String, String>{};
   final _controller = StreamController<Map<String, Object?>>.broadcast();
   Future<void> _writes = Future<void>.value();
@@ -79,11 +80,16 @@ class AccountStateRepository {
   bool _pending = false;
   bool _closed = false;
   bool _started = false;
+  bool _backgroundRunning = false;
+  bool _backgroundRequested = false;
+  Future<void>? _closing;
+  String? _unreadableState;
   int _revision = 0;
   Timer? _retryTimer;
   var _retrySeconds = 1;
   String get _cacheKey => '$_cachePrefix$pubkey';
   String get _stateKey => '${_cacheKey}_state';
+  String get _quarantineKey => 'account_state_quarantine_${namespace}_$pubkey';
 
   /// Keys belonging to one account, including the original badge cache.
   static Iterable<String> localAccountKeys(
@@ -172,7 +178,8 @@ class AccountStateRepository {
     _incoming = _client.subscribe(_filters).listen((event) {
       if (_closed ||
           !_belongs(event) ||
-          _events.any((known) => known.id == event.id)) {
+          _events.any((known) => known.id == event.id) ||
+          _receivedSources.containsKey(event.id)) {
         return;
       }
       // Receipt itself is an overwrite barrier, even if its journal write
@@ -202,7 +209,26 @@ class AccountStateRepository {
   }
 
   void _backgroundSync() {
-    if (!_closed) unawaited(synchronize().catchError((Object _) {}));
+    if (_closed) return;
+    _backgroundRequested = true;
+    if (_backgroundRunning) return;
+    _backgroundRunning = true;
+    unawaited(_drainBackgroundSyncs());
+  }
+
+  Future<void> _drainBackgroundSyncs() async {
+    try {
+      do {
+        _backgroundRequested = false;
+        try {
+          await synchronize();
+        } on Object {
+          // synchronize owns retry classification and persistence barriers.
+        }
+      } while (!_closed && _backgroundRequested);
+    } finally {
+      _backgroundRunning = false;
+    }
   }
 
   /// Flushes pending writes after reading all configured relays.
@@ -428,11 +454,11 @@ class AccountStateRepository {
       if (signed == null || signed.id != expectedId || !_belongs(signed)) {
         throw const AccountStateException('Could not sign account state');
       }
+      _remember(signed.id, jsonEncode(signed.toJson()), publishing);
       await _checkedSigner();
       if (_closed) return;
       if (!await _confirmCurrent(signed, snapshots.keys.toSet())) return;
       confirmed = signed;
-      _remember(signed.id, publishing);
     } else if (latest != null &&
         !read.events.any((event) => event.id == latest.id)) {
       await _checkedSigner();
@@ -492,6 +518,7 @@ class AccountStateRepository {
     final keys = publishing.keys.toList()..sort();
     if (keys.any((key) => !_fieldTags.containsKey(key))) {
       await _write(() async {
+        if (_closed) return;
         final previous = Map<String, String>.of(_fieldTags);
         for (final key in keys) {
           _fieldTags.putIfAbsent(key, _newFieldTag);
@@ -562,10 +589,10 @@ class AccountStateRepository {
         if (signed == null || signed.id != expected || !_belongs(signed)) {
           throw const AccountStateException('Could not sign account state');
         }
+        _remember(signed.id, jsonEncode(signed.toJson()), field);
         await _checkedSigner();
         if (_closed || !await _confirmCurrent(signed, sources)) return;
         confirmed = signed;
-        _remember(signed.id, field);
       } else if (!remoteEvents.any((event) => event.id == latest.id)) {
         await _checkedSigner();
         if (_closed || !await _confirmCurrent(latest, sources)) return;
@@ -576,6 +603,7 @@ class AccountStateRepository {
         // Commit every acknowledged shard independently. A later refusal or
         // network failure must not republish already acknowledged siblings.
         await _write(() async {
+          if (_closed) return;
           final events = _unionEvents([
             ..._events.where(
               (event) => event.dTagValue != tag || !sources.contains(event.id),
@@ -703,6 +731,7 @@ class AccountStateRepository {
     _events = _unionEvents([...persisted, ..._receivedSources.values]);
     final ids = _events.map((event) => event.id).toSet();
     _verifiedSources.removeWhere((id, _) => !ids.contains(id));
+    _decoded.removeWhere((id, _) => !ids.contains(id));
   }
 
   Future<bool> _confirmCurrent(Event event, Set<String> sources) async {
@@ -720,7 +749,7 @@ class AccountStateRepository {
     });
     if (publication == null) return false;
     await publication;
-    return true;
+    return !_closed;
   }
 
   Future<void> _confirm(Event event) async {
@@ -734,8 +763,9 @@ class AccountStateRepository {
   }
 
   Future<Map<String, _Entry>> _decode(NostrSigner signer, Event event) async {
+    final fingerprint = jsonEncode(event.toJson());
     final known = _decoded[event.id];
-    if (known != null) return known;
+    if (known != null && known.fingerprint == fingerprint) return known.entries;
     final plaintext = await _signerRequest(
       () => signer.nip44Decrypt(pubkey, event.content),
       'Could not decrypt account state',
@@ -761,7 +791,7 @@ class AccountStateRepository {
       }
       _learnFieldTag(entries.keys.single, event.dTagValue);
     }
-    _remember(event.id, entries);
+    _remember(event.id, fingerprint, entries);
     return entries;
   }
 
@@ -813,6 +843,8 @@ class AccountStateRepository {
           name: 'AccountStateRepository',
           category: LogCategory.storage,
         );
+        _unreadableState = state;
+        _fieldTags.clear();
         _entries = {};
         _pending = false;
         _events = [];
@@ -877,9 +909,34 @@ class AccountStateRepository {
       await storage.write(encoded);
       return;
     }
-    final previous = _preferences.getString(_stateKey);
+    final unreadable = _unreadableState;
+    if (unreadable != null) {
+      final sources = _quarantinedSources(
+        _preferences.getString(_quarantineKey),
+      );
+      if (!sources.contains(unreadable)) sources.add(unreadable);
+      // Preserve unreadable bytes before replacing the journal. The fixed key
+      // belongs to localAccountKeys and is removed by explicit owner erasure.
+      await _writePreference(_quarantineKey, jsonEncode(sources));
+    }
+    await _writePreference(_stateKey, encoded);
+    _unreadableState = null;
+  }
+
+  List<String> _quarantinedSources(String? raw) {
+    if (raw == null) return [];
     try {
-      if (!await _preferences.setString(_stateKey, encoded)) {
+      return (jsonDecode(raw) as List).cast<String>().toList();
+    } on Object {
+      // A damaged archive is itself a recovery source; never discard it.
+      return [raw];
+    }
+  }
+
+  Future<void> _writePreference(String key, String value) async {
+    final previous = _preferences.getString(key);
+    try {
+      if (!await _preferences.setString(key, value)) {
         throw const AccountStateException(
           'Could not save account state',
           retryable: true,
@@ -892,9 +949,9 @@ class AccountStateRepository {
       // too, so the previous local value is restored even if it throws.
       try {
         if (previous == null) {
-          await _preferences.remove(_stateKey);
+          await _preferences.remove(key);
         } else {
-          await _preferences.setString(_stateKey, previous);
+          await _preferences.setString(key, previous);
         }
       } on Object catch (_) {
         // Preserve the original persistence error and stack.
@@ -959,9 +1016,11 @@ class AccountStateRepository {
   }
 
   static Object? _copyValue(Object? value) => jsonDecode(jsonEncode(value));
-  void _remember(String id, Map<String, _Entry> entries) {
-    _decoded[id] = entries;
-    if (_decoded.length > 8) _decoded.remove(_decoded.keys.first);
+  void _remember(String id, String fingerprint, Map<String, _Entry> entries) {
+    // A shard set has no fixed source count. Retain exactly the durable source
+    // working set, pruned by _installSources, rather than an eight-item LRU.
+    // Event is mutable, so an ID alone must never authorize a decoded hit.
+    _decoded[id] = (fingerprint: fingerprint, entries: entries);
   }
 
   void _emit() {
@@ -972,8 +1031,9 @@ class AccountStateRepository {
     if (_closed) throw StateError('Account state repository is closed');
   }
 
-  Future<void> close() async {
-    if (_closed) return;
+  Future<void> close() => _closing ??= _close();
+
+  Future<void> _close() async {
     _closed = true;
     _clearRetry();
     await _incoming?.cancel();
