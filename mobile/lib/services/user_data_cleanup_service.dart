@@ -413,6 +413,9 @@ class UserDataCleanupService {
       throw const CuratedListRecoveryException();
     }
     await onAccountStateWritesStop?.call(userPubkey);
+    // Intent readback can discard optimistic values from native writes that
+    // were still pending. Inspect committed owner data only after their drain.
+    await _prefs.reload();
     await CuratedListRecoveryJournal.invalidateOwner(_prefs, userPubkey);
     var clearedCount = 0;
 
@@ -664,6 +667,9 @@ class UserDataCleanupService {
     await requiredCleanup?.record(_prefs);
     if ((deleteUserData || forgetAccount) && userPubkey != null) {
       await onAccountStateWritesStop?.call(userPubkey);
+      // The intent's readback may have preceded a held native projection.
+      // Refresh after it settles before enumerating keys or checking ownership.
+      await _prefs.reload();
     }
 
     int clearedCount = 0;
