@@ -10,14 +10,17 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
+  clock: ^1.1.2
   db_client:
   equatable: ^2.0.5
   funnelcake_api_client:
+  http: ^1.5.0
   meta: ^1.14.0
   models:
   nostr_client:
   nostr_sdk:
   profile_repository:
+  pub_semver: ^2.2.0
   rxdart: ^0.28.0
   text_sanitizer:
   unified_logger:
