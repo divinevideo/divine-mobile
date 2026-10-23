@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/text_gradient_presets.dart';
+import 'package:openvine/widgets/color_swatch_button.dart';
 import 'package:openvine/widgets/video_editor/text_editor/video_editor_text_extensions.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_row.dart';
@@ -97,9 +98,8 @@ class TextGradientControls extends StatelessWidget {
           padding: inset,
           children: [
             for (var i = 0; i < colorCount; i++)
-              VideoEditorColorTile(
+              _ColorTile(
                 color: gradient.colors[i],
-                selected: false,
                 onTap: () => _changeColor(context, i),
               ),
             _IconTile(
@@ -137,6 +137,9 @@ class TextGradientControls extends StatelessWidget {
 }
 
 /// A [title] over a row of tiles that scrolls out to the edge of the sheet.
+///
+/// A screen reader hears the title as the label of the row, before its
+/// tiles.
 class _Section extends StatelessWidget {
   const _Section({
     required this.title,
@@ -157,21 +160,27 @@ class _Section extends StatelessWidget {
       children: [
         Padding(
           padding: padding,
-          child: Text(
-            title,
-            style: VineTheme.labelMediumFont(
-              color: context.vineColors.secondaryText,
+          child: ExcludeSemantics(
+            child: Text(
+              title,
+              style: VineTheme.labelMediumFont(
+                color: context.vineColors.secondaryText,
+              ),
             ),
           ),
         ),
-        SizedBox(
-          height: VideoEditorColorRow.height,
-          child: ListView.separated(
-            scrollDirection: .horizontal,
-            padding: padding,
-            itemCount: children.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 12),
-            itemBuilder: (_, index) => children[index],
+        Semantics(
+          container: true,
+          label: title,
+          child: SizedBox(
+            height: VideoEditorColorRow.height,
+            child: ListView.separated(
+              scrollDirection: .horizontal,
+              padding: padding,
+              itemCount: children.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
+              itemBuilder: (_, index) => children[index],
+            ),
           ),
         ),
       ],
@@ -258,6 +267,31 @@ class _GradientTile extends StatelessWidget {
           gradient: gradient.swatch,
           shape: BoxShape.circle,
         ),
+      ),
+    );
+  }
+}
+
+/// A color of the gradient, which opens the color picker to change it.
+class _ColorTile extends StatelessWidget {
+  const _ColorTile({required this.color, required this.onTap});
+
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return _Tile(
+      // Read like the palette's own picker tile: what it opens, then its
+      // color.
+      semanticLabel: l10n.videoEditorColorPickerSwatchSemanticLabel(
+        l10n.videoEditorColorPickerSemanticLabel,
+        ColorSwatchButton.rgbSemanticLabel(context, color),
+      ),
+      onTap: onTap,
+      child: DecoratedBox(
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
       ),
     );
   }
