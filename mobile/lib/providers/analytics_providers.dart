@@ -80,6 +80,21 @@ final analyticsCollectionControlProvider = Provider<AnalyticsCollectionControl>(
   },
 );
 
+/// Measures taps through the existing Firebase collection/consent boundary.
+final notificationAnalyticsTrackerProvider =
+    Provider<NotificationAnalyticsTracker>(
+      (ref) => NotificationAnalyticsTracker(
+        sink: ref.watch(analyticsEventSinkProvider),
+        collectionAllowed: () async {
+          final analytics = ref.read(analyticsServiceProvider);
+          await analytics.initialize();
+          return analytics.analyticsEnabled;
+        },
+        privacyBoundary: () =>
+            ref.read(analyticsServiceProvider).productAnalyticsSessionId,
+      ),
+    );
+
 final creationAnalyticsTrackerProvider = Provider<CreationAnalyticsTracker>(
   (ref) => CreationAnalyticsTracker(
     analytics: ref.watch(analyticsEventSinkProvider),

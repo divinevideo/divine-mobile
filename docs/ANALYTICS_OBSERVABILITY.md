@@ -143,6 +143,15 @@ that did not open the camera in the active session, so those publishes cannot
 drag the timing distribution toward zero. Query it with `IS NOT NULL` rather
 than treating a missing value as instant.
 
+## Notification Opens
+
+| Event | Parameters | Boundary |
+| --- | --- | --- |
+| `push_notification_opened` | `notification_type`, `open_source` | A person taps a push or local notification; receipt alone is not an open |
+
+The parameter values, deduplication, and the BigQuery engagement report are in
+[analytics/push_engagement.md](analytics/push_engagement.md).
+
 ## Post-Publish Experiment
 
 The existing profile destination and published-video confirmation remain the
@@ -177,6 +186,10 @@ does not make them queryable as dimensions retroactively.
 
 1. Create an event-scoped custom dimension named `mode` for event parameter
    `mode`.
+2. Create event-scoped custom dimensions `notification_type` and `open_source`
+   before the instrumented release if notification opens should break down in
+   GA4 reports. The BigQuery report reads raw event parameters and does not
+   need them.
 
 The GA4 reporting identity setting does not gate the BigQuery `user_id` field;
 use BigQuery as the campaign source of truth.

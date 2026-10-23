@@ -1,15 +1,31 @@
 // ABOUTME: Tests routeBackgroundPushTap routes a tapped push through the
 // ABOUTME: account container that is live when the tap arrives.
 
+import 'dart:async';
+
+import 'package:analytics/analytics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/notifications/notification_tap_router.dart';
+import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/services/notification_helpers.dart';
 
 class _MockGoRouter extends Mock implements GoRouter {}
+
+class _RecordingSink extends NoOpAnalyticsEventSink {
+  final events = <Map<String, Object>>[];
+
+  @override
+  Future<void> logEvent({
+    required String name,
+    required Map<String, Object> parameters,
+  }) async {
+    events.add({'name': name, ...parameters});
+  }
+}
 
 void main() {
   const destination = '/following/new';
@@ -24,20 +40,136 @@ void main() {
   late ProviderContainer containerA;
   late ProviderContainer containerB;
 
+  NotificationAnalyticsTracker disabledTracker() =>
+      NotificationAnalyticsTracker(
+        sink: const NoOpAnalyticsEventSink(),
+        collectionAllowed: () async => false,
+        privacyBoundary: () => 'test',
+      );
+
   setUp(() {
     routerA = _MockGoRouter();
     routerB = _MockGoRouter();
     containerA = ProviderContainer(
-      overrides: [goRouterProvider.overrideWithValue(routerA)],
+      overrides: [
+        goRouterProvider.overrideWithValue(routerA),
+        notificationAnalyticsTrackerProvider.overrideWithValue(
+          disabledTracker(),
+        ),
+      ],
     );
     containerB = ProviderContainer(
-      overrides: [goRouterProvider.overrideWithValue(routerB)],
+      overrides: [
+        goRouterProvider.overrideWithValue(routerB),
+        notificationAnalyticsTrackerProvider.overrideWithValue(
+          disabledTracker(),
+        ),
+      ],
     );
   });
 
   tearDown(() => containerB.dispose());
 
+  group('routeNotificationTap', () {
+    for (final source in NotificationOpenSource.values) {
+      test('shared tap router records ${source.wireValue}', () async {
+        final sink = _RecordingSink();
+        final container = ProviderContainer(
+          overrides: [
+            goRouterProvider.overrideWithValue(routerA),
+            notificationAnalyticsTrackerProvider.overrideWithValue(
+              NotificationAnalyticsTracker(
+                sink: sink,
+                collectionAllowed: () async => true,
+                privacyBoundary: () => 'test',
+              ),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        containerA.dispose();
+        await routeNotificationTap(
+          messageId: 'transport-message-1',
+          openSource: source,
+          referencedAddress: null,
+          referencedEventId: null,
+          eventId: null,
+          notificationType: 'campaign',
+          senderPubkey: null,
+          container: container,
+          tapTargetType: 'app_route',
+          tapTargetValue: destination,
+        );
+        await pumpEventQueue();
+        expect(sink.events.single['open_source'], source.wireValue);
+        verify(() => routerA.go(destination)).called(1);
+      });
+    }
+  });
+
   group('routeBackgroundPushTap', () {
+    test('routes immediately while analytics waits for consent', () async {
+      final consent = Completer<bool>();
+      final sink = _RecordingSink();
+      final container = ProviderContainer(
+        overrides: [
+          goRouterProvider.overrideWithValue(routerA),
+          notificationAnalyticsTrackerProvider.overrideWithValue(
+            NotificationAnalyticsTracker(
+              sink: sink,
+              collectionAllowed: () => consent.future,
+              privacyBoundary: () => 'test',
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      containerA.dispose();
+
+      await routeBackgroundPushTap(campaignTap, liveContainer: () => container);
+      verify(() => routerA.go(destination)).called(1);
+      expect(sink.events, isEmpty);
+
+      consent.complete(true);
+      await pumpEventQueue();
+      expect(sink.events, [
+        {
+          'name': 'push_notification_opened',
+          'notification_type': 'campaign',
+          'open_source': 'os_background',
+        },
+      ]);
+    });
+
+    test(
+      'deduplicates a repeated background tap by its transport message ID',
+      () async {
+        final sink = _RecordingSink();
+        final container = ProviderContainer(
+          overrides: [
+            goRouterProvider.overrideWithValue(routerA),
+            notificationAnalyticsTrackerProvider.overrideWithValue(
+              NotificationAnalyticsTracker(
+                sink: sink,
+                collectionAllowed: () async => true,
+                privacyBoundary: () => 'test',
+              ),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+        containerA.dispose();
+        final tap = fcmPayloadWithMessageId(campaignTap, 'transport-message-1');
+
+        await routeBackgroundPushTap(tap, liveContainer: () => container);
+        await routeBackgroundPushTap(tap, liveContainer: () => container);
+        await pumpEventQueue();
+
+        // Campaigns carry no event ID, so only the message ID can merge these.
+        expect(sink.events, hasLength(1));
+      },
+    );
+
     test(
       'routes a background tap through the container that is live when it '
       'arrives',

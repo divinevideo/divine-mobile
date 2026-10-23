@@ -6,6 +6,7 @@ import 'dart:io'
     if (dart.library.html) 'package:openvine/utils/platform_io_web.dart'
     as io;
 
+import 'package:analytics/analytics.dart' show NotificationOpenSource;
 import 'package:divine_video_player/divine_video_player.dart'
     show DivineVideoPlayerController, NativePlaybackDiagnostics;
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -440,6 +441,8 @@ class _DivineAppState extends ConsumerState<DivineApp>
           );
           unawaited(
             routeNotificationTap(
+              messageId: tapEvent.messageId,
+              openSource: NotificationOpenSource.localTap,
               referencedAddress: tapEvent.referencedAddress,
               referencedEventId: tapEvent.referencedEventId,
               eventId: tapEvent.eventId,
