@@ -1,8 +1,8 @@
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/router/nav_extensions.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/hashtag_screen_router.dart';
-import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/search_results/view/search_results_page.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -56,7 +56,7 @@ final class LinkifiedTextNavigation {
     final npub = NostrKeyUtils.encodePubKey(hexPubkey);
     _pushAfterModalPop(
       context,
-      OtherProfileScreen.pathForNpub(npub),
+      OtherProfileRouteData(npub: npub).location,
       beforeNavigate: beforeNavigate,
     );
   }

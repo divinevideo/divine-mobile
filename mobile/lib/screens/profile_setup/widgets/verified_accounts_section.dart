@@ -1,11 +1,10 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/my_profile/my_profile_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/profile_setup/widgets/profile_setup_rows.dart';
-import 'package:openvine/screens/verify/verify_screen.dart';
 import 'package:openvine/widgets/profile/verified_accounts_row.dart';
 import 'package:profile_repository/profile_repository.dart';
 
@@ -64,7 +63,7 @@ class _GetVerifiedTile extends StatelessWidget {
 
   Future<void> _openVerify(BuildContext context) async {
     final myProfileBloc = context.read<MyProfileBloc>();
-    await context.pushNamed(VerifyPage.routeName);
+    await const VerifyRouteData().push<void>(context);
     if (myProfileBloc.isClosed) return;
     // The chip row above renders from MyProfileBloc, so a link added or
     // removed in the flow only shows up here after a re-read.

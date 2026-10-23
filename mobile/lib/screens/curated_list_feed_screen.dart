@@ -16,8 +16,8 @@ import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
-import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
@@ -354,7 +354,7 @@ class _CuratedListFeedScreenState extends ConsumerState<CuratedListFeedScreen> {
   void _openAuthorProfile(String authorPubkey) {
     final npub = NostrKeyUtils.encodePubKey(authorPubkey);
     runDetached(
-      context.push<void>(OtherProfileScreen.pathForNpub(npub)),
+      OtherProfileRouteData(npub: npub).push<void>(context),
       'open list author profile',
       logName: 'CuratedListFeedScreen',
       category: LogCategory.ui,

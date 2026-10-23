@@ -32,6 +32,7 @@ import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/providers/swap_account.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/auth/secure_account_screen.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/notification_settings_screen.dart';
@@ -41,7 +42,6 @@ import 'package:openvine/screens/settings/account_status_screen.dart';
 import 'package:openvine/screens/settings/nostr_settings_screen.dart';
 import 'package:openvine/screens/settings/privacy_settings_screen.dart';
 import 'package:openvine/screens/settings/settings_categories_screen.dart';
-import 'package:openvine/screens/verify/verify_screen.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:openvine/utils/deferred_login_options_navigator.dart';
@@ -490,7 +490,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       icon: DivineIconName.sealCheck,
                       title: context.l10n.verifyTitle,
                       subtitle: context.l10n.verifyIntro,
-                      onTap: () => context.pushNamed(VerifyPage.routeName),
+                      onTap: () => const VerifyRouteData().push<void>(context),
                     ),
                   if (supporterVerificationAvailable)
                     const SupporterMembership(),

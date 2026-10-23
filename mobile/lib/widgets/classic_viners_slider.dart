@@ -12,7 +12,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/classic_vines_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/router.dart';
-import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -272,9 +272,9 @@ class _VinerAvatar extends ConsumerWidget {
     if (authorName != null) extra['displayName'] = authorName;
     if (avatarUrl != null) extra['avatarUrl'] = avatarUrl;
 
-    await context.push(
-      OtherProfileScreen.pathForNpub(npub),
-      extra: extra.isEmpty ? null : extra,
-    );
+    await OtherProfileRouteData(
+      npub: npub,
+      $extra: extra.isEmpty ? null : extra,
+    ).push<void>(context);
   }
 }

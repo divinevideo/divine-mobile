@@ -3,7 +3,6 @@
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/my_following/my_following_bloc.dart';
 import 'package:openvine/blocs/others_following/others_following_bloc.dart';
@@ -11,7 +10,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
-import 'package:openvine/router/router.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/widgets/profile/profile_stats_row_widget.dart';
 
 /// Page widget that creates the appropriate following BLoC based on pubkey.
@@ -111,10 +110,10 @@ class _MyFollowingStatView extends ConsumerWidget {
           count: hasLoadedCount ? state.followingPubkeys.length : initialCount,
           label: context.l10n.profileFollowingStatLabel,
           isLoading: (isLoading || !hasLoadedCount) && initialCount == null,
-          onTap: () => context.push(
-            FollowingScreenRouter.pathForPubkey(pubkey),
-            extra: displayName,
-          ),
+          onTap: () => FollowingRouteData(
+            pubkey: pubkey,
+            $extra: displayName,
+          ).push<void>(context),
         );
       },
     );
@@ -150,10 +149,10 @@ class _OthersFollowingStatView extends ConsumerWidget {
           count: hasLoadedCount ? state.followingPubkeys.length : initialCount,
           label: context.l10n.profileFollowingStatLabel,
           isLoading: (isLoading || !hasLoadedCount) && initialCount == null,
-          onTap: () => context.push(
-            FollowingScreenRouter.pathForPubkey(pubkey),
-            extra: displayName,
-          ),
+          onTap: () => FollowingRouteData(
+            pubkey: pubkey,
+            $extra: displayName,
+          ).push<void>(context),
         );
       },
     );

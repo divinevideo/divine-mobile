@@ -532,7 +532,7 @@ void main() {
 
       MockGoRouter stubbedGoRouter() {
         final goRouter = MockGoRouter();
-        when(() => goRouter.push(any())).thenAnswer((_) async => null);
+        when(() => goRouter.push<void>(any())).thenAnswer((_) async {});
         return goRouter;
       }
 
@@ -638,7 +638,7 @@ void main() {
         await tester.tap(inAppBar(find.text(roomTitle)));
         await tester.pump();
 
-        verifyNever(() => goRouter.push(any()));
+        verifyNever(() => goRouter.push<void>(any()));
       });
 
       testWidgets('exposes the room title to assistive tech as plain text', (
@@ -847,7 +847,7 @@ void main() {
         await tester.tap(inAppBar(find.text('Patrol B')));
         await tester.pump();
 
-        verify(() => goRouter.push(firstMemberProfilePath)).called(1);
+        verify(() => goRouter.push<void>(firstMemberProfilePath)).called(1);
       });
 
       testWidgets('a 1:1 thread still shows the card for the other person '
@@ -884,7 +884,7 @@ void main() {
         await tester.tap(find.text(l10n.inboxConversationViewProfileButton));
         await tester.pump();
 
-        verify(() => goRouter.push(firstMemberProfilePath)).called(1);
+        verify(() => goRouter.push<void>(firstMemberProfilePath)).called(1);
       });
     });
 

@@ -39,6 +39,7 @@ import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
@@ -48,7 +49,6 @@ import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_name_builder.dart';
 import 'package:openvine/screens/library_screen.dart';
-import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/services/collaborator_invite_parser.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
@@ -569,9 +569,9 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                           handle: handle,
                           onBack: () => context.pop(),
                           onTitleTap: otherPubkey.isNotEmpty && !isGroup
-                              ? () => context.push(
-                                  '${OtherProfileScreen.path}/${NostrKeyUtils.encodePubKey(otherPubkey)}',
-                                )
+                              ? () => OtherProfileRouteData(
+                                  npub: NostrKeyUtils.encodePubKey(otherPubkey),
+                                ).push<void>(context)
                               : null,
                           onOptions: otherPubkey.isNotEmpty
                               ? () => _onOptions(otherPubkey)
@@ -619,9 +619,9 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                                                 otherPubkey,
                                               );
                                           runDetached(
-                                            context.push(
-                                              '${OtherProfileScreen.path}/$npub',
-                                            ),
+                                            OtherProfileRouteData(
+                                              npub: npub,
+                                            ).push<void>(context),
                                             'open conversation profile',
                                             logName: 'ConversationView',
                                             category: LogCategory.ui,

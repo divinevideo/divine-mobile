@@ -17,6 +17,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/crossposting_providers.dart';
 import 'package:openvine/providers/subtitle_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/settings/account/change_email_screen.dart';
 import 'package:openvine/screens/settings/account/change_password_screen.dart';
 import 'package:openvine/screens/settings/app_language_screen.dart';
@@ -24,7 +25,6 @@ import 'package:openvine/screens/settings/appearance_settings_screen.dart';
 import 'package:openvine/screens/settings/bluesky_settings_screen.dart';
 import 'package:openvine/screens/settings/crossposting_settings_screen.dart';
 import 'package:openvine/screens/settings/storage/storage_management_page.dart';
-import 'package:openvine/screens/verify/verify_screen.dart';
 import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
 import 'package:openvine/services/locale_preference_service.dart';
 
@@ -206,7 +206,7 @@ class GeneralSettingsScreen extends ConsumerWidget {
                   icon: DivineIconName.caretRight,
                   color: context.vineColors.mutedText,
                 ),
-                onTap: () => context.pushNamed(VerifyPage.routeName),
+                onTap: () => const VerifyRouteData().push<void>(context),
               ),
             ],
           ),

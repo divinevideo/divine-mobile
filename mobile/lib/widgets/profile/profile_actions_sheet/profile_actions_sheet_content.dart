@@ -6,8 +6,8 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/auth/secure_account_screen.dart';
-import 'package:openvine/screens/profile_setup/profile_setup.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/profile/profile_actions_sheet/profile_action_type.dart';
@@ -59,7 +59,8 @@ class _ProfileActionsSheetContentState
     final route = switch (action) {
       ProfileActionType.accountRestricted => AccountStatusScreen.path,
       ProfileActionType.secureAccount => SecureAccountScreen.path,
-      ProfileActionType.completeProfile => ProfileSetupScreen.setupPath,
+      ProfileActionType.completeProfile =>
+        const SetupProfileRouteData().location,
     };
 
     Navigator.of(context).pop();

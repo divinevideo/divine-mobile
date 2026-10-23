@@ -4,13 +4,12 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/verify/verify_cubit.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
-import 'package:openvine/screens/verify/verify_connect_screen.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/verify/verify_platform_labels.dart';
 import 'package:openvine/screens/verify/widgets/verify_claim_row.dart';
 import 'package:openvine/screens/verify/widgets/verify_how_it_works_sheet.dart';
@@ -300,10 +299,9 @@ class _VerifyContent extends StatelessWidget {
     VerifierPlatform platform,
   ) async {
     final cubit = context.read<VerifyCubit>();
-    final linked = await context.pushNamed<IdentityClaim>(
-      VerifyConnectPage.routeName,
-      pathParameters: {'platform': platform.key},
-    );
+    final linked = await VerifyConnectRouteData(
+      platform: platform.key,
+    ).push<IdentityClaim>(context);
     if (linked == null || !context.mounted) return;
 
     cubit.claimLinked(linked);

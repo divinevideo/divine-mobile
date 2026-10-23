@@ -19,12 +19,12 @@ import 'package:openvine/models/collaborator_invite.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/inbox_page.dart';
 import 'package:openvine/screens/inbox/widgets/conversation_triage_bar.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
-import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/services/collaborator_invite_parser.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/string_utils.dart';
@@ -456,11 +456,9 @@ class _ProfileContent extends StatelessWidget {
               const SizedBox(height: 16),
               _OutlinedActionButton(
                 label: context.l10n.messageRequestViewProfileButton,
-                onTap: () => context.push(
-                  OtherProfileScreen.pathForNpub(
-                    NostrKeyUtils.encodePubKey(otherPubkey),
-                  ),
-                ),
+                onTap: () => OtherProfileRouteData(
+                  npub: NostrKeyUtils.encodePubKey(otherPubkey),
+                ).push<void>(context),
               ),
               const SizedBox(height: 32),
               if (isClosedThread)
