@@ -9,6 +9,7 @@ import 'package:models/models.dart';
 import 'package:openvine/constants/notification_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/widgets/actor_notification_row.dart';
+import 'package:openvine/notifications/widgets/notification_avatar_stack.dart';
 import 'package:openvine/notifications/widgets/notification_comment_quote.dart';
 import 'package:openvine/widgets/notification_type_icon.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -79,6 +80,103 @@ Future<void> _pump(
 
 void main() {
   group(ActorNotificationRow, () {
+    testWidgets(
+      'groups comment likers with avatars and a distinct people count',
+      (tester) async {
+        final actors = [
+          _alice,
+          for (var i = 1; i <= 4; i++)
+            ActorInfo(pubkey: '$i' * 64, displayName: 'Person $i'),
+        ];
+        await _pump(
+          tester,
+          notification: ActorNotification(
+            id: 'grouped-like',
+            type: NotificationKind.likeComment,
+            actor: _alice,
+            additionalActors: actors.skip(1).toList(),
+            timestamp: DateTime.now(),
+            commentText: 'this is so cool',
+          ),
+        );
+        expect(
+          find.textContaining('Alice and 4 others liked your comment'),
+          findsOneWidget,
+        );
+        final stack = tester.widget<NotificationAvatarStack>(
+          find.byType(NotificationAvatarStack),
+        );
+        expect(stack.actors, actors.take(3).toList());
+        expect(stack.overflowCount, 2);
+        expect(find.byType(NotificationCommentQuote), findsOneWidget);
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'labels the grouped avatar stack with the profile it opens',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        await _pump(
+          tester,
+          notification: ActorNotification(
+            id: 'grouped-like',
+            type: NotificationKind.likeComment,
+            actor: _alice,
+            additionalActors: const [
+              ActorInfo(
+                pubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+                displayName: 'Bob',
+              ),
+            ],
+            timestamp: DateTime.now(),
+          ),
+        );
+        expect(
+          find.bySemanticsLabel(
+            _l10n.notificationsViewProfileSemanticLabel(_alice.displayName),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.bySemanticsLabel(_l10n.notificationsViewProfilesSemanticLabel),
+          findsNothing,
+        );
+        handle.dispose();
+      },
+    );
+
+    for (final (locale, expected) in [
+      (
+        const Locale('es'),
+        'Alice y 1 persona más le dieron like a tu comentario',
+      ),
+      (const Locale('it'), 'Alice e 1 altro hanno messo like al tuo commento'),
+    ]) {
+      testWidgets(
+        'grouped likes use plural agreement in ${locale.languageCode}',
+        (tester) async {
+          await _pump(
+            tester,
+            locale: locale,
+            notification: ActorNotification(
+              id: 'grouped-like',
+              type: NotificationKind.likeComment,
+              actor: _alice,
+              additionalActors: const [
+                ActorInfo(
+                  pubkey: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+                  displayName: 'Bob',
+                ),
+              ],
+              timestamp: DateTime.now(),
+            ),
+          );
+          expect(find.textContaining(expected), findsOneWidget);
+        },
+      );
+    }
+
     group('renders', () {
       testWidgets('leading $NotificationTypeIcon for every kind', (
         tester,

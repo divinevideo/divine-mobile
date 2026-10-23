@@ -8356,6 +8356,11 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String notificationGroupLikedYourComment(String actorName) {
+    return '$actorName харесаха коментара ти';
+  }
+
+  @override
   String notificationLikedYourComment(String actorName) {
     return '$actorName хареса коментара ти';
   }

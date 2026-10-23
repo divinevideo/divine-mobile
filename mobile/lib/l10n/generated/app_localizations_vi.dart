@@ -8240,6 +8240,11 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String notificationGroupLikedYourComment(String actorName) {
+    return '$actorName đã thích bình luận của bạn';
+  }
+
+  @override
   String notificationLikedYourComment(String actorName) {
     return '$actorName đã thích bình luận của bạn';
   }

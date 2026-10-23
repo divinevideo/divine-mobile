@@ -8090,6 +8090,11 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String notificationGroupLikedYourComment(String actorName) {
+    return '$actorName አስተያየትህን ወደውታል።';
+  }
+
+  @override
   String notificationLikedYourComment(String actorName) {
     return '$actorName አስተያየትህን ወደውታል።';
   }

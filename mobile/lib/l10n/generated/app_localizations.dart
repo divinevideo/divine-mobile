@@ -13981,6 +13981,12 @@ abstract class AppLocalizations {
   /// **'{actorName} liked your video'**
   String notificationLikedYourVideo(String actorName);
 
+  /// Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.
+  ///
+  /// In en, this message translates to:
+  /// **'{actorName} liked your comment'**
+  String notificationGroupLikedYourComment(String actorName);
+
   /// Notification text when someone reacts to a comment the user posted (typically under another user's video).
   ///
   /// In en, this message translates to:

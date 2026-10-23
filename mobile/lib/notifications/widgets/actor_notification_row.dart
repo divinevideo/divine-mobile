@@ -1,5 +1,5 @@
 // ABOUTME: One-row layout for ActorNotification — leading 32x32 type icon,
-// ABOUTME: avatar + bold actor name + verb + inline timestamp, optional
+// ABOUTME: avatar(s) + bold actor names + verb + inline timestamp, optional
 // ABOUTME: comment quote, optional Follow back button.
 
 import 'package:divine_ui/divine_ui.dart';
@@ -9,6 +9,7 @@ import 'package:openvine/constants/notification_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_time_formatter.dart';
 import 'package:openvine/notifications/widgets/notification_actor_spans.dart';
+import 'package:openvine/notifications/widgets/notification_avatar_stack.dart';
 import 'package:openvine/notifications/widgets/notification_comment_quote.dart';
 import 'package:openvine/notifications/widgets/notification_leading_type_icon.dart';
 import 'package:openvine/widgets/user_avatar.dart';
@@ -126,17 +127,41 @@ class _NotificationContent extends StatelessWidget {
         // tapping Follow back never re-wraps the message line.
         Row(
           children: [
-            UserAvatar(
-              imageUrl: notification.actor.pictureUrl,
-              name: notification.actor.displayName,
-              placeholderSeed: notification.actor.pubkey,
-              size: NotificationConstants.avatarSize,
-              cornerRadius: NotificationConstants.avatarCornerRadius,
-              onTap: onProfileTap,
-              semanticLabel: l10n.notificationsViewProfileSemanticLabel(
-                notification.actor.displayName,
+            if (notification.additionalActors.isNotEmpty)
+              Semantics(
+                button: true,
+                // The stack opens the lead actor's profile, not a list of
+                // everyone in the group, so it is labelled as that one profile.
+                label: l10n.notificationsViewProfileSemanticLabel(
+                  notification.actor.displayName,
+                ),
+                child: GestureDetector(
+                  onTap: onProfileTap,
+                  child: NotificationAvatarStack(
+                    actors: notification.actors
+                        .take(NotificationConstants.maxStackedAvatars)
+                        .toList(),
+                    overflowCount:
+                        notification.actors.length >
+                            NotificationConstants.maxStackedAvatars
+                        ? notification.actors.length -
+                              NotificationConstants.maxStackedAvatars
+                        : null,
+                  ),
+                ),
+              )
+            else
+              UserAvatar(
+                imageUrl: notification.actor.pictureUrl,
+                name: notification.actor.displayName,
+                placeholderSeed: notification.actor.pubkey,
+                size: NotificationConstants.avatarSize,
+                cornerRadius: NotificationConstants.avatarCornerRadius,
+                onTap: onProfileTap,
+                semanticLabel: l10n.notificationsViewProfileSemanticLabel(
+                  notification.actor.displayName,
+                ),
               ),
-            ),
             if (_showFollowBack && !_shouldStackFollowBackButton(context)) ...[
               const Spacer(),
               // Tiny variant (32px visible) so the row's trailing
@@ -195,6 +220,11 @@ class _MessageText extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final type = notification.type;
+    final actorName = notification.additionalActors.isEmpty
+        ? notification.actor.displayName
+        : '${notification.actor.displayName} '
+              '${l10n.notificationAndConnector} '
+              '${l10n.notificationOthersCount(notification.additionalActors.length)}';
     final spans = type == NotificationKind.system
         ? <InlineSpan>[
             TextSpan(
@@ -205,8 +235,12 @@ class _MessageText extends StatelessWidget {
             ),
           ]
         : localizedActorSentenceSpans(
-            fullText: _messageFor(l10n, type, notification.actor.displayName),
-            actorName: notification.actor.displayName,
+            fullText:
+                type == NotificationKind.likeComment &&
+                    notification.additionalActors.isNotEmpty
+                ? l10n.notificationGroupLikedYourComment(actorName)
+                : _messageFor(l10n, type, actorName),
+            actorName: actorName,
             colors: context.vineColors,
           );
 

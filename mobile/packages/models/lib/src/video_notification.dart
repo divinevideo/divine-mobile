@@ -29,6 +29,7 @@ class VideoNotification extends NotificationItem {
     required this.actors,
     required this.totalCount,
     required super.timestamp,
+    this.actorPubkeys = const [],
     super.isRead,
     super.sourceEventIds,
     super.notificationIds,
@@ -81,6 +82,11 @@ class VideoNotification extends NotificationItem {
   /// First N actors (newest-first) for stacked avatar display.
   final List<ActorInfo> actors;
 
+  /// Complete distinct liker identities for counts across paginated groups.
+  /// [actors] remains capped for display. Empty for legacy placeholders and
+  /// notification types whose count represents events rather than people.
+  final List<String> actorPubkeys;
+
   /// Total number of distinct actors who interacted (may exceed the length of
   /// [actors]).
   final int totalCount;
@@ -113,6 +119,7 @@ class VideoNotification extends NotificationItem {
     String? videoThumbnailUrl,
     String? videoTitle,
     List<ActorInfo>? actors,
+    List<String>? actorPubkeys,
     int? totalCount,
     DateTime? timestamp,
     bool? isRead,
@@ -131,6 +138,7 @@ class VideoNotification extends NotificationItem {
       videoThumbnailUrl: videoThumbnailUrl ?? this.videoThumbnailUrl,
       videoTitle: videoTitle ?? this.videoTitle,
       actors: actors ?? this.actors,
+      actorPubkeys: actorPubkeys ?? this.actorPubkeys,
       totalCount: totalCount ?? this.totalCount,
       timestamp: timestamp ?? this.timestamp,
       isRead: isRead ?? this.isRead,
@@ -152,6 +160,7 @@ class VideoNotification extends NotificationItem {
     videoThumbnailUrl,
     videoTitle,
     actors,
+    actorPubkeys,
     totalCount,
     timestamp,
     isRead,

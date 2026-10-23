@@ -8374,6 +8374,11 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
+  String notificationGroupLikedYourComment(String actorName) {
+    return '$actorName hanno messo like al tuo commento';
+  }
+
+  @override
   String notificationLikedYourComment(String actorName) {
     return '$actorName ha messo like al tuo commento';
   }

@@ -7786,6 +7786,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String notificationGroupLikedYourComment(String actorName) {
+    return '$actorName 点赞了你的评论';
+  }
+
+  @override
   String notificationLikedYourComment(String actorName) {
     return '$actorName 点赞了你的评论';
   }

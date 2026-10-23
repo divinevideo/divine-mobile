@@ -1747,6 +1747,16 @@
   "contentLabelMisleading": "Nakakapagligaw",
   "contentLabelSensitiveContent": "Sensitibong Content",
   "notificationLikedYourVideo": "Ni-like ni {actorName} ang video mo",
+  "notificationGroupLikedYourComment": "Ni-like nina {actorName} ang comment mo",
+  "@notificationGroupLikedYourComment": {
+    "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",
+    "placeholders": {
+      "actorName": {
+        "type": "String",
+        "example": "Alice and 2 others"
+      }
+    }
+  },
   "notificationLikedYourComment": "Ni-like ni {actorName} ang comment mo",
   "notificationCommentedOnYourVideo": "Nag-comment si {actorName} sa video mo",
   "notificationStartedFollowing": "Sinimulan kang i-follow ni {actorName}",

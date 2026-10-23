@@ -1,12 +1,13 @@
 // ABOUTME: Actor-anchored notification — follows, mentions, system, and
-// ABOUTME: reactions without an event-id anchor. One row per event.
+// ABOUTME: reactions without a video anchor, including grouped comment likes.
 
 part of 'notification_item.dart';
 
 /// A notification anchored to an actor (follow, mention, system, or an
 /// addressable reaction without a concrete video event ID).
 ///
-/// No video reference; one row per event.
+/// Comment likes with a confirmed comment ID share a row; other kinds
+/// remain one row per event.
 @immutable
 class ActorNotification extends NotificationItem {
   /// Creates an [ActorNotification], normalizing [commentText] to well-formed
@@ -19,6 +20,8 @@ class ActorNotification extends NotificationItem {
     required super.type,
     required this.actor,
     required super.timestamp,
+    this.additionalActors = const [],
+    this.commentEventId,
     super.isRead,
     super.targetEventId,
     super.sourceEventIds,
@@ -41,6 +44,18 @@ class ActorNotification extends NotificationItem {
 
   /// The actor who triggered this notification.
   final ActorInfo actor;
+
+  /// Other distinct people represented by a grouped comment-like row.
+  /// Kept in full so pagination can deduplicate people beyond the avatar cap.
+  final List<ActorInfo> additionalActors;
+
+  /// All distinct actors, with the visible lead actor first.
+  List<ActorInfo> get actors => [actor, ...additionalActors];
+
+  /// Confirmed liked comment ID, separate from the navigation fallback in
+  /// [targetEventId], which can instead identify the parent video.
+  /// Only rows with this explicit target may be grouped as comment likes.
+  final String? commentEventId;
 
   /// Optional row quote/context text.
   ///
@@ -73,6 +88,8 @@ class ActorNotification extends NotificationItem {
     String? id,
     NotificationKind? type,
     ActorInfo? actor,
+    List<ActorInfo>? additionalActors,
+    String? commentEventId,
     DateTime? timestamp,
     bool? isRead,
     String? commentText,
@@ -87,6 +104,8 @@ class ActorNotification extends NotificationItem {
       id: id ?? this.id,
       type: type ?? this.type,
       actor: actor ?? this.actor,
+      additionalActors: additionalActors ?? this.additionalActors,
+      commentEventId: commentEventId ?? this.commentEventId,
       timestamp: timestamp ?? this.timestamp,
       isRead: isRead ?? this.isRead,
       commentText: commentText ?? this.commentText,
@@ -104,6 +123,8 @@ class ActorNotification extends NotificationItem {
     id,
     type,
     actor,
+    additionalActors,
+    commentEventId,
     timestamp,
     isRead,
     commentText,

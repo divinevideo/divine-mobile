@@ -8350,6 +8350,11 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
+  String notificationGroupLikedYourComment(String actorName) {
+    return '$actorName curtiram seu comentário';
+  }
+
+  @override
   String notificationLikedYourComment(String actorName) {
     return '$actorName curtiu seu comentário';
   }

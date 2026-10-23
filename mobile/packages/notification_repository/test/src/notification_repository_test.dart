@@ -1098,6 +1098,40 @@ void main() {
     });
 
     group('video-anchored grouping', () {
+      test(
+        'video like count deduplicates people across pages '
+        'beyond the avatar cap',
+        () async {
+          RelayNotification like(int index, int actorIndex) => makeNotification(
+            id: 'video-like-$index',
+            sourceEventId: index.toRadixString(16).padLeft(64, '0'),
+            sourcePubkey: actorIndex.toRadixString(16).padLeft(64, 'a'),
+            referencedEventId: 'e' * 64,
+          );
+          stubNotifications(
+            [
+              for (var i = 1; i <= 5; i++) like(i, i),
+              like(6, 1),
+            ],
+            hasMore: true,
+            nextCursor: 'older',
+          );
+          await repository.refresh();
+          final first =
+              (await repository.watchSnapshot().first).items.single
+                  as VideoNotification;
+          expect(first.totalCount, 5);
+          expect(first.actors, hasLength(3));
+          stubNotifications([like(7, 5), like(8, 6)]);
+          await repository.loadNextPage();
+          final group =
+              (await repository.watchSnapshot().first).items.single
+                  as VideoNotification;
+          expect(group.totalCount, 6);
+          expect(group.notificationIds, hasLength(8));
+        },
+      );
+
       test('5 likes on same video become 1 $VideoNotification '
           'with totalCount 5 and 3 actors', () async {
         stubNotifications([
@@ -1833,6 +1867,254 @@ void main() {
           expect(item.videoTitle, isNull);
         },
       );
+    });
+
+    group('comment like grouping', () {
+      final commentId = 'c' * 64;
+      final alice = 'a' * 64;
+      final bob = 'b' * 64;
+      final newest = DateTime.utc(2026, 10, 23, 12);
+
+      RelayNotification like(
+        int index,
+        String pubkey, {
+        String? target,
+        bool read = false,
+      }) => makeNotification(
+        id: 'comment-like-$index',
+        sourceEventId: index.toRadixString(16).padLeft(64, '0'),
+        sourcePubkey: pubkey,
+        targetCommentId: target ?? commentId,
+        commentContent: 'this is so cool',
+        createdAt: newest.subtract(Duration(minutes: index)),
+        read: read,
+      );
+
+      test('combines nonadjacent likes only for the same comment', () async {
+        stubNotifications([
+          like(1, alice, read: true),
+          like(2, bob, target: 'd' * 64),
+          like(3, bob),
+          like(4, alice),
+        ]);
+        final page = await repository.getNotifications();
+        expect(page.items, hasLength(2));
+        final group = page.items.first as ActorNotification;
+        expect(group.targetEventId, commentId);
+        expect(group.actors.map((actor) => actor.pubkey), [alice, bob]);
+        expect(group.timestamp, newest.subtract(const Duration(minutes: 1)));
+        expect(group.isRead, isFalse);
+        expect(group.commentText, 'this is so cool');
+        expect(
+          group.notificationIds,
+          unorderedEquals([
+            'comment-like-1',
+            'comment-like-3',
+            'comment-like-4',
+          ]),
+        );
+      });
+
+      test(
+        'does not group reactions without a confirmed comment target',
+        () async {
+          stubNotifications([
+            for (var i = 1; i <= 2; i++)
+              makeNotification(
+                id: 'unknown-target-$i',
+                sourceEventId: '$i' * 64,
+                sourcePubkey: i == 1 ? alice : bob,
+                referencedEventId: 'e' * 64,
+                rootEventPubkey: 'f' * 64,
+              ),
+          ]);
+          when(() => funnelcakeApiClient.getVideoStats(any())).thenAnswer(
+            (_) async => makeVideoStats(id: 'e' * 64, pubkey: 'f' * 64),
+          );
+          final items = (await repository.getNotifications()).items;
+          expect(items, hasLength(2));
+          expect(
+            items.every((item) => item.type == NotificationKind.likeComment),
+            isTrue,
+          );
+        },
+      );
+
+      test('filters blocked likers before grouping', () async {
+        repository = buildRepository(blockFilter: (pubkey) => pubkey == alice);
+        stubNotifications([like(1, alice), like(2, bob)]);
+        final group =
+            (await repository.getNotifications()).items.single
+                as ActorNotification;
+        expect(group.actor.pubkey, bob);
+        expect(group.notificationIds, ['comment-like-2']);
+      });
+
+      test(
+        'cache round trip preserves grouped people and all read ids',
+        () async {
+          final saved = Completer<List<NotificationCacheRow>>();
+          when(
+            () => notificationsDao.replaceAll(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((invocation) async {
+            if (!saved.isCompleted) {
+              saved.complete(
+                invocation.positionalArguments.first
+                    as List<NotificationCacheRow>,
+              );
+            }
+          });
+          stubNotifications([like(1, alice), like(2, bob)]);
+          await repository.getNotifications();
+          final rows = await saved.future;
+          when(
+            () => notificationsDao.getAllNotifications(
+              limit: any(named: 'limit'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer(
+            (_) async => [
+              for (final row in rows)
+                NotificationRow(
+                  id: row.id,
+                  type: row.type,
+                  fromPubkey: row.fromPubkey,
+                  timestamp: row.timestamp,
+                  targetEventId: row.targetEventId,
+                  videoAddressableId: row.videoAddressableId,
+                  targetPubkey: row.targetPubkey,
+                  content: row.content,
+                  hasCommentTarget: row.hasCommentTarget,
+                  isRead: row.isRead,
+                  cachedAt: DateTime.now(),
+                ),
+            ],
+          );
+          final hydrated = NotificationRepository(
+            funnelcakeApiClient: funnelcakeApiClient,
+            profileRepository: profileRepository,
+            notificationsDao: notificationsDao,
+            userPubkey: userPubkey,
+          );
+          addTearDown(hydrated.close);
+          final page = await hydrated.watchSnapshot().firstWhere(
+            (page) => page.items.isNotEmpty,
+          );
+          final group = page.items.single as ActorNotification;
+          expect(group.actors.map((actor) => actor.pubkey), [alice, bob]);
+          expect(group.commentEventId, commentId);
+          expect(group.notificationIds, ['comment-like-1', 'comment-like-2']);
+          expect(group.sourceEventIds, hasLength(2));
+          expect(group.commentText, 'this is so cool');
+          when(
+            () => funnelcakeApiClient.markNotificationsRead(
+              pubkey: any(named: 'pubkey'),
+              notificationIds: any(named: 'notificationIds'),
+              authHeaders: any(named: 'authHeaders'),
+            ),
+          ).thenAnswer(
+            (_) async => const MarkReadResponse(success: true, markedCount: 2),
+          );
+          when(
+            () => notificationsDao.markAsRead(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => true);
+          await hydrated.markAsRead([group.id]);
+          verify(
+            () => funnelcakeApiClient.markNotificationsRead(
+              pubkey: userPubkey,
+              notificationIds: any(
+                named: 'notificationIds',
+                that: unorderedEquals(['comment-like-1', 'comment-like-2']),
+              ),
+              authHeaders: any(named: 'authHeaders'),
+            ),
+          ).called(1);
+        },
+      );
+
+      test(
+        'single comment like keeps the legacy cache row older builds read',
+        () async {
+          final saved = Completer<List<NotificationCacheRow>>();
+          when(
+            () => notificationsDao.replaceAll(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((invocation) async {
+            if (!saved.isCompleted) {
+              saved.complete(
+                invocation.positionalArguments.first
+                    as List<NotificationCacheRow>,
+              );
+            }
+          });
+          stubNotifications([like(1, alice)]);
+          await repository.getNotifications();
+          final row = (await saved.future).single;
+          expect(row.type, 'likeComment');
+          expect(row.content, 'this is so cool');
+          expect(row.targetEventId, commentId);
+        },
+      );
+
+      test('merges older page likes and preserves every read id', () async {
+        stubNotifications(
+          [like(1, alice, read: true)],
+          hasMore: true,
+          nextCursor: 'older',
+        );
+        await repository.refresh();
+        stubNotifications([like(2, bob), like(3, alice)]);
+        await repository.loadNextPage();
+        final items = (await repository.watchSnapshot().first).items;
+        expect(items, hasLength(1));
+        final group = items.single as ActorNotification;
+        expect(group.actors.map((actor) => actor.pubkey), [alice, bob]);
+        expect(group.notificationIds, hasLength(3));
+        expect(group.sourceEventIds, hasLength(3));
+        expect(group.isRead, isFalse);
+        when(
+          () => funnelcakeApiClient.markNotificationsRead(
+            pubkey: any(named: 'pubkey'),
+            notificationIds: any(named: 'notificationIds'),
+            authHeaders: any(named: 'authHeaders'),
+          ),
+        ).thenAnswer(
+          (_) async => const MarkReadResponse(success: true, markedCount: 3),
+        );
+        when(
+          () => notificationsDao.markAsRead(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer((_) async => true);
+        await repository.markAsRead([group.id]);
+        verify(
+          () => funnelcakeApiClient.markNotificationsRead(
+            pubkey: userPubkey,
+            notificationIds: any(
+              named: 'notificationIds',
+              that: unorderedEquals([
+                'comment-like-1',
+                'comment-like-2',
+                'comment-like-3',
+              ]),
+            ),
+            authHeaders: any(named: 'authHeaders'),
+          ),
+        ).called(1);
+        expect(
+          (await repository.watchSnapshot().first).items.single.isRead,
+          isTrue,
+        );
+      });
     });
 
     group('follow consolidation', () {

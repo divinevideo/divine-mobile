@@ -8471,6 +8471,11 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String notificationGroupLikedYourComment(String actorName) {
+    return '$actorName polubili Twój komentarz';
+  }
+
+  @override
   String notificationLikedYourComment(String actorName) {
     return '$actorName polubił(a) Twój komentarz';
   }
