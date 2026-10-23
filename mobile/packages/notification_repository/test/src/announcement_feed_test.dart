@@ -88,6 +88,46 @@ void main() {
     );
 
     test(
+      'mark all marks the announcements shown at call time and still sends '
+      'the social mark-all',
+      () async {
+        when(
+          () => api.notificationsReadUri(pubkey: any(named: 'pubkey')),
+        ).thenReturn(Uri.parse('https://api.test/notifications/read'));
+        when(
+          () => api.markNotificationsRead(
+            pubkey: any(named: 'pubkey'),
+            authHeaders: any(named: 'authHeaders'),
+          ),
+        ).thenAnswer(
+          (_) async => const MarkReadResponse(success: true, markedCount: 0),
+        );
+        when(
+          () => dao.markAllAsRead(ownerPubkey: any(named: 'ownerPubkey')),
+        ).thenAnswer((_) async => 0);
+        final later = AnnouncementNotification(
+          announcementId: '3f0c7a52-5a4e-4d1e-9b9e-2f6c0d8a7b41',
+          title: 'Arrived after the tap',
+          body: 'This one stays new.',
+          timestamp: DateTime.utc(2026, 10, 24),
+          expiresAt: DateTime.utc(2026, 11, 24),
+        );
+
+        final markAll = repository.markAllAsRead();
+        catalog.add([item, later]);
+        await markAll;
+
+        verify(() => announcements.markSeen([item.id])).called(1);
+        verify(
+          () => api.markNotificationsRead(
+            pubkey: any(named: 'pubkey'),
+            authHeaders: any(named: 'authHeaders'),
+          ),
+        ).called(1);
+      },
+    );
+
+    test(
       'closing the account drains its announcement repository once',
       () async {
         await repository.close();
