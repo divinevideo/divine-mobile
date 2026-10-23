@@ -11,13 +11,30 @@ import 'package:models/models.dart';
 /// [VideoEvent.videoUrl]. For Divine blob URLs the list is expanded with
 /// canonical alternatives so the runtime can fail over between them.
 ///
+/// [preferB2Original] prepends the dedicated B2 original for eligible public
+/// original URLs, leaving the canonical ladder as its fallback.
+///
 /// Derivative-resolved Divine blobs use the bare blob as their final fallback,
 /// after quality-specific and HLS sources have been attempted.
 List<String> resolvePlaybackSources(
   VideoEvent video, {
   String? Function(VideoEvent video)? urlResolver,
   DerivativeFailureCache? derivativeFailureCache,
+  bool preferB2Original = false,
 }) {
+  final canary = preferB2Original
+      ? b2OriginalPlaybackUrl(video.videoUrl)
+      : null;
+  if (canary != null) {
+    return orderedUniqueSources([
+      canary,
+      ...resolvePlaybackSources(
+        video,
+        urlResolver: urlResolver,
+        derivativeFailureCache: derivativeFailureCache,
+      ),
+    ]);
+  }
   final resolvedSource = urlResolver?.call(video) ?? video.videoUrl;
   final originalUrl = video.videoUrl;
 
@@ -152,3 +169,37 @@ bool _mentionsHttpStatus(String lower, int status) {
   }
   return RegExp('(^|[^0-9a-f])$status([^0-9a-f]|\$)').hasMatch(lower);
 }
+
+/// Policy denials in a canary ladder apply to the asset, not the mirror.
+/// Unknown 4xx fail closed across the canary ladder. Canonical-source 404
+/// retains its normal fallback behavior; B2-source 404 is handled separately.
+bool blocksB2CanaryFallback({
+  NativePlayerErrorCode? errorCode,
+  String? errorMessage,
+}) {
+  if (errorCode == NativePlayerErrorCode.authRequired ||
+      errorCode == NativePlayerErrorCode.forbidden ||
+      errorCode == NativePlayerErrorCode.httpClientError) {
+    return true;
+  }
+  final message = (errorMessage ?? '').toLowerCase();
+  if (message.contains('unauthorized') || message.contains('forbidden')) {
+    return true;
+  }
+  if (!message.contains('http') &&
+      !message.contains('status') &&
+      !message.contains('response code')) {
+    return false;
+  }
+  return RegExp(
+    r'(^|[^0-9a-f])(4[0-9]{2})([^0-9a-f]|$)',
+  ).allMatches(message).any((match) => match.group(2) != '404');
+}
+
+/// Only an explicit readiness response or a typed connection failure can
+/// leave the B2 host. A private 404 may mean a policy denial; generic server
+/// and unknown errors may hide origin authorization failures and fail closed.
+bool canFailOverB2Original(NativePlayerErrorCode? errorCode) =>
+    errorCode == NativePlayerErrorCode.serviceUnavailable ||
+    errorCode == NativePlayerErrorCode.networkError ||
+    errorCode == NativePlayerErrorCode.timeout;

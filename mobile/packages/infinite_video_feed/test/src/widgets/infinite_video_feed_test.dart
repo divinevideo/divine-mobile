@@ -201,6 +201,154 @@ void main() {
     ).thenReturn(mockCancellable);
   });
 
+  group('B2 canary cache and controller identity', () {
+    const hash =
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    const raw = 'https://media.divine.video/$hash';
+    const b2 = 'https://media-b2.divine.video/$hash';
+
+    testWidgets(
+      'OFF ON OFF with the same list bypasses canonical disk bytes '
+      'and rebuilds players',
+      (tester) async {
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install();
+        final videos = [_makeVideo('canary', videoUrl: raw)];
+        final key = GlobalKey<InfiniteVideoFeedState>();
+        when(
+          () => cache.getCachedFileSync('canary'),
+        ).thenReturn(File('/cache/canonical.mp4'));
+        Future<void> mount({required bool enabled}) async {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                key: key,
+                videos: videos,
+                cache: cache,
+                urlResolver: (_) => '$raw/720p.mp4',
+                preferB2Original: enabled,
+                prefetchCount: 0,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+        }
+
+        try {
+          await mount(enabled: false);
+          expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
+            '/cache/canonical.mp4',
+          ]);
+          await mount(enabled: true);
+          expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
+            '/cache/canonical.mp4',
+            b2,
+          ]);
+          await mount(enabled: false);
+          expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
+            '/cache/canonical.mp4',
+            b2,
+            '/cache/canonical.mp4',
+          ]);
+          verifyNever(() => cache.removeCachedFile(any()));
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+        }
+      },
+    );
+
+    for (final (code, fallsBack) in [
+      ('not_found', false),
+      ('http_server_error', false),
+      ('service_unavailable', true),
+    ]) {
+      testWidgets(
+        'runtime B2 $code ${fallsBack ? 'uses' : 'stops'} canonical fallback',
+        (tester) async {
+          DivineVideoPlayerController.resetIdCounterForTesting();
+          final harness = _NativePlayerHarness(tester);
+          await harness.install(playerIds: const [0]);
+          try {
+            await tester.pumpWidget(
+              _wrapFeed(
+                InfiniteVideoFeed(
+                  videos: [_makeVideo('canary', videoUrl: raw)],
+                  cache: cache,
+                  preferB2Original: true,
+                  urlResolver: (_) => '$raw/720p.mp4',
+                  prefetchCount: 0,
+                  autoRetryMaxAttempts: 0,
+                  preloadGracePeriod: Duration.zero,
+                ),
+              ),
+            );
+            await tester.pump();
+            await tester.pump();
+            expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [
+              b2,
+            ]);
+            await harness.sendEvent(0, {
+              'status': 'error',
+              'errorCode': code,
+              'errorMessage': 'Synthetic playback failure',
+            });
+            await tester.pump();
+            await tester.pump();
+            expect(
+              harness.clipsHandedToPlayer.map((clip) => clip['uri']),
+              fallsBack ? [b2, '$raw/720p.mp4'] : [b2],
+            );
+          } finally {
+            await tester.pumpWidget(const SizedBox.shrink());
+            await tester.pump();
+            await harness.dispose();
+          }
+        },
+      );
+    }
+
+    testWidgets(
+      'prefetch never aliases B2 or canonical bytes into a canary event key',
+      (tester) async {
+        DivineVideoPlayerController.resetIdCounterForTesting();
+        final harness = _NativePlayerHarness(tester);
+        await harness.install(playerIds: const [0]);
+        try {
+          await tester.pumpWidget(
+            _wrapFeed(
+              InfiniteVideoFeed(
+                videos: [
+                  _makeVideo('first', videoUrl: raw),
+                  _makeVideo('next', videoUrl: raw),
+                ],
+                cache: cache,
+                preferB2Original: true,
+                keepNextAlive: false,
+                prefetchCount: 4,
+                preloadGracePeriod: Duration.zero,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+          expect(harness.clipsHandedToPlayer.map((clip) => clip['uri']), [b2]);
+          verifyNever(
+            () => cache.cacheFileCancellable(any(), key: any(named: 'key')),
+          );
+        } finally {
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+          await harness.dispose();
+        }
+      },
+    );
+  });
+
   group(InfiniteVideoFeed, () {
     test('isSupported can be evaluated', () {
       expect(InfiniteVideoFeed.isSupported, isA<bool>());

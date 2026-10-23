@@ -50,3 +50,40 @@ List<String> orderedUniqueSources(Iterable<String?> sources) {
 
   return ordered;
 }
+
+/// The original-only canary accepts only known public Divine blob hosts.
+/// Queries, user info, fragments, alternate ports and derivative paths are
+/// excluded so a signed or authenticated URL cannot lose its access context.
+String? b2OriginalPlaybackUrl(String? url) {
+  if (url == null) return null;
+  final uri = Uri.tryParse(url);
+  if (uri == null ||
+      uri.scheme != 'https' ||
+      !const {
+        'media.divine.video',
+        'cdn.divine.video',
+        'blossom.divine.video',
+      }.contains(uri.host) ||
+      uri.userInfo.isNotEmpty ||
+      uri.hasQuery ||
+      uri.hasFragment ||
+      uri.port != 443 ||
+      !RegExp(r'^/[a-fA-F0-9]{64}$').hasMatch(uri.path) ||
+      url.contains('%')) {
+    return null;
+  }
+  return 'https://media-b2.divine.video${uri.path.toLowerCase()}';
+}
+
+/// Whether this is an exact original URL on the dedicated canary host.
+bool isB2OriginalPlaybackSource(String source) {
+  final uri = Uri.tryParse(source);
+  return uri != null &&
+      uri.scheme == 'https' &&
+      uri.host == 'media-b2.divine.video' &&
+      uri.port == 443 &&
+      uri.userInfo.isEmpty &&
+      !uri.hasQuery &&
+      !uri.hasFragment &&
+      RegExp(r'^/[a-f0-9]{64}$').hasMatch(uri.path);
+}

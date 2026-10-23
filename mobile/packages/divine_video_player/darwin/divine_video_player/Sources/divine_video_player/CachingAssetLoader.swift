@@ -138,7 +138,10 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
                 request.finishLoading(with: NSError(
                     domain: NSURLErrorDomain,
                     code: NSURLErrorBadServerResponse,
-                    userInfo: [NSLocalizedDescriptionKey: "HTTP \(http.statusCode)"]
+                    userInfo: [
+                        NSLocalizedDescriptionKey: "HTTP \(http.statusCode)",
+                        "NSURLErrorFailingURLResponseErrorKey": http
+                    ]
                 ))
                 completionHandler(.cancel)
                 return
@@ -155,7 +158,10 @@ final class CachingAssetLoader: NSObject, AVAssetResourceLoaderDelegate, URLSess
             failure = NSError(
                 domain: NSURLErrorDomain,
                 code: NSURLErrorBadServerResponse,
-                userInfo: [NSLocalizedDescriptionKey: "HTTP \(http.statusCode)"]
+                userInfo: [
+                    NSLocalizedDescriptionKey: "HTTP \(http.statusCode)",
+                    "NSURLErrorFailingURLResponseErrorKey": http
+                ]
             )
             completionHandler(.cancel)
             serve()

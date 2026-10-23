@@ -3,6 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group(NativePlayerErrorCode, () {
+    test('retains a distinct HTTP503 code for mirror fallback decisions', () {
+      final code = NativePlayerErrorCode.fromString('service_unavailable');
+      expect(code.name, 'serviceUnavailable');
+      expect(code.shouldFailover, isTrue);
+      expect(code.isTransient, isFalse);
+    });
     group('shouldFailover', () {
       test('returns false for mediaProcessing', () {
         expect(NativePlayerErrorCode.mediaProcessing.shouldFailover, isFalse);

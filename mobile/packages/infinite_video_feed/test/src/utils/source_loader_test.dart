@@ -13,6 +13,145 @@ void main() {
 
     setUp(logs.clear);
 
+    group('B2 original canary', () {
+      const b2 =
+          'https://media-b2.divine.video/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+      const canonical =
+          'https://media.divine.video/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/720p.mp4';
+
+      for (final code in [
+        'forbidden',
+        'http_client_error',
+        'not_found',
+        'http_server_error',
+        'unknown',
+        'decoder_error',
+        'parse_error',
+      ]) {
+        test('does not bypass B2 $code through a canonical source', () async {
+          final clips = <VideoClip>[];
+          final failure = PlatformException(code: code);
+          final controller = _RecordingControllerWithFailures(
+            clips.add,
+            failures: [failure],
+          );
+          addTearDown(controller.dispose);
+          await expectLater(
+            setSourceWithFallbacks(
+              index: 0,
+              controller: controller,
+              sources: [b2, canonical],
+              log: logs.add,
+              trimToCommonTrackEnd: true,
+              applyTypedFailoverPolicy: true,
+            ),
+            throwsA(same(failure)),
+          );
+          expect(clips.map((clip) => clip.uri), [b2]);
+        });
+      }
+
+      for (final code in ['network_error', 'timeout', 'service_unavailable']) {
+        test('falls back from a B2 $code to canonical playback', () async {
+          final clips = <VideoClip>[];
+          final controller = _RecordingControllerWithFailures(
+            clips.add,
+            failures: [PlatformException(code: code)],
+          );
+          addTearDown(controller.dispose);
+          final result = await setSourceWithFallbacks(
+            index: 0,
+            controller: controller,
+            sources: [b2, canonical],
+            log: logs.add,
+            trimToCommonTrackEnd: true,
+            applyTypedFailoverPolicy: true,
+          );
+          expect(result, (canonical, 1));
+          expect(clips.map((clip) => clip.uri), [b2, canonical]);
+        });
+      }
+      test(
+        'stops on canonical policy denial after B2 is unavailable',
+        () async {
+          final clips = <VideoClip>[];
+          final denial = PlatformException(code: 'forbidden');
+          final controller = _RecordingControllerWithFailures(
+            clips.add,
+            failures: [
+              PlatformException(code: 'service_unavailable'),
+              denial,
+            ],
+          );
+          addTearDown(controller.dispose);
+          await expectLater(
+            setSourceWithFallbacks(
+              index: 0,
+              controller: controller,
+              sources: [b2, canonical, '$canonical/alternate'],
+              log: logs.add,
+              trimToCommonTrackEnd: true,
+              applyTypedFailoverPolicy: true,
+            ),
+            throwsA(same(denial)),
+          );
+          expect(clips.map((clip) => clip.uri), [b2, canonical]);
+        },
+      );
+
+      test('logs the B2 attempt and canonical fallback separately', () async {
+        final clips = <VideoClip>[];
+        final controller = _RecordingControllerWithFailures(
+          clips.add,
+          failures: [PlatformException(code: 'service_unavailable')],
+        );
+        addTearDown(controller.dispose);
+        final result = await setSourceWithFallbacks(
+          index: 0,
+          controller: controller,
+          sources: [b2, canonical],
+          log: logs.add,
+          trimToCommonTrackEnd: true,
+          applyTypedFailoverPolicy: true,
+        );
+        expect(result, (canonical, 1));
+        expect(clips.map((clip) => clip.uri), [b2, canonical]);
+        expect(logs, contains(contains('B2 canary attempt')));
+        expect(logs, contains(contains('B2 canary fallback')));
+      });
+
+      for (final message in [
+        'HTTP 401',
+        'HTTP 403',
+        'HTTP 404',
+        'HTTP 410',
+        'HTTP 502',
+        'HTTP 500',
+      ]) {
+        test('stops on an untyped B2 $message response', () async {
+          final clips = <VideoClip>[];
+          final failure = Exception(message);
+          final controller = _RecordingControllerWithFailures(
+            clips.add,
+            failures: [failure],
+          );
+          addTearDown(controller.dispose);
+          await expectLater(
+            setSourceWithFallbacks(
+              index: 0,
+              controller: controller,
+              sources: [b2, canonical],
+              log: logs.add,
+              trimToCommonTrackEnd: true,
+              applyTypedFailoverPolicy: true,
+            ),
+            throwsA(same(failure)),
+          );
+          expect(clips.map((clip) => clip.uri), [b2]);
+        });
+      }
+    });
+
     test('returns (source, 0) when first source succeeds', () async {
       final controller = FakeController();
       addTearDown(controller.dispose);

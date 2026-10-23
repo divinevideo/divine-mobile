@@ -1105,6 +1105,36 @@ void main() {
       },
     );
 
+    testWidgets('B2 canary flag changes the mounted feed in both directions', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final flags = FeatureFlagService(
+        await SharedPreferences.getInstance(),
+        const BuildConfiguration(),
+        canOverrideInternalFlags: () => true,
+      );
+      await flags.initialize();
+      addTearDown(flags.dispose);
+      await _pumpFeedVideos(
+        tester,
+        videos: [_makeVideo()],
+        additionalOverrides: [
+          featureFlagServiceProvider.overrideWithValue(flags),
+        ],
+      );
+      InfiniteVideoFeed feed() => tester.widget(find.byType(InfiniteVideoFeed));
+      expect(feed().preferB2Original, isFalse);
+      await flags.setFlag(FeatureFlag.b2PlaybackCanary, true);
+      await tester.pump();
+      await tester.pump();
+      expect(feed().preferB2Original, isTrue);
+      await flags.setFlag(FeatureFlag.b2PlaybackCanary, false);
+      await tester.pump();
+      await tester.pump();
+      expect(feed().preferB2Original, isFalse);
+    });
+
     testWidgets(
       'drops the community blur and reopens the gate when flag flips off '
       'at runtime',

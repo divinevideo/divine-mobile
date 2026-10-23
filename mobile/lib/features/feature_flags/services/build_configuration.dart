@@ -65,6 +65,9 @@ class BuildConfiguration {
         // flag gates the picker that starts a group and filing a room someone
         // else starts as a room.
         return const bool.fromEnvironment('FF_GROUP_MESSAGES');
+      case FeatureFlag.b2PlaybackCanary:
+        // A device-local developer opt-in, never enabled for an entire build.
+        return false;
       case FeatureFlag.concordChat:
         // Default OFF: the POC signs with the account's real key into a
         // stream anyone can read, so only reviewer builds opt in (#10094).
@@ -113,6 +116,8 @@ class BuildConfiguration {
         return 'FF_POST_PUBLISH_CONFIRMATION_TREATMENT';
       case FeatureFlag.groupMessages:
         return 'FF_GROUP_MESSAGES';
+      case FeatureFlag.b2PlaybackCanary:
+        return 'FF_B2_PLAYBACK_CANARY';
       case FeatureFlag.concordChat:
         return 'FF_CONCORD_CHAT';
     }
