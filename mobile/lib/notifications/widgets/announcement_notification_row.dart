@@ -48,6 +48,7 @@ class AnnouncementNotificationRow extends StatelessWidget {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      spacing: 4,
                       children: [
                         Text(
                           l10n.notificationFromDivine,
@@ -55,14 +56,12 @@ class AnnouncementNotificationRow extends StatelessWidget {
                             color: colors.secondaryText,
                           ),
                         ),
-                        const SizedBox(height: 4),
                         Text(
                           notification.title,
                           style: VineTheme.bodyMediumFont(
                             color: colors.onSurface,
                           ).copyWith(fontWeight: FontWeight.bold),
                         ),
-                        const SizedBox(height: 4),
                         Text(
                           notification.body,
                           maxLines: 2,
@@ -71,7 +70,6 @@ class AnnouncementNotificationRow extends StatelessWidget {
                             color: colors.secondaryText,
                           ),
                         ),
-                        const SizedBox(height: 4),
                         Text(
                           LocalizedTimeFormatter.formatRelative(
                             l10n,
