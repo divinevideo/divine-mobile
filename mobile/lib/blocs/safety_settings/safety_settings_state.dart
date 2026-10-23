@@ -8,8 +8,9 @@ enum SafetySettingsStatus { loading, ready }
 
 /// State for `SafetySettingsCubit`.
 ///
-/// The cubit owns three independent toggles ([isAgeVerified],
-/// [isPeopleIFollowEnabled], [showDivineHostedOnly]) plus two reactive lists
+/// The cubit owns independent toggles ([isAgeVerified],
+/// [isPeopleIFollowEnabled], [showDivineHostedOnly], [showVerifiedOnly],
+/// [blurDmVideoPreviews]) plus two reactive lists
 /// ([customLabelers], [blockedUsers]) that the cubit refreshes from streams
 /// and after every mutation (label add/remove, block/unblock). The previous
 /// `_buildBlockedUsersSection` `ref.watch(blocklistVersionProvider)` rebuild
@@ -24,6 +25,7 @@ class SafetySettingsState extends Equatable {
     this.isPeopleIFollowEnabled = false,
     this.showDivineHostedOnly = true,
     this.showVerifiedOnly = false,
+    this.blurDmVideoPreviews = false,
     this.customLabelers = const <String>{},
     this.blockedUsers = const <String>{},
   });
@@ -40,6 +42,10 @@ class SafetySettingsState extends Equatable {
   /// Whether to hide videos with no capture chain (archive exempt).
   final bool showVerifiedOnly;
 
+  /// Whether video DM previews from trusted senders stay blurred until the
+  /// video is played. Always false when no account is signed in.
+  final bool blurDmVideoPreviews;
+
   /// Subscribed labeler pubkeys excluding the built-in Divine labeler.
   final Set<String> customLabelers;
 
@@ -54,6 +60,7 @@ class SafetySettingsState extends Equatable {
     bool? isPeopleIFollowEnabled,
     bool? showDivineHostedOnly,
     bool? showVerifiedOnly,
+    bool? blurDmVideoPreviews,
     Set<String>? customLabelers,
     Set<String>? blockedUsers,
   }) {
@@ -65,6 +72,7 @@ class SafetySettingsState extends Equatable {
           isPeopleIFollowEnabled ?? this.isPeopleIFollowEnabled,
       showDivineHostedOnly: showDivineHostedOnly ?? this.showDivineHostedOnly,
       showVerifiedOnly: showVerifiedOnly ?? this.showVerifiedOnly,
+      blurDmVideoPreviews: blurDmVideoPreviews ?? this.blurDmVideoPreviews,
       customLabelers: customLabelers ?? this.customLabelers,
       blockedUsers: blockedUsers ?? this.blockedUsers,
     );
@@ -78,6 +86,7 @@ class SafetySettingsState extends Equatable {
     isPeopleIFollowEnabled,
     showDivineHostedOnly,
     showVerifiedOnly,
+    blurDmVideoPreviews,
     customLabelers,
     blockedUsers,
   ];

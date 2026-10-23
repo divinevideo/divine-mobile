@@ -2901,6 +2901,14 @@ class AppLocalizationsNl extends AppLocalizations {
       'Abonneer je op labels van mensen die je volgt';
 
   @override
+  String get safetySettingsBlurDmVideoPreviews =>
+      'Blur video previews in messages';
+
+  @override
+  String get safetySettingsBlurDmVideoPreviewsSubtitle =>
+      'From people you follow and chats you\'ve replied in. Tap a video to watch it.';
+
+  @override
   String get safetySettingsAddCustomLabeler => 'Eigen labeler toevoegen';
 
   @override

@@ -2828,6 +2828,14 @@ class AppLocalizationsTr extends AppLocalizations {
       'Takip ettiğin kişilerin etiketlerine abone ol';
 
   @override
+  String get safetySettingsBlurDmVideoPreviews =>
+      'Blur video previews in messages';
+
+  @override
+  String get safetySettingsBlurDmVideoPreviewsSubtitle =>
+      'From people you follow and chats you\'ve replied in. Tap a video to watch it.';
+
+  @override
   String get safetySettingsAddCustomLabeler => 'Özel Etiketleyici Ekle';
 
   @override

@@ -2884,6 +2884,14 @@ class AppLocalizationsSv extends AppLocalizations {
       'Prenumerera på etiketter från personer du följer';
 
   @override
+  String get safetySettingsBlurDmVideoPreviews =>
+      'Blur video previews in messages';
+
+  @override
+  String get safetySettingsBlurDmVideoPreviewsSubtitle =>
+      'From people you follow and chats you\'ve replied in. Tap a video to watch it.';
+
+  @override
   String get safetySettingsAddCustomLabeler => 'Lägg till egen etiketterare';
 
   @override

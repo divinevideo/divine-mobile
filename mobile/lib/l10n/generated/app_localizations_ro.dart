@@ -2994,6 +2994,14 @@ class AppLocalizationsRo extends AppLocalizations {
       'Abonează-te la etichete de la oameni pe care âi urmărești';
 
   @override
+  String get safetySettingsBlurDmVideoPreviews =>
+      'Blur video previews in messages';
+
+  @override
+  String get safetySettingsBlurDmVideoPreviewsSubtitle =>
+      'From people you follow and chats you\'ve replied in. Tap a video to watch it.';
+
+  @override
   String get safetySettingsAddCustomLabeler =>
       'Adaugă etichetator personalizat';
 

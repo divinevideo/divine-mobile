@@ -1909,6 +1909,14 @@
   "safetySettingsDivineSubtitle": "Official moderation service (on by default)",
   "safetySettingsPeopleIFollow": "People I follow",
   "safetySettingsPeopleIFollowSubtitle": "Subscribe to labels from people you follow",
+  "safetySettingsBlurDmVideoPreviews": "Blur video previews in messages",
+  "@safetySettingsBlurDmVideoPreviews": {
+    "description": "Safety settings switch. When on, a video sent in a direct message by someone the user follows, or in a 1:1 chat they have replied in, shows a blurred preview until it is played."
+  },
+  "safetySettingsBlurDmVideoPreviewsSubtitle": "From people you follow and chats you've replied in. Tap a video to watch it.",
+  "@safetySettingsBlurDmVideoPreviewsSubtitle": {
+    "description": "Subtitle under the 'Blur video previews in messages' switch, saying which video messages it applies to and that a tap still plays the video."
+  },
   "safetySettingsAddCustomLabeler": "Add Custom Labeler",
   "safetySettingsAddCustomLabelerHint": "Enter npub...",
   "safetySettingsAddCustomLabelerListTitle": "Add custom labeler",

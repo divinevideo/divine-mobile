@@ -21,6 +21,7 @@ import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
+import 'package:openvine/services/dm_video_blur_preference_service.dart';
 import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_provenance_filter_service.dart';
@@ -114,6 +115,7 @@ void main() {
     late _MockVideoEventService mockVideoEventService;
     late DivineHostFilterService divineHostFilterService;
     late VideoProvenanceFilterService provenanceFilterService;
+    late DmVideoBlurPreferenceService blurService;
     const blockedPubkey =
         'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
     const labelerPubkey =
@@ -132,6 +134,7 @@ void main() {
       mockVideoEventService = _MockVideoEventService();
       divineHostFilterService = DivineHostFilterService(prefs);
       provenanceFilterService = VideoProvenanceFilterService(prefs);
+      blurService = DmVideoBlurPreferenceService(prefs, account: 'a' * 64);
 
       when(
         () => mockModerationLabelService.ensureLoaded(),
@@ -203,6 +206,7 @@ void main() {
           videoProvenanceFilterServiceProvider.overrideWithValue(
             provenanceFilterService,
           ),
+          dmVideoBlurPreferenceServiceProvider.overrideWithValue(blurService),
           isProtectedMinorProvider.overrideWithValue(isProtectedMinor),
           userProfileReactiveProvider.overrideWith(
             (ref, pubkey) => Stream.value(profiles[pubkey]),
@@ -470,6 +474,28 @@ void main() {
             followedPubkeys: ['followed_pubkey_1', 'followed_pubkey_2'],
           ),
         ).called(1);
+        expect(tester.widget<DivineSwitchTile>(tile).value, isTrue);
+      },
+    );
+
+    testWidgets(
+      'turns on blurring video previews in messages for the signed-in account',
+      (tester) async {
+        await tester.pumpWidget(createTestWidget());
+        await tester.pumpAndSettle();
+
+        final tile = find.widgetWithText(
+          DivineSwitchTile,
+          l10n.safetySettingsBlurDmVideoPreviews,
+        );
+        expect(tile, findsOneWidget);
+        expect(tester.widget<DivineSwitchTile>(tile).value, isFalse);
+
+        await tester.scrollUntilVisible(tile, 120);
+        tester.widget<DivineSwitchTile>(tile).onChanged!(true);
+        await tester.pumpAndSettle();
+
+        expect(blurService.blurVideoPreviews, isTrue);
         expect(tester.widget<DivineSwitchTile>(tile).value, isTrue);
       },
     );

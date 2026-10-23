@@ -26,6 +26,7 @@ import 'package:openvine/services/curated_lists/curated_list_relay_evidence.dart
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
+import 'package:openvine/services/dm_video_blur_preference_service.dart';
 import 'package:openvine/services/language_preference_service.dart';
 import 'package:openvine/services/messages_preference_service.dart';
 import 'package:openvine/services/minor_account_review_status_store.dart';
@@ -442,6 +443,7 @@ class UserDataCleanupService {
     await remove(followingPrefetchMarkerKey(userPubkey));
     await remove(MinorAccountReviewStatusStore.storageKey(userPubkey));
     await remove(MessagesPreferenceService.storageKey(userPubkey));
+    await remove(DmVideoBlurPreferenceService.storageKey(userPubkey));
     await remove(RelayDiscoveryService.cacheStorageKey(userNpub));
 
     await onDatabaseCleanup?.call(

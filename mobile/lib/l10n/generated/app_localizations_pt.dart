@@ -2913,6 +2913,14 @@ class AppLocalizationsPt extends AppLocalizations {
       'Assinar rótulos de pessoas que você segue';
 
   @override
+  String get safetySettingsBlurDmVideoPreviews =>
+      'Blur video previews in messages';
+
+  @override
+  String get safetySettingsBlurDmVideoPreviewsSubtitle =>
+      'From people you follow and chats you\'ve replied in. Tap a video to watch it.';
+
+  @override
   String get safetySettingsAddCustomLabeler => 'Adicionar rótulo personalizado';
 
   @override

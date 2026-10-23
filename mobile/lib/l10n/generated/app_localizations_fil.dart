@@ -2899,6 +2899,14 @@ class AppLocalizationsFil extends AppLocalizations {
       'Mag-subscribe sa mga label mula sa mga taong fino-follow mo';
 
   @override
+  String get safetySettingsBlurDmVideoPreviews =>
+      'Blur video previews in messages';
+
+  @override
+  String get safetySettingsBlurDmVideoPreviewsSubtitle =>
+      'From people you follow and chats you\'ve replied in. Tap a video to watch it.';
+
+  @override
   String get safetySettingsAddCustomLabeler => 'Magdagdag ng Custom Labeler';
 
   @override

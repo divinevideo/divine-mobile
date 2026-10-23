@@ -2828,6 +2828,14 @@ class AppLocalizationsAm extends AppLocalizations {
   String get safetySettingsPeopleIFollowSubtitle => 'ለሚከተሏቸው ሰዎች መለያዎች ይመዝገቡ';
 
   @override
+  String get safetySettingsBlurDmVideoPreviews =>
+      'Blur video previews in messages';
+
+  @override
+  String get safetySettingsBlurDmVideoPreviewsSubtitle =>
+      'From people you follow and chats you\'ve replied in. Tap a video to watch it.';
+
+  @override
   String get safetySettingsAddCustomLabeler => 'ብጁ መሰየሚያ ያክሉ';
 
   @override

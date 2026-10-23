@@ -2880,6 +2880,14 @@ class AppLocalizationsAr extends AppLocalizations {
       'اشترك في الوسوم من الأشخاص الذين تتابعهم';
 
   @override
+  String get safetySettingsBlurDmVideoPreviews =>
+      'Blur video previews in messages';
+
+  @override
+  String get safetySettingsBlurDmVideoPreviewsSubtitle =>
+      'From people you follow and chats you\'ve replied in. Tap a video to watch it.';
+
+  @override
   String get safetySettingsAddCustomLabeler => 'إضافة واسم مخصّص';
 
   @override

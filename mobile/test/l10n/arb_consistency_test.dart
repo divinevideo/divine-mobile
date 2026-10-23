@@ -620,6 +620,11 @@ const _knownUntranslatedDebt = <String>{
   'dmVideoCardHiddenSenderBlocked',
   'dmVideoCardHiddenSenderMuted',
 
+  // The setting that blurs trusted senders' video DM previews (#10353).
+  // English ships first and waits for the human translation pass.
+  'safetySettingsBlurDmVideoPreviews',
+  'safetySettingsBlurDmVideoPreviewsSubtitle',
+
   // Group inbox preview sender prefix (#8428). The separator after the name is
   // a per-locale convention (a space before the colon in French, a full-width
   // colon in Japanese and Chinese), so it waits for the human translation pass

@@ -4897,6 +4897,18 @@ abstract class AppLocalizations {
   /// **'Subscribe to labels from people you follow'**
   String get safetySettingsPeopleIFollowSubtitle;
 
+  /// Safety settings switch. When on, a video sent in a direct message by someone the user follows, or in a 1:1 chat they have replied in, shows a blurred preview until it is played.
+  ///
+  /// In en, this message translates to:
+  /// **'Blur video previews in messages'**
+  String get safetySettingsBlurDmVideoPreviews;
+
+  /// Subtitle under the 'Blur video previews in messages' switch, saying which video messages it applies to and that a tap still plays the video.
+  ///
+  /// In en, this message translates to:
+  /// **'From people you follow and chats you\'ve replied in. Tap a video to watch it.'**
+  String get safetySettingsBlurDmVideoPreviewsSubtitle;
+
   /// No description provided for @safetySettingsAddCustomLabeler.
   ///
   /// In en, this message translates to:

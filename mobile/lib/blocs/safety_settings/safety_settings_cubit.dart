@@ -13,6 +13,7 @@ import 'package:openvine/blocs/safety_settings/safety_settings_state.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
+import 'package:openvine/services/dm_video_blur_preference_service.dart';
 import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_provenance_filter_service.dart';
@@ -44,6 +45,7 @@ class SafetySettingsCubit extends Cubit<SafetySettingsState>
     required FollowRepository followRepository,
     required ContentBlocklistRepository contentBlocklistRepository,
     bool isAdultContentLocked = false,
+    DmVideoBlurPreferenceService? dmVideoBlurPreferenceService,
   }) : _isAdultContentLocked = isAdultContentLocked,
        _ageVerificationService = ageVerificationService,
        _contentFilterService = contentFilterService,
@@ -53,6 +55,7 @@ class SafetySettingsCubit extends Cubit<SafetySettingsState>
        _moderationLabelService = moderationLabelService,
        _followRepository = followRepository,
        _contentBlocklistRepository = contentBlocklistRepository,
+       _dmVideoBlurPreferenceService = dmVideoBlurPreferenceService,
        super(const SafetySettingsState());
 
   final AgeVerificationService _ageVerificationService;
@@ -65,9 +68,12 @@ class SafetySettingsCubit extends Cubit<SafetySettingsState>
   final ContentBlocklistRepository _contentBlocklistRepository;
   final bool _isAdultContentLocked;
 
+  /// Null when no account is signed in: the choice is stored per account.
+  final DmVideoBlurPreferenceService? _dmVideoBlurPreferenceService;
+
   StreamSubscription<ContentPolicyState>? _blocklistSub;
 
-  /// Snapshots the three settings + the labeler / blocklist lists, and
+  /// Snapshots the toggles + the labeler / blocklist lists, and
   /// starts subscribing to the blocklist stream for live refreshes.
   Future<void> load() async {
     emit(state.copyWith(status: SafetySettingsStatus.loading));
@@ -86,6 +92,8 @@ class SafetySettingsCubit extends Cubit<SafetySettingsState>
             _moderationLabelService.isFollowingModerationEnabled,
         showDivineHostedOnly: _divineHostFilterService.showDivineHostedOnly,
         showVerifiedOnly: _provenanceFilterService.showVerifiedOnly,
+        blurDmVideoPreviews:
+            _dmVideoBlurPreferenceService?.blurVideoPreviews ?? false,
         customLabelers: _moderationLabelService.customLabelers,
         blockedUsers: _contentBlocklistRepository.runtimeBlockedUsers,
       ),
@@ -159,6 +167,22 @@ class SafetySettingsCubit extends Cubit<SafetySettingsState>
     } catch (e, stackTrace) {
       addError(e, stackTrace);
       emitIfOpen(state.copyWith(showVerifiedOnly: previous));
+    }
+  }
+
+  /// Toggle "blur video previews in messages" for the signed-in account.
+  ///
+  /// Does nothing when no account is signed in.
+  Future<void> setBlurDmVideoPreviews(bool value) async {
+    final service = _dmVideoBlurPreferenceService;
+    if (service == null) return;
+    final previous = state.blurDmVideoPreviews;
+    emit(state.copyWith(blurDmVideoPreviews: value));
+    try {
+      await service.setBlurVideoPreviews(value);
+    } catch (e, stackTrace) {
+      addError(e, stackTrace);
+      emitIfOpen(state.copyWith(blurDmVideoPreviews: previous));
     }
   }
 

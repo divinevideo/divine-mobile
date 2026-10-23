@@ -41,6 +41,7 @@ import 'package:openvine/services/broken_video_tracker.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/dead_media_feed_guard.dart';
+import 'package:openvine/services/dm_video_blur_preference_service.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
 import 'package:openvine/services/dm_video_store.dart';
@@ -539,6 +540,22 @@ final dmVideoStoreProvider = Provider<DmVideoStore?>((ref) {
   );
   return store;
 });
+
+/// The signed-in account's choice to blur video DM previews from trusted
+/// senders until played, or null when no account is signed in.
+///
+/// Rebuilt when the account changes, so each account reads its own choice.
+final dmVideoBlurPreferenceServiceProvider =
+    Provider<DmVideoBlurPreferenceService?>((ref) {
+      final account = ref.watch(currentAccountIdProvider);
+      if (account == null || account.isEmpty) return null;
+      final service = DmVideoBlurPreferenceService(
+        ref.watch(sharedPreferencesProvider),
+        account: account,
+      );
+      ref.onDispose(service.dispose);
+      return service;
+    });
 
 /// Whether a kept video's message is gone for [owner]: retracted, as the
 /// thread no longer shows it, or removed with its conversation. A missing

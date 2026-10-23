@@ -2927,6 +2927,14 @@ class AppLocalizationsIt extends AppLocalizations {
       'Iscriviti alle etichette delle persone che segui';
 
   @override
+  String get safetySettingsBlurDmVideoPreviews =>
+      'Blur video previews in messages';
+
+  @override
+  String get safetySettingsBlurDmVideoPreviewsSubtitle =>
+      'From people you follow and chats you\'ve replied in. Tap a video to watch it.';
+
+  @override
   String get safetySettingsAddCustomLabeler =>
       'Aggiungi labeler personalizzato';
 
