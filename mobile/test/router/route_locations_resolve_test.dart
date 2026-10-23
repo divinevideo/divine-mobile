@@ -23,6 +23,7 @@ const _pubkeyHex =
 const _conversationId =
     '3333333333333333333333333333333333333333333333333333333333333333';
 const _listId = 'weekend-picks';
+const _announcementId = 'cc3897b7-a83f-4d9f-9ce4-a7daa7c07a63';
 final String _npub = NostrKeyUtils.encodePubKey(_pubkeyHex);
 
 /// Every location a [RoutePaths] member produces, keyed by the member's name.
@@ -92,6 +93,9 @@ final _locations = <String, List<String>>{
   'welcome': [RoutePaths.welcome],
   'welcomeLoginOptions': [RoutePaths.welcomeLoginOptions],
   'welcomeResetPassword': [RoutePaths.welcomeResetPassword],
+  'announcementDetailForId': [
+    RoutePaths.announcementDetailForId(_announcementId),
+  ],
   'appDetailForSlug': [RoutePaths.appDetailForSlug('sample-app')],
   'categoryGalleryFor': [RoutePaths.categoryGalleryFor('Wild Life')],
   'conversationForId': [RoutePaths.conversationForId(_conversationId)],
@@ -141,6 +145,7 @@ final _locations = <String, List<String>>{
 /// [RoutePaths] members that are not a whole location on their own.
 const _notLocations = {
   // Prefixes the builders extend. No route is registered at the bare prefix.
+  'announcementDetailBase',
   'curatedListFeedBase',
   'followersBase',
   'followingBase',
