@@ -1666,12 +1666,12 @@ class VideosRepository {
   /// (e.g. profile Liked / Saved tabs) get loop and engagement totals like the
   /// home feed — unless [hydrateBulkStats] is false.
   ///
-  /// [includeFeedShape] defaults to true for feeds. Direct opens opt out.
-  ///
   /// Use [hydrateBulkStats] `false` when the caller will run bulk-stats
   /// hydration under its own timeout or policy ([fetchVideoWithStats] does
   /// this so a slow Funnelcake call cannot block indefinitely on the relay
   /// fetch+hydrate path).
+  ///
+  /// [includeFeedShape] defaults to true for feeds. Direct opens opt out.
   Future<List<VideoEvent>> getVideosByIds(
     List<String> eventIds, {
     bool cacheResults = false,

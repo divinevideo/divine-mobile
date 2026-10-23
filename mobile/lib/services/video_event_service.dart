@@ -635,6 +635,7 @@ class VideoEventService extends ChangeNotifier implements VideoEventCache {
   /// [moderationLabels] (ML-generated from Funnelcake) only trigger "hide"
   /// filtering — never "warn" blur overlays — because ML classifiers are
   /// noisy and would otherwise block autoplay on ordinary videos.
+  ///
   /// Profiles opt out of feed shape with [includeFeedShape], retaining all
   /// other visibility and content policies.
   List<VideoEvent> filterVideoList(
