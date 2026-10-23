@@ -9116,7 +9116,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorTextGradientAddColor => 'ቀለም ያክሉ';
 
   @override
-  String get videoEditorTextGradientRemoveColor => 'የመጨረሻውን ቀለም አስወግድ';
+  String get videoEditorTextGradientRemoveColor => 'የመጨረሻውን ቀለም ያስወግዱ';
 
   @override
   String get videoEditorTextGradientSunset => 'ጀንበር ስትጠልቅ';

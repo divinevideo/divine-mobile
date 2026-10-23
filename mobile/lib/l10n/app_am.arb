@@ -3365,7 +3365,7 @@
   "videoEditorTextGradientPresets": "ዝግጁ ቅንብሮች",
   "videoEditorTextGradientColors": "ቀለሞች",
   "videoEditorTextGradientAddColor": "ቀለም ያክሉ",
-  "videoEditorTextGradientRemoveColor": "የመጨረሻውን ቀለም አስወግድ",
+  "videoEditorTextGradientRemoveColor": "የመጨረሻውን ቀለም ያስወግዱ",
   "videoEditorTextGradientSunset": "ጀንበር ስትጠልቅ",
   "videoEditorTextGradientOcean": "ውቅያኖስ",
   "videoEditorTextGradientRainbow": "ቀስተ ደመና",
