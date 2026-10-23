@@ -43,6 +43,41 @@ void main() {
     });
 
     test(
+      'read journal survives cache cleanup and stale acknowledgments',
+      () async {
+        await state.rememberReadCursors(pkA, {'tuple': 100});
+        final first = state.pendingReadRevision(pkA);
+        await state.rememberReadCursors(pkA, {'tuple': 50, 'other': 200});
+        await state.acknowledgeReadRevision(pkA, first);
+        expect(state.pendingReadRevision(pkA), greaterThan(first));
+        await state.clear(pkA);
+        await state.clearAll();
+        expect(state.readCursors(pkA), {'tuple': 100, 'other': 200});
+        final revision = state.pendingReadRevision(pkA);
+        await state.acknowledgeReadRevision(pkA, revision);
+        expect(state.pendingReadRevision(pkA), 0);
+        expect(state.readCursors(pkA), {'tuple': 100, 'other': 200});
+        expect(state.readCursors(pkB), isEmpty);
+        expect(
+          DmSyncState.readStateStorageKeys(pkA),
+          contains(DmSyncState.readStateStorageKey(pkA)),
+        );
+      },
+    );
+
+    test('refused read intent restores the preferences cache', () async {
+      final original = SharedPreferencesStorePlatform.instance;
+      addTearDown(() => SharedPreferencesStorePlatform.instance = original);
+      SharedPreferencesStorePlatform.instance = _RefusingStore.withData({});
+      await expectLater(
+        state.rememberReadCursors(pkA, {'tuple': 100}),
+        throwsStateError,
+      );
+      expect(DmSyncState(prefs).readCursors(pkA), isEmpty);
+      expect(state.pendingReadRevision(pkA), 0);
+    });
+
+    test(
       'returns null for newestSyncedAt and oldestSyncedAt when nothing '
       'persisted',
       () {

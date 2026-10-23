@@ -454,6 +454,32 @@ class _GatedPubkeySigner implements NostrSigner {
 /// Test double for [DmSyncState] that stores values in memory and captures
 /// [recordSeen] calls for assertions.
 class _FakeDmSyncState implements DmSyncState {
+  final Map<String, Map<String, int>> _reads = {};
+  final Map<String, int> _readRevisions = {};
+
+  @override
+  int pendingReadRevision(String pubkey) => _readRevisions[pubkey] ?? 0;
+
+  @override
+  Map<String, int> readCursors(String pubkey) => _reads[pubkey] ?? {};
+
+  @override
+  Future<void> rememberReadCursors(
+    String pubkey,
+    Map<String, int> cursors,
+  ) async {
+    final read = _reads.putIfAbsent(pubkey, () => {});
+    for (final entry in cursors.entries) {
+      if (entry.value > (read[entry.key] ?? 0)) read[entry.key] = entry.value;
+    }
+    _readRevisions[pubkey] = pendingReadRevision(pubkey) + 1;
+  }
+
+  @override
+  Future<void> acknowledgeReadRevision(String pubkey, int revision) async {
+    if (pendingReadRevision(pubkey) == revision) _readRevisions.remove(pubkey);
+  }
+
   int? newestOverride;
   int? newestWireOverride;
   int? oldestOverride;

@@ -429,36 +429,19 @@ END
     );
     if (changed == 0) return false;
     if (dismissed) {
-      final row = (await getConversation(id, ownerPubkey: ownerPubkey))!;
-      final boundary = row.lastMessageTimestamp ?? 0;
-      // The visible conversation may still be an unattributed legacy row.
-      // Capture its replay ids too, but never another known account's rows.
-      final messages =
-          await (select(attachedDatabase.directMessages)..where(
-                (t) =>
-                    t.conversationId.equals(id) &
-                    (t.ownerPubkey.equals(ownerPubkey) |
-                        t.ownerPubkey.equals('') |
-                        t.ownerPubkey.isNull()) &
-                    t.createdAt.isBiggerOrEqualValue(boundary),
-              ))
-              .get();
+      final boundary = (await captureDismissalBoundary(
+        id,
+        ownerPubkey: ownerPubkey,
+      ))!;
       await into(
         attachedDatabase.conversationDismissals,
       ).insertOnConflictUpdate(
         ConversationDismissalsCompanion.insert(
           conversationId: id,
           ownerPubkey: ownerPubkey,
-          boundaryTimestamp: boundary,
+          boundaryTimestamp: boundary.timestamp,
           knownMessageIds: Value(
-            jsonEncode(
-              {
-                if (row.retainedMessageIds != null)
-                  ...(jsonDecode(row.retainedMessageIds!) as List)
-                      .cast<String>(),
-                ...messages.map((m) => m.id),
-              }.toList(),
-            ),
+            jsonEncode(boundary.knownMessageIds.toList()..sort()),
           ),
         ),
       );
@@ -466,6 +449,105 @@ END
       await _clearDismissal(id, ownerPubkey);
     }
     return true;
+  });
+
+  /// Account-owned dismissal intent, retained when cache rows are cleared.
+  Future<ConversationDismissal?> getDismissal(
+    String id, {
+    required String ownerPubkey,
+  }) =>
+      (select(attachedDatabase.conversationDismissals)..where(
+            (t) =>
+                t.conversationId.equals(id) & t.ownerPubkey.equals(ownerPubkey),
+          ))
+          .getSingleOrNull();
+
+  /// Captures a through-message boundary without changing visible state.
+  /// Include deleted and legacy message IDs exactly as local dismissal does,
+  /// so replay cannot mistake an already known message for a new arrival.
+  Future<({int timestamp, Set<String> knownMessageIds})?>
+  captureDismissalBoundary(String id, {required String ownerPubkey}) =>
+      attachedDatabase.transaction(() async {
+        final row = await getConversation(id, ownerPubkey: ownerPubkey);
+        if (row == null) return null;
+        final timestamp = row.lastMessageTimestamp ?? 0;
+        final messages =
+            await (select(attachedDatabase.directMessages)..where(
+                  (t) =>
+                      t.conversationId.equals(id) &
+                      (t.ownerPubkey.equals(ownerPubkey) |
+                          t.ownerPubkey.equals('') |
+                          t.ownerPubkey.isNull()) &
+                      t.createdAt.isBiggerOrEqualValue(timestamp),
+                ))
+                .get();
+        return (
+          timestamp: timestamp,
+          knownMessageIds: {
+            if (row.retainedMessageIds != null)
+              ...(jsonDecode(row.retainedMessageIds!) as List).cast<String>(),
+            ...messages.map((m) => m.id),
+          },
+        );
+      });
+
+  /// Applies a remote through-message boundary exactly as received. Newer
+  /// local messages, including unknown IDs in the same second, stay visible.
+  /// The intent may precede the conversation row during history restoration.
+  Future<void> applySyncedDismissal(
+    String id, {
+    required String ownerPubkey,
+    required bool dismissed,
+    int boundaryTimestamp = 0,
+    Set<String> knownMessageIds = const {},
+  }) => attachedDatabase.transaction(() async {
+    if (!dismissed) {
+      await _clearDismissal(id, ownerPubkey);
+      await (update(conversations)..where(
+            (t) => t.id.equals(id) & _visibleToOwner(t, ownerPubkey),
+          ))
+          .write(const ConversationsCompanion(isDismissed: Value(false)));
+      return;
+    }
+    final row = await getConversation(id, ownerPubkey: ownerPubkey);
+    final candidates =
+        await (select(attachedDatabase.directMessages)..where(
+              (t) =>
+                  t.conversationId.equals(id) &
+                  t.ownerPubkey.equals(ownerPubkey) &
+                  t.createdAt.isBiggerOrEqualValue(boundaryTimestamp),
+            ))
+            .get();
+    final hasNewer =
+        (row?.lastMessageTimestamp ?? 0) > boundaryTimestamp ||
+        candidates.any(
+          (m) =>
+              m.createdAt > boundaryTimestamp ||
+              !knownMessageIds.contains(m.id),
+        );
+    if (hasNewer) {
+      // Clear any older cached dismissal too: the account intent has already
+      // been superseded by a message beyond its boundary.
+      await _clearDismissal(id, ownerPubkey);
+      await (update(conversations)..where(
+            (t) => t.id.equals(id) & _visibleToOwner(t, ownerPubkey),
+          ))
+          .write(const ConversationsCompanion(isDismissed: Value(false)));
+      return;
+    }
+    await into(attachedDatabase.conversationDismissals).insertOnConflictUpdate(
+      ConversationDismissalsCompanion.insert(
+        conversationId: id,
+        ownerPubkey: ownerPubkey,
+        boundaryTimestamp: boundaryTimestamp,
+        knownMessageIds: Value(jsonEncode(knownMessageIds.toList()..sort())),
+      ),
+    );
+    await applyReadCursor(id, boundaryTimestamp, ownerPubkey: ownerPubkey);
+    await (update(conversations)..where(
+          (t) => t.id.equals(id) & _visibleToOwner(t, ownerPubkey),
+        ))
+        .write(const ConversationsCompanion(isDismissed: Value(true)));
   });
 
   Future<int> _clearDismissal(String id, String ownerPubkey) =>

@@ -643,6 +643,75 @@ class DmSyncState {
     if (!saved) throw const DmCatchUpDebtNotSavedException();
   }
 
+  /// Account-lifetime read journal, retained across disposable cache cleanup.
+  static String readStateStorageKey(String pubkey) =>
+      'dm_read_state_v1_$pubkey';
+
+  /// Keys removed only by explicit account-data erasure.
+  static Iterable<String> readStateStorageKeys(String pubkey) => [
+    readStateStorageKey(pubkey),
+  ];
+
+  Map<String, dynamic> _readState(String pubkey) {
+    final raw = _prefs.getString(readStateStorageKey(pubkey));
+    return raw == null
+        ? <String, dynamic>{}
+        : jsonDecode(raw) as Map<String, dynamic>;
+  }
+
+  /// Durable revision not yet acknowledged by a relay; zero when idle.
+  int pendingReadRevision(String pubkey) {
+    final state = _readState(pubkey);
+    return state['pending'] == true ? state['revision'] as int : 0;
+  }
+
+  /// Union retained independently of the disposable conversation cache.
+  Map<String, int> readCursors(String pubkey) =>
+      ((_readState(pubkey)['cursors'] as Map?) ?? {}).cast<String, int>();
+
+  /// Records the exact read boundaries before changing local cache rows.
+  Future<void> rememberReadCursors(
+    String pubkey,
+    Map<String, int> cursors,
+  ) async {
+    final state = _readState(pubkey);
+    final merged = Map<String, int>.of(readCursors(pubkey));
+    for (final entry in cursors.entries) {
+      final previous = merged[entry.key] ?? 0;
+      if (entry.value > previous) merged[entry.key] = entry.value;
+    }
+    await _saveReadState(
+      pubkey,
+      jsonEncode({
+        'revision': (state['revision'] as int? ?? 0) + 1,
+        'pending': true,
+        'cursors': merged,
+      }),
+    );
+  }
+
+  /// A later read supersedes the publication being acknowledged.
+  Future<void> acknowledgeReadRevision(String pubkey, int revision) async {
+    if (pendingReadRevision(pubkey) != revision) return;
+    final state = _readState(pubkey)..['pending'] = false;
+    await _saveReadState(pubkey, jsonEncode(state));
+  }
+
+  Future<void> _saveReadState(String pubkey, String value) async {
+    final key = readStateStorageKey(pubkey);
+    final previous = _prefs.getString(key);
+    final saved = await _prefs.setString(key, value);
+    if (saved) return;
+    if (_prefs.getString(key) == value) {
+      if (previous == null) {
+        await _prefs.remove(key);
+      } else {
+        await _prefs.setString(key, previous);
+      }
+    }
+    throw StateError('DM read state was not saved');
+  }
+
   /// Removes all sync state for [pubkey]. Called on account switch.
   Future<void> clear(String pubkey) async {
     await _prefs.remove('$_newestPrefix$pubkey');
