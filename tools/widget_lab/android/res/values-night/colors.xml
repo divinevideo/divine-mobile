@@ -1,0 +1,4 @@
+<resources>
+    <style name="LabTheme" parent="android:style/Theme.Material.NoActionBar"><item name="android:colorAccent">#27C58B</item></style>
+    <color name="surface">#00150D</color>
+</resources>
