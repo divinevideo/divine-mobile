@@ -1,10 +1,10 @@
 import 'dart:convert';
-import 'dart:developer' as developer;
 import 'dart:math' as math;
 
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// An expected failure to synchronize private badge settings.
 class BadgeDismissalSyncException implements Exception {
@@ -46,9 +46,10 @@ class BadgeDismissalSync {
         } on Object catch (_) {
           // Never log decrypted settings or remote payloads. A read failure
           // must not prevent viewing badges or overwrite unreadable state.
-          developer.log(
+          Log.warning(
             'Badge decisions unavailable; retaining local choices',
             name: 'BadgeDismissalSync',
+            category: LogCategory.relay,
           );
           return local;
         }
