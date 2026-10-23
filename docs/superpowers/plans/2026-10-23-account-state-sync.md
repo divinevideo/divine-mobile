@@ -27,33 +27,33 @@
 
 **Files:** new mobile/packages/account_state_repository/**; mobile/packages/badge_repository/**.
 **Interfaces:** implement the shared repository contract in the spec. BadgeDismissalSync becomes a compatible facade over it.
-- [ ] Write two-store offline/restart/concurrent-edit regressions and observe failure.
-- [ ] Implement durable per-field state, transport, lifecycle listeners and badge adapter.
-- [ ] Run package tests and analysis; preserve existing badge regression coverage.
-- [ ] Commit only owned files and report exact tests and any interface adjustments.
+- [x] Write two-store offline/restart/concurrent-edit regressions and observe failure.
+- [x] Implement durable per-field state, transport, lifecycle listeners and badge adapter.
+- [x] Run package tests and analysis; preserve existing badge regression coverage.
+- [x] Commit only owned files and report exact tests and any interface adjustments.
 
 ### Task 2: App settings and lifecycle
 
 **Files:** mobile/lib/services/*preference*, selected filter services and Cubits, app providers/lifecycle; matching mobile/test/**; mobile/pubspec.yaml and lockfile.
 **Interfaces:** consume Task 1 APIs; wire owning read repositories' public flushPendingReadState() where available. Register the workspace package and dependency.
-- [ ] Inventory account vs device settings in the design doc, with each account setting wired and device exceptions explicit.
-- [ ] Write integration tests for two stores, explicit reset, remote UI update, account switch and lifecycle disposal.
-- [ ] Integrate shared state into settings without publishing untouched defaults or bypassing age restrictions.
-- [ ] Start/flush sync at account startup, resume and reconnect; retain existing read transport protocols.
-- [ ] Run affected tests/analysis, commit owned files and report evidence.
+- [x] Inventory account vs device settings in the design doc, with each account setting wired and device exceptions explicit.
+- [x] Write integration tests for two stores, explicit reset, remote UI update, account switch and lifecycle disposal.
+- [x] Integrate shared state into settings without publishing untouched defaults or bypassing age restrictions.
+- [x] Start/flush sync at account startup, resume and reconnect; retain existing read transport protocols.
+- [x] Run affected tests/analysis, commit owned files and report evidence.
 
 ### Task 3: Durable reads and dismissal
 
 **Files:** mobile/packages/dm_repository/**; mobile/packages/notification_repository/**; owned package tests.
 **Interfaces:** public Future<void> flushPendingReadState() on each repository; optional injected AccountStateRepository for DM dismissal if needed, coordinated with app owner.
-- [ ] Reproduce loss of failed/offline read publication without a second user read.
-- [ ] Persist retry intent using existing owning stores; retry on repository startup and explicit flush, keeping idempotence, ownership and newer-arrival boundaries.
-- [ ] Sync DM dismissal with a through-message boundary; preserve new-message restore behavior and existing read-marker protocol.
-- [ ] Run relevant read/mutation tests and analysis, commit owned files and report evidence.
+- [x] Reproduce loss of failed/offline read publication without a second user read.
+- [x] Persist retry intent using existing owning stores; retry on repository startup and explicit flush, keeping idempotence, ownership and newer-arrival boundaries.
+- [x] Sync DM dismissal with a through-message boundary; preserve new-message restore behavior and existing read-marker protocol.
+- [x] Run relevant read/mutation tests and analysis, commit owned files and report evidence.
 
 ### Task 4: Review, verify and publish
 
 - [ ] Review each owned deliverable against spec, fix verified defects and integrate.
-- [ ] Run affected packages/app tests and app CI analysis scope, guards and generated-code checks.
+- [x] Run affected packages/app tests and app CI analysis scope, guards and generated-code checks.
 - [ ] Rebase on fresh main, publish the expanded PR with a rewritten semantic title/body, preserve reviewer routing, inspect all required/relevant CI.
 - [ ] Obtain and publish fresh independent review where available; accurately record unavailable review providers. No merge/release.
