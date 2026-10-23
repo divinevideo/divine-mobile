@@ -5,14 +5,51 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
-import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockClient extends Mock implements NostrClient {}
 
+class _MockPreferences extends Mock implements SharedPreferences {}
+
+class _ControlledSigner extends LocalNostrSigner {
+  _ControlledSigner() : super('1'.padLeft(64, '0'));
+  bool refuseDecrypt = false;
+  bool refuseEncrypt = false;
+  bool refuseSign = false;
+  bool changeSignedContent = false;
+  bool returnUnsigned = false;
+  int decryptCalls = 0;
+
+  @override
+  Future<String?> nip44Decrypt(String pubkey, String ciphertext) async {
+    decryptCalls++;
+    return refuseDecrypt ? null : super.nip44Decrypt(pubkey, ciphertext);
+  }
+
+  @override
+  Future<String?> nip44Encrypt(String pubkey, String plaintext) async =>
+      refuseEncrypt ? null : super.nip44Encrypt(pubkey, plaintext);
+
+  @override
+  Future<Event?> signEvent(Event event) async {
+    if (refuseSign) return null;
+    if (returnUnsigned) return event;
+    final toSign = changeSignedContent
+        ? Event(
+            event.pubkey,
+            event.kind,
+            event.tags,
+            '${event.content}changed',
+            createdAt: event.createdAt,
+          )
+        : event;
+    return super.signEvent(toSign);
+  }
+}
+
 void main() {
   late _MockClient client;
-  late LocalNostrSigner signer;
+  late _ControlledSigner signer;
   late String pubkey;
   late SharedPreferences phonePreferences;
   late BadgeDismissalSync phone;
@@ -32,7 +69,7 @@ void main() {
 
   setUp(() async {
     client = _MockClient();
-    signer = LocalNostrSigner('1'.padLeft(64, '0'));
+    signer = _ControlledSigner();
     pubkey = (await signer.getPublicKey())!;
     relayEvents = [];
     timedOut = false;
@@ -75,6 +112,24 @@ void main() {
     );
   });
 
+  Future<Event> snapshot(Object payload, {int? createdAt, String? raw}) async {
+    final content = (await signer.nip44Encrypt(
+      pubkey,
+      raw ?? jsonEncode(payload),
+    ))!;
+    return (await signer.signEvent(
+      Event(
+        pubkey,
+        EventKind.appSpecificData,
+        [
+          ['d', 'divine:badge-dismissals'],
+        ],
+        content,
+        createdAt: createdAt,
+      ),
+    ))!;
+  }
+
   test(
     'rejection and undo reach another device without sharing storage',
     () async {
@@ -97,7 +152,9 @@ void main() {
     final plaintext = await signer.nip44Decrypt(pubkey, event.content);
     expect(jsonDecode(plaintext!), {
       'version': 1,
-      'decisions': {coordinate: true},
+      'decisions': {
+        coordinate: {'hidden': true, 'updated_at': isPositive},
+      },
     });
   });
 
@@ -139,7 +196,7 @@ void main() {
     timedOut = true;
     await expectLater(
       phone.setHidden(pubkey, {}, coordinate, hidden: true),
-      throwsStateError,
+      throwsA(isA<BadgeDismissalSyncException>()),
     );
     expect(relayEvents, isEmpty);
     expect(await phone.load(pubkey, {coordinate}), {coordinate});
@@ -149,7 +206,7 @@ void main() {
     rejectPublish = true;
     await expectLater(
       phone.setHidden(pubkey, {}, coordinate, hidden: true),
-      throwsStateError,
+      throwsA(isA<BadgeDismissalSyncException>()),
     );
     expect(await phone.load(pubkey, {}), isEmpty);
   });
@@ -183,4 +240,242 @@ void main() {
     expect(relayEvents.last.createdAt, 4102444801);
     expect(await desktop.load(pubkey, {}), isEmpty);
   });
+  test(
+    'unavailable decryption preserves local choices without publishing',
+    () async {
+      await phone.setHidden(pubkey, {}, coordinate, hidden: true);
+      signer.refuseDecrypt = true;
+      expect(await desktop.load(pubkey, {otherCoordinate}), {otherCoordinate});
+      expect(relayEvents, hasLength(1));
+    },
+  );
+
+  test(
+    'merges a cached undo with a newer stale snapshot from another device',
+    () async {
+      await phone.setHidden(pubkey, {}, coordinate, hidden: true);
+      await desktop.load(pubkey, {});
+      final oldSnapshot = relayEvents.single;
+      await phone.setHidden(pubkey, {coordinate}, coordinate, hidden: false);
+      final undo = relayEvents.last;
+      relayEvents = [oldSnapshot];
+      await desktop.setHidden(
+        pubkey,
+        {coordinate},
+        otherCoordinate,
+        hidden: true,
+      );
+      final stale = relayEvents.last;
+      final newerStale = Event(
+        pubkey,
+        stale.kind,
+        stale.tags,
+        stale.content,
+        createdAt: undo.createdAt + 10,
+      );
+      relayEvents = [(await signer.signEvent(newerStale))!];
+      expect(await phone.load(pubkey, {}), {otherCoordinate});
+      expect(await desktop.load(pubkey, {coordinate, otherCoordinate}), {
+        otherCoordinate,
+      });
+    },
+  );
+  for (final payload in <Object>[
+    [],
+    {'version': 2, 'decisions': <String, Object?>{}},
+    {'version': 1, 'decisions': <Object?>[]},
+    {
+      'version': 1,
+      'decisions': {coordinate: true},
+    },
+    {
+      'version': 1,
+      'decisions': {
+        coordinate: {'hidden': 'yes', 'updated_at': 1},
+      },
+    },
+    {
+      'version': 1,
+      'decisions': {
+        coordinate: {'hidden': true, 'updated_at': -1},
+      },
+    },
+  ]) {
+    test(
+      'unreadable settings preserve local choices and cannot be overwritten: $payload',
+      () async {
+        relayEvents = [await snapshot(payload)];
+        expect(await phone.load(pubkey, {otherCoordinate}), {otherCoordinate});
+        await expectLater(
+          phone.setHidden(pubkey, {}, coordinate, hidden: true),
+          throwsFormatException,
+        );
+        expect(relayEvents, hasLength(1));
+      },
+    );
+  }
+
+  test('malformed JSON is never exposed or overwritten', () async {
+    relayEvents = [await snapshot({}, raw: 'private invalid JSON')];
+    expect(await phone.load(pubkey, {coordinate}), {coordinate});
+    await expectLater(
+      phone.setHidden(pubkey, {}, coordinate, hidden: true),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.source,
+          'source',
+          isNull,
+        ),
+      ),
+    );
+    expect(relayEvents, hasLength(1));
+  });
+
+  test('read failures preserve local choices', () async {
+    when(
+      () => client.queryEventsDetailed(
+        any(),
+        useCache: false,
+        requireAllRelaysSettled: true,
+      ),
+    ).thenThrow(Exception('network unavailable'));
+    expect(await phone.load(pubkey, {coordinate}), {coordinate});
+    expect(relayEvents, isEmpty);
+  });
+
+  test('an unavailable signer does not prevent viewing badges', () async {
+    final unavailable = BadgeDismissalSync(
+      client: client,
+      preferences: phonePreferences,
+      signer: () => throw StateError('no active signer'),
+    );
+    expect(await unavailable.load(pubkey, {coordinate}), {coordinate});
+  });
+
+  test('a signer for another identity cannot publish a decision', () async {
+    final mismatch = BadgeDismissalSync(
+      client: client,
+      preferences: phonePreferences,
+      signer: () => LocalNostrSigner('2'.padLeft(64, '0')),
+    );
+    await expectLater(
+      mismatch.setHidden(pubkey, {}, coordinate, hidden: true),
+      throwsA(isA<BadgeDismissalSyncException>()),
+    );
+    expect(relayEvents, isEmpty);
+  });
+
+  test('encryption refusal does not change a decision', () async {
+    signer.refuseEncrypt = true;
+    await expectLater(
+      phone.setHidden(pubkey, {}, coordinate, hidden: true),
+      throwsA(isA<BadgeDismissalSyncException>()),
+    );
+    expect(relayEvents, isEmpty);
+  });
+
+  test('signing refusal does not change a decision', () async {
+    signer.refuseSign = true;
+    await expectLater(
+      phone.setHidden(pubkey, {}, coordinate, hidden: true),
+      throwsA(isA<BadgeDismissalSyncException>()),
+    );
+    expect(relayEvents, isEmpty);
+  });
+
+  test(
+    'a signer cannot change the encrypted snapshot it was asked to sign',
+    () async {
+      signer.changeSignedContent = true;
+      await expectLater(
+        phone.setHidden(pubkey, {}, coordinate, hidden: true),
+        throwsA(isA<BadgeDismissalSyncException>()),
+      );
+      expect(relayEvents, isEmpty);
+    },
+  );
+
+  test('an unsigned event is not published', () async {
+    signer.returnUnsigned = true;
+    await expectLater(
+      phone.setHidden(pubkey, {}, coordinate, hidden: true),
+      throwsA(isA<BadgeDismissalSyncException>()),
+    );
+    expect(relayEvents, isEmpty);
+  });
+
+  test(
+    'failed local persistence is reported as a synchronization failure',
+    () async {
+      final preferences = _MockPreferences();
+      when(() => preferences.getString(any())).thenReturn(null);
+      when(
+        () => preferences.setString(any(), any()),
+      ).thenAnswer((_) async => false);
+      final brokenCache = BadgeDismissalSync(
+        client: client,
+        preferences: preferences,
+        signer: () => signer,
+      );
+      await expectLater(
+        brokenCache.setHidden(pubkey, {}, coordinate, hidden: true),
+        throwsA(
+          isA<BadgeDismissalSyncException>().having(
+            (error) => error.toString(),
+            'description',
+            contains('Could not save decisions'),
+          ),
+        ),
+      );
+    },
+  );
+
+  test('corrupt local cache does not prevent viewing badges', () async {
+    await phonePreferences.setString(
+      'badge_dismissal_event_$pubkey',
+      'invalid',
+    );
+    expect(await phone.load(pubkey, {coordinate}), {coordinate});
+  });
+
+  test('concurrent decisions with equal timestamps converge on undo', () async {
+    final hidden = await snapshot({
+      'version': 1,
+      'decisions': {
+        coordinate: {'hidden': true, 'updated_at': 123},
+      },
+    }, createdAt: 1000);
+    final restored = await snapshot({
+      'version': 1,
+      'decisions': {
+        coordinate: {'hidden': false, 'updated_at': 123},
+      },
+    }, createdAt: 1000);
+    relayEvents = [hidden, restored];
+    expect(await phone.load(pubkey, {}), isEmpty);
+    relayEvents = [restored, hidden];
+    expect(await desktop.load(pubkey, {}), isEmpty);
+  });
+
+  test(
+    'successive snapshots stay current and unchanged reads do not decrypt again',
+    () async {
+      for (var i = 1; i <= 10; i++) {
+        relayEvents = [
+          await snapshot({
+            'version': 1,
+            'decisions': {
+              coordinate: {'hidden': i.isOdd, 'updated_at': i},
+            },
+          }, createdAt: 1000 + i),
+        ];
+        expect(await phone.load(pubkey, {}), i.isOdd ? {coordinate} : isEmpty);
+      }
+      final decryptions = signer.decryptCalls;
+      final count = relayEvents.length;
+      expect(await phone.load(pubkey, {}), isEmpty);
+      expect(signer.decryptCalls, decryptions);
+      expect(relayEvents, hasLength(count));
+    },
+  );
 }

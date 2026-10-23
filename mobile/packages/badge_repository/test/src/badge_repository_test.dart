@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
-import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -2544,11 +2543,12 @@ void main() {
     });
 
     group('saveDefinition', () {
-      test('publishes a kind 30009 definition', () async {
+      test('publishes entered fields as a kind 30009 definition', () async {
+        final fields = {'name': ' Scene Stealer '};
         final definition = await repository.saveDefinition(
-          const BadgeDefinitionDraft(
+          BadgeDefinitionDraft(
             identifier: ' scene-stealer ',
-            name: ' Scene Stealer ',
+            name: fields['name']!,
             description: ' Steals the scroll. ',
             imageUrl: 'https://media.divine.video/scene.png',
             thumbnailUrl: 'https://media.divine.video/scene-thumb.png',
