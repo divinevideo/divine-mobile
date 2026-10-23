@@ -162,7 +162,7 @@ void main() {
         );
       });
 
-      testWidgets('a search claims focus only when the URL asks', (
+      testWidgets('a prefilled search claims focus only when the URL asks', (
         tester,
       ) async {
         await captureContext(tester);
@@ -184,6 +184,29 @@ void main() {
         );
 
         expect(focused.initialQuery, equals('skate'));
+        expect(focused.requestFocusOnMount, isTrue);
+        expect(unfocused.requestFocusOnMount, isFalse);
+      });
+
+      // The Explore search bar opens this route and asks for focus.
+      testWidgets('an empty search claims focus only when the URL asks', (
+        tester,
+      ) async {
+        await captureContext(tester);
+
+        SearchResultsPage build(String location) =>
+            routeAt(SearchResultsPage.emptyPath).builder!(
+              context,
+              _FakeGoRouterState(location: location),
+            ) as SearchResultsPage;
+
+        final focused = build(
+          SearchResultsPage.pathForEmptyQuery(requestFocusOnMount: true),
+        );
+        final unfocused = build(
+          SearchResultsPage.pathForEmptyQuery(requestFocusOnMount: false),
+        );
+
         expect(focused.requestFocusOnMount, isTrue);
         expect(unfocused.requestFocusOnMount, isFalse);
       });
