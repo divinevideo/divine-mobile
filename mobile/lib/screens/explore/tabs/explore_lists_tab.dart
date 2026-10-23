@@ -5,19 +5,16 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/config/screenshot_mode.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/lists_discovery/cubit/lists_discovery_cubit.dart';
 import 'package:openvine/features/lists_discovery/lists_discovery_screenshot_fixtures.dart';
-import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/lists_routes.dart';
 import 'package:openvine/router/routes/route_extras.dart';
-import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
@@ -246,18 +243,16 @@ class _VideoListsColumn extends StatelessWidget {
                   category: LogCategory.ui,
                 );
                 runDetached(
-                  context.push<void>(
-                    CuratedListByAuthorScreen.pathFor(
-                      pubkey: author,
-                      listId: list.id,
-                    ),
-                    extra: CuratedListRouteExtra(
+                  CuratedListByAuthorRouteData(
+                    pubkey: author,
+                    listId: list.id,
+                    $extra: CuratedListRouteExtra(
                       listName: list.name,
                       videoIds: list.videoEventIds,
                       authorPubkey: list.pubkey,
                       list: list,
                     ),
-                  ),
+                  ).push<void>(context),
                   'open discovered list',
                   logName: 'VideoListsColumn',
                   category: LogCategory.ui,
@@ -322,12 +317,10 @@ class _PeopleListsColumn extends StatelessWidget {
                 category: LogCategory.ui,
               );
               runDetached(
-                context.push<void>(
-                  RoutePaths.peopleListForId(
-                    result.list.id,
-                    ownerPubkey: result.ownerPubkey,
-                  ),
-                ),
+                PeopleListRouteData(
+                  listId: result.list.id,
+                  owner: result.ownerPubkey,
+                ).push<void>(context),
                 'open discovered people list',
                 logName: 'PeopleListsColumn',
                 category: LogCategory.ui,
@@ -469,7 +462,8 @@ class _ExploreCreationHeader extends StatelessWidget {
         DivineButton(
           leadingIcon: .plus,
           label: context.l10n.listNewPeopleList,
-          onPressed: () => context.push(CreatePeopleListPage.path),
+          onPressed: () =>
+              const CreatePeopleListRouteData().push<void>(context),
         ),
         const SizedBox(height: 16),
         DivineButton(

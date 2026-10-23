@@ -8,7 +8,6 @@ import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
@@ -19,7 +18,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
-import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/lists_routes.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/rounded_grid_viewport.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -241,9 +240,7 @@ class _RosterView extends StatelessWidget {
             tooltip: l10n.peopleListsAddPeopleTooltip,
             semanticLabel: l10n.peopleListsAddPeopleSemanticLabel,
             onPressed: () => runDetached(
-              context.push<void>(
-                RoutePaths.peopleListAddPeopleForId(list.id),
-              ),
+              AddPeopleToListRouteData(listId: list.id).push<void>(context),
               'open add-people picker',
               logName: 'PeopleListMembersScreen',
               category: LogCategory.ui,

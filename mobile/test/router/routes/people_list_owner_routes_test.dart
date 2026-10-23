@@ -45,7 +45,7 @@ Widget? _selected;
 final ProviderFamily<GoRouter, (String, bool)> _routerProvider =
     Provider.family<GoRouter, (String, bool)>((ref, args) {
       final (location, render) = args;
-      final routes = listsRoutes(ref).cast<GoRoute>().map(
+      final routes = listsRoutes().cast<GoRoute>().map(
         (route) => GoRoute(
           path: route.path,
           name: route.name,

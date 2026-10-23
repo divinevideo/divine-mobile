@@ -22,9 +22,9 @@ import 'package:openvine/providers/og_diviner_eligibility_provider.dart';
 import 'package:openvine/providers/og_viner_cache_provider.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/lists_routes.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/router/routes/route_extras.dart';
-import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
@@ -231,14 +231,14 @@ class VideoOverlayActions extends ConsumerWidget {
               onListTap: (listId, listName) {
                 final list = curatedListService?.getListById(listId);
                 runDetached(
-                  context.push(
-                    CuratedListFeedScreen.pathForId(listId),
-                    extra: CuratedListRouteExtra(
+                  CuratedListFeedRouteData(
+                    listId: listId,
+                    $extra: CuratedListRouteExtra(
                       listName: listName,
                       videoIds: list?.videoEventIds,
                       authorPubkey: list?.pubkey,
                     ),
-                  ),
+                  ).push<void>(context),
                   'open curated list',
                   logName: 'VideoOverlayActions',
                   category: LogCategory.ui,

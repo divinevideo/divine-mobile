@@ -132,7 +132,7 @@ void main() {
               path: path,
               builder: (_, _) => Scaffold(body: Text(path)),
             ),
-          ...listsRoutes(ref).cast<GoRoute>().map(
+          ...listsRoutes().cast<GoRoute>().map(
             (route) => GoRoute(
               path: route.path,
               name: route.name,

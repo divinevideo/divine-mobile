@@ -24,6 +24,7 @@ import 'package:openvine/notifications/widgets/notification_empty_state.dart';
 import 'package:openvine/notifications/widgets/notification_list_item.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
@@ -68,6 +69,7 @@ typedef _RoutedViewResult = ({
   List<({String routeName, String eventId, String? addressableId})>
   engagementRoutes,
   List<String> profileNpubs,
+  List<({String pubkey, String listId})> listRoutes,
 });
 
 /// Pumps [NotificationsView] with routes that capture video/profile navigation.
@@ -84,6 +86,7 @@ Future<_RoutedViewResult> _pumpRoutedViewFull(
   final capturedEngagementRoutes =
       <({String routeName, String eventId, String? addressableId})>[];
   final capturedProfileNpubs = <String>[];
+  final capturedListRoutes = <({String pubkey, String listId})>[];
   final router = GoRouter(
     initialLocation: '/',
     routes: [
@@ -139,6 +142,16 @@ Future<_RoutedViewResult> _pumpRoutedViewFull(
           return const Scaffold(body: SizedBox.shrink());
         },
       ),
+      GoRoute(
+        path: CuratedListByAuthorScreen.path,
+        builder: (context, state) {
+          capturedListRoutes.add((
+            pubkey: state.pathParameters['pubkey']!,
+            listId: state.pathParameters['listId']!,
+          ));
+          return const Scaffold(body: SizedBox.shrink());
+        },
+      ),
     ],
   );
   addTearDown(router.dispose);
@@ -168,6 +181,7 @@ Future<_RoutedViewResult> _pumpRoutedViewFull(
     videoDetailRoutes: capturedVideoDetailRoutes,
     engagementRoutes: capturedEngagementRoutes,
     profileNpubs: capturedProfileNpubs,
+    listRoutes: capturedListRoutes,
   );
 }
 
@@ -1076,6 +1090,59 @@ void main() {
           expect(result.videoDetailRoutes.single.extra, isNull);
         },
       );
+    });
+
+    group('tap routing — list add', () {
+      testWidgets('opens the curated list the coordinate names', (
+        tester,
+      ) async {
+        final videoService = _MockVideoEventService();
+        final nostrClient = _MockNostrClient();
+        final videosRepository = _MockVideosRepository();
+        const listOwner =
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
+        when(() => mockBloc.state).thenReturn(
+          NotificationFeedState(
+            status: NotificationFeedStatus.loaded,
+            notifications: [
+              VideoNotification(
+                id: 'list-add-notification',
+                type: NotificationKind.listAdd,
+                videoEventId: 'added_video_event',
+                listCoordinate: '30005:$listOwner:weekend-picks',
+                listTitle: 'Weekend picks',
+                actors: const [
+                  ActorInfo(pubkey: 'actor_pubkey', displayName: 'Alice'),
+                ],
+                totalCount: 1,
+                timestamp: DateTime(2026),
+              ),
+            ],
+          ),
+        );
+
+        final result = await _pumpRoutedViewFull(
+          tester,
+          mockBloc,
+          videoEventService: videoService,
+          nostrClient: nostrClient,
+          videosRepository: videosRepository,
+        );
+
+        await tester.tap(find.byType(NotificationListItem).first);
+        await tester.pumpAndSettle();
+
+        // The author and the d-tag each go to their own path segment; the
+        // video the notification is about is not opened.
+        expect(
+          result.listRoutes,
+          equals([(pubkey: listOwner, listId: 'weekend-picks')]),
+        );
+        expect(result.videoArgs, isEmpty);
+        expect(result.videoDetailRoutes, isEmpty);
+        verifyNever(() => nostrClient.fetchEventById(any()));
+      });
     });
 
     group('tap routing — repost', () {

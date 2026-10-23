@@ -4,18 +4,14 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
-import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
-import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/lists_routes.dart';
 import 'package:openvine/router/routes/route_extras.dart';
-import 'package:openvine/screens/curated_list_feed_screen.dart';
-import 'package:openvine/screens/saved_videos_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/curated_list_initialization_failure.dart';
@@ -94,7 +90,8 @@ class _PeopleListsSection extends StatelessWidget {
               label: context.l10n.listNewPeopleList,
               leadingIcon: DivineIconName.plus,
               expanded: true,
-              onPressed: () => context.push(CreatePeopleListPage.path),
+              onPressed: () =>
+                  const CreatePeopleListRouteData().push<void>(context),
             ),
             for (final list in state.lists)
               Padding(
@@ -103,7 +100,7 @@ class _PeopleListsSection extends StatelessWidget {
                   key: ValueKey(list.id),
                   userList: list,
                   onTap: () => runDetached(
-                    context.push<void>(RoutePaths.peopleListForId(list.id)),
+                    PeopleListRouteData(listId: list.id).push<void>(context),
                     'open owned people list',
                     logName: 'ProfileListsGrid',
                     category: LogCategory.ui,
@@ -230,10 +227,10 @@ class _VideoListsColumn extends StatelessWidget {
             curatedList: list,
             thumbnailsPending: thumbnailsPending,
             onTap: () => runDetached(
-              context.push<void>(
-                CuratedListFeedScreen.pathForId(list.id),
-                extra: CuratedListRouteExtra(listName: list.name),
-              ),
+              CuratedListFeedRouteData(
+                listId: list.id,
+                $extra: CuratedListRouteExtra(listName: list.name),
+              ).push<void>(context),
               'open owned list',
               logName: 'ProfileListsGrid',
               category: LogCategory.ui,
@@ -315,7 +312,7 @@ class _BookmarksEntry extends StatelessWidget {
       button: true,
       label: context.l10n.shareMenuBookmarks,
       child: InkWell(
-        onTap: () => context.push(SavedVideosScreen.path),
+        onTap: () => const SavedVideosRouteData().push<void>(context),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(

@@ -100,7 +100,7 @@ List<RouteBase> appRoutes(Ref ref) => [
   ...chatRoutes(ref),
   ...accountDeletionRecoveryRoutes(),
   ...minorAccountReviewRoutes(),
-  ...listsRoutes(ref),
+  ...listsRoutes(),
   ...authRoutes(ref),
   ...appsRoutes(ref),
   ...settingsRoutes(ref),

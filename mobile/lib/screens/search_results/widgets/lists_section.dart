@@ -6,16 +6,13 @@
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/blocs/list_search/list_search_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/lists_routes.dart';
 import 'package:openvine/router/routes/route_extras.dart';
-import 'package:openvine/screens/curated_list_by_author_screen.dart';
-import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
 import 'package:openvine/screens/search_results/widgets/section_header.dart';
@@ -420,12 +417,10 @@ void _navigateToPeopleList(
   PeopleListSearchResult result,
 ) {
   runDetached(
-    context.push<void>(
-      RoutePaths.peopleListForId(
-        result.list.id,
-        ownerPubkey: result.ownerPubkey,
-      ),
-    ),
+    PeopleListRouteData(
+      listId: result.list.id,
+      owner: result.ownerPubkey,
+    ).push<void>(context),
     'open people list search result',
     logName: 'ListsSection',
     category: LogCategory.ui,
@@ -434,18 +429,21 @@ void _navigateToPeopleList(
 
 void _navigateToCuratedList(BuildContext context, CuratedList list) {
   final author = list.pubkey;
+  final extra = CuratedListRouteExtra(
+    listName: list.name,
+    videoIds: list.videoEventIds,
+    authorPubkey: author,
+    list: list,
+  );
+  final route = author == null
+      ? CuratedListFeedRouteData(listId: list.id, $extra: extra)
+      : CuratedListByAuthorRouteData(
+          pubkey: author,
+          listId: list.id,
+          $extra: extra,
+        );
   runDetached(
-    context.push<void>(
-      author == null
-          ? CuratedListFeedScreen.pathForId(list.id)
-          : CuratedListByAuthorScreen.pathFor(pubkey: author, listId: list.id),
-      extra: CuratedListRouteExtra(
-        listName: list.name,
-        videoIds: list.videoEventIds,
-        authorPubkey: author,
-        list: list,
-      ),
-    ),
+    route.push<void>(context),
     'open curated list search result',
     logName: 'ListsSection',
     category: LogCategory.ui,

@@ -431,7 +431,7 @@ void main() {
       const listId = 'weekend-picks';
       final screen = await buildFromUrl(
         tester,
-        withRef(listsRoutes),
+        listsRoutes(),
         CuratedListFeedScreen.routeName,
         location: CuratedListFeedScreen.pathForId(listId),
         pathParameters: const {'listId': listId},
