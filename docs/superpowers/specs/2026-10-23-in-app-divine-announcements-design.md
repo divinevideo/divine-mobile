@@ -159,9 +159,14 @@ announcement and social snapshots so both feed and badge consume the same
 merged result. Announcement refresh failure is independent of social refresh
 failure, and neither source's success drops the other's cached rows.
 
-Keep the public catalog separate from account data. Seen IDs are scoped by the
-full active account key and survive ordinary app restarts; logout/removal
-clears that owner's local announcement state in the account cleanup flow.
+Keep the public catalog separate from account data: cache its opaque validated
+envelope once in the device's bounded `cache_sync` store, with a five-minute
+freshness TTL. Stale envelopes remain available for repository validation and
+offline hydration; repository expiry checks still exclude expired messages.
+Seen IDs are small local dismissals stored in account-scoped preferences. They
+survive ordinary app restarts and switches between retained accounts; removing
+the account or deleting its local data clears that owner's seen state after
+draining its writers. Removing an account does not delete public catalog bytes.
 Old-owner in-flight requests and storage completions cannot update a new
 owner's feed. Cross-device seen synchronization and persistence after local
 account cleanup are not part of V1.
