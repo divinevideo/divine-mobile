@@ -165,17 +165,17 @@ class ContentFilterService extends ChangeNotifier {
   /// so every holder of this instance sees the incoming account's filters.
   Future<void> reloadFromStorage() async {
     await initialized;
-    final previous = Map.of(_preferences);
 
+    // Cleanup may already have removed the unbound projection. Keep the last
+    // observed effective snapshot until the reloaded values are reconciled.
     _preferences.clear();
     _initialized = false;
-    _initializeFuture = null;
+    _initializeFuture = _initialize(captureEffectivePreferences: false);
     await initialized;
-
-    if (!mapEquals(previous, _preferences)) notifyListeners();
+    await _refreshEffectivePreferences();
   }
 
-  Future<void> _initialize() async {
+  Future<void> _initialize({bool captureEffectivePreferences = true}) async {
     if (_initialized) return;
 
     try {
@@ -227,7 +227,7 @@ class ContentFilterService extends ChangeNotifier {
       _enforceAlwaysFilteredCategories();
       _initialized = true;
     }
-    _captureEffectivePreferences();
+    if (captureEffectivePreferences) _captureEffectivePreferences();
   }
 
   /// Get the preference for a specific content label.

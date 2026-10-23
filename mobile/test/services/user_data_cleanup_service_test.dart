@@ -71,6 +71,85 @@ void main() {
       service = UserDataCleanupService(prefs);
     });
 
+    group('unbound account projections', () {
+      const choices = <String, Object>{
+        'content_filter/spoiler': 'hide',
+        'notifications/likesEnabled': false,
+        'trusted_labeler/'
+                '1111111111111111111111111111111111111111111111111111111111111111':
+            true,
+      };
+
+      for (final entry in choices.entries) {
+        test('detects an orphaned ${entry.key} projection', () async {
+          final store = AccountPreferenceStore(prefs);
+          addTearDown(store.dispose);
+          await store.write(entry.key, entry.value);
+
+          expect(service.shouldClearDataForUser('2' * 64), isTrue);
+          expect(
+            UserDataCleanupService.hasRetainedUserSpecificDataAfterReset(prefs),
+            isTrue,
+          );
+        });
+      }
+
+      test(
+        'identity cleanup removes every unbound projection family',
+        () async {
+          final store = AccountPreferenceStore(prefs);
+          addTearDown(store.dispose);
+          await store.writeValues(choices);
+          await prefs.setBool('analytics_enabled', false);
+          await prefs.setString(
+            AccountPreferenceStore.projectionOwnerStorageKey,
+            '1' * 64,
+          );
+
+          await service.clearUserSpecificData(isIdentityChange: true);
+
+          for (final key in choices.keys) {
+            expect(prefs.containsKey(key), isFalse, reason: key);
+          }
+          expect(prefs.getBool('analytics_enabled'), isFalse);
+          expect(
+            prefs.getString(AccountPreferenceStore.projectionOwnerStorageKey),
+            '1' * 64,
+          );
+          expect(
+            UserDataCleanupService.hasRetainedUserSpecificDataAfterReset(prefs),
+            isFalse,
+          );
+        },
+      );
+
+      for (final preserveActiveSession in [false, true]) {
+        test(
+          'account removal ${preserveActiveSession ? 'preserves active' : 'clears departing'} '
+          'unbound projections',
+          () async {
+            final store = AccountPreferenceStore(prefs);
+            addTearDown(store.dispose);
+            await store.writeValues(choices);
+
+            await service.deleteAccountData(
+              '2' * 64,
+              userNpub: NostrKeyUtils.encodePubKey('2' * 64),
+              preserveActiveSession: preserveActiveSession,
+            );
+
+            for (final entry in choices.entries) {
+              expect(
+                prefs.get(entry.key),
+                preserveActiveSession ? entry.value : isNull,
+                reason: entry.key,
+              );
+            }
+          },
+        );
+      }
+    });
+
     group('shouldClearDataForUser', () {
       test('returns false when same user is logging in', () async {
         const pubkey = 'abc123def456';

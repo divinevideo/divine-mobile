@@ -238,6 +238,15 @@ class UserDataCleanupService {
     ...TermsAcceptanceKeys.all,
   ];
 
+  // Unbound account stores also project typed keys directly, including dynamic
+  // trusted-labeler entries. Classify by key so malformed values are cleared too.
+  static Set<String> _userSpecificKeysIn(SharedPreferences prefs) => {
+    ...userSpecificKeys,
+    ...prefs.getKeys().where(
+      (key) => AccountPreferenceRegistry.accepts(key, null),
+    ),
+  };
+
   /// Checks for retained account preferences after live services have reset.
   ///
   /// Reloading the content filter recreates its completed-migration marker
@@ -245,7 +254,7 @@ class UserDataCleanupService {
   /// state is safe to settle; incomplete markers and retained settings are not.
   /// The marker remains account-scoped and cleanup removes it before reset.
   static bool hasRetainedUserSpecificDataAfterReset(SharedPreferences prefs) {
-    return userSpecificKeys.any((key) {
+    return _userSpecificKeysIn(prefs).any((key) {
       if (!prefs.containsKey(key)) return false;
       return key != ContentFilterService.filterMigratedStorageKey ||
           prefs.get(key) != true ||
@@ -308,7 +317,7 @@ class UserDataCleanupService {
     // No stored pubkey - check if orphaned user data exists. Owner-scoped
     // legacy data may belong to the same account after Remove from Device; keep
     // it only when the preserved owner marker matches the logging-in pubkey.
-    for (final key in userSpecificKeys) {
+    for (final key in _userSpecificKeysIn(_prefs)) {
       if (_prefs.containsKey(key)) {
         return true;
       }
@@ -416,7 +425,7 @@ class UserDataCleanupService {
         legacyOwner: _prefs.getString('current_user_pubkey_hex'),
         deletingOwner: userPubkey,
       );
-      for (final key in userSpecificKeys) {
+      for (final key in _userSpecificKeysIn(_prefs)) {
         await remove(key);
       }
       final draftOwner = _prefs.getString(legacyDraftOwnerKey);
@@ -686,8 +695,8 @@ class UserDataCleanupService {
       throw const CuratedListRecoveryException();
     }
 
-    // Clear exact-match keys (always).
-    for (final key in userSpecificKeys) {
+    // Clear unscoped account keys, including typed account projections.
+    for (final key in _userSpecificKeysIn(_prefs)) {
       await remove(key);
     }
 

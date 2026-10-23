@@ -33,6 +33,106 @@ class _HeldProjectionStore extends AccountPreferenceStore {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  group('content filter storage reload', () {
+    for (final usePort in [false, true]) {
+      test(
+        '${usePort ? 'unbound port' : 'legacy'} cleanup notifies once for '
+        'the effective reset',
+        () async {
+          SharedPreferences.setMockInitialValues({});
+          final preferences = await SharedPreferences.getInstance();
+          final store = AccountPreferenceStore(preferences);
+          final filters = ContentFilterService(
+            ageVerificationService: AgeVerificationService(
+              preferences: preferences,
+            ),
+            accountPreferences: usePort ? store : null,
+          );
+          addTearDown(filters.dispose);
+          addTearDown(store.dispose);
+          await filters.initialize();
+          await filters.setPreference(
+            ContentLabel.spoiler,
+            ContentFilterPreference.hide,
+          );
+          var notifications = 0;
+          filters.addListener(() => notifications++);
+
+          await preferences.remove('content_filter/spoiler');
+          await preferences.remove(ContentFilterService.filterPrefsStorageKey);
+          await preferences.remove(
+            ContentFilterService.filterMigratedStorageKey,
+          );
+          await filters.reloadFromStorage();
+
+          expect(
+            filters.getPreference(ContentLabel.spoiler),
+            ContentFilterPreference.warn,
+          );
+          expect(notifications, 1);
+          await filters.reloadFromStorage();
+          expect(notifications, 1);
+        },
+      );
+    }
+
+    test('reload awaits revocation of effective adult access', () async {
+      SharedPreferences.setMockInitialValues({});
+      final preferences = await SharedPreferences.getInstance();
+      final store = AccountPreferenceStore(preferences);
+      final age = AgeVerificationService(
+        preferences: preferences,
+        currentPubkeyHex: () => _account,
+      );
+      await age.initialize();
+      await age.setAdultContentVerified(true);
+      final releaseRevocation = Completer<void>();
+      var revocations = 0;
+      final filters = ContentFilterService(
+        ageVerificationService: age,
+        accountPreferences: store,
+        onAdultMediaAccessRevoked: () {
+          revocations++;
+          return releaseRevocation.future;
+        },
+      );
+      addTearDown(() async {
+        if (!releaseRevocation.isCompleted) releaseRevocation.complete();
+        await pumpEventQueue();
+        filters.dispose();
+        store.dispose();
+      });
+      await filters.initialize();
+      await filters.setPreference(
+        ContentLabel.nudity,
+        ContentFilterPreference.show,
+      );
+      await filters.setPreference(
+        ContentLabel.sexual,
+        ContentFilterPreference.show,
+      );
+      expect(filters.adultPlaybackPreference, ContentFilterPreference.show);
+      var notifications = 0;
+      filters.addListener(() => notifications++);
+      await preferences.remove('content_filter/nudity');
+      await preferences.remove('content_filter/sexual');
+
+      var reloadCompleted = false;
+      final reload = filters.reloadFromStorage().then(
+        (_) => reloadCompleted = true,
+      );
+      await pumpEventQueue();
+      expect(filters.adultPlaybackPreference, ContentFilterPreference.hide);
+      expect(revocations, 1);
+      expect(notifications, 1);
+      expect(reloadCompleted, isFalse);
+
+      releaseRevocation.complete();
+      await reload;
+      expect(reloadCompleted, isTrue);
+    });
+  });
+
   group('content filter pending revocation', () {
     for (final fails in [false, true]) {
       test(
