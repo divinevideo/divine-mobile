@@ -381,6 +381,46 @@ void main() {
       return tester.widget<InfiniteVideoFeed>(find.byType(InfiniteVideoFeed));
     }
 
+    DmReplyContext sharedReelDmContext() => DmReplyContext(
+      conversationId: 'conversation',
+      participantPubkeys: const [testPubkey],
+      isGroup: false,
+      sharedReelMessageId: 'd' * 64,
+      messageAuthorPubkey: testPubkey,
+      hintName: 'Friend',
+      isOwnMessage: false,
+    );
+
+    testWidgets(
+      'the original shared DM reel keeps the private reply bar',
+      (tester) async {
+        final videos = createTestVideos();
+        final auth = createMockAuthService(
+          authState: AuthState.authenticated,
+          currentPublicKeyHex: testPubkey,
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            state: FullscreenFeedState(
+              status: FullscreenFeedStatus.ready,
+              videos: videos,
+            ),
+            mockAuthService: auth,
+            additionalOverrides: [
+              pendingActionServiceProvider.overrideWithValue(null),
+            ],
+            dmReplyContext: sharedReelDmContext(),
+            initialVideoKey: videos.first.feedDedupKey,
+          ),
+        );
+        await tester.pump();
+        expect(find.byType(ReelDmReplyBarHost), findsOneWidget);
+        expect(find.byType(InlineCommentComposerBar), findsNothing);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
+
     testWidgets(
       'discovery videos do not reply to the original shared DM reel',
       (tester) async {
@@ -400,15 +440,7 @@ void main() {
             additionalOverrides: [
               pendingActionServiceProvider.overrideWithValue(null),
             ],
-            dmReplyContext: DmReplyContext(
-              conversationId: 'conversation',
-              participantPubkeys: const [testPubkey],
-              isGroup: false,
-              sharedReelMessageId: 'd' * 64,
-              messageAuthorPubkey: testPubkey,
-              hintName: 'Friend',
-              isOwnMessage: false,
-            ),
+            dmReplyContext: sharedReelDmContext(),
             initialVideoKey: videos.first.feedDedupKey,
           ),
         );
