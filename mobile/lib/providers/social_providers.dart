@@ -919,7 +919,9 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
                 : db.dmReactionsDao.deleteNonRetryableForOwner(userPubkey),
           );
         }
-        if (userPubkey != null) {
+        // Seen IDs have no server-side copy. Owner scoping makes them safe
+        // to retain when switching away from an account that can return.
+        if (userPubkey != null && (deleteUserData || forgetAccount)) {
           await requiredCleanup(
             'announcements',
             () => ref.read(announcementOwnerCleanupProvider)(userPubkey),
