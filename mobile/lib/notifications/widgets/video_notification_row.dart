@@ -14,9 +14,6 @@ import 'package:openvine/notifications/widgets/notification_comment_quote.dart';
 import 'package:openvine/notifications/widgets/notification_leading_type_icon.dart';
 import 'package:openvine/notifications/widgets/notification_video_thumbnail.dart';
 
-/// Maximum stacked actor avatars before showing the overflow circle.
-const int _maxStackActors = 3;
-
 /// Displays a single video-anchored notification row.
 ///
 /// Layout: leading 32x32 type icon (left) → avatar stack + message text
@@ -143,7 +140,9 @@ class _NotificationContent extends StatelessWidget {
           child: GestureDetector(
             onTap: onProfileTap,
             child: NotificationAvatarStack(
-              actors: notification.actors.take(_maxStackActors).toList(),
+              actors: notification.actors
+                  .take(NotificationConstants.maxStackedAvatars)
+                  .toList(),
               overflowCount: overflowCount > 0 ? overflowCount : null,
             ),
           ),

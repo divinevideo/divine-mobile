@@ -134,9 +134,14 @@ class _NotificationContent extends StatelessWidget {
                 child: GestureDetector(
                   onTap: onProfileTap,
                   child: NotificationAvatarStack(
-                    actors: notification.actors.take(3).toList(),
-                    overflowCount: notification.actors.length > 3
-                        ? notification.actors.length - 3
+                    actors: notification.actors
+                        .take(NotificationConstants.maxStackedAvatars)
+                        .toList(),
+                    overflowCount:
+                        notification.actors.length >
+                            NotificationConstants.maxStackedAvatars
+                        ? notification.actors.length -
+                              NotificationConstants.maxStackedAvatars
                         : null,
                   ),
                 ),

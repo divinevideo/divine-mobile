@@ -7,6 +7,9 @@ class NotificationConstants {
   /// Corner radius for a notification avatar (Figma: 0.4 × [avatarSize]).
   static const double avatarCornerRadius = 12.8;
 
+  /// Most avatars a grouped row stacks before showing an overflow count.
+  static const int maxStackedAvatars = 3;
+
   /// Empirical breakpoint where 320px-wide video notification rows start
   /// clipping once the trailing thumbnail shares the main row.
   static const double largeTextStackThreshold = 1.33;
