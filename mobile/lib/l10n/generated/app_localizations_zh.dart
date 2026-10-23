@@ -9468,6 +9468,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorFadeOutLabel => '淡出';
 
   @override
+  String get videoEditorDuckingLabel => '人声避让';
+
+  @override
+  String get videoEditorDuckingSemanticLabel => '有人说话时降低所选声音';
+
+  @override
+  String get videoEditorDuckingSheetTitle => '给人声让路';
+
+  @override
+  String get videoEditorDuckingSwitchLabel => '有人说话时降低音量';
+
+  @override
+  String get videoEditorDuckingDescription => '配音说话时自动变小，说完再恢复。';
+
+  @override
+  String get videoEditorDuckingNoVoiceOverHint => '录一段配音，你一说话这个声音就会变小。';
+
+  @override
+  String get videoEditorDuckingStrengthLabel => '降低多少';
+
+  @override
   String get videoEditorVoiceEffectLabel => '变声';
 
   @override

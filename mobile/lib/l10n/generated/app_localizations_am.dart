@@ -9826,6 +9826,29 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'ቀስ ብሎ መውጣት';
 
   @override
+  String get videoEditorDuckingLabel => 'ድምፅ ማሳነስ';
+
+  @override
+  String get videoEditorDuckingSemanticLabel => 'አንድ ሰው ሲናገር የተመረጠውን ድምፅ ይቀንሱ';
+
+  @override
+  String get videoEditorDuckingSheetTitle => 'ለድምፆች ቦታ ይስጡ';
+
+  @override
+  String get videoEditorDuckingSwitchLabel => 'አንድ ሰው ሲናገር ይቀንሱ';
+
+  @override
+  String get videoEditorDuckingDescription =>
+      'የድምፅ ትረካው በሚናገርበት ጊዜ ሁሉ ይቀንሳል፣ ከዚያም ይመለሳል።';
+
+  @override
+  String get videoEditorDuckingNoVoiceOverHint =>
+      'የድምፅ ትረካ ይቅረጹ፣ እና ይህ ድምፅ በሚናገሩበት ጊዜ ሁሉ ይቀንሳል።';
+
+  @override
+  String get videoEditorDuckingStrengthLabel => 'ምን ያህል ይቀንስ';
+
+  @override
   String get videoEditorVoiceEffectLabel => 'ድምፅ';
 
   @override

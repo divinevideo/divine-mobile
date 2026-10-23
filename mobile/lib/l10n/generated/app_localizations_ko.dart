@@ -9583,6 +9583,28 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorFadeOutLabel => '페이드 아웃';
 
   @override
+  String get videoEditorDuckingLabel => '더킹';
+
+  @override
+  String get videoEditorDuckingSemanticLabel => '누군가 말하는 동안 선택한 사운드 낮추기';
+
+  @override
+  String get videoEditorDuckingSheetTitle => '목소리가 잘 들리게';
+
+  @override
+  String get videoEditorDuckingSwitchLabel => '누군가 말하는 동안 낮추기';
+
+  @override
+  String get videoEditorDuckingDescription => '내레이션이 말할 때마다 작아졌다가 다시 돌아와요.';
+
+  @override
+  String get videoEditorDuckingNoVoiceOverHint =>
+      '내레이션을 녹음하면 말할 때마다 이 사운드가 작아져요.';
+
+  @override
+  String get videoEditorDuckingStrengthLabel => '얼마나 낮출지';
+
+  @override
   String get videoEditorVoiceEffectLabel => '음성';
 
   @override

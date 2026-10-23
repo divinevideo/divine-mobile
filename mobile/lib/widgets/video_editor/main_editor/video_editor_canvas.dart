@@ -13,7 +13,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart' show AudioSourceKind;
+import 'package:models/models.dart' show AudioEvent, AudioSourceKind;
 import 'package:openvine/blocs/video_editor/audio_visualizer/video_editor_audio_visualizer_cubit.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
@@ -23,6 +23,7 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/audio_volume_curve_mapping.dart';
 import 'package:openvine/extensions/equalizer_settings_mapping.dart';
 import 'package:openvine/extensions/tune_adjustment_matrix_extensions.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
@@ -48,6 +49,7 @@ import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/layer_capture_resolution.dart';
 import 'package:openvine/services/video_editor/preview_composition.dart';
 import 'package:openvine/services/video_editor/stop_motion_audio_preview.dart';
+import 'package:openvine/services/video_editor/video_editor_audio_ducking.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_level_resolver.dart';
 import 'package:openvine/utils/await_push_transition.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -75,7 +77,8 @@ import 'package:openvine/widgets/video_editor/tune_editor/tune_set_timeline_ops.
 import 'package:openvine/widgets/video_editor/video_editor_widget_layer_loader.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     hide AudioTrack, VideoClip;
-import 'package:pro_video_editor/pro_video_editor.dart' show VideoSpeedRamp;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show AudioVolumeCurve, VideoSpeedRamp;
 import 'package:sound_service/sound_service.dart' show AudioSourceConfig;
 import 'package:unified_logger/unified_logger.dart';
 
@@ -731,6 +734,14 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// audio path) has nothing to attach to — this engine follows
   /// [_stopMotionClock] instead. Created lazily by [_syncStopMotionAudio].
   StopMotionAudioPreview? _stopMotionAudio;
+
+  /// Plans the dips of the sounds that duck under the voice-over, the same
+  /// ones the export bakes in.
+  final VideoEditorAudioDucking _audioDucking = VideoEditorAudioDucking();
+
+  /// Bumped by every audio sync, so a sync that waited on the voice-over
+  /// measurement does not put back tracks a newer sync already replaced.
+  int _audioSyncGeneration = 0;
 
   /// Last position dispatched to BLoC — avoids flooding with duplicates.
   Duration _lastReportedPosition = Duration.zero;
@@ -1902,9 +1913,22 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// timeline item, and the source is clipped to the sound's own start offset
   /// plus the window length.
   Future<void> _syncStopMotionAudio() async {
+    final generation = ++_audioSyncGeneration;
     final overlayState = context.read<TimelineOverlayBloc>().state;
     final isVoiceOverPreview = _isVoiceOverPreview;
     final audioById = {for (final e in overlayState.audioTracks) e.id: e};
+    // Recording a voice-over mutes every sound, so the dips do not matter and
+    // the mute must not wait on measuring the takes.
+    final duckingCurves = isVoiceOverPreview
+        ? const <String, AudioVolumeCurve>{}
+        : await _duckingCurvesFor(
+            overlayState,
+            audioById,
+            videoDuration: renderedAudioEnd(
+              context.read<ClipEditorBloc>().state.clips,
+            ),
+          );
+    if (!mounted || generation != _audioSyncGeneration) return;
 
     final tracks = <StopMotionAudioPreviewTrack>[];
     for (final item in overlayState.items) {
@@ -1951,6 +1975,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           fadeIn: sound.fadeInDuration,
           fadeOut: sound.fadeOutDuration,
           speed: sound.playbackSpeed,
+          volumeCurve: duckingCurves[item.id],
         ),
       );
     }
@@ -1998,6 +2023,19 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     );
   }
 
+  /// The dips of every sound in [overlay] that ducks under the voice-over,
+  /// by sound id, with each sound placed where its timeline item is.
+  Future<Map<String, AudioVolumeCurve>> _duckingCurvesFor(
+    TimelineOverlayState overlay,
+    Map<String, AudioEvent> audioById, {
+    required Duration videoDuration,
+  }) => _audioDucking.curvesFor([
+    for (final item in overlay.items)
+      if (item.type == TimelineOverlayType.sound)
+        if (audioById[item.id] case final sound?)
+          sound.copyWith(startTime: item.startTime, endTime: item.endTime),
+  ], videoDuration: videoDuration);
+
   /// Syncs native audio overlay tracks from the [TimelineOverlayBloc]
   /// sound items.
   ///
@@ -2012,6 +2050,15 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       return;
     }
     if (!_isPlayerInitialized) return;
+    final generation = ++_audioSyncGeneration;
+    final player = _videoPlayer!;
+    // Whether this sync is still the latest for the player it started on. A
+    // sync waits on the voice-over measurement and on asset extraction, and
+    // a newer one (an undo right after a move) or a released player must win.
+    bool isCurrent() =>
+        mounted &&
+        generation == _audioSyncGeneration &&
+        identical(_videoPlayer, player);
 
     final overlayState = context.read<TimelineOverlayBloc>().state;
     // Captured before the loop can await: the track builders below await the
@@ -2029,7 +2076,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
     if (soundItems.isEmpty || audioEvents.isEmpty) {
       _loadedAudioTrackIds = const [];
-      await _videoPlayer!.removeAllAudioTracks();
+      await player.removeAllAudioTracks();
       Log.info(
         '🎵 Audio cleared',
         name: 'VideoEditorCanvas',
@@ -2040,6 +2087,16 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
 
     // Index audio events by ID for fast lookup.
     final audioById = {for (final e in audioEvents) e.id: e};
+    // Recording a voice-over mutes every sound, so the dips do not matter and
+    // the mute must not wait on measuring the takes.
+    final duckingCurves = isVoiceOverPreview
+        ? const <String, AudioVolumeCurve>{}
+        : await _duckingCurvesFor(
+            overlayState,
+            audioById,
+            videoDuration: outputEnd,
+          );
+    if (!isCurrent()) return;
 
     final tracks = <AudioTrack>[];
     final trackIds = <String>[];
@@ -2071,6 +2128,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             fadeOutDuration: sound.fadeOutDuration,
             equalizer: sound.equalizer.toPlayerEqualizer(),
             playbackSpeed: sound.playbackSpeed,
+            volumeCurve:
+                duckingCurves[item.id]?.toPlayerVolumeCurve() ?? const [],
           );
         } else if (sound.isLocalImport && sound.localFilePath != null) {
           track = AudioTrack.file(
@@ -2086,6 +2145,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             fadeOutDuration: sound.fadeOutDuration,
             equalizer: sound.equalizer.toPlayerEqualizer(),
             playbackSpeed: sound.playbackSpeed,
+            volumeCurve:
+                duckingCurves[item.id]?.toPlayerVolumeCurve() ?? const [],
           );
         } else {
           track = AudioTrack.network(
@@ -2101,6 +2162,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             fadeOutDuration: sound.fadeOutDuration,
             equalizer: sound.equalizer.toPlayerEqualizer(),
             playbackSpeed: sound.playbackSpeed,
+            volumeCurve:
+                duckingCurves[item.id]?.toPlayerVolumeCurve() ?? const [],
           );
         }
         tracks.add(track);
@@ -2116,15 +2179,16 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       }
     }
 
+    if (!isCurrent()) return;
     if (tracks.isEmpty) {
       _loadedAudioTrackIds = const [];
-      await _videoPlayer!.removeAllAudioTracks();
+      await player.removeAllAudioTracks();
       return;
     }
 
     try {
       _loadedAudioTrackIds = const [];
-      await _videoPlayer!.setAudioTracks(tracks);
+      await player.setAudioTracks(tracks);
       _loadedAudioTrackIds = trackIds;
     } catch (e, stackTrace) {
       Log.error(

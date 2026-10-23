@@ -10160,6 +10160,30 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Fundido de salida';
 
   @override
+  String get videoEditorDuckingLabel => 'Atenuación';
+
+  @override
+  String get videoEditorDuckingSemanticLabel =>
+      'Bajar el sonido seleccionado mientras alguien habla';
+
+  @override
+  String get videoEditorDuckingSheetTitle => 'Lugar para las voces';
+
+  @override
+  String get videoEditorDuckingSwitchLabel => 'Bajar mientras alguien habla';
+
+  @override
+  String get videoEditorDuckingDescription =>
+      'Baja cada vez que habla la voz en off y después vuelve.';
+
+  @override
+  String get videoEditorDuckingNoVoiceOverHint =>
+      'Grabá una voz en off y este sonido va a bajar cada vez que hables.';
+
+  @override
+  String get videoEditorDuckingStrengthLabel => 'Cuánto más bajo';
+
+  @override
   String get videoEditorVoiceEffectLabel => 'Voz';
 
   @override

@@ -41,6 +41,7 @@ class AudioTrack {
     this.fadeOutDuration = Duration.zero,
     this.equalizer,
     this.playbackSpeed = 1.0,
+    this.volumeCurve = const [],
   }) : assert(
          playbackSpeed > 0 && playbackSpeed < double.infinity,
          'playbackSpeed must be finite and greater than 0',
@@ -58,6 +59,7 @@ class AudioTrack {
     this.fadeOutDuration = Duration.zero,
     this.equalizer,
     this.playbackSpeed = 1.0,
+    this.volumeCurve = const [],
   }) : assert(
          playbackSpeed > 0 && playbackSpeed < double.infinity,
          'playbackSpeed must be finite and greater than 0',
@@ -76,6 +78,7 @@ class AudioTrack {
     this.fadeOutDuration = Duration.zero,
     this.equalizer,
     this.playbackSpeed = 1.0,
+    this.volumeCurve = const [],
   }) : assert(
          playbackSpeed > 0 && playbackSpeed < double.infinity,
          'playbackSpeed must be finite and greater than 0',
@@ -97,6 +100,7 @@ class AudioTrack {
     Duration fadeOutDuration = Duration.zero,
     AudioEqualizer? equalizer,
     double playbackSpeed = 1.0,
+    List<AudioTrackVolumePoint> volumeCurve = const [],
     AssetBundle? bundle,
   }) async {
     final (data, dir) = await (
@@ -118,6 +122,7 @@ class AudioTrack {
       fadeOutDuration: fadeOutDuration,
       equalizer: equalizer,
       playbackSpeed: playbackSpeed,
+      volumeCurve: volumeCurve,
     );
   }
 
@@ -137,6 +142,7 @@ class AudioTrack {
     Duration fadeOutDuration = Duration.zero,
     AudioEqualizer? equalizer,
     double playbackSpeed = 1.0,
+    List<AudioTrackVolumePoint> volumeCurve = const [],
   }) async {
     final dir = await getTemporaryDirectory();
     final file = File('${dir.path}/divine_player_audio_memory/$fileName');
@@ -153,6 +159,7 @@ class AudioTrack {
       fadeOutDuration: fadeOutDuration,
       equalizer: equalizer,
       playbackSpeed: playbackSpeed,
+      volumeCurve: volumeCurve,
     );
   }
 
@@ -205,6 +212,14 @@ class AudioTrack {
   /// greater than zero. Android, iOS and macOS only.
   final double playbackSpeed;
 
+  /// Scales [volume] over the video timeline, moving in a straight line from
+  /// one point to the next, like the `volumeCurve` `pro_video_editor` bakes
+  /// into an exported track. Before the first point the volume stays at the
+  /// first point's, after the last at the last point's; without points it
+  /// stays at [volume]. Applied together with the fades. Android, iOS and
+  /// macOS only.
+  final List<AudioTrackVolumePoint> volumeCurve;
+
   /// Serializes this track for platform channel transport.
   Map<String, dynamic> toMap() {
     return {
@@ -219,6 +234,29 @@ class AudioTrack {
       'playbackSpeed': playbackSpeed,
       if (equalizer case final equalizer? when !equalizer.isFlat)
         'equalizer': equalizer.toMap(),
+      // A plain list rather than a Float64List: it reaches iOS and macOS as
+      // numbers the overlay can read without the Flutter framework.
+      if (volumeCurve.isNotEmpty)
+        'volumeCurve': <double>[
+          for (final point in volumeCurve) ...[
+            point.time.inMicroseconds / 1000,
+            point.volume,
+          ],
+        ],
     };
   }
+}
+
+/// One point of an [AudioTrack.volumeCurve]: the volume multiplier, from 0
+/// to 1, at [time] on the video timeline.
+class AudioTrackVolumePoint {
+  /// Creates a point with a [volume] from 0 (silent) to 1 (unchanged).
+  const AudioTrackVolumePoint({required this.time, required this.volume})
+    : assert(volume >= 0 && volume <= 1, 'volume must be between 0 and 1');
+
+  /// Where on the video timeline the point sits.
+  final Duration time;
+
+  /// The volume multiplier at [time].
+  final double volume;
 }

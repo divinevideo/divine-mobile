@@ -147,6 +147,22 @@ void main() {
         expect(map['fadeOutMs'], isZero);
         expect(map['playbackSpeed'], equals(1.0));
         expect(map.containsKey('equalizer'), isFalse);
+        expect(map.containsKey('volumeCurve'), isFalse);
+      });
+
+      test('sends a volume curve as milliseconds and volumes', () {
+        const track = AudioTrack(
+          uri: '/audio.mp3',
+          volumeCurve: [
+            AudioTrackVolumePoint(time: Duration(milliseconds: 750), volume: 1),
+            AudioTrackVolumePoint(
+              time: Duration(microseconds: 1000500),
+              volume: 0.25,
+            ),
+          ],
+        );
+
+        expect(track.toMap()['volumeCurve'], equals([750, 1, 1000.5, 0.25]));
       });
     });
 

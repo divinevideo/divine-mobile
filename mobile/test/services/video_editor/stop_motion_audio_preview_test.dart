@@ -6,6 +6,8 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/video_editor/stop_motion_audio_preview.dart';
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show AudioVolumeCurve, AudioVolumePoint;
 import 'package:sound_service/sound_service.dart';
 
 class _MockAudioClipPlayer extends Mock implements AudioClipPlayer {}
@@ -41,6 +43,7 @@ void main() {
       Duration fadeIn = Duration.zero,
       Duration fadeOut = Duration.zero,
       double speed = 1,
+      AudioVolumeCurve? volumeCurve,
     }) {
       return StopMotionAudioPreviewTrack(
         id: id,
@@ -51,6 +54,7 @@ void main() {
         fadeIn: fadeIn,
         fadeOut: fadeOut,
         speed: speed,
+        volumeCurve: volumeCurve,
       );
     }
 
@@ -143,6 +147,38 @@ void main() {
         await preview.syncTo(const Duration(seconds: 1), isPlaying: true);
 
         verifyInOrder([() => player.setVolume(0.5), player.play]);
+      });
+
+      test('follows its volume curve on the editor timeline', () async {
+        await preview.setTracks([
+          track(
+            windowStart: const Duration(seconds: 1),
+            windowEnd: const Duration(seconds: 5),
+            volume: 0.8,
+            volumeCurve: AudioVolumeCurve(const [
+              AudioVolumePoint(time: Duration(seconds: 2), volume: 1),
+              AudioVolumePoint(time: Duration(seconds: 3), volume: 0.25),
+            ]),
+          ),
+        ]);
+        final player = players.single;
+        clearInteractions(player);
+
+        await preview.syncTo(
+          const Duration(milliseconds: 1500),
+          isPlaying: true,
+        );
+        await preview.syncTo(
+          const Duration(milliseconds: 2500),
+          isPlaying: true,
+        );
+        await preview.syncTo(const Duration(seconds: 4), isPlaying: true);
+
+        expect(
+          verify(() => player.setVolume(captureAny())).captured,
+          // Still at the track's own 0.8 before the dip, so not set again.
+          [closeTo(0.5, 1e-9), 0.2],
+        );
       });
 
       test('a sound without a fade keeps its volume', () async {

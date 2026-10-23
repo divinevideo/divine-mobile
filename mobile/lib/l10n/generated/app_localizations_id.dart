@@ -9976,6 +9976,30 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Keluar perlahan';
 
   @override
+  String get videoEditorDuckingLabel => 'Ducking';
+
+  @override
+  String get videoEditorDuckingSemanticLabel =>
+      'Kecilkan suara yang dipilih saat ada yang bicara';
+
+  @override
+  String get videoEditorDuckingSheetTitle => 'Beri ruang untuk suara';
+
+  @override
+  String get videoEditorDuckingSwitchLabel => 'Kecilkan saat ada yang bicara';
+
+  @override
+  String get videoEditorDuckingDescription =>
+      'Mengecil setiap kali sulih suara berbicara, lalu kembali lagi.';
+
+  @override
+  String get videoEditorDuckingNoVoiceOverHint =>
+      'Rekam sulih suara dan suara ini akan mengecil setiap kali kamu bicara.';
+
+  @override
+  String get videoEditorDuckingStrengthLabel => 'Seberapa kecil';
+
+  @override
   String get videoEditorVoiceEffectLabel => 'Suara';
 
   @override

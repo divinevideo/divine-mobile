@@ -10278,6 +10278,31 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Ieșire treptată';
 
   @override
+  String get videoEditorDuckingLabel => 'Atenuare';
+
+  @override
+  String get videoEditorDuckingSemanticLabel =>
+      'Coboară sunetul selectat cât timp vorbește cineva';
+
+  @override
+  String get videoEditorDuckingSheetTitle => 'Loc pentru voci';
+
+  @override
+  String get videoEditorDuckingSwitchLabel =>
+      'Coboară cât timp vorbește cineva';
+
+  @override
+  String get videoEditorDuckingDescription =>
+      'Se aude mai încet de fiecare dată când vorbește vocea off, apoi revine.';
+
+  @override
+  String get videoEditorDuckingNoVoiceOverHint =>
+      'Înregistrează o voce off și sunetul acesta se va auzi mai încet când vorbești.';
+
+  @override
+  String get videoEditorDuckingStrengthLabel => 'Cu cât mai încet';
+
+  @override
   String get videoEditorVoiceEffectLabel => 'Voce';
 
   @override

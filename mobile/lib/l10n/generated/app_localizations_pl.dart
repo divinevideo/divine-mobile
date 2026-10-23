@@ -10264,6 +10264,30 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Wyciszanie';
 
   @override
+  String get videoEditorDuckingLabel => 'Wyciszanie';
+
+  @override
+  String get videoEditorDuckingSemanticLabel =>
+      'Ścisz wybrany dźwięk, gdy ktoś mówi';
+
+  @override
+  String get videoEditorDuckingSheetTitle => 'Miejsce dla głosu';
+
+  @override
+  String get videoEditorDuckingSwitchLabel => 'Ściszaj, gdy ktoś mówi';
+
+  @override
+  String get videoEditorDuckingDescription =>
+      'Cichnie za każdym razem, gdy mówi narracja, a potem wraca.';
+
+  @override
+  String get videoEditorDuckingNoVoiceOverHint =>
+      'Nagraj narrację, a ten dźwięk będzie cichnąć za każdym razem, gdy mówisz.';
+
+  @override
+  String get videoEditorDuckingStrengthLabel => 'O ile ciszej';
+
+  @override
   String get videoEditorVoiceEffectLabel => 'Głos';
 
   @override

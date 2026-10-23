@@ -10151,6 +10151,31 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'Плавно заглушаване';
 
   @override
+  String get videoEditorDuckingLabel => 'Приглушаване';
+
+  @override
+  String get videoEditorDuckingSemanticLabel =>
+      'Приглуши избрания звук, докато някой говори';
+
+  @override
+  String get videoEditorDuckingSheetTitle => 'Място за гласовете';
+
+  @override
+  String get videoEditorDuckingSwitchLabel =>
+      'Приглушавай, докато някой говори';
+
+  @override
+  String get videoEditorDuckingDescription =>
+      'Става по-тих, когато гласът зад кадър говори, и после се връща.';
+
+  @override
+  String get videoEditorDuckingNoVoiceOverHint =>
+      'Запиши глас зад кадър и този звук ще става по-тих, когато говориш.';
+
+  @override
+  String get videoEditorDuckingStrengthLabel => 'Колко по-тихо';
+
+  @override
   String get videoEditorVoiceEffectLabel => 'Глас';
 
   @override

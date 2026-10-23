@@ -10339,6 +10339,31 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorFadeOutLabel => 'ఫేడ్ అవుట్';
 
   @override
+  String get videoEditorDuckingLabel => 'డకింగ్';
+
+  @override
+  String get videoEditorDuckingSemanticLabel =>
+      'ఎవరైనా మాట్లాడుతున్నప్పుడు ఎంచుకున్న సౌండ్‌ను తగ్గించండి';
+
+  @override
+  String get videoEditorDuckingSheetTitle => 'గొంతులకు చోటు ఇవ్వండి';
+
+  @override
+  String get videoEditorDuckingSwitchLabel =>
+      'ఎవరైనా మాట్లాడుతున్నప్పుడు తగ్గించండి';
+
+  @override
+  String get videoEditorDuckingDescription =>
+      'వాయిస్ ఓవర్ మాట్లాడిన ప్రతిసారి తగ్గుతుంది, తర్వాత మళ్లీ పెరుగుతుంది.';
+
+  @override
+  String get videoEditorDuckingNoVoiceOverHint =>
+      'వాయిస్ ఓవర్ రికార్డ్ చేయండి, మీరు మాట్లాడిన ప్రతిసారి ఈ సౌండ్ తగ్గుతుంది.';
+
+  @override
+  String get videoEditorDuckingStrengthLabel => 'ఎంత తగ్గించాలి';
+
+  @override
   String get videoEditorVoiceEffectLabel => 'వాయిస్';
 
   @override

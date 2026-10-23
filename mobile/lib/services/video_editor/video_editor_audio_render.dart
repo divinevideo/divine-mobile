@@ -6,7 +6,9 @@ import 'dart:io';
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/extensions/equalizer_settings_mapping.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
+import 'package:openvine/models/video_editor/audio_render_window.dart';
 import 'package:openvine/services/video_editor/render_audio_fetcher.dart';
+import 'package:openvine/services/video_editor/video_editor_audio_ducking.dart';
 import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -101,21 +103,15 @@ AudioTrack? audioTrackFromMetaForRender(
     return null;
   }
 
-  // A persisted track can carry an invalid composition window — e.g. a sound
-  // added before its duration was known ends up with endTime=0 (see
-  // _openMusicLibrary). Treat any missing/inverted window as "play across the
-  // whole video" (both null per VideoAudioTrack's contract) so existing drafts
-  // still render audio instead of being dropped as a zero-length range.
-  final endTime = track.endTime;
-  final hasWindow = endTime != null && endTime > track.startTime;
+  final (:startTime, :endTime) = renderWindowOf(track);
   return AudioTrack(
     id: track.id,
     title: track.title ?? '',
     subtitle: track.source ?? '',
     duration: Duration(milliseconds: ((track.duration ?? 0) * 1000).toInt()),
     audio: audio,
-    startTime: hasWindow ? track.startTime : null,
-    endTime: hasWindow ? endTime : null,
+    startTime: startTime,
+    endTime: endTime,
     audioStartTime: track.startOffset,
     // audioEndTime is intentionally left at its default (null = "play to the
     // end of the file"); the composition window clips it. This drops the
@@ -244,6 +240,11 @@ List<AudioTrack> buildRenderAudioTracks({
 /// timeline events are the source. The fade out ends where the clamped window
 /// does, so a track cut short by the end of the video still fades out rather
 /// than stopping.
+///
+/// A track whose event ducks under the voice-over gets the volume curve
+/// [ducking] plans from the [audioEvents]. The preview plans its curve from
+/// the same sounds with the same code, so the two match wherever both can
+/// read the voice-over.
 Future<List<VideoAudioTrack>> resolveRenderAudioTracks(
   List<AudioTrack> customTracks, {
   required String logName,
@@ -251,9 +252,14 @@ Future<List<VideoAudioTrack>> resolveRenderAudioTracks(
   List<AudioEvent> audioEvents = const [],
   RenderAudioFetcher? fetcher,
   List<String>? tempFilePaths,
+  VideoEditorAudioDucking? ducking,
 }) async {
   final audioFetcher = fetcher ?? RenderAudioFetcher();
   final eventsById = {for (final event in audioEvents) event.id: event};
+  final duckingCurves = await (ducking ?? VideoEditorAudioDucking()).curvesFor(
+    audioEvents,
+    videoDuration: videoDuration,
+  );
   final audioTracks = <VideoAudioTrack>[];
   for (final track in customTracks) {
     final String audioPath;
@@ -315,6 +321,7 @@ Future<List<VideoAudioTrack>> resolveRenderAudioTracks(
       fadeOutDuration: event?.fadeOutDuration ?? Duration.zero,
       equalizer: event?.equalizer.toRenderEqualizer(),
       playbackSpeed: event?.playbackSpeed ?? 1.0,
+      volumeCurve: duckingCurves[track.id],
     );
     audioTracks.add(resolvedTrack);
     Log.warning(
@@ -326,6 +333,10 @@ Future<List<VideoAudioTrack>> resolveRenderAudioTracks(
       'fade=[${_durationMs(resolvedTrack.fadeInDuration)}, '
       '${_durationMs(resolvedTrack.fadeOutDuration)}], '
       'speed=${resolvedTrack.playbackSpeed}, '
+      '${switch (resolvedTrack.volumeCurve) {
+        final curve? => 'ducking=${curve.points.length} points, ',
+        null => '',
+      }}'
       'videoDuration=${_durationMs(videoDuration)}',
       name: logName,
       category: LogCategory.video,

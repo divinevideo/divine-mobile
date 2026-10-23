@@ -16,7 +16,8 @@ import androidx.media3.exoplayer.ExoPlayer
  * synced to the main video timeline. Drift correction keeps audio
  * aligned within [DRIFT_THRESHOLD_MS].
  *
- * A track with an [AudioOverlayFade] has its volume stepped every
+ * A track with an [AudioOverlayFade] or an [AudioOverlayVolumeCurve] has its
+ * volume stepped every
  * [FADE_TICK_MS] from the overlay's own position while it plays. The 200 ms
  * position sync is far too coarse for a ramp, and ExoPlayer has no volume
  * ramp of its own; at this rate each step is too small to hear as one.
@@ -88,6 +89,7 @@ internal class AudioOverlayManager(
                 speed = trackSpeed,
                 baseVolume = vol,
                 fade = AudioOverlayFade.fromMap(map),
+                volumeCurve = AudioOverlayVolumeCurve.fromMap(map),
                 equalizer = equalizer,
             )
             // media3 generates the session off the main thread, so it can
@@ -220,18 +222,21 @@ internal class AudioOverlayManager(
     }
 
     /**
-     * Sets [entry]'s volume to its base level scaled by its fade at
-     * [audioPositionMs], a position in the audio file.
+     * Sets [entry]'s volume to its base level scaled by its fade and its
+     * volume curve at [audioPositionMs], a position in the audio file.
      *
      * The fade steps only the player's own volume, the base level up to
      * 100 %; the part above it is a constant [AudioOverlayEntry.boost], so a
      * boosted fade still ramps linearly.
      */
     private fun applyFadeGain(entry: AudioOverlayEntry, audioPositionMs: Long) {
+        val elapsedMs = entry.videoMsOf(audioPositionMs - entry.trackStartMs)
+        val curveGain = entry.volumeCurve
+            ?.volumeAt((entry.videoStartMs + elapsedMs).toDouble())?.toFloat() ?: 1f
         val gain = entry.fade.gainAt(
-            elapsedMs = entry.videoMsOf(audioPositionMs - entry.trackStartMs),
+            elapsedMs = elapsedMs,
             audibleMs = audibleMs(entry),
-        )
+        ) * curveGain
         val volume = AudioSessionBoost.attenuationOf(entry.baseVolume) * gain
         if (entry.player.volume != volume) entry.player.volume = volume
         entry.boost.attach(entry.player.audioSessionId)
@@ -285,15 +290,17 @@ internal class AudioOverlayEntry(
     /** The track's volume before its fade is applied, above 1.0 when boosted. */
     var baseVolume: Float = 1.0f,
     val fade: AudioOverlayFade = AudioOverlayFade(fadeInMs = 0, fadeOutMs = 0),
+    /** Scales the volume over the video timeline; null keeps it constant. */
+    val volumeCurve: AudioOverlayVolumeCurve? = null,
     var isActive: Boolean = false,
     /** Carries [baseVolume] above 100 %; see [AudioSessionBoost]. */
     val boost: AudioSessionBoost = AudioSessionBoost(),
     /** The track's equalizer, in its player's audio sink. */
     val equalizer: TrackEqualizerAudioProcessor? = null,
 ) {
-    /** Whether this track is sounding with a fade that needs stepping. */
+    /** Whether this track is sounding with a fade or curve that needs stepping. */
     val isFading: Boolean
-        get() = isActive && player.playWhenReady && !fade.isNone
+        get() = isActive && player.playWhenReady && (!fade.isNone || volumeCurve != null)
 
     /** The position in the file that plays at [videoPositionMs]. */
     fun audioPositionAt(videoPositionMs: Long): Long =
