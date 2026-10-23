@@ -270,6 +270,7 @@ class NotificationPreferencesService {
   bool _disposed = false;
   NotificationPreferences? _lastAccountPreferences;
   Future<void>? _migration;
+  AccountPreferenceWriteLease? _migrationOwner;
   int _localMutations = 0;
 
   void _accountChanged() {
@@ -329,6 +330,11 @@ class NotificationPreferencesService {
   Future<NotificationPreferences> loadPreferences() async {
     final account = _accountPreferences;
     if (account == null || !account.isBound) return _store.loadPreferences();
+    final write = account.captureWrite();
+    if (!(_migrationOwner?.isCurrent ?? false)) {
+      _migration = null;
+      _migrationOwner = write;
+    }
     if (_store case final HiveNotificationPreferencesStore legacyStore) {
       await (_migration ??= () async {
         NotificationPreferences? legacy;
@@ -339,7 +345,7 @@ class NotificationPreferencesService {
         }
         if (!_disposed) {
           final defaults = const NotificationPreferences().toJson();
-          await account.seedLegacyNotificationPreferences({
+          await write.seedLegacyNotificationPreferences({
             if (legacy != null)
               for (final entry in legacy.toJson().entries)
                 if (entry.value != defaults[entry.key])
@@ -348,6 +354,7 @@ class NotificationPreferencesService {
         }
       }());
     }
+    write.ensureCurrent();
     return NotificationPreferences.fromJson({
       for (final field in AccountPreferenceRegistry.notificationFields)
         if (account.read('notifications/$field') is bool)
@@ -357,6 +364,7 @@ class NotificationPreferencesService {
 
   Future<void> updatePreferences(NotificationPreferences prefs) async {
     final account = _accountPreferences;
+    final write = account?.captureWrite();
     final owner = _currentPubkey();
     if (account != null) {
       ++_localMutations;
@@ -364,13 +372,14 @@ class NotificationPreferencesService {
       ++_refreshRequest;
       try {
         final previous = (await loadPreferences()).toJson();
-        await account.writeValues({
+        await write!.writeValues({
           for (final entry in prefs.toJson().entries)
             if (previous[entry.key] != entry.value)
               'notifications/${entry.key}': entry.value,
         });
         if (_disposed || owner != _currentPubkey()) return;
         final effective = await loadPreferences();
+        write.ensureCurrent();
         if (_disposed || owner != _currentPubkey()) return;
         _lastAccountPreferences = effective;
         _lastAccountPubkey = owner;
@@ -407,14 +416,16 @@ class NotificationPreferencesService {
   }
 
   Future<void> resetToDefaults() async {
-    final account = _accountPreferences;
-    if (account != null) {
-      await account.writeValues({
+    final write = _accountPreferences?.captureWrite();
+    if (write != null) {
+      await write.writeValues({
         for (final field in AccountPreferenceRegistry.notificationFields)
           'notifications/$field': null,
       });
     }
+    write?.ensureCurrent();
     await updatePreferences(const NotificationPreferences());
+    write?.ensureCurrent();
   }
 
   /// Schema version of the kind list [NotificationPreferences.toKindsList]
@@ -439,6 +450,7 @@ class NotificationPreferencesService {
   /// Marking dirty rather than publishing directly reuses the caller's
   /// readiness gating and retry handling.
   Future<bool> markDirtyIfSchemaOutdated(String pubkey) async {
+    final write = _accountPreferences?.captureWrite();
     final published = await _store.loadPublishedSchemaVersion(pubkey);
     if (published == publishedKindsSchemaVersion) return false;
 
@@ -447,7 +459,10 @@ class NotificationPreferencesService {
     // favour of the last-saved snapshot.
     if (await _store.loadDirty(pubkey) != null) return false;
 
-    await _store.markDirty(pubkey, await loadPreferences());
+    final preferences = await loadPreferences();
+    write?.ensureCurrent();
+    await _store.markDirty(pubkey, preferences);
+    write?.ensureCurrent();
     return true;
   }
 

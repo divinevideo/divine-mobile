@@ -377,20 +377,23 @@ class ContentFilterService extends ChangeNotifier {
   ///
   /// Called when the user un-checks age verification.
   Future<void> lockAdultCategories() async {
+    final write = _accountPreferences?.captureWrite();
     final previousAdultPreference = adultPlaybackPreference;
-    for (final label in ageRestrictedCategories) {
-      _preferences[label] = ContentFilterPreference.hide;
-      if (_accountPreferences != null) {
-        await _accountPreferences.write(
-          'content_filter/${label.value}',
-          ContentFilterPreference.hide.name,
-        );
+    if (write != null) {
+      await write.writeValues({
+        for (final label in ageRestrictedCategories)
+          'content_filter/${label.value}': ContentFilterPreference.hide.name,
+      });
+    } else {
+      for (final label in ageRestrictedCategories) {
+        _preferences[label] = ContentFilterPreference.hide;
       }
+      await _save();
     }
-    await _save();
     await _notifyIfAdultPassiveAccessRevoked(
       previousAdultPreference: previousAdultPreference,
     );
+    write?.ensureCurrent();
     notifyListeners();
   }
 
@@ -408,15 +411,28 @@ class ContentFilterService extends ChangeNotifier {
   /// explicitly changed to [warn] or [show] are left untouched, so this
   /// never overwrites a deliberate preference.
   Future<void> unlockAdultCategories() async {
+    final write = _accountPreferences?.captureWrite();
+    if (write != null && !ageVerificationService.isAdultContentVerified) return;
+    final promoted = <ContentLabel>{};
     for (final label in ageRestrictedCategories) {
       if (alwaysFilteredCategories.contains(label)) continue;
       if (_adultOptInCategories.contains(label)) continue;
-      if ((_preferences[label] ?? _defaultFor(label)) ==
-          ContentFilterPreference.hide) {
+      final preference = write == null
+          ? _preferences[label] ?? _defaultFor(label)
+          : getPreference(label);
+      if (preference == ContentFilterPreference.hide) promoted.add(label);
+    }
+    if (write != null) {
+      await write.writeValues({
+        for (final label in promoted)
+          'content_filter/${label.value}': ContentFilterPreference.warn.name,
+      });
+    } else {
+      for (final label in promoted) {
         _preferences[label] = ContentFilterPreference.warn;
       }
+      await _save();
     }
-    await _save();
     notifyListeners();
   }
 

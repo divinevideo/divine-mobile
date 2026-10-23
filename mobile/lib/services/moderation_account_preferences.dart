@@ -55,17 +55,20 @@ class ModerationAccountPreferences {
   int _generation = 0;
   bool _closed = false;
 
+  ModerationAccountPreferenceSnapshot get current =>
+      ModerationAccountPreferenceSnapshot(
+        labelers:
+            (_preferences.read(_labelersStorageKey) as List?)
+                ?.cast<String>()
+                .toSet() ??
+            {},
+        followingEnabled:
+            _preferences.read(_followingEnabledStorageKey) as bool? ?? false,
+      );
+
   void _refresh() {
     if (_closed) return;
-    final snapshot = ModerationAccountPreferenceSnapshot(
-      labelers:
-          (_preferences.read(_labelersStorageKey) as List?)
-              ?.cast<String>()
-              .toSet() ??
-          {},
-      followingEnabled:
-          _preferences.read(_followingEnabledStorageKey) as bool? ?? false,
-    );
+    final snapshot = current;
     if (_previous?.sameAs(snapshot) ?? false) return;
     _previous = snapshot;
     final generation = ++_generation;

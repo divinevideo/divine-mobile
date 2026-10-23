@@ -136,6 +136,11 @@ class AccountPreferenceStore {
     return _preferences.get(key);
   }
 
+  /// Capture before an operation's first await, including service initialization.
+  /// A lease fails explicitly if an account switch interrupts that operation.
+  AccountPreferenceWriteLease captureWrite() =>
+      AccountPreferenceWriteLease._(this, _generation);
+
   Future<void> write(String key, Object? value) => writeValues({key: value});
 
   Future<void> writeValues(Map<String, Object?> values) async {
@@ -348,4 +353,38 @@ class AccountPreferenceStore {
 
 class _ProjectionQueue {
   Future<void> tail = Future<void>.value();
+}
+
+/// Binds an asynchronous service operation to its initiating account generation.
+/// The store still owns durable writes; this lease guards awaits before the
+/// first write and between writes, including completion of local projections.
+class AccountPreferenceWriteLease {
+  AccountPreferenceWriteLease._(this._store, this._generation);
+
+  final AccountPreferenceStore _store;
+  final int _generation;
+
+  bool get isCurrent => !_store._closed && _generation == _store._generation;
+
+  void ensureCurrent() {
+    if (!isCurrent) {
+      throw StateError('Account changed during preference operation');
+    }
+  }
+
+  Future<void> write(String key, Object? value) => writeValues({key: value});
+
+  Future<void> writeValues(Map<String, Object?> values) async {
+    ensureCurrent();
+    await _store.writeValues(values);
+    ensureCurrent();
+  }
+
+  Future<void> seedLegacyNotificationPreferences(
+    Map<String, Object?> values,
+  ) async {
+    ensureCurrent();
+    await _store.seedLegacyNotificationPreferences(values);
+    ensureCurrent();
+  }
 }

@@ -114,12 +114,13 @@ class SubtitleLanguagePreferenceService implements Listenable {
 
   /// Sets the target language; pass `null` to follow the app locale.
   Future<void> setTargetLanguage(String? languageCode) async {
+    final write = _accountPreferences?.captureWrite();
     await initialize();
     final normalized = _normalize(languageCode);
     try {
       final prefs = await SharedPreferences.getInstance();
       if (_accountPreferences != null) {
-        await _accountPreferences.write(targetLanguageStorageKey, normalized);
+        await write!.write(targetLanguageStorageKey, normalized);
       } else if (normalized == null) {
         await prefs.remove(targetLanguageStorageKey);
       } else {
@@ -141,6 +142,7 @@ class SubtitleLanguagePreferenceService implements Listenable {
 
   /// Replaces the set of source languages to show in the original.
   Future<void> setKeepOriginalLanguages(Set<String> languages) async {
+    final write = _accountPreferences?.captureWrite();
     await initialize();
     final normalized = _normalizeAll(languages);
 
@@ -148,7 +150,7 @@ class SubtitleLanguagePreferenceService implements Listenable {
       final prefs = await SharedPreferences.getInstance();
       final sorted = normalized.toList()..sort();
       if (_accountPreferences != null) {
-        await _accountPreferences.write(
+        await write!.write(
           keepOriginalLanguagesStorageKey,
           sorted,
         );

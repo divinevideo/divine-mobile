@@ -94,6 +94,7 @@ class LanguagePreferenceService implements Listenable {
   ///
   /// [languageCode] must be an ISO-639-1 code (e.g. `'en'`, `'es'`, `'pt'`).
   Future<void> setContentLanguage(String languageCode) async {
+    final write = _accountPreferences?.captureWrite();
     try {
       await initialize();
       if (_customLanguage == languageCode && _accountPreferences == null) {
@@ -102,7 +103,7 @@ class LanguagePreferenceService implements Listenable {
 
       final prefs = await SharedPreferences.getInstance();
       if (_accountPreferences != null) {
-        await _accountPreferences.write(prefsKey, languageCode);
+        await write!.write(prefsKey, languageCode);
       } else {
         await prefs.setString(prefsKey, languageCode);
       }
@@ -128,13 +129,14 @@ class LanguagePreferenceService implements Listenable {
 
   /// Clear the custom language preference, reverting to device default.
   Future<void> clearContentLanguage() async {
+    final write = _accountPreferences?.captureWrite();
     try {
       await initialize();
       if (_customLanguage == null && _accountPreferences == null) return;
 
       final prefs = await SharedPreferences.getInstance();
       if (_accountPreferences != null) {
-        await _accountPreferences.write(prefsKey, null);
+        await write!.write(prefsKey, null);
       } else {
         await prefs.remove(prefsKey);
       }

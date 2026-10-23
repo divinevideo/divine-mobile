@@ -393,21 +393,15 @@ class ModerationLabelService {
       // initialize(), which is called only from relay-ready paths.
       _adoptModerationPubkey(_pubkeyResolver.cached(_prefs));
 
-      final saved =
-          (_accountPreferences == null
-                  ? _prefs.getStringList(subscribedLabelersStorageKey)
-                  : _accountPreferences.read(subscribedLabelersStorageKey))
-              as List?;
-      if (saved != null) {
-        _subscribedLabelers.addAll(saved.cast<String>());
-      }
+      final choices = _accountBinding?.current;
+      _subscribedLabelers.addAll(
+        choices?.labelers ??
+            _prefs.getStringList(subscribedLabelersStorageKey) ??
+            const <String>[],
+      );
       _isFollowingModerationEnabled =
-          (_accountPreferences == null
-                  ? _prefs.getBool(followingModerationEnabledStorageKey)
-                  : _accountPreferences.read(
-                      followingModerationEnabledStorageKey,
-                    ))
-              as bool? ??
+          choices?.followingEnabled ??
+          _prefs.getBool(followingModerationEnabledStorageKey) ??
           false;
 
       // Migrate retired pubkeys if present in stored subscriptions
@@ -984,9 +978,10 @@ class ModerationLabelService {
 
   /// Add a new labeler and persist.
   Future<void> addLabeler(String pubkey) async {
+    final write = _accountPreferences?.captureWrite();
     await _ensurePersistedStateLoaded();
     if (_accountPreferences != null) {
-      await _accountPreferences.write('trusted_labeler/$pubkey', true);
+      await write!.write('trusted_labeler/$pubkey', true);
       return;
     }
     _subscribedLabelers.add(pubkey);
@@ -996,11 +991,12 @@ class ModerationLabelService {
 
   /// Remove a labeler and clean up.
   Future<void> removeLabeler(String pubkey) async {
+    final write = _accountPreferences?.captureWrite();
     await _ensurePersistedStateLoaded();
     // Don't allow removing the built-in Divine labeler
     if (pubkey == _divineModerationPubkey) return;
     if (_accountPreferences != null) {
-      await _accountPreferences.write('trusted_labeler/$pubkey', false);
+      await write!.write('trusted_labeler/$pubkey', false);
       return;
     }
 
@@ -1016,10 +1012,12 @@ class ModerationLabelService {
     bool enabled, {
     Iterable<String> followedPubkeys = const [],
   }) async {
+    final write = _accountPreferences?.captureWrite();
     await _ensurePersistedStateLoaded();
+    write?.ensureCurrent();
     _lastFollowedPubkeys = followedPubkeys.toSet();
     if (_accountPreferences != null) {
-      await _accountPreferences.write(
+      await write!.write(
         followingModerationEnabledStorageKey,
         enabled,
       );
