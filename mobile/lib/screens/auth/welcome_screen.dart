@@ -17,6 +17,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/account_deletion_recovery_routes.dart';
 import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
 import 'package:openvine/utils/detached_future.dart';
@@ -156,7 +157,7 @@ class _WelcomeView extends ConsumerWidget {
               category: LogCategory.auth,
             );
           case WelcomeStatus.navigatingToAccountDeletionRecovery:
-            context.go(RoutePaths.accountDeletionRecovery);
+            const AccountDeletionRecoveryRouteData().go(context);
           case WelcomeStatus.sessionExpired:
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(

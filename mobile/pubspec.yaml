@@ -470,6 +470,7 @@ dev_dependencies:
 
   # Code generation
   build_runner: ^2.15.0
+  go_router_builder: ^4.5.2
   hive_ce_generator: ^1.6.0
 
   # Integration test utilities
@@ -480,7 +481,10 @@ dev_dependencies:
   riverpod_generator: ^4.0.4
   # custom_lint: ^0.6.4  # Temporarily disabled due to rxdart version conflict
   # riverpod_lint: ^2.3.10  # Depends on custom_lint
-  json_serializable: ^6.8.0
+  # go_router_builder 4.5.2 needs source_helper 1.4, which json_serializable's
+  # build script compiles beside from 6.15.1; 6.15.2 also reverts 6.15.0's
+  # duplicate fromJson-key check.
+  json_serializable: ^6.15.2
   yaml: any
   golden_toolkit: ^0.15.0
   alchemist: ^0.12.1

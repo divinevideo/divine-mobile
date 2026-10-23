@@ -266,6 +266,12 @@
 # RoutePaths leaf instead. #7383 (wave #4506).
 🚧 Verify lower layers do not import the UI (layer-direction ratchet)	-	bash scripts/check_layer_direction.sh
 
+# Issue #3572, epic #9121. Per-file ceiling on hand-written GoRoute /
+# ShellRoute / StatefulShellRoute constructions under mobile/lib, so every new
+# route is a @TypedGoRoute class and each migrated module locks its win.
+# Conventions: .claude/rules/routing.md.
+🧭 Verify hand-written route count matches its frozen ceiling (typed-route ratchet)	-	bash scripts/check_hand_written_route_ceiling.sh
+
 ⏳ Verify Future.delayed-in-tests count does not increase (ratchet)	-	bash scripts/check_future_delayed_ceiling.sh
 
 # Production (mobile/lib) counterpart of the test-scoped ratchet above. Fails
