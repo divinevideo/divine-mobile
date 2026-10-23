@@ -80,13 +80,18 @@ void main() {
         useCache: false,
         requireAllRelaysSettled: true,
       ),
-    ).thenAnswer(
-      (_) async => (
-        events: relayEvents.toList(),
+    ).thenAnswer((call) async {
+      final filter = (call.positionalArguments.single as List<Filter>).single;
+      final events = relayEvents.toList()
+        ..sort((left, right) => right.createdAt.compareTo(left.createdAt));
+      return (
+        events: filter.limit == null
+            ? events
+            : events.take(filter.limit!).toList(),
         timedOut: timedOut,
         noRelays: false,
-      ),
-    );
+      );
+    });
     when(() => client.publishEventAwaitOk(any())).thenAnswer((call) async {
       final event = call.positionalArguments.single as Event;
       if (!rejectPublish) relayEvents.add(event);
@@ -476,6 +481,66 @@ void main() {
       expect(await phone.load(pubkey, {}), isEmpty);
       expect(signer.decryptCalls, decryptions);
       expect(relayEvents, hasLength(count));
+    },
+  );
+  test(
+    'an incomplete read retains every signed snapshot across restart',
+    () async {
+      await phone.setHidden(pubkey, {}, coordinate, hidden: true);
+      await desktop.load(pubkey, {});
+      final old = relayEvents.single;
+      await phone.setHidden(pubkey, {coordinate}, coordinate, hidden: false);
+      final undo = relayEvents.last;
+      relayEvents = [old];
+      await desktop.setHidden(
+        pubkey,
+        {coordinate},
+        otherCoordinate,
+        hidden: true,
+      );
+      final stale = relayEvents.last;
+      relayEvents = [
+        (await signer.signEvent(
+          Event(
+            pubkey,
+            stale.kind,
+            stale.tags,
+            stale.content,
+            createdAt: undo.createdAt + 10,
+          ),
+        ))!,
+      ];
+      timedOut = true;
+      expect(await phone.load(pubkey, {}), {otherCoordinate});
+      final restarted = BadgeDismissalSync(
+        client: client,
+        preferences: phonePreferences,
+        signer: () => signer,
+      );
+      expect(await restarted.load(pubkey, {otherCoordinate}), {
+        otherCoordinate,
+      });
+    },
+  );
+
+  test(
+    'a fresh device merges current snapshots held on different relays',
+    () async {
+      relayEvents = [
+        await snapshot({
+          'version': 1,
+          'decisions': {
+            coordinate: {'hidden': true, 'updated_at': 1000},
+          },
+        }, createdAt: 1000),
+        await snapshot({
+          'version': 1,
+          'decisions': {
+            otherCoordinate: {'hidden': true, 'updated_at': 1001},
+          },
+        }, createdAt: 1001),
+      ];
+      expect(await phone.load(pubkey, {}), {coordinate, otherCoordinate});
     },
   );
 }

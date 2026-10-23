@@ -87,7 +87,6 @@ class BadgeDismissalSync {
           authors: [pubkey],
           kinds: [EventKind.appSpecificData],
           d: [_dTag],
-          limit: 1,
         ),
       ],
       useCache: false,
@@ -102,14 +101,14 @@ class BadgeDismissalSync {
 
     final cachedJson = _preferences.getString(_cacheKey(pubkey));
     final cached = cachedJson == null
-        ? null
-        : Event.fromJson(jsonDecode(cachedJson) as Map<String, dynamic>);
-    final candidates =
-        [
-            ...result.events,
-            ?cached,
-          ].where((event) => _belongsTo(event, pubkey)).toList()
-          ..sort(_compareNewestFirst);
+        ? const <Event>[]
+        : (jsonDecode(cachedJson) as List<dynamic>).map(
+            (value) => Event.fromJson(value as Map<String, dynamic>),
+          );
+    final candidates = {
+      for (final event in [...result.events, ...cached])
+        if (_belongsTo(event, pubkey)) event.id: event,
+    }.values.toList()..sort(_compareNewestFirst);
     final latest = candidates.isEmpty ? null : candidates.first;
     final decisions = <String, _Decision>{
       // Old local dismissals have no timestamp. A known account decision,
@@ -117,9 +116,11 @@ class BadgeDismissalSync {
       for (final legacy in local) legacy: (hidden: true, updatedAt: 0),
     };
     Map<String, _Decision>? latestDecisions;
+    final snapshots = <String, Map<String, _Decision>>{};
     for (final event in candidates) {
       final entries = await _decode(signer, pubkey, event);
       latestDecisions ??= entries;
+      snapshots[event.id] = entries;
       _merge(decisions, entries);
     }
 
@@ -137,10 +138,27 @@ class BadgeDismissalSync {
 
     if (complete && !_sameDecisions(decisions, latestDecisions ?? const {})) {
       final signed = await _publish(signer, pubkey, decisions, latest);
-      await _cache(pubkey, signed);
+      await _cache(pubkey, [signed]);
       _remember(signed.id, decisions);
     } else if (latest != null) {
-      await _cache(pubkey, latest);
+      // An incomplete read cannot publish a consolidated snapshot. Retain
+      // each signed source needed for a current decision, including undos.
+      final retained = <Event>[latest];
+      final missing = decisions.keys.toSet();
+      for (final event in candidates) {
+        final contributed = snapshots[event.id]!.entries
+            .where(
+              (entry) =>
+                  missing.contains(entry.key) &&
+                  decisions[entry.key] == entry.value,
+            )
+            .map((entry) => entry.key)
+            .toList();
+        if (contributed.isEmpty) continue;
+        if (event.id != latest.id) retained.add(event);
+        missing.removeAll(contributed);
+      }
+      await _cache(pubkey, retained);
     }
     return {
       for (final entry in decisions.entries)
@@ -244,8 +262,8 @@ class BadgeDismissalSync {
     }
   }
 
-  Future<void> _cache(String pubkey, Event event) async {
-    if (!await _preferences.setString(_cacheKey(pubkey), jsonEncode(event))) {
+  Future<void> _cache(String pubkey, List<Event> events) async {
+    if (!await _preferences.setString(_cacheKey(pubkey), jsonEncode(events))) {
       throw const BadgeDismissalSyncException('Could not save decisions');
     }
   }
