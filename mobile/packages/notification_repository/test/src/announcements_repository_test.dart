@@ -49,11 +49,15 @@ void main() {
 
   AnnouncementsRepository create(
     http.Client client, {
+    Uri? endpoint,
     String platform = 'ios',
     String appVersion = '1.2.3',
     Clock? clock,
     Duration requestTimeout = const Duration(seconds: 10),
   }) => repository = AnnouncementsRepository(
+    endpoint:
+        endpoint ??
+        Uri.https('announcements.divine.video', '/v1/announcements'),
     httpClient: client,
     store: store,
     platform: platform,
@@ -119,6 +123,33 @@ void main() {
       expect(repository.items.single.body, 'Hello from Divine');
       expect(repository.items.single.id, 'announcement:$firstId');
       expect(() => repository.items.clear(), throwsUnsupportedError);
+    });
+
+    test('fetches the endpoint the app supplies', () async {
+      final endpoint = Uri.https('announcements.example.test', '/v1/catalog');
+      final requested = <Uri>[];
+      create(
+        MockClient((request) async {
+          requested.add(request.url);
+          return jsonResponse(catalog());
+        }),
+        endpoint: endpoint,
+      );
+      await repository.refresh();
+      expect(requested, equals([endpoint]));
+      expect(repository.items.single.title, 'A little news');
+    });
+
+    test('ignores a cached catalog fetched from another endpoint', () async {
+      create(MockClient((_) async => jsonResponse(catalog())));
+      await repository.refresh();
+      await repository.close();
+      create(
+        MockClient((_) async => throw Exception('offline')),
+        endpoint: Uri.https('announcements.example.test', '/v1/catalog'),
+      );
+      await repository.initialize();
+      expect(repository.items, isEmpty);
     });
 
     test(

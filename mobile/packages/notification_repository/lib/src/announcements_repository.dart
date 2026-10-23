@@ -22,30 +22,29 @@ abstract interface class AnnouncementStore {
   Future<void> writeSeen(List<String> ids);
 }
 
-/// Fetches the fixed public Divine catalog and applies local eligibility.
+/// Fetches the public Divine catalog at the app-supplied endpoint and applies
+/// local eligibility.
 ///
 /// The injected client must be dedicated to this public, anonymous endpoint.
 /// This repository owns and closes that client.
 class AnnouncementsRepository {
   /// Creates an account-bound repository without reading storage or fetching.
   AnnouncementsRepository({
+    required Uri endpoint,
     required http.Client httpClient,
     required AnnouncementStore store,
     required String platform,
     required String appVersion,
     Clock clock = const Clock(),
     Duration requestTimeout = const Duration(seconds: 10),
-  }) : _httpClient = httpClient,
+  }) : _endpoint = endpoint,
+       _httpClient = httpClient,
        _store = store,
        _platform = platform,
        _appVersion = _version(appVersion),
        _clock = clock,
        _requestTimeout = requestTimeout;
 
-  static final Uri _endpoint = Uri.https(
-    'announcements.divine.video',
-    '/v1/announcements',
-  );
   static const int _maximumBytes = 512 * 1024;
   static const _maximumItems = 50;
   static const _platforms = {
@@ -68,6 +67,7 @@ class AnnouncementsRepository {
     r'(?:\.(\d{1,6}))?Z$',
   );
 
+  final Uri _endpoint;
   final http.Client _httpClient;
   final AnnouncementStore _store;
   final String _platform;
