@@ -177,7 +177,9 @@ void main() {
     when(
       () => videoEventService.removedVideoIds,
     ).thenAnswer((_) => const Stream<String>.empty());
-    when(() => videoEventService.filterVideoList(any())).thenAnswer(
+    when(
+      () => videoEventService.filterVideoList(any(), includeFeedShape: false),
+    ).thenAnswer(
       (invocation) => invocation.positionalArguments.first as List<VideoEvent>,
     );
     // ProfileFeedCubit._restoreFromCache filters tombstones through this, but
