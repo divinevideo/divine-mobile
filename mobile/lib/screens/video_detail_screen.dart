@@ -1,16 +1,15 @@
 // ABOUTME: Screen for viewing a specific video by ID (from deep links)
 // ABOUTME: Fetches video from Nostr and displays it in full-screen player
 
-import 'dart:async';
-
 import 'package:divine_ui/divine_ui.dart';
 import 'package:feed_repository/feed_repository.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
-import 'package:nostr_client/nostr_client.dart' show NostrClient;
+import 'package:openvine/blocs/video_detail/video_detail_cubit.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
 import 'package:openvine/extensions/video_event_extensions.dart';
@@ -23,12 +22,9 @@ import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/safety_settings_screen.dart';
-import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/takeover_close_button.dart';
 import 'package:openvine/widgets/tv_static_message_screen.dart';
-import 'package:unified_logger/unified_logger.dart';
-import 'package:videos_repository/videos_repository.dart';
 
 class VideoDetailRouteExtra {
   const VideoDetailRouteExtra({
@@ -47,7 +43,7 @@ class VideoDetailRouteExtra {
   final DmReplyContext? dmReplyContext;
 }
 
-class VideoDetailScreen extends ConsumerStatefulWidget {
+class VideoDetailScreen extends ConsumerWidget {
   /// Route name for this screen.
   static const routeName = 'video';
 
@@ -84,217 +80,68 @@ class VideoDetailScreen extends ConsumerStatefulWidget {
   final DmReplyContext? dmReplyContext;
 
   @override
-  ConsumerState<VideoDetailScreen> createState() => _VideoDetailScreenState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    return BlocProvider(
+      create: (_) => VideoDetailCubit(
+        // Read at lookup time, not in create: the repository can change after
+        // age verification or a filter toggle without resetting playback.
+        videosRepository: () => ref.read(videosRepositoryProvider),
+        isRelayReady: () {
+          final client = ref.read(nostrServiceProvider);
+          return client.isInitialized && client.connectedRelayCount > 0;
+        },
+        relayReadyStream: () => ref
+            .read(nostrServiceProvider)
+            .relayStatusStream
+            .map(
+              (statuses) => statuses.values.any((status) => status.isConnected),
+            ),
+      ),
+      child: _VideoDetailView(screen: this),
+    );
+  }
 }
 
-class _VideoDetailScreenState extends ConsumerState<VideoDetailScreen> {
-  VideoEvent? _video;
-  bool _isLoading = true;
-  _VideoDetailError? _error;
+class _VideoDetailView extends ConsumerStatefulWidget {
+  const _VideoDetailView({required this.screen});
 
-  /// The video a content filter removed, kept so the viewer can override
-  /// the filter for this one video without another round trip (#7892).
-  VideoEvent? _hiddenVideo;
-  StreamSubscription? _relayReadySubscription;
-  bool _retryScheduled = false;
-  bool _hasRetriedAfterRelayReady = false;
+  final VideoDetailScreen screen;
 
+  @override
+  ConsumerState<_VideoDetailView> createState() => _VideoDetailViewState();
+}
+
+class _VideoDetailViewState extends ConsumerState<_VideoDetailView> {
   @override
   void initState() {
     super.initState();
-    if (widget.initialVideo != null) {
-      _video = widget.initialVideo;
-      _isLoading = false;
+    _search();
+    if (widget.screen.initialVideo != null) {
       ref.read(screenAnalyticsServiceProvider).markDataLoaded('video_detail');
-      return;
     }
-    _loadVideoDetached();
   }
 
   @override
-  void didUpdateWidget(covariant VideoDetailScreen oldWidget) {
+  void didUpdateWidget(covariant _VideoDetailView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.videoId == widget.videoId &&
-        listEquals(oldWidget.fallbackVideoIds, widget.fallbackVideoIds) &&
-        oldWidget.initialVideo == widget.initialVideo) {
-      return;
+    final previous = oldWidget.screen;
+    final current = widget.screen;
+    if (previous.videoId != current.videoId ||
+        !listEquals(previous.fallbackVideoIds, current.fallbackVideoIds) ||
+        previous.initialVideo != current.initialVideo) {
+      _search();
     }
-
-    // Deep links can retarget an already-mounted video screen. Reset the
-    // previous request state so the second shared link triggers a fresh load.
-    _cancelRelayReadySubscription();
-    _retryScheduled = false;
-    _hasRetriedAfterRelayReady = false;
-
-    setState(() {
-      _video = widget.initialVideo;
-      _isLoading = widget.initialVideo == null;
-      _error = null;
-    });
-
-    if (widget.initialVideo != null) {
-      ref.read(screenAnalyticsServiceProvider).markDataLoaded('video_detail');
-      return;
-    }
-
-    _loadVideoDetached();
   }
 
-  @override
-  void dispose() {
-    _cancelRelayReadySubscription();
-    super.dispose();
-  }
-
-  void _loadVideoDetached({bool allowRelayReadyRetry = true}) {
-    runDetached(
-      _loadVideo(allowRelayReadyRetry: allowRelayReadyRetry),
-      'load video',
-      logName: 'VideoDetailScreen',
-      category: LogCategory.video,
+  void _search() {
+    final screen = widget.screen;
+    context.read<VideoDetailCubit>().search(
+      routeId: screen.videoId,
+      fallbackRouteIds: screen.fallbackVideoIds,
+      initialVideo: screen.initialVideo,
     );
   }
 
-  void _cancelRelayReadySubscription() {
-    // cancel() on the field rather than a local copy: cancel_subscriptions
-    // only sees the call when it targets _relayReadySubscription itself.
-    final cancelled = _relayReadySubscription?.cancel();
-    _relayReadySubscription = null;
-    if (cancelled == null) return;
-    runDetached(
-      cancelled,
-      'cancel relay-ready subscription',
-      logName: 'VideoDetailScreen',
-      category: LogCategory.video,
-    );
-  }
-
-  Future<void> _loadVideo({bool allowRelayReadyRetry = true}) async {
-    try {
-      final nostrClient = ref.read(nostrServiceProvider);
-      Log.info(
-        '📱 Loading video from route ref: ${widget.videoId}',
-        name: 'VideoDetailScreen',
-        category: LogCategory.video,
-      );
-
-      final canQueryRelays =
-          nostrClient.isInitialized && nostrClient.connectedRelayCount > 0;
-
-      // fetchVideoWithStats handles cache→relay lookup and bulk-stats
-      // hydration in one call, matching what feed providers do.
-      final videosRepository = ref.read(videosRepositoryProvider);
-      final lookup = await videosRepository.lookupVideoForRouteId(
-        widget.videoId,
-        fallbackRouteIds: widget.fallbackVideoIds,
-      );
-
-      // A filtered video is not a missing one: it resolved and plays, and
-      // reporting it as "not found" leaves the viewer with no way to act
-      // on a setting they may never have chosen (#7892).
-      if (lookup case VideoRouteHiddenByFilter(:final video)) {
-        Log.info(
-          'Video hidden by content filters: ${widget.videoId}',
-          name: 'VideoDetailScreen',
-          category: LogCategory.video,
-        );
-        if (mounted) {
-          setState(() {
-            _hiddenVideo = video;
-            _error = _VideoDetailError.hiddenBySettings;
-            _isLoading = false;
-          });
-        }
-        return;
-      }
-
-      final video = lookup is VideoRouteFound ? lookup.video : null;
-
-      if (video != null) {
-        Log.info(
-          '✅ Loaded video: ${video.title}',
-          name: 'VideoDetailScreen',
-          category: LogCategory.video,
-        );
-        if (mounted) {
-          setState(() {
-            _video = video;
-            _isLoading = false;
-            _error = null;
-          });
-          ref
-              .read(screenAnalyticsServiceProvider)
-              .markDataLoaded('video_detail');
-        }
-      } else {
-        // A null result only establishes absence when relays were queryable
-        // for the whole lookup. Checking that at the start alone misses the
-        // resume case: a REQ can begin against a relay that is gone by the
-        // time the per-query timeout fires, and an empty result from a lookup
-        // that lost its relays is not a confirmed "not found". Check both
-        // ends and defer to the relay-ready retry when either fails.
-        final canQueryRelaysNow =
-            nostrClient.isInitialized && nostrClient.connectedRelayCount > 0;
-        if (allowRelayReadyRetry &&
-            (!canQueryRelays || !canQueryRelaysNow) &&
-            _scheduleRelayReadyRetry(nostrClient)) {
-          Log.info(
-            '⏳ Video lookup deferred until relay connection is ready',
-            name: 'VideoDetailScreen',
-            category: LogCategory.video,
-          );
-          return;
-        }
-        Log.warning(
-          '❌ Video not found: ${widget.videoId}',
-          name: 'VideoDetailScreen',
-          category: LogCategory.video,
-        );
-        if (mounted) {
-          setState(() {
-            _error = _VideoDetailError.notFound;
-            _isLoading = false;
-          });
-        }
-      }
-    } catch (e) {
-      // A failure that lands after the user left has nothing to retry or
-      // render.
-      if (!mounted) return;
-      // Recovery may have disposed the client used by the failed lookup.
-      // Read its replacement only after the lifecycle check (#9341).
-      final nostrClient = ref.read(nostrServiceProvider);
-      final canQueryRelays =
-          nostrClient.isInitialized && nostrClient.connectedRelayCount > 0;
-      if (allowRelayReadyRetry &&
-          !canQueryRelays &&
-          _scheduleRelayReadyRetry(nostrClient)) {
-        Log.warning(
-          '⏳ Video lookup failed before relay readiness; waiting to retry: $e',
-          name: 'VideoDetailScreen',
-          category: LogCategory.video,
-        );
-        return;
-      }
-      Log.error(
-        'Error loading video: $e',
-        name: 'VideoDetailScreen',
-        category: LogCategory.video,
-      );
-      if (mounted) {
-        setState(() {
-          _error = _VideoDetailError.loadFailed;
-          _isLoading = false;
-        });
-      }
-    }
-  }
-
-  /// Which source preference is responsible, so the panel names the setting
-  /// the viewer actually has to change rather than guessing.
-  ///
-  /// Both can apply at once; hosting is reported first because it is on by
-  /// default and is therefore the likelier surprise.
   _HiddenReason _hiddenReason(VideoEvent video) {
     if (!video.isFromDivineServer &&
         ref.read(divineHostFilterServiceProvider).showDivineHostedOnly) {
@@ -308,132 +155,68 @@ class _VideoDetailScreenState extends ConsumerState<VideoDetailScreen> {
     return _HiddenReason.otherContentFilter;
   }
 
-  /// Renders the filtered video for this screen only.
-  ///
-  /// The lookup already parsed it, so the override is a state change rather
-  /// than a refetch, and it deliberately does not touch the stored setting —
-  /// overriding one video is not the same as turning the filter off.
-  void _showHiddenVideoAnyway() {
-    final video = _hiddenVideo;
-    if (video == null) return;
-    setState(() {
-      _video = video;
-      _error = null;
-      _isLoading = false;
-    });
-  }
-
-  bool _scheduleRelayReadyRetry(NostrClient nostrClient) {
-    if (_retryScheduled || _hasRetriedAfterRelayReady) {
-      return false;
-    }
-
-    _retryScheduled = true;
-    _cancelRelayReadySubscription();
-
-    void retry() {
-      _cancelRelayReadySubscription();
-      _retryScheduled = false;
-      _hasRetriedAfterRelayReady = true;
-      if (!mounted) return;
-      setState(() {
-        _isLoading = true;
-        _error = null;
-      });
-      _loadVideoDetached(allowRelayReadyRetry: false);
-    }
-
-    if (nostrClient.isInitialized && nostrClient.connectedRelayCount > 0) {
-      retry();
-      return true;
-    }
-
-    _relayReadySubscription = nostrClient.relayStatusStream.listen((statuses) {
-      final hasConnectedRelay = statuses.values.any(
-        (status) => status.isConnected,
-      );
-      if (hasConnectedRelay) {
-        retry();
-      }
-    });
-    return true;
-  }
-
   @override
   Widget build(BuildContext context) {
     ref.watch(blocklistVersionProvider);
     ref.watch(divineHostFilterVersionProvider);
     ref.watch(contentFilterVersionProvider);
     final videoEventService = ref.read(videoEventServiceProvider);
+    final screen = widget.screen;
 
-    if (_isLoading) {
-      return _LoadingScreen(onClose: () => _handleExit(context));
-    }
-
-    if (_error case final error?) {
-      return switch (error) {
-        _VideoDetailError.notFound => _NotFoundScreen(
-          onClose: () => _handleExit(context),
-        ),
-        _VideoDetailError.hiddenBySettings => _HiddenBySettingsScreen(
-          video: _hiddenVideo!,
-          reason: _hiddenReason(_hiddenVideo!),
-          onShowAnyway: _showHiddenVideoAnyway,
-          onClose: () => _handleExit(context),
-        ),
-        _VideoDetailError.loadFailed => TvStaticMessageScreen(
-          sticker: .alert,
-          title: context.l10n.videoDetailLoadError,
-          description: context.l10n.videoDetailLoadErrorBody,
-          actionLabel: context.l10n.videoErrorRetry,
-          onAction: _retry,
-          onClose: () => _handleExit(context),
-          closeSemanticLabel: context.l10n.videoDetailCloseSemanticLabel,
-        ),
-      };
-    }
-
-    if (_video == null ||
-        videoEventService.shouldHideVideo(_video!) ||
-        videoEventService.isVideoEventKnownDeleted(_video!)) {
-      return _NotFoundScreen(onClose: () => _handleExit(context));
-    }
-
-    // Display video in full-screen pooled player
-    return widget.videoFeedBuilder?.call(_video!) ??
-        PooledFullscreenVideoFeedScreen(
-          source: SingleVideoViewSource(_video!),
-          feedRepository: StaticFeedRepository(),
-          initialIndex: 0,
-          contextTitle: context.l10n.videoDetailContextTitle,
-          trafficSource: ViewTrafficSource.share,
-          autoOpenComments: widget.autoOpenComments,
-          dmReplyContext: widget.dmReplyContext,
-        );
-  }
-
-  void _retry() {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-    // A user-initiated retry must end in a definite state. Deferring to the
-    // relay-ready listener would swallow the failure and park the screen on an
-    // unbounded spinner with the Retry button gone; the user can always tap
-    // again once they are back online.
-    _loadVideoDetached(allowRelayReadyRetry: false);
+    return BlocConsumer<VideoDetailCubit, VideoDetailState>(
+      listenWhen: (previous, current) =>
+          current.status == VideoDetailStatus.ready &&
+          (previous.status != current.status ||
+              previous.video != current.video),
+      listener: (_, _) {
+        ref.read(screenAnalyticsServiceProvider).markDataLoaded('video_detail');
+      },
+      builder: (context, state) {
+        switch (state.status) {
+          case VideoDetailStatus.searching:
+            return _LoadingScreen(onClose: () => _handleExit(context));
+          case VideoDetailStatus.hiddenBySettings:
+            return _HiddenBySettingsScreen(
+              video: state.video!,
+              reason: _hiddenReason(state.video!),
+              onShowAnyway: context
+                  .read<VideoDetailCubit>()
+                  .showHiddenVideoAnyway,
+              onClose: () => _handleExit(context),
+            );
+          case VideoDetailStatus.loadFailed:
+            return TvStaticMessageScreen(
+              sticker: .alert,
+              title: context.l10n.videoDetailLoadError,
+              description: context.l10n.videoDetailLoadErrorBody,
+              actionLabel: context.l10n.videoErrorRetry,
+              onAction: context.read<VideoDetailCubit>().retry,
+              onClose: () => _handleExit(context),
+              closeSemanticLabel: context.l10n.videoDetailCloseSemanticLabel,
+            );
+          case VideoDetailStatus.ready:
+            final video = state.video!;
+            if (videoEventService.shouldHideVideo(video) ||
+                videoEventService.isVideoEventKnownDeleted(video)) {
+              return _NotFoundScreen(onClose: () => _handleExit(context));
+            }
+            return screen.videoFeedBuilder?.call(video) ??
+                PooledFullscreenVideoFeedScreen(
+                  source: SingleVideoViewSource(video),
+                  feedRepository: StaticFeedRepository(),
+                  initialIndex: 0,
+                  contextTitle: context.l10n.videoDetailContextTitle,
+                  trafficSource: ViewTrafficSource.share,
+                  autoOpenComments: screen.autoOpenComments,
+                  dmReplyContext: screen.dmReplyContext,
+                );
+        }
+      },
+    );
   }
 
   void _handleExit(BuildContext context) {
-    // The loading state can now be dismissed mid-fetch. Without this, a relay
-    // connecting during the pop transition would restart the lookup for a
-    // screen the user has already left.
-    _cancelRelayReadySubscription();
-    _retryScheduled = false;
-
-    // safePop, not a hand-rolled canPop/go pair: `/video/:id` is a flat
-    // top-level route, so a deep link lands here with a one-entry stack and
-    // the fallback is the branch that actually runs.
+    context.read<VideoDetailCubit>().cancelSearch();
     context.safePop();
   }
 }
@@ -472,8 +255,7 @@ class _LoadingScreen extends StatelessWidget {
   }
 }
 
-/// Shown when the route's video cannot be resolved, is hidden by a filter, or
-/// was deleted — the three ways a shared link lands on nothing to play.
+/// Shown when an already-resolved video is hidden or known to be deleted.
 class _NotFoundScreen extends StatelessWidget {
   const _NotFoundScreen({required this.onClose});
 
@@ -490,8 +272,6 @@ class _NotFoundScreen extends StatelessWidget {
     );
   }
 }
-
-enum _VideoDetailError { notFound, loadFailed, hiddenBySettings }
 
 /// Explains that a content filter — not a missing video — is why nothing
 /// played, and offers both ways out: change the setting, or override it for

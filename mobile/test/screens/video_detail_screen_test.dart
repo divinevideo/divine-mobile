@@ -8,6 +8,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:follow_repository/follow_repository.dart';
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
@@ -488,6 +489,47 @@ void main() {
     });
 
     group('video found', () {
+      testWidgets('preserves the player when the repository is replaced', (
+        tester,
+      ) async {
+        final video = createTestVideoEvent(id: 'a' * 64);
+        when(
+          () => mockVideosRepository.lookupVideoForRouteId(any()),
+        ).thenAnswer((_) async => VideoRouteFound(video));
+        final replacement = _MockVideosRepository();
+        when(
+          () => replacement.lookupVideoForRouteId(any()),
+        ).thenAnswer((_) async => VideoRouteFound(video));
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pump();
+        final player = tester.element(
+          find.byKey(const Key('video-feed-placeholder')),
+        );
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoDetailScreen)),
+        );
+        container.updateOverrides([
+          ...getStandardTestOverrides(
+            mockNostrService: mockNostrClient,
+            mockFollowRepository: mockFollowRepository,
+          ),
+          videoEventServiceProvider.overrideWithValue(mockVideoEventService),
+          contentBlocklistRepositoryProvider.overrideWithValue(
+            mockBlocklistRepository,
+          ),
+          videosRepositoryProvider.overrideWithValue(replacement),
+        ]);
+        await tester.pump();
+        await tester.pump();
+
+        expect(
+          tester.element(find.byKey(const Key('video-feed-placeholder'))),
+          same(player),
+        );
+        verifyNever(() => replacement.lookupVideoForRouteId(any()));
+      });
+
       testWidgets('renders supplied route video without fetching it again', (
         tester,
       ) async {
@@ -732,8 +774,298 @@ void main() {
     });
 
     group('video not found', () {
+      testWidgets('scheduled retries use the replacement repository', (
+        tester,
+      ) async {
+        when(
+          () => mockVideosRepository.lookupVideoForRouteId(any()),
+        ).thenAnswer((_) async => const VideoRouteMissing());
+        final replacement = _MockVideosRepository();
+        final video = createTestVideoEvent(id: 'b' * 64);
+        when(
+          () => replacement.lookupVideoForRouteId(any()),
+        ).thenAnswer((_) async => VideoRouteFound(video));
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pump();
+        expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(VideoDetailScreen)),
+        );
+        container.updateOverrides([
+          ...getStandardTestOverrides(
+            mockNostrService: mockNostrClient,
+            mockFollowRepository: mockFollowRepository,
+          ),
+          videoEventServiceProvider.overrideWithValue(mockVideoEventService),
+          contentBlocklistRepositoryProvider.overrideWithValue(
+            mockBlocklistRepository,
+          ),
+          videosRepositoryProvider.overrideWithValue(replacement),
+        ]);
+        await tester.pump();
+        verifyNever(() => replacement.lookupVideoForRouteId(any()));
+        await tester.pump(const Duration(seconds: 2));
+        await tester.pump();
+
+        expect(find.byKey(const Key('video-feed-placeholder')), findsOneWidget);
+        verify(() => mockVideosRepository.lookupVideoForRouteId(any()))
+            .called(1);
+        verify(() => replacement.lookupVideoForRouteId(any())).called(1);
+      });
+
+      Future<void> exhaustSearch(WidgetTester tester) async {
+        for (final seconds in [2, 4, 8]) {
+          await tester.pump(Duration(seconds: seconds));
+          await tester.pump();
+        }
+      }
+
+      for (final error in <Exception>[
+        const FunnelcakeTimeoutException('https://example.com'),
+        TimeoutException('relay read timed out'),
+        const RelayReadUnavailableException('no relay answered'),
+      ]) {
+        testWidgets('recovers automatically after ${error.runtimeType}', (
+          tester,
+        ) async {
+          final video = createTestVideoEvent(id: 'e' * 64);
+          var attempts = 0;
+          when(
+            () => mockVideosRepository.lookupVideoForRouteId(any()),
+          ).thenAnswer((_) async {
+            if (attempts++ == 0) throw error;
+            return VideoRouteFound(video);
+          });
+
+          await tester.pumpWidget(buildSubject());
+          await tester.pump();
+          expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
+          expect(find.text(l10n.videoErrorRetry), findsNothing);
+
+          await tester.pump(const Duration(seconds: 2));
+          await tester.pump();
+          expect(
+            find.byKey(const Key('video-feed-placeholder')),
+            findsOneWidget,
+          );
+        });
+      }
+
+      testWidgets('repeated timeouts end with Retry instead of missing', (
+        tester,
+      ) async {
+        when(
+          () => mockVideosRepository.lookupVideoForRouteId(any()),
+        ).thenThrow(TimeoutException('relay read timed out'));
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pump();
+        await exhaustSearch(tester);
+
+        expect(find.byType(BrandedLoadingIndicator), findsNothing);
+        expect(find.text(l10n.videoErrorNotFound), findsNothing);
+        expect(find.text(l10n.videoErrorRetry), findsOneWidget);
+      });
+
+      testWidgets('retargeting cancels a scheduled retry for the old video', (
+        tester,
+      ) async {
+        var oldAttempts = 0;
+        when(
+          () => mockVideosRepository.lookupVideoForRouteId('old-video'),
+        ).thenAnswer((_) async {
+          oldAttempts++;
+          return const VideoRouteMissing();
+        });
+        when(
+          () => mockVideosRepository.lookupVideoForRouteId('new-video'),
+        ).thenAnswer(
+          (_) async => VideoRouteFound(createTestVideoEvent(id: 'f' * 64)),
+        );
+
+        await tester.pumpWidget(buildSubject(videoId: 'old-video'));
+        await tester.pump();
+        expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
+        await tester.pumpWidget(buildSubject(videoId: 'new-video'));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 30));
+
+        expect(oldAttempts, 1);
+        expect(find.byKey(const Key('video-feed-placeholder')), findsOneWidget);
+      });
+
+      testWidgets('ignores a previous lookup error after retargeting', (
+        tester,
+      ) async {
+        final oldLookup = Completer<VideoRouteLookupResult>();
+        when(
+          () => mockVideosRepository.lookupVideoForRouteId('old-video'),
+        ).thenAnswer((_) => oldLookup.future);
+        when(
+          () => mockVideosRepository.lookupVideoForRouteId('new-video'),
+        ).thenAnswer(
+          (_) async => VideoRouteFound(createTestVideoEvent(id: '1' * 64)),
+        );
+
+        await tester.pumpWidget(buildSubject(videoId: 'old-video'));
+        await tester.pumpWidget(buildSubject(videoId: 'new-video'));
+        await tester.pump();
+        oldLookup.completeError(TimeoutException('old read failed'));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 30));
+
+        expect(find.byKey(const Key('video-feed-placeholder')), findsOneWidget);
+        expect(find.text(l10n.videoErrorRetry), findsNothing);
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('keeps searching while a notified video becomes available', (
+        tester,
+      ) async {
+        final video = createTestVideoEvent(id: 'a' * 64);
+        var available = false;
+        when(
+          () => mockVideosRepository.lookupVideoForRouteId(any()),
+        ).thenAnswer(
+          (_) async =>
+              available ? VideoRouteFound(video) : const VideoRouteMissing(),
+        );
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pump();
+        expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
+        expect(find.text(l10n.videoErrorNotFound), findsNothing);
+
+        // The first retry still misses; the next read sees the indexed video.
+        await tester.pump(const Duration(seconds: 2));
+        await tester.pump();
+        expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
+        available = true;
+        await tester.pump(const Duration(seconds: 4));
+        await tester.pump();
+
+        expect(find.byKey(const Key('video-feed-placeholder')), findsOneWidget);
+        expect(find.text(l10n.videoErrorNotFound), findsNothing);
+      });
+
       testWidgets(
-        'renders error when fetchVideoWithStatsForRouteId returns null',
+        'offers retry after the search is exhausted and can recover',
+        (
+          tester,
+        ) async {
+          final video = createTestVideoEvent(id: 'b' * 64);
+          var available = false;
+          when(
+            () => mockVideosRepository.lookupVideoForRouteId(any()),
+          ).thenAnswer(
+            (_) async =>
+                available ? VideoRouteFound(video) : const VideoRouteMissing(),
+          );
+
+          await tester.pumpWidget(buildSubject());
+          await tester.pump();
+          await exhaustSearch(tester);
+
+          expect(find.byType(BrandedLoadingIndicator), findsNothing);
+          expect(find.text(l10n.videoErrorNotFound), findsNothing);
+          expect(find.text(l10n.videoErrorRetry), findsOneWidget);
+
+          available = true;
+          await tester.tap(find.text(l10n.videoErrorRetry));
+          await tester.pump();
+          expect(
+            find.byKey(const Key('video-feed-placeholder')),
+            findsOneWidget,
+          );
+        },
+      );
+
+      testWidgets('bounds an offline search even if no relay reconnects', (
+        tester,
+      ) async {
+        when(() => mockNostrClient.connectedRelayCount).thenReturn(0);
+        when(
+          () => mockVideosRepository.lookupVideoForRouteId(any()),
+        ).thenAnswer((_) async => const VideoRouteMissing());
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pump();
+        await exhaustSearch(tester);
+
+        expect(find.byType(BrandedLoadingIndicator), findsNothing);
+        expect(find.text(l10n.videoErrorRetry), findsOneWidget);
+      });
+
+      testWidgets('bounds a stalled search and ignores its late result', (
+        tester,
+      ) async {
+        final lookup = Completer<VideoRouteLookupResult>();
+        when(
+          () => mockVideosRepository.lookupVideoForRouteId(any()),
+        ).thenAnswer((_) => lookup.future);
+
+        await tester.pumpWidget(buildSubject());
+        await tester.pump(const Duration(seconds: 30));
+        await tester.pump();
+
+        expect(find.byType(BrandedLoadingIndicator), findsNothing);
+        expect(find.text(l10n.videoErrorRetry), findsOneWidget);
+
+        lookup.complete(VideoRouteFound(createTestVideoEvent(id: 'c' * 64)));
+        await tester.pump();
+        expect(find.text(l10n.videoErrorRetry), findsOneWidget);
+        expect(find.byKey(const Key('video-feed-placeholder')), findsNothing);
+      });
+
+      testWidgets('ignores a previous video lookup after retargeting', (
+        tester,
+      ) async {
+        final oldLookup = Completer<VideoRouteLookupResult>();
+        final video = createTestVideoEvent(id: 'd' * 64);
+        when(
+          () => mockVideosRepository.lookupVideoForRouteId('old-video'),
+        ).thenAnswer((_) => oldLookup.future);
+        when(
+          () => mockVideosRepository.lookupVideoForRouteId('new-video'),
+        ).thenAnswer((_) async => VideoRouteFound(video));
+
+        await tester.pumpWidget(buildSubject(videoId: 'old-video'));
+        await tester.pumpWidget(buildSubject(videoId: 'new-video'));
+        await tester.pump();
+        expect(find.byKey(const Key('video-feed-placeholder')), findsOneWidget);
+
+        oldLookup.complete(const VideoRouteMissing());
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 30));
+        expect(find.byKey(const Key('video-feed-placeholder')), findsOneWidget);
+        expect(find.text(l10n.videoErrorRetry), findsNothing);
+      });
+
+      testWidgets(
+        'cancels pending search retries when the screen is disposed',
+        (
+          tester,
+        ) async {
+          var attempts = 0;
+          when(
+            () => mockVideosRepository.lookupVideoForRouteId(any()),
+          ).thenAnswer((_) async {
+            attempts++;
+            return const VideoRouteMissing();
+          });
+          await tester.pumpWidget(buildSubject());
+          await tester.pump();
+          expect(find.byType(BrandedLoadingIndicator), findsOneWidget);
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump(const Duration(seconds: 30));
+          expect(attempts, 1);
+          expect(tester.takeException(), isNull);
+        },
+      );
+
+      testWidgets(
+        'renders a retryable error after repeated empty lookups',
         (tester) async {
           when(
             () => mockVideosRepository.lookupVideoForRouteId(any()),
@@ -741,14 +1073,15 @@ void main() {
 
           await tester.pumpWidget(buildSubject());
           await tester.pump();
+          await exhaustSearch(tester);
 
-          expect(find.text(l10n.videoErrorNotFound), findsOneWidget);
-          expect(find.text(l10n.videoDetailNotFoundBody), findsOneWidget);
+          expect(find.text(l10n.videoDetailLoadError), findsOneWidget);
+          expect(find.text(l10n.videoDetailLoadErrorBody), findsOneWidget);
           // Prove the copy resolves through l10n rather than a hardcoded
           // English string (#5125).
           expect(
             find.text(
-              lookupAppLocalizations(const Locale('de')).videoErrorNotFound,
+              lookupAppLocalizations(const Locale('de')).videoDetailLoadError,
             ),
             findsNothing,
           );
@@ -761,16 +1094,13 @@ void main() {
       );
 
       testWidgets(
-        'renders the error state with an exit affordance for an unfetchable '
-        'NIP-33 video coordinate route (intended destination for '
-        'coordinate-routed push taps, #5079)',
+        'keeps an unfetchable notification coordinate on a retryable video '
+        'screen with an exit affordance',
         (tester) async {
           // Push taps carrying an authoritative referencedAddress push the
           // raw kind:pubkey:d-tag coordinate straight to this route with no
-          // pre-fetch. When the video is deleted or otherwise unfetchable,
-          // this error state — not a profile/inbox fallback — is the decided
-          // destination, matching the in-app rows' trust-the-coordinate
-          // contract.
+          // pre-fetch. An empty lookup can be indexing lag, so search before
+          // offering Retry on the intended video screen.
           const coordinate = '34236:owner_pubkey_hex:my-vine-id';
           when(
             () => mockVideosRepository.lookupVideoForRouteId(coordinate),
@@ -778,9 +1108,10 @@ void main() {
 
           await tester.pumpWidget(buildSubject(videoId: coordinate));
           await tester.pump();
+          await exhaustSearch(tester);
 
-          expect(find.text(l10n.videoErrorNotFound), findsOneWidget);
-          expect(find.text(l10n.videoDetailNotFoundBody), findsOneWidget);
+          expect(find.text(l10n.videoDetailLoadError), findsOneWidget);
+          expect(find.text(l10n.videoErrorRetry), findsOneWidget);
           expect(_divineSticker(DivineStickerName.alert), findsOneWidget);
           expect(
             find.bySemanticsLabel(l10n.videoDetailCloseSemanticLabel),
@@ -1036,8 +1367,9 @@ void main() {
         'shows a lookup error when the replacement client is already ready',
         (tester) async {
           final lookup = Completer<VideoRouteLookupResult>();
-          when(() => mockVideosRepository.lookupVideoForRouteId(any()))
-              .thenAnswer((_) => lookup.future);
+          when(
+            () => mockVideosRepository.lookupVideoForRouteId(any()),
+          ).thenAnswer((_) => lookup.future);
           await tester.pumpWidget(buildSubject());
           final container = ProviderScope.containerOf(
             tester.element(find.byType(VideoDetailScreen)),
