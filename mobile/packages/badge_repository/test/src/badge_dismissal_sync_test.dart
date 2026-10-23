@@ -186,6 +186,35 @@ void main() {
         expect(await desktop.load(pubkey, {}), isEmpty);
       },
     );
+    test(
+      'facade lifecycle receives remote choices and cancels account listeners',
+      () async {
+        final events = StreamController<Event>.broadcast();
+        final statuses =
+            StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+        when(() => client.subscribe(any())).thenAnswer((_) => events.stream);
+        when(() => client.relayStatusStream).thenAnswer((_) => statuses.stream);
+        await phone.start(pubkey);
+        await phone.synchronize(pubkey);
+        expect(events.hasListener, true);
+        events.add(
+          await snapshot({
+            'version': 1,
+            'decisions': {
+              coordinate: {'hidden': true, 'updated_at': 10},
+            },
+          }),
+        );
+        await pumpEventQueue();
+        expect(await phone.load(pubkey, {}), {coordinate});
+        await phone.close();
+        expect(events.hasListener, false);
+        expect(statuses.hasListener, false);
+        await events.close();
+        await statuses.close();
+      },
+    );
+
     test('display does not wait for consolidation acknowledgment', () async {
       final acknowledgment = Completer<PublishOutcome>();
       Event? pending;

@@ -66,6 +66,42 @@ void main() {
       );
     });
 
+    test(
+      'account lifecycle starts listeners, flushes durable choices and closes subscriptions',
+      () async {
+        final events = StreamController<Event>.broadcast();
+        final statuses =
+            StreamController<Map<String, RelayConnectionStatus>>.broadcast();
+        when(
+          () => nostrClient.subscribe(any()),
+        ).thenAnswer((_) => events.stream);
+        when(
+          () => nostrClient.relayStatusStream,
+        ).thenAnswer((_) => statuses.stream);
+        await repository.startAccountState();
+        expect(events.hasListener, true);
+        expect(statuses.hasListener, true);
+        await repository.hideAward('30009:${_pubkey(2)}:daily-diviner');
+        await repository.synchronizeAccountState();
+        final published = verify(
+          () => nostrClient.publishEventAwaitOk(captureAny()),
+        ).captured.cast<Event>();
+        expect(published, isNotEmpty);
+        expect(
+          published.every(
+            (event) =>
+                event.isSigned && event.dTagValue == 'divine:badge-dismissals',
+          ),
+          true,
+        );
+        await repository.closeAccountState();
+        expect(events.hasListener, false);
+        expect(statuses.hasListener, false);
+        await events.close();
+        await statuses.close();
+      },
+    );
+
     test('loads decisions while awards are still pending', () async {
       final awards = Completer<List<Event>>();
       var decisionsStarted = false;

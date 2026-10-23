@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:account_state_repository/account_state_repository.dart';
+import 'package:fake_async/fake_async.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
@@ -16,6 +18,23 @@ class _Signer extends LocalNostrSigner {
   bool decryptFails = false;
   Future<void>? decryptGate;
   bool encryptFails = false;
+  Future<void>? encryptGate;
+  Future<void>? signingGate;
+  Future<void>? publicKeyGate;
+  int publicKeyCalls = 0;
+  String? publicKeyOverride;
+  int? holdPublicKeyAt;
+  void Function(String)? onPreparation;
+  @override
+  Future<String?> getPublicKey() async {
+    publicKeyCalls++;
+    if (publicKeyCalls == holdPublicKeyAt) {
+      onPreparation?.call('final signer check');
+      await publicKeyGate;
+    }
+    return publicKeyOverride ?? await super.getPublicKey();
+  }
+
   bool signingFails = false;
   @override
   Future<String?> nip44Decrypt(String pubkey, String ciphertext) async {
@@ -24,11 +43,18 @@ class _Signer extends LocalNostrSigner {
   }
 
   @override
-  Future<String?> nip44Encrypt(String pubkey, String plaintext) =>
-      encryptFails ? Future.value() : super.nip44Encrypt(pubkey, plaintext);
+  Future<String?> nip44Encrypt(String pubkey, String plaintext) async {
+    onPreparation?.call('encryption');
+    await encryptGate;
+    return encryptFails ? null : super.nip44Encrypt(pubkey, plaintext);
+  }
+
   @override
-  Future<Event?> signEvent(Event event) =>
-      signingFails ? Future.value() : super.signEvent(event);
+  Future<Event?> signEvent(Event event) async {
+    onPreparation?.call('signing');
+    await signingGate;
+    return signingFails ? null : super.signEvent(event);
+  }
 }
 
 void main() {
@@ -41,7 +67,11 @@ void main() {
   late StreamController<Event> incoming;
   late StreamController<Map<String, RelayConnectionStatus>> statuses;
   late List<AccountStateRepository> repositories;
-  SharedPreferences store({bool Function()? writeSucceeds}) {
+  SharedPreferences store({
+    bool Function()? writeSucceeds,
+    Exception? Function()? writeError,
+    Future<void> Function()? beforeWrite,
+  }) {
     final data = <String, String>{};
     final preferences = _Preferences();
     when(
@@ -50,6 +80,9 @@ void main() {
     when(() => preferences.setString(any(), any())).thenAnswer((call) async {
       data[call.positionalArguments[0] as String] =
           call.positionalArguments[1] as String;
+      await beforeWrite?.call();
+      final error = writeError?.call();
+      if (error != null) throw error;
       return writeSucceeds?.call() ?? true;
     });
     when(() => preferences.remove(any())).thenAnswer((call) async {
@@ -387,6 +420,380 @@ void main() {
         expect(relay, isEmpty);
       },
     );
+
+    group('durable outbox retry', () {
+      test('rejected publish retries without reconnect or another edit', () {
+        var attempts = 0;
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((call) async {
+          final event = call.positionalArguments[0] as Event;
+          attempts++;
+          final accepted = attempts >= 2;
+          if (accepted) relay.add(event);
+          return PublishOutcome(
+            eventId: event.id,
+            acceptedBy: accepted ? const ['wss://relay.example'] : const [],
+            rejectedBy: const {},
+            noResponseFrom: const [],
+          );
+        });
+        fakeAsync((clock) {
+          final phone = device();
+          unawaited(phone.start());
+          clock.flushMicrotasks();
+          unawaited(phone.setValue('choice', true));
+          clock.flushMicrotasks();
+          expect(attempts, 1);
+          expect(phone.hasPendingChanges, true);
+          clock
+            ..elapse(const Duration(milliseconds: 999))
+            ..flushMicrotasks();
+          expect(attempts, 1);
+          clock
+            ..elapse(const Duration(milliseconds: 1))
+            ..flushMicrotasks();
+          expect(attempts, 2);
+          expect(phone.hasPendingChanges, false);
+          unawaited(phone.close());
+          clock.flushMicrotasks();
+        });
+      });
+      test('backoff is bounded and close cancels the pending retry', () {
+        var attempts = 0;
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((call) async {
+          attempts++;
+          return PublishOutcome(
+            eventId: (call.positionalArguments[0] as Event).id,
+            acceptedBy: const [],
+            rejectedBy: const {},
+            noResponseFrom: const [],
+          );
+        });
+        fakeAsync((clock) {
+          final phone = device();
+          unawaited(phone.start());
+          clock.flushMicrotasks();
+          unawaited(phone.setValue('choice', true));
+          clock.flushMicrotasks();
+          expect(attempts, 1);
+          for (final seconds in [1, 2, 4, 8, 16, 32, 60, 60]) {
+            final previous = attempts;
+            clock
+              ..elapse(Duration(seconds: seconds - 1))
+              ..flushMicrotasks();
+            expect(attempts, previous);
+            clock
+              ..elapse(const Duration(seconds: 1))
+              ..flushMicrotasks();
+            expect(attempts, previous + 1);
+          }
+          unawaited(phone.close());
+          clock.flushMicrotasks();
+          final beforeClose = attempts;
+          clock
+            ..elapse(const Duration(minutes: 2))
+            ..flushMicrotasks();
+          expect(attempts, beforeClose);
+          expect(phone.hasPendingChanges, true);
+        });
+      });
+      test(
+        'successful acknowledgment keeps retry for a source whose persistence failed',
+        () async {
+          final unknown = await snapshot({}, version: 2);
+          Exception? storageError;
+          final preferences = store(writeError: () => storageError);
+          late Completer<PublishOutcome> acknowledgment;
+          Event? published;
+          when(() => client.publishEventAwaitOk(any())).thenAnswer((call) {
+            published = call.positionalArguments[0] as Event;
+            return acknowledgment.future;
+          });
+          fakeAsync((clock) {
+            acknowledgment = Completer<PublishOutcome>();
+            final phone = device(preferences: preferences);
+            unawaited(phone.start());
+            clock.flushMicrotasks();
+            unawaited(phone.setValue('choice', true));
+            clock.flushMicrotasks();
+            expect(published, isNotNull);
+            storageError = PlatformException(code: 'storage_unavailable');
+            incoming.add(unknown);
+            clock.flushMicrotasks();
+            storageError = null;
+            acknowledgment.complete(
+              PublishOutcome(
+                eventId: published!.id,
+                acceptedBy: const ['wss://relay.example'],
+                rejectedBy: const {},
+                noResponseFrom: const [],
+              ),
+            );
+            clock
+              ..flushMicrotasks()
+              ..elapse(const Duration(seconds: 1))
+              ..flushMicrotasks();
+            unawaited(phone.close());
+            clock.flushMicrotasks();
+            final restarted = device(preferences: preferences);
+            Object? failure;
+            unawaited(
+              restarted.synchronize().catchError((Object error) {
+                failure = error;
+              }),
+            );
+            clock.flushMicrotasks();
+            expect(failure, isFormatException);
+            unawaited(restarted.close());
+            clock.flushMicrotasks();
+          });
+        },
+      );
+
+      test('explicit successful flush cancels scheduled retry', () {
+        var attempts = 0;
+        var reject = true;
+        when(() => client.publishEventAwaitOk(any())).thenAnswer((call) async {
+          attempts++;
+          return PublishOutcome(
+            eventId: (call.positionalArguments[0] as Event).id,
+            acceptedBy: reject ? const [] : const ['wss://relay.example'],
+            rejectedBy: const {},
+            noResponseFrom: const [],
+          );
+        });
+        fakeAsync((clock) {
+          final phone = device();
+          unawaited(phone.start());
+          clock.flushMicrotasks();
+          unawaited(phone.setValue('choice', true));
+          clock.flushMicrotasks();
+          reject = false;
+          unawaited(phone.synchronize());
+          clock.flushMicrotasks();
+          expect(attempts, 2);
+          clock
+            ..elapse(const Duration(minutes: 2))
+            ..flushMicrotasks();
+          expect(attempts, 2);
+          expect(phone.hasPendingChanges, false);
+          unawaited(phone.close());
+          clock.flushMicrotasks();
+        });
+      });
+      for (final refusal in [
+        'encryption',
+        'signing',
+        'decryption',
+        'identity',
+      ]) {
+        test('refused $refusal waits for a new external trigger', () async {
+          final controlled = _Signer();
+          if (refusal == 'encryption') controlled.encryptFails = true;
+          if (refusal == 'signing') controlled.signingFails = true;
+          if (refusal == 'decryption') {
+            controlled.decryptFails = true;
+            relay.add(
+              await snapshot({
+                'remote': {'value': true, 'updated_at': 1},
+              }),
+            );
+          }
+          if (refusal == 'identity') {
+            controlled.publicKeyOverride = '2'.padLeft(64, '0');
+          }
+          var reads = 0;
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              useCache: false,
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer((_) async {
+            reads++;
+            return (events: relay.toList(), timedOut: false, noRelays: false);
+          });
+          fakeAsync((clock) {
+            final phone = device(getSigner: () => controlled);
+            unawaited(phone.setValue('choice', true));
+            clock.flushMicrotasks();
+            unawaited(phone.start());
+            clock.flushMicrotasks();
+            final initialReads = reads;
+            final initialPublicKeyCalls = controlled.publicKeyCalls;
+            clock
+              ..elapse(const Duration(minutes: 2))
+              ..flushMicrotasks();
+            expect(reads, initialReads);
+            expect(controlled.publicKeyCalls, initialPublicKeyCalls);
+            expect(phone.hasPendingChanges, true);
+            expect(relay.where((event) => event.createdAt > 1000), isEmpty);
+            unawaited(phone.close());
+            clock.flushMicrotasks();
+          });
+        });
+      }
+
+      test(
+        'failed startup read with no pending data does not become polling',
+        () {
+          var reads = 0;
+          when(
+            () => client.queryEventsDetailed(
+              any(),
+              useCache: false,
+              requireAllRelaysSettled: true,
+            ),
+          ).thenAnswer((_) async {
+            reads++;
+            throw StateError('network unavailable');
+          });
+          fakeAsync((clock) {
+            final phone = device();
+            unawaited(phone.start());
+            clock.flushMicrotasks();
+            expect(reads, 1);
+            clock
+              ..elapse(const Duration(minutes: 2))
+              ..flushMicrotasks();
+            expect(reads, 1);
+            expect(phone.hasPendingChanges, false);
+            unawaited(phone.close());
+            clock.flushMicrotasks();
+          });
+        },
+      );
+
+      test('unknown schema does not schedule automatic retry', () async {
+        relay.add(await snapshot({}, version: 2));
+        var reads = 0;
+        when(
+          () => client.queryEventsDetailed(
+            any(),
+            useCache: false,
+            requireAllRelaysSettled: true,
+          ),
+        ).thenAnswer((_) async {
+          reads++;
+          return (events: relay.toList(), timedOut: false, noRelays: false);
+        });
+        fakeAsync((clock) {
+          final phone = device();
+          unawaited(phone.setValue('choice', true));
+          clock.flushMicrotasks();
+          unawaited(phone.start());
+          clock.flushMicrotasks();
+          expect(reads, 1);
+          clock
+            ..elapse(const Duration(minutes: 2))
+            ..flushMicrotasks();
+          expect(reads, 1);
+          expect(phone.hasPendingChanges, true);
+          unawaited(phone.close());
+          clock.flushMicrotasks();
+        });
+      });
+    });
+
+    group('publication and storage failure fences', () {
+      for (final window in [
+        'encryption',
+        'signing',
+        'final signer check',
+        'queued source write',
+        'failed source write',
+      ]) {
+        test(
+          'newer schema received during $window prevents prepared publication',
+          () async {
+            final controlled = _Signer();
+            Future<void>? diskGate;
+            Exception? sourceWriteError;
+            final preferences = store(
+              writeError: () => sourceWriteError,
+              beforeWrite: () async {
+                await diskGate;
+              },
+            );
+            final phone = device(
+              preferences: preferences,
+              getSigner: () => controlled,
+            );
+            await phone.start();
+            await pumpEventQueue();
+            final gate = Completer<void>();
+            final reached = Completer<void>();
+            final signerWindow = window.endsWith('source write')
+                ? 'final signer check'
+                : window;
+            controlled.onPreparation = (stage) {
+              if (stage == signerWindow && !reached.isCompleted) {
+                reached.complete();
+              }
+            };
+            if (window == 'encryption') controlled.encryptGate = gate.future;
+            if (window == 'signing') controlled.signingGate = gate.future;
+            if (signerWindow == 'final signer check') {
+              controlled.holdPublicKeyAt = controlled.publicKeyCalls + 2;
+              controlled.publicKeyGate = gate.future;
+            }
+            await phone.setValue('choice', true);
+            await reached.future;
+            final pendingDisk = Completer<void>();
+            if (window == 'queued source write') diskGate = pendingDisk.future;
+            if (window == 'failed source write') {
+              sourceWriteError = PlatformException(code: 'storage_unavailable');
+            }
+            incoming.add(await snapshot({}, version: 2));
+            await pumpEventQueue();
+            sourceWriteError = null;
+            gate.complete();
+            await pumpEventQueue();
+            if (window == 'queued source write') {
+              expect(
+                relay,
+                isEmpty,
+                reason: 'publication must fence queued source persistence',
+              );
+              diskGate = null;
+              pendingDisk.complete();
+              await pumpEventQueue();
+            }
+            expect(
+              relay,
+              isEmpty,
+              reason: 'a newer schema must not be replaced with version one',
+            );
+            expect(phone.hasPendingChanges, true);
+            await phone.close();
+            await expectLater(
+              device(preferences: preferences).synchronize(),
+              throwsFormatException,
+            );
+          },
+        );
+      }
+      for (final hasPrevious in [false, true]) {
+        test(
+          'thrown platform write restores eager cache (previous: $hasPrevious)',
+          () async {
+            Exception? storageError;
+            final preferences = store(writeError: () => storageError);
+            final phone = device(preferences: preferences);
+            if (hasPrevious) await phone.setValue('choice', true);
+            storageError = PlatformException(code: 'storage_unavailable');
+            await expectLater(
+              phone.setValue('choice', false),
+              throwsA(same(storageError)),
+            );
+            expect(phone.contains('choice'), hasPrevious);
+            final restarted = device(preferences: preferences);
+            expect(restarted.contains('choice'), hasPrevious);
+            expect(restarted.value('choice'), hasPrevious ? true : null);
+            expect(restarted.hasPendingChanges, hasPrevious);
+          },
+        );
+      }
+    });
 
     group('transport and storage boundaries', () {
       test(

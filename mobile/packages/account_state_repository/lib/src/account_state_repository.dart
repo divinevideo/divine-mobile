@@ -10,8 +10,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 enum AccountStateMergeRule { latest, numericMaximum, falseWinsTie }
 
 class AccountStateException implements Exception {
-  const AccountStateException(this.message);
+  const AccountStateException(this.message, {this.retryable = false});
   final String message;
+  final bool retryable;
   @override
   String toString() => 'AccountStateException: $message';
 }
@@ -58,6 +59,7 @@ class AccountStateRepository {
   final AccountStateMergeRule _defaultMergeRule;
   Map<String, _Entry> _entries = {};
   List<Event> _events = [];
+  final _receivedSources = <String, Event>{};
   final _decoded = <String, Map<String, _Entry>>{};
   final _controller = StreamController<Map<String, Object?>>.broadcast();
   Future<void> _writes = Future<void>.value();
@@ -68,6 +70,8 @@ class AccountStateRepository {
   bool _closed = false;
   bool _started = false;
   int _revision = 0;
+  Timer? _retryTimer;
+  var _retrySeconds = 1;
   String get _cacheKey => '$_cachePrefix$pubkey';
   String get _stateKey => '${_cacheKey}_state';
 
@@ -82,7 +86,7 @@ class AccountStateRepository {
         (key.endsWith('_$pubkey') || key.endsWith('_${pubkey}_state')),
   );
 
-  Object? value(String key) => values[key];
+  Object? value(String key) => _copyValue(_entries[key]?.value);
   bool contains(String key) => _entries.containsKey(key);
   Map<String, Object?> get values => Map.unmodifiable({
     for (final entry in _entries.entries)
@@ -160,15 +164,18 @@ class AccountStateRepository {
           _events.any((known) => known.id == event.id)) {
         return;
       }
+      // Receipt itself is an overwrite barrier, even if its journal write
+      // fails. Keep the source in memory until a later durable write succeeds.
+      _receivedSources[event.id] = event;
       unawaited(
         _write(() async {
           if (_closed) return;
-          final events = _unionEvents([..._events, event]);
+          final events = _unionEvents([..._events, ..._receivedSources.values]);
           await _save(_entries, events, pending: _pending);
           if (_closed) return;
-          _events = events;
+          _installSources(events);
           _backgroundSync();
-        }).catchError((Object _) {}),
+        }).catchError((Object _) => _scheduleRetry()),
       );
     }, onError: (Object _) {});
     var connected = <String>{};
@@ -200,8 +207,46 @@ class AccountStateRepository {
     final result = _syncs.then(
       (_) => _synchronize(beforeMerge: beforeMerge, onReconciled: onReconciled),
     );
-    _syncs = result.then<void>((_) {}, onError: (Object _, StackTrace _) {});
+    _syncs = result.then<void>(
+      (_) {
+        _clearRetry();
+        // An older publication's success cannot cancel persistence retry for a
+        // source that arrived while its acknowledgment was outstanding.
+        if (_receivedSources.isNotEmpty) _scheduleRetry();
+      },
+      onError: (Object error, StackTrace _) {
+        if (error is FormatException ||
+            (error is AccountStateException && !error.retryable)) {
+          _clearRetry();
+        } else {
+          _scheduleRetry();
+        }
+      },
+    );
     return result;
+  }
+
+  void _scheduleRetry() {
+    if (!_started ||
+        _closed ||
+        _retryTimer != null ||
+        (!_pending &&
+            _entries.isEmpty &&
+            _events.isEmpty &&
+            _receivedSources.isEmpty)) {
+      return;
+    }
+    _retryTimer = Timer(Duration(seconds: _retrySeconds), () {
+      _retryTimer = null;
+      _backgroundSync();
+    });
+    _retrySeconds = math.min(_retrySeconds * 2, 60);
+  }
+
+  void _clearRetry() {
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    _retrySeconds = 1;
   }
 
   Future<void> _synchronize({
@@ -223,9 +268,13 @@ class AccountStateRepository {
     // later empty read must never allow this client to erase a newer schema.
     await _write(() async {
       if (_closed) return;
-      final events = _unionEvents([..._events, ...read.events]);
+      final events = _unionEvents([
+        ..._events,
+        ..._receivedSources.values,
+        ...read.events,
+      ]);
       await _save(_entries, events, pending: _pending);
-      if (!_closed) _events = events;
+      if (!_closed) _installSources(events);
     });
     if (_closed) return;
     final candidates = _events.toList()..sort(_newestFirst);
@@ -269,7 +318,7 @@ class AccountStateRepository {
       await _save(merged, sources, pending: _pending);
       if (_closed) return;
       _entries = merged;
-      _events = sources;
+      _installSources(sources);
       _emit();
       publishing = Map.of(merged);
       revision = _revision;
@@ -277,22 +326,28 @@ class AccountStateRepository {
     if (_closed) return;
     onReconciled?.call();
     if (read.noRelays || read.timedOut) {
-      throw const AccountStateException('Incomplete account state read');
+      throw const AccountStateException(
+        'Incomplete account state read',
+        retryable: true,
+      );
     }
     final latest = candidates.isEmpty ? null : candidates.first;
     final latestEntries = latest == null
         ? <String, _Entry>{}
         : snapshots[latest.id]!;
     // New sources arriving during decoding must be decoded before any repair.
-    if (_events.any((event) => !snapshots.containsKey(event.id))) {
+    if (_hasNewSources(snapshots.keys.toSet())) {
       _backgroundSync();
       return;
     }
     Event? confirmed;
     if (!_same(publishing, latestEntries)) {
-      final content = await signer.nip44Encrypt(
-        pubkey,
-        jsonEncode({'version': 1, _payloadEntriesKey: _encode(publishing)}),
+      final content = await _signerRequest(
+        () => signer.nip44Encrypt(
+          pubkey,
+          jsonEncode({'version': 1, _payloadEntriesKey: _encode(publishing)}),
+        ),
+        'Could not encrypt account state',
       );
       if (_closed) return;
       if (content == null || content.isEmpty) {
@@ -311,21 +366,24 @@ class AccountStateRepository {
         ),
       );
       final expectedId = unsigned.id;
-      final signed = await signer.signEvent(unsigned);
+      final signed = await _signerRequest(
+        () => signer.signEvent(unsigned),
+        'Could not sign account state',
+      );
       if (_closed) return;
       if (signed == null || signed.id != expectedId || !_belongs(signed)) {
         throw const AccountStateException('Could not sign account state');
       }
       await _checkedSigner();
       if (_closed) return;
-      await _confirm(signed);
+      if (!await _confirmCurrent(signed, snapshots.keys.toSet())) return;
       confirmed = signed;
       _remember(signed.id, publishing);
     } else if (latest != null &&
         !read.events.any((event) => event.id == latest.id)) {
       await _checkedSigner();
       if (_closed) return;
-      await _confirm(latest);
+      if (!await _confirmCurrent(latest, snapshots.keys.toSet())) return;
       confirmed = latest;
     }
     if (_closed) return;
@@ -346,7 +404,7 @@ class AccountStateRepository {
       final pending = !unchanged && _pending;
       await _save(_entries, events, pending: pending);
       if (_closed) return;
-      _events = events;
+      _installSources(events);
       _pending = pending;
     });
   }
@@ -359,25 +417,71 @@ class AccountStateRepository {
     ),
   ];
 
-  Future<NostrSigner> _checkedSigner() async {
+  Future<T> _signerRequest<T>(
+    Future<T> Function() request,
+    String failure,
+  ) async {
+    try {
+      return await request();
+    } on Object {
+      throw AccountStateException(failure);
+    }
+  }
+
+  Future<NostrSigner> _checkedSigner() => _signerRequest(() async {
     final signer = _signer();
     if (await signer.getPublicKey() != pubkey) {
       throw const AccountStateException('Signer does not match account');
     }
     return signer;
+  }, 'Signer does not match account or is unavailable');
+
+  bool _hasNewSources(Set<String> known) =>
+      _events.any((source) => !known.contains(source.id)) ||
+      _receivedSources.keys.any((id) => !known.contains(id));
+
+  void _installSources(List<Event> persisted) {
+    for (final source in persisted) {
+      _receivedSources.remove(source.id);
+    }
+    _events = _unionEvents([...persisted, ..._receivedSources.values]);
+  }
+
+  Future<bool> _confirmCurrent(Event event, Set<String> sources) async {
+    Future<void>? publication;
+    // Fence all incoming source writes already queued during asynchronous
+    // encryption/signing/signer checks. Check and send in the same synchronous
+    // turn, then release the local queue before waiting for network response.
+    await _write(() async {
+      if (_closed) return;
+      if (_hasNewSources(sources)) {
+        _backgroundSync();
+        return;
+      }
+      publication = _confirm(event)..ignore();
+    });
+    if (publication == null) return false;
+    await publication;
+    return true;
   }
 
   Future<void> _confirm(Event event) async {
     final result = await _client.publishEventAwaitOk(event);
     if (!result.acceptedByAny) {
-      throw const AccountStateException('No relay confirmed account state');
+      throw const AccountStateException(
+        'No relay confirmed account state',
+        retryable: true,
+      );
     }
   }
 
   Future<Map<String, _Entry>> _decode(NostrSigner signer, Event event) async {
     final known = _decoded[event.id];
     if (known != null) return known;
-    final plaintext = await signer.nip44Decrypt(pubkey, event.content);
+    final plaintext = await _signerRequest(
+      () => signer.nip44Decrypt(pubkey, event.content),
+      'Could not decrypt account state',
+    );
     if (plaintext == null) {
       throw const AccountStateException('Could not decrypt account state');
     }
@@ -488,15 +592,28 @@ class AccountStateRepository {
       'events': events,
     });
     final previous = _preferences.getString(_stateKey);
-    if (!await _preferences.setString(_stateKey, encoded)) {
-      // SharedPreferences mutates its cache before the platform write succeeds.
-      // Restore that cache too, so a new repository cannot read a failed edit.
-      if (previous == null) {
-        await _preferences.remove(_stateKey);
-      } else {
-        await _preferences.setString(_stateKey, previous);
+    try {
+      if (!await _preferences.setString(_stateKey, encoded)) {
+        throw const AccountStateException(
+          'Could not save account state',
+          retryable: true,
+        );
       }
-      throw const AccountStateException('Could not save account state');
+    } on Object catch (error, stack) {
+      // SharedPreferences changes its cache before the platform write. Restore
+      // that cache for both rejected and thrown writes. A rollback's platform
+      // failure must not replace the original error; its cache change is eager
+      // too, so the previous local value is restored even if it throws.
+      try {
+        if (previous == null) {
+          await _preferences.remove(_stateKey);
+        } else {
+          await _preferences.setString(_stateKey, previous);
+        }
+      } on Object catch (_) {
+        // Preserve the original persistence error and stack.
+      }
+      Error.throwWithStackTrace(error, stack);
     }
   }
 
@@ -569,6 +686,7 @@ class AccountStateRepository {
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
+    _clearRetry();
     await _incoming?.cancel();
     await _statuses?.cancel();
     await _controller.close();
