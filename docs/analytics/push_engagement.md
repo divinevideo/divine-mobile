@@ -31,8 +31,10 @@ bq query --project_id=openvine-co --use_legacy_sql=false < docs/analytics/push_e
 
 The script reads the existing GA4 export and returns aggregate daily rows for
 iOS/Android. It uses temporary tables only. The default window is 28 days ending
-four UTC days ago. Sessions on the final day are observed into the next UTC day,
-so that day also clears GA4's 72-hour late-event window. Change `start_date` and
+four UTC days ago. Sessions on the final day are observed into the next UTC day.
+That observation day can still receive late events, so the final day's
+subsequent-activity metrics may change on a later run. This cutoff does not
+guarantee that GA4's daily exports are closed. Change `start_date` and
 `end_date` at the top for a particular rollout; the window must be under 90 days.
 The export property's calendar may differ from UTC, so source table suffixes
 include a day before the report and two days after it to cover both the
