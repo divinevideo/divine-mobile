@@ -1003,6 +1003,10 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                                             videos: state.videos,
                                             contextTitle: widget.contextTitle,
                                             currentIndex: state.currentIndex,
+                                            scrollPhysics:
+                                                widget.loadMoreOnEndSwipe
+                                                ? const AlwaysScrollableScrollPhysics()
+                                                : null,
                                             hasMore: state.canLoadMore,
                                             isLoadingMore: state.isLoadingMore,
                                             trafficSource: widget.trafficSource,

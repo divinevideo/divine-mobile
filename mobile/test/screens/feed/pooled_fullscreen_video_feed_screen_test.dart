@@ -334,6 +334,7 @@ void main() {
       String? contextTitle,
       String? sponsorName,
       MediaQueryData? mediaQueryData,
+      TargetPlatform? scrollPlatform,
       ViewTrafficSource trafficSource = ViewTrafficSource.unknown,
       String? sourceDetail,
       bool autoOpenComments = false,
@@ -356,15 +357,23 @@ void main() {
         loadMoreOnEndSwipe: loadMoreOnEndSwipe,
         onBack: onBack,
       );
+      Widget subject = content;
+      if (scrollPlatform != null) {
+        subject = Theme(
+          data: VineTheme.theme.copyWith(platform: scrollPlatform),
+          child: subject,
+        );
+      }
+      if (mediaQueryData != null) {
+        subject = MediaQuery(data: mediaQueryData, child: subject);
+      }
       return testMaterialApp(
         additionalOverrides: additionalOverrides,
         mockAuthService: mockAuthService,
         mockNostrService: mockNostrService,
         mockProfileRepository: mockProfileRepository,
         mockNip05VerificationService: mockNip05VerificationService,
-        home: mediaQueryData == null
-            ? content
-            : MediaQuery(data: mediaQueryData, child: content),
+        home: subject,
       );
     }
 
@@ -411,44 +420,37 @@ void main() {
       },
     );
 
-    testWidgets('another end swipe retries an anchor-only discovery feed', (
-      tester,
-    ) async {
-      final videos = createTestVideos(count: 1);
-      await tester.pumpWidget(
-        buildSubject(
-          state: FullscreenFeedState(
-            status: FullscreenFeedStatus.ready,
-            videos: videos,
-            canLoadMore: true,
-          ),
-          loadMoreOnEndSwipe: true,
-        ),
+    for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+      testWidgets(
+        'another end swipe retries an anchor-only discovery feed on $platform',
+        (
+          tester,
+        ) async {
+          final videos = createTestVideos(count: 1);
+          await tester.pumpWidget(
+            buildSubject(
+              state: FullscreenFeedState(
+                status: FullscreenFeedStatus.ready,
+                videos: videos,
+                canLoadMore: true,
+              ),
+              loadMoreOnEndSwipe: true,
+              scrollPlatform: platform,
+            ),
+          );
+          await tester.pump();
+          await tester.drag(
+            find.byType(InfiniteVideoFeed),
+            const Offset(0, -160),
+          );
+          await tester.pump();
+          verify(() => mockBloc.add(const FullscreenFeedLoadMoreRequested()))
+              .called(1);
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pump();
+        },
       );
-      await tester.pump();
-      final feedContext = tester.element(find.byType(FeedVideos));
-      OverscrollNotification(
-        context: feedContext,
-        metrics: FixedScrollMetrics(
-          minScrollExtent: 0,
-          maxScrollExtent: 0,
-          pixels: 0,
-          viewportDimension: 600,
-          axisDirection: AxisDirection.down,
-          devicePixelRatio: 1,
-        ),
-        overscroll: 80,
-        dragDetails: DragUpdateDetails(
-          delta: const Offset(0, -80),
-          globalPosition: Offset.zero,
-        ),
-      ).dispatch(feedContext);
-      await tester.pump();
-      verify(() => mockBloc.add(const FullscreenFeedLoadMoreRequested()))
-          .called(1);
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
-    });
+    }
 
     testWidgets(
       'a single-video route appends For You without replacing its anchor',

@@ -65,6 +65,7 @@ class FeedVideos extends ConsumerStatefulWidget {
     required this.onNearEnd,
     this.contextTitle,
     this.currentIndex = 0,
+    this.scrollPhysics,
     this.shouldPortraitExpand = true,
     this.isActive = true,
     this.releaseNeighboursWhenInactive = false,
@@ -81,6 +82,9 @@ class FeedVideos extends ConsumerStatefulWidget {
   final List<VideoEvent> videos;
   final VoidCallback onNearEnd;
   final int currentIndex;
+
+  /// Optional physics, including end swipes while discovery has only one video.
+  final ScrollPhysics? scrollPhysics;
   final String? contextTitle;
   final bool shouldPortraitExpand;
 
@@ -413,6 +417,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
         urlResolver: (video) => video.getOptimalVideoUrlForPlatform(),
         preferB2Original: preferB2Original,
         initialIndex: widget.currentIndex,
+        scrollPhysics: widget.scrollPhysics,
         onNearEnd: widget.onNearEnd,
         initialVolume: context.read<VideoVolumeCubit>().state.volume,
         onVolumeChanged: context
