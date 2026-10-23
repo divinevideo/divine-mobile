@@ -34,7 +34,7 @@ import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
 import 'package:openvine/providers/video_clip_import_provider.dart';
-import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
+import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
@@ -371,10 +371,10 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
                 ? () {
                     if (!hostContext.mounted) return;
                     _runShareDetached(
-                      hostContext.push<void>(
-                        ConversationPage.pathForId(conversationId),
-                        extra: [recipientPubkey],
-                      ),
+                      ConversationRouteData(
+                        id: conversationId,
+                        $extra: [recipientPubkey],
+                      ).push<void>(hostContext),
                       'open shared conversation',
                     );
                   }

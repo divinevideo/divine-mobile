@@ -12,7 +12,7 @@ import 'package:openvine/blocs/dm/dm_peer_name.dart';
 import 'package:openvine/blocs/dm/message_requests/message_request_actions_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/screens/inbox/message_requests/request_preview_page.dart';
+import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/screens/inbox/message_requests/widgets/request_bulk_actions_sheet.dart';
 import 'package:openvine/screens/inbox/message_requests/widgets/request_tile.dart';
 import 'package:openvine/screens/inbox/widgets/restore_paused_banner.dart';
@@ -278,11 +278,10 @@ class _RequestList extends StatelessWidget {
           };
 
     runDetached(
-      context.pushNamed(
-        RequestPreviewPage.routeName,
-        pathParameters: {'id': conversation.id},
-        extra: extra,
-      ),
+      RequestPreviewRouteData(
+        id: conversation.id,
+        $extra: extra,
+      ).push<void>(context),
       'open message request preview',
       logName: 'MessageRequestsView',
       category: LogCategory.ui,

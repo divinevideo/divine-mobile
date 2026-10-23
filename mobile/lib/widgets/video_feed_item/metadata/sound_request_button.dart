@@ -7,7 +7,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/sound_requests/sound_requests_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/routes/messaging_routes.dart';
-import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -66,9 +65,9 @@ class _SoundRequestButtonState extends State<SoundRequestButton> {
     if (ModalRoute.of(context) is PopupRoute) Navigator.of(context).pop();
     if (!host.mounted) return;
     await host.pushWithVideoPause(
-      ConversationPage.pathForId(
-        DmRepository.computeConversationId([owner, creator]),
-      ),
+      ConversationRouteData(
+        id: DmRepository.computeConversationId([owner, creator]),
+      ).location,
       extra: DmRouteExtra(participantPubkeys: [owner, creator]),
     );
   }

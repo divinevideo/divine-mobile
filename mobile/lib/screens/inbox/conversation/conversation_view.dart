@@ -41,9 +41,9 @@ import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
-import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/sound_request_card.dart';
@@ -1367,15 +1367,13 @@ class _ClosedThreadNotice extends StatelessWidget {
   /// current-key thread exists yet: `ConversationPage` renders an empty thread,
   /// which is the same state the pinned inbox row opens.
   void _openCurrentSupportThread(BuildContext context) {
-    context.pushReplacement(
-      ConversationPage.pathForId(
-        DmRepository.computeConversationId([
-          currentPubkey,
-          kModerationPubkeyHex,
-        ]),
-      ),
-      extra: const [kModerationPubkeyHex],
-    );
+    ConversationRouteData(
+      id: DmRepository.computeConversationId([
+        currentPubkey,
+        kModerationPubkeyHex,
+      ]),
+      $extra: const [kModerationPubkeyHex],
+    ).pushReplacement(context);
   }
 }
 

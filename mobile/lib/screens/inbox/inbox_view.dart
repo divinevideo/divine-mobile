@@ -28,8 +28,7 @@ import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
-import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
-import 'package:openvine/screens/inbox/message_requests/message_requests_page.dart';
+import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/screens/inbox/message_requests/widgets/message_requests_banner.dart';
 import 'package:openvine/screens/inbox/messages/messages_home_page.dart';
 import 'package:openvine/screens/inbox/new_message_sheet.dart';
@@ -328,12 +327,12 @@ void _pushConversation(
     category: LogCategory.ui,
   );
   runDetached(
-    context.push(
-      ConversationPage.pathForId(conversationId),
-      extra: subject == null
+    ConversationRouteData(
+      id: conversationId,
+      $extra: subject == null
           ? participantPubkeys
           : {'participantPubkeys': participantPubkeys, 'subject': subject},
-    ),
+    ).push<void>(context),
     'open DM conversation',
     logName: 'InboxView',
     category: LogCategory.ui,
@@ -1050,7 +1049,7 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
 
   void _openMessageRequests(BuildContext context) {
     runDetached(
-      context.pushNamed(MessageRequestsPage.routeName),
+      const MessageRequestsRouteData().push<void>(context),
       'open message requests',
       logName: 'InboxView',
       category: LogCategory.ui,
