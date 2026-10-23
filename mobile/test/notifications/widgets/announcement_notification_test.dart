@@ -73,30 +73,33 @@ void main() {
         tester,
       ) async {
         final semantics = tester.ensureSemantics();
-        addTearDown(semantics.dispose);
-        await tester.pumpWidget(
-          MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: NotificationListItem(
-                notification: AnnouncementNotification(
-                  announcementId: 'd7388b9c-b35c-4269-8fc5-fac5d7a454ad',
-                  title: 'A small update',
-                  body: 'Your website is ready.',
-                  timestamp: DateTime.utc(2026, 10, 23),
-                  expiresAt: DateTime.utc(2026, 11, 23),
-                  isRead: isRead,
+        try {
+          await tester.pumpWidget(
+            MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: NotificationListItem(
+                  notification: AnnouncementNotification(
+                    announcementId: 'd7388b9c-b35c-4269-8fc5-fac5d7a454ad',
+                    title: 'A small update',
+                    body: 'Your website is ready.',
+                    timestamp: DateTime.utc(2026, 10, 23),
+                    expiresAt: DateTime.utc(2026, 11, 23),
+                    isRead: isRead,
+                  ),
+                  onTap: () {},
                 ),
-                onTap: () {},
               ),
             ),
-          ),
-        );
-        expect(
-          find.bySemanticsLabel(RegExp('Unread notification')),
-          isRead ? findsNothing : findsOneWidget,
-        );
+          );
+          expect(
+            find.bySemanticsLabel(RegExp('Unread notification')),
+            isRead ? findsNothing : findsOneWidget,
+          );
+        } finally {
+          semantics.dispose();
+        }
       });
     }
 

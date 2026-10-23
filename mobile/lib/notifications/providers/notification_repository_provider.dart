@@ -1,18 +1,25 @@
 // ABOUTME: Riverpod provider that constructs NotificationRepository
 // ABOUTME: with all dependencies (API client, profile repo, DAO, auth).
 
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:http/http.dart' as http;
 import 'package:notification_repository/notification_repository.dart';
+import 'package:openvine/notifications/providers/announcement_providers.dart';
+import 'package:openvine/notifications/services/announcement_store.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:openvine/services/nip98_http_client.dart';
 import 'package:openvine/utils/relay_url_utils.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Riverpod provider that creates and exposes a [NotificationRepository].
 ///
@@ -52,7 +59,36 @@ final notificationRepositoryProvider = Provider<NotificationRepository?>((ref) {
   final authService = ref.watch(authServiceProvider);
   final userPubkey = authService.currentPublicKeyHex ?? '';
 
+  final sessions = ref.watch(announcementSessionsProvider);
+  final announcements = userPubkey.isEmpty
+      ? null
+      : AnnouncementsRepository(
+          httpClient: ref.watch(announcementHttpClientFactoryProvider)(),
+          store: SharedPreferencesAnnouncementStore(
+            prefs: ref.watch(sharedPreferencesProvider),
+            owner: userPubkey,
+          ),
+          platform: kIsWeb ? 'web' : defaultTargetPlatform.name.toLowerCase(),
+          appVersion: ref.watch(appVersionProvider),
+        );
+  if (announcements != null) {
+    sessions.register(userPubkey, announcements);
+    unawaited(
+      announcements
+          .initialize()
+          .then((_) => announcements.refresh())
+          .catchError((Object error) {
+            Log.warning(
+              'Announcement catalog unavailable',
+              name: 'Announcements',
+            );
+          }),
+    );
+    ref.onDispose(() => unawaited(sessions.release(userPubkey, announcements)));
+  }
+
   final repository = NotificationRepository(
+    announcementsRepository: announcements,
     funnelcakeApiClient: funnelcakeApiClient,
     profileRepository: profileRepository,
     notificationsDao: db.notificationsDao,

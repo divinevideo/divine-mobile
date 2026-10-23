@@ -95,6 +95,13 @@ class NotificationFeedBloc
     final notifications = _applyFollowState(event.page.items);
     emit(
       state.copyWith(
+        // The public catalog can arrive after the independent social request
+        // failed. Keep those usable messages visible alongside the error banner.
+        status:
+            state.status == NotificationFeedStatus.failure &&
+                notifications.isNotEmpty
+            ? NotificationFeedStatus.loaded
+            : state.status,
         notifications: notifications,
         unreadCount: event.page.unreadCount,
         hasMore: event.page.hasMore,
@@ -116,7 +123,11 @@ class NotificationFeedBloc
   /// let [_flushPendingEmptyPageContinuation] pick it up once the refresh
   /// handler has settled.
   void _continuePastEmptyPageIfNeeded(List<NotificationItem> notifications) {
-    if (notifications.isNotEmpty || !state.hasMore) {
+    // Official messages do not populate the independent social cursor page.
+    final hasSocialRows = notifications.any(
+      (notification) => notification is! AnnouncementNotification,
+    );
+    if (hasSocialRows || !state.hasMore) {
       _emptyPageContinuations = 0;
       _loadMoreFailed = false;
       _emptyPageContinuationPending = false;

@@ -62,6 +62,7 @@ class _FakeNotificationRepository extends Fake
         VideoNotification() => item.copyWith(isRead: true),
         ActorNotification(:final isRead) when isRead => item,
         ActorNotification() => item.copyWith(isRead: true),
+        AnnouncementNotification() => item.copyWith(isRead: true),
       };
     }).toList();
     _snapshot.add(current.copyWith(items: updated));
