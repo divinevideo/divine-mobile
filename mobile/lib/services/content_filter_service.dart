@@ -61,9 +61,11 @@ class ContentFilterService extends ChangeNotifier {
     _lastAccountAdultPreference = adultPlaybackPreference;
     // Both the stream and a local setter can observe the same durable write.
     // Reconcile once, including the awaited adult-media revocation callback.
-    _pendingRevocation = _notifyIfAdultPassiveAccessRevoked(
-      previousAdultPreference: previous,
-    );
+    // Later snapshots must retain any revocation that is still in flight.
+    _pendingRevocation = Future.wait<void>([
+      _pendingRevocation,
+      _notifyIfAdultPassiveAccessRevoked(previousAdultPreference: previous),
+    ]).then((_) {});
     notifyListeners();
     return _pendingRevocation;
   }
