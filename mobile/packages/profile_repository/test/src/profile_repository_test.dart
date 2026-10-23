@@ -772,6 +772,90 @@ void main() {
           },
         );
 
+        test('concurrent display raw reads share one relay fetch', () async {
+          final connected = Completer<Event?>();
+          final indexer = Completer<List<Event>>();
+          when(
+            () => mockNostrClient.fetchProfile(testPubkey, useCache: false),
+          ).thenAnswer((_) => connected.future);
+          when(
+            () => mockNostrClient.queryEvents(
+              any(),
+              tempRelays: any(named: 'tempRelays'),
+              useCache: false,
+            ),
+          ).thenAnswer((_) => indexer.future);
+
+          final first = repoWithFunnelcake.fetchRawProfileForDisplay(
+            pubkey: testPubkey,
+          );
+          final second = repoWithFunnelcake.fetchRawProfileForDisplay(
+            pubkey: testPubkey,
+          );
+          connected.complete(mockProfileEvent);
+          final results = await Future.wait([first, second]);
+
+          expect(results.map((profile) => profile?.eventId), [
+            testEventId,
+            testEventId,
+          ]);
+          verify(
+            () => mockNostrClient.fetchProfile(testPubkey, useCache: false),
+          ).called(1);
+          verify(
+            () => mockNostrClient.queryEvents(
+              any(),
+              tempRelays: any(named: 'tempRelays'),
+              useCache: false,
+            ),
+          ).called(1);
+          indexer.complete([]);
+          await pumpEventQueue();
+        });
+
+        test(
+          'late display source invariant is logged after an early result',
+          () async {
+            final indexer = Completer<List<Event>>();
+            when(
+              () => mockNostrClient.queryEvents(
+                any(),
+                tempRelays: any(named: 'tempRelays'),
+                useCache: false,
+              ),
+            ).thenAnswer((_) => indexer.future);
+            final result = await repoWithFunnelcake.fetchRawProfileForDisplay(
+              pubkey: testPubkey,
+            );
+            expect(result?.eventId, testEventId);
+
+            final invariant = StateError('late display source invariant');
+            final stackTrace = StackTrace.current;
+            indexer.completeError(invariant, stackTrace);
+            await pumpEventQueue();
+
+            final captured = LogCaptureService().getRecentLogs().where(
+              (entry) =>
+                  entry.message == 'Late raw profile display source failed' &&
+                  entry.error == invariant.toString(),
+            );
+            expect(captured, hasLength(1));
+            final entry = captured.single;
+            expect(entry.name, 'ProfileRepository.fetchRawProfileForDisplay');
+            expect(entry.level, LogLevel.error);
+            expect(
+              entry.stackTrace,
+              contains(stackTrace.toString().split('\n').first),
+            );
+            expect(
+              (await repoWithFunnelcake.getCachedProfile(
+                pubkey: testPubkey,
+              ))?.eventId,
+              testEventId,
+            );
+          },
+        );
+
         test('display raw read retries after a strict session miss', () async {
           when(() => mockFunnelcakeClient.isAvailable).thenReturn(false);
           stubRawRelayRead();
