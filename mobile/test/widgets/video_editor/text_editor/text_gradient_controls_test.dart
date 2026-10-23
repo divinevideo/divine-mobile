@@ -2,7 +2,7 @@
 // ABOUTME: colors and the direction of a text gradient, and what they report.
 
 import 'dart:math' as math;
-import 'dart:ui' show Tristate;
+import 'dart:ui' show SemanticsFlags, Tristate;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,6 +46,9 @@ void main() {
         ),
       );
     }
+
+    SemanticsFlags flags(WidgetTester tester, Finder finder) =>
+        tester.getSemantics(finder).getSemanticsData().flagsCollection;
 
     Future<void> tapLabel(WidgetTester tester, String label) async {
       await tester.tap(find.bySemanticsLabel(label));
@@ -98,6 +101,7 @@ void main() {
         const gradient = TextGradient(
           colors: [VineTheme.accentBlue, VineTheme.accentPurple],
           stops: [0.2, 1],
+          angle: 1,
         );
         await pumpControls(tester, gradient);
 
@@ -107,17 +111,25 @@ void main() {
         expect(changes.single.colors, hasLength(3));
         expect(changes.single.colors.take(2), gradient.colors);
         expect(changes.single.stops, isNull);
+        expect(changes.single.angle, 1);
         expect(changes.single.isValid, isTrue);
       });
 
       testWidgets('keeps between two and six colors', (tester) async {
         await pumpControls(tester, TextGradientPreset.mint.withAngle(0));
         await tapLabel(tester, l10n.videoEditorTextGradientRemoveColor);
-
-        await pumpControls(tester, TextGradientPreset.rainbow.withAngle(0));
-        await tapLabel(tester, l10n.videoEditorTextGradientAddColor);
-
         expect(changes, isEmpty);
+
+        // Tapping + would only open the picker either way, so the button's
+        // state is what shows the limit.
+        await pumpControls(tester, TextGradientPreset.rainbow.withAngle(0));
+        expect(
+          flags(
+            tester,
+            find.bySemanticsLabel(l10n.videoEditorTextGradientAddColor),
+          ).isEnabled,
+          Tristate.isFalse,
+        );
       });
     });
 
@@ -130,11 +142,8 @@ void main() {
           TextGradientPreset.candy.withAngle(math.pi / 4),
         );
 
-        Tristate selected(String label) => tester
-            .getSemantics(find.bySemanticsLabel(label))
-            .getSemanticsData()
-            .flagsCollection
-            .isSelected;
+        Tristate selected(String label) =>
+            flags(tester, find.bySemanticsLabel(label)).isSelected;
 
         expect(selected(l10n.videoEditorTextGradientCandy), Tristate.isTrue);
         expect(selected(l10n.videoEditorTextGradientSunset), Tristate.isFalse);
@@ -146,6 +155,16 @@ void main() {
           selected(l10n.videoEditorTextGradientLeftToRight),
           Tristate.isFalse,
         );
+        // A color of the gradient opens the picker; it is not an option
+        // that can be selected.
+        final colorTiles = find.bySemanticsLabel(
+          RegExp('^${RegExp.escape(l10n.videoEditorColorPickerSemanticLabel)}'),
+        );
+        expect(
+          colorTiles,
+          findsNWidgets(TextGradientPreset.candy.colors.length),
+        );
+        expect(flags(tester, colorTiles.first).isSelected, Tristate.none);
       });
     });
   });
