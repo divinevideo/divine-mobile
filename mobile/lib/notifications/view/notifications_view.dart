@@ -20,8 +20,8 @@ import 'package:openvine/notifications/routing/notification_tap_target.dart';
 import 'package:openvine/notifications/widgets/widgets.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/router/routes/lists_routes.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
-import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
 import 'package:openvine/services/notification_target_resolver.dart';
@@ -334,9 +334,10 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
     required String listId,
   }) {
     _pushRoute(
-      context.push<void>(
-        CuratedListByAuthorScreen.pathFor(pubkey: pubkey, listId: listId),
-      ),
+      CuratedListByAuthorRouteData(
+        pubkey: pubkey,
+        listId: listId,
+      ).push<void>(context),
     );
   }
 

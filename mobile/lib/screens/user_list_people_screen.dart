@@ -20,6 +20,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/lists_routes.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/utils/share_list_link.dart';
@@ -409,9 +410,7 @@ class _UserListPeopleViewState extends ConsumerState<_UserListPeopleView> {
 
   void _navigateToAddPeople(String listId) {
     runDetached(
-      context.push<void>(
-        RoutePaths.peopleListAddPeopleForId(listId),
-      ),
+      AddPeopleToListRouteData(listId: listId).push<void>(context),
       'open add-people picker',
       logName: 'UserListPeopleScreen',
       category: LogCategory.ui,
@@ -843,12 +842,10 @@ class _RosterHero extends StatelessWidget {
         totalVideos: state.totalVideos,
         totalLoops: state.totalLoops,
         onViewAll: () => runDetached(
-          context.push<void>(
-            RoutePaths.peopleListMembersForId(
-              userList.id,
-              ownerPubkey: ownerPubkey,
-            ),
-          ),
+          PeopleListMembersRouteData(
+            listId: userList.id,
+            owner: ownerPubkey,
+          ).push<void>(context),
           'open people list roster',
           logName: 'RosterHero',
           category: LogCategory.ui,
