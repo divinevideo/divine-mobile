@@ -51,6 +51,7 @@ import 'package:openvine/services/broken_video_tracker.dart';
 import 'package:openvine/services/dead_media_feed_guard.dart';
 import 'package:openvine/services/media_auth_interceptor.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/divine_video_metrics_tracker.dart';
 import 'package:openvine/widgets/feed_tuning/feed_tuning_swipe_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/actions/actions.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
@@ -624,6 +625,45 @@ void main() {
               .single
               .parameters['feed_type'],
           'for_you',
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
+
+    testWidgets(
+      'views keep share attribution for the opened video only',
+      (tester) async {
+        final nativePlayer = _NativePlayerHarness(tester)..install();
+        addTearDown(nativePlayer.dispose);
+        final videos = createTestVideos(count: 2);
+        await tester.pumpWidget(
+          buildSubject(
+            state: FullscreenFeedState(
+              status: FullscreenFeedStatus.ready,
+              videos: videos,
+            ),
+            trafficSource: ViewTrafficSource.share,
+            initialVideoKey: videos.first.feedDedupKey,
+            loadMoreOnEndSwipe: true,
+            additionalOverrides: [
+              pendingActionServiceProvider.overrideWithValue(null),
+            ],
+          ),
+        );
+        await tester.pump();
+        final trackers = tester.widgetList<DivineVideoMetricsTracker>(
+          find.byType(DivineVideoMetricsTracker, skipOffstage: false),
+        );
+        expect(
+          {
+            for (final tracker in trackers)
+              tracker.video.id: tracker.trafficSource,
+          },
+          {
+            videos.first.id: ViewTrafficSource.share,
+            videos.last.id: ViewTrafficSource.discoveryForYou,
+          },
         );
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
