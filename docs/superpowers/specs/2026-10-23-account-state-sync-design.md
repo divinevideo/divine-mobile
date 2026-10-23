@@ -1,0 +1,21 @@
+# Account state follows the account
+
+The maintainer asked to expand the badge-rejection fix into a real account-sync PR. A choice or read on one device must not reappear as a fresh task on another. This supersedes the badge-only, online-mutation scope of PR #10413.
+
+## Required behavior
+
+- A shared account-state repository owns encrypted NIP-44/NIP-78 transport, durable account-scoped local state and pending writes, per-field reconciliation, signed snapshot retention, and synchronization at startup, foreground, relay reconnect, and incoming account-state events.
+- Local changes commit durably before the UI reports success; network failure leaves pending work, not a rollback. Later edits and explicit resets/Undo supersede older choices. Separate fields merge independently. Numeric read cursors, where used, merge forward only. Unknown newer schemas are never overwritten.
+- Badge rejections consume the shared repository. Preserve legacy local migration and all signed-snapshot/relay-repair regression guarantees from the existing PR. Keep the existing badge namespace and wire format compatible.
+- App settings follow the account: explicit content language, subtitle target/original-language choices, audio reuse default, hosting/provenance filters, feed shape, per-category content preferences, display language/appearance and stats visibility. An unset preference remains unset (device-default behavior); reset is an explicit synced value. Do not publish untouched defaults or copy one account's settings to another.
+- Use existing repositories and Cubits/listenable services; remote updates refresh the active UI and feed filters without echo writes. Age verification, protected-minor enforcement and local consent remain authoritative and cannot be unlocked through synced preferences.
+- Preserve the existing DM read-marker protocol and notification server API. Make failed/offline reads durable and retry them after restart/reconnect without requiring another read. Reconciliation must not roll read state backward or mark newer arrivals read. Evaluate conversation dismissal as account-owned state and sync it with a through-message boundary so a later incoming message still restores the conversation.
+- Device permissions, credentials, local files, storage/cache/bandwidth settings, camera/audio hardware, developer/security switches, and livestream/live-spaces behavior remain outside account preference sync. The livestream hold remains binding.
+
+## Repository interface
+
+New pure reusable package `mobile/packages/account_state_repository` exports `AccountStateRepository`. Constructor: `nostrClient`, `sharedPreferences`, `pubkey` (fixed account), `signer` getter, `namespace` (NIP-78 d tag), and optional `payloadEntriesKey` (default `entries`) / `entryValueKey` (default `value`) / `cacheKeyPrefix` / merge rules for legacy badge compatibility. Values are JSON-safe `Object?`, where null is a persisted reset. APIs: `value(String)`, `contains(String)`, `values`, `changes` stream, `hasPendingChanges`, `setValue(String,Object?)`, `setValues(Map<String,Object?>)`, `seed(Map<String,Object?>)` (absent fields only, timestamp zero), `synchronize()`, `start()`, `close()`. Local setters persist and emit without awaiting the network; `synchronize` is an explicit flush. Start installs incoming-event and relay-status listeners and initiates reconciliation; close tears down listeners and prevents stale completions. Only signed valid own-account events are accepted; unreadable remote data cannot cause an overwrite. The repository retains the durable union before attempting relay repair.
+
+## Validation
+
+Two independent stores and real signatures/encryption: settings/rejection/Undo propagation, concurrent different-field edits, deterministic ties, offline edits followed by restart, late/stale relay snapshots, incomplete reads, rejected publication, unknown schema, read cursor monotonicity, account-switch isolation and listener disposal. App tests cover local/remote propagation, startup/resume/reconnect hooks and age-gate enforcement. Read-repository tests cover failed publish/POST replay without another user action, restart durability, idempotence and arrivals newer than the read boundary. Run affected package/app tests, analysis, guards and full PR CI. Publish an accurate review record; no merge or release is authorized.
