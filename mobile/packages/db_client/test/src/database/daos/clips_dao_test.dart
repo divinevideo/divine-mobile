@@ -886,6 +886,104 @@ void main() {
       });
     });
 
+    group('deleteOrphanedDraftClips', () {
+      const deletedDraftId = 'draft_1690000000000';
+      const autosaveDraftId = 'draft_autosave';
+
+      Future<void> insertClip(
+        String id, {
+        String? draftId,
+        String? ownerPubkey,
+      }) => dao.upsertClip(
+        id: id,
+        draftId: draftId,
+        orderIndex: 0,
+        durationMs: 3000,
+        recordedAt: DateTime(2023, 11, 14, 10),
+        filePath: '$id.mp4',
+        thumbnailPath: '$id.jpg',
+        data: '{}',
+        ownerPubkey: ownerPubkey,
+      );
+
+      Future<Set<String>> remainingIds() async => (await dao.getAllClips(
+        includeTrashed: true,
+      )).map((r) => r.id).toSet();
+
+      test('deletes rows of a missing draft across owners', () async {
+        await insertClip('orphan_a', draftId: deletedDraftId);
+        await insertClip(
+          'orphan_b',
+          draftId: deletedDraftId,
+          ownerPubkey: 'a' * 64,
+        );
+        await insertClip('live', draftId: testDraftId);
+        await insertClip('library');
+
+        final deleted = await dao.deleteOrphanedDraftClips(
+          keepDraftIds: const {},
+        );
+
+        expect(
+          deleted.map((row) => row.id),
+          unorderedEquals(['orphan_a', 'orphan_b']),
+        );
+        expect(
+          deleted.map((row) => row.filePath),
+          unorderedEquals(['orphan_a.mp4', 'orphan_b.mp4']),
+        );
+        expect(await remainingIds(), equals({'live', 'library'}));
+      });
+
+      test('keeps rows of a kept draft id without its draft row', () async {
+        await insertClip('autosave', draftId: autosaveDraftId);
+        await insertClip('orphan', draftId: deletedDraftId);
+
+        final deleted = await dao.deleteOrphanedDraftClips(
+          keepDraftIds: {autosaveDraftId},
+        );
+
+        expect(deleted.map((row) => row.id), equals(['orphan']));
+        expect(await remainingIds(), equals({'autosave'}));
+      });
+
+      test('keeps trashed rows of a missing draft', () async {
+        await insertClip('trashed', draftId: deletedDraftId);
+        await dao.softDeleteClip(id: 'trashed', deletedAt: DateTime(2026));
+
+        final deleted = await dao.deleteOrphanedDraftClips(
+          keepDraftIds: const {},
+        );
+
+        expect(deleted, isEmpty);
+        expect(await remainingIds(), equals({'trashed'}));
+      });
+
+      test('keeps library rows when no draft rows exist', () async {
+        await draftsDao.clearAll();
+        await insertClip('library');
+
+        expect(
+          await dao.deleteOrphanedDraftClips(keepDraftIds: const {}),
+          isEmpty,
+        );
+        expect(await remainingIds(), equals({'library'}));
+      });
+
+      test('is a no-op on a second run', () async {
+        await insertClip('orphan', draftId: deletedDraftId);
+        expect(
+          await dao.deleteOrphanedDraftClips(keepDraftIds: const {}),
+          hasLength(1),
+        );
+
+        expect(
+          await dao.deleteOrphanedDraftClips(keepDraftIds: const {}),
+          isEmpty,
+        );
+      });
+    });
+
     group('watchClipsByDraftId', () {
       test('emits initial list ordered by orderIndex', () async {
         await dao.upsertClip(

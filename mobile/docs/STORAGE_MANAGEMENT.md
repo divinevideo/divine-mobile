@@ -60,8 +60,11 @@ A file is removed when **all** of these hold:
    database's legacy location are out of reach.
 2. Its extension is one the app writes for media (`.mp4`, `.mov`, `.m4v`,
    `.webm`, `.jpg`, `.jpeg`, `.png`, `.webp`, `.wav`, `.m4a`, `.aac`,
-   `.mp3`). A `.hive`, `.lock` or `.db` file left by an old build is counted
-   as content and never touched.
+   `.mp3`), or it is the `.old` twin of a video whose signed replacement
+   sits beside it (`C2paDebrisJanitor.isRedundantUnsignedOriginal`, e.g.
+   `VID_*.mp4.old` next to a non-empty `VID_*.mp4`; see
+   [Background janitors](#background-janitors)). A `.hive`, `.lock` or `.db`
+   file left by an old build is counted as content and never touched.
 3. No clip row references its basename — checked against **every** row in
    the database, every account and the trash included, through
    `ClipsDao.referencedFilenames`, which also reads the stills, ghost frames,
@@ -117,7 +120,8 @@ cannot be refetched from a relay does not belong in that box.
 1. Developer Options → Storage Footprint walks all four roots and lists the
    largest entries per root (`StorageManagementService.measureFootprint`).
    Ask for that output first; it says which root the bytes are in.
-2. Documents root, files with no row → Remove leftover files.
+2. Documents root, files with no row → Remove leftover files. That includes
+   `VID_*.mp4.old` twins, which the startup janitor also removes.
 3. Documents root, files with rows → the user's library; delete clips.
 4. Documents subdirectories → sounds and voice-overs are content; the two
    `transition_*` directories are cache.
@@ -126,15 +130,32 @@ cannot be refetched from a relay does not belong in that box.
 
 ## Background janitors
 
-Independent of the screen, three sweeps run on their own:
+Independent of the screen, these sweeps run on their own:
 
 - `TempRenderJanitor.deleteStaleTempRenders` — called before a new watermark
   render and before a merged upload render, for that pattern only, older than
   one hour, never a pending upload's input.
-- `C2paDebrisJanitor` — at startup, deletes *empty* `c2pa_signed_*.mp4` files
-  older than one hour from the documents and temporary directories.
+- `C2paDebrisJanitor` — at startup, deletes from the documents and temporary
+  directories, when older than one hour: *empty* `c2pa_signed_*.mp4` files
+  left by failed signs, and the unsigned originals builds up to 1.0.19 renamed
+  to `<video>.mp4.old` before moving the signed copy into place. Nothing ever
+  read or removed those, so each recording signed then occupies its space
+  twice; #7395 stopped writing them in 1.0.20. A `.old` file is deleted only
+  when its replacement (the same name without `.old`) exists and is not empty:
+  a failure between the two renames was never rolled back, leaving the `.old`
+  file as the only copy of the recording. Logs the bytes it freed.
+- `ClipLibraryService.purgeOrphanedDraftClips` — after sign-in, deletes clip
+  rows whose draft no longer exists (`ClipsDao.deleteOrphanedDraftClips`),
+  across all accounts, then their files through `FileCleanupService`, which
+  keeps any file another row or draft still names. From 1.0.6 through 1.0.16
+  deleting a draft removed only its row, so its clips stayed behind: invisible
+  in the Library, yet counted as references, so neither this screen nor any
+  cleanup could free their recordings. Rows of the autosave draft
+  (`VideoEditorConstants.autoSaveId`) are kept, because the Library lists them
+  as clips with or without their draft row; trashed rows are left to the trash
+  purge.
 - The media caches enforce their own byte budgets (`kCacheLimitDefaultBytes`,
   adjustable on this screen; `kSeamCacheLimitBytes` for the seams).
 
-None of them touch a non-empty file under the documents root — that is what
-the sweep on this screen is for.
+Apart from those two legacy leftovers, none of them touch a non-empty file
+under the documents root — that is what the sweep on this screen is for.

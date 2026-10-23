@@ -79,23 +79,36 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
       if (!mounted) return;
       await ref.read(clipLibraryServiceProvider).migrateOldClips();
       await ref.read(draftStorageServiceProvider).migrateOldDrafts();
-      // Hard-delete trashed clips past the 30-day retention window.
-      // Best-effort, idempotent; failures here are logged inside the
-      // service and must never block app startup.
-      try {
-        await ref.read(clipLibraryServiceProvider).purgeExpiredTrash();
-      } catch (e, st) {
-        Log.error(
-          'Trash purge sweep failed: $e',
-          name: 'AppLifecycleHandler',
-          category: LogCategory.video,
-          error: e,
-          stackTrace: st,
-        );
-      }
+      // Hard-delete trashed clips past the 30-day retention window, and the
+      // clip rows older builds stranded when they deleted a draft.
+      // Best-effort, idempotent; failures are logged and must never block
+      // app startup, nor stop the other sweep.
+      final clipLibrary = ref.read(clipLibraryServiceProvider);
+      await _runStartupSweep('Trash purge', clipLibrary.purgeExpiredTrash);
+      await _runStartupSweep(
+        'Orphaned draft clip',
+        clipLibrary.purgeOrphanedDraftClips,
+      );
       if (!mounted) return;
       _finishPendingGalleryBackups();
     });
+  }
+
+  Future<void> _runStartupSweep(
+    String label,
+    Future<int> Function() sweep,
+  ) async {
+    try {
+      await sweep();
+    } catch (e, st) {
+      Log.error(
+        '$label sweep failed: $e',
+        name: 'AppLifecycleHandler',
+        category: LogCategory.video,
+        error: e,
+        stackTrace: st,
+      );
+    }
   }
 
   /// Copies recordings to the gallery that were waiting for their signature,

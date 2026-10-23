@@ -609,6 +609,105 @@ void main() {
       );
     });
 
+    group('purgeOrphanedDraftClips', () {
+      late Directory documentsDir;
+      late PathProviderPlatform originalPathProvider;
+      late DraftStorageService draftService;
+
+      setUp(() {
+        documentsDir = Directory.systemTemp.createTempSync('clip_orphans_');
+        originalPathProvider = PathProviderPlatform.instance;
+        PathProviderPlatform.instance = MockPathProviderPlatform()
+          ..setApplicationDocumentsPath(documentsDir.path);
+        draftService = DraftStorageService(
+          draftsDao: database.draftsDao,
+          clipsDao: database.clipsDao,
+        );
+      });
+
+      tearDown(() {
+        PathProviderPlatform.instance = originalPathProvider;
+        if (documentsDir.existsSync()) {
+          documentsDir.deleteSync(recursive: true);
+        }
+      });
+
+      File writeMedia(String name) =>
+          File(p.join(documentsDir.path, name))
+            ..writeAsBytesSync(const [0, 1, 2, 3]);
+
+      DivineVideoClip recording(String id, {File? thumbnail}) =>
+          DivineVideoClip(
+            id: id,
+            video: EditorVideo.file(writeMedia('VID_$id.mp4').path),
+            thumbnailPath: thumbnail?.path,
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime(2026, 6, 14),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+          );
+
+      File videoOf(DivineVideoClip clip) =>
+          File(p.join(documentsDir.path, 'VID_${clip.id}.mp4'));
+
+      Future<void> saveDraft(String id, List<DivineVideoClip> clips) =>
+          draftService.saveDraft(
+            DivineVideoDraft.create(
+              id: id,
+              clips: clips,
+              title: '',
+              description: '',
+              hashtags: const {},
+              selectedApproach: '',
+            ),
+          );
+
+      // What deleteDraft did from 1.0.6 through 1.0.16: only the draft row.
+      Future<void> deleteDraftRowOnly(String id) => database.customStatement(
+        'DELETE FROM drafts WHERE id = ?',
+        [id],
+      );
+
+      test('reclaims recordings only a deleted draft referenced', () async {
+        final thumbnail = writeMedia('thumb_orphan.jpg');
+        final orphan = recording('orphan', thumbnail: thumbnail);
+        final shared = recording('shared');
+        await service.saveClip(shared);
+        await saveDraft('draft_1781000000000', [orphan, shared]);
+        await deleteDraftRowOnly('draft_1781000000000');
+
+        expect(await service.purgeOrphanedDraftClips(), 2);
+
+        expect(videoOf(orphan).existsSync(), isFalse);
+        expect(thumbnail.existsSync(), isFalse);
+        expect(
+          videoOf(shared).existsSync(),
+          isTrue,
+          reason: 'a library clip still plays this recording',
+        );
+        expect((await service.getAllClips()).map((c) => c.id), ['shared']);
+        expect(await service.purgeOrphanedDraftClips(), 0);
+      });
+
+      test('keeps autosave rows and the rows of existing drafts', () async {
+        final autosaved = recording('autosaved');
+        final drafted = recording('drafted');
+        await saveDraft(VideoEditorConstants.autoSaveId, [autosaved]);
+        await deleteDraftRowOnly(VideoEditorConstants.autoSaveId);
+        await saveDraft('draft_1782000000000', [drafted]);
+
+        expect(await service.purgeOrphanedDraftClips(), 0);
+
+        expect(videoOf(autosaved).existsSync(), isTrue);
+        expect(videoOf(drafted).existsSync(), isTrue);
+        expect((await service.getAllClips()).map((c) => c.id), ['autosaved']);
+        expect(
+          await database.clipsDao.getClipsByDraftId('draft_1782000000000'),
+          hasLength(1),
+        );
+      });
+    });
+
     group('getAllClips', () {
       test('returns empty list when no clips saved', () async {
         final clips = await service.getAllClips();
