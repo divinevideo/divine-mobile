@@ -13,6 +13,7 @@ import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/nip19.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:notification_repository/notification_repository.dart';
+import 'package:notification_repository/src/comment_like_cache_codec.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart';
@@ -302,6 +303,108 @@ void main() {
         await durable.close();
       });
     }
+    test(
+      'comment-group codec membership overrides stale read metadata '
+      'without consuming later arrivals',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        var online = false;
+        final posted = <List<String>>[];
+        when(
+          () => funnelcakeApiClient.markNotificationsRead(
+            pubkey: any(named: 'pubkey'),
+            notificationIds: any(named: 'notificationIds'),
+            authHeaders: any(named: 'authHeaders'),
+          ),
+        ).thenAnswer((call) async {
+          posted.add(
+            List<String>.from(call.namedArguments[#notificationIds] as List),
+          );
+          if (!online) throw const FunnelcakeException('offline');
+          return const MarkReadResponse(success: true, markedCount: 2);
+        });
+        Future<void> cacheGroup(List<String> ids) async {
+          final group = ActorNotification(
+            id: 'raw-a',
+            type: NotificationKind.likeComment,
+            actor: ActorInfo(pubkey: 'a' * 64, displayName: 'A'),
+            additionalActors: [ActorInfo(pubkey: 'b' * 64, displayName: 'B')],
+            commentEventId: 'c' * 64,
+            targetEventId: 'c' * 64,
+            timestamp: DateTime(2026),
+            notificationIds: ids,
+          );
+          await readDatabase.notificationsDao.replaceAll([
+            (
+              id: group.id,
+              type: CommentLikeCacheCodec.type,
+              fromPubkey: group.actor.pubkey,
+              timestamp: 1700000000,
+              targetEventId: group.commentEventId,
+              videoAddressableId: null,
+              hasCommentTarget: true,
+              targetPubkey: null,
+              content: CommentLikeCacheCodec.encode(group),
+              isRead: false,
+            ),
+          ], ownerPubkey: userPubkey);
+        }
+
+        await cacheGroup(['raw-a', 'raw-b']);
+        await readDatabase.accountSyncDao.writeNotificationReads(
+          userPubkey,
+          {'raw-a'},
+          {'raw-a'},
+          {
+            'raw-a': ['raw-a'],
+          },
+        );
+        NotificationRepository create() => NotificationRepository(
+          funnelcakeApiClient: funnelcakeApiClient,
+          profileRepository: profileRepository,
+          notificationsDao: readDatabase.notificationsDao,
+          userPubkey: userPubkey,
+          pendingReadPreferences: prefs,
+          readStateDao: readDatabase.accountSyncDao,
+        );
+        final first = create();
+        addTearDown(first.close);
+        final hydrated = await first.watchSnapshot().firstWhere(
+          (page) => page.items.isNotEmpty,
+        );
+        expect(
+          hydrated.items.single.notificationIds,
+          unorderedEquals(['raw-a', 'raw-b']),
+        );
+        expect(hydrated.items.single.isRead, false);
+        await first.markAsRead(['raw-a']);
+        await first.flushPendingReadState();
+        expect(
+          (await readDatabase.accountSyncDao.readNotificationReads(
+            userPubkey,
+          )).where((row) => row.pending).map((row) => row.notificationId),
+          unorderedEquals(['raw-a', 'raw-b']),
+        );
+        await first.close();
+        await cacheGroup(['raw-a', 'raw-b', 'raw-new']);
+        online = true;
+        final restarted = create();
+        addTearDown(restarted.close);
+        final later = await restarted.watchSnapshot().firstWhere(
+          (page) => page.items.isNotEmpty,
+        );
+        await restarted.flushPendingReadState();
+        expect(posted.last, unorderedEquals(['raw-a', 'raw-b']));
+        expect(
+          later.items.single.notificationIds,
+          unorderedEquals(['raw-a', 'raw-b', 'raw-new']),
+        );
+        expect(later.items.single.isRead, false);
+        await restarted.close();
+      },
+    );
+
     test(
       'legacy pending reads and exact grouped membership migrate to Drift',
       () async {

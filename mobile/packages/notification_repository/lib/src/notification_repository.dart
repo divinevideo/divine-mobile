@@ -957,20 +957,36 @@ class NotificationRepository {
           );
           final retained = cache.map((row) => row.id).toSet();
           _cachedNotificationIds.removeWhere((id, _) => !retained.contains(id));
+          for (final row in cache) {
+            if (row.type != CommentLikeCacheCodec.type) continue;
+            final group = CommentLikeCacheCodec.decode(row);
+            if (group != null) {
+              // The versioned cache row owns its exact current membership.
+              // Older journal metadata must not hide a later group member.
+              _cachedNotificationIds[row.id] = List.of(group.notificationIds);
+            }
+          }
           await _saveDurableReads(_durableReadIds, _pendingReadIds);
         });
       }
       if (rows.isEmpty) return;
       if (_snapshot.value.items.isNotEmpty) return;
       final items = _overlayDurableReads(
-        rows.map(_rowToPlaceholder).whereType<NotificationItem>().map((item) {
-          final ids = _cachedNotificationIds[item.id];
-          if (ids == null) return item;
-          return switch (item) {
-            VideoNotification() => item.copyWith(notificationIds: ids),
-            ActorNotification() => item.copyWith(notificationIds: ids),
-          };
-        }).toList(),
+        rows
+            .map((row) {
+              final item = _rowToPlaceholder(row);
+              if (item == null || row.type == CommentLikeCacheCodec.type) {
+                return item;
+              }
+              final ids = _cachedNotificationIds[item.id];
+              if (ids == null) return item;
+              return switch (item) {
+                VideoNotification() => item.copyWith(notificationIds: ids),
+                ActorNotification() => item.copyWith(notificationIds: ids),
+              };
+            })
+            .whereType<NotificationItem>()
+            .toList(),
       );
       if (items.isEmpty) return;
       _snapshot.add(
