@@ -1,7 +1,7 @@
 // ABOUTME: DM / message-request routes (conversation, requests, request preview)
-// ABOUTME: Split from app_router.dart (#4508)
+// ABOUTME: Typed with go_router_builder; conventions in .claude/rules/routing.md.
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/router/navigator_keys.dart';
@@ -10,63 +10,96 @@ import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/message_requests/message_requests_page.dart';
 import 'package:openvine/screens/inbox/message_requests/request_preview_page.dart';
 
-/// Optional data carried when navigating from a conversation row.
+part 'messaging_routes.g.dart';
+
+List<RouteBase> messagingRoutes() => $appRoutes;
+
+/// DM conversation detail, pushed from the inbox with no bottom nav.
+@TypedGoRoute<ConversationRouteData>(
+  path: ConversationPage.pathPattern,
+  name: ConversationPage.routeName,
+)
+class ConversationRouteData extends GoRouteData with $ConversationRouteData {
+  const ConversationRouteData({required this.id, this.$extra});
+
+  final String id;
+
+  /// The participant hint read by [dmRouteExtra]; absent after a deep link.
+  final Object? $extra;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    if (id.isEmpty) {
+      return RouteErrorScreen(message: context.l10n.routeInvalidConversationId);
+    }
+    final extra = dmRouteExtra($extra);
+    return ConversationPage(
+      conversationId: id,
+      participantPubkeys: extra.participantPubkeys,
+      subject: extra.subject,
+    );
+  }
+}
+
+/// Message requests inbox, pushed from the inbox with no bottom nav.
+@TypedGoRoute<MessageRequestsRouteData>(
+  path: MessageRequestsPage.path,
+  name: MessageRequestsPage.routeName,
+)
+class MessageRequestsRouteData extends GoRouteData
+    with $MessageRequestsRouteData {
+  const MessageRequestsRouteData();
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey =
+      NavigatorKeys.root;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const MessageRequestsPage();
+}
+
+/// Message request preview, pushed from the requests inbox.
+@TypedGoRoute<RequestPreviewRouteData>(
+  path: RequestPreviewPage.pathPattern,
+  name: RequestPreviewPage.routeName,
+)
+class RequestPreviewRouteData extends GoRouteData
+    with $RequestPreviewRouteData {
+  const RequestPreviewRouteData({required this.id, this.$extra});
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey =
+      NavigatorKeys.root;
+
+  final String id;
+
+  /// The participant hint read by [dmRouteExtra]; absent after a deep link.
+  final Object? $extra;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    if (id.isEmpty) {
+      return RouteErrorScreen(message: context.l10n.routeInvalidRequestId);
+    }
+    // Pubkeys are optional — the page loads them from the DB when not
+    // provided (e.g. deep link); DM-restricted users fail closed (#176).
+    final extra = dmRouteExtra($extra);
+    return RequestPreviewPage(
+      conversationId: id,
+      participantPubkeys: extra.participantPubkeys,
+      subject: extra.subject,
+    );
+  }
+}
+
+/// The participant hint [dmRouteExtra] reads from a DM route's `extra`.
+///
+/// Callers pass the counterparty list, or a map with `participantPubkeys` and
+/// `subject`, never this class: it is not a shape [dmRouteExtra] reads.
 class DmRouteExtra {
   const DmRouteExtra({required this.participantPubkeys, this.subject});
 
   final List<String> participantPubkeys;
   final String? subject;
-}
-
-List<RouteBase> messagingRoutes() {
-  return [
-    // DM conversation detail (pushed from inbox, no bottom nav)
-    GoRoute(
-      path: ConversationPage.pathPattern,
-      name: ConversationPage.routeName,
-      builder: (ctx, st) {
-        final id = st.pathParameters['id'];
-        if (id == null || id.isEmpty) {
-          return RouteErrorScreen(message: ctx.l10n.routeInvalidConversationId);
-        }
-        final extra = dmRouteExtra(st.extra);
-        return ConversationPage(
-          conversationId: id,
-          participantPubkeys: extra.participantPubkeys,
-          subject: extra.subject,
-        );
-      },
-    ),
-
-    // Message requests inbox (pushed from inbox, no bottom nav)
-    GoRoute(
-      path: MessageRequestsPage.path,
-      name: MessageRequestsPage.routeName,
-      parentNavigatorKey: NavigatorKeys.root,
-      builder: (ctx, st) => const MessageRequestsPage(),
-    ),
-
-    // Message request preview (pushed from requests inbox)
-    GoRoute(
-      path: RequestPreviewPage.pathPattern,
-      name: RequestPreviewPage.routeName,
-      parentNavigatorKey: NavigatorKeys.root,
-      builder: (ctx, st) {
-        final id = st.pathParameters['id'];
-        if (id == null || id.isEmpty) {
-          return RouteErrorScreen(message: ctx.l10n.routeInvalidRequestId);
-        }
-        // Pubkeys are optional — the page loads them from the DB when not
-        // provided (e.g. deep link); DM-restricted users fail closed (#176).
-        final extra = dmRouteExtra(st.extra);
-        return RequestPreviewPage(
-          conversationId: id,
-          participantPubkeys: extra.participantPubkeys,
-          subject: extra.subject,
-        );
-      },
-    ),
-  ];
 }
 
 @visibleForTesting

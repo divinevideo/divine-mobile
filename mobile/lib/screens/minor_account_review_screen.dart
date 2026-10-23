@@ -13,7 +13,7 @@ import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/router/route_paths.dart';
-import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
+import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
 import 'package:openvine/screens/minor_account_review_parent_contact_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_screen.dart';
@@ -472,10 +472,10 @@ class _LoadedView extends ConsumerWidget {
         DmRepository.computeConversationId([currentPubkey, moderationPubkey]);
 
     runDetached(
-      context.push<void>(
-        ConversationPage.pathForId(conversationId),
-        extra: [moderationPubkey],
-      ),
+      ConversationRouteData(
+        id: conversationId,
+        $extra: [moderationPubkey],
+      ).push<void>(context),
       'open moderation conversation',
       logName: 'MinorAccountReviewScreen',
       category: LogCategory.ui,

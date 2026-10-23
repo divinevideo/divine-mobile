@@ -20,8 +20,8 @@ import 'package:openvine/blocs/dm/reactions/conversation_reactions_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
-import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/full_reaction_emoji_picker_sheet.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/reaction_picker_overlay.dart'
     show kDefaultDmReactionEmojis;
@@ -508,7 +508,9 @@ class _ReelDmReplyBarState extends State<_ReelDmReplyBar> {
 
   void _showChatSnackBar(String message) {
     final router = GoRouter.maybeOf(context);
-    final conversationPath = ConversationPage.pathForId(_ctx.conversationId);
+    final conversationPath = ConversationRouteData(
+      id: _ctx.conversationId,
+    ).location;
     final participantPubkeys = List<String>.of(_ctx.participantPubkeys);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

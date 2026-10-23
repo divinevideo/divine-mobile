@@ -19,8 +19,8 @@ import 'package:openvine/models/collaborator_invite.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
-import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/inbox_page.dart';
 import 'package:openvine/screens/inbox/widgets/conversation_triage_bar.dart';
@@ -846,16 +846,15 @@ class _ActionButtons extends StatelessWidget {
         _PrimaryActionButton(
           label: context.l10n.messageRequestViewMessagesButton,
           onTap: () {
-            context.pushReplacementNamed(
-              ConversationPage.routeName,
-              pathParameters: {'id': conversationId},
-              extra: subject == null
+            ConversationRouteData(
+              id: conversationId,
+              $extra: subject == null
                   ? participantPubkeys
                   : {
                       'participantPubkeys': participantPubkeys,
                       'subject': subject,
                     },
-            );
+            ).pushReplacement(context);
           },
         ),
         // An enforcement notice is not a request to decline. Removing it is

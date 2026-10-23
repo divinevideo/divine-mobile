@@ -18,6 +18,7 @@ import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_view.dart';
 import 'package:openvine/screens/inbox/inbox_page.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -308,7 +309,7 @@ class _FollowRefiledMessagesState extends State<_FollowRefiledMessages> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         if (movedTo.length == 1) {
-          context.pushReplacement(ConversationPage.pathForId(movedTo.single));
+          ConversationRouteData(id: movedTo.single).pushReplacement(context);
         } else {
           context.go(InboxPage.path);
         }

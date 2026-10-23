@@ -1211,9 +1211,8 @@ void main() {
         tester,
       ) async {
         when(
-          () => mockGoRouter.pushReplacementNamed(
+          () => mockGoRouter.pushReplacement(
             any(),
-            pathParameters: any(named: 'pathParameters'),
             extra: any(named: 'extra'),
           ),
         ).thenAnswer((_) async => null);
@@ -1225,9 +1224,8 @@ void main() {
         await tester.pump();
 
         verify(
-          () => mockGoRouter.pushReplacementNamed(
-            ConversationPage.routeName,
-            pathParameters: {'id': conversationId},
+          () => mockGoRouter.pushReplacement(
+            ConversationPage.pathForId(conversationId),
             extra: [otherPubkey],
           ),
         ).called(1);

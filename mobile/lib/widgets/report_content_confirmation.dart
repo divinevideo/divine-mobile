@@ -8,7 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
+import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -147,7 +147,7 @@ class ReportConfirmationActions extends ConsumerWidget {
               }
               runDetached(
                 router.push<void>(
-                  ConversationPage.pathForId(conversationId),
+                  ConversationRouteData(id: conversationId).location,
                   extra: [moderationPubkey],
                 ),
                 'open moderation conversation',

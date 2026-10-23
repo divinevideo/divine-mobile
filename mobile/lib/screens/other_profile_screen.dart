@@ -6,7 +6,6 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/blocs/other_profile/other_profile_bloc.dart';
@@ -26,7 +25,7 @@ import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/route_paths.dart';
-import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
+import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/utils/clipboard_utils.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -208,12 +207,10 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
     // here opened a thread whose id matched no stored row, so history never
     // rendered and messages sent from this screen never appeared in it.
     runDetached(
-      context.push<void>(
-        ConversationPage.pathForId(
-          DmRepository.computeConversationId([currentPubkey, widget.pubkey]),
-        ),
-        extra: [widget.pubkey],
-      ),
+      ConversationRouteData(
+        id: DmRepository.computeConversationId([currentPubkey, widget.pubkey]),
+        $extra: [widget.pubkey],
+      ).push<void>(context),
       'open direct message from profile',
       logName: 'OtherProfileView',
       category: LogCategory.ui,

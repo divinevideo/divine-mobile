@@ -15,8 +15,8 @@ import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/app_router.dart';
+import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/screens/inbox/message_requests/message_requests_view.dart';
-import 'package:openvine/screens/inbox/message_requests/request_preview_page.dart';
 import 'package:openvine/screens/inbox/message_requests/widgets/request_tile.dart';
 import 'package:openvine/screens/inbox/widgets/restore_paused_banner.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
@@ -440,7 +440,7 @@ void main() {
     });
 
     group('navigation', () {
-      testWidgets('calls pushNamed to request preview when request is tapped', (
+      testWidgets('pushes the request preview route when request is tapped', (
         tester,
       ) async {
         final testProfile = UserProfile(
@@ -475,12 +475,8 @@ void main() {
         );
 
         when(
-          () => mockGoRouter.pushNamed(
-            any(),
-            pathParameters: any(named: 'pathParameters'),
-            extra: any(named: 'extra'),
-          ),
-        ).thenAnswer((_) async => null);
+          () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) async {});
 
         await tester.pumpWidget(
           testMaterialApp(
@@ -511,11 +507,10 @@ void main() {
         await tester.pump();
 
         verify(
-          () => mockGoRouter.pushNamed(
-            RequestPreviewPage.routeName,
-            pathParameters: {
-              'id': 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
-            },
+          () => mockGoRouter.push<void>(
+            const RequestPreviewRouteData(
+              id: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+            ).location,
             extra: [otherPubkey],
           ),
         ).called(1);

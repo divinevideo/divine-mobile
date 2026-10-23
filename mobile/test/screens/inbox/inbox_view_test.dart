@@ -1472,21 +1472,21 @@ void main() {
         await tester.pump(const Duration(milliseconds: 350));
 
         when(
-          () => mockGoRouter.push(any(), extra: any(named: 'extra')),
-        ).thenAnswer((_) async => null);
+          () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) async {});
 
         await tester.tap(find.byType(ConversationTile));
         await tester.pump();
 
         verify(
-          () => mockGoRouter.push(
+          () => mockGoRouter.push<void>(
             ConversationPage.pathForId('conv123'),
             extra: [otherPubkey],
           ),
         ).called(1);
       });
 
-      testWidgets('calls pushNamed to message requests when banner is tapped', (
+      testWidgets('pushes the message requests route when banner is tapped', (
         tester,
       ) async {
         final request = DmConversation(
@@ -1514,14 +1514,13 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 350));
 
-        when(() => mockGoRouter.pushNamed(any())).thenAnswer((_) async => null);
+        when(() => mockGoRouter.push<void>(any())).thenAnswer((_) async {});
 
         await tester.tap(find.byType(MessageRequestsBanner));
         await tester.pump();
 
-        verify(
-          () => mockGoRouter.pushNamed(MessageRequestsPage.routeName),
-        ).called(1);
+        verify(() => mockGoRouter.push<void>(MessageRequestsPage.path))
+            .called(1);
       });
 
       testWidgets('adds navigate event when user is tapped in following bar', (
@@ -1614,8 +1613,8 @@ void main() {
           () => profileRepository.getCachedProfile(pubkey: bobPubkey),
         ).thenAnswer((_) async => contact(bobPubkey, 'Bob'));
         when(
-          () => mockGoRouter.push(any(), extra: any(named: 'extra')),
-        ).thenAnswer((_) async => null);
+          () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) async {});
       });
 
       /// Opens the Messages tab and taps the compose button.
@@ -1682,7 +1681,7 @@ void main() {
         await pumpSheetClosed(tester);
 
         verify(
-          () => mockGoRouter.push(
+          () => mockGoRouter.push<void>(
             ConversationPage.pathForId(
               DmRepository.computeConversationId([currentPubkey, alicePubkey]),
             ),
@@ -1708,7 +1707,7 @@ void main() {
         await pumpSheetClosed(tester);
 
         verify(
-          () => mockGoRouter.push(
+          () => mockGoRouter.push<void>(
             ConversationPage.pathForId(
               DmRepository.computeConversationId([
                 currentPubkey,
@@ -1732,7 +1731,9 @@ void main() {
         await pumpSheetClosed(tester);
 
         expect(find.byType(NewMessageSheet), findsNothing);
-        verifyNever(() => mockGoRouter.push(any(), extra: any(named: 'extra')));
+        verifyNever(
+          () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
+        );
       });
 
       testWidgets('offers no group row while the flag is off', (tester) async {
@@ -3006,8 +3007,8 @@ void main() {
         final l10n = lookupAppLocalizations(const Locale('en'));
         final pin = supportPin();
         when(
-          () => mockGoRouter.push<Object?>(any(), extra: any(named: 'extra')),
-        ).thenAnswer((_) async => null);
+          () => mockGoRouter.push<void>(any(), extra: any(named: 'extra')),
+        ).thenAnswer((_) async {});
 
         await tester.pumpWidget(
           buildSubject(
@@ -3026,7 +3027,7 @@ void main() {
         // signed-in user — caught only by running the app, because a mocked
         // router happily accepts either list.
         final captured = verify(
-          () => mockGoRouter.push<Object?>(
+          () => mockGoRouter.push<void>(
             ConversationPage.pathForId(pin.conversation.id),
             extra: captureAny(named: 'extra'),
           ),
