@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -120,9 +121,9 @@ void main() {
       );
     });
 
-    test('declares every key device-scoped', () {
+    test('declares every key account-scoped', () {
       expect(
-        StatsVisibilityPreferences.deviceScopedPrefsKeys,
+        AccountPreferenceRegistry.keys,
         containsAll(<String>[
           StatsVisibilityPreferences.showTotalLoopsKey,
           StatsVisibilityPreferences.showVideoLoopsKey,

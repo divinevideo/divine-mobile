@@ -3,6 +3,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/nostr_signature_verification_policy.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/listenable_provider_bridge.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -24,7 +25,12 @@ part 'preferences_providers.g.dart';
 final feedAspectRatioPreferenceServiceProvider =
     Provider<FeedAspectRatioPreferenceService>((ref) {
       final prefs = ref.watch(sharedPreferencesProvider);
-      return FeedAspectRatioPreferenceService(prefs);
+      final service = FeedAspectRatioPreferenceService(
+        prefs,
+        accountPreferences: ref.watch(accountPreferenceStoreProvider),
+      );
+      ref.onDispose(service.dispose);
+      return service;
     });
 
 /// Viewer-scoped stats visibility switches. Non-autoDispose so the choice
@@ -32,7 +38,12 @@ final feedAspectRatioPreferenceServiceProvider =
 final statsVisibilityPreferencesProvider = Provider<StatsVisibilityPreferences>(
   (ref) {
     final prefs = ref.watch(sharedPreferencesProvider);
-    return StatsVisibilityPreferences(prefs);
+    final service = StatsVisibilityPreferences(
+      prefs,
+      accountPreferences: ref.watch(accountPreferenceStoreProvider),
+    );
+    ref.onDispose(service.dispose);
+    return service;
   },
 );
 
@@ -41,7 +52,12 @@ final statsVisibilityPreferencesProvider = Provider<StatsVisibilityPreferences>(
 @Riverpod(keepAlive: true)
 AudioSharingPreferenceService audioSharingPreferenceService(Ref ref) {
   final prefs = ref.watch(sharedPreferencesProvider);
-  return AudioSharingPreferenceService(prefs);
+  final service = AudioSharingPreferenceService(
+    prefs,
+    accountPreferences: ref.watch(accountPreferenceStoreProvider),
+  );
+  ref.onDispose(service.dispose);
+  return service;
 }
 
 final holdToRecordPreferenceServiceProvider =
@@ -108,7 +124,9 @@ AudioDevicePreferenceService audioDevicePreferenceService(Ref ref) {
 /// keepAlive ensures setting persists across widget rebuilds.
 @Riverpod(keepAlive: true)
 LanguagePreferenceService languagePreferenceService(Ref ref) {
-  final service = LanguagePreferenceService();
+  final service = LanguagePreferenceService(
+    accountPreferences: ref.watch(accountPreferenceStoreProvider),
+  );
   runProviderDetached(
     service.initialize(),
     'initialize language preferences',

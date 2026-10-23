@@ -1,7 +1,10 @@
 // ABOUTME: Service for managing the user's preferred content language
 // ABOUTME: Stores ISO-639-1 language code used for NIP-32 labeling on video events
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
+import 'package:openvine/services/account_preference_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -12,6 +15,19 @@ import 'package:unified_logger/unified_logger.dart';
 ///
 /// When no custom language is set, the device's OS language is used.
 class LanguagePreferenceService implements Listenable {
+  LanguagePreferenceService({AccountPreferenceStore? accountPreferences})
+    : _accountPreferences = accountPreferences {
+    _accountSubscription = _accountPreferences?.changes.listen(
+      (_) => _reloadAccountPreferences(),
+    );
+  }
+  final AccountPreferenceStore? _accountPreferences;
+  StreamSubscription<void>? _accountSubscription;
+  void _reloadAccountPreferences() {
+    // Account reads are synchronous; no old storage load can win over them.
+    unawaited(reloadFromStorage());
+  }
+
   /// SharedPreferences key for the content language preference
   static const String prefsKey = 'content_language';
 
@@ -60,7 +76,11 @@ class LanguagePreferenceService implements Listenable {
   Future<void> _loadPreference() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      _customLanguage = prefs.getString(prefsKey);
+      _customLanguage =
+          (_accountPreferences == null
+                  ? prefs.getString(prefsKey)
+                  : _accountPreferences.read(prefsKey))
+              as String?;
     } catch (e) {
       Log.error(
         'Error loading language preference: $e',
@@ -76,11 +96,19 @@ class LanguagePreferenceService implements Listenable {
   Future<void> setContentLanguage(String languageCode) async {
     try {
       await initialize();
-      if (_customLanguage == languageCode) return;
+      if (_customLanguage == languageCode && _accountPreferences == null) {
+        return;
+      }
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(prefsKey, languageCode);
-      _customLanguage = languageCode;
+      if (_accountPreferences != null) {
+        await _accountPreferences.write(prefsKey, languageCode);
+      } else {
+        await prefs.setString(prefsKey, languageCode);
+      }
+      _customLanguage = _accountPreferences == null
+          ? languageCode
+          : _accountPreferences.read(prefsKey) as String?;
       _notifyListeners();
 
       Log.debug(
@@ -89,6 +117,7 @@ class LanguagePreferenceService implements Listenable {
         category: LogCategory.system,
       );
     } catch (e) {
+      if (_accountPreferences != null) rethrow;
       Log.error(
         'Error saving language preference: $e',
         name: 'LanguagePreferenceService',
@@ -101,10 +130,14 @@ class LanguagePreferenceService implements Listenable {
   Future<void> clearContentLanguage() async {
     try {
       await initialize();
-      if (_customLanguage == null) return;
+      if (_customLanguage == null && _accountPreferences == null) return;
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(prefsKey);
+      if (_accountPreferences != null) {
+        await _accountPreferences.write(prefsKey, null);
+      } else {
+        await prefs.remove(prefsKey);
+      }
       _customLanguage = null;
       _notifyListeners();
 
@@ -114,6 +147,7 @@ class LanguagePreferenceService implements Listenable {
         category: LogCategory.system,
       );
     } catch (e) {
+      if (_accountPreferences != null) rethrow;
       Log.error(
         'Error clearing language preference: $e',
         name: 'LanguagePreferenceService',
@@ -171,6 +205,7 @@ class LanguagePreferenceService implements Listenable {
 
   /// Release registered listeners when the provider is disposed.
   void dispose() {
+    unawaited(_accountSubscription?.cancel());
     _listeners.clear();
   }
 

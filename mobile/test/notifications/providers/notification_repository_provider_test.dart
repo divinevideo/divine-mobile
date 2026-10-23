@@ -20,9 +20,11 @@ import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -59,6 +61,11 @@ class _CountingClient extends http.BaseClient {
 
 void main() {
   group('notificationRepositoryProvider', () {
+    late SharedPreferences preferences;
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      preferences = await SharedPreferences.getInstance();
+    });
     const ownerPubkey =
         'a1b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012';
     const actorPubkey =
@@ -109,6 +116,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          sharedPreferencesProvider.overrideWithValue(preferences),
           currentEnvironmentProvider.overrideWithValue(
             EnvironmentConfig.production,
           ),

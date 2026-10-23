@@ -10,6 +10,7 @@ import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:openvine/services/nip98_http_client.dart';
 import 'package:openvine/utils/relay_url_utils.dart';
@@ -57,6 +58,7 @@ final notificationRepositoryProvider = Provider<NotificationRepository?>((ref) {
     profileRepository: profileRepository,
     notificationsDao: db.notificationsDao,
     userPubkey: userPubkey,
+    pendingReadPreferences: ref.watch(sharedPreferencesProvider),
     // Engine-backed blocked-author filter.
     blockFilter: createBlockedAuthorFilter(ref),
     authHeadersProvider: (url, method, {body}) async {

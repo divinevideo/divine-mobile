@@ -3,6 +3,8 @@
 // ABOUTME: NotificationPreferencesService, and runs the mark-all-as-read
 // ABOUTME: action against NotificationRepository.
 
+import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:notification_repository/notification_repository.dart';
 import 'package:openvine/blocs/close_guard.dart';
@@ -30,7 +32,25 @@ class NotificationSettingsCubit extends Cubit<NotificationSettingsState>
                ? MarkAllAsReadStatus.unavailable
                : MarkAllAsReadStatus.idle,
          ),
-       );
+       ) {
+    _preferenceSubscription = _preferencesService.changes?.listen(
+      (_) => _preferencesChanged(),
+    );
+  }
+
+  StreamSubscription<void>? _preferenceSubscription;
+
+  void _preferencesChanged() => unawaited(_reloadPreferences());
+  Future<void> _reloadPreferences() async {
+    final preferences = await _preferencesService.loadPreferences();
+    emitIfOpen(state.copyWith(preferences: preferences));
+  }
+
+  @override
+  Future<void> close() {
+    unawaited(_preferenceSubscription?.cancel());
+    return super.close();
+  }
 
   final NotificationPreferencesService _preferencesService;
   final NotificationRepository? _notificationRepository;
@@ -71,14 +91,13 @@ class NotificationSettingsCubit extends Cubit<NotificationSettingsState>
 
   /// Applies [preferences] optimistically, then persists them.
   Future<void> setPreferences(NotificationPreferences preferences) async {
-    emit(state.copyWith(preferences: preferences));
     await _preferencesService.updatePreferences(preferences);
+    await _reloadPreferences();
   }
 
   /// Resets preferences to their defaults and persists them.
   Future<void> resetToDefaults() async {
-    const defaults = NotificationPreferences();
-    emit(state.copyWith(preferences: defaults));
-    await _preferencesService.updatePreferences(defaults);
+    await _preferencesService.resetToDefaults();
+    await _reloadPreferences();
   }
 }

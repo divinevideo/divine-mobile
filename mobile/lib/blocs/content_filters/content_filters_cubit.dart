@@ -22,7 +22,24 @@ class ContentFiltersCubit extends Cubit<ContentFiltersState>
     required AgeVerificationService ageVerificationService,
   }) : _contentFilterService = contentFilterService,
        _ageVerificationService = ageVerificationService,
-       super(const ContentFiltersState());
+       super(const ContentFiltersState()) {
+    _contentFilterService.addListener(_refresh);
+  }
+
+  void _refresh() => emitIfOpen(
+    state.copyWith(
+      preferences: {
+        for (final label in ContentLabel.values)
+          label: _contentFilterService.getPreference(label),
+      },
+    ),
+  );
+
+  @override
+  Future<void> close() {
+    _contentFilterService.removeListener(_refresh);
+    return super.close();
+  }
 
   final ContentFilterService _contentFilterService;
   final AgeVerificationService _ageVerificationService;

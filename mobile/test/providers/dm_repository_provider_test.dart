@@ -19,6 +19,7 @@ import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/feature_flags/services/feature_flag_service.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -128,6 +129,7 @@ void main() {
     }) {
       return ProviderContainer(
         overrides: [
+          accountDmStateProvider.overrideWithValue(null),
           if (featureFlagService != null)
             featureFlagServiceProvider.overrideWithValue(featureFlagService),
           nostrServiceProvider.overrideWithValue(mockNostrClient),

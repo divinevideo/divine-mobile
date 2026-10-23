@@ -25,6 +25,7 @@ import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/constants/hive_box_names.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/bookmark_signer_adapter.dart';
@@ -64,7 +65,7 @@ part 'repository_providers.g.dart';
 final badgeRepositoryProvider = Provider<BadgeRepository>((ref) {
   final authService = ref.watch(authServiceProvider);
   final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
-  return BadgeRepository(
+  final repository = BadgeRepository(
     nostrClient: ref.watch(nostrServiceProvider),
     sharedPreferences: ref.watch(sharedPreferencesProvider),
     currentPubkey: () => authService.currentPublicKeyHex,
@@ -75,6 +76,8 @@ final badgeRepositoryProvider = Provider<BadgeRepository>((ref) {
     // still takes effect on the next badge load.
     isHiddenPubkey: blocklistRepository.shouldFilterFromFeeds,
   );
+  ref.onDispose(repository.closeAccountState);
+  return repository;
 });
 
 final FutureProviderFamily<List<ProfileBadgeViewData>, String>
@@ -1006,6 +1009,7 @@ DmRepository dmRepository(Ref ref) {
     removedConversationsDao: db.removedConversationsDao,
     removedMessageIdsDao: db.removedMessageIdsDao,
     syncState: DmSyncState(prefs),
+    accountStateRepository: ref.watch(accountDmStateProvider),
     reactionsRepository: reactionsRepository,
     // Identity is sufficient to scope local storage. Signing, publishing, and
     // relay work remain gated below on the stronger nostrReady contract.

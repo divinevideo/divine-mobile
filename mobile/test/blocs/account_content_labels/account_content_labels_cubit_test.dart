@@ -22,7 +22,10 @@ void main() {
     setUp(() {
       service = _MockAccountLabelService();
       when(() => service.accountLabels).thenReturn(const {});
-      when(() => service.setAccountLabels(any())).thenAnswer((_) async {});
+      when(() => service.setAccountLabels(any())).thenAnswer((call) async {
+        when(() => service.accountLabels)
+            .thenReturn(call.positionalArguments.first as Set<ContentLabel>);
+      });
     });
 
     AccountContentLabelsCubit buildCubit() =>

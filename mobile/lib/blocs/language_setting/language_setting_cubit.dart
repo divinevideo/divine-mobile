@@ -15,7 +15,19 @@ import 'package:openvine/services/language_preference_service.dart';
 class LanguageSettingCubit extends Cubit<LanguageSettingState> {
   LanguageSettingCubit({required LanguagePreferenceService service})
     : _service = service,
-      super(const LanguageSettingState());
+      super(const LanguageSettingState()) {
+    _service.addListener(_refreshPreferences);
+  }
+
+  void _refreshPreferences() {
+    if (!isClosed) _emitSnapshot();
+  }
+
+  @override
+  Future<void> close() {
+    _service.removeListener(_refreshPreferences);
+    return super.close();
+  }
 
   final LanguagePreferenceService _service;
 
@@ -36,6 +48,7 @@ class LanguageSettingCubit extends Cubit<LanguageSettingState> {
   }
 
   void _emitSnapshot() {
+    if (isClosed) return;
     emit(
       state.copyWith(
         status: LanguageSettingStatus.ready,

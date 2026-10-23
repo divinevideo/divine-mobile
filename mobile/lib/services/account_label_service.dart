@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/constants/nostr_event_kinds.dart';
 import 'package:openvine/models/content_label.dart';
+import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -19,8 +20,27 @@ class AccountLabelService {
   AccountLabelService({
     required AuthService authService,
     required NostrClient nostrClient,
+    AccountPreferenceStore? accountPreferences,
   }) : _authService = authService,
-       _nostrClient = nostrClient;
+       _nostrClient = nostrClient,
+       _accountPreferences = accountPreferences {
+    _accountSubscription = _accountPreferences?.changes.listen(
+      (_) => _refreshAccount(),
+    );
+  }
+
+  final AccountPreferenceStore? _accountPreferences;
+  StreamSubscription<void>? _accountSubscription;
+  Stream<void>? get changes => _accountPreferences?.changes;
+  void _refreshAccount() {
+    _accountLabels = ContentLabel.fromCsv(
+      _accountPreferences?.read(accountLabelStorageKey) as String?,
+    );
+  }
+
+  void dispose() {
+    unawaited(_accountSubscription?.cancel());
+  }
 
   final AuthService _authService;
   final NostrClient _nostrClient;
@@ -58,7 +78,11 @@ class AccountLabelService {
   Future<void> initialize() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final value = prefs.getString(accountLabelStorageKey);
+      final value =
+          (_accountPreferences == null
+                  ? prefs.getString(accountLabelStorageKey)
+                  : _accountPreferences.read(accountLabelStorageKey))
+              as String?;
       _accountLabels = ContentLabel.fromCsv(value);
     } catch (e) {
       Log.error(
@@ -77,6 +101,17 @@ class AccountLabelService {
   ///
   /// Pass an empty set to clear account labels.
   Future<void> setAccountLabels(Set<ContentLabel> labels) async {
+    if (_accountPreferences != null) {
+      final owner = _authService.currentPublicKeyHex;
+      await _accountPreferences.write(
+        accountLabelStorageKey,
+        ContentLabel.toCsv(labels),
+      );
+      if (labels.isNotEmpty) {
+        unawaited(_publishAccountLabels(labels, expectedPubkey: owner));
+      }
+      return;
+    }
     _accountLabels = Set.of(labels);
 
     try {
@@ -115,8 +150,12 @@ class AccountLabelService {
   ///   ]
   /// }
   /// ```
-  Future<void> _publishAccountLabels(Set<ContentLabel> labels) async {
-    final pubkey = _authService.currentPublicKeyHex;
+  Future<void> _publishAccountLabels(
+    Set<ContentLabel> labels, {
+    String? expectedPubkey,
+  }) async {
+    final pubkey = expectedPubkey ?? _authService.currentPublicKeyHex;
+    if (pubkey != _authService.currentPublicKeyHex) return;
     if (pubkey == null) {
       Log.warning(
         'Cannot publish account labels - not authenticated',
@@ -148,6 +187,10 @@ class AccountLabelService {
         return;
       }
 
+      if (pubkey != _authService.currentPublicKeyHex ||
+          event.pubkey != pubkey) {
+        return;
+      }
       final sentEvent = await _nostrClient.publishEvent(event);
       if (sentEvent is PublishSuccess) {
         Log.info(

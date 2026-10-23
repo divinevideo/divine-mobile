@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/listenable_provider_bridge.dart';
@@ -58,7 +59,10 @@ final divineHostFilterServiceProvider = Provider<DivineHostFilterService>((
   ref,
 ) {
   final prefs = ref.watch(sharedPreferencesProvider);
-  final service = DivineHostFilterService(prefs);
+  final service = DivineHostFilterService(
+    prefs,
+    accountPreferences: ref.watch(accountPreferenceStoreProvider),
+  );
   ref.onDispose(service.dispose);
   return service;
 });
@@ -86,7 +90,10 @@ class DivineHostFilterVersion extends Notifier<int> {
 final videoProvenanceFilterServiceProvider =
     Provider<VideoProvenanceFilterService>((ref) {
       final prefs = ref.watch(sharedPreferencesProvider);
-      final service = VideoProvenanceFilterService(prefs);
+      final service = VideoProvenanceFilterService(
+        prefs,
+        accountPreferences: ref.watch(accountPreferenceStoreProvider),
+      );
       ref.onDispose(service.dispose);
       return service;
     });
@@ -177,6 +184,7 @@ ContentFilterService contentFilterService(Ref ref) {
   final ageVerificationService = ref.watch(ageVerificationServiceProvider);
   final service = ContentFilterService(
     ageVerificationService: ageVerificationService,
+    accountPreferences: ref.watch(accountPreferenceStoreProvider),
     onAdultMediaAccessRevoked: () => _clearAdultMediaAccessCaches(ref),
   );
   runProviderDetached(
@@ -214,6 +222,7 @@ AccountLabelService accountLabelService(Ref ref) {
   final authService = ref.watch(authServiceProvider);
   final nostrClient = ref.watch(nostrServiceProvider);
   final service = AccountLabelService(
+    accountPreferences: ref.watch(accountPreferenceStoreProvider),
     authService: authService,
     nostrClient: nostrClient,
   );
@@ -222,6 +231,7 @@ AccountLabelService accountLabelService(Ref ref) {
     'initialize account labels',
     logName: 'AccountLabelService',
   );
+  ref.onDispose(service.dispose);
   return service;
 }
 
@@ -232,6 +242,7 @@ ModerationLabelService moderationLabelService(Ref ref) {
   final authService = ref.watch(authServiceProvider);
   final prefs = ref.watch(sharedPreferencesProvider);
   final service = ModerationLabelService(
+    accountPreferences: ref.watch(accountPreferenceStoreProvider),
     nostrClient: nostrClient,
     authService: authService,
     sharedPreferences: prefs,

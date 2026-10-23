@@ -31,10 +31,14 @@ void main() {
     setUp(() {
       service = _MockNotificationPreferencesService();
       repository = _MockNotificationRepository();
-      when(
-        service.loadPreferences,
-      ).thenAnswer((_) async => const NotificationPreferences());
-      when(() => service.updatePreferences(any())).thenAnswer((_) async {});
+      var stored = const NotificationPreferences();
+      when(service.loadPreferences).thenAnswer((_) async => stored);
+      when(() => service.updatePreferences(any())).thenAnswer((call) async {
+        stored = call.positionalArguments.first as NotificationPreferences;
+      });
+      when(service.resetToDefaults).thenAnswer((_) async {
+        stored = const NotificationPreferences();
+      });
       when(repository.markAllAsRead).thenAnswer((_) async {});
     });
 
@@ -99,9 +103,7 @@ void main() {
         NotificationSettingsState(status: NotificationSettingsStatus.ready),
       ],
       verify: (_) {
-        verify(
-          () => service.updatePreferences(const NotificationPreferences()),
-        ).called(1);
+        verify(service.resetToDefaults).called(1);
       },
     );
 

@@ -1,11 +1,13 @@
 // ABOUTME: Persists push notification preferences and syncs them to the push service
 // ABOUTME: Keeps storage and remote update logic out of the settings UI
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:hive_ce/hive.dart';
 import 'package:openvine/constants/hive_box_names.dart';
 import 'package:openvine/models/notification_preferences.dart';
+import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/hive_box_opener.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -54,6 +56,15 @@ class HiveNotificationPreferencesStore implements NotificationPreferencesStore {
   static const _prefsKey = 'push_preferences';
   static const _dirtyPrefix = 'push_preferences_dirty_';
   static const _schemaVersionPrefix = 'push_preferences_schema_';
+
+  Future<NotificationPreferences?> loadExplicitPreferences() async {
+    final box = await _openBox();
+    final stored = box.get(_prefsKey);
+    if (stored is! String) return null;
+    final decoded = jsonDecode(stored);
+    if (decoded is! Map<String, dynamic>) return null;
+    return NotificationPreferences.fromJson(decoded);
+  }
 
   @override
   Future<NotificationPreferences> loadPreferences() async {
@@ -238,11 +249,76 @@ class NotificationPreferencesService {
     required String? Function() currentPubkey,
     required Future<bool> Function(String pubkey, NotificationPreferences prefs)
     publishPreferences,
+    AccountPreferenceStore? accountPreferences,
     void Function(String pubkey)? onStillDirty,
-  }) : _store = store,
+  }) : _accountPreferences = accountPreferences,
+       _store = store,
        _currentPubkey = currentPubkey,
        _publishPreferences = publishPreferences,
-       _onStillDirty = onStillDirty;
+       _onStillDirty = onStillDirty {
+    _accountSubscription = _accountPreferences?.changes.listen(
+      (_) => _accountChanged(),
+    );
+  }
+
+  final AccountPreferenceStore? _accountPreferences;
+  StreamSubscription<void>? _accountSubscription;
+  Stream<void>? get changes => _accountPreferences?.changes;
+  int _generation = 0;
+  int _refreshRequest = 0;
+  String? _lastAccountPubkey;
+  bool _disposed = false;
+  NotificationPreferences? _lastAccountPreferences;
+  Future<void>? _migration;
+  int _localMutations = 0;
+
+  void _accountChanged() {
+    if (_localMutations != 0 || _disposed) return;
+    unawaited(
+      _refreshAccount().catchError((Object error, StackTrace stack) {
+        Log.warning(
+          'Unable to refresh account notification preferences',
+          name: 'NotificationPreferencesService',
+          category: LogCategory.system,
+        );
+      }),
+    );
+  }
+
+  Future<void> _refreshAccount() async {
+    final pubkey = _currentPubkey();
+    final request = ++_refreshRequest;
+    final preferences = await loadPreferences();
+    if (_disposed || request != _refreshRequest || pubkey != _currentPubkey()) {
+      return;
+    }
+    if (preferences == _lastAccountPreferences &&
+        pubkey == _lastAccountPubkey) {
+      return;
+    }
+    final generation = ++_generation;
+    _lastAccountPreferences = preferences;
+    _lastAccountPubkey = pubkey;
+    // Apply received choices to this device's push registration. This does not
+    // write account state and therefore cannot echo the incoming event.
+    if (pubkey == null) return;
+    await _store.markDirty(pubkey, preferences);
+    if (_disposed || generation != _generation || pubkey != _currentPubkey()) {
+      return;
+    }
+    final outcome = await _publishAndClearDirtyPreferences(pubkey, preferences);
+    if (!_disposed &&
+        outcome == NotificationPreferencesSyncOutcome.stillDirty) {
+      _onStillDirty?.call(pubkey);
+    }
+  }
+
+  void dispose() {
+    _disposed = true;
+    ++_generation;
+    ++_refreshRequest;
+    unawaited(_accountSubscription?.cancel());
+  }
 
   final NotificationPreferencesStore _store;
   final String? Function() _currentPubkey;
@@ -251,20 +327,94 @@ class NotificationPreferencesService {
   final void Function(String pubkey)? _onStillDirty;
 
   Future<NotificationPreferences> loadPreferences() async {
-    return _store.loadPreferences();
+    final account = _accountPreferences;
+    if (account == null || !account.isBound) return _store.loadPreferences();
+    if (_store case final HiveNotificationPreferencesStore legacyStore) {
+      await (_migration ??= () async {
+        NotificationPreferences? legacy;
+        try {
+          legacy = await legacyStore.loadExplicitPreferences();
+        } on Object {
+          // A missing/corrupt legacy cache cannot replace account state.
+        }
+        if (!_disposed) {
+          final defaults = const NotificationPreferences().toJson();
+          await account.seedLegacyNotificationPreferences({
+            if (legacy != null)
+              for (final entry in legacy.toJson().entries)
+                if (entry.value != defaults[entry.key])
+                  'notifications/${entry.key}': entry.value,
+          });
+        }
+      }());
+    }
+    return NotificationPreferences.fromJson({
+      for (final field in AccountPreferenceRegistry.notificationFields)
+        if (account.read('notifications/$field') is bool)
+          field: account.read('notifications/$field'),
+    });
   }
 
   Future<void> updatePreferences(NotificationPreferences prefs) async {
-    await _store.savePreferences(prefs);
-
-    final pubkey = _currentPubkey();
-    if (pubkey == null) return;
-
-    await _store.markDirty(pubkey, prefs);
-    final outcome = await _publishAndClearDirtyPreferences(pubkey, prefs);
-    if (outcome == NotificationPreferencesSyncOutcome.stillDirty) {
-      _onStillDirty?.call(pubkey);
+    final account = _accountPreferences;
+    final owner = _currentPubkey();
+    if (account != null) {
+      ++_localMutations;
+      ++_generation;
+      ++_refreshRequest;
+      try {
+        final previous = (await loadPreferences()).toJson();
+        await account.writeValues({
+          for (final entry in prefs.toJson().entries)
+            if (previous[entry.key] != entry.value)
+              'notifications/${entry.key}': entry.value,
+        });
+        if (_disposed || owner != _currentPubkey()) return;
+        final effective = await loadPreferences();
+        if (_disposed || owner != _currentPubkey()) return;
+        _lastAccountPreferences = effective;
+        _lastAccountPubkey = owner;
+        if (owner != null) {
+          await _store.markDirty(owner, effective);
+          if (!_disposed && owner == _currentPubkey()) {
+            unawaited(
+              _publishAndClearDirtyPreferences(owner, effective)
+                  .then((outcome) {
+                    if (!_disposed &&
+                        outcome ==
+                            NotificationPreferencesSyncOutcome.stillDirty) {
+                      _onStillDirty?.call(owner);
+                    }
+                  })
+                  .catchError((Object error, StackTrace stack) {
+                    if (!_disposed) _onStillDirty?.call(owner);
+                  }),
+            );
+          }
+        }
+      } finally {
+        --_localMutations;
+      }
+      return;
     }
+    await _store.savePreferences(prefs);
+    if (owner == null) return;
+    await _store.markDirty(owner, prefs);
+    final outcome = await _publishAndClearDirtyPreferences(owner, prefs);
+    if (outcome == NotificationPreferencesSyncOutcome.stillDirty) {
+      _onStillDirty?.call(owner);
+    }
+  }
+
+  Future<void> resetToDefaults() async {
+    final account = _accountPreferences;
+    if (account != null) {
+      await account.writeValues({
+        for (final field in AccountPreferenceRegistry.notificationFields)
+          'notifications/$field': null,
+      });
+    }
+    await updatePreferences(const NotificationPreferences());
   }
 
   /// Schema version of the kind list [NotificationPreferences.toKindsList]
@@ -297,7 +447,7 @@ class NotificationPreferencesService {
     // favour of the last-saved snapshot.
     if (await _store.loadDirty(pubkey) != null) return false;
 
-    await _store.markDirty(pubkey, await _store.loadPreferences());
+    await _store.markDirty(pubkey, await loadPreferences());
     return true;
   }
 

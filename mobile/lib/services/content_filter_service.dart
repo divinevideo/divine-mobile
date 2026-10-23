@@ -1,25 +1,19 @@
 // ABOUTME: Service for per-category content filtering with Show/Warn/Hide preferences
 // ABOUTME: Stores preferences in SharedPreferences, enforces age gate for adult categories
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:openvine/models/content_filter_preference.dart';
 import 'package:openvine/models/content_label.dart';
+import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// User preference for how a content category should be handled in feeds.
-enum ContentFilterPreference {
-  /// Show content normally without any overlay.
-  show,
-
-  /// Show content with a blur overlay and "View Anyway" button.
-  warn,
-
-  /// Filter content completely from feeds (not visible at all).
-  hide,
-}
+export 'package:openvine/models/content_filter_preference.dart'
+    show ContentFilterPreference;
 
 /// Service that manages per-category content filter preferences.
 ///
@@ -33,8 +27,34 @@ enum ContentFilterPreference {
 class ContentFilterService extends ChangeNotifier {
   ContentFilterService({
     required this.ageVerificationService,
+    AccountPreferenceStore? accountPreferences,
     Future<void> Function()? onAdultMediaAccessRevoked,
-  }) : _onAdultMediaAccessRevoked = onAdultMediaAccessRevoked;
+  }) : _accountPreferences = accountPreferences,
+       _onAdultMediaAccessRevoked = onAdultMediaAccessRevoked {
+    _accountSubscription = _accountPreferences?.changes.listen(
+      (_) => _reloadAccountPreferences(),
+    );
+  }
+
+  final AccountPreferenceStore? _accountPreferences;
+  StreamSubscription<void>? _accountSubscription;
+  ContentFilterPreference _lastAccountAdultPreference =
+      ContentFilterPreference.hide;
+  void _reloadAccountPreferences() {
+    final previous = _lastAccountAdultPreference;
+    _lastAccountAdultPreference = adultPlaybackPreference;
+    notifyListeners();
+    // Revocation invalidates cached adult media without changing local consent.
+    unawaited(
+      _notifyIfAdultPassiveAccessRevoked(previousAdultPreference: previous),
+    );
+  }
+
+  @override
+  void dispose() {
+    unawaited(_accountSubscription?.cancel());
+    super.dispose();
+  }
 
   /// Public so `UserDataCleanupService` can clear it by reference.
   /// A copied literal cannot detect that this key was renamed (#8314).
@@ -108,34 +128,6 @@ class ContentFilterService extends ChangeNotifier {
     ContentLabel.deepfake,
     ContentLabel.spam,
     ContentLabel.scam,
-  };
-
-  /// Default preferences for each category.
-  static const Map<ContentLabel, ContentFilterPreference> _defaults = {
-    // Adult content stays hidden even after age verification; the user must
-    // opt in per category via Content Filters.
-    ContentLabel.nudity: ContentFilterPreference.hide,
-    ContentLabel.sexual: ContentFilterPreference.hide,
-    ContentLabel.drugs: ContentFilterPreference.hide,
-    // Always-filtered categories are not user-configurable.
-    ContentLabel.graphicMedia: ContentFilterPreference.hide,
-    ContentLabel.violence: ContentFilterPreference.hide,
-    ContentLabel.selfHarm: ContentFilterPreference.hide,
-    ContentLabel.porn: ContentFilterPreference.hide,
-    ContentLabel.hate: ContentFilterPreference.hide,
-    ContentLabel.harassment: ContentFilterPreference.hide,
-    ContentLabel.aiGenerated: ContentFilterPreference.hide,
-    ContentLabel.deepfake: ContentFilterPreference.hide,
-    ContentLabel.spam: ContentFilterPreference.hide,
-    ContentLabel.scam: ContentFilterPreference.hide,
-    // Visible non-adult categories start at warn.
-    ContentLabel.alcohol: ContentFilterPreference.warn,
-    ContentLabel.tobacco: ContentFilterPreference.warn,
-    ContentLabel.gambling: ContentFilterPreference.warn,
-    ContentLabel.profanity: ContentFilterPreference.warn,
-    ContentLabel.flashingLights: ContentFilterPreference.warn,
-    ContentLabel.spoiler: ContentFilterPreference.warn,
-    ContentLabel.misleading: ContentFilterPreference.warn,
   };
 
   /// Whether the service has been initialized.
@@ -228,6 +220,12 @@ class ContentFilterService extends ChangeNotifier {
         !ageVerificationService.isAdultContentVerified) {
       return ContentFilterPreference.hide;
     }
+    if (_accountPreferences != null && _accountPreferences.isBound) {
+      final value = _accountPreferences.read('content_filter/${label.value}');
+      return value is String
+          ? _preferenceFromString(value) ?? _defaultFor(label)
+          : _defaultFor(label);
+    }
     return _preferences[label] ?? _defaultFor(label);
   }
 
@@ -299,12 +297,20 @@ class ContentFilterService extends ChangeNotifier {
     }
 
     final previousAdultPreference = adultPlaybackPreference;
-    _preferences[label] = preference;
-    await _save();
+    if (_accountPreferences != null) {
+      await _accountPreferences.write(
+        'content_filter/${label.value}',
+        preference.name,
+      );
+    } else {
+      _preferences[label] = preference;
+      await _save();
+    }
     await _notifyIfAdultPassiveAccessRevoked(
       label: label,
       previousAdultPreference: previousAdultPreference,
     );
+    _lastAccountAdultPreference = adultPlaybackPreference;
     notifyListeners();
 
     Log.debug(
@@ -341,7 +347,9 @@ class ContentFilterService extends ChangeNotifier {
 
   /// Get all current preferences as a map.
   Map<ContentLabel, ContentFilterPreference> get allPreferences =>
-      Map.unmodifiable(_preferences);
+      Map.unmodifiable({
+        for (final label in ContentLabel.values) label: getPreference(label),
+      });
 
   /// Aggregate the adult-category preferences for generic 18+ media playback.
   ///
@@ -372,6 +380,12 @@ class ContentFilterService extends ChangeNotifier {
     final previousAdultPreference = adultPlaybackPreference;
     for (final label in ageRestrictedCategories) {
       _preferences[label] = ContentFilterPreference.hide;
+      if (_accountPreferences != null) {
+        await _accountPreferences.write(
+          'content_filter/${label.value}',
+          ContentFilterPreference.hide.name,
+        );
+      }
     }
     await _save();
     await _notifyIfAdultPassiveAccessRevoked(
@@ -492,7 +506,7 @@ class ContentFilterService extends ChangeNotifier {
 
   /// Get the default preference for a given label.
   static ContentFilterPreference _defaultFor(ContentLabel label) {
-    return _defaults[label] ?? ContentFilterPreference.show;
+    return contentFilterDefaults[label] ?? ContentFilterPreference.show;
   }
 
   bool _enforceAlwaysFilteredCategories() {
