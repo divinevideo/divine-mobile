@@ -31,8 +31,9 @@ abstract class FeedRepository {
 
   /// Requests the next page for [source], if the source paginates.
   ///
-  /// A no-op for static sources (e.g. [SingleVideoViewSource],
-  /// [VideoListViewSource]).
+  /// A no-op for static sources such as [VideoListViewSource]. A
+  /// [SingleVideoViewSource] is static unless its repository appends
+  /// discovery after the opened video.
   Future<void> loadMore(ViewSource source);
 
   /// A stream of whether [source] can paginate further.

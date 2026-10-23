@@ -65,6 +65,7 @@ class FeedVideos extends ConsumerStatefulWidget {
     required this.onNearEnd,
     this.contextTitle,
     this.currentIndex = 0,
+    this.scrollPhysics,
     this.shouldPortraitExpand = true,
     this.isActive = true,
     this.releaseNeighboursWhenInactive = false,
@@ -72,6 +73,7 @@ class FeedVideos extends ConsumerStatefulWidget {
     this.isLoadingMore = false,
     this.onActiveVideoChanged,
     this.trafficSource = ViewTrafficSource.unknown,
+    this.trafficSourceForVideo,
     this.sourceDetail,
     this.feedSessionRevision = 0,
     super.key,
@@ -80,6 +82,9 @@ class FeedVideos extends ConsumerStatefulWidget {
   final List<VideoEvent> videos;
   final VoidCallback onNearEnd;
   final int currentIndex;
+
+  /// Optional physics, including end swipes while discovery has only one video.
+  final ScrollPhysics? scrollPhysics;
   final String? contextTitle;
   final bool shouldPortraitExpand;
 
@@ -112,6 +117,9 @@ class FeedVideos extends ConsumerStatefulWidget {
   final void Function(VideoEvent video, int index)? onActiveVideoChanged;
 
   final ViewTrafficSource trafficSource;
+
+  /// Optional attribution for mixed feeds, such as a share followed by For You.
+  final ViewTrafficSource Function(VideoEvent video)? trafficSourceForVideo;
   final String? sourceDetail;
 
   /// Identifies one feed-depth session.
@@ -170,6 +178,9 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
     final videoId = widget.videos.elementAtOrNull(_activeIndex)?.id;
     if (videoId != null) _seenVideoIds.add(videoId);
   }
+
+  ViewTrafficSource _trafficSourceFor(VideoEvent video) =>
+      widget.trafficSourceForVideo?.call(video) ?? widget.trafficSource;
 
   @override
   void initState() {
@@ -409,6 +420,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
         urlResolver: (video) => video.getOptimalVideoUrlForPlatform(),
         preferB2Original: preferB2Original,
         initialIndex: widget.currentIndex,
+        scrollPhysics: widget.scrollPhysics,
         onNearEnd: widget.onNearEnd,
         initialVolume: context.read<VideoVolumeCubit>().state.volume,
         onVolumeChanged: context
@@ -429,7 +441,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
           if (!isProgrammaticActivation && _seenVideoIds.add(video.id)) {
             unawaited(
               _consumptionAnalytics.feedDepthReached(
-                trafficSource: widget.trafficSource,
+                trafficSource: _trafficSourceFor(video),
                 feedSessionId: _feedSessionId,
                 depth: _seenVideoIds.length,
                 sourceDetail: widget.sourceDetail,
@@ -575,7 +587,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
                 isActive: isActive,
                 isFeedVisible: isFeedActive,
                 position: index,
-                trafficSource: widget.trafficSource,
+                trafficSource: _trafficSourceFor(video),
                 sourceDetail: widget.sourceDetail,
                 child: _Overlay(
                   controller: controller,

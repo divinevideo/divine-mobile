@@ -17,11 +17,14 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/view_traffic_source.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
+import 'package:openvine/providers/feed_viewer_preference_hints.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/repositories/single_video_feed_repository.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/safety_settings_screen.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/takeover_close_button.dart';
 import 'package:openvine/widgets/tv_static_message_screen.dart';
@@ -112,6 +115,10 @@ class _VideoDetailView extends ConsumerStatefulWidget {
 }
 
 class _VideoDetailViewState extends ConsumerState<_VideoDetailView> {
+  SingleVideoFeedRepository? _discoveryRepository;
+  String? _discoveryVideoId;
+  String? _discoveryUserPubkey;
+
   @override
   void initState() {
     super.initState();
@@ -129,8 +136,62 @@ class _VideoDetailViewState extends ConsumerState<_VideoDetailView> {
     if (previous.videoId != current.videoId ||
         !listEquals(previous.fallbackVideoIds, current.fallbackVideoIds) ||
         previous.initialVideo != current.initialVideo) {
+      _disposeDiscoveryRepository();
       _search();
     }
+  }
+
+  @override
+  void dispose() {
+    _disposeDiscoveryRepository();
+    super.dispose();
+  }
+
+  void _disposeDiscoveryRepository() {
+    final repository = _discoveryRepository;
+    _discoveryRepository = null;
+    _discoveryVideoId = null;
+    _discoveryUserPubkey = null;
+    if (repository != null) {
+      runDetached(
+        repository.dispose(),
+        'dispose single-video discovery feed',
+        logName: 'VideoDetailScreen',
+        category: LogCategory.video,
+      );
+    }
+  }
+
+  SingleVideoFeedRepository _repositoryFor(VideoEvent video) {
+    final pubkey = ref.read(authServiceProvider).currentPublicKeyHex;
+    if (_discoveryVideoId != video.id || _discoveryUserPubkey != pubkey) {
+      _disposeDiscoveryRepository();
+      // Page loading can outlive this widget, so callbacks retain the app
+      // container rather than WidgetRef and read current services after recovery.
+      final container = ProviderScope.containerOf(context, listen: false);
+      _discoveryRepository = SingleVideoFeedRepository(
+        video: video,
+        loadPage: ({cursor}) async {
+          final hints = await readFeedViewerPreferenceHints(container.read);
+          return container
+              .read(videosRepositoryProvider)
+              .getVideoDiscoveryPage(
+                userPubkey: pubkey,
+                cursor: cursor,
+                preferredLanguages: hints.preferredLanguages,
+                viewerCountry: hints.viewerCountry,
+              );
+        },
+        filter: (videos) => container
+            .read(videoEventServiceProvider)
+            .filterVideoList(
+              videos.where((v) => v.isSupportedOnCurrentPlatform).toList(),
+            ),
+      );
+      _discoveryVideoId = video.id;
+      _discoveryUserPubkey = pubkey;
+    }
+    return _discoveryRepository!..refreshFilters();
   }
 
   void _search() {
@@ -157,6 +218,7 @@ class _VideoDetailViewState extends ConsumerState<_VideoDetailView> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(currentAuthStateProvider);
     ref.watch(blocklistVersionProvider);
     ref.watch(divineHostFilterVersionProvider);
     ref.watch(contentFilterVersionProvider);
@@ -200,16 +262,19 @@ class _VideoDetailViewState extends ConsumerState<_VideoDetailView> {
                 videoEventService.isVideoEventKnownDeleted(video)) {
               return _NotFoundScreen(onClose: () => _handleExit(context));
             }
-            return screen.videoFeedBuilder?.call(video) ??
-                PooledFullscreenVideoFeedScreen(
-                  source: SingleVideoViewSource(video),
-                  feedRepository: StaticFeedRepository(),
-                  initialIndex: 0,
-                  contextTitle: context.l10n.videoDetailContextTitle,
-                  trafficSource: ViewTrafficSource.share,
-                  autoOpenComments: screen.autoOpenComments,
-                  dmReplyContext: screen.dmReplyContext,
-                );
+            final builder = screen.videoFeedBuilder;
+            if (builder != null) return builder(video);
+            final repository = _repositoryFor(video);
+            return PooledFullscreenVideoFeedScreen(
+              key: ValueKey(repository),
+              source: SingleVideoViewSource(video),
+              feedRepository: repository,
+              initialIndex: 0,
+              contextTitle: context.l10n.videoDetailContextTitle,
+              trafficSource: ViewTrafficSource.share,
+              autoOpenComments: screen.autoOpenComments,
+              dmReplyContext: screen.dmReplyContext,
+            );
         }
       },
     );

@@ -3419,6 +3419,26 @@ class VideosRepository {
     return _funnelcakeApiClient.getBulkVideoStats(eventIds);
   }
 
+  /// Fetches discovery following an opened video, using For You for now.
+  ///
+  /// An opaque [cursor] continues recommendations. A popular fallback without
+  /// a cursor is a terminal page, matching the home For You feed.
+  Future<HomeFeedResult> getVideoDiscoveryPage({
+    required String? userPubkey,
+    int limit = _defaultLimit,
+    String? cursor,
+    List<String> preferredLanguages = const [],
+    String? viewerCountry,
+  }) {
+    return getRecommendedVideos(
+      userPubkey: userPubkey,
+      limit: limit,
+      cursor: cursor,
+      preferredLanguages: preferredLanguages,
+      viewerCountry: viewerCountry,
+    );
+  }
+
   /// Fetches For You videos from the recommendations endpoint.
   ///
   /// - [skipCache]: Full manual refresh — bypasses the in-memory first-page
