@@ -2930,6 +2930,8 @@
   "videoEditorStickerSearchHint": "Cari stiker...",
   "videoEditorTextAlignmentSemanticLabel": "Perataan teks",
   "videoEditorTextBackgroundSemanticLabel": "Latar belakang teks",
+  "videoEditorTextDontWrap": "Jangan pindah baris",
+  "videoEditorTextWrapAtEdges": "Pindah baris di tepi",
   "videoEditorTextEffectsSemanticLabel": "Garis tepi dan bayangan",
   "videoEditorTextOutline": "Garis tepi",
   "videoEditorTextOutlineThickness": "Ketebalan garis tepi",

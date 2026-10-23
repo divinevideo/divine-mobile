@@ -9138,6 +9138,12 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'የጽሑፍ ዳራ';
 
   @override
+  String get videoEditorTextDontWrap => 'ያለ መጠቅለል';
+
+  @override
+  String get videoEditorTextWrapAtEdges => 'በጠርዞች ላይ መጠቅለል';
+
+  @override
   String get videoEditorTextEffectsSemanticLabel => 'የጠርዝ መስመር እና ጥላ';
 
   @override

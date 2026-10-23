@@ -9416,6 +9416,12 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Background ng text';
 
   @override
+  String get videoEditorTextDontWrap => 'Huwag i-wrap';
+
+  @override
+  String get videoEditorTextWrapAtEdges => 'I-wrap sa gilid';
+
+  @override
   String get videoEditorTextEffectsSemanticLabel => 'Outline at anino';
 
   @override

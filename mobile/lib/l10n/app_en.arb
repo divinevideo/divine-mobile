@@ -6531,6 +6531,14 @@
   "videoEditorTextColorSemanticLabel": "Text color",
   "videoEditorTextAlignmentSemanticLabel": "Text alignment",
   "videoEditorTextBackgroundSemanticLabel": "Text background",
+  "videoEditorTextDontWrap": "Don't wrap",
+  "@videoEditorTextDontWrap": {
+    "description": "Video editor toolbar chip shown after a text is pinched large enough that the video edges wrap it. Tapping it lets the text run past the edges on one line instead; the export cuts it off there."
+  },
+  "videoEditorTextWrapAtEdges": "Wrap at edges",
+  "@videoEditorTextWrapAtEdges": {
+    "description": "Video editor toolbar chip shown for a text that runs past the video edges. Tapping it makes the text wrap at the edges of the video again."
+  },
   "videoEditorTextEffectsSemanticLabel": "Outline and shadow",
   "videoEditorTextOutline": "Outline",
   "videoEditorTextOutlineThickness": "Outline thickness",

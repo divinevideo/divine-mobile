@@ -15833,6 +15833,18 @@ abstract class AppLocalizations {
   /// **'Text background'**
   String get videoEditorTextBackgroundSemanticLabel;
 
+  /// Video editor toolbar chip shown after a text is pinched large enough that the video edges wrap it. Tapping it lets the text run past the edges on one line instead; the export cuts it off there.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t wrap'**
+  String get videoEditorTextDontWrap;
+
+  /// Video editor toolbar chip shown for a text that runs past the video edges. Tapping it makes the text wrap at the edges of the video again.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrap at edges'**
+  String get videoEditorTextWrapAtEdges;
+
   /// No description provided for @videoEditorTextEffectsSemanticLabel.
   ///
   /// In en, this message translates to:

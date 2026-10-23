@@ -9439,6 +9439,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Text background';
 
   @override
+  String get videoEditorTextDontWrap => 'Don\'t wrap';
+
+  @override
+  String get videoEditorTextWrapAtEdges => 'Wrap at edges';
+
+  @override
   String get videoEditorTextEffectsSemanticLabel => 'Outline and shadow';
 
   @override

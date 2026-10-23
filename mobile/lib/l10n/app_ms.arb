@@ -4789,6 +4789,8 @@
   "videoEditorTextColorSemanticLabel": "Warna teks",
   "videoEditorTextAlignmentSemanticLabel": "Penjajaran teks",
   "videoEditorTextBackgroundSemanticLabel": "Latar belakang teks",
+  "videoEditorTextDontWrap": "Jangan balut teks",
+  "videoEditorTextWrapAtEdges": "Balut teks di tepi",
   "videoEditorTextEffectsSemanticLabel": "Garis luar dan bayang",
   "videoEditorTextOutline": "Garis luar",
   "videoEditorTextOutlineThickness": "Ketebalan garis luar",

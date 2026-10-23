@@ -9264,6 +9264,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Metin arka planı';
 
   @override
+  String get videoEditorTextDontWrap => 'Metni kaydırma';
+
+  @override
+  String get videoEditorTextWrapAtEdges => 'Kenarlarda kaydır';
+
+  @override
   String get videoEditorTextEffectsSemanticLabel => 'Kontur ve gölge';
 
   @override

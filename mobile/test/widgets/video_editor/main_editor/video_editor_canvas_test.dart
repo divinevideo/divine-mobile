@@ -13,6 +13,7 @@ import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
+import 'package:openvine/blocs/video_editor/text_wrap_hint/text_wrap_hint_cubit.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -80,6 +81,7 @@ void main() {
                 BlocProvider(create: (_) => VideoEditorMainBloc()),
                 BlocProvider(create: (_) => VideoEditorDrawBloc()),
                 BlocProvider(create: (_) => VideoEditorFilterBloc()),
+                BlocProvider(create: (_) => TextWrapHintCubit()),
               ],
               child: VideoEditorScope(
                 editorKey: GlobalKey(),

@@ -4789,6 +4789,8 @@
   "videoEditorTextColorSemanticLabel": "ٹیکسٹ کا رنگ",
   "videoEditorTextAlignmentSemanticLabel": "ٹیکسٹ سیدھ",
   "videoEditorTextBackgroundSemanticLabel": "ٹیکسٹ پس منظر",
+  "videoEditorTextDontWrap": "ٹیکسٹ نہ لپیٹیں",
+  "videoEditorTextWrapAtEdges": "کناروں پر لپیٹیں",
   "videoEditorTextEffectsSemanticLabel": "آؤٹ لائن اور سایہ",
   "videoEditorTextOutline": "آؤٹ لائن",
   "videoEditorTextOutlineThickness": "آؤٹ لائن کی موٹائی",

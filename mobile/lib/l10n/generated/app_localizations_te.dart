@@ -9603,6 +9603,12 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'వచన నేపథ్యం';
 
   @override
+  String get videoEditorTextDontWrap => 'చుట్టకండి';
+
+  @override
+  String get videoEditorTextWrapAtEdges => 'అంచుల వద్ద చుట్టండి';
+
+  @override
   String get videoEditorTextEffectsSemanticLabel => 'అంచు గీత మరియు నీడ';
 
   @override

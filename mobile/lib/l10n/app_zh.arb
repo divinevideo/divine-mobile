@@ -4789,6 +4789,8 @@
   "videoEditorTextColorSemanticLabel": "文字颜色",
   "videoEditorTextAlignmentSemanticLabel": "文字对齐",
   "videoEditorTextBackgroundSemanticLabel": "文字背景",
+  "videoEditorTextDontWrap": "不换行",
+  "videoEditorTextWrapAtEdges": "在边缘换行",
   "videoEditorTextEffectsSemanticLabel": "描边和阴影",
   "videoEditorTextOutline": "描边",
   "videoEditorTextOutlineThickness": "描边粗细",

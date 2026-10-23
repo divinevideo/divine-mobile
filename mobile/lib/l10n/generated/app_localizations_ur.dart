@@ -9344,6 +9344,12 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'ٹیکسٹ پس منظر';
 
   @override
+  String get videoEditorTextDontWrap => 'ٹیکسٹ نہ لپیٹیں';
+
+  @override
+  String get videoEditorTextWrapAtEdges => 'کناروں پر لپیٹیں';
+
+  @override
   String get videoEditorTextEffectsSemanticLabel => 'آؤٹ لائن اور سایہ';
 
   @override

@@ -9256,6 +9256,12 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Latar belakang teks';
 
   @override
+  String get videoEditorTextDontWrap => 'Jangan pindah baris';
+
+  @override
+  String get videoEditorTextWrapAtEdges => 'Pindah baris di tepi';
+
+  @override
   String get videoEditorTextEffectsSemanticLabel => 'Garis tepi dan bayangan';
 
   @override

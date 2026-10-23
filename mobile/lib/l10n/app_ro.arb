@@ -2754,6 +2754,8 @@
   "videoEditorTextColorSemanticLabel": "Culoare text",
   "videoEditorTextAlignmentSemanticLabel": "Aliniere text",
   "videoEditorTextBackgroundSemanticLabel": "Fundal text",
+  "videoEditorTextDontWrap": "Fără încadrare",
+  "videoEditorTextWrapAtEdges": "Încadrare la margini",
   "videoEditorTextEffectsSemanticLabel": "Contur și umbră",
   "videoEditorTextOutline": "Contur",
   "videoEditorTextOutlineThickness": "Grosimea conturului",

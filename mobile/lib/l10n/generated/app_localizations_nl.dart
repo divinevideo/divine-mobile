@@ -9388,6 +9388,12 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Tekstachtergrond';
 
   @override
+  String get videoEditorTextDontWrap => 'Niet afbreken';
+
+  @override
+  String get videoEditorTextWrapAtEdges => 'Afbreken bij de rand';
+
+  @override
   String get videoEditorTextEffectsSemanticLabel => 'Contour en schaduw';
 
   @override

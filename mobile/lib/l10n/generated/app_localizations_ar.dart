@@ -9336,6 +9336,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'خلفية النص';
 
   @override
+  String get videoEditorTextDontWrap => 'بدون التفاف';
+
+  @override
+  String get videoEditorTextWrapAtEdges => 'التفاف عند الحواف';
+
+  @override
   String get videoEditorTextEffectsSemanticLabel => 'الحد الخارجي والظل';
 
   @override

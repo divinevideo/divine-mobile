@@ -9305,6 +9305,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Nền chữ';
 
   @override
+  String get videoEditorTextDontWrap => 'Không xuống dòng';
+
+  @override
+  String get videoEditorTextWrapAtEdges => 'Xuống dòng ở mép';
+
+  @override
   String get videoEditorTextEffectsSemanticLabel => 'Viền và bóng';
 
   @override

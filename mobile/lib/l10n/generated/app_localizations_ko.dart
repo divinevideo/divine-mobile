@@ -8912,6 +8912,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => '텍스트 배경';
 
   @override
+  String get videoEditorTextDontWrap => '줄 바꿈 안 함';
+
+  @override
+  String get videoEditorTextWrapAtEdges => '가장자리에서 줄 바꿈';
+
+  @override
   String get videoEditorTextEffectsSemanticLabel => '외곽선 및 그림자';
 
   @override

@@ -2994,6 +2994,8 @@
   "videoEditorTextColorSemanticLabel": "Цвят на текста",
   "videoEditorTextAlignmentSemanticLabel": "Подравняване на текст",
   "videoEditorTextBackgroundSemanticLabel": "Текстов фон",
+  "videoEditorTextDontWrap": "Без пренасяне",
+  "videoEditorTextWrapAtEdges": "Пренасяне до краищата",
   "videoEditorTextEffectsSemanticLabel": "Контур и сянка",
   "videoEditorTextOutline": "Контур",
   "videoEditorTextOutlineThickness": "Дебелина на контура",

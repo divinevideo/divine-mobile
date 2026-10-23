@@ -2754,6 +2754,8 @@
   "videoEditorTextColorSemanticLabel": "Textfarbe",
   "videoEditorTextAlignmentSemanticLabel": "Textausrichtung",
   "videoEditorTextBackgroundSemanticLabel": "Texthintergrund",
+  "videoEditorTextDontWrap": "Nicht umbrechen",
+  "videoEditorTextWrapAtEdges": "Am Rand umbrechen",
   "videoEditorTextEffectsSemanticLabel": "Kontur und Schatten",
   "videoEditorTextOutline": "Kontur",
   "videoEditorTextOutlineThickness": "Konturstärke",

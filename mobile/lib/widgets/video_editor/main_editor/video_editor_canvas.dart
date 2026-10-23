@@ -20,6 +20,7 @@ import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.d
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
+import 'package:openvine/blocs/video_editor/text_wrap_hint/text_wrap_hint_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -72,6 +73,7 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_cut_area_
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_feed_preview_overlay.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_setup_loading_indicator.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_text_wrap_hint.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/tune_set_timeline_ops.dart';
 import 'package:openvine/widgets/video_editor/video_editor_widget_layer_loader.dart';
@@ -2441,6 +2443,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   ) async {
     if (_isImportingHistory || !_isInitialized) return;
 
+    context.read<TextWrapHintCubit>().layersChanged();
+
     // Directionless: the directional onUndo/onRedo pass owns stepping past an
     // orphan-only entry (this callback fires first, before onUndo/onRedo).
     _syncMainCapabilities(scope, bloc, allowOrphanStep: false);
@@ -2787,6 +2791,22 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // Listen for playback control requests from BLoC
     final editor = MultiBlocListener(
       listeners: [
+        // A text selected in the timeline keeps the toolbar's wrap hint up.
+        BlocListener<TimelineOverlayBloc, TimelineOverlayState>(
+          listenWhen: (previous, current) =>
+              previous.selectedItemId != current.selectedItemId,
+          listener: (context, state) {
+            final selectedId = state.selectedItemId;
+            final selected = selectedId == null
+                ? null
+                : scope.editor?.activeLayers
+                      .where((layer) => layer.id == selectedId)
+                      .firstOrNull;
+            context.read<TextWrapHintCubit>().layerSelected(
+              textWrapHintLayerIdOf(selected),
+            );
+          },
+        ),
         BlocListener<VideoEditorEffectsCubit, VideoEditorEffectsState>(
           listenWhen: (previous, current) => !listEquals(
             previous.previewCustomEffects,
@@ -3575,6 +3595,13 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                       'persist removed layer history',
                     );
                   }
+                  // A text the user is sizing may now wrap at the video
+                  // edges; the toolbar offers to let it run past them.
+                  context.read<TextWrapHintCubit>().layerTransformed(
+                    bloc.state.isLayerOverRemoveArea
+                        ? null
+                        : textWrapHintLayerIdOf(removed),
+                  );
                   _selectedLayer = null;
                 }
 

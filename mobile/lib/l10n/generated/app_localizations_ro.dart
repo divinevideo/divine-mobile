@@ -9557,6 +9557,12 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Fundal text';
 
   @override
+  String get videoEditorTextDontWrap => 'Fără încadrare';
+
+  @override
+  String get videoEditorTextWrapAtEdges => 'Încadrare la margini';
+
+  @override
   String get videoEditorTextEffectsSemanticLabel => 'Contur și umbră';
 
   @override

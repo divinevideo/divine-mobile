@@ -9487,6 +9487,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorTextBackgroundSemanticLabel => 'Arrière-plan du texte';
 
   @override
+  String get videoEditorTextDontWrap => 'Pas de retour à la ligne';
+
+  @override
+  String get videoEditorTextWrapAtEdges => 'Retour à la ligne aux bords';
+
+  @override
   String get videoEditorTextEffectsSemanticLabel => 'Contour et ombre';
 
   @override

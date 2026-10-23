@@ -2930,6 +2930,8 @@
   "videoEditorStickerSearchHint": "Çıkartma ara...",
   "videoEditorTextAlignmentSemanticLabel": "Metin hizalama",
   "videoEditorTextBackgroundSemanticLabel": "Metin arka planı",
+  "videoEditorTextDontWrap": "Metni kaydırma",
+  "videoEditorTextWrapAtEdges": "Kenarlarda kaydır",
   "videoEditorTextEffectsSemanticLabel": "Kontur ve gölge",
   "videoEditorTextOutline": "Kontur",
   "videoEditorTextOutlineThickness": "Kontur kalınlığı",
