@@ -71,6 +71,30 @@ class VideoCacheTest {
     }
 
     @Test
+    fun `open always checks the B2 canary host instead of replaying cached bytes`() {
+        val cachedFactory = mockk<DataSource.Factory> {
+            every { createDataSource() } returns mockk(relaxed = true)
+        }
+        val uncachedFactory = mockk<DataSource.Factory> {
+            every { createDataSource() } returns mockk(relaxed = true)
+        }
+        val uri = mockk<Uri>(relaxed = true) {
+            every { scheme } returns "https"
+            every { host } returns "media-b2.divine.video"
+        }
+        val source = CacheBypassDataSource(
+            cachedFactory = cachedFactory,
+            uncachedFactory = uncachedFactory,
+            httpHeadersForUri = { emptyMap() },
+        )
+
+        source.open(DataSpec.Builder().setUri(uri).build())
+
+        verify(exactly = 1) { uncachedFactory.createDataSource() }
+        verify(exactly = 0) { cachedFactory.createDataSource() }
+    }
+
+    @Test
     fun `open uses the cache and adds no headers for anonymous content`() {
         val cachedDelegate = mockk<DataSource>(relaxed = true)
         val uncachedDelegate = mockk<DataSource>(relaxed = true)

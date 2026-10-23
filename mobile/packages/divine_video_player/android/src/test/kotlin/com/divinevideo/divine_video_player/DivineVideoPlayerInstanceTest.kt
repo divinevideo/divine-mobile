@@ -662,6 +662,24 @@ class DivineVideoPlayerInstanceTest {
     }
 
     @Test
+    fun `onPlayerError distinguishes HTTP 503 from origin configuration failures`() {
+        val listener = capturePlayerListener()
+        val result = mockk<MethodChannel.Result>(relaxed = true)
+        instance.onMethodCall(setClipsCall("https://example.com/canary.mp4"), result)
+
+        listener.onPlayerError(httpStatusError(503))
+
+        verify(exactly = 1) {
+            result.error(
+                "PLAYER_ERROR",
+                "HTTP 503",
+                mapOf("errorCode" to "service_unavailable"),
+            )
+        }
+        verify(exactly = 0) { result.success(any()) }
+    }
+
+    @Test
     fun `onPlayerError maps pending HTTP 404 setClips failure to not_found`() {
         val listener = capturePlayerListener()
         val result = mockk<MethodChannel.Result>(relaxed = true)

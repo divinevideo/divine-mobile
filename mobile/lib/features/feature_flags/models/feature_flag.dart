@@ -85,6 +85,12 @@ enum FeatureFlag {
         'messaging is ready (#8269).',
     audience: FeatureFlagAudience.internal,
   ),
+  b2PlaybackCanary(
+    'B2 Playback Canary',
+    'Try the B2 mirror for public Divine originals before canonical playback. '
+        'Internal per-device test; off restores canonical playback.',
+    audience: FeatureFlagAudience.internal,
+  ),
   concordChat(
     'Concord Chat (POC)',
     'Show Rooms in Messages, the Concord community chat proof of concept. '

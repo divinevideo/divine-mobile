@@ -15,6 +15,7 @@ import 'package:infinite_video_feed/src/services/disk_prefetcher.dart';
 import 'package:infinite_video_feed/src/services/load_watchdog.dart';
 import 'package:infinite_video_feed/src/services/playback_source_registry.dart';
 import 'package:infinite_video_feed/src/services/stale_playback_detector.dart';
+import 'package:infinite_video_feed/src/utils/canonical_divine_url.dart';
 import 'package:infinite_video_feed/src/utils/playback_failure_log.dart';
 import 'package:infinite_video_feed/src/utils/playback_sources.dart';
 import 'package:infinite_video_feed/src/utils/source_loader.dart';
@@ -43,6 +44,7 @@ class InfiniteVideoFeed extends StatefulWidget {
     required this.cache,
     this.videoBuilder,
     this.urlResolver,
+    this.preferB2Original = false,
     this.loadingBuilder,
     this.errorBuilder,
     this.overlayBuilder,
@@ -111,6 +113,11 @@ class InfiniteVideoFeed extends StatefulWidget {
   ///
   /// Falls back to [VideoEvent.videoUrl] when `null`.
   final String? Function(VideoEvent video)? urlResolver;
+
+  /// Internal original-only mirror canary. Eligible videos bypass event-ID
+  /// disk caching and prefetch so canonical cached bytes cannot mask B2.
+  /// Switching this off rebuilds subsequent playback with canonical sources.
+  final bool preferB2Original;
 
   /// Builder for the loading state shown while a video initializes.
   final LoadingBuilder? loadingBuilder;
@@ -585,7 +592,10 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       _reconcileInactiveReleasePolicy(oldWidget);
     }
     _syncCurrentAutoPlayGate();
-    if (widget.videos == oldWidget.videos) return;
+    if (widget.videos == oldWidget.videos &&
+        widget.preferB2Original == oldWidget.preferB2Original) {
+      return;
+    }
 
     // How many leading items are unchanged — same id AND same resolved
     // playback source. A changed resolved URL for an existing index (e.g. the
@@ -659,6 +669,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     InfiniteVideoFeed oldWidget,
     InfiniteVideoFeed newWidget,
   ) {
+    if (oldWidget.preferB2Original != newWidget.preferB2Original) return 0;
     final maxLength = oldWidget.videos.length < newWidget.videos.length
         ? oldWidget.videos.length
         : newWidget.videos.length;
@@ -938,6 +949,20 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     _staleDetector.start(index, controller);
   }
 
+  bool _usesB2Original(VideoEvent video) =>
+      widget.preferB2Original && b2OriginalPlaybackUrl(video.videoUrl) != null;
+
+  bool _canaryStopsFallback(
+    VideoEvent video,
+    String? source,
+    NativePlayerErrorCode? code,
+    String? message,
+  ) =>
+      _usesB2Original(video) &&
+      (blocksB2CanaryFallback(errorCode: code, errorMessage: message) ||
+          (isB2OriginalPlaybackSource(source ?? '') &&
+              !canFailOverB2Original(code)));
+
   // coverage:ignore-start
   // Simple resolver wrapper; behavior is covered via callers, but optimized
   // coverage reports the declaration line itself as uncovered.
@@ -1113,13 +1138,16 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       startIndex: prefetchStart,
       endIndex: prefetchEnd,
       videos: widget.videos,
-      resolveUrls: (video) => resolvePlaybackSources(
-        video,
-        urlResolver: widget.urlResolver,
-        derivativeFailureCache: _derivativeFailures,
-        // Exclude HLS manifests: prefetch writes static files to disk,
-        // but HLS playback needs re-streaming the manifest + segments.
-      ).where((url) => !isHlsManifest(url)).toList(),
+      resolveUrls: (video) => _usesB2Original(video)
+          ? const []
+          : resolvePlaybackSources(
+              video,
+              urlResolver: widget.urlResolver,
+              preferB2Original: widget.preferB2Original,
+              derivativeFailureCache: _derivativeFailures,
+              // Exclude HLS manifests: prefetch writes static files to disk,
+              // but HLS playback needs re-streaming the manifest + segments.
+            ).where((url) => !isHlsManifest(url)).toList(),
     );
     // coverage:ignore-end
   }
@@ -1194,7 +1222,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
     final initGeneration = (_controllerInitGenerations[index] ?? 0) + 1;
     _controllerInitGenerations[index] = initGeneration;
 
-    final cachedFile = skipCache
+    final cachedFile = skipCache || _usesB2Original(video)
         ? null
         : widget.cache.getCachedFileSync(video.id);
     final fromCache = cachedFile != null;
@@ -1272,6 +1300,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       final playbackSources = resolvePlaybackSources(
         video,
         urlResolver: widget.urlResolver,
+        preferB2Original: widget.preferB2Original,
         derivativeFailureCache: _derivativeFailures,
       );
       // Hash-bound auth applies to every resolved source for this index, so
@@ -1411,7 +1440,13 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
         errorMessage: e.toString(),
       );
       unawaited(_controllers.remove(index)?.dispose());
-      if (_isTerminalPlaybackFailure(e)) {
+      if (_isTerminalPlaybackFailure(e) ||
+          _canaryStopsFallback(
+            video,
+            lastFailedSource,
+            nativePlayerErrorCodeFromError(e),
+            e.toString(),
+          )) {
         _stopAndMarkTerminalError(index, errorType);
       } else {
         _errorTypes[index] = errorType;
@@ -1545,6 +1580,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       }
     }
 
+    final failedSource = _sources.activeSourceFor(index);
     final nextSource = _sources.advance(index);
     if (nextSource == null) {
       _log('All sources exhausted for index $index');
@@ -1552,7 +1588,16 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       return;
     }
 
-    _log('Source failover index $index: source=$nextSource');
+    _log(
+      'Source failover index $index: '
+      'failedSource=$failedSource source=$nextSource',
+    );
+    if (_usesB2Original(widget.videos[index])) {
+      _log(
+        'B2 canary fallback index $index: '
+        'failedSource=$failedSource retrySource=$nextSource',
+      );
+    }
 
     // The first failover after a cache load means the cached file was
     // unplayable at runtime. Evict it so future loads hit the network.
@@ -1612,7 +1657,14 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
       );
       _onVideoStalled(
         index,
-        isTerminal: _isTerminalPlaybackFailure(e),
+        isTerminal:
+            _isTerminalPlaybackFailure(e) ||
+            _canaryStopsFallback(
+              widget.videos[index],
+              nextSource,
+              nativePlayerErrorCodeFromError(e),
+              e.toString(),
+            ),
         errorType: classifyVideoError(
           errorCode: nativePlayerErrorCodeFromError(e),
           errorMessage: e.toString(),
@@ -1924,10 +1976,21 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
           // Use the typed error code for a reliable failover decision.
           // Fall back to attempting failover for unknown errors so we
           // don't give up prematurely on unclassified failures.
+          final canaryPolicyDenied = _canaryStopsFallback(
+            widget.videos[index],
+            _sources.activeSourceFor(index),
+            errorCode,
+            errorMessage,
+          );
           final shouldFailover =
+              !canaryPolicyDenied &&
               (errorCode == null ||
                   errorCode == NativePlayerErrorCode.unknown ||
-                  errorCode.shouldFailover) &&
+                  errorCode.shouldFailover ||
+                  (isB2OriginalPlaybackSource(
+                        _sources.activeSourceFor(index) ?? '',
+                      ) &&
+                      canFailOverB2Original(errorCode))) &&
               _sources.hasSources(index) &&
               _sources.canAdvance(index);
           if (shouldFailover) {
@@ -1944,7 +2007,7 @@ class InfiniteVideoFeedState extends State<InfiniteVideoFeed> {
             errorCode: errorCode,
             errorMessage: errorMessage,
           );
-          if (_isTerminalPlaybackFailure(errorMessage)) {
+          if (canaryPolicyDenied || _isTerminalPlaybackFailure(errorMessage)) {
             _stopAndMarkTerminalError(index, errorType);
           } else {
             _stopAndMarkError(index, errorType);

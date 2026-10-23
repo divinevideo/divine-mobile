@@ -167,7 +167,9 @@ internal fun isCacheableScheme(scheme: String?): Boolean =
  * [uncachedFactory], deciding per `open()` so HLS segments are judged on
  * their own URI rather than the manifest's.
  *
- * Two kinds of request bypass the cache:
+ * Three kinds of request bypass the cache:
+ *  - The B2 playback canary host, so every new open checks the endpoint
+ *    policy instead of silently replaying an earlier approved copy.
  *  - Viewer-authenticated (age-gated) content, which the origin serves
  *    `no-store`; the auth headers are attached and the private bytes are
  *    never persisted.
@@ -195,7 +197,9 @@ internal class CacheBypassDataSource(
         } else {
             dataSpec.withRequestHeaders(dataSpec.httpRequestHeaders + httpHeaders)
         }
-        val useCache = httpHeaders.isEmpty() && isCacheableScheme(dataSpec.uri.scheme)
+        val isB2Canary = dataSpec.uri.host.equals("media-b2.divine.video", ignoreCase = true)
+        val useCache = httpHeaders.isEmpty() &&
+            isCacheableScheme(dataSpec.uri.scheme) && !isB2Canary
         val selectedDelegate = if (useCache) {
             cachedFactory.createDataSource()
         } else {

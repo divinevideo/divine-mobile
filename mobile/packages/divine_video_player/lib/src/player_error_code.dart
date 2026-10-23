@@ -49,7 +49,12 @@ enum NativePlayerErrorCode {
   /// iOS: `NSError` with HTTP status in `userInfo`, except 401, 403, and 404.
   httpClientError,
 
-  /// HTTP 5xx response from the media server.
+  /// HTTP 503: the source is temporarily unavailable. Kept distinct from
+  /// other server failures so a mirror can explicitly permit canonical
+  /// fallback.
+  serviceUnavailable,
+
+  /// HTTP 5xx response from the media server (other than 503).
   ///
   /// Android: `ERROR_CODE_IO_BAD_HTTP_STATUS` when 500+.
   /// iOS: `NSError` with HTTP status in `userInfo`.
@@ -111,6 +116,7 @@ enum NativePlayerErrorCode {
     forbidden => true,
     notFound => true,
     httpClientError => true,
+    serviceUnavailable => true,
     httpServerError => true,
     ioError => true,
     parseError => true,
@@ -134,6 +140,7 @@ enum NativePlayerErrorCode {
     authRequired => false,
     forbidden => false,
     notFound => false,
+    serviceUnavailable => false,
     httpServerError => false,
     httpClientError => false,
     parseError => false,
@@ -148,6 +155,7 @@ enum NativePlayerErrorCode {
     'forbidden' => forbidden,
     'not_found' => notFound,
     'http_client_error' => httpClientError,
+    'service_unavailable' => serviceUnavailable,
     'http_server_error' => httpServerError,
     'network_error' => networkError,
     'timeout' => timeout,

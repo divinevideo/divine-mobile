@@ -11,6 +11,36 @@ import 'package:shared_preferences/shared_preferences.dart';
 class _MockSharedPreferences extends Mock implements SharedPreferences {}
 
 void main() {
+  group('B2 canary device preference', () {
+    test('persists internal opt in and opt out while keeping non-developer devices off', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      FeatureFlagService create({bool internal = true}) => FeatureFlagService(
+        prefs,
+        const BuildConfiguration(),
+        canOverrideInternalFlags: () => internal,
+      );
+      final first = create();
+      addTearDown(first.dispose);
+      await first.initialize();
+      expect(first.isEnabled(FeatureFlag.b2PlaybackCanary), isFalse);
+      await first.setFlag(FeatureFlag.b2PlaybackCanary, true);
+      final restarted = create();
+      addTearDown(restarted.dispose);
+      await restarted.initialize();
+      expect(restarted.isEnabled(FeatureFlag.b2PlaybackCanary), isTrue);
+      final publicDevice = create(internal: false);
+      addTearDown(publicDevice.dispose);
+      await publicDevice.initialize();
+      expect(publicDevice.isEnabled(FeatureFlag.b2PlaybackCanary), isFalse);
+      await restarted.setFlag(FeatureFlag.b2PlaybackCanary, false);
+      final disabled = create();
+      addTearDown(disabled.dispose);
+      await disabled.initialize();
+      expect(disabled.isEnabled(FeatureFlag.b2PlaybackCanary), isFalse);
+    });
+  });
+
   group('FeatureFlagService', () {
     late _MockSharedPreferences mockPrefs;
     late FeatureFlagService service;

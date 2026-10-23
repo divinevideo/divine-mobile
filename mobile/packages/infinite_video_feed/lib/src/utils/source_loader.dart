@@ -1,4 +1,5 @@
 import 'package:divine_video_player/divine_video_player.dart';
+import 'package:infinite_video_feed/src/utils/canonical_divine_url.dart';
 import 'package:infinite_video_feed/src/utils/playback_sources.dart';
 
 const _mediaProcessingRetryDelays = <Duration>[
@@ -54,7 +55,9 @@ class SourceLoadAborted implements Exception {
 /// `false` to keep walking the ladder, which is what a surface offering
 /// hand-picked alternate renditions wants. Either way, authentication errors
 /// stop the ladder immediately and media-processing errors stay eligible for
-/// fallback, because another rendition may already be ready.
+/// fallback, because another rendition may already be ready. A B2 canary
+/// original fails closed unless the platform reports HTTP 503 or a typed
+/// connection failure; its private 404 must never bypass policy.
 Future<(String, int)> setSourceWithFallbacks({
   required int index,
   required DivineVideoPlayerController controller,
@@ -69,6 +72,7 @@ Future<(String, int)> setSourceWithFallbacks({
   void Function(String source)? onFailoverSourceFailure,
   void Function(String source)? onSourceLoadFailure,
 }) async {
+  final isCanary = sources.any(isB2OriginalPlaybackSource);
   Object? lastError;
   StackTrace? lastStackTrace;
 
@@ -81,6 +85,9 @@ Future<(String, int)> setSourceWithFallbacks({
   for (var attemptIndex = 0; attemptIndex < sources.length; attemptIndex++) {
     final source = sources[attemptIndex];
     abortIfStale(source);
+    if (isB2OriginalPlaybackSource(source)) {
+      log('B2 canary attempt index $index: source=$source');
+    }
     try {
       await controller.setSource(
         VideoClip.network(
@@ -91,6 +98,12 @@ Future<(String, int)> setSourceWithFallbacks({
         ),
       );
       abortIfStale(source);
+      if (isCanary) {
+        log(
+          'B2 canary result index $index: '
+          'selectedSource=$source attempt=$attemptIndex',
+        );
+      }
       return (source, attemptIndex);
     } on SourceLoadAborted {
       rethrow;
@@ -107,7 +120,18 @@ Future<(String, int)> setSourceWithFallbacks({
               nativeErrorCode != NativePlayerErrorCode.unknown &&
               nativeErrorCode != NativePlayerErrorCode.mediaProcessing &&
               !nativeErrorCode.shouldFailover);
-      if (isTypedNonFailoverError) {
+      final policyDenied =
+          isCanary &&
+          (blocksB2CanaryFallback(
+                errorCode: nativeErrorCode,
+                errorMessage: error.toString(),
+              ) ||
+              (isB2OriginalPlaybackSource(source) &&
+                  !canFailOverB2Original(nativeErrorCode)));
+      final isB2SourceFailure =
+          isB2OriginalPlaybackSource(source) &&
+          canFailOverB2Original(nativeErrorCode);
+      if (policyDenied || (isTypedNonFailoverError && !isB2SourceFailure)) {
         log(
           'Source failed without failover index $index: '
           'failedSource=$source '
@@ -158,6 +182,12 @@ Future<(String, int)> setSourceWithFallbacks({
       }
       final nextAttempt = attemptIndex + 1;
       if (nextAttempt < sources.length) {
+        if (isCanary) {
+          log(
+            'B2 canary fallback index $index: failedSource=$source '
+            'retrySource=${sources[nextAttempt]} code=$nativeErrorCode',
+          );
+        }
         if (_shouldRecordFailoverSourceFailure(error)) {
           onFailoverSourceFailure?.call(source);
         }

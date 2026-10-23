@@ -3,6 +3,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/services/build_configuration.dart';
 
 void main() {
   group('FeatureFlag enum', () {
@@ -56,6 +57,14 @@ void main() {
         FeatureFlag.values.map((flag) => flag.name),
         isNot(anyElement(anyOf('lightMode', 'adaptiveMediaChrome'))),
       );
+    });
+
+    test('keeps the B2 playback canary internal and off by default', () {
+      final flag = FeatureFlag.values.firstWhere(
+        (flag) => flag.name == 'b2PlaybackCanary',
+      );
+      expect(flag.isInternal, isTrue);
+      expect(const BuildConfiguration().getDefault(flag), isFalse);
     });
 
     test('should classify staged rollout flags as internal', () {

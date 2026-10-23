@@ -332,6 +332,9 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
 
   @override
   Widget build(BuildContext context) {
+    final preferB2Original = ref.watch(
+      isFeatureEnabledProvider(FeatureFlag.b2PlaybackCanary),
+    );
     final playbackEligible = ref.watch(playbackEligibleProvider);
     final videosRepository = ref.watch(videosRepositoryProvider);
     final isFeedActive =
@@ -404,6 +407,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
         // dependencies into BlocProvider" → exception #1.
         cache: ref.read(mediaCacheProvider),
         urlResolver: (video) => video.getOptimalVideoUrlForPlatform(),
+        preferB2Original: preferB2Original,
         initialIndex: widget.currentIndex,
         onNearEnd: widget.onNearEnd,
         initialVolume: context.read<VideoVolumeCubit>().state.volume,

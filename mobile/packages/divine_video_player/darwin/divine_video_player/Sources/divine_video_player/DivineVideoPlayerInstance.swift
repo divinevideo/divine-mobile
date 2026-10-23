@@ -2517,6 +2517,9 @@ final class DivineVideoPlayerInstance: NSObject, FlutterStreamHandler, PlaybackD
             if httpResponse.statusCode == 404 {
                 return "not_found"
             }
+            if let code = httpServiceUnavailableCode(status: httpResponse.statusCode) {
+                return code
+            }
             return httpResponse.statusCode >= 500 ? "http_server_error" : "http_client_error"
         }
 
