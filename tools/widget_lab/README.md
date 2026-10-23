@@ -30,7 +30,7 @@ To try your own human-made clips, provide exactly three local files, each at lea
 python3 prepare_media.py /absolute/path/one.mp4 /absolute/path/two.mp4 /absolute/path/three.mp4
 ```
 
-Each sample's first two seconds become the preview; up to six seconds become the host-app playback sample. Generated samples are silent and center-cropped to a landscape card. There is no media download or backend dependency.
+Each sample's first two seconds become the preview; up to six seconds become the host-app playback sample. Generated samples are silent. Preview frames are center-cropped to a landscape card; host-app playback samples retain their source aspect ratio. There is no media download or backend dependency.
 
 ## iOS
 

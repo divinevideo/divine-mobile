@@ -22,4 +22,3 @@ struct LikeHighlight: AppIntent {
         return .result()
     }
 }
-
