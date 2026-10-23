@@ -14,8 +14,10 @@ receipt alone does not record an open. New parameters are:
 
 `local_tap` identifies a local-notification callback; it does not assert the app
 was in the foreground. No new identity, message text, route, event ID, or FCM
-token is sent as a parameter. Transport/source IDs are used only for bounded
-in-memory deduplication within a privacy/session boundary. Older campaigns
+token is sent as a parameter. Transport/source IDs are never exported. The FCM
+message ID travels in a locally rendered notification's payload, so it also
+appears in the app's local tap log, and otherwise serves only bounded in-memory
+deduplication within a privacy/session boundary. Older campaigns
 without either ID cannot reliably deduplicate callbacks. Deduplication does not
 promise exactly-once delivery across process restarts.
 
