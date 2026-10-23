@@ -102,11 +102,9 @@ void main() {
       expect(await future, 0);
     });
 
-    test('settles quietly when the feature is disabled', () async {
+    test('settles quietly when the active owner signs out', () async {
       final future = wait();
-      states.add(
-        const PeopleListsState(ownerPubkey: _ownerPubkey, enabled: false),
-      );
+      states.add(const PeopleListsState());
 
       expect(await future, 0);
     });

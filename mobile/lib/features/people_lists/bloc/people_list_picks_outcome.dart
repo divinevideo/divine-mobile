@@ -6,8 +6,8 @@ import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 /// Observes one batch before it is dispatched, retaining even a fast answer.
 ///
 /// Another visit for the same person cannot complete this wait: [requestId]
-/// must match. Returns 0 if the owner changes, the feature is disabled, or
-/// the stream closes before the batch finishes.
+/// must match. Returns 0 if the owner changes or signs out, or the stream
+/// closes before the batch finishes.
 Future<int> awaitRefusedPicks({
   required Stream<PeopleListsState> states,
   required Object requestId,

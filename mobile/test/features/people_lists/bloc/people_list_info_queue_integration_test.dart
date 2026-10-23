@@ -43,7 +43,6 @@ void main() {
       repository: repository,
       ownerPubkeyStream: const Stream.empty(),
       repositoryStream: const Stream.empty(),
-      enabledStream: const Stream.empty(),
       initialOwnerPubkey: _ownerA,
       clock: () => DateTime.utc(2026),
     );
@@ -386,7 +385,7 @@ void main() {
     for (final boundary in [
       'owner round trip',
       'repository replacement',
-      'feature cycle',
+      'sign out and back in',
     ]) {
       test(
         'an open draft stays retired after $boundary with the same owner',
@@ -403,13 +402,14 @@ void main() {
               bloc.add(PeopleListsOwnerChanged(ownerPubkey: owner));
               await changed;
             }
-          } else if (boundary == 'feature cycle') {
-            final disabled = bloc.stream.firstWhere((s) => !s.enabled);
-            bloc.add(const PeopleListsEnabledChanged(enabled: false));
-            await disabled;
-            final enabled = bloc.stream.firstWhere((s) => s.enabled);
-            bloc.add(const PeopleListsEnabledChanged(enabled: true));
-            await enabled;
+          } else if (boundary == 'sign out and back in') {
+            for (final owner in [null, _ownerA]) {
+              final changed = bloc.stream.firstWhere(
+                (s) => s.activeOwnerPubkey == owner,
+              );
+              bloc.add(PeopleListsOwnerChanged(ownerPubkey: owner));
+              await changed;
+            }
           } else {
             final replacement = _Repository();
             when(
