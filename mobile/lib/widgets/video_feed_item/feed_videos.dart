@@ -72,6 +72,7 @@ class FeedVideos extends ConsumerStatefulWidget {
     this.isLoadingMore = false,
     this.onActiveVideoChanged,
     this.trafficSource = ViewTrafficSource.unknown,
+    this.trafficSourceForVideo,
     this.sourceDetail,
     this.feedSessionRevision = 0,
     super.key,
@@ -112,6 +113,9 @@ class FeedVideos extends ConsumerStatefulWidget {
   final void Function(VideoEvent video, int index)? onActiveVideoChanged;
 
   final ViewTrafficSource trafficSource;
+
+  /// Optional attribution for mixed feeds, such as a share followed by For You.
+  final ViewTrafficSource Function(VideoEvent video)? trafficSourceForVideo;
   final String? sourceDetail;
 
   /// Identifies one feed-depth session.
@@ -429,7 +433,9 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
           if (!isProgrammaticActivation && _seenVideoIds.add(video.id)) {
             unawaited(
               _consumptionAnalytics.feedDepthReached(
-                trafficSource: widget.trafficSource,
+                trafficSource:
+                    widget.trafficSourceForVideo?.call(video) ??
+                    widget.trafficSource,
                 feedSessionId: _feedSessionId,
                 depth: _seenVideoIds.length,
                 sourceDetail: widget.sourceDetail,
@@ -575,7 +581,9 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
                 isActive: isActive,
                 isFeedVisible: isFeedActive,
                 position: index,
-                trafficSource: widget.trafficSource,
+                trafficSource:
+                    widget.trafficSourceForVideo?.call(video) ??
+                    widget.trafficSource,
                 sourceDetail: widget.sourceDetail,
                 child: _Overlay(
                   controller: controller,

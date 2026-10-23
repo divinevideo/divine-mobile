@@ -330,6 +330,11 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
         autoOpenComments: autoOpenComments,
         onPageChanged: onPageChanged,
         dmReplyContext: dmReplyContext,
+        loadMoreOnEndSwipe: source is SingleVideoViewSource,
+        initialVideoKey: switch (source) {
+          SingleVideoViewSource(:final video) => video.feedDedupKey,
+          _ => null,
+        },
         onBack: onBack,
       ),
     );
@@ -352,6 +357,8 @@ class FullscreenFeedContent extends ConsumerStatefulWidget {
     this.autoOpenComments = false,
     this.onPageChanged,
     this.dmReplyContext,
+    this.initialVideoKey,
+    this.loadMoreOnEndSwipe = false,
     this.onBack,
     super.key,
   });
@@ -382,6 +389,12 @@ class FullscreenFeedContent extends ConsumerStatefulWidget {
   /// reply/reaction bar in the body footer.
   final DmReplyContext? dmReplyContext;
 
+  /// Logical identity of the opened video, for DM controls and attribution.
+  final String? initialVideoKey;
+
+  /// Lets another swipe retry discovery when no new page was playable yet.
+  final bool loadMoreOnEndSwipe;
+
   /// Overrides the app-bar back action when the feed is embedded as a parent
   /// screen's video mode (see [PooledFullscreenVideoFeedScreen.onBack]).
   final VoidCallback? onBack;
@@ -402,6 +415,7 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
 
   /// Whether the inline comment composer is focused.
   bool _inlineComposerFocused = false;
+  bool _requestedDiscoveryForDrag = false;
 
   /// Whether one of THIS screen's own bottom composers (inline comment or DM
   /// reply) currently holds focus. Drives `resizeToAvoidBottomInset`: we only
@@ -517,6 +531,56 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
     );
   }
 
+  bool _onDiscoveryScroll(ScrollNotification notification) {
+    if (!widget.loadMoreOnEndSwipe ||
+        notification.depth != 0 ||
+        notification.metrics.axis != Axis.vertical) {
+      return false;
+    }
+    if (notification is ScrollStartNotification ||
+        notification is ScrollEndNotification) {
+      _requestedDiscoveryForDrag = false;
+    }
+    // Clamping physics reports an overscroll; bouncing physics reports a
+    // scroll update beyond the end. Only user drags request another page.
+    final swipingPastEnd = switch (notification) {
+      OverscrollNotification(:final overscroll, :final dragDetails) =>
+        dragDetails != null && overscroll > 0,
+      ScrollUpdateNotification(:final scrollDelta, :final dragDetails) =>
+        dragDetails != null &&
+            (scrollDelta ?? 0) > 0 &&
+            notification.metrics.pixels > notification.metrics.maxScrollExtent,
+      _ => false,
+    };
+    final state = context.read<FullscreenFeedBloc>().state;
+    if (swipingPastEnd &&
+        !_requestedDiscoveryForDrag &&
+        state.canLoadMore &&
+        !state.isLoadingMore &&
+        state.currentIndex == state.videos.length - 1) {
+      _requestedDiscoveryForDrag = true;
+      _triggerLoadMore();
+    }
+    return false;
+  }
+
+  ViewTrafficSource _trafficSourceForVideo(VideoEvent video) {
+    if (widget.loadMoreOnEndSwipe &&
+        video.feedDedupKey != widget.initialVideoKey) {
+      return ViewTrafficSource.discoveryForYou;
+    }
+    return widget.trafficSource;
+  }
+
+  void _clearComposerFocus() {
+    if (!_replyComposerFocused && !_inlineComposerFocused) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() {
+      _replyComposerFocused = false;
+      _inlineComposerFocused = false;
+    });
+  }
+
   void _triggerLoadMore() {
     context.read<FullscreenFeedBloc>().add(
       const FullscreenFeedLoadMoreRequested(),
@@ -612,6 +676,12 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
         ],
         child: MultiBlocListener(
           listeners: [
+            BlocListener<FullscreenFeedBloc, FullscreenFeedState>(
+              listenWhen: (previous, current) =>
+                  previous.currentVideo?.feedDedupKey !=
+                  current.currentVideo?.feedDedupKey,
+              listener: (_, _) => _clearComposerFocus(),
+            ),
             BlocListener<FullscreenFeedBloc, FullscreenFeedState>(
               listenWhen: (prev, curr) =>
                   prev.videos.length != curr.videos.length ||
@@ -788,18 +858,23 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
               // so the action column / author info land at the same gap
               // above the comment bar. The bar's own `SafeArea`-style
               // padding handles the home-indicator visually.
-              // When the reel is opened FROM a DM, only the private DM reply
+              // While viewing the original reel opened from a DM, the private reply
               // bar is shown — the public comment composer is suppressed so a
               // private-context reply can't be mistaken for (or accidentally
               // posted as) a public comment. Public commenting is still one
               // tap away via the right-rail comment button. Matches TikTok/IG.
+              final isSharedDmVideo =
+                  widget.dmReplyContext != null &&
+                  (widget.initialVideoKey == null ||
+                      widget.initialVideoKey ==
+                          state.currentVideo?.feedDedupKey);
               final showCommentBar =
-                  widget.dmReplyContext == null &&
+                  !isSharedDmVideo &&
                   currentUserPubkey != null &&
                   state.currentVideo != null;
 
               final showDmReplyBar =
-                  widget.dmReplyContext != null &&
+                  isSharedDmVideo &&
                   currentUserPubkey != null &&
                   state.currentVideo != null;
 
@@ -914,43 +989,48 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                                   child: VideoTapShield(
                                     child: _MaybeRoundFeedBottom(
                                       roundCorners: showCommentBar,
-                                      child: MediaQuery.removePadding(
-                                        context: context,
-                                        removeBottom: true,
-                                        child: FeedVideos(
-                                          key: _feedVideosKey,
-                                          // Pause the reel while the DM reply composer
-                                          // is focused so it doesn't play under the
-                                          // keyboard.
-                                          isActive: !_replyComposerFocused,
-                                          videos: state.videos,
-                                          contextTitle: widget.contextTitle,
-                                          currentIndex: state.currentIndex,
-                                          hasMore: state.canLoadMore,
-                                          isLoadingMore: state.isLoadingMore,
-                                          trafficSource: widget.trafficSource,
-                                          sourceDetail: widget.sourceDetail,
-                                          onActiveVideoChanged: (_, index) {
-                                            ref
-                                                .read(
-                                                  foregroundFeedActivityGateProvider,
-                                                )
-                                                .markActive();
-                                            _resumeAutoAdvanceAfterSwipe();
-                                            context
-                                                .read<FullscreenFeedBloc>()
-                                                .add(
-                                                  FullscreenFeedIndexChanged(
-                                                    index,
-                                                  ),
-                                                );
-                                            widget.onPageChanged?.call(index);
-                                          },
-                                          onNearEnd: () {
-                                            if (state.canLoadMore) {
-                                              _triggerLoadMore();
-                                            }
-                                          },
+                                      child: NotificationListener<ScrollNotification>(
+                                        onNotification: _onDiscoveryScroll,
+                                        child: MediaQuery.removePadding(
+                                          context: context,
+                                          removeBottom: true,
+                                          child: FeedVideos(
+                                            key: _feedVideosKey,
+                                            // Pause the reel while the DM reply composer
+                                            // is focused so it doesn't play under the
+                                            // keyboard.
+                                            isActive: !_replyComposerFocused,
+                                            videos: state.videos,
+                                            contextTitle: widget.contextTitle,
+                                            currentIndex: state.currentIndex,
+                                            hasMore: state.canLoadMore,
+                                            isLoadingMore: state.isLoadingMore,
+                                            trafficSource: widget.trafficSource,
+                                            trafficSourceForVideo:
+                                                _trafficSourceForVideo,
+                                            sourceDetail: widget.sourceDetail,
+                                            onActiveVideoChanged: (_, index) {
+                                              ref
+                                                  .read(
+                                                    foregroundFeedActivityGateProvider,
+                                                  )
+                                                  .markActive();
+                                              _resumeAutoAdvanceAfterSwipe();
+                                              context
+                                                  .read<FullscreenFeedBloc>()
+                                                  .add(
+                                                    FullscreenFeedIndexChanged(
+                                                      index,
+                                                    ),
+                                                  );
+                                              widget.onPageChanged?.call(index);
+                                            },
+                                            onNearEnd: () {
+                                              if (state.canLoadMore) {
+                                                _triggerLoadMore();
+                                              }
+                                            },
+                                          ),
                                         ),
                                       ),
                                     ),

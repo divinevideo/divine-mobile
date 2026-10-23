@@ -13872,6 +13872,49 @@ void main() {
       });
     });
 
+    test(
+      'video discovery continues popular fallback without a Gorse cursor',
+      () async {
+        final mockFunnelcakeClient = MockFunnelcakeApiClient();
+        final popular = _createVideoStats(
+          id: 'popular-continuation',
+          pubkey: 'popular-pubkey',
+          dTag: 'popular-dtag',
+          videoUrl: 'https://example.com/popular.mp4',
+        );
+        when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+        when(
+          () => mockFunnelcakeClient.getWatchingVideos(
+            limit: any(named: 'limit'),
+            before: any(named: 'before'),
+          ),
+        ).thenAnswer((_) async => [popular]);
+        final repo = VideosRepository(
+          nostrClient: mockNostrClient,
+          funnelcakeApiClient: mockFunnelcakeClient,
+        );
+        final result = await repo.getVideoDiscoveryPage(
+          userPubkey: 'viewer',
+          until: 1700000000,
+          limit: 10,
+        );
+        expect(result.videos.single.id, 'popular-continuation');
+        verify(
+          () => mockFunnelcakeClient.getWatchingVideos(
+            limit: 10,
+            before: 1700000000,
+          ),
+        ).called(1);
+        verifyNever(
+          () => mockFunnelcakeClient.getRecommendations(
+            pubkey: any(named: 'pubkey'),
+            cursor: any(named: 'cursor'),
+            seed: any(named: 'seed'),
+          ),
+        );
+      },
+    );
+
     group('getRecommendedVideos', () {
       late MockFunnelcakeApiClient mockFunnelcakeClient;
 

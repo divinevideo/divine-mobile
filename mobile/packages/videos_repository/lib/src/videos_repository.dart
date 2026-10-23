@@ -3419,6 +3419,39 @@ class VideosRepository {
     return _funnelcakeApiClient.getBulkVideoStats(eventIds);
   }
 
+  /// Fetches discovery following an opened video, using For You for now.
+  ///
+  /// An opaque [cursor] continues recommendations. An [until] boundary means
+  /// the first page fell back to popular; keep that source for pagination
+  /// rather than interpreting its timestamp as a recommendation cursor.
+  Future<HomeFeedResult> getVideoDiscoveryPage({
+    required String? userPubkey,
+    int limit = _defaultLimit,
+    String? cursor,
+    int? until,
+    List<String> preferredLanguages = const [],
+    String? viewerCountry,
+  }) {
+    if (cursor == null && until != null) {
+      return _popularVideosInsteadOfRecommendations(
+        reason: 'continuing popular discovery fallback',
+        limit: limit,
+        until: until,
+        skipCache: false,
+        revalidate: false,
+        preferredLanguages: preferredLanguages,
+        viewerCountry: viewerCountry,
+      );
+    }
+    return getRecommendedVideos(
+      userPubkey: userPubkey,
+      limit: limit,
+      cursor: cursor,
+      preferredLanguages: preferredLanguages,
+      viewerCountry: viewerCountry,
+    );
+  }
+
   /// Fetches For You videos from the recommendations endpoint.
   ///
   /// - [skipCache]: Full manual refresh — bypasses the in-memory first-page

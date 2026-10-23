@@ -40,11 +40,13 @@ import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/screens/comments/comments_screen.dart';
+import 'package:openvine/screens/feed/dm_reply_context.dart';
 import 'package:openvine/screens/feed/feed_auto_advance_cubit.dart';
 import 'package:openvine/screens/feed/feed_immersive_cubit.dart';
 import 'package:openvine/screens/feed/feed_settings_menu.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/feed/video_feed_page.dart';
+import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/broken_video_tracker.dart';
 import 'package:openvine/services/dead_media_feed_guard.dart';
 import 'package:openvine/services/media_auth_interceptor.dart';
@@ -56,12 +58,16 @@ import 'package:openvine/widgets/video_feed_item/feed_videos.dart';
 import 'package:openvine/widgets/video_feed_item/fullscreen_sponsor_disclosure.dart';
 import 'package:openvine/widgets/video_feed_item/inline_comment_composer_bar.dart';
 import 'package:openvine/widgets/video_feed_item/moderated_content_overlay.dart';
+import 'package:openvine/widgets/video_feed_item/reel_dm_reply_bar.dart';
 import 'package:riverpod/misc.dart' show Override;
 import 'package:unified_logger/unified_logger.dart';
+import 'package:videos_repository/videos_repository.dart';
 
 import '../../helpers/recording_consumption_analytics.dart';
 import '../../helpers/test_provider_overrides.dart';
 import '../../test_data/video_test_data.dart';
+
+class _MockDiscoveryVideosRepository extends Mock implements VideosRepository {}
 
 class MockFullscreenFeedBloc
     extends MockBloc<FullscreenFeedEvent, FullscreenFeedState>
@@ -293,6 +299,9 @@ void main() {
       ViewTrafficSource trafficSource = ViewTrafficSource.unknown,
       String? sourceDetail,
       bool autoOpenComments = false,
+      DmReplyContext? dmReplyContext,
+      String? initialVideoKey,
+      bool loadMoreOnEndSwipe = false,
       VoidCallback? onBack,
     }) {
       return MultiBlocProvider(
@@ -309,6 +318,9 @@ void main() {
           trafficSource: trafficSource,
           sourceDetail: sourceDetail,
           autoOpenComments: autoOpenComments,
+          dmReplyContext: dmReplyContext,
+          initialVideoKey: initialVideoKey,
+          loadMoreOnEndSwipe: loadMoreOnEndSwipe,
           onBack: onBack,
         ),
       );
@@ -325,6 +337,9 @@ void main() {
       ViewTrafficSource trafficSource = ViewTrafficSource.unknown,
       String? sourceDetail,
       bool autoOpenComments = false,
+      DmReplyContext? dmReplyContext,
+      String? initialVideoKey,
+      bool loadMoreOnEndSwipe = false,
       VoidCallback? onBack,
     }) {
       final effectiveState = state ?? FullscreenFeedState();
@@ -336,6 +351,9 @@ void main() {
         trafficSource: trafficSource,
         sourceDetail: sourceDetail,
         autoOpenComments: autoOpenComments,
+        dmReplyContext: dmReplyContext,
+        initialVideoKey: initialVideoKey,
+        loadMoreOnEndSwipe: loadMoreOnEndSwipe,
         onBack: onBack,
       );
       return testMaterialApp(
@@ -353,6 +371,231 @@ void main() {
     InfiniteVideoFeed nativeFeed(WidgetTester tester) {
       return tester.widget<InfiniteVideoFeed>(find.byType(InfiniteVideoFeed));
     }
+
+    testWidgets(
+      'discovery videos do not reply to the original shared DM reel',
+      (tester) async {
+        final videos = createTestVideos();
+        final auth = createMockAuthService(
+          authState: AuthState.authenticated,
+          currentPublicKeyHex: testPubkey,
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            state: FullscreenFeedState(
+              status: FullscreenFeedStatus.ready,
+              videos: videos,
+              currentIndex: 1,
+            ),
+            mockAuthService: auth,
+            additionalOverrides: [
+              pendingActionServiceProvider.overrideWithValue(null),
+            ],
+            dmReplyContext: DmReplyContext(
+              conversationId: 'conversation',
+              participantPubkeys: const [testPubkey],
+              isGroup: false,
+              sharedReelMessageId: 'd' * 64,
+              messageAuthorPubkey: testPubkey,
+              hintName: 'Friend',
+              isOwnMessage: false,
+            ),
+            initialVideoKey: videos.first.feedDedupKey,
+          ),
+        );
+        await tester.pump();
+        expect(find.byType(ReelDmReplyBarHost), findsNothing);
+        expect(find.byType(InlineCommentComposerBar), findsOneWidget);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
+
+    testWidgets('another end swipe retries an anchor-only discovery feed', (
+      tester,
+    ) async {
+      final videos = createTestVideos(count: 1);
+      await tester.pumpWidget(
+        buildSubject(
+          state: FullscreenFeedState(
+            status: FullscreenFeedStatus.ready,
+            videos: videos,
+            canLoadMore: true,
+          ),
+          loadMoreOnEndSwipe: true,
+        ),
+      );
+      await tester.pump();
+      final feedContext = tester.element(find.byType(FeedVideos));
+      OverscrollNotification(
+        context: feedContext,
+        metrics: FixedScrollMetrics(
+          minScrollExtent: 0,
+          maxScrollExtent: 0,
+          pixels: 0,
+          viewportDimension: 600,
+          axisDirection: AxisDirection.down,
+          devicePixelRatio: 1,
+        ),
+        overscroll: 80,
+        dragDetails: DragUpdateDetails(
+          delta: const Offset(0, -80),
+          globalPosition: Offset.zero,
+        ),
+      ).dispatch(feedContext);
+      await tester.pump();
+      verify(() => mockBloc.add(const FullscreenFeedLoadMoreRequested()))
+          .called(1);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
+
+    testWidgets(
+      'a single-video route appends For You without replacing its anchor',
+      (tester) async {
+        final nativePlayer = _NativePlayerHarness(tester)..install();
+        addTearDown(nativePlayer.dispose);
+        final videos = createTestVideos(count: 2);
+        final page = Completer<HomeFeedResult>();
+        final repository = _MockDiscoveryVideosRepository();
+        when(
+          () => repository.getVideoDiscoveryPage(
+            userPubkey: any(named: 'userPubkey'),
+            cursor: any(named: 'cursor'),
+            until: any(named: 'until'),
+            preferredLanguages: any(named: 'preferredLanguages'),
+            viewerCountry: any(named: 'viewerCountry'),
+          ),
+        ).thenAnswer((_) => page.future);
+        final videoService = createMockVideoEventService();
+        when(() => videoService.shouldHideVideo(any())).thenReturn(false);
+        when(() => videoService.filterVideoList(any())).thenAnswer(
+          (call) => call.positionalArguments.first as List<VideoEvent>,
+        );
+        await tester.pumpWidget(
+          BlocProvider<VideoVolumeCubit>.value(
+            value: videoVolumeCubit,
+            child: testMaterialApp(
+              mockProfileRepository: mockProfileRepository,
+              mockNip05VerificationService: mockNip05VerificationService,
+              additionalOverrides: [
+                pendingActionServiceProvider.overrideWithValue(null),
+                videosRepositoryProvider.overrideWithValue(repository),
+                videoEventServiceProvider.overrideWithValue(videoService),
+              ],
+              home: VideoDetailScreen(
+                videoId: videos.first.id,
+                initialVideo: videos.first,
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        final feedContext = tester.element(find.byType(FullscreenFeedContent));
+        final bloc = feedContext.read<FullscreenFeedBloc>();
+        expect(bloc.state.videos, [videos.first]);
+        page.complete(HomeFeedResult(videos: videos, hasMore: false));
+        // Allow the bounded country-hint timeout used by the page loader.
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump();
+        expect(bloc.state.videos, videos);
+        expect(bloc.state.currentVideo, videos.first);
+        expect(nativeFeed(tester).videos, videos);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
+
+    testWidgets('changing videos clears composer focus state', (tester) async {
+      final nativePlayer = _NativePlayerHarness(tester)..install();
+      addTearDown(nativePlayer.dispose);
+      final videos = createTestVideos(count: 2);
+      final initial = FullscreenFeedState(
+        status: FullscreenFeedStatus.ready,
+        videos: videos,
+      );
+      await tester.pumpWidget(
+        buildSubject(
+          state: initial,
+          mockAuthService: createMockAuthService(
+            authState: AuthState.authenticated,
+            currentPublicKeyHex: testPubkey,
+          ),
+          additionalOverrides: [
+            pendingActionServiceProvider.overrideWithValue(null),
+          ],
+        ),
+      );
+      await tester.pump();
+      tester
+          .widget<InlineCommentComposerBar>(
+            find.byType(InlineCommentComposerBar),
+          )
+          .onFocusChanged!(true);
+      await tester.pump();
+      expect(
+        tester
+            .widget<Scaffold>(find.byType(Scaffold).first)
+            .resizeToAvoidBottomInset,
+        isTrue,
+      );
+      final next = initial.copyWith(currentIndex: 1);
+      when(() => mockBloc.state).thenReturn(next);
+      stateController.add(next);
+      await tester.pump();
+      expect(
+        tester
+            .widget<Scaffold>(find.byType(Scaffold).first)
+            .resizeToAvoidBottomInset,
+        isFalse,
+      );
+      expect(
+        tester.widget<FeedVideos>(find.byType(FeedVideos)).isActive,
+        isTrue,
+      );
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+    });
+
+    testWidgets(
+      'recommendation swipes record For You rather than share depth',
+      (tester) async {
+        final nativePlayer = _NativePlayerHarness(tester)..install();
+        addTearDown(nativePlayer.dispose);
+        final analytics = RecordingConsumptionAnalytics();
+        addTearDown(analytics.dispose);
+        final videos = createTestVideos(count: 2);
+        await tester.pumpWidget(
+          buildSubject(
+            state: FullscreenFeedState(
+              status: FullscreenFeedStatus.ready,
+              videos: videos,
+            ),
+            trafficSource: ViewTrafficSource.share,
+            initialVideoKey: videos.first.feedDedupKey,
+            loadMoreOnEndSwipe: true,
+            additionalOverrides: [
+              pendingActionServiceProvider.overrideWithValue(null),
+              consumptionAnalyticsTrackerProvider.overrideWithValue(
+                ConsumptionAnalyticsTracker(analytics: () => analytics),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+        nativeFeed(tester).onActiveVideoChanged?.call(videos.last, 1);
+        await tester.pump();
+        expect(
+          analytics.events
+              .where((event) => event.name == 'feed_depth_recorded')
+              .single
+              .parameters['feed_type'],
+          'for_you',
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+    );
 
     group('blocklist version listener', () {
       testWidgets(
