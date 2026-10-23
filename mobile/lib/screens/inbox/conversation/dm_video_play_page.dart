@@ -383,18 +383,10 @@ class _PlayerFailure implements Exception {
   /// Keeps [path] and the file's name out of [text]: they name the account
   /// and the message, and a native player can quote either.
   _PlayerFailure(String? text, String? path)
-    : message = text == null ? null : _withoutFile(text, path);
+    : message = text == null ? null : redactFilesAndPaths(text, [path]);
 
   /// The player's diagnostic text, when it gave one.
   final String? message;
-
-  static String _withoutFile(String text, String? path) {
-    if (path == null) return redactFilesystemPaths(text);
-    final name = path.split('/').last.split('.').first;
-    final scrubbed = redactFilesystemPaths(text.replaceAll(path, '[REDACTED]'));
-    // An empty name would put a mark between every character.
-    return name.isEmpty ? scrubbed : scrubbed.replaceAll(name, '[REDACTED]');
-  }
 
   @override
   String toString() => 'Video player failed: ${message ?? 'unknown error'}';

@@ -1,6 +1,7 @@
 // ABOUTME: Configuration for bug report system including support email and limits
 // ABOUTME: Defines sensitive data patterns for sanitization and report size constraints
 
+import 'package:path/path.dart' as p;
 import 'package:unified_logger/unified_logger.dart';
 
 /// Separator between a credential key and its value: `:`, `:=`, `=` or `=>`,
@@ -275,6 +276,26 @@ String redactFilesystemPaths(String input) {
     redacted = redacted.replaceAll(pattern, '[REDACTED]');
   }
   return redacted;
+}
+
+/// [input] with each of [paths], and the name of the file it ends in, redacted
+/// wherever it is quoted, then every path [redactFilesystemPaths] redacts: for
+/// a native error about a file whose name alone can identify something, as a
+/// kept video DM's file is named after its message. Null and empty paths are
+/// skipped.
+///
+/// Each of [paths] is replaced before other paths are redacted: one already
+/// partly redacted would no longer match.
+String redactFilesAndPaths(String input, Iterable<String?> paths) {
+  var redacted = input;
+  for (final path in paths) {
+    if (path == null || path.isEmpty) continue;
+    redacted = redacted.replaceAll(path, '[REDACTED]');
+    final name = p.basenameWithoutExtension(path);
+    // An empty name would put a mark between every character.
+    if (name.isNotEmpty) redacted = redacted.replaceAll(name, '[REDACTED]');
+  }
+  return redactFilesystemPaths(redacted);
 }
 
 /// Sanitize one user-provided or diagnostic text field before it reaches a

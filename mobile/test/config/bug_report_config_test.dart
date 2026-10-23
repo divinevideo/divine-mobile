@@ -42,6 +42,53 @@ void main() {
     });
   });
 
+  group('redactFilesAndPaths', () {
+    final messageId = 'ab' * 32;
+
+    test('redacts each path and its file name wherever they are quoted', () {
+      final kept = '/tmp/kept/dm_videos/owner/$messageId.mp4';
+
+      final redacted = redactFilesAndPaths(
+        'cannot open $kept; no file named $messageId (1).mp4',
+        [kept],
+      );
+
+      expect(redacted, isNot(contains('dm_videos')));
+      expect(redacted, isNot(contains(messageId)));
+      expect(
+        redacted,
+        equals('cannot open [REDACTED]; no file named [REDACTED] (1).mp4'),
+      );
+    });
+
+    test('keeps the text readable when a file has no name before its '
+        'extension', () {
+      const unnamed = '/tmp/kept/dm_videos/owner/.mp4';
+
+      expect(
+        redactFilesAndPaths('cannot open $unnamed', [unnamed]),
+        equals('cannot open [REDACTED]'),
+      );
+    });
+
+    test('skips a missing or empty path and still redacts other paths', () {
+      expect(
+        redactFilesAndPaths('cannot open /Users/someone/clip.mov', [null, '']),
+        equals('cannot open [REDACTED]'),
+      );
+    });
+
+    test('replaces every given path before redacting other paths', () {
+      // Redacted first, the unquoted path would lose only its first word.
+      const copy = '/Users/someone/Library/Application Support/Divine_1.mp4';
+
+      expect(
+        redactFilesAndPaths('cannot save $copy', ['/tmp/source.mp4', copy]),
+        equals('cannot save [REDACTED]'),
+      );
+    });
+  });
+
   group('sanitizeDiagnosticText', () {
     test('redacts a bare NIP-05 domain fragment', () {
       const input = 'profile nip05: @example.test';

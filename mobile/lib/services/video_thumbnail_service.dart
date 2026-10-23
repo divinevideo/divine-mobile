@@ -11,7 +11,6 @@ import 'package:flutter/services.dart' show PlatformException;
 import 'package:openvine/config/bug_report_config.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/observability/crash_reporter.dart';
-import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -964,22 +963,15 @@ class StripThumbnail {
 /// taken out, and any other path the text holds is redacted.
 class _ThumbnailFailure implements Exception {
   _ThumbnailFailure(Object error, String videoPath)
-    : message = _withoutFile(
+    : message = redactFilesAndPaths(
         error is PlatformException
             ? '${error.code}: ${error.message}'
             : '${error.runtimeType}: $error',
-        videoPath,
+        [videoPath],
       );
 
   /// The error's type or code and its scrubbed text.
   final String message;
-
-  static String _withoutFile(String text, String path) {
-    var scrubbed = text.replaceAll(path, '[REDACTED]');
-    final stem = p.basenameWithoutExtension(path);
-    if (stem.isNotEmpty) scrubbed = scrubbed.replaceAll(stem, '[REDACTED]');
-    return redactFilesystemPaths(scrubbed);
-  }
 
   @override
   String toString() => 'Thumbnail extraction failed: $message';
