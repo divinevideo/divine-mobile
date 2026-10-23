@@ -10923,6 +10923,7 @@ class DmRepository {
   final Duration _readStateRetryDelay;
   Timer? _readRetryTimer;
   int _readRetryAttempt = 0;
+  bool _readSigningBlocked = false;
 
   /// Whether this account has durable read actions awaiting relay delivery.
   bool get hasPendingReadState {
@@ -10932,6 +10933,7 @@ class DmRepository {
 
   void _schedulePendingReadRetry() {
     if (_disposed ||
+        _readSigningBlocked ||
         !hasPendingReadState ||
         !isInitialized ||
         _messageService == null) {
@@ -10945,12 +10947,19 @@ class DmRepository {
     _readRetryAttempt++;
     _readRetryTimer = Timer(Duration(milliseconds: milliseconds), () {
       _readRetryTimer = null;
-      unawaited(flushPendingReadState());
+      unawaited(_flushReadStateWithPolicy(allowSigning: false));
     });
   }
 
   /// Retries durable reads without requiring another user action.
-  Future<void> flushPendingReadState() {
+  Future<void> flushPendingReadState() =>
+      _flushReadStateWithPolicy(allowSigning: true);
+
+  Future<void> _flushReadStateWithPolicy({required bool allowSigning}) {
+    if (allowSigning) _readSigningBlocked = false;
+    if (_readSigningBlocked) return Future<void>.value();
+    _readMarkerDebounce?.cancel();
+    _readMarkerDebounce = null;
     final running = _readFlush;
     if (running != null) return running;
     final operation = _applyAccountDismissals().then(
@@ -11008,13 +11017,24 @@ class DmRepository {
         'read': readMap,
       });
       if (!lease.isCurrent) return;
-      final published = await service.publishSelfApplicationMarker(
+      final published = await service.publishSelfApplicationMarkerDetailed(
         content: content,
         tags: const [
           ['d', _readMarkerDTag],
         ],
       );
-      if (published &&
+      if (!lease.isCurrent ||
+          _disposed ||
+          _resetGeneration != gen ||
+          _ownerPubkey != owner) {
+        return;
+      }
+      if (published == SelfApplicationMarkerResult.signerUnavailable) {
+        _readSigningBlocked = true;
+        _readRetryTimer?.cancel();
+        _readRetryTimer = null;
+      }
+      if (published == SelfApplicationMarkerResult.published &&
           !_disposed &&
           _resetGeneration == gen &&
           _ownerPubkey == owner) {

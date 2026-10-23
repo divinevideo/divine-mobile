@@ -117,7 +117,7 @@ void main() {
           final sent = <Map<String, dynamic>>[];
           final service = _Service();
           when(
-            () => service.publishSelfApplicationMarker(
+            () => service.publishSelfApplicationMarkerDetailed(
               content: any(named: 'content'),
               tags: any(named: 'tags'),
             ),
@@ -126,7 +126,7 @@ void main() {
               jsonDecode(call.namedArguments[#content] as String)
                   as Map<String, dynamic>,
             );
-            return true;
+            return SelfApplicationMarkerResult.published;
           });
           final repository = DmRepository(
             nostrClient: _Client(),
@@ -186,13 +186,13 @@ void main() {
         final service = _Service();
         var published = false;
         when(
-          () => service.publishSelfApplicationMarker(
+          () => service.publishSelfApplicationMarkerDetailed(
             content: any(named: 'content'),
             tags: any(named: 'tags'),
           ),
         ).thenAnswer((_) async {
           published = true;
-          return true;
+          return SelfApplicationMarkerResult.published;
         });
         final repository = DmRepository(
           nostrClient: _Client(),
@@ -237,11 +237,11 @@ void main() {
         addTearDown(() => SharedPreferencesStorePlatform.instance = original);
         final service = _Service();
         when(
-          () => service.publishSelfApplicationMarker(
+          () => service.publishSelfApplicationMarkerDetailed(
             content: any(named: 'content'),
             tags: any(named: 'tags'),
           ),
-        ).thenAnswer((_) async => true);
+        ).thenAnswer((_) async => SelfApplicationMarkerResult.published);
         final repository = DmRepository(
           nostrClient: _Client(),
           directMessagesDao: db.directMessagesDao,
@@ -281,10 +281,10 @@ void main() {
       final sync = DmSyncState(prefs);
       await sync.rememberReadCursors(owner, {'$owner,$peer': 200});
       final entered = Completer<void>();
-      final release = Completer<bool>();
+      final release = Completer<SelfApplicationMarkerResult>();
       final service = _Service();
       when(
-        () => service.publishSelfApplicationMarker(
+        () => service.publishSelfApplicationMarkerDetailed(
           content: any(named: 'content'),
           tags: any(named: 'tags'),
         ),
@@ -308,12 +308,64 @@ void main() {
       await close().timeout(const Duration(seconds: 1));
       expect(sync.pendingReadRevision(owner), 1);
       await prefs.remove(DmSyncState.readStateStorageKey(owner));
-      release.complete(true);
+      release.complete(SelfApplicationMarkerResult.published);
       await publishing;
       await prefs.reload();
       expect(sync.readCursors(owner), isEmpty);
       await repository.stopListening();
     });
+
+    test(
+      'signer refusal retains reads without an automatic prompt loop',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final database = AppDatabase.test(NativeDatabase.memory());
+        addTearDown(database.close);
+        await database.conversationsDao.upsertConversation(
+          id: 'thread',
+          participantPubkeys: '["owner","peer"]',
+          isGroup: false,
+          createdAt: 100,
+          lastMessageTimestamp: 100,
+          ownerPubkey: 'owner',
+          isRead: false,
+        );
+        final service = _Service();
+        var calls = 0;
+        var permitsSigning = false;
+        when(
+          () => service.publishSelfApplicationMarkerDetailed(
+            content: any(named: 'content'),
+            tags: any(named: 'tags'),
+          ),
+        ).thenAnswer((_) async {
+          calls++;
+          return permitsSigning
+              ? SelfApplicationMarkerResult.published
+              : SelfApplicationMarkerResult.signerUnavailable;
+        });
+        final repository = DmRepository(
+          nostrClient: _Client(),
+          directMessagesDao: database.directMessagesDao,
+          conversationsDao: database.conversationsDao,
+          userPubkey: 'owner',
+          signer: LocalNostrSigner('1' * 64),
+          messageService: service,
+          syncState: DmSyncState(await SharedPreferences.getInstance()),
+          readStateRetryDelay: Duration.zero,
+        );
+        addTearDown(repository.stopListening);
+        await repository.markConversationAsRead('thread');
+        await repository.flushPendingReadState();
+        await pumpEventQueue();
+        expect(repository.hasPendingReadState, isTrue);
+        expect(calls, 1);
+        permitsSigning = true;
+        await repository.flushPendingReadState();
+        expect(calls, 2);
+        expect(repository.hasPendingReadState, isFalse);
+      },
+    );
 
     test(
       'failed read marker survives restart and retries without another read',
@@ -336,11 +388,15 @@ void main() {
         final service = _Service();
         var accepts = false;
         when(
-          () => service.publishSelfApplicationMarker(
+          () => service.publishSelfApplicationMarkerDetailed(
             content: any(named: 'content'),
             tags: any(named: 'tags'),
           ),
-        ).thenAnswer((_) async => accepts);
+        ).thenAnswer(
+          (_) async => accepts
+              ? SelfApplicationMarkerResult.published
+              : SelfApplicationMarkerResult.retryableFailure,
+        );
         DmRepository create() => DmRepository(
           nostrClient: _Client(),
           directMessagesDao: DirectMessagesDao(db),
@@ -364,7 +420,7 @@ void main() {
         await restarted.flushPendingReadState();
         await restarted.flushPendingReadState();
         verify(
-          () => service.publishSelfApplicationMarker(
+          () => service.publishSelfApplicationMarkerDetailed(
             content: any(named: 'content'),
             tags: any(named: 'tags'),
           ),
@@ -392,13 +448,15 @@ void main() {
         final retried = Completer<void>();
         final service = _Service();
         when(
-          () => service.publishSelfApplicationMarker(
+          () => service.publishSelfApplicationMarkerDetailed(
             content: any(named: 'content'),
             tags: any(named: 'tags'),
           ),
         ).thenAnswer((_) async {
           if (online && !retried.isCompleted) retried.complete();
-          return online;
+          return online
+              ? SelfApplicationMarkerResult.published
+              : SelfApplicationMarkerResult.retryableFailure;
         });
         final repository = DmRepository(
           nostrClient: _Client(),

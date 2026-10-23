@@ -828,7 +828,7 @@ void main() {
     //   * queryEventsDetailed -- send/listener inbox resolution catches its
     //                            throw; RC3 re-declares the answered-empty
     //                            decision explicitly in its own group
-    //   * getAllConversations, both backfills, publishSelfApplicationMarker
+    //   * getAllConversations, both backfills, publishSelfApplicationMarkerDetailed
     //                         -- production CATCHES their throw and logs it, so
     //                            removing them keeps the suite green while
     //                            silently running it against an error branch
@@ -921,12 +921,12 @@ void main() {
         ),
       ).thenAnswer((_) async => <String, int>{});
       when(
-        () => mockMessageService.publishSelfApplicationMarker(
+        () => mockMessageService.publishSelfApplicationMarkerDetailed(
           content: any(named: 'content'),
           tags: any(named: 'tags'),
           eventKind: any(named: 'eventKind'),
         ),
-      ).thenAnswer((_) async => true);
+      ).thenAnswer((_) async => SelfApplicationMarkerResult.published);
 
       // Default stub for buildRumor — production sendMessage now calls
       // buildRumor first to enqueue a queue row keyed by the rumor's id
@@ -14310,7 +14310,7 @@ void main() {
             isFalse,
           );
           verifyNever(
-            () => mockMessageService.publishSelfApplicationMarker(
+            () => mockMessageService.publishSelfApplicationMarkerDetailed(
               content: any(named: 'content'),
               tags: any(named: 'tags'),
               eventKind: any(named: 'eventKind'),
@@ -14344,7 +14344,7 @@ void main() {
             isFalse,
           );
           verifyNever(
-            () => mockMessageService.publishSelfApplicationMarker(
+            () => mockMessageService.publishSelfApplicationMarkerDetailed(
               content: any(named: 'content'),
               tags: any(named: 'tags'),
               eventKind: any(named: 'eventKind'),
@@ -14378,7 +14378,7 @@ void main() {
             isFalse,
           );
           verify(
-            () => mockMessageService.publishSelfApplicationMarker(
+            () => mockMessageService.publishSelfApplicationMarkerDetailed(
               content: any(named: 'content'),
               tags: any(named: 'tags'),
               eventKind: any(named: 'eventKind'),
@@ -14404,7 +14404,7 @@ void main() {
           await Future<void>.delayed(const Duration(milliseconds: 20));
 
           final captured = verify(
-            () => mockMessageService.publishSelfApplicationMarker(
+            () => mockMessageService.publishSelfApplicationMarkerDetailed(
               content: captureAny(named: 'content'),
               tags: captureAny(named: 'tags'),
               eventKind: any(named: 'eventKind'),
@@ -14448,7 +14448,7 @@ void main() {
           await Future<void>.delayed(const Duration(milliseconds: 20));
 
           verifyNever(
-            () => mockMessageService.publishSelfApplicationMarker(
+            () => mockMessageService.publishSelfApplicationMarkerDetailed(
               content: any(named: 'content'),
               tags: any(named: 'tags'),
               eventKind: any(named: 'eventKind'),
@@ -14473,7 +14473,7 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 160));
 
         verify(
-          () => mockMessageService.publishSelfApplicationMarker(
+          () => mockMessageService.publishSelfApplicationMarkerDetailed(
             content: any(named: 'content'),
             tags: any(named: 'tags'),
             eventKind: any(named: 'eventKind'),
@@ -14598,7 +14598,7 @@ void main() {
             ),
           ).called(1);
           verify(
-            () => mockMessageService.publishSelfApplicationMarker(
+            () => mockMessageService.publishSelfApplicationMarkerDetailed(
               content: any(named: 'content'),
               tags: any(named: 'tags'),
               eventKind: any(named: 'eventKind'),
@@ -14621,7 +14621,7 @@ void main() {
           ),
         );
         verifyNever(
-          () => mockMessageService.publishSelfApplicationMarker(
+          () => mockMessageService.publishSelfApplicationMarkerDetailed(
             content: any(named: 'content'),
             tags: any(named: 'tags'),
             eventKind: any(named: 'eventKind'),
@@ -14663,7 +14663,7 @@ void main() {
 
           // The only conversation yields no tuple key → empty map → no publish.
           verifyNever(
-            () => mockMessageService.publishSelfApplicationMarker(
+            () => mockMessageService.publishSelfApplicationMarkerDetailed(
               content: any(named: 'content'),
               tags: any(named: 'tags'),
               eventKind: any(named: 'eventKind'),
@@ -14687,7 +14687,7 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 20));
 
         verifyNever(
-          () => mockMessageService.publishSelfApplicationMarker(
+          () => mockMessageService.publishSelfApplicationMarkerDetailed(
             content: any(named: 'content'),
             tags: any(named: 'tags'),
             eventKind: any(named: 'eventKind'),

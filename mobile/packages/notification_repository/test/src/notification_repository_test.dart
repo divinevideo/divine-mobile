@@ -330,6 +330,92 @@ void main() {
   }
 
   group('durable read retries', () {
+    for (final status in [400, 401, 413]) {
+      test(
+        'HTTP $status retains intent without automatic re-signing',
+        () async {
+          final database = AppDatabase.test(NativeDatabase.memory());
+          addTearDown(database.close);
+          var calls = 0;
+          var accepts = false;
+          when(
+            () => funnelcakeApiClient.markNotificationsRead(
+              pubkey: any(named: 'pubkey'),
+              notificationIds: any(named: 'notificationIds'),
+              authHeaders: any(named: 'authHeaders'),
+            ),
+          ).thenAnswer((_) async {
+            calls++;
+            if (!accepts)
+              throw FunnelcakeApiException(
+                message: 'request rejected',
+                statusCode: status,
+              );
+            return const MarkReadResponse(success: true, markedCount: 1);
+          });
+          final durable = NotificationRepository(
+            funnelcakeApiClient: funnelcakeApiClient,
+            profileRepository: profileRepository,
+            notificationsDao: notificationsDao,
+            userPubkey: userPubkey,
+            readStateDao: database.accountSyncDao,
+            hydrateOnStart: false,
+            readStateRetryDelay: Duration.zero,
+          );
+          addTearDown(durable.close);
+          await durable.markAsRead(['read-id']);
+          await durable.flushPendingReadState();
+          await pumpEventQueue();
+          expect(calls, 1);
+          expect(durable.hasPendingReadState, isTrue);
+          accepts = true;
+          await durable.flushPendingReadState();
+          expect(calls, 2);
+          expect(durable.hasPendingReadState, isFalse);
+        },
+      );
+    }
+
+    test('signer refusal waits for a new explicit trigger', () async {
+      final database = AppDatabase.test(NativeDatabase.memory());
+      addTearDown(database.close);
+      var signingCalls = 0;
+      var permitsSigning = false;
+      when(
+        () => funnelcakeApiClient.markNotificationsRead(
+          pubkey: any(named: 'pubkey'),
+          notificationIds: any(named: 'notificationIds'),
+          authHeaders: any(named: 'authHeaders'),
+        ),
+      ).thenAnswer(
+        (_) async => const MarkReadResponse(success: true, markedCount: 1),
+      );
+      final durable = NotificationRepository(
+        funnelcakeApiClient: funnelcakeApiClient,
+        profileRepository: profileRepository,
+        notificationsDao: notificationsDao,
+        userPubkey: userPubkey,
+        readStateDao: database.accountSyncDao,
+        hydrateOnStart: false,
+        readStateRetryDelay: Duration.zero,
+        authHeadersProvider: (url, method, {body}) async {
+          signingCalls++;
+          if (!permitsSigning) throw StateError('signer refused');
+          return {};
+        },
+      );
+      addTearDown(durable.close);
+      await durable.markAsRead(['read-id']);
+      await durable.flushPendingReadState();
+      await pumpEventQueue();
+      expect(durable.hasPendingReadState, isTrue);
+      expect(signingCalls, 1);
+      permitsSigning = true;
+      await durable.flushPendingReadState();
+      expect(signingCalls, 2);
+      expect(durable.hasPendingReadState, isFalse);
+    });
+
     late AppDatabase readDatabase;
     setUp(() {
       readDatabase = AppDatabase.test(NativeDatabase.memory());

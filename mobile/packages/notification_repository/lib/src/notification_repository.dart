@@ -422,12 +422,17 @@ class NotificationRepository {
   final Duration _readStateRetryDelay;
   Timer? _readRetryTimer;
   int _readRetryAttempt = 0;
+  bool _readAuthorizationBlocked = false;
 
   /// Whether durable local reads are awaiting server acknowledgement.
   bool get hasPendingReadState => _pendingReadIds.isNotEmpty;
 
   void _schedulePendingReadRetry() {
-    if (_closed || !hasPendingReadState || _readRetryTimer != null) return;
+    if (_closed ||
+        _readAuthorizationBlocked ||
+        !hasPendingReadState ||
+        _readRetryTimer != null)
+      return;
     final milliseconds = math.min(
       60000,
       _readStateRetryDelay.inMilliseconds *
@@ -436,7 +441,7 @@ class NotificationRepository {
     _readRetryAttempt++;
     _readRetryTimer = Timer(Duration(milliseconds: milliseconds), () {
       _readRetryTimer = null;
-      unawaited(flushPendingReadState());
+      unawaited(_flushReadStateWithPolicy(allowAuthorization: false));
     });
   }
 
@@ -455,7 +460,12 @@ class NotificationRepository {
 
   /// Retries captured server IDs without blocking new local read actions.
   /// Bare mark-all requests remain online actions and are never replayed.
-  Future<void> flushPendingReadState() {
+  Future<void> flushPendingReadState() =>
+      _flushReadStateWithPolicy(allowAuthorization: true);
+
+  Future<void> _flushReadStateWithPolicy({required bool allowAuthorization}) {
+    if (allowAuthorization) _readAuthorizationBlocked = false;
+    if (_readAuthorizationBlocked) return Future<void>.value();
     final running = _pendingReadFlush;
     if (running != null) return running;
     final operation = (() async {
@@ -497,9 +507,24 @@ class NotificationRepository {
           notificationIds: ids,
         );
         final provider = _authHeadersProvider;
-        final headers = provider == null
-            ? <String, String>{}
-            : await _readAuthHeaders(provider, url, body: body);
+        final Map<String, String> headers;
+        try {
+          headers = provider == null
+              ? <String, String>{}
+              : await _readAuthHeaders(provider, url, body: body);
+        } on Object {
+          // Signer refusal and transient signer RPC failures are not reliably
+          // distinguishable. Keep intent, but never prompt again on a timer.
+          _readAuthorizationBlocked = true;
+          _readRetryTimer?.cancel();
+          _readRetryTimer = null;
+          Log.warning(
+            'Notification read signing deferred until a new trigger',
+            name: 'NotificationRepository',
+            category: LogCategory.system,
+          );
+          return;
+        }
         if (_closed) return;
         final response = await _funnelcakeApiClient.markNotificationsRead(
           pubkey: _userPubkey,
@@ -515,6 +540,15 @@ class NotificationRepository {
           );
         });
       } on Object catch (error) {
+        if (error is FunnelcakeApiException &&
+            error.statusCode >= 400 &&
+            error.statusCode < 500 &&
+            error.statusCode != 408 &&
+            error.statusCode != 429) {
+          // A rejected request needs a changed authorization/input or a later
+          // explicit trigger, not a freshly signed copy every minute.
+          _readAuthorizationBlocked = true;
+        }
         Log.warning(
           'Notification read retry deferred (${error.runtimeType})',
           name: 'NotificationRepository',
