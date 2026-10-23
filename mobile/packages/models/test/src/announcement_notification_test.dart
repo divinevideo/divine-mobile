@@ -1,4 +1,4 @@
-import 'package:models/models.dart';
+import 'package:models/notification_item.dart';
 import 'package:test/test.dart';
 
 void main() {
