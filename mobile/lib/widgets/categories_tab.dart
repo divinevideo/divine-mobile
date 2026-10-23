@@ -4,7 +4,6 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show VideoCategory;
 import 'package:openvine/blocs/categories/categories_bloc.dart';
@@ -13,7 +12,7 @@ import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_category_name.dart';
 import 'package:openvine/providers/app_providers.dart';
-import 'package:openvine/screens/category_gallery_screen.dart';
+import 'package:openvine/router/routes/search_routes.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/categories/category_glyph.dart';
 import 'package:openvine/widgets/categories/category_visuals.dart';
@@ -41,10 +40,10 @@ class CategoriesTab extends ConsumerWidget {
             },
             onCategoryTap: (category) {
               runDetached(
-                context.push<void>(
-                  CategoryGalleryScreen.locationFor(category.name),
-                  extra: category,
-                ),
+                CategoryGalleryRouteData(
+                  categoryName: category.name,
+                  $extra: category,
+                ).push<void>(context),
                 'open category gallery',
                 logName: 'CategoriesTab',
                 category: LogCategory.ui,

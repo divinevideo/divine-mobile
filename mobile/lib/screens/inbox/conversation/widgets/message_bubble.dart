@@ -16,13 +16,12 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/router/nav_extensions.dart';
+import 'package:openvine/router/routes/search_routes.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
-import 'package:openvine/screens/hashtag_screen_router.dart';
 import 'package:openvine/screens/inbox/conversation/dm_video_target.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/encrypted_video_card.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/video_link_preview_cubit.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
-import 'package:openvine/screens/search_results/view/search_results_page.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/external_link_launcher.dart';
@@ -1007,7 +1006,7 @@ class _MessageTextState extends ConsumerState<_MessageText> {
 
   void _navigateToHashtag(String hashtag) {
     runDetached(
-      context.push(HashtagScreenRouter.pathForTag(hashtag)),
+      HashtagRouteData(tag: hashtag).push<void>(context),
       'open hashtag from DM',
       logName: 'MessageBubble',
       category: LogCategory.ui,
@@ -1035,9 +1034,7 @@ class _MessageTextState extends ConsumerState<_MessageText> {
 
   void _navigateToSearch(String username) {
     runDetached(
-      context.push(
-        SearchResultsPage.pathForQuery(username, requestFocusOnMount: false),
-      ),
+      SearchQueryRouteData(query: username).push<void>(context),
       'open search from DM mention',
       logName: 'MessageBubble',
       category: LogCategory.ui,

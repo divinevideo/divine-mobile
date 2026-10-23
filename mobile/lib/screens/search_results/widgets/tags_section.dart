@@ -1,11 +1,10 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/hashtag_search/hashtag_search_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/screens/hashtag_screen_router.dart';
+import 'package:openvine/router/routes/search_routes.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_tag_chip.dart';
@@ -124,7 +123,7 @@ class _TagsContent extends StatelessWidget {
               SearchTagChip(
                 tag: tag,
                 onTap: () => runDetached(
-                  context.push<void>(HashtagScreenRouter.pathForTag(tag)),
+                  HashtagRouteData(tag: tag).push<void>(context),
                   'open hashtag feed',
                   logName: 'TagsSection',
                   category: LogCategory.ui,

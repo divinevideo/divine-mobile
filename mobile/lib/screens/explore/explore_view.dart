@@ -20,6 +20,7 @@ import 'package:openvine/providers/for_you_provider.dart';
 import 'package:openvine/providers/route_feed_providers.dart';
 import 'package:openvine/providers/tab_visibility_provider.dart';
 import 'package:openvine/router/router.dart';
+import 'package:openvine/router/routes/search_routes.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
 import 'package:openvine/screens/explore/widgets/explore_feed_content.dart';
 import 'package:openvine/screens/explore/widgets/explore_tab_bar.dart';
@@ -235,9 +236,9 @@ class _ExploreViewState extends ConsumerState<ExploreView>
   }
 
   Future<void> _navigateToSearchResults() async {
-    await context.push(
-      SearchResultsPage.pathForEmptyQuery(requestFocusOnMount: true),
-    );
+    await const SearchRouteData(
+      focus: SearchResultsPage.requestFocusQueryValue,
+    ).push<void>(context);
   }
 
   @override

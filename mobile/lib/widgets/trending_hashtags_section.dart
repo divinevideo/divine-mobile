@@ -2,11 +2,10 @@
 // ABOUTME: Extracted from ExploreScreen for reusability and testability
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/screens/hashtag_screen_router.dart';
+import 'package:openvine/router/routes/search_routes.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -135,7 +134,7 @@ class _HashtagChipList extends StatelessWidget {
                 onHashtagTap!(hashtag);
               } else {
                 runDetached(
-                  context.push<void>(HashtagScreenRouter.pathForTag(hashtag)),
+                  HashtagRouteData(tag: hashtag).push<void>(context),
                   'open hashtag feed',
                   logName: 'TrendingHashtagsSection',
                   category: LogCategory.ui,
