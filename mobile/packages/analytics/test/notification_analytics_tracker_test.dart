@@ -44,132 +44,137 @@ void main() {
     );
   });
 
-  test(
-    'records type and entry path without exporting the deduplication key',
-    () async {
-      await tracker.opened(
-        notificationType: 'comment',
-        source: NotificationOpenSource.osColdStart,
-        deduplicationKey: 'private-local-deduplication-value',
-      );
-
-      expect(sink.events.single.name, 'push_notification_opened');
-      expect(sink.events.single.parameters, {
-        'notification_type': 'comment',
-        'open_source': 'os_cold_start',
-      });
-    },
-  );
-
-  test(
-    'normalizes arbitrary payload values instead of exporting them',
-    () async {
-      await tracker.opened(
-        notificationType: 'untrusted free text',
-        source: NotificationOpenSource.localTap,
-      );
-      expect(sink.events.single.parameters['notification_type'], 'unknown');
-    },
-  );
-
-  test(
-    'normalizes current sender wire types for messages and new posts',
-    () async {
-      await tracker.opened(
-        notificationType: 'directMessage',
-        source: NotificationOpenSource.localTap,
-      );
-      await tracker.opened(
-        notificationType: 'newPost',
-        source: NotificationOpenSource.localTap,
-      );
-      expect(
-        sink.events.map((event) => event.parameters['notification_type']),
-        ['direct_message', 'new_post'],
-      );
-    },
-  );
-
-  test('does not record when collection is disabled', () async {
-    allowed = false;
-    await tracker.opened(
-      notificationType: 'like',
-      source: NotificationOpenSource.localTap,
-    );
-    expect(sink.events, isEmpty);
-  });
-
-  test('deduplicates overlapping callbacks while consent is loading', () async {
-    final consent = Completer<bool>();
-    tracker = NotificationAnalyticsTracker(
-      sink: sink,
-      collectionAllowed: () => consent.future,
-      privacyBoundary: () => boundary,
-    );
-    final first = tracker.opened(
-      notificationType: 'like',
-      source: NotificationOpenSource.osColdStart,
-      deduplicationKey: 'same-delivery',
-    );
-    final second = tracker.opened(
-      notificationType: 'like',
-      source: NotificationOpenSource.localColdStart,
-      deduplicationKey: 'same-delivery',
-    );
-    consent.complete(true);
-    await Future.wait([first, second]);
-    expect(sink.events, hasLength(1));
-  });
-
-  test(
-    'drops a tap if the privacy boundary changes while consent loads',
-    () async {
-      final consent = Completer<bool>();
-      tracker = NotificationAnalyticsTracker(
-        sink: sink,
-        collectionAllowed: () => consent.future,
-        privacyBoundary: () => boundary,
-      );
-      final pending = tracker.opened(
-        notificationType: 'comment',
-        source: NotificationOpenSource.osColdStart,
-      );
-      boundary = 'another-account-session';
-      consent.complete(true);
-      await pending;
-      expect(sink.events, isEmpty);
-    },
-  );
-
-  test(
-    'does not merge unrelated legacy campaign opens without a delivery key',
-    () async {
-      for (var index = 0; index < 2; index++) {
+  group('opened', () {
+    test(
+      'records type and entry path without exporting the deduplication key',
+      () async {
         await tracker.opened(
-          notificationType: 'campaign',
+          notificationType: 'comment',
+          source: NotificationOpenSource.osColdStart,
+          deduplicationKey: 'private-local-deduplication-value',
+        );
+
+        expect(sink.events.single.name, 'push_notification_opened');
+        expect(sink.events.single.parameters, {
+          'notification_type': 'comment',
+          'open_source': 'os_cold_start',
+        });
+      },
+    );
+
+    test(
+      'normalizes arbitrary payload values instead of exporting them',
+      () async {
+        await tracker.opened(
+          notificationType: 'untrusted free text',
           source: NotificationOpenSource.localTap,
         );
-      }
-      expect(sink.events, hasLength(2));
-    },
-  );
+        expect(sink.events.single.parameters['notification_type'], 'unknown');
+      },
+    );
 
-  test(
-    'sink failure is best effort and does not prevent a later open',
-    () async {
-      sink.fail = true;
+    test(
+      'normalizes current sender wire types for messages and new posts',
+      () async {
+        await tracker.opened(
+          notificationType: 'directMessage',
+          source: NotificationOpenSource.localTap,
+        );
+        await tracker.opened(
+          notificationType: 'newPost',
+          source: NotificationOpenSource.localTap,
+        );
+        expect(
+          sink.events.map((event) => event.parameters['notification_type']),
+          ['direct_message', 'new_post'],
+        );
+      },
+    );
+
+    test('does not record when collection is disabled', () async {
+      allowed = false;
       await tracker.opened(
-        notificationType: 'mention',
-        source: NotificationOpenSource.osBackground,
-        deduplicationKey: 'retryable-delivery',
+        notificationType: 'like',
+        source: NotificationOpenSource.localTap,
       );
-      sink.fail = false;
-      await tracker.opened(
-        notificationType: 'mention',
-        source: NotificationOpenSource.osBackground,
-        deduplicationKey: 'retryable-delivery',
-      );
-      expect(sink.events, hasLength(1));
-    },
-  );
+      expect(sink.events, isEmpty);
+    });
+
+    test(
+      'deduplicates overlapping callbacks while consent is loading',
+      () async {
+        final consent = Completer<bool>();
+        tracker = NotificationAnalyticsTracker(
+          sink: sink,
+          collectionAllowed: () => consent.future,
+          privacyBoundary: () => boundary,
+        );
+        final first = tracker.opened(
+          notificationType: 'like',
+          source: NotificationOpenSource.osColdStart,
+          deduplicationKey: 'same-delivery',
+        );
+        final second = tracker.opened(
+          notificationType: 'like',
+          source: NotificationOpenSource.localColdStart,
+          deduplicationKey: 'same-delivery',
+        );
+        consent.complete(true);
+        await Future.wait([first, second]);
+        expect(sink.events, hasLength(1));
+      },
+    );
+
+    test(
+      'drops a tap if the privacy boundary changes while consent loads',
+      () async {
+        final consent = Completer<bool>();
+        tracker = NotificationAnalyticsTracker(
+          sink: sink,
+          collectionAllowed: () => consent.future,
+          privacyBoundary: () => boundary,
+        );
+        final pending = tracker.opened(
+          notificationType: 'comment',
+          source: NotificationOpenSource.osColdStart,
+        );
+        boundary = 'another-account-session';
+        consent.complete(true);
+        await pending;
+        expect(sink.events, isEmpty);
+      },
+    );
+
+    test(
+      'does not merge unrelated legacy campaign opens without a delivery key',
+      () async {
+        for (var index = 0; index < 2; index++) {
+          await tracker.opened(
+            notificationType: 'campaign',
+            source: NotificationOpenSource.localTap,
+          );
+        }
+        expect(sink.events, hasLength(2));
+      },
+    );
+
+    test(
+      'sink failure is best effort and does not prevent a later open',
+      () async {
+        sink.fail = true;
+        await tracker.opened(
+          notificationType: 'mention',
+          source: NotificationOpenSource.osBackground,
+          deduplicationKey: 'retryable-delivery',
+        );
+        sink.fail = false;
+        await tracker.opened(
+          notificationType: 'mention',
+          source: NotificationOpenSource.osBackground,
+          deduplicationKey: 'retryable-delivery',
+        );
+        expect(sink.events, hasLength(1));
+      },
+    );
+  });
 }

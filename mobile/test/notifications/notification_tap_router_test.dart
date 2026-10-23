@@ -72,40 +72,42 @@ void main() {
 
   tearDown(() => containerB.dispose());
 
-  for (final source in NotificationOpenSource.values) {
-    test('shared tap router records ${source.wireValue}', () async {
-      final sink = _RecordingSink();
-      final container = ProviderContainer(
-        overrides: [
-          goRouterProvider.overrideWithValue(routerA),
-          notificationAnalyticsTrackerProvider.overrideWithValue(
-            NotificationAnalyticsTracker(
-              sink: sink,
-              collectionAllowed: () async => true,
-              privacyBoundary: () => 'test',
+  group('routeNotificationTap', () {
+    for (final source in NotificationOpenSource.values) {
+      test('shared tap router records ${source.wireValue}', () async {
+        final sink = _RecordingSink();
+        final container = ProviderContainer(
+          overrides: [
+            goRouterProvider.overrideWithValue(routerA),
+            notificationAnalyticsTrackerProvider.overrideWithValue(
+              NotificationAnalyticsTracker(
+                sink: sink,
+                collectionAllowed: () async => true,
+                privacyBoundary: () => 'test',
+              ),
             ),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
-      containerA.dispose();
-      await routeNotificationTap(
-        messageId: 'transport-message-1',
-        openSource: source,
-        referencedAddress: null,
-        referencedEventId: null,
-        eventId: null,
-        notificationType: 'campaign',
-        senderPubkey: null,
-        container: container,
-        tapTargetType: 'app_route',
-        tapTargetValue: destination,
-      );
-      await sink.logged.future;
-      expect(sink.events.single['open_source'], source.wireValue);
-      verify(() => routerA.go(destination)).called(1);
-    });
-  }
+          ],
+        );
+        addTearDown(container.dispose);
+        containerA.dispose();
+        await routeNotificationTap(
+          messageId: 'transport-message-1',
+          openSource: source,
+          referencedAddress: null,
+          referencedEventId: null,
+          eventId: null,
+          notificationType: 'campaign',
+          senderPubkey: null,
+          container: container,
+          tapTargetType: 'app_route',
+          tapTargetValue: destination,
+        );
+        await sink.logged.future;
+        expect(sink.events.single['open_source'], source.wireValue);
+        verify(() => routerA.go(destination)).called(1);
+      });
+    }
+  });
 
   group('routeBackgroundPushTap', () {
     test('routes immediately while analytics waits for consent', () async {
