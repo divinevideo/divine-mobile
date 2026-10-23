@@ -391,9 +391,9 @@ class _PlayerFailure implements Exception {
   static String _withoutFile(String text, String? path) {
     if (path == null) return redactFilesystemPaths(text);
     final name = path.split('/').last.split('.').first;
-    return redactFilesystemPaths(
-      text.replaceAll(path, '[REDACTED]'),
-    ).replaceAll(name, '[REDACTED]');
+    final scrubbed = redactFilesystemPaths(text.replaceAll(path, '[REDACTED]'));
+    // An empty name would put a mark between every character.
+    return name.isEmpty ? scrubbed : scrubbed.replaceAll(name, '[REDACTED]');
   }
 
   @override
