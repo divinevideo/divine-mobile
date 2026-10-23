@@ -3,6 +3,7 @@
 
 import 'dart:async';
 
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,8 @@ import 'package:notification_repository/notification_repository.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/notifications/view/announcement_detail_screen.dart';
+import 'package:openvine/notifications/view/notifications_page.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/announcement_routes.dart';
 
 class _MockNotificationRepository extends Mock
@@ -66,6 +69,35 @@ void main() {
         find.text('This announcement is no longer available.'),
         findsOneWidget,
       );
+    });
+
+    testWidgets('back from a cold entry falls back to notifications', (
+      tester,
+    ) async {
+      final router = GoRouter(
+        initialLocation: AnnouncementDetailScreen.pathForId('missing'),
+        routes: [
+          ...announcementRoutes(),
+          GoRoute(
+            path: NotificationsPage.pathWithIndex,
+            builder: (_, _) => const SizedBox.shrink(),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await pump(tester, router, null);
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.bySemanticsIdentifier(DiVineAppBarLeading.backButtonSemanticId),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        router.state.uri.path,
+        equals(RoutePaths.notificationsForIndex(0)),
+      );
+      expect(find.byType(AnnouncementDetailScreen), findsNothing);
     });
 
     testWidgets('catalog hydration resolves detail and withdrawal clears it', (
