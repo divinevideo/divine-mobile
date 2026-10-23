@@ -613,6 +613,13 @@ void main() {
 // Keys intentionally allowed to fall back to English until a translation pass.
 // Keep this list small and reviewable so new translation gaps stay visible.
 const _knownUntranslatedDebt = <String>{
+  // Why a video DM card shows no preview (#10349). English ships first; the
+  // wording came from the trust-and-safety review and waits for the human
+  // translation pass.
+  'dmVideoCardTapToLoad',
+  'dmVideoCardHiddenSenderBlocked',
+  'dmVideoCardHiddenSenderMuted',
+
   // Group inbox preview sender prefix (#8428). The separator after the name is
   // a per-locale convention (a space before the colon in French, a full-width
   // colon in Japanese and Chinese), so it waits for the human translation pass

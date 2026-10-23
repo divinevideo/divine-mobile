@@ -7,6 +7,7 @@ import 'dart:ui';
 
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as models;
@@ -16,6 +17,7 @@ import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/published_clip_source_resolver.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _MockClipLibraryService extends Mock implements ClipLibraryService {}
 
@@ -1040,6 +1042,107 @@ void main() {
       expect(clip.sourceAddressableId, equals(post.addressableId));
     });
 
+    test(
+      'asks whether it may still keep the clip just before saving it, once '
+      'the lookup, the copy and its frames are done',
+      () async {
+        final order = <String>[];
+        final resolver = _MockPublishedClipSourceResolver();
+        when(() => resolver.resolve(_receivedClipHash)).thenAnswer((_) async {
+          order.add('lookup');
+          return null;
+        });
+        when(() => clipLibraryService.saveClip(any())).thenAnswer((_) async {
+          order.add('save');
+        });
+        final service = buildService(
+          readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
+          publishedSourceResolver: resolver,
+          extractThumbnail:
+              ({required videoPath, required targetTimestamp}) async {
+                order.add('thumbnail');
+                return null;
+              },
+          extractLastFrame:
+              ({required videoPath, required videoDuration}) async {
+                order.add('last frame');
+                return null;
+              },
+        );
+
+        await service.importReceivedClip(
+          source: sourceVideo,
+          messageId: _messageId,
+          senderPubkey: _senderPubkey,
+          c2paManifestId: _c2paManifestId,
+          beforeSave: () async => order.add('check'),
+        );
+
+        expect(
+          order,
+          equals(['lookup', 'thumbnail', 'last frame', 'check', 'save']),
+        );
+      },
+    );
+
+    test(
+      'leaves neither the copy nor its frames behind, and saves nothing, when '
+      'it may not keep the clip',
+      () async {
+        final service = buildService(
+          readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
+        );
+        int? filesWhenAsked;
+
+        final result = await service.importReceivedClip(
+          source: sourceVideo,
+          messageId: _messageId,
+          senderPubkey: _senderPubkey,
+          c2paManifestId: _c2paManifestId,
+          beforeSave: () async {
+            filesWhenAsked = docsDir.listSync().whereType<File>().length;
+            throw StateError('the message was retracted');
+          },
+        );
+
+        expect(result, isA<VideoClipImportFailure>());
+        // The copy, its thumbnail and its last frame.
+        expect(filesWhenAsked, equals(3));
+        expect(docsDir.listSync(), isEmpty);
+        verifyNever(() => clipLibraryService.saveClip(any()));
+      },
+    );
+
+    test(
+      'leaves neither the copy nor its frames behind when the library cannot '
+      'save the clip',
+      () async {
+        when(
+          () => clipLibraryService.saveClip(any()),
+        ).thenThrow(StateError('database closed'));
+        final service = buildService(
+          readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
+        );
+
+        final result = await service.importReceivedClip(
+          source: sourceVideo,
+          messageId: _messageId,
+          senderPubkey: _senderPubkey,
+          c2paManifestId: _c2paManifestId,
+        );
+
+        expect(
+          result,
+          isA<VideoClipImportFailure>().having(
+            (result) => result.reason,
+            'reason',
+            VideoClipImportFailureReason.saveFailed,
+          ),
+        );
+        expect(docsDir.listSync(), isEmpty);
+      },
+    );
+
     test('imports nothing when it cannot tell whether the clip was '
         'published', () async {
       final resolver = _MockPublishedClipSourceResolver();
@@ -1068,6 +1171,121 @@ void main() {
       );
       verifyNever(() => clipLibraryService.saveClip(any()));
       expect(docsDir.listSync().whereType<File>(), isEmpty);
+    });
+
+    group('logs a failure without the kept file it names', () {
+      // Named the way the video DM store keeps a received file.
+      late File kept;
+
+      setUp(() async {
+        kept = File('${tempDir.path}/dm_videos/$_ownerPubkey/$_messageId.mp4');
+        await LogCaptureService().clearAllLogs();
+        addTearDown(LogCaptureService().clearAllLogs);
+      });
+
+      List<String> importLog() => LogCaptureService()
+          .getRecentLogs()
+          .where((entry) => entry.name == 'VideoClipImportService')
+          .map((entry) => '${entry.message} ${entry.error}')
+          .toList();
+
+      void expectNoFileNamed(List<String> log) {
+        expect(log, isNotEmpty);
+        for (final line in log) {
+          expect(line, isNot(contains(_messageId)));
+          expect(line, isNot(contains(_ownerPubkey)));
+          expect(line, isNot(contains(tempDir.path)));
+        }
+      }
+
+      test('when the kept file cannot be copied', () async {
+        // Gone before the copy: dart:io quotes both paths.
+        final service = buildService(
+          readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
+        );
+
+        final result = await service.importReceivedClip(
+          source: kept,
+          messageId: _messageId,
+          senderPubkey: _senderPubkey,
+          c2paManifestId: _c2paManifestId,
+        );
+
+        expect(
+          result,
+          isA<VideoClipImportFailure>().having(
+            (result) => result.reason,
+            'reason',
+            VideoClipImportFailureReason.copyFailed,
+          ),
+        );
+        final log = importLog();
+        expectNoFileNamed(log);
+        expect(log, contains(contains('PathNotFoundException (OS code: 2)')));
+      });
+
+      test('when the library cannot save the clip', () async {
+        kept
+          ..createSync(recursive: true)
+          ..writeAsBytesSync(List<int>.filled(16, 7));
+        when(() => clipLibraryService.saveClip(any())).thenAnswer((call) {
+          final clip = call.positionalArguments.single as DivineVideoClip;
+          throw StateError('could not save ${clip.video!.file!.path}');
+        });
+        final service = buildService(
+          readVideoMetadata: (_) async => metadataOf(const Size(1080, 1920)),
+        );
+
+        final result = await service.importReceivedClip(
+          source: kept,
+          messageId: _messageId,
+          senderPubkey: _senderPubkey,
+          c2paManifestId: _c2paManifestId,
+        );
+
+        expect(
+          result,
+          isA<VideoClipImportFailure>().having(
+            (result) => result.reason,
+            'reason',
+            VideoClipImportFailureReason.saveFailed,
+          ),
+        );
+        final log = importLog();
+        expectNoFileNamed(log);
+        expect(log, contains(contains('StateError')));
+      });
+
+      test('when the copy cannot be probed', () async {
+        kept
+          ..createSync(recursive: true)
+          ..writeAsBytesSync(List<int>.filled(16, 7));
+        final service = buildService(
+          readVideoMetadata: (video) async => throw PlatformException(
+            code: 'METADATA_ERROR',
+            message: 'Cannot open ${video.file!.path}',
+          ),
+        );
+
+        final result = await service.importReceivedClip(
+          source: kept,
+          messageId: _messageId,
+          senderPubkey: _senderPubkey,
+          c2paManifestId: _c2paManifestId,
+        );
+
+        expect(
+          result,
+          isA<VideoClipImportFailure>().having(
+            (result) => result.reason,
+            'reason',
+            VideoClipImportFailureReason.unreadableVideo,
+          ),
+        );
+        final log = importLog();
+        expectNoFileNamed(log);
+        expect(log, contains(contains('PlatformException')));
+      });
     });
 
     test('refuses a file with no readable duration and leaves no copy '

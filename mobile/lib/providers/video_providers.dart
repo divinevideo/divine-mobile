@@ -4,6 +4,8 @@
 import 'dart:async';
 
 import 'package:db_client/db_client.dart';
+import 'package:drift/drift.dart' show TableUpdateQuery, UpdateKind;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart' show Provider;
 import 'package:image_picker/image_picker.dart';
 import 'package:likes_repository/likes_repository.dart';
@@ -13,6 +15,7 @@ import 'package:openvine/features/feature_flags/providers/feature_flag_providers
 import 'package:openvine/l10n/current_app_l10n.dart';
 import 'package:openvine/models/view_event_drop_reason.dart';
 import 'package:openvine/observability/reportable_error.dart';
+import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
@@ -40,6 +43,7 @@ import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/dead_media_feed_guard.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
+import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/event_api_client.dart';
 import 'package:openvine/services/event_router.dart';
 import 'package:openvine/services/feed_unavailability_gate.dart';
@@ -479,6 +483,179 @@ final dmVideoSendServiceProvider = Provider<DmVideoSendService>((ref) {
 final dmVideoDecryptorProvider = Provider<DmVideoDecryptor>(
   (ref) => DmVideoDecryptor(),
 );
+
+/// The signed-in account's received video DMs, kept on this device, or null
+/// when no account is signed in, or on the web, which has no folder for them.
+///
+/// Rebuilt when the account changes, so each account reads only its own
+/// folder. Prunes old and excess videos once when built, and again at
+/// sign-out before the account's DM rows are cleared: a retraction shows
+/// only in those rows.
+final dmVideoStoreProvider = Provider<DmVideoStore?>((ref) {
+  // The web target has neither filesystem storage nor path_provider support.
+  if (kIsWeb) return null;
+  final owner = ref.watch(currentAccountIdProvider);
+  if (owner == null || owner.isEmpty) return null;
+  final db = ref.watch(databaseProvider);
+  final store = DmVideoStore(
+    ownerPubkey: owner,
+    fetchVideo: ref.watch(dmVideoDecryptorProvider).decrypt,
+    isMessageGone: dmVideoMessageGone(db, owner),
+    isConversationRemoved: dmVideoConversationRemoved(db, owner),
+    findMessageLocation: (messageId) async {
+      final row = await db.directMessagesDao.getMessageById(
+        messageId,
+        ownerPubkey: owner,
+      );
+      return row == null
+          ? null
+          : (conversationId: row.conversationId, sentAt: row.createdAt);
+    },
+    crashReporter: ref.read(crashReportingServiceProvider),
+  );
+  final goneCleanup = pruneWhenDmVideoMessagesGo(db, store.prune);
+  // A kill in the background, routine for the system, then blames no sender
+  // whose video's frame was being read.
+  ref.listen<bool>(
+    appForegroundProvider,
+    (_, inForeground) => store.appInForeground = inForeground,
+    fireImmediately: true,
+  );
+  final unregisterBeforeSignOut = ref
+      .watch(authServiceProvider)
+      .registerBeforeSessionTeardownCallback(store.prune);
+  ref.onDispose(() {
+    unregisterBeforeSignOut();
+    runProviderDetached(
+      goneCleanup.close().whenComplete(store.dispose),
+      'close kept video DM cleanup',
+      logName: 'DmVideoStore',
+    );
+  });
+  runProviderDetached(
+    store.prune(),
+    'prune kept video DMs',
+    logName: 'DmVideoStore',
+  );
+  return store;
+});
+
+/// Whether a kept video's message is gone for [owner]: retracted, as the
+/// thread no longer shows it, or removed with its conversation. A missing
+/// row alone says nothing, since an account switch clears the rows and the
+/// messages download again; [dmVideoConversationRemoved] covers one whose
+/// conversation was removed meanwhile.
+Future<bool> Function(String messageId) dmVideoMessageGone(
+  AppDatabase db,
+  String owner,
+) => (messageId) async {
+  final removed = await db.removedMessageIdsDao.contains(
+    rumorId: messageId,
+    ownerPubkey: owner,
+  );
+  return removed ||
+      await db.directMessagesDao.isRetracted(messageId, ownerPubkey: owner);
+};
+
+/// Runs [prune] after a DM row in [db] changes or a removed message is
+/// recorded, so a retracted or removed message's kept video goes soon after,
+/// not only at the next launch.
+DmVideoGoneCleanup pruneWhenDmVideoMessagesGo(
+  AppDatabase db,
+  Future<void> Function() prune,
+) => DmVideoGoneCleanup(changes: dmVideoMessageChanges(db), prune: prune);
+
+/// Owns the delayed cleanup and drains it before its store is disposed.
+final class DmVideoGoneCleanup {
+  /// Starts the audited cleanup, retaining pending work for [close].
+  DmVideoGoneCleanup({
+    required Stream<void> changes,
+    required Future<void> Function() prune,
+    Duration cleanupDelay = DmVideoStore.goneCleanupDelay,
+  }) : _prune = prune {
+    _subscription = changes.listen((_) {
+      if (_closed) return;
+      _pending = true;
+      // Audit, not debounce: continuing writes must not starve cleanup.
+      _timer ??= Timer(cleanupDelay, () {
+        _timer = null;
+        _pending = false;
+        final running = Future<void>.sync(_prune);
+        _running = running;
+        runProviderDetached(
+          running,
+          'prune kept video DMs after a message went',
+          logName: 'DmVideoStore',
+        );
+      });
+    });
+  }
+
+  final Future<void> Function() _prune;
+  late final StreamSubscription<void> _subscription;
+  Timer? _timer;
+  bool _closed = false;
+  bool _pending = false;
+  Future<void>? _running;
+  Future<void>? _closing;
+
+  /// Stops listening, immediately flushes a change still waiting out the
+  /// audit delay, and awaits any cleanup already running. Repeated calls
+  /// share one close. This reads the database as it is at close time: an
+  /// account switch that already cleared DM rows cannot recover a retraction
+  /// from those rows, while conversation-removal tombstones remain available.
+  /// Sign-out and the account swap prune the store before clearing them, so
+  /// this covers what changed after that prune.
+  Future<void> close() {
+    _closed = true;
+    _timer?.cancel();
+    _timer = null;
+    return _closing ??= _close();
+  }
+
+  Future<void> _close() async {
+    await _subscription.cancel();
+    // A cleanup that failed was reported where it ran.
+    await _running?.then<void>((_) {}, onError: (Object _) {});
+    if (_pending) {
+      _pending = false;
+      await _prune();
+    }
+  }
+}
+
+/// Whether [owner] removed the conversation [conversationId] at or after
+/// [sentAt], the rule the DM history download applies to old messages. A
+/// kept video's message is then gone even when no row is left to say so, as
+/// when an account switch cleared the rows but kept the conversation.
+Future<bool> Function(String conversationId, int sentAt)
+dmVideoConversationRemoved(AppDatabase db, String owner) =>
+    (conversationId, sentAt) async {
+      final removedAt = await db.removedConversationsDao.removedAtFor(
+        conversationId: conversationId,
+        ownerPubkey: owner,
+      );
+      return removedAt != null && sentAt <= removedAt;
+    };
+
+/// Writes that can make a kept video's message gone: a retraction marks its
+/// row, an update, and removing its conversation records the conversation
+/// and the ids of its messages. A new message is none of these.
+Stream<void> dmVideoMessageChanges(AppDatabase db) => db
+    .tableUpdates(
+      TableUpdateQuery.allOf([
+        TableUpdateQuery.onTable(
+          db.directMessages,
+          limitUpdateKind: UpdateKind.update,
+        ),
+        TableUpdateQuery.onTable(
+          db.removedMessageIds,
+          limitUpdateKind: UpdateKind.insert,
+        ),
+        TableUpdateQuery.onTable(db.removedConversations),
+      ]),
+    )
+    .map((_) {});
 
 /// Gallery picker used to choose a video to attach to a DM.
 ///

@@ -30,6 +30,7 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/swap_account.dart'
     show accountSwitchInitialLocation;
 import 'package:openvine/providers/swap_account.dart' as switching;
+import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/screens/profile_screen_router.dart';
 import 'package:openvine/services/auth/account_activation_coordinator.dart';
@@ -39,6 +40,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
+import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/feed_mode_persistence.dart';
 import 'package:openvine/services/push_notification_session_coordinator.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
@@ -50,6 +52,7 @@ import 'package:openvine/utils/nostr_key_utils.dart';
 // re-export the type name even though it accepts List<Override>.
 import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/curated_list_publish_stubs.dart';
 
@@ -63,6 +66,8 @@ class _MockPushNotificationSessionCoordinator extends Mock
 class _MockDmRepository extends Mock implements DmRepository {}
 
 class _MockCuratedListService extends Mock implements CuratedListService {}
+
+class _MockDmVideoStore extends Mock implements DmVideoStore {}
 
 class _FakeCuratedListsState extends CuratedListsState {
   _FakeCuratedListsState(this._fakeService);
@@ -306,6 +311,21 @@ void main() {
     );
     await checked;
   });
+
+  // Frames a swap until it reaches the outgoing prune, so a test can then
+  // advance fake time past the swap's wait for it.
+  Future<void> drivePruneStart(Completer<void> pruneStarted) async {
+    final tester = activeTester!;
+    for (var frame = 0; !pruneStarted.isCompleted && frame < 250; frame += 1) {
+      await tester.runAsync(pumpEventQueue);
+      await tester.pump();
+    }
+    expect(
+      pruneStarted.isCompleted,
+      isTrue,
+      reason: 'Account switch must reach the outgoing prune',
+    );
+  }
 
   group('accountSwitchInitialLocation', () {
     test('retargets the leaving account own-profile route', () {
@@ -1402,6 +1422,141 @@ void main() {
       expect(events, ['stop outgoing DMs', 'sign in target']);
       verify(dmRepository.stopListening).called(1);
       verifyNever(dmRepository.startListening);
+    });
+
+    testWidgets(
+      "prunes the outgoing account's kept video DMs before target sign-in, "
+      'while its rows still show which messages are gone',
+      (tester) async {
+        final store = _MockDmVideoStore();
+        final events = <String>[];
+        when(store.prune).thenAnswer((_) async {
+          events.add('prune outgoing videos');
+        });
+        final initial = await pumpHost(
+          tester,
+          accountOverrides: [dmVideoStoreProvider.overrideWithValue(store)],
+        );
+        initial.read(dmVideoStoreProvider);
+
+        await driveSwap(
+          swapAccount(
+            deviceScope: deviceScope,
+            controller: controller,
+            currentAuthService: currentAuthService,
+            account: account,
+            signIn: (_, _) async => events.add('sign in target'),
+          ),
+        );
+        await tester.pump();
+
+        expect(events, ['prune outgoing videos', 'sign in target']);
+      },
+    );
+
+    testWidgets('does not let a stalled outgoing prune hold the swap', (
+      tester,
+    ) async {
+      final store = _MockDmVideoStore();
+      final pruneStarted = Completer<void>();
+      when(store.prune).thenAnswer((_) {
+        if (!pruneStarted.isCompleted) pruneStarted.complete();
+        return Completer<void>().future;
+      });
+      final events = <String>[];
+      final initial = await pumpHost(
+        tester,
+        accountOverrides: [dmVideoStoreProvider.overrideWithValue(store)],
+      );
+      initial.read(dmVideoStoreProvider);
+
+      final assertion = expectLater(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async => events.add('sign in target'),
+        ),
+        completes,
+      );
+      await drivePruneStart(pruneStarted);
+      expect(events, isEmpty);
+
+      await tester.pump(const Duration(seconds: 5));
+      await driveSwap(assertion);
+
+      expect(events, ['sign in target']);
+    });
+
+    testWidgets(
+      'logs an outgoing prune that fails after the swap stopped waiting',
+      (tester) async {
+        final store = _MockDmVideoStore();
+        final pruneStarted = Completer<void>();
+        final pruning = Completer<void>();
+        when(store.prune).thenAnswer((_) {
+          if (!pruneStarted.isCompleted) pruneStarted.complete();
+          return pruning.future;
+        });
+        final initial = await pumpHost(
+          tester,
+          accountOverrides: [dmVideoStoreProvider.overrideWithValue(store)],
+        );
+        initial.read(dmVideoStoreProvider);
+        await LogCaptureService().clearAllLogs();
+        addTearDown(LogCaptureService().clearAllLogs);
+
+        final assertion = expectLater(
+          swapAccount(
+            deviceScope: deviceScope,
+            controller: controller,
+            currentAuthService: currentAuthService,
+            account: account,
+            signIn: (_, _) async {},
+          ),
+          completes,
+        );
+        await drivePruneStart(pruneStarted);
+        await tester.pump(const Duration(seconds: 5));
+        await driveSwap(assertion);
+        pruning.completeError(StateError('the prune failed late'));
+        await tester.pump();
+
+        expect(
+          LogCaptureService().getRecentLogs().map(
+            (entry) => '${entry.message} ${entry.error}',
+          ),
+          contains(contains('the prune failed late')),
+        );
+      },
+    );
+
+    testWidgets('a prune that fails at once does not stop the swap', (
+      tester,
+    ) async {
+      final store = _MockDmVideoStore();
+      when(store.prune)
+          .thenAnswer((_) async => throw StateError('prune failed'));
+      final events = <String>[];
+      final initial = await pumpHost(
+        tester,
+        accountOverrides: [dmVideoStoreProvider.overrideWithValue(store)],
+      );
+      initial.read(dmVideoStoreProvider);
+
+      await driveSwap(
+        swapAccount(
+          deviceScope: deviceScope,
+          controller: controller,
+          currentAuthService: currentAuthService,
+          account: account,
+          signIn: (_, _) async => events.add('sign in target'),
+        ),
+      );
+      await tester.pump();
+
+      expect(events, ['sign in target']);
     });
 
     testWidgets('resumes outgoing DMs when target sign-in fails', (

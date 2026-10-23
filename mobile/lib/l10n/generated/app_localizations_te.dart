@@ -3831,6 +3831,15 @@ class AppLocalizationsTe extends AppLocalizations {
   String get dmClipBadge => 'క్లిప్';
 
   @override
+  String get dmVideoCardTapToLoad => 'Tap to load';
+
+  @override
+  String get dmVideoCardHiddenSenderBlocked => 'Hidden: sender blocked';
+
+  @override
+  String get dmVideoCardHiddenSenderMuted => 'Hidden: sender muted';
+
+  @override
   String get dmClipChecking =>
       'ఈ క్లిప్ Divineతో చిత్రీకరించబడిందో లేదో తనిఖీ చేస్తున్నాం…';
 

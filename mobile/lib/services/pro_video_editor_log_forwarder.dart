@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:openvine/config/bug_report_config.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -49,17 +51,21 @@ class ProVideoEditorLogForwarder {
     CrashReporter crashReporter = const SilentCrashReporter(),
   }) {
     if (entry.message.isEmpty) return;
-    final name = (entry.tag?.isNotEmpty ?? false)
-        ? entry.tag!
-        : 'ProVideoEditorNative';
+    final name = _redact(
+      (entry.tag?.isNotEmpty ?? false) ? entry.tag! : 'ProVideoEditorNative',
+    );
+    // Redact before either sink: the local capture also retains native logs.
+    final message = _redact(entry.message);
+    final stack = entry.stackTrace == null ? null : _redact(entry.stackTrace!);
     // The final render owns the non-fatal report. Native fallback attempts
     // contribute context without each becoming a separate crash issue.
     if (entry.level == NativeLogLevel.warning ||
         entry.level == NativeLogLevel.error) {
-      final stack = entry.stackTrace;
+      // A native message can quote a file's path, and a kept video DM's path
+      // names the account and the message.
       crashReporter.log(
         sanitizeForCrashReport(
-          '[$name] ${entry.message}'
+          '[$name] $message'
           '${stack == null || stack.isEmpty ? '' : '\n$stack'}',
         ),
       );
@@ -67,22 +73,35 @@ class ProVideoEditorLogForwarder {
     switch (entry.level) {
       case NativeLogLevel.error:
         Log.error(
-          entry.message,
+          message,
           name: name,
           category: LogCategory.video,
-          stackTrace: entry.stackTrace == null
-              ? null
-              : StackTrace.fromString(entry.stackTrace!),
+          stackTrace: stack == null ? null : StackTrace.fromString(stack),
         );
       case NativeLogLevel.warning:
-        Log.warning(entry.message, name: name, category: LogCategory.video);
+        Log.warning(message, name: name, category: LogCategory.video);
       case NativeLogLevel.debug:
-        Log.debug(entry.message, name: name, category: LogCategory.video);
+        Log.debug(message, name: name, category: LogCategory.video);
       case NativeLogLevel.verbose:
-        Log.verbose(entry.message, name: name, category: LogCategory.video);
+        Log.verbose(message, name: name, category: LogCategory.video);
       case NativeLogLevel.info:
       case NativeLogLevel.none:
-        Log.info(entry.message, name: name, category: LogCategory.video);
+        Log.info(message, name: name, category: LogCategory.video);
     }
   }
+
+  // A kept video DM's files are named after its message, and an iOS file
+  // error quotes that name without the path around it. A render cache file
+  // named after its hash looks the same and is hidden too; a task id that
+  // carries the hash is not, since only a name followed by a dot is. A clip
+  // added from a DM carries the message id in its own id, which a render can
+  // use as its task id.
+  static final _messageNamedFile = RegExp(
+    r'(?<![A-Za-z0-9])[A-Za-z0-9]{64}(?=\.)|'
+    '${DivineVideoClip.receivedDmClipIdPrefix}[A-Za-z0-9]{64}',
+  );
+
+  static String _redact(String text) => redactFilesystemPaths(
+    text,
+  ).replaceAll(_messageNamedFile, '[REDACTED]');
 }

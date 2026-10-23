@@ -1090,6 +1090,117 @@ void main() {
       });
     });
 
+    group('isRetracted', () {
+      Future<void> insertMessage({required String sender}) => dao.insertMessage(
+        id: 'msg_retracted',
+        conversationId: conversationId1,
+        senderPubkey: sender,
+        content: 'https://media.example/blob',
+        createdAt: 1700000000,
+        giftWrapId: 'gw_retracted',
+        messageKind: 15,
+        ownerPubkey: 'pubkey_alice',
+      );
+
+      test('is true once the sender retracted it', () async {
+        await insertMessage(sender: 'pubkey_bob');
+        await dao.markMessageDeleted(
+          'msg_retracted',
+          ownerPubkey: 'pubkey_alice',
+        );
+
+        expect(
+          await dao.isRetracted('msg_retracted', ownerPubkey: 'pubkey_alice'),
+          isTrue,
+        );
+      });
+
+      test(
+        'is false for your own message while its retraction is undelivered, '
+        'as the thread still shows it',
+        () async {
+          await insertMessage(sender: 'pubkey_alice');
+          await dao.markMessageDeletionPending(
+            'msg_retracted',
+            deletionRumorJson: '{"kind":5}',
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(
+            await dao.isRetracted(
+              'msg_retracted',
+              ownerPubkey: 'pubkey_alice',
+            ),
+            isFalse,
+          );
+        },
+      );
+
+      test(
+        'is true for your own message once its retraction is delivered',
+        () async {
+          await insertMessage(sender: 'pubkey_alice');
+          await dao.markMessageDeletionPending(
+            'msg_retracted',
+            deletionRumorJson: '{"kind":5}',
+            ownerPubkey: 'pubkey_alice',
+          );
+          await dao.markMessageDeletionSent(
+            'msg_retracted',
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(
+            await dao.isRetracted('msg_retracted', ownerPubkey: 'pubkey_alice'),
+            isTrue,
+          );
+        },
+      );
+
+      test(
+        'agrees with the thread for your own message deleted with no '
+        'delivery status',
+        () async {
+          await insertMessage(sender: 'pubkey_alice');
+          await dao.markMessageDeleted(
+            'msg_retracted',
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(
+            await dao.getMessagesForConversation(
+              conversationId1,
+              ownerPubkey: 'pubkey_alice',
+            ),
+            isEmpty,
+          );
+          expect(
+            await dao.isRetracted(
+              'msg_retracted',
+              ownerPubkey: 'pubkey_alice',
+            ),
+            isTrue,
+          );
+        },
+      );
+
+      test('is false for a message still shown', () async {
+        await insertMessage(sender: 'pubkey_bob');
+
+        expect(
+          await dao.isRetracted('msg_retracted', ownerPubkey: 'pubkey_alice'),
+          isFalse,
+        );
+      });
+
+      test('is false when there is no row', () async {
+        expect(
+          await dao.isRetracted('msg_retracted', ownerPubkey: 'pubkey_alice'),
+          isFalse,
+        );
+      });
+    });
+
     group('getAllMessagesForConversationIncludingDeleted', () {
       test('returns soft-deleted rows the rendering read hides', () async {
         await dao.insertMessage(

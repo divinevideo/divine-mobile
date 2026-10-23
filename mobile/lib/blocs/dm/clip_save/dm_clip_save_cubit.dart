@@ -10,9 +10,11 @@ import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/models/dm_clip_tag.dart';
 import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
+import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
 
-/// Adds a verified received clip to one account's clip library.
+/// Adds a verified received clip to one account's clip library, awaiting
+/// [beforeSave] just before it saves the clip there.
 typedef ReceivedClipImporter = Future<VideoClipImportResult> Function({
   required File source,
   required String messageId,
@@ -20,6 +22,7 @@ typedef ReceivedClipImporter = Future<VideoClipImportResult> Function({
   required String c2paManifestId,
   AspectRatio? targetAspectRatio,
   List<String> contributorPubkeys,
+  Future<void> Function()? beforeSave,
 });
 
 /// Returns the [ReceivedClipImporter] for the signed-in account's library.
@@ -68,22 +71,22 @@ class DmClipSaveState extends Equatable {
 ///
 /// A clip is only added when [ClipProvenanceVerifier] confirms it is a
 /// Divine camera capture or a signed edit of captures, so a clip library
-/// never holds footage whose origin is unknown or generated. The decrypted
-/// temp file is always removed before the save settles; the library keeps its
-/// own copy.
+/// never holds footage whose origin is unknown or generated. The video comes
+/// from the [DmVideoStore] of the account signed in when the save starts,
+/// held until the library has its own copy.
 class DmClipSaveCubit extends Cubit<DmClipSaveState>
     with CloseGuardedEmit<DmClipSaveState> {
   /// Creates a [DmClipSaveCubit].
   DmClipSaveCubit({
-    required DmVideoDecryptor decryptor,
+    required DmVideoStoreResolver resolveStore,
     required ClipProvenanceVerifier verifier,
     required ReceivedClipImporterResolver resolveImporter,
-  }) : _decryptor = decryptor,
+  }) : _resolveStore = resolveStore,
        _verifier = verifier,
        _resolveImporter = resolveImporter,
        super(const DmClipSaveState());
 
-  final DmVideoDecryptor _decryptor;
+  final DmVideoStoreResolver _resolveStore;
   final ClipProvenanceVerifier _verifier;
   final ReceivedClipImporterResolver _resolveImporter;
 
@@ -104,16 +107,18 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
   /// not cancelled by [close], so a caller that outlives the screen can still
   /// report the outcome.
   Future<DmClipSaveStatus> save(DmMessage message) async {
+    final store = _resolveStore();
     final importClip = _resolveImporter();
     emit(const DmClipSaveState(status: DmClipSaveStatus.checking));
 
-    final status = await _save(message, importClip);
+    final status = await _save(message, store, importClip);
     emitIfOpen(DmClipSaveState(status: status));
     return status;
   }
 
   Future<DmClipSaveStatus> _save(
     DmMessage message,
+    DmVideoStore? store,
     ReceivedClipImporter importClip,
   ) async {
     final fileType = message.fileMetadata?.fileType.toLowerCase();
@@ -121,25 +126,39 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
       return DmClipSaveStatus.notVerified;
     }
 
-    String? path;
     try {
-      path = await _decryptor.decryptToFile(message);
-
-      final provenance = await _verifier.verify(path);
-      if (!provenance.isVerified) {
-        return provenance.isRejected
-            ? DmClipSaveStatus.notVerified
-            : DmClipSaveStatus.checkUnavailable;
+      if (store == null) {
+        throw const DmVideoUnavailableException(
+          'no account is signed in, or this is the web',
+        );
       }
+      final video = await store.videoFor(message);
+      final VideoClipImportResult result;
+      try {
+        final provenance = await _verifier.verify(video.path);
+        if (!provenance.isVerified) {
+          return provenance.isRejected
+              ? DmClipSaveStatus.notVerified
+              : DmClipSaveStatus.checkUnavailable;
+        }
 
-      final result = await importClip(
-        source: File(path),
-        messageId: message.id,
-        senderPubkey: message.senderPubkey,
-        c2paManifestId: provenance.activeManifestId!,
-        targetAspectRatio: message.clipTargetAspectRatio,
-        contributorPubkeys: provenance.contributors,
-      );
+        result = await importClip(
+          source: video,
+          messageId: message.id,
+          senderPubkey: message.senderPubkey,
+          c2paManifestId: provenance.activeManifestId!,
+          targetAspectRatio: message.clipTargetAspectRatio,
+          contributorPubkeys: provenance.contributors,
+          // Asked again just before the save: the check, the import's lookups
+          // and its frames take seconds, and a message retracted by then must
+          // not reach the library.
+          beforeSave: () async => store.releaseVideo(
+            await store.videoFor(message),
+          ),
+        );
+      } finally {
+        store.releaseVideo(video);
+      }
       switch (result) {
         case VideoClipImportSuccess():
           return DmClipSaveStatus.saved;
@@ -156,8 +175,6 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
     } catch (error, stackTrace) {
       addError(error, stackTrace);
       return DmClipSaveStatus.failed;
-    } finally {
-      if (path != null) _decryptor.deleteClip(path);
     }
   }
 }

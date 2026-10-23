@@ -3722,6 +3722,15 @@ class AppLocalizationsPt extends AppLocalizations {
   String get dmClipBadge => 'Clipe';
 
   @override
+  String get dmVideoCardTapToLoad => 'Tap to load';
+
+  @override
+  String get dmVideoCardHiddenSenderBlocked => 'Hidden: sender blocked';
+
+  @override
+  String get dmVideoCardHiddenSenderMuted => 'Hidden: sender muted';
+
+  @override
   String get dmClipChecking =>
       'Conferindo se este clipe foi gravado com o Divine…';
 

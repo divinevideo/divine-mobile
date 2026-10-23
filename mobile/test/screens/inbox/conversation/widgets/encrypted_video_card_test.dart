@@ -3,6 +3,9 @@
 // ABOUTME: network image, because fetching the encrypted thumbnail would reuse
 // ABOUTME: the AES-GCM nonce.
 
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -34,6 +37,33 @@ DmMessage _videoMessage({String? blurhash = _blurhash}) => DmMessage(
   giftWrapId: 'c' * 64,
   messageKind: 15,
   fileMetadata: _videoMetadata(blurhash: blurhash),
+);
+
+/// Writes a small PNG standing in for a kept frame and returns its path. The
+/// engine encodes it, so this runs on the real event loop.
+Future<String> _writeKeptFrame() async {
+  final recorder = ui.PictureRecorder();
+  ui.Canvas(recorder).drawRect(
+    const Rect.fromLTWH(0, 0, 4, 4),
+    ui.Paint()..color = const Color(0xFF27C58B),
+  );
+  final image = await recorder.endRecording().toImage(4, 4);
+  final png = await image.toByteData(format: ui.ImageByteFormat.png);
+  image.dispose();
+  final dir = Directory.systemTemp.createTempSync('encrypted_video_card_');
+  final file = File('${dir.path}/frame.png')
+    ..writeAsBytesSync(png!.buffer.asUint8List());
+  return file.path;
+}
+
+/// The card's image of the kept frame at [path], decoded or not.
+Finder _keptFrame(String path) => find.byWidgetPredicate(
+  (widget) =>
+      widget is Image &&
+      widget.image is ResizeImage &&
+      (widget.image as ResizeImage).imageProvider is FileImage &&
+      ((widget.image as ResizeImage).imageProvider as FileImage).file.path ==
+          path,
 );
 
 Widget _host(Widget child) => MaterialApp(
@@ -109,6 +139,98 @@ void main() {
       },
     );
 
+    testWidgets(
+      'keeps the blurhash showing while the kept frame decodes, so the card '
+      'never goes blank',
+      (tester) async {
+        const framePath = '/kept/dm_videos/owner/clip.preview.jpg';
+        await tester.pumpWidget(
+          _host(
+            EncryptedVideoCard(
+              fileMetadata: _videoMetadata(),
+              isSent: false,
+              framePath: framePath,
+            ),
+          ),
+        );
+
+        expect(find.byType(BlurhashDisplay), findsOneWidget);
+        expect(_keptFrame(framePath), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'draws the kept frame over the blurhash, under a play icon, once it '
+      'decodes',
+      (tester) async {
+        await tester.runAsync(() async {
+          final framePath = await _writeKeptFrame();
+          addTearDown(
+            () => File(framePath).parent.deleteSync(recursive: true),
+          );
+          await tester.pumpWidget(
+            _host(
+              EncryptedVideoCard(
+                fileMetadata: _videoMetadata(),
+                isSent: false,
+                framePath: framePath,
+              ),
+            ),
+          );
+          final frame = tester.element(find.byType(Image));
+          await precacheImage((frame.widget as Image).image, frame);
+        });
+        await tester.pump();
+
+        // A Stack paints each child over the ones before it.
+        expect(
+          find
+              .byWidgetPredicate(
+                (widget) =>
+                    widget is BlurhashDisplay ||
+                    (widget is RawImage && widget.image != null) ||
+                    (widget is DivineIcon &&
+                        widget.icon == DivineIconName.play),
+              )
+              .evaluate()
+              .map((element) => element.widget.runtimeType),
+          orderedEquals([BlurhashDisplay, RawImage, DivineIcon]),
+        );
+      },
+    );
+
+    testWidgets(
+      'keeps showing the blurhash when the kept frame is gone',
+      (tester) async {
+        final missing = '${Directory.systemTemp.path}/no_such_frame.jpg';
+        await tester.runAsync(() async {
+          await tester.pumpWidget(
+            _host(
+              EncryptedVideoCard(
+                fileMetadata: _videoMetadata(),
+                isSent: false,
+                framePath: missing,
+              ),
+            ),
+          );
+          // The card's own provider, resized, so its own load is the one
+          // waited for, and fails.
+          final frame = tester.element(find.byType(Image));
+          await precacheImage(
+            (frame.widget as Image).image,
+            frame,
+            onError: (_, _) {},
+          );
+        });
+        await tester.pump();
+
+        expect(find.byType(BlurhashDisplay), findsOneWidget);
+        // The failed frame draws nothing over it, not even a broken-image box.
+        expect(find.byType(RawImage), findsNothing);
+        expect(find.byType(Placeholder), findsNothing);
+      },
+    );
+
     testWidgets('does not label a plain video as a clip', (tester) async {
       await tester.pumpWidget(
         _host(
@@ -117,6 +239,97 @@ void main() {
       );
 
       expect(find.text(strings.dmClipBadge), findsNothing);
+    });
+
+    group('held back', () {
+      const framePath = '/kept/dm_videos/owner/clip.preview.jpg';
+
+      testWidgets("keeps a request's blurhash, shows no frame and asks for a "
+          'tap', (tester) async {
+        await tester.pumpWidget(
+          _host(
+            EncryptedVideoCard(
+              fileMetadata: _videoMetadata(),
+              isSent: false,
+              framePath: framePath,
+              hold: DmVideoHold.request,
+            ),
+          ),
+        );
+
+        expect(find.byType(BlurhashDisplay), findsOneWidget);
+        expect(_keptFrame(framePath), findsNothing);
+        expect(find.text(strings.dmVideoCardTapToLoad), findsOneWidget);
+      });
+
+      for (final (hold, hint) in [
+        (DmVideoHold.blocked, strings.dmVideoCardHiddenSenderBlocked),
+        (DmVideoHold.muted, strings.dmVideoCardHiddenSenderMuted),
+      ]) {
+        testWidgets("hides a ${hold.name} sender's preview and says why", (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            _host(
+              EncryptedVideoCard(
+                fileMetadata: _videoMetadata(),
+                isSent: false,
+                framePath: framePath,
+                hold: hold,
+              ),
+            ),
+          );
+
+          expect(find.byType(BlurhashDisplay), findsNothing);
+          expect(_keptFrame(framePath), findsNothing);
+          expect(find.text(hint), findsOneWidget);
+        });
+      }
+
+      for (final hold in DmVideoHold.values) {
+        testWidgets('still plays a ${hold.name} card on tap', (tester) async {
+          var taps = 0;
+          await tester.pumpWidget(
+            _host(
+              EncryptedVideoCard(
+                fileMetadata: _videoMetadata(),
+                isSent: false,
+                framePath: framePath,
+                hold: hold,
+                onTap: () => taps++,
+              ),
+            ),
+          );
+
+          await tester.tap(find.byType(EncryptedVideoCard));
+
+          expect(taps, 1);
+        });
+      }
+
+      testWidgets('tells screen readers why there is no preview', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(
+          _host(
+            EncryptedVideoCard(
+              fileMetadata: _videoMetadata(),
+              isSent: false,
+              hold: DmVideoHold.blocked,
+              onTap: () {},
+            ),
+          ),
+        );
+
+        final card = tester.getSemantics(
+          find.bySemanticsLabel(
+            RegExp(RegExp.escape(strings.videoPlayerPlayVideo)),
+          ),
+        );
+        expect(card.hint, strings.dmVideoCardHiddenSenderBlocked);
+        semantics.dispose();
+      });
     });
   });
 
@@ -138,6 +351,29 @@ void main() {
         );
       },
     );
+
+    testWidgets('shows the kept frame it is given', (tester) async {
+      const framePath = '/kept/dm_videos/owner/clip.preview.jpg';
+      await tester.pumpWidget(
+        _host(
+          MessageBubble(
+            message: _videoMessage().content,
+            timestamp: '2:30 PM',
+            isSent: false,
+            fileMetadata: _videoMessage().fileMetadata,
+            encryptedVideoFramePath: framePath,
+          ),
+        ),
+      );
+
+      expect(
+        find.descendant(
+          of: find.byType(EncryptedVideoCard),
+          matching: _keptFrame(framePath),
+        ),
+        findsOneWidget,
+      );
+    });
 
     testWidgets('never renders the encrypted file URL as text', (tester) async {
       await tester.pumpWidget(_bubbleFrom(_videoMessage(), isSent: false));
@@ -209,6 +445,24 @@ void main() {
         findsOneWidget,
       );
       semantics.dispose();
+    });
+
+    testWidgets('passes why a preview is held back to its card', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _host(
+          MessageBubble(
+            message: _videoMessage().content,
+            timestamp: '2:30 PM',
+            isSent: false,
+            fileMetadata: _videoMetadata(),
+            encryptedVideoHold: DmVideoHold.request,
+          ),
+        ),
+      );
+
+      expect(find.text(strings.dmVideoCardTapToLoad), findsOneWidget);
     });
 
     testWidgets('forwards a card tap to onOpenEncryptedVideo', (tester) async {

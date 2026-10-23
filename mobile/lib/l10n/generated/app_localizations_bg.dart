@@ -3744,6 +3744,15 @@ class AppLocalizationsBg extends AppLocalizations {
   String get dmClipBadge => 'Клип';
 
   @override
+  String get dmVideoCardTapToLoad => 'Tap to load';
+
+  @override
+  String get dmVideoCardHiddenSenderBlocked => 'Hidden: sender blocked';
+
+  @override
+  String get dmVideoCardHiddenSenderMuted => 'Hidden: sender muted';
+
+  @override
   String get dmClipChecking => 'Проверяваме дали клипът е заснет с Divine…';
 
   @override

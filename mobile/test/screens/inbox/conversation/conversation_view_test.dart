@@ -37,10 +37,12 @@ import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/watermark_download_provider.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/conversation/conversation_view.dart';
+import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
+import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/watermark_download_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/profile/more_sheet/more_sheet_content.dart';
@@ -56,6 +58,8 @@ import '../../../builders/video_event_builder.dart';
 import '../../../helpers/go_router.dart';
 import '../../../helpers/retired_key_custody.dart';
 import '../../../helpers/test_provider_overrides.dart';
+
+class _MockDmVideoStore extends Mock implements DmVideoStore {}
 
 class _MockConversationBloc
     extends MockBloc<ConversationEvent, ConversationState>
@@ -5210,6 +5214,403 @@ void main() {
 
         expect(find.text('🔥'), findsOneWidget);
         expect(find.text('😂'), findsNothing);
+      });
+    });
+
+    group('video DM previews', () {
+      late _MockDmVideoStore store;
+
+      DmMessage videoFrom(String sender, {String id = 'video'}) => DmMessage(
+        id: id.padRight(64, '0'),
+        conversationId:
+            'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+        senderPubkey: sender,
+        content: 'https://media.example/encrypted',
+        createdAt: now.millisecondsSinceEpoch ~/ 1000,
+        giftWrapId:
+            'aaaaaaaabbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccdddddddd',
+        messageKind: 15,
+        fileMetadata: DmFileMetadata(
+          fileType: 'video/mp4',
+          encryptionAlgorithm: 'aes-gcm',
+          decryptionKey: '00' * 32,
+          decryptionNonce: '00' * 12,
+          fileHash: 'ab' * 32,
+        ),
+      );
+
+      DmMessage textFrom(String sender) => DmMessage(
+        id: 'text'.padRight(64, '0'),
+        conversationId:
+            'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+        senderPubkey: sender,
+        content: 'Posting here',
+        createdAt: now.millisecondsSinceEpoch ~/ 1000 - 60,
+        giftWrapId:
+            'bbbbbbbbccccccccddddddddaaaaaaaabbbbbbbbccccccccddddddddaaaaaaaa',
+      );
+
+      setUpAll(() => registerFallbackValue(videoFrom(otherPubkey)));
+
+      setUp(() {
+        store = _MockDmVideoStore();
+        when(() => store.kept).thenAnswer((_) => const Stream.empty());
+        when(
+          () => store.previewFor(
+            any(),
+            stillWanted: any(named: 'stillWanted'),
+          ),
+        ).thenAnswer((_) async => null);
+      });
+
+      Future<void> pumpThread(
+        WidgetTester tester,
+        List<DmMessage> messages, {
+        required Map<String, FollowRelationship> follows,
+        List<String>? members,
+      }) async {
+        await tester.pumpWidget(
+          buildSubject(
+            state: ConversationState(
+              status: ConversationStatus.loaded,
+              messages: messages,
+            ),
+            counterparties: members,
+            extraOverrides: [
+              dmVideoStoreProvider.overrideWithValue(store),
+              for (final MapEntry(key: pubkey, value: relationship)
+                  in follows.entries)
+                followRelationshipProvider(
+                  pubkey,
+                ).overrideWith((ref) => Stream.value(relationship)),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+      }
+
+      void expectLoaded(DmMessage video) => verify(
+        () => store.previewFor(
+          video,
+          stillWanted: any(named: 'stillWanted'),
+        ),
+      ).called(1);
+
+      void expectHeldBack(DmMessage video) => verifyNever(
+        () => store.previewFor(
+          video,
+          stillWanted: any(named: 'stillWanted'),
+        ),
+      );
+
+      group('1:1', () {
+        testWidgets('loads a video from someone the user follows', (
+          tester,
+        ) async {
+          final video = videoFrom(otherPubkey);
+          await pumpThread(
+            tester,
+            [video],
+            follows: {otherPubkey: FollowRelationship.youFollow},
+          );
+
+          expectLoaded(video);
+          expect(find.text(l10n.dmVideoCardTapToLoad), findsNothing);
+        });
+
+        testWidgets('loads a video from a mutual follow', (tester) async {
+          final video = videoFrom(otherPubkey);
+          await pumpThread(
+            tester,
+            [video],
+            follows: {otherPubkey: FollowRelationship.mutual},
+          );
+
+          expectLoaded(video);
+        });
+
+        testWidgets('loads a video in a chat the user posted in, from someone '
+            'they do not follow', (tester) async {
+          final video = videoFrom(otherPubkey);
+          await pumpThread(
+            tester,
+            [video, textFrom(currentPubkey)],
+            follows: {otherPubkey: FollowRelationship.none},
+          );
+
+          expectLoaded(video);
+        });
+
+        testWidgets('holds back a request from someone the user does not '
+            'follow, and asks for a tap', (tester) async {
+          final video = videoFrom(otherPubkey);
+          await pumpThread(
+            tester,
+            [video],
+            follows: {otherPubkey: FollowRelationship.followsYou},
+          );
+
+          expectHeldBack(video);
+          expect(find.text(l10n.dmVideoCardTapToLoad), findsOneWidget);
+        });
+
+        testWidgets('holds back a video from someone else filed into a chat '
+            'the user posted in, whom they do not follow', (tester) async {
+          const strangerPubkey =
+              '5566778855667788556677885566778855667788556677885566778855667788';
+          final video = videoFrom(strangerPubkey);
+          await pumpThread(
+            tester,
+            [video, textFrom(currentPubkey)],
+            follows: {
+              otherPubkey: FollowRelationship.none,
+              strangerPubkey: FollowRelationship.none,
+            },
+          );
+
+          expectHeldBack(video);
+          expect(find.text(l10n.dmVideoCardTapToLoad), findsOneWidget);
+        });
+
+        testWidgets("holds back a blocked sender's video, though the user "
+            'follows them and posted there', (tester) async {
+          when(
+            () => mockBlocklist.dmHiddenPubkeys,
+          ).thenReturn(const {otherPubkey});
+          when(() => mockBlocklist.isBlocked(otherPubkey)).thenReturn(true);
+          final video = videoFrom(otherPubkey);
+          await pumpThread(
+            tester,
+            [video, textFrom(currentPubkey)],
+            follows: {otherPubkey: FollowRelationship.mutual},
+          );
+
+          expectHeldBack(video);
+          expect(
+            find.text(l10n.dmVideoCardHiddenSenderBlocked),
+            findsOneWidget,
+          );
+        });
+
+        testWidgets("opens a blocked sender's video on tap", (tester) async {
+          when(
+            () => mockBlocklist.dmHiddenPubkeys,
+          ).thenReturn(const {otherPubkey});
+          when(() => mockBlocklist.isBlocked(otherPubkey)).thenReturn(true);
+          // The play page stays loading; that it opened is the point.
+          when(
+            () => store.videoFor(any()),
+          ).thenAnswer((_) => Completer<File>().future);
+          final video = videoFrom(otherPubkey);
+          await pumpThread(
+            tester,
+            [video],
+            follows: {otherPubkey: FollowRelationship.mutual},
+          );
+
+          await tester.tap(find.byType(EncryptedVideoCard));
+          await tester.pump();
+          await tester.pump();
+
+          expect(find.byType(DmVideoPlayPage), findsOneWidget);
+          verify(() => store.videoFor(video)).called(1);
+        });
+
+        testWidgets('a mixed-case mute entry does not override a block hint', (
+          tester,
+        ) async {
+          final sender = 'ab' * 32;
+          when(() => mockBlocklist.dmHiddenPubkeys).thenReturn({
+            sender,
+            sender.toUpperCase(),
+          });
+          when(() => mockBlocklist.isBlocked(sender)).thenReturn(true);
+          when(
+            () => mockBlocklist.isBlocked(sender.toUpperCase()),
+          ).thenReturn(false);
+          final video = videoFrom(sender);
+          await pumpThread(
+            tester,
+            [video],
+            follows: {sender: FollowRelationship.none},
+            members: [sender],
+          );
+
+          expectHeldBack(video);
+          expect(
+            find.text(l10n.dmVideoCardHiddenSenderBlocked),
+            findsOneWidget,
+          );
+          expect(find.text(l10n.dmVideoCardHiddenSenderMuted), findsNothing);
+        });
+
+        testWidgets("holds back a muted sender's video, though the user "
+            'follows them and posted there', (tester) async {
+          when(
+            () => mockBlocklist.dmHiddenPubkeys,
+          ).thenReturn(const {otherPubkey});
+          final video = videoFrom(otherPubkey);
+          await pumpThread(
+            tester,
+            [video, textFrom(currentPubkey)],
+            follows: {otherPubkey: FollowRelationship.mutual},
+          );
+
+          expectHeldBack(video);
+          expect(find.text(l10n.dmVideoCardHiddenSenderMuted), findsOneWidget);
+        });
+      });
+
+      group('from a key a seal spells in uppercase', () {
+        // Hex letters, so the uppercase spelling differs from the stored one.
+        const lettered =
+            'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+
+        testWidgets("holds back a blocked sender's video, in a 1:1 the user "
+            'posted in', (tester) async {
+          when(() => mockBlocklist.dmHiddenPubkeys)
+              .thenReturn(const {lettered});
+          when(() => mockBlocklist.isBlocked(lettered)).thenReturn(true);
+          final video = videoFrom(lettered.toUpperCase());
+          await pumpThread(
+            tester,
+            [video, textFrom(currentPubkey)],
+            members: const [lettered],
+            follows: const {},
+          );
+
+          expectHeldBack(video);
+          expect(
+            find.text(l10n.dmVideoCardHiddenSenderBlocked),
+            findsOneWidget,
+          );
+        });
+
+        testWidgets("holds back a muted sender's video, in a 1:1 the user "
+            'posted in', (tester) async {
+          when(() => mockBlocklist.dmHiddenPubkeys)
+              .thenReturn(const {lettered});
+          final video = videoFrom(lettered.toUpperCase());
+          await pumpThread(
+            tester,
+            [video, textFrom(currentPubkey)],
+            members: const [lettered],
+            follows: const {},
+          );
+
+          expectHeldBack(video);
+          expect(find.text(l10n.dmVideoCardHiddenSenderMuted), findsOneWidget);
+        });
+
+        testWidgets('holds back the video of a sender a block list spells in '
+            'uppercase', (tester) async {
+          final listed = lettered.toUpperCase();
+          when(() => mockBlocklist.dmHiddenPubkeys).thenReturn({listed});
+          when(() => mockBlocklist.isBlocked(listed)).thenReturn(true);
+          final video = videoFrom(lettered);
+          await pumpThread(
+            tester,
+            [video, textFrom(currentPubkey)],
+            members: const [lettered],
+            follows: const {},
+          );
+
+          expectHeldBack(video);
+          expect(
+            find.text(l10n.dmVideoCardHiddenSenderBlocked),
+            findsOneWidget,
+          );
+        });
+
+        testWidgets('loads a video from someone the user follows', (
+          tester,
+        ) async {
+          final video = videoFrom(lettered.toUpperCase());
+          await pumpThread(
+            tester,
+            [video],
+            members: const [lettered],
+            follows: {
+              lettered: FollowRelationship.youFollow,
+              lettered.toUpperCase(): FollowRelationship.none,
+            },
+          );
+
+          expectLoaded(video);
+        });
+      });
+
+      testWidgets(
+        'holds back a video in a thread whose members did not load, though '
+        'the user posted there',
+        (tester) async {
+          final video = videoFrom(otherPubkey);
+          await pumpThread(
+            tester,
+            [video, textFrom(currentPubkey)],
+            members: const [],
+            follows: {otherPubkey: FollowRelationship.none},
+          );
+
+          expectHeldBack(video);
+          expect(find.text(l10n.dmVideoCardTapToLoad), findsOneWidget);
+        },
+      );
+
+      group('group', () {
+        const memberPubkey =
+            '5566778855667788556677885566778855667788556677885566778855667788';
+        const members = [otherPubkey, memberPubkey];
+
+        testWidgets('holds back a member the user does not follow, though '
+            'the user posted there', (tester) async {
+          final video = videoFrom(memberPubkey);
+          await pumpThread(
+            tester,
+            [video, textFrom(currentPubkey)],
+            members: members,
+            follows: {
+              otherPubkey: FollowRelationship.none,
+              memberPubkey: FollowRelationship.none,
+            },
+          );
+
+          expectHeldBack(video);
+          expect(find.text(l10n.dmVideoCardTapToLoad), findsOneWidget);
+        });
+
+        testWidgets('loads a member the user follows', (tester) async {
+          final video = videoFrom(memberPubkey);
+          await pumpThread(
+            tester,
+            [video],
+            members: members,
+            follows: {
+              otherPubkey: FollowRelationship.none,
+              memberPubkey: FollowRelationship.youFollow,
+            },
+          );
+
+          expectLoaded(video);
+        });
+
+        testWidgets("loads the user's own video", (tester) async {
+          final video = videoFrom(currentPubkey);
+          await pumpThread(
+            tester,
+            [video],
+            members: members,
+            follows: {
+              otherPubkey: FollowRelationship.none,
+              memberPubkey: FollowRelationship.none,
+              // Trusted for being the user's, not for any relationship.
+              currentPubkey: FollowRelationship.none,
+            },
+          );
+
+          expectLoaded(video);
+        });
       });
     });
   });

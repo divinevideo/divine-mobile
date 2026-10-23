@@ -14,10 +14,11 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/dm_clip_tag.dart';
 import 'package:openvine/services/clip_provenance_verifier.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
+import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/video_clip_import_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
-class _MockDmVideoDecryptor extends Mock implements DmVideoDecryptor {}
+class _MockDmVideoStore extends Mock implements DmVideoStore {}
 
 class _MockClipProvenanceVerifier extends Mock
     implements ClipProvenanceVerifier {}
@@ -50,7 +51,7 @@ DmMessage _clipMessage({String? id, String fileType = 'video/mp4'}) =>
     );
 
 void main() {
-  late _MockDmVideoDecryptor decryptor;
+  late _MockDmVideoStore store;
   late _MockClipProvenanceVerifier verifier;
   late _MockVideoClipImportService importService;
 
@@ -60,16 +61,16 @@ void main() {
   });
 
   setUp(() {
-    decryptor = _MockDmVideoDecryptor();
+    store = _MockDmVideoStore();
     verifier = _MockClipProvenanceVerifier();
     importService = _MockVideoClipImportService();
     when(
-      () => decryptor.decryptToFile(any()),
-    ).thenAnswer((_) async => _decryptedPath);
+      () => store.videoFor(any()),
+    ).thenAnswer((_) async => File(_decryptedPath));
   });
 
   DmClipSaveCubit buildCubit() => DmClipSaveCubit(
-    decryptor: decryptor,
+    resolveStore: () => store,
     verifier: verifier,
     resolveImporter: () => importService.importReceivedClip,
   );
@@ -98,6 +99,7 @@ void main() {
         c2paManifestId: any(named: 'c2paManifestId'),
         targetAspectRatio: any(named: 'targetAspectRatio'),
         contributorPubkeys: any(named: 'contributorPubkeys'),
+        beforeSave: any(named: 'beforeSave'),
       ),
     ).thenAnswer(
       (_) async => VideoClipImportSuccess(
@@ -141,11 +143,11 @@ void main() {
                       targetAspectRatio: AspectRatio.square,
                       // Everyone the clip's signed history credits.
                       contributorPubkeys: [_recorderPubkey],
+                      beforeSave: any(named: 'beforeSave'),
                     ),
                   ).captured.single
                   as File;
           expect(source.path, equals(_decryptedPath));
-          verify(() => decryptor.deleteClip(_decryptedPath)).called(1);
         },
       );
 
@@ -166,9 +168,9 @@ void main() {
               senderPubkey: any(named: 'senderPubkey'),
               c2paManifestId: any(named: 'c2paManifestId'),
               targetAspectRatio: any(named: 'targetAspectRatio'),
+              beforeSave: any(named: 'beforeSave'),
             ),
           );
-          verify(() => decryptor.deleteClip(_decryptedPath)).called(1);
         },
       );
 
@@ -188,18 +190,35 @@ void main() {
             senderPubkey: any(named: 'senderPubkey'),
             c2paManifestId: any(named: 'c2paManifestId'),
             targetAspectRatio: any(named: 'targetAspectRatio'),
+            beforeSave: any(named: 'beforeSave'),
           ),
         ),
       );
 
       blocTest<DmClipSaveCubit, DmClipSaveState>(
         'fails when the clip cannot be decrypted',
-        setUp: () => when(() => decryptor.decryptToFile(any())).thenThrow(
+        setUp: () => when(() => store.videoFor(any())).thenThrow(
           const DmVideoUnavailableException(
             'ciphertext hash does not match the x tag',
           ),
         ),
         build: buildCubit,
+        act: (cubit) => cubit.save(_clipMessage()),
+        expect: () => const [
+          DmClipSaveState(status: DmClipSaveStatus.checking),
+          DmClipSaveState(status: DmClipSaveStatus.failed),
+        ],
+        errors: () => [isA<DmVideoUnavailableException>()],
+        verify: (_) => verifyNever(() => verifier.verify(any())),
+      );
+
+      blocTest<DmClipSaveCubit, DmClipSaveState>(
+        'fails without downloading when no account is signed in',
+        build: () => DmClipSaveCubit(
+          resolveStore: () => null,
+          verifier: verifier,
+          resolveImporter: () => importService.importReceivedClip,
+        ),
         act: (cubit) => cubit.save(_clipMessage()),
         expect: () => const [
           DmClipSaveState(status: DmClipSaveStatus.checking),
@@ -219,7 +238,7 @@ void main() {
         final otherAccountImport = _MockVideoClipImportService();
         var signedIn = importService;
         final cubit = DmClipSaveCubit(
-          decryptor: decryptor,
+          resolveStore: () => store,
           verifier: verifier,
           resolveImporter: () => signedIn.importReceivedClip,
         );
@@ -243,6 +262,7 @@ void main() {
             senderPubkey: _senderPubkey,
             c2paManifestId: _manifestId,
             targetAspectRatio: AspectRatio.square,
+            beforeSave: any(named: 'beforeSave'),
           ),
         ).called(1);
         verifyZeroInteractions(otherAccountImport);
@@ -259,6 +279,7 @@ void main() {
               senderPubkey: any(named: 'senderPubkey'),
               c2paManifestId: any(named: 'c2paManifestId'),
               targetAspectRatio: any(named: 'targetAspectRatio'),
+              beforeSave: any(named: 'beforeSave'),
             ),
           ).thenAnswer(
             (_) async => const VideoClipImportFailure(
@@ -282,19 +303,136 @@ void main() {
           DmClipSaveState(status: DmClipSaveStatus.checking),
           DmClipSaveState(status: DmClipSaveStatus.notVerified),
         ],
-        verify: (_) => verifyNever(() => decryptor.decryptToFile(any())),
+        verify: (_) => verifyNever(() => store.videoFor(any())),
       );
+
+      test('holds the video until the library has its copy', () async {
+        stubVerification(ClipProvenanceStatus.verified);
+        final importing = Completer<VideoClipImportResult>();
+        when(
+          () => importService.importReceivedClip(
+            source: any(named: 'source'),
+            messageId: any(named: 'messageId'),
+            senderPubkey: any(named: 'senderPubkey'),
+            c2paManifestId: any(named: 'c2paManifestId'),
+            targetAspectRatio: any(named: 'targetAspectRatio'),
+            contributorPubkeys: any(named: 'contributorPubkeys'),
+            beforeSave: any(named: 'beforeSave'),
+          ),
+        ).thenAnswer((_) => importing.future);
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+        final save = cubit.save(_clipMessage());
+        await pumpEventQueue();
+        verifyNever(() => store.releaseVideo(any()));
+
+        importing.complete(
+          const VideoClipImportFailure(VideoClipImportFailureReason.copyFailed),
+        );
+        await save;
+
+        final released = verify(
+          () => store.releaseVideo(captureAny()),
+        ).captured;
+        expect((released.single as File).path, equals(_decryptedPath));
+      });
+
+      group('just before the library saves the clip', () {
+        DivineVideoClip savedClip() => DivineVideoClip(
+          id: 'dm_clip_1',
+          video: EditorVideo.file('/documents/dm_clip_1.mp4'),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime.utc(2026, 9, 28),
+          targetAspectRatio: AspectRatio.square,
+          originalAspectRatio: 9 / 16,
+        );
+
+        /// Stubs the import to run its pre-save check the way the library
+        /// does, failing the import when the check refuses.
+        void stubImportRunningItsCheck({void Function()? beforeTheCheck}) {
+          when(
+            () => importService.importReceivedClip(
+              source: any(named: 'source'),
+              messageId: any(named: 'messageId'),
+              senderPubkey: any(named: 'senderPubkey'),
+              c2paManifestId: any(named: 'c2paManifestId'),
+              targetAspectRatio: any(named: 'targetAspectRatio'),
+              contributorPubkeys: any(named: 'contributorPubkeys'),
+              beforeSave: any(named: 'beforeSave'),
+            ),
+          ).thenAnswer((invocation) async {
+            beforeTheCheck?.call();
+            final check =
+                invocation.namedArguments[#beforeSave]
+                    as Future<void> Function()?;
+            if (check != null) {
+              try {
+                await check();
+              } on DmVideoUnavailableException {
+                return const VideoClipImportFailure(
+                  VideoClipImportFailureReason.saveFailed,
+                );
+              }
+            }
+            return VideoClipImportSuccess(savedClip());
+          });
+        }
+
+        test(
+          'asks the store again, and lets go of what it hands out',
+          () async {
+            stubVerification(ClipProvenanceStatus.verified);
+            stubImportRunningItsCheck();
+            final cubit = buildCubit();
+            addTearDown(cubit.close);
+
+            expect(
+              await cubit.save(_clipMessage()),
+              equals(DmClipSaveStatus.saved),
+            );
+            verify(() => store.videoFor(any())).called(2);
+            verify(() => store.releaseVideo(any())).called(2);
+          },
+        );
+
+        test('adds nothing once the message went during the check', () async {
+          stubVerification(ClipProvenanceStatus.verified);
+          stubImportRunningItsCheck(
+            // Retracted while the import looked the clip up.
+            beforeTheCheck: () => when(
+              () => store.videoFor(any()),
+            ).thenThrow(const DmVideoGoneException()),
+          );
+          final cubit = buildCubit();
+          addTearDown(cubit.close);
+
+          expect(
+            await cubit.save(_clipMessage()),
+            equals(DmClipSaveStatus.failed),
+          );
+        });
+      });
+
+      test('lets go of a video the check keeps out', () async {
+        stubVerification(ClipProvenanceStatus.untrustedSigner);
+        final cubit = buildCubit();
+        addTearDown(cubit.close);
+
+        await cubit.save(_clipMessage());
+
+        verify(() => store.releaseVideo(any())).called(1);
+      });
 
       test('checks a second video while the first is still checking', () async {
         const secondPath = '/tmp/dm_video_playback/dm_video_clip_1.mp4';
         final second = _clipMessage(id: 'e' * 64);
         final firstCheck = Completer<ClipProvenanceResult>();
-        when(() => decryptor.decryptToFile(any())).thenAnswer(
-          (invocation) async =>
-              (invocation.positionalArguments.single as DmMessage).id ==
-                  second.id
-              ? secondPath
-              : _decryptedPath,
+        when(() => store.videoFor(any())).thenAnswer(
+          (invocation) async => File(
+            (invocation.positionalArguments.single as DmMessage).id == second.id
+                ? secondPath
+                : _decryptedPath,
+          ),
         );
         when(
           () => verifier.verify(_decryptedPath),
@@ -347,6 +485,7 @@ void main() {
             senderPubkey: _senderPubkey,
             c2paManifestId: _manifestId,
             targetAspectRatio: AspectRatio.square,
+            beforeSave: any(named: 'beforeSave'),
           ),
         ).called(1);
       });

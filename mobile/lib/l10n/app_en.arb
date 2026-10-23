@@ -2380,6 +2380,18 @@
   "@dmClipBadge": {
     "description": "Short label on an encrypted video message in a DM thread marking it as a raw clip the sender shared from their clip library, as opposed to a finished video."
   },
+  "dmVideoCardTapToLoad": "Tap to load",
+  "@dmVideoCardTapToLoad": {
+    "description": "Short hint on a video message card in a DM thread from someone the user does not follow and has not replied to, or a group member they do not follow. The video is not downloaded or previewed until the user taps it."
+  },
+  "dmVideoCardHiddenSenderBlocked": "Hidden: sender blocked",
+  "@dmVideoCardHiddenSenderBlocked": {
+    "description": "Short hint on a video message card in a DM thread whose sender the user blocked. The card shows no preview; tapping still plays the video."
+  },
+  "dmVideoCardHiddenSenderMuted": "Hidden: sender muted",
+  "@dmVideoCardHiddenSenderMuted": {
+    "description": "Short hint on a video message card in a DM thread whose sender the user muted. The card shows no preview; tapping still plays the video."
+  },
   "dmClipChecking": "Making sure this clip was shot on Divine…",
   "@dmClipChecking": {
     "description": "SnackBar shown while a clip received in a DM is downloaded and its C2PA content credential is checked, before it is added to the clip library."

@@ -3,11 +3,13 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:gal/gal.dart';
 import 'package:models/models.dart' as model show AspectRatio;
+import 'package:openvine/config/bug_report_config.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -43,10 +45,36 @@ class GallerySavePermissionDenied extends GallerySaveResult {
 /// package and never throws exceptions - instead returning a result object.
 class GallerySaveService {
   /// Creates a [GallerySaveService] with the given [permissionsService].
-  const GallerySaveService({required PermissionsService permissionsService})
-    : _permissionsService = permissionsService;
+  ///
+  /// [copyRoot] is where neutrally named copies are made; tests give each
+  /// run its own.
+  const GallerySaveService({
+    required PermissionsService permissionsService,
+    @visibleForTesting Directory Function()? copyRoot,
+  }) : _permissionsService = permissionsService,
+       _copyRoot = copyRoot ?? _defaultCopyRoot;
 
   final PermissionsService _permissionsService;
+  final Directory Function() _copyRoot;
+
+  static Directory _defaultCopyRoot() =>
+      Directory(p.join(Directory.systemTemp.path, 'divine_gallery_copies'));
+
+  // Folders whose leftovers this process already removed.
+  static final Map<String, Future<void>> _leftoverCopiesRemoved = {};
+
+  /// Deletes the neutrally named copies saves the app did not live to finish
+  /// left behind: plaintext of private videos, in a folder nothing else
+  /// cleans. Runs once a process, at launch or before its first copy,
+  /// whichever comes first; a save waits for it, so a copy in use is never
+  /// deleted. Fails only through its future, as launch calls it from a
+  /// provider body.
+  Future<void> deleteLeftoverCopies() async {
+    // The web has no temporary folder; reaching for one throws there.
+    if (kIsWeb) return;
+    final root = _copyRoot();
+    await (_leftoverCopiesRemoved[root.path] ??= _deleteLeftovers(root));
+  }
 
   /// Platform-aware name for the save destination.
   ///
@@ -68,12 +96,16 @@ class GallerySaveService {
   /// Without [requestPermission] a permission the user has not granted yet is
   /// reported as [GallerySavePermissionDenied] instead of prompting, for
   /// saves that run in the background.
+  /// With [copyUnderNeutralName] the gallery gets a copy named like a
+  /// Downloads save rather than the file itself, whose name it would show:
+  /// for a file named after something private, such as a kept video DM.
   Future<GallerySaveResult> saveVideoToGallery(
     EditorVideo video, {
     model.AspectRatio? aspectRatio,
     String albumName = 'Divine',
     VideoMetadata? metadata,
     bool requestPermission = true,
+    bool copyUnderNeutralName = false,
   }) async {
     Log.info(
       'saveVideoToGallery started: aspectRatio=$aspectRatio album=$albumName',
@@ -82,6 +114,7 @@ class GallerySaveService {
     );
     // Declare filePath outside try so catch blocks can access it.
     String? resolvedPath;
+    String? galleryPath;
 
     try {
       // Crop to aspect ratio if specified
@@ -99,7 +132,7 @@ class GallerySaveService {
       final file = File(resolvedPath);
       if (!file.existsSync()) {
         Log.warning(
-          'Cannot save to gallery: file does not exist at $resolvedPath',
+          'Cannot save to gallery: file does not exist',
           name: 'GallerySaveService',
           category: LogCategory.video,
         );
@@ -127,17 +160,26 @@ class GallerySaveService {
       // Without album, it only needs photosAddOnly permission
       Log.info(
         'saveVideoToGallery calling Gal.putVideo: '
-        'path=$resolvedPath size=${file.lengthSync()} '
+        'size=${roundedSize(file.lengthSync())} '
         'platform=$defaultTargetPlatform',
         name: 'GallerySaveService',
         category: LogCategory.video,
       );
 
-      final galFuture = (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
-          ? Gal.putVideo(resolvedPath)
-          : Gal.putVideo(resolvedPath, album: albumName);
+      final galleryFile = copyUnderNeutralName
+          ? await _neutralCopyOf(file)
+          : file;
+      galleryPath = galleryFile.path;
+      try {
+        final galFuture =
+            (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
+            ? Gal.putVideo(galleryFile.path)
+            : Gal.putVideo(galleryFile.path, album: albumName);
 
-      await galFuture.timeout(const Duration(seconds: 15));
+        await galFuture.timeout(const Duration(seconds: 15));
+      } finally {
+        if (copyUnderNeutralName) await _deleteQuietly(galleryFile.parent);
+      }
 
       Log.info(
         'Video saved to camera roll successfully',
@@ -159,7 +201,7 @@ class GallerySaveService {
       // description on iOS) is all that survives of the real cause.
       Log.warning(
         'Failed to save video to gallery: ${e.type.name} '
-        '(native: ${e.platformException.message})',
+        '(native: ${_nativeDiagnostic(e.platformException.message, [resolvedPath, galleryPath])})',
         name: 'GallerySaveService',
         category: LogCategory.video,
       );
@@ -170,11 +212,13 @@ class GallerySaveService {
       }
 
       return GallerySaveFailure('Gallery error: ${e.type.name}');
-    } catch (e) {
+    } catch (e, stackTrace) {
+      // The error's text can quote the video's path; its stack cannot.
       Log.warning(
-        'Unexpected error saving video to gallery: $e',
+        'Unexpected error saving video to gallery: ${_failureKind(e)}',
         name: 'GallerySaveService',
         category: LogCategory.video,
+        stackTrace: stackTrace,
       );
 
       // On desktop, fall back to saving to Downloads folder
@@ -182,7 +226,7 @@ class GallerySaveService {
         return _saveToDownloads(resolvedPath);
       }
 
-      return GallerySaveFailure('Unexpected error: $e');
+      return GallerySaveFailure('Unexpected error: ${_failureKind(e)}');
     }
   }
 
@@ -250,19 +294,87 @@ class GallerySaveService {
       await File(filePath).copy(destPath);
 
       Log.info(
-        'Video saved to Downloads: $destPath',
+        'Video saved to Downloads successfully',
         name: 'GallerySaveService',
         category: LogCategory.video,
       );
 
       return const GallerySaveSuccess();
-    } catch (e) {
+    } catch (e, stackTrace) {
       Log.warning(
-        'Failed to save to Downloads: $e',
+        'Failed to save to Downloads: ${_failureKind(e)}',
+        name: 'GallerySaveService',
+        category: LogCategory.video,
+        stackTrace: stackTrace,
+      );
+      return GallerySaveFailure(
+        'Could not save to Downloads: ${_failureKind(e)}',
+      );
+    }
+  }
+
+  // The source can be a retained private video, including on desktop where
+  // temporary/cache roots need not match a standard sandbox-path pattern.
+  // A native error can quote the file name alone, or a numbered copy of it,
+  // and a kept video DM's file is named after its message.
+  static String _nativeDiagnostic(String? message, List<String?> paths) {
+    var text = message ?? 'no native message';
+    for (final path in paths) {
+      if (path == null || path.isEmpty) continue;
+      text = text.replaceAll(path, '[REDACTED]');
+      final stem = p.basenameWithoutExtension(path);
+      if (stem.isNotEmpty) text = text.replaceAll(stem, '[REDACTED]');
+    }
+    return redactFilesystemPaths(text);
+  }
+
+  // In a folder of its own, so two saves never share a copy.
+  Future<File> _neutralCopyOf(File file) async {
+    final root = _copyRoot();
+    await deleteLeftoverCopies();
+    await root.create(recursive: true);
+    final dir = await root.createTemp();
+    final name =
+        'Divine_${DateTime.now().millisecondsSinceEpoch}'
+        '${p.extension(file.path)}';
+    try {
+      return await file.copy(p.join(dir.path, name));
+    } catch (_) {
+      await _deleteQuietly(dir);
+      rethrow;
+    }
+  }
+
+  static Future<void> _deleteLeftovers(Directory root) async {
+    if (root.existsSync()) await _deleteQuietly(root);
+  }
+
+  static Future<void> _deleteQuietly(Directory dir) async {
+    try {
+      await dir.delete(recursive: true);
+    } on FileSystemException catch (error) {
+      Log.warning(
+        'Could not delete a gallery save copy: ${_failureKind(error)}',
         name: 'GallerySaveService',
         category: LogCategory.video,
       );
-      return GallerySaveFailure('Could not save to Downloads: $e');
     }
   }
+
+  /// [bytes] as megabytes to one significant figure, for logs.
+  ///
+  /// A kept video DM's exact length would identify it in support logs
+  /// (#6522), and so would a fine-grained one for a rare large video; one
+  /// significant figure still shows how big a slow save was.
+  @visibleForTesting
+  static String roundedSize(int bytes) {
+    final megabytes = bytes / (1024 * 1024);
+    if (megabytes < 1) return '<1 MB';
+    final scale = math.pow(10, (math.log(megabytes) / math.ln10).floor());
+    return '${(megabytes / scale).round() * scale} MB';
+  }
+
+  static String _failureKind(Object error) => error is FileSystemException
+      ? '${error.runtimeType} (OS code: ${error.osError?.errorCode})'
+      : '${error.runtimeType}';
 }

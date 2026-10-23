@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/services/pro_video_editor_log_forwarder.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -44,6 +45,33 @@ void main() {
   });
 
   group('ProVideoEditorLogForwarder.forwardEntry', () {
+    test('redacts sandbox paths in local logs at every native level', () {
+      const path =
+          '/data/user/0/co.openvine.app/cache/dm_videos/owner/message.mp4';
+      for (final level in NativeLogLevel.values) {
+        final tag = 'pve-private-path-${level.name}';
+        ProVideoEditorLogForwarder.forwardEntry(
+          entry(
+            level,
+            'Cannot decode $path',
+            tag: tag,
+            stackTrace: 'Caused by: cannot open $path',
+          ),
+        );
+
+        final logged = LogCaptureService().getRecentLogs().lastWhere(
+          (entry) => entry.name == tag,
+        );
+        expect(logged.message, contains('Cannot decode'));
+        expect(logged.message, isNot(contains(path)));
+        expect(logged.message, contains('[REDACTED]'));
+        if (level == NativeLogLevel.error) {
+          expect(logged.stackTrace.toString(), contains('Caused by:'));
+          expect(logged.stackTrace.toString(), isNot(contains(path)));
+        }
+      }
+    });
+
     test('preserves native failure and cause chain in crash breadcrumbs', () {
       final reporter = _RecordingCrashReporter();
       const stack =
@@ -65,6 +93,104 @@ void main() {
       expect(reporter.breadcrumbs, hasLength(1));
       expect(reporter.breadcrumbs.single, contains('RenderVideo'));
       expect(reporter.breadcrumbs.single, contains(stack));
+    });
+
+    test(
+      'keeps file paths, which name the account and the message, out of '
+      'crash reports',
+      () {
+        final reporter = _RecordingCrashReporter();
+        const path =
+            '/data/user/0/co.openvine.app/cache/dm_videos/owner/message.mp4';
+        const containerPath =
+            '/var/mobile/Containers/Data/Application/APP/Library/Caches/'
+            'dm_videos/owner/message.mov';
+        ProVideoEditorLogForwarder.forwardEntry(
+          entry(
+            NativeLogLevel.error,
+            'setDataSource failed: $path',
+            stackTrace: 'Caused by: cannot open $containerPath',
+          ),
+          crashReporter: reporter,
+        );
+
+        final breadcrumb = reporter.breadcrumbs.single;
+        expect(breadcrumb, isNot(contains('dm_videos')));
+        expect(breadcrumb, contains('setDataSource failed'));
+        expect(breadcrumb, contains('Caused by: cannot open'));
+      },
+    );
+
+    test(
+      "keeps a kept video's bare file name, which names its message, out of "
+      'local logs and crash reports',
+      () {
+        final reporter = _RecordingCrashReporter();
+        final messageId = 'a1' * 32;
+        // A render task id carries a hash too, but no file name.
+        final taskId = 'seam_${'c3' * 32}_1';
+        ProVideoEditorLogForwarder.forwardEntry(
+          entry(
+            NativeLogLevel.error,
+            'frame failed for $taskId: The file “$messageId.mp4” couldn’t '
+            'be opened.',
+            tag: 'pve-kept-file-name',
+            stackTrace: 'Caused by: cannot open $messageId.preview.jpg',
+          ),
+          crashReporter: reporter,
+        );
+
+        final logged = LogCaptureService().getRecentLogs().lastWhere(
+          (entry) => entry.name == 'pve-kept-file-name',
+        );
+        expect(logged.message, contains('couldn’t be opened'));
+        expect(logged.message, contains(taskId));
+        for (final text in [
+          logged.message,
+          logged.stackTrace.toString(),
+          reporter.breadcrumbs.single,
+        ]) {
+          expect(text, isNot(contains(messageId)));
+        }
+      },
+    );
+
+    test('keeps a DM clip id, which names its message, out of native logs', () {
+      final reporter = _RecordingCrashReporter();
+      final clipId = '${DivineVideoClip.receivedDmClipIdPrefix}${'d4' * 32}';
+      ProVideoEditorLogForwarder.forwardEntry(
+        entry(
+          NativeLogLevel.error,
+          'render failed for task $clipId',
+          tag: 'pve-dm-clip-task',
+        ),
+        crashReporter: reporter,
+      );
+
+      final logged = LogCaptureService().getRecentLogs().lastWhere(
+        (entry) => entry.name == 'pve-dm-clip-task',
+      );
+      expect(logged.message, contains('render failed for task'));
+      expect(logged.message, isNot(contains('d4' * 32)));
+      expect(reporter.breadcrumbs.single, isNot(contains('d4' * 32)));
+    });
+
+    test("keeps a kept video's file name out of a native log's tag", () {
+      final reporter = _RecordingCrashReporter();
+      final messageId = 'b2' * 32;
+      ProVideoEditorLogForwarder.forwardEntry(
+        entry(
+          NativeLogLevel.error,
+          'pve-kept-file-tag',
+          tag: 'Thumbnail $messageId.mp4',
+        ),
+        crashReporter: reporter,
+      );
+
+      final logged = latestWithMessage('pve-kept-file-tag');
+      expect(logged, isNotNull);
+      expect(logged!.name, isNot(contains(messageId)));
+      expect(reporter.breadcrumbs.single, isNot(contains(messageId)));
     });
 
     test('sanitizes the message, tag and cause before crash reporting', () {

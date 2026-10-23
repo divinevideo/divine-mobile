@@ -185,6 +185,11 @@ void main() {
       when(
         () => mockDraftStorageService.getAllDrafts(),
       ).thenAnswer((_) async => []);
+      // The screen's providers build the account cleanup, which clears the
+      // copies an unfinished gallery save left, at launch.
+      when(
+        () => mockGallerySaveService.deleteLeftoverCopies(),
+      ).thenAnswer((_) async {});
     });
 
     Widget buildWidget({

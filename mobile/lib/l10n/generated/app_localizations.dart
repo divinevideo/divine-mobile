@@ -6283,6 +6283,24 @@ abstract class AppLocalizations {
   /// **'Clip'**
   String get dmClipBadge;
 
+  /// Short hint on a video message card in a DM thread from someone the user does not follow and has not replied to, or a group member they do not follow. The video is not downloaded or previewed until the user taps it.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to load'**
+  String get dmVideoCardTapToLoad;
+
+  /// Short hint on a video message card in a DM thread whose sender the user blocked. The card shows no preview; tapping still plays the video.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden: sender blocked'**
+  String get dmVideoCardHiddenSenderBlocked;
+
+  /// Short hint on a video message card in a DM thread whose sender the user muted. The card shows no preview; tapping still plays the video.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden: sender muted'**
+  String get dmVideoCardHiddenSenderMuted;
+
   /// SnackBar shown while a clip received in a DM is downloaded and its C2PA content credential is checked, before it is added to the clip library.
   ///
   /// In en, this message translates to:

@@ -25,6 +25,7 @@ import 'package:openvine/providers/followed_people_lists_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/notifications_providers.dart';
+import 'package:openvine/providers/permissions_providers.dart';
 import 'package:openvine/providers/personal_event_cache_clear_provider.dart';
 import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
@@ -45,6 +46,7 @@ import 'package:openvine/services/collaborator_response_service.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/content_reporting_service.dart';
 import 'package:openvine/services/dm_reaction_retry_service.dart';
+import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/hashtag_service.dart';
 import 'package:openvine/services/outgoing_dm_retry_service.dart';
@@ -881,6 +883,16 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
             () => db.pendingViewEventsDao.deleteAllForUser(userPubkey),
           );
         }
+        // Received video DMs stay on the device across a switch, like the
+        // conversations they belong to, and go with the account. Not
+        // required: the launch sweep deletes whatever a failure leaves once
+        // the account is off the known list.
+        if ((forgetAccount || deleteUserData) && userPubkey != null) {
+          await safeCleanup(
+            'keptDmVideos',
+            () => DmVideoStore.deleteOwner(userPubkey),
+          );
+        }
         // Reaction rows keep decrypted rumor payloads (rumor_event_json). Most
         // are re-fetchable DM data and should be wiped with direct_messages,
         // but retryable own rows are also the outgoing queue for unpublished
@@ -1123,13 +1135,24 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
 
   service
     ..onConversationSweep = db.conversationsDao.deleteForOwnersNotIn
-    ..onQueuedViewSweep = db.pendingViewEventsDao.deleteForUsersNotIn;
+    ..onQueuedViewSweep = db.pendingViewEventsDao.deleteForUsersNotIn
+    ..onKeptDmVideoSweep = DmVideoStore.sweepOwners;
   // Kept conversations and queued views outlive their account when it leaves
   // the known-accounts list without its own cleanup; collect those once per
   // launch as well as after every account cleanup (#10276, #10290).
   runProviderDetached(
     service.sweepRowsOfUnknownAccounts(),
     'sweep rows of accounts no longer on this device',
+    logName: 'UserDataCleanup',
+  );
+  runProviderDetached(
+    DmVideoStore.deleteLegacyPlaybackClips(),
+    'remove obsolete decrypted playback clips',
+    logName: 'UserDataCleanup',
+  );
+  runProviderDetached(
+    ref.read(gallerySaveServiceProvider).deleteLeftoverCopies(),
+    'remove copies a gallery save the app did not finish left behind',
     logName: 'UserDataCleanup',
   );
 

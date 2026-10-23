@@ -40,6 +40,7 @@ void main() {
     late _MockClipProvenanceVerifier verifier;
     late List<String> events;
     late Set<String> stillUnsigned;
+    late Map<String, bool> neutralCopies;
 
     void verifiesAs(DivineVideoClip clip, ClipProvenanceStatus status) => when(
       () => verifier.verify('/clips/${clip.id}.mp4'),
@@ -67,9 +68,17 @@ void main() {
       verifier = _MockClipProvenanceVerifier();
       events = [];
       stillUnsigned = {};
-      when(() => gallery.saveVideoToGallery(any())).thenAnswer((invocation) {
+      neutralCopies = {};
+      when(
+        () => gallery.saveVideoToGallery(
+          any(),
+          copyUnderNeutralName: any(named: 'copyUnderNeutralName'),
+        ),
+      ).thenAnswer((invocation) {
         final video = invocation.positionalArguments.single as EditorVideo;
         events.add('save ${video.file!.path}');
+        neutralCopies[video.file!.path] =
+            invocation.namedArguments[#copyUnderNeutralName]! as bool;
         return Future.value(const GallerySaveSuccess());
       });
     });
@@ -202,6 +211,23 @@ void main() {
         );
       });
 
+      test('hands the gallery a neutrally named copy of a clip added from a '
+          'DM, and other clips as they are', () async {
+        final fromDm = _clip(
+          '${DivineVideoClip.receivedDmClipIdPrefix}${'a' * 64}',
+        );
+        verifiesAs(fromDm, ClipProvenanceStatus.verified);
+        final cubit = build();
+        addTearDown(cubit.close);
+
+        await cubit.saveClips([signed, fromDm]);
+
+        expect(neutralCopies, {
+          '/clips/${signed.id}.mp4': false,
+          '/clips/${fromDm.id}.mp4': true,
+        });
+      });
+
       test('neither signs nor warns without a C2PA check', () async {
         final cubit = build(withVerifier: false);
         addTearDown(cubit.close);
@@ -214,7 +240,10 @@ void main() {
 
       test('stops at the first clip the gallery refuses access for', () async {
         when(
-          () => gallery.saveVideoToGallery(any()),
+          () => gallery.saveVideoToGallery(
+            any(),
+            copyUnderNeutralName: any(named: 'copyUnderNeutralName'),
+          ),
         ).thenAnswer((_) async => const GallerySavePermissionDenied());
         final cubit = build();
         addTearDown(cubit.close);
@@ -228,7 +257,10 @@ void main() {
 
       test('counts a clip the gallery could not take as failed', () async {
         when(
-          () => gallery.saveVideoToGallery(any()),
+          () => gallery.saveVideoToGallery(
+            any(),
+            copyUnderNeutralName: any(named: 'copyUnderNeutralName'),
+          ),
         ).thenAnswer((_) async => const GallerySaveFailure('timeout'));
         final cubit = build();
         addTearDown(cubit.close);
@@ -241,7 +273,12 @@ void main() {
 
       test('ignores a second save while one is running', () async {
         final gate = Completer<void>();
-        when(() => gallery.saveVideoToGallery(any())).thenAnswer((_) async {
+        when(
+          () => gallery.saveVideoToGallery(
+            any(),
+            copyUnderNeutralName: any(named: 'copyUnderNeutralName'),
+          ),
+        ).thenAnswer((_) async {
           await gate.future;
           return const GallerySaveSuccess();
         });
@@ -258,7 +295,12 @@ void main() {
 
       test('finishes the save after the cubit is closed', () async {
         final gate = Completer<void>();
-        when(() => gallery.saveVideoToGallery(any())).thenAnswer((_) async {
+        when(
+          () => gallery.saveVideoToGallery(
+            any(),
+            copyUnderNeutralName: any(named: 'copyUnderNeutralName'),
+          ),
+        ).thenAnswer((_) async {
           await gate.future;
           return const GallerySaveSuccess();
         });

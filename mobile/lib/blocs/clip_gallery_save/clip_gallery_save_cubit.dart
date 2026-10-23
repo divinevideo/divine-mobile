@@ -304,6 +304,8 @@ class ClipGallerySaveCubit extends Cubit<ClipGallerySaveState>
       if (materialized == null) return false;
       final result = await _gallerySaveService.saveVideoToGallery(
         materialized.requireVideo,
+        // A clip added from a DM is named after the message.
+        copyUnderNeutralName: clip.isFromDirectMessage,
       );
       return switch (result) {
         GallerySaveSuccess() => true,

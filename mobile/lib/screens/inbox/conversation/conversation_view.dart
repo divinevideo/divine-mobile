@@ -17,6 +17,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:openvine/blocs/clips_library/clips_library_bloc.dart'
     show LibraryClipTypeFilter;
 import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
@@ -276,6 +277,16 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
     ref.watch(blocklistVersionProvider);
     final blocklistRepository = ref.read(contentBlocklistRepositoryProvider);
     final blockedReactors = blocklistRepository.dmHiddenPubkeys;
+    // Of those, the ones muted rather than blocked: a video card says which
+    // of the two holds its preview back.
+    final blockedSenders = {
+      for (final pubkey in blockedReactors)
+        if (blocklistRepository.isBlocked(pubkey)) pubkey.toLowerCase(),
+    };
+    final mutedSenders = {
+      for (final pubkey in blockedReactors)
+        if (!blockedSenders.contains(pubkey.toLowerCase())) pubkey,
+    };
 
     final otherPubkey = _otherPubkey;
     // A group is titled for the room, and `otherPubkey` is then whichever
@@ -435,11 +446,11 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
             currentPubkey: currentPubkey,
           ),
         ),
-        // Both dependencies are stateless, account-independent services, so
-        // reading them once is safe.
+        // The kept videos are the signed-in account's, so the store is looked
+        // up when a save starts; the gallery service is account-independent.
         BlocProvider(
           create: (_) => EncryptedVideoSaveCubit(
-            decryptor: ref.read(dmVideoDecryptorProvider),
+            resolveStore: () => ref.read(dmVideoStoreProvider),
             gallerySaveService: ref.read(gallerySaveServiceProvider),
           ),
         ),
@@ -596,6 +607,7 @@ class _ConversationViewState extends ConsumerState<ConversationView> {
                                   otherPubkey: otherPubkey,
                                   participantPubkeys: widget.participantPubkeys,
                                   blockedPubkeys: blockedReactors,
+                                  mutedPubkeys: mutedSenders,
                                   displayName: conversationDisplayName,
                                   moderation: moderation,
                                   isResolving: isIdentityResolving,
@@ -1354,6 +1366,7 @@ class _ConversationContent extends StatelessWidget {
     required this.otherPubkey,
     required this.participantPubkeys,
     required this.blockedPubkeys,
+    required this.mutedPubkeys,
     required this.displayName,
     required this.moderation,
     required this.isResolving,
@@ -1373,6 +1386,9 @@ class _ConversationContent extends StatelessWidget {
 
   /// Effective block/mute set; reactions from these pubkeys are hidden.
   final Set<String> blockedPubkeys;
+
+  /// The part of [blockedPubkeys] the user muted rather than blocked.
+  final Set<String> mutedPubkeys;
   final String displayName;
 
   /// How the counterparty is presented; the empty state's artwork follows it
@@ -1451,6 +1467,7 @@ class _ConversationContent extends StatelessWidget {
                     currentPubkey: currentPubkey,
                     participantPubkeys: participantPubkeys,
                     blockedPubkeys: blockedPubkeys,
+                    mutedPubkeys: mutedPubkeys,
                     senderDisplayName: displayName,
                     reactionsEnabled: reactionsEnabled,
                     retractionsEnabled: retractionsEnabled,
@@ -1498,6 +1515,7 @@ class _MessageList extends StatelessWidget {
     required this.currentPubkey,
     required this.participantPubkeys,
     required this.blockedPubkeys,
+    required this.mutedPubkeys,
     required this.senderDisplayName,
     required this.reactionsEnabled,
     required this.retractionsEnabled,
@@ -1510,6 +1528,9 @@ class _MessageList extends StatelessWidget {
 
   /// Effective block/mute set; reactions from these pubkeys are hidden.
   final Set<String> blockedPubkeys;
+
+  /// The part of [blockedPubkeys] the user muted rather than blocked.
+  final Set<String> mutedPubkeys;
   final String senderDisplayName;
   final bool reactionsEnabled;
 
@@ -1826,6 +1847,25 @@ class _MessageList extends StatelessWidget {
       );
     }
 
+    // Once the user has posted in a 1:1 chat it is not a request, so its
+    // videos download as soon as they show. Posting in a group does not vouch
+    // for members the user does not know: only the ones they follow load.
+    // Nor does posting in a thread whose members did not load.
+    final hasOwnMessage = messages.any(
+      (message) => pubkeysEqual(message.senderPubkey, currentPubkey),
+    );
+    bool isOneToOneWith(String sender) =>
+        participantPubkeys.length == 1 &&
+        pubkeysEqual(participantPubkeys.single, sender);
+    // In lowercase: a seal can spell its signer's key in uppercase and still
+    // verify, and an exact lookup would then miss a blocked or muted sender.
+    final blockedSenders = {
+      for (final pubkey in blockedPubkeys) pubkey.toLowerCase(),
+    };
+    final mutedSenders = {
+      for (final pubkey in mutedPubkeys) pubkey.toLowerCase(),
+    };
+
     return ListView.builder(
       reverse: true,
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -1932,7 +1972,10 @@ class _MessageList extends StatelessWidget {
           DmDeliveryStatus status, {
           DmPeerNameResolution? author,
         }) {
-          final bubble = MessageBubble(
+          Widget bubbleWith({
+            String? encryptedVideoFramePath,
+            DmVideoHold? encryptedVideoHold,
+          }) => MessageBubble(
             message: message.content,
             timestamp: LocalizedTimeFormatter.formatMessageTime(
               context.l10n,
@@ -2002,7 +2045,26 @@ class _MessageList extends StatelessWidget {
                         !isSent && ClipProvenanceVerifier.isSupportedPlatform,
                   )
                 : null,
+            encryptedVideoFramePath: encryptedVideoFramePath,
+            encryptedVideoHold: encryptedVideoHold,
           );
+          final sender = message.senderPubkey.toLowerCase();
+          final bubble = message.fileMetadata?.isVideo == true
+              ? DmVideoPreviewScope(
+                  message: message,
+                  accepted:
+                      pubkeysEqual(sender, currentPubkey) ||
+                      (hasOwnMessage && isOneToOneWith(sender)),
+                  blocked:
+                      blockedSenders.contains(sender) &&
+                      !mutedSenders.contains(sender),
+                  muted: mutedSenders.contains(sender),
+                  builder: (_, framePath, hold) => bubbleWith(
+                    encryptedVideoFramePath: framePath,
+                    encryptedVideoHold: hold,
+                  ),
+                )
+              : bubbleWith();
           return Column(
             crossAxisAlignment: isSent
                 ? CrossAxisAlignment.end

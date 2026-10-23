@@ -1,6 +1,8 @@
 // ABOUTME: Orchestrates an in-place account switch — build a container, sign it
 // ABOUTME: in as the target account, then swap; roll back on failure.
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:openvine/models/known_account.dart';
@@ -12,6 +14,7 @@ import 'package:openvine/providers/notifications_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
+import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/router/app_router.dart';
 import 'package:openvine/services/auth/account_activation_coordinator.dart';
 import 'package:openvine/services/auth/account_session_store.dart';
@@ -19,6 +22,7 @@ import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/npub_hex.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -35,6 +39,10 @@ typedef AccountSignIn = Future<void> Function(
 );
 
 const _accountSwitchPushCleanupTimeout = Duration(seconds: 15);
+
+/// How long the swap waits for the outgoing account's kept video DMs to be
+/// pruned, the same budget sign-out gives its own cleanups.
+const _accountSwitchDmVideoPruneTimeout = Duration(seconds: 5);
 
 /// Stops the outgoing account's DM ingest before the incoming container signs
 /// in and wipes shared DM state.
@@ -57,6 +65,39 @@ Future<bool> _quiesceOutgoingDmIngest(ProviderContainer? outgoing) async {
       name: 'swapAccount',
     );
     return false;
+  }
+}
+
+/// Prunes the outgoing account's kept video DMs while its DM rows still show
+/// which messages were retracted, before the incoming sign-in clears them.
+/// Otherwise a retracted video stays until that account signs in again.
+Future<void> _pruneOutgoingDmVideos(ProviderContainer? outgoing) async {
+  if (outgoing == null || !outgoing.exists(dmVideoStoreProvider)) return;
+  Future<void>? prune;
+  try {
+    prune = outgoing.read(dmVideoStoreProvider)?.prune();
+    await prune?.timeout(_accountSwitchDmVideoPruneTimeout);
+  } on TimeoutException {
+    Log.warning(
+      'Pruning the outgoing account kept video DMs outlasted the wait before '
+      'the swap; it goes on',
+      name: 'swapAccount',
+    );
+    // No longer waited for, but a failure of it still shows in the log.
+    if (prune != null) {
+      runDetached(
+        prune,
+        'prune the outgoing account kept video DMs',
+        logName: 'swapAccount',
+        category: LogCategory.video,
+      );
+    }
+  } catch (error) {
+    Log.warning(
+      'Pruning the outgoing account kept video DMs before the swap failed: '
+      '$error',
+      name: 'swapAccount',
+    );
   }
 }
 
@@ -290,6 +331,8 @@ Future<void> swapAccount({
       // Before sign-in, because sign-in is what runs the identity-change
       // cleanup that wipes the shared DM tables. See #7318.
       outgoingDmIngestQuiesced = await _quiesceOutgoingDmIngest(current);
+      ensureOutgoingCurrent();
+      await _pruneOutgoingDmVideos(current);
       ensureOutgoingCurrent();
       suspendedOutgoingLists = _suspendOutgoingCuratedLists(current);
       await CuratedListSessionCoordinator.forPreferences(

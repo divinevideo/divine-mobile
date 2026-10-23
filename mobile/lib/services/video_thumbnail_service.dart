@@ -7,8 +7,11 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show PlatformException;
+import 'package:openvine/config/bug_report_config.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/observability/crash_reporter.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -23,6 +26,10 @@ class VideoThumbnailService {
   /// #4743 conversion — every instantiable service takes a [CrashReporter]
   /// through its constructor instead.
   static CrashReporter crashReporter = const SilentCrashReporter();
+
+  /// Numbers the frames this process writes, as two can be written in the
+  /// same millisecond, and one must not replace or delete the other's.
+  static int _framesWritten = 0;
 
   static const int _thumbnailQuality = 75;
   static const Size _thumbnailSize = Size.square(640);
@@ -102,7 +109,8 @@ class VideoThumbnailService {
 
       final destPath =
           '${(await getApplicationDocumentsDirectory()).path}/'
-          'thumbnail_${DateTime.now().millisecondsSinceEpoch}.jpg';
+          'thumbnail_${DateTime.now().millisecondsSinceEpoch}_'
+          '${_framesWritten++}.jpg';
 
       try {
         Log.debug(
@@ -148,7 +156,7 @@ class VideoThumbnailService {
         );
       } catch (e) {
         Log.error(
-          'Failed to generate thumbnail: $e',
+          'Failed to generate thumbnail: ${_ThumbnailFailure(e, videoPath)}',
           name: 'VideoThumbnailService',
           category: LogCategory.video,
         );
@@ -156,7 +164,7 @@ class VideoThumbnailService {
       }
     } catch (e, stackTrace) {
       Log.error(
-        'Thumbnail extraction error: $e',
+        'Thumbnail extraction error: ${_ThumbnailFailure(e, videoPath)}',
         name: 'VideoThumbnailService',
         category: LogCategory.video,
       );
@@ -240,7 +248,8 @@ class VideoThumbnailService {
         );
       } catch (e) {
         Log.error(
-          'Failed to get video metadata for middle timestamp: $e',
+          'Failed to get video metadata for middle timestamp: '
+          '${_ThumbnailFailure(e, videoPath)}',
           name: 'VideoThumbnailService',
           category: LogCategory.video,
         );
@@ -315,9 +324,10 @@ class VideoThumbnailService {
           await crashReporter.recordError(
             Exception('Thumbnail extraction failed - thumbnails list is empty'),
             StackTrace.current,
+            // No path: a clip added from a DM is named after its message.
             reason:
-                'VideoThumbnailService: Failed to extract thumbnail from '
-                '$videoPath at timestamp: ${timestamp.inMilliseconds}ms',
+                'VideoThumbnailService: Failed to extract thumbnail at '
+                'timestamp: ${timestamp.inMilliseconds}ms',
           );
         }
         return null;
@@ -333,18 +343,19 @@ class VideoThumbnailService {
       );
       return thumbnail;
     } catch (e, stackTrace) {
+      final failure = _ThumbnailFailure(e, videoPath);
       Log.error(
-        'Thumbnail bytes extraction error: $e',
+        'Thumbnail bytes extraction error: $failure',
         name: 'VideoThumbnailService',
         category: LogCategory.video,
       );
       if (logToCrashlytics) {
         await crashReporter.recordError(
-          e,
+          failure,
           stackTrace,
           reason:
-              'VideoThumbnailService: Failed to extract thumbnail from '
-              '$videoPath at timestamp: ${timestamp.inMilliseconds}ms',
+              'VideoThumbnailService: Failed to extract thumbnail at '
+              'timestamp: ${timestamp.inMilliseconds}ms',
         );
       }
       return null;
@@ -453,7 +464,8 @@ class VideoThumbnailService {
       );
     } catch (e) {
       Log.warning(
-        '⚠️ getSingleThumbnail(position: .last) failed: $e',
+        '⚠️ getSingleThumbnail(position: .last) failed: '
+        '${_ThumbnailFailure(e, videoPath)}',
         name: 'VideoThumbnailService',
         category: LogCategory.video,
       );
@@ -496,17 +508,18 @@ class VideoThumbnailService {
         category: LogCategory.video,
       );
     } catch (e, stackTrace) {
+      final failure = _ThumbnailFailure(e, videoPath);
       Log.error(
-        'Last-frame fallback failed: $e',
+        'Last-frame fallback failed: $failure',
         name: 'VideoThumbnailService',
         category: LogCategory.video,
       );
       await crashReporter.recordError(
-        e,
+        failure,
         stackTrace,
         reason:
-            'VideoThumbnailService: Failed to extract last frame from '
-            '$videoPath (both strategies failed)',
+            'VideoThumbnailService: Failed to extract last frame (both '
+            'strategies failed)',
       );
     }
 
@@ -518,7 +531,8 @@ class VideoThumbnailService {
     final targetDir = await _resolveGhostFrameDirectory();
     await targetDir.create(recursive: true);
     final destPath =
-        '${targetDir.path}/ghost_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        '${targetDir.path}/ghost_${DateTime.now().millisecondsSinceEpoch}_'
+        '${_framesWritten++}.jpg';
     await File(destPath).writeAsBytes(bytes);
 
     Log.debug(
@@ -940,4 +954,33 @@ class StripThumbnail {
 
   /// The video position this thumbnail represents.
   final Duration timestamp;
+}
+
+/// A thumbnail read that failed, as crash reports and the log see it.
+///
+/// The native error can quote the video's path: pro_video_editor's iOS
+/// generator throws `Video file not found at path: <path>`. A clip added from
+/// a DM is named after its message, so the path and the file's name are
+/// taken out, and any other path the text holds is redacted.
+class _ThumbnailFailure implements Exception {
+  _ThumbnailFailure(Object error, String videoPath)
+    : message = _withoutFile(
+        error is PlatformException
+            ? '${error.code}: ${error.message}'
+            : '${error.runtimeType}: $error',
+        videoPath,
+      );
+
+  /// The error's type or code and its scrubbed text.
+  final String message;
+
+  static String _withoutFile(String text, String path) {
+    var scrubbed = text.replaceAll(path, '[REDACTED]');
+    final stem = p.basenameWithoutExtension(path);
+    if (stem.isNotEmpty) scrubbed = scrubbed.replaceAll(stem, '[REDACTED]');
+    return redactFilesystemPaths(scrubbed);
+  }
+
+  @override
+  String toString() => 'Thumbnail extraction failed: $message';
 }

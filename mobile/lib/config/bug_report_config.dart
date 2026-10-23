@@ -111,6 +111,24 @@ const _filesystemPathRoot =
 /// does not consume the surrounding log line.
 const _filesystemPathTail = r'''[^\s'",;)\]}]{0,4000}''';
 
+/// Filesystem paths rooted at a user or app-sandbox directory. See
+/// [_filesystemPathRoot]. Quote-specific rules run first so a quoted path
+/// with a spaced basename is redacted whole before the unquoted rule can stop
+/// at the space and strand the filename beside the marker. Requiring the
+/// matching closing quote keeps malformed input from consuming the rest of
+/// its diagnostic line.
+final List<RegExp> _filesystemPathPatterns = [
+  RegExp(
+    "(?<=')$_filesystemPathRoot"
+    r"[^'\n]{0,4000}(?=')",
+  ),
+  RegExp(
+    '(?<=")$_filesystemPathRoot'
+    r'[^"\n]{0,4000}(?=")',
+  ),
+  RegExp('$_filesystemPathRoot$_filesystemPathTail'),
+];
+
 /// Configuration for bug report system
 class BugReportConfig {
   /// Maximum log entries to include in bug report
@@ -235,21 +253,7 @@ class BugReportConfig {
       r'(?<![A-Z0-9._%+-])@[A-Z0-9.-]{1,255}\.[A-Z]{2,24}\b',
       caseSensitive: false,
     ),
-    // Filesystem paths rooted at a user or app-sandbox directory. See
-    // [_filesystemPathRoot]. Quote-specific rules run first so a quoted path
-    // with a spaced basename is redacted whole before the unquoted rule can
-    // stop at the space and strand the filename beside the marker. Requiring
-    // the matching closing quote keeps malformed input from consuming the rest
-    // of its diagnostic line.
-    RegExp(
-      "(?<=')$_filesystemPathRoot"
-      r"[^'\n]{0,4000}(?=')",
-    ),
-    RegExp(
-      '(?<=")$_filesystemPathRoot'
-      r'[^"\n]{0,4000}(?=")',
-    ),
-    RegExp('$_filesystemPathRoot$_filesystemPathTail'),
+    ..._filesystemPathPatterns,
   ];
 
   /// Log levels to include in bug reports (all by default)
@@ -260,6 +264,17 @@ class BugReportConfig {
     LogLevel.warning,
     LogLevel.error,
   };
+}
+
+/// Replaces only the filesystem paths in [input] that [sanitizeDiagnosticText]
+/// would, leaving the rest of the text as it is: for crash-report
+/// breadcrumbs, whose other redaction is `sanitizeForCrashReport`'s.
+String redactFilesystemPaths(String input) {
+  var redacted = input;
+  for (final pattern in _filesystemPathPatterns) {
+    redacted = redacted.replaceAll(pattern, '[REDACTED]');
+  }
+  return redacted;
 }
 
 /// Sanitize one user-provided or diagnostic text field before it reaches a

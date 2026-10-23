@@ -112,6 +112,40 @@ void main() {
         expect(decrypted, equals(plaintext));
       });
 
+      test('roundtrip works with empty data (tag only)', () async {
+        final encrypted = await fileEncryption.encrypt(Uint8List(0));
+        expect(encrypted.ciphertext, hasLength(16));
+
+        final decrypted = await fileEncryption.decrypt(
+          ciphertext: encrypted.ciphertext,
+          hexKey: encrypted.key,
+          hexNonce: encrypted.nonce,
+        );
+
+        expect(decrypted, isEmpty);
+      });
+
+      test(
+        'decrypts a ciphertext handed in as a view into a larger buffer',
+        () async {
+          final plaintext = Uint8List.fromList(
+            List.generate(33, (i) => i * 7 % 256),
+          );
+          final encrypted = await fileEncryption.encrypt(plaintext);
+          final length = encrypted.ciphertext.length;
+          final larger = Uint8List(length + 13)
+            ..setRange(5, 5 + length, encrypted.ciphertext);
+
+          final decrypted = await fileEncryption.decrypt(
+            ciphertext: Uint8List.sublistView(larger, 5, 5 + length),
+            hexKey: encrypted.key,
+            hexNonce: encrypted.nonce,
+          );
+
+          expect(decrypted, equals(plaintext));
+        },
+      );
+
       test('throws on tampered ciphertext', () async {
         final plaintext = Uint8List.fromList([1, 2, 3, 4, 5, 6, 7, 8]);
 
@@ -210,6 +244,76 @@ void main() {
               hexNonce: encrypted.nonce,
             ),
             throwsA(isA<ArgumentError>()),
+          );
+        },
+      );
+
+      test('names the key of the wrong size nowhere in its error', () async {
+        final encrypted = await fileEncryption.encrypt(
+          Uint8List.fromList([1, 2, 3, 4]),
+        );
+        final shortKey = '0f' * 16;
+
+        await expectLater(
+          fileEncryption.decrypt(
+            ciphertext: encrypted.ciphertext,
+            hexKey: shortKey,
+            hexNonce: encrypted.nonce,
+          ),
+          throwsA(
+            isA<ArgumentError>().having(
+              (error) => error.toString(),
+              'description',
+              isNot(contains(shortKey)),
+            ),
+          ),
+        );
+      });
+
+      test('names the nonce of the wrong size nowhere in its error', () async {
+        final encrypted = await fileEncryption.encrypt(
+          Uint8List.fromList([1, 2, 3, 4]),
+        );
+        final shortNonce = '0e' * 16;
+
+        await expectLater(
+          fileEncryption.decrypt(
+            ciphertext: encrypted.ciphertext,
+            hexKey: encrypted.key,
+            hexNonce: shortNonce,
+          ),
+          throwsA(
+            isA<ArgumentError>().having(
+              (error) => error.toString(),
+              'description',
+              isNot(contains(shortNonce)),
+            ),
+          ),
+        );
+      });
+
+      test(
+        'throws $ArgumentError for a key with non-hex characters, quoting none '
+        'of them',
+        () async {
+          final encrypted = await fileEncryption.encrypt(
+            Uint8List.fromList([1, 2, 3, 4]),
+          );
+          final keyWithSecretLookingText = 'zq${'0f' * 31}';
+
+          await expectLater(
+            fileEncryption.decrypt(
+              ciphertext: encrypted.ciphertext,
+              hexKey: keyWithSecretLookingText,
+              hexNonce: encrypted.nonce,
+            ),
+            throwsA(
+              isA<ArgumentError>().having(
+                (error) => error.toString(),
+                'description',
+                isNot(contains('zq')),
+              ),
+            ),
           );
         },
       );

@@ -3471,6 +3471,15 @@ class AppLocalizationsKo extends AppLocalizations {
   String get dmClipBadge => '클립';
 
   @override
+  String get dmVideoCardTapToLoad => 'Tap to load';
+
+  @override
+  String get dmVideoCardHiddenSenderBlocked => 'Hidden: sender blocked';
+
+  @override
+  String get dmVideoCardHiddenSenderMuted => 'Hidden: sender muted';
+
+  @override
   String get dmClipChecking => '이 클립이 Divine으로 촬영됐는지 확인하고 있어요…';
 
   @override
