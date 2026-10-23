@@ -157,6 +157,12 @@ void main() {
       ]);
 
       expect(result, isEmpty);
+      expect(
+        videoEventService.filterVideoList([
+          _createVideo(id: 'video-1'),
+        ], includeFeedShape: false),
+        isEmpty,
+      );
     });
 
     test(
@@ -175,6 +181,10 @@ void main() {
         expect(result, hasLength(1));
         expect(result.single.contentWarningLabels, isEmpty);
         expect(result.single.warnLabels, equals(['flashing-lights']));
+        final profileResult = videoEventService.filterVideoList([
+          _createVideo(id: 'video-2', sha256: 'sha-flashing-lights'),
+        ], includeFeedShape: false);
+        expect(profileResult.single.warnLabels, ['flashing-lights']);
       },
     );
 

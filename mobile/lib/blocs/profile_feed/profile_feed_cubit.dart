@@ -781,6 +781,7 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
         final videos = await _videosRepository.getVideosByAddressableIds(
           missing,
           cacheResults: true,
+          includeFeedShape: false,
         );
         if (isClosed) return;
         for (final video in videos) {
@@ -1057,7 +1058,9 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
         .where((v) => !v.isRepost)
         .toList();
     videos = _metadataCache.apply(videos);
-    return _withoutTombstones(_videoEventService.filterVideoList(videos));
+    return _withoutTombstones(
+      _videoEventService.filterVideoList(videos, includeFeedShape: false),
+    );
   }
 
   /// Blocked/muted-author filter on top of the content-preference filter, for
@@ -1088,7 +1091,10 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
     final blockFiltered = videos
         .where((v) => !_blocklistRepository.shouldFilterFromFeeds(v.pubkey))
         .toList();
-    return _videoEventService.filterVideoList(blockFiltered);
+    return _videoEventService.filterVideoList(
+      blockFiltered,
+      includeFeedShape: false,
+    );
   }
 
   List<VideoEvent> _withoutTombstones(List<VideoEvent> videos) {
