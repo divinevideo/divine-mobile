@@ -91,7 +91,10 @@ class RequestPreviewRouteData extends GoRouteData
   }
 }
 
-/// Optional data carried when navigating from a conversation row.
+/// The participant hint [dmRouteExtra] reads from a DM route's `extra`.
+///
+/// Callers pass the counterparty list, or a map with `participantPubkeys` and
+/// `subject`, never this class: it is not a shape [dmRouteExtra] reads.
 class DmRouteExtra {
   const DmRouteExtra({required this.participantPubkeys, this.subject});
 

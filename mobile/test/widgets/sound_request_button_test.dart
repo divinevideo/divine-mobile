@@ -1,18 +1,23 @@
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/sound_requests/sound_requests_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/router/routes/messaging_routes.dart';
+import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/sound_request_button.dart';
 
 class _Repository extends Mock implements SoundRequestsRepository {}
 
 const owner =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-const address =
-    '34236:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:clip';
+const creator =
+    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+const address = '34236:$creator:clip';
 void main() {
   final l10n = lookupAppLocalizations(const Locale('en'));
   group('interactions', () {
@@ -92,4 +97,77 @@ void main() {
       );
     });
   }
+
+  group('navigation', () {
+    testWidgets('opens the creator thread with the creator as counterparty', (
+      tester,
+    ) async {
+      final repo = _Repository();
+      when(() => repo.ownerPubkey).thenReturn(owner);
+      when(repo.watchState).thenAnswer(
+        (_) => Stream.value(
+          SoundRequestSnapshot(
+            requests: {
+              'c' * 64: SoundRequestEntry(
+                id: 'c' * 64,
+                requester: owner,
+                videoAddress: address,
+              ),
+            },
+          ),
+        ),
+      );
+      when(repo.start).thenAnswer((_) async {});
+      when(() => repo.canRequest(address)).thenAnswer((_) async => true);
+      final cubit = SoundRequestsCubit();
+      await cubit.connect(repo);
+      addTearDown(cubit.close);
+      GoRouterState? opened;
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => const Scaffold(
+              body: SoundRequestButton(videoAddress: address),
+            ),
+          ),
+          GoRoute(
+            path: ConversationPage.pathPattern,
+            builder: (_, state) {
+              opened = state;
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          child: BlocProvider.value(
+            value: cubit,
+            child: MaterialApp.router(
+              routerConfig: router,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text(l10n.soundRequestSent));
+      await tester.pumpAndSettle();
+
+      expect(
+        opened?.pathParameters['id'],
+        equals(DmRepository.computeConversationId([owner, creator])),
+      );
+      // The conversation route reads its hint through dmRouteExtra, and the
+      // hint names the counterparties only, never the signed-in account.
+      expect(
+        dmRouteExtra(opened?.extra).participantPubkeys,
+        equals([creator]),
+      );
+    });
+  });
 }

@@ -68,7 +68,7 @@ class _SoundRequestButtonState extends State<SoundRequestButton> {
       ConversationRouteData(
         id: DmRepository.computeConversationId([owner, creator]),
       ).location,
-      extra: DmRouteExtra(participantPubkeys: [owner, creator]),
+      extra: [creator],
     );
   }
 
