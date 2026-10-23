@@ -53,7 +53,9 @@
 
 ### Task 4: Review, verify and publish
 
-- [ ] Review each owned deliverable against spec, fix verified defects and integrate.
+- [x] Review each owned deliverable against spec, fix verified defects and integrate.
 - [x] Run affected packages/app tests and app CI analysis scope, guards and generated-code checks.
-- [ ] Rebase on fresh main, publish the expanded PR with a rewritten semantic title/body, preserve reviewer routing, inspect all required/relevant CI.
-- [ ] Obtain and publish fresh independent review where available; accurately record unavailable review providers. No merge/release.
+- Rebase on fresh main, publish the expanded PR with a rewritten semantic title/body, preserve reviewer routing, inspect all required/relevant CI.
+- Obtain and publish fresh independent review where available; accurately record unavailable review providers. No merge/release.
+
+Final publication, independent review and CI evidence are recorded on the pull request against its exact head commit.
