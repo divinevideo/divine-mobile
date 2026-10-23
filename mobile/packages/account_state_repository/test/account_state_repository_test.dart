@@ -140,6 +140,7 @@ void main() {
   group('AccountStateRepository', () {
     setUpAll(() {
       registerFallbackValue(<Filter>[]);
+      registerFallbackValue(Filter());
       registerFallbackValue(Event('1'.padLeft(64, '0'), 1, [], ''));
     });
     setUp(() async {
@@ -164,6 +165,14 @@ void main() {
       ).thenAnswer(
         (_) async =>
             (events: relay.toList(), timedOut: incomplete, noRelays: offline),
+      );
+      when(() => client.readAllEvents(any())).thenAnswer(
+        (_) async => PagedQueryResult(
+          events: relay.toList(),
+          isComplete: !offline && !incomplete,
+          pages: 1,
+          stoppedBy: offline ? QueryEnd.noRelay : null,
+        ),
       );
       when(() => client.publishEventAwaitOk(any())).thenAnswer((call) async {
         final event = call.positionalArguments[0] as Event;
@@ -382,6 +391,34 @@ void main() {
       },
     );
 
+    test(
+      'incomplete paged shard discovery retains sources and cannot publish',
+      () async {
+        final source = await snapshot({
+          'remote': {'value': true, 'updated_at': 1},
+        });
+        when(() => client.readAllEvents(any())).thenAnswer(
+          (_) async =>
+              PagedQueryResult(events: [source], isComplete: false, pages: 2),
+        );
+        final phone = device(perFieldSnapshots: true);
+        await phone.setValue('local', true);
+        await expectLater(
+          phone.synchronize(),
+          throwsA(
+            isA<AccountStateException>().having(
+              (e) => e.retryable,
+              'retryable',
+              true,
+            ),
+          ),
+        );
+        expect(phone.value('remote'), true);
+        expect(phone.hasPendingChanges, true);
+        expect(relay, isEmpty);
+        verify(() => client.readAllEvents(any())).called(1);
+      },
+    );
     test(
       'offline choice persists before publication and retries after restart',
       () async {

@@ -289,11 +289,13 @@ class AccountStateRepository {
     if (_closed) return;
     final signer = await _checkedSigner();
     if (_closed) return;
-    final read = await _client.queryEventsDetailed(
-      _filters,
-      useCache: false,
-      requireAllRelaysSettled: true,
-    );
+    final read = perFieldSnapshots
+        ? await _readFields()
+        : await _client.queryEventsDetailed(
+            _filters,
+            useCache: false,
+            requireAllRelaysSettled: true,
+          );
     if (_closed) return;
     await beforeMerge?.call();
     if (_closed) return;
@@ -641,6 +643,26 @@ class AccountStateRepository {
       await _preferences.remove(key);
     }
     _emit();
+  }
+
+  Future<({List<Event> events, bool timedOut, bool noRelays})>
+  _readFields() async {
+    // The existing pager retains cap/exhaustion evidence which the one-shot
+    // query API reduces to terminal-frame settlement. Its finite defaults are
+    // 500 events/page, 50 pages and two minutes for the whole walk.
+    final read = await _client.readAllEvents(_filters.single);
+    if (!read.isComplete) {
+      Log.warning(
+        'Account state shard discovery incomplete; publication deferred',
+        name: 'AccountStateRepository',
+        category: LogCategory.relay,
+      );
+    }
+    return (
+      events: read.events,
+      timedOut: !read.isComplete,
+      noRelays: read.stoppedBy == QueryEnd.noRelay,
+    );
   }
 
   List<Filter> get _filters => [

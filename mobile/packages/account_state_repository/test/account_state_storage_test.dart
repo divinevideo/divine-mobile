@@ -1,5 +1,5 @@
-import 'dart:convert';
 import 'dart:async';
+import 'dart:convert';
 import 'package:account_state_repository/account_state_repository.dart';
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';

@@ -138,16 +138,30 @@ void main() {
     );
 
     test(
-      'v27 gains durable account journals without losing existing rows',
+      'v28 gains durable account journals without losing existing rows',
       () async {
-        final schema = await verifier.schemaAt(27);
+        final schema = await verifier.schemaAt(28);
         schema.rawDatabase.execute(
-          "INSERT INTO sound_request_states (owner_pubkey,section,record_key,value) VALUES (?,?,?,?)",
+          'INSERT INTO sound_request_states '
+          '(owner_pubkey,section,record_key,value) VALUES (?,?,?,?)',
           ['a' * 64, 'jobs', 'pending', 'keep'],
+        );
+        schema.rawDatabase.execute(
+          'INSERT INTO removed_conversations '
+          '(conversation_id,owner_pubkey,removed_at,rejoined_at) '
+          'VALUES (?,?,?,?)',
+          ['c' * 64, 'a' * 64, 100, 200],
         );
         final db = AppDatabase(schema.newConnection());
         addTearDown(db.close);
-        await verifier.migrateAndValidate(db, 28);
+        await verifier.migrateAndValidate(db, 29);
+        expect(
+          (await db.removedConversationsDao.tombstoneFor(
+            conversationId: 'c' * 64,
+            ownerPubkey: 'a' * 64,
+          ))!.rejoinedAt,
+          200,
+        );
         await db.accountSyncDao.writeNotificationReads(
           'a' * 64,
           {'raw'},
@@ -292,8 +306,8 @@ void main() {
       });
     }
 
-    test('current schema version is 28', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 28);
+    test('current schema version is 29', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 29);
     });
 
     test(

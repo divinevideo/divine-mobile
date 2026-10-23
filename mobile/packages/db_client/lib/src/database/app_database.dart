@@ -152,7 +152,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 28;
+  int get schemaVersion => 29;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -353,11 +353,6 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable(myFollowers);
         }
       }
-      if (from < 28 && to >= 28) {
-        await m.createTable(accountSyncRecords);
-        await m.createTable(notificationReads);
-        await m.createTable(notificationReadMembers);
-      }
       // The same holds for the v26 column.
       if (to < 26 &&
           (await _columnNames(
@@ -391,6 +386,11 @@ class AppDatabase extends _$AppDatabase {
         await customStatement(
           'ALTER TABLE removed_conversations DROP COLUMN rejoined_at',
         );
+      }
+      if (from < 29 && to >= 29) {
+        await m.createTable(accountSyncRecords);
+        await m.createTable(notificationReads);
+        await m.createTable(notificationReadMembers);
       }
     },
     beforeOpen: (details) async {
