@@ -39,7 +39,9 @@ class UserProfilesDao extends DatabaseAccessor<AppDatabase>
   /// - no existing row: insert;
   /// - incoming is newer (`createdAt` later): replace;
   /// - incoming is older: keep the existing row untouched;
-  /// - same `createdAt`: replace only when the incoming profile is *richer*
+  /// - same `createdAt`: a raw Kind 0 completes a REST projection, and a
+  ///   REST projection never replaces a raw profile; otherwise replace only
+  ///   when the incoming profile is *richer*
   ///   (more non-empty identity fields), which breaks ties toward the more
   ///   complete profile. A genuine field clear rides in on a strictly newer
   ///   event, so it still applies.
@@ -126,6 +128,9 @@ class UserProfilesDao extends DatabaseAccessor<AppDatabase>
   static bool _incomingWins(UserProfile incoming, UserProfile existing) {
     if (incoming.createdAt.isAfter(existing.createdAt)) return true;
     if (incoming.createdAt.isBefore(existing.createdAt)) return false;
+    if (incoming.isRestProjection != existing.isRestProjection) {
+      return !incoming.isRestProjection;
+    }
     return _identityRichness(incoming) > _identityRichness(existing);
   }
 

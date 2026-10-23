@@ -67,7 +67,10 @@ class UserProfile {
     String? lud16,
     String? lud06,
     this.rawTags = const [],
-  }) : name = sanitizeUtf16OrNull(name),
+    bool? hasAuthoritativeTimestamp,
+  }) : hasAuthoritativeTimestamp =
+           hasAuthoritativeTimestamp ?? !eventId.startsWith('rest-'),
+       name = sanitizeUtf16OrNull(name),
        displayName = sanitizeUtf16OrNull(displayName),
        about = sanitizeUtf16OrNull(about),
        picture = sanitizeUtf16OrNull(picture),
@@ -146,6 +149,7 @@ class UserProfile {
         isUtc: true,
       ),
       eventId: json['event_id'] as String,
+      hasAuthoritativeTimestamp: json['has_authoritative_timestamp'] as bool?,
     );
   }
 
@@ -194,6 +198,7 @@ class UserProfile {
       lud16: p.lud16,
       rawData: rawData,
       createdAt: p.createdAt ?? DateTime.now(),
+      hasAuthoritativeTimestamp: p.createdAt != null,
       eventId: '${eventIdPrefix ?? 'rest'}-${p.pubkey}',
     );
   }
@@ -240,6 +245,11 @@ class UserProfile {
   final String? lud06; // LNURL
   final Map<String, dynamic> rawData;
   final DateTime createdAt;
+
+  /// Whether [createdAt] is the source Kind 0 timestamp rather than a local
+  /// fallback. REST Drift cache rows do not persist this provenance and
+  /// remain conservatively unknown until a timestamped REST read confirms it.
+  final bool hasAuthoritativeTimestamp;
   final String eventId;
 
   /// Whether this profile came from Funnelcake's REST projection instead of a
@@ -494,6 +504,7 @@ class UserProfile {
     'lud06': lud06,
     'created_at': createdAt.millisecondsSinceEpoch,
     'event_id': eventId,
+    'has_authoritative_timestamp': hasAuthoritativeTimestamp,
     'raw_data': rawData,
     'raw_tags': rawTags,
   };
@@ -511,6 +522,7 @@ class UserProfile {
     String? lud06,
     Map<String, dynamic>? rawData,
     List<List<String>>? rawTags,
+    bool? hasAuthoritativeTimestamp,
   }) => UserProfile(
     pubkey: pubkey,
     name: name ?? this.name,
@@ -524,6 +536,8 @@ class UserProfile {
     lud06: lud06 ?? this.lud06,
     rawData: rawData ?? this.rawData,
     rawTags: rawTags ?? this.rawTags,
+    hasAuthoritativeTimestamp:
+        hasAuthoritativeTimestamp ?? this.hasAuthoritativeTimestamp,
     createdAt: createdAt,
     eventId: eventId,
   );

@@ -437,6 +437,15 @@ void main() {
         final profile = UserProfile.fromUserProfileFound(result);
 
         expect(profile.createdAt, equals(original));
+        expect(profile.hasAuthoritativeTimestamp, isTrue);
+        expect(
+          profile.copyWith(about: 'Copy').hasAuthoritativeTimestamp,
+          isTrue,
+        );
+        expect(
+          UserProfile.fromJson(profile.toJson()).hasAuthoritativeTimestamp,
+          isTrue,
+        );
       });
 
       test('falls back to DateTime.now() when no timestamp is provided', () {
@@ -447,6 +456,7 @@ void main() {
         final before = DateTime.now();
         final profile = UserProfile.fromUserProfileFound(result);
         final after = DateTime.now();
+        expect(profile.hasAuthoritativeTimestamp, isFalse);
 
         expect(
           profile.createdAt.isBefore(before),

@@ -78,6 +78,13 @@ abstract interface class ProfileReader {
     List<Duration> rawKind0RetryDelays,
   });
 
+  /// Reads raw Kind 0 metadata for display, returning the first valid relay
+  /// result, including partial answers. Skips REST and session miss memos.
+  /// Returns `null` on relay failure or absence. Cache failures and programming
+  /// invariants propagate. Never use this to seed a publish:
+  /// [fetchFreshProfile] with `requireRawKind0` is the strict read.
+  Future<UserProfile?> fetchRawProfileForDisplay({required String pubkey});
+
   /// Whether the latest fetch positively established that [pubkey] has no
   /// published profile.
   ///

@@ -2,6 +2,7 @@
 // ABOUTME: Implements cache+fresh pattern and block/unblock actions
 
 import 'package:bloc_concurrency/bloc_concurrency.dart';
+import 'package:collection/collection.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -59,6 +60,9 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
   final IdentityClaimsRepository? _identityClaimsRepository;
 
   int _profileRequest = 0;
+  // A refresh can supersede load before its cache await completes. Retain
+  // that read as a fallback without delaying a successful foreground fetch.
+  Future<UserProfile?>? _pendingCacheRead;
 
   /// The pubkey of the profile being viewed.
   final String pubkey;
@@ -101,9 +105,9 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
     }
 
     // 1. Get cached profile from repository
-    final cachedProfile = await _profileRepository.getCachedProfile(
-      pubkey: pubkey,
-    );
+    final cacheRead = _profileRepository.getCachedProfile(pubkey: pubkey);
+    _pendingCacheRead = cacheRead;
+    final cachedProfile = await cacheRead;
     if (isClosed || emit.isDone || request != _profileRequest) return;
     // Carry claims through the reload so chips do not vanish and re-pop
     // while the verifier revalidates (#3936). Read AFTER the await so an
@@ -191,7 +195,7 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
       return;
     }
 
-    final currentProfile = switch (state) {
+    var currentProfile = switch (state) {
       OtherProfileInitial() => null,
       OtherProfileLoading(:final profile) => profile,
       OtherProfileLoaded(:final profile) => profile,
@@ -223,6 +227,8 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
         add(const VerifiedClaimsRequested());
         _requestSupportLinks(request);
       } else {
+        currentProfile ??= await _pendingCacheRead;
+        if (isClosed || emit.isDone || request != _profileRequest) return;
         emit(
           OtherProfileError(
             errorType: OtherProfileErrorType.notFound,
@@ -237,6 +243,8 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
         );
       }
     } catch (e) {
+      if (isClosed || emit.isDone || request != _profileRequest) return;
+      currentProfile ??= await _pendingCacheRead;
       if (isClosed || emit.isDone || request != _profileRequest) return;
       if (_profileRepository.isVanished(pubkey)) {
         emit(
@@ -275,10 +283,7 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
     if (isClosed || emit.isDone || event.request != _profileRequest) return;
     UserProfile? raw;
     try {
-      raw = await _profileRepository.fetchFreshProfile(
-        pubkey: pubkey,
-        requireRawKind0: true,
-      );
+      raw = await _profileRepository.fetchRawProfileForDisplay(pubkey: pubkey);
     } on Exception catch (error, stackTrace) {
       if (isClosed || emit.isDone || event.request != _profileRequest) return;
       if (_profileRepository.isVanished(pubkey)) {
@@ -305,9 +310,9 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
     }
     final latest = state;
     if (latest is! OtherProfileLoaded || raw.pubkey != pubkey) return;
-    // REST projections may carry a synthetic DateTime.now timestamp. Only a
-    // real Kind 0 timestamp can establish that the visible metadata is newer.
-    if (!latest.profile.isRestProjection &&
+    // Only a known source timestamp can establish that the visible metadata
+    // is newer. Untimestamped REST/legacy cache rows remain best-effort.
+    if (latest.profile.hasAuthoritativeTimestamp &&
         raw.createdAt.isBefore(latest.profile.createdAt)) {
       return;
     }
@@ -317,9 +322,21 @@ class OtherProfileBloc extends Bloc<OtherProfileEvent, OtherProfileState> {
       metadata[divineMonetizationLinksKey] =
           raw.rawData[divineMonetizationLinksKey];
     }
-    // Copy only support metadata. Keep the fast profile's fields, statistics,
-    // provenance, freshness, and claims that resolved while the raw read ran.
-    emit(latest.copyWith(profile: latest.profile.copyWith(rawData: metadata)));
+    final tagsChanged = !const DeepCollectionEquality().equals(
+      latest.profile.rawTags,
+      raw.rawTags,
+    );
+    // Keep the fast profile's display fields, statistics and provenance while
+    // restoring the legacy Kind 0 identity-claim source alongside links.
+    emit(
+      latest.copyWith(
+        profile: latest.profile.copyWith(
+          rawData: metadata,
+          rawTags: raw.rawTags,
+        ),
+      ),
+    );
+    if (tagsChanged) add(const VerifiedClaimsRequested());
   }
 
   Future<void> _onVerifiedClaimsRequested(

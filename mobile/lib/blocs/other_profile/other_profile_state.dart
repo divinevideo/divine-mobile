@@ -81,6 +81,7 @@ final class OtherProfileLoaded extends OtherProfileState {
     isFresh,
     verifiedClaims,
     profile.rawData[divineMonetizationLinksKey],
+    profile.rawTags,
   ];
 }
 
