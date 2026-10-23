@@ -218,6 +218,7 @@ class AccountStateRepository {
         if (error is FormatException ||
             (error is AccountStateException && !error.retryable)) {
           _clearRetry();
+          if (_receivedSources.isNotEmpty) _scheduleRetry(sourcesOnly: true);
         } else {
           _scheduleRetry();
         }
@@ -226,7 +227,7 @@ class AccountStateRepository {
     return result;
   }
 
-  void _scheduleRetry() {
+  void _scheduleRetry({bool sourcesOnly = false}) {
     if (!_started ||
         _closed ||
         _retryTimer != null ||
@@ -238,7 +239,16 @@ class AccountStateRepository {
     }
     _retryTimer = Timer(Duration(seconds: _retrySeconds), () {
       _retryTimer = null;
-      _backgroundSync();
+      if (sourcesOnly) {
+        unawaited(
+          _persistReceivedSources().then((_) {
+            _clearRetry();
+            if (_receivedSources.isNotEmpty) _scheduleRetry(sourcesOnly: true);
+          }, onError: (Object _) => _scheduleRetry(sourcesOnly: true)),
+        );
+      } else {
+        _backgroundSync();
+      }
     });
     _retrySeconds = math.min(_retrySeconds * 2, 60);
   }
@@ -249,10 +259,21 @@ class AccountStateRepository {
     _retrySeconds = 1;
   }
 
+  Future<void> _persistReceivedSources() => _write(() async {
+    if (_closed || _receivedSources.isEmpty) return;
+    // Receipt already verified signature, namespace and account. Persisting
+    // this encrypted signed source never requires signer authorization.
+    final sources = _unionEvents([..._events, ..._receivedSources.values]);
+    await _save(_entries, sources, pending: _pending);
+    if (!_closed) _installSources(sources);
+  });
+
   Future<void> _synchronize({
     Future<void> Function()? beforeMerge,
     void Function()? onReconciled,
   }) async {
+    if (_closed) return;
+    await _persistReceivedSources();
     if (_closed) return;
     final signer = await _checkedSigner();
     if (_closed) return;

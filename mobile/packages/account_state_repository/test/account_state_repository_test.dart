@@ -23,6 +23,7 @@ class _Signer extends LocalNostrSigner {
   Future<void>? publicKeyGate;
   int publicKeyCalls = 0;
   String? publicKeyOverride;
+  Exception? publicKeyError;
   int? holdPublicKeyAt;
   void Function(String)? onPreparation;
   @override
@@ -32,6 +33,7 @@ class _Signer extends LocalNostrSigner {
       onPreparation?.call('final signer check');
       await publicKeyGate;
     }
+    if (publicKeyError != null) throw publicKeyError!;
     return publicKeyOverride ?? await super.getPublicKey();
   }
 
@@ -543,6 +545,140 @@ void main() {
             );
             clock.flushMicrotasks();
             expect(failure, isFormatException);
+            unawaited(restarted.close());
+            clock.flushMicrotasks();
+          });
+        },
+      );
+
+      for (final delayedRecovery in [false, true]) {
+        test(
+          'received source persists before locked signer retry (delayed disk: $delayedRecovery)',
+          () async {
+            final unknown = await snapshot({}, version: 2);
+            var diskBroken = false;
+            var signerLocked = false;
+            var signerCalls = 0;
+            final preferences = store(
+              writeError: () => diskBroken
+                  ? PlatformException(code: 'storage_unavailable')
+                  : null,
+            );
+            fakeAsync((clock) {
+              final phone = device(
+                preferences: preferences,
+                getSigner: () {
+                  signerCalls++;
+                  if (signerLocked) throw StateError('signer locked');
+                  return signer;
+                },
+              );
+              unawaited(phone.start());
+              clock.flushMicrotasks();
+              unawaited(phone.setValue('choice', true));
+              clock.flushMicrotasks();
+              diskBroken = true;
+              incoming.add(unknown);
+              clock.flushMicrotasks();
+              signerLocked = true;
+              final beforeRetry = signerCalls;
+              diskBroken = delayedRecovery;
+              clock
+                ..elapse(const Duration(seconds: 1))
+                ..flushMicrotasks();
+              if (delayedRecovery) {
+                expect(
+                  signerCalls,
+                  beforeRetry,
+                  reason: 'source persistence must precede authorization',
+                );
+                diskBroken = false;
+                clock
+                  ..elapse(const Duration(seconds: 2))
+                  ..flushMicrotasks();
+              }
+              final blockedCalls = signerCalls;
+              clock
+                ..elapse(const Duration(minutes: 2))
+                ..flushMicrotasks();
+              expect(
+                signerCalls,
+                blockedCalls,
+                reason:
+                    'a refused signer must not be prompted by persistence retry',
+              );
+              unawaited(phone.close());
+              clock.flushMicrotasks();
+              relay.clear();
+              Object? failure;
+              final restarted = device(preferences: preferences);
+              unawaited(
+                restarted.synchronize().catchError((Object error) {
+                  failure = error;
+                }),
+              );
+              clock.flushMicrotasks();
+              expect(failure, isFormatException);
+              expect(relay, isEmpty);
+              unawaited(restarted.close());
+              clock.flushMicrotasks();
+            });
+          },
+        );
+      }
+      test(
+        'source-only retry survives refusal while public key request is in flight',
+        () async {
+          final unknown = await snapshot({}, version: 2);
+          final controlled = _Signer();
+          var diskBroken = false;
+          final preferences = store(
+            writeError: () => diskBroken
+                ? PlatformException(code: 'storage_unavailable')
+                : null,
+          );
+          fakeAsync((clock) {
+            final phone = device(
+              preferences: preferences,
+              getSigner: () => controlled,
+            );
+            unawaited(phone.start());
+            clock.flushMicrotasks();
+            unawaited(phone.setValue('choice', true));
+            clock.flushMicrotasks();
+            final gate = Completer<void>();
+            controlled.holdPublicKeyAt = controlled.publicKeyCalls + 1;
+            controlled.publicKeyGate = gate.future;
+            unawaited(phone.synchronize().catchError((Object _) {}));
+            clock.flushMicrotasks();
+            diskBroken = true;
+            incoming.add(unknown);
+            clock.flushMicrotasks();
+            controlled.publicKeyError = Exception('signer locked');
+            gate.complete();
+            clock.flushMicrotasks();
+            final refusedCalls = controlled.publicKeyCalls;
+            clock
+              ..elapse(const Duration(seconds: 1))
+              ..flushMicrotasks();
+            diskBroken = false;
+            clock
+              ..elapse(const Duration(seconds: 2))
+              ..flushMicrotasks();
+            expect(controlled.publicKeyCalls, refusedCalls);
+            unawaited(phone.close());
+            clock.flushMicrotasks();
+            relay.clear();
+            Object? failure;
+            final restarted = device(preferences: preferences);
+            unawaited(
+              restarted.synchronize().catchError((Object error) {
+                failure = error;
+              }),
+            );
+            clock.flushMicrotasks();
+            expect(failure, isFormatException);
+            expect(relay, isEmpty);
             unawaited(restarted.close());
             clock.flushMicrotasks();
           });
