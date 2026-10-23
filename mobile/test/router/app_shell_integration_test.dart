@@ -15,8 +15,6 @@ import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
@@ -129,8 +127,6 @@ void main() {
         mockNostrService: createMockNostrServiceWithRelayStatus(),
       ),
       // Exercise navigation with lists enabled, independently of build flags.
-      isFeatureEnabledProvider(FeatureFlag.curatedLists)
-          .overrideWithValue(true),
       // Home reads and watches followed lists even for the ordinary feed.
       // Navigation tests supply no followed lists instead of opening Hive.
       peopleListsRepositoryProvider.overrideWithValue(

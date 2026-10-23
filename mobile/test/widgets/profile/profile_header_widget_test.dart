@@ -368,7 +368,6 @@ void main() {
       String? avatarUrlHint,
       MyProfileState? myProfileState,
       bool provideMyProfileBloc = true,
-      bool curatedListsEnabled = false,
       PeopleListsState? peopleListsState,
       BackgroundPublishState? backgroundPublishState,
       Stream<BackgroundPublishState>? backgroundPublishStream,
@@ -521,9 +520,6 @@ void main() {
           }),
           badgeRepositoryProvider.overrideWithValue(badgeRepository),
           currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
-          isFeatureEnabledProvider(
-            FeatureFlag.curatedLists,
-          ).overrideWith((ref) => curatedListsEnabled),
           isFeatureEnabledProvider(
             FeatureFlag.profileMonetizationLinks,
           ).overrideWith((ref) => monetizationLinksEnabled),
@@ -2432,7 +2428,6 @@ void main() {
           userIdHex: testUserHex,
           isOwnProfile: false,
           suppliedProfile: testProfile,
-          curatedListsEnabled: true,
         ),
       );
       await tester.pumpAndSettle();
@@ -2450,7 +2445,6 @@ void main() {
             userIdHex: testUserHex,
             isOwnProfile: true,
             profile: testProfile,
-            curatedListsEnabled: true,
           ),
         );
         await tester.pumpAndSettle();
@@ -3324,9 +3318,6 @@ void main() {
                   currentAuthStateProvider.overrideWithValue(
                     AuthState.authenticated,
                   ),
-                  isFeatureEnabledProvider(
-                    FeatureFlag.curatedLists,
-                  ).overrideWith((ref) => false),
                 ],
                 child: MaterialApp(
                   localizationsDelegates: appLocalizationsDelegates,
@@ -3443,9 +3434,6 @@ void main() {
                   currentAuthStateProvider.overrideWithValue(
                     AuthState.authenticated,
                   ),
-                  isFeatureEnabledProvider(
-                    FeatureFlag.curatedLists,
-                  ).overrideWith((ref) => false),
                 ],
                 child: MaterialApp(
                   localizationsDelegates: appLocalizationsDelegates,

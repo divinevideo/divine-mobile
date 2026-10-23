@@ -40,6 +40,12 @@ void main() {
       expect(config.getDefault(FeatureFlag.videoReplies), isTrue);
     });
 
+    test('profile support links are enabled by default in all builds', () {
+      const config = BuildConfiguration();
+
+      expect(config.getDefault(FeatureFlag.profileMonetizationLinks), isTrue);
+    });
+
     test('should provide all flags with defaults', () {
       const config = BuildConfiguration();
 
@@ -85,12 +91,6 @@ void main() {
       const config = BuildConfiguration();
 
       expect(config.getDefault(FeatureFlag.integratedApps), isFalse);
-    });
-
-    test('curatedLists should default to true', () {
-      const config = BuildConfiguration();
-
-      expect(config.getDefault(FeatureFlag.curatedLists), isTrue);
     });
 
     test('post-publish experiment has a build-time off switch', () {

@@ -938,6 +938,42 @@ class ProfileRepository implements ProfileReader {
     return read.profile;
   }
 
+  /// Reads optional raw Kind 0 metadata without delaying the ordinary REST
+  /// profile read. Accepts partial relay results; unsafe as a publish seed.
+  ///
+  /// Skips REST and raw-read missing memos so a later display refresh can
+  /// discover newly published metadata. Relay failures return `null`; local
+  /// cache failures and programming invariants propagate to the caller.
+  @override
+  Future<UserProfile?> fetchRawProfileForDisplay({
+    required String pubkey,
+  }) async {
+    if (_vanished.contains(pubkey) || (_blockFilter?.call(pubkey) ?? false)) {
+      return null;
+    }
+    final key = '$pubkey#display-kind0';
+    final existing = _inFlightFetches[key];
+    if (existing != null) {
+      final read = await existing;
+      return _vanished.contains(pubkey) ? null : read.profile;
+    }
+    final future = _fetchFromRelaysParallel(
+      pubkey,
+      requireRawKind0: false,
+      useCache: false,
+      propagateProgrammingErrors: true,
+    );
+    _inFlightFetches[key] = future;
+    try {
+      final read = await future;
+      if (_vanished.contains(pubkey)) return null;
+      if (read.profile != null) await _cacheProfileIfNewer(read.profile!);
+      return read.profile;
+    } finally {
+      unawaited(_inFlightFetches.remove(key));
+    }
+  }
+
   /// [fetchFreshProfile], also reporting whether an empty answer is
   /// conclusive — the publish seed needs that distinction, display does not.
   Future<_ProfileRead> _readFreshProfile({
@@ -1074,7 +1110,16 @@ class ProfileRepository implements ProfileReader {
               // cache and may be missing fields the local one carries
               // (lud06, eventId, custom rawData).
               return (
-                profile: funnelcakeWon ? funnelcakeProfile : existing,
+                profile: funnelcakeWon
+                    ? funnelcakeProfile
+                    : existing?.copyWith(
+                        hasAuthoritativeTimestamp:
+                            existing.hasAuthoritativeTimestamp ||
+                            (funnelcakeProfile.hasAuthoritativeTimestamp &&
+                                existing.createdAt.isAtSameMomentAs(
+                                  funnelcakeProfile.createdAt,
+                                )),
+                      ),
                 conclusive: true,
               );
             }
@@ -1149,7 +1194,8 @@ class ProfileRepository implements ProfileReader {
   }
 
   /// Upserts [profile] into the local cache only when it is strictly newer
-  /// than the currently-cached profile for the same pubkey.
+  /// than the currently-cached profile for the same pubkey, or when raw Kind 0
+  /// metadata completes an equal-timestamp REST projection.
   ///
   /// Returns `true` when the cache was written ([profile] won), `false` when
   /// an existing, newer-or-equal cache entry was kept.
@@ -1171,7 +1217,11 @@ class ProfileRepository implements ProfileReader {
         : await _userProfilesDao.getProfile(profile.pubkey);
     if (cachedProfile != null &&
         !profile.createdAt.isAfter(cachedProfile.createdAt)) {
-      return false;
+      final rawCompletesProjection =
+          profile.createdAt.isAtSameMomentAs(cachedProfile.createdAt) &&
+          !profile.isRestProjection &&
+          cachedProfile.isRestProjection;
+      if (!rawCompletesProjection) return false;
     }
 
     _confirmedMissing.remove(profile.pubkey);
@@ -1194,6 +1244,8 @@ class ProfileRepository implements ProfileReader {
   Future<_ProfileRead> _fetchFromRelaysParallel(
     String pubkey, {
     required bool requireRawKind0,
+    bool useCache = true,
+    bool propagateProgrammingErrors = false,
   }) async {
     if (requireRawKind0) {
       UserProfile? indexerProfile;
@@ -1267,8 +1319,25 @@ class ProfileRepository implements ProfileReader {
             }
           }
         }
-      } on Object {
-        // Individual source failures should not abort the overall fetch.
+      } on Exception {
+        // Expected source failures leave the other source available.
+      } on Object catch (error, stackTrace) {
+        if (propagateProgrammingErrors) {
+          if (!completer.isCompleted) {
+            completer.completeError(error, stackTrace);
+          } else {
+            // The display caller already returned and may be disposed. Keep
+            // late failures observable without sending it an orphaned error.
+            Log.error(
+              'Late raw profile display source failed',
+              name: 'ProfileRepository.fetchRawProfileForDisplay',
+              error: error,
+              stackTrace: stackTrace,
+            );
+          }
+        }
+        // Ordinary reads retain their source-isolation contract; see
+        // "handles uncaught Error without hanging" in repository tests.
       } finally {
         remaining--;
         if (remaining == 0 && !completer.isCompleted) {
@@ -1282,6 +1351,7 @@ class ProfileRepository implements ProfileReader {
         _fetchFromConnectedRelays(
           pubkey,
           requireRawKind0: requireRawKind0,
+          useCache: useCache,
         ).then((read) {
           connectedConclusive = read.conclusive;
           return read.profile;
@@ -1296,6 +1366,7 @@ class ProfileRepository implements ProfileReader {
   Future<_ProfileRead> _fetchFromConnectedRelays(
     String pubkey, {
     required bool requireRawKind0,
+    bool useCache = true,
   }) async {
     try {
       final UserProfile? profile;
@@ -1315,7 +1386,9 @@ class ProfileRepository implements ProfileReader {
         profile = _newestKind0Profile(read.events);
         conclusive = !read.timedOut && !read.noRelays;
       } else {
-        final event = await _nostrClient.fetchProfile(pubkey);
+        final event = useCache
+            ? await _nostrClient.fetchProfile(pubkey)
+            : await _nostrClient.fetchProfile(pubkey, useCache: false);
         profile = event == null ? null : UserProfile.fromNostrEvent(event);
       }
       if (profile != null) {

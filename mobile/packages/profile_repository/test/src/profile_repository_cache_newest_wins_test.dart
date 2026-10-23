@@ -51,6 +51,42 @@ void main() {
     });
 
     test(
+      'raw profile completes equal-time REST cache and cannot be degraded',
+      () async {
+        final timestamp = DateTime.utc(2026);
+        final projection = UserProfile(
+          pubkey: testPubkey,
+          eventId: 'rest-$testPubkey',
+          name: 'Alice',
+          picture: 'https://example.com/alice.jpg',
+          createdAt: timestamp,
+          rawData: const {},
+        );
+        final raw = UserProfile(
+          pubkey: testPubkey,
+          eventId: 'd' * 64,
+          name: 'Alice',
+          picture: 'https://example.com/alice.jpg',
+          createdAt: timestamp,
+          rawData: const {'custom': 'complete'},
+        );
+        await repository.cacheProfile(projection);
+        await repository.cacheProfile(raw);
+        expect(
+          (await repository.getCachedProfile(pubkey: testPubkey))!.rawData,
+          raw.rawData,
+        );
+        await repository.cacheProfile(
+          projection.copyWith(about: 'REST richer'),
+        );
+        expect(
+          (await repository.getCachedProfile(pubkey: testPubkey))!.eventId,
+          raw.eventId,
+        );
+      },
+    );
+
+    test(
       'keeps the newer cached row when an older profile is cached',
       () async {
         await repository.cacheProfile(

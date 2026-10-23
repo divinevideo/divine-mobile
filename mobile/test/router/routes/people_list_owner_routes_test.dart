@@ -13,8 +13,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/nip19.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/people_lists.dart';
 import 'package:openvine/features/people_lists/view/add_people_to_list_screen.dart';
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
@@ -144,7 +142,6 @@ void main() {
       String location, {
       bool render = false,
       String listId = 'crew',
-      bool enabled = true,
       PeopleListsState? initialState,
     }) async {
       whenListen(
@@ -164,9 +161,6 @@ void main() {
         testProviderScope(
           mockAuthService: auth,
           additionalOverrides: [
-            isFeatureEnabledProvider(
-              FeatureFlag.curatedLists,
-            ).overrideWith((ref) => enabled),
             peopleListsRepositoryProvider.overrideWithValue(repository),
           ],
           child: BlocProvider<PeopleListsBloc>.value(
@@ -542,26 +536,6 @@ void main() {
           listId: 'new',
         ),
       ).called(1);
-    });
-
-    testWidgets('addressed new stays behind the people-list feature flag', (
-      tester,
-    ) async {
-      await pumpRoute(
-        tester,
-        RoutePaths.peopleListForId('new', ownerPubkey: _foreignOwner),
-        render: true,
-        listId: 'new',
-        enabled: false,
-      );
-      expect(find.text('Home'), findsOneWidget);
-      expect(find.byType(UserListPeopleScreen), findsNothing);
-      verifyNever(
-        () => repository.fetchPublicList(
-          ownerPubkey: any(named: 'ownerPubkey'),
-          listId: any(named: 'listId'),
-        ),
-      );
     });
 
     testWidgets('new with explicitly empty author does not become creation', (

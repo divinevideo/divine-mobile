@@ -7,8 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/models/people_list_entry_point.dart';
 import 'package:openvine/features/people_lists/view/add_to_people_lists_sheet.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -82,8 +80,8 @@ class UserProfileTile extends ConsumerWidget {
   /// Optional index for semantic labeling in lists (e.g., Maestro tests).
   final int? index;
 
-  /// Which entry point to attribute the "Add to list" action to when the
-  /// profile-list-features flag is on. Defaults to followers-list context.
+  /// Entry point attributed to the "Add to list" action when opening the picker.
+  /// Defaults to followers-list context.
   final PeopleListEntryPoint addToListEntryPoint;
 
   /// Inset around the row.
@@ -110,20 +108,7 @@ class UserProfileTile extends ConsumerWidget {
     final isVanished = ref.watch(profileVanishedProvider(pubkey));
     final authService = ref.watch(authServiceProvider);
     final isCurrentUser = pubkey == authService.currentPublicKeyHex;
-    final profileListFeaturesEnabled = ref.watch(
-      isFeatureEnabledProvider(FeatureFlag.profileListFeatures),
-    );
-    // curatedLists is the master switch for people lists; profileListFeatures
-    // only adds this surface on top of it. Without both, tapping would
-    // construct the lazily-registered PeopleListsBloc for a disabled feature.
-    final curatedListsEnabled = ref.watch(
-      isFeatureEnabledProvider(FeatureFlag.curatedLists),
-    );
-    final showAddToList =
-        showAddToListButton &&
-        profileListFeaturesEnabled &&
-        curatedListsEnabled &&
-        !isCurrentUser;
+    final showAddToList = showAddToListButton && !isCurrentUser;
 
     final displayName = vanishedAccountName(
       context,

@@ -1,6 +1,8 @@
 // ABOUTME: Settings screen for profile support and subscription links.
 // ABOUTME: Persists normalized outbound monetization links in Kind 0 metadata.
 
+import 'dart:async';
+
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,11 +30,9 @@ class MonetizationLinksSettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(currentAuthStateProvider);
+    ref.watch(currentAccountActivationReceiptProvider);
     final pubkey = ref.watch(authServiceProvider).currentPublicKeyHex;
-    final profileAsync = pubkey == null
-        ? const AsyncValue<UserProfile?>.data(null)
-        : ref.watch(userProfileReactiveProvider(pubkey));
-    final profile = profileAsync.asData?.value;
     final repository = ref.watch(profileRepositoryProvider);
     final appStoreTipPolicy = usesAppleAppStoreTipPolicy;
     final providers = monetizationProvidersForCurrentStorefront();
@@ -41,22 +41,25 @@ class MonetizationLinksSettingsScreen extends ConsumerWidget {
     return BlocProvider(
       key: ValueKey((
         pubkey,
-        profile?.eventId,
         repository,
         appStoreTipPolicy,
       )),
-      create: (_) => MonetizationLinksSettingsCubit(
-        repository: repository,
-        profile: profile,
-        visibleProviders: providers,
-        trackConfiguredLink: (link) =>
-            trackMonetizationLinkConfigured(analytics: analytics, link: link),
-        onProfileSaved: (saved) {
-          ref
-            ..invalidate(userProfileReactiveProvider(saved.pubkey))
-            ..invalidate(fetchUserProfileProvider(saved.pubkey));
-        },
-      ),
+      create: (_) {
+        final cubit = MonetizationLinksSettingsCubit(
+          repository: repository,
+          pubkey: pubkey,
+          visibleProviders: providers,
+          trackConfiguredLink: (link) =>
+              trackMonetizationLinkConfigured(analytics: analytics, link: link),
+          onProfileSaved: (saved) {
+            ref
+              ..invalidate(userProfileReactiveProvider(saved.pubkey))
+              ..invalidate(fetchUserProfileProvider(saved.pubkey));
+          },
+        );
+        unawaited(cubit.load());
+        return cubit;
+      },
       child: MonetizationLinksSettingsView(
         appStoreTipPolicy: appStoreTipPolicy,
       ),
@@ -153,6 +156,27 @@ class _MonetizationLinksSettingsViewState
                 profile: state.currentProfile,
                 appStoreTipPolicy: appStoreTipPolicy,
               ),
+              if (state.isLoading)
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Center(
+                    child: DivineCircularProgressIndicator(
+                      semanticsLabel: context.l10n.commonLoading,
+                    ),
+                  ),
+                ),
+              if (state.loadStatus ==
+                  MonetizationLinksSettingsLoadStatus.failure)
+                Column(
+                  children: [
+                    Text(context.l10n.commonSomethingWentWrong),
+                    DivineButton(
+                      label: context.l10n.commonRetry,
+                      onPressed: () =>
+                          context.read<MonetizationLinksSettingsCubit>().load(),
+                    ),
+                  ],
+                ),
               const SizedBox(height: 20),
               DivineSectionHeader(
                 context.l10n.monetizationSettingsTipSection,
@@ -163,6 +187,7 @@ class _MonetizationLinksSettingsViewState
                   provider: provider,
                   controller: _controllers[provider]!,
                   enabled: state.isEnabled(provider),
+                  canEdit: state.canEdit,
                   errorText: _errorTextFor(context, state.errorFor(provider)),
                   onEnabledChanged: (value) => context
                       .read<MonetizationLinksSettingsCubit>()
@@ -182,6 +207,7 @@ class _MonetizationLinksSettingsViewState
                     provider: provider,
                     controller: _controllers[provider]!,
                     enabled: state.isEnabled(provider),
+                    canEdit: state.canEdit,
                     errorText: _errorTextFor(
                       context,
                       state.errorFor(provider),
@@ -336,6 +362,7 @@ class _ProviderEditor extends StatelessWidget {
     required this.provider,
     required this.controller,
     required this.enabled,
+    required this.canEdit,
     required this.onEnabledChanged,
     required this.onChanged,
     this.errorText,
@@ -344,6 +371,7 @@ class _ProviderEditor extends StatelessWidget {
   final MonetizationLinkProvider provider;
   final TextEditingController controller;
   final bool enabled;
+  final bool canEdit;
   final ValueChanged<bool> onEnabledChanged;
   final ValueChanged<String> onChanged;
   final String? errorText;
@@ -365,14 +393,14 @@ class _ProviderEditor extends StatelessWidget {
           DivineSwitchTile(
             title: provider.displayName,
             value: enabled,
-            onChanged: onEnabledChanged,
+            onChanged: canEdit ? onEnabledChanged : null,
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: DivineAuthTextField(
               label: _hintForProvider(context, provider),
               controller: controller,
-              enabled: enabled,
+              enabled: canEdit && enabled,
               autocorrect: false,
               keyboardType: TextInputType.url,
               textInputAction: TextInputAction.next,

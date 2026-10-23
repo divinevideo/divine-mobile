@@ -80,7 +80,6 @@ void main() {
     });
 
     test('should leave user-facing flags visible to users', () {
-      expect(FeatureFlag.curatedLists.audience, FeatureFlagAudience.user);
       expect(FeatureFlag.blueskyPublishing.audience, FeatureFlagAudience.user);
       expect(FeatureFlag.videoReplies.audience, FeatureFlagAudience.user);
     });

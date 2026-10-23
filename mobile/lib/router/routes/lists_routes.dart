@@ -1,11 +1,9 @@
-// ABOUTME: List routes (NIP-51 curated video lists + people lists), feature-flag gated
+// ABOUTME: List routes (NIP-51 curated video lists + people lists)
 // ABOUTME: Split from app_router.dart (#4508)
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/view/add_people_to_list_screen.dart';
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
 import 'package:openvine/features/people_lists/view/edit_people_list_page.dart';
@@ -18,11 +16,9 @@ import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
 import 'package:openvine/screens/explore/explore_screen.dart';
-import 'package:openvine/screens/feed/video_feed_page.dart';
 import 'package:openvine/screens/saved_videos_screen.dart';
 import 'package:openvine/screens/user_list_people_screen.dart';
 import 'package:openvine/utils/people_list_owner.dart';
-import 'package:unified_logger/unified_logger.dart';
 
 List<RouteBase> listsRoutes(Ref ref) {
   return [
@@ -91,12 +87,9 @@ List<RouteBase> listsRoutes(Ref ref) {
     // `initialPubkey` query param lets callers (e.g., the share-video
     // "Add to list" sheet) seed the new list with a target person in
     // the same submit so the URL remains reloadable.
-    // Gated on FeatureFlag.curatedLists — a deep link here with the flag
-    // off would open a feature the user turned off, so redirect home.
     GoRoute(
       path: CreatePeopleListPage.path,
       name: CreatePeopleListPage.routeName,
-      redirect: (context, state) => _peopleListsRedirectIfDisabled(ref, state),
       builder: (context, state) {
         // `new` is a creation action only when no author was supplied. It is
         // also a valid NIP-51 d-tag, so an addressed list keeps its identity.
@@ -113,11 +106,9 @@ List<RouteBase> listsRoutes(Ref ref) {
     // Addressed by list id so the screen can select the current list
     // from PeopleListsBloc and react to repository updates without a
     // route rebuild. Outside shell — the screen owns its own AppBar.
-    // Gated on FeatureFlag.curatedLists (see CreatePeopleListPage route).
     GoRoute(
       path: UserListPeopleScreen.path,
       name: UserListPeopleScreen.routeName,
-      redirect: (context, state) => _peopleListsRedirectIfDisabled(ref, state),
       builder: (context, state) {
         return _buildPeopleList(
           context,
@@ -130,11 +121,9 @@ List<RouteBase> listsRoutes(Ref ref) {
     // PEOPLE LIST ROSTER route: every member, behind the list's "View all".
     // Resolves the list the same two ways the members route does, so a
     // discovered list's `owner` query param carries over.
-    // Gated on FeatureFlag.curatedLists (see CreatePeopleListPage route).
     GoRoute(
       path: PeopleListMembersScreen.path,
       name: PeopleListMembersScreen.routeName,
-      redirect: (context, state) => _peopleListsRedirectIfDisabled(ref, state),
       builder: (context, state) {
         return _buildPeopleList(
           context,
@@ -148,7 +137,6 @@ List<RouteBase> listsRoutes(Ref ref) {
     GoRoute(
       path: EditPeopleListPage.path,
       name: EditPeopleListPage.routeName,
-      redirect: (context, state) => _peopleListsRedirectIfDisabled(ref, state),
       builder: (context, state) {
         final listId = state.pathParameters['listId'];
         final owner = _peopleListOwner(state.uri);
@@ -172,11 +160,9 @@ List<RouteBase> listsRoutes(Ref ref) {
 
     // ADD PEOPLE TO LIST route. Full-screen picker that batches add
     // requests for the list identified by [listId].
-    // Gated on FeatureFlag.curatedLists (see CreatePeopleListPage route).
     GoRoute(
       path: AddPeopleToListScreen.path,
       name: AddPeopleToListScreen.routeName,
-      redirect: (context, state) => _peopleListsRedirectIfDisabled(ref, state),
       builder: (context, state) {
         final listId = state.pathParameters['listId'];
         final owner = _peopleListOwner(state.uri);
@@ -196,24 +182,6 @@ List<RouteBase> listsRoutes(Ref ref) {
       },
     ),
   ];
-}
-
-/// Redirects deep links for people-lists routes to the home feed when the
-/// [FeatureFlag.curatedLists] feature flag is off.
-///
-/// Without this guard a deep link / push / saved URL would open the
-/// people-lists screens even though the user turned the feature off.
-/// Returns `null` (no redirect) when the flag is on.
-String? _peopleListsRedirectIfDisabled(Ref ref, GoRouterState state) {
-  final enabled = ref.read(isFeatureEnabledProvider(FeatureFlag.curatedLists));
-  if (enabled) return null;
-  Log.info(
-    'Router redirect: ${state.matchedLocation} — '
-    'FeatureFlag.curatedLists is off, redirecting to home',
-    name: 'AppRouter',
-    category: LogCategory.ui,
-  );
-  return VideoFeedPage.pathForIndex(0);
 }
 
 /// Absent author selects the legacy own-list route. An explicit invalid or

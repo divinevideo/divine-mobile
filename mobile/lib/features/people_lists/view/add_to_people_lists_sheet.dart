@@ -8,10 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/extensions/modal_pop_extension.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/people_lists/bloc/people_list_picks_cubit.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
-import 'package:openvine/features/people_lists/curated_lists_gate.dart';
 import 'package:openvine/features/people_lists/models/people_list_entry_point.dart';
 import 'package:openvine/features/people_lists/view/widgets/widgets.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -31,9 +29,7 @@ import 'package:openvine/widgets/profile/new_people_list_sheet.dart';
 /// body needs above it.
 ///
 /// Consumers should call [AddToPeopleListsSheet.show] from within a
-/// subtree that has a [PeopleListsBloc] provided above it. Callers should
-/// also hide their affordance when [FeatureFlag.curatedLists] is off;
-/// [AddToPeopleListsSheet.show] enforces the same gate as a backstop.
+/// subtree that has a [PeopleListsBloc] provided above it.
 ///
 /// The sheet filters out read-only lists (`isEditable == false`). When
 /// there are no editable lists, an empty state offers a `Create list`
@@ -69,12 +65,6 @@ class AddToPeopleListsSheet extends StatefulWidget {
 
   /// Shows the sheet as a modal [VineBottomSheet].
   ///
-  /// Does nothing when [FeatureFlag.curatedLists] is off. The global
-  /// [PeopleListsBloc] is registered unconditionally and lazily, so opening
-  /// this sheet is what would construct it — starting a relay query and cache
-  /// subscription for a feature the user turned off.
-  ///
-  /// Returns a [Future] that completes when the sheet is dismissed.
   static Future<void> show(
     BuildContext context, {
     required String pubkey,
@@ -82,8 +72,6 @@ class AddToPeopleListsSheet extends StatefulWidget {
     String? displayName,
     UserProfile? initialCollaborator,
   }) async {
-    if (!curatedListsEnabled(context)) return;
-
     final account = ProviderScope.containerOf(
       context,
       listen: false,
@@ -91,14 +79,13 @@ class AddToPeopleListsSheet extends StatefulWidget {
     final openingOwner = account.currentOwnerPubkey;
     if (openingOwner == null || openingOwner.isEmpty) return;
     final bloc = context.read<PeopleListsBloc>();
-    if (!bloc.state.enabled || bloc.isClosed) return;
+    if (bloc.isClosed) return;
     if (bloc.state.status == PeopleListsStatus.initial) {
       // Lazy startup establishes the first mutation epoch. Wait for that
       // explicit transition before capturing this visit's epoch.
       await bloc.stream.firstWhere(
         (state) =>
             state.status != PeopleListsStatus.initial ||
-            !state.enabled ||
             state.activeOwnerPubkey != openingOwner,
         orElse: () => const PeopleListsState(),
       );
@@ -462,8 +449,6 @@ class _PickerSession {
       isAuthCurrent &&
       context.mounted &&
       !bloc.isClosed &&
-      bloc.state.enabled &&
-      curatedListsEnabled(context) &&
       identical(context.read<PeopleListsBloc>(), bloc) &&
       bloc.mutationSessionEpoch == epoch &&
       bloc.state.activeOwnerPubkey == ownerPubkey;

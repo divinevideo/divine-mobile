@@ -19,7 +19,6 @@ import 'package:openvine/blocs/saved_sounds/saved_sounds_scope.dart';
 import 'package:openvine/blocs/sound_requests/sound_requests_scope.dart';
 import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
 import 'package:openvine/features/appearance/providers/appearance_providers.dart';
-import 'package:openvine/features/people_lists/curated_lists_gate.dart';
 import 'package:openvine/features/people_lists/people_lists.dart';
 import 'package:openvine/l10n/current_app_l10n.dart';
 import 'package:openvine/l10n/email_verification_error_l10n.dart';
@@ -144,39 +143,8 @@ class AppCompositionRoot extends ConsumerWidget {
                 ),
               )..add(const AppUpdateCheckRequested()),
             ),
-            // Provisioned above MaterialApp.router so every route (including
-            // ones outside AppShell) sees the same lists state.
-            //
-            // Deliberately not wrapped in `if (curatedLists enabled)`: a
-            // conditional entry changes this provider chain's shape, so
-            // flipping the flag re-inflated everything below it — the whole
-            // MaterialApp.router subtree, feed state, video controllers, and
-            // the upload-listener dedupe sets with it. Users were thrown back
-            // to Settings from the imperatively pushed feature-flag screen;
-            // both the symptom and its disappearance under this shape are
-            // verified on device (#6477). What is not pinned is the
-            // Navigator-level step in between — a synthetic probe of the same
-            // shape kept the pushed route — so do not read the chain below
-            // re-inflation as established.
-            //
-            // Laziness does the creation gate instead: every entry point into
-            // the people-lists UI checks FeatureFlag.curatedLists before
-            // reading the bloc — the lists routes redirect home, the profile
-            // and search affordances stay hidden, and both sheets refuse to
-            // open — so a disabled feature does not construct the bloc.
-            //
-            // Once constructed while the flag is on, the bloc remains session-
-            // lifetime even if the flag flips off — laziness gates construction,
-            // not teardown. enabledStream is how it stands down instead: on a
-            // flag-off it drops its cache subscription and stops syncing, and on
-            // a flag-on it rewires to whoever is signed in then (#6494).
-            //
-            // peopleListsRepositoryProvider is keepAlive but not identity-
-            // stable: it watches nostrServiceProvider, which recreates its
-            // client on auth change. This provider is intentionally still not
-            // keyed; repositoryStream keeps the app-lifetime bloc pointed at
-            // the current repository without re-inflating MaterialApp.router
-            // (#6480, #6482).
+            // Keep list state above routes and follow repository changes without
+            // rebuilding the navigator when the signed-in account changes.
             BlocProvider(
               create: (_) {
                 final authService = ref.read(authServiceProvider);
@@ -188,7 +156,6 @@ class AppCompositionRoot extends ConsumerWidget {
                   repositoryStream: ref.read(
                     peopleListsRepositoryIdentityStreamProvider,
                   ),
-                  enabledStream: ref.read(curatedListsEnabledStreamProvider),
                   ownerPubkeyStream: ownerPubkeyStream,
                   initialOwnerPubkey: authService.currentPublicKeyHex,
                 )..add(const PeopleListsStarted());

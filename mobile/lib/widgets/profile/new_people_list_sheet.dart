@@ -6,9 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
-import 'package:openvine/features/people_lists/curated_lists_gate.dart';
 import 'package:openvine/features/people_lists/view/widgets/people_list_result_notice.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -24,17 +22,11 @@ import 'package:openvine/widgets/vanished_account_identity.dart';
 /// [initialCollaborator] is pre-added as the first member — useful when
 /// opening the sheet directly from a profile.
 ///
-/// Does nothing when [FeatureFlag.curatedLists] is off: the global
-/// [PeopleListsBloc] is registered lazily, so opening this sheet is what
-/// would start a relay query and cache subscription for a feature the user
-/// turned off.
 Future<void> showNewPeopleListSheet(
   BuildContext context, {
   UserProfile? initialCollaborator,
   String? initialPubkey,
 }) {
-  if (!curatedListsEnabled(context)) return Future<void>.value();
-
   final container = ProviderScope.containerOf(context, listen: false);
   final openingOwner = container.read(authServiceProvider).currentPublicKeyHex;
   bool isSessionCurrent() =>

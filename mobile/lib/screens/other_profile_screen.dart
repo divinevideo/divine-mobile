@@ -98,16 +98,16 @@ class OtherProfileScreen extends ConsumerWidget {
     final identityClaimsRepository = ref.watch(
       identityClaimsRepositoryProvider,
     );
-    final requireRawKind0 = ref.watch(
+    final loadSupportLinks = ref.watch(
       isFeatureEnabledProvider(FeatureFlag.profileMonetizationLinks),
     );
 
     return BlocProvider(
       // Re-create the bloc when captured dependencies change. A keyless
       // create: would keep stale repositories/current-user state after auth or
-      // account changes, and would also miss requireRawKind0 flag flips.
+      // account changes, and would also miss support-link flag changes.
       key: ValueKey((
-        requireRawKind0,
+        loadSupportLinks,
         profileRepository,
         blocklistRepository,
         nostrClient.publicKey,
@@ -121,7 +121,7 @@ class OtherProfileScreen extends ConsumerWidget {
         currentUserPubkey: nostrClient.publicKey,
         followRepository: followRepository,
         identityClaimsRepository: identityClaimsRepository,
-        requireRawKind0: requireRawKind0,
+        loadSupportLinks: loadSupportLinks,
       )..add(const OtherProfileLoadRequested()),
       child: OtherProfileView(
         pubkey: pubkey,
@@ -275,19 +275,9 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
     final displayName =
         profile?.bestDisplayName ?? widget.displayNameHint ?? fallbackName;
 
-    final profileListFeaturesEnabled = ref.read(
-      isFeatureEnabledProvider(FeatureFlag.profileListFeatures),
-    );
-    // curatedLists is the master switch for people lists; profileListFeatures
-    // only adds this surface on top of it. Without both, tapping would
-    // construct the lazily-registered PeopleListsBloc for a disabled feature.
-    final curatedListsEnabled = ref.read(
-      isFeatureEnabledProvider(FeatureFlag.curatedLists),
-    );
     final isOwnProfile =
         widget.pubkey == ref.read(authServiceProvider).currentPublicKeyHex;
-    final showAddToList =
-        profileListFeaturesEnabled && curatedListsEnabled && !isOwnProfile;
+    final showAddToList = !isOwnProfile;
 
     final result = await VineBottomSheet.show<MoreSheetResult>(
       context: context,
@@ -314,10 +304,6 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
         final npub = NostrKeyUtils.encodePubKey(widget.pubkey);
         await ClipboardUtils.copyPubkey(context, npub);
       case MoreSheetResult.addToList:
-        if (!ref.read(isFeatureEnabledProvider(FeatureFlag.curatedLists))) {
-          return;
-        }
-
         final profile = ref
             .read(userProfileReactiveProvider(widget.pubkey))
             .value;

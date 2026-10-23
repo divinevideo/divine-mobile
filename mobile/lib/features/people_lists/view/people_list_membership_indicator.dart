@@ -1,12 +1,9 @@
 // ABOUTME: Compact indicator showing how many people lists contain a pubkey.
-// ABOUTME: Renders SizedBox.shrink when the curatedLists flag is off or 0.
+// ABOUTME: Renders nothing when the pubkey is not in any list.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 
@@ -14,14 +11,13 @@ import 'package:openvine/l10n/l10n.dart';
 /// lists currently contain [pubkey].
 ///
 /// Behavior:
-/// * Hidden when the [FeatureFlag.curatedLists] flag is disabled.
 /// * Hidden when the pubkey is not in any list (count == 0).
 /// * Otherwise renders `"In 1 list"` or `"In N lists"`.
 ///
 /// The widget reads the reverse membership index directly from the
 /// surrounding [PeopleListsBloc] via `context.select`, so it rebuilds only
 /// when the membership count for this exact [pubkey] changes.
-class PeopleListMembershipIndicator extends ConsumerWidget {
+class PeopleListMembershipIndicator extends StatelessWidget {
   /// Creates the indicator.
   const PeopleListMembershipIndicator({
     required this.pubkey,
@@ -33,14 +29,7 @@ class PeopleListMembershipIndicator extends ConsumerWidget {
   final String pubkey;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isEnabled = ref.watch(
-      isFeatureEnabledProvider(FeatureFlag.curatedLists),
-    );
-    if (!isEnabled) {
-      return const SizedBox.shrink();
-    }
-
+  Widget build(BuildContext context) {
     final count = context.select<PeopleListsBloc, int>(
       (bloc) => bloc.state.listIdsByPubkey[pubkey]?.length ?? 0,
     );

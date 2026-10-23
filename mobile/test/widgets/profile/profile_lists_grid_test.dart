@@ -13,8 +13,6 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/view/create_people_list_page.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -79,7 +77,6 @@ void main() {
     late _MockCuratedListService mockListService;
     late String pushedRoute;
     late _MockPeopleListsBloc peopleBloc;
-    var enabled = true;
     const owner =
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
     final personList = UserList(
@@ -95,7 +92,6 @@ void main() {
       _videoLoad = null;
       _failInitialization = false;
       _initializationAttempts = 0;
-      enabled = true;
       peopleBloc = _MockPeopleListsBloc();
       when(() => peopleBloc.state).thenReturn(
         const PeopleListsState(
@@ -117,8 +113,6 @@ void main() {
                 myListsWithThumbnailsProvider.overrideWith(
                   (ref) async => mockListService.myLists,
                 ),
-            isFeatureEnabledProvider(FeatureFlag.curatedLists)
-                .overrideWithValue(enabled),
           ],
           child: BlocProvider<PeopleListsBloc>.value(
             value: peopleBloc,
@@ -280,9 +274,9 @@ void main() {
     });
 
     testWidgets(
-      'master off hides people controls and retains video and bookmarks',
+      'sign-out hides people controls and retains video and bookmarks',
       (tester) async {
-        enabled = false;
+        when(() => peopleBloc.state).thenReturn(const PeopleListsState());
         await tester.pumpWidget(buildSubject());
         await tester.pumpAndSettle();
         expect(find.text('New people list'), findsNothing);

@@ -59,6 +59,13 @@ class _ExhaustiveReader implements ProfileReader {
     List<Duration> rawKind0RetryDelays = const [],
   }) async => null;
 
+  // Widened consciously: this queries public Kind 0 metadata without signing
+  // or publishing, and keeps display partial reads separate from save seeds.
+  @override
+  Future<UserProfile?> fetchRawProfileForDisplay({
+    required String pubkey,
+  }) async => null;
+
   // Widened consciously: this reads session-local fetch classification only.
   @override
   bool isConfirmedMissing(String pubkey) => false;

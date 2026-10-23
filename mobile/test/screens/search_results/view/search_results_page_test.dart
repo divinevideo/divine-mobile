@@ -18,8 +18,6 @@ import 'package:openvine/blocs/search_results_filter/search_results_filter.dart'
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/blocs/video_search/video_search_bloc.dart';
 import 'package:openvine/constants/search_constants.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/user_ranking_providers.dart';
@@ -758,90 +756,66 @@ void main() {
       },
     );
 
-    for (final master in [false, true]) {
-      for (final profile in [false, true]) {
-        testWidgets(
-          'review regression people list search flags master=$master profile=$profile',
-          (tester) async {
-            when(() => mockCuratedListRepository.searchAllLists(any()))
-                .thenAnswer((_) => Stream.value(const <CuratedList>[]));
-            when(
-              () => mockPeopleListsRepository.searchPublicLists(
-                any(),
-                viewerPubkey: any(named: 'viewerPubkey'),
-              ),
-            ).thenAnswer((_) => Stream.value(const <PeopleListSearchResult>[]));
-            await tester.pumpWidget(
-              createTestWidget(
-                authService: createMockAuthService(
-                  authState: AuthState.authenticated,
-                  currentPublicKeyHex: _viewerPubkey,
-                ),
-                flagOverrides: [
-                  isFeatureEnabledProvider(FeatureFlag.curatedLists)
-                      .overrideWith((ref) => master),
-                  isFeatureEnabledProvider(FeatureFlag.profileListFeatures)
-                      .overrideWith((ref) => profile),
-                ],
-              ),
-            );
-            await tester.pump();
-            final bloc = BlocProvider.of<ListSearchBloc>(
-              tester.element(find.byType(SearchResultsView)),
-            );
-            bloc.add(const ListSearchQueryChanged('crew'));
-            await tester.pump();
-            expect(bloc.state.requestedQuery, 'crew');
-            expect(bloc.state.query, isEmpty);
-            verifyNever(
-              () => mockCuratedListRepository.searchAllLists(any()),
-            );
-            verifyNever(
-              () => mockPeopleListsRepository.searchPublicLists(
-                any(),
-                viewerPubkey: any(named: 'viewerPubkey'),
-              ),
-            );
-            await tester.pump(searchDebounceDuration);
-            // Rx cancellation completes in the root zone; flush without advancing time.
-            await tester.runAsync(() async {});
-            await tester.pump();
-            expect(bloc.isClosed, isFalse);
-            expect(
-              BlocProvider.of<ListSearchBloc>(
-                tester.element(find.byType(SearchResultsView)),
-              ),
-              same(bloc),
-            );
-            expect(bloc.state.query, 'crew');
-            expect(bloc.state.videoStatus, ListSearchSourceStatus.success);
-            expect(
-              bloc.state.peopleStatus,
-              master && profile
-                  ? ListSearchSourceStatus.success
-                  : ListSearchSourceStatus.initial,
-            );
-            if (master && profile) {
-              verify(
-                () => mockPeopleListsRepository.searchPublicLists(
-                  'crew',
-                  viewerPubkey: _viewerPubkey,
-                ),
-              ).called(1);
-            } else {
-              verifyNever(
-                () => mockPeopleListsRepository.searchPublicLists(
-                  any(),
-                  viewerPubkey: any(named: 'viewerPubkey'),
-                ),
-              );
-            }
-            verify(() => mockCuratedListRepository.searchAllLists('crew'))
-                .called(1);
-          },
+    testWidgets(
+      'searches people lists alongside video lists without experimental flags',
+      (tester) async {
+        when(() => mockCuratedListRepository.searchAllLists(any()))
+            .thenAnswer((_) => Stream.value(const <CuratedList>[]));
+        when(
+          () => mockPeopleListsRepository.searchPublicLists(
+            any(),
+            viewerPubkey: any(named: 'viewerPubkey'),
+          ),
+        ).thenAnswer((_) => Stream.value(const <PeopleListSearchResult>[]));
+        await tester.pumpWidget(
+          createTestWidget(
+            authService: createMockAuthService(
+              authState: AuthState.authenticated,
+              currentPublicKeyHex: _viewerPubkey,
+            ),
+          ),
         );
-      }
-    }
+        await tester.pump();
+        final bloc = BlocProvider.of<ListSearchBloc>(
+          tester.element(find.byType(SearchResultsView)),
+        );
+        bloc.add(const ListSearchQueryChanged('crew'));
+        await tester.pump();
+        expect(bloc.state.requestedQuery, 'crew');
+        expect(bloc.state.query, isEmpty);
+        verifyNever(
+          () => mockCuratedListRepository.searchAllLists(any()),
+        );
+        verifyNever(
+          () => mockPeopleListsRepository.searchPublicLists(
+            any(),
+            viewerPubkey: any(named: 'viewerPubkey'),
+          ),
+        );
+        await tester.pump(searchDebounceDuration);
+        // Rx cancellation completes in the root zone; flush without advancing time.
+        await tester.runAsync(() async {});
+        await tester.pump();
+        expect(bloc.isClosed, isFalse);
+        expect(
+          BlocProvider.of<ListSearchBloc>(
+            tester.element(find.byType(SearchResultsView)),
+          ),
+          same(bloc),
+        );
+        expect(bloc.state.query, 'crew');
+        expect(bloc.state.videoStatus, ListSearchSourceStatus.success);
+        expect(bloc.state.peopleStatus, ListSearchSourceStatus.success);
+        verify(
+          () => mockPeopleListsRepository.searchPublicLists(
+            'crew',
+            viewerPubkey: _viewerPubkey,
+          ),
+        ).called(1);
+        verify(() => mockCuratedListRepository.searchAllLists('crew'))
+            .called(1);
+      },
+    );
 
     testWidgets('uses the follow graph to rank people search', (tester) async {
       final followedPubkey = 'a' * 64;

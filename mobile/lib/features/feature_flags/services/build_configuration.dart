@@ -15,19 +15,12 @@ class BuildConfiguration {
         return const bool.fromEnvironment('FF_ENHANCED_ANALYTICS');
       case FeatureFlag.debugTools:
         return const bool.fromEnvironment('FF_DEBUG_TOOLS', defaultValue: true);
-      case FeatureFlag.curatedLists:
-        return const bool.fromEnvironment(
-          'FF_CURATED_LISTS',
-          defaultValue: true,
-        );
       case FeatureFlag.blueskyPublishing:
         return const bool.fromEnvironment('FF_BLUESKY_PUBLISHING');
       case FeatureFlag.integratedApps:
         return const bool.fromEnvironment('FF_INTEGRATED_APPS');
       case FeatureFlag.accountSwitching:
         return const bool.fromEnvironment('FF_ACCOUNT_SWITCHING');
-      case FeatureFlag.profileListFeatures:
-        return const bool.fromEnvironment('FF_PROFILE_LIST_FEATURES');
       case FeatureFlag.videoReplies:
         return const bool.fromEnvironment(
           'FF_VIDEO_REPLIES',
@@ -39,7 +32,10 @@ class BuildConfiguration {
         // TODO(#6649): Re-promote after divine-funnelcake#691 ships.
         return const bool.fromEnvironment('FF_FEED_TUNING');
       case FeatureFlag.profileMonetizationLinks:
-        return const bool.fromEnvironment('FF_PROFILE_MONETIZATION_LINKS');
+        return const bool.fromEnvironment(
+          'FF_PROFILE_MONETIZATION_LINKS',
+          defaultValue: true,
+        );
       case FeatureFlag.communityContentWarnings:
         // Default OFF pending T&S sign-off on surfacing warnings from
         // unverified community votes (#4771).
@@ -91,16 +87,12 @@ class BuildConfiguration {
         return 'FF_ENHANCED_ANALYTICS';
       case FeatureFlag.debugTools:
         return 'FF_DEBUG_TOOLS';
-      case FeatureFlag.curatedLists:
-        return 'FF_CURATED_LISTS';
       case FeatureFlag.blueskyPublishing:
         return 'FF_BLUESKY_PUBLISHING';
       case FeatureFlag.integratedApps:
         return 'FF_INTEGRATED_APPS';
       case FeatureFlag.accountSwitching:
         return 'FF_ACCOUNT_SWITCHING';
-      case FeatureFlag.profileListFeatures:
-        return 'FF_PROFILE_LIST_FEATURES';
       case FeatureFlag.videoReplies:
         return 'FF_VIDEO_REPLIES';
       case FeatureFlag.advancedRelaySettings:

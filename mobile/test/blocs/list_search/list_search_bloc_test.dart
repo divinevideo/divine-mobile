@@ -79,12 +79,10 @@ void main() {
     });
 
     ListSearchBloc buildBloc({
-      bool peopleEnabled = false,
       String? viewerPubkey,
     }) => ListSearchBloc(
       curatedListRepository: curatedListRepository,
       peopleListsRepository: peopleListsRepository,
-      peopleListSearchEnabled: peopleEnabled,
       viewerPubkey: viewerPubkey,
     );
 
@@ -95,7 +93,7 @@ void main() {
     group(ListSearchQueryChanged, () {
       blocTest<ListSearchBloc, ListSearchState>(
         'does not search and resets when the query contains a private key',
-        build: () => buildBloc(peopleEnabled: true),
+        build: buildBloc,
         seed: () => ListSearchState(
           status: ListSearchStatus.success,
           query: 'top',
@@ -143,7 +141,25 @@ void main() {
           isA<ListSearchState>()
               .having((s) => s.status, 'status', ListSearchStatus.success)
               .having((s) => s.query, 'query', 'videos')
-              .having((s) => s.videoResults, 'videoResults', [testCuratedList]),
+              .having((s) => s.videoResults, 'videoResults', [testCuratedList])
+              .having(
+                (s) => s.videoStatus,
+                'videoStatus',
+                ListSearchSourceStatus.success,
+              )
+              .having(
+                (s) => s.peopleStatus,
+                'peopleStatus',
+                ListSearchSourceStatus.loading,
+              ),
+          ListSearchState(
+            status: ListSearchStatus.success,
+            query: 'videos',
+            requestedQuery: 'videos',
+            videoResults: [testCuratedList],
+            videoStatus: ListSearchSourceStatus.success,
+            peopleStatus: ListSearchSourceStatus.success,
+          ),
         ],
       );
 
@@ -157,7 +173,7 @@ void main() {
             ),
           ).thenAnswer((_) => Stream.value([testPeopleResult]));
         },
-        build: () => buildBloc(peopleEnabled: true, viewerPubkey: 'a' * 64),
+        build: () => buildBloc(viewerPubkey: 'a' * 64),
         act: (bloc) => bloc.add(const ListSearchQueryChanged('people')),
         wait: const Duration(milliseconds: 400),
         verify: (_) {
@@ -171,13 +187,13 @@ void main() {
       );
 
       blocTest<ListSearchBloc, ListSearchState>(
-        'emits people results when people list search is enabled',
+        'emits people results for a matching query',
         setUp: () {
           when(
             () => peopleListsRepository.searchPublicLists('people'),
           ).thenAnswer((_) => Stream.value([testPeopleResult]));
         },
-        build: () => buildBloc(peopleEnabled: true),
+        build: buildBloc,
         act: (bloc) => bloc.add(const ListSearchQueryChanged('people')),
         wait: const Duration(milliseconds: 400),
         expect: () => [
@@ -202,25 +218,7 @@ void main() {
       );
 
       blocTest<ListSearchBloc, ListSearchState>(
-        'does not search people lists when flag is disabled',
-        setUp: () {
-          when(
-            () => curatedListRepository.searchAllLists('mixed'),
-          ).thenAnswer((_) => Stream.value([testCuratedList]));
-        },
-        build: buildBloc, // peopleEnabled: false by default
-        act: (bloc) => bloc.add(const ListSearchQueryChanged('mixed')),
-        wait: const Duration(milliseconds: 400),
-        verify: (bloc) {
-          verifyNever(
-            () => peopleListsRepository.searchPublicLists(any()),
-          );
-          expect(bloc.state.peopleResults, isEmpty);
-        },
-      );
-
-      blocTest<ListSearchBloc, ListSearchState>(
-        'merges video and people results when both enabled',
+        'merges video and people results from both sources',
         setUp: () {
           when(
             () => curatedListRepository.searchAllLists('mixed'),
@@ -229,7 +227,7 @@ void main() {
             () => peopleListsRepository.searchPublicLists('mixed'),
           ).thenAnswer((_) => Stream.value([testPeopleResult]));
         },
-        build: () => buildBloc(peopleEnabled: true),
+        build: buildBloc,
         act: (bloc) => bloc.add(const ListSearchQueryChanged('mixed')),
         wait: const Duration(milliseconds: 400),
         expect: () => [
@@ -272,7 +270,20 @@ void main() {
             'xyz',
           ),
           _searchState(status: ListSearchStatus.loading, query: 'xyz'),
-          _searchState(status: ListSearchStatus.success, query: 'xyz'),
+          const ListSearchState(
+            status: ListSearchStatus.loading,
+            query: 'xyz',
+            requestedQuery: 'xyz',
+            videoStatus: ListSearchSourceStatus.success,
+            peopleStatus: ListSearchSourceStatus.loading,
+          ),
+          const ListSearchState(
+            status: ListSearchStatus.success,
+            query: 'xyz',
+            requestedQuery: 'xyz',
+            videoStatus: ListSearchSourceStatus.success,
+            peopleStatus: ListSearchSourceStatus.success,
+          ),
         ],
       );
 
@@ -332,9 +343,19 @@ void main() {
             status: ListSearchStatus.loading,
             query: 'test',
           ),
-          _searchState(
+          const ListSearchState(
             status: ListSearchStatus.failure,
             query: 'test',
+            requestedQuery: 'test',
+            videoStatus: ListSearchSourceStatus.failure,
+            peopleStatus: ListSearchSourceStatus.loading,
+          ),
+          const ListSearchState(
+            status: ListSearchStatus.failure,
+            query: 'test',
+            requestedQuery: 'test',
+            videoStatus: ListSearchSourceStatus.failure,
+            peopleStatus: ListSearchSourceStatus.success,
           ),
         ],
         errors: () => [isA<Exception>()],
@@ -350,7 +371,7 @@ void main() {
             () => peopleListsRepository.searchPublicLists(any()),
           ).thenAnswer((_) => Stream.error(Exception('relay down')));
         },
-        build: () => buildBloc(peopleEnabled: true),
+        build: buildBloc,
         act: (bloc) => bloc.add(const ListSearchQueryChanged('test')),
         wait: const Duration(milliseconds: 400),
         expect: () => [
@@ -398,7 +419,25 @@ void main() {
           ),
           isA<ListSearchState>()
               .having((s) => s.status, 'status', ListSearchStatus.success)
-              .having((s) => s.videoResults, 'videoResults', [testCuratedList]),
+              .having((s) => s.videoResults, 'videoResults', [testCuratedList])
+              .having(
+                (s) => s.videoStatus,
+                'videoStatus',
+                ListSearchSourceStatus.success,
+              )
+              .having(
+                (s) => s.peopleStatus,
+                'peopleStatus',
+                ListSearchSourceStatus.loading,
+              ),
+          ListSearchState(
+            status: ListSearchStatus.success,
+            query: 'test',
+            requestedQuery: 'test',
+            videoResults: [testCuratedList],
+            videoStatus: ListSearchSourceStatus.success,
+            peopleStatus: ListSearchSourceStatus.success,
+          ),
         ],
       );
 
@@ -430,16 +469,36 @@ void main() {
             'vid',
           ),
           _searchState(status: ListSearchStatus.loading, query: 'vid'),
-          isA<ListSearchState>().having(
-            (s) => s.videoResults.length,
-            'videoResults.length',
-            1,
+          ListSearchState(
+            status: ListSearchStatus.success,
+            query: 'vid',
+            requestedQuery: 'vid',
+            videoResults: [testCuratedList],
+            videoStatus: ListSearchSourceStatus.success,
+            peopleStatus: ListSearchSourceStatus.loading,
           ),
-          isA<ListSearchState>().having(
-            (s) => s.videoResults.length,
-            'videoResults.length',
-            2,
+          ListSearchState(
+            status: ListSearchStatus.success,
+            query: 'vid',
+            requestedQuery: 'vid',
+            videoResults: [testCuratedList],
+            videoStatus: ListSearchSourceStatus.success,
+            peopleStatus: ListSearchSourceStatus.success,
           ),
+          isA<ListSearchState>()
+              .having((s) => s.status, 'status', ListSearchStatus.success)
+              .having((s) => s.query, 'query', 'vid')
+              .having((s) => s.videoResults.length, 'videoResults.length', 2)
+              .having(
+                (s) => s.videoStatus,
+                'videoStatus',
+                ListSearchSourceStatus.success,
+              )
+              .having(
+                (s) => s.peopleStatus,
+                'peopleStatus',
+                ListSearchSourceStatus.success,
+              ),
         ],
       );
     });
@@ -454,15 +513,26 @@ void main() {
         ),
         act: (bloc) => bloc.add(const ListSearchBlocklistChanged()),
         expect: () => [
-          isA<ListSearchState>().having(
-            (s) => s.status,
-            'status',
-            ListSearchStatus.loading,
+          const ListSearchState(
+            status: ListSearchStatus.loading,
+            query: 'videos',
+            requestedQuery: 'videos',
+            videoStatus: ListSearchSourceStatus.loading,
+            peopleStatus: ListSearchSourceStatus.loading,
           ),
-          isA<ListSearchState>().having(
-            (s) => s.status,
-            'status',
-            ListSearchStatus.success,
+          const ListSearchState(
+            status: ListSearchStatus.loading,
+            query: 'videos',
+            requestedQuery: 'videos',
+            videoStatus: ListSearchSourceStatus.success,
+            peopleStatus: ListSearchSourceStatus.loading,
+          ),
+          const ListSearchState(
+            status: ListSearchStatus.success,
+            query: 'videos',
+            requestedQuery: 'videos',
+            videoStatus: ListSearchSourceStatus.success,
+            peopleStatus: ListSearchSourceStatus.success,
           ),
         ],
         verify: (_) {
@@ -505,7 +575,7 @@ void main() {
               .thenAnswer((_) => videos.stream);
           when(() => peopleListsRepository.searchPublicLists('mixed'))
               .thenAnswer((_) => people.stream);
-          final bloc = buildBloc(peopleEnabled: true);
+          final bloc = buildBloc();
           addTearDown(() async {
             await bloc.close();
             await videos.close();
@@ -565,7 +635,7 @@ void main() {
                         const PublicPeopleListReadUnavailableException(),
                       ),
               );
-          final bloc = buildBloc(peopleEnabled: true);
+          final bloc = buildBloc();
           addTearDown(bloc.close);
           bloc.add(const ListSearchQueryChanged('mixed'));
           await bloc.stream.firstWhere(
@@ -603,7 +673,7 @@ void main() {
                 ? Stream.error(const PublicPeopleListReadUnavailableException())
                 : Stream.value([testPeopleResult]),
           );
-          final bloc = buildBloc(peopleEnabled: true);
+          final bloc = buildBloc();
           addTearDown(bloc.close);
           bloc.add(const ListSearchQueryChanged('mixed'));
           await bloc.stream.firstWhere((state) => state.hasSourceFailure);
@@ -626,7 +696,7 @@ void main() {
             .thenAnswer((_) => Stream.error(Exception('video unavailable')));
         when(() => peopleListsRepository.searchPublicLists('mixed'))
             .thenAnswer((_) => Stream.value([testPeopleResult]));
-        final bloc = buildBloc(peopleEnabled: true);
+        final bloc = buildBloc();
         addTearDown(bloc.close);
         bloc.add(const ListSearchQueryChanged('mixed'));
         await bloc.stream.firstWhere((state) => state.peopleResults.isNotEmpty);
@@ -706,7 +776,7 @@ void main() {
             .thenAnswer((_) => videos.stream);
         when(() => peopleListsRepository.searchPublicLists('active'))
             .thenAnswer((_) => people.stream);
-        final bloc = buildBloc(peopleEnabled: true);
+        final bloc = buildBloc();
         final subscribed = bloc.stream.firstWhere(
           (s) =>
               s.query == 'active' &&
@@ -767,7 +837,7 @@ void main() {
             (_) =>
                 Stream.error(const PublicPeopleListReadUnavailableException()),
           );
-          final bloc = buildBloc(peopleEnabled: true);
+          final bloc = buildBloc();
           addTearDown(bloc.close);
           bloc.add(const ListSearchQueryChanged('mixed'));
           await bloc.stream.firstWhere((state) => state.hasSourceFailure);
@@ -806,7 +876,7 @@ void main() {
                   (_) =>
                       peopleCalls++ == 0 ? people.stream : const Stream.empty(),
                 );
-            final bloc = buildBloc(peopleEnabled: true);
+            final bloc = buildBloc();
             addTearDown(() async {
               await bloc.close();
               await videos.close();
@@ -840,7 +910,7 @@ void main() {
       }
 
       test('clear also cancels a query still in its debounce', () async {
-        final bloc = buildBloc(peopleEnabled: true);
+        final bloc = buildBloc();
         addTearDown(bloc.close);
         bloc.add(const ListSearchQueryChanged('pending'));
         bloc.add(const ListSearchCleared());

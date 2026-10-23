@@ -14,10 +14,6 @@ enum FeatureFlag {
     'Detailed usage tracking and insights',
   ),
   debugTools('Debug Tools', 'Developer debugging utilities and diagnostics'),
-  // Named for the share-menu action it used to gate. Video lists (kind 30005)
-  // now ship unflagged, so this is the master switch for people lists
-  // (NIP-51 kind 30000) only, which profileListFeatures narrows further.
-  curatedLists('Curated Lists', 'Master switch for people lists (kind 30000)'),
   blueskyPublishing(
     'Bluesky Publishing',
     'Enable Bluesky crosspost toggle in settings',
@@ -29,10 +25,6 @@ enum FeatureFlag {
   accountSwitching(
     'Account Switching',
     'Enable switching between remembered accounts in Settings',
-  ),
-  profileListFeatures(
-    'Profile List Features',
-    'Enable people list creation from profiles and people list results in search (NIP-51 kind 30000)',
   ),
   videoReplies(
     'Video Replies',

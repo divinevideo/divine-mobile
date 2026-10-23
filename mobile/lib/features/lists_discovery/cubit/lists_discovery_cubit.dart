@@ -37,7 +37,6 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
     required CuratedListRepository curatedListRepository,
     required PeopleListsRepository peopleListsRepository,
     required String? viewerPubkey,
-    bool peopleListsEnabled = true,
     bool videoInitializationFailed = false,
     bool Function(String authorPubkey)? blockFilter,
     ListsDiscoveryState? seed,
@@ -46,12 +45,10 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
        _peopleListsRepository = peopleListsRepository,
        _viewerPubkey = viewerPubkey,
        _blockFilter = blockFilter,
-       _peopleListsEnabled = peopleListsEnabled,
        _videoInitializationFailed = videoInitializationFailed,
        _isSeeded = seed != null,
        super(
          (seed ?? const ListsDiscoveryState()).copyWith(
-           peopleListsEnabled: peopleListsEnabled,
            videoInitializationFailed: videoInitializationFailed,
            videoStatus: videoInitializationFailed
                ? ListsDiscoveryColumnStatus.failure
@@ -64,7 +61,6 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
   final PeopleListsRepository _peopleListsRepository;
   final String? _viewerPubkey;
   final bool _isSeeded;
-  final bool _peopleListsEnabled;
   final bool _videoInitializationFailed;
   final bool Function(String authorPubkey)? _blockFilter;
 
@@ -81,7 +77,7 @@ class ListsDiscoveryCubit extends Cubit<ListsDiscoveryState>
     return Future.wait([
       if (!_videoInitializationFailed && _curatedListService != null)
         _loadVideoLists(),
-      if (_peopleListsEnabled) _loadPeopleLists(),
+      _loadPeopleLists(),
     ]);
   }
 

@@ -56,7 +56,6 @@ void main() {
         repository: repository,
         ownerPubkeyStream: const Stream.empty(),
         repositoryStream: const Stream.empty(),
-        enabledStream: const Stream.empty(),
         initialOwnerPubkey: ownerPubkey,
         clock: () => DateTime.utc(2026),
       );

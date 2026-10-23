@@ -38,7 +38,6 @@ class _EditPeopleListPageState extends ConsumerState<EditPeopleListPage> {
     return BlocBuilder<PeopleListsBloc, PeopleListsState>(
       builder: (context, state) {
         if (_openingOwner == null ||
-            !state.enabled ||
             state.activeOwnerPubkey != _openingOwner ||
             ref.read(authServiceProvider).currentPublicKeyHex !=
                 _openingOwner) {

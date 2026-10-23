@@ -75,7 +75,6 @@ void main() {
 
     ListsDiscoveryCubit buildCubit({
       ListsDiscoveryState? seed,
-      bool peopleListsEnabled = true,
       bool Function(String)? blockFilter,
       bool videoInitializationFailed = false,
     }) => ListsDiscoveryCubit(
@@ -84,7 +83,6 @@ void main() {
       peopleListsRepository: peopleRepository,
       viewerPubkey: _viewer,
       seed: seed,
-      peopleListsEnabled: peopleListsEnabled,
       blockFilter: blockFilter,
       videoInitializationFailed: videoInitializationFailed,
     );
@@ -112,24 +110,23 @@ void main() {
       });
 
       test(
-        'master off skips people query and retains video discovery',
+        'loads people and video discovery together',
         () async {
           when(
             () =>
                 service.streamPublicListsFromRelays(limit: any(named: 'limit')),
           ).thenAnswer((_) => Stream.value([_videoList('video')]));
-          final cubit = buildCubit(peopleListsEnabled: false);
+          final cubit = buildCubit();
           addTearDown(cubit.close);
           await cubit.load();
           expect(cubit.state.videoLists.single.id, 'video');
-          expect(cubit.state.peopleListsEnabled, isFalse);
-          expect(cubit.state.peopleLists, isEmpty);
-          verifyNever(
+          expect(cubit.state.peopleLists.single.list.id, 'crew');
+          verify(
             () => peopleRepository.discoverPublicLists(
               limit: any(named: 'limit'),
               excludeAuthor: any(named: 'excludeAuthor'),
             ),
-          );
+          ).called(1);
         },
       );
 

@@ -170,20 +170,5 @@ void main() {
       expect(find.text(l10n.peopleListsSessionChanged), findsOneWidget);
       expect(find.byType(CreatePeopleListPage), findsNothing);
     });
-
-    testWidgets('refuses to edit while the feature is off', (tester) async {
-      await pumpPage(
-        tester,
-        state: PeopleListsState(
-          status: PeopleListsStatus.ready,
-          ownerPubkey: _owner,
-          enabled: false,
-          lists: [_list()],
-        ),
-      );
-
-      expect(find.text(l10n.peopleListsSessionChanged), findsOneWidget);
-      expect(find.byType(CreatePeopleListPage), findsNothing);
-    });
   });
 }

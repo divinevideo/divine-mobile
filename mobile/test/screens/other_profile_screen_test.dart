@@ -295,9 +295,6 @@ void main() {
         isFeatureEnabledProvider(
           FeatureFlag.profileMonetizationLinks,
         ).overrideWith((ref) => false),
-        isFeatureEnabledProvider(
-          FeatureFlag.curatedLists,
-        ).overrideWith((ref) => false),
         // Element-level, since the standard overrides already claim the
         // family and Riverpod rejects a second family override.
         if (isVanished)
@@ -461,7 +458,7 @@ void main() {
       're-fetches raw Kind 0 when the monetization flag flips while mounted',
       (tester) async {
         // Regression: the flag both gates the Tip/Support button AND gates
-        // OtherProfileBloc.requireRawKind0 (relay Kind 0, which carries the
+        // OtherProfileBloc.loadSupportLinks (relay Kind 0, which carries the
         // monetization links, vs the REST projection that strips them). A
         // keyless BlocProvider captured the first flag value forever, so
         // enabling the flag on an already-mounted profile never re-fetched the
@@ -483,13 +480,15 @@ void main() {
         when(
           () => profileRepo.fetchFreshProfile(pubkey: any(named: 'pubkey')),
         ).thenAnswer((_) async => profile());
+        final raw = Completer<UserProfile?>();
+        addTearDown(() {
+          if (!raw.isCompleted) raw.complete(null);
+        });
         when(
-          () => profileRepo.fetchFreshProfile(
+          () => profileRepo.fetchRawProfileForDisplay(
             pubkey: any(named: 'pubkey'),
-            requireRawKind0: any(named: 'requireRawKind0'),
-            rawKind0RetryDelays: any(named: 'rawKind0RetryDelays'),
           ),
-        ).thenAnswer((_) async => profile());
+        ).thenAnswer((_) => raw.future);
         // The load also drives the identity-claims flow; stub it to resolve to
         // no claims so it completes without a MissingStub TypeError.
         when(
@@ -545,9 +544,6 @@ void main() {
               FeatureFlag.videoReplies,
             ).overrideWith((ref) => false),
             isFeatureEnabledProvider(
-              FeatureFlag.curatedLists,
-            ).overrideWith((ref) => false),
-            isFeatureEnabledProvider(
               FeatureFlag.profileMonetizationLinks,
             ).overrideWith((ref) => ref.watch(flag)),
           ],
@@ -570,14 +566,10 @@ void main() {
         );
         await tester.pump(const Duration(milliseconds: 50));
 
-        // Flag OFF: bloc fetched with requireRawKind0 false, never true.
         verifyNever(
-          () => profileRepo.fetchFreshProfile(
-            pubkey: targetPubkey,
-            requireRawKind0: true,
-            rawKind0RetryDelays: any(named: 'rawKind0RetryDelays'),
-          ),
+          () => profileRepo.fetchRawProfileForDisplay(pubkey: targetPubkey),
         );
+        expect(find.byKey(const Key('profile-support-button')), findsNothing);
 
         container.read(flag.notifier).state = true;
         await tester.pump();
@@ -585,12 +577,26 @@ void main() {
 
         // Flipping the flag must recreate the bloc and re-fetch the raw Kind 0.
         verify(
-          () => profileRepo.fetchFreshProfile(
-            pubkey: targetPubkey,
-            requireRawKind0: true,
-            rawKind0RetryDelays: any(named: 'rawKind0RetryDelays'),
-          ),
+          () => profileRepo.fetchRawProfileForDisplay(pubkey: targetPubkey),
         ).called(1);
+        expect(find.byKey(const Key('profile-support-button')), findsNothing);
+        raw.complete(
+          profile().copyWith(
+            rawData: {
+              divineMonetizationLinksKey: [
+                const MonetizationLink(
+                  provider: MonetizationLinkProvider.cashApp,
+                  category: MonetizationLinkCategory.tip,
+                  url: r'https://cash.app/$creator',
+                  enabled: true,
+                ).toJson(),
+              ],
+            },
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(find.byKey(const Key('profile-support-button')), findsOneWidget);
       },
     );
 

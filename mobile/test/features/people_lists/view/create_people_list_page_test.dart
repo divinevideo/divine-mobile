@@ -465,23 +465,6 @@ void main() {
       verifyNever(() => bloc.submit(any()));
     });
 
-    testWidgets('does not submit after the feature is disabled', (
-      tester,
-    ) async {
-      await tester.pumpWidget(buildSubject());
-      await tester.enterText(
-        find.byType(TextFormField).first,
-        'Account A fields',
-      );
-      await tester.pump();
-      when(() => bloc.state).thenReturn(
-        const PeopleListsState(ownerPubkey: _ownerPubkey, enabled: false),
-      );
-      await tester.tap(find.widgetWithText(DivineButton, 'Create'));
-      await tester.pump();
-      verifyNever(() => bloc.submit(any()));
-    });
-
     test(
       'pathWithInitialPubkey builds a URL with URI-encoded, untruncated '
       'pubkey',

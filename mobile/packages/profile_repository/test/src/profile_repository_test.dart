@@ -748,6 +748,247 @@ void main() {
           verify(() => mockUserProfilesDao.upsertProfile(any())).called(1);
         });
 
+        test(
+          'display raw read skips REST and accepts a partial relay answer',
+          () async {
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            stubRawRelayRead(events: [mockProfileEvent], timedOut: true);
+            final result = await repoWithFunnelcake.fetchRawProfileForDisplay(
+              pubkey: testPubkey,
+            );
+            expect(result?.eventId, testEventId);
+            verify(
+              () => mockNostrClient.fetchProfile(testPubkey, useCache: false),
+            ).called(1);
+            verifyNever(() => mockFunnelcakeClient.getUserProfile(any()));
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(false);
+            expect(
+              await repoWithFunnelcake.fetchFreshProfile(
+                pubkey: testPubkey,
+                requireRawKind0: true,
+              ),
+              isNull,
+            );
+          },
+        );
+
+        test('concurrent display raw reads share one relay fetch', () async {
+          final connected = Completer<Event?>();
+          final indexer = Completer<List<Event>>();
+          when(
+            () => mockNostrClient.fetchProfile(testPubkey, useCache: false),
+          ).thenAnswer((_) => connected.future);
+          when(
+            () => mockNostrClient.queryEvents(
+              any(),
+              tempRelays: any(named: 'tempRelays'),
+              useCache: false,
+            ),
+          ).thenAnswer((_) => indexer.future);
+
+          final first = repoWithFunnelcake.fetchRawProfileForDisplay(
+            pubkey: testPubkey,
+          );
+          final second = repoWithFunnelcake.fetchRawProfileForDisplay(
+            pubkey: testPubkey,
+          );
+          connected.complete(mockProfileEvent);
+          final results = await Future.wait([first, second]);
+
+          expect(results.map((profile) => profile?.eventId), [
+            testEventId,
+            testEventId,
+          ]);
+          verify(
+            () => mockNostrClient.fetchProfile(testPubkey, useCache: false),
+          ).called(1);
+          verify(
+            () => mockNostrClient.queryEvents(
+              any(),
+              tempRelays: any(named: 'tempRelays'),
+              useCache: false,
+            ),
+          ).called(1);
+          indexer.complete([]);
+          await pumpEventQueue();
+        });
+
+        test(
+          'late display source invariant is logged after an early result',
+          () async {
+            final indexer = Completer<List<Event>>();
+            when(
+              () => mockNostrClient.queryEvents(
+                any(),
+                tempRelays: any(named: 'tempRelays'),
+                useCache: false,
+              ),
+            ).thenAnswer((_) => indexer.future);
+            final result = await repoWithFunnelcake.fetchRawProfileForDisplay(
+              pubkey: testPubkey,
+            );
+            expect(result?.eventId, testEventId);
+
+            final invariant = StateError('late display source invariant');
+            final stackTrace = StackTrace.current;
+            indexer.completeError(invariant, stackTrace);
+            await pumpEventQueue();
+
+            final captured = LogCaptureService().getRecentLogs().where(
+              (entry) =>
+                  entry.message == 'Late raw profile display source failed' &&
+                  entry.error == invariant.toString(),
+            );
+            expect(captured, hasLength(1));
+            final entry = captured.single;
+            expect(entry.name, 'ProfileRepository.fetchRawProfileForDisplay');
+            expect(entry.level, LogLevel.error);
+            expect(
+              entry.stackTrace,
+              contains(stackTrace.toString().split('\n').first),
+            );
+            expect(
+              (await repoWithFunnelcake.getCachedProfile(
+                pubkey: testPubkey,
+              ))?.eventId,
+              testEventId,
+            );
+          },
+        );
+
+        test('display raw read retries after a strict session miss', () async {
+          when(() => mockFunnelcakeClient.isAvailable).thenReturn(false);
+          stubRawRelayRead();
+          expect(
+            await repoWithFunnelcake.fetchFreshProfile(
+              pubkey: testPubkey,
+              requireRawKind0: true,
+            ),
+            isNull,
+          );
+          expect(
+            (await repoWithFunnelcake.fetchRawProfileForDisplay(
+              pubkey: testPubkey,
+            ))?.eventId,
+            testEventId,
+          );
+        });
+
+        test(
+          'display raw read returns indexer while connected relay is pending',
+          () async {
+            final connected = Completer<Event?>();
+            when(
+              () => mockNostrClient.fetchProfile(testPubkey, useCache: false),
+            ).thenAnswer((_) => connected.future);
+            when(
+              () => mockNostrClient.queryEvents(
+                any(),
+                tempRelays: any(named: 'tempRelays'),
+                useCache: false,
+              ),
+            ).thenAnswer((_) async => [mockProfileEvent]);
+            final result = await repoWithFunnelcake.fetchRawProfileForDisplay(
+              pubkey: testPubkey,
+            );
+            expect(result?.eventId, testEventId);
+            connected.complete(null);
+          },
+        );
+
+        test(
+          'equal REST timestamp certifies cached time and keeps metadata',
+          () async {
+            final timestamp = DateTime.utc(2026);
+            final cached = UserProfile(
+              pubkey: testPubkey,
+              rawData: const {'custom': 'kept'},
+              createdAt: timestamp.toLocal(),
+              eventId: 'rest-$testPubkey',
+            );
+            await repoWithFunnelcake.cacheProfile(cached);
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            when(
+              () => mockFunnelcakeClient.getUserProfile(testPubkey),
+            ).thenAnswer(
+              (_) async => UserProfileFound(
+                profile: UserProfileData(
+                  pubkey: testPubkey,
+                  createdAt: timestamp,
+                ),
+              ),
+            );
+            final result = await repoWithFunnelcake.fetchFreshProfile(
+              pubkey: testPubkey,
+            );
+            expect(result!.hasAuthoritativeTimestamp, isTrue);
+            expect(result.rawData, cached.rawData);
+          },
+        );
+
+        test(
+          'older REST timestamp cannot certify a different cached timestamp',
+          () async {
+            await repoWithFunnelcake.cacheProfile(
+              UserProfile(
+                pubkey: testPubkey,
+                rawData: const {},
+                createdAt: DateTime.utc(2027),
+                eventId: 'rest-$testPubkey',
+              ),
+            );
+            when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);
+            when(
+              () => mockFunnelcakeClient.getUserProfile(testPubkey),
+            ).thenAnswer(
+              (_) async => UserProfileFound(
+                profile: UserProfileData(
+                  pubkey: testPubkey,
+                  createdAt: DateTime.utc(2026),
+                ),
+              ),
+            );
+            final result = await repoWithFunnelcake.fetchFreshProfile(
+              pubkey: testPubkey,
+            );
+            expect(result!.hasAuthoritativeTimestamp, isFalse);
+          },
+        );
+
+        test(
+          'display raw read upgrades an equal-timestamp REST cache',
+          () async {
+            await repoWithFunnelcake.cacheProfile(
+              UserProfile(
+                pubkey: testPubkey,
+                rawData: const {},
+                createdAt: mockProfileEvent.createdAtDateTime.toLocal(),
+                eventId: 'rest-$testPubkey',
+              ),
+            );
+            await repoWithFunnelcake.fetchRawProfileForDisplay(
+              pubkey: testPubkey,
+            );
+            final cached = await repoWithFunnelcake.getCachedProfile(
+              pubkey: testPubkey,
+            );
+            expect(cached!.eventId, testEventId);
+          },
+        );
+
+        test(
+          'display raw read does not swallow programming invariants',
+          () async {
+            when(
+              () => mockNostrClient.fetchProfile(testPubkey, useCache: false),
+            ).thenThrow(StateError('broken invariant'));
+            await expectLater(
+              repoWithFunnelcake.fetchRawProfileForDisplay(pubkey: testPubkey),
+              throwsStateError,
+            );
+          },
+        );
+
         test('requires relay metadata when raw Kind 0 is requested', () async {
           stubRelaysServeProfileEvent();
           when(() => mockFunnelcakeClient.isAvailable).thenReturn(true);

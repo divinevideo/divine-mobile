@@ -279,12 +279,6 @@ void main() {
     isFeatureEnabledProvider(
       FeatureFlag.profileMonetizationLinks,
     ).overrideWith((ref) => false),
-    isFeatureEnabledProvider(
-      FeatureFlag.curatedLists,
-    ).overrideWith((ref) => false),
-    isFeatureEnabledProvider(
-      FeatureFlag.profileListFeatures,
-    ).overrideWith((ref) => false),
   ];
 
   /// The routes every scenario below needs: the two shapes of the in-shell

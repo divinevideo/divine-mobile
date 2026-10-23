@@ -29,11 +29,15 @@ void trackMonetizationAffordanceTapped({
       parameters: {
         'link_count': enabledLinks.length,
         'tip_count': enabledLinks
-            .where((link) => link.category == MonetizationLinkCategory.tip)
+            .where(
+              (link) => link.provider.category == MonetizationLinkCategory.tip,
+            )
             .length,
         'subscription_count': enabledLinks
             .where(
-              (link) => link.category == MonetizationLinkCategory.subscription,
+              (link) =>
+                  link.provider.category ==
+                  MonetizationLinkCategory.subscription,
             )
             .length,
       },
@@ -55,5 +59,5 @@ void trackMonetizationOutboundClicked({
 
 Map<String, Object> _linkParameters(MonetizationLink link) => {
   'provider': link.provider.value,
-  'category': link.category.value,
+  'category': link.provider.category.value,
 };

@@ -1,13 +1,11 @@
-// ABOUTME: Tests for PeopleListMembershipIndicator: flag/count gating + copy.
-// ABOUTME: Uses mocked PeopleListsBloc state + overridden feature flag.
+// ABOUTME: Tests for PeopleListMembershipIndicator: counts and localized copy.
+// ABOUTME: Uses mocked PeopleListsBloc state.
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/features/people_lists/view/people_list_membership_indicator.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -31,7 +29,6 @@ void main() {
     });
 
     Widget buildSubject({
-      required bool flagEnabled,
       required PeopleListsState state,
     }) {
       whenListen(
@@ -40,11 +37,6 @@ void main() {
         initialState: state,
       );
       return ProviderScope(
-        overrides: [
-          isFeatureEnabledProvider(
-            FeatureFlag.curatedLists,
-          ).overrideWith((ref) => flagEnabled),
-        ],
         child: BlocProvider<PeopleListsBloc>.value(
           value: bloc,
           child: const MaterialApp(
@@ -58,23 +50,11 @@ void main() {
       );
     }
 
-    testWidgets('renders SizedBox.shrink when flag is off', (tester) async {
-      await tester.pumpWidget(
-        buildSubject(
-          flagEnabled: false,
-          state: const PeopleListsState(),
-        ),
-      );
-
-      expect(find.textContaining('list'), findsNothing);
-    });
-
     testWidgets(
       'renders SizedBox.shrink when count is 0',
       (tester) async {
         await tester.pumpWidget(
           buildSubject(
-            flagEnabled: true,
             state: const PeopleListsState(),
           ),
         );
@@ -88,7 +68,6 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           buildSubject(
-            flagEnabled: true,
             state: const PeopleListsState(
               listIdsByPubkey: {
                 _fullPubkey: {'listA'},
@@ -106,7 +85,6 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           buildSubject(
-            flagEnabled: true,
             state: const PeopleListsState(
               listIdsByPubkey: {
                 _fullPubkey: {'a', 'b', 'c'},
@@ -126,7 +104,6 @@ void main() {
 
         await tester.pumpWidget(
           buildSubject(
-            flagEnabled: true,
             state: const PeopleListsState(
               listIdsByPubkey: {
                 _fullPubkey: {'listA', 'listB'},

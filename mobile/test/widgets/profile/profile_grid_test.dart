@@ -25,6 +25,7 @@ import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_state.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -103,6 +104,9 @@ class _MockProfileFeedCubit extends MockBloc<ProfileFeedEvent, ProfileFeedState>
 
 class _MockMyProfileBloc extends MockBloc<MyProfileEvent, MyProfileState>
     implements MyProfileBloc {}
+
+class _MockPeopleListsBloc extends MockBloc<PeopleListsEvent, PeopleListsState>
+    implements PeopleListsBloc {}
 
 class _MockCuratedListService extends Mock implements CuratedListService {
   _MockCuratedListService() {
@@ -251,6 +255,19 @@ void main() {
       });
     });
 
+    PeopleListsBloc createPeopleListsBloc() {
+      final bloc = _MockPeopleListsBloc();
+      whenListen(
+        bloc,
+        const Stream<PeopleListsState>.empty(),
+        initialState: const PeopleListsState(
+          status: PeopleListsStatus.ready,
+          ownerPubkey: userIdHex,
+        ),
+      );
+      return bloc;
+    }
+
     Widget buildSubject({
       required bool isOwnProfile,
       bool isLoadingVideos = false,
@@ -267,6 +284,7 @@ void main() {
         providers: [
           BlocProvider<MyProfileBloc>.value(value: myProfileBloc),
           BlocProvider<ProfileFeedCubit>.value(value: profileFeedCubit),
+          BlocProvider<PeopleListsBloc>(create: (_) => createPeopleListsBloc()),
         ],
         child: ProfileGridView(
           key: const ValueKey('profile-grid'),
@@ -306,9 +324,6 @@ void main() {
           isFeatureEnabledProvider(
             FeatureFlag.videoReplies,
           ).overrideWith((_) => false),
-          isFeatureEnabledProvider(
-            FeatureFlag.curatedLists,
-          ).overrideWith((_) => false),
           if (curatedListService != null)
             curatedListsStateProvider.overrideWith(
               () => _FakeCuratedListsState(curatedListService),
@@ -332,6 +347,9 @@ void main() {
               providers: [
                 BlocProvider<MyProfileBloc>.value(value: myProfileBloc),
                 BlocProvider<ProfileFeedCubit>.value(value: profileFeedCubit),
+                BlocProvider<PeopleListsBloc>(
+                  create: (_) => createPeopleListsBloc(),
+                ),
               ],
               child: const ProfileGridView(
                 key: ValueKey('profile-grid'),
@@ -482,9 +500,6 @@ void main() {
             ),
             isFeatureEnabledProvider(
               FeatureFlag.videoReplies,
-            ).overrideWith((_) => false),
-            isFeatureEnabledProvider(
-              FeatureFlag.curatedLists,
             ).overrideWith((_) => false),
           ],
         );

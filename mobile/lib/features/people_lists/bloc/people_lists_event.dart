@@ -34,24 +34,6 @@ class PeopleListsRepositoryChanged extends PeopleListsEvent {
   List<Object?> get props => [repository];
 }
 
-/// Internal event emitted when the injected enabled stream reports that
-/// `FeatureFlag.curatedLists` flipped.
-///
-/// The app-shell `BlocProvider` is deliberately unconditional — a conditional
-/// entry changed the provider chain's shape and re-inflated the Navigator on
-/// every flip (#6477) — so a bloc constructed while the flag was on outlives
-/// the flag going off. This event is how it stops (#6494).
-class PeopleListsEnabledChanged extends PeopleListsEvent {
-  /// Creates a feature-enabled-change event.
-  const PeopleListsEnabledChanged({required this.enabled});
-
-  /// Whether the curated-lists feature is enabled from now on.
-  final bool enabled;
-
-  @override
-  List<Object?> get props => [enabled];
-}
-
 /// Internal event emitted when the owner pubkey stream changes.
 ///
 /// Also carries the repository re-wire (see [PeopleListsOwnerChanged.rewire]).

@@ -29,6 +29,6 @@ List<MonetizationLink> monetizationLinksForCurrentStorefront(
   }
 
   return links
-      .where((link) => link.category == MonetizationLinkCategory.tip)
+      .where((link) => link.provider.category == MonetizationLinkCategory.tip)
       .toList(growable: false);
 }
