@@ -1355,14 +1355,12 @@ class NotificationRepository {
   /// Subsequent pages merge incoming items into the existing snapshot
   /// using target-group merges followed by duplicate-event gates:
   ///
-  /// 1. **`(videoEventId, type)` overlap (VideoNotification only)** —
-  ///    when an incoming group matches an existing snapshot group, the
-  ///    existing row is replaced in place by
-  ///    [_mergeAppendedVideoGroup] (richer page data folded into the
-  ///    existing row, preserving its position).
-  /// Confirmed comment-like targets and repeated followers are also merged
-  /// in place, retaining every underlying notification ID.
-  ///
+  /// 1. **Target-group overlap** — an incoming item matching an existing
+  ///    snapshot row is folded into that row in place, preserving its
+  ///    position and every underlying notification ID: a confirmed
+  ///    comment-like target via [_mergeCommentLikeGroup], a
+  ///    `(videoEventId, type)` video group via [_mergeAppendedVideoGroup],
+  ///    or a repeated follower via [_mergeAppendedFollow].
   /// 2. **`sourceEventIds` overlap** — when an incoming item's
   ///    underlying Nostr event ids overlap the rendered snapshot's set,
   ///    the incoming item is skipped as a cross-page duplicate (the
