@@ -29,10 +29,12 @@ bq query --project_id=openvine-co --use_legacy_sql=false < docs/analytics/push_e
 
 The script reads the existing GA4 export and returns aggregate daily rows for
 iOS/Android. It uses temporary tables only. The default window is 28 days ending
-two UTC days ago, allowing daily export completion. Change `start_date` and
+three UTC days ago, allowing daily export completion. Change `start_date` and
 `end_date` at the top for a particular rollout; the window must be under 90 days.
 The export property's calendar may differ from UTC, so source table suffixes
-include a day on either side and event timestamps determine report dates.
+include a day before the report and two days after it to cover both the
+following observation day and property-calendar differences. Event timestamps
+determine report dates.
 
 Rows with `notification_type = all` give daily totals. Additional rows group
 sessions by the first notification type tapped; `none` means no observed tap.
@@ -56,7 +58,10 @@ Sessions are identified by `user_pseudo_id`, `ga_session_id`, and platform. No n
 cross-account identity join is used. A returning installation is not necessarily
 a returning person across devices, reinstalls, or consent resets. Sessions
 crossing midnight belong to their session-start UTC date; this is a session
-trend report, not an exact daily-active-user or D1/D7 retention report.
+trend report, not an exact daily-active-user or D1/D7 retention report. Events
+are observed through the UTC day after end_date so ordinary cross-midnight
+sessions keep their later activity. Unusually long sessions continuing beyond
+that bounded observation window remain partial.
 
 ## Reading it
 
@@ -85,12 +90,14 @@ are not credited as post-open activity.
 
 The synthetic check executes the actual report with controlled rows, including
 repeated users, unknown session numbers, a direct return, activity before/after
-the tap, and an engagement interval spanning it. It never scans production data:
+the tap, an engagement interval spanning it, and a final-day session whose tap
+and publish happen after midnight. It also applies the real timestamp filter
+and checks that activity at the observation window upper boundary is excluded. It never scans production data:
 
 ```sh
 python3 scripts/analytics/check_push_engagement_report.py
 ```
 
-A successful result prints 12 passed assertions. BigQuery script dry-runs can
+A successful result prints 15 passed assertions. BigQuery script dry-runs can
 stop before validating later statements; the executable synthetic check is the
 check of the aggregation and attribution logic.

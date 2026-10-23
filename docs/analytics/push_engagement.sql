@@ -1,7 +1,7 @@
 -- Descriptive notification attribution and return-use trends. No experiment.
 -- Closed daily exports only; timestamps and report dates are UTC.
-DECLARE start_date DATE DEFAULT DATE_SUB(CURRENT_DATE('UTC'), INTERVAL 29 DAY);
-DECLARE end_date DATE DEFAULT DATE_SUB(CURRENT_DATE('UTC'), INTERVAL 2 DAY);
+DECLARE start_date DATE DEFAULT DATE_SUB(CURRENT_DATE('UTC'), INTERVAL 30 DAY);
+DECLARE end_date DATE DEFAULT DATE_SUB(CURRENT_DATE('UTC'), INTERVAL 3 DAY);
 ASSERT start_date <= end_date AS 'start_date must not exceed end_date';
 ASSERT DATE_DIFF(end_date, start_date, DAY) < 90 AS 'report window must be under 90 days';
 
@@ -20,17 +20,18 @@ SELECT
   (SELECT value.string_value FROM UNNEST(event_params) WHERE key = 'notification_type') AS notification_type
 FROM `openvine-co.analytics_505815521.events_*`
 WHERE _TABLE_SUFFIX BETWEEN FORMAT_DATE('%Y%m%d', DATE_SUB(start_date, INTERVAL 1 DAY))
-                        AND FORMAT_DATE('%Y%m%d', DATE_ADD(end_date, INTERVAL 1 DAY))
+                        AND FORMAT_DATE('%Y%m%d', DATE_ADD(end_date, INTERVAL 2 DAY))
   AND REGEXP_CONTAINS(_TABLE_SUFFIX, r'^\d{8}$')
-  AND platform IN ('IOS', 'ANDROID')
-  AND event_timestamp >= UNIX_MICROS(TIMESTAMP(DATE_SUB(start_date, INTERVAL 1 DAY), 'UTC'))
-  AND event_timestamp < UNIX_MICROS(TIMESTAMP(DATE_ADD(end_date, INTERVAL 1 DAY), 'UTC'));
+  AND platform IN ('IOS', 'ANDROID');
 -- END GA4 SOURCE
 
 CREATE TEMP TABLE report AS
+-- Observe the following UTC day so final-day sessions keep post-midnight taps.
 WITH session_events AS (
   SELECT * FROM raw_events
   WHERE user_pseudo_id IS NOT NULL AND session_id > 0
+    AND event_timestamp >= UNIX_MICROS(TIMESTAMP(DATE_SUB(start_date, INTERVAL 1 DAY), 'UTC'))
+    AND event_timestamp < UNIX_MICROS(TIMESTAMP(DATE_ADD(end_date, INTERVAL 2 DAY), 'UTC'))
 ), summaries AS (
   SELECT
     user_pseudo_id, session_id, platform,
