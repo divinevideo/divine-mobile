@@ -4,6 +4,8 @@
 import 'package:equatable/equatable.dart';
 import 'package:models/models.dart';
 
+enum MonetizationLinksSettingsLoadStatus { initial, loading, ready, failure }
+
 enum MonetizationLinksSettingsSaveStatus { idle, saving, success, failure }
 
 enum MonetizationLinksSettingsSaveFailure { noRelays, publishFailed }
@@ -12,6 +14,7 @@ class MonetizationLinksSettingsState extends Equatable {
   const MonetizationLinksSettingsState({
     required this.currentProfile,
     required this.visibleProviders,
+    this.loadStatus = MonetizationLinksSettingsLoadStatus.initial,
     this.values = const {},
     this.enabled = const {},
     this.errors = const {},
@@ -21,6 +24,7 @@ class MonetizationLinksSettingsState extends Equatable {
     this.savedVisibleLinks = const [],
   });
 
+  final MonetizationLinksSettingsLoadStatus loadStatus;
   final UserProfile? currentProfile;
   final List<MonetizationLinkProvider> visibleProviders;
   final Map<MonetizationLinkProvider, String> values;
@@ -33,7 +37,11 @@ class MonetizationLinksSettingsState extends Equatable {
   final List<MonetizationLink> savedVisibleLinks;
 
   bool get isSaving => status == MonetizationLinksSettingsSaveStatus.saving;
-  bool get canSave => !isSaving && currentProfile != null;
+  bool get isLoading =>
+      loadStatus == MonetizationLinksSettingsLoadStatus.loading;
+  bool get isReady => loadStatus == MonetizationLinksSettingsLoadStatus.ready;
+  bool get canEdit => isReady && !isSaving;
+  bool get canSave => canEdit && currentProfile != null;
 
   String valueFor(MonetizationLinkProvider provider) => values[provider] ?? '';
   bool isEnabled(MonetizationLinkProvider provider) =>
@@ -43,6 +51,7 @@ class MonetizationLinksSettingsState extends Equatable {
   ) => errors[provider];
 
   MonetizationLinksSettingsState copyWith({
+    MonetizationLinksSettingsLoadStatus? loadStatus,
     UserProfile? currentProfile,
     List<MonetizationLinkProvider>? visibleProviders,
     Map<MonetizationLinkProvider, String>? values,
@@ -56,6 +65,7 @@ class MonetizationLinksSettingsState extends Equatable {
     List<MonetizationLink>? savedVisibleLinks,
   }) {
     return MonetizationLinksSettingsState(
+      loadStatus: loadStatus ?? this.loadStatus,
       currentProfile: currentProfile ?? this.currentProfile,
       visibleProviders: visibleProviders ?? this.visibleProviders,
       values: values ?? this.values,
@@ -72,6 +82,7 @@ class MonetizationLinksSettingsState extends Equatable {
 
   @override
   List<Object?> get props => [
+    loadStatus,
     currentProfile,
     visibleProviders,
     values,

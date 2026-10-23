@@ -17,25 +17,69 @@ class MonetizationLinksSettingsCubit
     extends Cubit<MonetizationLinksSettingsState> {
   MonetizationLinksSettingsCubit({
     required ProfileRepository? repository,
-    required UserProfile? profile,
+    required String? pubkey,
     required List<MonetizationLinkProvider> visibleProviders,
     required MonetizationAnalyticsSink trackConfiguredLink,
     required MonetizationProfileSaved onProfileSaved,
-  }) : _repository = repository,
+  }) : _pubkey = pubkey,
+       _repository = repository,
        _trackConfiguredLink = trackConfiguredLink,
        _onProfileSaved = onProfileSaved,
        super(
-         _stateFromProfile(
-           currentProfile: profile,
+         MonetizationLinksSettingsState(
+           currentProfile: null,
            visibleProviders: visibleProviders,
          ),
        );
 
+  final String? _pubkey;
   final ProfileRepository? _repository;
   final MonetizationAnalyticsSink _trackConfiguredLink;
   final MonetizationProfileSaved _onProfileSaved;
 
+  /// Only a strict raw Kind 0 read can seed this replacement metadata editor.
+  /// Cached REST projections may omit both visible and hidden support links.
+  Future<void> load() async {
+    if (isClosed || state.isLoading || state.isReady) return;
+    final repository = _repository;
+    final pubkey = _pubkey;
+    if (repository == null || pubkey == null) return;
+    emit(
+      state.copyWith(loadStatus: MonetizationLinksSettingsLoadStatus.loading),
+    );
+    try {
+      final profile = await repository.fetchFreshProfile(
+        pubkey: pubkey,
+        requireRawKind0: true,
+      );
+      if (isClosed) return;
+      if (profile == null || profile.pubkey != pubkey) {
+        emit(
+          state.copyWith(
+            loadStatus: MonetizationLinksSettingsLoadStatus.failure,
+          ),
+        );
+        return;
+      }
+      emit(
+        _stateFromProfile(
+          currentProfile: profile,
+          visibleProviders: state.visibleProviders,
+        ),
+      );
+    } catch (error, stackTrace) {
+      if (isClosed) return;
+      addError(error, stackTrace);
+      emit(
+        state.copyWith(
+          loadStatus: MonetizationLinksSettingsLoadStatus.failure,
+        ),
+      );
+    }
+  }
+
   void setEnabled(MonetizationLinkProvider provider, bool value) {
+    if (isClosed || !state.canEdit) return;
     emit(
       state.copyWith(
         enabled: {...state.enabled, provider: value},
@@ -48,6 +92,7 @@ class MonetizationLinksSettingsCubit
   }
 
   void setValue(MonetizationLinkProvider provider, String value) {
+    if (isClosed || !state.canEdit) return;
     emit(
       state.copyWith(
         values: {...state.values, provider: value},
@@ -62,7 +107,12 @@ class MonetizationLinksSettingsCubit
   Future<void> save() async {
     final currentProfile = state.currentProfile;
     final repository = _repository;
-    if (currentProfile == null || repository == null || state.isSaving) return;
+    if (isClosed ||
+        !state.canSave ||
+        currentProfile == null ||
+        repository == null) {
+      return;
+    }
 
     final visibleProviderSet = state.visibleProviders.toSet();
     final visibleLinks = <MonetizationLink>[];
@@ -128,6 +178,7 @@ class MonetizationLinksSettingsCubit
         currentProfile: currentProfile,
         monetizationLinks: links,
       );
+      if (isClosed) return;
       await _onProfileSaved(saved);
       if (isClosed) return;
       Log.info(
@@ -167,8 +218,8 @@ class MonetizationLinksSettingsCubit
     StackTrace stackTrace,
     MonetizationLinksSettingsSaveFailure failure,
   ) {
-    addError(error, stackTrace);
     if (isClosed) return;
+    addError(error, stackTrace);
     emit(
       state.copyWith(
         status: MonetizationLinksSettingsSaveStatus.failure,
@@ -190,6 +241,7 @@ class MonetizationLinksSettingsCubit
     return MonetizationLinksSettingsState(
       currentProfile: currentProfile,
       visibleProviders: visibleProviders,
+      loadStatus: MonetizationLinksSettingsLoadStatus.ready,
       values: {
         for (final provider in MonetizationLinkProvider.values)
           provider: byProvider[provider]?.url ?? '',
