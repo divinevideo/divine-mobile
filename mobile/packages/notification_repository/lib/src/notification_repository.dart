@@ -993,10 +993,7 @@ class NotificationRepository {
       videoAddressableId: videoAddressableId,
       hasCommentTarget: hasCommentTarget,
       targetPubkey: targetPubkey,
-      content:
-          item is ActorNotification &&
-              item.type == NotificationKind.likeComment &&
-              item.commentEventId != null
+      content: item is ActorNotification && _isGroupedCommentLike(item)
           ? CommentLikeCacheCodec.encode(item)
           : content,
       isRead: item.isRead,
@@ -1009,13 +1006,19 @@ class NotificationRepository {
   static String _persistType(NotificationItem item) => switch (item) {
     VideoNotification(type: NotificationKind.mention) => 'videoMention',
     ActorNotification(type: NotificationKind.like) => 'actorLike',
-    ActorNotification(
-      type: NotificationKind.likeComment,
-      commentEventId: != null,
-    ) =>
+    ActorNotification() when _isGroupedCommentLike(item) =>
       CommentLikeCacheCodec.type,
     NotificationItem(:final type) => _persistKind(type),
   };
+
+  /// Whether [item] needs the versioned group payload to survive hydration.
+  /// Single-notification likes keep the legacy row so older builds, including
+  /// a rolled-back patch, still render them instead of the raw payload.
+  static bool _isGroupedCommentLike(ActorNotification item) =>
+      item.type == NotificationKind.likeComment &&
+      item.commentEventId != null &&
+      (item.additionalActors.isNotEmpty ||
+          {...item.notificationIds, item.id}.length > 1);
 
   static String _persistKind(NotificationKind kind) => switch (kind) {
     NotificationKind.like => 'like',

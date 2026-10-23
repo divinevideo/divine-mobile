@@ -2038,6 +2038,32 @@ void main() {
         },
       );
 
+      test(
+        'single comment like keeps the legacy cache row older builds read',
+        () async {
+          final saved = Completer<List<NotificationCacheRow>>();
+          when(
+            () => notificationsDao.replaceAll(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((invocation) async {
+            if (!saved.isCompleted) {
+              saved.complete(
+                invocation.positionalArguments.first
+                    as List<NotificationCacheRow>,
+              );
+            }
+          });
+          stubNotifications([like(1, alice)]);
+          await repository.getNotifications();
+          final row = (await saved.future).single;
+          expect(row.type, 'likeComment');
+          expect(row.content, 'this is so cool');
+          expect(row.targetEventId, commentId);
+        },
+      );
+
       test('merges older page likes and preserves every read id', () async {
         stubNotifications(
           [like(1, alice, read: true)],
