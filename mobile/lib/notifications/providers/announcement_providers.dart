@@ -17,6 +17,11 @@ final announcementOwnerCleanupProvider =
       return (owner) => sessions.clearOwner(prefs, owner);
     });
 
+/// The public announcement catalog, supplied by the app to the repository.
+final announcementCatalogEndpointProvider = Provider<Uri>(
+  (_) => Uri.https('announcements.divine.video', '/v1/announcements'),
+);
+
 /// Separate anonymous transport; never reuse the account's signed API client.
 final announcementHttpClientFactoryProvider = Provider<http.Client Function()>(
   (_) => http.Client.new,

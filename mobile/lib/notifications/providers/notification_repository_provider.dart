@@ -67,6 +67,7 @@ final notificationRepositoryProvider = Provider<NotificationRepository?>((ref) {
   final announcements = userPubkey.isEmpty
       ? null
       : AnnouncementsRepository(
+          endpoint: ref.watch(announcementCatalogEndpointProvider),
           httpClient: ref.watch(announcementHttpClientFactoryProvider)(),
           store: SharedPreferencesAnnouncementStore(
             prefs: ref.watch(sharedPreferencesProvider),
