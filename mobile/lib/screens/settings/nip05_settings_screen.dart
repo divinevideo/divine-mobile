@@ -14,7 +14,7 @@ import 'package:openvine/extensions/modal_pop_extension.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
-import 'package:openvine/screens/profile_setup/profile_setup.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/profile_editor/username_status_indicator.dart';
 
@@ -492,7 +492,7 @@ class _Nip05SettingsMissingProfile extends StatelessWidget {
               size: DivineButtonSize.small,
               label: context.l10n.nostrSettingsNip05CreateProfileAction,
               onPressed: () async {
-                await context.push(ProfileSetupScreen.setupPath);
+                await const SetupProfileRouteData().push<void>(context);
                 if (!context.mounted) return;
                 context.read<MyProfileBloc>().add(
                   const MyProfileLoadRequested(),

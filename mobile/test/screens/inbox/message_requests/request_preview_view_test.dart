@@ -1136,7 +1136,7 @@ void main() {
       testWidgets('navigates to profile view when "View profile" tapped', (
         tester,
       ) async {
-        when(() => mockGoRouter.push(any())).thenAnswer((_) async => null);
+        when(() => mockGoRouter.push<void>(any())).thenAnswer((_) async {});
 
         await tester.pumpWidget(buildSubject());
         await tester.pumpAndSettle();
@@ -1145,7 +1145,9 @@ void main() {
         await tester.pump();
 
         verify(
-          () => mockGoRouter.push(any(that: startsWith('/profile-view/'))),
+          () => mockGoRouter.push<void>(
+            any(that: startsWith('/profile-view/')),
+          ),
         ).called(1);
       });
 

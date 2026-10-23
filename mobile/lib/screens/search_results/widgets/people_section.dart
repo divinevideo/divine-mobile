@@ -1,12 +1,11 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/user_search/user_search_bloc.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_empty_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_section_error_state.dart';
 import 'package:openvine/screens/search_results/widgets/search_user_tile.dart';
@@ -154,7 +153,7 @@ class _PeopleContent extends StatelessWidget {
     final npub = normalizeToNpub(profile.pubkey);
     if (npub != null) {
       runDetached(
-        context.push<void>(OtherProfileScreen.pathForNpub(npub)),
+        OtherProfileRouteData(npub: npub).push<void>(context),
         'open profile search result',
         logName: 'PeopleSection',
         category: LogCategory.ui,

@@ -8,7 +8,6 @@ import 'package:collaborator_repository/collaborator_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
@@ -16,7 +15,7 @@ import 'package:openvine/blocs/video_collaborator_status/video_collaborator_stat
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
-import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
@@ -265,7 +264,7 @@ class CollaboratorAvatarRowBody extends StatelessWidget {
     final npub = normalizeToNpub(pubkey);
     if (npub != null) {
       runDetached(
-        context.push(OtherProfileScreen.pathForNpub(npub)),
+        OtherProfileRouteData(npub: npub).push<void>(context),
         'open collaborator profile',
         logName: 'CollaboratorAvatarRowBody',
         category: LogCategory.ui,
@@ -377,7 +376,9 @@ class _CollaboratorPickerTile extends ConsumerWidget {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!hostContext.mounted) return;
       runDetached(
-        hostContext.pushWithVideoPause(OtherProfileScreen.pathForNpub(npub)),
+        hostContext.pushWithVideoPause(
+          OtherProfileRouteData(npub: npub).location,
+        ),
         'open collaborator profile',
         logName: 'CollaboratorAvatarRowBody',
         category: LogCategory.ui,

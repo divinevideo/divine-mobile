@@ -106,10 +106,13 @@ void main() {
       bool settle = true,
     }) async {
       when(() => cubit.state).thenReturn(state);
+      // Mounted at the production paths: the view pushes the connect flow by
+      // its typed location, which is nested under the verify dashboard.
       final router = GoRouter(
+        initialLocation: VerifyPage.path,
         routes: [
           GoRoute(
-            path: '/',
+            path: VerifyPage.path,
             builder: (context, _) => BlocProvider<VerifyCubit>.value(
               value: cubit,
               child: const VerifyView(),

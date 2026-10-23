@@ -655,9 +655,9 @@ class _ProfileBadgeSheetSectionTitle extends StatelessWidget {
 }
 
 void _openProfileFromBadgeSheet(BuildContext context, String pubkey) {
-  final path = OtherProfileScreen.pathForNpub(
-    NostrKeyUtils.encodePubKey(pubkey),
-  );
+  final path = OtherProfileRouteData(
+    npub: NostrKeyUtils.encodePubKey(pubkey),
+  ).location;
   final router = GoRouter.of(context);
   Navigator.of(context).pop();
   _runProfileDetached(

@@ -356,9 +356,9 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow> {
               count: _skeletonPlaceholderCount,
               label: l10n.profileFollowingLabel,
               isLoading: _timeoutExpired,
-              onTap: () => context.push(
-                FollowingScreenRouter.pathForPubkey(widget.userIdHex),
-              ),
+              onTap: () => FollowingRouteData(
+                pubkey: widget.userIdHex,
+              ).push<void>(context),
             )
           else
             ProfileFollowingStat(
@@ -372,9 +372,9 @@ class _ProfileStatsRowState extends ConsumerState<_ProfileStatsRow> {
               count: _skeletonPlaceholderCount,
               label: l10n.profileFollowersLabel,
               isLoading: _timeoutExpired,
-              onTap: () => context.push(
-                FollowersScreenRouter.pathForPubkey(widget.userIdHex),
-              ),
+              onTap: () => FollowersRouteData(
+                pubkey: widget.userIdHex,
+              ).push<void>(context),
             )
           else
             ProfileFollowersStat(

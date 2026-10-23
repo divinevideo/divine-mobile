@@ -16,7 +16,7 @@ import 'package:openvine/blocs/video_collaborator_status/video_collaborator_stat
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
-import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/video_engagement/video_engagement_list_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
@@ -657,7 +657,9 @@ class _TappableUserChip extends ConsumerWidget {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!hostContext.mounted) return;
       runDetached(
-        hostContext.pushWithVideoPause(OtherProfileScreen.pathForNpub(npub)),
+        hostContext.pushWithVideoPause(
+          OtherProfileRouteData(npub: npub).location,
+        ),
         'open user profile',
         logName: 'MetadataUserChips',
         category: LogCategory.ui,
