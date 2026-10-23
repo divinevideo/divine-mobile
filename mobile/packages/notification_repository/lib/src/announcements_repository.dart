@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:models/notification_item.dart';
 import 'package:pub_semver/pub_semver.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Account-bound persistence supplied by the application.
 abstract interface class AnnouncementStore {
@@ -194,8 +195,15 @@ class AnnouncementsRepository {
           await _store.writeSeen(seen);
         });
       }
-    } on Exception {
+    } on Exception catch (error) {
       // Network, schema, and storage failures never erase valid cached rows.
+      // A fetch that close() cut off is not a catalog failure.
+      if (!_closed) {
+        Log.warning(
+          'Announcement catalog refresh failed: $error',
+          name: 'AnnouncementsRepository',
+        );
+      }
     }
     _emit();
   }
@@ -233,7 +241,10 @@ class AnnouncementsRepository {
           contentType != 'application/json' ||
           (response.contentLength ?? 0) > _maximumBytes) {
         unawaited(response.stream.listen(null).cancel());
-        throw const FormatException('Unavailable catalog response');
+        throw FormatException(
+          'Unavailable catalog response: HTTP ${response.statusCode}, '
+          '${contentType ?? 'no content type'}',
+        );
       }
       final bytes = <int>[];
       final completed = Completer<void>();
