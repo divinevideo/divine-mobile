@@ -14,6 +14,7 @@ import 'package:nostr_sdk/nip19/nip19.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:notification_repository/src/blocked_notification_filter.dart';
+import 'package:notification_repository/src/comment_like_cache_codec.dart';
 import 'package:notification_repository/src/notification_page.dart';
 import 'package:profile_repository/profile_repository.dart';
 // Hide rxdart's `NotificationKind` (a stream-event enum) to avoid clashing
@@ -713,10 +714,12 @@ class NotificationRepository {
     final generation = _allFeed.fetchGeneration;
     try {
       final pubkeys = placeholders
-          .map(
+          .expand(
             (item) => switch (item) {
-              VideoNotification(:final actors) => actors.first.pubkey,
-              ActorNotification(:final actor) => actor.pubkey,
+              VideoNotification(:final actors) => actors.map(
+                (actor) => actor.pubkey,
+              ),
+              ActorNotification() => item.actors.map((actor) => actor.pubkey),
             },
           )
           .where((pubkey) => pubkey.isNotEmpty)
@@ -769,6 +772,9 @@ class NotificationRepository {
           }(),
           ActorNotification(:final actor) => item.copyWith(
             actor: _buildActor(actor.pubkey, profiles),
+            additionalActors: item.additionalActors
+                .map((actor) => _buildActor(actor.pubkey, profiles))
+                .toList(),
           ),
         };
       }).toList();
@@ -814,6 +820,9 @@ class NotificationRepository {
   /// always replaced by the next first-page REST emission, so we keep
   /// the hydration path synchronous and dependency-free.
   static NotificationItem? _rowToPlaceholder(NotificationRow row) {
+    if (row.type == CommentLikeCacheCodec.type) {
+      return CommentLikeCacheCodec.decode(row);
+    }
     final timestamp = DateTime.fromMillisecondsSinceEpoch(
       row.timestamp * 1000,
       isUtc: true,
@@ -984,17 +993,27 @@ class NotificationRepository {
       videoAddressableId: videoAddressableId,
       hasCommentTarget: hasCommentTarget,
       targetPubkey: targetPubkey,
-      content: content,
+      content:
+          item is ActorNotification &&
+              item.type == NotificationKind.likeComment &&
+              item.commentEventId != null
+          ? CommentLikeCacheCodec.encode(item)
+          : content,
       isRead: item.isRead,
     );
   }
 
   /// String form persisted in the `type` column.
   ///
-  /// Inverse of [_videoKindFromCachedType] plus [_actorKindFromCachedType].
+  /// Inverse of the placeholder type mappings and grouped-comment codec.
   static String _persistType(NotificationItem item) => switch (item) {
     VideoNotification(type: NotificationKind.mention) => 'videoMention',
     ActorNotification(type: NotificationKind.like) => 'actorLike',
+    ActorNotification(
+      type: NotificationKind.likeComment,
+      commentEventId: != null,
+    ) =>
+      CommentLikeCacheCodec.type,
     NotificationItem(:final type) => _persistKind(type),
   };
 
@@ -1331,13 +1350,16 @@ class NotificationRepository {
   /// authoritative ground truth, so a full replace is correct.
   ///
   /// Subsequent pages merge incoming items into the existing snapshot
-  /// using three gates:
+  /// using target-group merges followed by duplicate-event gates:
   ///
   /// 1. **`(videoEventId, type)` overlap (VideoNotification only)** —
   ///    when an incoming group matches an existing snapshot group, the
   ///    existing row is replaced in place by
   ///    [_mergeAppendedVideoGroup] (richer page data folded into the
   ///    existing row, preserving its position).
+  /// Confirmed comment-like targets and repeated followers are also merged
+  /// in place, retaining every underlying notification ID.
+  ///
   /// 2. **`sourceEventIds` overlap** — when an incoming item's
   ///    underlying Nostr event ids overlap the rendered snapshot's set,
   ///    the incoming item is skipped as a cross-page duplicate (the
@@ -1377,8 +1399,11 @@ class NotificationRepository {
     final allIds = <String>{for (final n in result) n.id};
     final videoGroupIndex = <(String, NotificationKind), int>{};
     final followIndex = <String, int>{};
+    final commentLikeIndex = <String, int>{};
     for (var i = 0; i < result.length; i++) {
       final item = result[i];
+      final commentTarget = _commentLikeGroupKey(item);
+      if (commentTarget != null) commentLikeIndex[commentTarget] = i;
       if (item is VideoNotification) {
         videoGroupIndex[_snapshotVideoGroupKey(item)] = i;
       } else if (item is ActorNotification &&
@@ -1390,6 +1415,19 @@ class NotificationRepository {
     // Appends land in `result` itself so the indices in `followIndex` stay
     // valid for the `result[idx] = …` merges below.
     for (final item in incoming) {
+      final commentTarget = _commentLikeGroupKey(item);
+      final commentIndex = commentTarget == null
+          ? null
+          : commentLikeIndex[commentTarget];
+      if (commentIndex != null) {
+        result[commentIndex] = _mergeCommentLikeGroup(
+          result[commentIndex] as ActorNotification,
+          item as ActorNotification,
+        );
+        allSourceEventIds.addAll(item.sourceEventIds);
+        allIds.add(item.id);
+        continue;
+      }
       if (item is VideoNotification) {
         final idx = videoGroupIndex[_snapshotVideoGroupKey(item)];
         if (idx != null) {
@@ -1421,6 +1459,9 @@ class NotificationRepository {
       // contract.
       if (allIds.contains(item.id)) continue;
       result.add(item);
+      if (commentTarget != null) {
+        commentLikeIndex[commentTarget] = result.length - 1;
+      }
       allSourceEventIds.addAll(item.sourceEventIds);
       allIds.add(item.id);
       if (item is VideoNotification) {
@@ -1513,7 +1554,17 @@ class NotificationRepository {
               ? (existing.commentText ?? incoming.commentText)
               : (incoming.commentText ?? existing.commentText))
         : null;
-    final mergedTotalCount = existing.type == NotificationKind.mention
+    final actorPubkeys = {
+      ...existing.actorPubkeys,
+      ...incoming.actorPubkeys,
+    }.toList();
+    final hasLikerIdentities =
+        existing.type == NotificationKind.like &&
+        existing.actorPubkeys.isNotEmpty &&
+        incoming.actorPubkeys.isNotEmpty;
+    final mergedTotalCount = hasLikerIdentities
+        ? actorPubkeys.length
+        : existing.type == NotificationKind.mention
         ? mergedActors.length
         : existing.type == NotificationKind.listAdd
         ? mergedActors.length
@@ -1529,6 +1580,7 @@ class NotificationRepository {
       sourceEventIds: unionIds,
       notificationIds: unionNotificationIds,
       actors: mergedActors,
+      actorPubkeys: actorPubkeys,
       totalCount: mergedTotalCount,
       addedVideoCount: mergedAddedVideoCount,
       isRead: existing.isRead && incoming.isRead,
@@ -1619,7 +1671,16 @@ class NotificationRepository {
     final videosFuture = _fetchVideoMetadata(eventIds);
     final (profiles, videoMetadata) = await (profilesFuture, videosFuture).wait;
 
-    final consolidated = _consolidateFollows(raw);
+    final consolidated = _consolidateFollows(
+      raw.where((notification) {
+        final kind = _mapNotificationKind(notification);
+        final isLike =
+            kind == NotificationKind.like ||
+            kind == NotificationKind.likeComment;
+        return !isLike ||
+            !(_blockFilter?.call(notification.sourcePubkey) ?? false);
+      }).toList(),
+    );
     final misattributed = <RelayNotification>[];
     final videos = _groupVideoAnchored(
       consolidated,
@@ -1633,7 +1694,68 @@ class NotificationRepository {
 
     final items = <NotificationItem>[...videos, ...actors, ...reclassified]
       ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-    return _applyBlockFilter(_applyFeedFilter(items, filter));
+    return _groupCommentLikes(
+      _applyBlockFilter(_applyFeedFilter(items, filter)),
+    );
+  }
+
+  /// Groups only confirmed comment targets, after blocked actors are removed.
+  /// Navigation fallbacks and identical quote text do not establish identity.
+  static List<NotificationItem> _groupCommentLikes(
+    List<NotificationItem> items,
+  ) {
+    final result = <NotificationItem>[];
+    final indices = <String, int>{};
+    for (final item in items) {
+      final target = _commentLikeGroupKey(item);
+      final index = target == null ? null : indices[target];
+      if (index != null) {
+        result[index] = _mergeCommentLikeGroup(
+          result[index] as ActorNotification,
+          item as ActorNotification,
+        );
+      } else {
+        if (target != null) indices[target] = result.length;
+        result.add(item);
+      }
+    }
+    return result;
+  }
+
+  static String? _commentLikeGroupKey(NotificationItem item) =>
+      item is ActorNotification && item.type == NotificationKind.likeComment
+      ? _nonEmpty(item.commentEventId)
+      : null;
+
+  static ActorNotification _mergeCommentLikeGroup(
+    ActorNotification existing,
+    ActorNotification incoming,
+  ) {
+    final newest = incoming.timestamp.isAfter(existing.timestamp)
+        ? incoming
+        : existing;
+    final older = identical(newest, existing) ? incoming : existing;
+    final seen = <String>{};
+    final actors = [
+      for (final actor in [...newest.actors, ...older.actors])
+        if (seen.add(actor.pubkey)) actor,
+    ];
+    return newest.copyWith(
+      id: existing.id,
+      actor: actors.first,
+      additionalActors: actors.skip(1).toList(),
+      isRead: existing.isRead && incoming.isRead,
+      commentText: newest.commentText ?? older.commentText,
+      videoAddressableId: newest.videoAddressableId ?? older.videoAddressableId,
+      sourceEventIds: {
+        ...existing.sourceEventIds,
+        ...incoming.sourceEventIds,
+      }.toList(),
+      notificationIds: {
+        ...existing.notificationIds,
+        ...incoming.notificationIds,
+      }.toList(),
+    );
   }
 
   List<NotificationItem> _applyFeedFilter(
@@ -1807,7 +1929,8 @@ class NotificationRepository {
         group,
         profiles,
       );
-      final displayActorNotifications = isVideoMention || isListAdd
+      final isLike = entry.key.kind == NotificationKind.like;
+      final displayActorNotifications = isVideoMention || isListAdd || isLike
           ? _distinctActorNotificationsBySourcePubkey(actorNotifications)
           : actorNotifications;
       final actors = _orderVideoGroupActors(
@@ -1820,7 +1943,7 @@ class NotificationRepository {
           ? _videoAnchorEventId(entry.key.kind, group.first) ??
                 entry.key.eventId
           : entry.key.eventId;
-      final totalCount = isVideoMention || isListAdd
+      final totalCount = isVideoMention || isListAdd || isLike
           ? group.map((n) => n.sourcePubkey).toSet().length
           : group.length;
       final addedVideoCount = isListAdd ? group.length : null;
@@ -1904,6 +2027,9 @@ class NotificationRepository {
               : null,
           actors: actors,
           totalCount: totalCount,
+          actorPubkeys: isLike
+              ? group.map((n) => n.sourcePubkey).toSet().toList()
+              : const [],
           addedVideoCount: addedVideoCount,
           timestamp: group.first.createdAt,
           isRead: group.every((n) => n.read),
@@ -2046,6 +2172,9 @@ class NotificationRepository {
           : const [],
       videoAddressableId: _actorVideoAddressableId(type, notification),
       hasCommentTarget: _actorHasCommentTarget(type, notification),
+      commentEventId: type == NotificationKind.likeComment
+          ? _nonEmpty(notification.targetCommentId)
+          : null,
     );
   }
 

@@ -8470,6 +8470,11 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String notificationGroupLikedYourComment(String actorName) {
+    return '$actorNameమీ వ్యాఖ్యను ఇష్టపడ్డారు';
+  }
+
+  @override
   String notificationLikedYourComment(String actorName) {
     return '$actorNameమీ వ్యాఖ్యను ఇష్టపడ్డారు';
   }

@@ -8229,6 +8229,11 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String notificationGroupLikedYourComment(String actorName) {
+    return '$actorName نے آپ کا تبصرہ پسند کیا';
+  }
+
+  @override
   String notificationLikedYourComment(String actorName) {
     return '$actorName نے آپ کا تبصرہ پسند کیا';
   }

@@ -1838,6 +1838,16 @@
       }
     }
   },
+  "notificationGroupLikedYourComment": "{actorName}님이 회원님의 댓글을 좋아해요",
+  "@notificationGroupLikedYourComment": {
+    "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",
+    "placeholders": {
+      "actorName": {
+        "type": "String",
+        "example": "Alice and 2 others"
+      }
+    }
+  },
   "notificationLikedYourComment": "{actorName}님이 회원님의 댓글을 좋아해요",
   "@notificationLikedYourComment": {
     "placeholders": {

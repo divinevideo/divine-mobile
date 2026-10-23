@@ -8286,6 +8286,11 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String notificationGroupLikedYourComment(String actorName) {
+    return 'Ni-like nina $actorName ang comment mo';
+  }
+
+  @override
   String notificationLikedYourComment(String actorName) {
     return 'Ni-like ni $actorName ang comment mo';
   }

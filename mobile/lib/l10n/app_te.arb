@@ -4944,6 +4944,16 @@
       }
     }
   },
+  "notificationGroupLikedYourComment": "{actorName}మీ వ్యాఖ్యను ఇష్టపడ్డారు",
+  "@notificationGroupLikedYourComment": {
+    "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",
+    "placeholders": {
+      "actorName": {
+        "type": "String",
+        "example": "Alice and 2 others"
+      }
+    }
+  },
   "notificationLikedYourComment": "{actorName}మీ వ్యాఖ్యను ఇష్టపడ్డారు",
   "@notificationLikedYourComment": {
     "description": "Notification text when someone reacts to a comment the user posted (typically under another user's video).",

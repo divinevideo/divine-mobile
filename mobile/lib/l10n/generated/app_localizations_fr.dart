@@ -8343,6 +8343,11 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
+  String notificationGroupLikedYourComment(String actorName) {
+    return '$actorName ont aimé ton commentaire';
+  }
+
+  @override
   String notificationLikedYourComment(String actorName) {
     return '$actorName a aimé ton commentaire';
   }

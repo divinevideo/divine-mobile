@@ -7811,6 +7811,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String notificationGroupLikedYourComment(String actorName) {
+    return '$actorNameがあなたのコメントにいいねしました';
+  }
+
+  @override
   String notificationLikedYourComment(String actorName) {
     return '$actorNameさんがあなたのコメントにいいねしました';
   }

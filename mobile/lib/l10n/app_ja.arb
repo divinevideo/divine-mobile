@@ -2292,6 +2292,16 @@
       }
     }
   },
+  "notificationGroupLikedYourComment": "{actorName}があなたのコメントにいいねしました",
+  "@notificationGroupLikedYourComment": {
+    "description": "Notification when multiple people liked your comment. actorName is a localized summary such as Alice and 2 others.",
+    "placeholders": {
+      "actorName": {
+        "type": "String",
+        "example": "Alice and 2 others"
+      }
+    }
+  },
   "notificationLikedYourComment": "{actorName}さんがあなたのコメントにいいねしました",
   "@notificationLikedYourComment": {
     "placeholders": {

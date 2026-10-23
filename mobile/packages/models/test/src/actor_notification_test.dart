@@ -6,6 +6,25 @@ void main() {
     final actor = ActorInfo(pubkey: 'a' * 64, displayName: 'Alice');
     final timestamp = DateTime.utc(2026, 5, 4, 12);
 
+    test('grouped actors participate in equality and survive read updates', () {
+      final bob = ActorInfo(pubkey: 'b' * 64, displayName: 'Bob');
+      final single = ActorNotification(
+        id: 'n1',
+        type: NotificationKind.likeComment,
+        actor: actor,
+        timestamp: timestamp,
+        commentEventId: 'c' * 64,
+      );
+      final group = single.copyWith(additionalActors: [bob]);
+      expect(group.actors, [actor, bob]);
+      expect(group, isNot(single));
+      expect(group.copyWith(isRead: true).actors, [actor, bob]);
+      expect(
+        group.copyWith(isRead: true).commentEventId,
+        single.commentEventId,
+      );
+    });
+
     group('structure', () {
       test('exposes actor + type + timestamp', () {
         final notification = ActorNotification(

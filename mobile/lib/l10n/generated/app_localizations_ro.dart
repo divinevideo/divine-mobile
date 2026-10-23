@@ -8416,6 +8416,11 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String notificationGroupLikedYourComment(String actorName) {
+    return '$actorName au apreciat comentariul tău';
+  }
+
+  @override
   String notificationLikedYourComment(String actorName) {
     return '$actorName a apreciat comentariul tău';
   }
