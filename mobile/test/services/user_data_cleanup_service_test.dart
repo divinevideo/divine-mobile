@@ -1035,6 +1035,12 @@ void main() {
             AccountPreferenceStore.migrationStorageKey(otherPubkey),
             true,
           );
+          await prefs.setBool(
+            AccountPreferenceStore.notificationMigrationStorageKey(
+              deletedPubkey,
+            ),
+            true,
+          );
           await prefs.setString(
             AccountPreferenceStore.projectionOwnerStorageKey,
             deletedPubkey,
@@ -1055,6 +1061,14 @@ void main() {
             expect(prefs.containsKey(key), isFalse, reason: key);
           }
           expect(prefs.containsKey(otherKey), isTrue);
+          expect(
+            prefs.containsKey(
+              AccountPreferenceStore.notificationMigrationStorageKey(
+                deletedPubkey,
+              ),
+            ),
+            isFalse,
+          );
           expect(
             prefs.containsKey(
               AccountPreferenceStore.migrationStorageKey(deletedPubkey),

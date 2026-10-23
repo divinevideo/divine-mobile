@@ -469,6 +469,9 @@ class UserDataCleanupService {
     }
     await remove(NotificationRepository.readStateStorageKey(userPubkey));
     await remove(AccountPreferenceStore.migrationStorageKey(userPubkey));
+    await remove(
+      AccountPreferenceStore.notificationMigrationStorageKey(userPubkey),
+    );
     if (_prefs.getString(AccountPreferenceStore.projectionOwnerStorageKey) ==
         userPubkey) {
       await remove(AccountPreferenceStore.projectionOwnerStorageKey);
@@ -712,6 +715,9 @@ class UserDataCleanupService {
       }
       await remove(NotificationRepository.readStateStorageKey(userPubkey));
       await remove(AccountPreferenceStore.migrationStorageKey(userPubkey));
+      await remove(
+        AccountPreferenceStore.notificationMigrationStorageKey(userPubkey),
+      );
       if (_prefs.getString(AccountPreferenceStore.projectionOwnerStorageKey) ==
           userPubkey) {
         await remove(AccountPreferenceStore.projectionOwnerStorageKey);
