@@ -17,7 +17,6 @@ class _MockGoRouter extends Mock implements GoRouter {}
 
 class _RecordingSink extends NoOpAnalyticsEventSink {
   final events = <Map<String, Object>>[];
-  final logged = Completer<void>();
 
   @override
   Future<void> logEvent({
@@ -25,7 +24,6 @@ class _RecordingSink extends NoOpAnalyticsEventSink {
     required Map<String, Object> parameters,
   }) async {
     events.add({'name': name, ...parameters});
-    if (!logged.isCompleted) logged.complete();
   }
 }
 
@@ -102,7 +100,7 @@ void main() {
           tapTargetType: 'app_route',
           tapTargetValue: destination,
         );
-        await sink.logged.future;
+        await pumpEventQueue();
         expect(sink.events.single['open_source'], source.wireValue);
         verify(() => routerA.go(destination)).called(1);
       });
@@ -133,7 +131,7 @@ void main() {
       expect(sink.events, isEmpty);
 
       consent.complete(true);
-      await sink.logged.future;
+      await pumpEventQueue();
       expect(sink.events, [
         {
           'name': 'push_notification_opened',
