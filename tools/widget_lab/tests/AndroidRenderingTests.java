@@ -15,13 +15,44 @@ import android.widget.ViewFlipper;
 public final class AndroidRenderingTests extends Instrumentation {
     @Override public void onCreate(Bundle arguments) { super.onCreate(arguments); start(); }
 
+    @Override public void runOnMainSync(Runnable action) {
+        // Report assertions on the instrumentation thread so finally blocks
+        // still restore state and release the widget-host binding.
+        final Throwable[] failure = {null};
+        super.runOnMainSync(() -> {
+            try { action.run(); } catch (Throwable error) { failure[0] = error; }
+        });
+        if (failure[0] != null) throw new AssertionError("Main-thread test failed", failure[0]);
+    }
+
     @Override public void onStart() {
         Bundle result = new Bundle();
         try {
+            AssertionError sentinel = new AssertionError("test failure transport");
+            Throwable delivered = null;
+            try { runOnMainSync(() -> { throw sentinel; }); }
+            catch (AssertionError error) { delivered = error.getCause(); }
+            require(delivered == sentinel, "main-thread assertions reach the runner");
             LabActivity activity = (LabActivity) startActivitySync(
                 new Intent(getTargetContext(), LabActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             LabState original = LabStore.load(activity);
+            final View[] dashboard = {null};
             try {
+                ComponentName divine = new ComponentName("co.openvine.app", "co.openvine.app.MainActivity");
+                Intent camera = LabActivity.cameraIntent(divine);
+                require(divine.equals(camera.getComponent()), "camera intent targets the installed Divine activity");
+                require("co.openvine.divine_quick_actions.ACTION_QUICK_ACTION".equals(camera.getAction()), "Android camera action contract");
+                require("camera".equals(camera.getStringExtra("co.openvine.divine_quick_actions.extra.ACTION_TYPE")), "camera action type");
+                require(camera.getBundleExtra("co.openvine.divine_quick_actions.extra.ACTION_PAYLOAD") != null, "camera payload bundle");
+                runOnMainSync(() -> {
+                    dashboard[0] = ((android.view.ViewGroup) activity.findViewById(android.R.id.content)).getChildAt(0);
+                    View watch = findText(activity.getWindow().getDecorView(), "Watch selected sample");
+                    require(watch != null, "host watch control exists");
+                    watch.performClick();
+                    watch.performClick();
+                    require(countSurfaces(activity.getWindow().getDecorView()) == 1,
+                        "repeated Open reuses one playback surface");
+                });
                 runOnMainSync(() -> {
                     LabStore.save(activity, new LabState());
                     LabState state = LabStore.load(activity);
@@ -53,8 +84,7 @@ public final class AndroidRenderingTests extends Instrumentation {
                     card.findViewById(R.id.like).performClick();
                 });
                 await(() -> LabStore.load(activity).isLiked(), "Like broadcast persists");
-                checkSystemHost(activity);
-                runOnMainSync(() -> activity.findViewById(R.id.open).performClick());
+                checkSystemHost(activity, dashboard[0]);
                 await(() -> LabStore.load(activity).openCount == 1, "Open pending intent");
                 result.putString("stream", "PASS: RemoteViews inflation, Next, Like, Open, system widget host animation, two-second stop.\n");
             } finally {
@@ -67,8 +97,9 @@ public final class AndroidRenderingTests extends Instrumentation {
         }
     }
 
-    private void checkSystemHost(LabActivity activity) throws InterruptedException {
+    private void checkSystemHost(LabActivity activity, View dashboard) throws InterruptedException {
         AppWidgetHost host = new AppWidgetHost(activity, 707);
+        final AppWidgetHostView[] hosted = {null};
         int widgetId = host.allocateAppWidgetId();
         try {
             AppWidgetManager manager = AppWidgetManager.getInstance(activity);
@@ -77,6 +108,7 @@ public final class AndroidRenderingTests extends Instrumentation {
             runOnMainSync(() -> {
                 host.startListening();
                 AppWidgetHostView view = host.createView(activity, widgetId, manager.getAppWidgetInfo(widgetId));
+                hosted[0] = view;
                 activity.setContentView(view);
                 HighlightProvider.render(activity, false);
             });
@@ -85,7 +117,9 @@ public final class AndroidRenderingTests extends Instrumentation {
             try { await(() -> {
                 final boolean[] ready = {false};
                 runOnMainSync(() -> {
-                    TextView title = activity.findViewById(R.id.title);
+                    // AppWidgetHostView is a root namespace: Activity lookup
+                    // intentionally cannot traverse into its remote children.
+                    TextView title = hosted[0].findViewById(R.id.title);
                     ready[0] = title != null && title.getText().toString().equals(HighlightProvider.TITLES[LabStore.load(activity).index]);
                     initial[0] = "destroyed=" + activity.isDestroyed() + ", title=" + (title == null ? "missing" : title.getText())
                         + ", ids=" + java.util.Arrays.toString(manager.getAppWidgetIds(new ComponentName(activity, HighlightProvider.class)));
@@ -102,7 +136,7 @@ public final class AndroidRenderingTests extends Instrumentation {
             try { await(() -> {
                 final boolean[] playing = {false};
                 runOnMainSync(() -> {
-                    ViewFlipper frames = activity.findViewById(R.id.frames);
+                    ViewFlipper frames = hosted[0].findViewById(R.id.frames);
                     playing[0] = frames != null && frames.getVisibility() == View.VISIBLE && frames.isFlipping();
                     diagnostic[0] = frames == null ? "no frame view" : "visible=" + frames.getVisibility()
                         + ", flipping=" + frames.isFlipping() + ", frames=" + frames.getChildCount()
@@ -112,18 +146,23 @@ public final class AndroidRenderingTests extends Instrumentation {
             }, "system host starts animation"); }
             catch (AssertionError failure) { throw new AssertionError(failure.getMessage() + ": " + diagnostic[0]); }
             final int[] firstFrame = {-1};
-            runOnMainSync(() -> firstFrame[0] = ((ViewFlipper) activity.findViewById(R.id.frames)).getDisplayedChild());
+            runOnMainSync(() -> firstFrame[0] = ((ViewFlipper) hosted[0].findViewById(R.id.frames)).getDisplayedChild());
             await(() -> {
                 final boolean[] changed = {false};
-                runOnMainSync(() -> changed[0] = ((ViewFlipper) activity.findViewById(R.id.frames)).getDisplayedChild() != firstFrame[0]);
+                runOnMainSync(() -> changed[0] = ((ViewFlipper) hosted[0].findViewById(R.id.frames)).getDisplayedChild() != firstFrame[0]);
                 return changed[0];
             }, "frame advances in system host");
             await(() -> {
                 final boolean[] resting = {false};
-                runOnMainSync(() -> resting[0] = activity.findViewById(R.id.frames).getVisibility() == View.GONE
-                    && activity.findViewById(R.id.poster).getVisibility() == View.VISIBLE);
+                runOnMainSync(() -> resting[0] = hosted[0].findViewById(R.id.frames).getVisibility() == View.GONE
+                    && hosted[0].findViewById(R.id.poster).getVisibility() == View.VISIBLE);
                 return resting[0];
             }, "preview stops and returns to poster");
+            runOnMainSync(() -> {
+                activity.setContentView(dashboard);
+                hosted[0].findViewById(R.id.open).performClick();
+            });
+            await(() -> LabStore.load(activity).openCount == 1, "system host Open pending intent");
         } finally {
             runOnMainSync(host::stopListening);
             host.deleteAppWidgetId(widgetId);
@@ -138,6 +177,27 @@ public final class AndroidRenderingTests extends Instrumentation {
 
     private void require(boolean condition, String message) {
         if (!condition) throw new AssertionError(message);
+    }
+
+    private View findText(View view, String text) {
+        if (view instanceof TextView && text.contentEquals(((TextView) view).getText())) return view;
+        if (view instanceof android.view.ViewGroup) {
+            android.view.ViewGroup group = (android.view.ViewGroup) view;
+            for (int index = 0; index < group.getChildCount(); index++) {
+                View found = findText(group.getChildAt(index), text);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
+    private int countSurfaces(View view) {
+        int count = view instanceof android.view.SurfaceView ? 1 : 0;
+        if (view instanceof android.view.ViewGroup) {
+            android.view.ViewGroup group = (android.view.ViewGroup) view;
+            for (int index = 0; index < group.getChildCount(); index++) count += countSurfaces(group.getChildAt(index));
+        }
+        return count;
     }
 
     private String describe(View view) {

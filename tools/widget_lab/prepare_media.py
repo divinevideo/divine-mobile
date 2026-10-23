@@ -20,6 +20,10 @@ def prepare(clips):
     for index, source in enumerate(clips):
         scratch = ROOT / f".build/media/clip_{index}"
         scratch.mkdir(parents=True, exist_ok=True)
+        # FFmpeg overwrites only the frames it produces. A shorter replacement
+        # must not borrow the previous sample's remaining frames.
+        for stale_frame in scratch.glob("frame_*.jpg"):
+            stale_frame.unlink()
         subprocess.run([
             "ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(source),
             "-t", "2", "-vf", f"fps={FPS},scale=320:180:force_original_aspect_ratio=increase,crop=320:180",

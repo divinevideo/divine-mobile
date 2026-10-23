@@ -6,7 +6,6 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.res.AssetFileDescriptor;
 import android.media.MediaPlayer;
-import android.net.Uri;
 import android.os.Bundle;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -21,6 +20,9 @@ public final class LabActivity extends Activity {
     private LinearLayout content;
     private TextView counters;
     private MediaPlayer player;
+    private SurfaceView playbackSurface;
+    private int selectedClip = -1;
+    private boolean resumed;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -57,9 +59,19 @@ public final class LabActivity extends Activity {
             refreshCounters();
         });
         button("Watch selected sample", () -> watch(LabStore.load(this).index));
+        playbackSurface = new SurfaceView(this);
+        playbackSurface.setVisibility(android.view.View.GONE);
+        content.addView(playbackSurface, new LinearLayout.LayoutParams(-1, 420));
+        playbackSurface.getHolder().addCallback(new SurfaceHolder.Callback() {
+            public void surfaceCreated(SurfaceHolder holder) { startPlayback(); }
+            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) { }
+            public void surfaceDestroyed(SurfaceHolder holder) { releasePlayer(); }
+        });
         text("Create: give an ordinary object a dramatic entrance.", 18);
         button("Open Divine camera", () -> {
-            Intent camera = new Intent(Intent.ACTION_VIEW, Uri.parse("divine://quick-action/camera"));
+            Intent launch = getPackageManager().getLaunchIntentForPackage("co.openvine.app");
+            if (launch == null) { text("Install Divine to try the camera shortcut.", 16); return; }
+            Intent camera = cameraIntent(launch.getComponent());
             try { startActivity(camera); }
             catch (android.content.ActivityNotFoundException exception) { text("Install Divine to try the camera shortcut.", 16); }
         });
@@ -76,7 +88,12 @@ public final class LabActivity extends Activity {
         handleIntent(getIntent());
     }
 
-    @Override protected void onResume() { super.onResume(); refreshCounters(); }
+    @Override protected void onResume() {
+        super.onResume();
+        resumed = true;
+        refreshCounters();
+        if (player == null) startPlayback();
+    }
 
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
@@ -86,7 +103,8 @@ public final class LabActivity extends Activity {
 
     @Override protected void onStop() {
         super.onStop();
-        if (player != null) { player.release(); player = null; }
+        resumed = false;
+        releasePlayer();
     }
 
     private void handleIntent(Intent intent) {
@@ -102,24 +120,49 @@ public final class LabActivity extends Activity {
     }
 
     private void watch(int clip) {
-        if (player != null) { player.release(); player = null; }
-        SurfaceView surface = new SurfaceView(this);
-        content.addView(surface, new LinearLayout.LayoutParams(-1, 420));
-        surface.getHolder().addCallback(new SurfaceHolder.Callback() {
-            public void surfaceCreated(SurfaceHolder holder) {
-                try (AssetFileDescriptor file = getAssets().openFd("clip_" + clip + ".mp4")) {
-                    player = new MediaPlayer();
-                    player.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
-                    player.setDisplay(holder);
-                    player.setOnPreparedListener(MediaPlayer::start);
-                    player.prepareAsync();
-                } catch (IOException exception) { text("Could not load sample: " + exception.getMessage(), 16); }
-            }
-            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) { }
-            public void surfaceDestroyed(SurfaceHolder holder) {
-                if (player != null) { player.release(); player = null; }
-            }
-        });
+        selectedClip = clip;
+        playbackSurface.setVisibility(android.view.View.VISIBLE);
+        startPlayback();
+        playbackSurface.post(() -> playbackSurface.requestRectangleOnScreen(
+            new android.graphics.Rect(0, 0, playbackSurface.getWidth(), playbackSurface.getHeight()), false));
+    }
+
+    private void startPlayback() {
+        if (!resumed || selectedClip < 0 || !playbackSurface.getHolder().getSurface().isValid()) return;
+        releasePlayer();
+        try (AssetFileDescriptor file = getAssets().openFd("clip_" + selectedClip + ".mp4")) {
+            MediaPlayer current = new MediaPlayer();
+            player = current;
+            current.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+            current.setDisplay(playbackSurface.getHolder());
+            current.setOnPreparedListener(prepared -> {
+                if (resumed && player == prepared) prepared.start();
+            });
+            current.setOnErrorListener((failed, what, extra) -> {
+                if (player == failed) releasePlayer();
+                text("Could not play sample.", 16);
+                return true;
+            });
+            current.prepareAsync();
+        } catch (IOException exception) {
+            releasePlayer();
+            text("Could not load sample: " + exception.getMessage(), 16);
+        }
+    }
+
+    private void releasePlayer() {
+        if (player == null) return;
+        player.release();
+        player = null;
+    }
+
+    static Intent cameraIntent(ComponentName component) {
+        // Match Divine's Android QuickActionContract, not the iOS-only URL.
+        return new Intent("co.openvine.divine_quick_actions.ACTION_QUICK_ACTION")
+            .setComponent(component)
+            .putExtra("co.openvine.divine_quick_actions.extra.ACTION_TYPE", "camera")
+            .putExtra("co.openvine.divine_quick_actions.extra.ACTION_PAYLOAD", new Bundle())
+            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
     }
 
     private void refreshCounters() {

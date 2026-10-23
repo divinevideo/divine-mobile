@@ -10,7 +10,7 @@ The question: can a highlighted video show a two-second moving preview inside a 
 - Tap **Next** in the widget to select another sample and attempt a two-second preview. Both prototypes use 16 frames sampled at 8 fps. There is no GIF player or embedded video player in the widget.
 - **Like** toggles local state for that sample. It does not publish a Nostr reaction.
 - **Open** opens that sample in the standalone host app's native player.
-- The host app has a motion/still switch, local action counts, a reset button, and a creative prompt with the existing Divine camera deep link. Install Divine separately to use that shortcut.
+- The host app has a motion/still switch, local action counts, a reset button, and a creative prompt with the existing Divine camera shortcut. Install Divine separately to use that shortcut (the stable `co.openvine.app` package on Android). iOS uses a URL; Android uses Divine's native quick-action intent.
 
 The three samples and the selection are shared across instances of the widget on each platform. The widgets change on explicit actions; automatic background highlight selection is outside this experiment. Changing sample in the host app also requests a widget refresh, but refresh timing belongs to the OS.
 
@@ -85,6 +85,7 @@ Native state tests:
 
 ```sh
 python3 test_state.py
+python3 -m unittest discover -s tests -p 'test_*.py'
 ```
 
 iOS home-screen test (install the lab and add the medium widget at the top of home-screen page two first):
@@ -109,14 +110,14 @@ adb shell am instrument -w video.divine.widgetlab/.AndroidRenderingTests
 adb shell appwidget revokebind --package video.divine.widgetlab
 ```
 
-The binding grant permits the test app to host its own widget without a picker. The test restores local demo state, removes its allocated widget, and stops the host listener. It checks RemoteViews inflation, action pending intents, frame advancement in a system widget host, and the return to the resting poster. Check the explicit `PASS`/`FAIL` text; Android's instrumentation CLI can exit zero even when this minimal runner reports failure.
+The binding grant permits the test app to host its own widget without a picker. The test restores local demo state, removes its allocated widget, and stops the host listener. It checks repeated playback uses one surface, the native camera-intent contract, RemoteViews inflation, action pending intents, frame advancement in a system widget host, and the return to the resting poster. It does not launch an installed Divine app or validate its camera screen. Check the explicit `PASS`/`FAIL` text; Android's instrumentation CLI can exit zero even when this minimal runner reports failure.
 
 ## Observed results (2026-10-23)
 
 - iOS 26.1 simulator: the medium home-screen widget's Reset → Next → Like → Open test passes, including the expected local counters. The revised image fills the card, with overlaid branding and controls.
 - Swift and Java state tests pass, including per-clip likes, counters, and a reset generation that cannot reuse an earlier preview's revision.
-- The standalone Android APK builds and its signature verifies. The Android system widget-host rendering test remains unverified: an initial run did not pass, and subsequent clean API 35/36 emulator attempts hung during boot before app installation (QEMU CPU-thread watchdog errors).
-- Useful two-second motion has **not** been established on either platform. Treat the frame sequences as experiments and use the still fallback until tested on working devices.
+- The standalone Android APK builds and its signature verifies. The rendering test passes on an API 36 emulator, including Next, Like, Open, advancing frames in a system widget host, and return to the resting poster. The initial failure was a test lookup across the widget host's isolated view namespace, not missing widget content. Physical devices and launcher-specific rendering remain untested.
+- Useful two-second motion has **not** been established on either platform. The Android test observes frame advancement, not visual quality or exact presentation timing. Treat the frame sequences as experiments and use the still fallback until assessed on target devices.
 - The repository's Flutter CI analysis scope (`flutter analyze lib test integration_test tools`) passes; the prototypes add no Flutter app code.
 
 ## Measurement boundaries
