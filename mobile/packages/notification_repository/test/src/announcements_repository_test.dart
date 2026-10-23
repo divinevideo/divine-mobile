@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:clock/clock.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:notification_repository/announcements_repository.dart';
@@ -50,13 +51,14 @@ void main() {
     http.Client client, {
     String platform = 'ios',
     String appVersion = '1.2.3',
+    Clock? clock,
     Duration requestTimeout = const Duration(seconds: 10),
   }) => repository = AnnouncementsRepository(
     httpClient: client,
     store: store,
     platform: platform,
     appVersion: appVersion,
-    clock: Clock(() => now),
+    clock: clock ?? Clock(() => now),
     requestTimeout: requestTimeout,
   );
 
@@ -409,6 +411,87 @@ void main() {
     await repository.refresh();
     await repository.markSeen(['announcement:$firstId']);
     expect(repository.items.single.isRead, isTrue);
+  });
+
+  test('preserves seen IDs when the catalog cache is unreadable', () async {
+    store
+      ..catalogValue = '{bad cache'
+      ..seen = ['announcement:$firstId'];
+    create(MockClient((_) async => jsonResponse(catalog())));
+    await repository.initialize();
+    await repository.refresh();
+    expect(repository.items.single.isRead, isTrue);
+    expect(store.seen, ['announcement:$firstId']);
+  });
+
+  test(
+    'replayed snapshots update at publication and expiry without a fetch',
+    () {
+      fakeAsync((async) {
+        final snapshots = <List<String>>[];
+        var requests = 0;
+        create(
+          MockClient((_) async {
+            requests++;
+            return jsonResponse(
+              catalog([
+                announcement(expiresAt: '2026-10-24T00:00:00Z'),
+                announcement(
+                  id: secondId,
+                  publishedAt: '2026-10-24T00:00:00Z',
+                  expiresAt: '2026-10-25T00:00:00Z',
+                ),
+              ]),
+            );
+          }),
+          clock: async.getClock(now),
+        );
+        final subscription = repository.watchSnapshot().listen((items) {
+          snapshots.add(items.map((item) => item.announcementId).toList());
+        });
+        try {
+          unawaited(repository.refresh());
+          async.flushMicrotasks();
+          expect(snapshots.last, [firstId]);
+          async.elapse(const Duration(days: 1));
+          expect(snapshots.last, [secondId]);
+          final replayed = <List<String>>[];
+          final replay = repository.watchSnapshot().listen((items) {
+            replayed.add(items.map((item) => item.announcementId).toList());
+          });
+          async.flushMicrotasks();
+          expect(replayed.single, [secondId]);
+          unawaited(replay.cancel());
+          async.elapse(const Duration(days: 1));
+          expect(snapshots.last, isEmpty);
+          expect(requests, 1);
+        } finally {
+          unawaited(subscription.cancel());
+          unawaited(repository.close());
+          async.flushMicrotasks();
+        }
+        expect(async.nonPeriodicTimerCount, 0);
+      });
+    },
+  );
+
+  test('close cancels eligibility timers', () {
+    fakeAsync((async) {
+      create(
+        MockClient((_) async => jsonResponse(catalog())),
+        clock: async.getClock(now),
+      );
+      try {
+        unawaited(repository.refresh());
+        async.flushMicrotasks();
+        expect(async.nonPeriodicTimerCount, 1);
+      } finally {
+        final firstClose = repository.close();
+        expect(identical(firstClose, repository.close()), isTrue);
+        async.flushMicrotasks();
+      }
+      expect(async.nonPeriodicTimerCount, 0);
+    });
   });
 
   test('coalesces concurrent refreshes', () async {
