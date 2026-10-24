@@ -35,7 +35,9 @@ void fixEditorLoop(BuildContext context) {
       clipState.isTrimDragging ||
       main.isSubEditorOpen ||
       main.isReordering ||
-      (main.audition != null && !(listener?._ownsAudition ?? false))) {
+      (main.audition != null &&
+          (!(listener?._ownsAudition ?? false) ||
+              main.auditionOwner != listener?._auditionOwner))) {
     return;
   }
   listener?._endSeam();
@@ -129,6 +131,7 @@ class _LoopRepairResultListenerState extends State<LoopRepairResultListener> {
   List<DivineVideoClip>? _playingClips;
   bool _sawNotReady = false;
   bool _ownsAudition = false;
+  String? _auditionOwner;
 
   @override
   Widget build(BuildContext context) => MultiBlocListener(
@@ -258,6 +261,7 @@ class _LoopRepairResultListenerState extends State<LoopRepairResultListener> {
     final duration = compositionDuration(result.after);
     const side = VideoEditorConstants.loopSeamPreviewSide;
     _playingClips = result.after;
+    _auditionOwner = result.operationId;
     _pendingAudition = duration > side * 2
         ? (start: duration - side, end: side)
         : (start: Duration.zero, end: duration);
@@ -275,6 +279,13 @@ class _LoopRepairResultListenerState extends State<LoopRepairResultListener> {
   }
 
   void _onMainState(BuildContext context, VideoEditorMainState state) {
+    if (_ownsAudition &&
+        state.audition != null &&
+        state.auditionOwner != _auditionOwner) {
+      _ownsAudition = false;
+      _playingClips = null;
+      _auditionOwner = null;
+    }
     if (state.isSubEditorOpen ||
         state.isReordering ||
         !(ModalRoute.isCurrentOf(context) ?? true)) {
@@ -288,7 +299,11 @@ class _LoopRepairResultListenerState extends State<LoopRepairResultListener> {
     _pendingAudition = null;
     _ownsAudition = true;
     context.read<VideoEditorMainBloc>().add(
-      VideoEditorAuditionStarted(start: audition.start, end: audition.end),
+      VideoEditorAuditionStarted(
+        start: audition.start,
+        end: audition.end,
+        owner: _auditionOwner,
+      ),
     );
   }
 
@@ -297,7 +312,10 @@ class _LoopRepairResultListenerState extends State<LoopRepairResultListener> {
     _playingClips = null;
     if (!_ownsAudition) return;
     _ownsAudition = false;
-    context.read<VideoEditorMainBloc>().add(const VideoEditorAuditionEnded());
+    context.read<VideoEditorMainBloc>().add(
+      VideoEditorAuditionEnded(owner: _auditionOwner),
+    );
+    _auditionOwner = null;
   }
 
   void _report(String message, {bool undo = false}) {

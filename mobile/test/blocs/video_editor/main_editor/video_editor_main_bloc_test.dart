@@ -686,6 +686,129 @@ void main() {
       );
     });
 
+    group('audition ownership', () {
+      const window = (start: Duration.zero, end: Duration(seconds: 1));
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'unowned replacement at the same range survives stale owned end',
+        build: buildBloc,
+        seed: () => const VideoEditorMainState(
+          audition: window,
+          auditionOwner: 'loop',
+          isPlaying: true,
+        ),
+        act: (bloc) => bloc
+          ..add(
+            const VideoEditorAuditionStarted(
+              start: Duration.zero,
+              end: Duration(seconds: 1),
+            ),
+          )
+          ..add(const VideoEditorAuditionEnded(owner: 'loop')),
+        expect: () => [
+          isA<VideoEditorMainState>()
+              .having((s) => s.audition, 'foreign range', window)
+              .having((s) => s.auditionOwner, 'foreign owner', isNull),
+        ],
+      );
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'matching owner can end its audition',
+        build: buildBloc,
+        seed: () => const VideoEditorMainState(
+          audition: window,
+          auditionOwner: 'loop',
+          isPlaying: true,
+        ),
+        act: (bloc) => bloc.add(const VideoEditorAuditionEnded(owner: 'loop')),
+        expect: () => [
+          isA<VideoEditorMainState>()
+              .having((s) => s.audition, 'range', isNull)
+              .having((s) => s.auditionOwner, 'owner', isNull),
+        ],
+      );
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'owned start records the owner for the same playback range',
+        build: buildBloc,
+        seed: () =>
+            const VideoEditorMainState(audition: window, isPlaying: true),
+        act: (bloc) => bloc.add(
+          const VideoEditorAuditionStarted(
+            start: Duration.zero,
+            end: Duration(seconds: 1),
+            owner: 'loop',
+          ),
+        ),
+        expect: () => [
+          isA<VideoEditorMainState>().having(
+            (s) => s.auditionOwner,
+            'owner',
+            'loop',
+          ),
+        ],
+      );
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'generic end preserves existing ability to end an owned audition',
+        build: buildBloc,
+        seed: () => const VideoEditorMainState(
+          audition: window,
+          auditionOwner: 'loop',
+          isPlaying: true,
+        ),
+        act: (bloc) => bloc.add(const VideoEditorAuditionEnded()),
+        expect: () => [
+          isA<VideoEditorMainState>()
+              .having((s) => s.audition, 'range', isNull)
+              .having((s) => s.auditionOwner, 'owner', isNull),
+        ],
+      );
+      test(
+        'copy preserves owner except when replacing or clearing audition',
+        () {
+          const state = VideoEditorMainState(
+            audition: window,
+            auditionOwner: 'loop',
+          );
+          expect(state.copyWith(isPlaying: true).auditionOwner, 'loop');
+          expect(state.copyWith(audition: window).auditionOwner, isNull);
+          expect(state.copyWith(clearAudition: true).auditionOwner, isNull);
+          expect(
+            state
+                .copyWith(audition: window, auditionOwner: 'other')
+                .auditionOwner,
+            'other',
+          );
+          expect(
+            state,
+            isNot(
+              const VideoEditorMainState(
+                audition: window,
+                auditionOwner: 'other',
+              ),
+            ),
+          );
+        },
+      );
+      test('events include ownership in equality', () {
+        expect(
+          const VideoEditorAuditionStarted(
+            start: Duration.zero,
+            end: Duration(seconds: 1),
+            owner: 'loop',
+          ),
+          isNot(
+            const VideoEditorAuditionStarted(
+              start: Duration.zero,
+              end: Duration(seconds: 1),
+              owner: 'other',
+            ),
+          ),
+        );
+        expect(
+          const VideoEditorAuditionEnded(owner: 'loop'),
+          isNot(const VideoEditorAuditionEnded(owner: 'other')),
+        );
+      });
+    });
+
     group(VideoEditorAuditionStarted, () {
       const start = Duration(seconds: 3);
       const end = Duration(seconds: 6);

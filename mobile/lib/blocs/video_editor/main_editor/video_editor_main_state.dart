@@ -42,6 +42,7 @@ class VideoEditorMainState extends Equatable {
     this.isMarkingTrackRegion = false,
     this.detachedClipOpacityPreview,
     this.audition,
+    this.auditionOwner,
     this.pausesAfterAudition = false,
     this.isAuditionSeekPending = false,
   });
@@ -144,6 +145,9 @@ class VideoEditorMainState extends Equatable {
   /// The stretch playback loops over while a sheet plays it, or `null`.
   final PlaybackAudition? audition;
 
+  /// The operation that owns the active audition, when one was supplied.
+  final String? auditionOwner;
+
   /// Whether playback was paused when the [audition] started, and pauses
   /// again when it ends.
   final bool pausesAfterAudition;
@@ -173,7 +177,8 @@ class VideoEditorMainState extends Equatable {
   ///
   /// Use [clearOpenSubEditor] to explicitly close the sub-editor,
   /// [clearDetachedClipOpacityPreview] to end an opacity preview and
-  /// [clearAudition] to end an audition.
+  /// [clearAudition] to end an audition. Supplying a replacement [audition]
+  /// also replaces its owner, including clearing an omitted owner.
   VideoEditorMainState copyWith({
     bool? canUndo,
     bool? canRedo,
@@ -201,6 +206,7 @@ class VideoEditorMainState extends Equatable {
     DetachedClipOpacityPreview? detachedClipOpacityPreview,
     bool clearDetachedClipOpacityPreview = false,
     PlaybackAudition? audition,
+    String? auditionOwner,
     bool clearAudition = false,
     bool? pausesAfterAudition,
     bool? isAuditionSeekPending,
@@ -240,6 +246,11 @@ class VideoEditorMainState extends Equatable {
           ? null
           : (detachedClipOpacityPreview ?? this.detachedClipOpacityPreview),
       audition: clearAudition ? null : (audition ?? this.audition),
+      auditionOwner: clearAudition
+          ? null
+          : (audition != null
+                ? auditionOwner
+                : auditionOwner ?? this.auditionOwner),
       pausesAfterAudition: pausesAfterAudition ?? this.pausesAfterAudition,
       isAuditionSeekPending:
           isAuditionSeekPending ?? this.isAuditionSeekPending,
@@ -272,6 +283,7 @@ class VideoEditorMainState extends Equatable {
     isMarkingTrackRegion,
     detachedClipOpacityPreview,
     audition,
+    auditionOwner,
     pausesAfterAudition,
     isAuditionSeekPending,
   ];

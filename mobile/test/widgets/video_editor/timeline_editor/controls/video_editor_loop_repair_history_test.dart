@@ -40,9 +40,12 @@ void main() {
     registerFallbackValue(const LoopRepairResult(status: .noMatch));
   });
   group('LoopRepairResultListener interactions', () {
-    for (final brightness in Brightness.values) {
+    for (final (brightness, foreign) in [
+      for (final brightness in Brightness.values)
+        for (final foreign in [false, true]) (brightness, foreign),
+    ]) {
       testWidgets(
-        'one history edit releases audio anchors, waits for player and offers Undo in $brightness',
+        'one history edit releases audio anchors, waits for player and offers Undo in $brightness (foreign preview: $foreign)',
         (tester) async {
           final clip = DivineVideoClip(
             id: 'a',
@@ -96,7 +99,9 @@ void main() {
           when(() => editor.stateManager).thenReturn(stateManager);
           when(
             () => editor.setState(any()),
-          ).thenAnswer((c) => (c.positionalArguments.single as VoidCallback)());
+          ).thenAnswer(
+            (c) => (c.positionalArguments.single as VoidCallback)(),
+          );
           final histories = <Map<String, dynamic>>[];
           when(
             () => editor.addHistory(
@@ -141,7 +146,11 @@ void main() {
             for (var i = 0; i < 20 && !closed; i++) {
               await tester.pump();
             }
-            expect(closed, isTrue, reason: 'Editor blocs must finish shutdown');
+            expect(
+              closed,
+              isTrue,
+              reason: 'Editor blocs must finish shutdown',
+            );
             await closing;
           });
           await tester.pumpWidget(
@@ -172,7 +181,9 @@ void main() {
                     providers: [
                       BlocProvider<ClipEditorBloc>.value(value: clipBloc),
                       BlocProvider<VideoEditorMainBloc>.value(value: main),
-                      BlocProvider<TimelineOverlayBloc>.value(value: overlays),
+                      BlocProvider<TimelineOverlayBloc>.value(
+                        value: overlays,
+                      ),
                       BlocProvider.value(value: cubit),
                     ],
                     child: LoopRepairResultListener(
@@ -219,20 +230,51 @@ void main() {
           await tester.pump();
           playerStates.add(const VideoEditorMainState(isPlayerReady: true));
           await tester.pump();
-          verify(() => main.add(any(that: isA<VideoEditorAuditionStarted>())))
-              .called(1);
+          final recorded = verify(
+            () => main.add(captureAny(that: isA<VideoEditorAuditionStarted>())),
+          );
+          recorded.called(1);
+          final started =
+              recorded.captured.single as VideoEditorAuditionStarted;
+          expect(started.owner, isNotNull);
           await tester.pumpAndSettle();
           final undo = tester
               .widget<SnackBarAction>(find.byType(SnackBarAction))
               .onPressed;
           // Fix loop remains available while its own seam preview is playing.
           playerStates.add(
-            const VideoEditorMainState(
+            VideoEditorMainState(
               isPlayerReady: true,
-              audition: (start: Duration(seconds: 1), end: Duration.zero),
+              audition: (start: started.start, end: started.end),
+              auditionOwner: started.owner,
             ),
           );
           await tester.pump();
+          if (foreign) {
+            final screenContext = tester.element(find.text('Fix loop'));
+            unawaited(
+              showModalBottomSheet<void>(
+                context: screenContext,
+                builder: (_) => const SizedBox(height: 100),
+              ),
+            );
+            // Another feature can own the exact same playback range.
+            playerStates.add(
+              VideoEditorMainState(
+                isPlayerReady: true,
+                audition: (start: started.start, end: started.end),
+              ),
+            );
+            await tester.pumpAndSettle();
+            verifyNever(
+              () => main.add(any(that: isA<VideoEditorAuditionEnded>())),
+            );
+            Navigator.of(screenContext).pop();
+            await tester.pumpAndSettle();
+            undo();
+            verify(editor.undoAction).called(1);
+            return;
+          }
           when(
             () => repository.repair(
               any(),
