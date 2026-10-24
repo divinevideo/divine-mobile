@@ -80,15 +80,13 @@ final class AdjustVideoEffect: CustomVideoEffectRenderer, VideoFrameEffect {
 /// Dart `AdjustVideoEffect` writes them.
 struct AdjustSettings {
   /// Below 0 darkens bright areas, above 0 brightens them.
-  var highlights = 0.0
+  let highlights: Double
   /// Above 0 lifts dark areas, below 0 deepens them.
-  var shadows = 0.0
+  let shadows: Double
   /// Above 0 strengthens dull colours, below 0 mutes strong ones.
-  var vibrance = 0.0
+  let vibrance: Double
   /// How strongly fine detail is crisped up.
-  var sharpen = 0.0
-
-  init() {}
+  let sharpen: Double
 
   init(params: [String: Any]) {
     func value(_ key: String, min: Double) -> Double {
