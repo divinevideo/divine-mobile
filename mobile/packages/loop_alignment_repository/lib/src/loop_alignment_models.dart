@@ -314,9 +314,12 @@ final class LoopAnalysis {
     this.endpointHeight = 0,
     this.ordinaryMotionP95 = 0,
     this.ordinaryMotionSamples = 0,
-  }) : candidates = List.unmodifiable(candidates);
+    List<Duration> eligibleTrimEnds = const [],
+  }) : eligibleTrimEnds = List.unmodifiable(eligibleTrimEnds),
+       candidates = List.unmodifiable(candidates);
   final LoopSeamScores baselineScores;
   final List<LoopAlignmentPlan> candidates;
+  final List<Duration> eligibleTrimEnds;
 
   final LoopFrameMatch? endpointRegistration;
   final int endpointWidth, endpointHeight, ordinaryMotionSamples;
@@ -348,7 +351,8 @@ final class LoopMediaMetadata {
     required this.width,
     required this.height,
   }) : frameTimes = List.unmodifiable(frameTimes);
-  final Duration videoDuration, audioDuration;
+  final Duration videoDuration;
+  final Duration? audioDuration;
   final List<Duration> frameTimes;
   final int width, height;
 }
@@ -370,11 +374,15 @@ final class LoopInspection {
     required this.audioDuration,
     required this.videoDuration,
     required this.covered,
-  }) : frameTimes = List.unmodifiable(frameTimes);
+    Map<String, LoopMediaMetadata> metadata = const {},
+  }) : metadata = Map.unmodifiable(metadata),
+       frameTimes = List.unmodifiable(frameTimes);
   final LoopSeamScores scores;
   final List<Duration> frameTimes;
-  final Duration audioDuration, videoDuration;
+  final Duration videoDuration;
+  final Duration? audioDuration;
   final bool covered;
+  final Map<String, LoopMediaMetadata> metadata;
 }
 
 enum LoopRepairStatus { repaired, alreadySmooth, noMatch, unsupported }
