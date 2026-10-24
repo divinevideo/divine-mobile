@@ -1,4 +1,5 @@
 {
+  "videoEditorEditingToolsLabel": "Bearbeitungswerkzeuge",
   "@@locale": "de",
   "devOptionsClipRecovery": "Clip-Wiederherstellung",
   "devOptionsClipRecoveryDescription": "Findet Aufnahmen unter einem anderen Konto und Videodateien, auf die kein Eintrag mehr verweist.",

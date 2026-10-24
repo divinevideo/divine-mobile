@@ -10,6 +10,9 @@ class AppLocalizationsBg extends AppLocalizations {
   AppLocalizationsBg([String locale = 'bg']) : super(locale);
 
   @override
+  String get videoEditorEditingToolsLabel => 'Инструменти за редактиране';
+
+  @override
   String get devOptionsClipRecovery => 'Възстановяване на клипове';
 
   @override

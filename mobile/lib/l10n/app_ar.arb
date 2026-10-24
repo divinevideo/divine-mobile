@@ -1,4 +1,5 @@
 {
+  "videoEditorEditingToolsLabel": "أدوات التعديل",
   "@@locale": "ar",
   "devOptionsClipRecovery": "استرداد المقاطع",
   "devOptionsClipRecoveryDescription": "يعثر على التسجيلات المحفوظة ضمن حساب آخر وعلى ملفات الفيديو التي لم يعد أي سجل يشير إليها.",

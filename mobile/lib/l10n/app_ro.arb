@@ -1,4 +1,5 @@
 {
+  "videoEditorEditingToolsLabel": "Instrumente de editare",
   "@@locale": "ro",
   "devOptionsClipRecovery": "Recuperare clipuri",
   "devOptionsClipRecoveryDescription": "Găsește înregistrări stocate în alt cont și fișiere video la care nu mai face referire nicio intrare.",

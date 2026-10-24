@@ -1,4 +1,5 @@
 {
+  "videoEditorEditingToolsLabel": "Düzenleme araçları",
   "@@locale": "tr",
   "devOptionsClipRecovery": "Klip kurtarma",
   "devOptionsClipRecoveryDescription": "Başka bir hesap altında saklanan kayıtları ve artık hiçbir kaydın işaret etmediği video dosyalarını bulur.",

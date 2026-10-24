@@ -10,6 +10,9 @@ class AppLocalizationsSv extends AppLocalizations {
   AppLocalizationsSv([String locale = 'sv']) : super(locale);
 
   @override
+  String get videoEditorEditingToolsLabel => 'Redigeringsverktyg';
+
+  @override
   String get devOptionsClipRecovery => 'Klippåterställning';
 
   @override

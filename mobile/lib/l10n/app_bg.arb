@@ -1,4 +1,5 @@
 {
+  "videoEditorEditingToolsLabel": "Инструменти за редактиране",
   "@@locale": "bg",
   "devOptionsClipRecovery": "Възстановяване на клипове",
   "devOptionsClipRecoveryDescription": "Намира записи, съхранени под друг акаунт, и видеофайлове, към които вече не сочи никакъв запис.",
