@@ -20,7 +20,7 @@ import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/vine_cached_image.dart';
 
-/// Page: bridges the seven moderation services + repositories into
+/// Page: bridges the moderation services and repositories into
 /// [SafetySettingsCubit].
 class SafetySettingsScreen extends ConsumerWidget {
   const SafetySettingsScreen({super.key});
@@ -46,6 +46,9 @@ class SafetySettingsScreen extends ConsumerWidget {
       videoProvenanceFilterServiceProvider,
     );
     final isAdultContentLocked = ref.watch(isProtectedMinorProvider);
+    final dmVideoBlurPreferenceService = ref.watch(
+      dmVideoBlurPreferenceServiceProvider,
+    );
     return BlocProvider(
       // Auth-flippable services are re-keyed so the Cubit reloads with the
       // fresh instances rather than operating on stale ones.
@@ -59,6 +62,7 @@ class SafetySettingsScreen extends ConsumerWidget {
         followRepository,
         contentBlocklistRepository,
         isAdultContentLocked,
+        dmVideoBlurPreferenceService,
       )),
       create: (_) {
         final cubit = SafetySettingsCubit(
@@ -71,6 +75,7 @@ class SafetySettingsScreen extends ConsumerWidget {
           followRepository: followRepository,
           contentBlocklistRepository: contentBlocklistRepository,
           isAdultContentLocked: isAdultContentLocked,
+          dmVideoBlurPreferenceService: dmVideoBlurPreferenceService,
         );
         runDetached(
           cubit.load(),
@@ -121,6 +126,7 @@ class SafetySettingsView extends StatelessWidget {
                   const _DivineProviderTile(),
                   const _PeopleIFollowProviderTile(),
                   const _CustomLabelersSection(),
+                  const _BlurDmVideoPreviewsTile(),
                   DivineSectionHeader(context.l10n.safetySettingsBlockedUsers),
                   const _BlockedUsersSection(),
                 ],
@@ -227,6 +233,25 @@ class _PeopleIFollowProviderTile extends StatelessWidget {
       value: isEnabled,
       onChanged: (value) =>
           context.read<SafetySettingsCubit>().setPeopleIFollowEnabled(value),
+    );
+  }
+}
+
+class _BlurDmVideoPreviewsTile extends StatelessWidget {
+  const _BlurDmVideoPreviewsTile();
+
+  @override
+  Widget build(BuildContext context) {
+    final blurDmVideoPreviews = context.select(
+      (SafetySettingsCubit cubit) => cubit.state.blurDmVideoPreviews,
+    );
+    return DivineSwitchTile(
+      leadingIcon: DivineIconName.eyeSlash,
+      title: context.l10n.safetySettingsBlurDmVideoPreviews,
+      subtitle: context.l10n.safetySettingsBlurDmVideoPreviewsSubtitle,
+      value: blurDmVideoPreviews,
+      onChanged: (value) =>
+          context.read<SafetySettingsCubit>().setBlurDmVideoPreviews(value),
     );
   }
 }

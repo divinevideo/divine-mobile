@@ -15,12 +15,16 @@ import 'package:openvine/blocs/safety_settings/safety_settings_state.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
+import 'package:openvine/services/dm_video_blur_preference_service.dart';
 import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/services/video_provenance_filter_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockAgeVerificationService extends Mock
     implements AgeVerificationService {}
+
+class _RefusingPreferences extends Mock implements SharedPreferences {}
 
 class _MockContentFilterService extends Mock implements ContentFilterService {}
 
@@ -95,18 +99,21 @@ void main() {
           .thenAnswer((_) async {});
     }
 
-    SafetySettingsCubit buildCubit({bool isAdultContentLocked = false}) =>
-        SafetySettingsCubit(
-          ageVerificationService: ageService,
-          contentFilterService: filterService,
-          videoEventService: videoEventService,
-          divineHostFilterService: divineHostFilterService,
-          provenanceFilterService: provenanceFilterService,
-          moderationLabelService: moderationLabelService,
-          followRepository: followRepository,
-          contentBlocklistRepository: blocklistRepository,
-          isAdultContentLocked: isAdultContentLocked,
-        );
+    SafetySettingsCubit buildCubit({
+      bool isAdultContentLocked = false,
+      DmVideoBlurPreferenceService? dmVideoBlurPreferenceService,
+    }) => SafetySettingsCubit(
+      ageVerificationService: ageService,
+      contentFilterService: filterService,
+      videoEventService: videoEventService,
+      divineHostFilterService: divineHostFilterService,
+      provenanceFilterService: provenanceFilterService,
+      moderationLabelService: moderationLabelService,
+      followRepository: followRepository,
+      contentBlocklistRepository: blocklistRepository,
+      isAdultContentLocked: isAdultContentLocked,
+      dmVideoBlurPreferenceService: dmVideoBlurPreferenceService,
+    );
 
     blocTest<SafetySettingsCubit, SafetySettingsState>(
       'load() surfaces isAdultContentLocked for a protected minor',
@@ -490,6 +497,140 @@ void main() {
         ),
       ],
     );
+
+    group('setBlurDmVideoPreviews', () {
+      test(
+        'an older refused save cannot roll back a newer saved choice',
+        () async {
+          final prefs = _RefusingPreferences();
+          final saves = <Completer<bool>>[];
+          when(() => prefs.getBool(any())).thenReturn(null);
+          when(() => prefs.setBool(any(), any())).thenAnswer((_) {
+            if (saves.length == 3) return Future.value(true);
+            final save = Completer<bool>();
+            saves.add(save);
+            return save.future;
+          });
+          final service = DmVideoBlurPreferenceService(
+            prefs,
+            account: 'a' * 64,
+          );
+          addTearDown(service.dispose);
+          final cubit = buildCubit(dmVideoBlurPreferenceService: service);
+          addTearDown(cubit.close);
+
+          final oldResult = cubit.setBlurDmVideoPreviews(true);
+          final newerSaves = Future.wait([
+            cubit.setBlurDmVideoPreviews(false),
+            cubit.setBlurDmVideoPreviews(true),
+          ]);
+          // Refused while both newer saves are still in flight.
+          saves.first.complete(false);
+          await oldResult;
+
+          expect(service.blurVideoPreviews, isTrue);
+          expect(cubit.state.blurDmVideoPreviews, isTrue);
+          saves[1].complete(true);
+          saves[2].complete(true);
+          await newerSaves;
+        },
+      );
+
+      final account = 'a' * 64;
+      late SharedPreferences prefs;
+      late DmVideoBlurPreferenceService service;
+
+      setUp(() async {
+        SharedPreferences.setMockInitialValues({
+          DmVideoBlurPreferenceService.storageKey(account): true,
+        });
+        prefs = await SharedPreferences.getInstance();
+      });
+
+      blocTest<SafetySettingsCubit, SafetySettingsState>(
+        "load reads the signed-in account's stored choice",
+        setUp: stubSettingsInitialization,
+        build: () => buildCubit(
+          dmVideoBlurPreferenceService: DmVideoBlurPreferenceService(
+            prefs,
+            account: account,
+          ),
+        ),
+        act: (cubit) => cubit.load(),
+        skip: 1,
+        expect: () => [
+          isA<SafetySettingsState>().having(
+            (s) => s.blurDmVideoPreviews,
+            'blurDmVideoPreviews',
+            isTrue,
+          ),
+        ],
+      );
+
+      blocTest<SafetySettingsCubit, SafetySettingsState>(
+        'emits the new choice and stores it for the account',
+        build: () {
+          service = DmVideoBlurPreferenceService(prefs, account: 'b' * 64);
+          return buildCubit(dmVideoBlurPreferenceService: service);
+        },
+        act: (cubit) => cubit.setBlurDmVideoPreviews(true),
+        expect: () => [
+          isA<SafetySettingsState>().having(
+            (s) => s.blurDmVideoPreviews,
+            'blurDmVideoPreviews',
+            isTrue,
+          ),
+        ],
+        verify: (_) {
+          expect(service.blurVideoPreviews, isTrue);
+          expect(
+            DmVideoBlurPreferenceService(
+              prefs,
+              account: 'b' * 64,
+            ).blurVideoPreviews,
+            isTrue,
+          );
+        },
+      );
+
+      blocTest<SafetySettingsCubit, SafetySettingsState>(
+        'turns the switch back when the choice cannot be saved',
+        build: () {
+          final refusing = _RefusingPreferences();
+          when(() => refusing.getBool(any())).thenReturn(null);
+          when(
+            () => refusing.setBool(any(), any()),
+          ).thenAnswer((_) async => false);
+          return buildCubit(
+            dmVideoBlurPreferenceService: DmVideoBlurPreferenceService(
+              refusing,
+              account: account,
+            ),
+          );
+        },
+        act: (cubit) => cubit.setBlurDmVideoPreviews(true),
+        expect: () => [
+          isA<SafetySettingsState>().having(
+            (s) => s.blurDmVideoPreviews,
+            'blurDmVideoPreviews',
+            isTrue,
+          ),
+          isA<SafetySettingsState>().having(
+            (s) => s.blurDmVideoPreviews,
+            'blurDmVideoPreviews',
+            isFalse,
+          ),
+        ],
+        errors: () => [isA<DmVideoBlurPreferenceSaveException>()],
+      );
+
+      blocTest<SafetySettingsCubit, SafetySettingsState>(
+        'does nothing when no account is signed in',
+        build: buildCubit,
+        act: (cubit) => cubit.setBlurDmVideoPreviews(true),
+        expect: () => <SafetySettingsState>[],
+      );
+    });
 
     group('closed mid-flight', () {
       test('setPeopleIFollowEnabled drops a rollback after close', () async {

@@ -62,6 +62,7 @@ a UI BLoC would be the wrong layer.
 | `lib/services/curated_list_service.dart` | NIP-51 curated lists. |
 | `lib/services/divine_host_filter_service.dart` | Divine-hosted-only filter preference. |
 | `lib/services/video_provenance_filter_service.dart` | Capture-verified-only filter preference. |
+| `lib/services/dm_video_blur_preference_service.dart` | Per-account preference to blur video DM previews from trusted senders until played (#10353). |
 | `lib/services/environment_service.dart` | Build environment (dev/staging/prod). |
 | `lib/services/feed_aspect_ratio_preference_service.dart` | Feed aspect-ratio preference. |
 | `lib/services/stats_visibility_preferences.dart` | Viewer-scoped stats visibility preference (total/video loops, publish date). |

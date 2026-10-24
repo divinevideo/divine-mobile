@@ -4897,6 +4897,18 @@ abstract class AppLocalizations {
   /// **'Subscribe to labels from people you follow'**
   String get safetySettingsPeopleIFollowSubtitle;
 
+  /// Safety settings switch. When on, a video sent in a direct message by someone the user follows, or in a 1:1 chat they have replied in, shows a blurred preview until it is played.
+  ///
+  /// In en, this message translates to:
+  /// **'Blur video previews in messages'**
+  String get safetySettingsBlurDmVideoPreviews;
+
+  /// Subtitle under the 'Blur video previews in messages' switch, saying which video messages it applies to and that a tap still plays the video.
+  ///
+  /// In en, this message translates to:
+  /// **'From people you follow and chats you\'ve replied in. Tap a video to watch it.'**
+  String get safetySettingsBlurDmVideoPreviewsSubtitle;
+
   /// No description provided for @safetySettingsAddCustomLabeler.
   ///
   /// In en, this message translates to:
@@ -6288,6 +6300,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tap to load'**
   String get dmVideoCardTapToLoad;
+
+  /// Short hint on a blurred video message card in a DM thread whose sender marked the video sensitive with a content warning. The card stays blurred until the user taps to play it, even when they did not turn on blurring.
+  ///
+  /// In en, this message translates to:
+  /// **'Marked sensitive by sender'**
+  String get dmVideoCardMarkedSensitive;
+
+  /// Short hint on a blurred video message card in a DM thread, shown when the user turned on 'Blur video previews in messages'. Tapping plays the video, after which the card shows its preview.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to watch'**
+  String get dmVideoCardTapToWatch;
 
   /// Short hint on a video message card in a DM thread whose sender the user blocked. The card shows no preview; tapping still plays the video.
   ///

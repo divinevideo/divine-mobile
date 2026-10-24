@@ -56,6 +56,7 @@ ALLOWLIST=(
   "services/curated_list_service.dart"
   "services/divine_host_filter_service.dart"
   "services/video_provenance_filter_service.dart"
+  "services/dm_video_blur_preference_service.dart"
   "services/environment_service.dart"
   "services/feed_aspect_ratio_preference_service.dart"
   "services/stats_visibility_preferences.dart"

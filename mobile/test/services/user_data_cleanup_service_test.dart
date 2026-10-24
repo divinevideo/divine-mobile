@@ -18,6 +18,7 @@ import 'package:openvine/services/content_filter_service.dart';
 import 'package:openvine/services/creator_sync/prefs_sync_state_store.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
+import 'package:openvine/services/dm_video_blur_preference_service.dart';
 import 'package:openvine/services/language_preference_service.dart';
 import 'package:openvine/services/messages_preference_service.dart';
 import 'package:openvine/services/minor_account_review_status_store.dart';
@@ -1241,6 +1242,40 @@ void main() {
 
         expect(preference.roomsSelected(deletedPubkey), isFalse);
         expect(preference.roomsSelected(otherPubkey), isTrue);
+      });
+
+      test("forgets only that account's video preview blur choice", () async {
+        final deletedPubkey = 'a' * 64;
+        final otherPubkey = 'b' * 64;
+        await DmVideoBlurPreferenceService(
+          prefs,
+          account: deletedPubkey,
+        ).setBlurVideoPreviews(true);
+        await DmVideoBlurPreferenceService(
+          prefs,
+          account: otherPubkey,
+        ).setBlurVideoPreviews(true);
+
+        await service.deleteAccountData(
+          deletedPubkey,
+          userNpub: NostrKeyUtils.encodePubKey(deletedPubkey),
+          preserveActiveSession: true,
+        );
+
+        expect(
+          DmVideoBlurPreferenceService(
+            prefs,
+            account: deletedPubkey,
+          ).blurVideoPreviews,
+          isFalse,
+        );
+        expect(
+          DmVideoBlurPreferenceService(
+            prefs,
+            account: otherPubkey,
+          ).blurVideoPreviews,
+          isTrue,
+        );
       });
 
       test('deletes device-wide user data when no session is active', () async {

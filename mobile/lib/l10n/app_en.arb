@@ -1909,6 +1909,14 @@
   "safetySettingsDivineSubtitle": "Official moderation service (on by default)",
   "safetySettingsPeopleIFollow": "People I follow",
   "safetySettingsPeopleIFollowSubtitle": "Subscribe to labels from people you follow",
+  "safetySettingsBlurDmVideoPreviews": "Blur video previews in messages",
+  "@safetySettingsBlurDmVideoPreviews": {
+    "description": "Safety settings switch. When on, a video sent in a direct message by someone the user follows, or in a 1:1 chat they have replied in, shows a blurred preview until it is played."
+  },
+  "safetySettingsBlurDmVideoPreviewsSubtitle": "From people you follow and chats you've replied in. Tap a video to watch it.",
+  "@safetySettingsBlurDmVideoPreviewsSubtitle": {
+    "description": "Subtitle under the 'Blur video previews in messages' switch, saying which video messages it applies to and that a tap still plays the video."
+  },
   "safetySettingsAddCustomLabeler": "Add Custom Labeler",
   "safetySettingsAddCustomLabelerHint": "Enter npub...",
   "safetySettingsAddCustomLabelerListTitle": "Add custom labeler",
@@ -2383,6 +2391,14 @@
   "dmVideoCardTapToLoad": "Tap to load",
   "@dmVideoCardTapToLoad": {
     "description": "Short hint on a video message card in a DM thread from someone the user does not follow and has not replied to, or a group member they do not follow. The video is not downloaded or previewed until the user taps it."
+  },
+  "dmVideoCardMarkedSensitive": "Marked sensitive by sender",
+  "@dmVideoCardMarkedSensitive": {
+    "description": "Short hint on a blurred video message card in a DM thread whose sender marked the video sensitive with a content warning. The card stays blurred until the user taps to play it, even when they did not turn on blurring."
+  },
+  "dmVideoCardTapToWatch": "Tap to watch",
+  "@dmVideoCardTapToWatch": {
+    "description": "Short hint on a blurred video message card in a DM thread, shown when the user turned on 'Blur video previews in messages'. Tapping plays the video, after which the card shows its preview."
   },
   "dmVideoCardHiddenSenderBlocked": "Hidden: sender blocked",
   "@dmVideoCardHiddenSenderBlocked": {

@@ -41,6 +41,8 @@ import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/services/dm_video_blur_preference_service.dart';
+import 'package:openvine/services/dm_video_preview_memory.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
 import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/watermark_download_service.dart';
@@ -51,6 +53,7 @@ import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:riverpod/misc.dart' show Override;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:videos_repository/videos_repository.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
@@ -6305,6 +6308,7 @@ void main() {
 
     group('video DM previews', () {
       late _MockDmVideoStore store;
+      late DmVideoPreviewMemory memory;
 
       DmMessage videoFrom(String sender, {String id = 'video'}) => DmMessage(
         id: id.padRight(64, '0'),
@@ -6339,6 +6343,7 @@ void main() {
       setUpAll(() => registerFallbackValue(videoFrom(otherPubkey)));
 
       setUp(() {
+        memory = DmVideoPreviewMemory();
         store = _MockDmVideoStore();
         when(() => store.kept).thenAnswer((_) => const Stream.empty());
         when(
@@ -6349,11 +6354,26 @@ void main() {
         ).thenAnswer((_) async => null);
       });
 
+      tearDown(() => memory.dispose());
+
+      Future<DmVideoBlurPreferenceService> blurringOn() async {
+        SharedPreferences.setMockInitialValues({
+          DmVideoBlurPreferenceService.storageKey(currentPubkey): true,
+        });
+        final blur = DmVideoBlurPreferenceService(
+          await SharedPreferences.getInstance(),
+          account: currentPubkey,
+        );
+        addTearDown(blur.dispose);
+        return blur;
+      }
+
       Future<void> pumpThread(
         WidgetTester tester,
         List<DmMessage> messages, {
         required Map<String, FollowRelationship> follows,
         List<String>? members,
+        DmVideoBlurPreferenceService? blur,
       }) async {
         await tester.pumpWidget(
           buildSubject(
@@ -6364,6 +6384,8 @@ void main() {
             counterparties: members,
             extraOverrides: [
               dmVideoStoreProvider.overrideWithValue(store),
+              dmVideoBlurPreferenceServiceProvider.overrideWithValue(blur),
+              dmVideoPreviewMemoryProvider.overrideWithValue(memory),
               for (final MapEntry(key: pubkey, value: relationship)
                   in follows.entries)
                 followRelationshipProvider(
@@ -6403,6 +6425,39 @@ void main() {
 
           expectLoaded(video);
           expect(find.text(l10n.dmVideoCardTapToLoad), findsNothing);
+        });
+
+        testWidgets(
+          "blurs a followed sender's video, which still loads, when the user "
+          'chose to',
+          (tester) async {
+            final video = videoFrom(otherPubkey);
+            await pumpThread(
+              tester,
+              [video],
+              follows: {otherPubkey: FollowRelationship.youFollow},
+              blur: await blurringOn(),
+            );
+
+            expectLoaded(video);
+            expect(find.text(l10n.dmVideoCardTapToWatch), findsOneWidget);
+          },
+        );
+
+        testWidgets("never blurs the user's own video", (tester) async {
+          final video = videoFrom(currentPubkey);
+          await pumpThread(
+            tester,
+            [video],
+            follows: {
+              otherPubkey: FollowRelationship.none,
+              currentPubkey: FollowRelationship.none,
+            },
+            blur: await blurringOn(),
+          );
+
+          expectLoaded(video);
+          expect(find.text(l10n.dmVideoCardTapToWatch), findsNothing);
         });
 
         testWidgets('loads a video from a mutual follow', (tester) async {

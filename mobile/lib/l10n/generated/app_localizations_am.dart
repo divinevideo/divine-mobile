@@ -2828,6 +2828,14 @@ class AppLocalizationsAm extends AppLocalizations {
   String get safetySettingsPeopleIFollowSubtitle => 'ለሚከተሏቸው ሰዎች መለያዎች ይመዝገቡ';
 
   @override
+  String get safetySettingsBlurDmVideoPreviews =>
+      'Blur video previews in messages';
+
+  @override
+  String get safetySettingsBlurDmVideoPreviewsSubtitle =>
+      'From people you follow and chats you\'ve replied in. Tap a video to watch it.';
+
+  @override
   String get safetySettingsAddCustomLabeler => 'ብጁ መሰየሚያ ያክሉ';
 
   @override
@@ -3615,6 +3623,12 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get dmVideoCardTapToLoad => 'Tap to load';
+
+  @override
+  String get dmVideoCardMarkedSensitive => 'Marked sensitive by sender';
+
+  @override
+  String get dmVideoCardTapToWatch => 'Tap to watch';
 
   @override
   String get dmVideoCardHiddenSenderBlocked => 'Hidden: sender blocked';

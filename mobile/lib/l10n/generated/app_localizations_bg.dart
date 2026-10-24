@@ -2935,6 +2935,14 @@ class AppLocalizationsBg extends AppLocalizations {
       'Абонирай се за етикети от хората, които следваш';
 
   @override
+  String get safetySettingsBlurDmVideoPreviews =>
+      'Blur video previews in messages';
+
+  @override
+  String get safetySettingsBlurDmVideoPreviewsSubtitle =>
+      'From people you follow and chats you\'ve replied in. Tap a video to watch it.';
+
+  @override
   String get safetySettingsAddCustomLabeler => 'Добави персонализиран етикет';
 
   @override
@@ -3745,6 +3753,12 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get dmVideoCardTapToLoad => 'Tap to load';
+
+  @override
+  String get dmVideoCardMarkedSensitive => 'Marked sensitive by sender';
+
+  @override
+  String get dmVideoCardTapToWatch => 'Tap to watch';
 
   @override
   String get dmVideoCardHiddenSenderBlocked => 'Hidden: sender blocked';

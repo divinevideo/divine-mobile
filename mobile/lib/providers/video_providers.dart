@@ -6,7 +6,8 @@ import 'dart:async';
 import 'package:db_client/db_client.dart';
 import 'package:drift/drift.dart' show TableUpdateQuery, UpdateKind;
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter_riverpod/flutter_riverpod.dart' show Provider;
+import 'package:flutter_riverpod/flutter_riverpod.dart'
+    show Notifier, NotifierProvider, Provider;
 import 'package:image_picker/image_picker.dart';
 import 'package:likes_repository/likes_repository.dart';
 import 'package:openvine/blocs/gallery_clip_import/gallery_clip_import_cubit.dart';
@@ -23,6 +24,7 @@ import 'package:openvine/providers/creator_sync_provider.dart';
 import 'package:openvine/providers/curation_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
+import 'package:openvine/providers/listenable_provider_bridge.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/og_viner_cache_provider.dart';
@@ -41,7 +43,9 @@ import 'package:openvine/services/broken_video_tracker.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/dead_media_feed_guard.dart';
+import 'package:openvine/services/dm_video_blur_preference_service.dart';
 import 'package:openvine/services/dm_video_decryptor.dart';
+import 'package:openvine/services/dm_video_preview_memory.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
 import 'package:openvine/services/dm_video_store.dart';
 import 'package:openvine/services/event_api_client.dart';
@@ -538,6 +542,57 @@ final dmVideoStoreProvider = Provider<DmVideoStore?>((ref) {
     logName: 'DmVideoStore',
   );
   return store;
+});
+
+/// The signed-in account's choice to blur video DM previews from trusted
+/// senders until played, or null when no account is signed in.
+///
+/// Rebuilt when the account changes, so each account reads its own choice.
+final dmVideoBlurPreferenceServiceProvider =
+    Provider<DmVideoBlurPreferenceService?>((ref) {
+      final account = ref.watch(currentAccountIdProvider);
+      if (account == null || account.isEmpty) return null;
+      final service = DmVideoBlurPreferenceService(
+        ref.watch(sharedPreferencesProvider),
+        account: account,
+      );
+      ref.onDispose(service.dispose);
+      return service;
+    });
+
+/// Whether video DM cards from trusted senders show a blurred preview until
+/// played. False when no account is signed in.
+final dmVideoBlurPreviewsEnabledProvider =
+    NotifierProvider<DmVideoBlurPreviewsEnabled, bool>(
+      DmVideoBlurPreviewsEnabled.new,
+    );
+
+/// Publishes [DmVideoBlurPreferenceService.blurVideoPreviews] as it changes.
+class DmVideoBlurPreviewsEnabled extends Notifier<bool> {
+  @override
+  bool build() {
+    final service = ref.watch(dmVideoBlurPreferenceServiceProvider);
+    if (service == null) return false;
+    listenForProviderLifetime(
+      ref,
+      service,
+      () => state = service.blurVideoPreviews,
+    );
+    return service.blurVideoPreviews;
+  }
+}
+
+/// The signed-in account's memory of the video DMs it played this session,
+/// or null when no account is signed in.
+///
+/// Rebuilt empty when the account changes, so a played video's preview is
+/// blurred again after an account switch or a restart.
+final dmVideoPreviewMemoryProvider = Provider<DmVideoPreviewMemory?>((ref) {
+  final account = ref.watch(currentAccountIdProvider);
+  if (account == null || account.isEmpty) return null;
+  final memory = DmVideoPreviewMemory();
+  ref.onDispose(memory.dispose);
+  return memory;
 });
 
 /// Whether a kept video's message is gone for [owner]: retracted, as the

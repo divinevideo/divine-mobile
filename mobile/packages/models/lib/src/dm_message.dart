@@ -105,6 +105,18 @@ class DmMessage extends Equatable {
   /// Whether this message carries a structured shared-video reference.
   bool get hasSharedVideo => sharedVideoRef != null;
 
+  /// Whether the sender marked this message sensitive: a NIP-36
+  /// `content-warning` tag, with or without a reason, or a NIP-32 `l` label
+  /// in the `content-warning` namespace. An `L` tag alone only names the
+  /// namespace and labels nothing.
+  bool get isMarkedSensitive => tags.any(
+    (tag) =>
+        (tag.isNotEmpty && tag.first == _contentWarning) ||
+        (tag.length >= 3 && tag.first == 'l' && tag[2] == _contentWarning),
+  );
+
+  static const _contentWarning = 'content-warning';
+
   /// Whether this message was sent by the given pubkey.
   bool isSentBy(String pubkey) => senderPubkey == pubkey;
 

@@ -2705,6 +2705,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get safetySettingsPeopleIFollowSubtitle => '订阅你关注的人给出的标签';
 
   @override
+  String get safetySettingsBlurDmVideoPreviews =>
+      'Blur video previews in messages';
+
+  @override
+  String get safetySettingsBlurDmVideoPreviewsSubtitle =>
+      'From people you follow and chats you\'ve replied in. Tap a video to watch it.';
+
+  @override
   String get safetySettingsAddCustomLabeler => '添加自定义标记服务';
 
   @override
@@ -3455,6 +3463,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get dmVideoCardTapToLoad => 'Tap to load';
+
+  @override
+  String get dmVideoCardMarkedSensitive => 'Marked sensitive by sender';
+
+  @override
+  String get dmVideoCardTapToWatch => 'Tap to watch';
 
   @override
   String get dmVideoCardHiddenSenderBlocked => 'Hidden: sender blocked';

@@ -1,5 +1,5 @@
 // ABOUTME: Provides one video DM's kept preview frame to the bubble it builds,
-// ABOUTME: or why it holds the preview back: requests, blocked and muted.
+// ABOUTME: or why it holds the preview back: requests, blocked, muted, blurred.
 
 import 'dart:async';
 
@@ -23,12 +23,19 @@ import 'package:openvine/screens/inbox/conversation/widgets/encrypted_video_card
 /// the 1:1 chat, or the user follows the sender. Anyone else's card holds its
 /// preview back: a request downloads nothing until the user plays it, and a
 /// blocked or muted sender's card shows nothing of the video, not even a
-/// frame read before. Either way a tap still plays it. A held card never
-/// reads the kept file or its frame.
+/// frame read before. Either way a tap still plays it. A request, blocked or
+/// muted card never reads the kept file or its frame.
+///
+/// When the user chose to blur video previews, a trusted card other than
+/// the user's own still downloads, but shows a blurhash instead of its frame
+/// until the video is played. A video its sender marked sensitive is blurred
+/// the same way whether or not the user chose to, and says so, as does a
+/// request's card when its sender marked the video.
 class DmVideoPreviewScope extends ConsumerWidget {
   /// Creates a [DmVideoPreviewScope] for [message].
   const DmVideoPreviewScope({
     required this.message,
+    required this.isOwn,
     required this.accepted,
     required this.blocked,
     required this.muted,
@@ -38,6 +45,9 @@ class DmVideoPreviewScope extends ConsumerWidget {
 
   /// The kind 15 video message.
   final DmMessage message;
+
+  /// Whether the message is the user's own. Its preview is never blurred.
+  final bool isOwn;
 
   /// Whether the message is the user's own, or the user has posted in this
   /// 1:1 conversation.
@@ -51,19 +61,21 @@ class DmVideoPreviewScope extends ConsumerWidget {
   /// [accepted] and following, as [blocked] does.
   final bool muted;
 
-  /// Builds the bubble with the frame's path, null until there is one, and
-  /// why its preview is held back, null when it is not.
+  /// Builds the bubble with the frame's path, null until there is one, why
+  /// its preview is held back, null when it is not, and for a blurred card a
+  /// blurhash read from its frame, null until there is one.
   final Widget Function(
     BuildContext context,
     String? framePath,
     DmVideoHold? hold,
+    String? frameBlurhash,
   )
   builder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (blocked) return builder(context, null, DmVideoHold.blocked);
-    if (muted) return builder(context, null, DmVideoHold.muted);
+    if (blocked) return builder(context, null, DmVideoHold.blocked, null);
+    if (muted) return builder(context, null, DmVideoHold.muted, null);
     final store = ref.watch(dmVideoStoreProvider);
     // `value`, not `asData`: while the relationship reloads it keeps the
     // previous answer, so the preview is not torn down and started again.
@@ -79,21 +91,53 @@ class DmVideoPreviewScope extends ConsumerWidget {
       return builder(
         context,
         null,
-        relationship == null ? null : DmVideoHold.request,
+        relationship == null
+            ? null
+            : message.isMarkedSensitive
+            ? DmVideoHold.markedSensitive
+            : DmVideoHold.request,
+        null,
       );
     }
+    final memory = ref.watch(dmVideoPreviewMemoryProvider);
+    final markedSensitive = message.isMarkedSensitive;
+    final blurUntilPlayed =
+        !isOwn &&
+        (markedSensitive || ref.watch(dmVideoBlurPreviewsEnabledProvider));
     return BlocProvider(
-      // A new account starts a fresh read.
-      key: ValueKey((store, message.id)),
+      // A new account, or blurring turned on or off, starts a fresh read.
+      key: ValueKey((store, memory, message.id, blurUntilPlayed)),
       create: (_) {
-        final cubit = DmVideoPreviewCubit(message: message, store: store);
+        final cubit = DmVideoPreviewCubit(
+          message: message,
+          store: store,
+          memory: memory,
+          blurUntilPlayed: blurUntilPlayed,
+        );
         unawaited(cubit.load());
         return cubit;
       },
-      child: BlocSelector<DmVideoPreviewCubit, DmVideoPreviewState, String?>(
-        selector: (state) => state.framePath,
-        builder: (context, framePath) => builder(context, framePath, null),
-      ),
+      child:
+          BlocSelector<
+            DmVideoPreviewCubit,
+            DmVideoPreviewState,
+            (String?, bool, String?)
+          >(
+            selector: (state) =>
+                (state.framePath, state.blurred, state.frameBlurhash),
+            builder: (context, preview) {
+              final (framePath, blurred, frameBlurhash) = preview;
+              if (!blurred) return builder(context, framePath, null, null);
+              return builder(
+                context,
+                null,
+                markedSensitive
+                    ? DmVideoHold.markedSensitive
+                    : DmVideoHold.blurred,
+                frameBlurhash,
+              );
+            },
+          ),
     );
   }
 }

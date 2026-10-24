@@ -39,12 +39,17 @@ class DmVideoPlayPage extends ConsumerWidget {
   /// clips, behind the C2PA check. Only for a video someone else sent.
   final bool canAddToClips;
 
-  /// Opens the page for [message] on the enclosing navigator.
+  /// Opens the page for [message] on the enclosing navigator, and records
+  /// the video as played, so its card stops blurring its preview.
   static Future<void> open(
     BuildContext context,
     DmMessage message, {
     bool canAddToClips = false,
   }) {
+    ProviderScope.containerOf(
+      context,
+      listen: false,
+    ).read(dmVideoPreviewMemoryProvider)?.markWatched(message.id);
     return Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) =>
