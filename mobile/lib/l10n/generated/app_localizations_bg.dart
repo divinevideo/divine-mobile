@@ -9818,6 +9818,21 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorShapeMaskHeart => 'Сърце';
 
   @override
+  String get videoEditorShapeMaskStar => 'Звезда';
+
+  @override
+  String get videoEditorShapeMaskTriangle => 'Триъгълник';
+
+  @override
+  String get videoEditorShapeMaskDiamond => 'Ромб';
+
+  @override
+  String get videoEditorShapeMaskHexagon => 'Шестоъгълник';
+
+  @override
+  String get videoEditorShapeMaskSpeechBubble => 'Балонче';
+
+  @override
   String get videoEditorShapeMaskLinear => 'Линейна';
 
   @override

@@ -16523,6 +16523,36 @@ abstract class AppLocalizations {
   /// **'Heart'**
   String get videoEditorShapeMaskHeart;
 
+  /// Shape option on the shape mask screen: the item shows inside a five-pointed star. Shown under a 52dp tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Star'**
+  String get videoEditorShapeMaskStar;
+
+  /// Shape option on the shape mask screen: the item shows inside a triangle pointing up. Shown under a 52dp tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Triangle'**
+  String get videoEditorShapeMaskTriangle;
+
+  /// Shape option on the shape mask screen: the item shows inside a diamond, a square standing on one corner (a rhombus). Use the word for the geometric shape, not the gemstone, where they differ. Shown under a 52dp tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Diamond'**
+  String get videoEditorShapeMaskDiamond;
+
+  /// Shape option on the shape mask screen: the item shows inside a hexagon, a six-sided shape. Shown under a 52dp tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Hexagon'**
+  String get videoEditorShapeMaskHexagon;
+
+  /// Shape option on the shape mask screen: the item shows inside a speech bubble, a rounded box with a small tail, like the bubbles that hold what someone says in a comic. Keep it short: the tile fits about nine Latin characters. Shown under a 52dp tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Bubble'**
+  String get videoEditorShapeMaskSpeechBubble;
+
   /// Shape option on the shape mask screen: a straight line across the item; it shows on one side of the line, and softness turns the line into a gradient that fades it out. Use the term video editors use for this mask type. Shown under a 52dp tile.
   ///
   /// In en, this message translates to:

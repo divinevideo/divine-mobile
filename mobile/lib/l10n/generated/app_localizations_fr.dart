@@ -9882,6 +9882,21 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorShapeMaskHeart => 'Cœur';
 
   @override
+  String get videoEditorShapeMaskStar => 'Étoile';
+
+  @override
+  String get videoEditorShapeMaskTriangle => 'Triangle';
+
+  @override
+  String get videoEditorShapeMaskDiamond => 'Losange';
+
+  @override
+  String get videoEditorShapeMaskHexagon => 'Hexagone';
+
+  @override
+  String get videoEditorShapeMaskSpeechBubble => 'Bulle';
+
+  @override
   String get videoEditorShapeMaskLinear => 'Linéaire';
 
   @override

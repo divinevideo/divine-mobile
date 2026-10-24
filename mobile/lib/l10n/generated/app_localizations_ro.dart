@@ -9948,6 +9948,21 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorShapeMaskHeart => 'Inimă';
 
   @override
+  String get videoEditorShapeMaskStar => 'Stea';
+
+  @override
+  String get videoEditorShapeMaskTriangle => 'Triunghi';
+
+  @override
+  String get videoEditorShapeMaskDiamond => 'Romb';
+
+  @override
+  String get videoEditorShapeMaskHexagon => 'Hexagon';
+
+  @override
+  String get videoEditorShapeMaskSpeechBubble => 'Balon';
+
+  @override
   String get videoEditorShapeMaskLinear => 'Liniară';
 
   @override

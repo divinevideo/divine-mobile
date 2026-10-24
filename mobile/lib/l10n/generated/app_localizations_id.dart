@@ -9643,6 +9643,21 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorShapeMaskHeart => 'Hati';
 
   @override
+  String get videoEditorShapeMaskStar => 'Bintang';
+
+  @override
+  String get videoEditorShapeMaskTriangle => 'Segitiga';
+
+  @override
+  String get videoEditorShapeMaskDiamond => 'Wajik';
+
+  @override
+  String get videoEditorShapeMaskHexagon => 'Segi enam';
+
+  @override
+  String get videoEditorShapeMaskSpeechBubble => 'Balon';
+
+  @override
   String get videoEditorShapeMaskLinear => 'Linear';
 
   @override

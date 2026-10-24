@@ -9690,6 +9690,21 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorShapeMaskHeart => 'Trái tim';
 
   @override
+  String get videoEditorShapeMaskStar => 'Ngôi sao';
+
+  @override
+  String get videoEditorShapeMaskTriangle => 'Tam giác';
+
+  @override
+  String get videoEditorShapeMaskDiamond => 'Hình thoi';
+
+  @override
+  String get videoEditorShapeMaskHexagon => 'Lục giác';
+
+  @override
+  String get videoEditorShapeMaskSpeechBubble => 'Bong bóng';
+
+  @override
   String get videoEditorShapeMaskLinear => 'Tuyến tính';
 
   @override

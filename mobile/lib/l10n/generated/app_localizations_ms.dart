@@ -9738,6 +9738,21 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorShapeMaskHeart => 'Hati';
 
   @override
+  String get videoEditorShapeMaskStar => 'Bintang';
+
+  @override
+  String get videoEditorShapeMaskTriangle => 'Segi tiga';
+
+  @override
+  String get videoEditorShapeMaskDiamond => 'Wajik';
+
+  @override
+  String get videoEditorShapeMaskHexagon => 'Segi enam';
+
+  @override
+  String get videoEditorShapeMaskSpeechBubble => 'Gelembung';
+
+  @override
   String get videoEditorShapeMaskLinear => 'Linear';
 
   @override

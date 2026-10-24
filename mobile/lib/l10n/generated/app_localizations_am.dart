@@ -9509,6 +9509,21 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorShapeMaskHeart => 'ልብ';
 
   @override
+  String get videoEditorShapeMaskStar => 'ኮከብ';
+
+  @override
+  String get videoEditorShapeMaskTriangle => 'ሦስት ማዕዘን';
+
+  @override
+  String get videoEditorShapeMaskDiamond => 'አልማዝ';
+
+  @override
+  String get videoEditorShapeMaskHexagon => 'ስድስት ማዕዘን';
+
+  @override
+  String get videoEditorShapeMaskSpeechBubble => 'የንግግር አረፋ';
+
+  @override
   String get videoEditorShapeMaskLinear => 'መስመራዊ';
 
   @override

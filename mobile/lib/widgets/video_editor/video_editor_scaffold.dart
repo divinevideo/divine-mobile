@@ -23,6 +23,7 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas.da
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_caption_preview_overlay.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_actions_sheet.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_overlay_actions.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor_view.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_loop_suggestion_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/tracking/layer_tracking_actions.dart';
@@ -112,6 +113,7 @@ class _ScaffoldBody extends StatelessWidget {
 /// The timeline steps aside while the mask editor is open, as it does for
 /// every full-screen canvas tool; without this the canvas would grow under the
 /// panel, and a shape dragged there could be neither seen nor grabbed again.
+/// The space follows the panel as it grows and shrinks with its sliders.
 class _MaskEditorPanelSpace extends StatelessWidget {
   const _MaskEditorPanelSpace();
 
@@ -120,15 +122,38 @@ class _MaskEditorPanelSpace extends StatelessWidget {
     final isEditingMask = context.select(
       (VideoEditorMainBloc bloc) => bloc.state.isEditingMask,
     );
+    final panelHeight = VideoEditorScope.maybeOf(
+      context,
+    )?.maskPanelHeightNotifier;
+    if (panelHeight == null) {
+      return _MaskEditorPanelSpaceBox(
+        height: isEditingMask ? videoEditorMaskPanelMaxHeight : 0,
+      );
+    }
+    return ValueListenableBuilder<double>(
+      valueListenable: panelHeight,
+      builder: (context, height, _) =>
+          _MaskEditorPanelSpaceBox(height: isEditingMask ? height : 0),
+    );
+  }
+}
+
+/// The space below the canvas, [height] above the bottom safe area while it
+/// is open, moving with the mask editor's panel as that changes height.
+class _MaskEditorPanelSpaceBox extends StatelessWidget {
+  const _MaskEditorPanelSpaceBox({required this.height});
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
     return AnimatedContainer(
       duration: MediaQuery.disableAnimationsOf(context)
           ? Duration.zero
-          : _switchDuration,
+          : videoEditorMaskPanelResizeDuration,
       curve: Curves.easeInOut,
       color: context.vineColors.surfaceContainerHigh,
-      height: isEditingMask
-          ? videoEditorMaskPanelHeight + MediaQuery.paddingOf(context).bottom
-          : 0,
+      height: height > 0 ? height + MediaQuery.paddingOf(context).bottom : 0,
     );
   }
 }

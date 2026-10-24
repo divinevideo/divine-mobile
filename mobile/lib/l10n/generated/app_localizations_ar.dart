@@ -9718,6 +9718,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorShapeMaskHeart => 'قلب';
 
   @override
+  String get videoEditorShapeMaskStar => 'نجمة';
+
+  @override
+  String get videoEditorShapeMaskTriangle => 'مثلث';
+
+  @override
+  String get videoEditorShapeMaskDiamond => 'معيّن';
+
+  @override
+  String get videoEditorShapeMaskHexagon => 'سداسي';
+
+  @override
+  String get videoEditorShapeMaskSpeechBubble => 'فقاعة';
+
+  @override
   String get videoEditorShapeMaskLinear => 'خطي';
 
   @override

@@ -86,6 +86,26 @@ void main() {
       expect(mask.feather, 0);
     });
 
+    test('starts a triangle equilateral and a hexagon regular on screen, two '
+        'thirds of the shorter side along their longer side', () {
+      final triangle = editorMaskForShape(
+        LayerMaskShape.triangle,
+        boxSize: box,
+      );
+      final hexagon = editorMaskForShape(LayerMaskShape.hexagon, boxSize: box);
+
+      expect(triangle.size.width * box.width, closeTo(400 / 3, 0.001));
+      expect(
+        triangle.size.height * box.height,
+        closeTo(400 / 3 * math.sqrt(3) / 2, 0.001),
+      );
+      expect(
+        hexagon.size.width * box.width,
+        closeTo(400 / 3 * math.sqrt(3) / 2, 0.001),
+      );
+      expect(hexagon.size.height * box.height, closeTo(400 / 3, 0.001));
+    });
+
     test('starts a linear mask with a soft edge', () {
       final mask = editorMaskForShape(LayerMaskShape.linear, boxSize: box);
 
@@ -116,6 +136,28 @@ void main() {
           cornerRadius: editorMaskRectangleCorners,
         ),
       );
+    });
+
+    test('gives a shape never stretched the proportions of the shape it '
+        'switches to, as long on its longer side', () {
+      final circle = editorMaskForShape(LayerMaskShape.ellipse, boxSize: box);
+
+      final hexagon = editorMaskForShape(
+        LayerMaskShape.hexagon,
+        boxSize: box,
+        previous: circle,
+      );
+      final star = editorMaskForShape(
+        LayerMaskShape.star,
+        boxSize: box,
+        previous: hexagon,
+      );
+
+      final regular = editorMaskForShape(LayerMaskShape.hexagon, boxSize: box);
+      expect(hexagon.size.width, closeTo(regular.size.width, 1e-9));
+      expect(hexagon.size.height, closeTo(regular.size.height, 1e-9));
+      expect(star.size.width, closeTo(circle.size.width, 1e-9));
+      expect(star.size.height, closeTo(circle.size.height, 1e-9));
     });
 
     test('gives a shape switched from a linear mask a size of its own', () {

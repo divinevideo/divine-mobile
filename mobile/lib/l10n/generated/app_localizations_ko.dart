@@ -9275,6 +9275,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorShapeMaskHeart => '하트';
 
   @override
+  String get videoEditorShapeMaskStar => '별';
+
+  @override
+  String get videoEditorShapeMaskTriangle => '삼각형';
+
+  @override
+  String get videoEditorShapeMaskDiamond => '마름모';
+
+  @override
+  String get videoEditorShapeMaskHexagon => '육각형';
+
+  @override
+  String get videoEditorShapeMaskSpeechBubble => '말풍선';
+
+  @override
   String get videoEditorShapeMaskLinear => '선형';
 
   @override

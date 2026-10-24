@@ -95,6 +95,7 @@ void main() {
       ProImageEditorState? editorOverride,
       VideoEditorEffectsCubit? effectsCubit,
       LoopSuggestionCubit? loopSuggestionCubit,
+      ValueNotifier<double>? maskPanelHeight,
       ThemeData? theme,
     }) {
       final editorKey = GlobalKey<ProImageEditorState>();
@@ -119,6 +120,7 @@ void main() {
           zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
           playTimeNotifier: ValueNotifier(Duration.zero),
           playheadAdvancingNotifier: ValueNotifier<bool>(false),
+          maskPanelHeightNotifier: maskPanelHeight,
           fromLibrary: false,
           child: MultiBlocProvider(
             providers: [
@@ -269,9 +271,15 @@ void main() {
         // Created inside the test, as in the voice-over test above.
         final mainBloc = VideoEditorMainBloc();
         addTearDown(mainBloc.close);
+        final panelHeight = ValueNotifier(videoEditorMaskPanelHeight(null));
+        addTearDown(panelHeight.dispose);
 
         await tester.pumpWidget(
-          buildWidget(isLoading: true, mainBlocOverride: mainBloc),
+          buildWidget(
+            isLoading: true,
+            mainBlocOverride: mainBloc,
+            maskPanelHeight: panelHeight,
+          ),
         );
         await tester.pump();
 
@@ -284,10 +292,18 @@ void main() {
         // can never slip under it.
         expect(find.byType(VideoEditorMainOverlayActions), findsNothing);
         final screen = tester.view.physicalSize / tester.view.devicePixelRatio;
-        expect(
-          tester.getRect(find.byType(BrandedLoadingScaffold)).bottom,
-          screen.height - videoEditorMaskPanelHeight,
+        double canvasBottom() =>
+            tester.getRect(find.byType(BrandedLoadingScaffold)).bottom;
+        expect(canvasBottom(), screen.height - panelHeight.value);
+
+        // A rectangle brings two sliders, and the canvas makes room for them.
+        panelHeight.value = videoEditorMaskPanelHeight(
+          const LayerMask(shape: LayerMaskShape.rectangle),
         );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(canvasBottom(), screen.height - panelHeight.value);
 
         mainBloc.add(const VideoEditorMaskEditingChanged(isEditing: false));
         await tester.pump();

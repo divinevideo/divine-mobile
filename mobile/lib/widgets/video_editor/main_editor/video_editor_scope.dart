@@ -45,6 +45,7 @@ class VideoEditorScope extends InheritedWidget {
     this.cancelLiveVolumePreview,
     this.liveEqualizerNotifier,
     this.liveClipMaskNotifier,
+    this.maskPanelHeightNotifier,
     this.clipFrameTracker,
     this.previewReleasedNotifier,
     this.onAddAudioVisualizer,
@@ -155,6 +156,12 @@ class VideoEditorScope extends InheritedWidget {
   /// The timeline clip mask being changed in the mask editor, null while
   /// none is. The preview draws it before it is committed on confirm.
   final ValueNotifier<LiveClipMask?>? liveClipMaskNotifier;
+
+  /// How tall the mask editor's panel is while it is open, above the bottom
+  /// safe area. It grows and shrinks with the sliders the panel shows, and
+  /// the editor keeps that much free below the canvas. Optional, like
+  /// [canvasBodyKey]; without it the editor keeps room for the tallest panel.
+  final ValueNotifier<double>? maskPanelHeightNotifier;
 
   /// Knows the box the preview frame fills on the canvas — the part of the
   /// video the export keeps, which a timeline clip's mask is measured in.
@@ -304,6 +311,7 @@ class VideoEditorScope extends InheritedWidget {
       cancelLiveVolumePreview != oldWidget.cancelLiveVolumePreview ||
       liveEqualizerNotifier != oldWidget.liveEqualizerNotifier ||
       liveClipMaskNotifier != oldWidget.liveClipMaskNotifier ||
+      maskPanelHeightNotifier != oldWidget.maskPanelHeightNotifier ||
       clipFrameTracker != oldWidget.clipFrameTracker ||
       previewReleasedNotifier != oldWidget.previewReleasedNotifier;
 }
