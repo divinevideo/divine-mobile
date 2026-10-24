@@ -578,6 +578,33 @@ void main() {
         expect(built.last, (_framePath, null));
       });
 
+      for (final (name, blocked, muted, hold) in [
+        ('blocked', true, false, DmVideoHold.blocked),
+        ('muted', false, true, DmVideoHold.muted),
+      ]) {
+        testWidgets('still hides it entirely when the sender is $name', (
+          tester,
+        ) async {
+          final built = <(String?, DmVideoHold?)>[];
+          await tester.pumpWidget(
+            host(
+              accepted: true,
+              blocked: blocked,
+              muted: muted,
+              message: marked,
+              relationship: Stream.value(FollowRelationship.youFollow),
+              memory: memory,
+              built: built,
+            ),
+          );
+          await tester.pump();
+          await tester.pump();
+
+          expectNoStoreRead();
+          expect(built.last, (null, hold));
+        });
+      }
+
       testWidgets('says so on a request, still downloading nothing', (
         tester,
       ) async {
