@@ -52,25 +52,15 @@ CustomVideoEffect? adjustVideoEffect(
 /// both these come before brightness, contrast and the rest of their set.
 List<CustomVideoEffect> adjustVideoEffectsOf(
   List<TuneAdjustmentMatrix> adjustments,
-) {
-  final sets = <String, List<TuneAdjustmentMatrix>>{};
-  for (final adjustment in adjustments) {
-    if (adjustment.value == 0 ||
-        !adjustVideoEffectKinds.contains(adjustment.tuneKind)) {
-      continue;
-    }
-    (sets[adjustment.tuneSetId] ??= []).add(adjustment);
-  }
-  return [
-    for (final members in sets.values)
-      ?adjustVideoEffect(
-        {for (final member in members) member.tuneKind: member.value},
-        // The members of a set share one time window.
-        startTime: members.first.startTime,
-        endTime: members.first.endTime,
-      ),
-  ];
-}
+) => [
+  for (final members in TuneSet.groupBySet(adjustments).values)
+    ?adjustVideoEffect(
+      {for (final member in members) member.tuneKind: member.value},
+      // The window the set's timeline bar shows.
+      startTime: members.first.startTime,
+      endTime: members.first.endTime,
+    ),
+];
 
 /// The Adjust effects the editor preview shows.
 ///

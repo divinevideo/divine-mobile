@@ -157,16 +157,10 @@ class TimelineOverlayBloc
           ),
     ];
 
-    // Group tune adjustments into sets (one Adjust session → one bar sharing a
-    // time window). Neutral adjustments (value 0) are skipped. Insertion order
-    // is preserved so existing sets keep their rows and a new set lands last.
-    final tuneSets = <String, List<TuneAdjustmentMatrix>>{};
-    for (final tune in event.tuneAdjustments) {
-      if (tune.value == 0) continue;
-      (tuneSets[tune.tuneSetId] ??= []).add(tune);
-    }
+    // One bar per Adjust set. Insertion order is preserved so existing sets
+    // keep their rows and a new set lands last.
     final tunes = <TimelineOverlayItem>[
-      for (final entry in tuneSets.entries)
+      for (final entry in TuneSet.groupBySet(event.tuneAdjustments).entries)
         TimelineOverlayItem(
           id: entry.key,
           type: .tune,
