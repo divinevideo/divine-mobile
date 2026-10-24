@@ -1729,9 +1729,10 @@ final class DropsVideoEffectTests: XCTestCase {
 /// on iOS and macOS, and with the same shader in GLSL on Android
 /// (`AdjustVideoEffect`). This checks every pixel of the kernel against the
 /// shader's formulas computed here on the CPU, for the whole frame and for a
-/// tile Core Image renders on its own, so a change to one copy that is not
-/// made to the other fails, and so does a kernel that reads its textures
-/// upside down or samples outside the region it asked for.
+/// tile Core Image renders on its own, so a change to the kernel that the
+/// formulas here do not share fails, and so does a kernel that reads its
+/// textures upside down or samples outside the region it asked for. No test
+/// runs the Android copy: a change to it has to be made here as well.
 final class AdjustVideoEffectTests: XCTestCase {
   private let width = 90
   private let height = 160
