@@ -3604,18 +3604,11 @@
   "videoEditorTrackNotFollowed": "ሊከተለው አልተቻለም። ብዙ ዝርዝር ያለውን ነገር በክፈፍ ያስገቡ።",
   "videoEditorTrackFailed": "መከታተሉ አልተሳካም። እንደገና ይሞክሩ።",
   "videoEditorTrackLostPartway": "በመሃል ጠፋ። ከዚያ በኋላ ንብርብሩ እንደቆመ ይቆያል።",
-  "videoEditorLoopLabel": "ዙር",
-  "videoEditorLoopSemanticLabel": "ለስላሳ የዙር ነጥብ ፈልግ",
-  "videoEditorLoopFoundEarlier": "ለስላሳ ዙር ተገኝቷል። {seconds} ሰ ቀድሞ ያበቃል።",
-  "videoEditorLoopFoundLater": "ለስላሳ ዙር ተገኝቷል። {seconds} ሰ ዘግይቶ ያበቃል።",
-  "videoEditorLoopClosestEarlier": "ፍጹም ተዛማጅ የለም፣ ግን ይህ በጣም ቅርቡ ነው። {seconds} ሰ ቀድሞ ያበቃል።",
-  "videoEditorLoopClosestLater": "ፍጹም ተዛማጅ የለም፣ ግን ይህ በጣም ቅርቡ ነው። {seconds} ሰ ዘግይቶ ያበቃል።",
-  "videoEditorLoopKeepLabel": "አቆይ",
-  "videoEditorLoopKeepSemanticLabel": "አዲሱን የዙር ነጥብ አቆይ",
-  "videoEditorLoopDiscardSemanticLabel": "የቀድሞውን መጨረሻ መልስ",
+  "videoEditorLoopLabel": "ሉፑን አስተካክል",
+  "videoEditorLoopSemanticLabel": "የሉፑን መገናኛ አስተካክል",
   "videoEditorLoopAlreadySmooth": "ይህ አስቀድሞ ለስላሳ ሆኖ ይዞራል።",
   "videoEditorLoopFailed": "ዙሩን ማረጋገጥ አልተቻለም። እንደገና ይሞክሩ።",
-  "videoEditorLoopNoMatch": "እንከን የለሽ ዙር አልተገኘም። ከመጨረሻው አቅራቢያ ቪዲዮው ከሚጀምርበት ጋር የሚገጥም ነገር የለም።",
+  "videoEditorLoopNoMatch": "ይህን ሉፕ ማሻሻል አልተቻለም",
   "videoEditorKeyframeEffect": "ውጤት",
   "videoEditorKeyframeCurveSegment": "እንቅስቃሴ ከቁልፍ ፍሬም {from} እስከ {to}",
   "videoEditorLayerAnimationEnter": "መግቢያ",
@@ -5886,43 +5879,46 @@
   "inboxLeaveGroupConfirmBody": "ከመልእክት ሳጥንዎ ይወገዳል፣ አዲስ መልእክቶችም አይመልሱትም። እንደገና ለመቀላቀል በውስጡ ይጻፉ። ሌሎቹ አይነገራቸውም።",
   "inboxLeaveGroupConfirmConfirm": "ይውጡ",
   "inboxLeftGroup": "ከቡድኑ ወጥተዋል",
-"listsDiscoveryEmpty": "በዚህ ጊዜ ምንም ዝርዝሮች አልተገኙም። ለማደስ ወደታች ይጎትቱ።",
-"listsDiscoveryLoadingLabel": "ዝርዝሮችን በመጫን ላይ",
-"listSearchPeopleUnavailable": "የሰዎች ዝርዝሮች በአሁኑ ጊዜ አይገኙም።",
-"listSearchVideosUnavailable": "የቪዲዮ ዝርዝሮች በአሁኑ ጊዜ አይገኙም።",
-"listPrivateConversionTooLarge": "ይህ ዝርዝር የግል ለማድረግ በጣም ትልቅ ነው። መጀመሪያ አንዳንድ ቪዲዮዎችን ያስወግዱ። ለውጦችዎ እዚህ ይቆያሉ፤ ገና አልተቀመጡም።",
-"authAccountCleanupFailed": "የቀድሞውን መለያ ውሂብ ማጽዳት አልተቻለም። እንደገና ይሞክሩ።",
-"@peopleListsAddPersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  "listsDiscoveryEmpty": "በዚህ ጊዜ ምንም ዝርዝሮች አልተገኙም። ለማደስ ወደታች ይጎትቱ።",
+  "listsDiscoveryLoadingLabel": "ዝርዝሮችን በመጫን ላይ",
+  "listSearchPeopleUnavailable": "የሰዎች ዝርዝሮች በአሁኑ ጊዜ አይገኙም።",
+  "listSearchVideosUnavailable": "የቪዲዮ ዝርዝሮች በአሁኑ ጊዜ አይገኙም።",
+  "listPrivateConversionTooLarge": "ይህ ዝርዝር የግል ለማድረግ በጣም ትልቅ ነው። መጀመሪያ አንዳንድ ቪዲዮዎችን ያስወግዱ። ለውጦችዎ እዚህ ይቆያሉ፤ ገና አልተቀመጡም።",
+  "authAccountCleanupFailed": "የቀድሞውን መለያ ውሂብ ማጽዳት አልተቻለም። እንደገና ይሞክሩ።",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"@peopleListsRemovePersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"peopleListsAddPersonSemanticLabel": "{name}ን ወደ ዝርዝር ያክሉ",
-"peopleListsMembershipUpdateFailed": "ዝርዝሩን ማዘመን አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
-"peopleListsAddPeopleSearchHint": "ሰዎችን ፈልግ",
-"peopleListsRemovePersonSemanticLabel": "{name}ን ከዝርዝር ያስወግዱ",
-"listMakePublicLabel": "ይፋዊ ያድርጉ",
-"listCollaboratorsNone": "ምንም",
-"listAddCollaboratorTitle": "ተባባሪ ጨምር",
-"listMakePublicSubtitle": "ሌሎች ይህን ዝርዝር እንዲያዩ ይፍቀዱ",
-"listCollaboratorSearchHint": "Divine ፈልግ...",
-"listVideoNotAdded": "ዝርዝርዎ ተፈጥሯል፣ ግን ይህ ቪዲዮ አልተጨመረም።",
-"listPrivateCollaboratorsWarning": "ይህን ዝርዝር የግል ማድረግ ተባባሪዎቹንም ያስወግዳል። ቪዲዮዎችን ማከል የሚችሉት እርስዎ ብቻ ይሆናሉ።",
-"listVideoPendingSync": "ዝርዝርዎ እና ቪዲዮዎ እዚህ ተቀምጠዋል። ቪዲዮው ለመመሳሰል በመጠባበቅ ላይ ነው።",
-"listRetrySync": "አሁን አመሳስል",
-"listPermissionsUnconfirmed": "ይህን ለውጥ ማረጋገጥ አልተቻለም። እንደገና ይሞክሩ።",
-"listRecoveryPending": "ይህ ዝርዝር መመሳሰል የሚጠብቁ ለውጦች አሉት።",
-"listPermissionsRecoveryPending": "ለውጥዎ ተቀባይነት አግኝቷል። ማስቀመጡን ለማጠናቀቅ አሁን አመሳስልን ይንኩ። እስከዚያ ድረስ ማርትዕ ቆሟል።",
-"listRecoveryReadOnly": "በቪዲዮ ዝርዝሮች ላይ የተቀመጡ አንዳንድ ለውጦች መመለስ ያስፈልጋቸዋል። የቪዲዮ ዝርዝሮችን ማየት ይችላሉ፣ ግን ማርትዕ ለጊዜው ቆሟል።",
-"listAddToLists": "ወደ ዝርዝሮች ያክሉ",
-"accountDeletionProcessingSignOutFailed": "መለያዎን የመሰረዝ ሂደት በመካሄድ ላይ ነው፣ ግን ማስወጣት አልቻልንም። እንደገና ይሞክሩ።"
+  },
+  "peopleListsAddPersonSemanticLabel": "{name}ን ወደ ዝርዝር ያክሉ",
+  "peopleListsMembershipUpdateFailed": "ዝርዝሩን ማዘመን አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
+  "peopleListsAddPeopleSearchHint": "ሰዎችን ፈልግ",
+  "peopleListsRemovePersonSemanticLabel": "{name}ን ከዝርዝር ያስወግዱ",
+  "listMakePublicLabel": "ይፋዊ ያድርጉ",
+  "listCollaboratorsNone": "ምንም",
+  "listAddCollaboratorTitle": "ተባባሪ ጨምር",
+  "listMakePublicSubtitle": "ሌሎች ይህን ዝርዝር እንዲያዩ ይፍቀዱ",
+  "listCollaboratorSearchHint": "Divine ፈልግ...",
+  "listVideoNotAdded": "ዝርዝርዎ ተፈጥሯል፣ ግን ይህ ቪዲዮ አልተጨመረም።",
+  "listPrivateCollaboratorsWarning": "ይህን ዝርዝር የግል ማድረግ ተባባሪዎቹንም ያስወግዳል። ቪዲዮዎችን ማከል የሚችሉት እርስዎ ብቻ ይሆናሉ።",
+  "listVideoPendingSync": "ዝርዝርዎ እና ቪዲዮዎ እዚህ ተቀምጠዋል። ቪዲዮው ለመመሳሰል በመጠባበቅ ላይ ነው።",
+  "listRetrySync": "አሁን አመሳስል",
+  "listPermissionsUnconfirmed": "ይህን ለውጥ ማረጋገጥ አልተቻለም። እንደገና ይሞክሩ።",
+  "listRecoveryPending": "ይህ ዝርዝር መመሳሰል የሚጠብቁ ለውጦች አሉት።",
+  "listPermissionsRecoveryPending": "ለውጥዎ ተቀባይነት አግኝቷል። ማስቀመጡን ለማጠናቀቅ አሁን አመሳስልን ይንኩ። እስከዚያ ድረስ ማርትዕ ቆሟል።",
+  "listRecoveryReadOnly": "በቪዲዮ ዝርዝሮች ላይ የተቀመጡ አንዳንድ ለውጦች መመለስ ያስፈልጋቸዋል። የቪዲዮ ዝርዝሮችን ማየት ይችላሉ፣ ግን ማርትዕ ለጊዜው ቆሟል።",
+  "listAddToLists": "ወደ ዝርዝሮች ያክሉ",
+  "accountDeletionProcessingSignOutFailed": "መለያዎን የመሰረዝ ሂደት በመካሄድ ላይ ነው፣ ግን ማስወጣት አልቻልንም። እንደገና ይሞክሩ።",
+  "videoEditorLoopRepairSmoothed": "ሉፑ ተስተካክሏል",
+  "videoEditorLoopRepairProgress": "ሉፑን በማስተካከል ላይ…",
+  "videoEditorLoopRepairTrimmed": "ሉፑ ተስተካክሏል። {seconds} ሰከንድ ተወግዷል።"
 }

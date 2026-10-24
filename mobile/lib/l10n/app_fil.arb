@@ -2268,18 +2268,11 @@
   "videoEditorTrackNotFollowed": "Hindi ito masundan. Mag-frame ng bagay na mas detalyado.",
   "videoEditorTrackFailed": "Hindi gumana ang tracking. Subukan ulit.",
   "videoEditorTrackLostPartway": "Nawala ito sa kalagitnaan. Hindi na gagalaw ang layer mula roon.",
-  "videoEditorLoopLabel": "Loop",
-  "videoEditorLoopSemanticLabel": "Humanap ng mas makinis na loop point",
-  "videoEditorLoopFoundEarlier": "May nakitang mas makinis na loop. Natatapos ito nang {seconds} s mas maaga.",
-  "videoEditorLoopFoundLater": "May nakitang mas makinis na loop. Natatapos ito nang {seconds} s mas huli.",
-  "videoEditorLoopClosestEarlier": "Walang eksaktong tugma, pero ito ang pinakamalapit. Natatapos ito nang {seconds} s mas maaga.",
-  "videoEditorLoopClosestLater": "Walang eksaktong tugma, pero ito ang pinakamalapit. Natatapos ito nang {seconds} s mas huli.",
-  "videoEditorLoopKeepLabel": "Panatilihin",
-  "videoEditorLoopKeepSemanticLabel": "Panatilihin ang bagong loop point",
-  "videoEditorLoopDiscardSemanticLabel": "Ibalik ang dating dulo",
+  "videoEditorLoopLabel": "Ayusin ang loop",
+  "videoEditorLoopSemanticLabel": "Pakinisin ang dugtungan ng loop",
   "videoEditorLoopAlreadySmooth": "Makinis na ang loop nito.",
   "videoEditorLoopFailed": "Hindi ma-check ang loop. Subukan ulit.",
-  "videoEditorLoopNoMatch": "Walang nakitang tuloy-tuloy na loop. Walang malapit sa dulo na tumutugma sa simula ng video.",
+  "videoEditorLoopNoMatch": "Hindi mapaganda ang loop na ito",
   "videoEditorKeyframeEffect": "Effect",
   "videoEditorKeyframeCurveSegment": "Galaw mula keyframe {from} hanggang {to}",
   "videoEditorLayerAnimationEnter": "Pasok",
@@ -4860,43 +4853,46 @@
   "inboxLeaveGroupConfirmBody": "Mawawala ito sa inbox mo, at hindi na ito ibabalik ng mga bagong message. Mag-message ulit dito para bumalik. Hindi malalaman ng iba.",
   "inboxLeaveGroupConfirmConfirm": "Umalis",
   "inboxLeftGroup": "Umalis ka sa group",
-"listsDiscoveryEmpty": "Walang lumabas na list ngayon. Hilahin pababa para mag-refresh.",
-"listsDiscoveryLoadingLabel": "Naglo-load ng mga list",
-"listSearchPeopleUnavailable": "Hindi available ang mga listahan ng tao ngayon.",
-"listSearchVideosUnavailable": "Hindi available ang mga listahan ng video ngayon.",
-"listPrivateConversionTooLarge": "Masyadong malaki ang listahang ito para gawing pribado. Mag-alis muna ng ilang video. Nananatili rito ang mga pagbabago mo at hindi pa nase-save.",
-"authAccountCleanupFailed": "Hindi ma-clear ang data ng nakaraang account. Subukan ulit.",
-"@peopleListsAddPersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  "listsDiscoveryEmpty": "Walang lumabas na list ngayon. Hilahin pababa para mag-refresh.",
+  "listsDiscoveryLoadingLabel": "Naglo-load ng mga list",
+  "listSearchPeopleUnavailable": "Hindi available ang mga listahan ng tao ngayon.",
+  "listSearchVideosUnavailable": "Hindi available ang mga listahan ng video ngayon.",
+  "listPrivateConversionTooLarge": "Masyadong malaki ang listahang ito para gawing pribado. Mag-alis muna ng ilang video. Nananatili rito ang mga pagbabago mo at hindi pa nase-save.",
+  "authAccountCleanupFailed": "Hindi ma-clear ang data ng nakaraang account. Subukan ulit.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"@peopleListsRemovePersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"peopleListsAddPersonSemanticLabel": "Idagdag si {name} sa list",
-"peopleListsMembershipUpdateFailed": "Hindi na-update ang list. Subukan ulit.",
-"peopleListsAddPeopleSearchHint": "Maghanap ng tao",
-"peopleListsRemovePersonSemanticLabel": "Alisin si {name} sa list",
-"listMakePublicLabel": "Gawing public",
-"listCollaboratorsNone": "Wala",
-"listAddCollaboratorTitle": "Magdagdag ng collaborator",
-"listMakePublicSubtitle": "Hayaang makita ng iba ang list na ito",
-"listCollaboratorSearchHint": "Maghanap sa Divine...",
-"listVideoNotAdded": "Nagawa ang listahan mo, pero hindi naidagdag ang video na ito.",
-"listPrivateCollaboratorsWarning": "Kapag ginawang pribado ang listahang ito, aalisin din ang mga collaborator nito. Ikaw lang ang makakapagdagdag ng mga video.",
-"listVideoPendingSync": "Naka-save dito ang listahan at video mo. Naghihintay ang video na ma-sync.",
-"listRetrySync": "I-sync ngayon",
-"listPermissionsUnconfirmed": "Hindi makumpirma ang pagbabagong ito. Subukan ulit.",
-"listRecoveryPending": "May mga pagbabago sa listahang ito na naghihintay ma-sync.",
-"listPermissionsRecoveryPending": "Tinanggap ang pagbabago mo. I-tap ang I-sync ngayon para tapusin ang pag-save. Naka-pause ang pag-edit hanggang matapos ito.",
-"listRecoveryReadOnly": "Kailangang i-recover ang ilang naka-save na pagbabago sa mga video list. Puwede mong tingnan ang mga video list, pero naka-pause ang pag-edit.",
-"listAddToLists": "Idagdag sa mga list",
-"accountDeletionProcessingSignOutFailed": "Pinoproseso ang pag-delete ng account mo, pero hindi ka namin ma-sign out. Subukan ulit."
+  },
+  "peopleListsAddPersonSemanticLabel": "Idagdag si {name} sa list",
+  "peopleListsMembershipUpdateFailed": "Hindi na-update ang list. Subukan ulit.",
+  "peopleListsAddPeopleSearchHint": "Maghanap ng tao",
+  "peopleListsRemovePersonSemanticLabel": "Alisin si {name} sa list",
+  "listMakePublicLabel": "Gawing public",
+  "listCollaboratorsNone": "Wala",
+  "listAddCollaboratorTitle": "Magdagdag ng collaborator",
+  "listMakePublicSubtitle": "Hayaang makita ng iba ang list na ito",
+  "listCollaboratorSearchHint": "Maghanap sa Divine...",
+  "listVideoNotAdded": "Nagawa ang listahan mo, pero hindi naidagdag ang video na ito.",
+  "listPrivateCollaboratorsWarning": "Kapag ginawang pribado ang listahang ito, aalisin din ang mga collaborator nito. Ikaw lang ang makakapagdagdag ng mga video.",
+  "listVideoPendingSync": "Naka-save dito ang listahan at video mo. Naghihintay ang video na ma-sync.",
+  "listRetrySync": "I-sync ngayon",
+  "listPermissionsUnconfirmed": "Hindi makumpirma ang pagbabagong ito. Subukan ulit.",
+  "listRecoveryPending": "May mga pagbabago sa listahang ito na naghihintay ma-sync.",
+  "listPermissionsRecoveryPending": "Tinanggap ang pagbabago mo. I-tap ang I-sync ngayon para tapusin ang pag-save. Naka-pause ang pag-edit hanggang matapos ito.",
+  "listRecoveryReadOnly": "Kailangang i-recover ang ilang naka-save na pagbabago sa mga video list. Puwede mong tingnan ang mga video list, pero naka-pause ang pag-edit.",
+  "listAddToLists": "Idagdag sa mga list",
+  "accountDeletionProcessingSignOutFailed": "Pinoproseso ang pag-delete ng account mo, pero hindi ka namin ma-sign out. Subukan ulit.",
+  "videoEditorLoopRepairSmoothed": "Mas maayos na ang loop",
+  "videoEditorLoopRepairProgress": "Inaayos ang loop mo…",
+  "videoEditorLoopRepairTrimmed": "Mas maayos na ang loop. Inalis ang {seconds} s."
 }

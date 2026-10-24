@@ -67,6 +67,7 @@ workspace:
   - packages/iap_repository
   - packages/keycast_flutter
   - packages/likes_repository
+  - packages/loop_alignment_repository
   - packages/logging_types
   - packages/media_cache
   - packages/models
@@ -321,6 +322,8 @@ dependencies:
   app_update_repository:
   app_version_client:
   db_client:
+  loop_alignment_repository:
+    path: packages/loop_alignment_repository
   likes_repository:
   media_cache:
   reposts_repository:

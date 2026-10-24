@@ -6120,18 +6120,11 @@
   "videoEditorTrackNotFollowed": "దాన్ని అనుసరించలేకపోయాము. మరింత వివరాలు ఉన్న దాన్ని ఫ్రేమ్‌లో పెట్టండి.",
   "videoEditorTrackFailed": "ట్రాకింగ్ పని చేయలేదు. మళ్లీ ప్రయత్నించండి.",
   "videoEditorTrackLostPartway": "మధ్యలో కనిపించకుండా పోయింది. అక్కడి నుండి లేయర్ కదలకుండా ఉంటుంది.",
-  "videoEditorLoopLabel": "లూప్",
-  "videoEditorLoopSemanticLabel": "మరింత సాఫీ అయిన లూప్ పాయింట్‌ను కనుగొనండి",
-  "videoEditorLoopFoundEarlier": "మరింత సాఫీ లూప్ దొరికింది. ఇది {seconds} సె ముందుగా ముగుస్తుంది.",
-  "videoEditorLoopFoundLater": "మరింత సాఫీ లూప్ దొరికింది. ఇది {seconds} సె ఆలస్యంగా ముగుస్తుంది.",
-  "videoEditorLoopClosestEarlier": "సరిగ్గా సరిపోయేది లేదు, కానీ ఇదే అత్యంత దగ్గరిది. ఇది {seconds} సె ముందుగా ముగుస్తుంది.",
-  "videoEditorLoopClosestLater": "సరిగ్గా సరిపోయేది లేదు, కానీ ఇదే అత్యంత దగ్గరిది. ఇది {seconds} సె ఆలస్యంగా ముగుస్తుంది.",
-  "videoEditorLoopKeepLabel": "ఉంచు",
-  "videoEditorLoopKeepSemanticLabel": "కొత్త లూప్ పాయింట్‌ను ఉంచండి",
-  "videoEditorLoopDiscardSemanticLabel": "పాత ముగింపును తిరిగి పెట్టండి",
+  "videoEditorLoopLabel": "లూప్‌ను సరిచేయండి",
+  "videoEditorLoopSemanticLabel": "లూప్ కలయికను సాఫీగా చేయండి",
   "videoEditorLoopAlreadySmooth": "ఇది ఇప్పటికే సాఫీగా లూప్ అవుతోంది.",
   "videoEditorLoopFailed": "లూప్‌ను తనిఖీ చేయలేకపోయాం. మళ్లీ ప్రయత్నించండి.",
-  "videoEditorLoopNoMatch": "అతుకులు లేని లూప్ దొరకలేదు. ముగింపు దగ్గర ఏదీ వీడియో ప్రారంభంతో సరిపోలడం లేదు.",
+  "videoEditorLoopNoMatch": "ఈ లూప్‌ను మెరుగుపరచలేకపోయాం",
   "videoEditorKeyframeEffect": "ఎఫెక్ట్",
   "videoEditorKeyframeCurveSegment": "కీఫ్రేమ్ {from} నుండి {to} వరకు కదలిక",
   "@videoEditorLayerAnimationButtonSemanticLabel": {
@@ -7575,7 +7568,14 @@
   "supporterLightboxHeadline": "{name} ఒక {badge}",
   "@supporterLightboxHeadline": {
     "description": "Headline of another user's supporter lightbox. {name} is their display name; {badge} is supporterLightboxBadge, shown in the accent color. Keep both placeholders; reorder freely.",
-    "placeholders": { "name": { "type": "String" }, "badge": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "badge": {
+        "type": "String"
+      }
+    }
   },
   "supporterLightboxBadge": "Divine మద్దతుదారు",
   "@supporterLightboxBadge": {
@@ -8784,5 +8784,8 @@
   "listPermissionsRecoveryPending": "మీ మార్పు ఆమోదించబడింది. దాన్ని సేవ్ చేయడం పూర్తి చేయడానికి ఇప్పుడే సింక్ చేయండి నొక్కండి. అప్పటి వరకు సవరణ నిలిపివేయబడుతుంది.",
   "listRecoveryReadOnly": "వీడియో జాబితాల్లో సేవ్ చేసిన కొన్ని మార్పులను పునరుద్ధరించాలి. మీరు వీడియో జాబితాలను చూడవచ్చు, కానీ సవరించడం తాత్కాలికంగా నిలిపివేయబడింది.",
   "listAddToLists": "జాబితాలకు జోడించండి",
-  "accountDeletionProcessingSignOutFailed": "మీ ఖాతాను తొలగించే ప్రక్రియ కొనసాగుతోంది, కానీ మేము సైన్ అవుట్‌ను పూర్తి చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి."
+  "accountDeletionProcessingSignOutFailed": "మీ ఖాతాను తొలగించే ప్రక్రియ కొనసాగుతోంది, కానీ మేము సైన్ అవుట్‌ను పూర్తి చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి.",
+  "videoEditorLoopRepairSmoothed": "లూప్ సాఫీగా మారింది",
+  "videoEditorLoopRepairProgress": "మీ లూప్‌ను సరిచేస్తున్నాం…",
+  "videoEditorLoopRepairTrimmed": "లూప్ సాఫీగా మారింది. {seconds} సె. తొలగించాం."
 }

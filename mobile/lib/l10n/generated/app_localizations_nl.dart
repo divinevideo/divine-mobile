@@ -10506,39 +10506,11 @@ class AppLocalizationsNl extends AppLocalizations {
       'Halverwege uit het oog verloren. Vanaf daar staat de laag stil.';
 
   @override
-  String get videoEditorLoopLabel => 'Loop';
+  String get videoEditorLoopLabel => 'Loop verbeteren';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'Vloeiender looppunt zoeken';
-
-  @override
-  String videoEditorLoopFoundEarlier(String seconds) {
-    return 'Vloeiendere loop gevonden. Hij eindigt $seconds s eerder.';
-  }
-
-  @override
-  String videoEditorLoopFoundLater(String seconds) {
-    return 'Vloeiendere loop gevonden. Hij eindigt $seconds s later.';
-  }
-
-  @override
-  String videoEditorLoopClosestEarlier(String seconds) {
-    return 'Geen perfecte match, maar dit is de dichtstbijzijnde. Hij eindigt $seconds s eerder.';
-  }
-
-  @override
-  String videoEditorLoopClosestLater(String seconds) {
-    return 'Geen perfecte match, maar dit is de dichtstbijzijnde. Hij eindigt $seconds s later.';
-  }
-
-  @override
-  String get videoEditorLoopKeepLabel => 'Houden';
-
-  @override
-  String get videoEditorLoopKeepSemanticLabel => 'Nieuw looppunt houden';
-
-  @override
-  String get videoEditorLoopDiscardSemanticLabel => 'Oude einde terugzetten';
+  String get videoEditorLoopSemanticLabel =>
+      'Overgang van de loop vloeiender maken';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'Deze loopt al vloeiend rond.';
@@ -10548,8 +10520,7 @@ class AppLocalizationsNl extends AppLocalizations {
       'Loop controleren is niet gelukt. Probeer het opnieuw.';
 
   @override
-  String get videoEditorLoopNoMatch =>
-      'Geen naadloze loop gevonden. Niets aan het eind past bij het begin van de video.';
+  String get videoEditorLoopNoMatch => 'Deze loop kon niet worden verbeterd';
 
   @override
   String get videoEditorKeyframeEffect => 'Effect';
@@ -14527,4 +14498,15 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Je account wordt verwijderd, maar we konden je niet volledig uitloggen. Probeer het opnieuw.';
+
+  @override
+  String get videoEditorLoopRepairSmoothed => 'Loop verbeterd';
+
+  @override
+  String get videoEditorLoopRepairProgress => 'Je loop wordt verbeterd…';
+
+  @override
+  String videoEditorLoopRepairTrimmed(String seconds) {
+    return 'Loop verbeterd. $seconds s verwijderd.';
+  }
 }

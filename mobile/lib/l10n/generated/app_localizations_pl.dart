@@ -10668,39 +10668,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Zgubione po drodze. Od tego miejsca warstwa stoi w miejscu.';
 
   @override
-  String get videoEditorLoopLabel => 'Pętla';
+  String get videoEditorLoopLabel => 'Popraw pętlę';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'Znajdź płynniejszy punkt pętli';
-
-  @override
-  String videoEditorLoopFoundEarlier(String seconds) {
-    return 'Znaleziono płynniejszą pętlę. Kończy się $seconds s wcześniej.';
-  }
-
-  @override
-  String videoEditorLoopFoundLater(String seconds) {
-    return 'Znaleziono płynniejszą pętlę. Kończy się $seconds s później.';
-  }
-
-  @override
-  String videoEditorLoopClosestEarlier(String seconds) {
-    return 'Brak idealnego dopasowania, ale to najbliższe. Kończy się $seconds s wcześniej.';
-  }
-
-  @override
-  String videoEditorLoopClosestLater(String seconds) {
-    return 'Brak idealnego dopasowania, ale to najbliższe. Kończy się $seconds s później.';
-  }
-
-  @override
-  String get videoEditorLoopKeepLabel => 'Zachowaj';
-
-  @override
-  String get videoEditorLoopKeepSemanticLabel => 'Zachowaj nowy punkt pętli';
-
-  @override
-  String get videoEditorLoopDiscardSemanticLabel => 'Przywróć poprzedni koniec';
+  String get videoEditorLoopSemanticLabel => 'Wygładź łączenie pętli';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'To już płynnie się zapętla.';
@@ -10710,8 +10681,7 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się sprawdzić pętli. Spróbuj ponownie.';
 
   @override
-  String get videoEditorLoopNoMatch =>
-      'Nie znaleziono płynnej pętli. Nic pod koniec nie pasuje do początku filmu.';
+  String get videoEditorLoopNoMatch => 'Nie udało się poprawić tej pętli';
 
   @override
   String get videoEditorKeyframeEffect => 'Efekt';
@@ -14751,4 +14721,15 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Usuwanie twojego konta trwa, ale nie udało się dokończyć wylogowania. Spróbuj ponownie.';
+
+  @override
+  String get videoEditorLoopRepairSmoothed => 'Pętla wygładzona';
+
+  @override
+  String get videoEditorLoopRepairProgress => 'Poprawiamy twoją pętlę…';
+
+  @override
+  String videoEditorLoopRepairTrimmed(String seconds) {
+    return 'Pętla wygładzona. Usunięto $seconds s.';
+  }
 }

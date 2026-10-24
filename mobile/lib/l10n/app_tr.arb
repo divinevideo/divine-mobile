@@ -2903,18 +2903,11 @@
   "videoEditorTrackNotFollowed": "Bu takip edilemedi. Daha fazla ayrıntısı olan bir şeyi çerçevele.",
   "videoEditorTrackFailed": "Takip işe yaramadı. Tekrar dene.",
   "videoEditorTrackLostPartway": "Yarı yolda gözden kayboldu. Katman oradan itibaren sabit kalır.",
-  "videoEditorLoopLabel": "Döngü",
-  "videoEditorLoopSemanticLabel": "Daha akıcı bir döngü noktası bul",
-  "videoEditorLoopFoundEarlier": "Daha akıcı bir döngü bulundu. {seconds} sn önce bitiyor.",
-  "videoEditorLoopFoundLater": "Daha akıcı bir döngü bulundu. {seconds} sn sonra bitiyor.",
-  "videoEditorLoopClosestEarlier": "Tam eşleşme yok ama en yakını bu. {seconds} sn önce bitiyor.",
-  "videoEditorLoopClosestLater": "Tam eşleşme yok ama en yakını bu. {seconds} sn sonra bitiyor.",
-  "videoEditorLoopKeepLabel": "Koru",
-  "videoEditorLoopKeepSemanticLabel": "Yeni döngü noktasını koru",
-  "videoEditorLoopDiscardSemanticLabel": "Eski bitişi geri getir",
+  "videoEditorLoopLabel": "Döngüyü düzelt",
+  "videoEditorLoopSemanticLabel": "Döngü birleşimini yumuşat",
   "videoEditorLoopAlreadySmooth": "Bu zaten akıcı bir şekilde dönüyor.",
   "videoEditorLoopFailed": "Döngü kontrol edilemedi. Tekrar dene.",
-  "videoEditorLoopNoMatch": "Kusursuz bir döngü bulunamadı. Sona yakın hiçbir şey videonun başlangıcıyla eşleşmiyor.",
+  "videoEditorLoopNoMatch": "Bu döngü iyileştirilemedi",
   "videoEditorKeyframeEffect": "Efekt",
   "videoEditorKeyframeCurveSegment": "{from}. ana kareden {to}. ana kareye hareket",
   "videoEditorLayerAnimationEnter": "Giriş",
@@ -5833,43 +5826,46 @@
   "inboxLeaveGroupConfirmBody": "Gelen kutundan kalkar ve yeni mesajlar onu geri getirmez. Yeniden katılmak için gruba tekrar yaz. Diğerlerine haber verilmez.",
   "inboxLeaveGroupConfirmConfirm": "Çık",
   "inboxLeftGroup": "Gruptan çıktın",
-"listsDiscoveryEmpty": "Bu sefer hiç liste çıkmadı. Yenilemek için aşağı çek.",
-"listsDiscoveryLoadingLabel": "Listeler yükleniyor",
-"listSearchPeopleUnavailable": "Kişi listeleri şu anda kullanılamıyor.",
-"listSearchVideosUnavailable": "Video listeleri şu anda kullanılamıyor.",
-"listPrivateConversionTooLarge": "Bu liste özel yapılmak için çok büyük. Önce birkaç videoyu kaldır. Düzenlemelerin burada duruyor ve henüz kaydedilmedi.",
-"authAccountCleanupFailed": "Önceki hesabın verileri temizlenemedi. Tekrar dene.",
-"@peopleListsAddPersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  "listsDiscoveryEmpty": "Bu sefer hiç liste çıkmadı. Yenilemek için aşağı çek.",
+  "listsDiscoveryLoadingLabel": "Listeler yükleniyor",
+  "listSearchPeopleUnavailable": "Kişi listeleri şu anda kullanılamıyor.",
+  "listSearchVideosUnavailable": "Video listeleri şu anda kullanılamıyor.",
+  "listPrivateConversionTooLarge": "Bu liste özel yapılmak için çok büyük. Önce birkaç videoyu kaldır. Düzenlemelerin burada duruyor ve henüz kaydedilmedi.",
+  "authAccountCleanupFailed": "Önceki hesabın verileri temizlenemedi. Tekrar dene.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"@peopleListsRemovePersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"peopleListsAddPersonSemanticLabel": "{name} kişisini listeye ekle",
-"peopleListsMembershipUpdateFailed": "Liste güncellenemedi. Lütfen tekrar dene.",
-"peopleListsAddPeopleSearchHint": "Kişi ara",
-"peopleListsRemovePersonSemanticLabel": "{name} kişisini listeden kaldır",
-"listMakePublicLabel": "Herkese açık yap",
-"listCollaboratorsNone": "Yok",
-"listAddCollaboratorTitle": "Ortak ekle",
-"listMakePublicSubtitle": "Başkaları bu listeyi görebilsin",
-"listCollaboratorSearchHint": "Divine'da ara...",
-"listVideoNotAdded": "Listen oluşturuldu, ancak bu video eklenmedi.",
-"listPrivateCollaboratorsWarning": "Bu listeyi özel yapmak, ortak çalışanlarını da kaldırır. Yalnızca sen video ekleyebilirsin.",
-"listVideoPendingSync": "Listen ve videon burada kaydedildi. Video eşitlenmeyi bekliyor.",
-"listRetrySync": "Şimdi eşitle",
-"listPermissionsUnconfirmed": "Bu değişiklik doğrulanamadı. Tekrar dene.",
-"listRecoveryPending": "Bu listede eşitlenmeyi bekleyen değişiklikler var.",
-"listPermissionsRecoveryPending": "Değişikliğin kabul edildi. Kaydetmeyi tamamlamak için Şimdi eşitle seçeneğine dokun. O zamana kadar düzenleme duraklatılır.",
-"listRecoveryReadOnly": "Video listelerindeki bazı kayıtlı değişikliklerin kurtarılması gerekiyor. Video listelerini görüntüleyebilirsin, ancak düzenleme duraklatıldı.",
-"listAddToLists": "Listelere ekle",
-"accountDeletionProcessingSignOutFailed": "Hesabının silinmesi işleniyor, ancak çıkışını tamamlayamadık. Tekrar dene."
+  },
+  "peopleListsAddPersonSemanticLabel": "{name} kişisini listeye ekle",
+  "peopleListsMembershipUpdateFailed": "Liste güncellenemedi. Lütfen tekrar dene.",
+  "peopleListsAddPeopleSearchHint": "Kişi ara",
+  "peopleListsRemovePersonSemanticLabel": "{name} kişisini listeden kaldır",
+  "listMakePublicLabel": "Herkese açık yap",
+  "listCollaboratorsNone": "Yok",
+  "listAddCollaboratorTitle": "Ortak ekle",
+  "listMakePublicSubtitle": "Başkaları bu listeyi görebilsin",
+  "listCollaboratorSearchHint": "Divine'da ara...",
+  "listVideoNotAdded": "Listen oluşturuldu, ancak bu video eklenmedi.",
+  "listPrivateCollaboratorsWarning": "Bu listeyi özel yapmak, ortak çalışanlarını da kaldırır. Yalnızca sen video ekleyebilirsin.",
+  "listVideoPendingSync": "Listen ve videon burada kaydedildi. Video eşitlenmeyi bekliyor.",
+  "listRetrySync": "Şimdi eşitle",
+  "listPermissionsUnconfirmed": "Bu değişiklik doğrulanamadı. Tekrar dene.",
+  "listRecoveryPending": "Bu listede eşitlenmeyi bekleyen değişiklikler var.",
+  "listPermissionsRecoveryPending": "Değişikliğin kabul edildi. Kaydetmeyi tamamlamak için Şimdi eşitle seçeneğine dokun. O zamana kadar düzenleme duraklatılır.",
+  "listRecoveryReadOnly": "Video listelerindeki bazı kayıtlı değişikliklerin kurtarılması gerekiyor. Video listelerini görüntüleyebilirsin, ancak düzenleme duraklatıldı.",
+  "listAddToLists": "Listelere ekle",
+  "accountDeletionProcessingSignOutFailed": "Hesabının silinmesi işleniyor, ancak çıkışını tamamlayamadık. Tekrar dene.",
+  "videoEditorLoopRepairSmoothed": "Döngü yumuşatıldı",
+  "videoEditorLoopRepairProgress": "Döngün düzeltiliyor…",
+  "videoEditorLoopRepairTrimmed": "Döngü yumuşatıldı. {seconds} sn kaldırıldı."
 }

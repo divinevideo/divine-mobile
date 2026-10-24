@@ -10682,42 +10682,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Pierdut din vedere pe parcurs. De acolo, stratul rămâne pe loc.';
 
   @override
-  String get videoEditorLoopLabel => 'Buclă';
+  String get videoEditorLoopLabel => 'Îmbunătățește bucla';
 
   @override
-  String get videoEditorLoopSemanticLabel =>
-      'Găsește un punct de buclă mai fluid';
-
-  @override
-  String videoEditorLoopFoundEarlier(String seconds) {
-    return 'Am găsit o buclă mai fluidă. Se termină cu $seconds s mai devreme.';
-  }
-
-  @override
-  String videoEditorLoopFoundLater(String seconds) {
-    return 'Am găsit o buclă mai fluidă. Se termină cu $seconds s mai târziu.';
-  }
-
-  @override
-  String videoEditorLoopClosestEarlier(String seconds) {
-    return 'Nicio potrivire perfectă, dar aceasta e cea mai apropiată. Se termină cu $seconds s mai devreme.';
-  }
-
-  @override
-  String videoEditorLoopClosestLater(String seconds) {
-    return 'Nicio potrivire perfectă, dar aceasta e cea mai apropiată. Se termină cu $seconds s mai târziu.';
-  }
-
-  @override
-  String get videoEditorLoopKeepLabel => 'Păstrează';
-
-  @override
-  String get videoEditorLoopKeepSemanticLabel =>
-      'Păstrează noul punct de buclă';
-
-  @override
-  String get videoEditorLoopDiscardSemanticLabel =>
-      'Pune la loc finalul anterior';
+  String get videoEditorLoopSemanticLabel => 'Netezește îmbinarea buclei';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'Se repetă deja fluid în buclă.';
@@ -10727,8 +10695,7 @@ class AppLocalizationsRo extends AppLocalizations {
       'Nu am putut verifica bucla. Încearcă din nou.';
 
   @override
-  String get videoEditorLoopNoMatch =>
-      'Nu am găsit o buclă fără cusur. Nimic de la final nu se potrivește cu începutul videoclipului.';
+  String get videoEditorLoopNoMatch => 'Nu am putut îmbunătăți această buclă';
 
   @override
   String get videoEditorKeyframeEffect => 'Efect';
@@ -14747,4 +14714,15 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Ștergerea contului tău este în curs, dar nu am putut finaliza deconectarea. Încearcă din nou.';
+
+  @override
+  String get videoEditorLoopRepairSmoothed => 'Buclă netezită';
+
+  @override
+  String get videoEditorLoopRepairProgress => 'Îți îmbunătățim bucla…';
+
+  @override
+  String videoEditorLoopRepairTrimmed(String seconds) {
+    return 'Buclă netezită. S-au eliminat $seconds s.';
+  }
 }

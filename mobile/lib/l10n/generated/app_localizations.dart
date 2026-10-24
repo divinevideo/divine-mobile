@@ -17765,59 +17765,17 @@ abstract class AppLocalizations {
   /// **'Lost sight of it partway. The layer holds still from there.'**
   String get videoEditorTrackLostPartway;
 
-  /// Clip action on the last clip that looks for where it can end so the video loops without a visible jump.
+  /// One optional action for the whole edit that repairs a reliable loop framing mismatch.
   ///
   /// In en, this message translates to:
-  /// **'Loop'**
+  /// **'Fix loop'**
   String get videoEditorLoopLabel;
 
-  /// Screen reader label for the Loop clip action.
+  /// Accessible label for Fix loop.
   ///
   /// In en, this message translates to:
-  /// **'Find a smoother loop point'**
+  /// **'Smooth the loop join'**
   String get videoEditorLoopSemanticLabel;
-
-  /// Shown above Keep and Cancel while a smoother loop point is previewed. {seconds} is how much earlier the video now ends, already formatted with one or two decimals.
-  ///
-  /// In en, this message translates to:
-  /// **'Smoother loop found. It ends {seconds} s earlier.'**
-  String videoEditorLoopFoundEarlier(String seconds);
-
-  /// Like videoEditorLoopFoundEarlier, when the new end brings back footage trimmed off before. {seconds} is how much later the video now ends.
-  ///
-  /// In en, this message translates to:
-  /// **'Smoother loop found. It ends {seconds} s later.'**
-  String videoEditorLoopFoundLater(String seconds);
-
-  /// Like videoEditorLoopFoundEarlier, when no end matches the first frame closely and this is only the closest one. {seconds} is how much earlier the video now ends.
-  ///
-  /// In en, this message translates to:
-  /// **'No perfect match, but this is the closest. It ends {seconds} s earlier.'**
-  String videoEditorLoopClosestEarlier(String seconds);
-
-  /// Like videoEditorLoopClosestEarlier, when the closest end lies later. {seconds} is how much later the video now ends.
-  ///
-  /// In en, this message translates to:
-  /// **'No perfect match, but this is the closest. It ends {seconds} s later.'**
-  String videoEditorLoopClosestLater(String seconds);
-
-  /// Button that keeps the suggested loop point as an editing step.
-  ///
-  /// In en, this message translates to:
-  /// **'Keep'**
-  String get videoEditorLoopKeepLabel;
-
-  /// Screen reader label for the Keep button of the loop suggestion.
-  ///
-  /// In en, this message translates to:
-  /// **'Keep the new loop point'**
-  String get videoEditorLoopKeepSemanticLabel;
-
-  /// Screen reader label for the Cancel button of the loop suggestion, which restores the clip's previous end.
-  ///
-  /// In en, this message translates to:
-  /// **'Put the old end back'**
-  String get videoEditorLoopDiscardSemanticLabel;
 
   /// Snackbar when no cut would make the video loop more smoothly than it does now.
   ///
@@ -17831,10 +17789,10 @@ abstract class AppLocalizations {
   /// **'Couldn\'t check the loop. Try again.'**
   String get videoEditorLoopFailed;
 
-  /// Snackbar when no cut makes the loop smoother because nothing near the end looks like the first frame, so the motion never comes back around.
+  /// No reliable improvement or unsupported composition. Nothing changed.
   ///
   /// In en, this message translates to:
-  /// **'No seamless loop found. Nothing near the end matches how the video starts.'**
+  /// **'Couldn\'t improve this loop'**
   String get videoEditorLoopNoMatch;
 
   /// Label above the effects in the keyframe sheet of a layer in the video editor: none, wiggle, bounce or pulse, played while the layer moves from one keyframe to the next.
@@ -24110,6 +24068,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your account deletion is processing, but we couldn’t finish signing you out. Try again.'**
   String get accountDeletionProcessingSignOutFailed;
+
+  /// Success after a verified loop correction. Snackbar also offers normal history Undo.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop smoothed'**
+  String get videoEditorLoopRepairSmoothed;
+
+  /// Progress while analyzing, rendering and verifying a loop correction.
+  ///
+  /// In en, this message translates to:
+  /// **'Fixing your loop…'**
+  String get videoEditorLoopRepairProgress;
+
+  /// Loop repair success when up to 200 ms were removed from the final clip. seconds is locale-formatted.
+  ///
+  /// In en, this message translates to:
+  /// **'Loop smoothed. Removed {seconds} s.'**
+  String videoEditorLoopRepairTrimmed(String seconds);
 }
 
 class _AppLocalizationsDelegate

@@ -7671,61 +7671,13 @@
   "@videoEditorTrackLostPartway": {
     "description": "Snackbar when tracking lost the object before the end, for example because it left the frame. The layer follows it up to there and then stays still."
   },
-  "videoEditorLoopLabel": "Loop",
+  "videoEditorLoopLabel": "Fix loop",
   "@videoEditorLoopLabel": {
-    "description": "Clip action on the last clip that looks for where it can end so the video loops without a visible jump."
+    "description": "One optional action for the whole edit that repairs a reliable loop framing mismatch."
   },
-  "videoEditorLoopSemanticLabel": "Find a smoother loop point",
+  "videoEditorLoopSemanticLabel": "Smooth the loop join",
   "@videoEditorLoopSemanticLabel": {
-    "description": "Screen reader label for the Loop clip action."
-  },
-  "videoEditorLoopFoundEarlier": "Smoother loop found. It ends {seconds} s earlier.",
-  "@videoEditorLoopFoundEarlier": {
-    "description": "Shown above Keep and Cancel while a smoother loop point is previewed. {seconds} is how much earlier the video now ends, already formatted with one or two decimals.",
-    "placeholders": {
-      "seconds": {
-        "type": "String"
-      }
-    }
-  },
-  "videoEditorLoopFoundLater": "Smoother loop found. It ends {seconds} s later.",
-  "@videoEditorLoopFoundLater": {
-    "description": "Like videoEditorLoopFoundEarlier, when the new end brings back footage trimmed off before. {seconds} is how much later the video now ends.",
-    "placeholders": {
-      "seconds": {
-        "type": "String"
-      }
-    }
-  },
-  "videoEditorLoopClosestEarlier": "No perfect match, but this is the closest. It ends {seconds} s earlier.",
-  "@videoEditorLoopClosestEarlier": {
-    "description": "Like videoEditorLoopFoundEarlier, when no end matches the first frame closely and this is only the closest one. {seconds} is how much earlier the video now ends.",
-    "placeholders": {
-      "seconds": {
-        "type": "String"
-      }
-    }
-  },
-  "videoEditorLoopClosestLater": "No perfect match, but this is the closest. It ends {seconds} s later.",
-  "@videoEditorLoopClosestLater": {
-    "description": "Like videoEditorLoopClosestEarlier, when the closest end lies later. {seconds} is how much later the video now ends.",
-    "placeholders": {
-      "seconds": {
-        "type": "String"
-      }
-    }
-  },
-  "videoEditorLoopKeepLabel": "Keep",
-  "@videoEditorLoopKeepLabel": {
-    "description": "Button that keeps the suggested loop point as an editing step."
-  },
-  "videoEditorLoopKeepSemanticLabel": "Keep the new loop point",
-  "@videoEditorLoopKeepSemanticLabel": {
-    "description": "Screen reader label for the Keep button of the loop suggestion."
-  },
-  "videoEditorLoopDiscardSemanticLabel": "Put the old end back",
-  "@videoEditorLoopDiscardSemanticLabel": {
-    "description": "Screen reader label for the Cancel button of the loop suggestion, which restores the clip's previous end."
+    "description": "Accessible label for Fix loop."
   },
   "videoEditorLoopAlreadySmooth": "This already loops smoothly.",
   "@videoEditorLoopAlreadySmooth": {
@@ -7735,9 +7687,9 @@
   "@videoEditorLoopFailed": {
     "description": "Snackbar when the loop point search failed because a clip could not be read or it stopped responding."
   },
-  "videoEditorLoopNoMatch": "No seamless loop found. Nothing near the end matches how the video starts.",
+  "videoEditorLoopNoMatch": "Couldn't improve this loop",
   "@videoEditorLoopNoMatch": {
-    "description": "Snackbar when no cut makes the loop smoother because nothing near the end looks like the first frame, so the motion never comes back around."
+    "description": "No reliable improvement or unsupported composition. Nothing changed."
   },
   "videoEditorKeyframeEffect": "Effect",
   "@videoEditorKeyframeEffect": {
@@ -9499,7 +9451,14 @@
   "supporterLightboxHeadline": "{name} is a {badge}",
   "@supporterLightboxHeadline": {
     "description": "Headline of another user's supporter lightbox. {name} is their display name; {badge} is supporterLightboxBadge, shown in the accent color. Keep both placeholders; reorder freely.",
-    "placeholders": { "name": { "type": "String" }, "badge": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "badge": {
+        "type": "String"
+      }
+    }
   },
   "supporterLightboxBadge": "Divine Supporter",
   "@supporterLightboxBadge": {
@@ -11216,5 +11175,25 @@
   },
   "listAddToLists": "Add to lists",
   "accountDeletionProcessingSignOutFailed": "Your account deletion is processing, but we couldn’t finish signing you out. Try again.",
-  "@accountDeletionProcessingSignOutFailed": {"description": "An accepted account deletion continues on the server while local sign-out failed. Retrying signs out without resubmitting or clearing the deletion receipt."}
+  "@accountDeletionProcessingSignOutFailed": {
+    "description": "An accepted account deletion continues on the server while local sign-out failed. Retrying signs out without resubmitting or clearing the deletion receipt."
+  },
+  "videoEditorLoopRepairSmoothed": "Loop smoothed",
+  "videoEditorLoopRepairProgress": "Fixing your loop…",
+  "videoEditorLoopRepairTrimmed": "Loop smoothed. Removed {seconds} s.",
+  "@videoEditorLoopRepairSmoothed": {
+    "description": "Success after a verified loop correction. Snackbar also offers normal history Undo."
+  },
+  "@videoEditorLoopRepairProgress": {
+    "description": "Progress while analyzing, rendering and verifying a loop correction."
+  },
+  "@videoEditorLoopRepairTrimmed": {
+    "description": "Loop repair success when up to 200 ms were removed from the final clip. seconds is locale-formatted.",
+    "placeholders": {
+      "seconds": {
+        "type": "String",
+        "example": "0.12"
+      }
+    }
+  }
 }

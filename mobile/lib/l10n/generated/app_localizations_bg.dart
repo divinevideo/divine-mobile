@@ -10552,40 +10552,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Изгубено по пътя. Оттам слоят остава на място.';
 
   @override
-  String get videoEditorLoopLabel => 'Цикъл';
+  String get videoEditorLoopLabel => 'Изглади цикъла';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'Намери по-гладка точка на цикъла';
-
-  @override
-  String videoEditorLoopFoundEarlier(String seconds) {
-    return 'Намерен е по-гладък цикъл. Свършва $seconds с по-рано.';
-  }
-
-  @override
-  String videoEditorLoopFoundLater(String seconds) {
-    return 'Намерен е по-гладък цикъл. Свършва $seconds с по-късно.';
-  }
-
-  @override
-  String videoEditorLoopClosestEarlier(String seconds) {
-    return 'Няма точно съвпадение, но това е най-близкото. Свършва $seconds с по-рано.';
-  }
-
-  @override
-  String videoEditorLoopClosestLater(String seconds) {
-    return 'Няма точно съвпадение, но това е най-близкото. Свършва $seconds с по-късно.';
-  }
-
-  @override
-  String get videoEditorLoopKeepLabel => 'Запази';
-
-  @override
-  String get videoEditorLoopKeepSemanticLabel =>
-      'Запази новата точка на цикъла';
-
-  @override
-  String get videoEditorLoopDiscardSemanticLabel => 'Върни предишния край';
+  String get videoEditorLoopSemanticLabel => 'Изглади връзката на цикъла';
 
   @override
   String get videoEditorLoopAlreadySmooth =>
@@ -10596,8 +10566,7 @@ class AppLocalizationsBg extends AppLocalizations {
       'Цикълът не можа да се провери. Опитай отново.';
 
   @override
-  String get videoEditorLoopNoMatch =>
-      'Не намерихме гладък цикъл. Нищо близо до края не съвпада с началото на видеото.';
+  String get videoEditorLoopNoMatch => 'Не успяхме да подобрим този цикъл';
 
   @override
   String get videoEditorKeyframeEffect => 'Ефект';
@@ -14591,4 +14560,15 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Изтриването на акаунта ти е в ход, но не успяхме да завършим излизането. Опитай отново.';
+
+  @override
+  String get videoEditorLoopRepairSmoothed => 'Цикълът е изгладен';
+
+  @override
+  String get videoEditorLoopRepairProgress => 'Изглаждане на цикъла…';
+
+  @override
+  String videoEditorLoopRepairTrimmed(String seconds) {
+    return 'Цикълът е изгладен. Премахнати са $seconds сек.';
+  }
 }

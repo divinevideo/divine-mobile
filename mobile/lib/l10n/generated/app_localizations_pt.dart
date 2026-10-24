@@ -10545,40 +10545,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Perdeu de vista no meio do caminho. A camada fica parada a partir daí.';
 
   @override
-  String get videoEditorLoopLabel => 'Loop';
+  String get videoEditorLoopLabel => 'Melhorar loop';
 
   @override
-  String get videoEditorLoopSemanticLabel =>
-      'Encontrar um ponto de loop mais suave';
-
-  @override
-  String videoEditorLoopFoundEarlier(String seconds) {
-    return 'Loop mais suave encontrado. Termina $seconds s antes.';
-  }
-
-  @override
-  String videoEditorLoopFoundLater(String seconds) {
-    return 'Loop mais suave encontrado. Termina $seconds s depois.';
-  }
-
-  @override
-  String videoEditorLoopClosestEarlier(String seconds) {
-    return 'Não há correspondência perfeita, mas esta é a mais próxima. Termina $seconds s antes.';
-  }
-
-  @override
-  String videoEditorLoopClosestLater(String seconds) {
-    return 'Não há correspondência perfeita, mas esta é a mais próxima. Termina $seconds s depois.';
-  }
-
-  @override
-  String get videoEditorLoopKeepLabel => 'Manter';
-
-  @override
-  String get videoEditorLoopKeepSemanticLabel => 'Manter o novo ponto de loop';
-
-  @override
-  String get videoEditorLoopDiscardSemanticLabel => 'Voltar ao final anterior';
+  String get videoEditorLoopSemanticLabel => 'Suavizar a junção do loop';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'Isso já faz um loop suave.';
@@ -10588,8 +10558,7 @@ class AppLocalizationsPt extends AppLocalizations {
       'Não foi possível verificar o loop. Tente de novo.';
 
   @override
-  String get videoEditorLoopNoMatch =>
-      'Nenhum loop perfeito encontrado. Nada perto do final combina com o início do vídeo.';
+  String get videoEditorLoopNoMatch => 'Não foi possível melhorar este loop';
 
   @override
   String get videoEditorKeyframeEffect => 'Efeito';
@@ -14582,4 +14551,15 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'A exclusão da sua conta está em andamento, mas não conseguimos concluir a saída. Tente de novo.';
+
+  @override
+  String get videoEditorLoopRepairSmoothed => 'Loop suavizado';
+
+  @override
+  String get videoEditorLoopRepairProgress => 'Melhorando seu loop…';
+
+  @override
+  String videoEditorLoopRepairTrimmed(String seconds) {
+    return 'Loop suavizado. $seconds s removidos.';
+  }
 }

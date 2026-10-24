@@ -10217,39 +10217,10 @@ class AppLocalizationsAm extends AppLocalizations {
       'በመሃል ጠፋ። ከዚያ በኋላ ንብርብሩ እንደቆመ ይቆያል።';
 
   @override
-  String get videoEditorLoopLabel => 'ዙር';
+  String get videoEditorLoopLabel => 'ሉፑን አስተካክል';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'ለስላሳ የዙር ነጥብ ፈልግ';
-
-  @override
-  String videoEditorLoopFoundEarlier(String seconds) {
-    return 'ለስላሳ ዙር ተገኝቷል። $seconds ሰ ቀድሞ ያበቃል።';
-  }
-
-  @override
-  String videoEditorLoopFoundLater(String seconds) {
-    return 'ለስላሳ ዙር ተገኝቷል። $seconds ሰ ዘግይቶ ያበቃል።';
-  }
-
-  @override
-  String videoEditorLoopClosestEarlier(String seconds) {
-    return 'ፍጹም ተዛማጅ የለም፣ ግን ይህ በጣም ቅርቡ ነው። $seconds ሰ ቀድሞ ያበቃል።';
-  }
-
-  @override
-  String videoEditorLoopClosestLater(String seconds) {
-    return 'ፍጹም ተዛማጅ የለም፣ ግን ይህ በጣም ቅርቡ ነው። $seconds ሰ ዘግይቶ ያበቃል።';
-  }
-
-  @override
-  String get videoEditorLoopKeepLabel => 'አቆይ';
-
-  @override
-  String get videoEditorLoopKeepSemanticLabel => 'አዲሱን የዙር ነጥብ አቆይ';
-
-  @override
-  String get videoEditorLoopDiscardSemanticLabel => 'የቀድሞውን መጨረሻ መልስ';
+  String get videoEditorLoopSemanticLabel => 'የሉፑን መገናኛ አስተካክል';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'ይህ አስቀድሞ ለስላሳ ሆኖ ይዞራል።';
@@ -10258,8 +10229,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorLoopFailed => 'ዙሩን ማረጋገጥ አልተቻለም። እንደገና ይሞክሩ።';
 
   @override
-  String get videoEditorLoopNoMatch =>
-      'እንከን የለሽ ዙር አልተገኘም። ከመጨረሻው አቅራቢያ ቪዲዮው ከሚጀምርበት ጋር የሚገጥም ነገር የለም።';
+  String get videoEditorLoopNoMatch => 'ይህን ሉፕ ማሻሻል አልተቻለም';
 
   @override
   String get videoEditorKeyframeEffect => 'ውጤት';
@@ -14091,4 +14061,15 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'መለያዎን የመሰረዝ ሂደት በመካሄድ ላይ ነው፣ ግን ማስወጣት አልቻልንም። እንደገና ይሞክሩ።';
+
+  @override
+  String get videoEditorLoopRepairSmoothed => 'ሉፑ ተስተካክሏል';
+
+  @override
+  String get videoEditorLoopRepairProgress => 'ሉፑን በማስተካከል ላይ…';
+
+  @override
+  String videoEditorLoopRepairTrimmed(String seconds) {
+    return 'ሉፑ ተስተካክሏል። $seconds ሰከንድ ተወግዷል።';
+  }
 }

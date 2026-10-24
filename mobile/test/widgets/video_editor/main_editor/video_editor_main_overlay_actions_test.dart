@@ -25,10 +25,9 @@ import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_overlay_actions.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
-import 'package:pro_video_editor/pro_video_editor.dart'
-    show EditorVideo, VideoLoopPoint;
 
 import '../../../helpers/go_router.dart';
+import '../../../helpers/video_editor/loop_repair.dart';
 
 class _MockVideoEditorMainBloc
     extends MockBloc<VideoEditorMainEvent, VideoEditorMainState>
@@ -167,7 +166,11 @@ void main() {
                     BlocProvider<ClipEditorBloc>.value(value: clipEditorBloc),
                     BlocProvider(create: (_) => TextWrapHintCubit()),
                     if (loopCubit == null)
-                      BlocProvider(create: (_) => LoopSuggestionCubit())
+                      BlocProvider(
+                        create: (_) => LoopSuggestionCubit(
+                          repository: noMatchLoopRepository(),
+                        ),
+                      )
                     else
                       BlocProvider.value(value: loopCubit),
                   ],
@@ -181,30 +184,12 @@ void main() {
     }
 
     group('renders', () {
-      testWidgets('requires Keep or Cancel before continuing to post details', (
+      testWidgets('blocks continuing while a loop repair is running', (
         tester,
       ) async {
-        final cubit = LoopSuggestionCubit(
-          findLoopPoint:
-              ({required search, required taskId, onProgress}) async =>
-                  const VideoLoopPoint(
-                    start: Duration.zero,
-                    end: Duration(seconds: 2),
-                    difference: 0.01,
-                    currentDifference: 0.2,
-                  ),
-        );
+        final cubit = pendingLoopCubit();
         addTearDown(cubit.close);
-        await cubit.search([
-          DivineVideoClip(
-            id: 'clip',
-            video: EditorVideo.file('/docs/clip.mp4'),
-            duration: const Duration(seconds: 3),
-            recordedAt: DateTime(2026),
-            targetAspectRatio: model.AspectRatio.vertical,
-            originalAspectRatio: 9 / 16,
-          ),
-        ]);
+        beginPendingLoop(cubit, []);
         await tester.pumpWidget(buildWidget(loopCubit: cubit));
 
         expect(
@@ -214,7 +199,7 @@ void main() {
           isNull,
         );
 
-        cubit.resultHandled();
+        await cubit.cancel();
         await tester.pump();
         expect(
           tester

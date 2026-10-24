@@ -2975,18 +2975,11 @@
   "videoEditorTrackNotFollowed": "Das ließ sich nicht verfolgen. Rahme etwas mit mehr Details ein.",
   "videoEditorTrackFailed": "Verfolgen hat nicht geklappt. Versuch es noch mal.",
   "videoEditorTrackLostPartway": "Unterwegs aus den Augen verloren. Ab da bleibt die Ebene stehen.",
-  "videoEditorLoopLabel": "Loop",
-  "videoEditorLoopSemanticLabel": "Flüssigeren Loop-Punkt finden",
-  "videoEditorLoopFoundEarlier": "Flüssigerer Loop gefunden. Er endet {seconds} s früher.",
-  "videoEditorLoopFoundLater": "Flüssigerer Loop gefunden. Er endet {seconds} s später.",
-  "videoEditorLoopClosestEarlier": "Kein perfekter Treffer, aber der nächste, den es gibt. Er endet {seconds} s früher.",
-  "videoEditorLoopClosestLater": "Kein perfekter Treffer, aber der nächste, den es gibt. Er endet {seconds} s später.",
-  "videoEditorLoopKeepLabel": "Behalten",
-  "videoEditorLoopKeepSemanticLabel": "Neuen Loop-Punkt behalten",
-  "videoEditorLoopDiscardSemanticLabel": "Altes Ende zurückholen",
+  "videoEditorLoopLabel": "Loop verbessern",
+  "videoEditorLoopSemanticLabel": "Übergang des Loops glätten",
   "videoEditorLoopAlreadySmooth": "Das loopt schon flüssig.",
   "videoEditorLoopFailed": "Der Loop konnte nicht geprüft werden. Versuch es noch mal.",
-  "videoEditorLoopNoMatch": "Kein nahtloser Loop gefunden. Nichts gegen Ende passt zum Anfang des Videos.",
+  "videoEditorLoopNoMatch": "Dieser Loop ließ sich nicht verbessern",
   "videoEditorKeyframeEffect": "Effekt",
   "videoEditorKeyframeCurveSegment": "Bewegung von Keyframe {from} zu {to}",
   "videoEditorLayerAnimationEnter": "Eingang",
@@ -5833,43 +5826,46 @@
   "inboxLeaveGroupConfirmBody": "Sie verschwindet aus deinem Posteingang, und neue Nachrichten holen sie nicht zurück. Schreib wieder in die Gruppe, um zurückzukommen. Die anderen erfahren nichts davon.",
   "inboxLeaveGroupConfirmConfirm": "Verlassen",
   "inboxLeftGroup": "Du hast die Gruppe verlassen",
-"listsDiscoveryEmpty": "Diesmal sind keine Listen aufgetaucht. Zieh nach unten zum Aktualisieren.",
-"listsDiscoveryLoadingLabel": "Listen werden geladen",
-"listSearchPeopleUnavailable": "Personenlisten sind gerade nicht verfügbar.",
-"listSearchVideosUnavailable": "Videolisten sind gerade nicht verfügbar.",
-"listPrivateConversionTooLarge": "Diese Liste ist zu groß, um sie privat zu machen. Entferne zuerst einige Videos. Deine Änderungen bleiben hier erhalten und wurden noch nicht gespeichert.",
-"authAccountCleanupFailed": "Die Daten des vorherigen Kontos konnten nicht gelöscht werden. Versuche es erneut.",
-"@peopleListsAddPersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  "listsDiscoveryEmpty": "Diesmal sind keine Listen aufgetaucht. Zieh nach unten zum Aktualisieren.",
+  "listsDiscoveryLoadingLabel": "Listen werden geladen",
+  "listSearchPeopleUnavailable": "Personenlisten sind gerade nicht verfügbar.",
+  "listSearchVideosUnavailable": "Videolisten sind gerade nicht verfügbar.",
+  "listPrivateConversionTooLarge": "Diese Liste ist zu groß, um sie privat zu machen. Entferne zuerst einige Videos. Deine Änderungen bleiben hier erhalten und wurden noch nicht gespeichert.",
+  "authAccountCleanupFailed": "Die Daten des vorherigen Kontos konnten nicht gelöscht werden. Versuche es erneut.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"@peopleListsRemovePersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"peopleListsAddPersonSemanticLabel": "{name} zur Liste hinzufügen",
-"peopleListsMembershipUpdateFailed": "Liste konnte nicht aktualisiert werden. Bitte versuch es nochmal.",
-"peopleListsAddPeopleSearchHint": "Personen suchen",
-"peopleListsRemovePersonSemanticLabel": "{name} aus der Liste entfernen",
-"listMakePublicLabel": "Öffentlich machen",
-"listCollaboratorsNone": "Keine",
-"listAddCollaboratorTitle": "Mitarbeiter hinzufügen",
-"listMakePublicSubtitle": "Lass andere diese Liste sehen",
-"listCollaboratorSearchHint": "Divine durchsuchen...",
-"listVideoNotAdded": "Deine Liste wurde erstellt, aber dieses Video wurde nicht hinzugefügt.",
-"listPrivateCollaboratorsWarning": "Wenn du diese Liste privat machst, werden auch ihre Mitwirkenden entfernt. Nur du kannst dann Videos hinzufügen.",
-"listVideoPendingSync": "Deine Liste und dein Video sind hier gespeichert. Das Video wartet auf die Synchronisierung.",
-"listRetrySync": "Jetzt synchronisieren",
-"listPermissionsUnconfirmed": "Diese Änderung konnte nicht bestätigt werden. Versuch es erneut.",
-"listRecoveryPending": "Diese Liste hat Änderungen, die auf die Synchronisierung warten.",
-"listPermissionsRecoveryPending": "Deine Änderung wurde angenommen. Tippe auf Jetzt synchronisieren, um das Speichern abzuschließen. Bis dahin ist die Bearbeitung pausiert.",
-"listRecoveryReadOnly": "Einige gespeicherte Änderungen an Videolisten müssen wiederhergestellt werden. Du kannst Videolisten ansehen, aber die Bearbeitung ist vorübergehend pausiert.",
-"listAddToLists": "Zu Listen hinzufügen",
-"accountDeletionProcessingSignOutFailed": "Dein Konto wird gerade gelöscht, aber wir konnten dich nicht vollständig abmelden. Versuch es noch einmal."
+  },
+  "peopleListsAddPersonSemanticLabel": "{name} zur Liste hinzufügen",
+  "peopleListsMembershipUpdateFailed": "Liste konnte nicht aktualisiert werden. Bitte versuch es nochmal.",
+  "peopleListsAddPeopleSearchHint": "Personen suchen",
+  "peopleListsRemovePersonSemanticLabel": "{name} aus der Liste entfernen",
+  "listMakePublicLabel": "Öffentlich machen",
+  "listCollaboratorsNone": "Keine",
+  "listAddCollaboratorTitle": "Mitarbeiter hinzufügen",
+  "listMakePublicSubtitle": "Lass andere diese Liste sehen",
+  "listCollaboratorSearchHint": "Divine durchsuchen...",
+  "listVideoNotAdded": "Deine Liste wurde erstellt, aber dieses Video wurde nicht hinzugefügt.",
+  "listPrivateCollaboratorsWarning": "Wenn du diese Liste privat machst, werden auch ihre Mitwirkenden entfernt. Nur du kannst dann Videos hinzufügen.",
+  "listVideoPendingSync": "Deine Liste und dein Video sind hier gespeichert. Das Video wartet auf die Synchronisierung.",
+  "listRetrySync": "Jetzt synchronisieren",
+  "listPermissionsUnconfirmed": "Diese Änderung konnte nicht bestätigt werden. Versuch es erneut.",
+  "listRecoveryPending": "Diese Liste hat Änderungen, die auf die Synchronisierung warten.",
+  "listPermissionsRecoveryPending": "Deine Änderung wurde angenommen. Tippe auf Jetzt synchronisieren, um das Speichern abzuschließen. Bis dahin ist die Bearbeitung pausiert.",
+  "listRecoveryReadOnly": "Einige gespeicherte Änderungen an Videolisten müssen wiederhergestellt werden. Du kannst Videolisten ansehen, aber die Bearbeitung ist vorübergehend pausiert.",
+  "listAddToLists": "Zu Listen hinzufügen",
+  "accountDeletionProcessingSignOutFailed": "Dein Konto wird gerade gelöscht, aber wir konnten dich nicht vollständig abmelden. Versuch es noch einmal.",
+  "videoEditorLoopRepairSmoothed": "Loop geglättet",
+  "videoEditorLoopRepairProgress": "Dein Loop wird verbessert…",
+  "videoEditorLoopRepairTrimmed": "Loop geglättet. {seconds} s entfernt."
 }

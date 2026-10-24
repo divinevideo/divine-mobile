@@ -2896,18 +2896,11 @@
   "videoEditorTrackNotFollowed": "تعذّر التتبع. يُفضَّل تأطير شيء بتفاصيل أكثر.",
   "videoEditorTrackFailed": "تعذّر التتبع. يُرجى المحاولة مجددًا.",
   "videoEditorTrackLostPartway": "فُقد الأثر في منتصف الطريق، وتبقى الطبقة ثابتة من هناك.",
-  "videoEditorLoopLabel": "تكرار",
-  "videoEditorLoopSemanticLabel": "ابحث عن نقطة تكرار أكثر سلاسة",
-  "videoEditorLoopFoundEarlier": "وجدنا تكرارًا أكثر سلاسة. ينتهي أبكر بمقدار {seconds} ث.",
-  "videoEditorLoopFoundLater": "وجدنا تكرارًا أكثر سلاسة. ينتهي متأخرًا بمقدار {seconds} ث.",
-  "videoEditorLoopClosestEarlier": "لا يوجد تطابق تام، لكن هذا الأقرب. ينتهي أبكر بمقدار {seconds} ث.",
-  "videoEditorLoopClosestLater": "لا يوجد تطابق تام، لكن هذا الأقرب. ينتهي متأخرًا بمقدار {seconds} ث.",
-  "videoEditorLoopKeepLabel": "احتفظ",
-  "videoEditorLoopKeepSemanticLabel": "احتفظ بنقطة التكرار الجديدة",
-  "videoEditorLoopDiscardSemanticLabel": "أعِد النهاية السابقة",
+  "videoEditorLoopLabel": "تحسين التكرار",
+  "videoEditorLoopSemanticLabel": "تنعيم نقطة اتصال التكرار",
   "videoEditorLoopAlreadySmooth": "هذا يتكرر بسلاسة بالفعل.",
   "videoEditorLoopFailed": "تعذّر فحص التكرار. يُرجى المحاولة مجددًا.",
-  "videoEditorLoopNoMatch": "لم نجد تكرارًا سلسًا. لا شيء قرب النهاية يطابق بداية الفيديو.",
+  "videoEditorLoopNoMatch": "تعذّر تحسين هذا التكرار",
   "videoEditorKeyframeEffect": "التأثير",
   "videoEditorKeyframeCurveSegment": "الحركة من الإطار الرئيسي {from} إلى {to}",
   "videoEditorLayerAnimationEnter": "دخول",
@@ -5833,43 +5826,46 @@
   "inboxLeaveGroupConfirmBody": "ستختفي من صندوق الوارد، ولن تعيدها الرسائل الجديدة. للانضمام مجددًا تكفي الكتابة فيها. لا يُرسَل أي إشعار.",
   "inboxLeaveGroupConfirmConfirm": "مغادرة",
   "inboxLeftGroup": "تمت مغادرة المجموعة",
-"listsDiscoveryEmpty": "لم تظهر أي قوائم هذه المرة. يمكن السحب للتحديث.",
-"listsDiscoveryLoadingLabel": "جارٍ تحميل القوائم",
-"listSearchPeopleUnavailable": "قوائم الأشخاص غير متاحة الآن.",
-"listSearchVideosUnavailable": "قوائم الفيديو غير متاحة الآن.",
-"listPrivateConversionTooLarge": "هذه القائمة أكبر من أن تصبح خاصة. أزل بعض الفيديوهات أولاً. تعديلاتك محفوظة هنا ولم يتم حفظها في القائمة.",
-"authAccountCleanupFailed": "تعذّر مسح بيانات الحساب السابق. يرجى المحاولة مرّة أخرى.",
-"@peopleListsAddPersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  "listsDiscoveryEmpty": "لم تظهر أي قوائم هذه المرة. يمكن السحب للتحديث.",
+  "listsDiscoveryLoadingLabel": "جارٍ تحميل القوائم",
+  "listSearchPeopleUnavailable": "قوائم الأشخاص غير متاحة الآن.",
+  "listSearchVideosUnavailable": "قوائم الفيديو غير متاحة الآن.",
+  "listPrivateConversionTooLarge": "هذه القائمة أكبر من أن تصبح خاصة. أزل بعض الفيديوهات أولاً. تعديلاتك محفوظة هنا ولم يتم حفظها في القائمة.",
+  "authAccountCleanupFailed": "تعذّر مسح بيانات الحساب السابق. يرجى المحاولة مرّة أخرى.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"@peopleListsRemovePersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"peopleListsAddPersonSemanticLabel": "إضافة {name} إلى القائمة",
-"peopleListsMembershipUpdateFailed": "تعذّر تحديث القائمة. يرجى المحاولة مجددًا.",
-"peopleListsAddPeopleSearchHint": "البحث عن أشخاص",
-"peopleListsRemovePersonSemanticLabel": "إزالة {name} من القائمة",
-"listMakePublicLabel": "جعل القائمة عامة",
-"listCollaboratorsNone": "لا أحد",
-"listAddCollaboratorTitle": "إضافة متعاون",
-"listMakePublicSubtitle": "السماح للآخرين برؤية هذه القائمة",
-"listCollaboratorSearchHint": "ابحث في Divine...",
-"listVideoNotAdded": "تم إنشاء قائمتك، لكن لم تتم إضافة هذا الفيديو.",
-"listPrivateCollaboratorsWarning": "جعل هذه القائمة خاصة يزيل المتعاونين معها أيضًا. ستكون أنت الوحيد القادر على إضافة الفيديوهات.",
-"listVideoPendingSync": "تم حفظ قائمتك وفيديوك هنا. الفيديو بانتظار المزامنة.",
-"listRetrySync": "زامن الآن",
-"listPermissionsUnconfirmed": "تعذّر تأكيد هذا التغيير. حاول مرة أخرى.",
-"listRecoveryPending": "تحتوي هذه القائمة على تغييرات بانتظار المزامنة.",
-"listPermissionsRecoveryPending": "تم قبول تغييرك. اضغط على زامن الآن لإكمال حفظه. التعديل متوقف حتى ذلك الحين.",
-"listRecoveryReadOnly": "تحتاج بعض التغييرات المحفوظة في قوائم الفيديو إلى استعادة. يمكن عرض قوائم الفيديو، لكن التعديل متوقف مؤقتًا.",
-"listAddToLists": "إضافة إلى القوائم",
-"accountDeletionProcessingSignOutFailed": "حذف الحساب قيد المعالجة، لكن تعذّر إكمال تسجيل الخروج. يرجى المحاولة مجددًا."
+  },
+  "peopleListsAddPersonSemanticLabel": "إضافة {name} إلى القائمة",
+  "peopleListsMembershipUpdateFailed": "تعذّر تحديث القائمة. يرجى المحاولة مجددًا.",
+  "peopleListsAddPeopleSearchHint": "البحث عن أشخاص",
+  "peopleListsRemovePersonSemanticLabel": "إزالة {name} من القائمة",
+  "listMakePublicLabel": "جعل القائمة عامة",
+  "listCollaboratorsNone": "لا أحد",
+  "listAddCollaboratorTitle": "إضافة متعاون",
+  "listMakePublicSubtitle": "السماح للآخرين برؤية هذه القائمة",
+  "listCollaboratorSearchHint": "ابحث في Divine...",
+  "listVideoNotAdded": "تم إنشاء قائمتك، لكن لم تتم إضافة هذا الفيديو.",
+  "listPrivateCollaboratorsWarning": "جعل هذه القائمة خاصة يزيل المتعاونين معها أيضًا. ستكون أنت الوحيد القادر على إضافة الفيديوهات.",
+  "listVideoPendingSync": "تم حفظ قائمتك وفيديوك هنا. الفيديو بانتظار المزامنة.",
+  "listRetrySync": "زامن الآن",
+  "listPermissionsUnconfirmed": "تعذّر تأكيد هذا التغيير. حاول مرة أخرى.",
+  "listRecoveryPending": "تحتوي هذه القائمة على تغييرات بانتظار المزامنة.",
+  "listPermissionsRecoveryPending": "تم قبول تغييرك. اضغط على زامن الآن لإكمال حفظه. التعديل متوقف حتى ذلك الحين.",
+  "listRecoveryReadOnly": "تحتاج بعض التغييرات المحفوظة في قوائم الفيديو إلى استعادة. يمكن عرض قوائم الفيديو، لكن التعديل متوقف مؤقتًا.",
+  "listAddToLists": "إضافة إلى القوائم",
+  "accountDeletionProcessingSignOutFailed": "حذف الحساب قيد المعالجة، لكن تعذّر إكمال تسجيل الخروج. يرجى المحاولة مجددًا.",
+  "videoEditorLoopRepairSmoothed": "تم تنعيم التكرار",
+  "videoEditorLoopRepairProgress": "جارٍ تحسين التكرار…",
+  "videoEditorLoopRepairTrimmed": "تم تنعيم التكرار. أُزيلت {seconds} ث."
 }

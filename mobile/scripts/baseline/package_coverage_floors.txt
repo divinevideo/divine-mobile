@@ -47,6 +47,7 @@ infinite_video_feed 100
 keycast_flutter 44
 likes_repository 62
 logging_types 100
+loop_alignment_repository 100
 media_cache 98
 models 25
 nostr_app_bridge_repository 78

@@ -2983,18 +2983,11 @@
   "videoEditorTrackNotFollowed": "No se pudo seguir eso. Encuadrá algo con más detalle.",
   "videoEditorTrackFailed": "El seguimiento no funcionó. Probá de nuevo.",
   "videoEditorTrackLostPartway": "Se perdió a mitad de camino. La capa se queda quieta desde ahí.",
-  "videoEditorLoopLabel": "Bucle",
-  "videoEditorLoopSemanticLabel": "Buscar un punto de bucle más suave",
-  "videoEditorLoopFoundEarlier": "Encontramos un bucle más suave. Termina {seconds} s antes.",
-  "videoEditorLoopFoundLater": "Encontramos un bucle más suave. Termina {seconds} s después.",
-  "videoEditorLoopClosestEarlier": "No hay una coincidencia perfecta, pero esta es la más cercana. Termina {seconds} s antes.",
-  "videoEditorLoopClosestLater": "No hay una coincidencia perfecta, pero esta es la más cercana. Termina {seconds} s después.",
-  "videoEditorLoopKeepLabel": "Mantener",
-  "videoEditorLoopKeepSemanticLabel": "Mantener el nuevo punto de bucle",
-  "videoEditorLoopDiscardSemanticLabel": "Volver al final anterior",
+  "videoEditorLoopLabel": "Mejorá el bucle",
+  "videoEditorLoopSemanticLabel": "Suavizá la unión del bucle",
   "videoEditorLoopAlreadySmooth": "Esto ya hace un bucle suave.",
   "videoEditorLoopFailed": "No pudimos revisar el bucle. Probá de nuevo.",
-  "videoEditorLoopNoMatch": "No encontramos un bucle sin cortes. Nada cerca del final coincide con el inicio del video.",
+  "videoEditorLoopNoMatch": "No pudimos mejorar este bucle",
   "videoEditorKeyframeEffect": "Efecto",
   "videoEditorKeyframeCurveSegment": "Movimiento del fotograma clave {from} al {to}",
   "videoEditorLayerAnimationEnter": "Entrada",
@@ -5833,43 +5826,46 @@
   "inboxLeaveGroupConfirmBody": "Desaparece de tu bandeja de entrada y los mensajes nuevos no lo van a traer de vuelta. Escribí de nuevo en el grupo para volver. Nadie más se entera.",
   "inboxLeaveGroupConfirmConfirm": "Salir",
   "inboxLeftGroup": "Saliste del grupo",
-"listsDiscoveryEmpty": "Esta vez no apareció ninguna lista. Deslizá para actualizar.",
-"listsDiscoveryLoadingLabel": "Cargando listas",
-"listSearchPeopleUnavailable": "Las listas de personas no están disponibles ahora.",
-"listSearchVideosUnavailable": "Las listas de videos no están disponibles ahora.",
-"listPrivateConversionTooLarge": "Esta lista es demasiado grande para hacerla privada. Quitá algunos videos primero. Tus cambios siguen acá y no se guardaron.",
-"authAccountCleanupFailed": "No se pudieron borrar los datos de la cuenta anterior. Probá de nuevo.",
-"@peopleListsAddPersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  "listsDiscoveryEmpty": "Esta vez no apareció ninguna lista. Deslizá para actualizar.",
+  "listsDiscoveryLoadingLabel": "Cargando listas",
+  "listSearchPeopleUnavailable": "Las listas de personas no están disponibles ahora.",
+  "listSearchVideosUnavailable": "Las listas de videos no están disponibles ahora.",
+  "listPrivateConversionTooLarge": "Esta lista es demasiado grande para hacerla privada. Quitá algunos videos primero. Tus cambios siguen acá y no se guardaron.",
+  "authAccountCleanupFailed": "No se pudieron borrar los datos de la cuenta anterior. Probá de nuevo.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"@peopleListsRemovePersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"peopleListsAddPersonSemanticLabel": "Añadir a {name} a la lista",
-"peopleListsMembershipUpdateFailed": "No se pudo actualizar la lista. Probá de nuevo.",
-"peopleListsAddPeopleSearchHint": "Buscar personas",
-"peopleListsRemovePersonSemanticLabel": "Eliminar a {name} de la lista",
-"listMakePublicLabel": "Hacer pública",
-"listCollaboratorsNone": "Ninguno",
-"listAddCollaboratorTitle": "Añadir colaborador",
-"listMakePublicSubtitle": "Dejá que otras personas vean esta lista",
-"listCollaboratorSearchHint": "Buscar en Divine...",
-"listVideoNotAdded": "Tu lista se creó, pero este video no se añadió.",
-"listPrivateCollaboratorsWarning": "Al hacer privada esta lista, también se eliminan sus colaboradores. Solo vos vas a poder añadir videos.",
-"listVideoPendingSync": "Tu lista y tu video están guardados acá. El video está esperando a sincronizarse.",
-"listRetrySync": "Sincronizar ahora",
-"listPermissionsUnconfirmed": "No se pudo confirmar este cambio. Probá de nuevo.",
-"listRecoveryPending": "Esta lista tiene cambios pendientes de sincronización.",
-"listPermissionsRecoveryPending": "Tu cambio fue aceptado. Tocá Sincronizar ahora para terminar de guardarlo. La edición está pausada hasta entonces.",
-"listRecoveryReadOnly": "Algunos cambios guardados en las listas de videos necesitan recuperarse. Podés ver las listas de videos, pero la edición está pausada.",
-"listAddToLists": "Añadir a listas",
-"accountDeletionProcessingSignOutFailed": "La eliminación de tu cuenta sigue en curso, pero no pudimos cerrar tu sesión. Volvé a intentarlo."
+  },
+  "peopleListsAddPersonSemanticLabel": "Añadir a {name} a la lista",
+  "peopleListsMembershipUpdateFailed": "No se pudo actualizar la lista. Probá de nuevo.",
+  "peopleListsAddPeopleSearchHint": "Buscar personas",
+  "peopleListsRemovePersonSemanticLabel": "Eliminar a {name} de la lista",
+  "listMakePublicLabel": "Hacer pública",
+  "listCollaboratorsNone": "Ninguno",
+  "listAddCollaboratorTitle": "Añadir colaborador",
+  "listMakePublicSubtitle": "Dejá que otras personas vean esta lista",
+  "listCollaboratorSearchHint": "Buscar en Divine...",
+  "listVideoNotAdded": "Tu lista se creó, pero este video no se añadió.",
+  "listPrivateCollaboratorsWarning": "Al hacer privada esta lista, también se eliminan sus colaboradores. Solo vos vas a poder añadir videos.",
+  "listVideoPendingSync": "Tu lista y tu video están guardados acá. El video está esperando a sincronizarse.",
+  "listRetrySync": "Sincronizar ahora",
+  "listPermissionsUnconfirmed": "No se pudo confirmar este cambio. Probá de nuevo.",
+  "listRecoveryPending": "Esta lista tiene cambios pendientes de sincronización.",
+  "listPermissionsRecoveryPending": "Tu cambio fue aceptado. Tocá Sincronizar ahora para terminar de guardarlo. La edición está pausada hasta entonces.",
+  "listRecoveryReadOnly": "Algunos cambios guardados en las listas de videos necesitan recuperarse. Podés ver las listas de videos, pero la edición está pausada.",
+  "listAddToLists": "Añadir a listas",
+  "accountDeletionProcessingSignOutFailed": "La eliminación de tu cuenta sigue en curso, pero no pudimos cerrar tu sesión. Volvé a intentarlo.",
+  "videoEditorLoopRepairSmoothed": "Bucle suavizado",
+  "videoEditorLoopRepairProgress": "Mejorando tu bucle…",
+  "videoEditorLoopRepairTrimmed": "Bucle suavizado. Se quitaron {seconds} s."
 }

@@ -19,6 +19,7 @@ import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
+import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/text_wrap_hint/text_wrap_hint_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
@@ -2443,6 +2444,19 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   ) async {
     if (_isImportingHistory || !_isInitialized) return;
 
+    final loopCubit = context.read<LoopSuggestionCubit>();
+    if (loopCubit.state.request != null) {
+      final overlay = context.read<TimelineOverlayBloc>().state;
+      loopCubit.compositionChanged(
+        scope.requireEditor
+            .loopRepairInput(
+              context.read<ClipEditorBloc>().state.clips,
+              audioTracks: overlay.audioTracks,
+              timelineMarkers: overlay.timelineMarkers,
+            )
+            .revision,
+      );
+    }
     context.read<TextWrapHintCubit>().layersChanged();
 
     // Directionless: the directional onUndo/onRedo pass owns stepping past an

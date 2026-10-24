@@ -2975,18 +2975,11 @@
   "videoEditorTrackNotFollowed": "Nie udało się tego śledzić. Obramuj coś z większą liczbą szczegółów.",
   "videoEditorTrackFailed": "Śledzenie się nie udało. Spróbuj ponownie.",
   "videoEditorTrackLostPartway": "Zgubione po drodze. Od tego miejsca warstwa stoi w miejscu.",
-  "videoEditorLoopLabel": "Pętla",
-  "videoEditorLoopSemanticLabel": "Znajdź płynniejszy punkt pętli",
-  "videoEditorLoopFoundEarlier": "Znaleziono płynniejszą pętlę. Kończy się {seconds} s wcześniej.",
-  "videoEditorLoopFoundLater": "Znaleziono płynniejszą pętlę. Kończy się {seconds} s później.",
-  "videoEditorLoopClosestEarlier": "Brak idealnego dopasowania, ale to najbliższe. Kończy się {seconds} s wcześniej.",
-  "videoEditorLoopClosestLater": "Brak idealnego dopasowania, ale to najbliższe. Kończy się {seconds} s później.",
-  "videoEditorLoopKeepLabel": "Zachowaj",
-  "videoEditorLoopKeepSemanticLabel": "Zachowaj nowy punkt pętli",
-  "videoEditorLoopDiscardSemanticLabel": "Przywróć poprzedni koniec",
+  "videoEditorLoopLabel": "Popraw pętlę",
+  "videoEditorLoopSemanticLabel": "Wygładź łączenie pętli",
   "videoEditorLoopAlreadySmooth": "To już płynnie się zapętla.",
   "videoEditorLoopFailed": "Nie udało się sprawdzić pętli. Spróbuj ponownie.",
-  "videoEditorLoopNoMatch": "Nie znaleziono płynnej pętli. Nic pod koniec nie pasuje do początku filmu.",
+  "videoEditorLoopNoMatch": "Nie udało się poprawić tej pętli",
   "videoEditorKeyframeEffect": "Efekt",
   "videoEditorKeyframeCurveSegment": "Ruch od klatki kluczowej {from} do {to}",
   "videoEditorLayerAnimationEnter": "Wejście",
@@ -5833,43 +5826,46 @@
   "inboxLeaveGroupConfirmBody": "Zniknie z Twojej skrzynki odbiorczej, a nowe wiadomości jej nie przywrócą. Napisz w niej ponownie, aby wrócić. Pozostali nie dostaną powiadomienia.",
   "inboxLeaveGroupConfirmConfirm": "Opuść",
   "inboxLeftGroup": "Opuszczono grupę",
-"listsDiscoveryEmpty": "Tym razem nie pojawiła się żadna lista. Pociągnij, aby odświeżyć.",
-"listsDiscoveryLoadingLabel": "Wczytywanie list",
-"listSearchPeopleUnavailable": "Listy osób są teraz niedostępne.",
-"listSearchVideosUnavailable": "Listy filmów są teraz niedostępne.",
-"listPrivateConversionTooLarge": "Ta lista jest zbyt duża, by ustawić ją jako prywatną. Najpierw usuń kilka filmów. Twoje zmiany pozostają tutaj i nie zostały jeszcze zapisane.",
-"authAccountCleanupFailed": "Nie udało się usunąć danych poprzedniego konta. Spróbuj ponownie.",
-"@peopleListsAddPersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  "listsDiscoveryEmpty": "Tym razem nie pojawiła się żadna lista. Pociągnij, aby odświeżyć.",
+  "listsDiscoveryLoadingLabel": "Wczytywanie list",
+  "listSearchPeopleUnavailable": "Listy osób są teraz niedostępne.",
+  "listSearchVideosUnavailable": "Listy filmów są teraz niedostępne.",
+  "listPrivateConversionTooLarge": "Ta lista jest zbyt duża, by ustawić ją jako prywatną. Najpierw usuń kilka filmów. Twoje zmiany pozostają tutaj i nie zostały jeszcze zapisane.",
+  "authAccountCleanupFailed": "Nie udało się usunąć danych poprzedniego konta. Spróbuj ponownie.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"@peopleListsRemovePersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"peopleListsAddPersonSemanticLabel": "Dodaj {name} do listy",
-"peopleListsMembershipUpdateFailed": "Nie udało się zaktualizować listy. Spróbuj ponownie.",
-"peopleListsAddPeopleSearchHint": "Szukaj osób",
-"peopleListsRemovePersonSemanticLabel": "Usuń {name} z listy",
-"listMakePublicLabel": "Ustaw jako publiczną",
-"listCollaboratorsNone": "Brak",
-"listAddCollaboratorTitle": "Dodaj współpracownika",
-"listMakePublicSubtitle": "Pozwól innym zobaczyć tę listę",
-"listCollaboratorSearchHint": "Szukaj w Divine...",
-"listVideoNotAdded": "Twoja lista została utworzona, ale ten film nie został dodany.",
-"listPrivateCollaboratorsWarning": "Ustawienie tej listy jako prywatnej usunie też jej współtwórców. Tylko Ty będziesz mieć możliwość dodawania filmów.",
-"listVideoPendingSync": "Twoja lista i film są zapisane tutaj. Film czeka na synchronizację.",
-"listRetrySync": "Synchronizuj teraz",
-"listPermissionsUnconfirmed": "Nie udało się potwierdzić tej zmiany. Spróbuj ponownie.",
-"listRecoveryPending": "Ta lista ma zmiany oczekujące na synchronizację.",
-"listPermissionsRecoveryPending": "Zmiana została zaakceptowana. Dotknij Synchronizuj teraz, aby dokończyć zapisywanie. Do tego czasu edycja jest wstrzymana.",
-"listRecoveryReadOnly": "Niektóre zapisane zmiany na listach filmów wymagają odzyskania. Możesz przeglądać listy filmów, ale edycja jest wstrzymana.",
-"listAddToLists": "Dodaj do list",
-"accountDeletionProcessingSignOutFailed": "Usuwanie twojego konta trwa, ale nie udało się dokończyć wylogowania. Spróbuj ponownie."
+  },
+  "peopleListsAddPersonSemanticLabel": "Dodaj {name} do listy",
+  "peopleListsMembershipUpdateFailed": "Nie udało się zaktualizować listy. Spróbuj ponownie.",
+  "peopleListsAddPeopleSearchHint": "Szukaj osób",
+  "peopleListsRemovePersonSemanticLabel": "Usuń {name} z listy",
+  "listMakePublicLabel": "Ustaw jako publiczną",
+  "listCollaboratorsNone": "Brak",
+  "listAddCollaboratorTitle": "Dodaj współpracownika",
+  "listMakePublicSubtitle": "Pozwól innym zobaczyć tę listę",
+  "listCollaboratorSearchHint": "Szukaj w Divine...",
+  "listVideoNotAdded": "Twoja lista została utworzona, ale ten film nie został dodany.",
+  "listPrivateCollaboratorsWarning": "Ustawienie tej listy jako prywatnej usunie też jej współtwórców. Tylko Ty będziesz mieć możliwość dodawania filmów.",
+  "listVideoPendingSync": "Twoja lista i film są zapisane tutaj. Film czeka na synchronizację.",
+  "listRetrySync": "Synchronizuj teraz",
+  "listPermissionsUnconfirmed": "Nie udało się potwierdzić tej zmiany. Spróbuj ponownie.",
+  "listRecoveryPending": "Ta lista ma zmiany oczekujące na synchronizację.",
+  "listPermissionsRecoveryPending": "Zmiana została zaakceptowana. Dotknij Synchronizuj teraz, aby dokończyć zapisywanie. Do tego czasu edycja jest wstrzymana.",
+  "listRecoveryReadOnly": "Niektóre zapisane zmiany na listach filmów wymagają odzyskania. Możesz przeglądać listy filmów, ale edycja jest wstrzymana.",
+  "listAddToLists": "Dodaj do list",
+  "accountDeletionProcessingSignOutFailed": "Usuwanie twojego konta trwa, ale nie udało się dokończyć wylogowania. Spróbuj ponownie.",
+  "videoEditorLoopRepairSmoothed": "Pętla wygładzona",
+  "videoEditorLoopRepairProgress": "Poprawiamy twoją pętlę…",
+  "videoEditorLoopRepairTrimmed": "Pętla wygładzona. Usunięto {seconds} s."
 }

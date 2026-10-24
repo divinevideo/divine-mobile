@@ -10540,41 +10540,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Nawala ito sa kalagitnaan. Hindi na gagalaw ang layer mula roon.';
 
   @override
-  String get videoEditorLoopLabel => 'Loop';
+  String get videoEditorLoopLabel => 'Ayusin ang loop';
 
   @override
-  String get videoEditorLoopSemanticLabel =>
-      'Humanap ng mas makinis na loop point';
-
-  @override
-  String videoEditorLoopFoundEarlier(String seconds) {
-    return 'May nakitang mas makinis na loop. Natatapos ito nang $seconds s mas maaga.';
-  }
-
-  @override
-  String videoEditorLoopFoundLater(String seconds) {
-    return 'May nakitang mas makinis na loop. Natatapos ito nang $seconds s mas huli.';
-  }
-
-  @override
-  String videoEditorLoopClosestEarlier(String seconds) {
-    return 'Walang eksaktong tugma, pero ito ang pinakamalapit. Natatapos ito nang $seconds s mas maaga.';
-  }
-
-  @override
-  String videoEditorLoopClosestLater(String seconds) {
-    return 'Walang eksaktong tugma, pero ito ang pinakamalapit. Natatapos ito nang $seconds s mas huli.';
-  }
-
-  @override
-  String get videoEditorLoopKeepLabel => 'Panatilihin';
-
-  @override
-  String get videoEditorLoopKeepSemanticLabel =>
-      'Panatilihin ang bagong loop point';
-
-  @override
-  String get videoEditorLoopDiscardSemanticLabel => 'Ibalik ang dating dulo';
+  String get videoEditorLoopSemanticLabel => 'Pakinisin ang dugtungan ng loop';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'Makinis na ang loop nito.';
@@ -10583,8 +10552,7 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorLoopFailed => 'Hindi ma-check ang loop. Subukan ulit.';
 
   @override
-  String get videoEditorLoopNoMatch =>
-      'Walang nakitang tuloy-tuloy na loop. Walang malapit sa dulo na tumutugma sa simula ng video.';
+  String get videoEditorLoopNoMatch => 'Hindi mapaganda ang loop na ito';
 
   @override
   String get videoEditorKeyframeEffect => 'Effect';
@@ -14577,4 +14545,15 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Pinoproseso ang pag-delete ng account mo, pero hindi ka namin ma-sign out. Subukan ulit.';
+
+  @override
+  String get videoEditorLoopRepairSmoothed => 'Mas maayos na ang loop';
+
+  @override
+  String get videoEditorLoopRepairProgress => 'Inaayos ang loop mo…';
+
+  @override
+  String videoEditorLoopRepairTrimmed(String seconds) {
+    return 'Mas maayos na ang loop. Inalis ang $seconds s.';
+  }
 }

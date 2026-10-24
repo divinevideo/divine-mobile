@@ -10374,39 +10374,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Yarı yolda gözden kayboldu. Katman oradan itibaren sabit kalır.';
 
   @override
-  String get videoEditorLoopLabel => 'Döngü';
+  String get videoEditorLoopLabel => 'Döngüyü düzelt';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'Daha akıcı bir döngü noktası bul';
-
-  @override
-  String videoEditorLoopFoundEarlier(String seconds) {
-    return 'Daha akıcı bir döngü bulundu. $seconds sn önce bitiyor.';
-  }
-
-  @override
-  String videoEditorLoopFoundLater(String seconds) {
-    return 'Daha akıcı bir döngü bulundu. $seconds sn sonra bitiyor.';
-  }
-
-  @override
-  String videoEditorLoopClosestEarlier(String seconds) {
-    return 'Tam eşleşme yok ama en yakını bu. $seconds sn önce bitiyor.';
-  }
-
-  @override
-  String videoEditorLoopClosestLater(String seconds) {
-    return 'Tam eşleşme yok ama en yakını bu. $seconds sn sonra bitiyor.';
-  }
-
-  @override
-  String get videoEditorLoopKeepLabel => 'Koru';
-
-  @override
-  String get videoEditorLoopKeepSemanticLabel => 'Yeni döngü noktasını koru';
-
-  @override
-  String get videoEditorLoopDiscardSemanticLabel => 'Eski bitişi geri getir';
+  String get videoEditorLoopSemanticLabel => 'Döngü birleşimini yumuşat';
 
   @override
   String get videoEditorLoopAlreadySmooth =>
@@ -10416,8 +10387,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorLoopFailed => 'Döngü kontrol edilemedi. Tekrar dene.';
 
   @override
-  String get videoEditorLoopNoMatch =>
-      'Kusursuz bir döngü bulunamadı. Sona yakın hiçbir şey videonun başlangıcıyla eşleşmiyor.';
+  String get videoEditorLoopNoMatch => 'Bu döngü iyileştirilemedi';
 
   @override
   String get videoEditorKeyframeEffect => 'Efekt';
@@ -14378,4 +14348,15 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Hesabının silinmesi işleniyor, ancak çıkışını tamamlayamadık. Tekrar dene.';
+
+  @override
+  String get videoEditorLoopRepairSmoothed => 'Döngü yumuşatıldı';
+
+  @override
+  String get videoEditorLoopRepairProgress => 'Döngün düzeltiliyor…';
+
+  @override
+  String videoEditorLoopRepairTrimmed(String seconds) {
+    return 'Döngü yumuşatıldı. $seconds sn kaldırıldı.';
+  }
 }
