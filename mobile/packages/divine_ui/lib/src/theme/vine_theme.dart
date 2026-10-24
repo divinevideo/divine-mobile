@@ -77,6 +77,7 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
     required this.accentPositive,
     required this.accentWarning,
     required this.accentBrand,
+    required this.link,
     required this.controlSelectedFill,
     required this.controlFill,
     required this.controlOutline,
@@ -249,6 +250,16 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
   /// dark hex.
   final Color accentBrand;
 
+  /// Foreground for inline text links — URLs, hashtags, and mentions inside
+  /// body copy.
+  ///
+  /// Dark is [VineTheme.primary], the primary button fill, so a link reads as
+  /// the same brand action (6.8:1 or better on every dark surface). That
+  /// green is ~2:1 on the light surfaces, too faint for body text, so light
+  /// uses the darkened green [accentPositive] already carries for body copy
+  /// (7.5:1 or better).
+  final Color link;
+
   /// Selected fill for dense interactive controls.
   ///
   /// Dark keeps the shipped 18%-primary wash. Light uses [primaryContainer].
@@ -350,6 +361,7 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
     Color? accentPositive,
     Color? accentWarning,
     Color? accentBrand,
+    Color? link,
     Color? controlSelectedFill,
     Color? controlFill,
     Color? controlOutline,
@@ -395,6 +407,7 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
     accentPositive: accentPositive ?? this.accentPositive,
     accentWarning: accentWarning ?? this.accentWarning,
     accentBrand: accentBrand ?? this.accentBrand,
+    link: link ?? this.link,
     controlSelectedFill: controlSelectedFill ?? this.controlSelectedFill,
     controlFill: controlFill ?? this.controlFill,
     controlOutline: controlOutline ?? this.controlOutline,
@@ -453,6 +466,7 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
         other.accentBrand,
         t,
       ),
+      link: Color.lerp(link, other.link, t),
       controlSelectedFill: Color.lerp(
         controlSelectedFill,
         other.controlSelectedFill,
@@ -512,6 +526,7 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
           accentPositive == other.accentPositive &&
           accentWarning == other.accentWarning &&
           accentBrand == other.accentBrand &&
+          link == other.link &&
           controlSelectedFill == other.controlSelectedFill &&
           controlFill == other.controlFill &&
           controlOutline == other.controlOutline &&
@@ -559,6 +574,7 @@ class VineThemeColors extends ThemeExtension<VineThemeColors> {
     accentPositive,
     accentWarning,
     accentBrand,
+    link,
     controlSelectedFill,
     controlFill,
     controlOutline,
@@ -1111,7 +1127,9 @@ class VineTheme {
   /// Success color for positive status indicators.
   static const Color success = Color(0xFF4CAF50);
 
-  /// Informational color for badges and links.
+  /// Informational color for badges and status indicators.
+  ///
+  /// Not for text links — those read [VineThemeColors.link].
   static const Color info = Color(0xFF2196F3);
 
   /// Content warning amber color.
@@ -1269,6 +1287,7 @@ class VineTheme {
     accentPositive: vineGreen,
     accentWarning: accentOrange,
     accentBrand: vineGreen,
+    link: primary,
     controlSelectedFill: Color(0x2E27C58B),
     controlFill: Color(0x14888888),
     controlOutline: transparent,
@@ -1339,6 +1358,7 @@ class VineTheme {
     accentPositive: Color(0xFF1B553D),
     accentWarning: Color(0xFFAE3100),
     accentBrand: Color(0xFF17382D),
+    link: Color(0xFF1B553D),
     controlSelectedFill: Color(0xFFE7F5EE),
     controlFill: Color(0xFFF5F2F0),
     controlOutline: Color(0xFF768E83),

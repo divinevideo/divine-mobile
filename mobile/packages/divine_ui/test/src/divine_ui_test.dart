@@ -107,6 +107,7 @@ void main() {
         'accentPositive': (c) => c.accentPositive,
         'accentWarning': (c) => c.accentWarning,
         'accentBrand': (c) => c.accentBrand,
+        'link': (c) => c.link,
         'controlSelectedFill': (c) => c.controlSelectedFill,
         'controlFill': (c) => c.controlFill,
         'controlOutline': (c) => c.controlOutline,
@@ -160,6 +161,7 @@ void main() {
         accentPositive: color,
         accentWarning: color,
         accentBrand: color,
+        link: color,
         controlSelectedFill: color,
         controlFill: color,
         controlOutline: color,
@@ -204,6 +206,7 @@ void main() {
           accentPositive: const Color(0xFF00001A),
           accentWarning: const Color(0xFF00001B),
           accentBrand: const Color(0xFF000020),
+          link: const Color(0xFF000024),
           controlSelectedFill: const Color(0xFF000021),
           controlFill: const Color(0xFF000022),
           controlOutline: const Color(0xFF000023),
@@ -243,6 +246,7 @@ void main() {
         expect(copied.accentPositive, const Color(0xFF00001A));
         expect(copied.accentWarning, const Color(0xFF00001B));
         expect(copied.accentBrand, const Color(0xFF000020));
+        expect(copied.link, const Color(0xFF000024));
         expect(copied.controlSelectedFill, const Color(0xFF000021));
         expect(copied.controlFill, const Color(0xFF000022));
         expect(copied.controlOutline, const Color(0xFF000023));
@@ -307,6 +311,10 @@ void main() {
         expect(VineTheme.darkColors.mediaCard, VineTheme.neutral10);
       });
 
+      test('link matches the primary button fill on the dark palette', () {
+        expect(VineTheme.darkColors.link, VineTheme.primary);
+      });
+
       test('mediaCard stays distinct from the surfaces it sits on', () {
         // Drawn on `surface` (chat) and `surfaceContainerHigh` (recorder);
         // matching either makes the element vanish, which is how the light
@@ -353,6 +361,7 @@ void main() {
             accentPositive: token == 'accentPositive' ? Colors.white : null,
             accentWarning: token == 'accentWarning' ? Colors.white : null,
             accentBrand: token == 'accentBrand' ? Colors.white : null,
+            link: token == 'link' ? Colors.white : null,
             controlSelectedFill: token == 'controlSelectedFill'
                 ? Colors.white
                 : null,

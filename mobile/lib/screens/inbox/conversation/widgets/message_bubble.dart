@@ -908,7 +908,7 @@ class _MessageTextState extends ConsumerState<_MessageText> {
     // bubble it would sit green-on-green, so links there stay white.
     final linkColor = widget.isSent
         ? VineTheme.whiteText
-        : context.vineColors.accentPositive;
+        : context.vineColors.link;
     final referenceStyle = defaultStyle.copyWith(
       color: linkColor,
       decoration: TextDecoration.underline,

@@ -55,7 +55,7 @@ class _NotificationCommentQuoteState
       color: context.vineColors.primaryText,
     );
     final linkStyle = VineTheme.bodyMediumFont(
-      color: VineTheme.info,
+      color: context.vineColors.link,
     ).copyWith(fontWeight: FontWeight.w600);
     final bodySpans = LinkifiedTextSpanBuilder(
       text: widget.text,
