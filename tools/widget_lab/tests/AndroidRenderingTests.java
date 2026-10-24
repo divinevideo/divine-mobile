@@ -49,11 +49,16 @@ public final class AndroidRenderingTests extends Instrumentation {
             try {
                 checkShapes(activity);
                 ComponentName divine = new ComponentName("co.openvine.app", "co.openvine.app.MainActivity");
-                Intent camera = LabActivity.cameraIntent(divine);
+                Intent camera = HighlightProvider.cameraIntent(activity, divine);
                 require(divine.equals(camera.getComponent()), "camera intent targets the installed Divine activity");
                 require("co.openvine.divine_quick_actions.ACTION_QUICK_ACTION".equals(camera.getAction()), "Android camera action contract");
                 require("camera".equals(camera.getStringExtra("co.openvine.divine_quick_actions.extra.ACTION_TYPE")), "camera action type");
                 require(camera.getBundleExtra("co.openvine.divine_quick_actions.extra.ACTION_PAYLOAD") != null, "camera payload bundle");
+                require((camera.getFlags() & Intent.FLAG_ACTIVITY_NEW_TASK) != 0, "widget camera launches a separate app task");
+                Intent missingCamera = HighlightProvider.cameraIntent(activity, null);
+                require("camera".equals(missingCamera.getAction())
+                    && new ComponentName(activity, LabActivity.class).equals(missingCamera.getComponent()),
+                    "missing Divine routes to the lab install message");
                 runOnMainSync(() -> {
                     dashboard[0] = ((android.view.ViewGroup) activity.findViewById(android.R.id.content)).getChildAt(0);
                     View watch = findText(activity.getWindow().getDecorView(), "Watch selected sample");
@@ -96,6 +101,19 @@ public final class AndroidRenderingTests extends Instrumentation {
                 await(() -> LabStore.load(activity).isLiked(), "Like broadcast persists");
                 checkSystemHost(activity, dashboard[0]);
                 await(() -> LabStore.load(activity).openCount == 1, "Open pending intent");
+                if (activity.getPackageManager().getLaunchIntentForPackage("co.openvine.app") == null) {
+                    runOnMainSync(() -> {
+                        View card = HighlightProvider.card(activity, LabStore.load(activity), false).apply(activity, new FrameLayout(activity));
+                        card.findViewById(R.id.camera).performClick();
+                    });
+                    await(() -> {
+                        final boolean[] shown = {false};
+                        runOnMainSync(() -> shown[0] = findText(activity.getWindow().getDecorView(),
+                            "Install Divine to open the camera.") != null);
+                        return shown[0];
+                    }, "widget camera reaches the missing-app message");
+                    require(LabStore.load(activity).openCount == 1, "camera action is not counted as watching a sample");
+                }
                 if (screenshots) captureShapes(activity);
                 result.putString("stream", "PASS: square/tall control bounds, 48 dp targets, mixed-height resize, Next, Like, Open, system widget host animation, two-second stop.\n");
             } finally {
@@ -110,18 +128,19 @@ public final class AndroidRenderingTests extends Instrumentation {
 
     private void checkShapes(LabActivity activity) {
         runOnMainSync(() -> {
-            for (boolean expanded : new boolean[] {false, true}) {
+            for (int widthDp : new int[] {144, 160}) {
+              for (boolean expanded : new boolean[] {false, true}) {
                 FrameLayout parent = new FrameLayout(activity);
                 View card = HighlightProvider.card(activity, new LabState(), false, expanded).apply(activity, parent);
                 parent.addView(card);
-                int width = dp(activity, 160);
-                int height = dp(activity, expanded ? 280 : 160);
+                int width = dp(activity, widthDp);
+                int height = dp(activity, expanded ? 280 : widthDp);
                 card.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
                     View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY));
                 card.layout(0, 0, width, height);
                 require(card.findViewById(R.id.context).getVisibility() == (expanded ? View.VISIBLE : View.GONE),
                     "only the tall card shows extra context");
-                for (int id : new int[] {R.id.like, R.id.next, R.id.open}) {
+                for (int id : new int[] {R.id.like, R.id.camera, R.id.next, R.id.open}) {
                     View control = card.findViewById(id);
                     require(control.getWidth() >= dp(activity, 48) && control.getHeight() >= dp(activity, 48),
                         "square and tall controls retain 48 dp touch targets");
@@ -132,6 +151,7 @@ public final class AndroidRenderingTests extends Instrumentation {
                         "all controls fit inside each card: expanded=" + expanded + ", id=" + id
                             + ", bounds=" + bounds + ", card=" + width + "x" + height);
                 }
+              }
             }
         });
     }

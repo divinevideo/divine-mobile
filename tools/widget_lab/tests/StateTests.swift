@@ -3,6 +3,7 @@ import Foundation
 @main
 struct StateTests {
     static func main() throws {
+        precondition(LabRoutes.camera.absoluteString == "divine://quick-action/camera")
         var state = LabState()
         state.next()
         precondition(state.index == 1 && state.nextCount == 1)

@@ -11,7 +11,7 @@ def test():
     output = ROOT / ".build/tests"
     output.mkdir(parents=True, exist_ok=True)
     java = Path(os.environ.get("JAVA_HOME", "/Applications/Android Studio.app/Contents/jbr/Contents/Home")) / "bin"
-    subprocess.run(["swiftc", str(ROOT / "ios/Shared/LabState.swift"), str(ROOT / "tests/StateTests.swift"),
+    subprocess.run(["swiftc", str(ROOT / "ios/Shared/LabState.swift"), str(ROOT / "ios/Shared/LabRoutes.swift"), str(ROOT / "tests/StateTests.swift"),
                     "-o", str(output / "state-tests")], check=True)
     subprocess.run([str(output / "state-tests")], check=True)
     subprocess.run([str(java / "javac"), "-d", str(output), str(ROOT / "android/src/video/divine/widgetlab/LabState.java"),

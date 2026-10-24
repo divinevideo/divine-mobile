@@ -10,6 +10,7 @@ The question: can a highlighted video show a two-second moving preview inside a 
 - Tap **Next** in the widget to select another sample and attempt a two-second preview. Both prototypes use 16 frames sampled at 8 fps. There is no GIF player or embedded video player in the widget.
 - **Like** toggles local state for that sample. It does not publish a Nostr reaction.
 - **Open** opens that sample in the standalone host app's native player.
+- The green **camera** button opens Divine's camera directly from either card size, using the app's existing iOS URL or Android quick-action intent. Install Divine separately first. Android shows an install message when it is missing; camera taps do not increment the local sample-watch counter.
 - The host app has a motion/still switch, local action counts, a reset button, and a creative prompt with the existing Divine camera shortcut. Install Divine separately to use that shortcut (the stable `co.openvine.app` package on Android). iOS uses a URL; Android uses Divine's native quick-action intent.
 
 The three samples and the selection are shared across instances of the widget on each platform. The widgets change on explicit actions; automatic background highlight selection is outside this experiment. Changing sample in the host app also requests a widget refresh, but refresh timing belongs to the OS.
@@ -125,9 +126,10 @@ Pass `-e screenshots true` to the instrumentation command to save `files/widget-
 ## Square and tall revision (2026-10-24)
 
 - iOS 26.1 simulator: the small square widget is added through the system gallery; Reset → Next → Like → Open passes on the home screen with the expected local counters. Both small and large gallery layouts were captured and visually inspected.
-- Android API 36 emulator: native rendering and system-host tests pass, including 160 × 160 dp and 160 × 280 dp control bounds, 48 dp touch targets, context appearing and disappearing when the host resizes, and the existing action and frame-sequence checks. The optional native preview capture shows both shapes; it is not evidence of a physical launcher's presentation.
+- Android API 36 emulator: native rendering and system-host tests pass, including 144/160 dp-wide compact/tall control bounds, 48 dp touch targets, context appearing and disappearing when the host resizes, camera-intent construction and missing-app routing, and the existing action and frame-sequence checks. The optional native preview capture shows both shapes; it is not evidence of a physical launcher's presentation.
 - Both native builds, APK signature verification, Swift/Java state tests, the media regression test, and Flutter CI-scope analysis pass. Generated preview frames are 320 × 320.
 - Motion quality and physical-device behavior remain experimental; the shape revision does not establish either.
+- Camera shortcuts reuse the shipping app's route contracts, but the installed Divine camera screen was not exercised end to end. The iOS route is checked in the native state/route tests; Android verifies the launch intent and taps the widget control through to the missing-app message on a fixture without Divine installed.
 
 ## Measurement boundaries
 

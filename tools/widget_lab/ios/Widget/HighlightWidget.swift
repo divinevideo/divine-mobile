@@ -91,6 +91,15 @@ struct HighlightCard: View {
                             }
                             .accessibilityLabel(entry.state.isLiked ? "Liked" : "Like")
                             Spacer(minLength: 0)
+                            Link(destination: LabRoutes.camera) {
+                                Image(systemName: "camera.fill")
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundStyle(.black)
+                                    .frame(width: 44, height: 44)
+                                    .background(LabStyle.green, in: Circle())
+                            }
+                            .accessibilityLabel("Open Divine camera")
+                            Spacer(minLength: 0)
                             Button(intent: NextHighlight()) {
                                 HStack(spacing: 6) {
                                     if !compact { Text("Next").font(.system(size: 14, weight: .semibold)) }

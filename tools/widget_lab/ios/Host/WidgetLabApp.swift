@@ -28,7 +28,7 @@ struct LabDashboard: View {
                 }
                 Section("Create something") {
                     Text("Give an ordinary object a dramatic entrance.")
-                    Link("Open Divine camera", destination: URL(string: "divine://quick-action/camera")!)
+                    Link("Open Divine camera", destination: LabRoutes.camera)
                 }
                 Section("Local actions · no analytics uploaded") {
                     Text("Next taps: \(state.nextCount)")

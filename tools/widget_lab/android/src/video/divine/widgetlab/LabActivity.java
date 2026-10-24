@@ -68,13 +68,7 @@ public final class LabActivity extends Activity {
             public void surfaceDestroyed(SurfaceHolder holder) { releasePlayer(); }
         });
         text("Create: give an ordinary object a dramatic entrance.", 18);
-        button("Open Divine camera", () -> {
-            Intent launch = getPackageManager().getLaunchIntentForPackage("co.openvine.app");
-            if (launch == null) { text("Install Divine to try the camera shortcut.", 16); return; }
-            Intent camera = cameraIntent(launch.getComponent());
-            try { startActivity(camera); }
-            catch (android.content.ActivityNotFoundException exception) { text("Install Divine to try the camera shortcut.", 16); }
-        });
+        button("Open Divine camera", this::openCamera);
         counters = text("", 16);
         text("Local demo only. Likes are not published. Rendering the widget is not counted as a view or an active user. No network requests or analytics uploads.", 16);
         button("Reset experiment", () -> {
@@ -108,6 +102,11 @@ public final class LabActivity extends Activity {
     }
 
     private void handleIntent(Intent intent) {
+        if ("camera".equals(intent.getAction())) {
+            intent.setAction(null);
+            openCamera();
+            return;
+        }
         if (!"watch".equals(intent.getAction())) return;
         int clip = intent.getIntExtra("clip", -1);
         if (clip < 0 || clip >= LabState.CLIP_COUNT) return;
@@ -117,6 +116,17 @@ public final class LabActivity extends Activity {
         watch(clip);
         intent.setAction(null);
         refreshCounters();
+    }
+
+    private void openCamera() {
+        Intent launch = getPackageManager().getLaunchIntentForPackage("co.openvine.app");
+        if (launch != null) {
+            try { startActivity(cameraIntent(launch.getComponent())); return; }
+            catch (android.content.ActivityNotFoundException exception) { /* App was removed after lookup. */ }
+        }
+        TextView notice = text("Install Divine to open the camera.", 16);
+        notice.post(() -> notice.requestRectangleOnScreen(
+            new android.graphics.Rect(0, 0, notice.getWidth(), notice.getHeight()), false));
     }
 
     private void watch(int clip) {

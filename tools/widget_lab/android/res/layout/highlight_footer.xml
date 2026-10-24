@@ -3,8 +3,10 @@
             <TextView android:id="@+id/title" android:layout_width="match_parent" android:layout_height="wrap_content" android:maxLines="1" android:ellipsize="end" android:textColor="#FFFFFF" android:textStyle="bold" android:textSize="15sp" />
             <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="6 seconds. All human." android:textColor="#CCFFFFFF" android:textSize="11sp" />
         </LinearLayout>
-        <LinearLayout android:layout_width="match_parent" android:layout_height="48dp" android:orientation="horizontal" android:paddingHorizontal="6dp" android:baselineAligned="false" android:gravity="center_vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="48dp" android:orientation="horizontal" android:baselineAligned="false" android:gravity="center_vertical">
             <Button android:id="@+id/like" android:layout_width="48dp" android:layout_height="48dp" android:text="♡" android:contentDescription="Like" android:textSize="24sp" android:textColor="#FFFFFF" style="?android:attr/borderlessButtonStyle" />
+            <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="1dp" />
+            <ImageButton android:id="@+id/camera" android:layout_width="48dp" android:layout_height="48dp" android:src="@drawable/camera_icon" android:tint="#00150D" android:padding="12dp" android:contentDescription="Open Divine camera" android:background="@drawable/camera_button" />
             <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="1dp" />
             <ImageButton android:id="@+id/next" android:layout_width="48dp" android:layout_height="48dp" android:src="@android:drawable/ic_media_next" android:tint="#FFFFFF" android:padding="12dp" android:contentDescription="Next" style="?android:attr/borderlessButtonStyle" />
         </LinearLayout>
