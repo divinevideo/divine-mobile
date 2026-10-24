@@ -6,6 +6,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/view/announcement_detail_screen.dart';
 
 void main() {
+  final l10n = lookupAppLocalizations(const Locale('en'));
   final announcement = AnnouncementNotification(
     announcementId: 'd7388b9c-b35c-4269-8fc5-fac5d7a454ad',
     title: 'Your profile has a home',
@@ -36,10 +37,10 @@ void main() {
           onLearnMore: (url) async => opened = url,
         ),
       );
-      expect(find.text('From Divine'), findsOneWidget);
+      expect(find.text(l10n.notificationFromDivine), findsOneWidget);
       expect(find.text(announcement.title), findsOneWidget);
       expect(find.text(announcement.body), findsOneWidget);
-      await tester.tap(find.text('Learn More'));
+      await tester.tap(find.text(l10n.profileLearnMore));
       expect(opened, Uri.parse('https://divine.video/updates'));
     });
 
@@ -48,10 +49,10 @@ void main() {
     ) async {
       await pump(tester, const AnnouncementDetailScreen());
       expect(
-        find.text('This announcement is no longer available.'),
+        find.text(l10n.announcementUnavailable),
         findsOneWidget,
       );
-      expect(find.text('Learn More'), findsNothing);
+      expect(find.text(l10n.profileLearnMore), findsNothing);
     });
 
     for (final brightness in Brightness.values) {
@@ -83,12 +84,12 @@ void main() {
         );
         expect(find.text(announcement.title), findsOneWidget);
         await tester.scrollUntilVisible(
-          find.text('Learn More'),
+          find.text(l10n.profileLearnMore),
           200,
           scrollable: find.byType(Scrollable).first,
         );
         await tester.pump();
-        await tester.tap(find.text('Learn More'));
+        await tester.tap(find.text(l10n.profileLearnMore));
         expect(tester.takeException(), isNull);
       });
     }
@@ -109,7 +110,7 @@ void main() {
         ),
       );
       expect(find.text('Everything you need is here.'), findsOneWidget);
-      expect(find.text('Learn More'), findsNothing);
+      expect(find.text(l10n.profileLearnMore), findsNothing);
     });
   });
 }

@@ -25,6 +25,7 @@ class _MockAnnouncementsRepository extends Mock
     implements AnnouncementsRepository {}
 
 void main() {
+  final l10n = lookupAppLocalizations(const Locale('en'));
   AnnouncementNotification item(String id, String title) =>
       AnnouncementNotification(
         announcementId: id,
@@ -52,6 +53,17 @@ void main() {
   );
 
   group('navigation', () {
+    test('typed location preserves the encoded announcement ID', () {
+      const id = 'announcement:a/b c';
+      expect(
+        const AnnouncementDetailRouteData(id: id).location,
+        AnnouncementDetailScreen.pathForId(id),
+      );
+      final route = announcementRoutes().single as GoRoute;
+      expect(route.path, AnnouncementDetailScreen.path);
+      expect(route.name, AnnouncementDetailScreen.routeName);
+    });
+
     testWidgets('cold route ignores untrusted extras when catalog is absent', (
       tester,
     ) async {
@@ -66,7 +78,7 @@ void main() {
 
       expect(find.text('Untrusted route content'), findsNothing);
       expect(
-        find.text('This announcement is no longer available.'),
+        find.text(l10n.announcementUnavailable),
         findsOneWidget,
       );
     });
@@ -120,7 +132,7 @@ void main() {
       await pump(tester, router, repository);
       await tester.pumpAndSettle();
       expect(
-        find.text('This announcement is no longer available.'),
+        find.text(l10n.announcementUnavailable),
         findsOneWidget,
       );
 
@@ -132,7 +144,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Current announcement'), findsNothing);
       expect(
-        find.text('This announcement is no longer available.'),
+        find.text(l10n.announcementUnavailable),
         findsOneWidget,
       );
     });
