@@ -28,6 +28,8 @@ import 'package:openvine/services/video_provenance_filter_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/scroll.dart';
+
 class _MockContentBlocklistRepository extends Mock
     implements ContentBlocklistRepository {
   final Set<String> _runtimeBlocklist = {};
@@ -488,15 +490,37 @@ void main() {
           DivineSwitchTile,
           l10n.safetySettingsBlurDmVideoPreviews,
         );
+        await scrollUntilTappable(tester, tile, 120);
         expect(tile, findsOneWidget);
         expect(tester.widget<DivineSwitchTile>(tile).value, isFalse);
 
-        await tester.scrollUntilVisible(tile, 120);
         tester.widget<DivineSwitchTile>(tile).onChanged!(true);
         await tester.pumpAndSettle();
 
         expect(blurService.blurVideoPreviews, isTrue);
         expect(tester.widget<DivineSwitchTile>(tile).value, isTrue);
+      },
+    );
+
+    testWidgets(
+      'lists the video preview switch after the labelers, not among them',
+      (tester) async {
+        await tester.pumpWidget(createTestWidget());
+        await tester.pumpAndSettle();
+
+        final blurTile = find.widgetWithText(
+          DivineSwitchTile,
+          l10n.safetySettingsBlurDmVideoPreviews,
+        );
+        final addLabeler = find.text(
+          l10n.safetySettingsAddCustomLabelerListTitle,
+        );
+        await scrollUntilTappable(tester, blurTile, 120);
+
+        expect(
+          tester.getTopLeft(blurTile).dy,
+          greaterThan(tester.getTopLeft(addLabeler).dy),
+        );
       },
     );
   });
