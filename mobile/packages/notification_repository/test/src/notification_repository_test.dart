@@ -346,11 +346,12 @@ void main() {
             ),
           ).thenAnswer((_) async {
             calls++;
-            if (!accepts)
+            if (!accepts) {
               throw FunnelcakeApiException(
                 message: 'request rejected',
                 statusCode: status,
               );
+            }
             return const MarkReadResponse(success: true, markedCount: 1);
           });
           final durable = NotificationRepository(

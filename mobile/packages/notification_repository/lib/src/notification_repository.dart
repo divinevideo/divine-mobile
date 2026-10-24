@@ -431,8 +431,9 @@ class NotificationRepository {
     if (_closed ||
         _readAuthorizationBlocked ||
         !hasPendingReadState ||
-        _readRetryTimer != null)
+        _readRetryTimer != null) {
       return;
+    }
     final milliseconds = math.min(
       60000,
       _readStateRetryDelay.inMilliseconds *
