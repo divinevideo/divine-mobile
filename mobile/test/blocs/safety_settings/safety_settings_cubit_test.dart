@@ -499,6 +499,36 @@ void main() {
     );
 
     group('setBlurDmVideoPreviews', () {
+      test(
+        'an older refused save cannot roll back a newer saved choice',
+        () async {
+          final prefs = _RefusingPreferences();
+          final oldSave = Completer<bool>();
+          when(() => prefs.getBool(any())).thenReturn(null);
+          var saves = 0;
+          when(() => prefs.setBool(any(), any())).thenAnswer((_) {
+            saves++;
+            return saves == 1 ? oldSave.future : Future.value(true);
+          });
+          final service = DmVideoBlurPreferenceService(
+            prefs,
+            account: 'a' * 64,
+          );
+          addTearDown(service.dispose);
+          final cubit = buildCubit(dmVideoBlurPreferenceService: service);
+          addTearDown(cubit.close);
+
+          final oldResult = cubit.setBlurDmVideoPreviews(true);
+          await cubit.setBlurDmVideoPreviews(false);
+          await cubit.setBlurDmVideoPreviews(true);
+          oldSave.complete(false);
+          await oldResult;
+
+          expect(service.blurVideoPreviews, isTrue);
+          expect(cubit.state.blurDmVideoPreviews, isTrue);
+        },
+      );
+
       final account = 'a' * 64;
       late SharedPreferences prefs;
       late DmVideoBlurPreferenceService service;

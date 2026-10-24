@@ -21,6 +21,7 @@ class DmVideoBlurPreferenceService extends ChangeNotifier {
   final SharedPreferences _prefs;
   final String _account;
   bool _blurVideoPreviews;
+  int _saveVersion = 0;
 
   /// Whether trusted senders' video previews are blurred until played.
   bool get blurVideoPreviews => _blurVideoPreviews;
@@ -32,12 +33,29 @@ class DmVideoBlurPreferenceService extends ChangeNotifier {
   /// refuses the save; the previous choice is then back in effect.
   Future<void> setBlurVideoPreviews(bool value) async {
     if (_blurVideoPreviews == value) return;
+    final previous = _blurVideoPreviews;
+    final version = ++_saveVersion;
     _blurVideoPreviews = value;
     notifyListeners();
-    if (await _prefs.setBool(storageKey(_account), value)) return;
-    _blurVideoPreviews = !value;
-    notifyListeners();
-    throw const DmVideoBlurPreferenceSaveException();
+    try {
+      if (await _prefs.setBool(storageKey(_account), value)) return;
+      throw const DmVideoBlurPreferenceSaveException();
+    } catch (_) {
+      // An older write can finish after a newer choice was already saved.
+      if (version == _saveVersion) {
+        _blurVideoPreviews = previous;
+        notifyListeners();
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  void dispose() {
+    // An account switch can dispose this service while its save is pending.
+    // Let that save finish, but do not notify listeners that no longer exist.
+    _saveVersion++;
+    super.dispose();
   }
 }
 

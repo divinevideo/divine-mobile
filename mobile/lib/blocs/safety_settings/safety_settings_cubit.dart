@@ -176,13 +176,14 @@ class SafetySettingsCubit extends Cubit<SafetySettingsState>
   Future<void> setBlurDmVideoPreviews(bool value) async {
     final service = _dmVideoBlurPreferenceService;
     if (service == null) return;
-    final previous = state.blurDmVideoPreviews;
     emit(state.copyWith(blurDmVideoPreviews: value));
     try {
       await service.setBlurVideoPreviews(value);
     } catch (e, stackTrace) {
       addError(e, stackTrace);
-      emitIfOpen(state.copyWith(blurDmVideoPreviews: previous));
+      emitIfOpen(
+        state.copyWith(blurDmVideoPreviews: service.blurVideoPreviews),
+      );
     }
   }
 

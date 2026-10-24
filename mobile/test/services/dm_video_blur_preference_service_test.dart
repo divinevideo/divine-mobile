@@ -1,6 +1,9 @@
 // ABOUTME: Verifies the per-account "blur video previews in messages" choice:
 // ABOUTME: off by default, kept per account, and announced when it changes.
 
+import 'dart:async';
+
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/dm_video_blur_preference_service.dart';
@@ -49,6 +52,71 @@ void main() {
     });
 
     group('setBlurVideoPreviews', () {
+      test('restores the choice when saving throws', () async {
+        final refusing = _RefusingPreferences();
+        when(() => refusing.getBool(any())).thenReturn(null);
+        when(() => refusing.setBool(any(), any())).thenThrow(
+          PlatformException(code: 'write_failed'),
+        );
+        final service = DmVideoBlurPreferenceService(refusing, account: first);
+        addTearDown(service.dispose);
+
+        await expectLater(
+          service.setBlurVideoPreviews(true),
+          throwsA(isA<PlatformException>()),
+        );
+
+        expect(service.blurVideoPreviews, isFalse);
+      });
+
+      test('an older refused save cannot undo the latest choice', () async {
+        final refusing = _RefusingPreferences();
+        final oldSave = Completer<bool>();
+        when(() => refusing.getBool(any())).thenReturn(null);
+        var saves = 0;
+        when(() => refusing.setBool(any(), any())).thenAnswer((_) {
+          saves++;
+          return saves == 1 ? oldSave.future : Future.value(true);
+        });
+        final service = DmVideoBlurPreferenceService(refusing, account: first);
+        addTearDown(service.dispose);
+        final oldResult = expectLater(
+          service.setBlurVideoPreviews(true),
+          throwsA(isA<DmVideoBlurPreferenceSaveException>()),
+        );
+        await service.setBlurVideoPreviews(false);
+        await service.setBlurVideoPreviews(true);
+
+        oldSave.complete(false);
+        await oldResult;
+
+        expect(service.blurVideoPreviews, isTrue);
+      });
+
+      test(
+        'a refused save after an account switch preserves its error',
+        () async {
+          final refusing = _RefusingPreferences();
+          final save = Completer<bool>();
+          when(() => refusing.getBool(any())).thenReturn(null);
+          when(() => refusing.setBool(any(), any()))
+              .thenAnswer((_) => save.future);
+          final service = DmVideoBlurPreferenceService(
+            refusing,
+            account: first,
+          );
+          final result = expectLater(
+            service.setBlurVideoPreviews(true),
+            throwsA(isA<DmVideoBlurPreferenceSaveException>()),
+          );
+
+          service.dispose();
+          save.complete(false);
+
+          await result;
+        },
+      );
+
       test('keeps the latest of two quick choices', () async {
         SharedPreferences.setMockInitialValues({
           DmVideoBlurPreferenceService.storageKey(first): true,
