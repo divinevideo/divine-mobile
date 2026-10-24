@@ -14,6 +14,7 @@ import 'package:openvine/models/clip_gallery_backup.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_boomerang.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:openvine/models/video_editor/clip_loop_alignment.dart';
 import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:openvine/models/video_editor/clip_stabilization.dart';
 import 'package:openvine/utils/path_resolver.dart';
@@ -62,6 +63,7 @@ class DivineVideoClip {
     this.chromaKeySourcePath,
     this.captureChromaKey,
     this.stabilization,
+    this.loopAlignment,
     this.boomerang,
     this.derivedFrom,
     this.recordingSha256,
@@ -300,6 +302,9 @@ class DivineVideoClip {
   /// clip (split, duplicate): the footage stays steadied, but the record no
   /// longer describes how to undo it.
   final ClipStabilization? stabilization;
+
+  /// Source mapping of the current baked loop correction.
+  final ClipLoopAlignment? loopAlignment;
 
   /// Set when [video] plays its footage forward and then backward, recording
   /// what it was rendered from so turning the boomerang off restores the clip.
@@ -654,6 +659,10 @@ class DivineVideoClip {
     yield chromaKeySourcePath;
     // The unstabilized footage, kept to turn stabilization off again.
     yield stabilization?.rawSourcePath;
+    yield loopAlignment?.sourcePath;
+    yield* (loopAlignment?.sourceDerivedFrom ?? const <C2paEditSource>[]).map(
+      (source) => source.path,
+    );
     yield* (stabilization?.sourceDerivedFrom ?? const <C2paEditSource>[]).map(
       (source) => source.path,
     );
@@ -761,6 +770,8 @@ class DivineVideoClip {
     ClipChromaKey? captureChromaKey,
     bool clearCaptureChromaKey = false,
     ClipStabilization? stabilization,
+    ClipLoopAlignment? loopAlignment,
+    bool clearLoopAlignment = false,
     bool clearStabilization = false,
     ClipBoomerang? boomerang,
     bool clearBoomerang = false,
@@ -846,6 +857,9 @@ class DivineVideoClip {
       captureChromaKey: clearCaptureChromaKey
           ? null
           : (captureChromaKey ?? this.captureChromaKey),
+      loopAlignment: isNewLogicalClip || clearLoopAlignment
+          ? null
+          : (loopAlignment ?? this.loopAlignment),
       stabilization: isNewLogicalClip || clearStabilization
           ? null
           : (stabilization ?? this.stabilization),
@@ -918,6 +932,7 @@ class DivineVideoClip {
       if (captureChromaKey != null)
         'captureChromaKey': captureChromaKey!.toJson(),
       if (stabilization case final record?) 'stabilization': record.toJson(),
+      if (loopAlignment case final record?) 'loopAlignment': record.toJson(),
       if (boomerang case final record?) 'boomerang': record.toJson(),
       if (derivedFrom case final sources?)
         'derivedFrom': [for (final source in sources) source.toJson()],
@@ -1080,6 +1095,11 @@ class DivineVideoClip {
       ),
       captureChromaKey: _chromaKeyFromJson(
         json['captureChromaKey'],
+        documentsPath,
+        useOriginalPath: useOriginalPath,
+      ),
+      loopAlignment: ClipLoopAlignment.fromJson(
+        json['loopAlignment'],
         documentsPath,
         useOriginalPath: useOriginalPath,
       ),
