@@ -89,7 +89,10 @@ void main() {
               );
               final pushStore = _PushStore();
               when(() => pushStore.markDirty(any(), any()))
-                  .thenAnswer((_) async {});
+                  .thenAnswer((_) async => true);
+              when(() => pushStore.readDirty(any())).thenAnswer(
+                (_) async => (preferences: null, succeeded: true),
+              );
               final notifications = NotificationPreferencesService(
                 store: pushStore,
                 currentPubkey: () => owner,

@@ -11,6 +11,11 @@ import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/hive_box_opener.dart';
 import 'package:unified_logger/unified_logger.dart';
 
+typedef NotificationPreferencesDirtyRead = ({
+  NotificationPreferences? preferences,
+  bool succeeded,
+});
+
 abstract interface class NotificationPreferencesStore {
   Future<NotificationPreferences> loadPreferences();
   Future<void> savePreferences(NotificationPreferences preferences);
@@ -21,11 +26,16 @@ abstract interface class NotificationPreferencesStore {
   /// this one carries no pubkey, so it is the departing account's choices
   /// until something clears it (#8314).
   Future<void> clearPreferences();
-  Future<void> markDirty(
+
+  /// Reports whether the dirty snapshot was persisted, without throwing for I/O.
+  Future<bool> markDirty(
     String pubkey,
     NotificationPreferences preferences,
   );
   Future<NotificationPreferences?> loadDirty(String pubkey);
+
+  /// Distinguishes a readable empty outbox from a failed read.
+  Future<NotificationPreferencesDirtyRead> readDirty(String pubkey);
   Future<void> clearDirty(String pubkey);
   Future<void> clearDirtyIfMatches(
     String pubkey,
@@ -124,38 +134,47 @@ class HiveNotificationPreferencesStore implements NotificationPreferencesStore {
   }
 
   @override
-  Future<void> markDirty(
+  Future<bool> markDirty(
     String pubkey,
     NotificationPreferences preferences,
   ) async {
     try {
       final box = await _openDirtyBox();
       await box.put(_dirtyKey(pubkey), jsonEncode(preferences.toJson()));
+      return true;
     } on Object catch (error) {
       Log.warning(
         'Failed to mark push notification preferences dirty: $error',
         name: 'NotificationPreferencesService',
         category: LogCategory.system,
       );
+      return false;
     }
   }
 
   @override
-  Future<NotificationPreferences?> loadDirty(String pubkey) async {
+  Future<NotificationPreferences?> loadDirty(String pubkey) async =>
+      (await readDirty(pubkey)).preferences;
+
+  @override
+  Future<NotificationPreferencesDirtyRead> readDirty(String pubkey) async {
     try {
       final box = await _openDirtyBox();
       final stored = box.get(_dirtyKey(pubkey)) as String?;
-      if (stored == null) return null;
+      if (stored == null) return (preferences: null, succeeded: true);
 
       final json = jsonDecode(stored) as Map<String, dynamic>;
-      return NotificationPreferences.fromJson(json);
+      return (
+        preferences: NotificationPreferences.fromJson(json),
+        succeeded: true,
+      );
     } on Object catch (error) {
       Log.warning(
         'Failed to load dirty push notification preferences: $error',
         name: 'NotificationPreferencesService',
         category: LogCategory.system,
       );
-      return null;
+      return (preferences: null, succeeded: false);
     }
   }
 
@@ -243,6 +262,17 @@ enum NotificationPreferencesSyncOutcome {
   stillDirty,
 }
 
+class _PreferenceDeliveryIntent {
+  _PreferenceDeliveryIntent(this.preferences, this.owner);
+
+  final NotificationPreferences preferences;
+  final AccountPreferenceWriteLease? owner;
+  bool delivered = false;
+  bool persisted = false;
+
+  bool get isCurrent => owner?.isCurrent ?? true;
+}
+
 class NotificationPreferencesService {
   NotificationPreferencesService({
     required NotificationPreferencesStore store,
@@ -274,6 +304,26 @@ class NotificationPreferencesService {
   int _localMutations = 0;
   bool _refreshPending = false;
   final _publications = <String, Future<void>>{};
+  final _deliveryIntents = <String, _PreferenceDeliveryIntent>{};
+
+  Future<void> _markDirty(
+    String pubkey,
+    NotificationPreferences preferences,
+  ) async {
+    final previous = _deliveryIntents[pubkey];
+    if (previous == null ||
+        !previous.isCurrent ||
+        previous.preferences != preferences) {
+      // Hive can swallow a failed write or roll back to an older dirty value.
+      // Retain the explicit intent before issuing that write, including retries.
+      _deliveryIntents[pubkey] = _PreferenceDeliveryIntent(
+        preferences,
+        _accountPreferences?.captureWrite(),
+      );
+    }
+    final intent = _deliveryIntents[pubkey]!;
+    intent.persisted = await _store.markDirty(pubkey, preferences);
+  }
 
   void _accountChanged() {
     if (_disposed) return;
@@ -310,11 +360,14 @@ class NotificationPreferencesService {
     // Apply received choices to this device's push registration. This does not
     // write account state and therefore cannot echo the incoming event.
     if (pubkey == null) return;
-    await _store.markDirty(pubkey, preferences);
+    await _markDirty(pubkey, preferences);
     if (_disposed || generation != _generation || pubkey != _currentPubkey()) {
       return;
     }
-    final outcome = await _publishAndClearDirtyPreferences(pubkey, preferences);
+    final outcome = await _publishAndClearDirtyPreferences(
+      pubkey,
+      explicit: true,
+    );
     if (!_disposed &&
         outcome == NotificationPreferencesSyncOutcome.stillDirty) {
       _onStillDirty?.call(pubkey);
@@ -323,6 +376,7 @@ class NotificationPreferencesService {
 
   void dispose() {
     _disposed = true;
+    _deliveryIntents.clear();
     ++_generation;
     ++_refreshRequest;
     unawaited(_accountSubscription?.cancel());
@@ -395,7 +449,7 @@ class NotificationPreferencesService {
         _lastAccountPreferences = effective;
         _lastAccountPubkey = owner;
         if (owner != null) {
-          await _store.markDirty(owner, effective);
+          await _markDirty(owner, effective);
           if (generation != _generation) {
             // A later local mutation may already have published. The held
             // dirty write must be replaced by the latest account snapshot.
@@ -403,7 +457,7 @@ class NotificationPreferencesService {
             _refreshPending = true;
           } else if (!_disposed && owner == _currentPubkey()) {
             unawaited(
-              _publishAndClearDirtyPreferences(owner, effective)
+              _publishAndClearDirtyPreferences(owner, explicit: true)
                   .then((outcome) {
                     if (!_disposed &&
                         outcome ==
@@ -426,10 +480,13 @@ class NotificationPreferencesService {
     await _store.savePreferences(prefs);
     write?.ensureCurrent();
     if (_disposed || owner == null || owner != _currentPubkey()) return;
-    await _store.markDirty(owner, prefs);
+    await _markDirty(owner, prefs);
     write?.ensureCurrent();
     if (_disposed || owner != _currentPubkey()) return;
-    final outcome = await _publishAndClearDirtyPreferences(owner, prefs);
+    final outcome = await _publishAndClearDirtyPreferences(
+      owner,
+      explicit: true,
+    );
     if (outcome == NotificationPreferencesSyncOutcome.stillDirty) {
       _onStillDirty?.call(owner);
     }
@@ -481,7 +538,7 @@ class NotificationPreferencesService {
 
     final preferences = await loadPreferences();
     write?.ensureCurrent();
-    await _store.markDirty(pubkey, preferences);
+    await _markDirty(pubkey, preferences);
     write?.ensureCurrent();
     return true;
   }
@@ -491,26 +548,61 @@ class NotificationPreferencesService {
   ) => _publishAndClearDirtyPreferences(pubkey);
 
   Future<NotificationPreferencesSyncOutcome> _publishAndClearDirtyPreferences(
-    String pubkey, [
-    NotificationPreferences? preferences,
-  ]) {
+    String pubkey, {
+    bool explicit = false,
+  }) {
     final previous = _publications[pubkey];
+    final issued = explicit && previous == null
+        ? _deliveryIntents[pubkey]
+        : null;
     final owner = _accountPreferences?.captureWrite();
     bool isCurrent() =>
         !_disposed && _currentPubkey() == pubkey && (owner?.isCurrent ?? true);
     final result = () async {
       await previous;
       if (!isCurrent()) return NotificationPreferencesSyncOutcome.stillDirty;
-      // Encryption, signing and relay acknowledgment form one ordered delivery.
-      // A queued retry reads the latest intent only after its predecessor settles.
-      final latest = previous != null || preferences == null
-          ? await _store.loadDirty(pubkey)
-          : preferences;
+      // Encryption, signing and acknowledgment stay ordered. Successful dirty
+      // persistence can coalesce newer stored choices; failed persistence cannot.
+      final read = await _store.readDirty(pubkey);
       if (!isCurrent()) return NotificationPreferencesSyncOutcome.stillDirty;
+      final dirty = read.preferences;
+      var intent = issued ?? _deliveryIntents[pubkey];
+      if (intent != null && !intent.isCurrent) {
+        _deliveryIntents.remove(pubkey);
+        intent = null;
+      }
+      if (issued == null &&
+          intent?.persisted == true &&
+          read.succeeded &&
+          dirty != null &&
+          dirty != intent!.preferences) {
+        // A newer successfully stored snapshot supersedes this delivery.
+        intent = null;
+      }
+      if (!read.succeeded && intent?.delivered == true) {
+        // Delivery already succeeded. Do not overwrite an unread newer outbox
+        // value just to retry cleanup; wait for a readable snapshot.
+        return NotificationPreferencesSyncOutcome.stillDirty;
+      }
+      final latest = intent?.preferences ?? dirty;
       if (latest == null) {
+        return read.succeeded
+            ? NotificationPreferencesSyncOutcome.nothingToDrain
+            : NotificationPreferencesSyncOutcome.stillDirty;
+      }
+      if (intent?.delivered == true && read.succeeded && dirty == null) {
+        if (identical(_deliveryIntents[pubkey], intent)) {
+          _deliveryIntents.remove(pubkey);
+        }
         return NotificationPreferencesSyncOutcome.nothingToDrain;
       }
-      return _publishSnapshot(pubkey, latest, isCurrent);
+      if (intent != null &&
+          identical(_deliveryIntents[pubkey], intent) &&
+          (!intent.persisted || (read.succeeded && dirty == null))) {
+        intent.persisted = await _store.markDirty(pubkey, latest);
+        if (!isCurrent()) return NotificationPreferencesSyncOutcome.stillDirty;
+      }
+      return _publishSnapshot(pubkey, latest, isCurrent, intent);
     }();
     final settled = result.then<void>(
       (_) {},
@@ -531,10 +623,22 @@ class NotificationPreferencesService {
     String pubkey,
     NotificationPreferences preferences,
     bool Function() isCurrent,
+    _PreferenceDeliveryIntent? intent,
   ) async {
-    final published = await _publishPreferences(pubkey, preferences);
-    if (!published || !isCurrent()) {
-      return NotificationPreferencesSyncOutcome.stillDirty;
+    if (!(intent?.delivered ?? false)) {
+      final published = await _publishPreferences(pubkey, preferences);
+      if (!published || !isCurrent()) {
+        return NotificationPreferencesSyncOutcome.stillDirty;
+      }
+      // A cleanup/read failure must not repeat an already accepted delivery,
+      // including an equal explicit choice queued while this delivery ran.
+      if (intent != null) intent.delivered = true;
+      final current = _deliveryIntents[pubkey];
+      if (current != null &&
+          current.isCurrent &&
+          current.preferences == preferences) {
+        current.delivered = true;
+      }
     }
 
     // Recorded only after the publish lands, so a failed publish leaves the
@@ -544,9 +648,14 @@ class NotificationPreferencesService {
       publishedKindsSchemaVersion,
     );
     await _store.clearDirtyIfMatches(pubkey, preferences);
-    final dirty = await _store.loadDirty(pubkey);
-    return dirty == null
-        ? NotificationPreferencesSyncOutcome.publishedAndCleared
-        : NotificationPreferencesSyncOutcome.stillDirty;
+    final read = await _store.readDirty(pubkey);
+    if (!read.succeeded || read.preferences != null) {
+      return NotificationPreferencesSyncOutcome.stillDirty;
+    }
+    final current = _deliveryIntents[pubkey];
+    if (current?.delivered == true) {
+      _deliveryIntents.remove(pubkey);
+    }
+    return NotificationPreferencesSyncOutcome.publishedAndCleared;
   }
 }

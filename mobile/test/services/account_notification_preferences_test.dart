@@ -59,7 +59,7 @@ class _MemoryPushStore implements NotificationPreferencesStore {
   }
 
   @override
-  Future<void> markDirty(
+  Future<bool> markDirty(
     String pubkey,
     NotificationPreferences preferences,
   ) async {
@@ -67,7 +67,12 @@ class _MemoryPushStore implements NotificationPreferencesStore {
     if (!markDirtyEntered.isCompleted) markDirtyEntered.complete();
     await markDirtyGate?.future;
     if (commitAfterGate) dirty[pubkey] = preferences;
+    return true;
   }
+
+  @override
+  Future<NotificationPreferencesDirtyRead> readDirty(String pubkey) async =>
+      (preferences: await loadDirty(pubkey), succeeded: true);
 
   @override
   Future<NotificationPreferences?> loadDirty(String pubkey) async =>
@@ -219,6 +224,257 @@ void main() {
           port.dispose();
           await account.close();
         });
+      }
+    });
+
+    group('production dirty store failures', () {
+      test(
+        'an acknowledged choice cannot overwrite unread newer durable intent',
+        () async {
+          SharedPreferences.setMockInitialValues({});
+          final port = AccountPreferenceStore(
+            await SharedPreferences.getInstance(),
+          );
+          final account = FakeAccountState(_account);
+          await port.bind(account);
+          addTearDown(port.dispose);
+          addTearDown(account.close);
+          final box = _Box();
+          final persisted = <Object, Object?>{};
+          const dirtyKey = 'push_preferences_dirty_$_account';
+          var failRead = false;
+          when(() => box.get(any())).thenAnswer((call) {
+            if (call.positionalArguments.first == dirtyKey && failRead) {
+              throw StateError('dirty read unavailable');
+            }
+            return persisted[call.positionalArguments.first];
+          });
+          when(() => box.put(any(), any())).thenAnswer((call) async {
+            persisted[call.positionalArguments.first as Object] =
+                call.positionalArguments[1];
+          });
+          when(() => box.delete(any())).thenAnswer((call) async {
+            persisted.remove(call.positionalArguments.first);
+          });
+          final store = HiveNotificationPreferencesStore(
+            openBox: () async => box,
+            openDirtyBox: () async => box,
+          );
+          const old = NotificationPreferences(commentsEnabled: false);
+          const latest = NotificationPreferences(likesEnabled: false);
+          final published = <NotificationPreferences>[];
+          final service = NotificationPreferencesService(
+            store: store,
+            accountPreferences: port,
+            currentPubkey: () => _account,
+            publishPreferences: (_, prefs) async {
+              published.add(prefs);
+              if (published.length == 1) failRead = true;
+              return true;
+            },
+          );
+          addTearDown(service.dispose);
+          await service.updatePreferences(old);
+          await pumpEventQueue();
+          expect(published, [old]);
+          expect(await store.markDirty(_account, latest), isTrue);
+          expect(
+            await service.syncDirtyPreferencesForPubkey(_account),
+            NotificationPreferencesSyncOutcome.stillDirty,
+          );
+          expect(jsonDecode(persisted[dirtyKey]! as String), latest.toJson());
+          expect(published, [old]);
+          failRead = false;
+          expect(
+            await service.syncDirtyPreferencesForPubkey(_account),
+            NotificationPreferencesSyncOutcome.publishedAndCleared,
+          );
+          expect(published, [old, latest]);
+          expect(await store.loadDirty(_account), isNull);
+        },
+      );
+
+      for (final sameChoice in [true, false]) {
+        test(
+          'successful explicit queue coalesces and deduplicates, same choice: '
+          '$sameChoice',
+          () async {
+            SharedPreferences.setMockInitialValues({});
+            final port = AccountPreferenceStore(
+              await SharedPreferences.getInstance(),
+            );
+            final account = FakeAccountState(_account);
+            await port.bind(account);
+            addTearDown(port.dispose);
+            addTearDown(account.close);
+            final box = _Box();
+            final persisted = <Object, Object?>{};
+            when(
+              () => box.get(any()),
+            ).thenAnswer((call) => persisted[call.positionalArguments.first]);
+            when(() => box.put(any(), any())).thenAnswer((call) async {
+              persisted[call.positionalArguments.first as Object] =
+                  call.positionalArguments[1];
+            });
+            when(() => box.delete(any())).thenAnswer((call) async {
+              persisted.remove(call.positionalArguments.first);
+            });
+            final store = HiveNotificationPreferencesStore(
+              openBox: () async => box,
+              openDirtyBox: () async => box,
+            );
+            const old = NotificationPreferences();
+            const latest = NotificationPreferences(
+              likesEnabled: false,
+              commentsEnabled: false,
+            );
+            await store.markDirty(_account, old);
+            final entered = Completer<void>();
+            final release = Completer<void>();
+            final published = <NotificationPreferences>[];
+            final service = NotificationPreferencesService(
+              store: store,
+              currentPubkey: () => _account,
+              accountPreferences: port,
+              publishPreferences: (_, prefs) async {
+                published.add(prefs);
+                if (published.length == 1) {
+                  entered.complete();
+                  await release.future;
+                }
+                return true;
+              },
+            );
+            addTearDown(service.dispose);
+            final predecessor = service.syncDirtyPreferencesForPubkey(_account);
+            await entered.future;
+            if (sameChoice) {
+              await service.updatePreferences(old);
+            } else {
+              account.receive({'notifications/commentsEnabled': false});
+              await pumpEventQueue();
+              account.receive({'notifications/likesEnabled': false});
+              await pumpEventQueue();
+            }
+            release.complete();
+            await predecessor;
+            await pumpEventQueue();
+            expect(published, [old, if (!sameChoice) latest]);
+            expect(await store.loadDirty(_account), isNull);
+            expect(
+              await service.syncDirtyPreferencesForPubkey(_account),
+              NotificationPreferencesSyncOutcome.nothingToDrain,
+            );
+            expect(published, [old, if (!sameChoice) latest]);
+          },
+        );
+      }
+
+      for (final storageFailure in ['put', 'read']) {
+        for (final predecessorAccepted in [true, false]) {
+          for (final delivery in ['accepted', 'refused', 'thrown']) {
+            test('$storageFailure with predecessor $predecessorAccepted and '
+                'new delivery $delivery retains the explicit account choice', () async {
+              SharedPreferences.setMockInitialValues({});
+              final port = AccountPreferenceStore(
+                await SharedPreferences.getInstance(),
+              );
+              final account = FakeAccountState(_account);
+              await port.bind(account);
+              addTearDown(port.dispose);
+              addTearDown(account.close);
+              final preferencesBox = _Box();
+              final dirtyBox = _Box();
+              final persisted = <Object, Object?>{};
+              const dirtyKey = 'push_preferences_dirty_$_account';
+              var failStorage = false;
+              var storageFailed = false;
+              when(() => preferencesBox.get(any())).thenReturn(null);
+              when(() => dirtyBox.get(any())).thenAnswer((call) {
+                final key = call.positionalArguments.first;
+                if (key == dirtyKey &&
+                    failStorage &&
+                    storageFailure == 'read') {
+                  storageFailed = true;
+                  throw StateError('dirty read refused');
+                }
+                return persisted[key];
+              });
+              when(() => dirtyBox.put(any(), any())).thenAnswer((call) async {
+                final key = call.positionalArguments[0] as Object;
+                if (key == dirtyKey && failStorage && storageFailure == 'put') {
+                  storageFailed = true;
+                  // Failed Hive backend writes roll back the optimistic cache;
+                  // the production store catches this error and leaves P1.
+                  throw StateError('dirty put rolled back');
+                }
+                persisted[key] = call.positionalArguments[1];
+              });
+              when(() => dirtyBox.delete(any())).thenAnswer((call) async {
+                persisted.remove(call.positionalArguments.first);
+              });
+              final store = HiveNotificationPreferencesStore(
+                openBox: () async => preferencesBox,
+                openDirtyBox: () async => dirtyBox,
+              );
+              const old = NotificationPreferences();
+              const latest = NotificationPreferences(commentsEnabled: false);
+              await store.markDirty(_account, old);
+              final entered = Completer<void>();
+              final release = Completer<void>();
+              final published = <NotificationPreferences>[];
+              var latestAttempts = 0;
+              final service = NotificationPreferencesService(
+                store: store,
+                currentPubkey: () => _account,
+                accountPreferences: port,
+                publishPreferences: (_, prefs) async {
+                  published.add(prefs);
+                  if (published.length == 1) {
+                    entered.complete();
+                    await release.future;
+                    return predecessorAccepted;
+                  }
+                  if (prefs == latest && latestAttempts++ == 0) {
+                    if (delivery == 'thrown') {
+                      throw StateError('publish refused');
+                    }
+                    return delivery == 'accepted';
+                  }
+                  return true;
+                },
+              );
+              addTearDown(service.dispose);
+              final predecessor = service.syncDirtyPreferencesForPubkey(
+                _account,
+              );
+              await entered.future;
+              failStorage = true;
+              account.receive({'notifications/commentsEnabled': false});
+              await pumpEventQueue();
+              release.complete();
+              await predecessor;
+              await pumpEventQueue();
+              expect(storageFailed, isTrue);
+              expect(published, [old, latest]);
+              expect(await service.loadPreferences(), latest);
+              expect(account.localWrites, 0);
+              // Recovery uses the existing no-argument retry path. No new
+              // account event or explicit preference snapshot is supplied.
+              failStorage = false;
+              await service.syncDirtyPreferencesForPubkey(_account);
+              expect(published.last, latest);
+              expect(latestAttempts, delivery == 'accepted' ? 1 : 2);
+              expect(await store.loadDirty(_account), isNull);
+              final attempts = published.length;
+              expect(
+                await service.syncDirtyPreferencesForPubkey(_account),
+                NotificationPreferencesSyncOutcome.nothingToDrain,
+              );
+              expect(published, hasLength(attempts));
+            });
+          }
+        }
       }
     });
 

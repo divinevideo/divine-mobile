@@ -90,12 +90,17 @@ class _FakeNotificationPreferencesStore
   }
 
   @override
-  Future<void> markDirty(
+  Future<bool> markDirty(
     String pubkey,
     NotificationPreferences preferences,
   ) async {
     dirtyPreferencesByPubkey[pubkey] = preferences;
+    return true;
   }
+
+  @override
+  Future<NotificationPreferencesDirtyRead> readDirty(String pubkey) async =>
+      (preferences: await loadDirty(pubkey), succeeded: true);
 
   @override
   Future<NotificationPreferences?> loadDirty(String pubkey) async {
