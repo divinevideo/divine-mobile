@@ -123,19 +123,32 @@ class VideoEditorSeekRequested extends VideoEditorMainEvent {
 /// end of the video and on from its beginning to [end], so the seam where
 /// the video starts over can be watched again and again.
 class VideoEditorAuditionStarted extends VideoEditorMainEvent {
-  const VideoEditorAuditionStarted({required this.start, required this.end});
+  const VideoEditorAuditionStarted({
+    required this.start,
+    required this.end,
+    this.owner,
+  });
 
   final Duration start;
   final Duration end;
 
+  /// Identifies the operation allowed to end this audition.
+  final String? owner;
+
   @override
-  List<Object?> get props => [start, end];
+  List<Object?> get props => [start, end, owner];
 }
 
 /// Ends the audition started by [VideoEditorAuditionStarted], pausing
 /// playback again if the audition started it.
 class VideoEditorAuditionEnded extends VideoEditorMainEvent {
-  const VideoEditorAuditionEnded();
+  const VideoEditorAuditionEnded({this.owner});
+
+  /// Null preserves the generic end behavior for existing editor controls.
+  final String? owner;
+
+  @override
+  List<Object?> get props => [owner];
 }
 
 /// Triggered when the video player reports a new playback position, or when

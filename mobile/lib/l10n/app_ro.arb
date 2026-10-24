@@ -2975,18 +2975,11 @@
   "videoEditorTrackNotFollowed": "Nu s-a putut urmări. Încadrează ceva cu mai multe detalii.",
   "videoEditorTrackFailed": "Urmărirea nu a reușit. Încearcă din nou.",
   "videoEditorTrackLostPartway": "Pierdut din vedere pe parcurs. De acolo, stratul rămâne pe loc.",
-  "videoEditorLoopLabel": "Buclă",
-  "videoEditorLoopSemanticLabel": "Găsește un punct de buclă mai fluid",
-  "videoEditorLoopFoundEarlier": "Am găsit o buclă mai fluidă. Se termină cu {seconds} s mai devreme.",
-  "videoEditorLoopFoundLater": "Am găsit o buclă mai fluidă. Se termină cu {seconds} s mai târziu.",
-  "videoEditorLoopClosestEarlier": "Nicio potrivire perfectă, dar aceasta e cea mai apropiată. Se termină cu {seconds} s mai devreme.",
-  "videoEditorLoopClosestLater": "Nicio potrivire perfectă, dar aceasta e cea mai apropiată. Se termină cu {seconds} s mai târziu.",
-  "videoEditorLoopKeepLabel": "Păstrează",
-  "videoEditorLoopKeepSemanticLabel": "Păstrează noul punct de buclă",
-  "videoEditorLoopDiscardSemanticLabel": "Pune la loc finalul anterior",
+  "videoEditorLoopLabel": "Îmbunătățește bucla",
+  "videoEditorLoopSemanticLabel": "Netezește îmbinarea buclei",
   "videoEditorLoopAlreadySmooth": "Se repetă deja fluid în buclă.",
   "videoEditorLoopFailed": "Nu am putut verifica bucla. Încearcă din nou.",
-  "videoEditorLoopNoMatch": "Nu am găsit o buclă fără cusur. Nimic de la final nu se potrivește cu începutul videoclipului.",
+  "videoEditorLoopNoMatch": "Nu am putut îmbunătăți această buclă",
   "videoEditorKeyframeEffect": "Efect",
   "videoEditorKeyframeCurveSegment": "Mișcarea de la cadrul cheie {from} la {to}",
   "videoEditorLayerAnimationEnter": "Intrare",
@@ -5833,43 +5826,46 @@
   "inboxLeaveGroupConfirmBody": "Dispare din inbox, iar mesajele noi nu îl mai aduc înapoi. Scrie din nou în grup ca să revii. Nu se trimite nicio notificare.",
   "inboxLeaveGroupConfirmConfirm": "Părăsește",
   "inboxLeftGroup": "Ai părăsit grupul",
-"listsDiscoveryEmpty": "De data asta n-a apărut nicio listă. Trage în jos pentru reîmprospătare.",
-"listsDiscoveryLoadingLabel": "Se încarcă listele",
-"listSearchPeopleUnavailable": "Listele de persoane nu sunt disponibile acum.",
-"listSearchVideosUnavailable": "Listele de videoclipuri nu sunt disponibile acum.",
-"listPrivateConversionTooLarge": "Această listă este prea mare pentru a deveni privată. Elimină mai întâi câteva videoclipuri. Modificările tale rămân aici și nu au fost încă salvate.",
-"authAccountCleanupFailed": "Nu am putut șterge datele contului anterior. Încearcă din nou.",
-"@peopleListsAddPersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  "listsDiscoveryEmpty": "De data asta n-a apărut nicio listă. Trage în jos pentru reîmprospătare.",
+  "listsDiscoveryLoadingLabel": "Se încarcă listele",
+  "listSearchPeopleUnavailable": "Listele de persoane nu sunt disponibile acum.",
+  "listSearchVideosUnavailable": "Listele de videoclipuri nu sunt disponibile acum.",
+  "listPrivateConversionTooLarge": "Această listă este prea mare pentru a deveni privată. Elimină mai întâi câteva videoclipuri. Modificările tale rămân aici și nu au fost încă salvate.",
+  "authAccountCleanupFailed": "Nu am putut șterge datele contului anterior. Încearcă din nou.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"@peopleListsRemovePersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"peopleListsAddPersonSemanticLabel": "Adaugă pe {name} la listă",
-"peopleListsMembershipUpdateFailed": "N-am putut actualiza lista. Mai încearcă.",
-"peopleListsAddPeopleSearchHint": "Caută persoane",
-"peopleListsRemovePersonSemanticLabel": "Elimină pe {name} din listă",
-"listMakePublicLabel": "Fă lista publică",
-"listCollaboratorsNone": "Niciunul",
-"listAddCollaboratorTitle": "Adaugă un colaborator",
-"listMakePublicSubtitle": "Lasă-i pe alții să vadă această listă",
-"listCollaboratorSearchHint": "Caută în Divine...",
-"listVideoNotAdded": "Lista ta a fost creată, dar acest videoclip nu a fost adăugat.",
-"listPrivateCollaboratorsWarning": "Dacă faci această listă privată, colaboratorii ei vor fi eliminați. Doar tu vei putea adăuga videoclipuri.",
-"listVideoPendingSync": "Lista și videoclipul tău sunt salvate aici. Videoclipul așteaptă sincronizarea.",
-"listRetrySync": "Sincronizează acum",
-"listPermissionsUnconfirmed": "Nu am putut confirma această schimbare. Încearcă din nou.",
-"listRecoveryPending": "Această listă are modificări care așteaptă sincronizarea.",
-"listPermissionsRecoveryPending": "Modificarea a fost acceptată. Apasă Sincronizează acum pentru a termina salvarea. Editarea este suspendată până atunci.",
-"listRecoveryReadOnly": "Unele modificări salvate în listele de videoclipuri trebuie recuperate. Poți vedea listele de videoclipuri, dar editarea este suspendată.",
-"listAddToLists": "Adaugă la liste",
-"accountDeletionProcessingSignOutFailed": "Ștergerea contului tău este în curs, dar nu am putut finaliza deconectarea. Încearcă din nou."
+  },
+  "peopleListsAddPersonSemanticLabel": "Adaugă pe {name} la listă",
+  "peopleListsMembershipUpdateFailed": "N-am putut actualiza lista. Mai încearcă.",
+  "peopleListsAddPeopleSearchHint": "Caută persoane",
+  "peopleListsRemovePersonSemanticLabel": "Elimină pe {name} din listă",
+  "listMakePublicLabel": "Fă lista publică",
+  "listCollaboratorsNone": "Niciunul",
+  "listAddCollaboratorTitle": "Adaugă un colaborator",
+  "listMakePublicSubtitle": "Lasă-i pe alții să vadă această listă",
+  "listCollaboratorSearchHint": "Caută în Divine...",
+  "listVideoNotAdded": "Lista ta a fost creată, dar acest videoclip nu a fost adăugat.",
+  "listPrivateCollaboratorsWarning": "Dacă faci această listă privată, colaboratorii ei vor fi eliminați. Doar tu vei putea adăuga videoclipuri.",
+  "listVideoPendingSync": "Lista și videoclipul tău sunt salvate aici. Videoclipul așteaptă sincronizarea.",
+  "listRetrySync": "Sincronizează acum",
+  "listPermissionsUnconfirmed": "Nu am putut confirma această schimbare. Încearcă din nou.",
+  "listRecoveryPending": "Această listă are modificări care așteaptă sincronizarea.",
+  "listPermissionsRecoveryPending": "Modificarea a fost acceptată. Apasă Sincronizează acum pentru a termina salvarea. Editarea este suspendată până atunci.",
+  "listRecoveryReadOnly": "Unele modificări salvate în listele de videoclipuri trebuie recuperate. Poți vedea listele de videoclipuri, dar editarea este suspendată.",
+  "listAddToLists": "Adaugă la liste",
+  "accountDeletionProcessingSignOutFailed": "Ștergerea contului tău este în curs, dar nu am putut finaliza deconectarea. Încearcă din nou.",
+  "videoEditorLoopRepairSmoothed": "Buclă netezită",
+  "videoEditorLoopRepairProgress": "Îți îmbunătățim bucla…",
+  "videoEditorLoopRepairTrimmed": "Buclă netezită. S-au eliminat {seconds} s."
 }

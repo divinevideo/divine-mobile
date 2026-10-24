@@ -10416,40 +10416,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Mất dấu giữa chừng. Từ đó lớp sẽ đứng yên.';
 
   @override
-  String get videoEditorLoopLabel => 'Loop';
+  String get videoEditorLoopLabel => 'Sửa vòng lặp';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'Tìm điểm loop mượt hơn';
-
-  @override
-  String videoEditorLoopFoundEarlier(String seconds) {
-    return 'Đã tìm thấy loop mượt hơn. Kết thúc sớm hơn $seconds giây.';
-  }
-
-  @override
-  String videoEditorLoopFoundLater(String seconds) {
-    return 'Đã tìm thấy loop mượt hơn. Kết thúc muộn hơn $seconds giây.';
-  }
-
-  @override
-  String videoEditorLoopClosestEarlier(String seconds) {
-    return 'Không có điểm khớp hoàn hảo, nhưng đây là điểm gần nhất. Kết thúc sớm hơn $seconds giây.';
-  }
-
-  @override
-  String videoEditorLoopClosestLater(String seconds) {
-    return 'Không có điểm khớp hoàn hảo, nhưng đây là điểm gần nhất. Kết thúc muộn hơn $seconds giây.';
-  }
-
-  @override
-  String get videoEditorLoopKeepLabel => 'Giữ';
-
-  @override
-  String get videoEditorLoopKeepSemanticLabel => 'Giữ điểm loop mới';
-
-  @override
-  String get videoEditorLoopDiscardSemanticLabel =>
-      'Đưa điểm kết thúc cũ trở lại';
+  String get videoEditorLoopSemanticLabel => 'Làm mượt điểm nối vòng lặp';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'Video này đã loop mượt rồi.';
@@ -10458,8 +10428,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorLoopFailed => 'Không kiểm tra được loop. Thử lại nhé.';
 
   @override
-  String get videoEditorLoopNoMatch =>
-      'Không tìm thấy loop liền mạch. Không có đoạn nào gần cuối khớp với phần đầu video.';
+  String get videoEditorLoopNoMatch => 'Không thể cải thiện vòng lặp này';
 
   @override
   String get videoEditorKeyframeEffect => 'Hiệu ứng';
@@ -14393,4 +14362,15 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Tài khoản của bạn đang được xử lý xóa, nhưng chúng tôi chưa thể đăng xuất cho bạn. Hãy thử lại.';
+
+  @override
+  String get videoEditorLoopRepairSmoothed => 'Đã làm mượt vòng lặp';
+
+  @override
+  String get videoEditorLoopRepairProgress => 'Đang sửa vòng lặp của bạn…';
+
+  @override
+  String videoEditorLoopRepairTrimmed(String seconds) {
+    return 'Đã làm mượt vòng lặp. Đã cắt $seconds giây.';
+  }
 }

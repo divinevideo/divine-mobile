@@ -169,27 +169,9 @@ class VideoEditorConstants {
   static const maxBouncePercent = 200;
   static const bounceStepPercent = 10;
 
-  /// How far before the current end of a video the loop helper looks for a
-  /// better cut (#10249): long enough for one turn of a spin, a pendulum's
-  /// swing or a walk cycle. A loop never gets shorter than half of itself.
-  static const Duration loopPointSearchBack = Duration(seconds: 3);
-
   /// The shortest loop the helper suggests: below this a cut stops reading
   /// as a loop and starts reading as a stutter.
   static const Duration loopPointMinLoop = Duration(seconds: 1);
-
-  /// A cut found counts as smoother only when its seam differs by at most
-  /// this share of the seam the video has now; closer than that, it already
-  /// loops about as well as it can.
-  static const double loopPointImprovementShare = 0.8;
-
-  /// How different the frames at a seam may be and still count as a close
-  /// match: the mean luma difference, 0 to 1. Above it a suggested cut is
-  /// only the closest one there is, and the helper says so; a current seam
-  /// below it already loops smoothly. On H.264 footage a true match measures
-  /// about 0.002, a pendulum swinging the other way about 0.04, and a seam
-  /// one frame off 0.06.
-  static const double loopPointCloseMatchDifference = 0.03;
 
   /// How much of the video the loop preview plays on each side of the seam.
   static const Duration loopSeamPreviewSide = Duration(milliseconds: 1200);

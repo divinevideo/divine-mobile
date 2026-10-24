@@ -2896,18 +2896,11 @@
   "videoEditorTrackNotFollowed": "追跡できませんでした。もっと細部のあるものを枠で囲んでください。",
   "videoEditorTrackFailed": "トラッキングに失敗しました。もう一度お試しください。",
   "videoEditorTrackLostPartway": "途中で見失いました。そこから先はレイヤーが静止します。",
-  "videoEditorLoopLabel": "ループ",
-  "videoEditorLoopSemanticLabel": "よりなめらかなループ位置を探す",
-  "videoEditorLoopFoundEarlier": "よりなめらかなループが見つかりました。{seconds}秒早く終わります。",
-  "videoEditorLoopFoundLater": "よりなめらかなループが見つかりました。{seconds}秒遅く終わります。",
-  "videoEditorLoopClosestEarlier": "完全に一致する位置はありませんが、これが最も近い位置です。{seconds}秒早く終わります。",
-  "videoEditorLoopClosestLater": "完全に一致する位置はありませんが、これが最も近い位置です。{seconds}秒遅く終わります。",
-  "videoEditorLoopKeepLabel": "採用",
-  "videoEditorLoopKeepSemanticLabel": "新しいループ位置を採用",
-  "videoEditorLoopDiscardSemanticLabel": "元の終わりに戻す",
+  "videoEditorLoopLabel": "ループを調整",
+  "videoEditorLoopSemanticLabel": "ループのつなぎ目を滑らかにする",
   "videoEditorLoopAlreadySmooth": "すでになめらかにループしています。",
   "videoEditorLoopFailed": "ループを確認できませんでした。もう一度お試しください。",
-  "videoEditorLoopNoMatch": "継ぎ目のないループは見つかりませんでした。終わり付近に、動画の始まりと一致する部分がありません。",
+  "videoEditorLoopNoMatch": "このループは改善できませんでした",
   "videoEditorKeyframeEffect": "エフェクト",
   "videoEditorKeyframeCurveSegment": "キーフレーム{from}から{to}への動き",
   "videoEditorLayerAnimationEnter": "イン",
@@ -5833,43 +5826,46 @@
   "inboxLeaveGroupConfirmBody": "受信トレイから消え、新しいメッセージが届いても戻りません。もう一度書き込むと再参加できます。ほかのメンバーには通知されません。",
   "inboxLeaveGroupConfirmConfirm": "退出",
   "inboxLeftGroup": "グループから退出しました",
-"listsDiscoveryEmpty": "今回はリストが見つかりませんでした。引っ張って更新してください。",
-"listsDiscoveryLoadingLabel": "リストを読み込み中",
-"listSearchPeopleUnavailable": "現在、ユーザーリストを利用できません。",
-"listSearchVideosUnavailable": "現在、動画リストを利用できません。",
-"listPrivateConversionTooLarge": "このリストは大きすぎるため非公開にできません。先に動画をいくつか削除してください。編集内容はここに残っていますが、まだ保存されていません。",
-"authAccountCleanupFailed": "前のアカウントのデータを削除できませんでした。もう一度お試しください。",
-"@peopleListsAddPersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  "listsDiscoveryEmpty": "今回はリストが見つかりませんでした。引っ張って更新してください。",
+  "listsDiscoveryLoadingLabel": "リストを読み込み中",
+  "listSearchPeopleUnavailable": "現在、ユーザーリストを利用できません。",
+  "listSearchVideosUnavailable": "現在、動画リストを利用できません。",
+  "listPrivateConversionTooLarge": "このリストは大きすぎるため非公開にできません。先に動画をいくつか削除してください。編集内容はここに残っていますが、まだ保存されていません。",
+  "authAccountCleanupFailed": "前のアカウントのデータを削除できませんでした。もう一度お試しください。",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"@peopleListsRemovePersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"peopleListsAddPersonSemanticLabel": "{name}をリストに追加",
-"peopleListsMembershipUpdateFailed": "リストを更新できませんでした。もう一度お試しください。",
-"peopleListsAddPeopleSearchHint": "ユーザーを検索",
-"peopleListsRemovePersonSemanticLabel": "{name}をリストから削除",
-"listMakePublicLabel": "公開する",
-"listCollaboratorsNone": "なし",
-"listAddCollaboratorTitle": "コラボレーターを追加",
-"listMakePublicSubtitle": "他の人もこのリストを見られます",
-"listCollaboratorSearchHint": "Divineを検索...",
-"listVideoNotAdded": "リストは作成されましたが、この動画は追加されませんでした。",
-"listPrivateCollaboratorsWarning": "このリストを非公開にすると、共同編集者も削除されます。動画を追加できるのはあなただけになります。",
-"listVideoPendingSync": "リストと動画はこの端末に保存されています。動画は同期を待っています。",
-"listRetrySync": "今すぐ同期",
-"listPermissionsUnconfirmed": "この変更を確認できませんでした。もう一度お試しください。",
-"listRecoveryPending": "このリストには同期を待っている変更があります。",
-"listPermissionsRecoveryPending": "変更は承認されました。「今すぐ同期」をタップして保存を完了してください。それまでは編集が一時停止されます。",
-"listRecoveryReadOnly": "動画リストに保存された一部の変更には復旧が必要です。動画リストは閲覧できますが、編集は一時停止しています。",
-"listAddToLists": "リストに追加",
-"accountDeletionProcessingSignOutFailed": "アカウントの削除は処理中ですが、ログアウトを完了できませんでした。もう一度お試しください。"
+  },
+  "peopleListsAddPersonSemanticLabel": "{name}をリストに追加",
+  "peopleListsMembershipUpdateFailed": "リストを更新できませんでした。もう一度お試しください。",
+  "peopleListsAddPeopleSearchHint": "ユーザーを検索",
+  "peopleListsRemovePersonSemanticLabel": "{name}をリストから削除",
+  "listMakePublicLabel": "公開する",
+  "listCollaboratorsNone": "なし",
+  "listAddCollaboratorTitle": "コラボレーターを追加",
+  "listMakePublicSubtitle": "他の人もこのリストを見られます",
+  "listCollaboratorSearchHint": "Divineを検索...",
+  "listVideoNotAdded": "リストは作成されましたが、この動画は追加されませんでした。",
+  "listPrivateCollaboratorsWarning": "このリストを非公開にすると、共同編集者も削除されます。動画を追加できるのはあなただけになります。",
+  "listVideoPendingSync": "リストと動画はこの端末に保存されています。動画は同期を待っています。",
+  "listRetrySync": "今すぐ同期",
+  "listPermissionsUnconfirmed": "この変更を確認できませんでした。もう一度お試しください。",
+  "listRecoveryPending": "このリストには同期を待っている変更があります。",
+  "listPermissionsRecoveryPending": "変更は承認されました。「今すぐ同期」をタップして保存を完了してください。それまでは編集が一時停止されます。",
+  "listRecoveryReadOnly": "動画リストに保存された一部の変更には復旧が必要です。動画リストは閲覧できますが、編集は一時停止しています。",
+  "listAddToLists": "リストに追加",
+  "accountDeletionProcessingSignOutFailed": "アカウントの削除は処理中ですが、ログアウトを完了できませんでした。もう一度お試しください。",
+  "videoEditorLoopRepairSmoothed": "ループを滑らかにしました",
+  "videoEditorLoopRepairProgress": "ループを調整中…",
+  "videoEditorLoopRepairTrimmed": "ループを滑らかにしました。{seconds}秒を削除しました。"
 }

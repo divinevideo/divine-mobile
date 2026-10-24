@@ -9940,39 +9940,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorTrackLostPartway => '途中で見失いました。そこから先はレイヤーが静止します。';
 
   @override
-  String get videoEditorLoopLabel => 'ループ';
+  String get videoEditorLoopLabel => 'ループを調整';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'よりなめらかなループ位置を探す';
-
-  @override
-  String videoEditorLoopFoundEarlier(String seconds) {
-    return 'よりなめらかなループが見つかりました。$seconds秒早く終わります。';
-  }
-
-  @override
-  String videoEditorLoopFoundLater(String seconds) {
-    return 'よりなめらかなループが見つかりました。$seconds秒遅く終わります。';
-  }
-
-  @override
-  String videoEditorLoopClosestEarlier(String seconds) {
-    return '完全に一致する位置はありませんが、これが最も近い位置です。$seconds秒早く終わります。';
-  }
-
-  @override
-  String videoEditorLoopClosestLater(String seconds) {
-    return '完全に一致する位置はありませんが、これが最も近い位置です。$seconds秒遅く終わります。';
-  }
-
-  @override
-  String get videoEditorLoopKeepLabel => '採用';
-
-  @override
-  String get videoEditorLoopKeepSemanticLabel => '新しいループ位置を採用';
-
-  @override
-  String get videoEditorLoopDiscardSemanticLabel => '元の終わりに戻す';
+  String get videoEditorLoopSemanticLabel => 'ループのつなぎ目を滑らかにする';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'すでになめらかにループしています。';
@@ -9981,8 +9952,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorLoopFailed => 'ループを確認できませんでした。もう一度お試しください。';
 
   @override
-  String get videoEditorLoopNoMatch =>
-      '継ぎ目のないループは見つかりませんでした。終わり付近に、動画の始まりと一致する部分がありません。';
+  String get videoEditorLoopNoMatch => 'このループは改善できませんでした';
 
   @override
   String get videoEditorKeyframeEffect => 'エフェクト';
@@ -13740,4 +13710,15 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'アカウントの削除は処理中ですが、ログアウトを完了できませんでした。もう一度お試しください。';
+
+  @override
+  String get videoEditorLoopRepairSmoothed => 'ループを滑らかにしました';
+
+  @override
+  String get videoEditorLoopRepairProgress => 'ループを調整中…';
+
+  @override
+  String videoEditorLoopRepairTrimmed(String seconds) {
+    return 'ループを滑らかにしました。$seconds秒を削除しました。';
+  }
 }

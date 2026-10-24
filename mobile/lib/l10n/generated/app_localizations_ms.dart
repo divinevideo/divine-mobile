@@ -10468,41 +10468,10 @@ class AppLocalizationsMs extends AppLocalizations {
       'Hilang jejak di pertengahan jalan. Lapisan kekal diam dari situ.';
 
   @override
-  String get videoEditorLoopLabel => 'Loop';
+  String get videoEditorLoopLabel => 'Baiki gelung';
 
   @override
-  String get videoEditorLoopSemanticLabel =>
-      'Cari titik loop yang lebih lancar';
-
-  @override
-  String videoEditorLoopFoundEarlier(String seconds) {
-    return 'Loop yang lebih lancar ditemui. Ia tamat $seconds s lebih awal.';
-  }
-
-  @override
-  String videoEditorLoopFoundLater(String seconds) {
-    return 'Loop yang lebih lancar ditemui. Ia tamat $seconds s lebih lewat.';
-  }
-
-  @override
-  String videoEditorLoopClosestEarlier(String seconds) {
-    return 'Tiada padanan sempurna, tetapi ini yang paling hampir. Ia tamat $seconds s lebih awal.';
-  }
-
-  @override
-  String videoEditorLoopClosestLater(String seconds) {
-    return 'Tiada padanan sempurna, tetapi ini yang paling hampir. Ia tamat $seconds s lebih lewat.';
-  }
-
-  @override
-  String get videoEditorLoopKeepLabel => 'Simpan';
-
-  @override
-  String get videoEditorLoopKeepSemanticLabel => 'Simpan titik loop baharu';
-
-  @override
-  String get videoEditorLoopDiscardSemanticLabel =>
-      'Kembalikan penghujung lama';
+  String get videoEditorLoopSemanticLabel => 'Lancarkan sambungan gelung';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'Ini sudah loop dengan lancar.';
@@ -10511,8 +10480,7 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorLoopFailed => 'Tidak dapat menyemak loop. Cuba lagi.';
 
   @override
-  String get videoEditorLoopNoMatch =>
-      'Loop lancar tidak ditemui. Tiada bahagian berhampiran penghujung yang sepadan dengan permulaan video.';
+  String get videoEditorLoopNoMatch => 'Gelung ini tidak dapat diperbaiki';
 
   @override
   String get videoEditorKeyframeEffect => 'Kesan';
@@ -14452,4 +14420,15 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Pemadaman akaun anda sedang diproses, tetapi kami tidak dapat menyelesaikan log keluar. Cuba lagi.';
+
+  @override
+  String get videoEditorLoopRepairSmoothed => 'Gelung dilancarkan';
+
+  @override
+  String get videoEditorLoopRepairProgress => 'Membaiki gelung anda…';
+
+  @override
+  String videoEditorLoopRepairTrimmed(String seconds) {
+    return 'Gelung dilancarkan. $seconds s dibuang.';
+  }
 }

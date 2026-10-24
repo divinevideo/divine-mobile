@@ -1,155 +1,140 @@
-// ABOUTME: Looks for where the last clip can end so the video loops without a
-// ABOUTME: visible jump, and holds the suggestion until it is kept (#10249).
+// ABOUTME: Coordinates cancellable loop repair and rejects late work after
+// ABOUTME: composition changes, cancellation, or editor teardown.
+
+import 'dart:async';
 
 import 'package:equatable/equatable.dart';
-import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:loop_alignment_repository/loop_alignment_repository.dart';
 import 'package:openvine/blocs/close_guard.dart';
-import 'package:openvine/constants/video_editor_constants.dart';
-import 'package:openvine/models/divine_video_clip.dart';
-import 'package:openvine/models/video_editor/loop_point_search.dart';
-import 'package:openvine/observability/reportable_error.dart';
-import 'package:openvine/services/video_editor/clip_loop_point_service.dart';
-import 'package:openvine/services/video_editor/video_render_failures.dart';
-import 'package:openvine/utils/detached_future.dart';
-import 'package:pro_video_editor/pro_video_editor.dart'
-    show RenderCanceledException;
 import 'package:unified_logger/unified_logger.dart';
+import 'package:uuid/uuid.dart';
 
 part 'loop_suggestion_state.dart';
 
-/// Suggests a trim of the last clip that makes the video loop seamlessly.
-///
-/// The clips stay in the clip editor: this only reports the trimmed clip,
-/// and the editor shows it, plays the seam, and keeps or drops it before it
-/// calls [resultHandled].
 class LoopSuggestionCubit extends Cubit<LoopSuggestionState>
     with CloseGuardedEmit<LoopSuggestionState> {
   LoopSuggestionCubit({
-    FindClipLoopPointFn? findLoopPoint,
-    CancelClipLoopPointFn? cancelSearch,
-  }) : _findLoopPoint = findLoopPoint ?? ClipLoopPointService.findLoopPoint,
-       _cancelSearch = cancelSearch ?? ClipLoopPointService.cancel,
+    required LoopAlignmentRepository repository,
+    String Function()? newTaskId,
+  }) : _repository = repository,
+       _newTaskId = newTaskId ?? const Uuid().v4,
        super(const LoopSuggestionState());
 
-  static const _logName = 'LoopSuggestionCubit';
+  final LoopAlignmentRepository _repository;
+  final String Function() _newTaskId;
 
-  final FindClipLoopPointFn _findLoopPoint;
-  final CancelClipLoopPointFn _cancelSearch;
+  bool _owns(String taskId) => !isClosed && state.taskId == taskId;
 
-  /// Looks for a smoother end of [clips]' last clip. Does nothing while a
-  /// search runs or a suggestion waits, or when [loopPointSearchFor] finds
-  /// nothing to compare.
-  Future<void> search(List<DivineVideoClip> clips) async {
-    if (state.status != LoopSuggestionStatus.idle) return;
-    final search = loopPointSearchFor(clips);
-    if (search == null) return;
-    final clip = clips.last;
-    final originalClips = List<DivineVideoClip>.unmodifiable(clips);
+  Future<void> fix(LoopRepairInput input) async {
+    if (isClosed || state.status != LoopSuggestionStatus.idle) return;
+    final taskId = 'loop_repair_${_newTaskId()}';
     emit(
       LoopSuggestionState(
         status: LoopSuggestionStatus.searching,
-        original: clip,
-        originalClips: originalClips,
+        taskId: taskId,
+        request: input,
       ),
     );
     try {
-      final point = await _findLoopPoint(
-        search: search,
-        taskId: ClipLoopPointService.taskIdFor(clip.id),
+      final result = await _repository.repair(
+        input,
+        taskId: taskId,
         onProgress: (progress) {
-          if (state.isSearching && state.clipId == clip.id) {
-            emitIfOpen(state.copyWith(progress: progress));
+          if (_owns(taskId) && state.isSearching && progress.isFinite) {
+            emit(state.withProgress(progress.clamp(0, 1)));
           }
         },
       );
-      Log.info(
-        '🔁 Loop point for clip ${clip.id}: end '
-        '${search.end.inMicroseconds} -> ${point.end.inMicroseconds} µs, '
-        'seam ${point.currentDifference.toStringAsFixed(4)} -> '
-        '${point.difference.toStringAsFixed(4)}',
-        name: _logName,
-        category: LogCategory.video,
-      );
-      final smoother =
-          point.end != search.end &&
-          point.difference <
-              point.currentDifference *
-                  VideoEditorConstants.loopPointImprovementShare;
-      const closeMatch = VideoEditorConstants.loopPointCloseMatchDifference;
+      if (!_owns(taskId)) {
+        await discard(result);
+        return;
+      }
       emitIfOpen(
-        smoother
-            ? LoopSuggestionState(
-                status: LoopSuggestionStatus.suggested,
-                progress: 1,
-                original: clip,
-                originalClips: originalClips,
-                suggested: clipEndingAt(clip, point.end),
-                isCloseMatch: point.difference <= closeMatch,
-              )
-            : LoopSuggestionState(
-                status: point.currentDifference <= closeMatch
-                    ? LoopSuggestionStatus.alreadySmooth
-                    : LoopSuggestionStatus.noMatch,
-                progress: 1,
-                original: clip,
-              ),
+        LoopSuggestionState(
+          status: switch (result.status) {
+            LoopRepairStatus.repaired => LoopSuggestionStatus.repaired,
+            LoopRepairStatus.alreadySmooth =>
+              LoopSuggestionStatus.alreadySmooth,
+            LoopRepairStatus.noMatch => LoopSuggestionStatus.noMatch,
+            LoopRepairStatus.unsupported => LoopSuggestionStatus.unsupported,
+          },
+          taskId: taskId,
+          request: input,
+          result: result,
+          progress: 1,
+        ),
       );
-    } on RenderCanceledException {
-      emitIfOpen(const LoopSuggestionState());
-    } on PlatformException catch (error, stackTrace) {
-      // A clip could not be decoded: an expected failure of the footage.
-      Log.error(
-        'Loop point search could not read a clip: $error',
-        name: _logName,
-        category: LogCategory.video,
+    } on LoopAlignmentCancelled {
+      if (_owns(taskId)) emitIfOpen(const LoopSuggestionState());
+    } catch (error, stack) {
+      if (!_owns(taskId)) return;
+      addError(error, stack);
+      emitIfOpen(
+        LoopSuggestionState(
+          status: error is LoopAlignmentTimeout
+              ? LoopSuggestionStatus.timedOut
+              : LoopSuggestionStatus.failed,
+          taskId: taskId,
+          request: input,
+        ),
       );
-      addError(error, stackTrace);
-      emitIfOpen(_failed(clip));
-    } on VideoRenderFailedException catch (error, stackTrace) {
-      // The watchdog gave up; it reported the timeout itself.
-      addError(error, stackTrace);
-      emitIfOpen(_failed(clip));
-    } catch (error, stackTrace) {
-      Log.error(
-        'Loop point search failed: $error',
-        name: _logName,
-        category: LogCategory.video,
-        error: error,
-        stackTrace: stackTrace,
-      );
-      addError(Reportable(error, context: 'search'), stackTrace);
-      emitIfOpen(_failed(clip));
     }
   }
 
-  static LoopSuggestionState _failed(DivineVideoClip clip) =>
-      LoopSuggestionState(status: LoopSuggestionStatus.failed, original: clip);
-
-  /// Stops the search that runs now; [state] then goes back to idle.
+  /// Invalidates synchronously, before awaiting native cancellation. Old
+  /// progress/completion and a late cancel can never change a new operation.
   Future<void> cancel() async {
-    final clipId = state.clipId;
-    if (!state.isSearching || clipId == null) return;
-    await _cancelSearch(ClipLoopPointService.taskIdFor(clipId));
+    final previous = state;
+    if (isClosed || previous.status == LoopSuggestionStatus.idle) return;
+    emit(const LoopSuggestionState());
+    try {
+      if (previous.isSearching && previous.taskId != null) {
+        await _repository.cancel(previous.taskId!);
+      } else if (previous.result case final result?) {
+        await discard(result);
+      }
+    } catch (error, stack) {
+      if (!isClosed) addError(error, stack);
+    }
   }
 
-  /// Forgets the last result once the editor kept, dropped or reported it.
+  void compositionChanged(String revision) {
+    if (state.request == null || state.request!.revision == revision) return;
+    unawaited(
+      cancel().catchError((Object error, StackTrace stack) {
+        if (!isClosed) addError(error, stack);
+      }),
+    );
+  }
+
+  /// Transfers a delivered result's ownership to the editor's application
+  /// listener, which must discard it if the atomic application is rejected.
   void resultHandled() {
-    if (state.isSearching || state.status == LoopSuggestionStatus.idle) return;
+    if (isClosed || state.isSearching) return;
     emit(const LoopSuggestionState());
   }
 
+  Future<void> discard(LoopRepairResult result) => _repository.discard(result);
+
   @override
-  Future<void> close() {
-    // The decoding would run on for a closed editor.
-    if (state.isSearching) {
-      runDetached(
-        cancel(),
-        'cancel loop point search',
-        logName: _logName,
+  Future<void> close() async {
+    final previous = state;
+    final closing = super.close();
+    try {
+      if (previous.isSearching && previous.taskId != null) {
+        await _repository.cancel(previous.taskId!);
+      } else if (previous.result case final result?) {
+        await discard(result);
+      }
+    } catch (error) {
+      Log.warning(
+        'Loop repair teardown could not finish: $error',
+        name: 'LoopSuggestionCubit',
         category: LogCategory.video,
       );
+    } finally {
+      await closing;
     }
-    return super.close();
   }
 }

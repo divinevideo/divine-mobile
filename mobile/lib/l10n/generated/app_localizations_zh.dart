@@ -9840,39 +9840,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorTrackLostPartway => '中途跟丢了，从那里起图层保持不动。';
 
   @override
-  String get videoEditorLoopLabel => '循环';
+  String get videoEditorLoopLabel => '优化循环';
 
   @override
-  String get videoEditorLoopSemanticLabel => '查找更顺滑的循环点';
-
-  @override
-  String videoEditorLoopFoundEarlier(String seconds) {
-    return '找到更顺滑的循环，提前 $seconds 秒结束。';
-  }
-
-  @override
-  String videoEditorLoopFoundLater(String seconds) {
-    return '找到更顺滑的循环，延后 $seconds 秒结束。';
-  }
-
-  @override
-  String videoEditorLoopClosestEarlier(String seconds) {
-    return '没有完全匹配的位置，这是最接近的一个，提前 $seconds 秒结束。';
-  }
-
-  @override
-  String videoEditorLoopClosestLater(String seconds) {
-    return '没有完全匹配的位置，这是最接近的一个，延后 $seconds 秒结束。';
-  }
-
-  @override
-  String get videoEditorLoopKeepLabel => '保留';
-
-  @override
-  String get videoEditorLoopKeepSemanticLabel => '保留新的循环点';
-
-  @override
-  String get videoEditorLoopDiscardSemanticLabel => '恢复原来的结尾';
+  String get videoEditorLoopSemanticLabel => '让循环衔接更流畅';
 
   @override
   String get videoEditorLoopAlreadySmooth => '已经循环得很顺滑了。';
@@ -9881,7 +9852,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorLoopFailed => '无法检查循环，请重试。';
 
   @override
-  String get videoEditorLoopNoMatch => '没有找到无缝循环。结尾附近没有与视频开头相符的画面。';
+  String get videoEditorLoopNoMatch => '无法改善此循环';
 
   @override
   String get videoEditorKeyframeEffect => '效果';
@@ -13572,4 +13543,15 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       '你的账号删除请求正在处理中，但我们未能完成退出登录。请重试。';
+
+  @override
+  String get videoEditorLoopRepairSmoothed => '循环已优化';
+
+  @override
+  String get videoEditorLoopRepairProgress => '正在优化循环…';
+
+  @override
+  String videoEditorLoopRepairTrimmed(String seconds) {
+    return '循环已优化。已移除 $seconds 秒。';
+  }
 }

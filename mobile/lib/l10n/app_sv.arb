@@ -2975,18 +2975,11 @@
   "videoEditorTrackNotFollowed": "Det gick inte att följa. Rama in något med fler detaljer.",
   "videoEditorTrackFailed": "Följningen fungerade inte. Försök igen.",
   "videoEditorTrackLostPartway": "Tappade bort det på vägen. Lagret står still därifrån.",
-  "videoEditorLoopLabel": "Loop",
-  "videoEditorLoopSemanticLabel": "Hitta en mjukare looppunkt",
-  "videoEditorLoopFoundEarlier": "Mjukare loop hittad. Den slutar {seconds} s tidigare.",
-  "videoEditorLoopFoundLater": "Mjukare loop hittad. Den slutar {seconds} s senare.",
-  "videoEditorLoopClosestEarlier": "Ingen perfekt träff, men det här är den närmaste. Den slutar {seconds} s tidigare.",
-  "videoEditorLoopClosestLater": "Ingen perfekt träff, men det här är den närmaste. Den slutar {seconds} s senare.",
-  "videoEditorLoopKeepLabel": "Behåll",
-  "videoEditorLoopKeepSemanticLabel": "Behåll den nya looppunkten",
-  "videoEditorLoopDiscardSemanticLabel": "Sätt tillbaka det gamla slutet",
+  "videoEditorLoopLabel": "Förbättra loopen",
+  "videoEditorLoopSemanticLabel": "Gör loopens övergång mjukare",
   "videoEditorLoopAlreadySmooth": "Den loopar redan mjukt.",
   "videoEditorLoopFailed": "Det gick inte att kolla loopen. Försök igen.",
-  "videoEditorLoopNoMatch": "Ingen sömlös loop hittades. Inget nära slutet matchar hur videon börjar.",
+  "videoEditorLoopNoMatch": "Det gick inte att förbättra den här loopen",
   "videoEditorKeyframeEffect": "Effekt",
   "videoEditorKeyframeCurveSegment": "Rörelse från nyckelbildruta {from} till {to}",
   "videoEditorLayerAnimationEnter": "In",
@@ -5833,43 +5826,46 @@
   "inboxLeaveGroupConfirmBody": "Den försvinner från din inkorg och nya meddelanden tar inte tillbaka den. Skriv i den igen för att gå med på nytt. De andra får inget besked.",
   "inboxLeaveGroupConfirmConfirm": "Lämna",
   "inboxLeftGroup": "Du lämnade gruppen",
-"listsDiscoveryEmpty": "Inga listor dök upp den här gången. Dra för att uppdatera.",
-"listsDiscoveryLoadingLabel": "Läser in listor",
-"listSearchPeopleUnavailable": "Personlistor är inte tillgängliga just nu.",
-"listSearchVideosUnavailable": "Videolistor är inte tillgängliga just nu.",
-"listPrivateConversionTooLarge": "Den här listan är för stor för att göras privat. Ta bort några videor först. Dina ändringar finns kvar här och har inte sparats än.",
-"authAccountCleanupFailed": "Det gick inte att rensa det förra kontots data. Försök igen.",
-"@peopleListsAddPersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  "listsDiscoveryEmpty": "Inga listor dök upp den här gången. Dra för att uppdatera.",
+  "listsDiscoveryLoadingLabel": "Läser in listor",
+  "listSearchPeopleUnavailable": "Personlistor är inte tillgängliga just nu.",
+  "listSearchVideosUnavailable": "Videolistor är inte tillgängliga just nu.",
+  "listPrivateConversionTooLarge": "Den här listan är för stor för att göras privat. Ta bort några videor först. Dina ändringar finns kvar här och har inte sparats än.",
+  "authAccountCleanupFailed": "Det gick inte att rensa det förra kontots data. Försök igen.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"@peopleListsRemovePersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"peopleListsAddPersonSemanticLabel": "Lägg till {name} i listan",
-"peopleListsMembershipUpdateFailed": "Kunde inte uppdatera listan. Försök igen.",
-"peopleListsAddPeopleSearchHint": "Sök personer",
-"peopleListsRemovePersonSemanticLabel": "Ta bort {name} från listan",
-"listMakePublicLabel": "Gör offentlig",
-"listCollaboratorsNone": "Inga",
-"listAddCollaboratorTitle": "Lägg till medarbetare",
-"listMakePublicSubtitle": "Låt andra se den här listan",
-"listCollaboratorSearchHint": "Sök i Divine...",
-"listVideoNotAdded": "Din lista skapades, men den här videon lades inte till.",
-"listPrivateCollaboratorsWarning": "Om du gör den här listan privat tas även dess medskapare bort. Bara du kommer att kunna lägga till videor.",
-"listVideoPendingSync": "Din lista och video är sparade här. Videon väntar på synkronisering.",
-"listRetrySync": "Synkronisera nu",
-"listPermissionsUnconfirmed": "Det gick inte att bekräfta ändringen. Försök igen.",
-"listRecoveryPending": "Den här listan har ändringar som väntar på synkronisering.",
-"listPermissionsRecoveryPending": "Din ändring har godkänts. Tryck på Synkronisera nu för att slutföra sparandet. Redigering är pausad tills dess.",
-"listRecoveryReadOnly": "Vissa sparade ändringar i videolistor behöver återställas. Du kan visa videolistor, men redigeringen är pausad.",
-"listAddToLists": "Lägg till i listor",
-"accountDeletionProcessingSignOutFailed": "Ditt konto håller på att raderas, men vi kunde inte slutföra utloggningen. Försök igen."
+  },
+  "peopleListsAddPersonSemanticLabel": "Lägg till {name} i listan",
+  "peopleListsMembershipUpdateFailed": "Kunde inte uppdatera listan. Försök igen.",
+  "peopleListsAddPeopleSearchHint": "Sök personer",
+  "peopleListsRemovePersonSemanticLabel": "Ta bort {name} från listan",
+  "listMakePublicLabel": "Gör offentlig",
+  "listCollaboratorsNone": "Inga",
+  "listAddCollaboratorTitle": "Lägg till medarbetare",
+  "listMakePublicSubtitle": "Låt andra se den här listan",
+  "listCollaboratorSearchHint": "Sök i Divine...",
+  "listVideoNotAdded": "Din lista skapades, men den här videon lades inte till.",
+  "listPrivateCollaboratorsWarning": "Om du gör den här listan privat tas även dess medskapare bort. Bara du kommer att kunna lägga till videor.",
+  "listVideoPendingSync": "Din lista och video är sparade här. Videon väntar på synkronisering.",
+  "listRetrySync": "Synkronisera nu",
+  "listPermissionsUnconfirmed": "Det gick inte att bekräfta ändringen. Försök igen.",
+  "listRecoveryPending": "Den här listan har ändringar som väntar på synkronisering.",
+  "listPermissionsRecoveryPending": "Din ändring har godkänts. Tryck på Synkronisera nu för att slutföra sparandet. Redigering är pausad tills dess.",
+  "listRecoveryReadOnly": "Vissa sparade ändringar i videolistor behöver återställas. Du kan visa videolistor, men redigeringen är pausad.",
+  "listAddToLists": "Lägg till i listor",
+  "accountDeletionProcessingSignOutFailed": "Ditt konto håller på att raderas, men vi kunde inte slutföra utloggningen. Försök igen.",
+  "videoEditorLoopRepairSmoothed": "Loopen är mjukare",
+  "videoEditorLoopRepairProgress": "Förbättrar din loop…",
+  "videoEditorLoopRepairTrimmed": "Loopen är mjukare. Tog bort {seconds} s."
 }

@@ -25,7 +25,7 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_acti
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_overlay_actions.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor_view.dart';
-import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_loop_suggestion_controls.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_loop_repair_listener.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/tracking/layer_tracking_actions.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/video_editor_tune_bottom_bar.dart';
@@ -55,7 +55,7 @@ class VideoEditorScaffold extends StatelessWidget {
         resizeToAvoidBottomInset: false,
         floatingActionButton: const _AddElementFab(),
         body: LayerTrackingResultListener(
-          child: LoopSuggestionResultListener(
+          child: LoopRepairResultListener(
             child: ClipEditorResultListeners(
               child: _ScaffoldBody(isLoading: isLoading),
             ),
@@ -103,6 +103,7 @@ class _ScaffoldBody extends StatelessWidget {
         const ClipOperationProgressOverlays(),
 
         const LayerTrackingProgressOverlay(),
+        const LoopRepairProgressOverlay(),
       ],
     );
   }
@@ -405,7 +406,7 @@ class _AddElementFab extends StatelessWidget {
     // Anything added now would be saved with the previewed loop trim.
     final hasLoopSuggestion = context.select(
       (LoopSuggestionCubit c) =>
-          c.state.status == LoopSuggestionStatus.suggested,
+          c.state.status == LoopSuggestionStatus.searching,
     );
 
     if (shouldHide ||

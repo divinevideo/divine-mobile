@@ -20,7 +20,6 @@ import 'package:openvine/models/video_editor/clip_placeholder_fill.dart';
 import 'package:openvine/models/video_editor/clip_speed_choice.dart';
 import 'package:openvine/models/video_editor/clip_style.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
-import 'package:openvine/models/video_editor/loop_point_search.dart';
 import 'package:openvine/screens/video_editor/video_clip_chroma_key_screen.dart';
 import 'package:openvine/screens/video_editor/video_clip_transform_screen.dart';
 import 'package:openvine/services/video_editor/video_editor_split_service.dart';
@@ -32,6 +31,7 @@ import 'package:openvine/widgets/video_editor/stop_motion/stop_motion_frame_comm
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_clip_speed_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_detach_clip_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_equalizer_sheet.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_loop_repair_listener.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_action_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
@@ -160,13 +160,9 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
     final hasCopiedStyle = context.select(
       (StyleClipboardCubit cubit) => cubit.state.clipStyle != null,
     );
-    // The loop's seam is at the end of the last clip, so only that clip
-    // offers to find a smoother one.
-    final canFindLoop = context.select((ClipEditorBloc bloc) {
-      final state = bloc.state;
-      return state.currentClipIndex == state.clips.length - 1 &&
-          loopPointSearchFor(state.clips) != null;
-    });
+    final canFindLoop = context.select(
+      (ClipEditorBloc bloc) => bloc.state.clips.isNotEmpty,
+    );
     final hasPendingClipOperation = context.select(
       (ClipEditorBloc bloc) => bloc.state.hasPendingClipOperation,
     );
@@ -604,13 +600,7 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
     );
   }
 
-  /// Looks for where the last clip can end so the video loops without a
-  /// visible jump; [LoopSuggestionResultListener] shows what it finds.
-  Future<void> _findLoop(BuildContext context) async {
-    final state = context.read<ClipEditorBloc>().state;
-    if (state.hasPendingClipOperation) return;
-    await context.read<LoopSuggestionCubit>().search(state.clips);
-  }
+  void _findLoop(BuildContext context) => fixEditorLoop(context);
 
   /// Opens the equalizer of the selected clip. The preview loops the clip and
   /// plays every change while the sheet is open; a confirmed one becomes one

@@ -18,6 +18,8 @@ import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_edi
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_layer_multi_select_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_marker_controls.dart';
 
+import '../../../../helpers/video_editor/loop_repair.dart';
+
 class _MockVideoEditorMainBloc
     extends MockBloc<VideoEditorMainEvent, VideoEditorMainState>
     implements VideoEditorMainBloc {}
@@ -65,7 +67,10 @@ void main() {
                 BlocProvider<ClipEditorBloc>.value(value: clipBloc),
                 BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
                 BlocProvider(create: (_) => StyleClipboardCubit()),
-                BlocProvider(create: (_) => LoopSuggestionCubit()),
+                BlocProvider(
+                  create: (_) =>
+                      LoopSuggestionCubit(repository: noMatchLoopRepository()),
+                ),
               ],
               child: TimelineControlsBar(
                 isEditing: isEditing,

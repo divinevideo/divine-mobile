@@ -29,6 +29,8 @@ class ClipEditorState extends Equatable {
     this.reversingClipId,
     this.lastReverseResult,
     this.isStabilizing = false,
+    this.isRepairingLoop = false,
+    this.lastLoopRepair,
     this.stabilizingClipId,
     this.stabilizeRenderId,
     this.stabilizeProgress,
@@ -185,6 +187,9 @@ class ClipEditorState extends Equatable {
 
   /// Whether a clip is being stabilized, or its stabilization undone.
   final bool isStabilizing;
+
+  final bool isRepairingLoop;
+  final ClipLoopRepairResult? lastLoopRepair;
 
   /// The clip being stabilized while [isStabilizing].
   final String? stabilizingClipId;
@@ -474,6 +479,10 @@ class ClipEditorState extends Equatable {
   /// Whether an asynchronous clip operation may still publish a composition.
   /// A temporary loop trim must not enter that operation's saved snapshot.
   bool get hasPendingClipOperation =>
+      isRepairingLoop || hasPendingMediaOperation;
+
+  /// Other native edits must not race a loop replacement.
+  bool get hasPendingMediaOperation =>
       isExtractingAudio ||
       isSplitting ||
       isReversing ||
@@ -523,6 +532,8 @@ class ClipEditorState extends Equatable {
     bool clearBoomerangingClipId = false,
     ClipBoomerangResult? lastBoomerangResult,
     bool? isStabilizing,
+    bool? isRepairingLoop,
+    ClipLoopRepairResult? lastLoopRepair,
     String? stabilizingClipId,
     bool clearStabilizingClipId = false,
     String? stabilizeRenderId,
@@ -617,6 +628,8 @@ class ClipEditorState extends Equatable {
           : (reversingClipId ?? this.reversingClipId),
       lastReverseResult: lastReverseResult ?? this.lastReverseResult,
       isStabilizing: isStabilizing ?? this.isStabilizing,
+      isRepairingLoop: isRepairingLoop ?? this.isRepairingLoop,
+      lastLoopRepair: lastLoopRepair ?? this.lastLoopRepair,
       stabilizingClipId: clearStabilizingClipId
           ? null
           : (stabilizingClipId ?? this.stabilizingClipId),
@@ -753,6 +766,8 @@ class ClipEditorState extends Equatable {
     reversingClipId,
     identityHashCode(lastReverseResult),
     isStabilizing,
+    isRepairingLoop,
+    identityHashCode(lastLoopRepair),
     stabilizingClipId,
     stabilizeRenderId,
     stabilizeProgress,
@@ -1329,4 +1344,30 @@ final class DetachedClipReattachResult {
   /// a fresh one: the layer's clip is still on the timeline for a repeat, and
   /// gone again once an undo has put the layer back on the canvas.
   final String clipId;
+}
+
+/// One-shot application signal. The listener owns the single history write.
+sealed class ClipLoopRepairResult {
+  const ClipLoopRepairResult(this.repair, this.operationId);
+  final LoopRepairResult repair;
+  final String operationId;
+}
+
+final class ClipLoopRepairSuccess extends ClipLoopRepairResult {
+  const ClipLoopRepairSuccess(
+    super.repair,
+    super.operationId, {
+    required this.before,
+    required this.after,
+  });
+  final List<DivineVideoClip> before;
+  final List<DivineVideoClip> after;
+}
+
+final class ClipLoopRepairDiscarded extends ClipLoopRepairResult {
+  const ClipLoopRepairDiscarded(super.repair, super.operationId);
+}
+
+final class ClipLoopRepairFailure extends ClipLoopRepairResult {
+  const ClipLoopRepairFailure(super.repair, super.operationId);
 }

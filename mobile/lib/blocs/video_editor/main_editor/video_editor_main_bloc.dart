@@ -167,6 +167,7 @@ class VideoEditorMainBloc
     emit(
       state.copyWith(
         audition: audition,
+        auditionOwner: event.owner,
         pausesAfterAudition: startsPlayback,
         isAuditionSeekPending: !isInside,
         seekPosition: isInside ? null : event.start,
@@ -186,7 +187,10 @@ class VideoEditorMainBloc
     VideoEditorAuditionEnded event,
     Emitter<VideoEditorMainState> emit,
   ) {
-    if (state.audition == null) return;
+    if (state.audition == null ||
+        (event.owner != null && event.owner != state.auditionOwner)) {
+      return;
+    }
     final pauses = state.pausesAfterAudition && state.isPlaying;
     emit(
       state.copyWith(

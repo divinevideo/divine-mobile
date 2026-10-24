@@ -10370,40 +10370,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Kehilangan jejak di tengah jalan. Lapisan diam dari situ.';
 
   @override
-  String get videoEditorLoopLabel => 'Loop';
+  String get videoEditorLoopLabel => 'Perbaiki loop';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'Cari titik loop yang lebih mulus';
-
-  @override
-  String videoEditorLoopFoundEarlier(String seconds) {
-    return 'Loop yang lebih mulus ditemukan. Berakhir $seconds dtk lebih awal.';
-  }
-
-  @override
-  String videoEditorLoopFoundLater(String seconds) {
-    return 'Loop yang lebih mulus ditemukan. Berakhir $seconds dtk lebih lambat.';
-  }
-
-  @override
-  String videoEditorLoopClosestEarlier(String seconds) {
-    return 'Tidak ada yang benar-benar cocok, tapi ini yang paling dekat. Berakhir $seconds dtk lebih awal.';
-  }
-
-  @override
-  String videoEditorLoopClosestLater(String seconds) {
-    return 'Tidak ada yang benar-benar cocok, tapi ini yang paling dekat. Berakhir $seconds dtk lebih lambat.';
-  }
-
-  @override
-  String get videoEditorLoopKeepLabel => 'Simpan';
-
-  @override
-  String get videoEditorLoopKeepSemanticLabel => 'Simpan titik loop baru';
-
-  @override
-  String get videoEditorLoopDiscardSemanticLabel =>
-      'Kembalikan akhir sebelumnya';
+  String get videoEditorLoopSemanticLabel => 'Haluskan sambungan loop';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'Ini sudah loop dengan mulus.';
@@ -10412,8 +10382,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorLoopFailed => 'Loop tidak bisa diperiksa. Coba lagi.';
 
   @override
-  String get videoEditorLoopNoMatch =>
-      'Loop mulus tidak ditemukan. Tidak ada bagian di dekat akhir yang cocok dengan awal video.';
+  String get videoEditorLoopNoMatch => 'Loop ini belum bisa diperbaiki';
 
   @override
   String get videoEditorKeyframeEffect => 'Efek';
@@ -14350,4 +14319,15 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Akunmu sedang dihapus, tapi kami belum bisa mengeluarkanmu. Coba lagi.';
+
+  @override
+  String get videoEditorLoopRepairSmoothed => 'Loop diperhalus';
+
+  @override
+  String get videoEditorLoopRepairProgress => 'Memperbaiki loop kamu…';
+
+  @override
+  String videoEditorLoopRepairTrimmed(String seconds) {
+    return 'Loop diperhalus. $seconds dtk dihapus.';
+  }
 }

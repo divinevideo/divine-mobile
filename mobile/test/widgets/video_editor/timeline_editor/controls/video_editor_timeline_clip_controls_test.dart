@@ -35,6 +35,7 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 import '../../../../helpers/scroll.dart';
+import '../../../../helpers/video_editor/loop_repair.dart';
 
 class _MockClipEditorBloc extends MockBloc<ClipEditorEvent, ClipEditorState>
     implements ClipEditorBloc {}
@@ -89,7 +90,10 @@ void main() {
               providers: [
                 BlocProvider<ClipEditorBloc>.value(value: bloc),
                 BlocProvider.value(value: clipboard),
-                BlocProvider(create: (_) => LoopSuggestionCubit()),
+                BlocProvider(
+                  create: (_) =>
+                      LoopSuggestionCubit(repository: noMatchLoopRepository()),
+                ),
               ],
               child: TimelineClipControls(
                 playheadPosition: ValueNotifier(playhead),
@@ -170,7 +174,11 @@ void main() {
                   providers: [
                     BlocProvider<ClipEditorBloc>.value(value: bloc),
                     BlocProvider.value(value: clipboard),
-                    BlocProvider(create: (_) => LoopSuggestionCubit()),
+                    BlocProvider(
+                      create: (_) => LoopSuggestionCubit(
+                        repository: noMatchLoopRepository(),
+                      ),
+                    ),
                     BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
                   ],
                   child: TimelineClipControls(
@@ -264,7 +272,11 @@ void main() {
                         providers: [
                           BlocProvider<ClipEditorBloc>.value(value: bloc),
                           BlocProvider.value(value: clipboard),
-                          BlocProvider(create: (_) => LoopSuggestionCubit()),
+                          BlocProvider(
+                            create: (_) => LoopSuggestionCubit(
+                              repository: noMatchLoopRepository(),
+                            ),
+                          ),
                           BlocProvider<TimelineOverlayBloc>.value(
                             value: overlayBloc,
                           ),
@@ -374,7 +386,9 @@ void main() {
         expect(controls.onLoop, isNotNull);
       });
 
-      testWidgets('is not offered on an earlier clip', (tester) async {
+      testWidgets('is offered for the whole edit from an earlier clip', (
+        tester,
+      ) async {
         when(
           () => bloc.state,
         ).thenReturn(ClipEditorState(clips: [clip('a'), clip('b')]));
@@ -384,7 +398,7 @@ void main() {
         final controls = tester.widget<VideoEditorTimelineControls>(
           find.byType(VideoEditorTimelineControls),
         );
-        expect(controls.onLoop, isNull);
+        expect(controls.onLoop, isNotNull);
       });
     });
 
@@ -1266,7 +1280,11 @@ void main() {
                     providers: [
                       BlocProvider<ClipEditorBloc>.value(value: bloc),
                       BlocProvider.value(value: clipboard),
-                      BlocProvider(create: (_) => LoopSuggestionCubit()),
+                      BlocProvider(
+                        create: (_) => LoopSuggestionCubit(
+                          repository: noMatchLoopRepository(),
+                        ),
+                      ),
                       BlocProvider<TimelineOverlayBloc>.value(
                         value: overlayBloc,
                       ),

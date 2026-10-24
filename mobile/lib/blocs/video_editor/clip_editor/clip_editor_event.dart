@@ -725,3 +725,25 @@ class ClipEditorSaveClipToLibraryRequested extends ClipEditorEvent {
   @override
   List<Object?> get props => [clipId, overlays];
 }
+
+/// Mirrors the loop operation into the shared pending-operation guard.
+final class ClipEditorLoopRepairPendingChanged extends ClipEditorEvent {
+  const ClipEditorLoopRepairPendingChanged(this.pending);
+  final bool pending;
+  @override
+  List<Object?> get props => [pending];
+}
+
+/// Publishes a verified composition in one emission after checking its source.
+final class ClipEditorLoopRepairApplied extends ClipEditorEvent {
+  ClipEditorLoopRepairApplied({
+    required List<DivineVideoClip> expectedClips,
+    required this.result,
+    required this.operationId,
+  }) : expectedClips = List.unmodifiable(expectedClips);
+  final List<DivineVideoClip> expectedClips;
+  final LoopRepairResult result;
+  final String operationId;
+  @override
+  List<Object?> get props => [expectedClips, result, operationId];
+}
