@@ -22,7 +22,7 @@ Requirements: Python 3 and FFmpeg. Run from this directory:
 python3 prepare_media.py
 ```
 
-By default this samples the three videos already checked into the repository's seed-media directory. It only reads those content-addressed originals. All resized clips, JPEG frames, build products, debug signing keys, recordings, and test artifacts are ignored by Git. Do not add generated media or real account identifiers to the branch.
+By default this samples the three videos already checked into the repository's seed-media directory. It only reads those content-addressed originals. Resized clips, JPEG frames, build products, debug signing keys, recordings, and test artifacts stay ignored by Git. The two review screenshots under `screenshots/` are intentionally checked in so they can be embedded in the PR. Do not add generated video assets or real account identifiers to the branch.
 
 To try your own human-made clips, provide exactly three local files, each at least two seconds long:
 
