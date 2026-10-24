@@ -21,6 +21,7 @@ import 'package:dm_repository/src/dm_decrypt_isolate.dart';
 import 'package:dm_repository/src/dm_decryption_worker.dart';
 import 'package:dm_repository/src/dm_message_size.dart';
 import 'package:dm_repository/src/dm_reactions_repository.dart';
+import 'package:dm_repository/src/dm_read_state_writer.dart';
 import 'package:dm_repository/src/dm_removal_policy.dart';
 import 'package:dm_repository/src/dm_repository_reportable_sites.dart';
 import 'package:dm_repository/src/dm_send_budget.dart';
@@ -571,6 +572,8 @@ class DmRepository {
     RemovedMessageIdsDao? removedMessageIdsDao,
     DmSyncState? syncState,
     AccountStateRepository? accountStateRepository,
+    void Function(String owner, Future<void> Function() close)?
+    onReadOwnerCreated,
     NIP17MessageService? messageService,
     String? userPubkey,
     NostrSigner? signer,
@@ -602,6 +605,11 @@ class DmRepository {
        _removedMessageIdsDao = removedMessageIdsDao,
        _syncState = syncState,
        _accountStateRepository = accountStateRepository,
+       _readStateWriter = DmReadStateWriter(
+         conversations: conversationsDao,
+         syncState: syncState,
+         onOwnerCreated: onReadOwnerCreated,
+       ),
        _messageService = messageService,
        _userPubkey = userPubkey ?? '',
        _signer = signer,
@@ -664,6 +672,19 @@ class DmRepository {
   final RemovedMessageIdsDao? _removedMessageIdsDao;
 
   final DmSyncState? _syncState;
+  final DmReadStateWriter _readStateWriter;
+
+  DmReadWriteLease _readLease(String owner) {
+    final generation = _resetGeneration;
+    return _readStateWriter.lease(
+      owner,
+      () =>
+          !_disposed && _resetGeneration == generation && _ownerPubkey == owner,
+    );
+  }
+
+  /// Fences this provider's local read actions and drains issued writes.
+  Future<void> closeLocalReadState() => _readStateWriter.close();
   final AccountStateRepository? _accountStateRepository;
   StreamSubscription<Map<String, Object?>>? _dismissalSubscription;
   Future<void> _dismissalTail = Future<void>.value();
@@ -683,17 +704,15 @@ class DmRepository {
   }) {
     final state = _accountStateRepository;
     final owner = ownerPubkey ?? _ownerPubkey;
-    final generation = _resetGeneration;
     if (state == null ||
         owner == null ||
         state.pubkey != owner ||
         _ownerPubkey != owner) {
       return Future<void>.value();
     }
+    final lease = _readLease(owner);
     Future<void> reconcile() async {
-      if (_disposed ||
-          generation != _resetGeneration ||
-          _ownerPubkey != owner) {
+      if (!lease.isCurrent) {
         return;
       }
       final rows = <ConversationRow>[];
@@ -726,12 +745,10 @@ class DmRepository {
           };
         }
       }
-      if (_disposed ||
-          generation != _resetGeneration ||
-          _ownerPubkey != owner) {
+      if (!lease.isCurrent) {
         return;
       }
-      if (seeds.isNotEmpty) await state.seed(seeds);
+      if (seeds.isNotEmpty) await lease.write(() => state.seed(seeds));
       final entries = conversationId == null
           ? state.values.entries
           : <MapEntry<String, Object?>>[
@@ -740,31 +757,35 @@ class DmRepository {
                   MapEntry(key, state.value(key)),
             ];
       for (final entry in entries) {
-        if (_disposed ||
-            generation != _resetGeneration ||
-            _ownerPubkey != owner) {
+        if (!lease.isCurrent) {
           return;
         }
         final participants = entry.key.split(',');
         if (participants.length < 2 || !participants.contains(owner)) continue;
         final value = entry.value;
         if (value == null) {
-          await _conversationsDao.applySyncedDismissal(
-            computeConversationId(participants),
-            ownerPubkey: owner,
-            dismissed: false,
+          await lease.write(
+            () => _conversationsDao.applySyncedDismissal(
+              computeConversationId(participants),
+              ownerPubkey: owner,
+              dismissed: false,
+            ),
           );
         } else if (value is Map &&
             value['through'] is int &&
             value['known'] is List) {
           final known = value['known'] as List;
           if (known.any((id) => id is! String)) continue;
-          await _conversationsDao.applySyncedDismissal(
-            computeConversationId(participants),
-            ownerPubkey: owner,
-            dismissed: true,
-            boundaryTimestamp: DmClock.now().atMostNow(value['through'] as int),
-            knownMessageIds: known.cast<String>().toSet(),
+          await lease.write(
+            () => _conversationsDao.applySyncedDismissal(
+              computeConversationId(participants),
+              ownerPubkey: owner,
+              dismissed: true,
+              boundaryTimestamp: DmClock.now().atMostNow(
+                value['through'] as int,
+              ),
+              knownMessageIds: known.cast<String>().toSet(),
+            ),
           );
         }
       }
@@ -3137,6 +3158,7 @@ class DmRepository {
     // have cursor/read-state writes after it. Preserve the handles captured
     // above and wait for every writer to observe the teardown before declaring
     // the repository quiescent. See #7318.
+    await _readStateWriter.drain();
     await postAuthMaintenance;
     await historyDrain;
     await pendingDecryptRetry;
@@ -10699,16 +10721,25 @@ class DmRepository {
       );
       return false;
     }
-    final boundaries = await _rememberReadActions(owner, {conversationId});
+    final lease = _readLease(owner);
+    final boundaries = await _readStateWriter.remember(lease, {
+      conversationId,
+    }, _participantTupleKey);
+    if (!lease.isCurrent) return false;
     final boundary = boundaries[conversationId];
-    final written = _syncState == null
-        ? await _conversationsDao.markAsRead(conversationId, ownerPubkey: owner)
-        : boundary != null &&
-              await _applyReadCursorPreservingBoundary(
-                conversationId,
-                boundary,
-                ownerPubkey: owner,
-              );
+    final written = await lease.write(
+      () async => _syncState == null
+          ? await _conversationsDao.markAsRead(
+              conversationId,
+              ownerPubkey: owner,
+            )
+          : boundary != null &&
+                await _applyReadCursorPreservingBoundary(
+                  conversationId,
+                  boundary,
+                  ownerPubkey: owner,
+                ),
+    );
     if (!written) {
       // Info, not warning: opening a thread that has no row yet lands here.
       Log.info(
@@ -10738,19 +10769,30 @@ class DmRepository {
       return false;
     }
     final ids = conversationIds.toSet().toList();
-    final boundaries = await _rememberReadActions(owner, ids.toSet());
+    final lease = _readLease(owner);
+    final boundaries = await _readStateWriter.remember(
+      lease,
+      ids.toSet(),
+      _participantTupleKey,
+    );
+    if (!lease.isCurrent) return false;
     var written = 0;
     if (_syncState == null) {
-      written = await _conversationsDao.markMultipleAsRead(
-        ids,
-        ownerPubkey: owner,
+      written = await lease.write(
+        () => _conversationsDao.markMultipleAsRead(
+          ids,
+          ownerPubkey: owner,
+        ),
       );
     } else {
       for (final entry in boundaries.entries) {
-        if (await _applyReadCursorPreservingBoundary(
-          entry.key,
-          entry.value,
-          ownerPubkey: owner,
+        if (!lease.isCurrent) return false;
+        if (await lease.write(
+          () => _applyReadCursorPreservingBoundary(
+            entry.key,
+            entry.value,
+            ownerPubkey: owner,
+          ),
         )) {
           written++;
         }
@@ -10777,6 +10819,8 @@ class DmRepository {
     if (owner == null) {
       throw StateError('Cannot dismiss a conversation without a known owner.');
     }
+    final lease = _readLease(owner);
+    if (!lease.isCurrent) return;
     final state = _accountStateRepository;
     if (state != null || _syncState != null) {
       if (state != null && state.pubkey != owner) {
@@ -10786,6 +10830,7 @@ class DmRepository {
         conversationId,
         ownerPubkey: owner,
       );
+      if (!lease.isCurrent) return;
       if (row == null) throw StateError('Conversation is no longer available.');
       final key = _participantTupleKey(row.participantPubkeys);
       if (key == null) {
@@ -10795,37 +10840,48 @@ class DmRepository {
         conversationId,
         ownerPubkey: owner,
       );
+      if (!lease.isCurrent) return;
       if (boundary == null) {
         throw StateError('Conversation is no longer available.');
       }
       if (dismissed) {
-        await _syncState?.rememberReadCursors(
-          owner,
-          {key: boundary.timestamp},
-          boundaryMessageIds: {key: boundary.knownMessageIds},
+        await lease.write(
+          () async => _syncState?.rememberReadCursors(
+            owner,
+            {key: boundary.timestamp},
+            boundaryMessageIds: {key: boundary.knownMessageIds},
+          ),
         );
+        if (!lease.isCurrent) return;
       }
-      await state?.setValue(
-        key,
-        dismissed
-            ? {
-                'through': boundary.timestamp,
-                'known': boundary.knownMessageIds.toList()..sort(),
-              }
-            : null,
+      await lease.write(
+        () async => state?.setValue(
+          key,
+          dismissed
+              ? {
+                  'through': boundary.timestamp,
+                  'known': boundary.knownMessageIds.toList()..sort(),
+                }
+              : null,
+        ),
       );
-      await _conversationsDao.applySyncedDismissal(
-        conversationId,
-        ownerPubkey: owner,
-        dismissed: dismissed,
-        boundaryTimestamp: boundary.timestamp,
-        knownMessageIds: boundary.knownMessageIds,
+      if (!lease.isCurrent) return;
+      await lease.write(
+        () => _conversationsDao.applySyncedDismissal(
+          conversationId,
+          ownerPubkey: owner,
+          dismissed: dismissed,
+          boundaryTimestamp: boundary.timestamp,
+          knownMessageIds: boundary.knownMessageIds,
+        ),
       );
     } else {
-      final changed = await _conversationsDao.setDismissed(
-        conversationId,
-        ownerPubkey: owner,
-        dismissed: dismissed,
+      final changed = await lease.write(
+        () => _conversationsDao.setDismissed(
+          conversationId,
+          ownerPubkey: owner,
+          dismissed: dismissed,
+        ),
       );
       if (!changed) throw StateError('Conversation is no longer available.');
     }
@@ -10836,46 +10892,10 @@ class DmRepository {
   // Cross-device read-state sync (#4977)
   // ---------------------------------------------------------------------------
 
-  Future<Map<String, int>> _rememberReadActions(
-    String owner,
-    Set<String> ids,
-  ) async {
-    final sync = _syncState;
-    if (sync == null) return {};
-    final rows = await _conversationsDao.getAllConversations(
-      ownerPubkey: owner,
-    );
-    final cursors = <String, int>{};
-    final boundaries = <String, int>{};
-    final knownIds = <String, Set<String>>{};
-    for (final row in rows) {
-      if (!ids.contains(row.id)) continue;
-      final tuple = _participantTupleKey(row.participantPubkeys);
-      if (tuple == null) continue;
-      final read = row.lastReadTimestamp ?? 0;
-      final captured = await _conversationsDao.captureDismissalBoundary(
-        row.id,
-        ownerPubkey: owner,
-      );
-      if (captured == null) continue;
-      cursors[tuple] = captured.timestamp > read ? captured.timestamp : read;
-      knownIds[tuple] = captured.knownMessageIds;
-      boundaries[row.id] = cursors[tuple]!;
-    }
-    if (cursors.isNotEmpty) {
-      await sync.rememberReadCursors(
-        owner,
-        cursors,
-        boundaryMessageIds: knownIds,
-      );
-    }
-    return boundaries;
-  }
-
   /// Schedule a debounced publish of the read-state marker so a burst of reads
   /// coalesces into one self-encrypted kind-30078 marker.
   void _scheduleReadMarkerPublish() {
-    if (!isInitialized) return;
+    if (_disposed || !isInitialized) return;
     _readMarkerDebounce?.cancel();
     _readMarkerDebounce = Timer(
       _readMarkerDebounceDelay,
@@ -10946,14 +10966,18 @@ class DmRepository {
     final gen = _resetGeneration;
     final owner = _ownerPubkey;
     if (owner == null) return;
-    final revision = _syncState?.pendingReadRevision(owner) ?? 0;
-    if (_syncState != null && revision == 0) return;
+    final lease = _readLease(owner);
+    if (!lease.isCurrent) return;
     try {
       final conversations = await _conversationsDao.getAllConversations(
         ownerPubkey: owner,
       );
-      if (_disposed || _resetGeneration != gen) return;
-      final readMap = <String, int>{...?_syncState?.readCursors(owner)};
+      if (!lease.isCurrent) return;
+      final snapshot = await _syncState?.readPublicationSnapshot(owner);
+      if (!lease.isCurrent) return;
+      final revision = snapshot?.revision ?? 0;
+      if (_syncState != null && revision == 0) return;
+      final readMap = <String, int>{...?snapshot?.cursors};
       for (final convo in conversations) {
         final cursor = convo.lastReadTimestamp;
         if (cursor == null || cursor <= 0) continue;
@@ -10967,6 +10991,7 @@ class DmRepository {
         'v': _readMarkerPayloadVersion,
         'read': readMap,
       });
+      if (!lease.isCurrent) return;
       final published = await service.publishSelfApplicationMarker(
         content: content,
         tags: const [
@@ -10977,7 +11002,11 @@ class DmRepository {
           !_disposed &&
           _resetGeneration == gen &&
           _ownerPubkey == owner) {
-        await _syncState?.acknowledgeReadRevision(owner, revision);
+        if (lease.isCurrent) {
+          await lease.write(
+            () async => _syncState?.acknowledgeReadRevision(owner, revision),
+          );
+        }
       }
     } on Object catch (e, stackTrace) {
       Log.error(

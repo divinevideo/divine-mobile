@@ -105,6 +105,55 @@ void main() {
       },
     );
 
+    test(
+      'local account key enumeration isolates complete compatibility inputs',
+      () {
+        expect(BadgeRepository.localAccountKeys(_pubkey(1)), [
+          'dismissed_badge_coordinates_${_pubkey(1)}',
+          'dismissed_badge_awards_${_pubkey(1)}',
+        ]);
+        expect(
+          BadgeRepository.localAccountKeys(_pubkey(2)),
+          isNot(
+            contains('dismissed_badge_coordinates_${_pubkey(1)}'),
+          ),
+        );
+      },
+    );
+
+    test(
+      'a load awaiting awards cannot restore erased compatibility inputs',
+      () async {
+        final awards = Completer<List<Event>>();
+        when(() => nostrClient.queryEvents(any())).thenAnswer((call) async {
+          final filters = call.positionalArguments.single as List<Filter>;
+          return filters.first.kinds?.contains(EventKind.badgeAward) == true
+              ? awards.future
+              : <Event>[];
+        });
+        final coordinate = '30009:${_pubkey(2)}:badge';
+        await preferences.setStringList(
+          'dismissed_badge_coordinates_${_pubkey(1)}',
+          [coordinate],
+        );
+        final load = expectLater(
+          repository.loadAwardedBadges(),
+          throwsStateError,
+        );
+        await pumpEventQueue();
+        await repository.closeAccountState();
+        for (final key in BadgeRepository.localAccountKeys(_pubkey(1))) {
+          await preferences.remove(key);
+        }
+        awards.complete([]);
+        await load;
+        await preferences.reload();
+        for (final key in BadgeRepository.localAccountKeys(_pubkey(1))) {
+          expect(preferences.containsKey(key), isFalse);
+        }
+      },
+    );
+
     test('loads decisions while awards are still pending', () async {
       final awards = Completer<List<Event>>();
       var decisionsStarted = false;

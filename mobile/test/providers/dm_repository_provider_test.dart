@@ -26,6 +26,22 @@ import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
+
+class _HeldReadStore extends InMemorySharedPreferencesStore {
+  _HeldReadStore(this.key) : super.withData({});
+  final String key;
+  final entered = Completer<void>();
+  final release = Completer<void>();
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async {
+    if (key == 'flutter.${this.key}' && !entered.isCompleted) {
+      entered.complete();
+      await release.future;
+    }
+    return super.setValue(valueType, key, value);
+  }
+}
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -139,6 +155,58 @@ void main() {
           databaseProvider.overrideWithValue(database),
           sharedPreferencesProvider.overrideWithValue(prefs),
         ],
+      );
+    }
+
+    for (final disposed in [false, true]) {
+      test(
+        'erasure drains ${disposed ? 'disposed' : 'live'} DM native writes',
+        () async {
+          final original = SharedPreferencesStorePlatform.instance;
+          final key = DmSyncState.readStateStorageKey(testPubkey);
+          final native = _HeldReadStore(key);
+          SharedPreferencesStorePlatform.instance = native;
+          addTearDown(() => SharedPreferencesStorePlatform.instance = original);
+          final sync = DmSyncState(prefs);
+          await sync.rememberReadCursors(_ordinaryPeerPubkey, {'other': 200});
+          await database.conversationsDao.upsertConversation(
+            id: 'held-read',
+            participantPubkeys: '["$testPubkey","$_ordinaryPeerPubkey"]',
+            isGroup: false,
+            createdAt: 1,
+            lastMessageTimestamp: 100,
+            isRead: false,
+            ownerPubkey: testPubkey,
+          );
+          final container = createContainer(
+            readiness: const NostrSessionReadiness.identityKnown(
+              pubkey: testPubkey,
+            ),
+          );
+          final barrier = container.read(accountStateWriteBarrierProvider);
+          final repository = container.read(dmRepositoryProvider);
+          final read = repository.markConversationAsRead('held-read');
+          await native.entered.future;
+          if (disposed) container.dispose();
+          var erased = false;
+          final erase = barrier.stop(testPubkey).then((_) async {
+            for (final key in DmSyncState.readStateStorageKeys(testPubkey)) {
+              await prefs.remove(key);
+            }
+            erased = true;
+          });
+          await pumpEventQueue();
+          final erasedBeforeWrite = erased;
+          native.release.complete();
+          await read;
+          await erase;
+          await prefs.reload();
+          expect(erasedBeforeWrite, isFalse);
+          expect(sync.readCursors(testPubkey), isEmpty);
+          expect(sync.readCursors(_ordinaryPeerPubkey), {'other': 200});
+          if (!disposed) container.dispose();
+          await repository.stopListening();
+        },
       );
     }
 

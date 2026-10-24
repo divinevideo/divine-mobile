@@ -4,6 +4,7 @@
 import 'dart:convert';
 
 import 'package:account_state_repository/account_state_repository.dart';
+import 'package:badge_repository/badge_repository.dart';
 import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:creator_sync/creator_sync.dart';
 import 'package:dm_repository/dm_repository.dart';
@@ -481,6 +482,9 @@ class UserDataCleanupService {
     )) {
       await remove(key);
     }
+    for (final key in BadgeRepository.localAccountKeys(userPubkey)) {
+      await remove(key);
+    }
     for (final key in DmSyncState.readStateStorageKeys(userPubkey)) {
       await remove(key);
     }
@@ -754,6 +758,9 @@ class UserDataCleanupService {
         _prefs,
         userPubkey,
       )) {
+        await remove(key);
+      }
+      for (final key in BadgeRepository.localAccountKeys(userPubkey)) {
         await remove(key);
       }
       for (final key in DmSyncState.readStateStorageKeys(userPubkey)) {

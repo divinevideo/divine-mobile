@@ -77,6 +77,26 @@ class DmSyncState {
   DmSyncState(this._prefs);
   final SharedPreferences _prefs;
 
+  // Instances sharing the native preference cache share the owner queue too.
+  static final _readQueues = Expando<Map<String, Future<void>>>();
+
+  Future<T> _serializeReadState<T>(
+    String owner,
+    Future<T> Function() action,
+  ) {
+    final queues = _readQueues[_prefs] ??= {};
+    final previous = queues[owner] ?? Future<void>.value();
+    final operation = previous.then((_) => action());
+    late final Future<void> settled;
+    settled = operation
+        .then<void>((_) {}, onError: (Object _, StackTrace _) {})
+        .whenComplete(() {
+          if (identical(queues[owner], settled)) queues.remove(owner)?.ignore();
+        });
+    queues[owner] = settled;
+    return operation;
+  }
+
   static const _newestPrefix = 'dm.newestSyncedAt.';
   static const _newestWirePrefix = 'dm.newestWireSyncedAt.';
   static const _oldestPrefix = 'dm.oldestSyncedAt.';
@@ -644,6 +664,22 @@ class DmSyncState {
     if (!saved) throw const DmCatchUpDebtNotSavedException();
   }
 
+  /// Captures one committed revision and cursor union in the owner's queue.
+  ///
+  /// SharedPreferences changes its cache before native persistence settles.
+  /// Reading inside the queue prevents publishing a refused optimistic value.
+  Future<({int revision, Map<String, int> cursors})> readPublicationSnapshot(
+    String pubkey,
+  ) => _serializeReadState(pubkey, () async {
+    final state = _readState(pubkey);
+    return (
+      revision: state['pending'] == true ? state['revision'] as int : 0,
+      cursors: Map<String, int>.unmodifiable(
+        ((state['cursors'] as Map?) ?? {}).cast<String, int>(),
+      ),
+    );
+  });
+
   /// Account-lifetime read journal, retained across disposable cache cleanup.
   static String readStateStorageKey(String pubkey) =>
       'dm_read_state_v1_$pubkey';
@@ -705,7 +741,7 @@ class DmSyncState {
     String pubkey,
     Map<String, int> cursors, {
     Map<String, Set<String>> boundaryMessageIds = const {},
-  }) async {
+  }) => _serializeReadState(pubkey, () async {
     final state = _readState(pubkey);
     final boundaries = Map<String, dynamic>.of(
       (state['boundaryIds'] as Map?)?.cast<String, dynamic>() ?? {},
@@ -735,14 +771,15 @@ class DmSyncState {
         'boundaryIds': boundaries,
       }),
     );
-  }
+  });
 
   /// A later read supersedes the publication being acknowledged.
-  Future<void> acknowledgeReadRevision(String pubkey, int revision) async {
-    if (pendingReadRevision(pubkey) != revision) return;
-    final state = _readState(pubkey)..['pending'] = false;
-    await _saveReadState(pubkey, jsonEncode(state));
-  }
+  Future<void> acknowledgeReadRevision(String pubkey, int revision) =>
+      _serializeReadState(pubkey, () async {
+        if (pendingReadRevision(pubkey) != revision) return;
+        final state = _readState(pubkey)..['pending'] = false;
+        await _saveReadState(pubkey, jsonEncode(state));
+      });
 
   Future<void> _saveReadState(String pubkey, String value) async {
     final key = readStateStorageKey(pubkey);

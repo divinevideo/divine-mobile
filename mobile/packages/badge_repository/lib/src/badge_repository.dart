@@ -339,7 +339,6 @@ class BadgeRepository {
     void Function(String owner, Future<void> Function() close)?
     onAccountCreated,
   }) : _nostrClient = nostrClient,
-       _sharedPreferences = sharedPreferences,
        _currentPubkey = currentPubkey,
        _signEvent = signEvent,
        _isHiddenPubkey = isHiddenPubkey,
@@ -351,7 +350,6 @@ class BadgeRepository {
        );
 
   final NostrClient _nostrClient;
-  final SharedPreferences _sharedPreferences;
   final BadgeCurrentPubkeyReader _currentPubkey;
   final BadgeEventSigner _signEvent;
   final BadgeDismissalSync _dismissalSync;
@@ -1301,13 +1299,13 @@ class BadgeRepository {
     final pubkey = _requireCurrentPubkey();
     final dismissed = await _dismissalSync.setHidden(
       pubkey,
-      _storedDismissedCoordinates(pubkey),
+      _dismissalSync.storedCoordinates(pubkey),
       definitionCoordinate,
       hidden: false,
     );
-    if (_storedDismissedCoordinates(pubkey).isNotEmpty ||
+    if (_dismissalSync.storedCoordinates(pubkey).isNotEmpty ||
         dismissed.isNotEmpty) {
-      await _writeDismissedCoordinates(pubkey, dismissed);
+      await _dismissalSync.writeCoordinates(pubkey, dismissed);
     }
   }
 
@@ -1322,11 +1320,11 @@ class BadgeRepository {
     final pubkey = _requireCurrentPubkey();
     final dismissed = await _dismissalSync.setHidden(
       pubkey,
-      _storedDismissedCoordinates(pubkey),
+      _dismissalSync.storedCoordinates(pubkey),
       definitionCoordinate,
       hidden: true,
     );
-    await _writeDismissedCoordinates(pubkey, dismissed);
+    await _dismissalSync.writeCoordinates(pubkey, dismissed);
   }
 
   Future<List<Nip58BadgeAward>> _queryAwardsForRecipient(String pubkey) async {
@@ -1557,75 +1555,18 @@ class BadgeRepository {
     return event;
   }
 
-  Set<String> _storedDismissedCoordinates(String pubkey) {
-    return (_sharedPreferences.getStringList(
-              _dismissedCoordinatesKey(pubkey),
-            ) ??
-            const <String>[])
-        .toSet();
-  }
-
-  Future<void> _writeDismissedCoordinates(
-    String pubkey,
-    Set<String> coordinates,
-  ) {
-    return _sharedPreferences.setStringList(
-      _dismissedCoordinatesKey(pubkey),
-      coordinates.toList(growable: false),
-    );
-  }
-
   Future<Set<String>> _dismissedCoordinates(
     String pubkey,
     Future<List<Nip58BadgeAward>> awards,
   ) async {
     final localFuture = awards.then(
-      (awards) => _localDismissedCoordinates(pubkey, awards),
+      (awards) => _dismissalSync.localCoordinates(pubkey, awards),
     );
     final dismissed = await _dismissalSync.load(pubkey, localFuture);
     final local = await localFuture;
     if (local.isNotEmpty || dismissed.isNotEmpty) {
-      await _writeDismissedCoordinates(pubkey, dismissed);
+      await _dismissalSync.writeCoordinates(pubkey, dismissed);
     }
-    return dismissed;
-  }
-
-  /// The dismissed badge coordinates, absorbing dismissals still stored
-  /// under the older award-event key.
-  ///
-  /// Dismissals used to be keyed on the award event id. Rewriting them here
-  /// rather than dropping them keeps a rejection the user already made, and
-  /// each id is retired only once its award has actually been seen — an
-  /// award missing from this relay pass is left for a later load instead of
-  /// being discarded.
-  Future<Set<String>> _localDismissedCoordinates(
-    String pubkey,
-    List<Nip58BadgeAward> awards,
-  ) async {
-    final dismissed = _storedDismissedCoordinates(pubkey);
-    final legacyIds =
-        (_sharedPreferences.getStringList(_dismissedAwardsKey(pubkey)) ??
-                const <String>[])
-            .toSet();
-    if (legacyIds.isEmpty) return dismissed;
-
-    final retired = <String>{};
-    for (final award in awards) {
-      if (legacyIds.contains(award.event.id)) {
-        retired.add(award.event.id);
-        dismissed.add(award.definitionCoordinate);
-      }
-    }
-    if (retired.isEmpty) return dismissed;
-
-    legacyIds.removeAll(retired);
-    await _writeDismissedCoordinates(pubkey, dismissed);
-    await (legacyIds.isEmpty
-        ? _sharedPreferences.remove(_dismissedAwardsKey(pubkey))
-        : _sharedPreferences.setStringList(
-            _dismissedAwardsKey(pubkey),
-            legacyIds.toList(growable: false),
-          ));
     return dismissed;
   }
 
@@ -1691,14 +1632,9 @@ class BadgeRepository {
     return (kind: kind, pubkey: parts[1], dTag: parts.sublist(2).join(':'));
   }
 
-  static String _dismissedCoordinatesKey(String pubkey) {
-    return 'dismissed_badge_coordinates_$pubkey';
-  }
-
-  /// Key of the retired per-award dismissal list, read only to migrate it.
-  static String _dismissedAwardsKey(String pubkey) {
-    return 'dismissed_badge_awards_$pubkey';
-  }
+  /// Exact owner compatibility inputs removed only by explicit account erasure.
+  static Iterable<String> localAccountKeys(String pubkey) =>
+      BadgeDismissalSync.localCompatibilityKeys(pubkey);
 }
 
 /// Deduplicates identical relay lookups within one dashboard load pass.

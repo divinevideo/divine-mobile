@@ -1007,6 +1007,7 @@ DmRepository dmRepository(Ref ref) {
   final session = ref.watch(nostrSessionProvider);
   final db = ref.watch(databaseProvider);
   final prefs = ref.watch(sharedPreferencesProvider);
+  final accountWrites = ref.watch(accountStateWriteBarrierProvider);
   final reactionsRepository = ref.watch(dmReactionsRepositoryProvider);
 
   // Advertise the environment's stable DM relay (same source as the
@@ -1027,6 +1028,7 @@ DmRepository dmRepository(Ref ref) {
     removedConversationsDao: db.removedConversationsDao,
     removedMessageIdsDao: db.removedMessageIdsDao,
     syncState: DmSyncState(prefs),
+    onReadOwnerCreated: accountWrites.register,
     accountStateRepository: ref.watch(accountDmStateProvider),
     reactionsRepository: reactionsRepository,
     // Identity is sufficient to scope local storage. Signing, publishing, and
@@ -1066,7 +1068,18 @@ DmRepository dmRepository(Ref ref) {
     },
   );
 
-  ref.onDispose(repository.stopListening);
+  ref.onDispose(() {
+    runProviderDetached(
+      repository.closeLocalReadState(),
+      'close DM read state',
+      logName: 'DmRepository',
+    );
+    runProviderDetached(
+      repository.stopListening(),
+      'stop DM repository',
+      logName: 'DmRepository',
+    );
+  });
 
   // Hand the reactions repository this repository's kind-10050 resolver so a
   // gift-wrapped reaction routes to the recipient's advertised DM inbox rather

@@ -23,6 +23,8 @@ class _MemoryPushStore implements NotificationPreferencesStore {
   NotificationPreferences saved = const NotificationPreferences();
   final dirty = <String, NotificationPreferences>{};
   Completer<void>? markDirtyGate;
+  bool commitAfterGate = false;
+  final markDirtyEntered = Completer<void>();
   @override
   Future<NotificationPreferences> loadPreferences() async => saved;
   @override
@@ -40,8 +42,10 @@ class _MemoryPushStore implements NotificationPreferencesStore {
     String pubkey,
     NotificationPreferences preferences,
   ) async {
-    dirty[pubkey] = preferences;
+    if (!commitAfterGate) dirty[pubkey] = preferences;
+    if (!markDirtyEntered.isCompleted) markDirtyEntered.complete();
     await markDirtyGate?.future;
+    if (commitAfterGate) dirty[pubkey] = preferences;
   }
 
   @override
@@ -218,6 +222,141 @@ void main() {
         await repository.close();
       },
     );
+    for (final reset in [false, true]) {
+      test(
+        'remote flags during held local ${reset ? 'reset' : 'update'} converge',
+        () async {
+          SharedPreferences.setMockInitialValues({});
+          final port = AccountPreferenceStore(
+            await SharedPreferences.getInstance(),
+          );
+          final repository = FakeAccountState(_account, {
+            if (reset) 'notifications/likesEnabled': false,
+          });
+          await port.bind(repository);
+          final push = _MemoryPushStore()..markDirtyGate = Completer<void>();
+          final registrations = <NotificationPreferences>[];
+          final service = NotificationPreferencesService(
+            store: push,
+            currentPubkey: () => _account,
+            accountPreferences: port,
+            publishPreferences: (_, preferences) async {
+              registrations.add(preferences);
+              return true;
+            },
+          );
+          final update = reset
+              ? service.resetToDefaults()
+              : service.updatePreferences(
+                  const NotificationPreferences(likesEnabled: false),
+                );
+          await push.markDirtyEntered.future;
+          await pumpEventQueue();
+          repository.receive({'notifications/commentsEnabled': false});
+          await pumpEventQueue();
+          final writes = repository.localWrites;
+          push.markDirtyGate!.complete();
+          await update;
+          await pumpEventQueue();
+          final current = await service.loadPreferences();
+          expect(current.commentsEnabled, isFalse);
+          expect(current.likesEnabled, reset);
+          expect(registrations.last, current);
+          expect(
+            repository.localWrites,
+            writes,
+            reason: 'remote refresh never echoes',
+          );
+          expect(push.dirty, isEmpty);
+          service.dispose();
+          port.dispose();
+          await repository.close();
+        },
+      );
+    }
+
+    for (final mode in ['switch', 'dispose', 'retry', 'later edit']) {
+      test(
+        'queued remote refresh respects $mode after a held local write',
+        () async {
+          SharedPreferences.setMockInitialValues({});
+          final port = AccountPreferenceStore(
+            await SharedPreferences.getInstance(),
+          );
+          final outgoing = FakeAccountState(_account);
+          final incoming = FakeAccountState(_incoming, {
+            'notifications/followsEnabled': false,
+          });
+          await port.bind(outgoing);
+          final push = _MemoryPushStore()
+            ..markDirtyGate = Completer<void>()
+            ..commitAfterGate = mode == 'later edit';
+          final dirtyGate = push.markDirtyGate!;
+          final registrations = <(String, NotificationPreferences)>[];
+          var owner = _account;
+          var accepts = mode != 'retry';
+          final service = NotificationPreferencesService(
+            store: push,
+            currentPubkey: () => owner,
+            accountPreferences: port,
+            publishPreferences: (owner, preferences) async {
+              registrations.add((owner, preferences));
+              return accepts;
+            },
+          );
+          final update = service.updatePreferences(
+            const NotificationPreferences(likesEnabled: false),
+          );
+          await push.markDirtyEntered.future;
+          outgoing.receive({'notifications/commentsEnabled': false});
+          await pumpEventQueue();
+          Future<void>? later;
+          if (mode == 'later edit') {
+            push.markDirtyGate = null;
+            later = service.updatePreferences(
+              const NotificationPreferences(commentsEnabled: false),
+            );
+            await pumpEventQueue();
+          } else if (mode == 'switch') {
+            owner = _incoming;
+            await port.bind(incoming);
+          } else if (mode == 'dispose') {
+            service.dispose();
+          }
+          dirtyGate.complete();
+          await update;
+          await later;
+          await pumpEventQueue();
+          if (mode == 'dispose') {
+            expect(registrations, isEmpty);
+          } else {
+            final current = await service.loadPreferences();
+            expect(registrations.last, (owner, current));
+            if (mode == 'switch') {
+              expect(
+                registrations.every((entry) => entry.$1 == _incoming),
+                isTrue,
+              );
+              expect(incoming.localWrites, 0);
+            } else if (mode == 'retry') {
+              expect(push.dirty[_account], current);
+              accepts = true;
+              await service.syncDirtyPreferencesForPubkey(_account);
+              expect(push.dirty, isEmpty);
+              expect(registrations.last.$2, current);
+            } else {
+              expect(current.likesEnabled, isTrue);
+              expect(current.commentsEnabled, isFalse);
+            }
+          }
+          service.dispose();
+          port.dispose();
+          await outgoing.close();
+          await incoming.close();
+        },
+      );
+    }
+
     test('unrelated preference arrival does not cancel a pending push registration', () async {
       SharedPreferences.setMockInitialValues({});
       final port = AccountPreferenceStore(

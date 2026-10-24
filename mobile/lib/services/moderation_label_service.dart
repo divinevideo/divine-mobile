@@ -131,6 +131,7 @@ class ModerationLabelService {
   ModerationAccountPreferences? _accountBinding;
   Stream<void>? get changes => _accountPreferences?.changes;
   Set<String> _lastFollowedPubkeys = {};
+  final _followedReconciliation = FollowedLabelerReconciliation();
 
   Future<void> _reconcileAccountPreferences(
     ModerationAccountPreferenceSnapshot snapshot,
@@ -150,6 +151,7 @@ class ModerationLabelService {
     if (_disposed || !isCurrent()) return;
     await _syncFollowedLabelersInternal(
       _isFollowingModerationEnabled ? _lastFollowedPubkeys : const <String>[],
+      isCurrent: isCurrent,
     );
     if (_disposed || !isCurrent()) return;
     await _syncSubscribedLabelersWithRelays(isCurrent: isCurrent);
@@ -1290,31 +1292,18 @@ class ModerationLabelService {
   }
 
   Future<void> _syncFollowedLabelersInternal(
-    Iterable<String> followedPubkeys,
-  ) async {
-    final normalized = followedPubkeys
-        .where((pubkey) => pubkey.isNotEmpty)
-        .toSet();
-
-    await _withDeferredTailRebuild(() async {
-      final toRemove = _followedLabelers.difference(normalized);
-
-      for (final pubkey in toRemove) {
-        _followedLabelers.remove(pubkey);
-        if (!_subscribedLabelers.contains(pubkey)) {
-          await _unloadLabeler(pubkey);
-        }
-      }
-
-      for (final pubkey in normalized) {
-        _followedLabelers.add(pubkey);
-        if (!_subscribedLabelers.contains(pubkey) &&
-            !_loadedLabelers.contains(pubkey)) {
-          await subscribeToLabeler(pubkey);
-        }
-      }
-    });
-  }
+    Iterable<String> followedPubkeys, {
+    bool Function()? isCurrent,
+  }) => _followedReconciliation.reconcile(
+    next: followedPubkeys,
+    followed: _followedLabelers,
+    subscribed: _subscribedLabelers,
+    loaded: _loadedLabelers,
+    unload: _unloadLabeler,
+    subscribe: subscribeToLabeler,
+    deferTail: _withDeferredTailRebuild,
+    isCurrent: () => !_disposed && (isCurrent?.call() ?? true),
+  );
 
   Future<void> _unloadLabeler(String pubkey) async {
     // Synchronously, before the first await: a walk in flight has to see this

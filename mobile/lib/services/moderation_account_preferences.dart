@@ -93,3 +93,38 @@ class ModerationAccountPreferences {
     unawaited(_subscription?.cancel());
   }
 }
+
+/// Reconciles followed labelers while cancelling superseded asynchronous loads.
+class FollowedLabelerReconciliation {
+  int _generation = 0;
+
+  Future<void> reconcile({
+    required Iterable<String> next,
+    required Set<String> followed,
+    required Set<String> subscribed,
+    required Set<String> loaded,
+    required Future<void> Function(String) unload,
+    required Future<void> Function(String) subscribe,
+    required Future<void> Function(Future<void> Function()) deferTail,
+    required bool Function() isCurrent,
+  }) async {
+    final generation = ++_generation;
+    bool current() => generation == _generation && isCurrent();
+    if (!current()) return;
+    final normalized = next.where((pubkey) => pubkey.isNotEmpty).toSet();
+    await deferTail(() async {
+      for (final pubkey in followed.difference(normalized)) {
+        if (!current()) return;
+        followed.remove(pubkey);
+        if (!subscribed.contains(pubkey)) await unload(pubkey);
+      }
+      for (final pubkey in normalized) {
+        if (!current()) return;
+        followed.add(pubkey);
+        if (!subscribed.contains(pubkey) && !loaded.contains(pubkey)) {
+          await subscribe(pubkey);
+        }
+      }
+    });
+  }
+}

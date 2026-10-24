@@ -124,6 +124,108 @@ void main() {
   });
 
   group('onAccountCreated', () {
+    test(
+      'refused compatibility writes remain retryable and drainable',
+      () async {
+        final preferences = _MockPreferences();
+        when(() => preferences.getString(any())).thenReturn(null);
+        var saved = false;
+        when(
+          () => preferences.setStringList(any(), any()),
+        ).thenAnswer((_) async => saved);
+        final sync = BadgeDismissalSync(
+          client: client,
+          preferences: preferences,
+          signer: () => signer,
+        );
+        await expectLater(
+          sync.writeCoordinates(pubkey, {coordinate}),
+          throwsA(isA<BadgeDismissalSyncException>()),
+        );
+        saved = true;
+        await sync.writeCoordinates(pubkey, {coordinate});
+        await sync.close();
+        verify(
+          () => preferences.setStringList(
+            'dismissed_badge_coordinates_$pubkey',
+            [coordinate],
+          ),
+        ).called(2);
+      },
+    );
+
+    test(
+      'owner close drains issued compatibility storage but not other owners',
+      () async {
+        final preferences = _MockPreferences();
+        when(() => preferences.getString(any())).thenReturn(null);
+        final entered = Completer<void>();
+        final release = Completer<void>();
+        final persisted = <String, List<String>>{};
+        when(() => preferences.setStringList(any(), any())).thenAnswer((
+          call,
+        ) async {
+          final key = call.positionalArguments[0] as String;
+          final value = call.positionalArguments[1] as List<String>;
+          if (key == 'dismissed_badge_coordinates_$pubkey') {
+            entered.complete();
+            await release.future;
+          }
+          persisted[key] = value;
+          return true;
+        });
+        final closers = <String, Future<void> Function()>{};
+        final sync = BadgeDismissalSync(
+          client: client,
+          preferences: preferences,
+          signer: () => signer,
+          onAccountCreated: (owner, close) => closers[owner] = close,
+        );
+        final writing = sync.writeCoordinates(pubkey, {coordinate});
+        await entered.future;
+        var closed = false;
+        final closing = closers[pubkey]!().then((_) => closed = true);
+        final other = 'b' * 64;
+        await sync.writeCoordinates(other, {otherCoordinate});
+        await pumpEventQueue();
+        expect(closed, isFalse);
+        release.complete();
+        await writing;
+        await closing;
+        expect(persisted['dismissed_badge_coordinates_$pubkey'], [coordinate]);
+        expect(persisted['dismissed_badge_coordinates_$other'], [
+          otherCoordinate,
+        ]);
+        expect(() => sync.writeCoordinates(pubkey, {}), throwsStateError);
+        await sync.close();
+      },
+    );
+
+    test(
+      'owner registration can fence the first compatibility write',
+      () async {
+        final preferences = _MockPreferences();
+        when(() => preferences.getString(any())).thenReturn(null);
+        when(
+          () => preferences.setStringList(any(), any()),
+        ).thenAnswer((_) async => true);
+        final drains = <Future<void>>[];
+        final sync = BadgeDismissalSync(
+          client: client,
+          preferences: preferences,
+          signer: () => signer,
+          onAccountCreated: (_, close) => drains.add(close()),
+        );
+        await expectLater(
+          Future<void>.sync(() => sync.writeCoordinates(pubkey, {coordinate})),
+          throwsStateError,
+        );
+        await Future.wait(drains);
+        verifyNever(() => preferences.setStringList(any(), any()));
+        await sync.close();
+      },
+    );
+
     test('registers the exact owner before its first local write', () async {
       final preferences = _MockPreferences();
       when(() => preferences.getString(any())).thenReturn(null);

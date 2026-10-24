@@ -46,6 +46,51 @@ class _ReadState extends DmSyncState {
 class _OverlapDao extends ConversationsDao {
   _OverlapDao(super.attachedDatabase);
   static final _transactionZone = Object();
+  bool holdNextDismissal = false;
+  final dismissalEntered = Completer<void>();
+  final dismissalRelease = Completer<void>();
+
+  @override
+  Future<void> applySyncedDismissal(
+    String id, {
+    required String ownerPubkey,
+    required bool dismissed,
+    int boundaryTimestamp = 0,
+    Set<String> knownMessageIds = const {},
+  }) async {
+    if (holdNextDismissal) {
+      holdNextDismissal = false;
+      dismissalEntered.complete();
+      await dismissalRelease.future;
+    }
+    await super.applySyncedDismissal(
+      id,
+      ownerPubkey: ownerPubkey,
+      dismissed: dismissed,
+      boundaryTimestamp: boundaryTimestamp,
+      knownMessageIds: knownMessageIds,
+    );
+  }
+
+  bool holdNextCapture = false;
+  final captureEntered = Completer<void>();
+  final captureRelease = Completer<void>();
+
+  @override
+  Future<({int timestamp, Set<String> knownMessageIds})?>
+  captureDismissalBoundary(String id, {required String ownerPubkey}) async {
+    final boundary = await super.captureDismissalBoundary(
+      id,
+      ownerPubkey: ownerPubkey,
+    );
+    if (holdNextCapture) {
+      holdNextCapture = false;
+      captureEntered.complete();
+      await captureRelease.future;
+    }
+    return boundary;
+  }
+
   bool holdNextTransaction = false;
   bool transactionHeld = false;
   final entered = Completer<void>();
@@ -132,7 +177,7 @@ void main() {
         conversationsDao = _OverlapDao(db);
         messagesDao = DirectMessagesDao(db);
         nostrClient = _MockNostrClient();
-        relay = StreamController<Event>();
+        relay = StreamController<Event>.broadcast();
         rumorByWrapId = <String, Event>{};
         conversationId = DmRepository.computeConversationId(participants);
 
@@ -310,6 +355,79 @@ void main() {
         );
         return rows.where((r) => r.id == conversationId).firstOrNull;
       }
+
+      for (final dismiss in [false, true]) {
+        test(
+          'stop fences a pending ${dismiss ? 'dismissal' : 'read'} capture',
+          () async {
+            await ingestConversation(messageAt: _baseCreatedAt + 100);
+            conversationsDao.holdNextCapture = true;
+            final action = dismiss
+                ? repository.setConversationDismissed(
+                    conversationId,
+                    dismissed: true,
+                  )
+                : repository.markConversationAsRead(conversationId);
+            await conversationsDao.captureEntered.future;
+            await repository.stopListening();
+            final prefs = await SharedPreferences.getInstance();
+            for (final key in DmSyncState.readStateStorageKeys(_owner)) {
+              await prefs.remove(key);
+            }
+            conversationsDao.captureRelease.complete();
+            await action;
+            await prefs.reload();
+            expect(syncState.readCursors(_owner), isEmpty);
+            expect(accountState.values, isEmpty);
+            expect((await conversation())!.isRead, isFalse);
+            await repository.startListening();
+            expect(
+              await repository.markConversationAsRead(conversationId),
+              isTrue,
+            );
+            expect(syncState.readCursors(_owner), isNotEmpty);
+          },
+        );
+      }
+
+      test(
+        'owner close drains an issued remote dismissal projection',
+        () async {
+          await ingestConversation(messageAt: _baseCreatedAt + 100);
+          conversationsDao.holdNextDismissal = true;
+          await accountState.setValue(participants.join(','), {
+            'through': _baseCreatedAt + 100,
+            'known': ['f' * 64],
+          });
+          await conversationsDao.dismissalEntered.future;
+          var closed = false;
+          final close = repository.closeLocalReadState().then(
+            (_) => closed = true,
+          );
+          await settle();
+          final closedBeforeWrite = closed;
+          conversationsDao.dismissalRelease.complete();
+          await close;
+          await settle();
+          expect(closedBeforeWrite, isFalse);
+          expect((await conversation())!.isDismissed, isTrue);
+        },
+      );
+
+      test('stop drains an issued local read write', () async {
+        await ingestConversation(messageAt: _baseCreatedAt + 100);
+        syncState.blockNext = true;
+        final read = repository.markConversationAsRead(conversationId);
+        await syncState.entered.future;
+        var stopped = false;
+        final stop = repository.stopListening().then((_) => stopped = true);
+        await settle();
+        final stoppedBeforeWrite = stopped;
+        syncState.release.complete();
+        await read;
+        await stop;
+        expect(stoppedBeforeWrite, isFalse);
+      });
 
       test(
         'same-second arrival during durable read persistence remains unread',

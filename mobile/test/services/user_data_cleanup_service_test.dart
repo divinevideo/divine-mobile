@@ -1135,6 +1135,8 @@ void main() {
               'account_state_divine/preferences/v1_$deletedPubkey',
               'badge_dismissal_event_${deletedPubkey}_state',
               'badge_dismissal_event_$deletedPubkey',
+              'dismissed_badge_coordinates_$deletedPubkey',
+              'dismissed_badge_awards_$deletedPubkey',
               ...DmSyncState.readStateStorageKeys(deletedPubkey),
               NotificationRepository.readStateStorageKey(deletedPubkey),
             ];

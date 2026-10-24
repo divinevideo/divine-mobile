@@ -272,9 +272,15 @@ class NotificationPreferencesService {
   Future<void>? _migration;
   AccountPreferenceWriteLease? _migrationOwner;
   int _localMutations = 0;
+  bool _refreshPending = false;
 
   void _accountChanged() {
-    if (_localMutations != 0 || _disposed) return;
+    if (_disposed) return;
+    if (_localMutations != 0) {
+      _refreshPending = true;
+      return;
+    }
+    _refreshPending = false;
     unawaited(
       _refreshAccount().catchError((Object error, StackTrace stack) {
         Log.warning(
@@ -372,7 +378,7 @@ class NotificationPreferencesService {
     final owner = _currentPubkey();
     if (account != null && account.isBound) {
       ++_localMutations;
-      ++_generation;
+      final generation = ++_generation;
       ++_refreshRequest;
       try {
         final previous = (await loadPreferences()).toJson();
@@ -389,7 +395,12 @@ class NotificationPreferencesService {
         _lastAccountPubkey = owner;
         if (owner != null) {
           await _store.markDirty(owner, effective);
-          if (!_disposed && owner == _currentPubkey()) {
+          if (generation != _generation) {
+            // A later local mutation may already have published. The held
+            // dirty write must be replaced by the latest account snapshot.
+            _lastAccountPreferences = null;
+            _refreshPending = true;
+          } else if (!_disposed && owner == _currentPubkey()) {
             unawaited(
               _publishAndClearDirtyPreferences(owner, effective)
                   .then((outcome) {
@@ -407,6 +418,7 @@ class NotificationPreferencesService {
         }
       } finally {
         --_localMutations;
+        if (_localMutations == 0 && _refreshPending) _accountChanged();
       }
       return;
     }
