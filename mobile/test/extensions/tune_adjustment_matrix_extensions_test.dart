@@ -89,5 +89,33 @@ void main() {
         expect(seed.any((m) => m.id == 'hue'), isFalse);
       });
     });
+
+    group('groupBySet', () {
+      test('groups members by set, in the order the sets first appear', () {
+        final sets = TuneSet.groupBySet([
+          _member('brightness', 0.2, setId: 'set-2'),
+          _member('sharpen', 0.5, setId: 'set-1'),
+          _member('contrast', -0.1, setId: 'set-2'),
+        ]);
+
+        expect(sets.keys, ['set-2', 'set-1']);
+        expect(sets['set-2']!.map((m) => m.tuneKind), [
+          'brightness',
+          'contrast',
+        ]);
+        expect(sets['set-1']!.map((m) => m.tuneKind), ['sharpen']);
+      });
+
+      test('leaves out neutral members and sets with nothing else', () {
+        final sets = TuneSet.groupBySet([
+          _member('brightness', 0, setId: 'set-1'),
+          _member('shadows', 0.4, setId: 'set-1'),
+          _member('hue', 0, setId: 'set-2'),
+        ]);
+
+        expect(sets.keys, ['set-1']);
+        expect(sets['set-1']!.map((m) => m.tuneKind), ['shadows']);
+      });
+    });
   });
 }
