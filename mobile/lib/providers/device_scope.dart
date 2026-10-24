@@ -4,6 +4,8 @@
 import 'package:app_update_repository/app_update_repository.dart';
 import 'package:db_client/db_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/notifications/providers/announcement_providers.dart';
+import 'package:openvine/notifications/services/announcement_store.dart';
 import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
@@ -56,6 +58,7 @@ class DeviceScope {
     required this.database,
     required this.sharedPreferences,
     required this.feedModePersistence,
+    required this.announcementSessions,
     required this.switchController,
     required this.appVersion,
     required this.documentsPath,
@@ -82,6 +85,9 @@ class DeviceScope {
 
   /// Pending Home writes must share ownership across routes and account swaps.
   final FeedModePersistenceRegistry feedModePersistence;
+
+  /// Retains outgoing announcement writers until account cleanup drains them.
+  final AnnouncementSessions announcementSessions;
 
   /// App version resolved once from `PackageInfo` during bootstrap.
   final String appVersion;
@@ -147,6 +153,7 @@ class DeviceScope {
     databaseProvider.overrideWithValue(database),
     sharedPreferencesProvider.overrideWithValue(sharedPreferences),
     feedModePersistenceRegistryProvider.overrideWithValue(feedModePersistence),
+    announcementSessionsProvider.overrideWithValue(announcementSessions),
     appVersionProvider.overrideWithValue(appVersion),
     documentsPathProvider.overrideWithValue(documentsPath),
     dbCipherKeyProvider.overrideWithValue(dbCipherKey),

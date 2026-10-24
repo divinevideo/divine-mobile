@@ -15,6 +15,7 @@ import 'package:nostr_key_manager/nostr_key_manager.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/filter.dart' as nostr;
 import 'package:openvine/models/known_account.dart';
+import 'package:openvine/notifications/services/announcement_store.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/device_scope.dart';
@@ -274,6 +275,7 @@ void main() {
           final scope = DeviceScope(
             database: db,
             sharedPreferences: prefs,
+            announcementSessions: AnnouncementSessions(),
             feedModePersistence: FeedModePersistenceRegistry(
               sharedPreferences: prefs,
             ),
