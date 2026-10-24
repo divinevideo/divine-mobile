@@ -286,6 +286,9 @@ final class LoopSeamScores {
       difference.isFinite && motion.isFinite && difference >= 0 && motion >= 0;
 }
 
+/// Camera alignment is exhausted before the uncorrected trim fallback.
+enum LoopAlignmentKind { aligned, trimOnly }
+
 final class LoopAlignmentPlan {
   LoopAlignmentPlan({
     required List<LoopClipPlan> clips,
@@ -293,10 +296,12 @@ final class LoopAlignmentPlan {
     required this.confidence,
     required this.predictedScores,
     required this.baselineScores,
+    this.kind = LoopAlignmentKind.aligned,
     this.trimmedSourceEnd,
   }) : clips = List.unmodifiable(clips);
   final List<LoopClipPlan> clips;
   final double zoom;
+  final LoopAlignmentKind kind;
   final LoopFrameMatch confidence;
   final LoopSeamScores predictedScores;
 

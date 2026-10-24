@@ -43,12 +43,16 @@ class LoopAlignmentRepository {
       _check(taskId);
       if (analysis.isAlreadySmooth(limits))
         return const LoopRepairResult(status: LoopRepairStatus.alreadySmooth);
-      final candidates = [...analysis.candidates]
-        ..sort(
-          (a, b) => (a.trimmedSourceEnd == null ? 0 : 1).compareTo(
-            b.trimmedSourceEnd == null ? 0 : 1,
-          ),
-        );
+      // Preserve the measured endpoint order within each policy tier. A
+      // trim-only fallback must never hide a later viable camera alignment.
+      final candidates = [
+        for (final kind in LoopAlignmentKind.values)
+          for (final trimmed in [false, true])
+            for (final candidate in analysis.candidates)
+              if (candidate.kind == kind &&
+                  (candidate.trimmedSourceEnd != null) == trimmed)
+                candidate,
+      ];
       for (final plan in candidates) {
         _check(taskId);
         if (!_validPlan(input, plan, analysis) ||
@@ -103,6 +107,9 @@ class LoopAlignmentRepository {
         !plan.zoom.isFinite ||
         plan.zoom < 1 ||
         plan.zoom > limits.maximumZoom)
+      return false;
+    if (plan.kind == LoopAlignmentKind.trimOnly &&
+        plan.trimmedSourceEnd == null)
       return false;
     if (plan.trimmedSourceEnd != null &&
         !analysis.eligibleTrimEnds.contains(plan.trimmedSourceEnd))

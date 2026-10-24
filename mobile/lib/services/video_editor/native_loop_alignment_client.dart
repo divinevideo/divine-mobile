@@ -724,6 +724,7 @@ void _analyzeWorker(_WorkerInput data) {
             confidence: p.confidence,
             predictedScores: p.predictedScores,
             baselineScores: p.baselineScores,
+            kind: p.kind,
             trimmedSourceEnd: trimmed,
           ),
         );
@@ -798,6 +799,7 @@ void _analyzeWorker(_WorkerInput data) {
                 ),
             ],
             zoom: 1,
+            kind: LoopAlignmentKind.trimOnly,
             confidence: match,
             predictedScores: scores,
             baselineScores: baseline,

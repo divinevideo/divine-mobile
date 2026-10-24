@@ -36,7 +36,12 @@ void main() {
   );
   test('trim-only candidate passes the same score gates', () async {
     final client = FakeClient()
-      ..candidates = [plan(trim: const Duration(milliseconds: 900))];
+      ..candidates = [
+        plan(
+          trim: const Duration(milliseconds: 900),
+          kind: LoopAlignmentKind.trimOnly,
+        ),
+      ];
     expect((await run(client)).status, LoopRepairStatus.repaired);
   });
   test('post-render bad seam deletes replacement', () async {
@@ -95,6 +100,38 @@ void main() {
       expect(client.finished, ['a']);
     },
   );
+  test(
+    'aligned trim wins over an earlier passing trim-only fallback',
+    () async {
+      final fallback = plan(
+        trim: const Duration(milliseconds: 900),
+        kind: LoopAlignmentKind.trimOnly,
+      );
+      final aligned = plan(trim: const Duration(milliseconds: 900));
+      final client = FakeClient()..candidates = [fallback, aligned];
+      final result = await run(client);
+      expect(result.plan, same(aligned));
+      expect(client.rendered, [aligned]);
+    },
+  );
+  test(
+    'trim-only renders only after every aligned candidate is rejected',
+    () async {
+      final fallback = plan(
+        trim: const Duration(milliseconds: 900),
+        kind: LoopAlignmentKind.trimOnly,
+      );
+      final trimmed = plan(trim: const Duration(milliseconds: 900));
+      final unchanged = plan();
+      final client = FakeClient()
+        ..candidates = [fallback, trimmed, unchanged]
+        ..rejected = [trimmed, unchanged];
+      final result = await run(client);
+      expect(result.plan, same(fallback));
+      expect(client.rendered, [unchanged, trimmed, fallback]);
+      expect(client.discarded.length, 2);
+    },
+  );
 }
 
 Future<LoopRepairResult> run(FakeClient c) =>
@@ -105,13 +142,23 @@ Future<LoopRepairResult> run(FakeClient c) =>
       ),
       taskId: 'a',
     );
-LoopAlignmentPlan plan({Duration? trim}) => LoopAlignmentPlan(
+LoopAlignmentPlan plan({
+  Duration? trim,
+  LoopAlignmentKind kind = LoopAlignmentKind.aligned,
+}) => LoopAlignmentPlan(
   clips: [
     LoopClipPlan(
       clipId: 'a',
       sourceStart: Duration.zero,
       sourceEnd: trim ?? const Duration(seconds: 1),
-      keyframes: const [],
+      keyframes: [
+        LoopKeyframe(
+          sourceTime: Duration.zero,
+          correction: kind == LoopAlignmentKind.aligned
+              ? const LoopPose(a: 1, b: 0, tx: 1, ty: 0)
+              : LoopPose.identity,
+        ),
+      ],
     ),
   ],
   zoom: 1,
@@ -119,6 +166,7 @@ LoopAlignmentPlan plan({Duration? trim}) => LoopAlignmentPlan(
   predictedScores: const LoopSeamScores(difference: .01, motion: 0),
   baselineScores: const LoopSeamScores(difference: .05, motion: .1),
   trimmedSourceEnd: trim,
+  kind: kind,
 );
 
 class FakeClient implements LoopAlignmentClient {
@@ -126,6 +174,7 @@ class FakeClient implements LoopAlignmentClient {
   final rendered = <LoopAlignmentPlan>[];
   final discarded = <LoopRenderedOutput>[];
   List<LoopAlignmentPlan> candidates = [];
+  List<LoopAlignmentPlan> rejected = [];
   bool smooth = false, inspectionFails = false, badDuration = false;
   int samples = 4;
   Future<void> Function()? duringInspection;
@@ -198,7 +247,9 @@ class FakeClient implements LoopAlignmentClient {
     if (inspectionFails) throw const LoopAlignmentFailure('inspection');
     await duringInspection?.call();
     return LoopInspection(
-      scores: inspectionScores,
+      scores: rejected.contains(p)
+          ? const LoopSeamScores(difference: .04, motion: 0)
+          : inspectionScores,
       frameTimes: const [
         Duration.zero,
         Duration(milliseconds: 100),
