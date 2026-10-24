@@ -303,6 +303,7 @@ class NotificationPreferencesService {
   AccountPreferenceWriteLease? _migrationOwner;
   int _localMutations = 0;
   bool _refreshPending = false;
+  Future<void> _legacyPreferenceWrites = Future.value();
   final _publications = <String, Future<void>>{};
   final _deliveryIntents = <String, _PreferenceDeliveryIntent>{};
 
@@ -427,7 +428,20 @@ class NotificationPreferencesService {
     });
   }
 
-  Future<void> updatePreferences(NotificationPreferences prefs) async {
+  /// Replaces the complete preferences, as used by an explicit reset.
+  Future<void> updatePreferences(NotificationPreferences prefs) =>
+      _updatePreferences(prefs.toJson(), replaceAll: true);
+
+  /// Records one choice without replacing other, possibly newer, fields.
+  Future<void> updatePreference(
+    NotificationPreference preference,
+    bool enabled,
+  ) => _updatePreferences({preference.name: enabled}, replaceAll: false);
+
+  Future<void> _updatePreferences(
+    Map<String, dynamic> requested, {
+    required bool replaceAll,
+  }) async {
     final account = _accountPreferences;
     final write = account?.captureWrite();
     final owner = _currentPubkey();
@@ -438,8 +452,8 @@ class NotificationPreferencesService {
       try {
         final previous = (await loadPreferences()).toJson();
         await write!.writeValues({
-          for (final entry in prefs.toJson().entries)
-            if (previous[entry.key] != entry.value)
+          for (final entry in requested.entries)
+            if (!replaceAll || previous[entry.key] != entry.value)
               'notifications/${entry.key}': entry.value,
         });
         if (_disposed || owner != _currentPubkey()) return;
@@ -477,7 +491,11 @@ class NotificationPreferencesService {
       }
       return;
     }
-    await _store.savePreferences(prefs);
+    final prefs = await _saveLegacyPreferences(
+      requested,
+      replaceAll: replaceAll,
+      write: write,
+    );
     write?.ensureCurrent();
     if (_disposed || owner == null || owner != _currentPubkey()) return;
     await _markDirty(owner, prefs);
@@ -490,6 +508,28 @@ class NotificationPreferencesService {
     if (outcome == NotificationPreferencesSyncOutcome.stillDirty) {
       _onStillDirty?.call(owner);
     }
+  }
+
+  /// Serializes legacy read-modify-save operations, retaining each field intent.
+  Future<NotificationPreferences> _saveLegacyPreferences(
+    Map<String, dynamic> requested, {
+    required bool replaceAll,
+    required AccountPreferenceWriteLease? write,
+  }) {
+    final saved = _legacyPreferenceWrites.then((_) async {
+      write?.ensureCurrent();
+      final prefs = NotificationPreferences.fromJson({
+        if (!replaceAll) ...(await _store.loadPreferences()).toJson(),
+        ...requested,
+      });
+      write?.ensureCurrent();
+      await _store.savePreferences(prefs);
+      write?.ensureCurrent();
+      return prefs;
+    });
+    // A rejected write must not block the next explicit choice.
+    _legacyPreferenceWrites = saved.then<void>((_) {}, onError: (Object _) {});
+    return saved;
   }
 
   Future<void> resetToDefaults() async {

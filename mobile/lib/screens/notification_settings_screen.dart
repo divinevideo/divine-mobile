@@ -11,6 +11,7 @@ import 'package:openvine/blocs/notification_settings/notification_settings_state
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/notification_preferences.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/route_paths.dart';
@@ -118,8 +119,9 @@ class NotificationSettingsView extends StatelessWidget {
                         subtitle:
                             context.l10n.notificationSettingsLikesSubtitle,
                         value: prefs.likesEnabled,
-                        onChanged: (value) => cubit.setPreferences(
-                          prefs.copyWith(likesEnabled: value),
+                        onChanged: (value) => cubit.setPreference(
+                          NotificationPreference.likesEnabled,
+                          value,
                         ),
                       ),
                       _NotificationCard(
@@ -129,8 +131,9 @@ class NotificationSettingsView extends StatelessWidget {
                         subtitle:
                             context.l10n.notificationSettingsCommentsSubtitle,
                         value: prefs.commentsEnabled,
-                        onChanged: (value) => cubit.setPreferences(
-                          prefs.copyWith(commentsEnabled: value),
+                        onChanged: (value) => cubit.setPreference(
+                          NotificationPreference.commentsEnabled,
+                          value,
                         ),
                       ),
                       _NotificationCard(
@@ -140,8 +143,9 @@ class NotificationSettingsView extends StatelessWidget {
                         subtitle:
                             context.l10n.notificationSettingsFollowsSubtitle,
                         value: prefs.followsEnabled,
-                        onChanged: (value) => cubit.setPreferences(
-                          prefs.copyWith(followsEnabled: value),
+                        onChanged: (value) => cubit.setPreference(
+                          NotificationPreference.followsEnabled,
+                          value,
                         ),
                       ),
                       _NotificationCard(
@@ -151,8 +155,9 @@ class NotificationSettingsView extends StatelessWidget {
                         subtitle:
                             context.l10n.notificationSettingsMentionsSubtitle,
                         value: prefs.mentionsEnabled,
-                        onChanged: (value) => cubit.setPreferences(
-                          prefs.copyWith(mentionsEnabled: value),
+                        onChanged: (value) => cubit.setPreference(
+                          NotificationPreference.mentionsEnabled,
+                          value,
                         ),
                       ),
                       _NotificationCard(
@@ -162,8 +167,9 @@ class NotificationSettingsView extends StatelessWidget {
                         subtitle:
                             context.l10n.notificationSettingsRepostsSubtitle,
                         value: prefs.repostsEnabled,
-                        onChanged: (value) => cubit.setPreferences(
-                          prefs.copyWith(repostsEnabled: value),
+                        onChanged: (value) => cubit.setPreference(
+                          NotificationPreference.repostsEnabled,
+                          value,
                         ),
                       ),
                       if (showNewPosts)
@@ -174,8 +180,9 @@ class NotificationSettingsView extends StatelessWidget {
                           subtitle:
                               context.l10n.notificationSettingsNewPostsSubtitle,
                           value: prefs.newPostsEnabled,
-                          onChanged: (value) => cubit.setPreferences(
-                            prefs.copyWith(newPostsEnabled: value),
+                          onChanged: (value) => cubit.setPreference(
+                            NotificationPreference.newPostsEnabled,
+                            value,
                           ),
                         ),
                       _NotificationCard(
@@ -185,8 +192,9 @@ class NotificationSettingsView extends StatelessWidget {
                         subtitle:
                             context.l10n.notificationSettingsCampaignsSubtitle,
                         value: prefs.campaignsEnabled,
-                        onChanged: (value) => cubit.setPreferences(
-                          prefs.copyWith(campaignsEnabled: value),
+                        onChanged: (value) => cubit.setPreference(
+                          NotificationPreference.campaignsEnabled,
+                          value,
                         ),
                       ),
                       DivineSectionHeader(

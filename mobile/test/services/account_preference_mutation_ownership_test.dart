@@ -63,6 +63,7 @@ void main() {
           'labeler removal',
           'followed moderation',
           'notification flags',
+          'notification choice',
         ]) {
           test(
             '$mutation rejects a switch before its first durable write',
@@ -117,8 +118,12 @@ void main() {
                 'labeler removal' => moderation.removeLabeler(_labeler),
                 'followed moderation' =>
                   moderation.setFollowingModerationEnabled(true),
-                _ => notifications.updatePreferences(
+                'notification flags' => notifications.updatePreferences(
                   const NotificationPreferences(likesEnabled: false),
+                ),
+                _ => notifications.updatePreference(
+                  NotificationPreference.likesEnabled,
+                  false,
                 ),
               };
               final outcome = operation.then<Object?>(

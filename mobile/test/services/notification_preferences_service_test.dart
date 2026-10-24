@@ -21,9 +21,9 @@ void main() {
   });
 
   group('unbound account preference port', () {
-    for (final reset in [false, true]) {
+    for (final mutation in ['snapshot', 'field', 'reset']) {
       test(
-        'unbound mutation retains its account lease, reset: $reset',
+        'unbound $mutation mutation retains its account lease',
         () async {
           SharedPreferences.setMockInitialValues({});
           final account = AccountPreferenceStore(
@@ -31,8 +31,10 @@ void main() {
           );
           final entered = Completer<void>();
           final release = Completer<void>();
+          var saves = 0;
           final store = _MemoryNotificationPreferencesStore()
             ..beforeSave = () async {
+              ++saves;
               entered.complete();
               await release.future;
             };
@@ -52,17 +54,34 @@ void main() {
           addTearDown(service.dispose);
           addTearDown(account.dispose);
           addTearDown(incoming.close);
-          final mutation = reset
-              ? service.resetToDefaults()
-              : service.updatePreferences(
-                  const NotificationPreferences(commentsEnabled: false),
-                );
-          final cancelled = expectLater(mutation, throwsStateError);
+          final operation = switch (mutation) {
+            'reset' => service.resetToDefaults(),
+            'field' => service.updatePreference(
+              NotificationPreference.commentsEnabled,
+              false,
+            ),
+            _ => service.updatePreferences(
+              const NotificationPreferences(commentsEnabled: false),
+            ),
+          };
+          final cancelled = expectLater(operation, throwsStateError);
           await entered.future;
+          final queuedCancellation = mutation == 'field'
+              ? expectLater(
+                  service.updatePreference(
+                    NotificationPreference.likesEnabled,
+                    false,
+                  ),
+                  throwsStateError,
+                )
+              : null;
           owner = incoming.pubkey;
           await account.bind(incoming);
           release.complete();
           await cancelled;
+          await queuedCancellation;
+          expect(saves, 1);
+          expect(incoming.values, isEmpty);
           expect(await store.loadDirty(firstOwner), isNull);
           expect(publishedOwners, isNot(contains(firstOwner)));
         },
@@ -102,6 +121,82 @@ void main() {
         );
         expect(await store.loadDirty(owner), isNull);
         expect(published, isFalse);
+      },
+    );
+
+    test('merges concurrent legacy field choices after a held save', () async {
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      var saves = 0;
+      final store = _MemoryNotificationPreferencesStore()
+        ..beforeSave = () async {
+          if (saves++ == 0) {
+            entered.complete();
+            await release.future;
+          }
+        };
+      final service = NotificationPreferencesService(
+        store: store,
+        currentPubkey: () => null,
+        publishPreferences: (_, _) async => false,
+      );
+      addTearDown(service.dispose);
+      final first = service.updatePreference(
+        NotificationPreference.likesEnabled,
+        false,
+      );
+      await entered.future;
+      final second = service.updatePreference(
+        NotificationPreference.commentsEnabled,
+        false,
+      );
+      await pumpEventQueue();
+      release.complete();
+      await Future.wait([first, second]);
+
+      expect(
+        await service.loadPreferences(),
+        const NotificationPreferences(
+          likesEnabled: false,
+          commentsEnabled: false,
+        ),
+      );
+    });
+
+    test(
+      'a rejected legacy field save does not block the next choice',
+      () async {
+        var saves = 0;
+        final store = _MemoryNotificationPreferencesStore()
+          ..beforeSave = () async {
+            if (saves++ == 0) throw StateError('preference storage refused');
+          };
+        final owner = 'a' * 64;
+        final published = <NotificationPreferences>[];
+        final service = NotificationPreferencesService(
+          store: store,
+          currentPubkey: () => owner,
+          publishPreferences: (_, preferences) async {
+            published.add(preferences);
+            return false;
+          },
+        );
+        addTearDown(service.dispose);
+        await expectLater(
+          service.updatePreference(NotificationPreference.likesEnabled, false),
+          throwsStateError,
+        );
+        expect(await store.loadDirty(owner), isNull);
+        expect(published, isEmpty);
+        await service.updatePreference(
+          NotificationPreference.commentsEnabled,
+          false,
+        );
+
+        const effective = NotificationPreferences(commentsEnabled: false);
+        expect(await service.loadPreferences(), effective);
+        expect(await store.loadDirty(owner), effective);
+        expect(published, [effective]);
       },
     );
 

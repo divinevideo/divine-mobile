@@ -21,6 +21,7 @@ class _MockNotificationRepository extends Mock
 void main() {
   setUpAll(() {
     registerFallbackValue(const NotificationPreferences());
+    registerFallbackValue(NotificationPreference.likesEnabled);
   });
 
   group(NotificationSettingsCubit, () {
@@ -33,9 +34,14 @@ void main() {
       repository = _MockNotificationRepository();
       var stored = const NotificationPreferences();
       when(service.loadPreferences).thenAnswer((_) async => stored);
-      when(() => service.updatePreferences(any())).thenAnswer((call) async {
-        stored = call.positionalArguments.first as NotificationPreferences;
-      });
+      when(() => service.updatePreference(any(), any()))
+          .thenAnswer((call) async {
+            final field = call.positionalArguments[0] as NotificationPreference;
+            stored = NotificationPreferences.fromJson({
+              ...stored.toJson(),
+              field.name: call.positionalArguments[1] as bool,
+            });
+          });
       when(service.resetToDefaults).thenAnswer((_) async {
         stored = const NotificationPreferences();
       });
@@ -72,11 +78,10 @@ void main() {
     );
 
     blocTest<NotificationSettingsCubit, NotificationSettingsState>(
-      'setPreferences emits the new preferences and persists them',
+      'setPreference persists the changed choice and reloads the preferences',
       build: buildCubit,
-      act: (cubit) => cubit.setPreferences(
-        const NotificationPreferences(commentsEnabled: false),
-      ),
+      act: (cubit) =>
+          cubit.setPreference(NotificationPreference.commentsEnabled, false),
       expect: () => const [
         NotificationSettingsState(
           preferences: NotificationPreferences(commentsEnabled: false),
@@ -84,8 +89,9 @@ void main() {
       ],
       verify: (_) {
         verify(
-          () => service.updatePreferences(
-            const NotificationPreferences(commentsEnabled: false),
+          () => service.updatePreference(
+            NotificationPreference.commentsEnabled,
+            false,
           ),
         ).called(1);
       },

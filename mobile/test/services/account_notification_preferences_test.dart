@@ -16,6 +16,7 @@ import 'package:openvine/services/notification_preferences_service.dart';
 import 'package:openvine/services/notification_service.dart';
 import 'package:openvine/services/push_notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 import 'support/fake_account_state.dart';
 
@@ -38,6 +39,22 @@ class _PushEnvironment extends EnvironmentConfig {
   const _PushEnvironment() : super(environment: AppEnvironment.staging);
   @override
   String get pushServicePubkey => '3' * 64;
+}
+
+class _HeldNativeProjection extends InMemorySharedPreferencesStore {
+  _HeldNativeProjection() : super.empty();
+
+  final entered = Completer<void>();
+  final release = Completer<void>();
+
+  @override
+  Future<bool> setValue(String type, String key, Object value) async {
+    if (key == 'flutter.account_preferences_projection_owner') {
+      if (!entered.isCompleted) entered.complete();
+      await release.future;
+    }
+    return super.setValue(type, key, value);
+  }
 }
 
 class _MemoryPushStore implements NotificationPreferencesStore {
@@ -98,6 +115,103 @@ class _MemoryPushStore implements NotificationPreferencesStore {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  group('notification settings mutation intent', () {
+    late AccountPreferenceStore port;
+    late FakeAccountState account;
+    late NotificationPreferencesService service;
+    late NotificationSettingsCubit cubit;
+
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      port = AccountPreferenceStore(await SharedPreferences.getInstance());
+      account = FakeAccountState(_account);
+      await port.bind(account);
+      service = NotificationPreferencesService(
+        store: _MemoryPushStore(),
+        accountPreferences: port,
+        currentPubkey: () => account.pubkey,
+        publishPreferences: (_, _) async => false,
+      );
+      cubit = NotificationSettingsCubit(preferencesService: service);
+      await cubit.load();
+    });
+
+    tearDown(() async {
+      await cubit.close();
+      service.dispose();
+      port.dispose();
+      await account.close();
+    });
+
+    test('independent toggles survive a held native projection', () async {
+      final native = _HeldNativeProjection();
+      SharedPreferencesStorePlatform.instance = native;
+      addTearDown(() {
+        if (!native.release.isCompleted) native.release.complete();
+      });
+      final first = cubit.setPreference(
+        NotificationPreference.likesEnabled,
+        false,
+      );
+      await native.entered.future;
+      expect(account.value('notifications/likesEnabled'), isFalse);
+      final second = cubit.setPreference(
+        NotificationPreference.commentsEnabled,
+        false,
+      );
+      await pumpEventQueue();
+      native.release.complete();
+      await Future.wait([first, second]);
+      await pumpEventQueue();
+
+      expect(account.value('notifications/likesEnabled'), isFalse);
+      expect(account.value('notifications/commentsEnabled'), isFalse);
+      expect(cubit.state.preferences.likesEnabled, isFalse);
+      expect(cubit.state.preferences.commentsEnabled, isFalse);
+    });
+
+    test('a newer toggle wins even while its first write is pending', () async {
+      final pendingWrite = Completer<void>();
+      account.pendingWrite = pendingWrite;
+      final first = cubit.setPreference(
+        NotificationPreference.likesEnabled,
+        false,
+      );
+      final second = cubit.setPreference(
+        NotificationPreference.likesEnabled,
+        true,
+      );
+      await pumpEventQueue();
+      expect(cubit.state.preferences.likesEnabled, isTrue);
+      pendingWrite.complete();
+      await Future.wait([first, second]);
+      await pumpEventQueue();
+
+      expect(account.value('notifications/likesEnabled'), isTrue);
+      expect(cubit.state.preferences.likesEnabled, isTrue);
+    });
+
+    test(
+      'a rejected account write never changes the displayed choice',
+      () async {
+        final pendingWrite = Completer<void>();
+        account.pendingWrite = pendingWrite;
+        final mutation = cubit.setPreference(
+          NotificationPreference.likesEnabled,
+          false,
+        );
+        final rejected = expectLater(mutation, throwsStateError);
+        await pumpEventQueue();
+        expect(cubit.state.preferences.likesEnabled, isTrue);
+        pendingWrite.completeError(StateError('account storage refused'));
+        await rejected;
+
+        expect(cubit.state.preferences.likesEnabled, isTrue);
+        expect(account.value('notifications/likesEnabled'), isNull);
+      },
+    );
+  });
+
   group('account notification preferences', () {
     group('ordered production push delivery', () {
       setUpAll(() {

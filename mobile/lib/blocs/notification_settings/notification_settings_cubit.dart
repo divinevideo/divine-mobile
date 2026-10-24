@@ -89,9 +89,12 @@ class NotificationSettingsCubit extends Cubit<NotificationSettingsState>
     }
   }
 
-  /// Applies [preferences] optimistically, then persists them.
-  Future<void> setPreferences(NotificationPreferences preferences) async {
-    await _preferencesService.updatePreferences(preferences);
+  /// Persists only the changed choice before refreshing the displayed state.
+  Future<void> setPreference(
+    NotificationPreference preference,
+    bool enabled,
+  ) async {
+    await _preferencesService.updatePreference(preference, enabled);
     await _reloadPreferences();
   }
 
