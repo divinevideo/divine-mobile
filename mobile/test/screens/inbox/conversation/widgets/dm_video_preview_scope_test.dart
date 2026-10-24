@@ -578,7 +578,9 @@ void main() {
         expect(built.last, (_framePath, null));
       });
 
-      testWidgets('still asks for a tap on a request', (tester) async {
+      testWidgets('says so on a request, still downloading nothing', (
+        tester,
+      ) async {
         final built = <(String?, DmVideoHold?)>[];
         await tester.pumpWidget(
           host(
@@ -593,7 +595,7 @@ void main() {
         await tester.pump();
 
         expectNoStoreRead();
-        expect(built.last, (null, DmVideoHold.request));
+        expect(built.last, (null, DmVideoHold.markedSensitive));
       });
     });
   });

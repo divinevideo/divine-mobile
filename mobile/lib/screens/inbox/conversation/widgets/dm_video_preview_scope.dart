@@ -29,7 +29,8 @@ import 'package:openvine/screens/inbox/conversation/widgets/encrypted_video_card
 /// When the user chose to blur video previews, a trusted card other than
 /// the user's own still downloads, but shows a blurhash instead of its frame
 /// until the video is played. A video its sender marked sensitive is blurred
-/// the same way whether or not the user chose to, and says so.
+/// the same way whether or not the user chose to, and says so, as does a
+/// request's card when its sender marked the video.
 class DmVideoPreviewScope extends ConsumerWidget {
   /// Creates a [DmVideoPreviewScope] for [message].
   const DmVideoPreviewScope({
@@ -90,7 +91,11 @@ class DmVideoPreviewScope extends ConsumerWidget {
       return builder(
         context,
         null,
-        relationship == null ? null : DmVideoHold.request,
+        relationship == null
+            ? null
+            : message.isMarkedSensitive
+            ? DmVideoHold.markedSensitive
+            : DmVideoHold.request,
         null,
       );
     }

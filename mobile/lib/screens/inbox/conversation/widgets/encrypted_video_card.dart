@@ -36,7 +36,8 @@ enum DmVideoHold {
   blurred,
 
   /// The sender marked the video sensitive, so the card blurs it as for
-  /// [blurred], whether or not the user chose to blur previews.
+  /// [blurred], whether or not the user chose to blur previews. From anyone
+  /// else it is also a [request], downloading only when played.
   markedSensitive,
 }
 
