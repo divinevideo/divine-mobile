@@ -242,6 +242,37 @@ void main() {
       );
     });
 
+    testWidgets('restores the body safe area when editing tools hide', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      tester.view.padding = const FakeViewPadding(bottom: 34);
+      tester.view.viewPadding = const FakeViewPadding(bottom: 34);
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetViewPadding);
+      final mainBloc = VideoEditorMainBloc();
+      addTearDown(mainBloc.close);
+
+      await tester.pumpWidget(
+        buildWidget(isLoading: true, mainBlocOverride: mainBloc),
+      );
+      final timelineContext = tester.element(
+        find.byType(VideoEditorTimelineScaffold),
+      );
+      // The visible tools bar owns the inset instead of the body.
+      expect(MediaQuery.paddingOf(timelineContext).bottom, 0);
+      expect(find.text(l10n.videoEditorEditingToolsLabel), findsOneWidget);
+
+      mainBloc.add(const VideoEditorMainOpenSubEditor(SubEditorType.text));
+      await tester.pump();
+
+      expect(find.text(l10n.videoEditorEditingToolsLabel), findsNothing);
+      // Hidden tools must leave the inset available to editor controls.
+      expect(MediaQuery.paddingOf(timelineContext).bottom, 34);
+      expect(MediaQuery.viewPaddingOf(timelineContext).bottom, 34);
+    });
+
     testWidgets(
       'collapses the timeline and its own controls under the voice-over '
       'recorder',
