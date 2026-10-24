@@ -13755,4 +13755,10 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       '계정 삭제는 진행 중이지만 로그아웃을 완료하지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String get notificationFromDivine => 'Divine의 소식';
+
+  @override
+  String get announcementUnavailable => '이 공지는 더 이상 볼 수 없습니다.';
 }

@@ -14620,4 +14620,10 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'La eliminación de tu cuenta sigue en curso, pero no pudimos cerrar tu sesión. Volvé a intentarlo.';
+
+  @override
+  String get notificationFromDivine => 'De Divine';
+
+  @override
+  String get announcementUnavailable => 'Este anuncio ya no está disponible.';
 }

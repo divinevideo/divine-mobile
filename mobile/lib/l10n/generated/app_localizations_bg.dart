@@ -14591,4 +14591,10 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Изтриването на акаунта ти е в ход, но не успяхме да завършим излизането. Опитай отново.';
+
+  @override
+  String get notificationFromDivine => 'От Divine';
+
+  @override
+  String get announcementUnavailable => 'Това съобщение вече не е налично.';
 }

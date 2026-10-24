@@ -13740,4 +13740,10 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'アカウントの削除は処理中ですが、ログアウトを完了できませんでした。もう一度お試しください。';
+
+  @override
+  String get notificationFromDivine => 'Divineからのお知らせ';
+
+  @override
+  String get announcementUnavailable => 'このお知らせは現在ご覧いただけません。';
 }

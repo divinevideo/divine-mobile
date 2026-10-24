@@ -14393,4 +14393,10 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Tài khoản của bạn đang được xử lý xóa, nhưng chúng tôi chưa thể đăng xuất cho bạn. Hãy thử lại.';
+
+  @override
+  String get notificationFromDivine => 'Từ Divine';
+
+  @override
+  String get announcementUnavailable => 'Thông báo này không còn khả dụng.';
 }

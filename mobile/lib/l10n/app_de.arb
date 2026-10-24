@@ -5871,5 +5871,7 @@
 "listPermissionsRecoveryPending": "Deine Änderung wurde angenommen. Tippe auf Jetzt synchronisieren, um das Speichern abzuschließen. Bis dahin ist die Bearbeitung pausiert.",
 "listRecoveryReadOnly": "Einige gespeicherte Änderungen an Videolisten müssen wiederhergestellt werden. Du kannst Videolisten ansehen, aber die Bearbeitung ist vorübergehend pausiert.",
 "listAddToLists": "Zu Listen hinzufügen",
-"accountDeletionProcessingSignOutFailed": "Dein Konto wird gerade gelöscht, aber wir konnten dich nicht vollständig abmelden. Versuch es noch einmal."
+"accountDeletionProcessingSignOutFailed": "Dein Konto wird gerade gelöscht, aber wir konnten dich nicht vollständig abmelden. Versuch es noch einmal.",
+  "notificationFromDivine": "Von Divine",
+  "announcementUnavailable": "Diese Mitteilung ist nicht mehr verfügbar."
 }

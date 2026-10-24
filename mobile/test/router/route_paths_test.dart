@@ -10,6 +10,7 @@ void main() {
     // Expected values were read off the screen classes before the locations
     // moved here, so drift in either direction fails these tests.
     test('constants keep the exact locations the screens declared', () {
+      expect(RoutePaths.announcementDetailBase, equals('/announcements'));
       expect(RoutePaths.appLanguage, equals('/app-language'));
       expect(RoutePaths.appearanceSettings, equals('/appearance-settings'));
       expect(RoutePaths.appsDirectory, equals('/apps'));
@@ -89,6 +90,10 @@ void main() {
     });
 
     test('builders compose the same locations they did on the screens', () {
+      expect(
+        RoutePaths.announcementDetailForId('announcement:a/b'),
+        equals('/announcements/announcement%3Aa%2Fb'),
+      );
       expect(RoutePaths.appDetailForSlug('divine'), equals('/apps/divine'));
       expect(
         RoutePaths.categoryGalleryFor('Wild Life'),

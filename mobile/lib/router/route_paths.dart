@@ -13,6 +13,7 @@
 /// values, so existing `SomeScreen.path` call sites are unaffected.
 abstract final class RoutePaths {
   static const accountDeletionRecovery = '/account-deletion-recovery';
+  static const announcementDetailBase = '/announcements';
   static const appLanguage = '/app-language';
   static const appearanceSettings = '/appearance-settings';
   static const appsDirectory = '/apps';
@@ -105,6 +106,8 @@ abstract final class RoutePaths {
   static const welcomeLoginOptions = '/welcome/login-options';
   static const welcomeResetPassword = '$welcomeLoginOptions/reset-password';
 
+  static String announcementDetailForId(String id) =>
+      '$announcementDetailBase/${Uri.encodeComponent(id)}';
   static String appDetailForSlug(String slug) => '$appsDirectory/$slug';
   static String categoryGalleryFor(String categoryName) {
     return '/categories/${Uri.encodeComponent(categoryName)}';

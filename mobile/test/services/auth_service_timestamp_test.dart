@@ -1,6 +1,7 @@
 // ABOUTME: Test that AuthService creates events with correct backdated timestamps
 // ABOUTME: Verifies Kind 0 profile events use 5-minute backdate
 
+import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/utils/nostr_timestamp.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -8,12 +9,13 @@ import 'package:unified_logger/unified_logger.dart';
 void main() {
   group('AuthService Event Creation', () {
     test('should create Kind 0 event with 5-minute backdated timestamp', () async {
-      // Note: This test requires actual AuthService setup
-      // For now, let's test the timestamp logic directly
-
-      final currentTime = DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000;
+      final fixedClock = Clock.fixed(DateTime.now().toUtc());
+      final currentTime = fixedClock.now().millisecondsSinceEpoch ~/ 1000;
       final kind0Tolerance = NostrTimestamp.getDriftToleranceForKind(0);
-      final kind0Timestamp = NostrTimestamp.now(driftTolerance: kind0Tolerance);
+      final kind0Timestamp = NostrTimestamp.now(
+        driftTolerance: kind0Tolerance,
+        clock: fixedClock,
+      );
 
       Log.info('Testing Kind 0 (profile) event timestamp:');
       Log.info(
@@ -38,11 +40,12 @@ void main() {
     test(
       'should create Kind 22 event with 30-second backdated timestamp',
       () async {
-        final currentTime =
-            DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000;
+        final fixedClock = Clock.fixed(DateTime.now().toUtc());
+        final currentTime = fixedClock.now().millisecondsSinceEpoch ~/ 1000;
         final kind22Tolerance = NostrTimestamp.getDriftToleranceForKind(22);
         final kind22Timestamp = NostrTimestamp.now(
           driftTolerance: kind22Tolerance,
+          clock: fixedClock,
         );
 
         Log.info('Testing Kind 22 (video) event timestamp:');

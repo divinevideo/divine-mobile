@@ -5871,5 +5871,7 @@
 "listPermissionsRecoveryPending": "Tu cambio fue aceptado. Tocá Sincronizar ahora para terminar de guardarlo. La edición está pausada hasta entonces.",
 "listRecoveryReadOnly": "Algunos cambios guardados en las listas de videos necesitan recuperarse. Podés ver las listas de videos, pero la edición está pausada.",
 "listAddToLists": "Añadir a listas",
-"accountDeletionProcessingSignOutFailed": "La eliminación de tu cuenta sigue en curso, pero no pudimos cerrar tu sesión. Volvé a intentarlo."
+"accountDeletionProcessingSignOutFailed": "La eliminación de tu cuenta sigue en curso, pero no pudimos cerrar tu sesión. Volvé a intentarlo.",
+  "notificationFromDivine": "De Divine",
+  "announcementUnavailable": "Este anuncio ya no está disponible."
 }

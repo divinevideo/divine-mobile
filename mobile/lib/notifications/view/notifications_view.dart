@@ -17,6 +17,7 @@ import 'package:openvine/l10n/localized_time_formatter.dart';
 import 'package:openvine/notifications/bloc/notification_feed_bloc.dart';
 import 'package:openvine/notifications/routing/avatar_stack_tap_target.dart';
 import 'package:openvine/notifications/routing/notification_tap_target.dart';
+import 'package:openvine/notifications/view/announcement_detail_screen.dart';
 import 'package:openvine/notifications/widgets/widgets.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
@@ -196,6 +197,12 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
     // The executors (here vs main.dart) still keep their own navigation
     // mechanics after that decision is made.
     switch (notification) {
+      case AnnouncementNotification(:final announcementId):
+        _pushRoute(
+          context.push<void>(
+            AnnouncementDetailScreen.pathForId(announcementId),
+          ),
+        );
       case VideoNotification(
         :final videoEventId,
         :final videoAddressableId,
@@ -692,6 +699,7 @@ class _NotificationList extends StatelessWidget {
       VideoNotification(:final actors) =>
         actors.isNotEmpty ? actors.first.pubkey : null,
       ActorNotification(:final actor) => actor.pubkey,
+      AnnouncementNotification() => null,
     };
   }
 }

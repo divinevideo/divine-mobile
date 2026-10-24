@@ -14678,4 +14678,10 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'La suppression de ton compte est en cours, mais nous n’avons pas pu te déconnecter. Réessaie.';
+
+  @override
+  String get notificationFromDivine => 'De Divine';
+
+  @override
+  String get announcementUnavailable => 'Cette annonce n’est plus disponible.';
 }

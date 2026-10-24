@@ -14452,4 +14452,10 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Pemadaman akaun anda sedang diproses, tetapi kami tidak dapat menyelesaikan log keluar. Cuba lagi.';
+
+  @override
+  String get notificationFromDivine => 'Daripada Divine';
+
+  @override
+  String get announcementUnavailable => 'Pengumuman ini tidak lagi tersedia.';
 }

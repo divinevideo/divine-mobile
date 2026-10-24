@@ -5871,5 +5871,7 @@
 "listPermissionsRecoveryPending": "Din ändring har godkänts. Tryck på Synkronisera nu för att slutföra sparandet. Redigering är pausad tills dess.",
 "listRecoveryReadOnly": "Vissa sparade ändringar i videolistor behöver återställas. Du kan visa videolistor, men redigeringen är pausad.",
 "listAddToLists": "Lägg till i listor",
-"accountDeletionProcessingSignOutFailed": "Ditt konto håller på att raderas, men vi kunde inte slutföra utloggningen. Försök igen."
+"accountDeletionProcessingSignOutFailed": "Ditt konto håller på att raderas, men vi kunde inte slutföra utloggningen. Försök igen.",
+  "notificationFromDivine": "Från Divine",
+  "announcementUnavailable": "Det här meddelandet är inte längre tillgängligt."
 }

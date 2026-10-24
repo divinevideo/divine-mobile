@@ -5871,5 +5871,7 @@
 "listPermissionsRecoveryPending": "Zmiana została zaakceptowana. Dotknij Synchronizuj teraz, aby dokończyć zapisywanie. Do tego czasu edycja jest wstrzymana.",
 "listRecoveryReadOnly": "Niektóre zapisane zmiany na listach filmów wymagają odzyskania. Możesz przeglądać listy filmów, ale edycja jest wstrzymana.",
 "listAddToLists": "Dodaj do list",
-"accountDeletionProcessingSignOutFailed": "Usuwanie twojego konta trwa, ale nie udało się dokończyć wylogowania. Spróbuj ponownie."
+"accountDeletionProcessingSignOutFailed": "Usuwanie twojego konta trwa, ale nie udało się dokończyć wylogowania. Spróbuj ponownie.",
+  "notificationFromDivine": "Od Divine",
+  "announcementUnavailable": "To ogłoszenie nie jest już dostępne."
 }

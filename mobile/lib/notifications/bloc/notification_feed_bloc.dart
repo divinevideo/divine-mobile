@@ -93,8 +93,19 @@ class NotificationFeedBloc
     Emitter<NotificationFeedState> emit,
   ) {
     final notifications = _applyFollowState(event.page.items);
+    var status = state.status;
+    // Catalog arrivals and expiry must preserve the social failure affordance.
+    if (notifications.isNotEmpty && status == NotificationFeedStatus.failure) {
+      status = NotificationFeedStatus.loaded;
+    } else if (notifications.isEmpty &&
+        event.page.lastRefreshError &&
+        !state.isRefreshing &&
+        status == NotificationFeedStatus.loaded) {
+      status = NotificationFeedStatus.failure;
+    }
     emit(
       state.copyWith(
+        status: status,
         notifications: notifications,
         unreadCount: event.page.unreadCount,
         hasMore: event.page.hasMore,
@@ -116,7 +127,11 @@ class NotificationFeedBloc
   /// let [_flushPendingEmptyPageContinuation] pick it up once the refresh
   /// handler has settled.
   void _continuePastEmptyPageIfNeeded(List<NotificationItem> notifications) {
-    if (notifications.isNotEmpty || !state.hasMore) {
+    // Official messages do not populate the independent social cursor page.
+    final hasSocialRows = notifications.any(
+      (notification) => notification is! AnnouncementNotification,
+    );
+    if (hasSocialRows || !state.hasMore) {
       _emptyPageContinuations = 0;
       _loadMoreFailed = false;
       _emptyPageContinuationPending = false;

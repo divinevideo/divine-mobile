@@ -5871,5 +5871,7 @@
 "listPermissionsRecoveryPending": "Perubahanmu diterima. Ketuk Sinkronkan sekarang untuk menyelesaikan penyimpanan. Pengeditan dijeda sampai selesai.",
 "listRecoveryReadOnly": "Beberapa perubahan tersimpan pada daftar video perlu dipulihkan. Kamu bisa melihat daftar video, tetapi pengeditan dijeda.",
 "listAddToLists": "Tambahkan ke daftar",
-"accountDeletionProcessingSignOutFailed": "Akunmu sedang dihapus, tapi kami belum bisa mengeluarkanmu. Coba lagi."
+"accountDeletionProcessingSignOutFailed": "Akunmu sedang dihapus, tapi kami belum bisa mengeluarkanmu. Coba lagi.",
+  "notificationFromDivine": "Dari Divine",
+  "announcementUnavailable": "Pengumuman ini sudah tidak tersedia."
 }

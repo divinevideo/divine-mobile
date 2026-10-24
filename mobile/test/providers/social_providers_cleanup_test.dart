@@ -26,6 +26,7 @@ import 'package:openvine/constants/hive_box_names.dart';
 import 'package:openvine/models/authentication_source.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/known_account.dart';
+import 'package:openvine/notifications/services/announcement_store.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/followed_people_lists_providers.dart';
 import 'package:openvine/providers/moderation_providers.dart';
@@ -221,6 +222,43 @@ void main() {
         if (tempDir.existsSync()) {
           await tempDir.delete(recursive: true);
         }
+      }
+    });
+
+    group('announcement seen state', () {
+      for (final scope in [
+        (delete: false, forget: false),
+        (delete: true, forget: false),
+        (delete: false, forget: true),
+      ]) {
+        test('retains on switch, clears on removal ($scope)', () async {
+          final departing = SharedPreferencesAnnouncementStore(
+            prefs: prefs,
+            owner: _pubkeyA,
+          );
+          final staying = SharedPreferencesAnnouncementStore(
+            prefs: prefs,
+            owner: _pubkeyB,
+          );
+          await departing.writeSeen(['announcement:seen-a']);
+          await staying.writeSeen(['announcement:seen-b']);
+          expect(await departing.readSeen(), ['announcement:seen-a']);
+          final subscription = container.listen(
+            userDataCleanupServiceProvider,
+            (_, _) {},
+          );
+          addTearDown(subscription.close);
+          await subscription.read().onDatabaseCleanup!(
+            userPubkey: _pubkeyA,
+            deleteUserData: scope.delete,
+            forgetAccount: scope.forget,
+          );
+          expect(
+            await departing.readSeen(),
+            scope.delete || scope.forget ? isEmpty : ['announcement:seen-a'],
+          );
+          expect(await staying.readSeen(), ['announcement:seen-b']);
+        });
       }
     });
 

@@ -14378,4 +14378,10 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Hesabının silinmesi işleniyor, ancak çıkışını tamamlayamadık. Tekrar dene.';
+
+  @override
+  String get notificationFromDivine => 'Divine’dan';
+
+  @override
+  String get announcementUnavailable => 'Bu duyuru artık kullanılamıyor.';
 }

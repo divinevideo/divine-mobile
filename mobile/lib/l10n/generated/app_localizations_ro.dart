@@ -14747,4 +14747,10 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Ștergerea contului tău este în curs, dar nu am putut finaliza deconectarea. Încearcă din nou.';
+
+  @override
+  String get notificationFromDivine => 'De la Divine';
+
+  @override
+  String get announcementUnavailable => 'Acest anunț nu mai este disponibil.';
 }

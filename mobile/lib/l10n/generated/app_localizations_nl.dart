@@ -14527,4 +14527,11 @@ class AppLocalizationsNl extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Je account wordt verwijderd, maar we konden je niet volledig uitloggen. Probeer het opnieuw.';
+
+  @override
+  String get notificationFromDivine => 'Van Divine';
+
+  @override
+  String get announcementUnavailable =>
+      'Deze aankondiging is niet meer beschikbaar.';
 }

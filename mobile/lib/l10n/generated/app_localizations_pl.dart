@@ -14751,4 +14751,10 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Usuwanie twojego konta trwa, ale nie udało się dokończyć wylogowania. Spróbuj ponownie.';
+
+  @override
+  String get notificationFromDivine => 'Od Divine';
+
+  @override
+  String get announcementUnavailable => 'To ogłoszenie nie jest już dostępne.';
 }

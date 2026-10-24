@@ -14091,4 +14091,10 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'መለያዎን የመሰረዝ ሂደት በመካሄድ ላይ ነው፣ ግን ማስወጣት አልቻልንም። እንደገና ይሞክሩ።';
+
+  @override
+  String get notificationFromDivine => 'ከDivine';
+
+  @override
+  String get announcementUnavailable => 'ይህ ማስታወቂያ ከእንግዲህ የለም።';
 }

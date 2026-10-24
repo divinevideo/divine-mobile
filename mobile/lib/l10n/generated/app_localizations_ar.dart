@@ -14449,4 +14449,10 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'حذف الحساب قيد المعالجة، لكن تعذّر إكمال تسجيل الخروج. يرجى المحاولة مجددًا.';
+
+  @override
+  String get notificationFromDivine => 'من Divine';
+
+  @override
+  String get announcementUnavailable => 'لم يعد هذا الإعلان متاحًا.';
 }

@@ -14350,4 +14350,10 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Akunmu sedang dihapus, tapi kami belum bisa mengeluarkanmu. Coba lagi.';
+
+  @override
+  String get notificationFromDivine => 'Dari Divine';
+
+  @override
+  String get announcementUnavailable => 'Pengumuman ini sudah tidak tersedia.';
 }

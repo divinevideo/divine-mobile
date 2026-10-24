@@ -19,6 +19,7 @@ import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/known_account.dart';
+import 'package:openvine/notifications/services/announcement_store.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/device_scope.dart';
@@ -163,6 +164,7 @@ void main() {
     deviceScope = DeviceScope(
       database: database,
       sharedPreferences: prefs,
+      announcementSessions: AnnouncementSessions(),
       feedModePersistence: FeedModePersistenceRegistry(
         sharedPreferences: prefs,
       ),
@@ -190,6 +192,7 @@ void main() {
     deviceScope = DeviceScope(
       database: database,
       sharedPreferences: deviceScope.sharedPreferences,
+      announcementSessions: AnnouncementSessions(),
       feedModePersistence: deviceScope.feedModePersistence,
       switchController: controller,
       appVersion: 'test',
@@ -247,6 +250,7 @@ void main() {
       final scope = DeviceScope(
         database: deviceScope.database,
         sharedPreferences: deviceScope.sharedPreferences,
+        announcementSessions: AnnouncementSessions(),
         feedModePersistence: deviceScope.feedModePersistence,
         switchController: deviceScope.switchController,
         appVersion: deviceScope.appVersion,
@@ -649,6 +653,7 @@ void main() {
         deviceScope = DeviceScope(
           database: database,
           sharedPreferences: prefs,
+          announcementSessions: AnnouncementSessions(),
           feedModePersistence: FeedModePersistenceRegistry(
             sharedPreferences: prefs,
           ),
@@ -1263,6 +1268,7 @@ void main() {
       deviceScope = DeviceScope(
         database: database,
         sharedPreferences: deviceScope.sharedPreferences,
+        announcementSessions: AnnouncementSessions(),
         feedModePersistence: deviceScope.feedModePersistence,
         switchController: controller,
         appVersion: 'test',

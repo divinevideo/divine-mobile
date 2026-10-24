@@ -27,6 +27,7 @@ import 'package:openvine/features/app/startup/startup_phase.dart';
 import 'package:openvine/l10n/current_app_l10n.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/notifications/notification_tap_router.dart';
+import 'package:openvine/notifications/services/announcement_store.dart';
 import 'package:openvine/notifications/services/notification_refresh_coordinator.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/observability/divine_bloc_observer.dart';
@@ -709,6 +710,7 @@ Future<void> startOpenVineApp({
   final deviceScope = DeviceScope(
     database: deviceDatabase,
     sharedPreferences: sharedPreferences,
+    announcementSessions: AnnouncementSessions(),
     feedModePersistence: FeedModePersistenceRegistry(
       sharedPreferences: sharedPreferences,
     ),

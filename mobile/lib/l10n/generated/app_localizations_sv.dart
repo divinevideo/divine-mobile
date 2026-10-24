@@ -14462,4 +14462,11 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Ditt konto håller på att raderas, men vi kunde inte slutföra utloggningen. Försök igen.';
+
+  @override
+  String get notificationFromDivine => 'Från Divine';
+
+  @override
+  String get announcementUnavailable =>
+      'Det här meddelandet är inte längre tillgängligt.';
 }
