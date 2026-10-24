@@ -192,6 +192,15 @@ class ClipLibraryService {
         ownerPubkey: ownerPubkey,
         includeAutosaveDraftId: VideoEditorConstants.autoSaveId,
       );
+      // Trashing a clip trashes its autosave-draft copy too (see [softDelete]),
+      // but the editor's next autosave writes that copy again, untrashed. The
+      // library row decides, or the trashed clip would be listed again.
+      final trashedClipIds = {
+        for (final row in await _clipsDao.getTrashedLibraryClips(
+          ownerPubkey: ownerPubkey,
+        ))
+          row.id,
+      };
 
       final documentsPath = await getDocumentsPath();
 
@@ -212,6 +221,7 @@ class ClipLibraryService {
         // library next to real recordings. A freeze frame is the same kind of
         // generated still, held between two halves of a clip.
         if (clip.isPlaceholder || clip.isFreezeFrame) continue;
+        if (row.draftId != null && trashedClipIds.contains(clip.id)) continue;
         final existing = byClipId[clip.id];
         if (existing == null ||
             (existing.draftId != null && row.draftId == null)) {

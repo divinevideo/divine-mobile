@@ -298,6 +298,47 @@ void main() {
       );
 
       test(
+        'keeps a trashed clip out of the library when the editor autosaves '
+        'its copy again',
+        () async {
+          final draftService = DraftStorageService(
+            draftsDao: database.draftsDao,
+            clipsDao: database.clipsDao,
+          );
+          final clip = DivineVideoClip(
+            id: 'in_editor',
+            video: EditorVideo.file('/tmp/test_video.mp4'),
+            thumbnailPath: '/tmp/test_thumb.jpg',
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime(2026),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+          );
+          final autosave = DivineVideoDraft.create(
+            id: VideoEditorConstants.autoSaveId,
+            clips: [clip],
+            title: '',
+            description: '',
+            hashtags: const {},
+            selectedApproach: '',
+          );
+
+          await service.saveClip(clip);
+          await draftService.saveDraft(autosave);
+          await service.softDelete('in_editor');
+          // The editor still holds the clip and rewrites its draft rows,
+          // the trashed copy included.
+          await draftService.saveDraft(autosave);
+
+          expect(await service.getAllClips(), isEmpty);
+          expect(
+            (await service.getTrashedClips()).map((c) => c.id),
+            equals(['in_editor']),
+          );
+        },
+      );
+
+      test(
         'trashing a dual-row set with clearDraftId shows once in trash',
         () async {
           final draftService = DraftStorageService(
