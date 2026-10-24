@@ -34,6 +34,7 @@
 		5B8E0C1A2F6D4E7A9C3B1D21 /* EchoVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B8E0C1A2F6D4E7A9C3B1D20 /* EchoVideoEffect.swift */; };
 		F15E7E0E1A2B3C4D5E6F7B02 /* FisheyeVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = F15E7E0E1A2B3C4D5E6F7B01 /* FisheyeVideoEffect.swift */; };
 		7C2D66F1C8E35A4FAB9D3C23 /* DropsVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C2D66F1C8E35A4FAB9D3C22 /* DropsVideoEffect.swift */; };
+		AD1A57E1C8E35A4FAB9D3D23 /* AdjustVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD1A57E1C8E35A4FAB9D3D22 /* AdjustVideoEffect.swift */; };
 		78A318202AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 78A3181F2AECB46A00862997 /* FlutterGeneratedPluginSwiftPackage */; };
 		85EE05D0EF4411ECE02D06C9 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 53BB07D4E155845E5F56D875 /* Pods_Runner.framework */; };
 		AF8C168309329B88179E32CE /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 84DAF333CD0651C163C7C88F /* Pods_RunnerTests.framework */; };
@@ -94,6 +95,7 @@
 		5B8E0C1A2F6D4E7A9C3B1D20 /* EchoVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EchoVideoEffect.swift; path = ../ios/Runner/EchoVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		F15E7E0E1A2B3C4D5E6F7B01 /* FisheyeVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FisheyeVideoEffect.swift; path = ../ios/Runner/FisheyeVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		7C2D66F1C8E35A4FAB9D3C22 /* DropsVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DropsVideoEffect.swift; path = ../ios/Runner/DropsVideoEffect.swift; sourceTree = SOURCE_ROOT; };
+		AD1A57E1C8E35A4FAB9D3D22 /* AdjustVideoEffect.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AdjustVideoEffect.swift; path = ../ios/Runner/AdjustVideoEffect.swift; sourceTree = SOURCE_ROOT; };
 		78E0A7A72DC9AD7400C4905E /* FlutterGeneratedPluginSwiftPackage */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = FlutterGeneratedPluginSwiftPackage; path = ephemeral/Packages/FlutterGeneratedPluginSwiftPackage; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		8213F0D199F63C05451BAB7D /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
@@ -202,6 +204,7 @@
 				5B8E0C1A2F6D4E7A9C3B1D20 /* EchoVideoEffect.swift */,
 				F15E7E0E1A2B3C4D5E6F7B01 /* FisheyeVideoEffect.swift */,
 				7C2D66F1C8E35A4FAB9D3C22 /* DropsVideoEffect.swift */,
+				AD1A57E1C8E35A4FAB9D3D22 /* AdjustVideoEffect.swift */,
 				33E51913231747F40026EE4D /* DebugProfile.entitlements */,
 				33E51914231749380026EE4D /* Release.entitlements */,
 				33CC11242044D66E0003C045 /* Resources */,
@@ -494,6 +497,7 @@
 				5B8E0C1A2F6D4E7A9C3B1D21 /* EchoVideoEffect.swift in Sources */,
 				F15E7E0E1A2B3C4D5E6F7B02 /* FisheyeVideoEffect.swift in Sources */,
 				7C2D66F1C8E35A4FAB9D3C23 /* DropsVideoEffect.swift in Sources */,
+				AD1A57E1C8E35A4FAB9D3D23 /* AdjustVideoEffect.swift in Sources */,
 				2DD63C4A2E00A62100B40DED /* NativeCameraPlugin.swift in Sources */,
 				335BBD1B22A9A15E00E9071D /* GeneratedPluginRegistrant.swift in Sources */,
 			);

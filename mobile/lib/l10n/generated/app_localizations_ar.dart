@@ -8953,6 +8953,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorTuneFade => 'التلاشي';
 
   @override
+  String get videoEditorTuneHighlights => 'الإبرازات';
+
+  @override
+  String get videoEditorTuneShadows => 'الظلال';
+
+  @override
+  String get videoEditorTuneVibrance => 'الحيوية';
+
+  @override
+  String get videoEditorTuneSharpen => 'الحدة';
+
+  @override
   String get videoEditorAudioLabel => 'الصوت';
 
   @override

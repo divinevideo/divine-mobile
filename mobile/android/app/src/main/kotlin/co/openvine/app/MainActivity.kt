@@ -13,6 +13,7 @@ import android.security.keystore.KeyProperties
 import android.util.Log
 import android.window.OnBackInvokedCallback
 import co.openvine.app.proofmode.HardwareAttestationNotarizationProvider
+import co.openvine.app.videoeffects.AdjustVideoEffect
 import co.openvine.app.videoeffects.DropsVideoEffect
 import co.openvine.app.videoeffects.EchoVideoEffect
 import co.openvine.app.videoeffects.FisheyeVideoEffect
@@ -103,6 +104,7 @@ class MainActivity : FlutterFragmentActivity() {
         EchoVideoEffect.register()
         FisheyeVideoEffect.register()
         DropsVideoEffect.register()
+        AdjustVideoEffect.register()
 
         // Set up Nostr bridge frame attestation channel. Must run after
         // super.configureFlutterEngine (which registers WebViewFlutterPlugin via

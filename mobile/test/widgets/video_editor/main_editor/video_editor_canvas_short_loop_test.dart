@@ -20,15 +20,21 @@ import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bl
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/text_wrap_hint/text_wrap_hint_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
+import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
+import 'package:openvine/extensions/tune_adjustment_matrix_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/clip_manager_state.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/adjust_video_effect.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show TuneAdjustmentMatrix;
 import 'package:pro_video_editor/pro_video_editor.dart'
     show CustomVideoEffect, EditorVideo;
 import 'package:pro_video_editor/pro_video_editor.dart' as editor;
@@ -158,6 +164,7 @@ void main() {
   late _PlayerReports reports;
   late VideoEditorMainBloc mainBloc;
   late VideoEditorEffectsCubit effectsCubit;
+  late VideoEditorTuneBloc tuneBloc;
   late _MockClipEditorBloc clipBloc;
   late _MockTimelineOverlayBloc overlayBloc;
   late SharedPreferences prefs;
@@ -206,6 +213,7 @@ void main() {
     }
     await mainBloc.close();
     await effectsCubit.close();
+    await tuneBloc.close();
     tempDir.deleteSync(recursive: true);
   });
 
@@ -243,6 +251,7 @@ void main() {
     );
     mainBloc = VideoEditorMainBloc();
     effectsCubit = VideoEditorEffectsCubit();
+    tuneBloc = VideoEditorTuneBloc();
     final clip = clipOf(duration).copyWith(playbackSpeed: playbackSpeed);
     whenListen(
       clipBloc,
@@ -279,6 +288,8 @@ void main() {
               BlocProvider(create: (_) => VideoEditorDrawBloc()),
               BlocProvider(create: (_) => VideoEditorFilterBloc()),
               BlocProvider<VideoEditorEffectsCubit>.value(value: effectsCubit),
+              // Its sliders drive the Adjust effect the player draws.
+              BlocProvider<VideoEditorTuneBloc>.value(value: tuneBloc),
               // Read by the same capability sync, before the clip reconcile.
               BlocProvider(create: (_) => VideoEditorAudioVisualizerCubit()),
               // Read on every history change, before it is persisted.
@@ -575,6 +586,181 @@ void main() {
       );
       expect(frameEffectCalls().single.arguments, echoArguments);
       await unmount(tester);
+    });
+
+    group('Adjust', () {
+      Map<String, Object?> adjustArguments(
+        Map<String, double> params, {
+        int? startUs,
+        int? endUs,
+      }) => {
+        'effects': [
+          {
+            'id': adjustVideoEffectId,
+            'params': params,
+            'startUs': startUs,
+            'endUs': endUs,
+          },
+        ],
+      };
+
+      /// Opens Adjust on a session seeded with [values].
+      Future<void> openAdjust(
+        WidgetTester tester,
+        Map<String, double> values,
+      ) async {
+        tuneBloc.add(VideoEditorTuneSessionStarted(values: values));
+        mainBloc.add(const VideoEditorMainOpenSubEditor(SubEditorType.tune));
+        await tester.pump();
+      }
+
+      /// Moves the [kind] slider of the open session to [value].
+      Future<void> slide(WidgetTester tester, String kind, double value) async {
+        tuneBloc
+          ..add(
+            VideoEditorTuneAdjustmentSelected(
+              tuneBloc.state.adjustments.indexWhere((a) => a.id == kind),
+            ),
+          )
+          ..add(VideoEditorTuneValueChanged(value));
+        await tester.pump();
+      }
+
+      testWidgets('shows the open session over the whole video', (
+        tester,
+      ) async {
+        await pumpCanvas(tester, loop);
+
+        await openAdjust(tester, {'sharpen': 0.5, 'brightness': 0.2});
+
+        expect(
+          frameEffectCalls().last.arguments,
+          adjustArguments({'sharpen': 0.5}),
+        );
+        await unmount(tester);
+      });
+
+      testWidgets('follows the session sliders the effect draws', (
+        tester,
+      ) async {
+        await pumpCanvas(tester, loop);
+        await openAdjust(tester, {'sharpen': 0.5});
+
+        await slide(tester, 'shadows', 0.3);
+
+        expect(
+          frameEffectCalls().last.arguments,
+          adjustArguments({'shadows': 0.3, 'sharpen': 0.5}),
+        );
+        await unmount(tester);
+      });
+
+      testWidgets('leaves the player alone when a colour matrix slider moves', (
+        tester,
+      ) async {
+        await pumpCanvas(tester, loop);
+        await openAdjust(tester, {'sharpen': 0.5});
+        expect(frameEffectCalls(), isNotEmpty);
+        playerCalls.clear();
+
+        await slide(tester, 'brightness', 0.4);
+
+        expect(tuneBloc.state.values, containsPair('brightness', 0.4));
+        expect(frameEffectCalls(), isEmpty);
+        await unmount(tester);
+      });
+
+      testWidgets('drops the session once Adjust closes', (tester) async {
+        await pumpCanvas(tester, loop);
+        await openAdjust(tester, {'sharpen': 0.5});
+        expect(
+          frameEffectCalls().last.arguments,
+          adjustArguments({'sharpen': 0.5}),
+        );
+
+        mainBloc.add(const VideoEditorMainSubEditorClosed());
+        await tester.pump();
+
+        expect(frameEffectCalls().last.arguments, {'effects': <Object?>[]});
+        await unmount(tester);
+      });
+
+      testWidgets('shows an applied set over its window after a history '
+          'change', (tester) async {
+        await pumpCanvas(tester, loop);
+        const setId = 'set';
+        VideoEditorScope.of(
+          tester.element(find.byType(VideoEditorCanvas)),
+        ).editor!.addHistory(
+          tuneAdjustments: [
+            for (final (kind, value) in [('sharpen', 0.4), ('hue', 0.1)])
+              TuneAdjustmentMatrix(
+                id: TuneSet.memberId(kind: kind, setId: setId),
+                value: value,
+                matrix: const [],
+                meta: TuneSet.metaFor(setId: setId, kind: kind),
+                startTime: const Duration(seconds: 1),
+                endTime: const Duration(seconds: 2),
+              ),
+          ],
+        );
+        for (var i = 0; i < 5; i++) {
+          await tester.pump();
+        }
+
+        expect(
+          frameEffectCalls().last.arguments,
+          adjustArguments(
+            {'sharpen': 0.4},
+            startUs: 1000000,
+            endUs: 2000000,
+          ),
+        );
+        await unmount(tester);
+      });
+
+      testWidgets('follows an Adjust bar the timeline moves, and nothing '
+          'else there', (tester) async {
+        final overlay = StreamController<TimelineOverlayState>();
+        addTearDown(overlay.close);
+        whenListen(
+          overlayBloc,
+          overlay.stream,
+          initialState: const TimelineOverlayState(),
+        );
+        TimelineOverlayItem bar(String id, TimelineOverlayType type, int s) =>
+            TimelineOverlayItem(
+              id: id,
+              type: type,
+              startTime: Duration(seconds: s),
+              endTime: Duration(seconds: s + 1),
+            );
+        await pumpCanvas(tester, loop);
+        overlay.add(
+          TimelineOverlayState(
+            items: [bar('tune', .tune, 1), bar('layer', .layer, 0)],
+          ),
+        );
+        await tester.pump();
+        playerCalls.clear();
+
+        overlay.add(
+          TimelineOverlayState(
+            items: [bar('tune', .tune, 1), bar('layer', .layer, 2)],
+          ),
+        );
+        await tester.pump();
+        expect(frameEffectCalls(), isEmpty);
+
+        overlay.add(
+          TimelineOverlayState(
+            items: [bar('tune', .tune, 3), bar('layer', .layer, 2)],
+          ),
+        );
+        await tester.pump();
+        expect(frameEffectCalls(), hasLength(1));
+        await unmount(tester);
+      });
     });
   });
 }

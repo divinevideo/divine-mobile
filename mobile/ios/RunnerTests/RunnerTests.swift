@@ -1724,3 +1724,167 @@ final class DropsVideoEffectTests: XCTestCase {
     return out
   }
 }
+
+/// Highlights, shadows, vibrance and sharpening are drawn with a Metal kernel
+/// on iOS and macOS, and with the same shader in GLSL on Android
+/// (`AdjustVideoEffect`). This checks every pixel of the kernel against the
+/// shader's formulas computed here on the CPU, for the whole frame and for a
+/// tile Core Image renders on its own, so a change to the kernel that the
+/// formulas here do not share fails, and so does a kernel that reads its
+/// textures upside down or samples outside the region it asked for. No test
+/// runs the Android copy: a change to it has to be made here as well.
+final class AdjustVideoEffectTests: XCTestCase {
+  private let width = 90
+  private let height = 160
+
+  func testDrawsWhatTheAndroidShaderDraws() {
+    // Brightness ramps up the frame for the tone curve, with a
+    // checkerboard in the bottom quarter for the sharpening; red runs ahead
+    // of green and blue, so skin-like tones and saturated ones both occur.
+    var rgb = [Double](repeating: 0, count: width * height * 3)
+    for y in 0..<height {
+      for x in 0..<width {
+        let i = (y * width + x) * 3
+        let fx = (Double(x) + 0.5) / Double(width), fy = (Double(y) + 0.5) / Double(height)
+        let isLight = (x / 3 + y / 3) % 2 == 0
+        let check: Double = y < 40 ? (isLight ? 0.08 : -0.08) : 0
+        rgb[i] = min(max(fy + check, 0), 1)
+        rgb[i + 1] = fy * (0.4 + 0.6 * fx)
+        rgb[i + 2] = fy * fx * fx
+      }
+    }
+    // A bitmap's first row is the top of the image, Core Image's y = 0 the bottom.
+    var pixels = [Float](repeating: 1, count: width * height * 4)
+    for y in 0..<height {
+      for x in 0..<width {
+        let s = (y * width + x) * 3, d = ((height - 1 - y) * width + x) * 4
+        for k in 0..<3 { pixels[d + k] = Float(rgb[s + k]) }
+      }
+    }
+    let frame = CIImage(
+      bitmapData: Data(bytes: pixels, count: pixels.count * 4),
+      bytesPerRow: width * 16,
+      size: CGSize(width: width, height: height),
+      format: .RGBAf,
+      colorSpace: nil)
+    let context = CIContext(options: [.workingColorSpace: NSNull()])
+
+    // Params, and the values the shader draws them with: out of range ones
+    // are clamped, as on Android.
+    let cases: [([String: Any], (h: Double, s: Double, v: Double, k: Double))] = [
+      (["highlights": -1.0], (-1, 0, 0, 0)),
+      (["highlights": 1.0, "shadows": -1.0], (1, -1, 0, 0)),
+      (["shadows": 1.0, "vibrance": 1.0], (0, 1, 1, 0)),
+      (["vibrance": -1.0, "sharpen": 1.0], (0, 0, -1, 1)),
+      (["highlights": -0.6, "shadows": 0.7, "vibrance": 0.5, "sharpen": 0.4], (-0.6, 0.7, 0.5, 0.4)),
+      (["highlights": -3.0, "sharpen": -0.5], (-1, 0, 0, 0)),
+      ([:], (0, 0, 0, 0)),
+    ]
+    let tile = CGRect(x: 20, y: 50, width: 31, height: 47)
+    for (params, values) in cases {
+      let output = AdjustVideoEffect(params: params)
+        .render(frame, history: [], timeUs: 0, effectTimeUs: 0)
+      XCTAssertEqual(output.extent, frame.extent)
+      let expected = draw(rgb, values)
+      for bounds in [frame.extent, tile] {
+        let w = Int(bounds.width), h = Int(bounds.height)
+        var drawn = [Float](repeating: 0, count: w * h * 4)
+        drawn.withUnsafeMutableBytes {
+          context.render(
+            output.cropped(to: bounds), toBitmap: $0.baseAddress!, rowBytes: w * 16,
+            bounds: bounds, format: .RGBAf, colorSpace: nil)
+        }
+        let left = Int(bounds.minX), bottom = Int(bounds.minY)
+        var worst = 0.0
+        for y in 0..<h {
+          for x in 0..<w {
+            for k in 0..<3 {
+              let got = Double(drawn[((h - 1 - y) * w + x) * 4 + k])
+              worst = max(worst, abs(got - expected[((y + bottom) * width + x + left) * 3 + k]))
+            }
+          }
+        }
+        // Half-float textures round to about 0.0005.
+        XCTAssertLessThan(worst, 0.003, "\(params) in \(bounds)")
+      }
+    }
+  }
+
+  /// The shader on the CPU, for an RGB frame stored bottom row first.
+  private func draw(_ rgb: [Double], _ v: (h: Double, s: Double, v: Double, k: Double))
+    -> [Double]
+  {
+    let w = Double(width), h = Double(height)
+    func tap(_ qx: Double, _ qy: Double) -> [Double] {
+      let x = min(max(qx, 0.5), w - 0.5) - 0.5, y = min(max(qy, 0.5), h - 0.5) - 0.5
+      let x0 = Int(x), y0 = Int(y), x1 = min(x0 + 1, width - 1), y1 = min(y0 + 1, height - 1)
+      let fx = x - Double(x0), fy = y - Double(y0)
+      return (0..<3).map { k in
+        let row0 = rgb[(y0 * width + x0) * 3 + k] * (1 - fx) + rgb[(y0 * width + x1) * 3 + k] * fx
+        let row1 = rgb[(y1 * width + x0) * 3 + k] * (1 - fx) + rgb[(y1 * width + x1) * 3 + k] * fx
+        return row0 * (1 - fy) + row1 * fy
+      }
+    }
+    func luma(_ c: [Double]) -> Double { c[0] * 0.2126 + c[1] * 0.7152 + c[2] * 0.0722 }
+    func unit(_ x: Double) -> Double { min(max(x, 0), 1) }
+    func smoothstep(_ a: Double, _ b: Double, _ x: Double) -> Double {
+      let t = unit((x - a) / (b - a))
+      return t * t * (3 - 2 * t)
+    }
+
+    let r = max(1, 1.5 * min(w, h) / 1080)
+    var out = [Double](repeating: 0, count: rgb.count)
+    for yi in 0..<height {
+      for xi in 0..<width {
+        let px = Double(xi) + 0.5, py = Double(yi) + 0.5
+        var color = tap(px, py)
+        if v.k > 0 {
+          let y = luma(color)
+          let edges = [
+            luma(tap(px + r, py)), luma(tap(px - r, py)),
+            luma(tap(px, py + r)), luma(tap(px, py - r)),
+          ]
+          let corners = [
+            luma(tap(px + r, py + r)), luma(tap(px - r, py + r)),
+            luma(tap(px + r, py - r)), luma(tap(px - r, py - r)),
+          ]
+          let edgeSum: Double = edges.reduce(0, +)
+          let cornerSum: Double = corners.reduce(0, +)
+          let blur = (4 * y + 2 * edgeSum + cornerSum) / 16
+          let around = edges + corners + [y]
+          let sharp = min(max(y + 3 * v.k * (y - blur), around.min()!), around.max()!)
+          color = color.map { unit($0 + sharp - y) }
+        }
+        let l = luma(color), dark = 1 - l
+        let lows = l * dark * dark * dark * dark * 12.20703125
+        let highs = l * l * l * l * dark * 12.20703125
+        let shadowGain: Double = v.s > 0 ? 0.2 : 0.065
+        let highlightGain: Double = v.h < 0 ? 0.2 : 0.065
+        let toned = l + v.s * shadowGain * lows + v.h * highlightGain * highs
+        color = color.map { unit(l > 0.0001 ? $0 * (toned / l) : $0 + (toned - l)) }
+        if v.v != 0 {
+          let chroma = color.max()! - color.min()!
+          var skin = 0.0
+          if color[0] >= color[1] && color[1] >= color[2] && chroma > 0.0001 {
+            let hue = (color[1] - color[2]) / chroma
+            let hueWeight = smoothstep(0.05, 0.25, hue) * (1 - smoothstep(0.6, 0.85, hue))
+            let chromaWeight =
+              smoothstep(0.02, 0.08, chroma) * (1 - smoothstep(0.5, 0.75, chroma))
+            skin = hueWeight * chromaWeight
+          }
+          let keep = 1 - 0.85 * skin
+          let amount: Double
+          if v.v > 0 {
+            amount = v.v * 1.25 * (1 - chroma) * (1 - chroma) * keep
+          } else {
+            amount = v.v * (0.4 + 0.6 * chroma) * keep
+          }
+          let grey = luma(color)
+          color = color.map { unit(grey + ($0 - grey) * (1 + amount)) }
+        }
+        for k in 0..<3 { out[(yi * width + xi) * 3 + k] = color[k] }
+      }
+    }
+    return out
+  }
+}

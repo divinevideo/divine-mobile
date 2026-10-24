@@ -16,6 +16,7 @@
 		D150030F477BE488B34D632A /* EchoVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F393B56E54D79C2C88D6946 /* EchoVideoEffect.swift */; };
 		F15E7E0E1A2B3C4D5E6F7A02 /* FisheyeVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = F15E7E0E1A2B3C4D5E6F7A01 /* FisheyeVideoEffect.swift */; };
 		6A1C55E0B7D24F3E9A8C2B12 /* DropsVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A1C55E0B7D24F3E9A8C2B11 /* DropsVideoEffect.swift */; };
+		AD1A57E0B7D24F3E9A8C2C12 /* AdjustVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD1A57E0B7D24F3E9A8C2C11 /* AdjustVideoEffect.swift */; };
 		4538A593ED259ADE95BE0F82 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9F614F010AAECBECA4DA109 /* Foundation.framework */; };
 		4F86E81FB269DE72E2131EBC /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E86217C65C2A7ED5885FDC2 /* NotificationService.swift */; };
 		62ACD9D0D737E6772C26E9DF /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 8CE07D4A15ABF6932C18302C /* GoogleService-Info.plist */; };
@@ -98,6 +99,7 @@
 		8F393B56E54D79C2C88D6946 /* EchoVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EchoVideoEffect.swift; sourceTree = "<group>"; };
 		F15E7E0E1A2B3C4D5E6F7A01 /* FisheyeVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FisheyeVideoEffect.swift; sourceTree = "<group>"; };
 		6A1C55E0B7D24F3E9A8C2B11 /* DropsVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DropsVideoEffect.swift; sourceTree = "<group>"; };
+		AD1A57E0B7D24F3E9A8C2C11 /* AdjustVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AdjustVideoEffect.swift; sourceTree = "<group>"; };
 		0E3A100F5AEE1456DCC23B03 /* Pods-Runner.debug-divineuitests.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug-divineuitests.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug-divineuitests.xcconfig"; sourceTree = "<group>"; };
 		0F9089E8B21DD51EA95A008F /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
@@ -289,6 +291,7 @@
 				8F393B56E54D79C2C88D6946 /* EchoVideoEffect.swift */,
 				F15E7E0E1A2B3C4D5E6F7A01 /* FisheyeVideoEffect.swift */,
 				6A1C55E0B7D24F3E9A8C2B11 /* DropsVideoEffect.swift */,
+				AD1A57E0B7D24F3E9A8C2C11 /* AdjustVideoEffect.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 				1D777AEE1B05282C0928DE2F /* PrivacyInfo.xcprivacy */,
 			);
@@ -718,6 +721,7 @@
 				D150030F477BE488B34D632A /* EchoVideoEffect.swift in Sources */,
 				F15E7E0E1A2B3C4D5E6F7A02 /* FisheyeVideoEffect.swift in Sources */,
 				6A1C55E0B7D24F3E9A8C2B12 /* DropsVideoEffect.swift in Sources */,
+				AD1A57E0B7D24F3E9A8C2C12 /* AdjustVideoEffect.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

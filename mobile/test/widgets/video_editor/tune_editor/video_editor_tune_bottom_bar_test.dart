@@ -78,15 +78,15 @@ void main() {
       addTearDown(tester.view.reset);
 
       await pumpBar(tester);
-      expect(find.text(l10n.videoEditorTuneFade), findsNothing);
+      expect(find.text(l10n.videoEditorTuneSharpen), findsNothing);
 
       await tester.dragUntilVisible(
-        find.text(l10n.videoEditorTuneFade),
+        find.text(l10n.videoEditorTuneSharpen),
         find.byType(ListView),
         const Offset(-120, 0),
       );
 
-      expect(find.text(l10n.videoEditorTuneFade), findsOneWidget);
+      expect(find.text(l10n.videoEditorTuneSharpen), findsOneWidget);
     });
 
     testWidgets('selecting a chip updates the bloc selected index', (

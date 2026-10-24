@@ -32,6 +32,7 @@ import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/adjust_video_effect.dart';
 import 'package:openvine/models/video_editor/audio_fade.dart';
 import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
@@ -1991,16 +1992,41 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     );
   }
 
+  /// Where each Adjust bar of [state] sits on the timeline.
+  static List<(String, Duration, Duration)> _tuneWindows(
+    TimelineOverlayState state,
+  ) => [
+    for (final item in state.items)
+      if (item.type == TimelineOverlayType.tune)
+        (item.id, item.startTime, item.endTime),
+  ];
+
   /// Hands the effects Divine renders itself to the native player, which
   /// draws them on the preview (#9708), with their windows moved onto the
   /// player's timeline.
+  ///
+  /// The Adjust sets' highlights, shadows, vibrance and sharpening come
+  /// first, as in the export; while the Adjust editor is open its sliders
+  /// stand in for them.
   void _syncFrameEffects() {
     final player = _videoPlayer;
     if (player == null || !mounted) return;
-    final effects = context
-        .read<VideoEditorEffectsCubit>()
-        .state
-        .previewCustomEffects;
+    final isTuning =
+        context.read<VideoEditorMainBloc>().state.openSubEditor ==
+        SubEditorType.tune;
+    final effects = [
+      ...previewAdjustVideoEffects(
+        applied:
+            VideoEditorScope.of(
+              context,
+            ).editor?.stateManager.activeTuneAdjustments ??
+            const [],
+        session: isTuning
+            ? context.read<VideoEditorTuneBloc>().state.values
+            : null,
+      ),
+      ...context.read<VideoEditorEffectsCubit>().state.previewCustomEffects,
+    ];
     int? onPlayer(Duration? time) => time == null
         ? null
         : _composition.timelineToPlayer(time).inMicroseconds;
@@ -2309,6 +2335,9 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         clips: context.read<ClipEditorBloc>().state.clips,
       )
       ..syncApplied(editor.stateManager.videoEffectEntries);
+    // An Adjust set with highlights, shadows, vibrance or sharpening the
+    // history added, changed or removed; the player ignores an unchanged list.
+    _syncFrameEffects();
 
     // A detached clip's file is stored by name, so its sound is found through
     // the documents path, which is known from the first sync on.
@@ -2812,6 +2841,29 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             previous.previewCustomEffects,
             current.previewCustomEffects,
           ),
+          listener: (context, state) => _syncFrameEffects(),
+        ),
+        // The Adjust editor previews its highlights, shadows, vibrance and
+        // sharpening sliders on the native player while it is open.
+        BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
+          listenWhen: (previous, current) =>
+              (previous.openSubEditor == SubEditorType.tune) !=
+              (current.openSubEditor == SubEditorType.tune),
+          listener: (context, state) => _syncFrameEffects(),
+        ),
+        // Only these kinds reach the player; the others are colour matrices.
+        BlocListener<VideoEditorTuneBloc, VideoEditorTuneState>(
+          listenWhen: (previous, current) => adjustVideoEffectKinds.any(
+            (kind) => previous.values[kind] != current.values[kind],
+          ),
+          listener: (context, state) => _syncFrameEffects(),
+        ),
+        // Moving or trimming an Adjust bar retimes its set without a history
+        // entry, so the player's windows follow the bars instead.
+        BlocListener<TimelineOverlayBloc, TimelineOverlayState>(
+          listenWhen: (previous, current) =>
+              !identical(previous.items, current.items) &&
+              !listEquals(_tuneWindows(previous), _tuneWindows(current)),
           listener: (context, state) => _syncFrameEffects(),
         ),
         BlocListener<TimelineOverlayBloc, TimelineOverlayState>(
