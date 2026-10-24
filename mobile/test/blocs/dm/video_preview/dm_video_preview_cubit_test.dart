@@ -249,7 +249,7 @@ void main() {
         errors: () => [isA<SocketException>()],
       );
 
-      test('does not start waiting once it is closing', () async {
+      test('does not start waiting when closed as its download ends', () async {
         final download = Completer<File?>();
         when(
           () => store.previewFor(
@@ -260,8 +260,10 @@ void main() {
         final cubit = createCubit();
         final loading = cubit.load();
 
-        final closing = cubit.close();
+        // Completed first, so the load resumes ahead of anything close()
+        // awaits before it closes.
         download.complete(null);
+        final closing = cubit.close();
         await closing;
         await loading;
 
