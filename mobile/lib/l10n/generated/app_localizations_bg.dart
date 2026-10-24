@@ -10302,6 +10302,21 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorVoiceEffectEcho => 'Ехо';
 
   @override
+  String get videoEditorVoiceEffectReverb => 'Реверб';
+
+  @override
+  String get videoEditorVoiceEffectTelephone => 'Телефон';
+
+  @override
+  String get videoEditorVoiceEffectMegaphone => 'Мегафон';
+
+  @override
+  String get videoEditorVoiceEffectUnderwater => 'Под вода';
+
+  @override
+  String get videoEditorVoiceEffectSlowedReverb => 'Забавено + реверб';
+
+  @override
   String get videoEditorVoiceEffectPitch => 'Височина';
 
   @override

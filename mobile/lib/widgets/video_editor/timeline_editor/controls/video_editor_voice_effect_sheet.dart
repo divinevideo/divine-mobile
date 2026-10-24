@@ -193,7 +193,7 @@ class _PresetRow extends StatelessWidget {
               onTap: isApplying
                   ? null
                   : () => context.read<VoiceEffectBloc>().add(
-                      VoiceEffectSettingsChanged(effect: preset.effect),
+                      VoiceEffectSettingsChanged(preset: preset),
                     ),
             ),
         ],
@@ -222,6 +222,11 @@ class _PresetChip extends StatelessWidget {
       VoiceEffectPreset.lowPitch => l10n.videoEditorVoiceEffectLowPitch,
       VoiceEffectPreset.robot => l10n.videoEditorVoiceEffectRobot,
       VoiceEffectPreset.echo => l10n.videoEditorVoiceEffectEcho,
+      VoiceEffectPreset.reverb => l10n.videoEditorVoiceEffectReverb,
+      VoiceEffectPreset.telephone => l10n.videoEditorVoiceEffectTelephone,
+      VoiceEffectPreset.megaphone => l10n.videoEditorVoiceEffectMegaphone,
+      VoiceEffectPreset.underwater => l10n.videoEditorVoiceEffectUnderwater,
+      VoiceEffectPreset.slowedReverb => l10n.videoEditorVoiceEffectSlowedReverb,
     };
     final colors = context.vineColors;
     return AnimationPickerChip(
@@ -245,7 +250,7 @@ class _PresetChip extends StatelessWidget {
 class _EffectSliders extends StatelessWidget {
   const _EffectSliders();
 
-  /// Robot and echo move in steps of this many percent.
+  /// Robot, echo and reverb move in steps of this many percent.
   static const _amountStep = 5;
 
   @override
@@ -287,6 +292,14 @@ class _EffectSliders extends StatelessWidget {
           max: VoiceEffect.maxAmount,
           step: _amountStep,
           toEffect: (value) => effect.copyWith(echo: value),
+        ),
+        _EffectSlider(
+          label: l10n.videoEditorVoiceEffectReverb,
+          valueLabel: amount(effect.reverb),
+          value: effect.reverb,
+          max: VoiceEffect.maxAmount,
+          step: _amountStep,
+          toEffect: (value) => effect.copyWith(reverb: value),
         ),
       ],
     );

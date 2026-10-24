@@ -7,7 +7,7 @@ import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart'
-    show AudioEvent, AudioSourceKind, VoiceEffect;
+    show AudioEvent, AudioSourceKind, VoiceEffect, VoiceFilter;
 import 'package:openvine/blocs/video_editor/voice_effect/voice_effect_bloc.dart';
 import 'package:openvine/blocs/video_editor/voice_effect/voice_effect_preset.dart';
 import 'package:openvine/services/video_editor/voice_effect_service.dart';
@@ -113,6 +113,7 @@ void main() {
       when(() => player.play()).thenAnswer((_) async {});
       when(() => player.stop()).thenAnswer((_) async {});
       when(() => player.seek(any())).thenAnswer((_) async {});
+      when(() => player.setSpeed(any())).thenAnswer((_) async {});
       when(() => player.dispose()).thenAnswer((_) async {});
       when(() => service.discardAudition(any())).thenAnswer((_) async {});
       when(() => service.clearAuditions()).thenAnswer((_) async {});
@@ -148,8 +149,6 @@ void main() {
 
       blocTest<VoiceEffectBloc, VoiceEffectState>(
         'loops the stretch a sped-up take plays, at its speed',
-        setUp: () =>
-            when(() => player.setSpeed(any())).thenAnswer((_) async {}),
         build: () => build(_recording().copyWith(playbackSpeed: 2)),
         act: (bloc) => bloc.add(const VoiceEffectSettingsChanged()),
         verify: (_) {
@@ -164,10 +163,7 @@ void main() {
 
       blocTest<VoiceEffectBloc, VoiceEffectState>(
         'renders the stretch a sped-up take plays',
-        setUp: () {
-          when(() => player.setSpeed(any())).thenAnswer((_) async {});
-          stubAudition('/tmp/audition.wav');
-        },
+        setUp: () => stubAudition('/tmp/audition.wav'),
         build: () => build(_recording().copyWith(playbackSpeed: 2)),
         act: (bloc) =>
             bloc.add(const VoiceEffectSettingsChanged(effect: _robot)),
@@ -431,6 +427,107 @@ void main() {
         },
       );
 
+      group('slowed + reverb', () {
+        blocTest<VoiceEffectBloc, VoiceEffectState>(
+          'renders its setting and loops it slowed down',
+          setUp: () => stubAudition('/tmp/audition_1.wav'),
+          build: () => build(_song()),
+          act: (bloc) => bloc.add(
+            const VoiceEffectSettingsChanged(
+              preset: VoiceEffectPreset.slowedReverb,
+            ),
+          ),
+          verify: (bloc) {
+            expect(bloc.state.effect, VoiceEffectPreset.slowedReverb.effect);
+            expect(bloc.state.playbackSpeed, 0.8);
+            expect(bloc.state.preset, VoiceEffectPreset.slowedReverb);
+            verify(
+              () => service.renderAudition(
+                source: _songSource,
+                effect: VoiceEffectPreset.slowedReverb.effect,
+                noiseReduction: false,
+                start: const Duration(milliseconds: 500),
+                length: const Duration(seconds: 2),
+              ),
+            ).called(1);
+            verify(() => player.setSpeed(0.8)).called(1);
+          },
+        );
+
+        blocTest<VoiceEffectBloc, VoiceEffectState>(
+          'gives the speed back when another preset is picked',
+          setUp: () => stubAudition('/tmp/audition_1.wav'),
+          build: () => build(_song().copyWith(playbackSpeed: 1.5)),
+          act: (bloc) async {
+            bloc.add(
+              const VoiceEffectSettingsChanged(
+                preset: VoiceEffectPreset.slowedReverb,
+              ),
+            );
+            await pumpEventQueue();
+            bloc.add(
+              const VoiceEffectSettingsChanged(preset: VoiceEffectPreset.echo),
+            );
+          },
+          verify: (bloc) {
+            expect(bloc.state.playbackSpeed, 1.5);
+            expect(
+              verify(() => player.setSpeed(captureAny())).captured,
+              [0.8, 1.5],
+            );
+          },
+        );
+
+        blocTest<VoiceEffectBloc, VoiceEffectState>(
+          'plays a slowed track at normal speed once another preset is '
+          'picked',
+          build: () => build(
+            _song().copyWith(
+              voiceEffect: VoiceEffectPreset.slowedReverb.effect,
+              playbackSpeed: 0.8,
+            ),
+          ),
+          act: (bloc) => bloc.add(
+            const VoiceEffectSettingsChanged(
+              preset: VoiceEffectPreset.original,
+              audition: false,
+            ),
+          ),
+          verify: (bloc) {
+            expect(bloc.state.effect, VoiceEffect.none);
+            expect(bloc.state.playbackSpeed, 1);
+            expect(bloc.state.preset, VoiceEffectPreset.original);
+          },
+        );
+
+        blocTest<VoiceEffectBloc, VoiceEffectState>(
+          'keeps its speed while the sliders fine-tune it',
+          build: () => build(_song()),
+          act: (bloc) async {
+            bloc.add(
+              const VoiceEffectSettingsChanged(
+                preset: VoiceEffectPreset.slowedReverb,
+                audition: false,
+              ),
+            );
+            await pumpEventQueue();
+            bloc.add(
+              VoiceEffectSettingsChanged(
+                effect: VoiceEffectPreset.slowedReverb.effect.copyWith(
+                  reverb: 20,
+                ),
+                audition: false,
+              ),
+            );
+          },
+          verify: (bloc) {
+            expect(bloc.state.playbackSpeed, 0.8);
+            expect(bloc.state.preset, isNull);
+            expect(bloc.state.hasChanges, isTrue);
+          },
+        );
+      });
+
       blocTest<VoiceEffectBloc, VoiceEffectState>(
         'reports a take it cannot render',
         setUp: () => when(
@@ -552,6 +649,75 @@ void main() {
           expect(
             result.id,
             'local_import_voice_over_1-100-0_fx${_now.microsecondsSinceEpoch}',
+          );
+        },
+      );
+
+      blocTest<VoiceEffectBloc, VoiceEffectState>(
+        'hands over the speed slowed + reverb picked with the processed sound',
+        setUp: () {
+          stubAudition('/tmp/audition_1.wav');
+          when(
+            () => service.process(
+              source: _songSource,
+              effect: VoiceEffectPreset.slowedReverb.effect,
+              noiseReduction: false,
+            ),
+          ).thenAnswer(
+            (_) async => (path: '/docs/slowed.wav', mimeType: 'audio/wav'),
+          );
+        },
+        build: () => build(_song()),
+        act: (bloc) async {
+          bloc.add(
+            const VoiceEffectSettingsChanged(
+              preset: VoiceEffectPreset.slowedReverb,
+            ),
+          );
+          await pumpEventQueue();
+          bloc.add(const VoiceEffectApplyRequested());
+        },
+        verify: (bloc) {
+          final result = bloc.state.result!;
+          expect(result.url, '/docs/slowed.wav');
+          expect(result.voiceEffect, VoiceEffectPreset.slowedReverb.effect);
+          expect(result.playbackSpeed, 0.8);
+          expect(result.originalUrl, _songUrl);
+        },
+      );
+
+      blocTest<VoiceEffectBloc, VoiceEffectState>(
+        'only changes the speed of a sound left without an effect',
+        build: () => build(_song()),
+        act: (bloc) async {
+          bloc
+            ..add(
+              const VoiceEffectSettingsChanged(
+                preset: VoiceEffectPreset.slowedReverb,
+                audition: false,
+              ),
+            )
+            ..add(
+              const VoiceEffectSettingsChanged(
+                effect: VoiceEffect.none,
+                audition: false,
+              ),
+            );
+          await pumpEventQueue();
+          bloc.add(const VoiceEffectApplyRequested());
+        },
+        verify: (bloc) {
+          final result = bloc.state.result!;
+          expect(result.url, _songUrl);
+          expect(result.playbackSpeed, 0.8);
+          expect(result.hasVoiceProcessing, isFalse);
+          expect(result.originalUrl, isNull);
+          verifyNever(
+            () => service.process(
+              source: any(named: 'source'),
+              effect: any(named: 'effect'),
+              noiseReduction: any(named: 'noiseReduction'),
+            ),
           );
         },
       );
@@ -867,6 +1033,37 @@ void main() {
               .called(1);
         },
       );
+    });
+
+    group(VoiceEffectState, () {
+      VoiceEffectState state(VoiceEffect effect, {double speed = 1}) =>
+          VoiceEffectState(
+            track: _song(),
+            effect: effect,
+            noiseReduction: false,
+            playbackSpeed: speed,
+          );
+
+      test('shows slowed + reverb as picked only at its speed', () {
+        final effect = VoiceEffectPreset.slowedReverb.effect;
+
+        expect(
+          state(effect, speed: 0.8).preset,
+          VoiceEffectPreset.slowedReverb,
+        );
+        expect(state(effect).preset, isNull);
+      });
+
+      test('shows the filter a fine-tuned setting keeps as picked', () {
+        const effect = VoiceEffect(filter: VoiceFilter.megaphone, echo: 20);
+
+        expect(state(effect).preset, VoiceEffectPreset.megaphone);
+      });
+
+      test('counts a new speed as a change', () {
+        expect(state(VoiceEffect.none, speed: 0.8).hasChanges, isTrue);
+        expect(state(VoiceEffect.none).hasChanges, isFalse);
+      });
     });
   });
 }

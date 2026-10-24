@@ -10170,6 +10170,21 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorVoiceEffectEcho => 'Tiếng vang';
 
   @override
+  String get videoEditorVoiceEffectReverb => 'Reverb';
+
+  @override
+  String get videoEditorVoiceEffectTelephone => 'Điện thoại';
+
+  @override
+  String get videoEditorVoiceEffectMegaphone => 'Loa phóng thanh';
+
+  @override
+  String get videoEditorVoiceEffectUnderwater => 'Dưới nước';
+
+  @override
+  String get videoEditorVoiceEffectSlowedReverb => 'Slowed + reverb';
+
+  @override
   String get videoEditorVoiceEffectPitch => 'Cao độ';
 
   @override

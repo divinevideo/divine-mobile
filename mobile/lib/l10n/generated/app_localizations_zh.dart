@@ -9607,6 +9607,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorVoiceEffectEcho => '回声';
 
   @override
+  String get videoEditorVoiceEffectReverb => '混响';
+
+  @override
+  String get videoEditorVoiceEffectTelephone => '电话';
+
+  @override
+  String get videoEditorVoiceEffectMegaphone => '扩音器';
+
+  @override
+  String get videoEditorVoiceEffectUnderwater => '水下';
+
+  @override
+  String get videoEditorVoiceEffectSlowedReverb => '慢速 + 混响';
+
+  @override
   String get videoEditorVoiceEffectPitch => '音调';
 
   @override

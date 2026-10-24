@@ -17339,6 +17339,36 @@ abstract class AppLocalizations {
   /// **'Echo'**
   String get videoEditorVoiceEffectEcho;
 
+  /// Voice effect option, and the label of its slider, that makes the sound ring on as if it was in a room or a hall.
+  ///
+  /// In en, this message translates to:
+  /// **'Reverb'**
+  String get videoEditorVoiceEffectReverb;
+
+  /// Voice effect option that makes the voice thin, as if it came through a phone or an old radio.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get videoEditorVoiceEffectTelephone;
+
+  /// Voice effect option that makes the voice narrow and a little distorted, as if it came through a handheld loudspeaker.
+  ///
+  /// In en, this message translates to:
+  /// **'Megaphone'**
+  String get videoEditorVoiceEffectMegaphone;
+
+  /// Voice effect option that muffles the voice, as if it was heard underwater.
+  ///
+  /// In en, this message translates to:
+  /// **'Underwater'**
+  String get videoEditorVoiceEffectUnderwater;
+
+  /// Voice effect option that plays the sound slower and lower in pitch with a lot of reverb, the dreamy edit of a song popular on short-video platforms. Keep the trend's name where creators use it in English.
+  ///
+  /// In en, this message translates to:
+  /// **'Slowed + reverb'**
+  String get videoEditorVoiceEffectSlowedReverb;
+
   /// Label of the slider that moves the voice up or down in semitones.
   ///
   /// In en, this message translates to:

@@ -6,21 +6,27 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart' show AudioSourceKind, VoiceEffect;
+import 'package:models/models.dart'
+    show AudioSourceKind, VoiceEffect, VoiceFilter;
 import 'package:openvine/services/video_editor/voice_effect_service.dart';
 import 'package:path/path.dart' as p;
 import 'package:voice_effects/voice_effects.dart';
 
 const _sampleRate = 16000;
 
+/// Half a second of a 220 Hz tone at [amplitude].
+Float32List _tone({double amplitude = 0.5}) => Float32List.fromList([
+  for (var i = 0; i < _sampleRate ~/ 2; i++)
+    amplitude * math.sin(2 * math.pi * 220 * i / _sampleRate),
+]);
+
 /// Half a second of a 220 Hz tone, as the plugin would decode a sound.
-Uint8List _decodedSound() => encodeWav(
-  Float32List.fromList([
-    for (var i = 0; i < _sampleRate ~/ 2; i++)
-      0.5 * math.sin(2 * math.pi * 220 * i / _sampleRate),
-  ]),
-  _sampleRate,
-);
+Uint8List _decodedSound() => encodeWav(_tone(), _sampleRate);
+
+/// The tone in stereo, quieter on the right, as the plugin would decode a
+/// stereo song.
+Uint8List _decodedStereoSound() =>
+    encodeWavChannels([_tone(), _tone(amplitude: 0.25)], _sampleRate);
 
 void main() {
   group(VoiceEffectService, () {
@@ -40,13 +46,16 @@ void main() {
     late List<VoiceEffectSource> fetched;
     late List<String> fetchedCopies;
 
-    VoiceEffectService service({bool failDecode = false}) => VoiceEffectService(
+    VoiceEffectService service({
+      bool failDecode = false,
+      Uint8List Function() sound = _decodedSound,
+    }) => VoiceEffectService(
       temporaryDirectory: () async => temporary,
       documentsDirectory: () async => documents,
       decodeToWav: (input, output) async {
         decoded.add(input);
         if (failDecode) throw const FileSystemException('decode failed');
-        await File(output).writeAsBytes(_decodedSound());
+        await File(output).writeAsBytes(sound());
       },
       fetchSource: (source) async {
         fetched.add(source);
@@ -322,6 +331,42 @@ void main() {
         expect(songCopy.mimeType, 'audio/wav');
       });
 
+      test('keeps a stereo sound stereo, each side at its own level', () async {
+        final result = await service(sound: _decodedStereoSound).process(
+          source: song,
+          effect: const VoiceEffect(pitch: -4),
+          noiseReduction: false,
+        );
+
+        final processed = decodeWavChannels(
+          File(result.path).readAsBytesSync(),
+        );
+        expect(processed.channels, hasLength(2));
+        double rms(Float32List samples) => math.sqrt(
+          samples.fold(0.0, (sum, s) => sum + s * s) / samples.length,
+        );
+        expect(
+          rms(processed.channels[1]) / rms(processed.channels[0]),
+          closeTo(0.5, 0.01),
+        );
+      });
+
+      test('names a copy after its reverb and filter too', () {
+        expect(
+          VoiceEffectService.processedPath(
+            take,
+            effect: const VoiceEffect(
+              pitch: -4,
+              reverb: 60,
+              filter: VoiceFilter.megaphone,
+            ),
+            noiseReduction: true,
+            documentsPath: documents.path,
+          ),
+          p.join(takes.path, 'voice_over_1_p-4_r0_e0_v60_megaphone_nr.wav'),
+        );
+      });
+
       test('writes the copy of a library import beside it', () {
         final imported = p.join(
           documents.path,
@@ -394,6 +439,37 @@ void main() {
           isA<Robotize>().having((e) => e.mix, 'mix', 0.4),
           isA<Echo>().having((e) => e.mix, 'mix', closeTo(0.36, 1e-9)),
         ]);
+      });
+
+      test('plays the voice through its filter before the space it is in', () {
+        final chain = voiceEffectChain(
+          const VoiceEffect(
+            pitch: -4,
+            echo: 20,
+            reverb: 50,
+            filter: VoiceFilter.telephone,
+          ),
+          noiseReduction: false,
+        );
+
+        expect(chain, [
+          isA<PitchShift>(),
+          isA<Telephone>(),
+          isA<Echo>(),
+          isA<Reverb>()
+              .having((e) => e.mix, 'mix', closeTo(0.3, 1e-9))
+              .having((e) => e.roomSize, 'roomSize', closeTo(0.725, 1e-9)),
+        ]);
+      });
+
+      test('picks the effect each filter names', () {
+        List<AudioEffect> chainOf(VoiceFilter filter) => voiceEffectChain(
+          VoiceEffect(filter: filter),
+          noiseReduction: false,
+        );
+
+        expect(chainOf(VoiceFilter.megaphone), [isA<Megaphone>()]);
+        expect(chainOf(VoiceFilter.underwater), [isA<Underwater>()]);
       });
 
       test('applies nothing for the voice as recorded', () {

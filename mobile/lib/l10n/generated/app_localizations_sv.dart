@@ -10213,6 +10213,21 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorVoiceEffectEcho => 'Eko';
 
   @override
+  String get videoEditorVoiceEffectReverb => 'Reverb';
+
+  @override
+  String get videoEditorVoiceEffectTelephone => 'Telefon';
+
+  @override
+  String get videoEditorVoiceEffectMegaphone => 'Megafon';
+
+  @override
+  String get videoEditorVoiceEffectUnderwater => 'Under vatten';
+
+  @override
+  String get videoEditorVoiceEffectSlowedReverb => 'Slowed + reverb';
+
+  @override
   String get videoEditorVoiceEffectPitch => 'Tonhöjd';
 
   @override

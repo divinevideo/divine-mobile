@@ -10,7 +10,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart'
-    show AudioEvent, AudioSourceKind, VoiceEffect;
+    show AudioEvent, AudioSourceKind, VoiceEffect, VoiceFilter;
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/voice_effect_providers.dart';
 import 'package:openvine/services/video_editor/voice_effect_service.dart';
@@ -18,6 +18,8 @@ import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/animation_picker_components.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_voice_effect_sheet.dart';
 import 'package:sound_service/sound_service.dart';
+
+import '../../../../helpers/scroll.dart';
 
 class _MockVoiceEffectService extends Mock implements VoiceEffectService {}
 
@@ -95,6 +97,7 @@ void main() {
         () => player.completionStream,
       ).thenAnswer((_) => const Stream<void>.empty());
       when(() => player.setClip(any())).thenAnswer((_) async {});
+      when(() => player.setSpeed(any())).thenAnswer((_) async {});
       when(() => player.play()).thenAnswer((_) async {});
       when(() => player.stop()).thenAnswer((_) async {});
       when(() => player.dispose()).thenAnswer((_) async {});
@@ -150,6 +153,11 @@ void main() {
           l10n.videoEditorVoiceEffectLowPitch,
           l10n.videoEditorVoiceEffectRobot,
           l10n.videoEditorVoiceEffectEcho,
+          l10n.videoEditorVoiceEffectReverb,
+          l10n.videoEditorVoiceEffectTelephone,
+          l10n.videoEditorVoiceEffectMegaphone,
+          l10n.videoEditorVoiceEffectUnderwater,
+          l10n.videoEditorVoiceEffectSlowedReverb,
         ]) {
           expect(preset(label), findsOneWidget);
         }
@@ -233,6 +241,50 @@ void main() {
             find.bySemanticsLabel(l10n.videoEditorVoiceEffectOriginal),
           ),
           isSemantics(isButton: true, isSelected: false),
+        );
+      });
+
+      testWidgets('keeps a picked filter shown while a slider adds to it', (
+        tester,
+      ) async {
+        await open(tester);
+        final phone = preset(l10n.videoEditorVoiceEffectTelephone);
+        await scrollUntilTappable(
+          tester,
+          phone,
+          200,
+          scrollable: find.descendant(
+            of: find.byWidgetPredicate(
+              (w) =>
+                  w is SingleChildScrollView &&
+                  w.scrollDirection == Axis.horizontal,
+            ),
+            matching: find.byType(Scrollable),
+          ),
+        );
+        await tester.tap(phone);
+        await tester.pumpAndSettle();
+
+        slider(tester, l10n.videoEditorVoiceEffectReverb).onChangeEnd!(30);
+        await tester.pumpAndSettle();
+
+        verify(
+          () => service.renderAudition(
+            source: (kind: AudioSourceKind.file, path: _take),
+            effect: const VoiceEffect(
+              reverb: 30,
+              filter: VoiceFilter.telephone,
+            ),
+            noiseReduction: false,
+            start: any(named: 'start'),
+            length: any(named: 'length'),
+          ),
+        ).called(1);
+        expect(
+          tester.getSemantics(
+            find.bySemanticsLabel(l10n.videoEditorVoiceEffectTelephone),
+          ),
+          isSemantics(isButton: true, isSelected: true),
         );
       });
 

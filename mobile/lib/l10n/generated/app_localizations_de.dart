@@ -10341,6 +10341,21 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorVoiceEffectEcho => 'Echo';
 
   @override
+  String get videoEditorVoiceEffectReverb => 'Hall';
+
+  @override
+  String get videoEditorVoiceEffectTelephone => 'Telefon';
+
+  @override
+  String get videoEditorVoiceEffectMegaphone => 'Megafon';
+
+  @override
+  String get videoEditorVoiceEffectUnderwater => 'Unter Wasser';
+
+  @override
+  String get videoEditorVoiceEffectSlowedReverb => 'Slowed + Reverb';
+
+  @override
   String get videoEditorVoiceEffectPitch => 'Tonhöhe';
 
   @override
