@@ -71,7 +71,7 @@ adb install --no-streaming -r .build/android/widget-lab.apk
 adb shell am start -n video.divine.widgetlab/.LabActivity
 ```
 
-Use **Add home-screen widget** in the app, or long-press the home screen and select it from Widgets. It requests a 2 × 2 square footprint by default. Resize vertically toward 2 × 3 for a taller card: at 240 dp or more of available height, the title and caption appear in a separate footer. Both layouts retain 48 dp action targets. Actual cell dimensions and allowed resize shapes belong to the launcher.
+Use **Add home-screen widget** in the app, or long-press the home screen and select it from Widgets. It requests a 2 × 2 square footprint by default. Resize vertically toward 2 × 3 for a taller card: at 240 dp or more of available height, the title and caption appear in a separate footer. Android 12+ launchers select between responsive RemoteViews for their displayed size; older hosts receive portrait and landscape layouts based on their reported size bounds. Both layouts retain 48 dp action targets. Actual cell dimensions and allowed resize shapes belong to the launcher.
 
 The Android hypothesis uses a launcher-owned `ViewFlipper` containing 16 local image resources. The receiver sends one update to start the sequence and another after two seconds to show the resting poster. A revision guard prevents an older preview's completion from replacing a newer card. The receiver uses `goAsync()` for the bounded completion; it does not send 16 updates per second or run a background service. System-disabled animations use the still fallback. Different launchers and physical devices need separate checks for timing and memory.
 

@@ -97,7 +97,7 @@ public final class AndroidRenderingTests extends Instrumentation {
                 checkSystemHost(activity, dashboard[0]);
                 await(() -> LabStore.load(activity).openCount == 1, "Open pending intent");
                 if (screenshots) captureShapes(activity);
-                result.putString("stream", "PASS: RemoteViews inflation, Next, Like, Open, system widget host animation, two-second stop.\n");
+                result.putString("stream", "PASS: square/tall control bounds, 48 dp targets, mixed-height resize, Next, Like, Open, system widget host animation, two-second stop.\n");
             } finally {
                 runOnMainSync(() -> { LabStore.save(activity, original); HighlightProvider.render(activity, false); });
             }
@@ -199,7 +199,10 @@ public final class AndroidRenderingTests extends Instrumentation {
                 host.startListening();
                 AppWidgetHostView view = host.createView(activity, widgetId, manager.getAppWidgetInfo(widgetId));
                 hosted[0] = view;
-                activity.setContentView(view);
+                FrameLayout parent = new FrameLayout(activity);
+                parent.addView(view, new FrameLayout.LayoutParams(dp(activity, 160), dp(activity, 160)));
+                activity.setContentView(parent);
+                view.updateAppWidgetSize(new Bundle(), 160, 160, 160, 160);
                 HighlightProvider.render(activity, false);
             });
             waitForIdleSync();
@@ -252,9 +255,13 @@ public final class AndroidRenderingTests extends Instrumentation {
                 Bundle size = new Bundle();
                 size.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 160);
                 size.putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 160);
-                size.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, height);
+                // Portrait can be tall while the landscape minimum stays square.
+                size.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 160);
                 size.putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, height);
-                manager.updateAppWidgetOptions(widgetId, size);
+                runOnMainSync(() -> {
+                    hosted[0].setLayoutParams(new FrameLayout.LayoutParams(dp(activity, 160), dp(activity, height)));
+                    hosted[0].updateAppWidgetSize(size, 160, 160, 160, height);
+                });
                 await(() -> {
                     final boolean[] resized = {false};
                     runOnMainSync(() -> {

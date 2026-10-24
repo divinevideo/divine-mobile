@@ -10,8 +10,12 @@ import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Bundle;
+import android.os.Build;
+import android.util.SizeF;
 import android.view.View;
 import android.widget.RemoteViews;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public final class HighlightProvider extends AppWidgetProvider {
     static final String NEXT = "video.divine.widgetlab.NEXT";
@@ -58,8 +62,22 @@ public final class HighlightProvider extends AppWidgetProvider {
         LabState state = LabStore.load(context);
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
         for (int id : manager.getAppWidgetIds(new ComponentName(context, HighlightProvider.class))) {
-            int height = manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 140);
-            manager.updateAppWidget(id, card(context, state, animate, height >= 240));
+            RemoteViews views;
+            if (Build.VERSION.SDK_INT >= 31) {
+                // The launcher chooses for its displayed size, including rotation.
+                // MIN_HEIGHT alone can describe the smaller landscape footprint.
+                Map<SizeF, RemoteViews> sizes = new LinkedHashMap<>();
+                sizes.put(new SizeF(140, 140), card(context, state, animate, false));
+                sizes.put(new SizeF(140, 240), card(context, state, animate, true));
+                views = new RemoteViews(sizes);
+            } else {
+                Bundle options = manager.getAppWidgetOptions(id);
+                int minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 140);
+                int maxHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, minHeight);
+                views = new RemoteViews(card(context, state, animate, minHeight >= 240),
+                    card(context, state, animate, maxHeight >= 240));
+            }
+            manager.updateAppWidget(id, views);
         }
     }
 

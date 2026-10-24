@@ -49,7 +49,7 @@ def prepare(clips):
                 "-t", "6", "-vf", "scale=640:-2", "-c:v", "libx264", "-pix_fmt", "yuv420p",
                 "-an", "-movflags", "+faststart", str(destination / f"clip_{index}.mp4"),
             ], check=True)
-    print("Prepared three local clips and 16 frames per clip for both platforms.")
+    print(f"Prepared {len(clips)} local clips and 16 frames per clip for both platforms.")
 
 
 if __name__ == "__main__":

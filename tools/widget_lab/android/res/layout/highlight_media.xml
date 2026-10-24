@@ -2,5 +2,5 @@
     <ImageView android:id="@+id/poster" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="centerCrop" android:contentDescription="Sample video. Open to watch." />
     <ViewFlipper android:id="@+id/frames" android:layout_width="match_parent" android:layout_height="match_parent" android:visibility="gone" android:autoStart="true" android:flipInterval="125" />
     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_margin="10dp" android:paddingHorizontal="9dp" android:paddingVertical="5dp" android:text="Divine" android:textSize="13sp" android:textStyle="bold" android:textColor="#FFFFFF" android:background="@drawable/pill" />
-    <Button android:id="@+id/open" android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="top|end" android:layout_margin="8dp" android:text="▶" android:contentDescription="Open" android:textSize="18sp" android:textColor="#FFFFFF" android:background="@drawable/pill" />
+    <ImageButton android:id="@+id/open" android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="top|end" android:layout_margin="8dp" android:src="@android:drawable/ic_media_play" android:tint="#FFFFFF" android:padding="12dp" android:contentDescription="Open" android:background="@drawable/pill" />
 </FrameLayout>
