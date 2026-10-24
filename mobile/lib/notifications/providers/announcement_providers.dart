@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:openvine/notifications/services/announcement_store.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 
+/// DeviceScope shares this registry so cleanup sees outgoing account writers.
 final announcementSessionsProvider = Provider<AnnouncementSessions>(
   (_) => AnnouncementSessions(),
 );

@@ -13,6 +13,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/blocs/video_feed/video_feed_bloc.dart';
+import 'package:openvine/notifications/services/announcement_store.dart';
 import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/device_scope.dart';
 import 'package:openvine/providers/feed_mode_persistence_provider.dart';
@@ -1428,6 +1429,7 @@ void main() {
           final device = DeviceScope(
             database: _Database(),
             sharedPreferences: preferences,
+            announcementSessions: AnnouncementSessions(),
             feedModePersistence: setup.registry!,
             switchController: AccountSwitchController(),
             appVersion: 'test',
