@@ -18447,12 +18447,6 @@ abstract class AppLocalizations {
   /// **'Hue'**
   String get videoEditorHueSemanticLabel;
 
-  /// No description provided for @videoEditorAddElementSemanticLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Add element'**
-  String get videoEditorAddElementSemanticLabel;
-
   /// No description provided for @videoEditorDoneSemanticLabel.
   ///
   /// In en, this message translates to:

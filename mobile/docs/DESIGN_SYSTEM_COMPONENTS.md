@@ -27,6 +27,7 @@ Complete dark-mode design system providing:
 - `tertiary` — White background, dark green text
 - `ghost` — Semi-transparent dark background (65% black), white text
 - `ghostSecondary` — Lighter scrim (15% black), white text
+- `quiet` — No background, border, or shadow; muted Inter text and small icons for supporting controls
 - `link` — No background, underlined text
 - `error` — Red background, light text (destructive actions)
 

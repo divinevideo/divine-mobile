@@ -2009,7 +2009,6 @@
   "cameraPermissionAllowAccessTitle": "카메라 및 마이크 접근 허용",
   "cameraPermissionAllowAccessDescription": "이렇게 하면 앱에서 바로 동영상을 촬영하고 편집할 수 있으며, 그 외 용도는 없습니다.",
   "cameraPermissionGoToSettings": "설정으로 이동",
-  "videoEditorAddElementSemanticLabel": "요소 추가",
   "videoEditorAddTitle": "추가",
   "videoEditorAudioAddAudio": "오디오 추가",
   "videoEditorAudioFailedToLoadTitle": "사운드 로드 실패",

@@ -10653,9 +10653,6 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorHueSemanticLabel => 'ሁ';
 
   @override
-  String get videoEditorAddElementSemanticLabel => 'ኤለመንት አክል';
-
-  @override
   String get videoEditorDoneSemanticLabel => 'ተከናውኗል';
 
   @override

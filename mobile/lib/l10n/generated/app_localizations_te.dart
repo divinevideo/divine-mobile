@@ -11203,9 +11203,6 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorHueSemanticLabel => 'రంగు';
 
   @override
-  String get videoEditorAddElementSemanticLabel => 'మూలకాన్ని జోడించండి';
-
-  @override
   String get videoEditorDoneSemanticLabel => 'పూర్తయింది';
 
   @override

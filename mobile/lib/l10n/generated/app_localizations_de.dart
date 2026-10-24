@@ -11044,9 +11044,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorHueSemanticLabel => 'Farbton';
 
   @override
-  String get videoEditorAddElementSemanticLabel => 'Element hinzufügen';
-
-  @override
   String get videoEditorDoneSemanticLabel => 'Fertig';
 
   @override

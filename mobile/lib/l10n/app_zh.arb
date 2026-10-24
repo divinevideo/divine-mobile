@@ -5581,7 +5581,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "色相",
-  "videoEditorAddElementSemanticLabel": "添加元素",
   "videoEditorDoneSemanticLabel": "完成",
   "videoEditorLevelSemanticLabel": "层级",
   "videoEditorBrushSizeSemanticLabel": "画笔大小",

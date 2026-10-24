@@ -3092,7 +3092,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Farbton",
-  "videoEditorAddElementSemanticLabel": "Element hinzufügen",
   "videoEditorDoneSemanticLabel": "Fertig",
   "videoEditorLevelSemanticLabel": "Stufe",
   "videoEditorBrushSizeSemanticLabel": "Pinselgröße",

@@ -3092,7 +3092,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Tint",
-  "videoEditorAddElementSemanticLabel": "Element toevoegen",
   "videoEditorDoneSemanticLabel": "Gereed",
   "videoEditorLevelSemanticLabel": "Niveau",
   "videoEditorBrushSizeSemanticLabel": "Penseelgrootte",

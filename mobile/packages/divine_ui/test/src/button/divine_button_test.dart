@@ -615,6 +615,66 @@ void main() {
     });
 
     group('accessibility', () {
+      for (final size in [DivineButtonSize.base, DivineButtonSize.small]) {
+        testWidgets('quiet icon-only ${size.name} keeps its 48dp target', (
+          tester,
+        ) async {
+          await tester.pumpWidget(
+            buildTestWidget(
+              label: '',
+              semanticLabel: 'Open tools',
+              type: DivineButtonType.quiet,
+              size: size,
+              leadingIcon: DivineIconName.slidersHorizontal,
+              onPressed: _noop,
+            ),
+          );
+          expect(tester.getSize(find.byType(DivineButton)).height, 48);
+          await expectMeetsAccessibilityGuidelines(tester);
+        });
+      }
+
+      for (final theme in [VineTheme.theme, VineTheme.lightTheme]) {
+        for (final size in [DivineButtonSize.base, DivineButtonSize.small]) {
+          testWidgets(
+            'quiet ${size.name} is accessible on ${theme.brightness}',
+            (
+              tester,
+            ) async {
+              var pressed = false;
+              await tester.pumpWidget(
+                buildTestWidget(
+                  type: DivineButtonType.quiet,
+                  size: size,
+                  leadingIcon: DivineIconName.slidersHorizontal,
+                  trailingIcon: DivineIconName.caretUp,
+                  theme: theme,
+                  onPressed: () => pressed = true,
+                ),
+              );
+
+              expect(tester.getSize(find.byType(DivineButton)).height, 48);
+              final decoration =
+                  tester.widget<Ink>(find.byType(Ink)).decoration!
+                      as BoxDecoration;
+              expect(decoration.color, VineTheme.transparent);
+              expect(decoration.border, isNull);
+              expect(decoration.boxShadow, isNull);
+              final style = tester.widget<Text>(find.text('Test')).style!;
+              expect(style.fontFamily, contains('Inter'));
+              expect(style.decoration, isNot(TextDecoration.underline));
+              expect(
+                style.color,
+                theme.extension<VineThemeColors>()!.onSurfaceVariant,
+              );
+              await tester.tap(find.text('Test'));
+              expect(pressed, isTrue);
+              await expectMeetsAccessibilityGuidelines(tester);
+            },
+          );
+        }
+      }
+
       testWidgets('small meets the accessibility guidelines', (tester) async {
         await tester.pumpWidget(
           buildTestWidget(size: DivineButtonSize.small, onPressed: () {}),

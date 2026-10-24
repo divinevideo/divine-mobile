@@ -11146,9 +11146,6 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorHueSemanticLabel => 'Nuanță';
 
   @override
-  String get videoEditorAddElementSemanticLabel => 'Adaugă element';
-
-  @override
   String get videoEditorDoneSemanticLabel => 'Gata';
 
   @override

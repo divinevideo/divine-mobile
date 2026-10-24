@@ -10861,9 +10861,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorHueSemanticLabel => 'Tông màu';
 
   @override
-  String get videoEditorAddElementSemanticLabel => 'Thêm phần tử';
-
-  @override
   String get videoEditorDoneSemanticLabel => 'Xong';
 
   @override

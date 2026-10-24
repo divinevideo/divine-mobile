@@ -419,8 +419,6 @@ class _EditingToolsBar extends StatelessWidget {
   }
 }
 
-/// A quiet tray opener; DivineButton's filled and bordered variants give it
-/// more emphasis than the editor's supporting controls need.
 class _EditingToolsBarContent extends StatelessWidget {
   const _EditingToolsBarContent();
 
@@ -430,38 +428,14 @@ class _EditingToolsBarContent extends StatelessWidget {
       top: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-        child: TextButton(
+        child: DivineButton(
+          label: context.l10n.videoEditorEditingToolsLabel,
+          leadingIcon: .slidersHorizontal,
+          trailingIcon: .caretUp,
+          type: .quiet,
+          expanded: true,
+          maxLines: 2,
           onPressed: () => VideoEditorMainActionsSheet.show(context),
-          style: TextButton.styleFrom(
-            foregroundColor: context.vineColors.secondaryText,
-            minimumSize: const Size.fromHeight(48),
-            textStyle: VineTheme.bodyMediumFont().copyWith(
-              fontWeight: FontWeight.w500,
-            ),
-            shape: RoundedRectangleBorder(borderRadius: .circular(16)),
-          ),
-          child: Row(
-            mainAxisSize: .min,
-            spacing: 8,
-            children: [
-              DivineIcon(
-                icon: .slidersHorizontal,
-                size: 16,
-                color: context.vineColors.onSurfaceVariant,
-              ),
-              Flexible(
-                child: Text(
-                  context.l10n.videoEditorEditingToolsLabel,
-                  textAlign: .center,
-                ),
-              ),
-              DivineIcon(
-                icon: .caretUp,
-                size: 12,
-                color: context.vineColors.onSurfaceVariant,
-              ),
-            ],
-          ),
         ),
       ),
     );

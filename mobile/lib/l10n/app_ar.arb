@@ -2463,7 +2463,6 @@
   "cameraPermissionAllowAccessTitle": "السماح بالوصول إلى الكاميرا والميكروفون",
   "cameraPermissionAllowAccessDescription": "يتيح لك هذا التقاط الفيديوهات وتعديلها مباشرة داخل التطبيق، ولا شيء أكثر.",
   "cameraPermissionGoToSettings": "الذهاب إلى الإعدادات",
-  "videoEditorAddElementSemanticLabel": "إضافة عنصر",
   "videoEditorAddTitle": "إضافة",
   "videoEditorAudioAddAudio": "إضافة صوت",
   "videoEditorAudioFailedToLoadTitle": "فشل تحميل الأصوات",

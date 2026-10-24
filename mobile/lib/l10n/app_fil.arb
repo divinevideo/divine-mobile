@@ -2339,7 +2339,6 @@
   "videoEditorSaturationBrightnessSemanticLabel": "Saturation at brightness",
   "videoEditorSaturationBrightnessValue": "Saturation {saturation}%, Brightness {brightness}%",
   "videoEditorHueSemanticLabel": "Hue",
-  "videoEditorAddElementSemanticLabel": "Magdagdag ng element",
   "videoEditorDoneSemanticLabel": "Tapos na",
   "videoEditorLevelSemanticLabel": "Antas",
   "videoEditorBrushSizeSemanticLabel": "Laki ng brush",

@@ -2463,7 +2463,6 @@
   "cameraPermissionAllowAccessTitle": "カメラとマイクへのアクセスを許可",
   "cameraPermissionAllowAccessDescription": "これにより、アプリ内で動画の撮影と編集ができるようになります。それ以外の用途はありません。",
   "cameraPermissionGoToSettings": "設定に移動",
-  "videoEditorAddElementSemanticLabel": "要素を追加",
   "videoEditorAddTitle": "追加",
   "videoEditorAudioAddAudio": "オーディオを追加",
   "videoEditorAudioFailedToLoadTitle": "サウンドの読み込みに失敗",

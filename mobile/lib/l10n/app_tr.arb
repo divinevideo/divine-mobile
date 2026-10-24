@@ -2470,7 +2470,6 @@
   "cameraPermissionAllowAccessTitle": "Kamera ve mikrofona erişime izin ver",
   "cameraPermissionAllowAccessDescription": "Bu, videoları doğrudan uygulama içinde çekip düzenlemeni sağlar, daha fazlasını değil.",
   "cameraPermissionGoToSettings": "Ayarlara git",
-  "videoEditorAddElementSemanticLabel": "Öğe ekle",
   "videoEditorAddTitle": "Ekle",
   "videoEditorAudioAddAudio": "Ses ekle",
   "videoEditorAudioFailedToLoadTitle": "Sesler yüklenemedi",
