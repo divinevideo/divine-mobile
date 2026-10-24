@@ -7340,6 +7340,26 @@
   "@videoEditorVoiceEffectEcho": {
     "description": "Voice effect option that adds repeats of the voice, as in a big empty room."
   },
+  "videoEditorVoiceEffectReverb": "Reverb",
+  "@videoEditorVoiceEffectReverb": {
+    "description": "Voice effect option, and the label of its slider, that makes the sound ring on as if it was in a room or a hall."
+  },
+  "videoEditorVoiceEffectTelephone": "Phone",
+  "@videoEditorVoiceEffectTelephone": {
+    "description": "Voice effect option that makes the voice thin, as if it came through a phone or an old radio."
+  },
+  "videoEditorVoiceEffectMegaphone": "Megaphone",
+  "@videoEditorVoiceEffectMegaphone": {
+    "description": "Voice effect option that makes the voice narrow and a little distorted, as if it came through a handheld loudspeaker."
+  },
+  "videoEditorVoiceEffectUnderwater": "Underwater",
+  "@videoEditorVoiceEffectUnderwater": {
+    "description": "Voice effect option that muffles the voice, as if it was heard underwater."
+  },
+  "videoEditorVoiceEffectSlowedReverb": "Slowed + reverb",
+  "@videoEditorVoiceEffectSlowedReverb": {
+    "description": "Voice effect option that plays the sound slower and lower in pitch with a lot of reverb, the dreamy edit of a song popular on short-video platforms. Keep the trend's name where creators use it in English."
+  },
   "videoEditorVoiceEffectPitch": "Pitch",
   "@videoEditorVoiceEffectPitch": {
     "description": "Label of the slider that moves the voice up or down in semitones."

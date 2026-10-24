@@ -7,7 +7,7 @@ import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart'
-    show AudioEvent, AudioSourceKind, VoiceEffect;
+    show AudioEvent, AudioSourceKind, VoiceEffect, VoiceFilter;
 import 'package:openvine/blocs/video_editor/voice_effect/voice_effect_preset.dart';
 import 'package:openvine/services/video_editor/voice_effect_service.dart';
 import 'package:openvine/utils/audio_mime_type.dart';
@@ -21,7 +21,9 @@ part 'voice_effect_state.dart';
 /// Lets the creator hear and pick a voice effect and noise reduction for one
 /// timeline sound, [VoiceEffectState.track] — a voice-over, an imported or
 /// extracted track, or a bundled, published or provider sound — and bakes the
-/// pick into its audio once they confirm.
+/// pick into its audio once they confirm. A preset that also slows the sound
+/// picks its speed with it, which is heard in the audition and handed over
+/// with the result.
 ///
 /// Every setting is looped over the stretch of the sound the track plays on
 /// the timeline, so it is heard before it is kept. Any setting but the sound
@@ -50,6 +52,7 @@ class VoiceEffectBloc extends Bloc<VoiceEffectEvent, VoiceEffectState> {
            track: track,
            effect: track.voiceEffect,
            noiseReduction: track.noiseReduction,
+           playbackSpeed: track.playbackSpeed,
          ),
        ) {
     on<VoiceEffectSettingsChanged>(
@@ -88,12 +91,17 @@ class VoiceEffectBloc extends Bloc<VoiceEffectEvent, VoiceEffectState> {
     Emitter<VoiceEffectState> emit,
   ) async {
     if (_isFinishing) return;
-    final effect = event.effect ?? state.effect;
+    final preset = event.preset;
+    final effect = preset?.effect ?? event.effect ?? state.effect;
     final noiseReduction = event.noiseReduction ?? state.noiseReduction;
+    final playbackSpeed = preset == null
+        ? state.playbackSpeed
+        : preset.playbackSpeed ?? state.speedWithoutPreset;
     emit(
       state.copyWith(
         effect: effect,
         noiseReduction: noiseReduction,
+        playbackSpeed: playbackSpeed,
         status: VoiceEffectStatus.editing,
       ),
     );
@@ -184,7 +192,11 @@ class VoiceEffectBloc extends Bloc<VoiceEffectEvent, VoiceEffectState> {
       final id = '${baseId}_fx${_clock().microsecondsSinceEpoch}';
       final AudioEvent result;
       if (state.effect.isNone && !state.noiseReduction) {
-        result = _unprocessed(track, source).copyWith(id: id);
+        // A track that plays its sound itself only changes speed: slowed +
+        // reverb picked, then its effect slid back to nothing.
+        result =
+            (track.playsProcessedCopy ? _unprocessed(track, source) : track)
+                .copyWith(id: id, playbackSpeed: state.playbackSpeed);
       } else {
         final processed = await _service.process(
           source: source,
@@ -203,6 +215,7 @@ class VoiceEffectBloc extends Bloc<VoiceEffectEvent, VoiceEffectState> {
           clearMimeType: processed.mimeType == null,
           voiceEffect: state.effect,
           noiseReduction: state.noiseReduction,
+          playbackSpeed: state.playbackSpeed,
           // A track already playing a copy keeps the sound it came from.
           originalUrl: track.playsProcessedCopy ? null : track.url,
           originalMimeType: track.playsProcessedCopy ? null : track.mimeType,
@@ -287,14 +300,15 @@ class VoiceEffectBloc extends Bloc<VoiceEffectEvent, VoiceEffectState> {
     };
   }
 
-  /// Loops [audition], at the speed the track plays its sound.
+  /// Loops [audition], at the speed the sound plays at with the pick.
   Future<bool> _loop(
     AudioSourceConfig audition, {
     required bool Function() isCancelled,
   }) async {
     await _player.setClip(audition);
-    final speed = state.track.playbackSpeed;
-    if (speed != 1) await _player.setSpeed(speed);
+    // Set every time, since an earlier audition may have played at another
+    // speed.
+    await _player.setSpeed(state.playbackSpeed);
     if (isCancelled() || isClosed || _isFinishing) return false;
     // play completes when playback stops, not when it starts. Keep the
     // audition in state immediately so switching settings can reclaim it.

@@ -21,6 +21,7 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
+import 'package:openvine/blocs/video_editor/voice_effect/voice_effect_preset.dart';
 import 'package:openvine/blocs/video_editor/voice_over/voice_over_cubit.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
@@ -2267,6 +2268,7 @@ void main() {
             () => player.completionStream,
           ).thenAnswer((_) => const Stream<void>.empty());
           when(() => player.setClip(any())).thenAnswer((_) async {});
+          when(() => player.setSpeed(any())).thenAnswer((_) async {});
           when(player.play).thenAnswer((_) async {});
           when(player.stop).thenAnswer((_) async {});
           when(player.dispose).thenAnswer((_) async {});
@@ -2375,6 +2377,155 @@ void main() {
               const VideoEditorExternalPauseRequested(isPaused: false),
             ),
           ).called(1);
+        },
+      );
+
+      testWidgets(
+        'slowed + reverb from the voice sheet slows the sound down and '
+        'stretches its window to match',
+        (tester) async {
+          const song = 'https://blossom.example/abc';
+          const slowedCopy = '/docs/voice_effect_audio/abc_slowed.wav';
+          final slowed = VoiceEffectPreset.slowedReverb.effect;
+          final service = _MockVoiceEffectService();
+          when(
+            () => service.renderAudition(
+              source: (kind: AudioSourceKind.network, path: song),
+              effect: slowed,
+              noiseReduction: false,
+              start: any(named: 'start'),
+              length: any(named: 'length'),
+            ),
+          ).thenAnswer((_) async => '/tmp/audition.wav');
+          when(() => service.discardAudition(any())).thenAnswer((_) async {});
+          when(service.clearAuditions).thenAnswer((_) async {});
+          when(
+            () => service.process(
+              source: (kind: AudioSourceKind.network, path: song),
+              effect: slowed,
+              noiseReduction: false,
+            ),
+          ).thenAnswer((_) async => (path: slowedCopy, mimeType: 'audio/wav'));
+          final player = _MockAudioClipPlayer();
+          when(
+            () => player.completionStream,
+          ).thenAnswer((_) => const Stream<void>.empty());
+          when(() => player.setClip(any())).thenAnswer((_) async {});
+          when(() => player.setSpeed(any())).thenAnswer((_) async {});
+          when(player.play).thenAnswer((_) async {});
+          when(player.stop).thenAnswer((_) async {});
+          when(player.dispose).thenAnswer((_) async {});
+          final track = AudioEvent(
+            id: 'sound-1',
+            pubkey: 'pub',
+            createdAt: 0,
+            url: song,
+            mimeType: 'audio/mpeg',
+            startTime: const Duration(seconds: 1),
+            endTime: const Duration(seconds: 3),
+          );
+          when(
+            () => overlayBloc.state,
+          ).thenReturn(TimelineOverlayState(audioTracks: [track]));
+          when(() => mockStateManager.activeMeta).thenReturn({
+            VideoEditorConstants.audioStateHistoryKey: [track.toJson()],
+          });
+          when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+          final clipBloc = _MockClipEditorBloc();
+          when(
+            () => clipBloc.stream,
+          ).thenAnswer((_) => const Stream<ClipEditorState>.empty());
+          when(() => clipBloc.state).thenReturn(
+            ClipEditorState(
+              clips: [
+                DivineVideoClip(
+                  id: 'clip-1',
+                  video: EditorVideo.file('/tmp/clip-1.mp4'),
+                  duration: const Duration(seconds: 6),
+                  recordedAt: DateTime(2026),
+                  targetAspectRatio: model.AspectRatio.vertical,
+                  originalAspectRatio: 9 / 16,
+                ),
+              ],
+            ),
+          );
+
+          final item = TimelineOverlayItem(
+            id: track.id,
+            type: TimelineOverlayType.sound,
+            startTime: const Duration(seconds: 1),
+            endTime: const Duration(seconds: 3),
+          );
+          await tester.pumpWidget(
+            buildWithEditor(
+              item,
+              mockEditor,
+              mainBloc,
+              clipBloc: clipBloc,
+              routed: true,
+              overrides: [
+                voiceEffectServiceProvider.overrideWithValue(service),
+                voiceEffectAuditionPlayerFactoryProvider.overrideWithValue(
+                  () => player,
+                ),
+              ],
+            ),
+          );
+
+          await tester.tap(
+            find.bySemanticsLabel(l10n.videoEditorVoiceEffectSemanticLabel),
+          );
+          await tester.pumpAndSettle();
+          final chip = find.descendant(
+            of: find.byType(VideoEditorVoiceEffectSheet),
+            matching: find.text(l10n.videoEditorVoiceEffectSlowedReverb),
+          );
+          await scrollUntilTappable(
+            tester,
+            chip,
+            200,
+            scrollable: find.descendant(
+              of: find.descendant(
+                of: find.byType(VideoEditorVoiceEffectSheet),
+                matching: find.byWidgetPredicate(
+                  (w) =>
+                      w is SingleChildScrollView &&
+                      w.scrollDirection == Axis.horizontal,
+                ),
+              ),
+              matching: find.byType(Scrollable),
+            ),
+          );
+          await tester.tap(chip);
+          await tester.pumpAndSettle();
+          await tester.tap(
+            find.descendant(
+              of: find.byType(VideoEditorVoiceEffectSheet),
+              matching: find.byWidgetPredicate(
+                (w) => w is DivineIconButton && w.icon == DivineIconName.check,
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          final meta =
+              verify(
+                    () =>
+                        mockEditor.addHistory(meta: captureAny(named: 'meta')),
+                  ).captured.single
+                  as Map<String, dynamic>;
+          final processed = AudioEvent.fromJson(
+            (meta[VideoEditorConstants.audioStateHistoryKey] as List<dynamic>)
+                .cast<Map<String, dynamic>>()
+                .single,
+          );
+          expect(processed.url, slowedCopy);
+          expect(processed.voiceEffect, slowed);
+          expect(processed.playbackSpeed, 0.8);
+          // The same two seconds of the song, played at 0.8x.
+          expect(processed.startTime, const Duration(seconds: 1));
+          expect(processed.endTime, const Duration(milliseconds: 3500));
+          verify(() => player.setSpeed(0.8)).called(1);
         },
       );
 

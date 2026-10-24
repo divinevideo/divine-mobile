@@ -10259,6 +10259,21 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorVoiceEffectEcho => 'Echo';
 
   @override
+  String get videoEditorVoiceEffectReverb => 'Galm';
+
+  @override
+  String get videoEditorVoiceEffectTelephone => 'Telefoon';
+
+  @override
+  String get videoEditorVoiceEffectMegaphone => 'Megafoon';
+
+  @override
+  String get videoEditorVoiceEffectUnderwater => 'Onder water';
+
+  @override
+  String get videoEditorVoiceEffectSlowedReverb => 'Slowed + reverb';
+
+  @override
   String get videoEditorVoiceEffectPitch => 'Toonhoogte';
 
   @override

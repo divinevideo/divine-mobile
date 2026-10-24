@@ -88,3 +88,27 @@ double periodicity(
   }
   return cross / math.sqrt(energyA * energyB);
 }
+
+/// Magnitude of the [hz] component of `samples[from, from + length)`, by the
+/// Goertzel algorithm, normalised so a full-scale sine reads `0.5`.
+double goertzel(
+  List<double> samples,
+  double hz,
+  int sampleRate, {
+  required int from,
+  required int length,
+}) {
+  final coefficient = 2 * math.cos(2 * math.pi * hz / sampleRate);
+  var previous = 0.0;
+  var beforePrevious = 0.0;
+  for (var i = from; i < from + length; i++) {
+    final current = samples[i] + coefficient * previous - beforePrevious;
+    beforePrevious = previous;
+    previous = current;
+  }
+  final power =
+      previous * previous +
+      beforePrevious * beforePrevious -
+      coefficient * previous * beforePrevious;
+  return math.sqrt(power) / length;
+}

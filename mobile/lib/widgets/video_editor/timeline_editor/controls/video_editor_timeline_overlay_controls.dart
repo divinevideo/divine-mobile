@@ -1071,29 +1071,36 @@ class _SoundOverlayControls extends StatelessWidget {
     if (processed == null || !context.mounted) return;
 
     // Re-read the tracks after the async gap, and carry only the processed
-    // file over: the track's timing is whatever it is now.
+    // file and its speed over: the track's timing is whatever it is now.
     final tracks = editor.stateManager.audioTracks;
-    if (!tracks.any((t) => t.id == item.id)) return;
+    final current = tracks.where((t) => t.id == item.id).firstOrNull;
+    if (current == null) return;
+    final voiced = current.copyWith(
+      id: processed.id,
+      url: processed.url,
+      mimeType: processed.mimeType,
+      clearMimeType: processed.mimeType == null,
+      voiceEffect: processed.voiceEffect,
+      noiseReduction: processed.noiseReduction,
+      originalUrl: processed.originalUrl,
+      clearOriginalUrl: processed.originalUrl == null,
+      originalMimeType: processed.originalMimeType,
+      clearOriginalMimeType: processed.originalMimeType == null,
+    );
+    // A preset like slowed + reverb also changes the speed; the window is
+    // rescaled the way the speed sheet rescales it.
+    final updated = processed.playbackSpeed == current.playbackSpeed
+        ? voiced
+        : audioAtSpeed(
+            voiced,
+            processed.playbackSpeed,
+            compositionEnd: context.read<ClipEditorBloc>().state.totalDuration,
+          );
     editor.addHistory(
       meta: {
         ...editor.stateManager.activeMeta,
         VideoEditorConstants.audioStateHistoryKey: tracks
-            .map(
-              (t) => t.id == item.id
-                  ? t.copyWith(
-                      id: processed.id,
-                      url: processed.url,
-                      mimeType: processed.mimeType,
-                      clearMimeType: processed.mimeType == null,
-                      voiceEffect: processed.voiceEffect,
-                      noiseReduction: processed.noiseReduction,
-                      originalUrl: processed.originalUrl,
-                      clearOriginalUrl: processed.originalUrl == null,
-                      originalMimeType: processed.originalMimeType,
-                      clearOriginalMimeType: processed.originalMimeType == null,
-                    )
-                  : t,
-            )
+            .map((t) => t.id == item.id ? updated : t)
             .map((e) => e.toJson())
             .toList(),
       },

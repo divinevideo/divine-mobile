@@ -69,6 +69,47 @@ void main() {
     });
   });
 
+  group('encodeWavChannels', () {
+    test('round-trips stereo through decodeWavChannels', () {
+      final left = Float32List.fromList([0, 0.25, -0.5]);
+      final right = Float32List.fromList([0.5, -0.25, 0.125]);
+
+      final decoded = decodeWavChannels(
+        encodeWavChannels([left, right], 48000),
+      );
+
+      expect(decoded.sampleRate, equals(48000));
+      expect(decoded.channels, hasLength(2));
+      expect(decoded.channels[0], equals(left));
+      expect(decoded.channels[1], equals(right));
+    });
+
+    test('rejects no channels', () {
+      expect(() => encodeWavChannels([], 48000), throwsArgumentError);
+    });
+
+    test('rejects channels of different lengths', () {
+      expect(
+        () => encodeWavChannels([Float32List(2), Float32List(3)], 48000),
+        throwsArgumentError,
+      );
+    });
+  });
+
+  group('decodeWavChannels', () {
+    test('keeps each channel of a stereo file apart', () {
+      final bytes = _wav([
+        ('fmt ', _fmt(channels: 2)),
+        ('data', _int16([16384, 0, -16384, 8192])),
+      ]);
+
+      final decoded = decodeWavChannels(bytes);
+
+      expect(decoded.channels[0], equals([0.5, -0.5]));
+      expect(decoded.channels[1], equals([0, 0.25]));
+    });
+  });
+
   group('decodeWav', () {
     test('averages stereo into mono', () {
       final bytes = _wav([

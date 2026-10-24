@@ -60,5 +60,62 @@ void main() {
       expect(output, equals(input));
       expect(identical(output, input), isFalse);
     });
+
+    group('applyToChannels', () {
+      test('moves a voice shared by both channels the same way in each', () {
+        // A voice in the middle of the mix, with a different tone on each
+        // side for the channels to disagree about.
+        final voice = sine(hz: 180, seconds: 2, sampleRate: sampleRate);
+        final leftTone = sine(hz: 700, seconds: 2, sampleRate: sampleRate);
+        final rightTone = sine(hz: 950, seconds: 2, sampleRate: sampleRate);
+        final left = Float32List(voice.length);
+        final right = Float32List(voice.length);
+        for (var i = 0; i < voice.length; i++) {
+          left[i] = voice[i] + 0.3 * leftTone[i];
+          right[i] = voice[i] + 0.3 * rightTone[i];
+        }
+
+        final output = const PitchShift(-4).applyToChannels([
+          left,
+          right,
+        ], sampleRate);
+
+        // Shifted alike, the voice cancels out of the difference of the
+        // channels; shifted apart, it would not.
+        final difference = Float32List(voice.length);
+        for (var i = 0; i < voice.length; i++) {
+          difference[i] = output[0][i] - output[1][i];
+        }
+        const shiftedVoiceHz = 180 * 0.7937;
+        expect(
+          goertzel(
+            difference,
+            shiftedVoiceHz,
+            sampleRate,
+            from: 8000,
+            length: 8000,
+          ),
+          lessThan(
+            goertzel(
+                  output[0],
+                  shiftedVoiceHz,
+                  sampleRate,
+                  from: 8000,
+                  length: 8000,
+                ) /
+                100,
+          ),
+        );
+      });
+
+      test('returns empty channels as they are', () {
+        final output = const PitchShift(3).applyToChannels([
+          Float32List(0),
+          Float32List(0),
+        ], sampleRate);
+
+        expect(output, equals([isEmpty, isEmpty]));
+      });
+    });
   });
 }

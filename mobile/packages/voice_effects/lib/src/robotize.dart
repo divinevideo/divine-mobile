@@ -6,6 +6,7 @@ import 'dart:typed_data';
 
 import 'package:voice_effects/src/audio_effect.dart';
 import 'package:voice_effects/src/fft.dart';
+import 'package:voice_effects/src/levels.dart';
 
 /// Turns a voice into a monotone robot at [pitchHz].
 ///
@@ -71,30 +72,10 @@ class Robotize extends AudioEffect {
     for (var i = 0; i < samples.length; i++) {
       robot[i] = out[size + i];
     }
-    _matchLoudness(robot, samples);
+    matchLoudness(robot, samples);
     for (var i = 0; i < samples.length; i++) {
       robot[i] = (1 - mix) * samples[i] + mix * robot[i];
     }
     return robot;
-  }
-
-  /// Scales [output] in place to the RMS level of [reference].
-  static void _matchLoudness(Float32List output, Float32List reference) {
-    final target = _rms(reference);
-    final current = _rms(output);
-    if (current == 0) return;
-    final gain = target / current;
-    for (var i = 0; i < output.length; i++) {
-      output[i] *= gain;
-    }
-  }
-
-  static double _rms(Float32List samples) {
-    if (samples.isEmpty) return 0;
-    var sum = 0.0;
-    for (final sample in samples) {
-      sum += sample * sample;
-    }
-    return math.sqrt(sum / samples.length);
   }
 }
