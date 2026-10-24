@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:loop_alignment_repository/loop_alignment_repository.dart';
 import 'package:models/models.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/video_editor_history_extensions.dart';
@@ -9,9 +10,11 @@ import 'package:openvine/models/video_editor/caption_style.dart';
 import 'package:openvine/models/video_editor/caption_style_preset.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/models/video_editor/composition_duration.dart';
+import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
+import 'package:openvine/models/video_editor/loop_repair_input.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
 import 'package:pro_image_editor/pro_image_editor.dart' hide AudioTrack;
 import 'package:uuid/uuid.dart';
@@ -47,6 +50,52 @@ bool _burnInHighlightsWords(CaptionTrack track) =>
     null;
 
 extension VideoEditorExtensions on ProImageEditorState {
+  /// Serializes every relevant edit at the moment a repair is requested or
+  /// checked. Playback position and selection deliberately do not enter it.
+  LoopRepairInput loopRepairInput(
+    List<DivineVideoClip> clips, {
+    List<AudioEvent>? audioTracks,
+    List<Duration>? timelineMarkers,
+  }) => LoopRepairInputMapper.fromComposition(
+    clips,
+    composition: {
+      'layers': [for (final layer in activeLayers) layer.toMap()],
+      'filters': [
+        for (final filter in stateManager.activeFilters) filter.toMap(),
+      ],
+      'tune': [
+        for (final tune in stateManager.activeTuneAdjustments) tune.toMap(),
+      ],
+      'blur': stateManager.activeBlur,
+      'transform': stateManager.transformConfigs.toMap(),
+      'meta': stateManager.activeMeta,
+      'audio': [
+        for (final audio in audioTracks ?? stateManager.audioTracks)
+          audio.toJson(),
+      ],
+      'markers': [
+        for (final marker in timelineMarkers ?? stateManager.timelineMarkers)
+          marker.inMicroseconds,
+      ],
+    },
+    // Object following is persisted as ordinary keyframes, with no separate
+    // source-binding marker. Decline keyframed layers until that distinction
+    // can be established instead of moving their tracked objects underneath.
+    platformSupported:
+        !kIsWeb &&
+        switch (defaultTargetPlatform) {
+          TargetPlatform.android ||
+          TargetPlatform.iOS ||
+          TargetPlatform.macOS => true,
+          _ => false,
+        },
+    hasSourceTrackedLayers: activeLayers.any(
+      (layer) =>
+          layer.hasKeyframes ||
+          DetachedClipLayerData.isDetachedClipLayer(layer),
+    ),
+  );
+
   /// Captures the overlays currently over the composition — layers, colour
   /// filters, tune adjustments, video effects and blur — so they can be baked
   /// into a render mid-session.

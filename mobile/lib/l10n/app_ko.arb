@@ -2442,18 +2442,11 @@
   "videoEditorTrackNotFollowed": "따라갈 수 없었어요. 더 세밀한 대상을 틀로 감싸 보세요.",
   "videoEditorTrackFailed": "트래킹하지 못했어요. 다시 시도해 보세요.",
   "videoEditorTrackLostPartway": "중간에 놓쳤어요. 그 이후로는 레이어가 멈춰 있어요.",
-  "videoEditorLoopLabel": "루프",
-  "videoEditorLoopSemanticLabel": "더 매끄러운 루프 지점 찾기",
-  "videoEditorLoopFoundEarlier": "더 매끄러운 루프를 찾았어요. {seconds}초 일찍 끝나요.",
-  "videoEditorLoopFoundLater": "더 매끄러운 루프를 찾았어요. {seconds}초 늦게 끝나요.",
-  "videoEditorLoopClosestEarlier": "딱 맞는 지점은 없지만 이게 가장 가까워요. {seconds}초 일찍 끝나요.",
-  "videoEditorLoopClosestLater": "딱 맞는 지점은 없지만 이게 가장 가까워요. {seconds}초 늦게 끝나요.",
-  "videoEditorLoopKeepLabel": "유지",
-  "videoEditorLoopKeepSemanticLabel": "새 루프 지점 유지",
-  "videoEditorLoopDiscardSemanticLabel": "이전 끝으로 되돌리기",
+  "videoEditorLoopLabel": "루프 다듬기",
+  "videoEditorLoopSemanticLabel": "루프 연결 부분을 부드럽게 만들기",
   "videoEditorLoopAlreadySmooth": "이미 매끄럽게 루프돼요.",
   "videoEditorLoopFailed": "루프를 확인하지 못했어요. 다시 시도해 보세요.",
-  "videoEditorLoopNoMatch": "매끄러운 루프를 찾지 못했어요. 끝부분에 영상 시작과 맞는 곳이 없어요.",
+  "videoEditorLoopNoMatch": "이 루프를 개선하지 못했어요",
   "videoEditorKeyframeEffect": "효과",
   "videoEditorKeyframeCurveSegment": "키프레임 {from}에서 {to}까지의 움직임",
   "videoEditorLayerAnimationEnter": "등장",
@@ -5379,43 +5372,46 @@
   "inboxLeaveGroupConfirmBody": "받은 편지함에서 사라지고, 새 메시지가 와도 다시 나타나지 않아요. 다시 들어가려면 그룹에 메시지를 보내세요. 다른 멤버에게는 알리지 않아요.",
   "inboxLeaveGroupConfirmConfirm": "나가기",
   "inboxLeftGroup": "그룹에서 나갔어요",
-"listsDiscoveryEmpty": "이번엔 목록이 하나도 안 나왔어요. 당겨서 새로고침하세요.",
-"listsDiscoveryLoadingLabel": "목록 불러오는 중",
-"listSearchPeopleUnavailable": "지금은 사용자 목록을 이용할 수 없어요.",
-"listSearchVideosUnavailable": "지금은 동영상 목록을 이용할 수 없어요.",
-"listPrivateConversionTooLarge": "이 목록은 너무 커서 비공개로 바꿀 수 없어요. 먼저 동영상을 몇 개 삭제해 주세요. 편집 내용은 여기에 그대로 있지만 아직 저장되지 않았어요.",
-"authAccountCleanupFailed": "이전 계정의 데이터를 지울 수 없어요. 다시 시도해 주세요.",
-"@peopleListsAddPersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  "listsDiscoveryEmpty": "이번엔 목록이 하나도 안 나왔어요. 당겨서 새로고침하세요.",
+  "listsDiscoveryLoadingLabel": "목록 불러오는 중",
+  "listSearchPeopleUnavailable": "지금은 사용자 목록을 이용할 수 없어요.",
+  "listSearchVideosUnavailable": "지금은 동영상 목록을 이용할 수 없어요.",
+  "listPrivateConversionTooLarge": "이 목록은 너무 커서 비공개로 바꿀 수 없어요. 먼저 동영상을 몇 개 삭제해 주세요. 편집 내용은 여기에 그대로 있지만 아직 저장되지 않았어요.",
+  "authAccountCleanupFailed": "이전 계정의 데이터를 지울 수 없어요. 다시 시도해 주세요.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"@peopleListsRemovePersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"peopleListsAddPersonSemanticLabel": "목록에 {name} 추가",
-"peopleListsMembershipUpdateFailed": "목록을 업데이트하지 못했어요. 다시 시도해 주세요.",
-"peopleListsAddPeopleSearchHint": "사람 검색",
-"peopleListsRemovePersonSemanticLabel": "목록에서 {name} 삭제",
-"listMakePublicLabel": "공개로 설정",
-"listCollaboratorsNone": "없음",
-"listAddCollaboratorTitle": "협업자 추가",
-"listMakePublicSubtitle": "다른 사람도 이 목록을 볼 수 있어요",
-"listCollaboratorSearchHint": "Divine 검색...",
-"listVideoNotAdded": "목록은 만들어졌지만 이 동영상은 추가되지 않았어요.",
-"listPrivateCollaboratorsWarning": "이 목록을 비공개로 만들면 공동 작업자도 삭제돼요. 나만 동영상을 추가할 수 있게 돼요.",
-"listVideoPendingSync": "목록과 동영상이 여기에 저장되었어요. 동영상이 동기화를 기다리고 있어요.",
-"listRetrySync": "지금 동기화",
-"listPermissionsUnconfirmed": "이 변경 사항을 확인하지 못했어요. 다시 시도해 주세요.",
-"listRecoveryPending": "이 목록에 동기화를 기다리는 변경 사항이 있어요.",
-"listPermissionsRecoveryPending": "변경 사항이 승인되었습니다. 지금 동기화를 눌러 저장을 완료하세요. 그때까지 편집이 일시 중지됩니다.",
-"listRecoveryReadOnly": "동영상 목록에 저장된 일부 변경 사항을 복구해야 해요. 동영상 목록은 볼 수 있지만 편집은 잠시 중단돼요.",
-"listAddToLists": "목록에 추가",
-"accountDeletionProcessingSignOutFailed": "계정 삭제는 진행 중이지만 로그아웃을 완료하지 못했어요. 다시 시도해 주세요."
+  },
+  "peopleListsAddPersonSemanticLabel": "목록에 {name} 추가",
+  "peopleListsMembershipUpdateFailed": "목록을 업데이트하지 못했어요. 다시 시도해 주세요.",
+  "peopleListsAddPeopleSearchHint": "사람 검색",
+  "peopleListsRemovePersonSemanticLabel": "목록에서 {name} 삭제",
+  "listMakePublicLabel": "공개로 설정",
+  "listCollaboratorsNone": "없음",
+  "listAddCollaboratorTitle": "협업자 추가",
+  "listMakePublicSubtitle": "다른 사람도 이 목록을 볼 수 있어요",
+  "listCollaboratorSearchHint": "Divine 검색...",
+  "listVideoNotAdded": "목록은 만들어졌지만 이 동영상은 추가되지 않았어요.",
+  "listPrivateCollaboratorsWarning": "이 목록을 비공개로 만들면 공동 작업자도 삭제돼요. 나만 동영상을 추가할 수 있게 돼요.",
+  "listVideoPendingSync": "목록과 동영상이 여기에 저장되었어요. 동영상이 동기화를 기다리고 있어요.",
+  "listRetrySync": "지금 동기화",
+  "listPermissionsUnconfirmed": "이 변경 사항을 확인하지 못했어요. 다시 시도해 주세요.",
+  "listRecoveryPending": "이 목록에 동기화를 기다리는 변경 사항이 있어요.",
+  "listPermissionsRecoveryPending": "변경 사항이 승인되었습니다. 지금 동기화를 눌러 저장을 완료하세요. 그때까지 편집이 일시 중지됩니다.",
+  "listRecoveryReadOnly": "동영상 목록에 저장된 일부 변경 사항을 복구해야 해요. 동영상 목록은 볼 수 있지만 편집은 잠시 중단돼요.",
+  "listAddToLists": "목록에 추가",
+  "accountDeletionProcessingSignOutFailed": "계정 삭제는 진행 중이지만 로그아웃을 완료하지 못했어요. 다시 시도해 주세요.",
+  "videoEditorLoopRepairSmoothed": "루프를 부드럽게 다듬었어요",
+  "videoEditorLoopRepairProgress": "루프를 다듬고 있어요…",
+  "videoEditorLoopRepairTrimmed": "루프를 다듬었어요. {seconds}초를 잘라냈어요."
 }

@@ -9960,39 +9960,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorTrackLostPartway => '중간에 놓쳤어요. 그 이후로는 레이어가 멈춰 있어요.';
 
   @override
-  String get videoEditorLoopLabel => '루프';
+  String get videoEditorLoopLabel => '루프 다듬기';
 
   @override
-  String get videoEditorLoopSemanticLabel => '더 매끄러운 루프 지점 찾기';
-
-  @override
-  String videoEditorLoopFoundEarlier(String seconds) {
-    return '더 매끄러운 루프를 찾았어요. $seconds초 일찍 끝나요.';
-  }
-
-  @override
-  String videoEditorLoopFoundLater(String seconds) {
-    return '더 매끄러운 루프를 찾았어요. $seconds초 늦게 끝나요.';
-  }
-
-  @override
-  String videoEditorLoopClosestEarlier(String seconds) {
-    return '딱 맞는 지점은 없지만 이게 가장 가까워요. $seconds초 일찍 끝나요.';
-  }
-
-  @override
-  String videoEditorLoopClosestLater(String seconds) {
-    return '딱 맞는 지점은 없지만 이게 가장 가까워요. $seconds초 늦게 끝나요.';
-  }
-
-  @override
-  String get videoEditorLoopKeepLabel => '유지';
-
-  @override
-  String get videoEditorLoopKeepSemanticLabel => '새 루프 지점 유지';
-
-  @override
-  String get videoEditorLoopDiscardSemanticLabel => '이전 끝으로 되돌리기';
+  String get videoEditorLoopSemanticLabel => '루프 연결 부분을 부드럽게 만들기';
 
   @override
   String get videoEditorLoopAlreadySmooth => '이미 매끄럽게 루프돼요.';
@@ -10001,8 +9972,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorLoopFailed => '루프를 확인하지 못했어요. 다시 시도해 보세요.';
 
   @override
-  String get videoEditorLoopNoMatch =>
-      '매끄러운 루프를 찾지 못했어요. 끝부분에 영상 시작과 맞는 곳이 없어요.';
+  String get videoEditorLoopNoMatch => '이 루프를 개선하지 못했어요';
 
   @override
   String get videoEditorKeyframeEffect => '효과';
@@ -13755,4 +13725,15 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       '계정 삭제는 진행 중이지만 로그아웃을 완료하지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String get videoEditorLoopRepairSmoothed => '루프를 부드럽게 다듬었어요';
+
+  @override
+  String get videoEditorLoopRepairProgress => '루프를 다듬고 있어요…';
+
+  @override
+  String videoEditorLoopRepairTrimmed(String seconds) {
+    return '루프를 다듬었어요. $seconds초를 잘라냈어요.';
+  }
 }

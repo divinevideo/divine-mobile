@@ -10743,41 +10743,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'మధ్యలో కనిపించకుండా పోయింది. అక్కడి నుండి లేయర్ కదలకుండా ఉంటుంది.';
 
   @override
-  String get videoEditorLoopLabel => 'లూప్';
+  String get videoEditorLoopLabel => 'లూప్‌ను సరిచేయండి';
 
   @override
-  String get videoEditorLoopSemanticLabel =>
-      'మరింత సాఫీ అయిన లూప్ పాయింట్‌ను కనుగొనండి';
-
-  @override
-  String videoEditorLoopFoundEarlier(String seconds) {
-    return 'మరింత సాఫీ లూప్ దొరికింది. ఇది $seconds సె ముందుగా ముగుస్తుంది.';
-  }
-
-  @override
-  String videoEditorLoopFoundLater(String seconds) {
-    return 'మరింత సాఫీ లూప్ దొరికింది. ఇది $seconds సె ఆలస్యంగా ముగుస్తుంది.';
-  }
-
-  @override
-  String videoEditorLoopClosestEarlier(String seconds) {
-    return 'సరిగ్గా సరిపోయేది లేదు, కానీ ఇదే అత్యంత దగ్గరిది. ఇది $seconds సె ముందుగా ముగుస్తుంది.';
-  }
-
-  @override
-  String videoEditorLoopClosestLater(String seconds) {
-    return 'సరిగ్గా సరిపోయేది లేదు, కానీ ఇదే అత్యంత దగ్గరిది. ఇది $seconds సె ఆలస్యంగా ముగుస్తుంది.';
-  }
-
-  @override
-  String get videoEditorLoopKeepLabel => 'ఉంచు';
-
-  @override
-  String get videoEditorLoopKeepSemanticLabel => 'కొత్త లూప్ పాయింట్‌ను ఉంచండి';
-
-  @override
-  String get videoEditorLoopDiscardSemanticLabel =>
-      'పాత ముగింపును తిరిగి పెట్టండి';
+  String get videoEditorLoopSemanticLabel => 'లూప్ కలయికను సాఫీగా చేయండి';
 
   @override
   String get videoEditorLoopAlreadySmooth =>
@@ -10788,8 +10757,7 @@ class AppLocalizationsTe extends AppLocalizations {
       'లూప్‌ను తనిఖీ చేయలేకపోయాం. మళ్లీ ప్రయత్నించండి.';
 
   @override
-  String get videoEditorLoopNoMatch =>
-      'అతుకులు లేని లూప్ దొరకలేదు. ముగింపు దగ్గర ఏదీ వీడియో ప్రారంభంతో సరిపోలడం లేదు.';
+  String get videoEditorLoopNoMatch => 'ఈ లూప్‌ను మెరుగుపరచలేకపోయాం';
 
   @override
   String get videoEditorKeyframeEffect => 'ఎఫెక్ట్';
@@ -14810,4 +14778,15 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'మీ ఖాతాను తొలగించే ప్రక్రియ కొనసాగుతోంది, కానీ మేము సైన్ అవుట్‌ను పూర్తి చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get videoEditorLoopRepairSmoothed => 'లూప్ సాఫీగా మారింది';
+
+  @override
+  String get videoEditorLoopRepairProgress => 'మీ లూప్‌ను సరిచేస్తున్నాం…';
+
+  @override
+  String videoEditorLoopRepairTrimmed(String seconds) {
+    return 'లూప్ సాఫీగా మారింది. $seconds సె. తొలగించాం.';
+  }
 }

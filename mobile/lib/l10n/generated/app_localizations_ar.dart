@@ -10438,39 +10438,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'فُقد الأثر في منتصف الطريق، وتبقى الطبقة ثابتة من هناك.';
 
   @override
-  String get videoEditorLoopLabel => 'تكرار';
+  String get videoEditorLoopLabel => 'تحسين التكرار';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'ابحث عن نقطة تكرار أكثر سلاسة';
-
-  @override
-  String videoEditorLoopFoundEarlier(String seconds) {
-    return 'وجدنا تكرارًا أكثر سلاسة. ينتهي أبكر بمقدار $seconds ث.';
-  }
-
-  @override
-  String videoEditorLoopFoundLater(String seconds) {
-    return 'وجدنا تكرارًا أكثر سلاسة. ينتهي متأخرًا بمقدار $seconds ث.';
-  }
-
-  @override
-  String videoEditorLoopClosestEarlier(String seconds) {
-    return 'لا يوجد تطابق تام، لكن هذا الأقرب. ينتهي أبكر بمقدار $seconds ث.';
-  }
-
-  @override
-  String videoEditorLoopClosestLater(String seconds) {
-    return 'لا يوجد تطابق تام، لكن هذا الأقرب. ينتهي متأخرًا بمقدار $seconds ث.';
-  }
-
-  @override
-  String get videoEditorLoopKeepLabel => 'احتفظ';
-
-  @override
-  String get videoEditorLoopKeepSemanticLabel => 'احتفظ بنقطة التكرار الجديدة';
-
-  @override
-  String get videoEditorLoopDiscardSemanticLabel => 'أعِد النهاية السابقة';
+  String get videoEditorLoopSemanticLabel => 'تنعيم نقطة اتصال التكرار';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'هذا يتكرر بسلاسة بالفعل.';
@@ -10480,8 +10451,7 @@ class AppLocalizationsAr extends AppLocalizations {
       'تعذّر فحص التكرار. يُرجى المحاولة مجددًا.';
 
   @override
-  String get videoEditorLoopNoMatch =>
-      'لم نجد تكرارًا سلسًا. لا شيء قرب النهاية يطابق بداية الفيديو.';
+  String get videoEditorLoopNoMatch => 'تعذّر تحسين هذا التكرار';
 
   @override
   String get videoEditorKeyframeEffect => 'التأثير';
@@ -14449,4 +14419,15 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'حذف الحساب قيد المعالجة، لكن تعذّر إكمال تسجيل الخروج. يرجى المحاولة مجددًا.';
+
+  @override
+  String get videoEditorLoopRepairSmoothed => 'تم تنعيم التكرار';
+
+  @override
+  String get videoEditorLoopRepairProgress => 'جارٍ تحسين التكرار…';
+
+  @override
+  String videoEditorLoopRepairTrimmed(String seconds) {
+    return 'تم تنعيم التكرار. أُزيلت $seconds ث.';
+  }
 }

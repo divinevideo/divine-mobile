@@ -39,6 +39,8 @@ import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timel
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
+import '../../../helpers/video_editor/loop_repair.dart';
+
 class _MockProVideoEditor extends ProVideoEditor {
   @override
   Stream<dynamic> initializeStream() => const Stream.empty();
@@ -189,7 +191,11 @@ void main() {
                   ),
                   BlocProvider(create: (_) => StyleClipboardCubit()),
                   if (loopCubit == null)
-                    BlocProvider(create: (_) => LoopSuggestionCubit())
+                    BlocProvider(
+                      create: (_) => LoopSuggestionCubit(
+                        repository: noMatchLoopRepository(),
+                      ),
+                    )
                   else
                     BlocProvider.value(value: loopCubit),
                 ],
@@ -241,16 +247,7 @@ void main() {
           );
           final overlay = TimelineOverlayBloc();
           addTearDown(overlay.close);
-          final cubit = LoopSuggestionCubit(
-            findLoopPoint:
-                ({required search, required taskId, onProgress}) async =>
-                    const VideoLoopPoint(
-                      start: Duration.zero,
-                      end: Duration(milliseconds: 2500),
-                      difference: 0.01,
-                      currentDifference: 0.2,
-                    ),
-          );
+          final cubit = pendingLoopCubit();
           addTearDown(cubit.close);
           overlay.add(
             TimelineOverlayItemsUpdate(
@@ -289,9 +286,10 @@ void main() {
             Duration(milliseconds: 2900),
           ]);
 
-          await cubit.search([clip]);
+          beginPendingLoop(cubit, [clip]);
           await tester.pump();
-          states.add(ClipEditorState(clips: [cubit.state.suggested!]));
+          // An in-flight correction never previews an unverified replacement.
+          states.add(ClipEditorState(clips: [clip]));
           await tester.pump();
           expect(
             overlay.state.items.where(
@@ -304,7 +302,7 @@ void main() {
             Duration(milliseconds: 2900),
           ]);
 
-          cubit.resultHandled();
+          await cubit.cancel();
           states.add(ClipEditorState(clips: [clip]));
           await tester.pump();
           expect(
@@ -320,40 +318,30 @@ void main() {
         },
       );
 
-      testWidgets('requires Keep or Cancel before another timeline edit', (
+      testWidgets('blocks timeline edits while repairing the loop', (
         tester,
       ) async {
         final clip = _createTestClip(id: 'a', seconds: 5);
-        final cubit = LoopSuggestionCubit(
-          findLoopPoint:
-              ({required search, required taskId, onProgress}) async =>
-                  const VideoLoopPoint(
-                    start: Duration.zero,
-                    end: Duration(seconds: 4),
-                    difference: 0.01,
-                    currentDifference: 0.2,
-                  ),
-        );
+        final cubit = pendingLoopCubit();
         addTearDown(cubit.close);
-        await cubit.search([clip]);
+        beginPendingLoop(cubit, [clip]);
         await tester.pumpWidget(
           buildWidget(
             clipState: ClipEditorState(clips: [clip]),
             loopCubit: cubit,
           ),
         );
-        await tester.pumpAndSettle();
+        await tester.pump();
         final tile = find.byKey(const ValueKey('a'));
         final point = tester.getTopLeft(tile) + const Offset(30, 20);
 
         await tester.tapAt(point);
         await tester.pump();
         verifyNever(() => mockClipBloc.add(const ClipEditorEditingToggled()));
-        expect(find.text('Keep').hitTestable(), findsOneWidget);
-        expect(find.text('Cancel').hitTestable(), findsOneWidget);
+        expect(find.text('Keep'), findsNothing);
 
         // The same gesture works once the pending preview is dismissed.
-        cubit.resultHandled();
+        await cubit.cancel();
         await tester.pumpAndSettle();
         await tester.tapAt(point);
         await tester.pump();

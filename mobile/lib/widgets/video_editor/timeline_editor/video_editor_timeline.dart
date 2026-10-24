@@ -229,7 +229,7 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
     );
     final hasLoopSuggestion = context.select(
       (LoopSuggestionCubit cubit) =>
-          cubit.state.status == LoopSuggestionStatus.suggested,
+          cubit.state.status == LoopSuggestionStatus.searching,
     );
     // Sync layers from main editor to timeline overlay bloc, and
     // sync scroll to playback position while not user-scrolling.
@@ -238,12 +238,6 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
         BlocListener<ClipEditorBloc, ClipEditorState>(
           listenWhen: (prev, curr) => prev.totalDuration != curr.totalDuration,
           listener: (context, state) {
-            // The loop trim is not committed until Keep. Clamping here drops
-            // sounds and merges markers irreversibly, even if it is cancelled.
-            if (context.read<LoopSuggestionCubit>().state.status ==
-                LoopSuggestionStatus.suggested) {
-              return;
-            }
             // _totalDuration is not updated here: build recomputes it on every
             // rebuild (all its inputs are in the context.select record above)
             // and, unlike this listener, correctly suspends the loop-wrap

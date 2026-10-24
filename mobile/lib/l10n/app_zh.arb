@@ -5318,18 +5318,11 @@
   "videoEditorTrackNotFollowed": "无法跟踪该对象。请框选细节更多的东西。",
   "videoEditorTrackFailed": "跟踪失败，请重试。",
   "videoEditorTrackLostPartway": "中途跟丢了，从那里起图层保持不动。",
-  "videoEditorLoopLabel": "循环",
-  "videoEditorLoopSemanticLabel": "查找更顺滑的循环点",
-  "videoEditorLoopFoundEarlier": "找到更顺滑的循环，提前 {seconds} 秒结束。",
-  "videoEditorLoopFoundLater": "找到更顺滑的循环，延后 {seconds} 秒结束。",
-  "videoEditorLoopClosestEarlier": "没有完全匹配的位置，这是最接近的一个，提前 {seconds} 秒结束。",
-  "videoEditorLoopClosestLater": "没有完全匹配的位置，这是最接近的一个，延后 {seconds} 秒结束。",
-  "videoEditorLoopKeepLabel": "保留",
-  "videoEditorLoopKeepSemanticLabel": "保留新的循环点",
-  "videoEditorLoopDiscardSemanticLabel": "恢复原来的结尾",
+  "videoEditorLoopLabel": "优化循环",
+  "videoEditorLoopSemanticLabel": "让循环衔接更流畅",
   "videoEditorLoopAlreadySmooth": "已经循环得很顺滑了。",
   "videoEditorLoopFailed": "无法检查循环，请重试。",
-  "videoEditorLoopNoMatch": "没有找到无缝循环。结尾附近没有与视频开头相符的画面。",
+  "videoEditorLoopNoMatch": "无法改善此循环",
   "videoEditorKeyframeEffect": "效果",
   "videoEditorKeyframeCurveSegment": "从关键帧 {from} 到 {to} 的运动",
   "@videoEditorLayerAnimationButtonSemanticLabel": {
@@ -7162,5 +7155,8 @@
   "listPermissionsRecoveryPending": "更改已被接受。点击立即同步以完成保存。在此之前，编辑将暂停。",
   "listRecoveryReadOnly": "视频列表中保存的部分更改需要恢复。你可以查看视频列表，但编辑已暂停。",
   "listAddToLists": "加入列表",
-  "accountDeletionProcessingSignOutFailed": "你的账号删除请求正在处理中，但我们未能完成退出登录。请重试。"
+  "accountDeletionProcessingSignOutFailed": "你的账号删除请求正在处理中，但我们未能完成退出登录。请重试。",
+  "videoEditorLoopRepairSmoothed": "循环已优化",
+  "videoEditorLoopRepairProgress": "正在优化循环…",
+  "videoEditorLoopRepairTrimmed": "循环已优化。已移除 {seconds} 秒。"
 }

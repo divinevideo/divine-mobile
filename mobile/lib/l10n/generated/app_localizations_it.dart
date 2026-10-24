@@ -10583,41 +10583,11 @@ class AppLocalizationsIt extends AppLocalizations {
       'Perso di vista a metà strada. Da lì il livello resta fermo.';
 
   @override
-  String get videoEditorLoopLabel => 'Loop';
+  String get videoEditorLoopLabel => 'Migliora il loop';
 
   @override
   String get videoEditorLoopSemanticLabel =>
-      'Trova un punto di loop più fluido';
-
-  @override
-  String videoEditorLoopFoundEarlier(String seconds) {
-    return 'Trovato un loop più fluido. Finisce $seconds s prima.';
-  }
-
-  @override
-  String videoEditorLoopFoundLater(String seconds) {
-    return 'Trovato un loop più fluido. Finisce $seconds s dopo.';
-  }
-
-  @override
-  String videoEditorLoopClosestEarlier(String seconds) {
-    return 'Nessuna corrispondenza perfetta, ma questa è la più vicina. Finisce $seconds s prima.';
-  }
-
-  @override
-  String videoEditorLoopClosestLater(String seconds) {
-    return 'Nessuna corrispondenza perfetta, ma questa è la più vicina. Finisce $seconds s dopo.';
-  }
-
-  @override
-  String get videoEditorLoopKeepLabel => 'Tieni';
-
-  @override
-  String get videoEditorLoopKeepSemanticLabel => 'Tieni il nuovo punto di loop';
-
-  @override
-  String get videoEditorLoopDiscardSemanticLabel =>
-      'Ripristina la fine precedente';
+      'Rendi fluida la giunzione del loop';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'Va già in loop in modo fluido.';
@@ -10628,7 +10598,7 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get videoEditorLoopNoMatch =>
-      'Nessun loop perfetto trovato. Niente verso la fine combacia con l\'inizio del video.';
+      'Non è stato possibile migliorare questo loop';
 
   @override
   String get videoEditorKeyframeEffect => 'Effetto';
@@ -14635,4 +14605,15 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'L’eliminazione del tuo account è in corso, ma non siamo riusciti a completare la disconnessione. Riprova.';
+
+  @override
+  String get videoEditorLoopRepairSmoothed => 'Loop reso più fluido';
+
+  @override
+  String get videoEditorLoopRepairProgress => 'Miglioramento del tuo loop…';
+
+  @override
+  String videoEditorLoopRepairTrimmed(String seconds) {
+    return 'Loop reso più fluido. Rimossi $seconds s.';
+  }
 }

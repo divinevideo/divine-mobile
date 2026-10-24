@@ -10460,40 +10460,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Tappade bort det på vägen. Lagret står still därifrån.';
 
   @override
-  String get videoEditorLoopLabel => 'Loop';
+  String get videoEditorLoopLabel => 'Förbättra loopen';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'Hitta en mjukare looppunkt';
-
-  @override
-  String videoEditorLoopFoundEarlier(String seconds) {
-    return 'Mjukare loop hittad. Den slutar $seconds s tidigare.';
-  }
-
-  @override
-  String videoEditorLoopFoundLater(String seconds) {
-    return 'Mjukare loop hittad. Den slutar $seconds s senare.';
-  }
-
-  @override
-  String videoEditorLoopClosestEarlier(String seconds) {
-    return 'Ingen perfekt träff, men det här är den närmaste. Den slutar $seconds s tidigare.';
-  }
-
-  @override
-  String videoEditorLoopClosestLater(String seconds) {
-    return 'Ingen perfekt träff, men det här är den närmaste. Den slutar $seconds s senare.';
-  }
-
-  @override
-  String get videoEditorLoopKeepLabel => 'Behåll';
-
-  @override
-  String get videoEditorLoopKeepSemanticLabel => 'Behåll den nya looppunkten';
-
-  @override
-  String get videoEditorLoopDiscardSemanticLabel =>
-      'Sätt tillbaka det gamla slutet';
+  String get videoEditorLoopSemanticLabel => 'Gör loopens övergång mjukare';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'Den loopar redan mjukt.';
@@ -10504,7 +10474,7 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorLoopNoMatch =>
-      'Ingen sömlös loop hittades. Inget nära slutet matchar hur videon börjar.';
+      'Det gick inte att förbättra den här loopen';
 
   @override
   String get videoEditorKeyframeEffect => 'Effekt';
@@ -14462,4 +14432,15 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Ditt konto håller på att raderas, men vi kunde inte slutföra utloggningen. Försök igen.';
+
+  @override
+  String get videoEditorLoopRepairSmoothed => 'Loopen är mjukare';
+
+  @override
+  String get videoEditorLoopRepairProgress => 'Förbättrar din loop…';
+
+  @override
+  String videoEditorLoopRepairTrimmed(String seconds) {
+    return 'Loopen är mjukare. Tog bort $seconds s.';
+  }
 }

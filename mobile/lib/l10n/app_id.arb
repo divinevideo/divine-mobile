@@ -2903,18 +2903,11 @@
   "videoEditorTrackNotFollowed": "Tidak bisa mengikutinya. Bingkai sesuatu yang lebih detail.",
   "videoEditorTrackFailed": "Pelacakan gagal. Coba lagi.",
   "videoEditorTrackLostPartway": "Kehilangan jejak di tengah jalan. Lapisan diam dari situ.",
-  "videoEditorLoopLabel": "Loop",
-  "videoEditorLoopSemanticLabel": "Cari titik loop yang lebih mulus",
-  "videoEditorLoopFoundEarlier": "Loop yang lebih mulus ditemukan. Berakhir {seconds} dtk lebih awal.",
-  "videoEditorLoopFoundLater": "Loop yang lebih mulus ditemukan. Berakhir {seconds} dtk lebih lambat.",
-  "videoEditorLoopClosestEarlier": "Tidak ada yang benar-benar cocok, tapi ini yang paling dekat. Berakhir {seconds} dtk lebih awal.",
-  "videoEditorLoopClosestLater": "Tidak ada yang benar-benar cocok, tapi ini yang paling dekat. Berakhir {seconds} dtk lebih lambat.",
-  "videoEditorLoopKeepLabel": "Simpan",
-  "videoEditorLoopKeepSemanticLabel": "Simpan titik loop baru",
-  "videoEditorLoopDiscardSemanticLabel": "Kembalikan akhir sebelumnya",
+  "videoEditorLoopLabel": "Perbaiki loop",
+  "videoEditorLoopSemanticLabel": "Haluskan sambungan loop",
   "videoEditorLoopAlreadySmooth": "Ini sudah loop dengan mulus.",
   "videoEditorLoopFailed": "Loop tidak bisa diperiksa. Coba lagi.",
-  "videoEditorLoopNoMatch": "Loop mulus tidak ditemukan. Tidak ada bagian di dekat akhir yang cocok dengan awal video.",
+  "videoEditorLoopNoMatch": "Loop ini belum bisa diperbaiki",
   "videoEditorKeyframeEffect": "Efek",
   "videoEditorKeyframeCurveSegment": "Gerakan dari keyframe {from} ke {to}",
   "videoEditorLayerAnimationEnter": "Masuk",
@@ -5833,43 +5826,46 @@
   "inboxLeaveGroupConfirmBody": "Grup ini hilang dari kotak masukmu, dan pesan baru tidak akan memunculkannya lagi. Tulis lagi di grup untuk bergabung kembali. Anggota lain tidak diberi tahu.",
   "inboxLeaveGroupConfirmConfirm": "Keluar",
   "inboxLeftGroup": "Kamu keluar dari grup",
-"listsDiscoveryEmpty": "Belum ada daftar yang muncul kali ini. Tarik untuk menyegarkan.",
-"listsDiscoveryLoadingLabel": "Memuat daftar",
-"listSearchPeopleUnavailable": "Daftar orang sedang tidak tersedia.",
-"listSearchVideosUnavailable": "Daftar video sedang tidak tersedia.",
-"listPrivateConversionTooLarge": "Daftar ini terlalu besar untuk dijadikan privat. Hapus beberapa video terlebih dahulu. Perubahanmu tetap ada di sini dan belum disimpan.",
-"authAccountCleanupFailed": "Data akun sebelumnya tidak dapat dihapus. Coba lagi.",
-"@peopleListsAddPersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  "listsDiscoveryEmpty": "Belum ada daftar yang muncul kali ini. Tarik untuk menyegarkan.",
+  "listsDiscoveryLoadingLabel": "Memuat daftar",
+  "listSearchPeopleUnavailable": "Daftar orang sedang tidak tersedia.",
+  "listSearchVideosUnavailable": "Daftar video sedang tidak tersedia.",
+  "listPrivateConversionTooLarge": "Daftar ini terlalu besar untuk dijadikan privat. Hapus beberapa video terlebih dahulu. Perubahanmu tetap ada di sini dan belum disimpan.",
+  "authAccountCleanupFailed": "Data akun sebelumnya tidak dapat dihapus. Coba lagi.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"@peopleListsRemovePersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"peopleListsAddPersonSemanticLabel": "Tambahkan {name} ke daftar",
-"peopleListsMembershipUpdateFailed": "Tidak bisa memperbarui daftar. Coba lagi.",
-"peopleListsAddPeopleSearchHint": "Cari orang",
-"peopleListsRemovePersonSemanticLabel": "Hapus {name} dari daftar",
-"listMakePublicLabel": "Jadikan publik",
-"listCollaboratorsNone": "Tidak ada",
-"listAddCollaboratorTitle": "Tambah kolaborator",
-"listMakePublicSubtitle": "Biar orang lain bisa lihat daftar ini",
-"listCollaboratorSearchHint": "Cari di Divine...",
-"listVideoNotAdded": "Daftarmu sudah dibuat, tetapi video ini belum ditambahkan.",
-"listPrivateCollaboratorsWarning": "Menjadikan daftar ini privat juga menghapus kolaboratornya. Hanya kamu yang dapat menambahkan video.",
-"listVideoPendingSync": "Daftar dan videomu tersimpan di sini. Video menunggu untuk disinkronkan.",
-"listRetrySync": "Sinkronkan sekarang",
-"listPermissionsUnconfirmed": "Perubahan ini belum bisa dikonfirmasi. Coba lagi.",
-"listRecoveryPending": "Daftar ini memiliki perubahan yang menunggu sinkronisasi.",
-"listPermissionsRecoveryPending": "Perubahanmu diterima. Ketuk Sinkronkan sekarang untuk menyelesaikan penyimpanan. Pengeditan dijeda sampai selesai.",
-"listRecoveryReadOnly": "Beberapa perubahan tersimpan pada daftar video perlu dipulihkan. Kamu bisa melihat daftar video, tetapi pengeditan dijeda.",
-"listAddToLists": "Tambahkan ke daftar",
-"accountDeletionProcessingSignOutFailed": "Akunmu sedang dihapus, tapi kami belum bisa mengeluarkanmu. Coba lagi."
+  },
+  "peopleListsAddPersonSemanticLabel": "Tambahkan {name} ke daftar",
+  "peopleListsMembershipUpdateFailed": "Tidak bisa memperbarui daftar. Coba lagi.",
+  "peopleListsAddPeopleSearchHint": "Cari orang",
+  "peopleListsRemovePersonSemanticLabel": "Hapus {name} dari daftar",
+  "listMakePublicLabel": "Jadikan publik",
+  "listCollaboratorsNone": "Tidak ada",
+  "listAddCollaboratorTitle": "Tambah kolaborator",
+  "listMakePublicSubtitle": "Biar orang lain bisa lihat daftar ini",
+  "listCollaboratorSearchHint": "Cari di Divine...",
+  "listVideoNotAdded": "Daftarmu sudah dibuat, tetapi video ini belum ditambahkan.",
+  "listPrivateCollaboratorsWarning": "Menjadikan daftar ini privat juga menghapus kolaboratornya. Hanya kamu yang dapat menambahkan video.",
+  "listVideoPendingSync": "Daftar dan videomu tersimpan di sini. Video menunggu untuk disinkronkan.",
+  "listRetrySync": "Sinkronkan sekarang",
+  "listPermissionsUnconfirmed": "Perubahan ini belum bisa dikonfirmasi. Coba lagi.",
+  "listRecoveryPending": "Daftar ini memiliki perubahan yang menunggu sinkronisasi.",
+  "listPermissionsRecoveryPending": "Perubahanmu diterima. Ketuk Sinkronkan sekarang untuk menyelesaikan penyimpanan. Pengeditan dijeda sampai selesai.",
+  "listRecoveryReadOnly": "Beberapa perubahan tersimpan pada daftar video perlu dipulihkan. Kamu bisa melihat daftar video, tetapi pengeditan dijeda.",
+  "listAddToLists": "Tambahkan ke daftar",
+  "accountDeletionProcessingSignOutFailed": "Akunmu sedang dihapus, tapi kami belum bisa mengeluarkanmu. Coba lagi.",
+  "videoEditorLoopRepairSmoothed": "Loop diperhalus",
+  "videoEditorLoopRepairProgress": "Memperbaiki loop kamu…",
+  "videoEditorLoopRepairTrimmed": "Loop diperhalus. {seconds} dtk dihapus."
 }

@@ -2975,18 +2975,11 @@
   "videoEditorTrackNotFollowed": "Dat lukte niet om te volgen. Kader iets in met meer details.",
   "videoEditorTrackFailed": "Volgen is niet gelukt. Probeer het opnieuw.",
   "videoEditorTrackLostPartway": "Halverwege uit het oog verloren. Vanaf daar staat de laag stil.",
-  "videoEditorLoopLabel": "Loop",
-  "videoEditorLoopSemanticLabel": "Vloeiender looppunt zoeken",
-  "videoEditorLoopFoundEarlier": "Vloeiendere loop gevonden. Hij eindigt {seconds} s eerder.",
-  "videoEditorLoopFoundLater": "Vloeiendere loop gevonden. Hij eindigt {seconds} s later.",
-  "videoEditorLoopClosestEarlier": "Geen perfecte match, maar dit is de dichtstbijzijnde. Hij eindigt {seconds} s eerder.",
-  "videoEditorLoopClosestLater": "Geen perfecte match, maar dit is de dichtstbijzijnde. Hij eindigt {seconds} s later.",
-  "videoEditorLoopKeepLabel": "Houden",
-  "videoEditorLoopKeepSemanticLabel": "Nieuw looppunt houden",
-  "videoEditorLoopDiscardSemanticLabel": "Oude einde terugzetten",
+  "videoEditorLoopLabel": "Loop verbeteren",
+  "videoEditorLoopSemanticLabel": "Overgang van de loop vloeiender maken",
   "videoEditorLoopAlreadySmooth": "Deze loopt al vloeiend rond.",
   "videoEditorLoopFailed": "Loop controleren is niet gelukt. Probeer het opnieuw.",
-  "videoEditorLoopNoMatch": "Geen naadloze loop gevonden. Niets aan het eind past bij het begin van de video.",
+  "videoEditorLoopNoMatch": "Deze loop kon niet worden verbeterd",
   "videoEditorKeyframeEffect": "Effect",
   "videoEditorKeyframeCurveSegment": "Beweging van keyframe {from} naar {to}",
   "videoEditorLayerAnimationEnter": "Ingang",
@@ -5833,43 +5826,46 @@
   "inboxLeaveGroupConfirmBody": "Hij verdwijnt uit je inbox en nieuwe berichten brengen hem niet terug. Schrijf er opnieuw in om weer mee te doen. De anderen krijgen geen melding.",
   "inboxLeaveGroupConfirmConfirm": "Verlaten",
   "inboxLeftGroup": "Je hebt de groep verlaten",
-"listsDiscoveryEmpty": "Er doken deze keer geen lijsten op. Trek omlaag om te vernieuwen.",
-"listsDiscoveryLoadingLabel": "Lijsten laden",
-"listSearchPeopleUnavailable": "Personenlijsten zijn momenteel niet beschikbaar.",
-"listSearchVideosUnavailable": "Videolijsten zijn momenteel niet beschikbaar.",
-"listPrivateConversionTooLarge": "Deze lijst is te groot om privé te maken. Verwijder eerst een paar video’s. Je wijzigingen blijven hier staan en zijn nog niet opgeslagen.",
-"authAccountCleanupFailed": "De gegevens van het vorige account konden niet worden gewist. Probeer het opnieuw.",
-"@peopleListsAddPersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  "listsDiscoveryEmpty": "Er doken deze keer geen lijsten op. Trek omlaag om te vernieuwen.",
+  "listsDiscoveryLoadingLabel": "Lijsten laden",
+  "listSearchPeopleUnavailable": "Personenlijsten zijn momenteel niet beschikbaar.",
+  "listSearchVideosUnavailable": "Videolijsten zijn momenteel niet beschikbaar.",
+  "listPrivateConversionTooLarge": "Deze lijst is te groot om privé te maken. Verwijder eerst een paar video’s. Je wijzigingen blijven hier staan en zijn nog niet opgeslagen.",
+  "authAccountCleanupFailed": "De gegevens van het vorige account konden niet worden gewist. Probeer het opnieuw.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"@peopleListsRemovePersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"peopleListsAddPersonSemanticLabel": "{name} aan lijst toevoegen",
-"peopleListsMembershipUpdateFailed": "Kon de lijst niet bijwerken. Probeer het opnieuw.",
-"peopleListsAddPeopleSearchHint": "Mensen zoeken",
-"peopleListsRemovePersonSemanticLabel": "{name} uit lijst verwijderen",
-"listMakePublicLabel": "Openbaar maken",
-"listCollaboratorsNone": "Geen",
-"listAddCollaboratorTitle": "Medewerker toevoegen",
-"listMakePublicSubtitle": "Laat anderen deze lijst zien",
-"listCollaboratorSearchHint": "Zoek in Divine...",
-"listVideoNotAdded": "Je lijst is gemaakt, maar deze video is niet toegevoegd.",
-"listPrivateCollaboratorsWarning": "Als je deze lijst privé maakt, worden ook de bijdragers verwijderd. Alleen jij kunt dan video’s toevoegen.",
-"listVideoPendingSync": "Je lijst en video zijn hier opgeslagen. De video wacht op synchronisatie.",
-"listRetrySync": "Nu synchroniseren",
-"listPermissionsUnconfirmed": "Deze wijziging kon niet worden bevestigd. Probeer het opnieuw.",
-"listRecoveryPending": "Deze lijst heeft wijzigingen die nog gesynchroniseerd moeten worden.",
-"listPermissionsRecoveryPending": "Je wijziging is geaccepteerd. Tik op Nu synchroniseren om het opslaan af te ronden. Bewerken is tot die tijd gepauzeerd.",
-"listRecoveryReadOnly": "Sommige opgeslagen wijzigingen in videolijsten moeten worden hersteld. Je kunt videolijsten bekijken, maar bewerken is gepauzeerd.",
-"listAddToLists": "Toevoegen aan lijsten",
-"accountDeletionProcessingSignOutFailed": "Je account wordt verwijderd, maar we konden je niet volledig uitloggen. Probeer het opnieuw."
+  },
+  "peopleListsAddPersonSemanticLabel": "{name} aan lijst toevoegen",
+  "peopleListsMembershipUpdateFailed": "Kon de lijst niet bijwerken. Probeer het opnieuw.",
+  "peopleListsAddPeopleSearchHint": "Mensen zoeken",
+  "peopleListsRemovePersonSemanticLabel": "{name} uit lijst verwijderen",
+  "listMakePublicLabel": "Openbaar maken",
+  "listCollaboratorsNone": "Geen",
+  "listAddCollaboratorTitle": "Medewerker toevoegen",
+  "listMakePublicSubtitle": "Laat anderen deze lijst zien",
+  "listCollaboratorSearchHint": "Zoek in Divine...",
+  "listVideoNotAdded": "Je lijst is gemaakt, maar deze video is niet toegevoegd.",
+  "listPrivateCollaboratorsWarning": "Als je deze lijst privé maakt, worden ook de bijdragers verwijderd. Alleen jij kunt dan video’s toevoegen.",
+  "listVideoPendingSync": "Je lijst en video zijn hier opgeslagen. De video wacht op synchronisatie.",
+  "listRetrySync": "Nu synchroniseren",
+  "listPermissionsUnconfirmed": "Deze wijziging kon niet worden bevestigd. Probeer het opnieuw.",
+  "listRecoveryPending": "Deze lijst heeft wijzigingen die nog gesynchroniseerd moeten worden.",
+  "listPermissionsRecoveryPending": "Je wijziging is geaccepteerd. Tik op Nu synchroniseren om het opslaan af te ronden. Bewerken is tot die tijd gepauzeerd.",
+  "listRecoveryReadOnly": "Sommige opgeslagen wijzigingen in videolijsten moeten worden hersteld. Je kunt videolijsten bekijken, maar bewerken is gepauzeerd.",
+  "listAddToLists": "Toevoegen aan lijsten",
+  "accountDeletionProcessingSignOutFailed": "Je account wordt verwijderd, maar we konden je niet volledig uitloggen. Probeer het opnieuw.",
+  "videoEditorLoopRepairSmoothed": "Loop verbeterd",
+  "videoEditorLoopRepairProgress": "Je loop wordt verbeterd…",
+  "videoEditorLoopRepairTrimmed": "Loop verbeterd. {seconds} s verwijderd."
 }

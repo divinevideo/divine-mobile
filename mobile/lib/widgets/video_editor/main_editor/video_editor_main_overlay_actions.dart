@@ -62,7 +62,7 @@ class _TopActions extends ConsumerWidget {
     final scope = VideoEditorScope.of(context);
     final hasLoopSuggestion = context.select(
       (LoopSuggestionCubit cubit) =>
-          cubit.state.status == LoopSuggestionStatus.suggested,
+          cubit.state.status == LoopSuggestionStatus.searching,
     );
     // Uses `read` because `draftId` is set once during `initialize()` and
     // does not change during the editor session.
@@ -138,7 +138,7 @@ class _TopActions extends ConsumerWidget {
   /// "capture more frames" snackbar and stays in the editor.
   void _onDonePressed(BuildContext context, VideoEditorScope scope) {
     if (context.read<LoopSuggestionCubit>().state.status ==
-        LoopSuggestionStatus.suggested) {
+        LoopSuggestionStatus.searching) {
       return;
     }
     final clipState = context.read<ClipEditorBloc>().state;

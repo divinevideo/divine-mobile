@@ -10563,41 +10563,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Se perdió a mitad de camino. La capa se queda quieta desde ahí.';
 
   @override
-  String get videoEditorLoopLabel => 'Bucle';
+  String get videoEditorLoopLabel => 'Mejorá el bucle';
 
   @override
-  String get videoEditorLoopSemanticLabel =>
-      'Buscar un punto de bucle más suave';
-
-  @override
-  String videoEditorLoopFoundEarlier(String seconds) {
-    return 'Encontramos un bucle más suave. Termina $seconds s antes.';
-  }
-
-  @override
-  String videoEditorLoopFoundLater(String seconds) {
-    return 'Encontramos un bucle más suave. Termina $seconds s después.';
-  }
-
-  @override
-  String videoEditorLoopClosestEarlier(String seconds) {
-    return 'No hay una coincidencia perfecta, pero esta es la más cercana. Termina $seconds s antes.';
-  }
-
-  @override
-  String videoEditorLoopClosestLater(String seconds) {
-    return 'No hay una coincidencia perfecta, pero esta es la más cercana. Termina $seconds s después.';
-  }
-
-  @override
-  String get videoEditorLoopKeepLabel => 'Mantener';
-
-  @override
-  String get videoEditorLoopKeepSemanticLabel =>
-      'Mantener el nuevo punto de bucle';
-
-  @override
-  String get videoEditorLoopDiscardSemanticLabel => 'Volver al final anterior';
+  String get videoEditorLoopSemanticLabel => 'Suavizá la unión del bucle';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'Esto ya hace un bucle suave.';
@@ -10607,8 +10576,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'No pudimos revisar el bucle. Probá de nuevo.';
 
   @override
-  String get videoEditorLoopNoMatch =>
-      'No encontramos un bucle sin cortes. Nada cerca del final coincide con el inicio del video.';
+  String get videoEditorLoopNoMatch => 'No pudimos mejorar este bucle';
 
   @override
   String get videoEditorKeyframeEffect => 'Efecto';
@@ -14620,4 +14588,15 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'La eliminación de tu cuenta sigue en curso, pero no pudimos cerrar tu sesión. Volvé a intentarlo.';
+
+  @override
+  String get videoEditorLoopRepairSmoothed => 'Bucle suavizado';
+
+  @override
+  String get videoEditorLoopRepairProgress => 'Mejorando tu bucle…';
+
+  @override
+  String videoEditorLoopRepairTrimmed(String seconds) {
+    return 'Bucle suavizado. Se quitaron $seconds s.';
+  }
 }

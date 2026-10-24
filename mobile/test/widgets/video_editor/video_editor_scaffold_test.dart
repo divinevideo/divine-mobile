@@ -36,6 +36,8 @@ import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorVideo;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/video_editor/loop_repair.dart';
+
 class _MockClipEditorBloc extends MockBloc<ClipEditorEvent, ClipEditorState>
     implements ClipEditorBloc {}
 
@@ -142,7 +144,10 @@ void main() {
                   value: loopSuggestionCubit,
                 )
               else
-                BlocProvider(create: (_) => LoopSuggestionCubit()),
+                BlocProvider(
+                  create: (_) =>
+                      LoopSuggestionCubit(repository: noMatchLoopRepository()),
+                ),
               if (effectsCubit != null)
                 BlocProvider<VideoEditorEffectsCubit>.value(
                   value: effectsCubit,
@@ -344,7 +349,7 @@ void main() {
       },
     );
 
-    testWidgets('hides FAB while a loop suggestion waits on Keep or Cancel', (
+    testWidgets('hides FAB while a loop repair runs', (
       tester,
     ) async {
       final loopSuggestionCubit = _MockLoopSuggestionCubit();
@@ -352,7 +357,7 @@ void main() {
         loopSuggestionCubit,
         const Stream<LoopSuggestionState>.empty(),
         initialState: const LoopSuggestionState(
-          status: LoopSuggestionStatus.suggested,
+          status: LoopSuggestionStatus.searching,
         ),
       );
 

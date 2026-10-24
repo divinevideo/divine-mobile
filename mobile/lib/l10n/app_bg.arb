@@ -3215,18 +3215,11 @@
   "videoEditorTrackNotFollowed": "Не успях да го проследя. Огради нещо с повече детайли.",
   "videoEditorTrackFailed": "Проследяването не стана. Опитай отново.",
   "videoEditorTrackLostPartway": "Изгубено по пътя. Оттам слоят остава на място.",
-  "videoEditorLoopLabel": "Цикъл",
-  "videoEditorLoopSemanticLabel": "Намери по-гладка точка на цикъла",
-  "videoEditorLoopFoundEarlier": "Намерен е по-гладък цикъл. Свършва {seconds} с по-рано.",
-  "videoEditorLoopFoundLater": "Намерен е по-гладък цикъл. Свършва {seconds} с по-късно.",
-  "videoEditorLoopClosestEarlier": "Няма точно съвпадение, но това е най-близкото. Свършва {seconds} с по-рано.",
-  "videoEditorLoopClosestLater": "Няма точно съвпадение, но това е най-близкото. Свършва {seconds} с по-късно.",
-  "videoEditorLoopKeepLabel": "Запази",
-  "videoEditorLoopKeepSemanticLabel": "Запази новата точка на цикъла",
-  "videoEditorLoopDiscardSemanticLabel": "Върни предишния край",
+  "videoEditorLoopLabel": "Изглади цикъла",
+  "videoEditorLoopSemanticLabel": "Изглади връзката на цикъла",
   "videoEditorLoopAlreadySmooth": "Това вече се върти гладко в цикъл.",
   "videoEditorLoopFailed": "Цикълът не можа да се провери. Опитай отново.",
-  "videoEditorLoopNoMatch": "Не намерихме гладък цикъл. Нищо близо до края не съвпада с началото на видеото.",
+  "videoEditorLoopNoMatch": "Не успяхме да подобрим този цикъл",
   "videoEditorKeyframeEffect": "Ефект",
   "videoEditorKeyframeCurveSegment": "Движение от ключов кадър {from} до {to}",
   "videoEditorLayerAnimationEnter": "Вход",
@@ -5950,43 +5943,46 @@
   "inboxLeaveGroupConfirmBody": "Изчезва от входящата ти кутия и новите съобщения няма да я върнат. Пиши в нея отново, за да се присъединиш. Другите не получават известие.",
   "inboxLeaveGroupConfirmConfirm": "Напусни",
   "inboxLeftGroup": "Вече не си в групата",
-"listsDiscoveryEmpty": "Този път не изскочи нито един списък. Дръпни надолу за обновяване.",
-"listsDiscoveryLoadingLabel": "Зареждане на списъци",
-"listSearchPeopleUnavailable": "Списъците с хора не са достъпни в момента.",
-"listSearchVideosUnavailable": "Списъците с видеа не са достъпни в момента.",
-"listPrivateConversionTooLarge": "Този списък е твърде голям, за да стане частен. Първо премахнете няколко видеоклипа. Промените ви остават тук и още не са запазени.",
-"authAccountCleanupFailed": "Данните на предишния акаунт не могат да бъдат изчистени. Опитай отново.",
-"@peopleListsAddPersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  "listsDiscoveryEmpty": "Този път не изскочи нито един списък. Дръпни надолу за обновяване.",
+  "listsDiscoveryLoadingLabel": "Зареждане на списъци",
+  "listSearchPeopleUnavailable": "Списъците с хора не са достъпни в момента.",
+  "listSearchVideosUnavailable": "Списъците с видеа не са достъпни в момента.",
+  "listPrivateConversionTooLarge": "Този списък е твърде голям, за да стане частен. Първо премахнете няколко видеоклипа. Промените ви остават тук и още не са запазени.",
+  "authAccountCleanupFailed": "Данните на предишния акаунт не могат да бъдат изчистени. Опитай отново.",
+  "@peopleListsAddPersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"@peopleListsRemovePersonSemanticLabel": {
-  "placeholders": {
-    "name": {
-      "type": "String"
+  },
+  "@peopleListsRemovePersonSemanticLabel": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
     }
-  }
-},
-"peopleListsAddPersonSemanticLabel": "Добави {name} към списъка",
-"peopleListsMembershipUpdateFailed": "Не успяхме да обновим списъка. Опитай пак.",
-"peopleListsAddPeopleSearchHint": "Търси хора",
-"peopleListsRemovePersonSemanticLabel": "Премахни {name} от списъка",
-"listMakePublicLabel": "Направи публичен",
-"listCollaboratorsNone": "Няма",
-"listAddCollaboratorTitle": "Добави сътрудник",
-"listMakePublicSubtitle": "Позволи на другите да виждат този списък",
-"listCollaboratorSearchHint": "Търсене Divine...",
-"listVideoNotAdded": "Списъкът ти е създаден, но това видео не е добавено.",
-"listPrivateCollaboratorsWarning": "Ако направиш този списък частен, сътрудниците му също ще бъдат премахнати. Само ти ще можеш да добавяш видеа.",
-"listVideoPendingSync": "Списъкът и видеото ти са запазени тук. Видеото чака синхронизиране.",
-"listRetrySync": "Синхронизирай сега",
-"listPermissionsUnconfirmed": "Не можахме да потвърдим тази промяна. Опитай отново.",
-"listRecoveryPending": "Този списък има промени, които чакат синхронизиране.",
-"listPermissionsRecoveryPending": "Промяната е приета. Докосни Синхронизирай сега, за да завършиш запазването. Редактирането е спряно дотогава.",
-"listRecoveryReadOnly": "Някои запазени промени във видеосписъците трябва да бъдат възстановени. Можеш да разглеждаш видеосписъците, но редактирането е временно спряно.",
-"listAddToLists": "Добави към списъци",
-"accountDeletionProcessingSignOutFailed": "Изтриването на акаунта ти е в ход, но не успяхме да завършим излизането. Опитай отново."
+  },
+  "peopleListsAddPersonSemanticLabel": "Добави {name} към списъка",
+  "peopleListsMembershipUpdateFailed": "Не успяхме да обновим списъка. Опитай пак.",
+  "peopleListsAddPeopleSearchHint": "Търси хора",
+  "peopleListsRemovePersonSemanticLabel": "Премахни {name} от списъка",
+  "listMakePublicLabel": "Направи публичен",
+  "listCollaboratorsNone": "Няма",
+  "listAddCollaboratorTitle": "Добави сътрудник",
+  "listMakePublicSubtitle": "Позволи на другите да виждат този списък",
+  "listCollaboratorSearchHint": "Търсене Divine...",
+  "listVideoNotAdded": "Списъкът ти е създаден, но това видео не е добавено.",
+  "listPrivateCollaboratorsWarning": "Ако направиш този списък частен, сътрудниците му също ще бъдат премахнати. Само ти ще можеш да добавяш видеа.",
+  "listVideoPendingSync": "Списъкът и видеото ти са запазени тук. Видеото чака синхронизиране.",
+  "listRetrySync": "Синхронизирай сега",
+  "listPermissionsUnconfirmed": "Не можахме да потвърдим тази промяна. Опитай отново.",
+  "listRecoveryPending": "Този списък има промени, които чакат синхронизиране.",
+  "listPermissionsRecoveryPending": "Промяната е приета. Докосни Синхронизирай сега, за да завършиш запазването. Редактирането е спряно дотогава.",
+  "listRecoveryReadOnly": "Някои запазени промени във видеосписъците трябва да бъдат възстановени. Можеш да разглеждаш видеосписъците, но редактирането е временно спряно.",
+  "listAddToLists": "Добави към списъци",
+  "accountDeletionProcessingSignOutFailed": "Изтриването на акаунта ти е в ход, но не успяхме да завършим излизането. Опитай отново.",
+  "videoEditorLoopRepairSmoothed": "Цикълът е изгладен",
+  "videoEditorLoopRepairProgress": "Изглаждане на цикъла…",
+  "videoEditorLoopRepairTrimmed": "Цикълът е изгладен. Премахнати са {seconds} сек."
 }

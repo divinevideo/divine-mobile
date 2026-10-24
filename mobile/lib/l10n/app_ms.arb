@@ -5318,18 +5318,11 @@
   "videoEditorTrackNotFollowed": "Tidak dapat mengikutinya. Bingkaikan sesuatu yang lebih terperinci.",
   "videoEditorTrackFailed": "Penjejakan tidak berjaya. Cuba lagi.",
   "videoEditorTrackLostPartway": "Hilang jejak di pertengahan jalan. Lapisan kekal diam dari situ.",
-  "videoEditorLoopLabel": "Loop",
-  "videoEditorLoopSemanticLabel": "Cari titik loop yang lebih lancar",
-  "videoEditorLoopFoundEarlier": "Loop yang lebih lancar ditemui. Ia tamat {seconds} s lebih awal.",
-  "videoEditorLoopFoundLater": "Loop yang lebih lancar ditemui. Ia tamat {seconds} s lebih lewat.",
-  "videoEditorLoopClosestEarlier": "Tiada padanan sempurna, tetapi ini yang paling hampir. Ia tamat {seconds} s lebih awal.",
-  "videoEditorLoopClosestLater": "Tiada padanan sempurna, tetapi ini yang paling hampir. Ia tamat {seconds} s lebih lewat.",
-  "videoEditorLoopKeepLabel": "Simpan",
-  "videoEditorLoopKeepSemanticLabel": "Simpan titik loop baharu",
-  "videoEditorLoopDiscardSemanticLabel": "Kembalikan penghujung lama",
+  "videoEditorLoopLabel": "Baiki gelung",
+  "videoEditorLoopSemanticLabel": "Lancarkan sambungan gelung",
   "videoEditorLoopAlreadySmooth": "Ini sudah loop dengan lancar.",
   "videoEditorLoopFailed": "Tidak dapat menyemak loop. Cuba lagi.",
-  "videoEditorLoopNoMatch": "Loop lancar tidak ditemui. Tiada bahagian berhampiran penghujung yang sepadan dengan permulaan video.",
+  "videoEditorLoopNoMatch": "Gelung ini tidak dapat diperbaiki",
   "videoEditorKeyframeEffect": "Kesan",
   "videoEditorKeyframeCurveSegment": "Gerakan dari bingkai kunci {from} ke {to}",
   "@videoEditorLayerAnimationButtonSemanticLabel": {
@@ -7162,5 +7155,8 @@
   "listPermissionsRecoveryPending": "Perubahan anda diterima. Ketik Segerakkan sekarang untuk menyelesaikan penyimpanan. Penyuntingan dijeda sehingga selesai.",
   "listRecoveryReadOnly": "Sesetengah perubahan yang disimpan pada senarai video perlu dipulihkan. Anda boleh melihat senarai video, tetapi penyuntingan dijeda.",
   "listAddToLists": "Tambah ke senarai",
-  "accountDeletionProcessingSignOutFailed": "Pemadaman akaun anda sedang diproses, tetapi kami tidak dapat menyelesaikan log keluar. Cuba lagi."
+  "accountDeletionProcessingSignOutFailed": "Pemadaman akaun anda sedang diproses, tetapi kami tidak dapat menyelesaikan log keluar. Cuba lagi.",
+  "videoEditorLoopRepairSmoothed": "Gelung dilancarkan",
+  "videoEditorLoopRepairProgress": "Membaiki gelung anda…",
+  "videoEditorLoopRepairTrimmed": "Gelung dilancarkan. {seconds} s dibuang."
 }

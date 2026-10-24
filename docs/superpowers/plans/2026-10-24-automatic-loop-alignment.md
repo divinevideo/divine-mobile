@@ -6,9 +6,19 @@
 
 **Architecture:** UI -> existing LoopSuggestionCubit -> new loop_alignment_repository workspace package -> injected native client. The package owns plain Dart contracts, confidence, correction planning, scoring, and candidate selection; the client adapts public pro_video_editor tracking libraries and native decode/render APIs. A validated file replacement enters existing editor history atomically.
 
-**Tech Stack:** Dart, Flutter/BLoC, pro_video_editor 2.42.0 public analysis libraries and stabilization rendering, existing editor history/draft infrastructure; no new native vision library or model.
+**Tech Stack:** Dart, Flutter/BLoC, resolved pro_video_editor 2.43.2 public analysis libraries and stabilization rendering, existing editor history/draft infrastructure; no new native vision library or model.
 
 **Spec:** [Automatic loop alignment](../specs/2026-10-24-automatic-loop-alignment-design.md). Read both documents; prototype code is disposable evidence, not code to copy into the product.
+
+## Execution update
+
+The maintainer approved native implementation after inspecting the iOS prototype.
+On 2026-10-24, the maintainer explicitly waived waiting for a physical Android
+phone and requested an Android beta build with tester feedback. Hardware gaps
+remain reported evidence, rather than a gate to opening the implementation PR.
+Native output timing, crop, pixel correspondence, and source preservation checks
+remain required. Genuine variable frame rate or delayed-first-frame inputs may
+be declined when the native renderer cannot preserve the required timing proof.
 
 ## Global Constraints
 

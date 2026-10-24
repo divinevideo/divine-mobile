@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui';
 
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:loop_alignment_repository/loop_alignment_repository.dart';
 import 'package:openvine/services/video_editor/native_loop_alignment_client.dart';
@@ -10,255 +11,285 @@ import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 void main() {
-  test('portrait offsets use independent dimensions and crop exactly once', () {
-    final plan = LoopClipPlan(
-      clipId: 'a',
-      sourceStart: Duration.zero,
-      sourceEnd: const Duration(seconds: 1),
-      keyframes: [
-        const LoopKeyframe(
-          sourceTime: Duration(milliseconds: 517),
-          correction: LoopPose(a: 1, b: 0, tx: 2, ty: 3),
-        ),
-      ],
+  group('NativeLoopAlignmentClient', () {
+    test(
+      'portrait offsets use independent dimensions and crop exactly once',
+      () {
+        final plan = LoopClipPlan(
+          clipId: 'a',
+          sourceStart: Duration.zero,
+          sourceEnd: const Duration(seconds: 1),
+          keyframes: [
+            const LoopKeyframe(
+              sourceTime: Duration(milliseconds: 517),
+              correction: LoopPose(a: 1, b: 0, tx: 2, ty: 3),
+            ),
+          ],
+        );
+        final native = NativeLoopAlignmentClient.stabilizationFor(
+          plan,
+          1.04,
+          180,
+          320,
+        );
+        expect(native.keyframes.single.time, const Duration(milliseconds: 517));
+        expect(
+          native.keyframes.single.offset.dx,
+          closeTo(2 * 1.04 / 180, 1e-12),
+        );
+        expect(
+          native.keyframes.single.offset.dy,
+          closeTo(3 * 1.04 / 320, 1e-12),
+        );
+        expect(native.keyframes.single.scale, 1.04);
+      },
     );
-    final native = NativeLoopAlignmentClient.stabilizationFor(
-      plan,
-      1.04,
-      180,
-      320,
-    );
-    expect(native.keyframes.single.time, const Duration(milliseconds: 517));
-    expect(native.keyframes.single.offset.dx, closeTo(2 * 1.04 / 180, 1e-12));
-    expect(native.keyframes.single.offset.dy, closeTo(3 * 1.04 / 320, 1e-12));
-    expect(native.keyframes.single.scale, 1.04);
-  });
-  test('bounded portrait decode uses actual irregular timestamps', () async {
-    final backend = FakeBackend();
-    final client = NativeLoopAlignmentClient(backend: backend);
-    final analysis = await client.analyze(
-      input(),
-      const LoopAlignmentLimits(),
-      'a',
-      (_) {},
-    );
-    expect(analysis.alreadySmooth, isFalse);
-    expect(analysis.eligibleTrimEnds, backend.times);
-    expect(backend.configs.single.outputSize, const Size(320, 320));
-    expect(backend.configs.single.maxParallelDecoders, 1);
-    expect(backend.configs.single.startTime, const Duration(seconds: 50));
-    expect(backend.configs.single.endTime, const Duration(seconds: 51));
-    await client.finish('a');
-  });
-  test('nonmonotonic PTS fails rather than assuming a frame rate', () async {
-    final backend = FakeBackend()
-      ..times = [const Duration(seconds: 50), const Duration(seconds: 50)];
-    final client = NativeLoopAlignmentClient(backend: backend);
-    await expectLater(
-      client.analyze(input(), const LoopAlignmentLimits(), 'a', (_) {}),
-      throwsA(isA<LoopAlignmentFailure>()),
-    );
-    await client.finish('a');
-  });
-  test('malformed dimensions fail before worker', () async {
-    final backend = FakeBackend()..badSize = true;
-    final client = NativeLoopAlignmentClient(backend: backend);
-    await expectLater(
-      client.analyze(input(), const LoopAlignmentLimits(), 'a', (_) {}),
-      throwsA(isA<LoopAlignmentFailure>()),
-    );
-    await client.finish('a');
-  });
-  test(
-    'cancellation during metadata blocks decode; next operation independent',
-    () async {
-      final backend = FakeBackend()..metadataGate = Completer<VideoMetadata>();
+    test('bounded portrait decode uses actual irregular timestamps', () async {
+      final backend = FakeBackend();
       final client = NativeLoopAlignmentClient(backend: backend);
-      final pending = client.analyze(
+      final analysis = await client.analyze(
         input(),
         const LoopAlignmentLimits(),
         'a',
         (_) {},
       );
-      final assertion = expectLater(
-        pending,
-        throwsA(isA<LoopAlignmentCancelled>()),
+      expect(analysis.alreadySmooth, isFalse);
+      expect(analysis.eligibleTrimEnds, backend.times);
+      expect(backend.configs.single.outputSize, const Size(320, 320));
+      expect(backend.configs.single.maxParallelDecoders, 1);
+      expect(backend.configs.single.startTime, const Duration(seconds: 50));
+      expect(backend.configs.single.endTime, const Duration(seconds: 51));
+      await client.finish('a');
+    });
+    test('nonmonotonic PTS fails rather than assuming a frame rate', () async {
+      final backend = FakeBackend()
+        ..times = [const Duration(seconds: 50), const Duration(seconds: 50)];
+      final client = NativeLoopAlignmentClient(backend: backend);
+      await expectLater(
+        client.analyze(input(), const LoopAlignmentLimits(), 'a', (_) {}),
+        throwsA(isA<LoopAlignmentFailure>()),
       );
-      await client.cancel('a');
-      backend.metadataGate!.complete(metadata());
-      await assertion;
-      expect(backend.configs, isEmpty);
       await client.finish('a');
-      backend.metadataGate = null;
-      await client.analyze(input(), const LoopAlignmentLimits(), 'a', (_) {});
-      expect(backend.configs.length, 1);
+    });
+    test('malformed dimensions fail before worker', () async {
+      final backend = FakeBackend()..badSize = true;
+      final client = NativeLoopAlignmentClient(backend: backend);
+      await expectLater(
+        client.analyze(input(), const LoopAlignmentLimits(), 'a', (_) {}),
+        throwsA(isA<LoopAlignmentFailure>()),
+      );
       await client.finish('a');
-    },
-  );
-  test(
-    'render bakes at native speed one with full source PTS and audio default',
-    () async {
-      final backend = FakeBackend();
+    });
+    test(
+      'cancellation during metadata blocks decode; next operation independent',
+      () async {
+        final backend = FakeBackend()
+          ..metadataGate = Completer<VideoMetadata>();
+        final client = NativeLoopAlignmentClient(backend: backend);
+        final pending = client.analyze(
+          input(),
+          const LoopAlignmentLimits(),
+          'a',
+          (_) {},
+        );
+        final assertion = expectLater(
+          pending,
+          throwsA(isA<LoopAlignmentCancelled>()),
+        );
+        await client.cancel('a');
+        backend.metadataGate!.complete(metadata());
+        await assertion;
+        expect(backend.configs, isEmpty);
+        await client.finish('a');
+        backend.metadataGate = null;
+        await client.analyze(input(), const LoopAlignmentLimits(), 'a', (_) {});
+        expect(backend.configs.length, 1);
+        await client.finish('a');
+      },
+    );
+    test(
+      'render bakes at native speed one with full source PTS and audio default',
+      () async {
+        final backend = FakeBackend();
+        final client = NativeLoopAlignmentClient(backend: backend);
+        await client.analyze(input(), const LoopAlignmentLimits(), 'a', (_) {});
+        final output = await client.render(input(), repairPlan(), 'a', (_) {});
+        final segment = backend.renders.single.videoSegments!.single;
+        expect(segment.startTime, const Duration(seconds: 50));
+        expect(segment.endTime, const Duration(seconds: 51));
+        expect(backend.renders.single.maxFrameRate, isNull);
+        expect(segment.playbackSpeed, isNull);
+        expect(segment.reverseVideo, isFalse);
+        expect(segment.volume, isNull);
+        expect(
+          segment.stabilization!.keyframes.first.time,
+          const Duration(seconds: 50),
+        );
+        await client.discard(output);
+        expect(backend.files, isEmpty);
+        expect(backend.deleted, isNot(contains('/source.mp4')));
+        await client.finish('a');
+      },
+    );
+    test('disk-full partial render is deleted and source survives', () async {
+      final backend = FakeBackend()..renderFails = true;
       final client = NativeLoopAlignmentClient(backend: backend);
       await client.analyze(input(), const LoopAlignmentLimits(), 'a', (_) {});
-      final output = await client.render(input(), repairPlan(), 'a', (_) {});
-      final segment = backend.renders.single.videoSegments!.single;
-      expect(segment.startTime, const Duration(seconds: 50));
-      expect(segment.endTime, const Duration(seconds: 51));
-      expect(backend.renders.single.maxFrameRate, isNull);
-      expect(segment.playbackSpeed, isNull);
-      expect(segment.reverseVideo, isFalse);
-      expect(segment.volume, isNull);
-      expect(
-        segment.stabilization!.keyframes.first.time,
-        const Duration(seconds: 50),
+      await expectLater(
+        client.render(input(), repairPlan(), 'a', (_) {}),
+        throwsA(isA<StateError>()),
       );
-      await client.discard(output);
       expect(backend.files, isEmpty);
       expect(backend.deleted, isNot(contains('/source.mp4')));
       await client.finish('a');
-    },
-  );
-  test('disk-full partial render is deleted and source survives', () async {
-    final backend = FakeBackend()..renderFails = true;
-    final client = NativeLoopAlignmentClient(backend: backend);
-    await client.analyze(input(), const LoopAlignmentLimits(), 'a', (_) {});
-    await expectLater(
-      client.render(input(), repairPlan(), 'a', (_) {}),
-      throwsA(isA<StateError>()),
+    });
+    test(
+      'late canceled render completion deletes its newly written output',
+      () async {
+        final backend = FakeBackend()..renderGate = Completer<void>();
+        final client = NativeLoopAlignmentClient(backend: backend);
+        await client.analyze(input(), const LoopAlignmentLimits(), 'a', (_) {});
+        final pending = client.render(input(), repairPlan(), 'a', (_) {});
+        final assertion = expectLater(
+          pending,
+          throwsA(isA<LoopAlignmentCancelled>()),
+        );
+        await backend.renderStarted.future;
+        await client.cancel('a');
+        await assertion;
+        await client.finish('a');
+        backend.renderGate!.complete();
+        await pumpEventQueue();
+        expect(backend.files, isEmpty);
+        expect(backend.deleted.length, greaterThanOrEqualTo(2));
+      },
     );
-    expect(backend.files, isEmpty);
-    expect(backend.deleted, isNot(contains('/source.mp4')));
-    await client.finish('a');
+    test(
+      'inspection uses actual native pixels timestamps and audio metadata',
+      () async {
+        final backend = FakeBackend()..texture = true;
+        final client = NativeLoopAlignmentClient(backend: backend);
+        await client.analyze(input(), const LoopAlignmentLimits(), 'a', (_) {});
+        final output = await client.render(input(), repairPlan(), 'a', (_) {});
+        final proof = await client.inspect(input(), repairPlan(), output, 'a');
+        expect(proof.covered, isTrue);
+        expect(proof.metadata['a']!.frameTimes.length, backend.times.length);
+        expect(proof.audioDuration, const Duration(seconds: 1));
+        backend.dropOutput = true;
+        final dropped = await client.inspect(
+          input(),
+          repairPlan(),
+          output,
+          'a',
+        );
+        expect(dropped.covered, isFalse);
+        backend.dropOutput = false;
+        backend.loseAudio = true;
+        final silent = await client.inspect(input(), repairPlan(), output, 'a');
+        expect(silent.covered, isFalse);
+        await client.discard(output);
+        await client.finish('a');
+      },
+    );
+    test(
+      'watchdog cancels a stuck metadata call and ignores its late result',
+      () {
+        fakeAsync((clock) {
+          final backend = FakeBackend()
+            ..metadataGate = Completer<VideoMetadata>();
+          final client = NativeLoopAlignmentClient(
+            backend: backend,
+            watchdogTimeout: const Duration(milliseconds: 10),
+          );
+          Object? failure;
+          unawaited(
+            client
+                .analyze(input(), const LoopAlignmentLimits(), 'a', (_) {})
+                .then<void>(
+                  (_) => fail('A stalled metadata call must time out'),
+                  onError: (Object error) {
+                    failure = error;
+                  },
+                ),
+          );
+          clock.flushMicrotasks();
+          clock.elapse(const Duration(milliseconds: 10));
+          clock.flushMicrotasks();
+          expect(failure, isA<VideoRenderFailedException>());
+          backend.metadataGate!.complete(metadata());
+          clock.flushMicrotasks();
+          expect(backend.configs, isEmpty);
+          unawaited(client.finish('a'));
+          clock.flushMicrotasks();
+        });
+      },
+    );
+
+    test(
+      'montage applies common crop to every clip and correction only to final',
+      () async {
+        final backend = FakeBackend();
+        final client = NativeLoopAlignmentClient(backend: backend);
+        final composition = LoopRepairInput(
+          clips: [
+            input().clips.single,
+            const LoopClipInput(
+              clipId: 'b',
+              path: '/second.mp4',
+              sourceStart: Duration(seconds: 50),
+              sourceEnd: Duration(seconds: 51),
+              speed: 1,
+              width: 180,
+              height: 320,
+            ),
+          ],
+          revision: 'b',
+        );
+        final base = repairPlan();
+        final plan = LoopAlignmentPlan(
+          clips: [
+            base.clips.single,
+            LoopClipPlan(
+              clipId: 'b',
+              sourceStart: const Duration(seconds: 50),
+              sourceEnd: const Duration(seconds: 51),
+              keyframes: [
+                const LoopKeyframe(
+                  sourceTime: Duration(seconds: 50),
+                  correction: LoopPose.identity,
+                ),
+                const LoopKeyframe(
+                  sourceTime: Duration(seconds: 51),
+                  correction: LoopPose(a: 1, b: 0, tx: 2, ty: 0),
+                ),
+              ],
+            ),
+          ],
+          zoom: base.zoom,
+          confidence: base.confidence,
+          predictedScores: base.predictedScores,
+          baselineScores: base.baselineScores,
+        );
+        await client.analyze(
+          composition,
+          const LoopAlignmentLimits(),
+          'b',
+          (_) {},
+        );
+        final output = await client.render(composition, plan, 'b', (_) {});
+        expect(backend.renders.length, 2);
+        final first =
+            backend.renders.first.videoSegments!.single.stabilization!;
+        final last = backend.renders.last.videoSegments!.single.stabilization!;
+        expect(first.keyframes.last.offset, Offset.zero);
+        expect(last.keyframes.last.offset.dx, closeTo(2 * 1.02 / 180, 1e-12));
+        expect(first.keyframes.last.scale, 1.02);
+        expect(last.keyframes.last.scale, 1.02);
+        await client.discard(output);
+        await client.finish('b');
+      },
+    );
   });
-  test(
-    'late canceled render completion deletes its newly written output',
-    () async {
-      final backend = FakeBackend()..renderGate = Completer<void>();
-      final client = NativeLoopAlignmentClient(backend: backend);
-      await client.analyze(input(), const LoopAlignmentLimits(), 'a', (_) {});
-      final pending = client.render(input(), repairPlan(), 'a', (_) {});
-      final assertion = expectLater(
-        pending,
-        throwsA(isA<LoopAlignmentCancelled>()),
-      );
-      while (backend.renders.isEmpty) {
-        await Future<void>.delayed(Duration.zero);
-      }
-      await client.cancel('a');
-      await assertion;
-      await client.finish('a');
-      backend.renderGate!.complete();
-      for (var i = 0; i < 5; i++) {
-        await Future<void>.delayed(Duration.zero);
-      }
-      expect(backend.files, isEmpty);
-      expect(backend.deleted.length, greaterThanOrEqualTo(2));
-    },
-  );
-  test(
-    'inspection uses actual native pixels timestamps and audio metadata',
-    () async {
-      final backend = FakeBackend()..texture = true;
-      final client = NativeLoopAlignmentClient(backend: backend);
-      await client.analyze(input(), const LoopAlignmentLimits(), 'a', (_) {});
-      final output = await client.render(input(), repairPlan(), 'a', (_) {});
-      final proof = await client.inspect(input(), repairPlan(), output, 'a');
-      expect(proof.covered, isTrue);
-      expect(proof.metadata['a']!.frameTimes.length, backend.times.length);
-      expect(proof.audioDuration, const Duration(seconds: 1));
-      backend.dropOutput = true;
-      final dropped = await client.inspect(input(), repairPlan(), output, 'a');
-      expect(dropped.covered, isFalse);
-      backend.dropOutput = false;
-      backend.loseAudio = true;
-      final silent = await client.inspect(input(), repairPlan(), output, 'a');
-      expect(silent.covered, isFalse);
-      await client.discard(output);
-      await client.finish('a');
-    },
-  );
-  test(
-    'watchdog cancels a stuck metadata call and ignores its late result',
-    () async {
-      final backend = FakeBackend()..metadataGate = Completer<VideoMetadata>();
-      final client = NativeLoopAlignmentClient(
-        backend: backend,
-        watchdogTimeout: const Duration(milliseconds: 10),
-      );
-      await expectLater(
-        client.analyze(input(), const LoopAlignmentLimits(), 'a', (_) {}),
-        throwsA(isA<VideoRenderFailedException>()),
-      );
-      backend.metadataGate!.complete(metadata());
-      await Future<void>.delayed(Duration.zero);
-      expect(backend.configs, isEmpty);
-      await client.finish('a');
-    },
-  );
-  test(
-    'montage applies common crop to every clip and correction only to final',
-    () async {
-      final backend = FakeBackend();
-      final client = NativeLoopAlignmentClient(backend: backend);
-      final composition = LoopRepairInput(
-        clips: [
-          input().clips.single,
-          const LoopClipInput(
-            clipId: 'b',
-            path: '/second.mp4',
-            sourceStart: Duration(seconds: 50),
-            sourceEnd: Duration(seconds: 51),
-            speed: 1,
-            width: 180,
-            height: 320,
-          ),
-        ],
-        revision: 'b',
-      );
-      final base = repairPlan();
-      final plan = LoopAlignmentPlan(
-        clips: [
-          base.clips.single,
-          LoopClipPlan(
-            clipId: 'b',
-            sourceStart: const Duration(seconds: 50),
-            sourceEnd: const Duration(seconds: 51),
-            keyframes: [
-              const LoopKeyframe(
-                sourceTime: Duration(seconds: 50),
-                correction: LoopPose.identity,
-              ),
-              const LoopKeyframe(
-                sourceTime: Duration(seconds: 51),
-                correction: LoopPose(a: 1, b: 0, tx: 2, ty: 0),
-              ),
-            ],
-          ),
-        ],
-        zoom: base.zoom,
-        confidence: base.confidence,
-        predictedScores: base.predictedScores,
-        baselineScores: base.baselineScores,
-      );
-      await client.analyze(
-        composition,
-        const LoopAlignmentLimits(),
-        'b',
-        (_) {},
-      );
-      final output = await client.render(composition, plan, 'b', (_) {});
-      expect(backend.renders.length, 2);
-      final first = backend.renders.first.videoSegments!.single.stabilization!;
-      final last = backend.renders.last.videoSegments!.single.stabilization!;
-      expect(first.keyframes.last.offset, Offset.zero);
-      expect(last.keyframes.last.offset.dx, closeTo(2 * 1.02 / 180, 1e-12));
-      expect(first.keyframes.last.scale, 1.02);
-      expect(last.keyframes.last.scale, 1.02);
-      await client.discard(output);
-      await client.finish('b');
-    },
-  );
 }
 
 LoopRepairInput input() => LoopRepairInput(
@@ -297,6 +328,7 @@ class FakeBackend implements LoopNativeBackend {
   bool loseAudio = false;
   Completer<void>? renderGate;
   final renders = <VideoRenderData>[];
+  final renderStarted = Completer<void>();
   final files = <String>{};
   final deleted = <String>[];
   Completer<VideoMetadata>? metadataGate;
@@ -364,6 +396,7 @@ class FakeBackend implements LoopNativeBackend {
   @override
   Future<void> render(String path, VideoRenderData d) async {
     renders.add(d);
+    if (!renderStarted.isCompleted) renderStarted.complete();
     if (renderGate != null) await renderGate!.future;
     files.add(path);
     if (renderFails) throw StateError('disk full');

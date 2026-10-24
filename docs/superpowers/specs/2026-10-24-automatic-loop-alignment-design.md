@@ -247,7 +247,12 @@ dumps as fixtures.
   export. Compare the real join repeatedly at normal speed; still-frame
   metrics alone do not establish perceptual smoothness.
 
-## Current implementation references
+The maintainer subsequently approved proceeding to Android beta testing without
+waiting for a connected Android phone (2026-10-24). The implementation PR must
+state which production playback/export checks were actually performed; prototype
+inspection does not establish those results.
+
+## Pre-implementation references
 
 - `mobile/lib/services/video_editor/clip_loop_point_service.dart`: the
   existing package-backed trim-only search.

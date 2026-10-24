@@ -10590,39 +10590,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Unterwegs aus den Augen verloren. Ab da bleibt die Ebene stehen.';
 
   @override
-  String get videoEditorLoopLabel => 'Loop';
+  String get videoEditorLoopLabel => 'Loop verbessern';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'Flüssigeren Loop-Punkt finden';
-
-  @override
-  String videoEditorLoopFoundEarlier(String seconds) {
-    return 'Flüssigerer Loop gefunden. Er endet $seconds s früher.';
-  }
-
-  @override
-  String videoEditorLoopFoundLater(String seconds) {
-    return 'Flüssigerer Loop gefunden. Er endet $seconds s später.';
-  }
-
-  @override
-  String videoEditorLoopClosestEarlier(String seconds) {
-    return 'Kein perfekter Treffer, aber der nächste, den es gibt. Er endet $seconds s früher.';
-  }
-
-  @override
-  String videoEditorLoopClosestLater(String seconds) {
-    return 'Kein perfekter Treffer, aber der nächste, den es gibt. Er endet $seconds s später.';
-  }
-
-  @override
-  String get videoEditorLoopKeepLabel => 'Behalten';
-
-  @override
-  String get videoEditorLoopKeepSemanticLabel => 'Neuen Loop-Punkt behalten';
-
-  @override
-  String get videoEditorLoopDiscardSemanticLabel => 'Altes Ende zurückholen';
+  String get videoEditorLoopSemanticLabel => 'Übergang des Loops glätten';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'Das loopt schon flüssig.';
@@ -10632,8 +10603,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Der Loop konnte nicht geprüft werden. Versuch es noch mal.';
 
   @override
-  String get videoEditorLoopNoMatch =>
-      'Kein nahtloser Loop gefunden. Nichts gegen Ende passt zum Anfang des Videos.';
+  String get videoEditorLoopNoMatch => 'Dieser Loop ließ sich nicht verbessern';
 
   @override
   String get videoEditorKeyframeEffect => 'Effekt';
@@ -14622,4 +14592,15 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get accountDeletionProcessingSignOutFailed =>
       'Dein Konto wird gerade gelöscht, aber wir konnten dich nicht vollständig abmelden. Versuch es noch einmal.';
+
+  @override
+  String get videoEditorLoopRepairSmoothed => 'Loop geglättet';
+
+  @override
+  String get videoEditorLoopRepairProgress => 'Dein Loop wird verbessert…';
+
+  @override
+  String videoEditorLoopRepairTrimmed(String seconds) {
+    return 'Loop geglättet. $seconds s entfernt.';
+  }
 }

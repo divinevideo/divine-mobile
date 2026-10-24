@@ -5,6 +5,7 @@ import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:collection/collection.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:loop_alignment_repository/loop_alignment_repository.dart';
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
@@ -20,6 +21,7 @@ import 'package:openvine/models/video_editor/clip_style.dart';
 import 'package:openvine/models/video_editor/composition_duration.dart';
 import 'package:openvine/models/video_editor/detached_clip_reattach.dart';
 import 'package:openvine/models/video_editor/editor_overlay_snapshot.dart';
+import 'package:openvine/models/video_editor/loop_repair_input.dart';
 import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/audio_extraction_service.dart';
 import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
@@ -287,6 +289,10 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
     on<ClipEditorClipRemoved>(_onClipRemoved);
     on<ClipEditorClipInserted>(_onClipInserted);
     on<ClipEditorClipUpdated>(_onClipUpdated);
+    on<ClipEditorLoopRepairPendingChanged>(
+      (event, emit) => emit(state.copyWith(isRepairingLoop: event.pending)),
+    );
+    on<ClipEditorLoopRepairApplied>(_onLoopRepairApplied);
     on<ClipEditorClipThumbnailUpdated>(_onClipThumbnailUpdated);
 
     // Clip selection
@@ -578,6 +584,60 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         selectedFrameIndexes: prunedMultiSelection,
       ),
     );
+  }
+
+  void _onLoopRepairApplied(
+    ClipEditorLoopRepairApplied event,
+    Emitter<ClipEditorState> emit,
+  ) {
+    if (!const ListEquality<DivineVideoClip>().equals(
+          state.clips,
+          event.expectedClips,
+        ) ||
+        state.hasPendingMediaOperation ||
+        state.isTrimDragging) {
+      emit(
+        state.copyWith(
+          isRepairingLoop: false,
+          lastLoopRepair: ClipLoopRepairDiscarded(
+            event.result,
+            event.operationId,
+          ),
+        ),
+      );
+      return;
+    }
+    try {
+      final before = state.clips;
+      final after = LoopRepairInputMapper.applyResult(
+        before,
+        event.result,
+        operationId: event.operationId,
+      );
+      emit(
+        state.copyWith(
+          clips: after,
+          isRepairingLoop: false,
+          lastLoopRepair: ClipLoopRepairSuccess(
+            event.result,
+            event.operationId,
+            before: before,
+            after: after,
+          ),
+        ),
+      );
+    } catch (error, stack) {
+      addError(error, stack);
+      emit(
+        state.copyWith(
+          isRepairingLoop: false,
+          lastLoopRepair: ClipLoopRepairFailure(
+            event.result,
+            event.operationId,
+          ),
+        ),
+      );
+    }
   }
 
   void _onClipThumbnailUpdated(

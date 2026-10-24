@@ -5318,18 +5318,11 @@
   "videoEditorTrackNotFollowed": "اس کے پیچھے نہیں چلا جا سکا۔ زیادہ تفصیل والی چیز کو فریم میں لیں۔",
   "videoEditorTrackFailed": "ٹریکنگ کام نہیں کر سکی۔ دوبارہ کوشش کریں۔",
   "videoEditorTrackLostPartway": "راستے میں نظر سے اوجھل ہو گئی۔ وہاں سے لیئر ٹھہری رہتی ہے۔",
-  "videoEditorLoopLabel": "لوپ",
-  "videoEditorLoopSemanticLabel": "زیادہ ہموار لوپ پوائنٹ تلاش کریں",
-  "videoEditorLoopFoundEarlier": "زیادہ ہموار لوپ مل گیا۔ یہ {seconds} سیکنڈ پہلے ختم ہوتا ہے۔",
-  "videoEditorLoopFoundLater": "زیادہ ہموار لوپ مل گیا۔ یہ {seconds} سیکنڈ بعد ختم ہوتا ہے۔",
-  "videoEditorLoopClosestEarlier": "بالکل درست میچ نہیں ملا، لیکن یہ سب سے قریب ہے۔ یہ {seconds} سیکنڈ پہلے ختم ہوتا ہے۔",
-  "videoEditorLoopClosestLater": "بالکل درست میچ نہیں ملا، لیکن یہ سب سے قریب ہے۔ یہ {seconds} سیکنڈ بعد ختم ہوتا ہے۔",
-  "videoEditorLoopKeepLabel": "رکھیں",
-  "videoEditorLoopKeepSemanticLabel": "نیا لوپ پوائنٹ رکھیں",
-  "videoEditorLoopDiscardSemanticLabel": "پرانا اختتام واپس لائیں",
+  "videoEditorLoopLabel": "لوپ بہتر کریں",
+  "videoEditorLoopSemanticLabel": "لوپ کے جوڑ کو ہموار کریں",
   "videoEditorLoopAlreadySmooth": "یہ پہلے ہی ہموار طریقے سے لوپ ہوتا ہے۔",
   "videoEditorLoopFailed": "لوپ چیک نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
-  "videoEditorLoopNoMatch": "ہموار لوپ نہیں ملا۔ آخر کے قریب کچھ بھی ویڈیو کے آغاز سے میل نہیں کھاتا۔",
+  "videoEditorLoopNoMatch": "اس لوپ کو بہتر نہیں کیا جا سکا",
   "videoEditorKeyframeEffect": "ایفیکٹ",
   "videoEditorKeyframeCurveSegment": "کی فریم {from} سے {to} تک حرکت",
   "@videoEditorLayerAnimationButtonSemanticLabel": {
@@ -7162,5 +7155,8 @@
   "listPermissionsRecoveryPending": "آپ کی تبدیلی قبول کر لی گئی ہے۔ اسے محفوظ کرنے کے لیے اب ہم آہنگ کریں پر ٹیپ کریں۔ تب تک ترمیم موقوف ہے۔",
   "listRecoveryReadOnly": "ویڈیو فہرستوں میں محفوظ کی گئی کچھ تبدیلیوں کو بحال کرنے کی ضرورت ہے۔ آپ ویڈیو فہرستیں دیکھ سکتے ہیں، لیکن ترمیم عارضی طور پر روک دی گئی ہے۔",
   "listAddToLists": "فہرستوں میں شامل کریں",
-  "accountDeletionProcessingSignOutFailed": "آپ کا اکاؤنٹ حذف کرنے کی کارروائی جاری ہے، لیکن ہم آپ کو سائن آؤٹ نہیں کر سکے۔ دوبارہ کوشش کریں۔"
+  "accountDeletionProcessingSignOutFailed": "آپ کا اکاؤنٹ حذف کرنے کی کارروائی جاری ہے، لیکن ہم آپ کو سائن آؤٹ نہیں کر سکے۔ دوبارہ کوشش کریں۔",
+  "videoEditorLoopRepairSmoothed": "لوپ ہموار ہو گیا",
+  "videoEditorLoopRepairProgress": "آپ کا لوپ بہتر کیا جا رہا ہے…",
+  "videoEditorLoopRepairTrimmed": "لوپ ہموار ہو گیا۔ {seconds} سیکنڈ ہٹا دیے گئے۔"
 }
