@@ -23,8 +23,8 @@ import 'package:openvine/screens/inbox/conversation/widgets/encrypted_video_card
 /// the 1:1 chat, or the user follows the sender. Anyone else's card holds its
 /// preview back: a request downloads nothing until the user plays it, and a
 /// blocked or muted sender's card shows nothing of the video, not even a
-/// frame read before. Either way a tap still plays it. A held card never
-/// reads the kept file or its frame.
+/// frame read before. Either way a tap still plays it. A request, blocked or
+/// muted card never reads the kept file or its frame.
 ///
 /// When the user chose to blur video previews, a trusted card other than
 /// the user's own still downloads, but shows a blurhash instead of its frame
