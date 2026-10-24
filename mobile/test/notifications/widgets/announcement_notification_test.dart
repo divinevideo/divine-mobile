@@ -6,6 +6,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/notifications/widgets/notification_list_item.dart';
 
 void main() {
+  final l10n = lookupAppLocalizations(const Locale('en'));
   group('official announcement row', () {
     testWidgets('shows the official message and opens it on tap', (
       tester,
@@ -31,7 +32,7 @@ void main() {
         ),
       );
 
-      expect(find.text('From Divine'), findsOneWidget);
+      expect(find.text(l10n.notificationFromDivine), findsOneWidget);
       expect(find.text('Your profile has a home'), findsOneWidget);
       expect(
         find.text('Open your profile to find your own Divine website.'),
@@ -65,7 +66,7 @@ void main() {
           ),
         ),
       );
-      expect(find.text('From Divine'), findsNothing);
+      expect(find.text(l10n.notificationFromDivine), findsNothing);
     });
 
     for (final isRead in [false, true]) {
@@ -94,7 +95,9 @@ void main() {
             ),
           );
           expect(
-            find.bySemanticsLabel(RegExp('Unread notification')),
+            find.bySemanticsLabel(
+              RegExp(RegExp.escape(l10n.notificationsUnreadPrefix)),
+            ),
             isRead ? findsNothing : findsOneWidget,
           );
         } finally {
@@ -140,7 +143,7 @@ void main() {
             ),
           ),
         );
-        expect(find.text('From Divine'), findsOneWidget);
+        expect(find.text(l10n.notificationFromDivine), findsOneWidget);
         expect(tester.takeException(), isNull);
       });
     }
