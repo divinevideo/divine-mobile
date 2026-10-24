@@ -14,6 +14,7 @@ import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/loop_repair_input.dart';
 import 'package:openvine/services/clip_library_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
@@ -22,6 +23,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/video_editor/loop_repair.dart';
 import '../mocks/mock_path_provider_platform.dart';
 
 void main() {
@@ -2121,6 +2123,103 @@ void main() {
           expect(deferred, [oldVideo.path]);
         });
       });
+
+      test(
+        'keeps excluded loop sources through save, cleanup, and reopened Undo',
+        () async {
+          final firstFile = writeVideo('first.mp4');
+          final lastFile = writeVideo('last.mp4');
+          final excludedFile = writeVideo('excluded-render.mp4');
+          final obsoleteCache = writeVideo('obsolete-cache.mp4');
+          final first = draftWithClip(firstFile.path).clips.single.copyWith(
+            duration: const Duration(seconds: 4),
+            reversedVideoPath: obsoleteCache.path,
+          );
+          final last = draftWithClip(lastFile.path).clips.single.copyWith(
+            duration: const Duration(seconds: 4),
+          );
+          final excluded = draftWithClip(excludedFile.path).clips.single
+              .copyWith(
+                duration: const Duration(seconds: 3),
+              );
+          final original = draftWithClip(firstFile.path)
+              .copyWith(clips: [first, last, excluded]);
+          await service.saveDraft(original);
+          final repair = repairedLoopResult([
+            first,
+            last.copyWith(trimEnd: const Duration(milliseconds: 1700)),
+          ]);
+          for (final path in repair.output!.paths.values) {
+            writeVideo(p.basename(path));
+          }
+          final repaired =
+              LoopRepairInputMapper.applyResult(
+                    original.clips,
+                    repair,
+                    operationId: 'persisted-prefix',
+                  )
+                  .map(
+                    (clip) => clip.copyWith(
+                      video: EditorVideo.file(
+                        p.join(
+                          documentsPath,
+                          p.basename(clip.video!.file!.path),
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList();
+          await service.saveDraft(
+            original.copyWith(
+              clips: repaired,
+              editorStateHistory: {
+                'history': [
+                  {
+                    'meta': {
+                      VideoEditorConstants.clipsStateHistoryKey: original.clips
+                          .map((clip) => clip.toJson())
+                          .toList(),
+                    },
+                  },
+                ],
+              },
+            ),
+          );
+
+          expect(obsoleteCache.existsSync(), isFalse);
+          expect(excludedFile.existsSync(), isTrue);
+          expect(
+            await database.clipsDao.isFileReferenced(
+              p.basename(excludedFile.path),
+            ),
+            isTrue,
+          );
+          final reopened = await service.getDraftById(original.id);
+          expect(reopened, isNotNull);
+          expect(reopened!.clips, hasLength(2));
+          final history = reopened.editorStateHistory['history'] as List;
+          final meta = (history.single as Map)['meta'] as Map;
+          final previousClips =
+              (meta[VideoEditorConstants.clipsStateHistoryKey] as List)
+                  .map(
+                    (json) => DivineVideoClip.fromJson(
+                      Map<String, dynamic>.from(json as Map),
+                      documentsPath,
+                    ),
+                  )
+                  .toList();
+          expect(previousClips, hasLength(3));
+          expect(
+            File(previousClips.last.video!.file!.path).existsSync(),
+            isTrue,
+          );
+          await service.saveDraft(reopened.copyWith(clips: previousClips));
+          expect(
+            (await service.getDraftById(original.id))!.clips,
+            hasLength(3),
+          );
+        },
+      );
 
       test('keeps detached clip media across a draft save', () async {
         final detachedVideo = writeVideo('detached.mp4');

@@ -66,8 +66,14 @@ void main() {
 
       final result = await VideoEditorMergeService.mergeClips(
         clips: [
-          _createClip(id: 'a'),
-          _createClip(id: 'b'),
+          _createClip(id: 'a')
+              .copyWith(retainedSourcePaths: const ['/path/excluded.mp4']),
+          _createClip(id: 'b').copyWith(
+            retainedSourcePaths: const [
+              '/path/excluded.mp4',
+              '/path/another.mp4',
+            ],
+          ),
         ],
         renderId: 'merge-1',
       );
@@ -79,6 +85,11 @@ void main() {
       expect(result?.proofManifestJson, contains('urn:c2pa:merged'));
       // Signed, the merged file vouches for itself.
       expect(result?.derivedFrom, isNull);
+      expect(result?.retainedSourcePaths, hasLength(2));
+      expect(
+        result?.ownedFilePaths,
+        containsAll(['/path/excluded.mp4', '/path/another.mp4']),
+      );
     });
 
     test('keeps the merged sources when it could not be signed', () async {

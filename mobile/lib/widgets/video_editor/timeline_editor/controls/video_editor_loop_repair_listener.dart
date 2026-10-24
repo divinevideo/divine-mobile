@@ -18,11 +18,10 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/composition_duration.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
-import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_action_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Starts the whole-composition action from either timeline control surface.
+/// Starts loop repair from the editor route's editing tools.
 void fixEditorLoop(BuildContext context) {
   final clipState = context.read<ClipEditorBloc>().state;
   final main = context.read<VideoEditorMainBloc>().state;
@@ -53,27 +52,6 @@ void fixEditorLoop(BuildContext context) {
     'repair loop',
     logName: 'LoopRepair',
     category: LogCategory.video,
-  );
-}
-
-/// Uses the existing timeline action location even with no selected clip.
-class TimelineLoopRepairControls extends StatelessWidget {
-  const TimelineLoopRepairControls({super.key});
-  @override
-  Widget build(BuildContext context) => TimelineActionBar(
-    actions: [
-      TimelineActionButton(
-        icon: .repeat,
-        label: context.l10n.videoEditorLoopLabel,
-        semanticLabel: context.l10n.videoEditorLoopSemanticLabel,
-        onPressed:
-            context.select(
-              (ClipEditorBloc b) => b.state.hasPendingClipOperation,
-            )
-            ? null
-            : () => fixEditorLoop(context),
-      ),
-    ],
   );
 }
 
@@ -266,7 +244,12 @@ class _LoopRepairResultListenerState extends State<LoopRepairResultListener> {
         ? (start: duration - side, end: side)
         : (start: Duration.zero, end: duration);
     _sawNotReady = !context.read<VideoEditorMainBloc>().state.isPlayerReady;
-    final removed = compositionDuration(result.before) - duration;
+    final previousDuration = compositionDuration(result.before);
+    final previousExportDuration =
+        previousDuration > VideoEditorConstants.maxDuration
+        ? VideoEditorConstants.maxDuration
+        : previousDuration;
+    final removed = previousExportDuration - duration;
     final message = removed > Duration.zero
         ? context.l10n.videoEditorLoopRepairTrimmed(
             NumberFormat(

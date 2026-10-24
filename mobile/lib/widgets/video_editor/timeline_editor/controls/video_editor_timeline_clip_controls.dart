@@ -6,7 +6,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
-import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
@@ -31,7 +30,6 @@ import 'package:openvine/widgets/video_editor/stop_motion/stop_motion_frame_comm
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_clip_speed_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_detach_clip_sheet.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_equalizer_sheet.dart';
-import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_loop_repair_listener.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_action_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
@@ -160,15 +158,6 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
     final hasCopiedStyle = context.select(
       (StyleClipboardCubit cubit) => cubit.state.clipStyle != null,
     );
-    final canFindLoop = context.select(
-      (ClipEditorBloc bloc) => bloc.state.clips.isNotEmpty,
-    );
-    final hasPendingClipOperation = context.select(
-      (ClipEditorBloc bloc) => bloc.state.hasPendingClipOperation,
-    );
-    final isFindingLoop = context.select(
-      (LoopSuggestionCubit cubit) => cubit.state.isSearching,
-    );
 
     // A colour or photo standing in for a detached clip is a backdrop, not
     // footage. Splitting, reversing, speeding up or extracting audio from a
@@ -213,9 +202,6 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       // Split/Speed stay mounted and are shown disabled (not removed) while
       // busy, so the control set doesn't visibly reshuffle mid-operation.
       onSplit: () => _splitClip(context),
-      onLoop: canFindLoop ? () => _findLoop(context) : null,
-      isFindingLoop: isFindingLoop,
-      isLoopDisabled: hasPendingClipOperation,
       onFreezeFrame: () => _freezeFrame(context),
       isFreezingFrame: isFreezingCurrentClip,
       onDetach: () => _detachClip(context),
@@ -599,8 +585,6 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       timelineMarkers: rebasedMarkers,
     );
   }
-
-  void _findLoop(BuildContext context) => fixEditorLoop(context);
 
   /// Opens the equalizer of the selected clip. The preview loops the clip and
   /// plays every change while the sheet is open; a confirmed one becomes one

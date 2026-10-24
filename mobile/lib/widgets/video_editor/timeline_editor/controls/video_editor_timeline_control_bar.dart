@@ -3,7 +3,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
-import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_loop_repair_listener.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_clip_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_layer_multi_select_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_marker_controls.dart';
@@ -11,8 +10,8 @@ import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_edi
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_overlay_controls.dart';
 
 /// Shows context-specific controls at the bottom of the timeline based on
-/// what is currently active: marker mode, a multi-select mode, a loop point
-/// waiting to be kept, a clip (editing), or a selected overlay item.
+/// what is currently active: marker mode, a multi-select mode, a clip
+/// (editing), or a selected overlay item.
 class TimelineControlsBar extends StatelessWidget {
   const TimelineControlsBar({
     required this.isEditing,
@@ -49,7 +48,6 @@ class TimelineControlsBar extends StatelessWidget {
         isMarkerMode ||
         isMultiSelectMode ||
         isLayerMultiSelectMode ||
-        context.select((ClipEditorBloc b) => b.state.clips.isNotEmpty) ||
         isEditing ||
         selectedOverlayItem != null;
     final controlsChild = switch ((
@@ -79,10 +77,6 @@ class TimelineControlsBar extends StatelessWidget {
         key: const ValueKey('timeline_controls_clip'),
         playheadPosition: playheadPosition,
       ),
-      (false, false, false, true, false) when selectedOverlayItem == null =>
-        const TimelineLoopRepairControls(
-          key: ValueKey('timeline_controls_loop_repair'),
-        ),
       (false, false, false, true, false) => TimelineOverlayControls(
         key: const ValueKey('timeline_controls_overlay'),
         item: selectedOverlayItem!,

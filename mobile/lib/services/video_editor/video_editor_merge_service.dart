@@ -99,6 +99,9 @@ class VideoEditorMergeService {
       sourceCredits: sourceCredits,
       proofManifestJson: proof == null ? null : jsonEncode(proof),
       derivedFrom: mergedFrom,
+      retainedSourcePaths: {
+        for (final clip in clips) ...clip.retainedSourcePaths,
+      }.toList(),
     );
   }
 

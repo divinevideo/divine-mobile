@@ -50,12 +50,12 @@ class VideoEditorScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: VideoEditorConstants.uiOverlayStyleFor(context.vineColors),
-      child: Scaffold(
-        backgroundColor: context.vineColors.surfaceContainerHigh,
-        resizeToAvoidBottomInset: false,
-        floatingActionButton: const _AddElementFab(),
-        body: LayerTrackingResultListener(
-          child: LoopRepairResultListener(
+      child: LoopRepairResultListener(
+        child: Scaffold(
+          backgroundColor: context.vineColors.surfaceContainerHigh,
+          resizeToAvoidBottomInset: false,
+          floatingActionButton: const _AddElementFab(),
+          body: LayerTrackingResultListener(
             child: ClipEditorResultListeners(
               child: _ScaffoldBody(isLoading: isLoading),
             ),

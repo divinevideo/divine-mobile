@@ -12,6 +12,7 @@ import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_loop_repair_listener.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/open_tune_editor.dart';
 
 /// Bottom sheet that shows video editor sub-editor actions.
@@ -19,7 +20,11 @@ import 'package:openvine/widgets/video_editor/tune_editor/open_tune_editor.dart'
 /// Uses [_ItemButton] for each action and closes the sheet after
 /// an action is selected.
 class VideoEditorMainActionsSheet extends StatelessWidget {
-  const VideoEditorMainActionsSheet({required this.scope, super.key});
+  const VideoEditorMainActionsSheet({
+    required this.scope,
+    this.onFixLoop,
+    super.key,
+  });
 
   static const _maxItemWidth = 72.0;
   static const _itemHeight = 112.0;
@@ -28,6 +33,9 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
 
   /// The editor scope captured before opening the sheet.
   final VideoEditorScope scope;
+
+  /// Starts loop repair from the editor route after this sheet closes.
+  final VoidCallback? onFixLoop;
 
   /// Opens the actions bottom sheet.
   static Future<void> show(BuildContext context) {
@@ -57,7 +65,10 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
             BlocProvider<VideoEditorTuneBloc>.value(value: tuneBloc),
             BlocProvider<VideoEditorDrawBloc>.value(value: drawBloc),
           ],
-          child: VideoEditorMainActionsSheet(scope: scope),
+          child: VideoEditorMainActionsSheet(
+            scope: scope,
+            onFixLoop: () => fixEditorLoop(context),
+          ),
         ),
       ],
     );
@@ -175,6 +186,17 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
                   openTuneEditor(tuneBloc, scope);
                 },
               ),
+              if (onFixLoop case final fixLoop?
+                  when totalDuration > Duration.zero && !isStopMotion)
+                _ItemButton(
+                  icon: .repeat,
+                  label: context.l10n.videoEditorLoopLabel,
+                  semanticLabel: context.l10n.videoEditorLoopSemanticLabel,
+                  onTap: () {
+                    Navigator.pop(context);
+                    fixLoop();
+                  },
+                ),
               _ItemButton(
                 icon: .scribble,
                 label: context.l10n.videoEditorDrawLabel,

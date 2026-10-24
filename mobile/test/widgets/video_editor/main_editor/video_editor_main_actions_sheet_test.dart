@@ -19,6 +19,7 @@ import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_actions_sheet.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
 class _MockVideoEditorMainBloc
     extends MockBloc<VideoEditorMainEvent, VideoEditorMainState>
@@ -104,6 +105,43 @@ void main() {
       expect(find.text(l10n.videoEditorFilterLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorStickers), findsOneWidget);
       expect(find.text(l10n.videoEditorMarkerLabel), findsOneWidget);
+    });
+
+    testWidgets('offers Fix loop with the other editing tools for long clips', (
+      tester,
+    ) async {
+      when(() => clipBloc.state).thenReturn(
+        ClipEditorState(
+          clips: [
+            DivineVideoClip(
+              id: 'recording',
+              video: EditorVideo.file('/documents/recording.mp4'),
+              duration: const Duration(milliseconds: 8140),
+              recordedAt: DateTime(2026),
+              targetAspectRatio: model.AspectRatio.vertical,
+              originalAspectRatio: 9 / 16,
+            ),
+          ],
+        ),
+      );
+      await tester.pumpWidget(
+        _buildShowHost(
+          mainBloc: mainBloc,
+          clipBloc: clipBloc,
+          timelineOverlayBloc: timelineOverlayBloc,
+          tuneBloc: tuneBloc,
+          drawBloc: drawBloc,
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('open-sheet')));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.videoEditorLoopLabel), findsOneWidget);
+      expect(
+        find.bySemanticsLabel(l10n.videoEditorLoopSemanticLabel),
+        findsOneWidget,
+      );
     });
 
     testWidgets('hides the marker action for a stop-motion composition', (
