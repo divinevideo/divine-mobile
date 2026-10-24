@@ -224,6 +224,28 @@ void main() {
       );
 
       blocTest<VideoEditorTuneBloc, VideoEditorTuneState>(
+        "replaces the previous session's values with the new session's",
+        build: buildBloc,
+        seed: () => const VideoEditorTuneState(
+          adjustments: VideoEditorConstants.tuneAdjustments,
+          values: {'sharpen': 0.5},
+        ),
+        act: (bloc) => bloc.add(
+          const VideoEditorTuneSessionStarted(
+            setId: 'set-2',
+            values: {'shadows': 0.3},
+          ),
+        ),
+        expect: () => [
+          isA<VideoEditorTuneState>().having(
+            (s) => s.values,
+            'values',
+            {'shadows': 0.3},
+          ),
+        ],
+      );
+
+      blocTest<VideoEditorTuneBloc, VideoEditorTuneState>(
         'is preserved across VideoEditorTuneEditorInitialized',
         build: buildBloc,
         seed: () => const VideoEditorTuneState(

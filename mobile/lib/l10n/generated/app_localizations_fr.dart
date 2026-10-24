@@ -9091,6 +9091,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorTuneFade => 'Fondu';
 
   @override
+  String get videoEditorTuneHighlights => 'Hautes lumières';
+
+  @override
+  String get videoEditorTuneShadows => 'Ombres';
+
+  @override
+  String get videoEditorTuneVibrance => 'Vibrance';
+
+  @override
+  String get videoEditorTuneSharpen => 'Netteté';
+
+  @override
   String get videoEditorAudioLabel => 'Audio';
 
   @override

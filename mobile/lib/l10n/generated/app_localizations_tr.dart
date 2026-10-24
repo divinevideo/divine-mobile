@@ -8876,6 +8876,18 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorTuneFade => 'Solma';
 
   @override
+  String get videoEditorTuneHighlights => 'Vurgular';
+
+  @override
+  String get videoEditorTuneShadows => 'Gölgeler';
+
+  @override
+  String get videoEditorTuneVibrance => 'Canlılık';
+
+  @override
+  String get videoEditorTuneSharpen => 'Keskinlik';
+
+  @override
   String get videoEditorAudioLabel => 'Ses';
 
   @override

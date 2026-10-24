@@ -21,6 +21,7 @@ extension FlutterError: @retroactive Error {}
     EchoVideoEffect.register()
     FisheyeVideoEffect.register()
     DropsVideoEffect.register()
+    AdjustVideoEffect.register()
     #if DEBUG
     exportScreenshotLaunchConfig()
     #endif

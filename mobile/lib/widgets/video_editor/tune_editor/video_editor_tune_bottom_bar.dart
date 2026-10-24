@@ -14,12 +14,16 @@ String tuneAdjustmentLabel(BuildContext context, String id) {
   return switch (id) {
     'brightness' => l10n.videoEditorTuneBrightness,
     'contrast' => l10n.videoEditorTuneContrast,
+    'highlights' => l10n.videoEditorTuneHighlights,
+    'shadows' => l10n.videoEditorTuneShadows,
     'saturation' => l10n.videoEditorTuneSaturation,
+    'vibrance' => l10n.videoEditorTuneVibrance,
     'exposure' => l10n.videoEditorTuneExposure,
     'hue' => l10n.videoEditorTuneHue,
     'temperature' => l10n.videoEditorTuneTemperature,
     'tint' => l10n.videoEditorTuneTint,
     'fade' => l10n.videoEditorTuneFade,
+    'sharpen' => l10n.videoEditorTuneSharpen,
     _ => id,
   };
 }

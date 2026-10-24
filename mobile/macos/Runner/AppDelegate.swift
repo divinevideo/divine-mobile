@@ -12,6 +12,7 @@ class AppDelegate: FlutterAppDelegate {
     EchoVideoEffect.register()
     FisheyeVideoEffect.register()
     DropsVideoEffect.register()
+    AdjustVideoEffect.register()
     // CameraMacOSPlugin removed - Flutter now has native macOS camera support
   }
 
