@@ -21,7 +21,9 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * saturates dull colours more than strong ones and mostly spares skin tones.
  *
  * The shader is the Swift `AdjustVideoEffect`'s Metal kernel, line for line,
- * so both platforms draw the same picture.
+ * so both platforms draw the same picture. Only the Metal copy runs in a test
+ * (`AdjustVideoEffectTests` in `RunnerTests`), so a change here has to be made
+ * there as well.
  *
  * Its params, from the Dart `CustomVideoEffect`, are `highlights`, `shadows`
  * and `vibrance` (-1 to 1) and `sharpen` (0 to 1); a missing one is 0.
