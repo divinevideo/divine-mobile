@@ -10,6 +10,9 @@ class AppLocalizationsMs extends AppLocalizations {
   AppLocalizationsMs([String locale = 'ms']) : super(locale);
 
   @override
+  String get videoEditorEditingToolsLabel => 'Alat penyuntingan';
+
+  @override
   String get devOptionsClipRecovery => 'Pemulihan klip';
 
   @override

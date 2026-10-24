@@ -53,7 +53,7 @@ class VideoEditorScaffold extends StatelessWidget {
       child: Scaffold(
         backgroundColor: context.vineColors.surfaceContainerHigh,
         resizeToAvoidBottomInset: false,
-        floatingActionButton: const _AddElementFab(),
+        bottomNavigationBar: const _EditingToolsBar(),
         body: LayerTrackingResultListener(
           child: LoopRepairResultListener(
             child: ClipEditorResultListeners(
@@ -382,17 +382,16 @@ class _BottomActions extends StatelessWidget {
   }
 }
 
-/// Decides whether the FAB should be visible. Keeps the visibility check in
-/// a dedicated widget so that [_AddElementFabContent] is only rebuilt when
-/// it actually needs to render — not on every hide/show state change.
-class _AddElementFab extends StatelessWidget {
-  const _AddElementFab();
+/// Shows the editing-tools bar when the timeline is available for editing.
+class _EditingToolsBar extends StatelessWidget {
+  const _EditingToolsBar();
 
   @override
   Widget build(BuildContext context) {
     final shouldHide = context.select(
       (VideoEditorMainBloc b) =>
           b.state.isSubEditorOpen ||
+          b.state.isCanvasFullscreen ||
           b.state.isTimelineHiddenByUser ||
           b.state.isMarkerMode,
     );
@@ -416,39 +415,52 @@ class _AddElementFab extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    return const _AddElementFabContent();
+    return const _EditingToolsBarContent();
   }
 }
 
-class _AddElementFabContent extends StatelessWidget {
-  const _AddElementFabContent();
+/// A quiet tray opener; DivineButton's filled and bordered variants give it
+/// more emphasis than the editor's supporting controls need.
+class _EditingToolsBarContent extends StatelessWidget {
+  const _EditingToolsBarContent();
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: context.l10n.videoEditorAddElementSemanticLabel,
-      child: GestureDetector(
-        onTap: () => VideoEditorMainActionsSheet.show(context),
-        child: Container(
-          width: 56,
-          height: 56,
-          decoration: ShapeDecoration(
-            color: context.vineColors.surfaceContainer,
-            shape: RoundedRectangleBorder(
-              side: BorderSide(
-                width: 2,
-                color: context.vineColors.outlineMuted,
-              ),
-              borderRadius: .circular(24),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: TextButton(
+          onPressed: () => VideoEditorMainActionsSheet.show(context),
+          style: TextButton.styleFrom(
+            foregroundColor: context.vineColors.secondaryText,
+            minimumSize: const Size.fromHeight(48),
+            textStyle: VineTheme.bodyMediumFont().copyWith(
+              fontWeight: FontWeight.w500,
             ),
+            shape: RoundedRectangleBorder(borderRadius: .circular(16)),
           ),
-          child: Center(
-            // Hand-rolled twin of `DivineIconButtonType.secondary`.
-            child: DivineIcon(
-              icon: .plus,
-              color: context.vineColors.accentBrand,
-            ),
+          child: Row(
+            mainAxisSize: .min,
+            spacing: 8,
+            children: [
+              DivineIcon(
+                icon: .slidersHorizontal,
+                size: 16,
+                color: context.vineColors.onSurfaceVariant,
+              ),
+              Flexible(
+                child: Text(
+                  context.l10n.videoEditorEditingToolsLabel,
+                  textAlign: .center,
+                ),
+              ),
+              DivineIcon(
+                icon: .caretUp,
+                size: 12,
+                color: context.vineColors.onSurfaceVariant,
+              ),
+            ],
           ),
         ),
       ),

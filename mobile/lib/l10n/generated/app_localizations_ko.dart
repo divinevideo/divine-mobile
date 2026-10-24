@@ -10,6 +10,9 @@ class AppLocalizationsKo extends AppLocalizations {
   AppLocalizationsKo([String locale = 'ko']) : super(locale);
 
   @override
+  String get videoEditorEditingToolsLabel => '편집 도구';
+
+  @override
   String get devOptionsClipRecovery => '클립 복구';
 
   @override

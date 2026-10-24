@@ -10,6 +10,9 @@ class AppLocalizationsTr extends AppLocalizations {
   AppLocalizationsTr([String locale = 'tr']) : super(locale);
 
   @override
+  String get videoEditorEditingToolsLabel => 'Düzenleme araçları';
+
+  @override
   String get devOptionsClipRecovery => 'Klip kurtarma';
 
   @override

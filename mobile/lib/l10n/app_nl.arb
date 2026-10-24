@@ -1,4 +1,5 @@
 {
+  "videoEditorEditingToolsLabel": "Bewerkingstools",
   "@@locale": "nl",
   "devOptionsClipRecovery": "Clipherstel",
   "devOptionsClipRecoveryDescription": "Vindt opnamen die onder een ander account staan en videobestanden waarnaar geen enkel item meer verwijst.",

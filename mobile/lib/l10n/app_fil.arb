@@ -1,4 +1,5 @@
 {
+  "videoEditorEditingToolsLabel": "Mga tool sa pag-edit",
   "@@locale": "fil",
   "devOptionsClipRecovery": "Pagbawi ng clip",
   "devOptionsClipRecoveryDescription": "Naghahanap ng mga recording na nakaimbak sa ibang account at mga video file na wala nang tumutukoy na entry.",

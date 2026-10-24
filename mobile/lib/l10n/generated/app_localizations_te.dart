@@ -10,6 +10,9 @@ class AppLocalizationsTe extends AppLocalizations {
   AppLocalizationsTe([String locale = 'te']) : super(locale);
 
   @override
+  String get videoEditorEditingToolsLabel => 'ఎడిటింగ్ సాధనాలు';
+
+  @override
   String get devOptionsClipRecovery => 'క్లిప్ రికవరీ';
 
   @override

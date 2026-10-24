@@ -1,4 +1,8 @@
 {
+  "videoEditorEditingToolsLabel": "Editing tools",
+  "@videoEditorEditingToolsLabel": {
+    "description": "Button that opens the tray of video editing tools."
+  },
   "@@locale": "en",
   "devOptionsClipRecovery": "Clip Recovery",
   "@devOptionsClipRecovery": {

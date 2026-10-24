@@ -1,4 +1,5 @@
 {
+  "videoEditorEditingToolsLabel": "編集ツール",
   "@@locale": "ja",
   "devOptionsClipRecovery": "クリップの復旧",
   "devOptionsClipRecoveryDescription": "別のアカウントに保存された録画と、どの項目からも参照されていない動画ファイルを探します。",

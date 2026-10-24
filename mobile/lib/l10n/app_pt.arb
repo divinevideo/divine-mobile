@@ -1,4 +1,5 @@
 {
+  "videoEditorEditingToolsLabel": "Ferramentas de edição",
   "@@locale": "pt",
   "devOptionsClipRecovery": "Recuperação de clipes",
   "devOptionsClipRecoveryDescription": "Encontra gravações salvas em outra conta e arquivos de vídeo que nenhum registro referencia mais.",

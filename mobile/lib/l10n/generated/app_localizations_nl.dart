@@ -10,6 +10,9 @@ class AppLocalizationsNl extends AppLocalizations {
   AppLocalizationsNl([String locale = 'nl']) : super(locale);
 
   @override
+  String get videoEditorEditingToolsLabel => 'Bewerkingstools';
+
+  @override
   String get devOptionsClipRecovery => 'Clipherstel';
 
   @override

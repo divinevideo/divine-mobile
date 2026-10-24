@@ -1,4 +1,5 @@
 {
+  "videoEditorEditingToolsLabel": "编辑工具",
   "@@locale": "zh",
   "devOptionsClipRecovery": "片段恢复",
   "devOptionsClipRecoveryDescription": "查找存储在其他账号下的录制内容，以及已无任何记录引用的视频文件。",

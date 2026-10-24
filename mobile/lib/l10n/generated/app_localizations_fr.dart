@@ -10,6 +10,9 @@ class AppLocalizationsFr extends AppLocalizations {
   AppLocalizationsFr([String locale = 'fr']) : super(locale);
 
   @override
+  String get videoEditorEditingToolsLabel => 'Outils de montage';
+
+  @override
   String get devOptionsClipRecovery => 'Récupération de clips';
 
   @override

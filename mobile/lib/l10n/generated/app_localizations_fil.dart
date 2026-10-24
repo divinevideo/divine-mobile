@@ -10,6 +10,9 @@ class AppLocalizationsFil extends AppLocalizations {
   AppLocalizationsFil([String locale = 'fil']) : super(locale);
 
   @override
+  String get videoEditorEditingToolsLabel => 'Mga tool sa pag-edit';
+
+  @override
   String get devOptionsClipRecovery => 'Pagbawi ng clip';
 
   @override

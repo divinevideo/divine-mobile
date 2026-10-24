@@ -10,6 +10,9 @@ class AppLocalizationsUr extends AppLocalizations {
   AppLocalizationsUr([String locale = 'ur']) : super(locale);
 
   @override
+  String get videoEditorEditingToolsLabel => 'ترمیم کے ٹولز';
+
+  @override
   String get devOptionsClipRecovery => 'کلپ کی بازیابی';
 
   @override

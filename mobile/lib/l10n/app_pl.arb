@@ -1,4 +1,5 @@
 {
+  "videoEditorEditingToolsLabel": "Narzędzia edycji",
   "@@locale": "pl",
   "devOptionsClipRecovery": "Odzyskiwanie klipów",
   "devOptionsClipRecoveryDescription": "Znajduje nagrania zapisane na innym koncie oraz pliki wideo, do których nie odwołuje się już żaden wpis.",

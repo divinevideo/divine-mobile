@@ -1,4 +1,5 @@
 {
+  "videoEditorEditingToolsLabel": "Alat pengeditan",
   "@@locale": "id",
   "devOptionsClipRecovery": "Pemulihan klip",
   "devOptionsClipRecoveryDescription": "Menemukan rekaman yang tersimpan di akun lain dan file video yang tidak lagi dirujuk entri mana pun.",
