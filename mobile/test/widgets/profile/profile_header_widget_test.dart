@@ -421,6 +421,7 @@ void main() {
       bool monetizationLinksEnabled = false,
       ThemeData? theme,
       bool disableAnimations = false,
+      bool accessibleNavigation = false,
       TextScaler? textScaler,
       Locale locale = const Locale('en'),
       // Ahead of the app's own, so one of these wins for its type.
@@ -593,6 +594,7 @@ void main() {
             builder: (context) => MediaQuery(
               data: MediaQuery.of(context).copyWith(
                 disableAnimations: disableAnimations,
+                accessibleNavigation: accessibleNavigation,
                 textScaler: textScaler ?? MediaQuery.textScalerOf(context),
               ),
               child: Scaffold(body: SingleChildScrollView(child: header)),
@@ -1451,6 +1453,9 @@ void main() {
           isOwnProfile: false,
           suppliedProfile: testProfile,
           goRouter: mockGoRouter,
+          // The static row only shows when the floating badges cannot: here,
+          // for a screen reader.
+          accessibleNavigation: true,
           acceptedProfileBadges: [
             ProfileBadgeViewData(
               badge: const Nip58ProfileBadgeRef(
@@ -1533,11 +1538,8 @@ void main() {
       expect(button, findsOneWidget);
       // The header shows the same badge as the feed, glyph and all.
       expect(find.byType(OgVinerBadge), findsOneWidget);
-      // The badge must stay a real tap target; the exact box is the design
-      // system's to decide, so assert the 48dp floor rather than a number.
-      final buttonSize = tester.getSize(button);
-      expect(buttonSize.width, greaterThanOrEqualTo(48));
-      expect(buttonSize.height, greaterThanOrEqualTo(48));
+      // A 40dp box, hanging over the username rather than spacing it away.
+      expect(tester.getSize(button), const Size.square(40));
 
       await tester.tap(button);
       await tester.pumpAndSettle();
@@ -1545,6 +1547,109 @@ void main() {
       expect(find.text(l10n.ogVinerBadgeLabel), findsWidgets);
       expect(find.text(l10n.profileBadgeOgVinerBody), findsOneWidget);
       expect(find.text(l10n.commonClose), findsOneWidget);
+    });
+
+    testWidgets('sets the display name in headline small, flush on the '
+        'username', (tester) async {
+      await tester.pumpWidget(
+        buildTestWidget(
+          userIdHex: testUserHex,
+          isOwnProfile: false,
+          suppliedProfile: createTestProfile(displayName: 'Flush User'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final name = tester.getRect(find.text('Flush User'));
+      final username = tester.getRect(
+        find.text(
+          truncateNpubForDisplay(NostrKeyUtils.encodePubKey(testUserHex)),
+        ),
+      );
+      // Headline small sets a 32px line; title large set 28.
+      expect(name.height, moreOrLessEquals(32));
+      expect(username.top, moreOrLessEquals(name.bottom));
+    });
+
+    testWidgets('keeps the username flush when a badge sits beside the name', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        ogVinerPubkeysCacheKey: jsonEncode([testUserHex]),
+      });
+      final prefs = await SharedPreferences.getInstance();
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          userIdHex: testUserHex,
+          isOwnProfile: false,
+          suppliedProfile: createTestProfile(displayName: 'OG User'),
+          sharedPreferences: prefs,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final name = tester.getRect(find.text('OG User'));
+      final username = tester.getRect(
+        find.text(
+          truncateNpubForDisplay(NostrKeyUtils.encodePubKey(testUserHex)),
+        ),
+      );
+      // The 40dp tap box is taller than the name's line, and must not push
+      // the username down.
+      expect(username.top, moreOrLessEquals(name.bottom));
+    });
+
+    testWidgets('gives a tap where the name badge overlaps the username to the '
+        'badge', (tester) async {
+      SharedPreferences.setMockInitialValues({
+        ogVinerPubkeysCacheKey: jsonEncode([testUserHex]),
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      await tester.pumpWidget(
+        buildTestWidget(
+          userIdHex: testUserHex,
+          isOwnProfile: false,
+          suppliedProfile: createTestProfile(displayName: 'OG User'),
+          sharedPreferences: prefs,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final badge = tester.getRect(findByTooltip(l10n.ogVinerBadgeLabel));
+      final name = tester.getRect(find.text('OG User'));
+      final username = tester.getRect(
+        find.text(
+          truncateNpubForDisplay(NostrKeyUtils.encodePubKey(testUserHex)),
+        ),
+      );
+      // Inside the badge's box, below the name's line, on the username.
+      final overlap = Offset(badge.center.dx, name.bottom + 2);
+      expect(badge.contains(overlap), isTrue);
+      expect(username.contains(overlap), isTrue);
+
+      await tester.tapAt(overlap);
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.profileBadgeOgVinerBody), findsOneWidget);
+      expect(find.text(l10n.profileLinkCopied), findsNothing);
+    });
+
+    testWidgets('leaves the static badge row to the floating badges when '
+        'motion is allowed', (tester) async {
+      await tester.pumpWidget(
+        buildTestWidget(
+          userIdHex: testUserHex,
+          isOwnProfile: false,
+          suppliedProfile: createTestProfile(displayName: 'Badged User'),
+          acceptedProfileBadges: [_acceptedBadge('Badge One', 'badge-one')],
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Badge One'), findsNothing);
     });
 
     testWidgets('opens OG Beta Tester explainer from profile header target', (
@@ -1570,11 +1675,8 @@ void main() {
       final button = findByTooltip(l10n.ogBetaTesterBadgeLabel);
       expect(button, findsOneWidget);
       expect(find.byType(OgBetaBadge), findsOneWidget);
-      // The header is the 48dp-compliant affordance; the inline chit takes a
-      // documented exception, so the floor has to hold here.
-      final buttonSize = tester.getSize(button);
-      expect(buttonSize.width, greaterThanOrEqualTo(48));
-      expect(buttonSize.height, greaterThanOrEqualTo(48));
+      // A 40dp box, hanging over the username rather than spacing it away.
+      expect(tester.getSize(button), const Size.square(40));
 
       await tester.tap(button);
       await tester.pumpAndSettle();
@@ -1751,11 +1853,8 @@ void main() {
       final semantics = tester.getSemantics(button);
       expect(semantics.label, equals(l10n.profileBadgeCheckmarkTitle));
       expect(semantics.value, equals(l10n.profileBadgeCheckmarkBody));
-      // The badge must stay a real tap target; the exact box is the design
-      // system's to decide, so assert the 48dp floor rather than a number.
-      final buttonSize = tester.getSize(button);
-      expect(buttonSize.width, greaterThanOrEqualTo(48));
-      expect(buttonSize.height, greaterThanOrEqualTo(48));
+      // A 40dp box, hanging over the username rather than spacing it away.
+      expect(tester.getSize(button), const Size.square(40));
 
       await tester.tap(button);
       await tester.pumpAndSettle();
@@ -1811,6 +1910,7 @@ void main() {
           isOwnProfile: false,
           suppliedProfile: testProfile,
           goRouter: mockGoRouter,
+          accessibleNavigation: true,
           acceptedProfileBadges: [
             ProfileBadgeViewData(
               badge: const Nip58ProfileBadgeRef(
@@ -1871,6 +1971,7 @@ void main() {
           userIdHex: testUserHex,
           isOwnProfile: false,
           suppliedProfile: testProfile,
+          accessibleNavigation: true,
           acceptedProfileBadges: [
             ProfileBadgeViewData(
               badge: const Nip58ProfileBadgeRef(
@@ -1911,6 +2012,7 @@ void main() {
           userIdHex: testUserHex,
           isOwnProfile: false,
           suppliedProfile: testProfile,
+          accessibleNavigation: true,
           acceptedProfileBadges: [
             _acceptedBadge('Badge One', 'badge-one'),
             _acceptedBadge('Badge Two', 'badge-two'),
@@ -1947,6 +2049,7 @@ void main() {
           userIdHex: testUserHex,
           isOwnProfile: false,
           suppliedProfile: createTestProfile(displayName: 'Badged User'),
+          accessibleNavigation: true,
           acceptedProfileBadges: [_acceptedBadge('Badge One', 'badge-one')],
         ),
       );

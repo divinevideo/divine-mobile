@@ -2,10 +2,15 @@
 // ABOUTME: Reusable between own profile and others' profile screens
 
 import 'dart:async';
+import 'dart:collection';
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:badge_repository/badge_repository.dart';
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -70,6 +75,7 @@ import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
+part 'profile_header_floating_badges.dart';
 part 'profile_header_identity.dart';
 part 'profile_header_media.dart';
 part 'profile_header_supporter_lightbox.dart';
@@ -445,7 +451,8 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
                   // Name, NIP-05, and bio. Horizontal inset lives on the
                   // children so the badge row can scroll edge-to-edge.
                   Padding(
-                    padding: const EdgeInsets.only(top: 32, bottom: 16),
+                    // The gap above the name lives inside the block.
+                    padding: const EdgeInsets.only(bottom: 16),
                     child: _ProfileNameAndBio(
                       profile: effectiveProfile,
                       userIdHex: widget.userIdHex,

@@ -44,15 +44,13 @@ class _ProfileNameAndBio extends StatelessWidget {
       children: [
         Padding(
           padding: inset,
+          // Bottom-up, so the name row paints over the username and is
+          // hit-tested before it: a name badge's tap box hangs over the
+          // username, and wins where they meet.
           child: Column(
+            mainAxisSize: MainAxisSize.min,
+            verticalDirection: VerticalDirection.up,
             children: [
-              _ProfileHeaderNameRow(
-                isVanished: isVanished,
-                profile: profile,
-                userIdHex: userIdHex,
-                isOwnProfile: isOwnProfile,
-                displayNameHint: displayNameHint,
-              ),
               Skeleton.keep(
                 child: _UniqueIdentifier(
                   userIdHex: userIdHex,
@@ -61,6 +59,18 @@ class _ProfileNameAndBio extends StatelessWidget {
                   accentColor: accentColor,
                 ),
               ),
+              _ProfileHeaderNameRow(
+                isVanished: isVanished,
+                profile: profile,
+                userIdHex: userIdHex,
+                isOwnProfile: isOwnProfile,
+                displayNameHint: displayNameHint,
+              ),
+              // The gap below the avatar lives here rather than around the
+              // block, so the badge's tap box can hang up into it and still
+              // take taps. A sibling, not a wrapper: a wrapper would drop taps
+              // on the part hanging over the username.
+              const SizedBox(height: _avatarToNameGap),
             ],
           ),
         ),
@@ -120,6 +130,9 @@ String? _ownProfileNamePlaceholder({
 /// badge row can break out of it and scroll edge-to-edge.
 const double _profileIdentityHorizontalInset = 16;
 
+/// Space between the bottom of the avatar and the display name's line.
+const double _avatarToNameGap = 16;
+
 class _ProfileHeaderNameRow extends ConsumerWidget {
   const _ProfileHeaderNameRow({
     required this.isVanished,
@@ -137,7 +150,7 @@ class _ProfileHeaderNameRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final textStyle = VineTheme.titleLargeFont(
+    final textStyle = VineTheme.headlineSmallFont(
       color: context.vineColors.primaryText,
     );
     // A vanished account renders "Deleted account"; no identity chit belongs
@@ -198,29 +211,136 @@ class _ProfileHeaderNameRow extends ConsumerWidget {
 
     if (!isOgViner && !isOgBetaTester && !showCheckmark) return name;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Flexible(child: name),
-        if (showCheckmark)
-          const _ProfileHeaderBadgeExplanationButton(
-            type: ProfileBadgeExplanationType.profileCheckmark,
-          ),
-        if (isOgViner)
-          const _ProfileHeaderBadgeExplanationButton(
-            type: ProfileBadgeExplanationType.ogViner,
-          ),
-        if (isOgBetaTester)
-          const _ProfileHeaderBadgeExplanationButton(
-            type: ProfileBadgeExplanationType.ogBetaTester,
-          ),
-      ],
+    // Names are a single line. The badge's tap box is taller than that line,
+    // so it hangs over the gap above and the username below rather than
+    // pushing them away.
+    final nameLineHeight =
+        MediaQuery.textScalerOf(context).scale(textStyle.fontSize ?? 0) *
+        (textStyle.height ?? 1);
+    return _Overhang(
+      by: math.max(0, (_nameBadgeTapTarget - nameLineHeight) / 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(child: name),
+          if (showCheckmark)
+            const _ProfileHeaderBadgeExplanationButton(
+              type: ProfileBadgeExplanationType.profileCheckmark,
+            ),
+          if (isOgViner)
+            const _ProfileHeaderBadgeExplanationButton(
+              type: ProfileBadgeExplanationType.ogViner,
+            ),
+          if (isOgBetaTester)
+            const _ProfileHeaderBadgeExplanationButton(
+              type: ProfileBadgeExplanationType.ogBetaTester,
+            ),
+        ],
+      ),
     );
   }
 }
 
-/// Diameter of a header badge. Sized off the 22px display name beside it,
+/// Side of the tap box around a badge beside the display name.
+const double _nameBadgeTapTarget = 40;
+
+/// Lays [child] out [by] pixels shorter at the top and at the bottom, while
+/// it still paints and takes taps at full size, hanging over its neighbours.
+///
+/// Keeps a name badge's whole tap box without it pushing the username away
+/// from the name. [Column]'s `spacing` cannot go negative, so this is how.
+class _Overhang extends SingleChildRenderObjectWidget {
+  const _Overhang({required this.by, required super.child});
+
+  final double by;
+
+  @override
+  _RenderOverhang createRenderObject(BuildContext context) =>
+      _RenderOverhang(by);
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderOverhang renderObject) {
+    renderObject.by = by;
+  }
+}
+
+class _RenderOverhang extends RenderProxyBox {
+  _RenderOverhang(this._by);
+
+  double _by;
+
+  double get by => _by;
+
+  set by(double value) {
+    if (value == _by) return;
+    _by = value;
+    markNeedsLayout();
+  }
+
+  Offset get _childOffset => Offset(0, -_by);
+
+  double _shortened(double height) => math.max(0, height - _by * 2);
+
+  @override
+  void performLayout() {
+    final child = this.child;
+    if (child == null) {
+      size = constraints.smallest;
+      return;
+    }
+    child.layout(constraints, parentUsesSize: true);
+    size = constraints.constrain(
+      Size(child.size.width, _shortened(child.size.height)),
+    );
+  }
+
+  @override
+  Size computeDryLayout(BoxConstraints constraints) {
+    final childSize = child?.getDryLayout(constraints) ?? Size.zero;
+    return constraints.constrain(
+      Size(childSize.width, _shortened(childSize.height)),
+    );
+  }
+
+  @override
+  double computeMinIntrinsicHeight(double width) =>
+      _shortened(super.computeMinIntrinsicHeight(width));
+
+  @override
+  double computeMaxIntrinsicHeight(double width) =>
+      _shortened(super.computeMaxIntrinsicHeight(width));
+
+  @override
+  void paint(PaintingContext context, Offset offset) {
+    final child = this.child;
+    if (child != null) context.paintChild(child, offset + _childOffset);
+  }
+
+  // The child hangs past this box at both ends, and must take taps there.
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) =>
+      hitTestChildren(result, position: position);
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) {
+    final child = this.child;
+    if (child == null) return false;
+    return result.addWithPaintOffset(
+      offset: _childOffset,
+      position: position,
+      hitTest: (result, transformed) =>
+          child.hitTest(result, position: transformed),
+    );
+  }
+
+  @override
+  void applyPaintTransform(RenderBox child, Matrix4 transform) {
+    transform.translateByDouble(_childOffset.dx, _childOffset.dy, 0, 1);
+  }
+}
+
+/// Diameter of a header badge, sized for the headline display name beside it,
 /// where the inline badges elsewhere sit beside much smaller name rows.
 const double _profileHeaderBadgeDiameter = 22;
 
@@ -253,9 +373,9 @@ class _ProfileHeaderBadgeExplanationButton extends StatelessWidget {
             // Same text as the label; announcing it twice adds nothing.
             excludeFromSemantics: true,
             child: SizedBox.square(
-              // The badge itself is smaller than the 48dp minimum, so the
-              // box around it — not the badge — carries the touch target.
-              dimension: DivineIcon.scaleSize(context, 48),
+              // The box around the badge, not the badge itself, carries the
+              // touch target.
+              dimension: _nameBadgeTapTarget,
               child: Center(child: ExcludeSemantics(child: type.badge)),
             ),
           ),
@@ -355,8 +475,10 @@ class _ProfileBadgesBlock extends ConsumerWidget {
     final items =
         ref.watch(profileAcceptedBadgesProvider(userIdHex)).value ??
         const <ProfileBadgeViewData>[];
+    // Otherwise the badges float over the banner instead.
+    final showsRow = items.isNotEmpty && _showsStaticProfileBadgeRow(context);
     return _ProfileHeaderReveal(
-      child: items.isEmpty ? null : _ProfileBadgesRow(items: items),
+      child: showsRow ? _ProfileBadgesRow(items: items) : null,
     );
   }
 }
@@ -401,9 +523,24 @@ class _ProfileBadgesRow extends StatelessWidget {
 }
 
 class _ProfileBadgeChip extends StatelessWidget {
-  const _ProfileBadgeChip({required this.badge});
+  const _ProfileBadgeChip({
+    required this.badge,
+    this.compact = false,
+    this.depthLayer = 0,
+  });
 
   final ProfileBadgeViewData badge;
+
+  /// Hugs the content for the floating layer: no 48dp height floor, no
+  /// border, and the badge image sits as far from the leading edge as from
+  /// the top and bottom, centred in the pill's rounded end. The static row
+  /// keeps the full 48dp touch target, and its border, which is all that
+  /// outlines a chip whose fill matches the page.
+  final bool compact;
+
+  /// Floating depth layer, 0 for the nearest. Each layer behind it lightens
+  /// the background by one more coat of white.
+  final int depthLayer;
 
   @override
   Widget build(BuildContext context) {
@@ -414,22 +551,29 @@ class _ProfileBadgeChip extends StatelessWidget {
       button: true,
       label: l10n.profileBadgeSemanticLabel(badge.displayName),
       child: Material(
-        color: context.vineColors.surface,
+        color: _depthTintedBackground(context.vineColors.surface, depthLayer),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radius),
-          side: BorderSide(
-            color: context.vineColors.isLight
-                ? context.vineColors.outline
-                : VineTheme.neutral10,
-          ),
+          side: compact
+              ? BorderSide.none
+              : BorderSide(
+                  color: context.vineColors.isLight
+                      ? context.vineColors.outline
+                      : VineTheme.neutral10,
+                ),
         ),
         child: InkWell(
           borderRadius: BorderRadius.circular(radius),
           onTap: () => _showProfileBadgeSheet(context, badge),
           child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
+            constraints: BoxConstraints(
+              minHeight: compact ? 0 : 48,
+              minWidth: 48,
+            ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: compact
+                  ? const EdgeInsetsDirectional.fromSTEB(6, 6, 10, 6)
+                  : const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -438,15 +582,19 @@ class _ProfileBadgeChip extends StatelessWidget {
                     semanticLabel: badge.displayName,
                   ),
                   const SizedBox(width: 6),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 180),
-                    child: Text(
-                      badge.displayName,
-                      style: VineTheme.labelMediumFont(
-                        color: context.vineColors.primaryText,
+                  // Flexible, so a long name ellipsizes within a floating
+                  // chip's width cap instead of overflowing it.
+                  Flexible(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 180),
+                      child: Text(
+                        badge.displayName,
+                        style: VineTheme.labelMediumFont(
+                          color: context.vineColors.primaryText,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
