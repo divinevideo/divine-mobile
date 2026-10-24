@@ -33,9 +33,15 @@ class DmVideoBlurPreferenceService extends ChangeNotifier {
   /// Makes [value] this account's choice and stores it.
   ///
   /// The choice takes effect at once, so of two quick changes the later one
-  /// wins. Throws a [DmVideoBlurPreferenceSaveException] when the platform
-  /// refuses the save; the last successfully saved choice is then back in
+  /// wins. If the save fails, the last successfully saved choice is back in
   /// effect unless a newer choice is pending.
+  ///
+  /// Throws:
+  ///
+  /// * [DmVideoBlurPreferenceSaveException] when the platform refuses the
+  ///   save.
+  /// * Whatever the platform save itself throws, such as a
+  ///   `PlatformException`, unchanged.
   Future<void> setBlurVideoPreviews(bool value) async {
     if (_blurVideoPreviews == value) return;
     final version = ++_saveVersion;
