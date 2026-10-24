@@ -13,11 +13,54 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
+import 'package:nostr_sdk/filter.dart' as nostr;
 import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
+
+class _ObservedAccountSyncDao extends AccountSyncDao {
+  _ObservedAccountSyncDao(super.attachedDatabase);
+  bool observeNextWrite = false;
+  final entered = Completer<void>();
+  final committed = Completer<void>();
+  final abort = Completer<void>();
+  final ordering = <String>[];
+  bool holdLegacyWrite = true;
+  final legacyEntered = Completer<void>();
+  final legacyRelease = Completer<void>();
+  @override
+  Future<void> writeState(
+    String owner,
+    String namespace,
+    Map<String, Map<String, String>> sections,
+  ) async {
+    final legacy =
+        entered.isCompleted && (sections['entries']?.isNotEmpty ?? false);
+    if (legacy) ordering.add('legacy seed');
+    final write = super.writeState(owner, namespace, sections);
+    if (legacy && holdLegacyWrite) {
+      holdLegacyWrite = false;
+      legacyEntered.complete();
+      await write;
+      await legacyRelease.future;
+      return;
+    }
+    if (!observeNextWrite) return write;
+    observeNextWrite = false;
+    entered.complete();
+    ordering.add('outside issued');
+    // A failed test can release the queue in finally. Success must await the
+    // actual shared-Drift write; there is no elapsed-time race or fake adapter.
+    await Future.any([
+      write,
+      abort.future.then((_) => throw StateError('test aborted')),
+    ]);
+    ordering.add('outside committed');
+    committed.complete();
+  }
+}
 
 class _ReadState extends DmSyncState {
   _ReadState(super._prefs);
@@ -91,6 +134,9 @@ class _OverlapDao extends ConversationsDao {
     return boundary;
   }
 
+  bool holdNextLegacyQuery = false;
+  final legacyQueryEntered = Completer<void>();
+  final legacyQueryRelease = Completer<void>();
   bool holdNextTransaction = false;
   bool transactionHeld = false;
   final entered = Completer<void>();
@@ -123,6 +169,15 @@ class _OverlapDao extends ConversationsDao {
       offset: offset,
       ownerPubkey: ownerPubkey,
     );
+    if (holdNextLegacyQuery) {
+      holdNextLegacyQuery = false;
+      return () async {
+        final rows = await result;
+        legacyQueryEntered.complete();
+        await legacyQueryRelease.future;
+        return rows;
+      }();
+    }
     if (transactionHeld && Zone.current[_transactionZone] != true) {
       if (!outsideQueryStarted.isCompleted) outsideQueryStarted.complete();
       // Only a failed regression needs this escape hatch: the real outside
@@ -146,6 +201,7 @@ const _baseCreatedAt = 1700000000;
 void main() {
   setUpAll(() {
     registerFallbackValue(Duration.zero);
+    registerFallbackValue(nostr.Filter());
   });
 
   // Drives the real ConversationsDao against a real database. The mock suite
@@ -524,6 +580,248 @@ void main() {
               isTrue,
             );
             expect((await conversation())!.isRead, isTrue);
+          },
+        );
+      }
+
+      for (final lifecycle in ['active', 'stop', 'erase']) {
+        test(
+          'legacy ingest never waits on a generic write blocked by its '
+          'Drift transaction ($lifecycle)',
+          () async {
+            final signer = LocalNostrSigner(_privateKey);
+            final owner = (await signer.getPublicKey())!;
+            final participants = [owner, _peer]..sort();
+            conversationId = DmRepository.computeConversationId(participants);
+            await repository.stopListening();
+            await accountState.close();
+            await conversationsDao.upsertConversation(
+              id: conversationId,
+              participantPubkeys: jsonEncode(participants),
+              isGroup: false,
+              createdAt: _baseCreatedAt,
+              lastMessageTimestamp: _baseCreatedAt + 100,
+              ownerPubkey: owner,
+            );
+            await conversationsDao.applySyncedDismissal(
+              conversationId,
+              ownerPubkey: owner,
+              dismissed: true,
+              boundaryTimestamp: _baseCreatedAt + 100,
+              knownMessageIds: {'1' * 64},
+            );
+            const namespace = 'divine/dm-dismissals/v1';
+            await db.accountSyncDao.writeState(_owner, namespace, {
+              'entries': {
+                'other-owner': '{"value":true,"clock":1,"device":"other"}',
+              },
+            });
+            final otherOwnerBefore = await db.accountSyncDao.readState(
+              _owner,
+              namespace,
+            );
+            final journalDao = _ObservedAccountSyncDao(db);
+            final sourceClient = _MockNostrClient();
+            final sources = StreamController<Event>.broadcast();
+            addTearDown(sources.close);
+            when(
+              () => sourceClient.subscribe(any()),
+            ).thenAnswer((_) => sources.stream);
+            when(
+              () => sourceClient.relayStatusStream,
+            ).thenAnswer((_) => const Stream.empty());
+            when(() => sourceClient.readAllEvents(any())).thenAnswer(
+              (_) async => const PagedQueryResult(
+                events: [],
+                isComplete: false,
+                pages: 1,
+              ),
+            );
+            accountState = AccountStateRepository(
+              nostrClient: sourceClient,
+              sharedPreferences: await SharedPreferences.getInstance(),
+              pubkey: owner,
+              signer: () => LocalNostrSigner(_privateKey),
+              namespace: 'divine/dm-dismissals/v1',
+              perFieldSnapshots: true,
+              storage: DriftAccountStateStorage(
+                journalDao,
+                owner: owner,
+                namespace: 'divine/dm-dismissals/v1',
+              ),
+            );
+            await accountState.start();
+            await expectLater(
+              accountState.synchronize(),
+              throwsA(isA<AccountStateException>()),
+            );
+            await accountState.seed({});
+            repository = DmRepository(
+              nostrClient: nostrClient,
+              directMessagesDao: messagesDao,
+              conversationsDao: conversationsDao,
+              userPubkey: owner,
+              syncState: syncState,
+              accountStateRepository: accountState,
+              signer: LocalNostrSigner(_privateKey),
+              rumorDecryptor: (_, wrap) async => rumorByWrapId[wrap.id],
+            );
+            addTearDown(() {
+              if (!conversationsDao.legacyQueryRelease.isCompleted) {
+                conversationsDao.legacyQueryRelease.complete();
+              }
+              if (!conversationsDao.release.isCompleted) {
+                conversationsDao.release.complete();
+              }
+            });
+            conversationsDao.holdNextLegacyQuery = true;
+            await repository.startListening();
+            await conversationsDao.legacyQueryEntered.future;
+            expect(accountState.contains(participants.join(',')), isFalse);
+            conversationsDao.holdNextTransaction = true;
+            final wrapId = 'e' * 64;
+            rumorByWrapId[wrapId] = Event.fromJson({
+              'id': 'f' * 64,
+              'pubkey': _peer,
+              'created_at': _baseCreatedAt + 50,
+              'kind': EventKind.privateDirectMessage,
+              'tags': [
+                ['p', owner],
+              ],
+              'content': 'older message',
+              'sig': '',
+            });
+            relay.add(
+              Event.fromJson({
+                'id': wrapId,
+                'pubkey': _peer,
+                'created_at': _baseCreatedAt + 50,
+                'kind': EventKind.giftWrap,
+                'tags': [
+                  ['p', owner],
+                ],
+                'content': 'wrapped',
+                'sig': '',
+              }),
+            );
+            await conversationsDao.entered.future;
+            journalDao.observeNextWrite = true;
+            final source = (await signer.signEvent(
+              Event(
+                owner,
+                30078,
+                [
+                  ['d', 'divine/dm-dismissals/v1'],
+                ],
+                'opaque received source',
+                createdAt: _baseCreatedAt,
+              ),
+            ))!;
+            expect(source.isValid, isTrue);
+            expect(source.isSigned, isTrue);
+            sources.add(source);
+            await journalDao.entered.future;
+            conversationsDao.release.complete();
+            final committed = messagesDao
+                .watchMessagesForConversation(
+                  conversationId,
+                  ownerPubkey: owner,
+                )
+                .firstWhere((rows) => rows.isNotEmpty);
+            try {
+              // Only a deadlock safety bound; no performance/elapsed-time assertion.
+              await committed.timeout(const Duration(seconds: 30));
+              await journalDao.committed.future;
+              expect(journalDao.abort.isCompleted, isFalse);
+              await journalDao.legacyEntered.future;
+              conversationsDao.transactionHeld = false;
+              conversationsDao.legacyQueryRelease.complete();
+              var drained = false;
+              final drain = (switch (lifecycle) {
+                'stop' => repository.stopListening(),
+                'erase' => repository.closeLocalReadState(),
+                _ => repository.flushPendingReadState(),
+              }).then((_) => drained = true);
+              await pumpEventQueue();
+              expect(
+                drained,
+                isFalse,
+                reason: 'the issued local seed is still held',
+              );
+              journalDao.legacyRelease.complete();
+              await drain;
+              expect(drained, isTrue);
+            } finally {
+              if (!journalDao.abort.isCompleted) journalDao.abort.complete();
+              conversationsDao.transactionHeld = false;
+              if (!conversationsDao.legacyQueryRelease.isCompleted) {
+                conversationsDao.legacyQueryRelease.complete();
+              }
+              if (!journalDao.legacyRelease.isCompleted) {
+                journalDao.legacyRelease.complete();
+              }
+              await repository.flushPendingReadState();
+            }
+            expect(
+              journalDao.ordering,
+              containsAllInOrder([
+                'outside issued',
+                'outside committed',
+                'legacy seed',
+              ]),
+            );
+            final row = await conversationsDao.getConversation(
+              conversationId,
+              ownerPubkey: owner,
+            );
+            expect(row!.isDismissed, isTrue);
+            expect(accountState.value(participants.join(',')), {
+              'through': _baseCreatedAt + 100,
+              'known': ['1' * 64],
+            });
+            await repository.closeLocalReadState();
+            await repository.stopListening();
+            await accountState.close();
+            final restarted = AccountStateRepository(
+              nostrClient: sourceClient,
+              sharedPreferences: await SharedPreferences.getInstance(),
+              pubkey: owner,
+              signer: () => LocalNostrSigner(_privateKey),
+              namespace: 'divine/dm-dismissals/v1',
+              perFieldSnapshots: true,
+              storage: DriftAccountStateStorage(
+                db.accountSyncDao,
+                owner: owner,
+                namespace: 'divine/dm-dismissals/v1',
+              ),
+            );
+            await restarted.seed({});
+            expect(
+              restarted.value(participants.join(',')),
+              accountState.value(participants.join(',')),
+            );
+            await restarted.close();
+            if (lifecycle == 'erase') {
+              await db.accountSyncDao.clearAccount(owner);
+              await messagesDao.deleteAllForOwner(owner);
+              await conversationsDao.deleteAllForOwner(owner);
+              await conversationsDao.clearDismissalsForOwner(owner);
+              expect(
+                await db.accountSyncDao.readState(owner, namespace),
+                isEmpty,
+              );
+              expect(
+                await conversationsDao.getDismissal(
+                  conversationId,
+                  ownerPubkey: owner,
+                ),
+                isNull,
+              );
+            }
+            expect(
+              await db.accountSyncDao.readState(_owner, namespace),
+              otherOwnerBefore,
+            );
           },
         );
       }

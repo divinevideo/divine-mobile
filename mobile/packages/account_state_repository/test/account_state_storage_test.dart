@@ -131,6 +131,30 @@ void main() {
     );
   });
 
+  group('eager restoration', () {
+    test(
+      'observes corrupt Drift restoration before a later operation awaits it',
+      () async {
+        await db.accountSyncDao.writeState(owner, 'dm', {
+          'entries': {'broken': '{invalid'},
+        });
+        final unhandled = <Object>[];
+        await runZonedGuarded(() async {
+          final repository = create(owner);
+          await pumpEventQueue();
+          await expectLater(repository.seed({}), throwsFormatException);
+          await expectLater(repository.start(), throwsFormatException);
+          await repository.close();
+        }, (error, _) => unhandled.add(error));
+        expect(unhandled, isEmpty);
+        expect(
+          (await db.accountSyncDao.readState(owner, 'dm')).single.value,
+          '{invalid',
+        );
+      },
+    );
+  });
+
   group('write / read', () {
     test(
       'structured adapter round-trips opaque addresses and signed source records',

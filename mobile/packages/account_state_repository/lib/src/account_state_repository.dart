@@ -50,6 +50,9 @@ class AccountStateRepository {
        _defaultMergeRule = defaultMergeRule {
     _restore();
     _ready = storage == null ? Future<void>.value() : _restoreStorage(storage);
+    // Restoration starts before session readiness. Observe its error now while
+    // preserving the original failed future for later operations and close.
+    _ready.ignore();
   }
 
   final String pubkey;

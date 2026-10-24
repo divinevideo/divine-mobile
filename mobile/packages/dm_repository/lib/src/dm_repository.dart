@@ -701,6 +701,7 @@ class DmRepository {
   Future<void> _applyAccountDismissals({
     String? conversationId,
     String? ownerPubkey,
+    bool migrateLegacy = true,
   }) {
     final state = _accountStateRepository;
     final owner = ownerPubkey ?? _ownerPubkey;
@@ -733,7 +734,12 @@ class DmRepository {
       final seeds = <String, Object?>{};
       for (final row in rows) {
         final key = _participantTupleKey(row.participantPubkeys);
-        if (key == null || state.contains(key) || !row.isDismissed) continue;
+        if (!migrateLegacy ||
+            key == null ||
+            state.contains(key) ||
+            !row.isDismissed) {
+          continue;
+        }
         final local = await _conversationsDao.getDismissal(
           row.id,
           ownerPubkey: owner,
@@ -4515,6 +4521,12 @@ class DmRepository {
             }
           }
         });
+        // The ingest transaction has committed, so queued journal persistence
+        // can acquire the same database without a lock-order cycle.
+        await _applyAccountDismissals(
+          conversationId: conversationId,
+          ownerPubkey: ownerPubkey,
+        );
 
         if (skippedByTransactionalGiftWrapDedup) {
           Log.debug(
@@ -5326,6 +5338,10 @@ class DmRepository {
         // replayed history stamped at or before the removal stays
         // suppressed. #7804.
       });
+      await _applyAccountDismissals(
+        conversationId: conversationId,
+        ownerPubkey: ownerPubkey,
+      );
 
       if (skippedByTransactionalGiftWrapDedup) {
         Log.debug(
@@ -11169,9 +11185,12 @@ class DmRepository {
     String conversationId, {
     required String ownerPubkey,
   }) async {
+    // Projection uses this transaction; the generic journal write queue must
+    // never be awaited while holding its database lock. Ingest seeds afterward.
     await _applyAccountDismissals(
       conversationId: conversationId,
       ownerPubkey: ownerPubkey,
+      migrateLegacy: false,
     );
     final sync = _syncState;
     if (sync != null) {

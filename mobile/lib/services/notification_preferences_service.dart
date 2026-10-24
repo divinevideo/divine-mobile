@@ -273,6 +273,7 @@ class NotificationPreferencesService {
   AccountPreferenceWriteLease? _migrationOwner;
   int _localMutations = 0;
   bool _refreshPending = false;
+  final _publications = <String, Future<void>>{};
 
   void _accountChanged() {
     if (_disposed) return;
@@ -487,19 +488,52 @@ class NotificationPreferencesService {
 
   Future<NotificationPreferencesSyncOutcome> syncDirtyPreferencesForPubkey(
     String pubkey,
-  ) async {
-    final prefs = await _store.loadDirty(pubkey);
-    if (prefs == null) return NotificationPreferencesSyncOutcome.nothingToDrain;
-
-    return _publishAndClearDirtyPreferences(pubkey, prefs);
-  }
+  ) => _publishAndClearDirtyPreferences(pubkey);
 
   Future<NotificationPreferencesSyncOutcome> _publishAndClearDirtyPreferences(
+    String pubkey, [
+    NotificationPreferences? preferences,
+  ]) {
+    final previous = _publications[pubkey];
+    final owner = _accountPreferences?.captureWrite();
+    bool isCurrent() =>
+        !_disposed && _currentPubkey() == pubkey && (owner?.isCurrent ?? true);
+    final result = () async {
+      await previous;
+      if (!isCurrent()) return NotificationPreferencesSyncOutcome.stillDirty;
+      // Encryption, signing and relay acknowledgment form one ordered delivery.
+      // A queued retry reads the latest intent only after its predecessor settles.
+      final latest = previous != null || preferences == null
+          ? await _store.loadDirty(pubkey)
+          : preferences;
+      if (!isCurrent()) return NotificationPreferencesSyncOutcome.stillDirty;
+      if (latest == null) {
+        return NotificationPreferencesSyncOutcome.nothingToDrain;
+      }
+      return _publishSnapshot(pubkey, latest, isCurrent);
+    }();
+    final settled = result.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
+    );
+    _publications[pubkey] = settled;
+    unawaited(
+      settled.then((_) {
+        if (identical(_publications[pubkey], settled)) {
+          unawaited(_publications.remove(pubkey));
+        }
+      }),
+    );
+    return result;
+  }
+
+  Future<NotificationPreferencesSyncOutcome> _publishSnapshot(
     String pubkey,
     NotificationPreferences preferences,
+    bool Function() isCurrent,
   ) async {
     final published = await _publishPreferences(pubkey, preferences);
-    if (!published) {
+    if (!published || !isCurrent()) {
       return NotificationPreferencesSyncOutcome.stillDirty;
     }
 

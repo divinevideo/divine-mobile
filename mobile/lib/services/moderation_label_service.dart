@@ -439,7 +439,8 @@ class ModerationLabelService {
   }) async {
     await _withDeferredTailRebuild(() async {
       for (final pubkey in _subscribedLabelers.toList()) {
-        if (isCurrent != null && !isCurrent()) return;
+        if (_disposed || (isCurrent != null && !isCurrent())) return;
+        if (!_subscribedLabelers.contains(pubkey)) continue;
         await subscribeToLabeler(pubkey);
       }
     });
