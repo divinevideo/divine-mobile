@@ -32,6 +32,11 @@ enum DivineButtonType {
   /// Use for inline text links and low-emphasis actions.
   link,
 
+  /// Borderless supporting action with Inter text and muted adaptive content.
+  /// Use for controls such as opening a tools tray without competing with
+  /// media.
+  quiet,
+
   /// Error/destructive button with red background and light text.
   /// Use for destructive actions like "Delete", "Remove".
   error,
@@ -230,18 +235,20 @@ class _DivineButtonContent extends StatelessWidget {
   bool get _isEnabled => onPressed != null && !isLoading;
 
   /// Icon size scales with [size]: tiny uses a smaller 20px icon to fit
-  /// inside the 32px visible chip, small/base use 24px.
+  /// inside the 32px visible chip, small/base use 24px. Quiet uses 16px.
   ///
   /// Unscaled — [DivineIcon] applies the text scaler itself. The loading
   /// spinner is not a [DivineIcon], so it scales this through
   /// [DivineIcon.scaleSize] to land on the same size as the icon it
   /// replaces; otherwise the button resizes when it enters the loading
   /// state.
-  double get _iconSize => switch (size) {
-    DivineButtonSize.tiny => 20,
-    DivineButtonSize.small => 24,
-    DivineButtonSize.base => 24,
-  };
+  double get _iconSize => type == DivineButtonType.quiet
+      ? 16
+      : switch (size) {
+          DivineButtonSize.tiny => 20,
+          DivineButtonSize.small => 24,
+          DivineButtonSize.base => 24,
+        };
 
   /// Whether the button has no text label (icon-only mode).
   ///
@@ -266,13 +273,21 @@ class _DivineButtonContent extends StatelessWidget {
   /// (32 / 40 / 48px) and never changes with stretch state. The border
   /// thickness is subtracted so the total height stays constant across
   /// bordered and unbordered types (see [_borderInset]).
-  double get _verticalPadding =>
-      switch (size) {
-        DivineButtonSize.tiny => 6,
-        DivineButtonSize.small => 8,
-        DivineButtonSize.base => 12,
-      } -
-      _borderInset;
+  double get _verticalPadding {
+    if (type == DivineButtonType.quiet) {
+      return switch (size) {
+        DivineButtonSize.tiny => _noLabel ? 8 : 6,
+        DivineButtonSize.small => _noLabel ? 12 : 10,
+        DivineButtonSize.base => _noLabel ? 16 : 14,
+      };
+    }
+    return switch (size) {
+          DivineButtonSize.tiny => 6,
+          DivineButtonSize.small => 8,
+          DivineButtonSize.base => 12,
+        } -
+        _borderInset;
+  }
 
   /// Horizontal inner padding for a content-hugging button (the wider,
   /// visually-balanced inset). A stretched button instead uses
@@ -311,6 +326,7 @@ class _DivineButtonContent extends StatelessWidget {
     DivineButtonType.ghost => colors.ghostFill,
     DivineButtonType.ghostSecondary => VineTheme.scrim15,
     DivineButtonType.link => VineTheme.transparent,
+    DivineButtonType.quiet => VineTheme.transparent,
     DivineButtonType.error => VineTheme.error,
   };
 
@@ -322,6 +338,7 @@ class _DivineButtonContent extends StatelessWidget {
     DivineButtonType.ghostSecondary =>
       colors.isLight ? colors.onSurface : VineTheme.onSurface,
     DivineButtonType.link => colors.onSurfaceVariant,
+    DivineButtonType.quiet => colors.onSurfaceVariant,
     DivineButtonType.error => VineTheme.onErrorContainer,
   };
 
@@ -331,6 +348,11 @@ class _DivineButtonContent extends StatelessWidget {
 
   TextStyle _textStyle(VineThemeColors colors) {
     final foreground = _foregroundColor(colors);
+    if (type == DivineButtonType.quiet) {
+      return VineTheme.bodyMediumFont(color: foreground).copyWith(
+        fontWeight: FontWeight.w500,
+      );
+    }
     if (type == DivineButtonType.link) {
       return VineTheme.bodyLargeFont(color: foreground).copyWith(
         decoration: TextDecoration.underline,
@@ -352,8 +374,10 @@ class _DivineButtonContent extends StatelessWidget {
   }
 
   List<BoxShadow>? _boxShadow(VineThemeColors colors) {
-    // Link buttons have no shadow
-    if (type == DivineButtonType.link) return null;
+    // Link and quiet buttons have no shadow.
+    if (type == DivineButtonType.link || type == DivineButtonType.quiet) {
+      return null;
+    }
     // Disabled primary buttons have no shadow
     if (!_isEnabled && type == DivineButtonType.primary) return null;
 

@@ -10912,9 +10912,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorHueSemanticLabel => 'رنگت';
 
   @override
-  String get videoEditorAddElementSemanticLabel => 'عنصر شامل کریں';
-
-  @override
   String get videoEditorDoneSemanticLabel => 'ہو گیا';
 
   @override

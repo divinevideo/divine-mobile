@@ -10895,9 +10895,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorHueSemanticLabel => 'الصبغة';
 
   @override
-  String get videoEditorAddElementSemanticLabel => 'إضافة عنصر';
-
-  @override
   String get videoEditorDoneSemanticLabel => 'تم';
 
   @override

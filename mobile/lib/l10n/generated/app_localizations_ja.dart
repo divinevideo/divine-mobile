@@ -10362,9 +10362,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorHueSemanticLabel => '色相';
 
   @override
-  String get videoEditorAddElementSemanticLabel => '要素を追加';
-
-  @override
   String get videoEditorDoneSemanticLabel => '完了';
 
   @override

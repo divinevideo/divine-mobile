@@ -10251,9 +10251,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorHueSemanticLabel => '色相';
 
   @override
-  String get videoEditorAddElementSemanticLabel => '添加元素';
-
-  @override
   String get videoEditorDoneSemanticLabel => '完成';
 
   @override

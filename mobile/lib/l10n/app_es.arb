@@ -3100,7 +3100,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Tono",
-  "videoEditorAddElementSemanticLabel": "Agregar elemento",
   "videoEditorDoneSemanticLabel": "Listo",
   "videoEditorLevelSemanticLabel": "Nivel",
   "videoEditorBrushSizeSemanticLabel": "Tamaño del pincel",

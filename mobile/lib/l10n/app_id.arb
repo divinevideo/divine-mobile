@@ -2470,7 +2470,6 @@
   "cameraPermissionAllowAccessTitle": "Izinkan akses kamera & mikrofon",
   "cameraPermissionAllowAccessDescription": "Ini memungkinkan Anda merekam dan mengedit video langsung di aplikasi, tidak lebih.",
   "cameraPermissionGoToSettings": "Buka pengaturan",
-  "videoEditorAddElementSemanticLabel": "Tambah elemen",
   "videoEditorAddTitle": "Tambah",
   "videoEditorAudioAddAudio": "Tambah audio",
   "videoEditorAudioFailedToLoadTitle": "Gagal memuat suara",

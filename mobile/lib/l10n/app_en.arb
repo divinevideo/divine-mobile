@@ -8096,7 +8096,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Hue",
-  "videoEditorAddElementSemanticLabel": "Add element",
   "videoEditorDoneSemanticLabel": "Done",
   "videoEditorLevelSemanticLabel": "Level",
   "videoEditorBrushSizeSemanticLabel": "Brush size",

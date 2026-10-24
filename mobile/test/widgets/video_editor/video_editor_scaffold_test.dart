@@ -388,7 +388,7 @@ void main() {
 
       final l10n = lookupAppLocalizations(const Locale('en'));
       expect(
-        find.bySemanticsLabel(l10n.videoEditorAddElementSemanticLabel),
+        find.bySemanticsLabel(l10n.videoEditorEditingToolsLabel),
         findsNothing,
       );
     });

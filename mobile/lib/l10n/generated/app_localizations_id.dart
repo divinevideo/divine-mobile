@@ -10818,9 +10818,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorHueSemanticLabel => 'Rona';
 
   @override
-  String get videoEditorAddElementSemanticLabel => 'Tambah elemen';
-
-  @override
   String get videoEditorDoneSemanticLabel => 'Selesai';
 
   @override

@@ -10381,9 +10381,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorHueSemanticLabel => '색조';
 
   @override
-  String get videoEditorAddElementSemanticLabel => '요소 추가';
-
-  @override
   String get videoEditorDoneSemanticLabel => '완료';
 
   @override
