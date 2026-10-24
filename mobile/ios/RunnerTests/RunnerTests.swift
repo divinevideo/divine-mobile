@@ -1745,7 +1745,8 @@ final class AdjustVideoEffectTests: XCTestCase {
       for x in 0..<width {
         let i = (y * width + x) * 3
         let fx = (Double(x) + 0.5) / Double(width), fy = (Double(y) + 0.5) / Double(height)
-        let check = y < 40 ? ((x / 3 + y / 3) % 2 == 0 ? 0.08 : -0.08) : 0
+        let isLight = (x / 3 + y / 3) % 2 == 0
+        let check: Double = y < 40 ? (isLight ? 0.08 : -0.08) : 0
         rgb[i] = min(max(fy + check, 0), 1)
         rgb[i + 1] = fy * (0.4 + 0.6 * fx)
         rgb[i + 2] = fy * fx * fx
@@ -1846,7 +1847,9 @@ final class AdjustVideoEffectTests: XCTestCase {
             luma(tap(px + r, py + r)), luma(tap(px - r, py + r)),
             luma(tap(px + r, py - r)), luma(tap(px - r, py - r)),
           ]
-          let blur = (4 * y + 2 * edges.reduce(0, +) + corners.reduce(0, +)) / 16
+          let edgeSum: Double = edges.reduce(0, +)
+          let cornerSum: Double = corners.reduce(0, +)
+          let blur = (4 * y + 2 * edgeSum + cornerSum) / 16
           let around = edges + corners + [y]
           let sharp = min(max(y + 3 * v.k * (y - blur), around.min()!), around.max()!)
           color = color.map { unit($0 + sharp - y) }
@@ -1854,23 +1857,27 @@ final class AdjustVideoEffectTests: XCTestCase {
         let l = luma(color), dark = 1 - l
         let lows = l * dark * dark * dark * dark * 12.20703125
         let highs = l * l * l * l * dark * 12.20703125
-        let toned =
-          l + v.s * (v.s > 0 ? 0.2 : 0.065) * lows + v.h * (v.h < 0 ? 0.2 : 0.065) * highs
+        let shadowGain: Double = v.s > 0 ? 0.2 : 0.065
+        let highlightGain: Double = v.h < 0 ? 0.2 : 0.065
+        let toned = l + v.s * shadowGain * lows + v.h * highlightGain * highs
         color = color.map { unit(l > 0.0001 ? $0 * (toned / l) : $0 + (toned - l)) }
         if v.v != 0 {
           let chroma = color.max()! - color.min()!
           var skin = 0.0
           if color[0] >= color[1] && color[1] >= color[2] && chroma > 0.0001 {
             let hue = (color[1] - color[2]) / chroma
-            skin =
-              smoothstep(0.05, 0.25, hue) * (1 - smoothstep(0.6, 0.85, hue))
-              * smoothstep(0.02, 0.08, chroma) * (1 - smoothstep(0.5, 0.75, chroma))
+            let hueWeight = smoothstep(0.05, 0.25, hue) * (1 - smoothstep(0.6, 0.85, hue))
+            let chromaWeight =
+              smoothstep(0.02, 0.08, chroma) * (1 - smoothstep(0.5, 0.75, chroma))
+            skin = hueWeight * chromaWeight
           }
           let keep = 1 - 0.85 * skin
-          let amount =
-            v.v > 0
-            ? v.v * 1.25 * (1 - chroma) * (1 - chroma) * keep
-            : v.v * (0.4 + 0.6 * chroma) * keep
+          let amount: Double
+          if v.v > 0 {
+            amount = v.v * 1.25 * (1 - chroma) * (1 - chroma) * keep
+          } else {
+            amount = v.v * (0.4 + 0.6 * chroma) * keep
+          }
           let grey = luma(color)
           color = color.map { unit(grey + ($0 - grey) * (1 + amount)) }
         }

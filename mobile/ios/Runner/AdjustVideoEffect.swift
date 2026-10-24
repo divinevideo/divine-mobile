@@ -130,7 +130,8 @@ final class AdjustKernel: CIImageProcessorKernel {
   /// frame, more on larger ones, so a video looks as sharp after it at any
   /// resolution.
   static func spacing(for extent: CGRect) -> Double {
-    max(1, 1.5 * min(extent.width, extent.height) / 1080)
+    let shorterSide = Double(min(extent.width, extent.height))
+    return max(1, 1.5 * shorterSide / 1080)
   }
 
   // Half floats keep the frame's precision, and every Apple GPU filters them;
@@ -170,7 +171,8 @@ final class AdjustKernel: CIImageProcessorKernel {
       Float(output.region.minX), Float(output.region.minY),
       Float(input.region.minX), Float(input.region.minY),
       Float(input.region.width), Float(input.region.height), 0, 0,
-    ] + settings.map(Float.init)
+    ]
+    values += settings.map { Float($0) }
     encoder.setComputePipelineState(pipeline)
     encoder.setTexture(source, index: 0)
     encoder.setTexture(target, index: 1)
