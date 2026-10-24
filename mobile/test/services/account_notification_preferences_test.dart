@@ -144,11 +144,15 @@ void main() {
     });
 
     test('independent toggles survive a held native projection', () async {
+      final originalStore = SharedPreferencesStorePlatform.instance;
+      addTearDown(() {
+        SharedPreferencesStorePlatform.instance = originalStore;
+      });
       final native = _HeldNativeProjection();
-      SharedPreferencesStorePlatform.instance = native;
       addTearDown(() {
         if (!native.release.isCompleted) native.release.complete();
       });
+      SharedPreferencesStorePlatform.instance = native;
       final first = cubit.setPreference(
         NotificationPreference.likesEnabled,
         false,
