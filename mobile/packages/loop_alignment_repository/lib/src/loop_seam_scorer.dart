@@ -59,7 +59,17 @@ final class LoopSeamScorer {
   const LoopSeamScorer();
 
   /// Inputs are chronological on each side, end.last immediately before start.first.
-  LoopSeamScores score(List<LoopFrame> start, List<LoopFrame> end) {
+  /// Speeds convert decoded source timestamps to playback time; unit speed
+  /// means the supplied timestamps already are presentation timestamps.
+  /// [seamInterval] is the actual last-frame presentation duration to the cut.
+  LoopSeamScores score(
+    List<LoopFrame> start,
+    List<LoopFrame> end, {
+    required Duration seamInterval,
+    double startSpeed = 1,
+    double endSpeed = 1,
+  }) {
+    _validateTiming(startSpeed, endSpeed, seamInterval);
     if (start.length < 2 || end.length < 2)
       throw ArgumentError('Two frames per side are required');
     final s = start
@@ -79,14 +89,14 @@ final class LoopSeamScorer {
     }
     // Compare exposure-normalized temporal derivatives. Normalize to one ordinary
     // frame interval so variable-rate frames do not create a false acceleration.
-    final dtStart = _seconds(start[1].time - start[0].time);
-    final dtEnd = _seconds(end.last.time - end[end.length - 2].time);
+    final dtStart = _seconds(start[1].time - start[0].time) / startSpeed;
+    final dtEnd = _seconds(end.last.time - end[end.length - 2].time) / endSpeed;
     if (dtStart <= 0 || dtEnd <= 0)
       throw ArgumentError('Frame timestamps must increase');
     final dt = (dtStart + dtEnd) / 2;
     final incoming = _velocity(e[e.length - 2], e.last, dtEnd, dt);
     final outgoing = _velocity(s[0], s[1], dtStart, dt);
-    final across = _velocity(e.last, s.first, dt, dt);
+    final across = _velocity(e.last, s.first, _seconds(seamInterval), dt);
     var motion = 0.0;
     for (var i = 0; i < across.length; i++) {
       motion +=
@@ -105,6 +115,9 @@ final class LoopSeamScorer {
     required List<LoopFrame> start,
     required List<LoopFrame> end,
     LoopAlignmentLimits limits = const LoopAlignmentLimits(),
+    required Duration seamInterval,
+    double startSpeed = 1,
+    double endSpeed = 1,
   }) {
     if (start.length < 2 ||
         end.length < 2 ||
@@ -119,16 +132,52 @@ final class LoopSeamScorer {
             ) >
             .5)
       return false;
-    final scores = score(start, end);
+    final scores = score(
+      start,
+      end,
+      seamInterval: seamInterval,
+      startSpeed: startSpeed,
+      endSpeed: endSpeed,
+    );
     if (scores.difference > limits.maximumDifference) return false;
+    final ordinary = motionReference(
+      start,
+      end,
+      startSpeed: startSpeed,
+      endSpeed: endSpeed,
+    );
+    return ordinary.samples >= 4 && scores.motion <= ordinary.p95 + 1e-12;
+  }
+
+  /// Ordinary acceleration measured on precisely the same 64-pixel grid and
+  /// playback normalization interval as [score].
+  ({int samples, double p95}) motionReference(
+    List<LoopFrame> start,
+    List<LoopFrame> end, {
+    double startSpeed = 1,
+    double endSpeed = 1,
+  }) {
+    _validateTiming(startSpeed, endSpeed, const Duration(microseconds: 1));
+    if (start.length < 2 || end.length < 2)
+      throw ArgumentError('Two frames per side are required');
+    final interval =
+        (_seconds(start[1].time - start[0].time) / startSpeed +
+            _seconds(end.last.time - end[end.length - 2].time) / endSpeed) /
+        2;
+    if (interval <= 0) throw ArgumentError('Frame timestamps must increase');
     final ordinary = <double>[];
-    for (final frames in [start, end]) {
+    for (final side in [(start, startSpeed), (end, endSpeed)]) {
+      final frames = side.$1
+          .map((f) => const LoopFrameResampler().warp(f, LoopPose.identity, 1))
+          .toList();
       for (var i = 2; i < frames.length; i++) {
         final a = frames[i - 2], b = frames[i - 1], c = frames[i];
-        final dt1 = _seconds(b.time - a.time), dt2 = _seconds(c.time - b.time);
-        if (dt1 <= 0 || dt2 <= 0) return false;
-        final velocity1 = _velocity(a, b, dt1, (dt1 + dt2) / 2),
-            velocity2 = _velocity(b, c, dt2, (dt1 + dt2) / 2);
+        final dt1 = _seconds(b.time - a.time) / side.$2,
+            dt2 = _seconds(c.time - b.time) / side.$2;
+        if (dt1 <= 0 || dt2 <= 0)
+          throw ArgumentError('Frame timestamps must increase');
+        final velocity1 = _velocity(a, b, dt1, interval),
+            velocity2 = _velocity(b, c, dt2, interval);
         var value = 0.0;
         for (var j = 0; j < velocity1.length; j++) {
           value += (velocity2[j] - velocity1[j]).abs();
@@ -136,10 +185,28 @@ final class LoopSeamScorer {
         ordinary.add(value / velocity1.length);
       }
     }
-    if (ordinary.length < 4) return false;
+    if (ordinary.isEmpty) return (samples: 0, p95: 0);
     ordinary.sort();
-    return scores.motion <=
-        ordinary[(.95 * (ordinary.length - 1)).ceil()] + 1e-12;
+    return (
+      samples: ordinary.length,
+      p95: ordinary[(.95 * (ordinary.length - 1)).ceil()],
+    );
+  }
+
+  void _validateTiming(
+    double startSpeed,
+    double endSpeed,
+    Duration seamInterval,
+  ) {
+    if (!startSpeed.isFinite ||
+        startSpeed <= 0 ||
+        !endSpeed.isFinite ||
+        endSpeed <= 0 ||
+        seamInterval <= Duration.zero) {
+      throw ArgumentError(
+        'Positive finite playback speeds and seam interval required',
+      );
+    }
   }
 
   double _difference(LoopFrame a, LoopFrame b) {

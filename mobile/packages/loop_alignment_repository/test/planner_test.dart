@@ -132,6 +132,7 @@ void main() {
             registration: evidence(LoopPose.identity, consistent: 0),
             start: frames,
             end: frames,
+            seamInterval: const Duration(milliseconds: 40),
           ),
           isFalse,
         );
@@ -186,13 +187,18 @@ void main() {
           .score(
             [solid(10, 0), solid(20, 40), solid(30, 80)],
             [solid(0, 0), solid(0, 40), solid(0, 80)],
+            seamInterval: const Duration(milliseconds: 40),
           )
           .difference,
       closeTo((10 + 20 * .5 + 30 * .25) / 1.75 / 255, 1e-12),
     );
     expect(
       const LoopSeamScorer()
-          .score([solid(10, 0), solid(20, 40)], [solid(0, 0), solid(0, 40)])
+          .score(
+            [solid(10, 0), solid(20, 40)],
+            [solid(0, 0), solid(0, 40)],
+            seamInterval: const Duration(milliseconds: 40),
+          )
           .difference,
       closeTo(20 / 1.5 / 255, 1e-12),
     );

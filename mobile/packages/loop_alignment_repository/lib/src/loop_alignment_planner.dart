@@ -69,8 +69,27 @@ final class LoopAlignmentPlanner {
         .skip(math.max(0, lastFrames.length - 3))
         .map((f) => const LoopFrameResampler().warp(f, LoopPose.identity, zoom))
         .toList();
-    final corrected = const LoopSeamScorer().score(start, end);
-    final baseline = const LoopSeamScorer().score(originalStart, originalEnd);
+    final seamInterval = Duration(
+      microseconds:
+          ((input.clips.last.sourceEnd - lastFrames.last.time).inMicroseconds /
+                  input.clips.last.speed)
+              .round(),
+    );
+    if (seamInterval <= Duration.zero) return null;
+    final corrected = const LoopSeamScorer().score(
+      start,
+      end,
+      seamInterval: seamInterval,
+      startSpeed: input.clips.first.speed,
+      endSpeed: input.clips.last.speed,
+    );
+    final baseline = const LoopSeamScorer().score(
+      originalStart,
+      originalEnd,
+      seamInterval: seamInterval,
+      startSpeed: input.clips.first.speed,
+      endSpeed: input.clips.last.speed,
+    );
     if (!limits.acceptsScores(baseline, corrected)) return null;
     return LoopAlignmentPlan(
       clips: plans,
@@ -233,25 +252,28 @@ final class LoopAlignmentPlanner {
         clip.speed;
     final dtOut =
         (opening[1].time - opening[0].time).inMicroseconds / clips.first.speed;
-    final seamInterval = (dtIn + dtOut) / 2;
-    final previousOpening = LoopPose.components(
-      x: -outgoing.pose.tx * seamInterval / dtOut,
-      y: -outgoing.pose.ty * seamInterval / dtOut,
-      angle: -outgoing.pose.angle * seamInterval / dtOut,
-      logScale: -math.log(outgoing.pose.scale) * seamInterval / dtOut,
-    );
+    final seamInterval =
+        (clip.sourceEnd - frames.last.time).inMicroseconds / clip.speed;
+    if (seamInterval <= 0) return null;
+    final previousOpening = _power(outgoing.pose, -seamInterval / dtOut);
     final endpoint = join.inverse().then(previousOpening);
-    final vin = [
-      incoming.pose.tx / dtIn,
-      incoming.pose.ty / dtIn,
-      incoming.pose.angle / dtIn,
-      math.log(incoming.pose.scale) / dtIn,
-    ];
-    final vout = [
-      outgoing.pose.tx / dtOut,
-      outgoing.pose.ty / dtOut,
-      outgoing.pose.angle / dtOut,
-      math.log(outgoing.pose.scale) / dtOut,
+    final incomingVelocity = _generator(incoming.pose, dtIn);
+    final outgoingVelocity = _generator(outgoing.pose, dtOut);
+    // For similarities C=(B,c), Q=(A,t), displayed framing is C Q.
+    // With local camera generators Gin/Gout, C' = Gout C - C Gin.
+    // In particular c' = omegaOut*c + vout - B*vin: subtracting the
+    // relative matches' translation components misses this transport.
+    final derivative = [
+      outgoingVelocity.real * endpoint.tx -
+          outgoingVelocity.imaginary * endpoint.ty +
+          outgoingVelocity.x -
+          (endpoint.a * incomingVelocity.x - endpoint.b * incomingVelocity.y),
+      outgoingVelocity.imaginary * endpoint.tx +
+          outgoingVelocity.real * endpoint.ty +
+          outgoingVelocity.y -
+          (endpoint.b * incomingVelocity.x + endpoint.a * incomingVelocity.y),
+      outgoingVelocity.imaginary - incomingVelocity.imaginary,
+      outgoingVelocity.real - incomingVelocity.real,
     ];
     final end = [
       endpoint.tx,
@@ -272,7 +294,7 @@ final class LoopAlignmentPlanner {
       final h = -2 * u * u * u + 3 * u * u, hd = u * u * u - u * u;
       final values = List.generate(
         4,
-        (i) => h * end[i] + hd * (vout[i] - vin[i]) * length,
+        (i) => h * end[i] + hd * derivative[i] * length,
       );
       keys.add(
         LoopKeyframe(
@@ -312,6 +334,64 @@ final class LoopAlignmentPlanner {
             ],
           ),
     ];
+  }
+
+  /// Logarithm of a similarity in the image coordinate system. A local
+  /// generator acts on a point as omega*point + velocity (complex notation).
+  ({double real, double imaginary, double x, double y}) _generator(
+    LoopPose pose,
+    double interval,
+  ) {
+    final real = math.log(pose.scale), imaginary = pose.angle;
+    final zr = pose.a - 1, zi = pose.b, denominator = zr * zr + zi * zi;
+    double ratioReal, ratioImaginary;
+    if (denominator < 1e-16) {
+      // log(z)/(z-1), expanded about identity to avoid cancellation.
+      ratioReal = 1 - real / 2 + (real * real - imaginary * imaginary) / 12;
+      ratioImaginary = -imaginary / 2 + real * imaginary / 6;
+    } else {
+      ratioReal = (real * zr + imaginary * zi) / denominator;
+      ratioImaginary = (imaginary * zr - real * zi) / denominator;
+    }
+    return (
+      real: real / interval,
+      imaginary: imaginary / interval,
+      x: (ratioReal * pose.tx - ratioImaginary * pose.ty) / interval,
+      y: (ratioImaginary * pose.tx + ratioReal * pose.ty) / interval,
+    );
+  }
+
+  /// Fractional composition, including the translation/linear-part coupling.
+  LoopPose _power(LoopPose pose, double fraction) {
+    final linear = LoopPose.components(
+      angle: pose.angle * fraction,
+      logScale: math.log(pose.scale) * fraction,
+    );
+    final zr = pose.a - 1, zi = pose.b, denominator = zr * zr + zi * zi;
+    double real, imaginary;
+    if (denominator < 1e-16) {
+      final lr = math.log(pose.scale), li = pose.angle;
+      real =
+          fraction *
+          (1 +
+              (fraction - 1) * lr / 2 +
+              (2 * fraction * fraction - 3 * fraction + 1) *
+                  (lr * lr - li * li) /
+                  12);
+      imaginary =
+          fraction *
+          ((fraction - 1) * li / 2 +
+              (2 * fraction * fraction - 3 * fraction + 1) * lr * li / 6);
+    } else {
+      real = ((linear.a - 1) * zr + linear.b * zi) / denominator;
+      imaginary = (linear.b * zr - (linear.a - 1) * zi) / denominator;
+    }
+    return LoopPose(
+      a: linear.a,
+      b: linear.b,
+      tx: real * pose.tx - imaginary * pose.ty,
+      ty: imaginary * pose.tx + real * pose.ty,
+    );
   }
 
   /// Includes every decoded output timestamp and intermediate path samples.

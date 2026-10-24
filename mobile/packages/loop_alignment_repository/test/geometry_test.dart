@@ -24,7 +24,12 @@ void main() {
       luma: Uint8List(16)..fillRange(0, 16, value),
     );
     final frames = [frame(40, 0), frame(40, 40)];
-    expect(const LoopSeamScorer().score(frames, frames).difference, 0);
+    expect(
+      const LoopSeamScorer()
+          .score(frames, frames, seamInterval: const Duration(milliseconds: 40))
+          .difference,
+      0,
+    );
     const limits = LoopAlignmentLimits();
     expect(
       limits.acceptsScores(
@@ -55,7 +60,11 @@ void main() {
       isFalse,
     );
     expect(
-      () => const LoopSeamScorer().score([frame(0, 0)], frames),
+      () => const LoopSeamScorer().score(
+        [frame(0, 0)],
+        frames,
+        seamInterval: const Duration(milliseconds: 40),
+      ),
       throwsArgumentError,
     );
   });

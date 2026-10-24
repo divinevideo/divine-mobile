@@ -60,6 +60,7 @@ void main() {
         registration: evidence(LoopPose.identity),
         start: frames,
         end: frames,
+        seamInterval: const Duration(milliseconds: 40),
       ),
       isTrue,
     );
@@ -68,6 +69,7 @@ void main() {
         registration: evidence(LoopPose.identity),
         start: frames.take(3).toList(),
         end: frames.take(3).toList(),
+        seamInterval: const Duration(milliseconds: 40),
       ),
       isFalse,
     );
