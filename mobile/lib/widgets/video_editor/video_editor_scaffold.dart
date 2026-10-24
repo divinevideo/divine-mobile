@@ -50,10 +50,7 @@ class VideoEditorScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: VideoEditorConstants.uiOverlayStyleFor(context.vineColors),
-      child: Scaffold(
-        backgroundColor: context.vineColors.surfaceContainerHigh,
-        resizeToAvoidBottomInset: false,
-        bottomNavigationBar: const _EditingToolsBar(),
+      child: _EditorScaffold(
         body: LayerTrackingResultListener(
           child: LoopRepairResultListener(
             child: ClipEditorResultListeners(
@@ -382,9 +379,11 @@ class _BottomActions extends StatelessWidget {
   }
 }
 
-/// Shows the editing-tools bar when the timeline is available for editing.
-class _EditingToolsBar extends StatelessWidget {
-  const _EditingToolsBar();
+/// Keeps the scaffold's bottom-bar slot empty when editor controls own the inset.
+class _EditorScaffold extends StatelessWidget {
+  const _EditorScaffold({required this.body});
+
+  final Widget body;
 
   @override
   Widget build(BuildContext context) {
@@ -408,14 +407,20 @@ class _EditingToolsBar extends StatelessWidget {
           c.state.status == LoopSuggestionStatus.searching,
     );
 
-    if (shouldHide ||
+    final hideTools =
+        shouldHide ||
         isOverlayInteracting ||
         isClipInteracting ||
-        hasLoopSuggestion) {
-      return const SizedBox.shrink();
-    }
+        hasLoopSuggestion;
 
-    return const _EditingToolsBarContent();
+    return Scaffold(
+      backgroundColor: context.vineColors.surfaceContainerHigh,
+      resizeToAvoidBottomInset: false,
+      // A non-null slot strips the body's bottom padding even at zero height.
+      // Hidden tools must leave that inset available to the editing controls.
+      bottomNavigationBar: hideTools ? null : const _EditingToolsBarContent(),
+      body: body,
+    );
   }
 }
 
