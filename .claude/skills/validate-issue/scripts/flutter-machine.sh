@@ -8,7 +8,7 @@
 #   flutter-machine.sh restart <rundir>                # hot restart (not a cold start)
 #   flutter-machine.sh ext     <rundir> <ext.name> ['{"json":"params"}']
 #   flutter-machine.sh logs    <rundir>                # app.log events as plain text
-#   flutter-machine.sh taint   <rundir>                # exit 1 if the run logged a tree-corruption signature
+#   flutter-machine.sh taint   <rundir>                # exit 1 if the run logged a tree-corruption signature, 3 if it has no log
 #   flutter-machine.sh stop    <rundir>
 #
 # FLUTTER overrides the launcher (default: "mise exec -- flutter", which needs
@@ -77,6 +77,7 @@ case "$cmd" in
     ;;
   logs)    app_logs ;;
   taint)
+    [ -s "$out" ] || { echo "no run log at $out (missing or empty); nothing to check" >&2; exit 3; }
     hits=$(app_logs | grep -n -E "$taint_re")
     if [ -z "$hits" ]; then echo "clean: no tree-corruption signature in $(app_logs | wc -l | tr -d ' ') log lines"; exit 0; fi
     echo "TAINTED from log line $(echo "$hits" | head -1 | cut -d: -f1) ($(echo "$hits" | wc -l | tr -d ' ') matching lines): cold-start before trusting anything observed after it"

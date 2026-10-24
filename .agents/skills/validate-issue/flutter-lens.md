@@ -161,7 +161,7 @@ deactivated widget's ancestor is unsafe", a live `Scaffold` can keep a stale
 snackbar, and taps stop arriving (`_debugMouseTrackerUpdateScheduled`). None of
 it happens on a clean launch.
 
-- Before counting a run, and again before Gate B: `$FM taint $RUN`. It exits 1 on those signatures and names the first line.
+- Before counting a run, and again before Gate B: `$FM taint $RUN`. It exits 1 on those signatures and names the first line, and 3 when the run has no log to read.
 - A tainted run is over. Cold-start and redo everything observed after that line. If the signature is itself the bug under test, report it as its own finding.
 - A clean `taint` proves only that the app logged none of them, not that the tree is sound.
 
