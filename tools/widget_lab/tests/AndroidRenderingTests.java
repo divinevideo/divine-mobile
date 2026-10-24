@@ -168,19 +168,26 @@ public final class AndroidRenderingTests extends Instrumentation {
             activity.setContentView(page);
         });
         waitForIdleSync();
-        final Bitmap[] snapshot = {null};
+        final android.graphics.Rect[] region = {null};
         runOnMainSync(() -> {
             LinearLayout page = preview[0];
+            int[] location = new int[2];
+            page.getLocationOnScreen(location);
             int bottom = page.getChildAt(page.getChildCount() - 1).getBottom() + dp(activity, 16);
-            snapshot[0] = Bitmap.createBitmap(page.getWidth(), bottom, Bitmap.Config.ARGB_8888);
-            page.draw(new android.graphics.Canvas(snapshot[0]));
+            region[0] = new android.graphics.Rect(location[0], location[1] + page.getPaddingTop(),
+                location[0] + page.getWidth(), location[1] + bottom);
         });
-        Bitmap image = snapshot[0];
+        // Capture the composed window: software View.draw omits hardware outline clipping.
+        Bitmap window = getUiAutomation().takeScreenshot();
+        require(window != null, "capture native previews");
+        android.graphics.Rect bounds = region[0];
+        Bitmap image = Bitmap.createBitmap(window, bounds.left, bounds.top, bounds.width(), bounds.height());
         File file = new File(activity.getFilesDir(), "widget-shapes.png");
         try (FileOutputStream stream = new FileOutputStream(file)) {
             image.compress(Bitmap.CompressFormat.PNG, 100, stream);
         }
         image.recycle();
+        window.recycle();
     }
 
     private int dp(LabActivity activity, int value) {
