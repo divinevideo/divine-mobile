@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Bundle;
 import android.view.View;
 import android.widget.RemoteViews;
 
@@ -20,6 +21,11 @@ public final class HighlightProvider extends AppWidgetProvider {
     static final String[] TITLES = {"A little weirdness", "Six seconds of joy", "Look what people make"};
 
     @Override public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
+        render(context, false);
+    }
+
+    @Override public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager,
+            int widgetId, Bundle options) {
         render(context, false);
     }
 
@@ -50,13 +56,20 @@ public final class HighlightProvider extends AppWidgetProvider {
 
     static void render(Context context, boolean animate) {
         LabState state = LabStore.load(context);
-        RemoteViews views = card(context, state, animate);
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
-        manager.updateAppWidget(new ComponentName(context, HighlightProvider.class), views);
+        for (int id : manager.getAppWidgetIds(new ComponentName(context, HighlightProvider.class))) {
+            int height = manager.getAppWidgetOptions(id).getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 140);
+            manager.updateAppWidget(id, card(context, state, animate, height >= 240));
+        }
     }
 
     static RemoteViews card(Context context, LabState state, boolean animate) {
-        RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.highlight_widget);
+        return card(context, state, animate, false);
+    }
+
+    static RemoteViews card(Context context, LabState state, boolean animate, boolean expanded) {
+        RemoteViews views = new RemoteViews(context.getPackageName(), expanded ? R.layout.highlight_widget_tall : R.layout.highlight_widget);
+        views.setViewVisibility(R.id.context, expanded ? View.VISIBLE : View.GONE);
         views.setTextViewText(R.id.title, TITLES[state.index]);
         views.setTextViewText(R.id.like, state.isLiked() ? "♥" : "♡");
         views.setContentDescription(R.id.like, state.isLiked() ? "Liked" : "Like");

@@ -26,7 +26,7 @@ def prepare(clips):
             stale_frame.unlink()
         subprocess.run([
             "ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", str(source),
-            "-t", "2", "-vf", f"fps={FPS},scale=320:180:force_original_aspect_ratio=increase,crop=320:180",
+            "-t", "2", "-vf", f"fps={FPS},scale=320:320:force_original_aspect_ratio=increase,crop=320:320",
             "-frames:v", str(FRAME_COUNT), "-q:v", "3", "-start_number", "0", str(scratch / "frame_%02d.jpg"),
         ], check=True)
         for frame in range(FRAME_COUNT):

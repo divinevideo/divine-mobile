@@ -1,0 +1,11 @@
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="bottom" android:background="#A6000000" android:orientation="vertical">
+        <LinearLayout android:id="@+id/context" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingHorizontal="14dp" android:paddingTop="12dp" android:visibility="gone">
+            <TextView android:id="@+id/title" android:layout_width="match_parent" android:layout_height="wrap_content" android:maxLines="1" android:ellipsize="end" android:textColor="#FFFFFF" android:textStyle="bold" android:textSize="15sp" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="6 seconds. All human." android:textColor="#CCFFFFFF" android:textSize="11sp" />
+        </LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="48dp" android:orientation="horizontal" android:paddingHorizontal="6dp" android:baselineAligned="false" android:gravity="center_vertical">
+            <Button android:id="@+id/like" android:layout_width="48dp" android:layout_height="48dp" android:text="♡" android:contentDescription="Like" android:textSize="24sp" android:textColor="#FFFFFF" style="?android:attr/borderlessButtonStyle" />
+            <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="1dp" />
+            <Button android:id="@+id/next" android:layout_width="48dp" android:layout_height="48dp" android:text="›|" android:contentDescription="Next" android:textSize="22sp" android:textColor="#FFFFFF" style="?android:attr/borderlessButtonStyle" />
+        </LinearLayout>
+    </LinearLayout>

@@ -1,16 +1,6 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:background="@drawable/card" android:clipToOutline="true">
-    <ImageView android:id="@+id/poster" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="centerCrop" android:contentDescription="Sample video. Open to watch." />
-    <ViewFlipper android:id="@+id/frames" android:layout_width="match_parent" android:layout_height="match_parent" android:visibility="gone" android:autoStart="true" android:flipInterval="125" />
-    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_margin="12dp" android:paddingHorizontal="10dp" android:paddingVertical="5dp" android:text="Divine" android:textSize="16sp" android:textStyle="bold" android:textColor="#FFFFFF" android:background="@drawable/pill" />
-    <Button android:id="@+id/open" android:layout_width="48dp" android:layout_height="48dp" android:layout_gravity="top|end" android:layout_margin="8dp" android:text="▶" android:contentDescription="Open" android:textSize="18sp" android:textColor="#FFFFFF" android:background="@drawable/pill" />
-    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_gravity="bottom" android:gravity="center_vertical" android:paddingHorizontal="12dp" android:background="#A6000000" android:orientation="horizontal">
-        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:paddingVertical="10dp">
-            <TextView android:id="@+id/title" android:layout_width="match_parent" android:layout_height="wrap_content" android:maxLines="1" android:ellipsize="end" android:textColor="#FFFFFF" android:textStyle="bold" android:textSize="15sp" />
-            <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="6 seconds. All human." android:textColor="#CCFFFFFF" android:textSize="11sp" />
-        </LinearLayout>
-        <Button android:id="@+id/like" android:layout_width="48dp" android:layout_height="48dp" android:text="♡" android:contentDescription="Like" android:textSize="24sp" android:textColor="#FFFFFF" style="?android:attr/borderlessButtonStyle" />
-        <Button android:id="@+id/next" android:layout_width="48dp" android:layout_height="48dp" android:text="›|" android:contentDescription="Next" android:textSize="22sp" android:textColor="#FFFFFF" style="?android:attr/borderlessButtonStyle" />
-    </LinearLayout>
+    <include layout="@layout/highlight_media" />
+    <include layout="@layout/highlight_footer" />
 </FrameLayout>
