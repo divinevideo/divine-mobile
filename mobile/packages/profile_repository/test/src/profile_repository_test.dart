@@ -4754,6 +4754,97 @@ void main() {
         ).thenAnswer((_) async => results);
       }
 
+      ProfileSearchResult restProfile(
+        String pubkey,
+        String name, {
+        int followerCount = 0,
+      }) => ProfileSearchResult(
+        pubkey: pubkey,
+        name: name,
+        createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+        followerCount: followerCount,
+        videoCount: 0,
+      );
+
+      test('a relevance search keeps the server order within a tier', () async {
+        // The cache lists pk18Videos first; the server ranks it second.
+        when(() => mockUserProfilesDao.getAllProfiles()).thenAnswer(
+          (_) async => [
+            UserProfile(
+              pubkey: pk18Videos,
+              name: 'lauren',
+              createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+              eventId: 'kind0-$pk18Videos',
+              rawData: const {},
+            ),
+          ],
+        );
+        stubRestResults([
+          restProfile(pk1Video, 'lauren'),
+          restProfile(pk18Videos, 'lauren', followerCount: 10000),
+        ]);
+
+        final result = await repoWithFunnelcake
+            .searchUsersProgressive(
+              query: 'lauren',
+              sortBy: profileSearchSortRelevance,
+            )
+            .last;
+
+        expect(result.profiles.map((p) => p.pubkey), [pk1Video, pk18Videos]);
+      });
+
+      test(
+        'a relevance search lists a profile only the cache found after the '
+        "server's",
+        () async {
+          when(() => mockUserProfilesDao.getAllProfiles()).thenAnswer(
+            (_) async => [
+              UserProfile(
+                pubkey: pkCachedVine,
+                name: 'lauren',
+                createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+                eventId: 'kind0-$pkCachedVine',
+                rawData: const {},
+              ),
+            ],
+          );
+          stubRestResults([restProfile(pk1Video, 'lauren')]);
+
+          final result = await repoWithFunnelcake
+              .searchUsersProgressive(
+                query: 'lauren',
+                sortBy: profileSearchSortRelevance,
+              )
+              .last;
+
+          expect(result.profiles.map((p) => p.pubkey), [
+            pk1Video,
+            pkCachedVine,
+          ]);
+        },
+      );
+
+      test(
+        'a relevance search keeps an exact match ahead of a prefix match the '
+        'server listed first',
+        () async {
+          stubRestResults([
+            restProfile(pk18Videos, 'laurence', followerCount: 10000),
+            restProfile(pk1Video, 'lauren'),
+          ]);
+
+          final result = await repoWithFunnelcake
+              .searchUsersProgressive(
+                query: 'lauren',
+                sortBy: profileSearchSortRelevance,
+              )
+              .last;
+
+          expect(result.profiles.map((p) => p.pubkey), [pk1Video, pk18Videos]);
+        },
+      );
+
       test('searchUsersProgressive ranks by video count when a followers sort '
           'is a no-op', () async {
         stubRestResults(resultsInServerOrder());

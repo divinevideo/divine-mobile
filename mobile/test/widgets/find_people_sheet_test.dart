@@ -792,7 +792,7 @@ void main() {
             () => mockProfileRepo.searchUsersProgressive(
               query: 'test',
               limit: 50,
-              sortBy: 'followers',
+              sortBy: 'relevance',
               cancellationToken: any(named: 'cancellationToken'),
             ),
           ).called(1);
