@@ -655,6 +655,21 @@ void main() {
         await unmount(tester);
       });
 
+      testWidgets('leaves the player alone when a colour matrix slider moves', (
+        tester,
+      ) async {
+        await pumpCanvas(tester, loop);
+        await openAdjust(tester, {'sharpen': 0.5});
+        expect(frameEffectCalls(), isNotEmpty);
+        playerCalls.clear();
+
+        await slide(tester, 'brightness', 0.4);
+
+        expect(tuneBloc.state.values, containsPair('brightness', 0.4));
+        expect(frameEffectCalls(), isEmpty);
+        await unmount(tester);
+      });
+
       testWidgets('drops the session once Adjust closes', (tester) async {
         await pumpCanvas(tester, loop);
         await openAdjust(tester, {'sharpen': 0.5});
