@@ -93,15 +93,19 @@ class NotificationFeedBloc
     Emitter<NotificationFeedState> emit,
   ) {
     final notifications = _applyFollowState(event.page.items);
+    var status = state.status;
+    // Catalog arrivals and expiry must preserve the social failure affordance.
+    if (notifications.isNotEmpty && status == NotificationFeedStatus.failure) {
+      status = NotificationFeedStatus.loaded;
+    } else if (notifications.isEmpty &&
+        event.page.lastRefreshError &&
+        !state.isRefreshing &&
+        status == NotificationFeedStatus.loaded) {
+      status = NotificationFeedStatus.failure;
+    }
     emit(
       state.copyWith(
-        // The public catalog can arrive after the independent social request
-        // failed. Keep those usable messages visible alongside the error banner.
-        status:
-            state.status == NotificationFeedStatus.failure &&
-                notifications.isNotEmpty
-            ? NotificationFeedStatus.loaded
-            : state.status,
+        status: status,
         notifications: notifications,
         unreadCount: event.page.unreadCount,
         hasMore: event.page.hasMore,
