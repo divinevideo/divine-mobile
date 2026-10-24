@@ -200,7 +200,7 @@ class DmVideoPreviewCubit extends Cubit<DmVideoPreviewState>
 
   @override
   Future<void> close() async {
-    // Cancel after `super.close()`, not before: awaiting a cancel first
+    // Await the cancels after `super.close()`, not before: awaiting one first
     // yields a microtask in which a [load] whose download just finished
     // resumes, sees [isClosed] as false, and starts a wait nothing cancels.
     final keptVideos = _keptVideos?.cancel();
