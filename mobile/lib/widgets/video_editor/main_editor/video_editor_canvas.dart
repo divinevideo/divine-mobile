@@ -7,8 +7,7 @@ import 'dart:math';
 import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:divine_video_player/divine_video_player.dart';
-import 'package:flutter/foundation.dart'
-    show kReleaseMode, listEquals, mapEquals;
+import 'package:flutter/foundation.dart' show kReleaseMode, listEquals;
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -2866,18 +2865,19 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
               (current.openSubEditor == SubEditorType.tune),
           listener: (context, state) => _syncFrameEffects(),
         ),
+        // Only these kinds reach the player; the others are colour matrices.
         BlocListener<VideoEditorTuneBloc, VideoEditorTuneState>(
-          listenWhen: (previous, current) =>
-              !mapEquals(previous.values, current.values),
+          listenWhen: (previous, current) => adjustVideoEffectKinds.any(
+            (kind) => previous.values[kind] != current.values[kind],
+          ),
           listener: (context, state) => _syncFrameEffects(),
         ),
         // Moving or trimming an Adjust bar retimes its set without a history
         // entry, so the player's windows follow the bars instead.
         BlocListener<TimelineOverlayBloc, TimelineOverlayState>(
-          listenWhen: (previous, current) => !listEquals(
-            _tuneWindows(previous),
-            _tuneWindows(current),
-          ),
+          listenWhen: (previous, current) =>
+              !identical(previous.items, current.items) &&
+              !listEquals(_tuneWindows(previous), _tuneWindows(current)),
           listener: (context, state) => _syncFrameEffects(),
         ),
         BlocListener<TimelineOverlayBloc, TimelineOverlayState>(
