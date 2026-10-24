@@ -25,6 +25,7 @@ class DmVideoBlurPreferenceService extends ChangeNotifier {
   bool _blurVideoPreviews;
   late bool _savedBlurVideoPreviews;
   int _saveVersion = 0;
+  bool _disposed = false;
 
   /// Whether trusted senders' video previews are blurred until played.
   bool get blurVideoPreviews => _blurVideoPreviews;
@@ -50,17 +51,29 @@ class DmVideoBlurPreferenceService extends ChangeNotifier {
       // An older write can finish after a newer choice was already saved.
       if (version == _saveVersion) {
         _blurVideoPreviews = _savedBlurVideoPreviews;
-        notifyListeners();
+        // An account switch can dispose this service while its save is
+        // pending; there is nobody left to notify.
+        if (!_disposed) notifyListeners();
+        await _restoreStoredChoice();
       }
       rethrow;
     }
   }
 
+  /// Puts the stored choice back in the preferences cache, which keeps a
+  /// value the platform refused, so a service built later reads what is stored.
+  Future<void> _restoreStoredChoice() async {
+    try {
+      await _prefs.setBool(storageKey(_account), _savedBlurVideoPreviews);
+    } on Object {
+      // The cache is restored before this write starts, and the platform
+      // already holds this value, so a failed write changes nothing.
+    }
+  }
+
   @override
   void dispose() {
-    // An account switch can dispose this service while its save is pending.
-    // Let that save finish, but do not notify listeners that no longer exist.
-    _saveVersion++;
+    _disposed = true;
     super.dispose();
   }
 }

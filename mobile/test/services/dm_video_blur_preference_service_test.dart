@@ -8,8 +8,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/dm_video_blur_preference_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
 class _RefusingPreferences extends Mock implements SharedPreferences {}
+
+/// A platform store that refuses every write, as a full disk does.
+class _RefusingStore extends InMemorySharedPreferencesStore {
+  _RefusingStore() : super.empty();
+
+  @override
+  Future<bool> setValue(String valueType, String key, Object value) async =>
+      false;
+}
 
 void main() {
   group(DmVideoBlurPreferenceService, () {
@@ -163,6 +173,65 @@ void main() {
           await result;
         },
       );
+
+      group('when the platform refuses every save', () {
+        late SharedPreferences refusingPrefs;
+
+        setUp(() async {
+          final originalStore = SharedPreferencesStorePlatform.instance;
+          addTearDown(() {
+            SharedPreferencesStorePlatform.instance = originalStore;
+            SharedPreferences.resetStatic();
+          });
+          SharedPreferences.setMockInitialValues({});
+          SharedPreferencesStorePlatform.instance = _RefusingStore();
+          refusingPrefs = await SharedPreferences.getInstance();
+        });
+
+        test('a service built afterwards reads the stored choice', () async {
+          final service = DmVideoBlurPreferenceService(
+            refusingPrefs,
+            account: first,
+          );
+          addTearDown(service.dispose);
+
+          await expectLater(
+            service.setBlurVideoPreviews(true),
+            throwsA(isA<DmVideoBlurPreferenceSaveException>()),
+          );
+
+          expect(
+            DmVideoBlurPreferenceService(
+              refusingPrefs,
+              account: first,
+            ).blurVideoPreviews,
+            isFalse,
+          );
+        });
+
+        test('a save refused after an account switch leaves no trace for '
+            'the next service', () async {
+          final service = DmVideoBlurPreferenceService(
+            refusingPrefs,
+            account: first,
+          );
+          final result = expectLater(
+            service.setBlurVideoPreviews(true),
+            throwsA(isA<DmVideoBlurPreferenceSaveException>()),
+          );
+
+          service.dispose();
+          await result;
+
+          expect(
+            DmVideoBlurPreferenceService(
+              refusingPrefs,
+              account: first,
+            ).blurVideoPreviews,
+            isFalse,
+          );
+        });
+      });
 
       test('keeps the latest of two quick choices', () async {
         SharedPreferences.setMockInitialValues({
