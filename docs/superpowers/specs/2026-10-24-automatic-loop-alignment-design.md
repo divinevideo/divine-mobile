@@ -1,6 +1,7 @@
 # Automatic loop alignment
 
-Status: Proposed; awaiting design approval before implementation planning.
+Status: Product direction accepted; phone feasibility validated in a disposable
+prototype. Editor implementation awaits implementation-plan review.
 
 ## Intent
 
@@ -37,6 +38,12 @@ and **Couldn't improve this loop** when no reliable, modest correction is
 available. Neither result changes the edit or its history. A decoding or
 rendering failure uses a distinct retryable error. Progress and cancellation
 use the editor's existing operation treatment.
+
+Only report already-smooth when registration is confident, every endpoint
+corner moves at most 0.5 analysis pixels, the displayed-join score is at most
+0.03, and its motion proxy is within the 95th percentile of nearby ordinary
+adjacent-frame acceleration (at least four samples). Blank or uncertain
+scenery is not evidence of an already-smooth loop.
 
 Manual alignment is outside this change. The automatic operation should be
 useful on its own before adding another editing surface.
@@ -75,6 +82,14 @@ Initial conservative acceptance limits are:
   matches agreeing with the transform.
 - Matches occupy at least four cells of a 3 by 3 image grid and span at least
   35% of the image width and height.
+- Require independent support from opposite boundary strips: left and right,
+  or top and bottom. Detect corners locally in the outer 8% strips, outside
+  the tracker's 8-pixel border. Each supporting strip needs at least four
+  forward/backward-consistent matches and 60% agreement within one analysis
+  pixel. A bright moving subject must not monopolize feature selection.
+- Withhold every third consistent match from a separate fit. Require at
+  least five withheld points and median prediction error at most one
+  analysis pixel.
 - Horizontal and vertical displacement each stay within 3% of their
   respective frame dimension; rotation within 2 degrees; relative scale
   within 0.97 to 1.03.
@@ -85,7 +100,8 @@ Initial conservative acceptance limits are:
   frames. Validate alignment on features withheld from fitting as well as
   the displayed image, so fitting a subset is not proof of improvement.
 
-Use the existing `VideoLoopPointFinder` definition of normalized join error:
+Use a displayed-join score, distinct from `VideoLoopPointFinder`'s
+motion-predicted trim-search score:
 mean absolute luma difference divided by 255 on its 64-pixel analysis grid,
 with up to two neighboring frame pairs on each side weighted 1, 0.5, and
 0.25 by distance from the cut, then divided by the sum of included weights.
@@ -94,10 +110,12 @@ pairs and common crop. The accepted score must also be at most 0.03, the
 current app's close-match threshold. A percentage improvement alone must not
 turn a bad match into an accepted correction.
 
-These are proposed product limits, not claims of measured accuracy. Before
-shipping, the validation set below must show that the acceptance decision
-rejects unsuitable footage. Tighten the limits if it does not; do not relax
-them just to make every clip produce a result.
+The limits are conservative product policy, not a measured general accuracy
+claim. A disposable implementation passed 20 synthetic acceptance/rejection
+cases after an observed moving-foreground false positive was fixed with the
+independent boundary check. Before shipping, extend that validation to the
+cases below. Tighten limits when needed; do not relax them just to make every
+clip produce a result.
 
 The analysis must separate background registration error from motion continuity.
 Evaluate temporal changes against ordinary adjacent-frame changes near the
@@ -119,11 +137,14 @@ repeat. Distribute the adjustment over the shot, rather than moving only its
 last frames. Endpoint position constraints alone are insufficient: verify
 the motion on both sides of the join too.
 
-For multiple clips, compare the last clip with the first. Correct the last
-clip while keeping the beginning of that clip and its incoming motion
-unchanged, so fixing the repeat does not introduce a jump at the preceding
-cut. Internal cuts stay at their existing times. If the available shot length
-cannot support a smooth correction within the limits, decline the correction.
+For multiple clips, compare the last clip with the first. The alignment
+correction acts only on the last clip and starts at identity with zero
+correction velocity. Apply the same constant coverage crop to the entire
+composition, including its first clip; otherwise cropping only the last shot
+would itself change the preceding cut. Relative to that common crop, the
+beginning of the last clip and its incoming motion stay unchanged. Internal
+cuts stay at their existing times. If the available shot length cannot
+support a smooth correction within the limits, decline the correction.
 Matching unrelated shots throughout a montage is outside this operation.
 
 Calculate the constant crop from the entire correction path, including
@@ -142,15 +163,22 @@ that the loop could not be improved without changing those features.
 
 ## Ownership and integration
 
-Reusable matching, confidence measurements, motion scoring, and transform
-planning belong in `pro_video_editor`, alongside `VideoLoopPointFinder` and
-`VideoStabilizationAnalyzer`. Reuse its motion estimation internals rather
-than copying them into the app or importing its private implementation files.
-Expose a public loop-repair analysis result with source timestamps, the
-suggested end, confidence measurements, and the planned per-frame transforms.
-This requires an upstream package change and a released dependency before
-the app integration can ship. Do not edit the pub cache or commit a local
-path override as the integration.
+Put reusable confidence measurements, motion scoring, transform planning,
+plain Dart contracts, and orchestration in the owning workspace package
+`mobile/packages/loop_alignment_repository`. Native clients bridge decoding,
+tracking, and rendering without exposing Flutter geometry to that package.
+Reuse `pro_video_editor` 2.42.0's public Dart libraries under
+`package:pro_video_editor/core/analysis/` for corner tracking and fitting.
+They are outside `lib/src` and contain no `@internal` restriction; omission
+from the top-level barrel does not make them private. Cover their actual
+signatures with adapter tests. Do not copy their implementations, edit the
+pub cache, add a local dependency override, or import `lib/src`.
+See [Dart's package library guidance](https://dart.dev/tools/pub/create-packages#organizing-a-package).
+
+This corrects the initial assumption that shipping required an upstream
+release. The installed version already supplies the necessary public
+libraries and native rendering API. A future upstream API can replace the
+adapter without changing editor or repository contracts.
 
 In this repository, use the layered flow UI -> Cubit -> Repository -> Client.
 Extend `LoopSuggestionCubit`'s existing role for busy and result presentation.
@@ -186,7 +214,7 @@ for files retained by undo history and saved drafts. Persist enough source
 provenance for draft reload and undo/redo; do not overload the existing
 stabilization toggle with a different operation.
 
-Run bounded frame decoding and analysis in the package's background worker,
+Run bounded frame decoding and analysis in a background worker,
 with one analysis decoder while the preview retains its player. Apply the
 existing render watchdog timeout. Unsupported platforms expose the current
 capability treatment rather than starting an operation that cannot finish.
@@ -232,4 +260,25 @@ dumps as fixtures.
 - `mobile/lib/services/video_editor/clip_stabilization_service.dart`: native
   keyframe rendering, watchdog, cancellation, and source retention patterns.
 
-This document defines proposed behavior. No editor behavior has changed yet.
+## Feasibility evidence
+
+The release prototype processed a 6.3-second, 1080-square, 189-frame clip on a
+physical iPhone 15 Pro. It decoded every frame but ran expensive motion
+estimation on 17 anchors. Three direct processing trials took 1.396–1.574
+seconds for the entire clip. With source playback active, the operation took
+1.710–1.887 seconds from activation to corrected playback in the latest two
+trials, including player replacement. The prototype restored the original
+through Undo and reapplied successfully. These are measurements on one phone,
+not a latency guarantee for the app or for other devices.
+
+Native output retained 189 frames and 6.3 seconds of audio and video. The
+additional zoom was 1.0224; the displayed-join difference proxy fell 67.8%.
+The creator also inspected the smoothed playback and found it looked good.
+The metrics support that visual check; they do not prove arbitrary footage
+will become seamless. Android, older phones, portrait orientation, multi-shot
+edits, HDR, and the actual editor integration still need validation.
+
+Related prior trim-search work is issue #10249 (Brain document
+`49CD880BD16BE5B99F5D41ACA9`); the current checkout defines its actual behavior.
+
+This document defines intended behavior. No editor behavior has changed yet.
