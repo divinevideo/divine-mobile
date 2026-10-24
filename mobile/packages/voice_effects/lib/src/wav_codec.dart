@@ -1,5 +1,5 @@
-// ABOUTME: Reads 16-bit PCM WAV into mono float samples and writes mono float
-// ABOUTME: samples back out as 16-bit PCM WAV.
+// ABOUTME: Reads 16-bit PCM WAV into float samples, mixed to mono or one list
+// ABOUTME: per channel, and writes float samples back out as 16-bit PCM WAV.
 
 import 'dart:typed_data';
 
@@ -13,6 +13,19 @@ class WavFormatException implements Exception {
 
   @override
   String toString() => 'WavFormatException: $message';
+}
+
+/// PCM audio as floats in `-1.0..1.0`, one list per channel.
+class PcmAudio {
+  /// Creates audio of [channels] recorded at [sampleRate] Hz.
+  const PcmAudio({required this.channels, required this.sampleRate});
+
+  /// One list of samples per channel, all of one length; a stereo file's
+  /// left channel comes first.
+  final List<Float32List> channels;
+
+  /// Sample frames per second.
+  final int sampleRate;
 }
 
 /// Mono PCM audio as floats in `-1.0..1.0`.
@@ -34,6 +47,26 @@ const double _int16Scale = 32768;
 
 /// Decodes a 16-bit PCM WAV file, averaging its channels into one.
 ///
+/// Reads the file as [decodeWavChannels] does and throws what it throws.
+MonoAudio decodeWav(Uint8List bytes) {
+  final audio = decodeWavChannels(bytes);
+  final channels = audio.channels;
+  if (channels.length == 1) {
+    return MonoAudio(samples: channels.single, sampleRate: audio.sampleRate);
+  }
+  final samples = Float32List(channels.first.length);
+  for (var i = 0; i < samples.length; i++) {
+    var sum = 0.0;
+    for (final channel in channels) {
+      sum += channel[i];
+    }
+    samples[i] = sum / channels.length;
+  }
+  return MonoAudio(samples: samples, sampleRate: audio.sampleRate);
+}
+
+/// Decodes a 16-bit PCM WAV file into one list of samples per channel.
+///
 /// Only the format `pro_video_editor` writes when it extracts audio — integer
 /// PCM at 16 bits — is accepted. A `data` chunk whose declared size runs past
 /// the end of [bytes], as a writer that never patched its header leaves it, is
@@ -41,7 +74,7 @@ const double _int16Scale = 32768;
 ///
 /// Throws a [WavFormatException] when [bytes] are not a RIFF/WAVE file, carry
 /// any other sample format, or have no `fmt ` or `data` chunk.
-MonoAudio decodeWav(Uint8List bytes) {
+PcmAudio decodeWavChannels(Uint8List bytes) {
   final data = ByteData.sublistView(bytes);
   if (bytes.length < 12 ||
       _fourCc(bytes, 0) != 'RIFF' ||
@@ -86,41 +119,65 @@ MonoAudio decodeWav(Uint8List bytes) {
 
   final frameBytes = channels * 2;
   final frames = dataLength ~/ frameBytes;
-  final samples = Float32List(frames);
+  final decoded = [for (var c = 0; c < channels; c++) Float32List(frames)];
   for (var frame = 0; frame < frames; frame++) {
-    var sum = 0;
     final start = dataOffset + frame * frameBytes;
-    for (var channel = 0; channel < channels; channel++) {
-      sum += data.getInt16(start + channel * 2, Endian.little);
+    for (var c = 0; c < channels; c++) {
+      decoded[c][frame] =
+          data.getInt16(start + c * 2, Endian.little) / _int16Scale;
     }
-    samples[frame] = sum / channels / _int16Scale;
   }
-  return MonoAudio(samples: samples, sampleRate: sampleRate);
+  return PcmAudio(channels: decoded, sampleRate: sampleRate);
 }
 
 /// Encodes [samples] at [sampleRate] Hz as a mono 16-bit PCM WAV file.
 ///
 /// Samples outside `-1.0..1.0` are clamped.
-Uint8List encodeWav(Float32List samples, int sampleRate) {
-  final dataLength = samples.length * 2;
+Uint8List encodeWav(Float32List samples, int sampleRate) =>
+    encodeWavChannels([samples], sampleRate);
+
+/// Encodes [channels] — one list of samples per channel, all of one length —
+/// at [sampleRate] Hz as a 16-bit PCM WAV file with that many channels.
+///
+/// Samples outside `-1.0..1.0` are clamped.
+///
+/// Throws an [ArgumentError] when there are no channels or their lengths
+/// differ.
+Uint8List encodeWavChannels(List<Float32List> channels, int sampleRate) {
+  if (channels.isEmpty) {
+    throw ArgumentError.value(channels, 'channels', 'must not be empty');
+  }
+  final frames = channels.first.length;
+  if (channels.any((channel) => channel.length != frames)) {
+    throw ArgumentError.value(channels, 'channels', 'must be of one length');
+  }
+  final count = channels.length;
+  final frameBytes = count * 2;
+  final dataLength = frames * frameBytes;
   final bytes = Uint8List(_headerLength + dataLength);
   final data = ByteData.sublistView(bytes)
     ..setUint32(4, 36 + dataLength, Endian.little)
     ..setUint32(16, 16, Endian.little)
     ..setUint16(20, _pcmFormat, Endian.little)
-    ..setUint16(22, 1, Endian.little)
+    ..setUint16(22, count, Endian.little)
     ..setUint32(24, sampleRate, Endian.little)
-    ..setUint32(28, sampleRate * 2, Endian.little)
-    ..setUint16(32, 2, Endian.little)
+    ..setUint32(28, sampleRate * frameBytes, Endian.little)
+    ..setUint16(32, frameBytes, Endian.little)
     ..setUint16(34, _bitsPerSample, Endian.little)
     ..setUint32(40, dataLength, Endian.little);
   _writeFourCc(bytes, 0, 'RIFF');
   _writeFourCc(bytes, 8, 'WAVE');
   _writeFourCc(bytes, 12, 'fmt ');
   _writeFourCc(bytes, 36, 'data');
-  for (var i = 0; i < samples.length; i++) {
-    final value = (samples[i] * _int16Scale).round().clamp(-32768, 32767);
-    data.setInt16(_headerLength + i * 2, value, Endian.little);
+  for (var frame = 0; frame < frames; frame++) {
+    final start = _headerLength + frame * frameBytes;
+    for (var c = 0; c < count; c++) {
+      final value = (channels[c][frame] * _int16Scale).round().clamp(
+        -32768,
+        32767,
+      );
+      data.setInt16(start + c * 2, value, Endian.little);
+    }
   }
   return bytes;
 }

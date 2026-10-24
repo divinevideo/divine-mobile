@@ -68,4 +68,56 @@ void main() {
       expect(identical(output, input), isFalse);
     });
   });
+
+  group('applyAudioEffectsToChannels', () {
+    test('applies each effect to every channel', () {
+      final output = applyAudioEffectsToChannels(
+        [
+          Float32List.fromList([0.1]),
+          Float32List.fromList([0.2]),
+        ],
+        48000,
+        const [_Scale(2)],
+      );
+
+      expect(output[0].single, closeTo(0.2, 1e-6));
+      expect(output[1].single, closeTo(0.4, 1e-6));
+    });
+
+    test('scales the channels down together, keeping their balance', () {
+      final output = applyAudioEffectsToChannels(
+        [
+          Float32List.fromList([0.5]),
+          Float32List.fromList([0.25]),
+        ],
+        48000,
+        const [_Scale(4)],
+      );
+
+      expect(output[0].single, closeTo(0.98, 1e-6));
+      expect(output[1].single, closeTo(0.49, 1e-6));
+    });
+
+    test('returns copies when there is nothing to apply', () {
+      final left = Float32List.fromList([0.1]);
+      final right = Float32List.fromList([0.2]);
+
+      final output = applyAudioEffectsToChannels(
+        [left, right],
+        48000,
+        const [],
+      );
+
+      expect(output, equals([left, right]));
+      expect(identical(output[0], left), isFalse);
+      expect(identical(output[1], right), isFalse);
+    });
+
+    test('rejects no channels', () {
+      expect(
+        () => applyAudioEffectsToChannels([], 48000, const [_Scale(2)]),
+        throwsArgumentError,
+      );
+    });
+  });
 }
