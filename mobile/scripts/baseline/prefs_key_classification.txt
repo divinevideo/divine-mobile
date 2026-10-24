@@ -14,9 +14,7 @@ account_deletion_receipt_v1
 analytics_enabled
 app_environment
 app_first_launch_at
-app_locale
 app_session_count
-appearance_mode_preference
 authentication_source # ambiguous: duplicates the per-account authSource inside known_accounts; may be drift to delete
 backup_created_at
 blocklist_active_pubkey # scoping key: every other key in content_blocklist_repository derives its on-disk name from this one
@@ -35,7 +33,6 @@ deleted_curated_list_coordinates # device-wide tombstones whose VALUES embed a p
 developer_mode_enabled
 divine_moderation_resolved_at
 divine_moderation_resolved_pubkey
-feed_aspect_ratio_preference
 gallery_permission_dismissed_forever
 geo_block_status
 geo_block_timestamp

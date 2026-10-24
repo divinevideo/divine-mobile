@@ -68,6 +68,97 @@ void main() {
       await database.conversationsDao.clearForAccountSwitch(owner);
     }
 
+    test('synced dismissal sees unknown same-second legacy messages', () async {
+      await database.directMessagesDao.insertMessage(
+        id: 'legacy-new',
+        conversationId: id,
+        senderPubkey: peer,
+        content: 'legacy',
+        createdAt: 100,
+        giftWrapId: 'legacy-wrap',
+      );
+      await database.conversationsDao.upsertConversation(
+        id: id,
+        participantPubkeys: '["$owner","$peer"]',
+        isGroup: false,
+        createdAt: 100,
+        lastMessageTimestamp: 100,
+        isRead: false,
+      );
+      await database.conversationsDao.applySyncedDismissal(
+        id,
+        ownerPubkey: owner,
+        dismissed: true,
+        boundaryTimestamp: 100,
+        knownMessageIds: {'known'},
+      );
+      expect(await isDismissed(), isFalse);
+      expect(
+        (await database.conversationsDao.getConversation(
+          id,
+          ownerPubkey: owner,
+        ))!.isRead,
+        isFalse,
+      );
+    });
+
+    test(
+      'synced boundary precedes history; a same-second new ID restores it',
+      () async {
+        await database.conversationsDao.applySyncedDismissal(
+          id,
+          ownerPubkey: owner,
+          dismissed: true,
+          boundaryTimestamp: 100,
+          knownMessageIds: {'known'},
+        );
+        await message('known');
+        await replay();
+        expect(await isDismissed(), isTrue);
+        await message('new');
+        await replay();
+        expect(await isDismissed(), isFalse);
+        // Replaying the same account intent must not hide that new arrival.
+        await database.conversationsDao.applySyncedDismissal(
+          id,
+          ownerPubkey: owner,
+          dismissed: true,
+          boundaryTimestamp: 100,
+          knownMessageIds: {'known'},
+        );
+        expect(await isDismissed(), isFalse);
+        expect(
+          (await database.conversationsDao.getConversation(
+            id,
+            ownerPubkey: owner,
+          ))!.isRead,
+          isFalse,
+        );
+      },
+    );
+
+    test(
+      'remote dismissal never reads newer local messages or another account',
+      () async {
+        await replay(timestamp: 200);
+        await replay(account: peer, timestamp: 50);
+        await database.conversationsDao.applySyncedDismissal(
+          id,
+          ownerPubkey: owner,
+          dismissed: true,
+          boundaryTimestamp: 100,
+        );
+        expect(await isDismissed(), isFalse);
+        expect(await isDismissed(account: peer), isFalse);
+        final row = (await database.conversationsDao.getConversation(
+          id,
+          ownerPubkey: owner,
+        ))!;
+        expect(row.lastMessageTimestamp, 200);
+        expect(row.isRead, isFalse);
+      },
+    );
+
     test(
       'rebuilding history after account cleanup retains dismissal',
       () async {

@@ -14,6 +14,7 @@ import 'package:nostr_sdk/nip05/nip05_validor.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/nostr_event_kinds.dart';
+import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/moderation_label_service.dart';
 import 'package:openvine/services/moderation_pubkey_resolver.dart';
@@ -21,6 +22,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 import '../helpers/test_pubkeys.dart';
+import 'support/fake_account_state.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -1007,7 +1009,181 @@ void main() {
       });
     });
 
+    group('subscribed initialization', () {
+      test(
+        'remote removal fences a later labeler in a held initial snapshot',
+        () async {
+          final first = 'a' * 64;
+          final second = 'b' * 64;
+          final target = 'c' * 64;
+          final account = FakeAccountState('d' * 64, {
+            'trusted_labeler/$first': true,
+            'trusted_labeler/$second': true,
+          });
+          final port = AccountPreferenceStore(mockPrefs);
+          await port.bind(account);
+          final entered = Completer<void>();
+          final release = Completer<void>();
+          final loaded = <String>[];
+          final tails = <String>[];
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((call) async {
+            final owner = (call.positionalArguments.first as List<Filter>)
+                .first
+                .authors!
+                .single;
+            loaded.add(owner);
+            if (owner == first && !entered.isCompleted) {
+              entered.complete();
+              await release.future;
+            }
+            return (
+              events: <Event>[
+                if (owner == second)
+                  _FakeLabelEvent(
+                    pubkey: owner,
+                    tags: [
+                      ['L', 'content-warning'],
+                      ['l', 'nudity', 'content-warning'],
+                      ['e', target],
+                    ],
+                  ),
+              ],
+              timedOut: false,
+              noRelays: false,
+            );
+          });
+          when(
+            () => mockNostrClient.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer((call) {
+            tails.addAll(
+              (call.positionalArguments.first as List<Filter>).expand(
+                (filter) => filter.authors ?? <String>[],
+              ),
+            );
+            return const Stream<Event>.empty();
+          });
+          final bound = ModerationLabelService(
+            nostrClient: mockNostrClient,
+            authService: mockAuthService,
+            sharedPreferences: mockPrefs,
+            accountPreferences: port,
+            pubkeyResolver: ModerationPubkeyResolver(
+              lookupPubkey: (_) async => 'e' * 64,
+            ),
+          );
+          addTearDown(bound.dispose);
+          final initialization = bound.initialize();
+          await entered.future;
+          account.receive({'trusted_labeler/$second': false});
+          await pumpEventQueue();
+          expect(bound.subscribedLabelers, isNot(contains(second)));
+          release.complete();
+          await initialization;
+          await pumpEventQueue();
+          expect(bound.getContentWarnings(target), isEmpty);
+          expect(loaded, isNot(contains(second)));
+          expect(tails, isNot(contains(second)));
+          expect(account.localWrites, 0);
+          bound.dispose();
+          port.dispose();
+          await account.close();
+        },
+      );
+    });
+
     group('followed labelers', () {
+      test(
+        'remote disable fences a held multi-labeler reconciliation',
+        () async {
+          final first = 'a' * 64;
+          final second = 'b' * 64;
+          final target = 'c' * 64;
+          final account = FakeAccountState('d' * 64);
+          final port = AccountPreferenceStore(mockPrefs);
+          await port.bind(account);
+          final entered = Completer<void>();
+          final release = Completer<void>();
+          final loaded = <String>[];
+          final tails = <String>[];
+          when(
+            () => mockNostrClient.queryEventsDetailed(
+              any(),
+              requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            ),
+          ).thenAnswer((invocation) async {
+            final filters =
+                invocation.positionalArguments.first as List<Filter>;
+            final owner = filters.first.authors!.single;
+            loaded.add(owner);
+            if (owner == first) {
+              entered.complete();
+              await release.future;
+            }
+            return (
+              events: <Event>[
+                if (owner == first || owner == second)
+                  _FakeLabelEvent(
+                    pubkey: owner,
+                    tags: [
+                      ['L', 'content-warning'],
+                      ['l', 'nudity', 'content-warning'],
+                      ['e', target],
+                    ],
+                  ),
+              ],
+              timedOut: false,
+              noRelays: false,
+            );
+          });
+          when(
+            () => mockNostrClient.subscribe(
+              any(),
+              subscriptionId: any(named: 'subscriptionId'),
+              onEose: any(named: 'onEose'),
+            ),
+          ).thenAnswer((invocation) {
+            final filters =
+                invocation.positionalArguments.first as List<Filter>;
+            tails.addAll(
+              filters.expand((filter) => filter.authors ?? <String>[]),
+            );
+            return const Stream<Event>.empty();
+          });
+          final bound = ModerationLabelService(
+            nostrClient: mockNostrClient,
+            authService: mockAuthService,
+            sharedPreferences: mockPrefs,
+            accountPreferences: port,
+          );
+          await bound.setFollowingModerationEnabled(
+            true,
+            followedPubkeys: [first, second],
+          );
+          await entered.future;
+          account.receive({'following_moderation_enabled': false});
+          await pumpEventQueue();
+          expect(bound.isFollowingModerationEnabled, isFalse);
+          release.complete();
+          await pumpEventQueue();
+          expect(bound.getContentWarnings(target), isEmpty);
+          expect(loaded, isNot(contains(second)));
+          expect(tails, isNot(contains(second)));
+          expect(account.localWrites, 1);
+          bound.dispose();
+          port.dispose();
+          await account.close();
+        },
+      );
+
       test('enables followed pubkeys as trusted labelers', () async {
         const followedLabeler =
             'abcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcdefabcd';

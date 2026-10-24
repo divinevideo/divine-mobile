@@ -48,7 +48,7 @@ void main() {
     );
 
     blocTest<AppearanceCubit, AppearanceMode>(
-      'emits the selected mode before saving it',
+      'emits the selected mode after saving it',
       setUp: () {
         when(
           () => repository.save(AppearanceMode.dark),
@@ -62,7 +62,7 @@ void main() {
     );
 
     blocTest<AppearanceCubit, AppearanceMode>(
-      'keeps the selected mode when persistence fails',
+      'retains the previous mode when persistence fails',
       setUp: () {
         when(
           () => repository.save(AppearanceMode.light),
@@ -70,7 +70,7 @@ void main() {
       },
       build: () => AppearanceCubit(repository),
       act: (cubit) => cubit.setMode(AppearanceMode.light),
-      expect: () => [AppearanceMode.light],
+      expect: () => <AppearanceMode>[],
     );
 
     test('resolves System to the platform-reactive ThemeMode', () {

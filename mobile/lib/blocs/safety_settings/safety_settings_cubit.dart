@@ -56,7 +56,23 @@ class SafetySettingsCubit extends Cubit<SafetySettingsState>
        _followRepository = followRepository,
        _contentBlocklistRepository = contentBlocklistRepository,
        _dmVideoBlurPreferenceService = dmVideoBlurPreferenceService,
-       super(const SafetySettingsState());
+       super(const SafetySettingsState()) {
+    _divineHostFilterService.addListener(_refreshFilters);
+    _provenanceFilterService.addListener(_refreshFilters);
+    _moderationPreferenceSubscription = _moderationLabelService.changes?.listen(
+      (_) => _refreshFilters(),
+    );
+  }
+
+  void _refreshFilters() => emitIfOpen(
+    state.copyWith(
+      showDivineHostedOnly: _divineHostFilterService.showDivineHostedOnly,
+      showVerifiedOnly: _provenanceFilterService.showVerifiedOnly,
+      isPeopleIFollowEnabled:
+          _moderationLabelService.isFollowingModerationEnabled,
+      customLabelers: _moderationLabelService.customLabelers,
+    ),
+  );
 
   final AgeVerificationService _ageVerificationService;
   final ContentFilterService _contentFilterService;
@@ -71,6 +87,7 @@ class SafetySettingsCubit extends Cubit<SafetySettingsState>
   /// Null when no account is signed in: the choice is stored per account.
   final DmVideoBlurPreferenceService? _dmVideoBlurPreferenceService;
 
+  StreamSubscription<void>? _moderationPreferenceSubscription;
   StreamSubscription<ContentPolicyState>? _blocklistSub;
 
   /// Snapshots the toggles + the labeler / blocklist lists, and
@@ -261,6 +278,9 @@ class SafetySettingsCubit extends Cubit<SafetySettingsState>
     // [isClosed] as false, and subscribes past the cancel — leaking the
     // cubit and its subscription. Capturing the future keeps the cancel
     // guaranteed even if `super.close()` throws.
+    _divineHostFilterService.removeListener(_refreshFilters);
+    _provenanceFilterService.removeListener(_refreshFilters);
+    unawaited(_moderationPreferenceSubscription?.cancel());
     final cancelled = _blocklistSub?.cancel();
     _blocklistSub = null;
     await super.close();

@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/providers/preferences_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/test_helpers.dart';
 import '../helpers/test_provider_overrides.dart';
@@ -17,9 +18,12 @@ void main() {
   group('videoEventServiceProvider aspect-ratio wiring (#6714 review)', () {
     late ProviderContainer container;
 
-    setUp(() {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
       container = ProviderContainer(
-        overrides: getStandardTestOverrides().cast(),
+        overrides: getStandardTestOverrides(mockSharedPreferences: prefs)
+            .cast(),
       );
     });
 

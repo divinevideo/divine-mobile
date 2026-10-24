@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/config/official_accounts.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_version_provider.dart';
@@ -737,7 +738,11 @@ ClipLibraryService clipLibraryService(Ref ref) {
 UserDataCleanupService userDataCleanupService(Ref ref) {
   final prefs = ref.watch(sharedPreferencesProvider);
   final db = ref.watch(databaseProvider);
-  final service = UserDataCleanupService(prefs);
+  final accountWrites = ref.watch(accountStateWriteBarrierProvider);
+  final service = UserDataCleanupService(
+    prefs,
+    onAccountStateWritesStop: accountWrites.stop,
+  );
 
   // Wire database cleanup callback so signOut() clears DM and notification data.
   // Stop DM listening FIRST to prevent in-flight event handlers from writing
@@ -759,6 +764,10 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
         bool preserveActiveSession = false,
         bool forgetAccount = false,
       }) async {
+        if ((deleteUserData || forgetAccount) && userPubkey != null) {
+          await accountWrites.stop(userPubkey);
+        }
+
         Future<void> safeCleanup(
           String name,
           Future<void> Function() fn,
@@ -985,6 +994,12 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
           );
         }
 
+        if ((deleteUserData || forgetAccount) && userPubkey != null) {
+          await requiredCleanup(
+            'accountSync',
+            () => db.accountSyncDao.clearAccount(userPubkey),
+          );
+        }
         // Per-user data cleanup (#2999): only on destructive paths
         if (deleteUserData && userPubkey != null) {
           Future<void> requiredDelete(

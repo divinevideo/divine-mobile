@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:nostr_client/nostr_client.dart' show ForceReconnectOutcome;
 import 'package:openvine/notifications/services/notification_refresh_coordinator.dart';
 import 'package:openvine/providers/account_enforcement_providers.dart';
+import 'package:openvine/providers/account_sync_lifecycle_provider.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
@@ -153,6 +154,7 @@ class _AppLifecycleHandlerState extends ConsumerState<AppLifecycleHandler>
 
     switch (state) {
       case AppLifecycleState.resumed:
+        unawaited(ref.read(accountSyncLifecycleProvider)?.flush());
         ref.read(playbackWindowFocusedProvider.notifier).setFocused(true);
         Log.info(
           '📱 App resumed from background - restoring activities',

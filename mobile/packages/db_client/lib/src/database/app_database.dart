@@ -100,6 +100,9 @@ const legacyV1NormalizationRepairIndexes = <String>[
     ScheduledPosts,
     ConcordStoreEntries,
     SoundRequestStates,
+    AccountSyncRecords,
+    NotificationReads,
+    NotificationReadMembers,
   ],
   daos: [
     UserProfilesDao,
@@ -138,6 +141,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     ScheduledPostsDao,
     ConcordStoreDao,
     SoundRequestStateDao,
+    AccountSyncDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -148,7 +152,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 28;
+  int get schemaVersion => 29;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -382,6 +386,11 @@ class AppDatabase extends _$AppDatabase {
         await customStatement(
           'ALTER TABLE removed_conversations DROP COLUMN rejoined_at',
         );
+      }
+      if (from < 29 && to >= 29) {
+        await m.createTable(accountSyncRecords);
+        await m.createTable(notificationReads);
+        await m.createTable(notificationReadMembers);
       }
     },
     beforeOpen: (details) async {

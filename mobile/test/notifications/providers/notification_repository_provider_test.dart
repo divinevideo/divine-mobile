@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:content_policy/content_policy.dart';
 import 'package:db_client/db_client.dart';
+import 'package:drift/native.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,14 +16,18 @@ import 'package:models/models.dart' as models;
 import 'package:nostr_client/nostr_client.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/services/account_state_write_barrier.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
 
@@ -33,6 +38,8 @@ class _MockNip98AuthService extends Mock implements Nip98AuthService {}
 class _MockAppDatabase extends Mock implements AppDatabase {}
 
 class _MockNotificationsDao extends Mock implements NotificationsDao {}
+
+class _MockAccountSyncDao extends Mock implements AccountSyncDao {}
 
 class _MockAuthService extends Mock implements AuthService {}
 
@@ -57,8 +64,30 @@ class _CountingClient extends http.BaseClient {
   }
 }
 
+class _HeldProviderReadStateDao extends AccountSyncDao {
+  _HeldProviderReadStateDao(super.attachedDatabase);
+  Completer<void>? gate;
+  Completer<void>? entered;
+  @override
+  Future<void> writeNotificationReads(
+    String owner,
+    Set<String> read,
+    Set<String> pending,
+    Map<String, List<String>> members,
+  ) async {
+    if (!(entered?.isCompleted ?? true)) entered!.complete();
+    await gate?.future;
+    await super.writeNotificationReads(owner, read, pending, members);
+  }
+}
+
 void main() {
   group('notificationRepositoryProvider', () {
+    late SharedPreferences preferences;
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      preferences = await SharedPreferences.getInstance();
+    });
     const ownerPubkey =
         'a1b2c3d4e5f6789012345678901234567890abcdef1234567890123456789012';
     const actorPubkey =
@@ -66,7 +95,11 @@ void main() {
     const videoEventId =
         'c3d4e5f6789012345678901234567890abcdef1234567890123456789012ab12';
 
-    ProviderContainer createContainer() {
+    ProviderContainer createContainer({
+      NotificationsDao? cacheDao,
+      AccountSyncDao? accountDao,
+      AccountStateWriteBarrier? writeBarrier,
+    }) {
       final nostrClient = _MockNostrClient();
       when(() => nostrClient.configuredRelays).thenReturn(<String>[]);
 
@@ -102,13 +135,26 @@ void main() {
         ],
       );
       final database = _MockAppDatabase();
-      when(() => database.notificationsDao).thenReturn(dao);
+      when(() => database.notificationsDao).thenReturn(cacheDao ?? dao);
+      final readState = _MockAccountSyncDao();
+      when(() => database.accountSyncDao).thenReturn(accountDao ?? readState);
+      when(() => readState.readNotificationReads(ownerPubkey))
+          .thenAnswer((_) async => []);
+      when(() => readState.readNotificationMembers(ownerPubkey))
+          .thenAnswer((_) async => []);
+      when(
+        () =>
+            readState.writeNotificationReads(ownerPubkey, any(), any(), any()),
+      ).thenAnswer((_) async {});
 
       final authService = _MockAuthService();
       when(() => authService.currentPublicKeyHex).thenReturn(ownerPubkey);
 
       final container = ProviderContainer(
         overrides: [
+          if (writeBarrier != null)
+            accountStateWriteBarrierProvider.overrideWithValue(writeBarrier),
+          sharedPreferencesProvider.overrideWithValue(preferences),
           currentEnvironmentProvider.overrideWithValue(
             EnvironmentConfig.production,
           ),
@@ -129,6 +175,54 @@ void main() {
       addTearDown(container.dispose);
       return container;
     }
+
+    group('account write barrier', () {
+      for (final disposeFirst in [false, true]) {
+        test(
+          'owner erasure joins held local writes after disposal: $disposeFirst',
+          () async {
+            final database = AppDatabase.test(NativeDatabase.memory());
+            final dao = _HeldProviderReadStateDao(database);
+            final barrier = AccountStateWriteBarrier();
+            final container = createContainer(
+              cacheDao: database.notificationsDao,
+              accountDao: dao,
+              writeBarrier: barrier,
+            );
+            final repository = container.read(notificationRepositoryProvider)!;
+            addTearDown(() async {
+              await repository.close();
+              await database.close();
+            });
+            await repository.flushPendingReadState();
+            await pumpEventQueue();
+            dao
+              ..gate = Completer<void>()
+              ..entered = Completer<void>();
+            final reading = repository.markAsRead(['d' * 64]);
+            await dao.entered!.future;
+            if (disposeFirst) container.dispose();
+            await barrier.stop('e' * 64);
+            var erased = false;
+            final erasing = barrier.stop(ownerPubkey).then((_) async {
+              await database.accountSyncDao.clearAccount(ownerPubkey);
+              erased = true;
+            });
+            await pumpEventQueue();
+            final erasedBeforeWriteDrained = erased;
+            dao.gate!.complete();
+            await reading;
+            await erasing;
+            expect(erasedBeforeWriteDrained, isFalse);
+            expect(
+              await database.accountSyncDao.readNotificationReads(ownerPubkey),
+              isEmpty,
+            );
+            expect(repository.isClosed, isTrue);
+          },
+        );
+      }
+    });
 
     // An in-place account switch disposes the outgoing container while its
     // notification enrichment is still waiting on the REST API (#10291).

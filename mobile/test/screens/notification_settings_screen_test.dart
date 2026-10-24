@@ -31,6 +31,7 @@ class _MockNotificationPreferencesService extends Mock
 void main() {
   setUpAll(() {
     registerFallbackValue(const NotificationPreferences());
+    registerFallbackValue(NotificationPreference.likesEnabled);
   });
 
   group(NotificationSettingsScreen, () {
@@ -42,7 +43,7 @@ void main() {
       mockPrefsService = _MockNotificationPreferencesService();
       when(mockPrefsService.loadPreferences)
           .thenAnswer((_) async => const NotificationPreferences());
-      when(() => mockPrefsService.updatePreferences(any()))
+      when(() => mockPrefsService.updatePreference(any(), any()))
           .thenAnswer((_) async {});
     });
 
@@ -266,8 +267,9 @@ void main() {
         await tester.pump();
 
         verify(
-          () => mockPrefsService.updatePreferences(
-            const NotificationPreferences(likesEnabled: false),
+          () => mockPrefsService.updatePreference(
+            NotificationPreference.likesEnabled,
+            false,
           ),
         ).called(1);
       },
@@ -296,8 +298,9 @@ void main() {
       await tester.pump();
 
       verify(
-        () => mockPrefsService.updatePreferences(
-          const NotificationPreferences(newPostsEnabled: false),
+        () => mockPrefsService.updatePreference(
+          NotificationPreference.newPostsEnabled,
+          false,
         ),
       ).called(1);
     });
@@ -340,8 +343,9 @@ void main() {
       await tester.pump();
 
       verify(
-        () => mockPrefsService.updatePreferences(
-          const NotificationPreferences(campaignsEnabled: true),
+        () => mockPrefsService.updatePreference(
+          NotificationPreference.campaignsEnabled,
+          true,
         ),
       ).called(1);
     });

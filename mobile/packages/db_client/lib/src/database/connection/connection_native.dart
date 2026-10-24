@@ -238,6 +238,8 @@ const salvageableLocalOnlyTables = <String>[
   'outgoing_dms',
   'concord_store_entries',
   'sound_request_states',
+  'account_sync_records',
+  'notification_reads',
   'dm_message_reactions',
   'removed_conversations',
   'removed_message_ids',
@@ -260,6 +262,9 @@ const tablesDroppedBySalvage = <String>[
   'my_followers',
   'user_profiles',
   'notifications',
+  // Raw group membership describes the dropped notification cache only;
+  // pending concrete IDs survive independently in notification_reads.
+  'notification_read_members',
   'nip05_verifications',
   'identity_events',
   'identity_verifications',
@@ -1358,6 +1363,14 @@ const _localOnlyDataQueries = [
   _LocalOnlyDataQuery(
     'sound_request_states',
     'SELECT 1 FROM sound_request_states LIMIT 1',
+  ),
+  _LocalOnlyDataQuery(
+    'account_sync_records',
+    'SELECT 1 FROM account_sync_records LIMIT 1',
+  ),
+  _LocalOnlyDataQuery(
+    'notification_reads',
+    'SELECT 1 FROM notification_reads WHERE pending = 1 LIMIT 1',
   ),
 ];
 

@@ -90,6 +90,18 @@ enum _SelfWrapPublish {
   failed,
 }
 
+/// Separates transport retry from signer work that may prompt for approval.
+enum SelfApplicationMarkerResult {
+  /// At least one relay accepted the signed wrap.
+  published,
+
+  /// The signed wrap could not reach transport successfully.
+  retryableFailure,
+
+  /// Building/signing needs another deliberate trigger, never a timer prompt.
+  signerUnavailable,
+}
+
 /// Service for sending encrypted private messages using NIP-17 gift wrapping.
 ///
 /// Accepts any [NostrSigner] implementation, supporting both local key
@@ -1327,19 +1339,46 @@ class NIP17MessageService {
     required String content,
     required List<List<String>> tags,
     int eventKind = EventKind.appSpecificData,
+  }) async =>
+      await publishSelfApplicationMarkerDetailed(
+        content: content,
+        tags: tags,
+        eventKind: eventKind,
+      ) ==
+      SelfApplicationMarkerResult.published;
+
+  /// Signer/build failures wait for an explicit trigger; a built wrap failing
+  /// transport remains eligible for automatic delivery retry.
+  Future<SelfApplicationMarkerResult> publishSelfApplicationMarkerDetailed({
+    required String content,
+    required List<List<String>> tags,
+    int eventKind = EventKind.appSpecificData,
   }) async {
+    final Event? selfWrapEvent;
     try {
       final nostr = Nostr(_signer, [], _dummyRelayGenerator);
       await nostr.refreshPublicKey();
       final rumor = Event(_senderPublicKey, eventKind, tags, content);
-      final selfWrapEvent = await _buildWrap(
+      selfWrapEvent = await _buildWrap(
         nostr: nostr,
         rumorEvent: rumor,
         receiverPublicKey: _senderPublicKey,
       ).timeout(DmSendBudget.selfWrapUncappedBuild, onTimeout: () => null);
-      if (selfWrapEvent == null) return false;
+    } on Object catch (error) {
+      Log.warning(
+        'DM read-marker signing deferred (${error.runtimeType})',
+        category: LogCategory.system,
+      );
+      return SelfApplicationMarkerResult.signerUnavailable;
+    }
+    if (selfWrapEvent == null) {
+      return SelfApplicationMarkerResult.signerUnavailable;
+    }
+    try {
       final published = await _nostrService.publishEvent(selfWrapEvent);
-      return published is PublishSuccess;
+      return published is PublishSuccess
+          ? SelfApplicationMarkerResult.published
+          : SelfApplicationMarkerResult.retryableFailure;
     } on Object catch (e, stackTrace) {
       Log.error(
         'DM read-marker self-wrap failed (non-fatal): $e',
@@ -1347,7 +1386,7 @@ class NIP17MessageService {
         error: e,
         stackTrace: stackTrace,
       );
-      return false;
+      return SelfApplicationMarkerResult.retryableFailure;
     }
   }
 

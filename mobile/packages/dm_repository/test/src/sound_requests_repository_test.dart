@@ -526,8 +526,9 @@ void main() {
         expect(publisher.metadataPublishes, 1);
         await repo.close();
         store.failAcknowledgement = false;
-        publisher.enabled = false;
-        publisher.video = publisher.video.copyWith(id: '9' * 64);
+        publisher
+          ..enabled = false
+          ..video = publisher.video.copyWith(id: '9' * 64);
         final resumed = repository(creator, transport, store, publisher);
         addTearDown(resumed.close);
         await resumed.start();

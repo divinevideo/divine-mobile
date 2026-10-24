@@ -1,5 +1,16 @@
 import 'package:equatable/equatable.dart';
 
+/// A notification choice; names match the persisted preference fields.
+enum NotificationPreference {
+  likesEnabled,
+  commentsEnabled,
+  followsEnabled,
+  mentionsEnabled,
+  repostsEnabled,
+  newPostsEnabled,
+  campaignsEnabled,
+}
+
 /// User preferences for push notification types.
 ///
 /// Maps to kind 3083 events per the NIP-XX push notification draft.

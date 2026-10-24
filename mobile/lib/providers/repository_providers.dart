@@ -25,6 +25,7 @@ import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/constants/hive_box_names.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/bookmark_signer_adapter.dart';
@@ -64,16 +65,37 @@ part 'repository_providers.g.dart';
 final badgeRepositoryProvider = Provider<BadgeRepository>((ref) {
   final authService = ref.watch(authServiceProvider);
   final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
-  return BadgeRepository(
+  final accountWrites = ref.watch(accountStateWriteBarrierProvider);
+  final accountClosers = <Future<void> Function()>[];
+  final repository = BadgeRepository(
     nostrClient: ref.watch(nostrServiceProvider),
     sharedPreferences: ref.watch(sharedPreferencesProvider),
     currentPubkey: () => authService.currentPublicKeyHex,
     signEvent: authService.createAndSignEvent,
+    signer: () => authService.requireIdentity,
+    onAccountCreated: (owner, close) {
+      accountClosers.add(accountWrites.register(owner, close));
+    },
     // Read through the repository rather than a snapshot: the hide buckets
     // are mutated in place, so a block made after this provider was built
     // still takes effect on the next badge load.
     isHiddenPubkey: blocklistRepository.shouldFilterFromFeeds,
   );
+  ref.onDispose(() {
+    for (final close in accountClosers) {
+      runProviderDetached(
+        close(),
+        'close badge account state',
+        logName: 'BadgeRepository',
+      );
+    }
+    runProviderDetached(
+      repository.closeAccountState(),
+      'close badge repository',
+      logName: 'BadgeRepository',
+    );
+  });
+  return repository;
 });
 
 final FutureProviderFamily<List<ProfileBadgeViewData>, String>
@@ -985,6 +1007,7 @@ DmRepository dmRepository(Ref ref) {
   final session = ref.watch(nostrSessionProvider);
   final db = ref.watch(databaseProvider);
   final prefs = ref.watch(sharedPreferencesProvider);
+  final accountWrites = ref.watch(accountStateWriteBarrierProvider);
   final reactionsRepository = ref.watch(dmReactionsRepositoryProvider);
 
   // Advertise the environment's stable DM relay (same source as the
@@ -1005,6 +1028,8 @@ DmRepository dmRepository(Ref ref) {
     removedConversationsDao: db.removedConversationsDao,
     removedMessageIdsDao: db.removedMessageIdsDao,
     syncState: DmSyncState(prefs),
+    onReadOwnerCreated: accountWrites.register,
+    accountStateRepository: ref.watch(accountDmStateProvider),
     reactionsRepository: reactionsRepository,
     // Identity is sufficient to scope local storage. Signing, publishing, and
     // relay work remain gated below on the stronger nostrReady contract.
@@ -1043,7 +1068,18 @@ DmRepository dmRepository(Ref ref) {
     },
   );
 
-  ref.onDispose(repository.stopListening);
+  ref.onDispose(() {
+    runProviderDetached(
+      repository.closeLocalReadState(),
+      'close DM read state',
+      logName: 'DmRepository',
+    );
+    runProviderDetached(
+      repository.stopListening(),
+      'stop DM repository',
+      logName: 'DmRepository',
+    );
+  });
 
   // Hand the reactions repository this repository's kind-10050 resolver so a
   // gift-wrapped reaction routes to the recipient's advertised DM inbox rather

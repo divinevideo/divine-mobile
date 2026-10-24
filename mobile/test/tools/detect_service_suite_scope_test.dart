@@ -96,6 +96,7 @@ fi
 
     test('runs both groups for every focused package dependency', () {
       const packages = [
+        'account_state_repository',
         'cache_sync',
         'db_client',
         'dm_repository',

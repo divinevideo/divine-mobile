@@ -1260,6 +1260,44 @@ void main() {
     });
 
     group('publishSelfApplicationMarker (#4977)', () {
+      for (final throws in [false, true]) {
+        test(
+          'detailed outcome blocks signer/build ${throws ? 'errors' : 'refusals'}',
+          () async {
+            final unavailable = NIP17MessageService(
+              signer: LocalNostrSigner(_testPrivateKey),
+              senderPublicKey: getPublicKey(_testPrivateKey),
+              nostrService: mockNostrClient,
+              giftWrapBuilder: (_, _, _) async {
+                if (throws) throw StateError('signer unavailable');
+                return null;
+              },
+            );
+            expect(
+              await unavailable.publishSelfApplicationMarkerDetailed(
+                content: 'read state',
+                tags: const [],
+              ),
+              SelfApplicationMarkerResult.signerUnavailable,
+            );
+            verifyNever(() => mockNostrClient.publishEvent(any()));
+          },
+        );
+      }
+
+      test('detailed outcome keeps relay failures retryable', () async {
+        when(
+          () => mockNostrClient.publishEvent(any()),
+        ).thenAnswer((_) async => const PublishNoRelays());
+        expect(
+          await service.publishSelfApplicationMarkerDetailed(
+            content: 'read state',
+            tags: const [],
+          ),
+          SelfApplicationMarkerResult.retryableFailure,
+        );
+      });
+
       setUp(() {
         // The self marker is NIP-44-sealed to the sender's own key, so the
         // sender pubkey must be a real curve point derived from the signing

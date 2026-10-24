@@ -65,7 +65,7 @@ final class AudioSharingPreferenceServiceProvider
 }
 
 String _$audioSharingPreferenceServiceHash() =>
-    r'e63c48c60864949925db6eeed76f7e8a67e5444a';
+    r'f5155e90e3af3cccf59ab6c73faf9891f46fb344';
 
 /// Audio device preference service for managing the preferred input device
 /// for recording on macOS. keepAlive ensures preference persists.
@@ -181,7 +181,7 @@ final class LanguagePreferenceServiceProvider
 }
 
 String _$languagePreferenceServiceHash() =>
-    r'97066a39a87e568a25bf048686701348e237bdaa';
+    r'c720c7cd509a1324bc55d2106b7d1962969691e4';
 
 /// Rebuild trigger for consumers that need the latest content-language
 /// preference in request parameters.

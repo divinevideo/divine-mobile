@@ -592,6 +592,40 @@ void main() {
       expect(sweeps.single.destructive, isTrue);
     });
 
+    test(
+      'a pending forget cannot borrow the live identity exception',
+      () async {
+        await establishLive();
+        await preferences.setString(
+          PendingAccountCleanup.storageKey,
+          jsonEncode({
+            'version': 3,
+            'userPubkey': container.publicKeyHex,
+            'isIdentityChange': true,
+            'deleteUserData': false,
+            'forgetAccount': true,
+          }),
+        );
+        cleanup.onDatabaseCleanup =
+            ({
+              String? userPubkey,
+              bool deleteUserData = false,
+              bool preserveActiveSession = false,
+              bool forgetAccount = false,
+            }) async {
+              expect(forgetAccount, isTrue);
+              sweeps.add((
+                owner: userPubkey,
+                destructive: deleteUserData,
+                preserveSession: preserveActiveSession,
+              ));
+              throw StateError('Required forget cleanup refused');
+            };
+        await expectFailedSweep(owner: container.publicKeyHex);
+        expect(sweeps.single.destructive, isFalse);
+      },
+    );
+
     test('an intent for a different owner cannot be deferred', () async {
       await establishLive();
       await recordPending(owner: otherOwner);

@@ -79,6 +79,9 @@ void main() {
       mockVideosRepository = _MockVideosRepository();
       mockFunnelcakeApiClient = _MockFunnelcakeApiClient();
       mockAuthService = _MockAuthService();
+      when(() => mockAuthService.authState).thenReturn(AuthState.authenticated);
+      when(() => mockAuthService.authStateStream)
+          .thenAnswer((_) => const Stream<AuthState>.empty());
       mockNostrClient = _MockNostrClient();
 
       when(() => mockVideoEventService.filterVideoList(any())).thenAnswer((

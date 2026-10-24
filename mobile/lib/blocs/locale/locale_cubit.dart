@@ -1,6 +1,7 @@
 // ABOUTME: Cubit for managing the app's display locale
 // ABOUTME: Reads/writes via LocalePreferenceService, emits Locale? state
 
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:equatable/equatable.dart';
@@ -32,8 +33,12 @@ class LocaleCubit extends Cubit<LocaleState>
        _preloadLocale = preloadLocale ?? _noPreload,
        super(const LocaleState()) {
     _loadSavedLocale();
+    _preferenceSubscription = _service.changes?.listen(
+      (_) => _onPreferenceChanged(),
+    );
   }
 
+  StreamSubscription<void>? _preferenceSubscription;
   final LocalePreferenceService _service;
   final LocalePreloader _preloadLocale;
   int _localeRequest = 0;
@@ -48,6 +53,23 @@ class LocaleCubit extends Cubit<LocaleState>
     if (saved != null) {
       emit(LocaleState(locale: Locale(saved)));
     }
+  }
+
+  void _onPreferenceChanged() => unawaited(_refreshLocale());
+
+  Future<void> _refreshLocale() async {
+    final request = ++_localeRequest;
+    final saved = _service.getLocale();
+    final locale = saved == null ? null : Locale(saved);
+    await _preloadLocale(locale);
+    if (request == _localeRequest) emitIfOpen(LocaleState(locale: locale));
+  }
+
+  @override
+  Future<void> close() {
+    ++_localeRequest;
+    unawaited(_preferenceSubscription?.cancel());
+    return super.close();
   }
 
   /// Sets the app locale to [localeCode] (e.g. `'es'`, `'tr'`).

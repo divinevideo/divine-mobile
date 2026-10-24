@@ -25,6 +25,7 @@ import 'package:openvine/screens/inbox/conversation/conversation_page.dart';
 import 'package:openvine/screens/inbox/inbox_page.dart';
 import 'package:openvine/screens/inbox/message_requests/request_preview_view.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
+import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -414,8 +415,12 @@ void main() {
       testWidgets('omits loops when the viewer hides total loops', (
         tester,
       ) async {
-        final prefs = MockSharedPreferences();
-        when(() => prefs.getBool(any())).thenReturn(false);
+        SharedPreferences.setMockInitialValues({
+          StatsVisibilityPreferences.showTotalLoopsKey: false,
+          StatsVisibilityPreferences.showVideoLoopsKey: false,
+          StatsVisibilityPreferences.showPublishedDateKey: false,
+        });
+        final prefs = await SharedPreferences.getInstance();
         await pumpStats(
           tester,
           buildStatsSubject(

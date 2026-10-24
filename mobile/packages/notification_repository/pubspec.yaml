@@ -19,10 +19,13 @@ dependencies:
   nostr_sdk:
   profile_repository:
   rxdart: ^0.28.0
+  shared_preferences: ^2.5.3
   text_sanitizer:
   unified_logger:
 
 dev_dependencies:
+  drift: ^2.34.0
   mocktail: ^1.0.4
+  shared_preferences_platform_interface: ^2.4.1
   test: ^1.26.3
   very_good_analysis: ^10.0.0

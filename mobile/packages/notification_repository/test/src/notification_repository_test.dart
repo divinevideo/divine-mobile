@@ -3,15 +3,19 @@
 // ABOUTME: mapping, and comment truncation.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
+import 'package:drift/native.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/nip19.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:notification_repository/notification_repository.dart';
+import 'package:notification_repository/src/comment_like_cache_codec.dart';
 import 'package:profile_repository/profile_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -20,6 +24,63 @@ class _MockFunnelcakeApiClient extends Mock implements FunnelcakeApiClient {}
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
 class _MockNotificationsDao extends Mock implements NotificationsDao {}
+
+class _HeldReadStateDao extends AccountSyncDao {
+  _HeldReadStateDao(super.attachedDatabase);
+  Completer<void>? readGate;
+  Completer<void>? readEntered;
+  Completer<void>? writeGate;
+  Completer<void>? writeEntered;
+
+  @override
+  Future<List<NotificationReadRow>> readNotificationReads(String owner) async {
+    if (!(readEntered?.isCompleted ?? true)) readEntered!.complete();
+    await readGate?.future;
+    return super.readNotificationReads(owner);
+  }
+
+  @override
+  Future<void> writeNotificationReads(
+    String owner,
+    Set<String> read,
+    Set<String> pending,
+    Map<String, List<String>> members,
+  ) async {
+    if (!(writeEntered?.isCompleted ?? true)) writeEntered!.complete();
+    await writeGate?.future;
+    await super.writeNotificationReads(owner, read, pending, members);
+  }
+}
+
+class _HeldNotificationsDao extends NotificationsDao {
+  _HeldNotificationsDao(super.attachedDatabase);
+  Completer<void>? cacheGate;
+  Completer<void>? cacheEntered;
+  Completer<void>? writeGate;
+  Completer<void>? writeEntered;
+
+  @override
+  Future<List<NotificationRow>> getAllNotifications({
+    int? limit,
+    String? ownerPubkey,
+  }) async {
+    if (limit == null && cacheGate != null) {
+      if (!(cacheEntered?.isCompleted ?? true)) cacheEntered!.complete();
+      await cacheGate!.future;
+    }
+    return super.getAllNotifications(limit: limit, ownerPubkey: ownerPubkey);
+  }
+
+  @override
+  Future<void> replaceAll(
+    List<NotificationCacheRow> rows, {
+    String? ownerPubkey,
+  }) async {
+    if (!(writeEntered?.isCompleted ?? true)) writeEntered!.complete();
+    await writeGate?.future;
+    await super.replaceAll(rows, ownerPubkey: ownerPubkey);
+  }
+}
 
 void main() {
   late _MockFunnelcakeApiClient funnelcakeApiClient;
@@ -267,6 +328,958 @@ void main() {
       engagementScore: 0,
     );
   }
+
+  group('durable read retries', () {
+    for (final status in [400, 401, 413]) {
+      test(
+        'HTTP $status retains intent without automatic re-signing',
+        () async {
+          final database = AppDatabase.test(NativeDatabase.memory());
+          addTearDown(database.close);
+          var calls = 0;
+          var accepts = false;
+          when(
+            () => funnelcakeApiClient.markNotificationsRead(
+              pubkey: any(named: 'pubkey'),
+              notificationIds: any(named: 'notificationIds'),
+              authHeaders: any(named: 'authHeaders'),
+            ),
+          ).thenAnswer((_) async {
+            calls++;
+            if (!accepts) {
+              throw FunnelcakeApiException(
+                message: 'request rejected',
+                statusCode: status,
+              );
+            }
+            return const MarkReadResponse(success: true, markedCount: 1);
+          });
+          final durable = NotificationRepository(
+            funnelcakeApiClient: funnelcakeApiClient,
+            profileRepository: profileRepository,
+            notificationsDao: notificationsDao,
+            userPubkey: userPubkey,
+            readStateDao: database.accountSyncDao,
+            hydrateOnStart: false,
+            readStateRetryDelay: Duration.zero,
+          );
+          addTearDown(durable.close);
+          await durable.markAsRead(['read-id']);
+          await durable.flushPendingReadState();
+          await pumpEventQueue();
+          expect(calls, 1);
+          expect(durable.hasPendingReadState, isTrue);
+          accepts = true;
+          await durable.flushPendingReadState();
+          expect(calls, 2);
+          expect(durable.hasPendingReadState, isFalse);
+        },
+      );
+    }
+
+    test('signer refusal waits for a new explicit trigger', () async {
+      final database = AppDatabase.test(NativeDatabase.memory());
+      addTearDown(database.close);
+      var signingCalls = 0;
+      var permitsSigning = false;
+      when(
+        () => funnelcakeApiClient.markNotificationsRead(
+          pubkey: any(named: 'pubkey'),
+          notificationIds: any(named: 'notificationIds'),
+          authHeaders: any(named: 'authHeaders'),
+        ),
+      ).thenAnswer(
+        (_) async => const MarkReadResponse(success: true, markedCount: 1),
+      );
+      final durable = NotificationRepository(
+        funnelcakeApiClient: funnelcakeApiClient,
+        profileRepository: profileRepository,
+        notificationsDao: notificationsDao,
+        userPubkey: userPubkey,
+        readStateDao: database.accountSyncDao,
+        hydrateOnStart: false,
+        readStateRetryDelay: Duration.zero,
+        authHeadersProvider: (url, method, {body}) async {
+          signingCalls++;
+          if (!permitsSigning) throw StateError('signer refused');
+          return {};
+        },
+      );
+      addTearDown(durable.close);
+      await durable.markAsRead(['read-id']);
+      await durable.flushPendingReadState();
+      await pumpEventQueue();
+      expect(durable.hasPendingReadState, isTrue);
+      expect(signingCalls, 1);
+      permitsSigning = true;
+      await durable.flushPendingReadState();
+      expect(signingCalls, 2);
+      expect(durable.hasPendingReadState, isFalse);
+    });
+
+    late AppDatabase readDatabase;
+    setUp(() {
+      readDatabase = AppDatabase.test(NativeDatabase.memory());
+    });
+    tearDown(() => readDatabase.close());
+    group('close local writes before owner erasure', () {
+      Future<void> erase(NotificationRepository repo) async {
+        await repo.close();
+        await readDatabase.accountSyncDao.clearAccount(userPubkey);
+        await readDatabase.notificationsDao.clearAll(ownerPubkey: userPubkey);
+      }
+
+      setUp(() {
+        when(
+          () => funnelcakeApiClient.markNotificationsRead(
+            pubkey: any(named: 'pubkey'),
+            notificationIds: any(named: 'notificationIds'),
+            authHeaders: any(named: 'authHeaders'),
+          ),
+        ).thenThrow(const FunnelcakeException('offline'));
+      });
+
+      test(
+        'held inner hydration cannot restore erased pending reads',
+        () async {
+          await readDatabase.accountSyncDao.writeNotificationReads(
+            userPubkey,
+            {'pending'},
+            {'pending'},
+            {},
+          );
+          final dao = _HeldNotificationsDao(readDatabase)
+            ..cacheGate = Completer<void>()
+            ..cacheEntered = Completer<void>();
+          final repo = NotificationRepository(
+            funnelcakeApiClient: funnelcakeApiClient,
+            profileRepository: profileRepository,
+            notificationsDao: dao,
+            userPubkey: userPubkey,
+            readStateDao: readDatabase.accountSyncDao,
+          );
+          await dao.cacheEntered!.future;
+          final erasing = erase(repo);
+          await pumpEventQueue();
+          dao.cacheGate!.complete();
+          await erasing;
+          await pumpEventQueue();
+          expect(
+            await readDatabase.accountSyncDao.readNotificationReads(userPubkey),
+            isEmpty,
+          );
+          expect(
+            await readDatabase.accountSyncDao.readNotificationMembers(
+              userPubkey,
+            ),
+            isEmpty,
+          );
+        },
+      );
+
+      test(
+        'repeated close joins an already issued durable read write',
+        () async {
+          final dao = _HeldReadStateDao(readDatabase);
+          final repo = NotificationRepository(
+            funnelcakeApiClient: funnelcakeApiClient,
+            profileRepository: profileRepository,
+            notificationsDao: notificationsDao,
+            userPubkey: userPubkey,
+            readStateDao: dao,
+            hydrateOnStart: false,
+          );
+          await repo.flushPendingReadState();
+          dao
+            ..writeGate = Completer<void>()
+            ..writeEntered = Completer<void>();
+          final reading = repo.markAsRead(['pending']);
+          await dao.writeEntered!.future;
+          unawaited(repo.close());
+          final erasing = erase(repo);
+          await pumpEventQueue();
+          dao.writeGate!.complete();
+          await reading;
+          await erasing;
+          expect(
+            await readDatabase.accountSyncDao.readNotificationReads(userPubkey),
+            isEmpty,
+          );
+        },
+      );
+
+      test(
+        'close joins held readiness and legacy migration before erasure',
+        () async {
+          SharedPreferences.setMockInitialValues({
+            NotificationRepository.readStateStorageKey(userPubkey): jsonEncode({
+              'read': ['legacy'],
+              'pending': ['legacy'],
+              'cachedIds': <String, List<String>>{},
+            }),
+          });
+          final prefs = await SharedPreferences.getInstance();
+          final dao = _HeldReadStateDao(readDatabase)
+            ..readGate = Completer<void>()
+            ..readEntered = Completer<void>();
+          final repo = NotificationRepository(
+            funnelcakeApiClient: funnelcakeApiClient,
+            profileRepository: profileRepository,
+            notificationsDao: notificationsDao,
+            userPubkey: userPubkey,
+            readStateDao: dao,
+            pendingReadPreferences: prefs,
+            hydrateOnStart: false,
+          );
+          await dao.readEntered!.future;
+          final erasing = erase(repo);
+          await pumpEventQueue();
+          dao.readGate!.complete();
+          await erasing;
+          await repo.flushPendingReadState();
+          expect(
+            await readDatabase.accountSyncDao.readNotificationReads(userPubkey),
+            isEmpty,
+          );
+        },
+      );
+
+      test(
+        'close joins an issued cache snapshot write without a durable journal',
+        () async {
+          final dao = _HeldNotificationsDao(readDatabase)
+            ..writeGate = Completer<void>()
+            ..writeEntered = Completer<void>();
+          final repo = NotificationRepository(
+            funnelcakeApiClient: funnelcakeApiClient,
+            profileRepository: profileRepository,
+            notificationsDao: dao,
+            userPubkey: userPubkey,
+            hydrateOnStart: false,
+          );
+          stubNotifications([
+            makeNotification(
+              id: 'cached',
+              notificationType: 'follow',
+              sourceKind: 3,
+            ),
+          ]);
+          await repo.getNotifications();
+          await dao.writeEntered!.future;
+          final erasing = erase(repo);
+          await pumpEventQueue();
+          dao.writeGate!.complete();
+          await erasing;
+          await pumpEventQueue();
+          expect(
+            await readDatabase.notificationsDao.getAllNotifications(
+              ownerPubkey: userPubkey,
+            ),
+            isEmpty,
+          );
+        },
+      );
+
+      test(
+        'late online mark-all acknowledgment cannot restore erased rows',
+        () async {
+          await readDatabase.accountSyncDao.writeNotificationReads(
+            userPubkey,
+            {},
+            {},
+            {
+              'cached': ['cached'],
+            },
+          );
+          await readDatabase.notificationsDao.replaceAll([
+            (
+              id: 'cached',
+              type: 'follow',
+              fromPubkey: validPubkey,
+              timestamp: 1700000000,
+              targetEventId: null,
+              videoAddressableId: null,
+              hasCommentTarget: false,
+              targetPubkey: null,
+              content: null,
+              isRead: false,
+            ),
+          ], ownerPubkey: userPubkey);
+          final response = Completer<MarkReadResponse>();
+          final submitted = Completer<void>();
+          when(
+            () => funnelcakeApiClient.markNotificationsRead(
+              pubkey: any(named: 'pubkey'),
+              authHeaders: any(named: 'authHeaders'),
+            ),
+          ).thenAnswer((_) {
+            submitted.complete();
+            return response.future;
+          });
+          final repo = NotificationRepository(
+            funnelcakeApiClient: funnelcakeApiClient,
+            profileRepository: profileRepository,
+            notificationsDao: readDatabase.notificationsDao,
+            userPubkey: userPubkey,
+            readStateDao: readDatabase.accountSyncDao,
+          );
+          await repo.watchSnapshot().firstWhere(
+            (page) => page.items.isNotEmpty,
+          );
+          final reading = repo.markAllAsRead();
+          await submitted.future;
+          // Closing must finish while the HTTP acknowledgment is still held.
+          await erase(repo);
+          response.complete(
+            const MarkReadResponse(success: true, markedCount: 1),
+          );
+          await reading;
+          expect(
+            await readDatabase.accountSyncDao.readNotificationReads(userPubkey),
+            isEmpty,
+          );
+          expect(
+            await readDatabase.accountSyncDao.readNotificationMembers(
+              userPubkey,
+            ),
+            isEmpty,
+          );
+        },
+      );
+    });
+
+    for (final corrupt in ['{', '{"read":"bad","pending":[],"cachedIds":{}}']) {
+      test('corrupt legacy read journal stays recoverable: $corrupt', () async {
+        SharedPreferences.setMockInitialValues({
+          NotificationRepository.readStateStorageKey(userPubkey): corrupt,
+        });
+        final prefs = await SharedPreferences.getInstance();
+        final durable = NotificationRepository(
+          funnelcakeApiClient: funnelcakeApiClient,
+          profileRepository: profileRepository,
+          notificationsDao: notificationsDao,
+          userPubkey: userPubkey,
+          pendingReadPreferences: prefs,
+          readStateDao: readDatabase.accountSyncDao,
+          hydrateOnStart: false,
+        );
+        await durable.flushPendingReadState();
+        expect(
+          prefs.getString(
+            NotificationRepository.readStateStorageKey(userPubkey),
+          ),
+          corrupt,
+        );
+        await durable.close();
+      });
+    }
+    test(
+      'comment-group codec membership overrides stale read metadata '
+      'without consuming later arrivals',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        var online = false;
+        final posted = <List<String>>[];
+        when(
+          () => funnelcakeApiClient.markNotificationsRead(
+            pubkey: any(named: 'pubkey'),
+            notificationIds: any(named: 'notificationIds'),
+            authHeaders: any(named: 'authHeaders'),
+          ),
+        ).thenAnswer((call) async {
+          posted.add(
+            List<String>.from(call.namedArguments[#notificationIds] as List),
+          );
+          if (!online) throw const FunnelcakeException('offline');
+          return const MarkReadResponse(success: true, markedCount: 2);
+        });
+        Future<void> cacheGroup(List<String> ids) async {
+          final group = ActorNotification(
+            id: 'raw-a',
+            type: NotificationKind.likeComment,
+            actor: ActorInfo(pubkey: 'a' * 64, displayName: 'A'),
+            additionalActors: [ActorInfo(pubkey: 'b' * 64, displayName: 'B')],
+            commentEventId: 'c' * 64,
+            targetEventId: 'c' * 64,
+            timestamp: DateTime(2026),
+            notificationIds: ids,
+          );
+          await readDatabase.notificationsDao.replaceAll([
+            (
+              id: group.id,
+              type: CommentLikeCacheCodec.type,
+              fromPubkey: group.actor.pubkey,
+              timestamp: 1700000000,
+              targetEventId: group.commentEventId,
+              videoAddressableId: null,
+              hasCommentTarget: true,
+              targetPubkey: null,
+              content: CommentLikeCacheCodec.encode(group),
+              isRead: false,
+            ),
+          ], ownerPubkey: userPubkey);
+        }
+
+        await cacheGroup(['raw-a', 'raw-b']);
+        await readDatabase.accountSyncDao.writeNotificationReads(
+          userPubkey,
+          {'raw-a'},
+          {'raw-a'},
+          {
+            'raw-a': ['raw-a'],
+          },
+        );
+        NotificationRepository create() => NotificationRepository(
+          funnelcakeApiClient: funnelcakeApiClient,
+          profileRepository: profileRepository,
+          notificationsDao: readDatabase.notificationsDao,
+          userPubkey: userPubkey,
+          pendingReadPreferences: prefs,
+          readStateDao: readDatabase.accountSyncDao,
+        );
+        final first = create();
+        addTearDown(first.close);
+        final hydrated = await first.watchSnapshot().firstWhere(
+          (page) => page.items.isNotEmpty,
+        );
+        expect(
+          hydrated.items.single.notificationIds,
+          unorderedEquals(['raw-a', 'raw-b']),
+        );
+        expect(hydrated.items.single.isRead, false);
+        await first.markAsRead(['raw-a']);
+        await first.flushPendingReadState();
+        expect(
+          (await readDatabase.accountSyncDao.readNotificationReads(
+            userPubkey,
+          )).where((row) => row.pending).map((row) => row.notificationId),
+          unorderedEquals(['raw-a', 'raw-b']),
+        );
+        await first.close();
+        await cacheGroup(['raw-a', 'raw-b', 'raw-new']);
+        online = true;
+        final restarted = create();
+        addTearDown(restarted.close);
+        final later = await restarted.watchSnapshot().firstWhere(
+          (page) => page.items.isNotEmpty,
+        );
+        await restarted.flushPendingReadState();
+        expect(posted.last, unorderedEquals(['raw-a', 'raw-b']));
+        expect(
+          later.items.single.notificationIds,
+          unorderedEquals(['raw-a', 'raw-b', 'raw-new']),
+        );
+        expect(later.items.single.isRead, false);
+        await restarted.close();
+      },
+    );
+
+    test(
+      'legacy pending reads and exact grouped membership migrate to Drift',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          NotificationRepository.readStateStorageKey(userPubkey): jsonEncode({
+            'read': ['old', 'pending'],
+            'pending': ['pending'],
+            'cachedIds': {
+              'group': ['old', 'pending'],
+            },
+          }),
+        });
+        final prefs = await SharedPreferences.getInstance();
+        when(
+          () => funnelcakeApiClient.markNotificationsRead(
+            pubkey: any(named: 'pubkey'),
+            notificationIds: any(named: 'notificationIds'),
+            authHeaders: any(named: 'authHeaders'),
+          ),
+        ).thenThrow(const FunnelcakeException('offline'));
+        final durable = NotificationRepository(
+          funnelcakeApiClient: funnelcakeApiClient,
+          profileRepository: profileRepository,
+          notificationsDao: notificationsDao,
+          userPubkey: userPubkey,
+          pendingReadPreferences: prefs,
+          readStateDao: readDatabase.accountSyncDao,
+          hydrateOnStart: false,
+        );
+        await durable.flushPendingReadState();
+        expect(
+          prefs.getString(
+            NotificationRepository.readStateStorageKey(userPubkey),
+          ),
+          isNull,
+        );
+        expect(
+          (await readDatabase.accountSyncDao.readNotificationReads(
+            userPubkey,
+          )).map((r) => (r.notificationId, r.pending)),
+          unorderedEquals([('old', false), ('pending', true)]),
+        );
+        expect(
+          (await readDatabase.accountSyncDao.readNotificationMembers(
+            userPubkey,
+          )).map((r) => r.notificationId),
+          unorderedEquals(['old', 'pending']),
+        );
+        await durable.close();
+      },
+    );
+    test('foreground failed POST retries without another action', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final retried = Completer<void>();
+      var online = false;
+      when(
+        () => notificationsDao.markAsRead(
+          any(),
+          ownerPubkey: any(named: 'ownerPubkey'),
+        ),
+      ).thenAnswer((_) async => true);
+      when(
+        () => funnelcakeApiClient.markNotificationsRead(
+          pubkey: any(named: 'pubkey'),
+          notificationIds: any(named: 'notificationIds'),
+          authHeaders: any(named: 'authHeaders'),
+        ),
+      ).thenAnswer((_) async {
+        if (!online) throw const FunnelcakeException('offline');
+        if (!retried.isCompleted) retried.complete();
+        return const MarkReadResponse(success: true, markedCount: 1);
+      });
+      final durable = NotificationRepository(
+        funnelcakeApiClient: funnelcakeApiClient,
+        profileRepository: profileRepository,
+        notificationsDao: notificationsDao,
+        userPubkey: userPubkey,
+        pendingReadPreferences: prefs,
+        readStateDao: readDatabase.accountSyncDao,
+        hydrateOnStart: false,
+        readStateRetryDelay: const Duration(milliseconds: 5),
+      );
+      await durable.markAsRead(['read-id']);
+      await durable.flushPendingReadState();
+      expect(durable.hasPendingReadState, isTrue);
+      online = true;
+      await retried.future.timeout(const Duration(seconds: 1));
+      await durable.flushPendingReadState();
+      expect(durable.hasPendingReadState, isFalse);
+      await durable.close();
+    });
+
+    test(
+      'a hung network retry cannot block a later durable local read',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final started = Completer<void>();
+        final network = Completer<MarkReadResponse>();
+        final posted = <List<String>>[];
+        when(
+          () => funnelcakeApiClient.markNotificationsRead(
+            pubkey: any(named: 'pubkey'),
+            notificationIds: any(named: 'notificationIds'),
+            authHeaders: any(named: 'authHeaders'),
+          ),
+        ).thenAnswer((call) async {
+          posted.add(
+            List<String>.of(
+              call.namedArguments[#notificationIds] as List<String>,
+            ),
+          );
+          if (posted.length == 1) {
+            started.complete();
+            return network.future;
+          }
+          return const MarkReadResponse(success: true, markedCount: 1);
+        });
+        when(
+          () => notificationsDao.markAsRead(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer((_) async => true);
+        final durable = NotificationRepository(
+          funnelcakeApiClient: funnelcakeApiClient,
+          profileRepository: profileRepository,
+          notificationsDao: notificationsDao,
+          userPubkey: userPubkey,
+          pendingReadPreferences: prefs,
+          readStateDao: readDatabase.accountSyncDao,
+          hydrateOnStart: false,
+        );
+        stubNotifications([
+          makeNotification(
+            id: 'one',
+            notificationType: 'follow',
+            sourceKind: 3,
+          ),
+          makeNotification(
+            id: 'two',
+            notificationType: 'follow',
+            sourceKind: 3,
+            sourcePubkey: 'other',
+            sourceEventId: 'other-event',
+          ),
+        ]);
+        await durable.getNotifications();
+        await durable.markAsRead(['one']);
+        await started.future;
+        await durable.markAsRead(['two']).timeout(const Duration(seconds: 1));
+        expect(
+          (await durable.watchSnapshot().first).items.every((n) => n.isRead),
+          isTrue,
+        );
+        network.complete(const MarkReadResponse(success: true, markedCount: 1));
+        await durable.flushPendingReadState();
+        expect(posted, [
+          ['one'],
+          ['two'],
+        ]);
+        await durable.close();
+      },
+    );
+
+    test(
+      'a captured group read does not consume a new member while queued',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final started = Completer<void>();
+        final release = Completer<bool>();
+        when(
+          () => notificationsDao.markAsRead(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer((call) async {
+          if (call.positionalArguments.single == 'blocker') {
+            started.complete();
+            return release.future;
+          }
+          return true;
+        });
+        when(
+          () => funnelcakeApiClient.markNotificationsRead(
+            pubkey: any(named: 'pubkey'),
+            notificationIds: any(named: 'notificationIds'),
+            authHeaders: any(named: 'authHeaders'),
+          ),
+        ).thenThrow(const FunnelcakeException('offline'));
+        final durable = NotificationRepository(
+          funnelcakeApiClient: funnelcakeApiClient,
+          profileRepository: profileRepository,
+          notificationsDao: notificationsDao,
+          userPubkey: userPubkey,
+          pendingReadPreferences: prefs,
+          readStateDao: readDatabase.accountSyncDao,
+          hydrateOnStart: false,
+        );
+        final blocker = makeNotification(
+          id: 'blocker',
+          notificationType: 'follow',
+          sourceKind: 3,
+        );
+        final old = makeNotification(id: 'old');
+        stubNotifications([blocker, old]);
+        await durable.getNotifications();
+        final first = durable.markAsRead(['blocker']);
+        await started.future;
+        final groupRead = durable.markAsRead(['old']);
+        stubNotifications([
+          blocker,
+          old,
+          makeNotification(
+            id: 'new',
+            sourcePubkey: 'new-actor',
+            sourceEventId: 'new-event',
+          ),
+        ]);
+        await durable.getNotifications();
+        release.complete(true);
+        await first;
+        await groupRead;
+        expect(
+          (await durable.watchSnapshot().first).items
+              .whereType<VideoNotification>()
+              .single
+              .isRead,
+          isFalse,
+        );
+        await durable.flushPendingReadState();
+        await durable.close();
+      },
+    );
+
+    test(
+      'refused local persistence keeps UI unread and records no retry',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final durable = NotificationRepository(
+          funnelcakeApiClient: funnelcakeApiClient,
+          profileRepository: profileRepository,
+          notificationsDao: notificationsDao,
+          userPubkey: userPubkey,
+          pendingReadPreferences: prefs,
+          readStateDao: readDatabase.accountSyncDao,
+          hydrateOnStart: false,
+        );
+        stubNotifications([makeNotification(id: 'old')]);
+        await durable.getNotifications();
+        await readDatabase.close();
+        await expectLater(durable.markAsRead(['old']), throwsStateError);
+        expect(
+          (await durable.watchSnapshot().first).items.single.isRead,
+          isFalse,
+        );
+        expect(
+          prefs.getString(
+            NotificationRepository.readStateStorageKey(userPubkey),
+          ),
+          isNull,
+        );
+        await durable.flushPendingReadState();
+        verifyNever(
+          () => funnelcakeApiClient.markNotificationsRead(
+            pubkey: any(named: 'pubkey'),
+            notificationIds: any(named: 'notificationIds'),
+            authHeaders: any(named: 'authHeaders'),
+          ),
+        );
+        await durable.close();
+      },
+    );
+
+    test('failed mark-all is never replayed over later arrivals', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final durable = NotificationRepository(
+        funnelcakeApiClient: funnelcakeApiClient,
+        profileRepository: profileRepository,
+        notificationsDao: notificationsDao,
+        userPubkey: userPubkey,
+        pendingReadPreferences: prefs,
+        readStateDao: readDatabase.accountSyncDao,
+        hydrateOnStart: false,
+      );
+      stubNotifications([makeNotification(id: 'old')]);
+      await durable.getNotifications();
+      when(
+        () => funnelcakeApiClient.markNotificationsRead(
+          pubkey: any(named: 'pubkey'),
+          authHeaders: any(named: 'authHeaders'),
+        ),
+      ).thenThrow(const FunnelcakeException('offline'));
+      await expectLater(
+        durable.markAllAsRead(),
+        throwsA(isA<FunnelcakeException>()),
+      );
+      stubNotifications([makeNotification(id: 'new')]);
+      await durable.getNotifications();
+      await durable.flushPendingReadState();
+      expect(
+        (await durable.watchSnapshot().first).items.single.isRead,
+        isFalse,
+      );
+      verify(
+        () => funnelcakeApiClient.markNotificationsRead(
+          pubkey: userPubkey,
+          authHeaders: any(named: 'authHeaders'),
+        ),
+      ).called(1);
+      await durable.close();
+    });
+
+    test('hydrated group retains raw server IDs for offline reads', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final database = AppDatabase.test(NativeDatabase.memory());
+      addTearDown(database.close);
+      var online = false;
+      final posted = <List<String>>[];
+      when(
+        () => funnelcakeApiClient.markNotificationsRead(
+          pubkey: any(named: 'pubkey'),
+          notificationIds: any(named: 'notificationIds'),
+          authHeaders: any(named: 'authHeaders'),
+        ),
+      ).thenAnswer((call) async {
+        posted.add(
+          List<String>.of(
+            call.namedArguments[#notificationIds] as List<String>,
+          ),
+        );
+        if (!online) throw const FunnelcakeException('offline');
+        return const MarkReadResponse(success: true, markedCount: 2);
+      });
+      NotificationRepository create({bool hydrate = true}) =>
+          NotificationRepository(
+            funnelcakeApiClient: funnelcakeApiClient,
+            profileRepository: profileRepository,
+            notificationsDao: database.notificationsDao,
+            userPubkey: userPubkey,
+            pendingReadPreferences: prefs,
+            readStateDao: readDatabase.accountSyncDao,
+            hydrateOnStart: hydrate,
+          );
+      stubNotifications([
+        makeNotification(id: 'raw-a'),
+        makeNotification(
+          id: 'raw-b',
+          sourcePubkey: 'other',
+          sourceEventId: 'event-b',
+        ),
+      ]);
+      final first = create(hydrate: false);
+      await first.getNotifications();
+      await first.flushPendingReadState();
+      await first.close();
+      final cached = create();
+      final hydrated = await cached.watchSnapshot().firstWhere(
+        (p) => p.items.isNotEmpty,
+      );
+      expect(
+        hydrated.items.single.notificationIds,
+        unorderedEquals(['raw-a', 'raw-b']),
+      );
+      await cached.markAsRead([hydrated.items.single.id]);
+      await cached.flushPendingReadState();
+      expect(
+        await database.notificationsDao.getUnreadCount(ownerPubkey: userPubkey),
+        0,
+      );
+      await cached.close();
+      online = true;
+      final restarted = create();
+      await restarted.flushPendingReadState();
+      expect(posted.last, unorderedEquals(['raw-a', 'raw-b']));
+      stubNotifications([
+        makeNotification(id: 'raw-a'),
+        makeNotification(
+          id: 'raw-b',
+          sourcePubkey: 'other',
+          sourceEventId: 'event-b',
+        ),
+        makeNotification(
+          id: 'raw-new',
+          sourcePubkey: 'new-actor',
+          sourceEventId: 'event-new',
+        ),
+      ]);
+      await restarted.getNotifications();
+      expect(
+        (await restarted.watchSnapshot().first).items.single.isRead,
+        isFalse,
+      );
+      await restarted.flushPendingReadState();
+      await restarted.close();
+    });
+
+    test(
+      'offline batch reads retry after restart and leave new arrivals unread',
+      () async {
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        var online = false;
+        final postedIds = <List<String>>[];
+        when(
+          () => funnelcakeApiClient.markNotificationsRead(
+            pubkey: any(named: 'pubkey'),
+            notificationIds: any(named: 'notificationIds'),
+            authHeaders: any(named: 'authHeaders'),
+          ),
+        ).thenAnswer((call) async {
+          postedIds.add(
+            List<String>.of(
+              call.namedArguments[#notificationIds] as List<String>,
+            ),
+          );
+          if (!online) throw const FunnelcakeException('offline');
+          return const MarkReadResponse(success: true, markedCount: 1);
+        });
+        when(
+          () => notificationsDao.markAsRead(
+            any(),
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer((_) async => true);
+        NotificationRepository create() => NotificationRepository(
+          funnelcakeApiClient: funnelcakeApiClient,
+          profileRepository: profileRepository,
+          notificationsDao: notificationsDao,
+          userPubkey: userPubkey,
+          pendingReadPreferences: prefs,
+          readStateDao: readDatabase.accountSyncDao,
+          hydrateOnStart: false,
+        );
+        var notifications = [
+          makeNotification(
+            id: 'old',
+            notificationType: 'follow',
+            sourceKind: 3,
+            sourceEventId: 'old-event',
+          ),
+        ];
+        when(
+          () => funnelcakeApiClient.getNotifications(
+            pubkey: any(named: 'pubkey'),
+            limit: any(named: 'limit'),
+            cursor: any(named: 'cursor'),
+            cursorId: any(named: 'cursorId'),
+            types: any(named: 'types'),
+            requestUri: any(named: 'requestUri'),
+            authHeaders: any(named: 'authHeaders'),
+          ),
+        ).thenAnswer(
+          (_) async => NotificationResponse(
+            notifications: notifications,
+            unreadCount: notifications.length,
+            hasMore: false,
+          ),
+        );
+        final first = create();
+        await first.getNotifications();
+        await first.markAsRead(['old']);
+        await first.flushPendingReadState();
+        expect((await first.watchSnapshot().first).items.single.isRead, isTrue);
+        await first.close();
+        notifications = [
+          ...notifications,
+          makeNotification(
+            id: 'new',
+            sourcePubkey: 'other',
+            notificationType: 'follow',
+            sourceKind: 3,
+            sourceEventId: 'new-event',
+          ),
+        ];
+        online = true;
+        final restarted = create();
+        await restarted.flushPendingReadState();
+        await restarted.getNotifications();
+        final items = (await restarted.watchSnapshot().first).items;
+        expect(
+          items.firstWhere((n) => n.notificationIds.contains('old')).isRead,
+          isTrue,
+        );
+        expect(
+          items.firstWhere((n) => n.notificationIds.contains('new')).isRead,
+          isFalse,
+        );
+        expect(postedIds, isNotEmpty);
+        expect(
+          postedIds.every((ids) => ids.length == 1 && ids.single == 'old'),
+          isTrue,
+        );
+        final attempts = postedIds.length;
+        await restarted.flushPendingReadState();
+        expect(postedIds.length, attempts);
+        await restarted.close();
+      },
+    );
+  });
 
   group(NotificationRepository, () {
     group('getNotifications', () {

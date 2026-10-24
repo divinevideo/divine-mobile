@@ -2283,3 +2283,40 @@ class SoundRequestStates extends Table {
   @override
   Set<Column> get primaryKey => {ownerPubkey, section, recordKey};
 }
+
+/// Durable account-state fields and signed sources. Kept while the account is
+/// known: tombstones and unsent intent cannot be evicted without resurrection.
+/// Explicit erasure calls AccountSyncDao.clearAccount; switches preserve rows.
+@DataClassName('AccountSyncRecord')
+class AccountSyncRecords extends Table {
+  TextColumn get ownerPubkey => text()();
+  TextColumn get namespace => text()();
+  TextColumn get section => text()();
+  TextColumn get recordKey => text()();
+  TextColumn get value => text()();
+  @override
+  Set<Column> get primaryKey => {ownerPubkey, namespace, section, recordKey};
+}
+
+/// Concrete notification reads/outbox. Pending rows never expire; acknowledged
+/// overlays are retained only for raw IDs in the current cache membership.
+/// NotificationRepository prunes on snapshot replacement and startup hydration.
+@DataClassName('NotificationReadRow')
+class NotificationReads extends Table {
+  TextColumn get ownerPubkey => text()();
+  TextColumn get notificationId => text()();
+  BoolColumn get pending => boolean()();
+  @override
+  Set<Column> get primaryKey => {ownerPubkey, notificationId};
+}
+
+/// Exact raw membership for cached groups; replaced atomically with read state.
+/// NotificationRepository replaces this cache metadata on each snapshot.
+@DataClassName('NotificationReadMember')
+class NotificationReadMembers extends Table {
+  TextColumn get ownerPubkey => text()();
+  TextColumn get cacheId => text()();
+  TextColumn get notificationId => text()();
+  @override
+  Set<Column> get primaryKey => {ownerPubkey, cacheId, notificationId};
+}

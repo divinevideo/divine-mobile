@@ -9,6 +9,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:account_state_repository/account_state_repository.dart';
 import 'package:crypto/crypto.dart';
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/src/build_mode.dart';
@@ -20,6 +21,7 @@ import 'package:dm_repository/src/dm_decrypt_isolate.dart';
 import 'package:dm_repository/src/dm_decryption_worker.dart';
 import 'package:dm_repository/src/dm_message_size.dart';
 import 'package:dm_repository/src/dm_reactions_repository.dart';
+import 'package:dm_repository/src/dm_read_state_writer.dart';
 import 'package:dm_repository/src/dm_removal_policy.dart';
 import 'package:dm_repository/src/dm_repository_reportable_sites.dart';
 import 'package:dm_repository/src/dm_send_budget.dart';
@@ -569,6 +571,9 @@ class DmRepository {
     RemovedConversationsDao? removedConversationsDao,
     RemovedMessageIdsDao? removedMessageIdsDao,
     DmSyncState? syncState,
+    AccountStateRepository? accountStateRepository,
+    void Function(String owner, Future<void> Function() close)?
+    onReadOwnerCreated,
     NIP17MessageService? messageService,
     String? userPubkey,
     NostrSigner? signer,
@@ -585,10 +590,12 @@ class DmRepository {
     List<String> dmInboxLookupRelays = const <String>[],
     List<String> dmInboxTaggedRelays = const <String>[],
     Duration readMarkerDebounceDelay = _defaultReadMarkerDebounceDelay,
+    Duration readStateRetryDelay = const Duration(seconds: 5),
     String Function()? sendBatchIdGenerator,
     String? environment,
   }) : _nostrClient = nostrClient,
        _readMarkerDebounceDelay = readMarkerDebounceDelay,
+       _readStateRetryDelay = readStateRetryDelay,
        _directMessagesDao = directMessagesDao,
        _conversationsDao = conversationsDao,
        _outgoingDmsDao = outgoingDmsDao,
@@ -597,6 +604,12 @@ class DmRepository {
        _removedConversationsDao = removedConversationsDao,
        _removedMessageIdsDao = removedMessageIdsDao,
        _syncState = syncState,
+       _accountStateRepository = accountStateRepository,
+       _readStateWriter = DmReadStateWriter(
+         conversations: conversationsDao,
+         syncState: syncState,
+         onOwnerCreated: onReadOwnerCreated,
+       ),
        _messageService = messageService,
        _userPubkey = userPubkey ?? '',
        _signer = signer,
@@ -659,6 +672,170 @@ class DmRepository {
   final RemovedMessageIdsDao? _removedMessageIdsDao;
 
   final DmSyncState? _syncState;
+  final DmReadStateWriter _readStateWriter;
+
+  DmReadWriteLease _readLease(String owner) {
+    final generation = _resetGeneration;
+    return _readStateWriter.lease(
+      owner,
+      () =>
+          !_disposed && _resetGeneration == generation && _ownerPubkey == owner,
+    );
+  }
+
+  /// Fences this provider's local read actions and drains issued writes.
+  Future<void> closeLocalReadState() => _readStateWriter.close();
+  final AccountStateRepository? _accountStateRepository;
+  StreamSubscription<Map<String, Object?>>? _dismissalSubscription;
+  Future<void> _dismissalTail = Future<void>.value();
+
+  void _listenForDismissals() {
+    final state = _accountStateRepository;
+    if (state == null || state.pubkey != _ownerPubkey) return;
+    _dismissalSubscription ??= state.changes.listen((_) {
+      unawaited(_applyAccountDismissals());
+    });
+    unawaited(_applyAccountDismissals());
+  }
+
+  Future<void> _applyAccountDismissals({
+    String? conversationId,
+    String? ownerPubkey,
+    bool migrateLegacy = true,
+  }) {
+    final state = _accountStateRepository;
+    final owner = ownerPubkey ?? _ownerPubkey;
+    if (state == null ||
+        owner == null ||
+        state.pubkey != owner ||
+        _ownerPubkey != owner) {
+      return Future<void>.value();
+    }
+    final lease = _readLease(owner);
+    Future<void> reconcile() async {
+      if (!lease.isCurrent) {
+        return;
+      }
+      final rows = <ConversationRow>[];
+      if (conversationId == null) {
+        rows.addAll(
+          await _conversationsDao.getAllConversations(ownerPubkey: owner),
+        );
+      } else {
+        final row = await _conversationsDao.getConversation(
+          conversationId,
+          ownerPubkey: owner,
+        );
+        if (row != null) rows.add(row);
+      }
+      final tupleKeys = {
+        for (final row in rows) _participantTupleKey(row.participantPubkeys),
+      };
+      final seeds = <String, Object?>{};
+      for (final row in rows) {
+        final key = _participantTupleKey(row.participantPubkeys);
+        if (!migrateLegacy ||
+            key == null ||
+            state.contains(key) ||
+            !row.isDismissed) {
+          continue;
+        }
+        final local = await _conversationsDao.getDismissal(
+          row.id,
+          ownerPubkey: owner,
+        );
+        if (local != null) {
+          seeds[key] = {
+            'through': local.boundaryTimestamp,
+            'known': (jsonDecode(local.knownMessageIds) as List).cast<String>(),
+          };
+        }
+      }
+      if (!lease.isCurrent) {
+        return;
+      }
+      if (seeds.isNotEmpty) await lease.write(() => state.seed(seeds));
+      final entries = conversationId == null
+          ? state.values.entries
+          : <MapEntry<String, Object?>>[
+              for (final key in tupleKeys)
+                if (key != null && state.contains(key))
+                  MapEntry(key, state.value(key)),
+            ];
+      for (final entry in entries) {
+        if (!lease.isCurrent) {
+          return;
+        }
+        final participants = entry.key.split(',');
+        if (participants.length < 2 || !participants.contains(owner)) continue;
+        final value = entry.value;
+        if (value == null) {
+          await lease.write(
+            () => _conversationsDao.applySyncedDismissal(
+              computeConversationId(participants),
+              ownerPubkey: owner,
+              dismissed: false,
+            ),
+          );
+        } else if (value is Map &&
+            value['through'] is int &&
+            value['known'] is List) {
+          final known = value['known'] as List;
+          if (known.any((id) => id is! String)) continue;
+          await lease.write(
+            () => _conversationsDao.applySyncedDismissal(
+              computeConversationId(participants),
+              ownerPubkey: owner,
+              dismissed: true,
+              boundaryTimestamp: DmClock.now().atMostNow(
+                value['through'] as int,
+              ),
+              knownMessageIds: known.cast<String>().toSet(),
+            ),
+          );
+        }
+      }
+    }
+
+    // Ingest already owns a Drift transaction. Waiting behind an outside
+    // reconciliation here would wait for the transaction's own database lock.
+    if (conversationId != null) return reconcile();
+    final result = _dismissalTail.then((_) => reconcile());
+    return _dismissalTail = result.then<void>(
+      (_) {},
+      onError: (Object error, StackTrace stack) {
+        Log.error(
+          'DM dismissal reconciliation failed: $error',
+          category: LogCategory.system,
+          error: error,
+          stackTrace: stack,
+        );
+      },
+    );
+  }
+
+  /// A projection failure cannot undo a committed message or its ledger.
+  Future<void> _applyAccountDismissalsAfterCommit({
+    required String conversationId,
+    required String ownerPubkey,
+  }) async {
+    try {
+      await _applyAccountDismissals(
+        conversationId: conversationId,
+        ownerPubkey: ownerPubkey,
+      );
+    } on Object catch (error, stackTrace) {
+      // Legacy/cache choices remain available to a later reconciliation. Do
+      // not misclassify this as a rolled-back message or skip sync cursors.
+      Log.warning(
+        'Post-commit DM dismissal reconciliation failed; '
+        'message retained (${error.runtimeType})',
+        category: LogCategory.system,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
   NIP17MessageService? _messageService;
   String _userPubkey;
   NostrSigner? _signer;
@@ -1295,6 +1472,12 @@ class DmRepository {
     // they never leak across an account switch. #4977.
     _readMarkerDebounce?.cancel();
     _readMarkerDebounce = null;
+    _readRetryTimer?.cancel();
+    _readRetryTimer = null;
+    _readRetryAttempt = 0;
+    _readFlush = null;
+    unawaited(_dismissalSubscription?.cancel());
+    _dismissalSubscription = null;
     _pendingReadCursors.clear();
     unawaited(_giftWrapSubscription?.cancel());
     _giftWrapSubscription = null;
@@ -1362,6 +1545,7 @@ class DmRepository {
     // only meant to suppress the onDone reconnect during intentional stop;
     // a new explicit startListening() should always be honored.
     _disposed = false;
+    _listenForDismissals();
     // A pending reconnect is made stale by this call — cancel it so the
     // timer doesn't fire later and try to re-subscribe on top of the
     // fresh subscription we're about to establish.
@@ -1380,6 +1564,9 @@ class DmRepository {
       // unauthenticated rumor timestamp before deriving `since:` from them —
       // otherwise an already-affected install stays silently blackholed.
       await _syncState?.repairPoisonedBoundaries(_userPubkey);
+      if ((_syncState?.pendingReadRevision(_userPubkey) ?? 0) > 0) {
+        unawaited(flushPendingReadState());
+      }
 
       // Count-based windowing: first open fetches a bounded backlog
       // (limit:50), later opens fetch only recent events via a `since:`
@@ -2979,6 +3166,12 @@ class DmRepository {
     // same user may resume listening. #4977.
     _readMarkerDebounce?.cancel();
     _readMarkerDebounce = null;
+    _readRetryTimer?.cancel();
+    _readRetryTimer = null;
+    _readRetryAttempt = 0;
+    _readFlush = null;
+    unawaited(_dismissalSubscription?.cancel());
+    _dismissalSubscription = null;
     await _giftWrapSubscription?.cancel();
     _giftWrapSubscription = null;
     try {
@@ -2993,6 +3186,7 @@ class DmRepository {
     // have cursor/read-state writes after it. Preserve the handles captured
     // above and wait for every writer to observe the teardown before declaring
     // the repository quiescent. See #7318.
+    await _readStateWriter.drain();
     await postAuthMaintenance;
     await historyDrain;
     await pendingDecryptRetry;
@@ -4349,6 +4543,12 @@ class DmRepository {
             }
           }
         });
+        // The ingest transaction has committed, so queued journal persistence
+        // can acquire the same database without a lock-order cycle.
+        await _applyAccountDismissalsAfterCommit(
+          conversationId: conversationId,
+          ownerPubkey: ownerPubkey,
+        );
 
         if (skippedByTransactionalGiftWrapDedup) {
           Log.debug(
@@ -5160,6 +5360,10 @@ class DmRepository {
         // replayed history stamped at or before the removal stays
         // suppressed. #7804.
       });
+      await _applyAccountDismissalsAfterCommit(
+        conversationId: conversationId,
+        ownerPubkey: ownerPubkey,
+      );
 
       if (skippedByTransactionalGiftWrapDedup) {
         Log.debug(
@@ -10555,9 +10759,24 @@ class DmRepository {
       );
       return false;
     }
-    final written = await _conversationsDao.markAsRead(
+    final lease = _readLease(owner);
+    final boundaries = await _readStateWriter.remember(lease, {
       conversationId,
-      ownerPubkey: owner,
+    }, _participantTupleKey);
+    if (!lease.isCurrent) return false;
+    final boundary = boundaries[conversationId];
+    final written = await lease.write(
+      () async => _syncState == null
+          ? await _conversationsDao.markAsRead(
+              conversationId,
+              ownerPubkey: owner,
+            )
+          : boundary != null &&
+                await _applyReadCursorPreservingBoundary(
+                  conversationId,
+                  boundary,
+                  ownerPubkey: owner,
+                ),
     );
     if (!written) {
       // Info, not warning: opening a thread that has no row yet lands here.
@@ -10588,10 +10807,35 @@ class DmRepository {
       return false;
     }
     final ids = conversationIds.toSet().toList();
-    final written = await _conversationsDao.markMultipleAsRead(
-      ids,
-      ownerPubkey: owner,
+    final lease = _readLease(owner);
+    final boundaries = await _readStateWriter.remember(
+      lease,
+      ids.toSet(),
+      _participantTupleKey,
     );
+    if (!lease.isCurrent) return false;
+    var written = 0;
+    if (_syncState == null) {
+      written = await lease.write(
+        () => _conversationsDao.markMultipleAsRead(
+          ids,
+          ownerPubkey: owner,
+        ),
+      );
+    } else {
+      for (final entry in boundaries.entries) {
+        if (!lease.isCurrent) return false;
+        if (await lease.write(
+          () => _applyReadCursorPreservingBoundary(
+            entry.key,
+            entry.value,
+            ownerPubkey: owner,
+          ),
+        )) {
+          written++;
+        }
+      }
+    }
     if (written > 0) _scheduleReadMarkerPublish();
     if (written == ids.length) return true;
     Log.warning(
@@ -10603,8 +10847,8 @@ class DmRepository {
 
   /// Put a conversation aside locally, retaining messages and acceptance state.
   /// Restoring makes it visible again. A newer incoming message also restores
-  /// it through the conversation upsert. Dismissal itself is device-local;
-  /// the read cursor uses the existing cross-device read-state marker.
+  /// it through the conversation upsert. Account dismissal sync captures the
+  /// exact through-message boundary; read cursors retain their existing marker.
   Future<void> setConversationDismissed(
     String conversationId, {
     required bool dismissed,
@@ -10613,12 +10857,72 @@ class DmRepository {
     if (owner == null) {
       throw StateError('Cannot dismiss a conversation without a known owner.');
     }
-    final changed = await _conversationsDao.setDismissed(
-      conversationId,
-      ownerPubkey: owner,
-      dismissed: dismissed,
-    );
-    if (!changed) throw StateError('Conversation is no longer available.');
+    final lease = _readLease(owner);
+    if (!lease.isCurrent) return;
+    final state = _accountStateRepository;
+    if (state != null || _syncState != null) {
+      if (state != null && state.pubkey != owner) {
+        throw StateError('Dismissal state belongs to another account');
+      }
+      final row = await _conversationsDao.getConversation(
+        conversationId,
+        ownerPubkey: owner,
+      );
+      if (!lease.isCurrent) return;
+      if (row == null) throw StateError('Conversation is no longer available.');
+      final key = _participantTupleKey(row.participantPubkeys);
+      if (key == null) {
+        throw StateError('Conversation participants are unavailable.');
+      }
+      final boundary = await _conversationsDao.captureDismissalBoundary(
+        conversationId,
+        ownerPubkey: owner,
+      );
+      if (!lease.isCurrent) return;
+      if (boundary == null) {
+        throw StateError('Conversation is no longer available.');
+      }
+      if (dismissed) {
+        await lease.write(
+          () async => _syncState?.rememberReadCursors(
+            owner,
+            {key: boundary.timestamp},
+            boundaryMessageIds: {key: boundary.knownMessageIds},
+          ),
+        );
+        if (!lease.isCurrent) return;
+      }
+      await lease.write(
+        () async => state?.setValue(
+          key,
+          dismissed
+              ? {
+                  'through': boundary.timestamp,
+                  'known': boundary.knownMessageIds.toList()..sort(),
+                }
+              : null,
+        ),
+      );
+      if (!lease.isCurrent) return;
+      await lease.write(
+        () => _conversationsDao.applySyncedDismissal(
+          conversationId,
+          ownerPubkey: owner,
+          dismissed: dismissed,
+          boundaryTimestamp: boundary.timestamp,
+          knownMessageIds: boundary.knownMessageIds,
+        ),
+      );
+    } else {
+      final changed = await lease.write(
+        () => _conversationsDao.setDismissed(
+          conversationId,
+          ownerPubkey: owner,
+          dismissed: dismissed,
+        ),
+      );
+      if (!changed) throw StateError('Conversation is no longer available.');
+    }
     if (dismissed) _scheduleReadMarkerPublish();
   }
 
@@ -10629,31 +10933,98 @@ class DmRepository {
   /// Schedule a debounced publish of the read-state marker so a burst of reads
   /// coalesces into one self-encrypted kind-30078 marker.
   void _scheduleReadMarkerPublish() {
-    if (!isInitialized) return;
+    if (_disposed || !isInitialized) return;
     _readMarkerDebounce?.cancel();
     _readMarkerDebounce = Timer(
       _readMarkerDebounceDelay,
-      () => unawaited(_publishReadMarker()),
+      () => unawaited(flushPendingReadState()),
     );
+  }
+
+  Future<void>? _readFlush;
+  final Duration _readStateRetryDelay;
+  Timer? _readRetryTimer;
+  int _readRetryAttempt = 0;
+  bool _readSigningBlocked = false;
+
+  /// Whether this account has durable read actions awaiting relay delivery.
+  bool get hasPendingReadState {
+    final owner = _ownerPubkey;
+    return owner != null && (_syncState?.pendingReadRevision(owner) ?? 0) > 0;
+  }
+
+  void _schedulePendingReadRetry() {
+    if (_disposed ||
+        _readSigningBlocked ||
+        !hasPendingReadState ||
+        !isInitialized ||
+        _messageService == null) {
+      return;
+    }
+    if (_readRetryTimer != null) return;
+    final milliseconds = min(
+      60000,
+      _readStateRetryDelay.inMilliseconds * (1 << min(_readRetryAttempt, 10)),
+    );
+    _readRetryAttempt++;
+    _readRetryTimer = Timer(Duration(milliseconds: milliseconds), () {
+      _readRetryTimer = null;
+      unawaited(_flushReadStateWithPolicy(allowSigning: false));
+    });
+  }
+
+  /// Retries durable reads without requiring another user action.
+  Future<void> flushPendingReadState() =>
+      _flushReadStateWithPolicy(allowSigning: true);
+
+  Future<void> _flushReadStateWithPolicy({required bool allowSigning}) {
+    if (allowSigning) _readSigningBlocked = false;
+    if (_readSigningBlocked) return Future<void>.value();
+    _readMarkerDebounce?.cancel();
+    _readMarkerDebounce = null;
+    final running = _readFlush;
+    if (running != null) return running;
+    final operation = _applyAccountDismissals().then(
+      (_) => _publishReadMarker(),
+    );
+    _readFlush = operation;
+    return operation.whenComplete(() {
+      if (identical(_readFlush, operation)) _readFlush = null;
+      if (hasPendingReadState) {
+        _schedulePendingReadRetry();
+      } else {
+        _readRetryTimer?.cancel();
+        _readRetryTimer = null;
+        _readRetryAttempt = 0;
+      }
+    });
   }
 
   /// Build the current per-conversation read-cursor map and publish it as a
   /// self-addressed, NIP-44-sealed kind-30078 marker (#4977 v1).
   ///
-  /// Best-effort: a failed publish just means read state syncs on the next
-  /// read. Published through the normal pool so the marker keeps the pool's
+  /// A failed publication retains the durable retry revision. Published
+  /// through the normal pool so the marker keeps the pool's
   /// write redundancy; other devices and a reinstall recover it from the
   /// same pool that receives Divine's DM traffic.
   Future<void> _publishReadMarker() async {
     final service = _messageService;
     if (service == null || !isInitialized) return;
     final gen = _resetGeneration;
+    final owner = _ownerPubkey;
+    if (owner == null) return;
+    final lease = _readLease(owner);
+    if (!lease.isCurrent) return;
     try {
       final conversations = await _conversationsDao.getAllConversations(
-        ownerPubkey: _ownerPubkey,
+        ownerPubkey: owner,
       );
-      if (_disposed || _resetGeneration != gen) return;
-      final readMap = <String, int>{};
+      if (!lease.isCurrent) return;
+      final snapshot = await _syncState?.readPublicationSnapshot(owner);
+      if (!lease.isCurrent) return;
+      final revision = snapshot?.revision ?? 0;
+      if (_syncState != null && revision == 0) return;
+      final readMap = <String, int>{...?snapshot?.cursors};
       for (final convo in conversations) {
         final cursor = convo.lastReadTimestamp;
         if (cursor == null || cursor <= 0) continue;
@@ -10667,12 +11038,34 @@ class DmRepository {
         'v': _readMarkerPayloadVersion,
         'read': readMap,
       });
-      await service.publishSelfApplicationMarker(
+      if (!lease.isCurrent) return;
+      final published = await service.publishSelfApplicationMarkerDetailed(
         content: content,
         tags: const [
           ['d', _readMarkerDTag],
         ],
       );
+      if (!lease.isCurrent ||
+          _disposed ||
+          _resetGeneration != gen ||
+          _ownerPubkey != owner) {
+        return;
+      }
+      if (published == SelfApplicationMarkerResult.signerUnavailable) {
+        _readSigningBlocked = true;
+        _readRetryTimer?.cancel();
+        _readRetryTimer = null;
+      }
+      if (published == SelfApplicationMarkerResult.published &&
+          !_disposed &&
+          _resetGeneration == gen &&
+          _ownerPubkey == owner) {
+        if (lease.isCurrent) {
+          await lease.write(
+            () async => _syncState?.acknowledgeReadRevision(owner, revision),
+          );
+        }
+      }
     } on Object catch (e, stackTrace) {
       Log.error(
         'DM read-marker publish failed (non-fatal): $e',
@@ -10744,7 +11137,7 @@ class DmRepository {
       final pubkeys = tupleKey.split(',');
       if (pubkeys.length < 2) continue;
       final conversationId = computeConversationId(pubkeys);
-      final applied = await _conversationsDao.applyReadCursor(
+      final applied = await _applyReadCursorPreservingBoundary(
         conversationId,
         cursor,
         ownerPubkey: _ownerPubkey,
@@ -10758,6 +11151,71 @@ class DmRepository {
     }
   }
 
+  Future<bool> _applyReadCursorPreservingBoundary(
+    String id,
+    int cursor, {
+    required String? ownerPubkey,
+  }) async {
+    final owner = ownerPubkey;
+    if (owner == null ||
+        ((_syncState?.readCursors(owner).isEmpty ?? true) &&
+            _accountStateRepository == null)) {
+      return _conversationsDao.applyReadCursor(
+        id,
+        cursor,
+        ownerPubkey: ownerPubkey,
+      );
+    }
+    final row = await _conversationsDao.getConversation(
+      id,
+      ownerPubkey: owner,
+    );
+    final tuple = row == null
+        ? null
+        : _participantTupleKey(row.participantPubkeys);
+    if (tuple != null) {
+      final retained = _syncState?.readCursors(owner)[tuple];
+      Set<String>? known;
+      if (retained == cursor) {
+        known = _syncState?.readBoundaryMessageIds(owner, tuple);
+      }
+      final state = _accountStateRepository;
+      if (known == null && state != null && state.pubkey == owner) {
+        final value = state.value(tuple);
+        if (value is Map &&
+            value['through'] == cursor &&
+            value['known'] is List) {
+          final ids = value['known'] as List;
+          if (ids.every((id) => id is String)) {
+            known = ids.cast<String>().toSet();
+          }
+        }
+      }
+      if (known != null) {
+        return _conversationsDao.applyReadBoundary(
+          id,
+          cursor,
+          ownerPubkey: owner,
+          knownMessageIds: known,
+        );
+      }
+      // Older journals cannot reconstruct IDs. Preserve an existing unread
+      // exception at their equal cursor rather than undoing a restoration.
+      if (retained == cursor &&
+          row != null &&
+          !row.isRead &&
+          row.lastReadTimestamp == cursor &&
+          row.lastMessageTimestamp == cursor) {
+        return true;
+      }
+    }
+    return _conversationsDao.applyReadCursor(
+      id,
+      cursor,
+      ownerPubkey: ownerPubkey,
+    );
+  }
+
   /// Applies a read-marker cursor that arrived before [conversationId] had a
   /// row (#4977) as soon as an ingested message creates or updates it.
   ///
@@ -10769,9 +11227,33 @@ class DmRepository {
     String conversationId, {
     required String ownerPubkey,
   }) async {
+    // Projection uses this transaction; the generic journal write queue must
+    // never be awaited while holding its database lock. Ingest seeds afterward.
+    await _applyAccountDismissals(
+      conversationId: conversationId,
+      ownerPubkey: ownerPubkey,
+      migrateLegacy: false,
+    );
+    final sync = _syncState;
+    if (sync != null) {
+      final row = await _conversationsDao.getConversation(
+        conversationId,
+        ownerPubkey: ownerPubkey,
+      );
+      final tuple = row == null
+          ? null
+          : _participantTupleKey(row.participantPubkeys);
+      final retained = tuple == null
+          ? null
+          : sync.readCursors(ownerPubkey)[tuple];
+      if (retained != null &&
+          retained > (_pendingReadCursors[conversationId] ?? 0)) {
+        _pendingReadCursors[conversationId] = retained;
+      }
+    }
     final cursor = _pendingReadCursors[conversationId];
     if (cursor == null) return;
-    await _conversationsDao.applyReadCursor(
+    await _applyReadCursorPreservingBoundary(
       conversationId,
       cursor,
       ownerPubkey: ownerPubkey,
@@ -10801,7 +11283,7 @@ class DmRepository {
       );
       for (final entry in floors.entries) {
         if (_ingestSessionEnded(pubkey, generation)) return;
-        await _conversationsDao.applyReadCursor(
+        await _applyReadCursorPreservingBoundary(
           entry.key,
           entry.value,
           ownerPubkey: pubkey,
@@ -10812,7 +11294,7 @@ class DmRepository {
         _pendingReadCursors.clear();
         for (final entry in pending.entries) {
           if (_ingestSessionEnded(pubkey, generation)) return;
-          await _conversationsDao.applyReadCursor(
+          await _applyReadCursorPreservingBoundary(
             entry.key,
             entry.value,
             ownerPubkey: pubkey,

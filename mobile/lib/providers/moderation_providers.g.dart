@@ -300,7 +300,7 @@ final class ContentFilterServiceProvider
 }
 
 String _$contentFilterServiceHash() =>
-    r'd96a2c0d3c6e169aa29b29fa518733799b5a7463';
+    r'355ce0d4807cf4631db9b8765b45afc6fc0b8670';
 
 /// Account label service for self-labeling content (NIP-32 Kind 1985).
 
@@ -353,7 +353,7 @@ final class AccountLabelServiceProvider
 }
 
 String _$accountLabelServiceHash() =>
-    r'c21ef2515c638daa0057efce40ebf4e214625e86';
+    r'888068a08e6472cb984c3a778bafffb612cef67f';
 
 /// Moderation label service for subscribing to Kind 1985 labeler events.
 
@@ -406,7 +406,7 @@ final class ModerationLabelServiceProvider
 }
 
 String _$moderationLabelServiceHash() =>
-    r'3a30421dc30c969f723bed27cd7eaec78ea8e37d';
+    r'2bd68869c36cf608e6799e29a31be7b443af26a0';
 
 /// Content blocklist service for filtering unwanted content from feeds
 ///
