@@ -83,12 +83,16 @@ $FM wait $RUN                          # prints appId, wsUri (VM service), dtdUr
 $FM ext $RUN ext.flutter.debugDumpApp  # any service extension, optional JSON params
 $FM reload $RUN                        # hot reload; `restart` = hot restart
 $FM logs $RUN                          # the app's log lines so far
+$FM taint $RUN                         # exit 1 if the tree may be corrupted (§4)
 $FM stop $RUN
 ```
 
 Tested on the headless `flutter-tester` device (start, two extension calls,
-reload, restart, stop, clean exit). Not yet run against a phone: the protocol
-is the same, the launch path (`devicectl` + `lldb`) is not.
+reload, restart, stop, clean exit), and on a USB iPhone on iOS 27.0.1 (start,
+wait, logs, taint, stop, then a second start on the same install). On the
+phone the first `app.started` took about four minutes, and the tool printed
+"The Dart VM Service was not discovered after 60 seconds" on the way; it
+attached without help, so keep waiting rather than restarting.
 
 - `wsUri` goes to the dart MCP `vm_service` tool or `websocat`. `dtdUri` goes to its `dtd` tool, which unlocks `get_runtime_errors`, `widget_inspector`, `hot_reload` and `hot_restart`.
 - One malformed line on stdin crashes the tool with a `FormatException`. Build messages with `jq`, as the helper does.
@@ -140,12 +144,30 @@ ev 'WidgetsBinding.instance.rootElement?.widget.runtimeType.toString()'
 - It cannot await: a `Future` comes back as `Instance of 'Future<…>'`. Use `.then((v) => Log.info('PROBE $v'))` and read the log.
 - A returned string is cut at about 135 characters. Log long values instead of returning them.
 - Object ids from one `evaluate` expire quickly; do the whole probe in one call rather than chaining ids.
-- `evaluate` can land mid-frame. Wrap reads of layout or hit-testing in a post-frame callback and report through `Log.info`.
+- `evaluate` can land mid-frame: the VM services it as an interrupt, even inside `drawFrame`. Run every probe that reads layout or hit-testing, and every one that changes anything (typing, taps, focus, navigation, `emit`), inside a post-frame callback, and report through `Log.info`. A write that lands mid-frame can corrupt the rest of the run (below).
 - The call hangs while the app is backgrounded or the phone is locked (hence the `alarm`). Foreground the app with `devicectl device process launch` first. A backgrounded app also tears down its route subtree, so a widget walk finds nothing.
+
+### A run you can no longer trust
+
+The probe driving the app can break it, and the app then reports the damage as
+its own bug. #10439 was filed from such a run (checked on a phone, October
+2026). An `evaluate` typed into a field mid-frame: `EditableText`'s `setState`
+threw "Build scheduled during frame" with a batch edit open, and when the
+screen was popped its `dispose` asserted `unfinished batch edits: 1`. The
+framework then drops the rest of that frame's teardown, so the route's
+`Scaffold` is never disposed and stays registered with the app-level
+`ScaffoldMessenger`. From then on every root snackbar throws "Looking up a
+deactivated widget's ancestor is unsafe", a live `Scaffold` can keep a stale
+snackbar, and taps stop arriving (`_debugMouseTrackerUpdateScheduled`). None of
+it happens on a clean launch.
+
+- Before counting a run, and again before Gate B: `$FM taint $RUN`. It exits 1 on those signatures and names the first line.
+- A tainted run is over. Cold-start and redo everything observed after that line. If the signature is itself the bug under test, report it as its own finding.
+- A clean `taint` proves only that the app logged none of them, not that the tree is sound.
 
 ## 5. Touch on a physical iPhone
 
-1. **VM-service pointer events** on a debug build. `handlePointerEvent(PointerDownEvent…)` then `PointerUpEvent` at a live widget's centre (`localToGlobal(size.center(Offset.zero))`, read at tap time: the keyboard and sliding sheets move targets), with a fresh `pointer` id per tap. Wait for the target to be on screen and still; poll transient UI such as snackbars every 200 ms rather than sleeping a fixed time. The default for an ad-hoc validation run; cannot reach native dialogs.
+1. **VM-service pointer events** on a debug build. `handlePointerEvent(PointerDownEvent…)` then `PointerUpEvent` at a live widget's centre (`localToGlobal(size.center(Offset.zero))`, read at tap time: the keyboard and sliding sheets move targets), with a fresh `pointer` id per tap, dispatched from a post-frame callback like every other write (§4). Type with `EditableTextState.userUpdateTextEditingValue` the same way. Wait for the target to be on screen and still; poll transient UI such as snackbars every 200 ms rather than sleeping a fixed time. The default for an ad-hoc validation run; cannot reach native dialogs.
 2. **`devicectl`.** Launch or foreground the app, screenshot, screen recording, pasteboard, appearance, location. No touch.
 3. **Patrol (XCUITest).** Real taps, system dialogs included, but on a physical iPhone the CLI runs release mode only (`patrol_cli` `ios_test_backend.dart`). That means the production bundle id, no VM service, and live logs from `idevicesyslog`, which Xcode 26 and later no longer feed. On the phone it is an ask-the-user item. When the flow is worth keeping as a regression test, write it for the repo's E2E harness instead (`e2e-test` skill, `local_stack/profile.sh`): Android emulator, plain `integration_test` suites, and new suites avoid Patrol.
 4. **The user's hand**, for camera, biometrics and anything else hardware.

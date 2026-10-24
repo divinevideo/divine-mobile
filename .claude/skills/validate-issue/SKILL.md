@@ -139,7 +139,7 @@ Logs: <file>  categories=<…>
 2. **Capture first.** Start log capture before launch; one timestamped file per run.
 3. **Script the steps** so run 2 equals run 1. Human timing is a last resort.
 4. **Probe the boundaries** at the moment of failure: screen, bloc state, cache, wire, relay. The bug lives at the first boundary where expected and actual diverge.
-5. **Count.** Report `fails k/n`; one run is an anecdote.
+5. **Count.** Report `fails k/n`; one run is an anecdote. A run counts only while `flutter-machine.sh taint` is clean up to its last step (`flutter-lens.md` §4).
 6. **Control.** Flip exactly one variable (the suspected cause) and show the outcome flips: A (bug) → B (cause removed) → A′ (bug back).
 7. **Conditions you cannot wait for.** "Leave it 30 hours" or "on cellular" is reproduced by setting the thing the condition acts through: a timestamp, a cursor, a token expiry, the device clock; a refused connect, a late EOSE, a lost OK (`scripts/relay-fault-proxy.dart`). Label it simulated. The real condition is a separate, named gap under "Not verified".
 
@@ -204,3 +204,4 @@ it before posting.
 | "Auto Mode says to minimize interruptions" | This skill's 10-20 rule is explicit and wins. |
 | "Every recommendation was taken, so I'm done" | Done only once the ledger holds 10 answered. |
 | "Probably unrelated" about an error in the run | Unproven. It is an adjacent finding until traced. |
+| "The app threw, so the bug reproduced" | Run `taint` first. A probe that wrote mid-frame makes errors no user can reach; #10439 was filed from one. |

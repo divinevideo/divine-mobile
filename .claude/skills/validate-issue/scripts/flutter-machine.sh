@@ -8,6 +8,7 @@
 #   flutter-machine.sh restart <rundir>                # hot restart (not a cold start)
 #   flutter-machine.sh ext     <rundir> <ext.name> ['{"json":"params"}']
 #   flutter-machine.sh logs    <rundir>                # app.log events as plain text
+#   flutter-machine.sh taint   <rundir>                # exit 1 if the run logged a tree-corruption signature
 #   flutter-machine.sh stop    <rundir>
 #
 # FLUTTER overrides the launcher (default: "mise exec -- flutter", which needs
@@ -16,7 +17,7 @@
 # the tool with a FormatException.
 set -u
 cmd="${1:-}"; run="${2:-}"
-[ -n "$cmd" ] && [ -n "$run" ] || { sed -n '2,16p' "$0"; exit 64; }
+[ -n "$cmd" ] && [ -n "$run" ] || { sed -n '2,17p' "$0"; exit 64; }
 out="$run/run.jsonl"; ctl="$run/ctl"
 
 field() { # event-name json-key -> first value
@@ -24,6 +25,12 @@ field() { # event-name json-key -> first value
 }
 alive() { [ -f "$run/pid" ] && kill -0 "$(cat "$run/pid")" 2>/dev/null; }
 app_id() { field app.start appId; }
+app_logs() { # app.log events, plus the raw lines some devices print outside the JSON stream
+  jq -Rr '(fromjson? // null) as $j | if $j == null then . elif ($j | type) == "array" then ($j[] | select(.event == "app.log") | .params.log) else empty end' "$out"
+}
+# Framework errors after which the widget tree may be corrupted for the rest of
+# the run, so later errors can be ones no user can reach (#10439; flutter-lens §4).
+taint_re="Build scheduled during frame|unfinished batch edits|while finalizing the widget tree|_debugMouseTrackerUpdateScheduled|_lifecycleState == _ElementLifecycle"
 send() { # method params-json [timeout]; prints the reply line
   alive || { echo "flutter run is not running (see $run/run.err)" >&2; return 3; }
   local id msg i=0 t="${3:-90}"
@@ -68,8 +75,14 @@ case "$cmd" in
     name="${3:?extension name}"; params="${4:-}"; [ -n "$params" ] || params='{}'
     send app.callServiceExtension "$(jq -nc --arg a "$(app_id)" --arg n "$name" --argjson p "$params" '{appId: $a, methodName: $n, params: $p}')"
     ;;
-  logs)    # app.log events, plus the raw lines some devices print outside the JSON stream
-           jq -Rr '(fromjson? // null) as $j | if $j == null then . elif ($j | type) == "array" then ($j[] | select(.event == "app.log") | .params.log) else empty end' "$out" ;;
+  logs)    app_logs ;;
+  taint)
+    hits=$(app_logs | grep -n -E "$taint_re")
+    if [ -z "$hits" ]; then echo "clean: no tree-corruption signature in $(app_logs | wc -l | tr -d ' ') log lines"; exit 0; fi
+    echo "TAINTED from log line $(echo "$hits" | head -1 | cut -d: -f1) ($(echo "$hits" | wc -l | tr -d ' ') matching lines): cold-start before trusting anything observed after it"
+    echo "$hits" | head -3
+    exit 1
+    ;;
   stop)
     send app.stop "$(jq -nc --arg a "$(app_id)" '{appId: $a}')" 30
     i=0; while alive && [ "$i" -lt 20 ]; do sleep 1; i=$((i + 1)); done
@@ -77,5 +90,5 @@ case "$cmd" in
     if alive; then echo "still running; kill it by pid: $(cat "$run/pid")" >&2; exit 1; fi
     echo "stopped"
     ;;
-  *) sed -n '2,16p' "$0"; exit 64 ;;
+  *) sed -n '2,17p' "$0"; exit 64 ;;
 esac
