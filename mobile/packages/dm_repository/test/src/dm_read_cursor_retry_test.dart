@@ -16,9 +16,28 @@ import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/filter.dart' as nostr;
 import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
+import 'package:nostr_sdk/subscription.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
+
+class _RefusingSeedState extends AccountStateRepository {
+  _RefusingSeedState({
+    required super.nostrClient,
+    required super.sharedPreferences,
+    required super.pubkey,
+    required super.signer,
+    required super.namespace,
+  });
+
+  bool refuseSeeds = false;
+
+  @override
+  Future<void> seed(Map<String, Object?> values) {
+    if (refuseSeeds) throw const AccountStateException('storage unavailable');
+    return super.seed(values);
+  }
+}
 
 class _ObservedAccountSyncDao extends AccountSyncDao {
   _ObservedAccountSyncDao(super.attachedDatabase);
@@ -221,6 +240,7 @@ void main() {
       late DmRepository repository;
       late Map<String, Event> rumorByWrapId;
       late _ReadState syncState;
+      late void Function(StoredEventsEnd) endStoredEvents;
 
       /// The conversation the marker names — deliberately not created yet.
       final participants = [_owner, _peer]..sort();
@@ -286,9 +306,13 @@ void main() {
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
-        ).thenAnswer((_) => relay.stream);
+        ).thenAnswer((call) {
+          final ended = call.namedArguments[#onStoredEventsEnd];
+          if (ended is void Function(StoredEventsEnd)) endStoredEvents = ended;
+          return relay.stream;
+        });
 
-        accountState = AccountStateRepository(
+        accountState = _RefusingSeedState(
           nostrClient: nostrClient,
           sharedPreferences: await SharedPreferences.getInstance(),
           pubkey: _owner,
@@ -411,6 +435,42 @@ void main() {
         );
         return rows.where((r) => r.id == conversationId).firstOrNull;
       }
+
+      test(
+        'post-commit dismissal failure keeps message sync boundaries',
+        () async {
+          endStoredEvents(const StoredEventsEnd(deliveredEventCount: 0));
+          await pumpEventQueue();
+          await conversationsDao.upsertConversation(
+            id: conversationId,
+            participantPubkeys: jsonEncode(participants),
+            isGroup: false,
+            createdAt: _baseCreatedAt,
+            lastMessageTimestamp: _baseCreatedAt + 100,
+            ownerPubkey: _owner,
+          );
+          await conversationsDao.setDismissed(
+            conversationId,
+            ownerPubkey: _owner,
+            dismissed: true,
+          );
+          (accountState as _RefusingSeedState).refuseSeeds = true;
+          expect(syncState.newestSyncedAt(_owner), isNull);
+          await ingestMessage(
+            wrapId: '4' * 64,
+            rumorId: '5' * 64,
+            sender: _peer,
+            messageAt: _baseCreatedAt + 50,
+          );
+          expect(
+            await messagesDao.getMessageById('5' * 64, ownerPubkey: _owner),
+            isNotNull,
+          );
+          expect(syncState.newestSyncedAt(_owner), _baseCreatedAt + 50);
+          expect(syncState.newestWireSyncedAt(_owner), _baseCreatedAt + 50);
+          expect((await conversation())!.isDismissed, isTrue);
+        },
+      );
 
       for (final dismiss in [false, true]) {
         test(

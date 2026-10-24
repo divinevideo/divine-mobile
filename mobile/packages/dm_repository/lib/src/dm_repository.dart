@@ -814,6 +814,28 @@ class DmRepository {
     );
   }
 
+  /// A projection failure cannot undo a committed message or its ledger.
+  Future<void> _applyAccountDismissalsAfterCommit({
+    required String conversationId,
+    required String ownerPubkey,
+  }) async {
+    try {
+      await _applyAccountDismissals(
+        conversationId: conversationId,
+        ownerPubkey: ownerPubkey,
+      );
+    } on Object catch (error, stackTrace) {
+      // Legacy/cache choices remain available to a later reconciliation. Do
+      // not misclassify this as a rolled-back message or skip sync cursors.
+      Log.warning(
+        'Post-commit DM dismissal reconciliation failed; '
+        'message retained (${error.runtimeType})',
+        category: LogCategory.system,
+        stackTrace: stackTrace,
+      );
+    }
+  }
+
   NIP17MessageService? _messageService;
   String _userPubkey;
   NostrSigner? _signer;
@@ -4523,7 +4545,7 @@ class DmRepository {
         });
         // The ingest transaction has committed, so queued journal persistence
         // can acquire the same database without a lock-order cycle.
-        await _applyAccountDismissals(
+        await _applyAccountDismissalsAfterCommit(
           conversationId: conversationId,
           ownerPubkey: ownerPubkey,
         );
@@ -5338,7 +5360,7 @@ class DmRepository {
         // replayed history stamped at or before the removal stays
         // suppressed. #7804.
       });
-      await _applyAccountDismissals(
+      await _applyAccountDismissalsAfterCommit(
         conversationId: conversationId,
         ownerPubkey: ownerPubkey,
       );
