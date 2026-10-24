@@ -52,6 +52,35 @@ void main() {
     });
 
     group('setBlurVideoPreviews', () {
+      test('two refused saves restore the last saved choice', () async {
+        final refusing = _RefusingPreferences();
+        final firstSave = Completer<bool>();
+        final secondSave = Completer<bool>();
+        when(() => refusing.getBool(any())).thenReturn(null);
+        var saves = 0;
+        when(() => refusing.setBool(any(), any())).thenAnswer((_) {
+          saves++;
+          return saves == 1 ? firstSave.future : secondSave.future;
+        });
+        final service = DmVideoBlurPreferenceService(refusing, account: first);
+        addTearDown(service.dispose);
+        final firstResult = expectLater(
+          service.setBlurVideoPreviews(true),
+          throwsA(isA<DmVideoBlurPreferenceSaveException>()),
+        );
+        final secondResult = expectLater(
+          service.setBlurVideoPreviews(false),
+          throwsA(isA<DmVideoBlurPreferenceSaveException>()),
+        );
+
+        firstSave.complete(false);
+        await firstResult;
+        secondSave.complete(false);
+        await secondResult;
+
+        expect(service.blurVideoPreviews, isFalse);
+      });
+
       test('restores the choice when saving throws', () async {
         final refusing = _RefusingPreferences();
         when(() => refusing.getBool(any())).thenReturn(null);
@@ -67,6 +96,24 @@ void main() {
         );
 
         expect(service.blurVideoPreviews, isFalse);
+      });
+
+      test('a refused save preserves an earlier successful choice', () async {
+        final refusing = _RefusingPreferences();
+        when(() => refusing.getBool(any())).thenReturn(null);
+        when(() => refusing.setBool(any(), true)).thenAnswer((_) async => true);
+        when(() => refusing.setBool(any(), false))
+            .thenAnswer((_) async => false);
+        final service = DmVideoBlurPreferenceService(refusing, account: first);
+        addTearDown(service.dispose);
+        await service.setBlurVideoPreviews(true);
+
+        await expectLater(
+          service.setBlurVideoPreviews(false),
+          throwsA(isA<DmVideoBlurPreferenceSaveException>()),
+        );
+
+        expect(service.blurVideoPreviews, isTrue);
       });
 
       test('an older refused save cannot undo the latest choice', () async {

@@ -13,7 +13,9 @@ class DmVideoBlurPreferenceService extends ChangeNotifier {
   /// Reads [account]'s stored choice from [prefs].
   DmVideoBlurPreferenceService(this._prefs, {required String account})
     : _account = account,
-      _blurVideoPreviews = _prefs.getBool(storageKey(account)) ?? false;
+      _blurVideoPreviews = _prefs.getBool(storageKey(account)) ?? false {
+    _savedBlurVideoPreviews = _blurVideoPreviews;
+  }
 
   /// Preference key for [account]; account deletion removes it.
   static String storageKey(String account) => 'dm_video_blur_previews_$account';
@@ -21,6 +23,7 @@ class DmVideoBlurPreferenceService extends ChangeNotifier {
   final SharedPreferences _prefs;
   final String _account;
   bool _blurVideoPreviews;
+  late bool _savedBlurVideoPreviews;
   int _saveVersion = 0;
 
   /// Whether trusted senders' video previews are blurred until played.
@@ -30,20 +33,23 @@ class DmVideoBlurPreferenceService extends ChangeNotifier {
   ///
   /// The choice takes effect at once, so of two quick changes the later one
   /// wins. Throws a [DmVideoBlurPreferenceSaveException] when the platform
-  /// refuses the save; the previous choice is then back in effect.
+  /// refuses the save; the last successfully saved choice is then back in
+  /// effect unless a newer choice is pending.
   Future<void> setBlurVideoPreviews(bool value) async {
     if (_blurVideoPreviews == value) return;
-    final previous = _blurVideoPreviews;
     final version = ++_saveVersion;
     _blurVideoPreviews = value;
     notifyListeners();
     try {
-      if (await _prefs.setBool(storageKey(_account), value)) return;
+      if (await _prefs.setBool(storageKey(_account), value)) {
+        _savedBlurVideoPreviews = value;
+        return;
+      }
       throw const DmVideoBlurPreferenceSaveException();
     } catch (_) {
       // An older write can finish after a newer choice was already saved.
       if (version == _saveVersion) {
-        _blurVideoPreviews = previous;
+        _blurVideoPreviews = _savedBlurVideoPreviews;
         notifyListeners();
       }
       rethrow;
