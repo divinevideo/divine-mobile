@@ -128,12 +128,13 @@ void main() {
 
       test('an older refused save cannot undo the latest choice', () async {
         final refusing = _RefusingPreferences();
-        final oldSave = Completer<bool>();
+        final saves = <Completer<bool>>[];
         when(() => refusing.getBool(any())).thenReturn(null);
-        var saves = 0;
         when(() => refusing.setBool(any(), any())).thenAnswer((_) {
-          saves++;
-          return saves == 1 ? oldSave.future : Future.value(true);
+          if (saves.length == 3) return Future.value(true);
+          final save = Completer<bool>();
+          saves.add(save);
+          return save.future;
         });
         final service = DmVideoBlurPreferenceService(refusing, account: first);
         addTearDown(service.dispose);
@@ -141,13 +142,19 @@ void main() {
           service.setBlurVideoPreviews(true),
           throwsA(isA<DmVideoBlurPreferenceSaveException>()),
         );
-        await service.setBlurVideoPreviews(false);
-        await service.setBlurVideoPreviews(true);
+        final newerSaves = Future.wait([
+          service.setBlurVideoPreviews(false),
+          service.setBlurVideoPreviews(true),
+        ]);
 
-        oldSave.complete(false);
+        // Refused while both newer saves are still in flight.
+        saves.first.complete(false);
         await oldResult;
 
         expect(service.blurVideoPreviews, isTrue);
+        saves[1].complete(true);
+        saves[2].complete(true);
+        await newerSaves;
       });
 
       test(

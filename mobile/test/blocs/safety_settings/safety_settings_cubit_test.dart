@@ -503,12 +503,13 @@ void main() {
         'an older refused save cannot roll back a newer saved choice',
         () async {
           final prefs = _RefusingPreferences();
-          final oldSave = Completer<bool>();
+          final saves = <Completer<bool>>[];
           when(() => prefs.getBool(any())).thenReturn(null);
-          var saves = 0;
           when(() => prefs.setBool(any(), any())).thenAnswer((_) {
-            saves++;
-            return saves == 1 ? oldSave.future : Future.value(true);
+            if (saves.length == 3) return Future.value(true);
+            final save = Completer<bool>();
+            saves.add(save);
+            return save.future;
           });
           final service = DmVideoBlurPreferenceService(
             prefs,
@@ -519,13 +520,19 @@ void main() {
           addTearDown(cubit.close);
 
           final oldResult = cubit.setBlurDmVideoPreviews(true);
-          await cubit.setBlurDmVideoPreviews(false);
-          await cubit.setBlurDmVideoPreviews(true);
-          oldSave.complete(false);
+          final newerSaves = Future.wait([
+            cubit.setBlurDmVideoPreviews(false),
+            cubit.setBlurDmVideoPreviews(true),
+          ]);
+          // Refused while both newer saves are still in flight.
+          saves.first.complete(false);
           await oldResult;
 
           expect(service.blurVideoPreviews, isTrue);
           expect(cubit.state.blurDmVideoPreviews, isTrue);
+          saves[1].complete(true);
+          saves[2].complete(true);
+          await newerSaves;
         },
       );
 
