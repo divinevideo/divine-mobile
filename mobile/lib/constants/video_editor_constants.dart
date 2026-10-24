@@ -1107,9 +1107,10 @@ class VideoEditorConstants {
   /// Mirrors pro_image_editor's `tunePresets` (which is not part of the
   /// package's public API) so the same list can be passed to both the editor
   /// config and the custom bottom bar, guaranteeing the `TuneEditorState`'s
-  /// `selectedIndex` maps to the same adjustment our UI shows. The `icon` /
-  /// `label` fields are never rendered — the custom bar draws its own
-  /// localized text chips (see [_unusedTuneIcon]).
+  /// `selectedIndex` maps to the same adjustment our UI shows. The `icon` is
+  /// never rendered — the custom bar draws its own localized text chips (see
+  /// [_unusedTuneIcon]) — but the English `label` names the adjustment on its
+  /// timeline bar (`TimelineOverlayBloc`).
   ///
   /// Highlights, shadows, vibrance and sharpen carry no colour matrix
   /// ([_noColorMatrix]); the native `divine.adjust` effect draws them.
