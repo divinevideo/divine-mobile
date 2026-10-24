@@ -8503,6 +8503,18 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorTuneFade => 'フェード';
 
   @override
+  String get videoEditorTuneHighlights => 'ハイライト';
+
+  @override
+  String get videoEditorTuneShadows => 'シャドウ';
+
+  @override
+  String get videoEditorTuneVibrance => '自然な彩度';
+
+  @override
+  String get videoEditorTuneSharpen => 'シャープネス';
+
+  @override
   String get videoEditorAudioLabel => 'オーディオ';
 
   @override

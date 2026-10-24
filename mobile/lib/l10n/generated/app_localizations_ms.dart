@@ -8950,6 +8950,18 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorTuneFade => 'Pudar';
 
   @override
+  String get videoEditorTuneHighlights => 'Serlahan';
+
+  @override
+  String get videoEditorTuneShadows => 'Bayang';
+
+  @override
+  String get videoEditorTuneVibrance => 'Kerancakan';
+
+  @override
+  String get videoEditorTuneSharpen => 'Ketajaman';
+
+  @override
   String get videoEditorAudioLabel => 'Audio';
 
   @override

@@ -8743,6 +8743,18 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorTuneFade => 'መደብዘዝ';
 
   @override
+  String get videoEditorTuneHighlights => 'ብሩህ ክፍሎች';
+
+  @override
+  String get videoEditorTuneShadows => 'ጥላዎች';
+
+  @override
+  String get videoEditorTuneVibrance => 'ሕያውነት';
+
+  @override
+  String get videoEditorTuneSharpen => 'ጥርትነት';
+
+  @override
   String get videoEditorAudioLabel => 'ኦዲዮ';
 
   @override

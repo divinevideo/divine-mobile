@@ -9008,6 +9008,18 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorTuneFade => 'Kupas';
 
   @override
+  String get videoEditorTuneHighlights => 'Highlight';
+
+  @override
+  String get videoEditorTuneShadows => 'Anino';
+
+  @override
+  String get videoEditorTuneVibrance => 'Sigla';
+
+  @override
+  String get videoEditorTuneSharpen => 'Talas';
+
+  @override
   String get videoEditorAudioLabel => 'Audio';
 
   @override

@@ -9035,6 +9035,18 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorTuneFade => 'Desvanecer';
 
   @override
+  String get videoEditorTuneHighlights => 'Luces';
+
+  @override
+  String get videoEditorTuneShadows => 'Sombras';
+
+  @override
+  String get videoEditorTuneVibrance => 'Intensidad';
+
+  @override
+  String get videoEditorTuneSharpen => 'Nitidez';
+
+  @override
   String get videoEditorAudioLabel => 'Audio';
 
   @override
