@@ -27,7 +27,8 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
   });
 
   static const _maxItemWidth = 72.0;
-  static const _itemHeight = 112.0;
+  // Leave room for a 72dp icon, the gap, and two label lines at the 1.4x cap.
+  static const _itemHeight = 128.0;
   static const _itemMainSpacing = 16.0;
   static const _itemCrossSpacing = 24.0;
 

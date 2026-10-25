@@ -107,6 +107,31 @@ void main() {
       expect(find.text(l10n.videoEditorMarkerLabel), findsOneWidget);
     });
 
+    testWidgets('fits two-line German labels at larger text sizes', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 844);
+      tester.platformDispatcher.textScaleFactorTestValue = 1.4;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await tester.pumpWidget(
+        _buildWidget(
+          mainBloc: mainBloc,
+          clipBloc: clipBloc,
+          timelineOverlayBloc: timelineOverlayBloc,
+          locale: const Locale('de'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final german = lookupAppLocalizations(const Locale('de'));
+      expect(find.text(german.videoEditorLoopLabel), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('Align loop in the drawer invokes its editor callback', (
       tester,
     ) async {
@@ -514,7 +539,8 @@ void main() {
 }
 
 /// Wraps [child] in the app + localization shell every test here needs.
-Widget _app({required Widget child}) => MaterialApp(
+Widget _app({required Widget child, Locale? locale}) => MaterialApp(
+  locale: locale,
   localizationsDelegates: appLocalizationsDelegates,
   supportedLocales: AppLocalizations.supportedLocales,
   home: Scaffold(body: child),
@@ -598,7 +624,9 @@ Widget _buildWidget({
   VoidCallback? onAddStickers,
   VoidCallback? onAddAudioVisualizer,
   VoidCallback? onAlignLoop,
+  Locale? locale,
 }) => _app(
+  locale: locale,
   child: MultiBlocProvider(
     providers: [
       BlocProvider<VideoEditorMainBloc>.value(value: mainBloc),
