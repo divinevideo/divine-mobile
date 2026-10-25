@@ -349,9 +349,7 @@ class _DivineButtonContent extends StatelessWidget {
   TextStyle _textStyle(VineThemeColors colors) {
     final foreground = _foregroundColor(colors);
     if (type == DivineButtonType.quiet) {
-      return VineTheme.bodyMediumFont(color: foreground).copyWith(
-        fontWeight: FontWeight.w500,
-      );
+      return VineTheme.bodyMediumFont(color: foreground);
     }
     if (type == DivineButtonType.link) {
       return VineTheme.bodyLargeFont(color: foreground).copyWith(
