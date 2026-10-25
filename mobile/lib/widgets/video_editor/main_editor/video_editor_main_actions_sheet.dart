@@ -49,8 +49,9 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
       context: context,
       expanded: false,
       scrollable: false,
+      showHeader: false,
+      showHeaderDivider: false,
       isScrollControlled: true,
-      title: Text(context.l10n.videoEditorAddTitle),
       children: [
         // The sheet opens on a separate route, outside the editor's
         // MultiBlocProvider, so re-provide every bloc the actions read —
