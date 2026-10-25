@@ -15,6 +15,8 @@ LoopFrame _frame(
   double angle = 0,
   double scale = 1,
   bool blank = false,
+  bool plainMargins = false,
+  Duration time = Duration.zero,
   double foreground = 0,
 }) {
   final pixels = Uint8List(width * height);
@@ -33,6 +35,9 @@ LoopFrame _frame(
                 23 * math.cos(sy * .37 - sx * .09) +
                 21 * math.sin(sx * .17 + sy * .23) +
                 17 * math.cos(sx * .61 - sy * .41);
+      if (plainMargins && (sx < width * .1 || sy < height * .1)) {
+        value = 100;
+      }
       if (foreground != 0 &&
           x > width * .1 &&
           x < width * .9 &&
@@ -48,7 +53,7 @@ LoopFrame _frame(
     }
   }
   return LoopFrame(
-    time: Duration.zero,
+    time: time,
     width: width,
     height: height,
     luma: pixels,
@@ -98,6 +103,98 @@ void main() {
         );
       });
     }
+    for (final (width, height) in [(180, 320), (320, 180)]) {
+      test('repairs gentle drift with plain margins at $width x $height', () {
+        // A wall at the top and left has no corners. Reliable background
+        // texture starts just inside the trackable edge region. Eroding that
+        // region by the tracker border used to discard every repair candidate.
+        final frames = [
+          for (var i = 0; i < 90; i++)
+            _frame(
+              width,
+              height,
+              dx: 2 * i / 89,
+              time: Duration(microseconds: i * 33333),
+              plainMargins: true,
+            ),
+        ];
+        final plan = const LoopAlignmentPlanner().plan(
+          input: LoopRepairInput(
+            clips: [
+              LoopClipInput(
+                clipId: 'drifting-camera',
+                path: '/synthetic.mp4',
+                sourceStart: Duration.zero,
+                sourceEnd: const Duration(microseconds: 90 * 33333),
+                speed: 1,
+                width: width,
+                height: height,
+              ),
+            ],
+            revision: 'synthetic-drift',
+          ),
+          firstFrames: frames,
+          lastFrames: frames,
+          matcher: PveLoopFrameMatcher(),
+          limits: const LoopAlignmentLimits(),
+        );
+        expect(plan, isNotNull);
+        expect(plan!.zoom, inInclusiveRange(1, 1.08));
+        final opening = const LoopFrameResampler().warp(
+          frames.first,
+          plan.clips.single.correctionAt(frames.first.time),
+          plan.zoom,
+          longestEdge: 320,
+        );
+        final ending = const LoopFrameResampler().warp(
+          frames.last,
+          plan.clips.single.correctionAt(frames.last.time),
+          plan.zoom,
+          longestEdge: 320,
+        );
+        final seam = PveLoopFrameMatcher().match(opening, ending);
+        expect(seam, isNotNull);
+        expect(
+          seam!.pose.maximumCornerDisplacement(width, height),
+          lessThan(.5),
+        );
+      });
+    }
+    for (final (width, height) in [(180, 320), (320, 180)]) {
+      test('small subject motion is not camera drift at $width x $height', () {
+        final match = PveLoopFrameMatcher().match(
+          _frame(width, height, plainMargins: true, foreground: 1),
+          _frame(width, height, plainMargins: true, foreground: 1.5),
+        );
+        expect(
+          match != null &&
+              const LoopAlignmentLimits().acceptsMatch(match, width, height),
+          isFalse,
+        );
+      });
+    }
+    test('large camera movement remains outside drift correction', () {
+      final match = PveLoopFrameMatcher().match(
+        _frame(180, 320, plainMargins: true),
+        _frame(180, 320, dx: 12, plainMargins: true),
+      );
+      expect(
+        match != null &&
+            const LoopAlignmentLimits().acceptsMatch(match, 180, 320),
+        isFalse,
+      );
+    });
+    test('moving foreground beside plain margins is not camera drift', () {
+      final match = PveLoopFrameMatcher().match(
+        _frame(180, 320, plainMargins: true, foreground: 1),
+        _frame(180, 320, plainMargins: true, foreground: 5),
+      );
+      expect(
+        match != null &&
+            const LoopAlignmentLimits().acceptsMatch(match, 180, 320),
+        isFalse,
+      );
+    });
     test('rotation and scale recover known centered camera geometry', () {
       const angle = .01;
       const scale = 1.01;

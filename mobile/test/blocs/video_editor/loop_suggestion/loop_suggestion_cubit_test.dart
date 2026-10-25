@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:loop_alignment_repository/loop_alignment_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class _Repository extends Mock implements LoopAlignmentRepository {}
 
@@ -35,7 +36,8 @@ void main() {
     registerFallbackValue(_input('fallback'));
     registerFallbackValue(const LoopRepairResult(status: .noMatch));
   });
-  setUp(() {
+  setUp(() async {
+    await LogCaptureService().clearAllLogs();
     repository = _Repository();
     when(() => repository.cancel(any())).thenAnswer((_) async {});
     when(() => repository.discard(any())).thenAnswer((_) async {});
@@ -62,6 +64,12 @@ void main() {
           addTearDown(cubit.close);
           await cubit.fix(_input('one'));
           expect(cubit.state.status, entry.value);
+          final logs = (await LogCaptureService().getAllLogsAsText()).join(
+            '\n',
+          );
+          expect(logs, contains('status=${entry.key.name}'));
+          expect(logs, isNot(contains('/documents/clip.mp4')));
+          expect(logs, isNot(contains('revision')));
           cubit.resultHandled();
           expect(cubit.state.status, LoopSuggestionStatus.idle);
         },

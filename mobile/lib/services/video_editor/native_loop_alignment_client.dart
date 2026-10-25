@@ -16,6 +16,7 @@ import 'package:openvine/services/video_editor/video_render_watchdog.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:path/path.dart' as p;
 import 'package:pro_video_editor/pro_video_editor.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Injectable native boundary; tests exercise real client policy without plugins.
 abstract interface class LoopNativeBackend {
@@ -260,6 +261,21 @@ final class NativeLoopAlignmentClient implements LoopAlignmentClient {
       _check(op);
       final result = await complete.future;
       _check(op);
+      final match = result.endpointRegistration;
+      Log.info(
+        'Loop analysis: candidates=${result.candidates.length}, '
+        'endpointAccepted=${match != null && limits.acceptsMatch(match, result.endpointWidth, result.endpointHeight)}, '
+        'matches=${match?.consistentCount}/${match?.retainedCount}, '
+        'edges=L${match?.left.agreeing}/${match?.left.retained} '
+        'R${match?.right.agreeing}/${match?.right.retained} '
+        'T${match?.top.agreeing}/${match?.top.retained} '
+        'B${match?.bottom.agreeing}/${match?.bottom.retained}, '
+        'boundaryError=${match?.boundaryModelError}, '
+        'difference=${result.baselineScores.difference}, '
+        'motion=${result.baselineScores.motion}',
+        name: 'LoopRepair',
+        category: LogCategory.video,
+      );
       progress(1);
       return result;
     } finally {
@@ -542,6 +558,13 @@ final class NativeLoopAlignmentClient implements LoopAlignmentClient {
       progression,
     );
     _check(op);
+    Log.info(
+      'Loop output inspection: timingAndCoverage=$covered, '
+      'registrationAndProgression=${proof.confident}, '
+      'difference=${proof.scores.difference}, motion=${proof.scores.motion}',
+      name: 'LoopRepair',
+      category: LogCategory.video,
+    );
     return LoopInspection(
       scores: proof.scores,
       frameTimes: frameTimes,

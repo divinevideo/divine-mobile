@@ -26,11 +26,17 @@ class PveLoopFrameMatcher implements LoopFrameMatcher {
     final points = <double>[...detectCorners(from.levels.first)];
     // Local quality thresholds keep a bright subject from suppressing weaker
     // background features. These points are tracked independently of the fit.
+    // Measure the bands inside the trackable image. Subtracting the detector's
+    // border from an 8% band left only six pixels on a 180px portrait frame,
+    // making gentle drift lose otherwise reliable opposite-edge support.
+    const trackingBorder = 8;
+    final bandX = trackingBorder + (w - 2 * trackingBorder) * .08;
+    final bandY = trackingBorder + (h - 2 * trackingBorder) * .08;
     final strips = [
-      (0.0, 0.0, w * .08, h.toDouble()),
-      (w * .92, 0.0, w.toDouble(), h.toDouble()),
-      (0.0, 0.0, w.toDouble(), h * .08),
-      (0.0, h * .92, w.toDouble(), h.toDouble()),
+      (0.0, 0.0, bandX, h.toDouble()),
+      (w - bandX, 0.0, w.toDouble(), h.toDouble()),
+      (0.0, 0.0, w.toDouble(), bandY),
+      (0.0, h - bandY, w.toDouble(), h.toDouble()),
     ];
     final boundaryPoints = <Float32List>[];
     for (final strip in strips) {
@@ -71,10 +77,8 @@ class PveLoopFrameMatcher implements LoopFrameMatcher {
         ? errors[errors.length ~/ 2]
         : (errors[errors.length ~/ 2 - 1] + errors[errors.length ~/ 2]) / 2;
     final support = <LoopBoundarySupport>[];
-    final boundaryMatches = <(double, double, double, double)>[];
     for (final points in boundaryPoints) {
       final matches = _track(from, to, points);
-      boundaryMatches.addAll(matches);
       support.add(
         LoopBoundarySupport(
           agreeing: matches.where((p) => error(p) <= 1).length,
@@ -85,6 +89,30 @@ class PveLoopFrameMatcher implements LoopFrameMatcher {
     // A subpixel compromise between foreground and background can pass a
     // one-pixel inlier count everywhere. Measure disagreement with an
     // independent background fit instead of treating that count as proof.
+    // Keep camera identity tied to the original outer edges. The wider support
+    // bands can include a subject beside a plain margin; letting those same
+    // points define the background would mistake subject motion for drift.
+    final boundaryMatches = <(double, double, double, double)>[];
+    for (final strip in [
+      (0.0, 0.0, w * .08, h.toDouble()),
+      (w * .92, 0.0, w.toDouble(), h.toDouble()),
+      (0.0, 0.0, w.toDouble(), h * .08),
+      (0.0, h * .92, w.toDouble(), h.toDouble()),
+    ]) {
+      boundaryMatches.addAll(
+        _track(
+          from,
+          to,
+          detectCornersInRect(
+            from.levels.first,
+            left: strip.$1,
+            top: strip.$2,
+            right: strip.$3,
+            bottom: strip.$4,
+          ),
+        ),
+      );
+    }
     final boundaryTraining = [
       for (var i = 0; i < boundaryMatches.length; i++)
         if (i % 3 != 0) boundaryMatches[i],
