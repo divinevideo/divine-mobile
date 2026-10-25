@@ -290,7 +290,7 @@ void main() {
     ) async {
       when(() => clipBloc.state).thenReturn(
         ClipEditorState(
-          isRepairingLoop: true,
+          isStabilizing: true,
           clips: [
             DivineVideoClip(
               id: 'sample-clip',
