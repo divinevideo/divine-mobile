@@ -139,12 +139,6 @@ abstract class AppLocalizations {
     Locale('zh'),
   ];
 
-  /// Button that opens the tray of video editing tools.
-  ///
-  /// In en, this message translates to:
-  /// **'Editing tools'**
-  String get videoEditorEditingToolsLabel;
-
   /// Header of the Developer Options section that recovers clips the app can no longer show.
   ///
   /// In en, this message translates to:

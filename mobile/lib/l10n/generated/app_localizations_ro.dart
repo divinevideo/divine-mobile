@@ -10,9 +10,6 @@ class AppLocalizationsRo extends AppLocalizations {
   AppLocalizationsRo([String locale = 'ro']) : super(locale);
 
   @override
-  String get videoEditorEditingToolsLabel => 'Instrumente de editare';
-
-  @override
   String get devOptionsClipRecovery => 'Recuperare clipuri';
 
   @override

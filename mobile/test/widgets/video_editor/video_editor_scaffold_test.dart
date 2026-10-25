@@ -171,12 +171,12 @@ void main() {
       await tester.pumpWidget(buildWidget(isLoading: true));
 
       expect(find.byType(BrandedLoadingScaffold), findsOneWidget);
-      expect(find.text(l10n.videoEditorEditingToolsLabel), findsOneWidget);
+      expect(find.text(l10n.videoActionEdit), findsOneWidget);
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
       expect(scaffold.bottomNavigationBar, isNotNull);
       expect(scaffold.floatingActionButton, isNull);
       expect(
-        find.bySemanticsLabel(l10n.videoEditorEditingToolsLabel),
+        find.bySemanticsLabel(l10n.videoActionEdit),
         findsOneWidget,
       );
     });
@@ -193,7 +193,7 @@ void main() {
 
       final icon = tester.widget<DivineIcon>(
         find.descendant(
-          of: find.bySemanticsLabel(l10n.videoEditorEditingToolsLabel),
+          of: find.bySemanticsLabel(l10n.videoActionEdit),
           matching: find.byWidgetPredicate(
             (widget) =>
                 widget is DivineIcon &&
@@ -216,7 +216,7 @@ void main() {
 
       final icon = tester.widget<DivineIcon>(
         find.descendant(
-          of: find.bySemanticsLabel(l10n.videoEditorEditingToolsLabel),
+          of: find.bySemanticsLabel(l10n.videoActionEdit),
           matching: find.byWidgetPredicate(
             (widget) =>
                 widget is DivineIcon &&
@@ -237,7 +237,7 @@ void main() {
       await tester.pump();
 
       expect(
-        find.bySemanticsLabel(l10n.videoEditorEditingToolsLabel),
+        find.bySemanticsLabel(l10n.videoActionEdit),
         findsNothing,
       );
     });
@@ -262,12 +262,12 @@ void main() {
       );
       // The visible tools bar owns the inset instead of the body.
       expect(MediaQuery.paddingOf(timelineContext).bottom, 0);
-      expect(find.text(l10n.videoEditorEditingToolsLabel), findsOneWidget);
+      expect(find.text(l10n.videoActionEdit), findsOneWidget);
 
       mainBloc.add(const VideoEditorMainOpenSubEditor(SubEditorType.text));
       await tester.pump();
 
-      expect(find.text(l10n.videoEditorEditingToolsLabel), findsNothing);
+      expect(find.text(l10n.videoActionEdit), findsNothing);
       // Hidden tools must leave the inset available to editor controls.
       expect(MediaQuery.paddingOf(timelineContext).bottom, 34);
       expect(MediaQuery.viewPaddingOf(timelineContext).bottom, 34);
@@ -419,7 +419,7 @@ void main() {
 
       final l10n = lookupAppLocalizations(const Locale('en'));
       expect(
-        find.bySemanticsLabel(l10n.videoEditorEditingToolsLabel),
+        find.bySemanticsLabel(l10n.videoActionEdit),
         findsNothing,
       );
     });
@@ -433,7 +433,7 @@ void main() {
       await tester.pump();
 
       expect(
-        find.bySemanticsLabel(l10n.videoEditorEditingToolsLabel),
+        find.bySemanticsLabel(l10n.videoActionEdit),
         findsNothing,
       );
     });
@@ -447,7 +447,7 @@ void main() {
       await tester.pump();
 
       expect(
-        find.bySemanticsLabel(l10n.videoEditorEditingToolsLabel),
+        find.bySemanticsLabel(l10n.videoActionEdit),
         findsNothing,
       );
     });

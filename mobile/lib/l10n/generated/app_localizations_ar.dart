@@ -10,9 +10,6 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
-  String get videoEditorEditingToolsLabel => 'أدوات التعديل';
-
-  @override
   String get devOptionsClipRecovery => 'استرداد المقاطع';
 
   @override

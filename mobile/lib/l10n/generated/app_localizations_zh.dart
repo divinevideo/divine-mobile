@@ -10,9 +10,6 @@ class AppLocalizationsZh extends AppLocalizations {
   AppLocalizationsZh([String locale = 'zh']) : super(locale);
 
   @override
-  String get videoEditorEditingToolsLabel => '编辑工具';
-
-  @override
   String get devOptionsClipRecovery => '片段恢复';
 
   @override

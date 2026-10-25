@@ -1,5 +1,4 @@
 {
-  "videoEditorEditingToolsLabel": "편집 도구",
   "@@locale": "ko",
   "devOptionsClipRecovery": "클립 복구",
   "devOptionsClipRecoveryDescription": "다른 계정에 저장된 녹화본과 어떤 항목도 참조하지 않는 동영상 파일을 찾습니다.",

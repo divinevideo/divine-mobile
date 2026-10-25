@@ -10,9 +10,6 @@ class AppLocalizationsIt extends AppLocalizations {
   AppLocalizationsIt([String locale = 'it']) : super(locale);
 
   @override
-  String get videoEditorEditingToolsLabel => 'Strumenti di modifica';
-
-  @override
   String get devOptionsClipRecovery => 'Recupero clip';
 
   @override

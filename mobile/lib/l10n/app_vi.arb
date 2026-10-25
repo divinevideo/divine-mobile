@@ -1,5 +1,4 @@
 {
-  "videoEditorEditingToolsLabel": "Công cụ chỉnh sửa",
   "@@locale": "vi",
   "devOptionsClipRecovery": "Khôi phục clip",
   "devOptionsClipRecoveryDescription": "Tìm các bản ghi được lưu dưới tài khoản khác và các tệp video không còn mục nào tham chiếu tới.",

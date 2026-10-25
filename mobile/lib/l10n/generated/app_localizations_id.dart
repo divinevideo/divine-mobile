@@ -10,9 +10,6 @@ class AppLocalizationsId extends AppLocalizations {
   AppLocalizationsId([String locale = 'id']) : super(locale);
 
   @override
-  String get videoEditorEditingToolsLabel => 'Alat pengeditan';
-
-  @override
   String get devOptionsClipRecovery => 'Pemulihan klip';
 
   @override

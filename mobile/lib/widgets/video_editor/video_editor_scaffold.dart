@@ -434,7 +434,7 @@ class _EditingToolsBarContent extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
         child: DivineButton(
-          label: context.l10n.videoEditorEditingToolsLabel,
+          label: context.l10n.videoActionEdit,
           leadingIcon: .slidersHorizontal,
           trailingIcon: .caretUp,
           type: .quiet,

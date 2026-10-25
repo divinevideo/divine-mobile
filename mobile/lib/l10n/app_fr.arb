@@ -1,5 +1,4 @@
 {
-  "videoEditorEditingToolsLabel": "Outils de montage",
   "@@locale": "fr",
   "devOptionsClipRecovery": "Récupération de clips",
   "devOptionsClipRecoveryDescription": "Trouve les enregistrements stockés sous un autre compte et les fichiers vidéo qu'aucune entrée ne référence plus.",

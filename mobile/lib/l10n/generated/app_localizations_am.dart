@@ -10,9 +10,6 @@ class AppLocalizationsAm extends AppLocalizations {
   AppLocalizationsAm([String locale = 'am']) : super(locale);
 
   @override
-  String get videoEditorEditingToolsLabel => 'የአርትዖት መሣሪያዎች';
-
-  @override
   String get devOptionsClipRecovery => 'የክሊፕ መልሶ ማግኛ';
 
   @override

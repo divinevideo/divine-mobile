@@ -10,9 +10,6 @@ class AppLocalizationsVi extends AppLocalizations {
   AppLocalizationsVi([String locale = 'vi']) : super(locale);
 
   @override
-  String get videoEditorEditingToolsLabel => 'Công cụ chỉnh sửa';
-
-  @override
   String get devOptionsClipRecovery => 'Khôi phục clip';
 
   @override

@@ -1,5 +1,4 @@
 {
-  "videoEditorEditingToolsLabel": "Redigeringsverktyg",
   "@@locale": "sv",
   "devOptionsClipRecovery": "Klippåterställning",
   "devOptionsClipRecoveryDescription": "Hittar inspelningar som lagrats under ett annat konto och videofiler som ingen post längre refererar till.",
