@@ -9943,10 +9943,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorTrackLostPartway => '途中で見失いました。そこから先はレイヤーが静止します。';
 
   @override
-  String get videoEditorLoopLabel => 'ループを調整';
+  String get videoEditorLoopLabel => 'ループを揃える';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'ループのつなぎ目を滑らかにする';
+  String get videoEditorLoopSemanticLabel => 'ループを揃える';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'すでになめらかにループしています。';
@@ -13715,7 +13715,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorLoopRepairSmoothed => 'ループを滑らかにしました';
 
   @override
-  String get videoEditorLoopRepairProgress => 'ループを調整中…';
+  String get videoEditorLoopRepairProgress => 'ループを揃えています…';
 
   @override
   String videoEditorLoopRepairTrimmed(String seconds) {

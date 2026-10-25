@@ -10463,10 +10463,10 @@ class AppLocalizationsSv extends AppLocalizations {
       'Tappade bort det på vägen. Lagret står still därifrån.';
 
   @override
-  String get videoEditorLoopLabel => 'Förbättra loopen';
+  String get videoEditorLoopLabel => 'Justera loop';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'Gör loopens övergång mjukare';
+  String get videoEditorLoopSemanticLabel => 'Justera loop';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'Den loopar redan mjukt.';
@@ -14437,7 +14437,7 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorLoopRepairSmoothed => 'Loopen är mjukare';
 
   @override
-  String get videoEditorLoopRepairProgress => 'Förbättrar din loop…';
+  String get videoEditorLoopRepairProgress => 'Justerar din loop…';
 
   @override
   String videoEditorLoopRepairTrimmed(String seconds) {

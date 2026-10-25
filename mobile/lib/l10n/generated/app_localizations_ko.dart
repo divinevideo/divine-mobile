@@ -9963,10 +9963,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorTrackLostPartway => '중간에 놓쳤어요. 그 이후로는 레이어가 멈춰 있어요.';
 
   @override
-  String get videoEditorLoopLabel => '루프 다듬기';
+  String get videoEditorLoopLabel => '루프 정렬';
 
   @override
-  String get videoEditorLoopSemanticLabel => '루프 연결 부분을 부드럽게 만들기';
+  String get videoEditorLoopSemanticLabel => '루프 정렬';
 
   @override
   String get videoEditorLoopAlreadySmooth => '이미 매끄럽게 루프돼요.';
@@ -13730,7 +13730,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorLoopRepairSmoothed => '루프를 부드럽게 다듬었어요';
 
   @override
-  String get videoEditorLoopRepairProgress => '루프를 다듬고 있어요…';
+  String get videoEditorLoopRepairProgress => '루프를 정렬하는 중…';
 
   @override
   String videoEditorLoopRepairTrimmed(String seconds) {

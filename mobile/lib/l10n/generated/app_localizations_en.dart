@@ -10560,10 +10560,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Lost sight of it partway. The layer holds still from there.';
 
   @override
-  String get videoEditorLoopLabel => 'Fix loop';
+  String get videoEditorLoopLabel => 'Align loop';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'Smooth the loop join';
+  String get videoEditorLoopSemanticLabel => 'Align loop';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'This already loops smoothly.';
@@ -14520,7 +14520,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorLoopRepairSmoothed => 'Loop smoothed';
 
   @override
-  String get videoEditorLoopRepairProgress => 'Fixing your loop…';
+  String get videoEditorLoopRepairProgress => 'Aligning your loop…';
 
   @override
   String videoEditorLoopRepairTrimmed(String seconds) {

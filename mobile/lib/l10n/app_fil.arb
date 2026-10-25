@@ -2269,8 +2269,8 @@
   "videoEditorTrackNotFollowed": "Hindi ito masundan. Mag-frame ng bagay na mas detalyado.",
   "videoEditorTrackFailed": "Hindi gumana ang tracking. Subukan ulit.",
   "videoEditorTrackLostPartway": "Nawala ito sa kalagitnaan. Hindi na gagalaw ang layer mula roon.",
-  "videoEditorLoopLabel": "Ayusin ang loop",
-  "videoEditorLoopSemanticLabel": "Pakinisin ang dugtungan ng loop",
+  "videoEditorLoopLabel": "Ihanay ang loop",
+  "videoEditorLoopSemanticLabel": "Ihanay ang loop",
   "videoEditorLoopAlreadySmooth": "Makinis na ang loop nito.",
   "videoEditorLoopFailed": "Hindi ma-check ang loop. Subukan ulit.",
   "videoEditorLoopNoMatch": "Hindi mapaganda ang loop na ito",
@@ -4893,6 +4893,6 @@
   "listAddToLists": "Idagdag sa mga list",
   "accountDeletionProcessingSignOutFailed": "Pinoproseso ang pag-delete ng account mo, pero hindi ka namin ma-sign out. Subukan ulit.",
   "videoEditorLoopRepairSmoothed": "Mas maayos na ang loop",
-  "videoEditorLoopRepairProgress": "Inaayos ang loop mo…",
+  "videoEditorLoopRepairProgress": "Inihahanay ang loop mo…",
   "videoEditorLoopRepairTrimmed": "Mas maayos na ang loop. Inalis ang {seconds} s."
 }

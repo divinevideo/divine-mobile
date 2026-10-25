@@ -2976,8 +2976,8 @@
   "videoEditorTrackNotFollowed": "Não deu para seguir isso. Enquadre algo com mais detalhes.",
   "videoEditorTrackFailed": "O rastreamento não funcionou. Tente de novo.",
   "videoEditorTrackLostPartway": "Perdeu de vista no meio do caminho. A camada fica parada a partir daí.",
-  "videoEditorLoopLabel": "Melhorar loop",
-  "videoEditorLoopSemanticLabel": "Suavizar a junção do loop",
+  "videoEditorLoopLabel": "Alinhar loop",
+  "videoEditorLoopSemanticLabel": "Alinhar loop",
   "videoEditorLoopAlreadySmooth": "Isso já faz um loop suave.",
   "videoEditorLoopFailed": "Não foi possível verificar o loop. Tente de novo.",
   "videoEditorLoopNoMatch": "Não foi possível melhorar este loop",
@@ -5866,6 +5866,6 @@
   "listAddToLists": "Adicionar às listas",
   "accountDeletionProcessingSignOutFailed": "A exclusão da sua conta está em andamento, mas não conseguimos concluir a saída. Tente de novo.",
   "videoEditorLoopRepairSmoothed": "Loop suavizado",
-  "videoEditorLoopRepairProgress": "Melhorando seu loop…",
+  "videoEditorLoopRepairProgress": "Alinhando seu loop…",
   "videoEditorLoopRepairTrimmed": "Loop suavizado. {seconds} s removidos."
 }

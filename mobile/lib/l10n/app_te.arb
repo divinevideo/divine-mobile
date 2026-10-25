@@ -6121,8 +6121,8 @@
   "videoEditorTrackNotFollowed": "దాన్ని అనుసరించలేకపోయాము. మరింత వివరాలు ఉన్న దాన్ని ఫ్రేమ్‌లో పెట్టండి.",
   "videoEditorTrackFailed": "ట్రాకింగ్ పని చేయలేదు. మళ్లీ ప్రయత్నించండి.",
   "videoEditorTrackLostPartway": "మధ్యలో కనిపించకుండా పోయింది. అక్కడి నుండి లేయర్ కదలకుండా ఉంటుంది.",
-  "videoEditorLoopLabel": "లూప్‌ను సరిచేయండి",
-  "videoEditorLoopSemanticLabel": "లూప్ కలయికను సాఫీగా చేయండి",
+  "videoEditorLoopLabel": "లూప్‌ను సమలేఖనం చేయి",
+  "videoEditorLoopSemanticLabel": "లూప్‌ను సమలేఖనం చేయి",
   "videoEditorLoopAlreadySmooth": "ఇది ఇప్పటికే సాఫీగా లూప్ అవుతోంది.",
   "videoEditorLoopFailed": "లూప్‌ను తనిఖీ చేయలేకపోయాం. మళ్లీ ప్రయత్నించండి.",
   "videoEditorLoopNoMatch": "ఈ లూప్‌ను మెరుగుపరచలేకపోయాం",
@@ -8786,6 +8786,6 @@
   "listAddToLists": "జాబితాలకు జోడించండి",
   "accountDeletionProcessingSignOutFailed": "మీ ఖాతాను తొలగించే ప్రక్రియ కొనసాగుతోంది, కానీ మేము సైన్ అవుట్‌ను పూర్తి చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి.",
   "videoEditorLoopRepairSmoothed": "లూప్ సాఫీగా మారింది",
-  "videoEditorLoopRepairProgress": "మీ లూప్‌ను సరిచేస్తున్నాం…",
+  "videoEditorLoopRepairProgress": "మీ లూప్‌ను సమలేఖనం చేస్తున్నాం…",
   "videoEditorLoopRepairTrimmed": "లూప్ సాఫీగా మారింది. {seconds} సె. తొలగించాం."
 }

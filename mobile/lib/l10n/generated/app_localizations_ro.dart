@@ -10685,10 +10685,10 @@ class AppLocalizationsRo extends AppLocalizations {
       'Pierdut din vedere pe parcurs. De acolo, stratul rămâne pe loc.';
 
   @override
-  String get videoEditorLoopLabel => 'Îmbunătățește bucla';
+  String get videoEditorLoopLabel => 'Aliniază bucla';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'Netezește îmbinarea buclei';
+  String get videoEditorLoopSemanticLabel => 'Aliniază bucla';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'Se repetă deja fluid în buclă.';
@@ -14719,7 +14719,7 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorLoopRepairSmoothed => 'Buclă netezită';
 
   @override
-  String get videoEditorLoopRepairProgress => 'Îți îmbunătățim bucla…';
+  String get videoEditorLoopRepairProgress => 'Se aliniază bucla…';
 
   @override
   String videoEditorLoopRepairTrimmed(String seconds) {

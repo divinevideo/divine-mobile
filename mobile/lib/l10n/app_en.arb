@@ -7675,13 +7675,13 @@
   "@videoEditorTrackLostPartway": {
     "description": "Snackbar when tracking lost the object before the end, for example because it left the frame. The layer follows it up to there and then stays still."
   },
-  "videoEditorLoopLabel": "Fix loop",
+  "videoEditorLoopLabel": "Align loop",
   "@videoEditorLoopLabel": {
-    "description": "One optional action for the whole edit that repairs a reliable loop framing mismatch."
+    "description": "Optional editing-tools drawer action that aligns the loop join for the whole edit."
   },
-  "videoEditorLoopSemanticLabel": "Smooth the loop join",
+  "videoEditorLoopSemanticLabel": "Align loop",
   "@videoEditorLoopSemanticLabel": {
-    "description": "Accessible label for Fix loop."
+    "description": "Accessible label for Align loop."
   },
   "videoEditorLoopAlreadySmooth": "This already loops smoothly.",
   "@videoEditorLoopAlreadySmooth": {
@@ -11182,7 +11182,7 @@
     "description": "An accepted account deletion continues on the server while local sign-out failed. Retrying signs out without resubmitting or clearing the deletion receipt."
   },
   "videoEditorLoopRepairSmoothed": "Loop smoothed",
-  "videoEditorLoopRepairProgress": "Fixing your loop…",
+  "videoEditorLoopRepairProgress": "Aligning your loop…",
   "videoEditorLoopRepairTrimmed": "Loop smoothed. Removed {seconds} s.",
   "@videoEditorLoopRepairSmoothed": {
     "description": "Success after a verified loop correction. Snackbar also offers normal history Undo."

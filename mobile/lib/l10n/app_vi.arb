@@ -5319,8 +5319,8 @@
   "videoEditorTrackNotFollowed": "Không theo dõi được. Hãy đóng khung thứ gì đó có nhiều chi tiết hơn.",
   "videoEditorTrackFailed": "Theo dõi không thành công. Thử lại nhé.",
   "videoEditorTrackLostPartway": "Mất dấu giữa chừng. Từ đó lớp sẽ đứng yên.",
-  "videoEditorLoopLabel": "Sửa vòng lặp",
-  "videoEditorLoopSemanticLabel": "Làm mượt điểm nối vòng lặp",
+  "videoEditorLoopLabel": "Căn chỉnh vòng lặp",
+  "videoEditorLoopSemanticLabel": "Căn chỉnh vòng lặp",
   "videoEditorLoopAlreadySmooth": "Video này đã loop mượt rồi.",
   "videoEditorLoopFailed": "Không kiểm tra được loop. Thử lại nhé.",
   "videoEditorLoopNoMatch": "Không thể cải thiện vòng lặp này",
@@ -7157,6 +7157,6 @@
   "listAddToLists": "Thêm vào danh sách",
   "accountDeletionProcessingSignOutFailed": "Tài khoản của bạn đang được xử lý xóa, nhưng chúng tôi chưa thể đăng xuất cho bạn. Hãy thử lại.",
   "videoEditorLoopRepairSmoothed": "Đã làm mượt vòng lặp",
-  "videoEditorLoopRepairProgress": "Đang sửa vòng lặp của bạn…",
+  "videoEditorLoopRepairProgress": "Đang căn chỉnh vòng lặp…",
   "videoEditorLoopRepairTrimmed": "Đã làm mượt vòng lặp. Đã cắt {seconds} giây."
 }

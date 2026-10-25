@@ -10586,11 +10586,10 @@ class AppLocalizationsIt extends AppLocalizations {
       'Perso di vista a metà strada. Da lì il livello resta fermo.';
 
   @override
-  String get videoEditorLoopLabel => 'Migliora il loop';
+  String get videoEditorLoopLabel => 'Allinea loop';
 
   @override
-  String get videoEditorLoopSemanticLabel =>
-      'Rendi fluida la giunzione del loop';
+  String get videoEditorLoopSemanticLabel => 'Allinea loop';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'Va già in loop in modo fluido.';
@@ -14610,7 +14609,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorLoopRepairSmoothed => 'Loop reso più fluido';
 
   @override
-  String get videoEditorLoopRepairProgress => 'Miglioramento del tuo loop…';
+  String get videoEditorLoopRepairProgress => 'Allineamento del loop…';
 
   @override
   String videoEditorLoopRepairTrimmed(String seconds) {
