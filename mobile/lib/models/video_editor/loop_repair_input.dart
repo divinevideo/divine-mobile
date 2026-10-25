@@ -22,12 +22,12 @@ abstract final class LoopRepairInputMapper {
     bool hasSourceTrackedLayers = false,
     bool platformSupported = true,
   }) {
+    final exportClips = _exportClips(clips);
     final supported =
         platformSupported &&
-        clips.isNotEmpty &&
+        exportClips.isNotEmpty &&
         !hasSourceTrackedLayers &&
-        compositionDuration(clips) <= VideoEditorConstants.maxDuration &&
-        clips.every(
+        exportClips.every(
           (clip) =>
               clip.video?.file != null &&
               !clip.isPlaceholder &&
@@ -45,7 +45,7 @@ abstract final class LoopRepairInputMapper {
         );
     return LoopRepairInput(
       clips: [
-        for (final clip in clips)
+        for (final clip in exportClips)
           if (clip.video?.file?.path case final path?)
             LoopClipInput(
               clipId: clip.id,
@@ -82,6 +82,7 @@ abstract final class LoopRepairInputMapper {
     LoopRepairResult result, {
     required String operationId,
   }) {
+    final exportClips = _exportClips(clips);
     final plan = result.plan;
     final output = result.output;
     if (result.status != LoopRepairStatus.repaired ||
@@ -89,21 +90,45 @@ abstract final class LoopRepairInputMapper {
         output == null ||
         operationId.isEmpty ||
         clips.isEmpty ||
-        plan.clips.length != clips.length ||
-        output.paths.length != clips.length ||
-        output.paths.values.toSet().length != clips.length ||
+        plan.clips.length != exportClips.length ||
+        output.paths.length != exportClips.length ||
+        output.paths.values.toSet().length != exportClips.length ||
         !plan.zoom.isFinite ||
         plan.zoom < 1 ||
         plan.zoom > 1.08) {
       throw StateError('Incomplete loop repair');
     }
+    final retainedSourcePaths = {
+      for (final clip in clips.skip(exportClips.length))
+        ...clip.ownedFilePaths.whereType<String>(),
+      // Provenance can stop owning a source once a later merge is signed,
+      // and splits clear the per-render restoration records. Keep the media
+      // those history entries restore independently of either mechanism.
+      for (final clip in exportClips)
+        ...<String?>[
+          clip.video?.file?.path,
+          clip.loopAlignment?.sourcePath,
+          clip.stabilization?.rawSourcePath,
+          clip.boomerang?.sourcePath,
+          ...?clip.derivedFrom?.map((source) => source.path),
+          ...?clip.loopAlignment?.sourceDerivedFrom?.map(
+            (source) => source.path,
+          ),
+          ...?clip.stabilization?.sourceDerivedFrom?.map(
+            (source) => source.path,
+          ),
+          ...?clip.boomerang?.sourceDerivedFrom?.map((source) => source.path),
+        ].whereType<String>(),
+      for (final clip in clips) ...clip.retainedSourcePaths,
+    }.toList()..sort();
     final replacements = <DivineVideoClip>[];
-    for (var i = 0; i < clips.length; i++) {
+    for (var i = 0; i < exportClips.length; i++) {
       final clip = clips[i];
+      final window = exportClips[i];
       final replacement = plan.clips[i];
       final path = output.paths[clip.id];
       final source = clip.video?.file?.path;
-      final removed = clip.duration - clip.trimEnd - replacement.sourceEnd;
+      final removed = window.duration - window.trimEnd - replacement.sourceEnd;
       final speed = clip.playbackSpeed ?? 1;
       if (source == null ||
           path == null ||
@@ -118,7 +143,7 @@ abstract final class LoopRepairInputMapper {
           speed <= 0 ||
           removed.inMicroseconds / speed >
               const LoopAlignmentLimits().maximumTrim.inMicroseconds ||
-          (i != clips.length - 1 && removed != Duration.zero) ||
+          (i != exportClips.length - 1 && removed != Duration.zero) ||
           (replacement.sourceEnd - replacement.sourceStart).inMicroseconds /
                   speed <
               TimelineConstants.minTrimDuration.inMicroseconds) {
@@ -141,6 +166,7 @@ abstract final class LoopRepairInputMapper {
             sourceDerivedFrom: clip.derivedFrom,
             operationId: operationId,
           ),
+          retainedSourcePaths: retainedSourcePaths,
           derivedFrom: clip.signingSources,
           clearStabilization: true,
           clearBoomerang: true,
@@ -154,6 +180,33 @@ abstract final class LoopRepairInputMapper {
       throw StateError('Loop repair would make the composition too short');
     }
     return List.unmodifiable(replacements);
+  }
+
+  /// Limits analysis and successful replacements to the exported prefix.
+  static List<DivineVideoClip> _exportClips(List<DivineVideoClip> clips) {
+    var remaining = VideoEditorConstants.maxDuration;
+    final exported = <DivineVideoClip>[];
+    for (final clip in clips) {
+      if (remaining <= Duration.zero) break;
+      final speed = clip.playbackSpeed ?? 1;
+      if (!speed.isFinite || speed <= 0 || clip.speedRamp != null) return clips;
+      if (clip.playbackDuration <= remaining) {
+        exported.add(clip);
+        remaining -= clip.playbackDuration;
+      } else {
+        // Round down so slow playback cannot exceed the export bound.
+        final sourceSpan = Duration(
+          microseconds: (remaining.inMicroseconds * speed).floor(),
+        );
+        exported.add(
+          clip.copyWith(
+            trimEnd: clip.duration - clip.trimStart - sourceSpan,
+          ),
+        );
+        break;
+      }
+    }
+    return exported;
   }
 
   static (int, int) _dimensions(double ratio) => ratio >= 1

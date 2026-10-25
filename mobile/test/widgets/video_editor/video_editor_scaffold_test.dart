@@ -1,5 +1,5 @@
 // ABOUTME: Widget tests for VideoEditorScaffold.
-// ABOUTME: Verifies loading UI and FAB visibility rules.
+// ABOUTME: Verifies loading UI and editing-tools visibility rules.
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -64,6 +64,7 @@ DivineVideoClip _detachedClip({String file = 'clip-1.mp4'}) => DivineVideoClip(
 );
 
 void main() {
+  final l10n = lookupAppLocalizations(const Locale('en'));
   group(VideoEditorScaffold, () {
     late VideoEditorMainBloc mainBloc;
     late TimelineOverlayBloc overlayBloc;
@@ -170,10 +171,17 @@ void main() {
       await tester.pumpWidget(buildWidget(isLoading: true));
 
       expect(find.byType(BrandedLoadingScaffold), findsOneWidget);
-      expect(find.bySemanticsLabel('Add element'), findsOneWidget);
+      expect(find.text(l10n.videoActionEdit), findsOneWidget);
+      final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
+      expect(scaffold.bottomNavigationBar, isNotNull);
+      expect(scaffold.floatingActionButton, isNull);
+      expect(
+        find.bySemanticsLabel(l10n.videoActionEdit),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('add-element glyph follows the palette on light', (
+    testWidgets('editing-tools glyph follows the palette on light', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -185,19 +193,22 @@ void main() {
 
       final icon = tester.widget<DivineIcon>(
         find.descendant(
-          of: find.bySemanticsLabel('Add element'),
-          matching: find.byType(DivineIcon),
+          of: find.bySemanticsLabel(l10n.videoActionEdit),
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon &&
+                widget.icon == DivineIconName.slidersHorizontal,
+          ),
         ),
       );
 
-      // This FAB is a hand-rolled twin of `DivineIconButtonType.secondary`,
-      // so it takes that variant's icon rule. The brand green only reaches
-      // 1.92:1 on the light `surfaceContainer` fill; `onSurface` is 11.06:1.
-      expect(icon.color, VineTheme.lightColors.onSurface);
+      expect(icon.color, VineTheme.lightColors.onSurfaceVariant);
       expect(icon.color, isNot(VineTheme.primary));
     });
 
-    testWidgets('add-element glyph stays brand green on dark', (tester) async {
+    testWidgets('editing-tools glyph follows the palette on dark', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         buildWidget(isLoading: true, theme: VineTheme.theme),
       );
@@ -205,21 +216,61 @@ void main() {
 
       final icon = tester.widget<DivineIcon>(
         find.descendant(
-          of: find.bySemanticsLabel('Add element'),
-          matching: find.byType(DivineIcon),
+          of: find.bySemanticsLabel(l10n.videoActionEdit),
+          matching: find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon &&
+                widget.icon == DivineIconName.slidersHorizontal,
+          ),
         ),
       );
 
-      expect(icon.color, VineTheme.primary);
+      expect(icon.color, VineTheme.darkColors.onSurfaceVariant);
     });
 
-    testWidgets('hides FAB while a sub-editor is open', (tester) async {
+    testWidgets('hides editing tools while a sub-editor is open', (
+      tester,
+    ) async {
       mainBloc.add(const VideoEditorMainOpenSubEditor(SubEditorType.text));
 
       await tester.pumpWidget(buildWidget(isLoading: true));
       await tester.pump();
 
-      expect(find.bySemanticsLabel('Add element'), findsNothing);
+      expect(
+        find.bySemanticsLabel(l10n.videoActionEdit),
+        findsNothing,
+      );
+    });
+
+    testWidgets('restores the body safe area when editing tools hide', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      tester.view.padding = const FakeViewPadding(bottom: 34);
+      tester.view.viewPadding = const FakeViewPadding(bottom: 34);
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetViewPadding);
+      final mainBloc = VideoEditorMainBloc();
+      addTearDown(mainBloc.close);
+
+      await tester.pumpWidget(
+        buildWidget(isLoading: true, mainBlocOverride: mainBloc),
+      );
+      final timelineContext = tester.element(
+        find.byType(VideoEditorTimelineScaffold),
+      );
+      // The visible tools bar owns the inset instead of the body.
+      expect(MediaQuery.paddingOf(timelineContext).bottom, 0);
+      expect(find.text(l10n.videoActionEdit), findsOneWidget);
+
+      mainBloc.add(const VideoEditorMainOpenSubEditor(SubEditorType.text));
+      await tester.pump();
+
+      expect(find.text(l10n.videoActionEdit), findsNothing);
+      // Hidden tools must leave the inset available to editor controls.
+      expect(MediaQuery.paddingOf(timelineContext).bottom, 34);
+      expect(MediaQuery.viewPaddingOf(timelineContext).bottom, 34);
     });
 
     testWidgets(
@@ -349,7 +400,7 @@ void main() {
       },
     );
 
-    testWidgets('hides FAB while a loop repair runs', (
+    testWidgets('hides editing tools while a loop repair runs', (
       tester,
     ) async {
       final loopSuggestionCubit = _MockLoopSuggestionCubit();
@@ -368,27 +419,37 @@ void main() {
 
       final l10n = lookupAppLocalizations(const Locale('en'));
       expect(
-        find.bySemanticsLabel(l10n.videoEditorAddElementSemanticLabel),
+        find.bySemanticsLabel(l10n.videoActionEdit),
         findsNothing,
       );
     });
 
-    testWidgets('hides FAB when an overlay item is selected', (tester) async {
+    testWidgets('hides editing tools when an overlay item is selected', (
+      tester,
+    ) async {
       overlayBloc.add(const TimelineOverlayItemSelected('overlay-1'));
 
       await tester.pumpWidget(buildWidget(isLoading: true));
       await tester.pump();
 
-      expect(find.bySemanticsLabel('Add element'), findsNothing);
+      expect(
+        find.bySemanticsLabel(l10n.videoActionEdit),
+        findsNothing,
+      );
     });
 
-    testWidgets('hides FAB during draw-layer multi-select', (tester) async {
+    testWidgets('hides editing tools during draw-layer multi-select', (
+      tester,
+    ) async {
       overlayBloc.add(const TimelineOverlayLayerMultiSelectStarted('draw-1'));
 
       await tester.pumpWidget(buildWidget(isLoading: true));
       await tester.pump();
 
-      expect(find.bySemanticsLabel('Add element'), findsNothing);
+      expect(
+        find.bySemanticsLabel(l10n.videoActionEdit),
+        findsNothing,
+      );
     });
 
     testWidgets(

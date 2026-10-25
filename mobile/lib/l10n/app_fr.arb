@@ -2975,8 +2975,8 @@
   "videoEditorTrackNotFollowed": "Impossible de suivre ça. Cadre quelque chose de plus détaillé.",
   "videoEditorTrackFailed": "Le suivi n'a pas fonctionné. Réessaie.",
   "videoEditorTrackLostPartway": "Perdu de vue en cours de route. Le calque reste immobile à partir de là.",
-  "videoEditorLoopLabel": "Améliorer la boucle",
-  "videoEditorLoopSemanticLabel": "Lisser la jonction de la boucle",
+  "videoEditorLoopLabel": "Aligner la boucle",
+  "videoEditorLoopSemanticLabel": "Aligner la boucle",
   "videoEditorLoopAlreadySmooth": "Ça boucle déjà en douceur.",
   "videoEditorLoopFailed": "Impossible de vérifier la boucle. Réessaie.",
   "videoEditorLoopNoMatch": "Impossible d’améliorer cette boucle",
@@ -3091,7 +3091,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Teinte",
-  "videoEditorAddElementSemanticLabel": "Ajouter un élément",
   "videoEditorDoneSemanticLabel": "Terminé",
   "videoEditorLevelSemanticLabel": "Niveau",
   "videoEditorBrushSizeSemanticLabel": "Taille du pinceau",
@@ -5866,6 +5865,6 @@
   "listAddToLists": "Ajouter aux listes",
   "accountDeletionProcessingSignOutFailed": "La suppression de ton compte est en cours, mais nous n’avons pas pu te déconnecter. Réessaie.",
   "videoEditorLoopRepairSmoothed": "Boucle lissée",
-  "videoEditorLoopRepairProgress": "Amélioration de ta boucle…",
+  "videoEditorLoopRepairProgress": "Alignement de ta boucle…",
   "videoEditorLoopRepairTrimmed": "Boucle lissée. {seconds} s retirées."
 }

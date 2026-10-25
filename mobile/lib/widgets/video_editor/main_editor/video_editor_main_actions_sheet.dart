@@ -1,5 +1,5 @@
 // ABOUTME: Bottom sheet with sub-editor actions for the video editor.
-// ABOUTME: Opened via FAB, provides access to text, draw, effects, and more.
+// ABOUTME: Opened from Editing tools, provides access to text, draw, and more.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -12,6 +12,7 @@ import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_loop_repair_listener.dart';
 import 'package:openvine/widgets/video_editor/tune_editor/open_tune_editor.dart';
 
 /// Bottom sheet that shows video editor sub-editor actions.
@@ -19,15 +20,21 @@ import 'package:openvine/widgets/video_editor/tune_editor/open_tune_editor.dart'
 /// Uses [_ItemButton] for each action and closes the sheet after
 /// an action is selected.
 class VideoEditorMainActionsSheet extends StatelessWidget {
-  const VideoEditorMainActionsSheet({required this.scope, super.key});
+  const VideoEditorMainActionsSheet({
+    required this.scope,
+    required this.onAlignLoop,
+    super.key,
+  });
 
   static const _maxItemWidth = 72.0;
-  static const _itemHeight = 112.0;
   static const _itemMainSpacing = 16.0;
   static const _itemCrossSpacing = 24.0;
 
   /// The editor scope captured before opening the sheet.
   final VideoEditorScope scope;
+
+  /// Uses the editor context outside the sheet to preserve loop history.
+  final VoidCallback onAlignLoop;
 
   /// Opens the actions bottom sheet.
   static Future<void> show(BuildContext context) {
@@ -42,13 +49,14 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
       expanded: false,
       scrollable: false,
       isScrollControlled: true,
-      title: Text(context.l10n.videoEditorAddTitle),
-      children: [
-        // The sheet opens on a separate route, outside the editor's
-        // MultiBlocProvider, so re-provide every bloc the actions read —
-        // including the tune bloc the Adjust action needs and the draw bloc
-        // the Draw and Blur actions open the draw editor with.
-        MultiBlocProvider(
+      showHeader: false,
+      showHeaderDivider: false,
+      // The sheet opens on a separate route, outside the editor's
+      // MultiBlocProvider, so re-provide every bloc the actions read —
+      // including the tune bloc the Adjust action needs and the draw bloc
+      // the Draw and Blur actions open the draw editor with.
+      body: SingleChildScrollView(
+        child: MultiBlocProvider(
           providers: [
             BlocProvider<VideoEditorMainBloc>.value(
               value: videoEditorMainBloc,
@@ -57,14 +65,32 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
             BlocProvider<VideoEditorTuneBloc>.value(value: tuneBloc),
             BlocProvider<VideoEditorDrawBloc>.value(value: drawBloc),
           ],
-          child: VideoEditorMainActionsSheet(scope: scope),
+          child: VideoEditorMainActionsSheet(
+            scope: scope,
+            onAlignLoop: () => alignEditorLoop(context),
+          ),
         ),
-      ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final labelStyle = VineTheme.bodySmallFont(
+      color: context.vineColors.primaryText,
+    );
+    final labelScaler = MediaQuery.textScalerOf(context).clamp(
+      maxScaleFactor: chipLabelTextScaleLimit,
+    );
+    // Reserve two scaled label lines below the largest icon tile. The grid
+    // gives each column a tight height, even when its label wraps.
+    final itemHeight =
+        (_maxItemWidth +
+                8 +
+                2 *
+                    labelScaler.scale(labelStyle.fontSize!) *
+                    labelStyle.height!)
+            .ceilToDouble();
     final totalDuration = context.select(
       (ClipEditorBloc b) => b.state.totalDuration,
     );
@@ -79,9 +105,10 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
           GridView(
             primary: false,
             shrinkWrap: true,
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
               maxCrossAxisExtent: _maxItemWidth,
-              mainAxisExtent: _itemHeight,
+              mainAxisExtent: itemHeight,
               mainAxisSpacing: _itemMainSpacing,
               crossAxisSpacing: _itemCrossSpacing,
             ),
@@ -164,6 +191,22 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
                   Navigator.pop(context);
                   scope.onOpenEffects();
                 },
+              ),
+              _ItemButton(
+                icon: .repeat,
+                label: context.l10n.videoEditorLoopLabel,
+                semanticLabel: context.l10n.videoEditorLoopSemanticLabel,
+                onTap:
+                    context.select(
+                      (ClipEditorBloc b) =>
+                          b.state.clips.isEmpty ||
+                          b.state.hasPendingClipOperation,
+                    )
+                    ? null
+                    : () {
+                        Navigator.pop(context);
+                        onAlignLoop();
+                      },
               ),
               _ItemButton(
                 icon: .slidersHorizontal,
@@ -266,7 +309,7 @@ class _ItemButton extends StatelessWidget {
     required this.semanticLabel,
   });
 
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final DivineIconName icon;
   final String label;
   final String semanticLabel;
@@ -280,6 +323,7 @@ class _ItemButton extends StatelessWidget {
         Semantics(
           label: semanticLabel,
           button: true,
+          enabled: onTap != null,
           child: GestureDetector(
             onTap: onTap,
             child: AspectRatio(
@@ -298,7 +342,9 @@ class _ItemButton extends StatelessWidget {
                 child: Center(
                   child: DivineIcon(
                     icon: icon,
-                    color: context.vineColors.accentPositive,
+                    color: onTap == null
+                        ? context.vineColors.disabled
+                        : context.vineColors.accentPositive,
                   ),
                 ),
               ),
@@ -311,10 +357,12 @@ class _ItemButton extends StatelessWidget {
             maxScaleFactor: chipLabelTextScaleLimit,
             child: Text(
               label,
-              maxLines: 1,
+              maxLines: 2,
               textAlign: .center,
               style: VineTheme.bodySmallFont(
-                color: context.vineColors.primaryText,
+                color: onTap == null
+                    ? context.vineColors.disabled
+                    : context.vineColors.primaryText,
               ),
             ),
           ),

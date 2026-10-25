@@ -10462,10 +10462,10 @@ class AppLocalizationsUr extends AppLocalizations {
       'راستے میں نظر سے اوجھل ہو گئی۔ وہاں سے لیئر ٹھہری رہتی ہے۔';
 
   @override
-  String get videoEditorLoopLabel => 'لوپ بہتر کریں';
+  String get videoEditorLoopLabel => 'لوپ سیدھا کریں';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'لوپ کے جوڑ کو ہموار کریں';
+  String get videoEditorLoopSemanticLabel => 'لوپ سیدھا کریں';
 
   @override
   String get videoEditorLoopAlreadySmooth =>
@@ -10907,9 +10907,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'رنگت';
-
-  @override
-  String get videoEditorAddElementSemanticLabel => 'عنصر شامل کریں';
 
   @override
   String get videoEditorDoneSemanticLabel => 'ہو گیا';
@@ -14423,7 +14420,7 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorLoopRepairSmoothed => 'لوپ ہموار ہو گیا';
 
   @override
-  String get videoEditorLoopRepairProgress => 'آپ کا لوپ بہتر کیا جا رہا ہے…';
+  String get videoEditorLoopRepairProgress => 'آپ کا لوپ سیدھا کیا جا رہا ہے…';
 
   @override
   String videoEditorLoopRepairTrimmed(String seconds) {

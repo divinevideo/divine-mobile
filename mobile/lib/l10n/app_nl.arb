@@ -2975,8 +2975,8 @@
   "videoEditorTrackNotFollowed": "Dat lukte niet om te volgen. Kader iets in met meer details.",
   "videoEditorTrackFailed": "Volgen is niet gelukt. Probeer het opnieuw.",
   "videoEditorTrackLostPartway": "Halverwege uit het oog verloren. Vanaf daar staat de laag stil.",
-  "videoEditorLoopLabel": "Loop verbeteren",
-  "videoEditorLoopSemanticLabel": "Overgang van de loop vloeiender maken",
+  "videoEditorLoopLabel": "Loop uitlijnen",
+  "videoEditorLoopSemanticLabel": "Loop uitlijnen",
   "videoEditorLoopAlreadySmooth": "Deze loopt al vloeiend rond.",
   "videoEditorLoopFailed": "Loop controleren is niet gelukt. Probeer het opnieuw.",
   "videoEditorLoopNoMatch": "Deze loop kon niet worden verbeterd",
@@ -3091,7 +3091,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Tint",
-  "videoEditorAddElementSemanticLabel": "Element toevoegen",
   "videoEditorDoneSemanticLabel": "Gereed",
   "videoEditorLevelSemanticLabel": "Niveau",
   "videoEditorBrushSizeSemanticLabel": "Penseelgrootte",
@@ -5866,6 +5865,6 @@
   "listAddToLists": "Toevoegen aan lijsten",
   "accountDeletionProcessingSignOutFailed": "Je account wordt verwijderd, maar we konden je niet volledig uitloggen. Probeer het opnieuw.",
   "videoEditorLoopRepairSmoothed": "Loop verbeterd",
-  "videoEditorLoopRepairProgress": "Je loop wordt verbeterd…",
+  "videoEditorLoopRepairProgress": "Je loop wordt uitgelijnd…",
   "videoEditorLoopRepairTrimmed": "Loop verbeterd. {seconds} s verwijderd."
 }

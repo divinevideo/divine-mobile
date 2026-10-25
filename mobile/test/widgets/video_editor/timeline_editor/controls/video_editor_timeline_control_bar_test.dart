@@ -13,10 +13,13 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_action_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_clip_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_control_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_layer_multi_select_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_marker_controls.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
 import '../../../../helpers/video_editor/loop_repair.dart';
 
@@ -95,6 +98,30 @@ void main() {
       await tester.pumpWidget(build(isEditing: true));
 
       expect(find.byType(TimelineClipControls), findsOneWidget);
+    });
+
+    testWidgets('does not add a standalone loop action to an idle timeline', (
+      tester,
+    ) async {
+      when(() => clipBloc.state).thenReturn(
+        ClipEditorState(
+          clips: [
+            DivineVideoClip(
+              id: 'recording',
+              video: EditorVideo.file('/documents/recording.mp4'),
+              duration: const Duration(milliseconds: 8140),
+              recordedAt: DateTime(2026),
+              targetAspectRatio: .vertical,
+              originalAspectRatio: 9 / 16,
+            ),
+          ],
+        ),
+      );
+
+      await tester.pumpWidget(build(isEditing: false));
+
+      expect(find.byType(TimelineActionButton), findsNothing);
+      expect(find.byType(TimelineClipControls), findsNothing);
     });
 
     testWidgets('shows marker controls when marker mode is active', (

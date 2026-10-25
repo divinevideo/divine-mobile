@@ -3604,8 +3604,8 @@
   "videoEditorTrackNotFollowed": "ሊከተለው አልተቻለም። ብዙ ዝርዝር ያለውን ነገር በክፈፍ ያስገቡ።",
   "videoEditorTrackFailed": "መከታተሉ አልተሳካም። እንደገና ይሞክሩ።",
   "videoEditorTrackLostPartway": "በመሃል ጠፋ። ከዚያ በኋላ ንብርብሩ እንደቆመ ይቆያል።",
-  "videoEditorLoopLabel": "ሉፑን አስተካክል",
-  "videoEditorLoopSemanticLabel": "የሉፑን መገናኛ አስተካክል",
+  "videoEditorLoopLabel": "ዙሩን አስተካክል",
+  "videoEditorLoopSemanticLabel": "ዙሩን አስተካክል",
   "videoEditorLoopAlreadySmooth": "ይህ አስቀድሞ ለስላሳ ሆኖ ይዞራል።",
   "videoEditorLoopFailed": "ዙሩን ማረጋገጥ አልተቻለም። እንደገና ይሞክሩ።",
   "videoEditorLoopNoMatch": "ይህን ሉፕ ማሻሻል አልተቻለም",
@@ -3721,7 +3721,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "ሁ",
-  "videoEditorAddElementSemanticLabel": "ኤለመንት አክል",
   "videoEditorDoneSemanticLabel": "ተከናውኗል",
   "videoEditorLevelSemanticLabel": "ደረጃ",
   "videoEditorBrushSizeSemanticLabel": "የብሩሽ መጠን",
@@ -5919,6 +5918,6 @@
   "listAddToLists": "ወደ ዝርዝሮች ያክሉ",
   "accountDeletionProcessingSignOutFailed": "መለያዎን የመሰረዝ ሂደት በመካሄድ ላይ ነው፣ ግን ማስወጣት አልቻልንም። እንደገና ይሞክሩ።",
   "videoEditorLoopRepairSmoothed": "ሉፑ ተስተካክሏል",
-  "videoEditorLoopRepairProgress": "ሉፑን በማስተካከል ላይ…",
+  "videoEditorLoopRepairProgress": "ዙርህን በማስተካከል ላይ…",
   "videoEditorLoopRepairTrimmed": "ሉፑ ተስተካክሏል። {seconds} ሰከንድ ተወግዷል።"
 }

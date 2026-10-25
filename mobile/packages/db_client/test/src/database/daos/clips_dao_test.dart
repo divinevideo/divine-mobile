@@ -1429,6 +1429,29 @@ void main() {
         expect(result, isTrue);
       });
 
+      test(
+        'retained source lists protect media, ignoring other string lists',
+        () async {
+          await dao.upsertClip(
+            id: 'repaired',
+            draftId: testDraftId,
+            orderIndex: 0,
+            durationMs: 6300,
+            recordedAt: DateTime(2026),
+            filePath: 'aligned.mp4',
+            thumbnailPath: null,
+            data: json.encode({
+              'retainedSourcePaths': ['excluded-render.mp4'],
+              'labels': ['not-a-source.mp4'],
+            }),
+          );
+
+          expect(await dao.isFileReferenced('excluded-render.mp4'), isTrue);
+          expect(await dao.isFileReferenced('not-a-source.mp4'), isFalse);
+          expect(await dao.isFileReferenced('excluded.mp4'), isFalse);
+        },
+      );
+
       test('returns false when filename is not referenced', () async {
         await dao.upsertClip(
           id: 'clip_1',

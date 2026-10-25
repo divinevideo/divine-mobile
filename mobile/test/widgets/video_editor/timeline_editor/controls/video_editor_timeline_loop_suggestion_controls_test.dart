@@ -44,11 +44,23 @@ void main() {
           ),
         );
         expect(find.text('Cancel'), findsOneWidget);
-        expect(find.text('Fixing your loop…'), findsOneWidget);
+        expect(
+          find.text(
+            lookupAppLocalizations(const Locale('en'))
+                .videoEditorLoopRepairProgress,
+          ),
+          findsOneWidget,
+        );
         await tester.tap(find.text('Cancel'));
         await tester.pump();
         expect(cubit.state.status, LoopSuggestionStatus.idle);
-        expect(find.text('Fixing your loop…'), findsNothing);
+        expect(
+          find.text(
+            lookupAppLocalizations(const Locale('en'))
+                .videoEditorLoopRepairProgress,
+          ),
+          findsNothing,
+        );
         gate.complete(const LoopRepairResult(status: .noMatch));
         await operation;
       },

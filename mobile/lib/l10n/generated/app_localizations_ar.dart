@@ -10438,10 +10438,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'فُقد الأثر في منتصف الطريق، وتبقى الطبقة ثابتة من هناك.';
 
   @override
-  String get videoEditorLoopLabel => 'تحسين التكرار';
+  String get videoEditorLoopLabel => 'محاذاة الحلقة';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'تنعيم نقطة اتصال التكرار';
+  String get videoEditorLoopSemanticLabel => 'محاذاة الحلقة';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'هذا يتكرر بسلاسة بالفعل.';
@@ -10890,9 +10890,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'الصبغة';
-
-  @override
-  String get videoEditorAddElementSemanticLabel => 'إضافة عنصر';
 
   @override
   String get videoEditorDoneSemanticLabel => 'تم';
@@ -14424,7 +14421,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorLoopRepairSmoothed => 'تم تنعيم التكرار';
 
   @override
-  String get videoEditorLoopRepairProgress => 'جارٍ تحسين التكرار…';
+  String get videoEditorLoopRepairProgress => 'جارٍ محاذاة الحلقة…';
 
   @override
   String videoEditorLoopRepairTrimmed(String seconds) {

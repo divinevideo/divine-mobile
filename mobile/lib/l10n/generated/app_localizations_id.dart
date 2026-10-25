@@ -10370,10 +10370,10 @@ class AppLocalizationsId extends AppLocalizations {
       'Kehilangan jejak di tengah jalan. Lapisan diam dari situ.';
 
   @override
-  String get videoEditorLoopLabel => 'Perbaiki loop';
+  String get videoEditorLoopLabel => 'Selaraskan loop';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'Haluskan sambungan loop';
+  String get videoEditorLoopSemanticLabel => 'Selaraskan loop';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'Ini sudah loop dengan mulus.';
@@ -10813,9 +10813,6 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Rona';
-
-  @override
-  String get videoEditorAddElementSemanticLabel => 'Tambah elemen';
 
   @override
   String get videoEditorDoneSemanticLabel => 'Selesai';
@@ -14324,7 +14321,7 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorLoopRepairSmoothed => 'Loop diperhalus';
 
   @override
-  String get videoEditorLoopRepairProgress => 'Memperbaiki loop kamu…';
+  String get videoEditorLoopRepairProgress => 'Menyelaraskan loop…';
 
   @override
   String videoEditorLoopRepairTrimmed(String seconds) {

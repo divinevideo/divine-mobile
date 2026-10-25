@@ -10374,10 +10374,10 @@ class AppLocalizationsTr extends AppLocalizations {
       'Yarı yolda gözden kayboldu. Katman oradan itibaren sabit kalır.';
 
   @override
-  String get videoEditorLoopLabel => 'Döngüyü düzelt';
+  String get videoEditorLoopLabel => 'Döngüyü hizala';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'Döngü birleşimini yumuşat';
+  String get videoEditorLoopSemanticLabel => 'Döngüyü hizala';
 
   @override
   String get videoEditorLoopAlreadySmooth =>
@@ -10822,9 +10822,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Ton';
-
-  @override
-  String get videoEditorAddElementSemanticLabel => 'Öğe ekle';
 
   @override
   String get videoEditorDoneSemanticLabel => 'Bitti';
@@ -14353,7 +14350,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorLoopRepairSmoothed => 'Döngü yumuşatıldı';
 
   @override
-  String get videoEditorLoopRepairProgress => 'Döngün düzeltiliyor…';
+  String get videoEditorLoopRepairProgress => 'Döngün hizalanıyor…';
 
   @override
   String videoEditorLoopRepairTrimmed(String seconds) {

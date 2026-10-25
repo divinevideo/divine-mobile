@@ -2975,8 +2975,8 @@
   "videoEditorTrackNotFollowed": "Das ließ sich nicht verfolgen. Rahme etwas mit mehr Details ein.",
   "videoEditorTrackFailed": "Verfolgen hat nicht geklappt. Versuch es noch mal.",
   "videoEditorTrackLostPartway": "Unterwegs aus den Augen verloren. Ab da bleibt die Ebene stehen.",
-  "videoEditorLoopLabel": "Loop verbessern",
-  "videoEditorLoopSemanticLabel": "Übergang des Loops glätten",
+  "videoEditorLoopLabel": "Loop ausrichten",
+  "videoEditorLoopSemanticLabel": "Loop ausrichten",
   "videoEditorLoopAlreadySmooth": "Das loopt schon flüssig.",
   "videoEditorLoopFailed": "Der Loop konnte nicht geprüft werden. Versuch es noch mal.",
   "videoEditorLoopNoMatch": "Dieser Loop ließ sich nicht verbessern",
@@ -3091,7 +3091,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Farbton",
-  "videoEditorAddElementSemanticLabel": "Element hinzufügen",
   "videoEditorDoneSemanticLabel": "Fertig",
   "videoEditorLevelSemanticLabel": "Stufe",
   "videoEditorBrushSizeSemanticLabel": "Pinselgröße",
@@ -5866,6 +5865,6 @@
   "listAddToLists": "Zu Listen hinzufügen",
   "accountDeletionProcessingSignOutFailed": "Dein Konto wird gerade gelöscht, aber wir konnten dich nicht vollständig abmelden. Versuch es noch einmal.",
   "videoEditorLoopRepairSmoothed": "Loop geglättet",
-  "videoEditorLoopRepairProgress": "Dein Loop wird verbessert…",
+  "videoEditorLoopRepairProgress": "Dein Loop wird ausgerichtet…",
   "videoEditorLoopRepairTrimmed": "Loop geglättet. {seconds} s entfernt."
 }

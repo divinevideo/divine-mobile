@@ -2983,8 +2983,8 @@
   "videoEditorTrackNotFollowed": "No se pudo seguir eso. Encuadrá algo con más detalle.",
   "videoEditorTrackFailed": "El seguimiento no funcionó. Probá de nuevo.",
   "videoEditorTrackLostPartway": "Se perdió a mitad de camino. La capa se queda quieta desde ahí.",
-  "videoEditorLoopLabel": "Mejorá el bucle",
-  "videoEditorLoopSemanticLabel": "Suavizá la unión del bucle",
+  "videoEditorLoopLabel": "Alinear bucle",
+  "videoEditorLoopSemanticLabel": "Alinear bucle",
   "videoEditorLoopAlreadySmooth": "Esto ya hace un bucle suave.",
   "videoEditorLoopFailed": "No pudimos revisar el bucle. Probá de nuevo.",
   "videoEditorLoopNoMatch": "No pudimos mejorar este bucle",
@@ -3099,7 +3099,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Tono",
-  "videoEditorAddElementSemanticLabel": "Agregar elemento",
   "videoEditorDoneSemanticLabel": "Listo",
   "videoEditorLevelSemanticLabel": "Nivel",
   "videoEditorBrushSizeSemanticLabel": "Tamaño del pincel",
@@ -5866,6 +5865,6 @@
   "listAddToLists": "Añadir a listas",
   "accountDeletionProcessingSignOutFailed": "La eliminación de tu cuenta sigue en curso, pero no pudimos cerrar tu sesión. Volvé a intentarlo.",
   "videoEditorLoopRepairSmoothed": "Bucle suavizado",
-  "videoEditorLoopRepairProgress": "Mejorando tu bucle…",
+  "videoEditorLoopRepairProgress": "Alineando tu bucle…",
   "videoEditorLoopRepairTrimmed": "Bucle suavizado. Se quitaron {seconds} s."
 }

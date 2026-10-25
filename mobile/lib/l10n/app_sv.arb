@@ -2975,8 +2975,8 @@
   "videoEditorTrackNotFollowed": "Det gick inte att följa. Rama in något med fler detaljer.",
   "videoEditorTrackFailed": "Följningen fungerade inte. Försök igen.",
   "videoEditorTrackLostPartway": "Tappade bort det på vägen. Lagret står still därifrån.",
-  "videoEditorLoopLabel": "Förbättra loopen",
-  "videoEditorLoopSemanticLabel": "Gör loopens övergång mjukare",
+  "videoEditorLoopLabel": "Justera loop",
+  "videoEditorLoopSemanticLabel": "Justera loop",
   "videoEditorLoopAlreadySmooth": "Den loopar redan mjukt.",
   "videoEditorLoopFailed": "Det gick inte att kolla loopen. Försök igen.",
   "videoEditorLoopNoMatch": "Det gick inte att förbättra den här loopen",
@@ -3091,7 +3091,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Nyans",
-  "videoEditorAddElementSemanticLabel": "Lägg till element",
   "videoEditorDoneSemanticLabel": "Klar",
   "videoEditorLevelSemanticLabel": "Nivå",
   "videoEditorBrushSizeSemanticLabel": "Penselstorlek",
@@ -5866,6 +5865,6 @@
   "listAddToLists": "Lägg till i listor",
   "accountDeletionProcessingSignOutFailed": "Ditt konto håller på att raderas, men vi kunde inte slutföra utloggningen. Försök igen.",
   "videoEditorLoopRepairSmoothed": "Loopen är mjukare",
-  "videoEditorLoopRepairProgress": "Förbättrar din loop…",
+  "videoEditorLoopRepairProgress": "Justerar din loop…",
   "videoEditorLoopRepairTrimmed": "Loopen är mjukare. Tog bort {seconds} s."
 }

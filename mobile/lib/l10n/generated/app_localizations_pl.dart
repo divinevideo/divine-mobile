@@ -10668,10 +10668,10 @@ class AppLocalizationsPl extends AppLocalizations {
       'Zgubione po drodze. Od tego miejsca warstwa stoi w miejscu.';
 
   @override
-  String get videoEditorLoopLabel => 'Popraw pętlę';
+  String get videoEditorLoopLabel => 'Wyrównaj pętlę';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'Wygładź łączenie pętli';
+  String get videoEditorLoopSemanticLabel => 'Wyrównaj pętlę';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'To już płynnie się zapętla.';
@@ -11127,9 +11127,6 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Odcień';
-
-  @override
-  String get videoEditorAddElementSemanticLabel => 'Dodaj element';
 
   @override
   String get videoEditorDoneSemanticLabel => 'Gotowe';
@@ -14726,7 +14723,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorLoopRepairSmoothed => 'Pętla wygładzona';
 
   @override
-  String get videoEditorLoopRepairProgress => 'Poprawiamy twoją pętlę…';
+  String get videoEditorLoopRepairProgress => 'Wyrównywanie pętli…';
 
   @override
   String videoEditorLoopRepairTrimmed(String seconds) {

@@ -8,13 +8,15 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as model;
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
+import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
-import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_actions_sheet.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_loop_repair_listener.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -31,6 +33,12 @@ class _Editor extends Mock implements ProImageEditorState {
 class _Main extends MockBloc<VideoEditorMainEvent, VideoEditorMainState>
     implements VideoEditorMainBloc {}
 
+class _Draw extends MockBloc<VideoEditorDrawEvent, VideoEditorDrawState>
+    implements VideoEditorDrawBloc {}
+
+class _Tune extends MockBloc<VideoEditorTuneEvent, VideoEditorTuneState>
+    implements VideoEditorTuneBloc {}
+
 void main() {
   setUpAll(() {
     registerFallbackValue(
@@ -40,19 +48,25 @@ void main() {
     registerFallbackValue(const LoopRepairResult(status: .noMatch));
   });
   group('LoopRepairResultListener interactions', () {
-    for (final (brightness, foreign) in [
+    for (final (brightness, foreign, longRecording) in [
       for (final brightness in Brightness.values)
-        for (final foreign in [false, true]) (brightness, foreign),
+        for (final foreign in [false, true])
+          for (final longRecording in [false, true])
+            (brightness, foreign, longRecording),
     ]) {
       testWidgets(
-        'one history edit releases audio anchors, waits for player and offers Undo in $brightness (foreign preview: $foreign)',
+        'one history edit releases audio anchors, waits for player and offers Undo in $brightness (foreign preview: $foreign, long recording: $longRecording)',
         (tester) async {
           final clip = DivineVideoClip(
             id: 'a',
             video: EditorVideo.file('/documents/a.mp4'),
-            duration: const Duration(seconds: 4),
-            trimStart: const Duration(seconds: 1),
-            trimEnd: const Duration(seconds: 1),
+            duration: longRecording
+                ? const Duration(milliseconds: 8140)
+                : const Duration(seconds: 4),
+            trimStart: longRecording
+                ? Duration.zero
+                : const Duration(seconds: 1),
+            trimEnd: longRecording ? Duration.zero : const Duration(seconds: 1),
             recordedAt: DateTime(2026),
             targetAspectRatio: .vertical,
             originalAspectRatio: 9 / 16,
@@ -68,6 +82,14 @@ void main() {
           await tester.pump();
           await initialized;
           final main = _Main();
+          final draw = _Draw();
+          final tune = _Tune();
+          when(() => draw.state).thenReturn(const VideoEditorDrawState());
+          when(() => tune.state).thenReturn(
+            const VideoEditorTuneState(
+              adjustments: VideoEditorConstants.tuneAdjustments,
+            ),
+          );
           final playerStates =
               StreamController<VideoEditorMainState>.broadcast();
           whenListen(
@@ -185,12 +207,23 @@ void main() {
                         value: overlays,
                       ),
                       BlocProvider.value(value: cubit),
+                      BlocProvider<VideoEditorDrawBloc>.value(value: draw),
+                      BlocProvider<VideoEditorTuneBloc>.value(value: tune),
                     ],
                     child: LoopRepairResultListener(
                       child: Builder(
-                        builder: (context) => TextButton(
-                          onPressed: () => fixEditorLoop(context),
-                          child: const Text('Fix loop'),
+                        builder: (context) => Column(
+                          children: [
+                            TextButton(
+                              onPressed: () => alignEditorLoop(context),
+                              child: const Text('Align loop'),
+                            ),
+                            TextButton(
+                              onPressed: () =>
+                                  VideoEditorMainActionsSheet.show(context),
+                              child: const Text('More edit'),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -199,19 +232,53 @@ void main() {
               ),
             ),
           );
-          final operation = cubit.fix(
-            editor.loopRepairInput(
-              [clip],
-              audioTracks: overlays.state.audioTracks,
-              timelineMarkers: [],
+          await tester.tap(find.text('More edit'));
+          await tester.pumpAndSettle();
+          await tester.tap(
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is Semantics &&
+                  widget.properties.label ==
+                      lookupAppLocalizations(const Locale('en'))
+                          .videoEditorLoopSemanticLabel,
             ),
           );
           await tester.pump();
-          gate.complete(repairedLoopResult([clip]));
-          await operation;
-          await tester.pump();
-          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 500));
+          final input =
+              verify(
+                    () => repository.repair(
+                      captureAny(),
+                      taskId: any(named: 'taskId'),
+                      onProgress: any(named: 'onProgress'),
+                    ),
+                  ).captured.single
+                  as LoopRepairInput;
+          expect(input.capability, LoopRepairCapability.supported);
+          expect(
+            input.clips.single.sourceEnd,
+            longRecording
+                ? const Duration(milliseconds: 6300)
+                : const Duration(seconds: 3),
+          );
+          final exportClip = longRecording
+              ? clip.copyWith(trimEnd: const Duration(milliseconds: 1840))
+              : clip;
+          gate.complete(repairedLoopResult([exportClip]));
+          await tester.pumpAndSettle();
           expect(histories, hasLength(1));
+          expect(
+            clipBloc.state.totalDuration,
+            longRecording
+                ? const Duration(milliseconds: 6300)
+                : const Duration(seconds: 2),
+          );
+          expect(
+            clip.duration,
+            longRecording
+                ? const Duration(milliseconds: 8140)
+                : const Duration(seconds: 4),
+          );
           final audio =
               (histories.single[VideoEditorConstants.audioStateHistoryKey]
                           as List)
@@ -241,7 +308,7 @@ void main() {
           final undo = tester
               .widget<SnackBarAction>(find.byType(SnackBarAction))
               .onPressed;
-          // Fix loop remains available while its own seam preview is playing.
+          // Align loop remains available while its own seam preview is playing.
           playerStates.add(
             VideoEditorMainState(
               isPlayerReady: true,
@@ -251,7 +318,7 @@ void main() {
           );
           await tester.pump();
           if (foreign) {
-            final screenContext = tester.element(find.text('Fix loop'));
+            final screenContext = tester.element(find.text('Align loop'));
             unawaited(
               showModalBottomSheet<void>(
                 context: screenContext,
@@ -284,7 +351,7 @@ void main() {
           ).thenAnswer(
             (_) async => const LoopRepairResult(status: .alreadySmooth),
           );
-          await tester.tap(find.text('Fix loop'));
+          await tester.tap(find.text('Align loop'));
           await tester.pumpAndSettle();
           verify(
             () => repository.repair(
@@ -292,7 +359,7 @@ void main() {
               taskId: any(named: 'taskId'),
               onProgress: any(named: 'onProgress'),
             ),
-          ).called(2);
+          ).called(1);
           undo();
           verify(editor.undoAction).called(1);
           await tester.pumpWidget(const SizedBox.shrink());

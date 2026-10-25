@@ -10619,10 +10619,10 @@ class AppLocalizationsFr extends AppLocalizations {
       'Perdu de vue en cours de route. Le calque reste immobile à partir de là.';
 
   @override
-  String get videoEditorLoopLabel => 'Améliorer la boucle';
+  String get videoEditorLoopLabel => 'Aligner la boucle';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'Lisser la jonction de la boucle';
+  String get videoEditorLoopSemanticLabel => 'Aligner la boucle';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'Ça boucle déjà en douceur.';
@@ -11076,9 +11076,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Teinte';
-
-  @override
-  String get videoEditorAddElementSemanticLabel => 'Ajouter un élément';
 
   @override
   String get videoEditorDoneSemanticLabel => 'Terminé';
@@ -14651,7 +14648,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorLoopRepairSmoothed => 'Boucle lissée';
 
   @override
-  String get videoEditorLoopRepairProgress => 'Amélioration de ta boucle…';
+  String get videoEditorLoopRepairProgress => 'Alignement de ta boucle…';
 
   @override
   String videoEditorLoopRepairTrimmed(String seconds) {

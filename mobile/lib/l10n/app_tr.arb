@@ -2469,7 +2469,6 @@
   "cameraPermissionAllowAccessTitle": "Kamera ve mikrofona erişime izin ver",
   "cameraPermissionAllowAccessDescription": "Bu, videoları doğrudan uygulama içinde çekip düzenlemeni sağlar, daha fazlasını değil.",
   "cameraPermissionGoToSettings": "Ayarlara git",
-  "videoEditorAddElementSemanticLabel": "Öğe ekle",
   "videoEditorAddTitle": "Ekle",
   "videoEditorAudioAddAudio": "Ses ekle",
   "videoEditorAudioFailedToLoadTitle": "Sesler yüklenemedi",
@@ -2903,8 +2902,8 @@
   "videoEditorTrackNotFollowed": "Bu takip edilemedi. Daha fazla ayrıntısı olan bir şeyi çerçevele.",
   "videoEditorTrackFailed": "Takip işe yaramadı. Tekrar dene.",
   "videoEditorTrackLostPartway": "Yarı yolda gözden kayboldu. Katman oradan itibaren sabit kalır.",
-  "videoEditorLoopLabel": "Döngüyü düzelt",
-  "videoEditorLoopSemanticLabel": "Döngü birleşimini yumuşat",
+  "videoEditorLoopLabel": "Döngüyü hizala",
+  "videoEditorLoopSemanticLabel": "Döngüyü hizala",
   "videoEditorLoopAlreadySmooth": "Bu zaten akıcı bir şekilde dönüyor.",
   "videoEditorLoopFailed": "Döngü kontrol edilemedi. Tekrar dene.",
   "videoEditorLoopNoMatch": "Bu döngü iyileştirilemedi",
@@ -5866,6 +5865,6 @@
   "listAddToLists": "Listelere ekle",
   "accountDeletionProcessingSignOutFailed": "Hesabının silinmesi işleniyor, ancak çıkışını tamamlayamadık. Tekrar dene.",
   "videoEditorLoopRepairSmoothed": "Döngü yumuşatıldı",
-  "videoEditorLoopRepairProgress": "Döngün düzeltiliyor…",
+  "videoEditorLoopRepairProgress": "Döngün hizalanıyor…",
   "videoEditorLoopRepairTrimmed": "Döngü yumuşatıldı. {seconds} sn kaldırıldı."
 }

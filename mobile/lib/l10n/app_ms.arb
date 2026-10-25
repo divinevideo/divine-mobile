@@ -5318,8 +5318,8 @@
   "videoEditorTrackNotFollowed": "Tidak dapat mengikutinya. Bingkaikan sesuatu yang lebih terperinci.",
   "videoEditorTrackFailed": "Penjejakan tidak berjaya. Cuba lagi.",
   "videoEditorTrackLostPartway": "Hilang jejak di pertengahan jalan. Lapisan kekal diam dari situ.",
-  "videoEditorLoopLabel": "Baiki gelung",
-  "videoEditorLoopSemanticLabel": "Lancarkan sambungan gelung",
+  "videoEditorLoopLabel": "Jajarkan gelung",
+  "videoEditorLoopSemanticLabel": "Jajarkan gelung",
   "videoEditorLoopAlreadySmooth": "Ini sudah loop dengan lancar.",
   "videoEditorLoopFailed": "Tidak dapat menyemak loop. Cuba lagi.",
   "videoEditorLoopNoMatch": "Gelung ini tidak dapat diperbaiki",
@@ -5580,7 +5580,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Rona",
-  "videoEditorAddElementSemanticLabel": "Tambah elemen",
   "videoEditorDoneSemanticLabel": "Siap",
   "videoEditorLevelSemanticLabel": "Tahap",
   "videoEditorBrushSizeSemanticLabel": "Saiz berus",
@@ -7157,6 +7156,6 @@
   "listAddToLists": "Tambah ke senarai",
   "accountDeletionProcessingSignOutFailed": "Pemadaman akaun anda sedang diproses, tetapi kami tidak dapat menyelesaikan log keluar. Cuba lagi.",
   "videoEditorLoopRepairSmoothed": "Gelung dilancarkan",
-  "videoEditorLoopRepairProgress": "Membaiki gelung anda…",
+  "videoEditorLoopRepairProgress": "Menjajarkan gelung anda…",
   "videoEditorLoopRepairTrimmed": "Gelung dilancarkan. {seconds} s dibuang."
 }

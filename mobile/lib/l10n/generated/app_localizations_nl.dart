@@ -10506,11 +10506,10 @@ class AppLocalizationsNl extends AppLocalizations {
       'Halverwege uit het oog verloren. Vanaf daar staat de laag stil.';
 
   @override
-  String get videoEditorLoopLabel => 'Loop verbeteren';
+  String get videoEditorLoopLabel => 'Loop uitlijnen';
 
   @override
-  String get videoEditorLoopSemanticLabel =>
-      'Overgang van de loop vloeiender maken';
+  String get videoEditorLoopSemanticLabel => 'Loop uitlijnen';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'Deze loopt al vloeiend rond.';
@@ -10956,9 +10955,6 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Tint';
-
-  @override
-  String get videoEditorAddElementSemanticLabel => 'Element toevoegen';
 
   @override
   String get videoEditorDoneSemanticLabel => 'Gereed';
@@ -14503,7 +14499,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorLoopRepairSmoothed => 'Loop verbeterd';
 
   @override
-  String get videoEditorLoopRepairProgress => 'Je loop wordt verbeterd…';
+  String get videoEditorLoopRepairProgress => 'Je loop wordt uitgelijnd…';
 
   @override
   String videoEditorLoopRepairTrimmed(String seconds) {

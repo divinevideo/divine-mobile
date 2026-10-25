@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:loop_alignment_repository/loop_alignment_repository.dart';
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/clip_stabilization.dart';
 import 'package:openvine/models/video_editor/loop_repair_input.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
@@ -58,6 +60,230 @@ LoopRepairResult _trimResult(List<DivineVideoClip> clips, int rawTrimMs) =>
     );
 void main() {
   group('Loop repair input mapping', () {
+    test('retains rendered and restoration sources after later edits', () {
+      final clip = _clip('stabilized').copyWith(
+        stabilization: const ClipStabilization(
+          rawSourcePath: '/documents/raw.mp4',
+          windowStart: Duration.zero,
+          sourceDuration: Duration(seconds: 3),
+          sourceDerivedFrom: [C2paEditSource(path: '/documents/capture.mp4')],
+        ),
+        derivedFrom: const [C2paEditSource(path: '/documents/provenance.mp4')],
+      );
+      final repaired = LoopRepairInputMapper.applyResult(
+        [clip],
+        _trimResult([clip], 0),
+        operationId: 'retain-history',
+      ).single;
+      final restored = DivineVideoClip.fromJson(
+        repaired.toJson(),
+        '/relocated',
+      );
+      final split = restored.copyWith(id: 'split', clearDerivedFrom: true);
+
+      expect(split.loopAlignment, isNull);
+      expect(split.stabilization, isNull);
+      expect(
+        split.ownedFilePaths,
+        containsAll([
+          '/relocated/stabilized.mp4',
+          '/relocated/raw.mp4',
+          '/relocated/capture.mp4',
+          '/relocated/provenance.mp4',
+        ]),
+      );
+      final repairedAgain = LoopRepairInputMapper.applyResult(
+        [restored],
+        _trimResult([restored], 0),
+        operationId: 'retain-earlier-render',
+      ).single;
+      expect(
+        repairedAgain.retainedSourcePaths,
+        containsAll([
+          '/relocated/stabilized_aligned.mp4',
+          '/relocated/stabilized.mp4',
+          '/relocated/raw.mp4',
+          '/relocated/capture.mp4',
+        ]),
+      );
+    });
+
+    test('analyzes the exported window of an 8.14-second recording', () {
+      final clip = _clip('long').copyWith(
+        duration: const Duration(milliseconds: 8140),
+      );
+      final input = LoopRepairInputMapper.fromComposition(
+        [clip],
+        composition: const {},
+      );
+
+      expect(input.capability, LoopRepairCapability.supported);
+      expect(input.clips.single.sourceStart, Duration.zero);
+      expect(input.clips.single.sourceEnd, const Duration(milliseconds: 6300));
+      expect(clip.duration, const Duration(milliseconds: 8140));
+      expect(clip.trimEnd, Duration.zero);
+    });
+
+    test('export window respects a source trim and uniform playback speed', () {
+      final clip = _clip('long').copyWith(
+        duration: const Duration(seconds: 20),
+        trimStart: const Duration(seconds: 1),
+        trimEnd: const Duration(seconds: 2),
+        playbackSpeed: 2,
+      );
+      final input = LoopRepairInputMapper.fromComposition(
+        [clip],
+        composition: const {},
+      );
+
+      expect(input.capability, LoopRepairCapability.supported);
+      expect(input.clips.single.sourceStart, const Duration(seconds: 1));
+      expect(input.clips.single.sourceEnd, const Duration(milliseconds: 13600));
+      expect(input.clips.single.speed, 2);
+    });
+
+    test('only clips contributing to the export enter loop analysis', () {
+      final clips = [
+        _clip('first').copyWith(duration: const Duration(seconds: 4)),
+        _clip('last').copyWith(duration: const Duration(seconds: 4)),
+        _clip('outside').copyWith(isPlaceholder: true),
+      ];
+      final input = LoopRepairInputMapper.fromComposition(
+        clips,
+        composition: const {},
+      );
+
+      expect(input.capability, LoopRepairCapability.supported);
+      expect(input.clips.map((clip) => clip.clipId), ['first', 'last']);
+      expect(input.clips.last.sourceEnd, const Duration(milliseconds: 2300));
+      expect(clips, hasLength(3));
+    });
+
+    test(
+      'a fractional-speed cutoff stays within the native analysis bound',
+      () {
+        final input = LoopRepairInputMapper.fromComposition(
+          [
+            _clip('first')
+                .copyWith(duration: const Duration(microseconds: 5299997)),
+            _clip('slow').copyWith(playbackSpeed: .5),
+          ],
+          composition: const {},
+        );
+        final duration = input.clips.fold(
+          Duration.zero,
+          (total, clip) => total + clip.visibleDuration,
+        );
+
+        expect(input.capability, LoopRepairCapability.supported);
+        expect(duration, lessThanOrEqualTo(const Duration(milliseconds: 6300)));
+        expect(duration, greaterThan(const Duration(milliseconds: 6299)));
+      },
+    );
+
+    test(
+      'a repaired prefix cannot pull hidden trailing clips into the export',
+      () {
+        final first = _clip('first')
+            .copyWith(duration: const Duration(seconds: 4));
+        final last = _clip('last')
+            .copyWith(duration: const Duration(seconds: 4));
+        final outside = _clip('outside');
+        final original = [first, last, outside];
+        final result = LoopRepairInputMapper.applyResult(
+          original,
+          _trimResult([
+            first,
+            last.copyWith(trimEnd: const Duration(milliseconds: 1700)),
+          ], 100),
+          operationId: 'prefix-repair',
+        );
+
+        expect(result.map((clip) => clip.id), ['first', 'last']);
+        expect(result.first.playbackDuration, const Duration(seconds: 4));
+        expect(
+          result.last.playbackDuration,
+          const Duration(milliseconds: 2200),
+        );
+        expect(original, [first, last, outside]);
+        expect(last.trimEnd, Duration.zero);
+        expect(result.last.loopAlignment?.sourceDuration, last.duration);
+        expect(
+          result.expand((clip) => clip.ownedFilePaths),
+          contains('/documents/outside.mp4'),
+        );
+        final restored = result
+            .map(
+              (clip) => DivineVideoClip.fromJson(clip.toJson(), '/relocated'),
+            )
+            .toList();
+        expect(
+          restored.expand((clip) => clip.ownedFilePaths),
+          contains('/relocated/outside.mp4'),
+        );
+        final transformed = restored.first.copyWith(
+          id: 'split',
+          clearLoopAlignment: true,
+        );
+        expect(transformed.ownedFilePaths, contains('/relocated/outside.mp4'));
+        final repairedAgain = LoopRepairInputMapper.applyResult(
+          restored,
+          _trimResult(restored, 0),
+          operationId: 'repeat-repair',
+        );
+        expect(
+          repairedAgain.expand((clip) => clip.ownedFilePaths),
+          contains('/relocated/outside.mp4'),
+        );
+      },
+    );
+
+    test(
+      'applies a repair of the export window and retains the full source',
+      () {
+        final clip = _clip('long').copyWith(
+          duration: const Duration(milliseconds: 8140),
+        );
+        final exportClip = clip.copyWith(
+          trimEnd: const Duration(milliseconds: 1840),
+        );
+        final result = LoopRepairInputMapper.applyResult(
+          [clip],
+          _trimResult([exportClip], 0),
+          operationId: 'long-repair',
+        );
+
+        expect(result.single.duration, const Duration(milliseconds: 6300));
+        expect(result.single.loopAlignment?.sourceDuration, clip.duration);
+        expect(result.single.ownedFilePaths, contains('/documents/long.mp4'));
+        expect(clip.duration, const Duration(milliseconds: 8140));
+      },
+    );
+
+    test('repair trim limits apply within the export window', () {
+      final clip = _clip('long').copyWith(
+        duration: const Duration(milliseconds: 8140),
+      );
+      final exportClip = clip.copyWith(
+        trimEnd: const Duration(milliseconds: 1840),
+      );
+      final result = LoopRepairInputMapper.applyResult(
+        [clip],
+        _trimResult([exportClip], 100),
+        operationId: 'long-repair',
+      );
+
+      expect(result.single.duration, const Duration(milliseconds: 6200));
+      expect(
+        () => LoopRepairInputMapper.applyResult(
+          [clip],
+          _trimResult([exportClip], 201),
+          operationId: 'invalid-repair',
+        ),
+        throwsStateError,
+      );
+    });
+
     test('input clip floor uses displayed duration for slow playback', () {
       final clips = [
         _clip('first'),

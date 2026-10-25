@@ -10416,10 +10416,10 @@ class AppLocalizationsVi extends AppLocalizations {
       'Mất dấu giữa chừng. Từ đó lớp sẽ đứng yên.';
 
   @override
-  String get videoEditorLoopLabel => 'Sửa vòng lặp';
+  String get videoEditorLoopLabel => 'Căn chỉnh vòng lặp';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'Làm mượt điểm nối vòng lặp';
+  String get videoEditorLoopSemanticLabel => 'Căn chỉnh vòng lặp';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'Video này đã loop mượt rồi.';
@@ -10856,9 +10856,6 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorHueSemanticLabel => 'Tông màu';
-
-  @override
-  String get videoEditorAddElementSemanticLabel => 'Thêm phần tử';
 
   @override
   String get videoEditorDoneSemanticLabel => 'Xong';
@@ -14367,7 +14364,7 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorLoopRepairSmoothed => 'Đã làm mượt vòng lặp';
 
   @override
-  String get videoEditorLoopRepairProgress => 'Đang sửa vòng lặp của bạn…';
+  String get videoEditorLoopRepairProgress => 'Đang căn chỉnh vòng lặp…';
 
   @override
   String videoEditorLoopRepairTrimmed(String seconds) {

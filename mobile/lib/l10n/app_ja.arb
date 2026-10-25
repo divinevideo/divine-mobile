@@ -2462,7 +2462,6 @@
   "cameraPermissionAllowAccessTitle": "カメラとマイクへのアクセスを許可",
   "cameraPermissionAllowAccessDescription": "これにより、アプリ内で動画の撮影と編集ができるようになります。それ以外の用途はありません。",
   "cameraPermissionGoToSettings": "設定に移動",
-  "videoEditorAddElementSemanticLabel": "要素を追加",
   "videoEditorAddTitle": "追加",
   "videoEditorAudioAddAudio": "オーディオを追加",
   "videoEditorAudioFailedToLoadTitle": "サウンドの読み込みに失敗",
@@ -2896,8 +2895,8 @@
   "videoEditorTrackNotFollowed": "追跡できませんでした。もっと細部のあるものを枠で囲んでください。",
   "videoEditorTrackFailed": "トラッキングに失敗しました。もう一度お試しください。",
   "videoEditorTrackLostPartway": "途中で見失いました。そこから先はレイヤーが静止します。",
-  "videoEditorLoopLabel": "ループを調整",
-  "videoEditorLoopSemanticLabel": "ループのつなぎ目を滑らかにする",
+  "videoEditorLoopLabel": "ループを揃える",
+  "videoEditorLoopSemanticLabel": "ループを揃える",
   "videoEditorLoopAlreadySmooth": "すでになめらかにループしています。",
   "videoEditorLoopFailed": "ループを確認できませんでした。もう一度お試しください。",
   "videoEditorLoopNoMatch": "このループは改善できませんでした",
@@ -5866,6 +5865,6 @@
   "listAddToLists": "リストに追加",
   "accountDeletionProcessingSignOutFailed": "アカウントの削除は処理中ですが、ログアウトを完了できませんでした。もう一度お試しください。",
   "videoEditorLoopRepairSmoothed": "ループを滑らかにしました",
-  "videoEditorLoopRepairProgress": "ループを調整中…",
+  "videoEditorLoopRepairProgress": "ループを揃えています…",
   "videoEditorLoopRepairTrimmed": "ループを滑らかにしました。{seconds}秒を削除しました。"
 }

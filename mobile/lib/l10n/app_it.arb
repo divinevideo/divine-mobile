@@ -2975,8 +2975,8 @@
   "videoEditorTrackNotFollowed": "Impossibile seguirlo. Inquadra qualcosa con più dettagli.",
   "videoEditorTrackFailed": "Il tracciamento non è riuscito. Riprova.",
   "videoEditorTrackLostPartway": "Perso di vista a metà strada. Da lì il livello resta fermo.",
-  "videoEditorLoopLabel": "Migliora il loop",
-  "videoEditorLoopSemanticLabel": "Rendi fluida la giunzione del loop",
+  "videoEditorLoopLabel": "Allinea loop",
+  "videoEditorLoopSemanticLabel": "Allinea loop",
   "videoEditorLoopAlreadySmooth": "Va già in loop in modo fluido.",
   "videoEditorLoopFailed": "Impossibile controllare il loop. Riprova.",
   "videoEditorLoopNoMatch": "Non è stato possibile migliorare questo loop",
@@ -3091,7 +3091,6 @@
     }
   },
   "videoEditorHueSemanticLabel": "Tonalità",
-  "videoEditorAddElementSemanticLabel": "Aggiungi elemento",
   "videoEditorDoneSemanticLabel": "Fatto",
   "videoEditorLevelSemanticLabel": "Livello",
   "videoEditorBrushSizeSemanticLabel": "Dimensione del pennello",
@@ -5866,6 +5865,6 @@
   "listAddToLists": "Aggiungi alle liste",
   "accountDeletionProcessingSignOutFailed": "L’eliminazione del tuo account è in corso, ma non siamo riusciti a completare la disconnessione. Riprova.",
   "videoEditorLoopRepairSmoothed": "Loop reso più fluido",
-  "videoEditorLoopRepairProgress": "Miglioramento del tuo loop…",
+  "videoEditorLoopRepairProgress": "Allineamento del loop…",
   "videoEditorLoopRepairTrimmed": "Loop reso più fluido. Rimossi {seconds} s."
 }

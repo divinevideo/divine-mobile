@@ -2008,7 +2008,6 @@
   "cameraPermissionAllowAccessTitle": "카메라 및 마이크 접근 허용",
   "cameraPermissionAllowAccessDescription": "이렇게 하면 앱에서 바로 동영상을 촬영하고 편집할 수 있으며, 그 외 용도는 없습니다.",
   "cameraPermissionGoToSettings": "설정으로 이동",
-  "videoEditorAddElementSemanticLabel": "요소 추가",
   "videoEditorAddTitle": "추가",
   "videoEditorAudioAddAudio": "오디오 추가",
   "videoEditorAudioFailedToLoadTitle": "사운드 로드 실패",
@@ -2442,8 +2441,8 @@
   "videoEditorTrackNotFollowed": "따라갈 수 없었어요. 더 세밀한 대상을 틀로 감싸 보세요.",
   "videoEditorTrackFailed": "트래킹하지 못했어요. 다시 시도해 보세요.",
   "videoEditorTrackLostPartway": "중간에 놓쳤어요. 그 이후로는 레이어가 멈춰 있어요.",
-  "videoEditorLoopLabel": "루프 다듬기",
-  "videoEditorLoopSemanticLabel": "루프 연결 부분을 부드럽게 만들기",
+  "videoEditorLoopLabel": "루프 정렬",
+  "videoEditorLoopSemanticLabel": "루프 정렬",
   "videoEditorLoopAlreadySmooth": "이미 매끄럽게 루프돼요.",
   "videoEditorLoopFailed": "루프를 확인하지 못했어요. 다시 시도해 보세요.",
   "videoEditorLoopNoMatch": "이 루프를 개선하지 못했어요",
@@ -5412,6 +5411,6 @@
   "listAddToLists": "목록에 추가",
   "accountDeletionProcessingSignOutFailed": "계정 삭제는 진행 중이지만 로그아웃을 완료하지 못했어요. 다시 시도해 주세요.",
   "videoEditorLoopRepairSmoothed": "루프를 부드럽게 다듬었어요",
-  "videoEditorLoopRepairProgress": "루프를 다듬고 있어요…",
+  "videoEditorLoopRepairProgress": "루프를 정렬하는 중…",
   "videoEditorLoopRepairTrimmed": "루프를 다듬었어요. {seconds}초를 잘라냈어요."
 }

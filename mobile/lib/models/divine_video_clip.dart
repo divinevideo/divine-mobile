@@ -64,6 +64,7 @@ class DivineVideoClip {
     this.captureChromaKey,
     this.stabilization,
     this.loopAlignment,
+    this.retainedSourcePaths = const [],
     this.boomerang,
     this.derivedFrom,
     this.recordingSha256,
@@ -305,6 +306,10 @@ class DivineVideoClip {
 
   /// Source mapping of the current baked loop correction.
   final ClipLoopAlignment? loopAlignment;
+
+  /// Files kept by an edit so earlier clip history survives draft cleanup.
+  /// These references remain owned through splits and subsequent transforms.
+  final List<String> retainedSourcePaths;
 
   /// Set when [video] plays its footage forward and then backward, recording
   /// what it was rendered from so turning the boomerang off restores the clip.
@@ -660,6 +665,7 @@ class DivineVideoClip {
     // The unstabilized footage, kept to turn stabilization off again.
     yield stabilization?.rawSourcePath;
     yield loopAlignment?.sourcePath;
+    yield* retainedSourcePaths;
     yield* (loopAlignment?.sourceDerivedFrom ?? const <C2paEditSource>[]).map(
       (source) => source.path,
     );
@@ -771,6 +777,7 @@ class DivineVideoClip {
     bool clearCaptureChromaKey = false,
     ClipStabilization? stabilization,
     ClipLoopAlignment? loopAlignment,
+    List<String>? retainedSourcePaths,
     bool clearLoopAlignment = false,
     bool clearStabilization = false,
     ClipBoomerang? boomerang,
@@ -857,6 +864,7 @@ class DivineVideoClip {
       captureChromaKey: clearCaptureChromaKey
           ? null
           : (captureChromaKey ?? this.captureChromaKey),
+      retainedSourcePaths: retainedSourcePaths ?? this.retainedSourcePaths,
       loopAlignment: isNewLogicalClip || clearLoopAlignment
           ? null
           : (loopAlignment ?? this.loopAlignment),
@@ -933,6 +941,8 @@ class DivineVideoClip {
         'captureChromaKey': captureChromaKey!.toJson(),
       if (stabilization case final record?) 'stabilization': record.toJson(),
       if (loopAlignment case final record?) 'loopAlignment': record.toJson(),
+      if (retainedSourcePaths.isNotEmpty)
+        'retainedSourcePaths': retainedSourcePaths.map(p.basename).toList(),
       if (boomerang case final record?) 'boomerang': record.toJson(),
       if (derivedFrom case final sources?)
         'derivedFrom': [for (final source in sources) source.toJson()],
@@ -1098,6 +1108,15 @@ class DivineVideoClip {
         documentsPath,
         useOriginalPath: useOriginalPath,
       ),
+      retainedSourcePaths: [
+        for (final path
+            in (json['retainedSourcePaths'] is List
+                    ? json['retainedSourcePaths'] as List
+                    : const [])
+                .whereType<String>())
+          if (path.isNotEmpty)
+            resolvePath(path, documentsPath, useOriginalPath: useOriginalPath)!,
+      ],
       loopAlignment: ClipLoopAlignment.fromJson(
         json['loopAlignment'],
         documentsPath,

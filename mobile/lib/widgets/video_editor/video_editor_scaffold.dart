@@ -50,12 +50,9 @@ class VideoEditorScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: VideoEditorConstants.uiOverlayStyleFor(context.vineColors),
-      child: Scaffold(
-        backgroundColor: context.vineColors.surfaceContainerHigh,
-        resizeToAvoidBottomInset: false,
-        floatingActionButton: const _AddElementFab(),
-        body: LayerTrackingResultListener(
-          child: LoopRepairResultListener(
+      child: LoopRepairResultListener(
+        child: _EditorScaffold(
+          body: LayerTrackingResultListener(
             child: ClipEditorResultListeners(
               child: _ScaffoldBody(isLoading: isLoading),
             ),
@@ -382,17 +379,18 @@ class _BottomActions extends StatelessWidget {
   }
 }
 
-/// Decides whether the FAB should be visible. Keeps the visibility check in
-/// a dedicated widget so that [_AddElementFabContent] is only rebuilt when
-/// it actually needs to render — not on every hide/show state change.
-class _AddElementFab extends StatelessWidget {
-  const _AddElementFab();
+/// Keeps the scaffold's bottom-bar slot empty when editor controls own the inset.
+class _EditorScaffold extends StatelessWidget {
+  const _EditorScaffold({required this.body});
+
+  final Widget body;
 
   @override
   Widget build(BuildContext context) {
     final shouldHide = context.select(
       (VideoEditorMainBloc b) =>
           b.state.isSubEditorOpen ||
+          b.state.isCanvasFullscreen ||
           b.state.isTimelineHiddenByUser ||
           b.state.isMarkerMode,
     );
@@ -409,47 +407,40 @@ class _AddElementFab extends StatelessWidget {
           c.state.status == LoopSuggestionStatus.searching,
     );
 
-    if (shouldHide ||
+    final hideTools =
+        shouldHide ||
         isOverlayInteracting ||
         isClipInteracting ||
-        hasLoopSuggestion) {
-      return const SizedBox.shrink();
-    }
+        hasLoopSuggestion;
 
-    return const _AddElementFabContent();
+    return Scaffold(
+      backgroundColor: context.vineColors.surfaceContainerHigh,
+      resizeToAvoidBottomInset: false,
+      // A non-null slot strips the body's bottom padding even at zero height.
+      // Hidden tools must leave that inset available to the editing controls.
+      bottomNavigationBar: hideTools ? null : const _EditingToolsBarContent(),
+      body: body,
+    );
   }
 }
 
-class _AddElementFabContent extends StatelessWidget {
-  const _AddElementFabContent();
+class _EditingToolsBarContent extends StatelessWidget {
+  const _EditingToolsBarContent();
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: context.l10n.videoEditorAddElementSemanticLabel,
-      child: GestureDetector(
-        onTap: () => VideoEditorMainActionsSheet.show(context),
-        child: Container(
-          width: 56,
-          height: 56,
-          decoration: ShapeDecoration(
-            color: context.vineColors.surfaceContainer,
-            shape: RoundedRectangleBorder(
-              side: BorderSide(
-                width: 2,
-                color: context.vineColors.outlineMuted,
-              ),
-              borderRadius: .circular(24),
-            ),
-          ),
-          child: Center(
-            // Hand-rolled twin of `DivineIconButtonType.secondary`.
-            child: DivineIcon(
-              icon: .plus,
-              color: context.vineColors.accentBrand,
-            ),
-          ),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: DivineButton(
+          label: context.l10n.videoActionEdit,
+          leadingIcon: .slidersHorizontal,
+          trailingIcon: .caretUp,
+          type: .quiet,
+          expanded: true,
+          maxLines: 2,
+          onPressed: () => VideoEditorMainActionsSheet.show(context),
         ),
       ),
     );

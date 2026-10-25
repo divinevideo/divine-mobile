@@ -577,6 +577,7 @@ class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
     'ghostFramePath',
     'forwardVideoPath',
     'reversedVideoPath',
+    'retainedSourcePaths',
     'chromaKeySourcePath',
     'rawSourcePath',
     'boomerangSourcePath',
@@ -610,7 +611,9 @@ class ClipsDao extends DatabaseAccessor<AppDatabase> with _$ClipsDaoMixin {
     }
 
     if (value is Iterable) {
-      return value.any((item) => _jsonReferencesFilename(item, filename));
+      return value.any(
+        (item) => _jsonReferencesFilename(item, filename, key: key),
+      );
     }
 
     return false;

@@ -17765,16 +17765,16 @@ abstract class AppLocalizations {
   /// **'Lost sight of it partway. The layer holds still from there.'**
   String get videoEditorTrackLostPartway;
 
-  /// One optional action for the whole edit that repairs a reliable loop framing mismatch.
+  /// Optional editing-tools drawer action that aligns the loop join for the whole edit.
   ///
   /// In en, this message translates to:
-  /// **'Fix loop'**
+  /// **'Align loop'**
   String get videoEditorLoopLabel;
 
-  /// Accessible label for Fix loop.
+  /// Accessible label for Align loop.
   ///
   /// In en, this message translates to:
-  /// **'Smooth the loop join'**
+  /// **'Align loop'**
   String get videoEditorLoopSemanticLabel;
 
   /// Snackbar when no cut would make the video loop more smoothly than it does now.
@@ -18440,12 +18440,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hue'**
   String get videoEditorHueSemanticLabel;
-
-  /// No description provided for @videoEditorAddElementSemanticLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Add element'**
-  String get videoEditorAddElementSemanticLabel;
 
   /// No description provided for @videoEditorDoneSemanticLabel.
   ///
@@ -24078,7 +24072,7 @@ abstract class AppLocalizations {
   /// Progress while analyzing, rendering and verifying a loop correction.
   ///
   /// In en, this message translates to:
-  /// **'Fixing your loop…'**
+  /// **'Aligning your loop…'**
   String get videoEditorLoopRepairProgress;
 
   /// Loop repair success when up to 200 ms were removed from the final clip. seconds is locale-formatted.
