@@ -22,7 +22,11 @@ import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timel
 import 'package:unified_logger/unified_logger.dart';
 
 /// Starts whole-composition loop alignment from the editing-tools drawer.
+///
+/// Does nothing once [context] has unmounted: the drawer can outlive the
+/// tools bar that opened it, which leaves the tree whenever it is hidden.
 void alignEditorLoop(BuildContext context) {
+  if (!context.mounted) return;
   final clipState = context.read<ClipEditorBloc>().state;
   final main = context.read<VideoEditorMainBloc>().state;
   final editor = VideoEditorScope.of(context).editor;

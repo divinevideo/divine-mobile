@@ -2,6 +2,7 @@
 // ABOUTME: Verifies action rendering and callback behavior.
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -209,6 +210,58 @@ void main() {
       );
       expect(aligned, isTrue);
     });
+
+    testWidgets(
+      'Align loop does nothing once the bar that opened the drawer is gone',
+      (tester) async {
+        when(() => clipBloc.state).thenReturn(
+          ClipEditorState(
+            clips: [
+              DivineVideoClip(
+                id: 'sample-clip',
+                stopMotionFrames: const [
+                  StopMotionClipFrame(
+                    path: '/frames/sample.jpg',
+                    duration: Duration(seconds: 6),
+                  ),
+                ],
+                duration: const Duration(seconds: 6),
+                recordedAt: DateTime(2026),
+                targetAspectRatio: model.AspectRatio.square,
+                originalAspectRatio: 1,
+              ),
+            ],
+          ),
+        );
+        final openerVisible = ValueNotifier(true);
+        addTearDown(openerVisible.dispose);
+        await tester.pumpWidget(
+          _buildShowHost(
+            mainBloc: mainBloc,
+            clipBloc: clipBloc,
+            timelineOverlayBloc: timelineOverlayBloc,
+            tuneBloc: tuneBloc,
+            drawBloc: drawBloc,
+            openerVisible: openerVisible,
+          ),
+        );
+        await tester.tap(find.byKey(const Key('open-sheet')));
+        await tester.pumpAndSettle();
+
+        openerVisible.value = false;
+        await tester.pump();
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorLoopSemanticLabel),
+        );
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(
+          find.bySemanticsLabel(l10n.videoEditorLoopSemanticLabel),
+          findsNothing,
+        );
+      },
+    );
 
     testWidgets('Align loop is disabled without clips', (tester) async {
       await tester.pumpWidget(
@@ -627,6 +680,7 @@ Widget _buildShowHost({
   required _MockTimelineOverlayBloc timelineOverlayBloc,
   required _MockVideoEditorTuneBloc tuneBloc,
   required _MockVideoEditorDrawBloc drawBloc,
+  ValueListenable<bool>? openerVisible,
 }) => _app(
   child: MultiBlocProvider(
     providers: [
@@ -637,16 +691,27 @@ Widget _buildShowHost({
       BlocProvider<VideoEditorDrawBloc>.value(value: drawBloc),
     ],
     child: _scope(
-      child: Builder(
-        builder: (context) => ElevatedButton(
-          key: const Key('open-sheet'),
-          onPressed: () => VideoEditorMainActionsSheet.show(context),
-          child: const Text('open'),
-        ),
-      ),
+      child: openerVisible == null
+          ? const _SheetOpener()
+          : ValueListenableBuilder(
+              valueListenable: openerVisible,
+              builder: (_, visible, _) =>
+                  visible ? const _SheetOpener() : const SizedBox.shrink(),
+            ),
     ),
   ),
 );
+
+class _SheetOpener extends StatelessWidget {
+  const _SheetOpener();
+
+  @override
+  Widget build(BuildContext context) => ElevatedButton(
+    key: const Key('open-sheet'),
+    onPressed: () => VideoEditorMainActionsSheet.show(context),
+    child: const Text('open'),
+  );
+}
 
 /// Renders the sheet directly under a host-provided bloc list, for asserting
 /// individual action callbacks without driving the `show` route. The sheet
