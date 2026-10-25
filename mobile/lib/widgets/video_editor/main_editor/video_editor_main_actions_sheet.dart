@@ -27,7 +27,6 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
   });
 
   static const _maxItemWidth = 72.0;
-  static const _itemHeight = 112.0;
   static const _itemMainSpacing = 16.0;
   static const _itemCrossSpacing = 24.0;
 
@@ -77,6 +76,21 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final labelStyle = VineTheme.bodySmallFont(
+      color: context.vineColors.primaryText,
+    );
+    final labelScaler = MediaQuery.textScalerOf(context).clamp(
+      maxScaleFactor: chipLabelTextScaleLimit,
+    );
+    // Reserve two scaled label lines below the largest icon tile. The grid
+    // gives each column a tight height, even when its label wraps.
+    final itemHeight =
+        (_maxItemWidth +
+                8 +
+                2 *
+                    labelScaler.scale(labelStyle.fontSize!) *
+                    labelStyle.height!)
+            .ceilToDouble();
     final totalDuration = context.select(
       (ClipEditorBloc b) => b.state.totalDuration,
     );
@@ -92,9 +106,9 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
             primary: false,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
               maxCrossAxisExtent: _maxItemWidth,
-              mainAxisExtent: _itemHeight,
+              mainAxisExtent: itemHeight,
               mainAxisSpacing: _itemMainSpacing,
               crossAxisSpacing: _itemCrossSpacing,
             ),

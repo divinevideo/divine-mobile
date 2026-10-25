@@ -108,6 +108,31 @@ void main() {
       expect(find.text(l10n.videoEditorMarkerLabel), findsOneWidget);
     });
 
+    testWidgets('drawer fits two-line labels at enlarged phone text scale', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 1.4;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pumpWidget(
+        _buildShowHost(
+          mainBloc: mainBloc,
+          clipBloc: clipBloc,
+          timelineOverlayBloc: timelineOverlayBloc,
+          tuneBloc: tuneBloc,
+          drawBloc: drawBloc,
+        ),
+      );
+      await tester.tap(find.byKey(const Key('open-sheet')));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text(l10n.videoEditorLoopLabel), findsOneWidget);
+    });
+
     testWidgets(
       'offers Align loop with the other editing tools for long clips',
       (
