@@ -7,11 +7,14 @@ import 'package:models/models.dart' show NativeProofData;
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/loop_repair_input.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
 import 'package:openvine/services/video_editor/video_editor_merge_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+
+import '../../helpers/video_editor/loop_repair.dart';
 
 DivineVideoClip _createClip({
   required String id,
@@ -64,17 +67,23 @@ void main() {
           };
       addTearDown(() => NativeProofModeService.proofFileOverride = null);
 
+      final clips = [
+        _createClip(id: 'a')
+            .copyWith(retainedSourcePaths: const ['/path/excluded.mp4']),
+        _createClip(id: 'b').copyWith(
+          retainedSourcePaths: const [
+            '/path/excluded.mp4',
+            '/path/another.mp4',
+          ],
+        ),
+      ];
+      final repaired = LoopRepairInputMapper.applyResult(
+        clips,
+        repairedLoopResult(clips),
+        operationId: 'before-merge',
+      );
       final result = await VideoEditorMergeService.mergeClips(
-        clips: [
-          _createClip(id: 'a')
-              .copyWith(retainedSourcePaths: const ['/path/excluded.mp4']),
-          _createClip(id: 'b').copyWith(
-            retainedSourcePaths: const [
-              '/path/excluded.mp4',
-              '/path/another.mp4',
-            ],
-          ),
-        ],
+        clips: repaired,
         renderId: 'merge-1',
       );
 
@@ -85,10 +94,16 @@ void main() {
       expect(result?.proofManifestJson, contains('urn:c2pa:merged'));
       // Signed, the merged file vouches for itself.
       expect(result?.derivedFrom, isNull);
-      expect(result?.retainedSourcePaths, hasLength(2));
+      expect(result?.retainedSourcePaths, hasLength(6));
       expect(
         result?.ownedFilePaths,
-        containsAll(['/path/excluded.mp4', '/path/another.mp4']),
+        containsAll([
+          '/path/excluded.mp4',
+          '/path/another.mp4',
+          '/path/a.mp4',
+          '/path/b.mp4',
+          ...repaired.map((clip) => clip.video!.file!.path),
+        ]),
       );
     });
 

@@ -101,6 +101,11 @@ class VideoEditorMergeService {
       derivedFrom: mergedFrom,
       retainedSourcePaths: {
         for (final clip in clips) ...clip.retainedSourcePaths,
+        // A signed merge no longer needs its inputs for provenance, but
+        // loop-repair history still restores those rendered clips on Undo.
+        for (final clip in clips)
+          if (clip.retainedSourcePaths.isNotEmpty)
+            ...clip.ownedFilePaths.whereType<String>(),
       }.toList(),
     );
   }

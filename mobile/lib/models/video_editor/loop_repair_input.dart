@@ -101,6 +101,24 @@ abstract final class LoopRepairInputMapper {
     final retainedSourcePaths = {
       for (final clip in clips.skip(exportClips.length))
         ...clip.ownedFilePaths.whereType<String>(),
+      // Provenance can stop owning a source once a later merge is signed,
+      // and splits clear the per-render restoration records. Keep the media
+      // those history entries restore independently of either mechanism.
+      for (final clip in exportClips)
+        ...<String?>[
+          clip.video?.file?.path,
+          clip.loopAlignment?.sourcePath,
+          clip.stabilization?.rawSourcePath,
+          clip.boomerang?.sourcePath,
+          ...?clip.derivedFrom?.map((source) => source.path),
+          ...?clip.loopAlignment?.sourceDerivedFrom?.map(
+            (source) => source.path,
+          ),
+          ...?clip.stabilization?.sourceDerivedFrom?.map(
+            (source) => source.path,
+          ),
+          ...?clip.boomerang?.sourceDerivedFrom?.map((source) => source.path),
+        ].whereType<String>(),
       for (final clip in clips) ...clip.retainedSourcePaths,
     }.toList()..sort();
     final replacements = <DivineVideoClip>[];

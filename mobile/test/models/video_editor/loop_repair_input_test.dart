@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:loop_alignment_repository/loop_alignment_repository.dart';
+import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/clip_stabilization.dart';
 import 'package:openvine/models/video_editor/loop_repair_input.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
@@ -58,6 +60,54 @@ LoopRepairResult _trimResult(List<DivineVideoClip> clips, int rawTrimMs) =>
     );
 void main() {
   group('Loop repair input mapping', () {
+    test('retains rendered and restoration sources after later edits', () {
+      final clip = _clip('stabilized').copyWith(
+        stabilization: const ClipStabilization(
+          rawSourcePath: '/documents/raw.mp4',
+          windowStart: Duration.zero,
+          sourceDuration: Duration(seconds: 3),
+          sourceDerivedFrom: [C2paEditSource(path: '/documents/capture.mp4')],
+        ),
+        derivedFrom: const [C2paEditSource(path: '/documents/provenance.mp4')],
+      );
+      final repaired = LoopRepairInputMapper.applyResult(
+        [clip],
+        _trimResult([clip], 0),
+        operationId: 'retain-history',
+      ).single;
+      final restored = DivineVideoClip.fromJson(
+        repaired.toJson(),
+        '/relocated',
+      );
+      final split = restored.copyWith(id: 'split', clearDerivedFrom: true);
+
+      expect(split.loopAlignment, isNull);
+      expect(split.stabilization, isNull);
+      expect(
+        split.ownedFilePaths,
+        containsAll([
+          '/relocated/stabilized.mp4',
+          '/relocated/raw.mp4',
+          '/relocated/capture.mp4',
+          '/relocated/provenance.mp4',
+        ]),
+      );
+      final repairedAgain = LoopRepairInputMapper.applyResult(
+        [restored],
+        _trimResult([restored], 0),
+        operationId: 'retain-earlier-render',
+      ).single;
+      expect(
+        repairedAgain.retainedSourcePaths,
+        containsAll([
+          '/relocated/stabilized_aligned.mp4',
+          '/relocated/stabilized.mp4',
+          '/relocated/raw.mp4',
+          '/relocated/capture.mp4',
+        ]),
+      );
+    });
+
     test('analyzes the exported window of an 8.14-second recording', () {
       final clip = _clip('long').copyWith(
         duration: const Duration(milliseconds: 8140),
