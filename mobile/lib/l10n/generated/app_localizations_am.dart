@@ -10220,10 +10220,10 @@ class AppLocalizationsAm extends AppLocalizations {
       'በመሃል ጠፋ። ከዚያ በኋላ ንብርብሩ እንደቆመ ይቆያል።';
 
   @override
-  String get videoEditorLoopLabel => 'ሉፑን አስተካክል';
+  String get videoEditorLoopLabel => 'ዙሩን አስተካክል';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'የሉፑን መገናኛ አስተካክል';
+  String get videoEditorLoopSemanticLabel => 'ዙሩን አስተካክል';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'ይህ አስቀድሞ ለስላሳ ሆኖ ይዞራል።';
@@ -14066,7 +14066,7 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorLoopRepairSmoothed => 'ሉፑ ተስተካክሏል';
 
   @override
-  String get videoEditorLoopRepairProgress => 'ሉፑን በማስተካከል ላይ…';
+  String get videoEditorLoopRepairProgress => 'ዙርህን በማስተካከል ላይ…';
 
   @override
   String videoEditorLoopRepairTrimmed(String seconds) {

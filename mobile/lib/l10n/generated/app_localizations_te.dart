@@ -10746,10 +10746,10 @@ class AppLocalizationsTe extends AppLocalizations {
       'మధ్యలో కనిపించకుండా పోయింది. అక్కడి నుండి లేయర్ కదలకుండా ఉంటుంది.';
 
   @override
-  String get videoEditorLoopLabel => 'లూప్‌ను సరిచేయండి';
+  String get videoEditorLoopLabel => 'లూప్‌ను సమలేఖనం చేయి';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'లూప్ కలయికను సాఫీగా చేయండి';
+  String get videoEditorLoopSemanticLabel => 'లూప్‌ను సమలేఖనం చేయి';
 
   @override
   String get videoEditorLoopAlreadySmooth =>
@@ -14783,7 +14783,7 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorLoopRepairSmoothed => 'లూప్ సాఫీగా మారింది';
 
   @override
-  String get videoEditorLoopRepairProgress => 'మీ లూప్‌ను సరిచేస్తున్నాం…';
+  String get videoEditorLoopRepairProgress => 'మీ లూప్‌ను సమలేఖనం చేస్తున్నాం…';
 
   @override
   String videoEditorLoopRepairTrimmed(String seconds) {

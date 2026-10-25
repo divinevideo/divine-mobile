@@ -10441,10 +10441,10 @@ class AppLocalizationsAr extends AppLocalizations {
       'فُقد الأثر في منتصف الطريق، وتبقى الطبقة ثابتة من هناك.';
 
   @override
-  String get videoEditorLoopLabel => 'تحسين التكرار';
+  String get videoEditorLoopLabel => 'محاذاة الحلقة';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'تنعيم نقطة اتصال التكرار';
+  String get videoEditorLoopSemanticLabel => 'محاذاة الحلقة';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'هذا يتكرر بسلاسة بالفعل.';
@@ -14424,7 +14424,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorLoopRepairSmoothed => 'تم تنعيم التكرار';
 
   @override
-  String get videoEditorLoopRepairProgress => 'جارٍ تحسين التكرار…';
+  String get videoEditorLoopRepairProgress => 'جارٍ محاذاة الحلقة…';
 
   @override
   String videoEditorLoopRepairTrimmed(String seconds) {

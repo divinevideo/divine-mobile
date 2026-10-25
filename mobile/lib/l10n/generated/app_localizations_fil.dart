@@ -10543,10 +10543,10 @@ class AppLocalizationsFil extends AppLocalizations {
       'Nawala ito sa kalagitnaan. Hindi na gagalaw ang layer mula roon.';
 
   @override
-  String get videoEditorLoopLabel => 'Ayusin ang loop';
+  String get videoEditorLoopLabel => 'Ihanay ang loop';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'Pakinisin ang dugtungan ng loop';
+  String get videoEditorLoopSemanticLabel => 'Ihanay ang loop';
 
   @override
   String get videoEditorLoopAlreadySmooth => 'Makinis na ang loop nito.';
@@ -14550,7 +14550,7 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorLoopRepairSmoothed => 'Mas maayos na ang loop';
 
   @override
-  String get videoEditorLoopRepairProgress => 'Inaayos ang loop mo…';
+  String get videoEditorLoopRepairProgress => 'Inihahanay ang loop mo…';
 
   @override
   String videoEditorLoopRepairTrimmed(String seconds) {

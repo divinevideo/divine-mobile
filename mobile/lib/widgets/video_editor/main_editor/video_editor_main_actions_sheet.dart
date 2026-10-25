@@ -1,5 +1,5 @@
 // ABOUTME: Bottom sheet with sub-editor actions for the video editor.
-// ABOUTME: Opened via FAB, provides access to text, draw, effects, and more.
+// ABOUTME: Opened from Editing tools, provides access to text, draw, and more.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -22,7 +22,7 @@ import 'package:openvine/widgets/video_editor/tune_editor/open_tune_editor.dart'
 class VideoEditorMainActionsSheet extends StatelessWidget {
   const VideoEditorMainActionsSheet({
     required this.scope,
-    this.onFixLoop,
+    required this.onAlignLoop,
     super.key,
   });
 
@@ -34,8 +34,8 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
   /// The editor scope captured before opening the sheet.
   final VideoEditorScope scope;
 
-  /// Starts loop repair from the editor route after this sheet closes.
-  final VoidCallback? onFixLoop;
+  /// Uses the editor context outside the sheet to preserve loop history.
+  final VoidCallback onAlignLoop;
 
   /// Opens the actions bottom sheet.
   static Future<void> show(BuildContext context) {
@@ -49,15 +49,15 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
       context: context,
       expanded: false,
       scrollable: false,
+      isScrollControlled: true,
       showHeader: false,
       showHeaderDivider: false,
-      isScrollControlled: true,
-      children: [
-        // The sheet opens on a separate route, outside the editor's
-        // MultiBlocProvider, so re-provide every bloc the actions read —
-        // including the tune bloc the Adjust action needs and the draw bloc
-        // the Draw and Blur actions open the draw editor with.
-        MultiBlocProvider(
+      // The sheet opens on a separate route, outside the editor's
+      // MultiBlocProvider, so re-provide every bloc the actions read —
+      // including the tune bloc the Adjust action needs and the draw bloc
+      // the Draw and Blur actions open the draw editor with.
+      body: SingleChildScrollView(
+        child: MultiBlocProvider(
           providers: [
             BlocProvider<VideoEditorMainBloc>.value(
               value: videoEditorMainBloc,
@@ -68,10 +68,10 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
           ],
           child: VideoEditorMainActionsSheet(
             scope: scope,
-            onFixLoop: () => fixEditorLoop(context),
+            onAlignLoop: () => alignEditorLoop(context),
           ),
         ),
-      ],
+      ),
     );
   }
 
@@ -91,6 +91,7 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
           GridView(
             primary: false,
             shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
               maxCrossAxisExtent: _maxItemWidth,
               mainAxisExtent: _itemHeight,
@@ -178,6 +179,22 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
                 },
               ),
               _ItemButton(
+                icon: .repeat,
+                label: context.l10n.videoEditorLoopLabel,
+                semanticLabel: context.l10n.videoEditorLoopSemanticLabel,
+                onTap:
+                    context.select(
+                      (ClipEditorBloc b) =>
+                          b.state.clips.isEmpty ||
+                          b.state.hasPendingClipOperation,
+                    )
+                    ? null
+                    : () {
+                        Navigator.pop(context);
+                        onAlignLoop();
+                      },
+              ),
+              _ItemButton(
                 icon: .slidersHorizontal,
                 label: context.l10n.videoEditorTuneLabel,
                 semanticLabel: context.l10n.videoEditorOpenTuneSemanticLabel,
@@ -187,17 +204,6 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
                   openTuneEditor(tuneBloc, scope);
                 },
               ),
-              if (onFixLoop case final fixLoop?
-                  when totalDuration > Duration.zero && !isStopMotion)
-                _ItemButton(
-                  icon: .repeat,
-                  label: context.l10n.videoEditorLoopLabel,
-                  semanticLabel: context.l10n.videoEditorLoopSemanticLabel,
-                  onTap: () {
-                    Navigator.pop(context);
-                    fixLoop();
-                  },
-                ),
               _ItemButton(
                 icon: .scribble,
                 label: context.l10n.videoEditorDrawLabel,
@@ -289,7 +295,7 @@ class _ItemButton extends StatelessWidget {
     required this.semanticLabel,
   });
 
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final DivineIconName icon;
   final String label;
   final String semanticLabel;
@@ -303,6 +309,7 @@ class _ItemButton extends StatelessWidget {
         Semantics(
           label: semanticLabel,
           button: true,
+          enabled: onTap != null,
           child: GestureDetector(
             onTap: onTap,
             child: AspectRatio(
@@ -321,7 +328,9 @@ class _ItemButton extends StatelessWidget {
                 child: Center(
                   child: DivineIcon(
                     icon: icon,
-                    color: context.vineColors.accentPositive,
+                    color: onTap == null
+                        ? context.vineColors.disabled
+                        : context.vineColors.accentPositive,
                   ),
                 ),
               ),
@@ -334,10 +343,12 @@ class _ItemButton extends StatelessWidget {
             maxScaleFactor: chipLabelTextScaleLimit,
             child: Text(
               label,
-              maxLines: 1,
+              maxLines: 2,
               textAlign: .center,
               style: VineTheme.bodySmallFont(
-                color: context.vineColors.primaryText,
+                color: onTap == null
+                    ? context.vineColors.disabled
+                    : context.vineColors.primaryText,
               ),
             ),
           ),

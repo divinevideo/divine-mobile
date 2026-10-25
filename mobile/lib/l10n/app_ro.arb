@@ -2976,8 +2976,8 @@
   "videoEditorTrackNotFollowed": "Nu s-a putut urmări. Încadrează ceva cu mai multe detalii.",
   "videoEditorTrackFailed": "Urmărirea nu a reușit. Încearcă din nou.",
   "videoEditorTrackLostPartway": "Pierdut din vedere pe parcurs. De acolo, stratul rămâne pe loc.",
-  "videoEditorLoopLabel": "Îmbunătățește bucla",
-  "videoEditorLoopSemanticLabel": "Netezește îmbinarea buclei",
+  "videoEditorLoopLabel": "Aliniază bucla",
+  "videoEditorLoopSemanticLabel": "Aliniază bucla",
   "videoEditorLoopAlreadySmooth": "Se repetă deja fluid în buclă.",
   "videoEditorLoopFailed": "Nu am putut verifica bucla. Încearcă din nou.",
   "videoEditorLoopNoMatch": "Nu am putut îmbunătăți această buclă",
@@ -5866,6 +5866,6 @@
   "listAddToLists": "Adaugă la liste",
   "accountDeletionProcessingSignOutFailed": "Ștergerea contului tău este în curs, dar nu am putut finaliza deconectarea. Încearcă din nou.",
   "videoEditorLoopRepairSmoothed": "Buclă netezită",
-  "videoEditorLoopRepairProgress": "Îți îmbunătățim bucla…",
+  "videoEditorLoopRepairProgress": "Se aliniază bucla…",
   "videoEditorLoopRepairTrimmed": "Buclă netezită. S-au eliminat {seconds} s."
 }

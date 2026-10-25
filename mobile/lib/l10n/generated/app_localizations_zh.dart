@@ -9843,10 +9843,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorTrackLostPartway => '中途跟丢了，从那里起图层保持不动。';
 
   @override
-  String get videoEditorLoopLabel => '优化循环';
+  String get videoEditorLoopLabel => '对齐循环';
 
   @override
-  String get videoEditorLoopSemanticLabel => '让循环衔接更流畅';
+  String get videoEditorLoopSemanticLabel => '对齐循环';
 
   @override
   String get videoEditorLoopAlreadySmooth => '已经循环得很顺滑了。';
@@ -13548,7 +13548,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorLoopRepairSmoothed => '循环已优化';
 
   @override
-  String get videoEditorLoopRepairProgress => '正在优化循环…';
+  String get videoEditorLoopRepairProgress => '正在对齐循环…';
 
   @override
   String videoEditorLoopRepairTrimmed(String seconds) {

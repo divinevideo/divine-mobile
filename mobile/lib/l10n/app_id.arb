@@ -2903,8 +2903,8 @@
   "videoEditorTrackNotFollowed": "Tidak bisa mengikutinya. Bingkai sesuatu yang lebih detail.",
   "videoEditorTrackFailed": "Pelacakan gagal. Coba lagi.",
   "videoEditorTrackLostPartway": "Kehilangan jejak di tengah jalan. Lapisan diam dari situ.",
-  "videoEditorLoopLabel": "Perbaiki loop",
-  "videoEditorLoopSemanticLabel": "Haluskan sambungan loop",
+  "videoEditorLoopLabel": "Selaraskan loop",
+  "videoEditorLoopSemanticLabel": "Selaraskan loop",
   "videoEditorLoopAlreadySmooth": "Ini sudah loop dengan mulus.",
   "videoEditorLoopFailed": "Loop tidak bisa diperiksa. Coba lagi.",
   "videoEditorLoopNoMatch": "Loop ini belum bisa diperbaiki",
@@ -5866,6 +5866,6 @@
   "listAddToLists": "Tambahkan ke daftar",
   "accountDeletionProcessingSignOutFailed": "Akunmu sedang dihapus, tapi kami belum bisa mengeluarkanmu. Coba lagi.",
   "videoEditorLoopRepairSmoothed": "Loop diperhalus",
-  "videoEditorLoopRepairProgress": "Memperbaiki loop kamu…",
+  "videoEditorLoopRepairProgress": "Menyelaraskan loop…",
   "videoEditorLoopRepairTrimmed": "Loop diperhalus. {seconds} dtk dihapus."
 }

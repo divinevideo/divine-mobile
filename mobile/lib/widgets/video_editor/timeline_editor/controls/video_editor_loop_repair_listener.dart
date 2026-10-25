@@ -21,8 +21,8 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dar
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Starts loop repair from the editor route's editing tools.
-void fixEditorLoop(BuildContext context) {
+/// Starts whole-composition loop alignment from the editing-tools drawer.
+void alignEditorLoop(BuildContext context) {
   final clipState = context.read<ClipEditorBloc>().state;
   final main = context.read<VideoEditorMainBloc>().state;
   final editor = VideoEditorScope.of(context).editor;

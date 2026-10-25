@@ -2896,8 +2896,8 @@
   "videoEditorTrackNotFollowed": "تعذّر التتبع. يُفضَّل تأطير شيء بتفاصيل أكثر.",
   "videoEditorTrackFailed": "تعذّر التتبع. يُرجى المحاولة مجددًا.",
   "videoEditorTrackLostPartway": "فُقد الأثر في منتصف الطريق، وتبقى الطبقة ثابتة من هناك.",
-  "videoEditorLoopLabel": "تحسين التكرار",
-  "videoEditorLoopSemanticLabel": "تنعيم نقطة اتصال التكرار",
+  "videoEditorLoopLabel": "محاذاة الحلقة",
+  "videoEditorLoopSemanticLabel": "محاذاة الحلقة",
   "videoEditorLoopAlreadySmooth": "هذا يتكرر بسلاسة بالفعل.",
   "videoEditorLoopFailed": "تعذّر فحص التكرار. يُرجى المحاولة مجددًا.",
   "videoEditorLoopNoMatch": "تعذّر تحسين هذا التكرار",
@@ -5866,6 +5866,6 @@
   "listAddToLists": "إضافة إلى القوائم",
   "accountDeletionProcessingSignOutFailed": "حذف الحساب قيد المعالجة، لكن تعذّر إكمال تسجيل الخروج. يرجى المحاولة مجددًا.",
   "videoEditorLoopRepairSmoothed": "تم تنعيم التكرار",
-  "videoEditorLoopRepairProgress": "جارٍ تحسين التكرار…",
+  "videoEditorLoopRepairProgress": "جارٍ محاذاة الحلقة…",
   "videoEditorLoopRepairTrimmed": "تم تنعيم التكرار. أُزيلت {seconds} ث."
 }

@@ -3216,8 +3216,8 @@
   "videoEditorTrackNotFollowed": "Не успях да го проследя. Огради нещо с повече детайли.",
   "videoEditorTrackFailed": "Проследяването не стана. Опитай отново.",
   "videoEditorTrackLostPartway": "Изгубено по пътя. Оттам слоят остава на място.",
-  "videoEditorLoopLabel": "Изглади цикъла",
-  "videoEditorLoopSemanticLabel": "Изглади връзката на цикъла",
+  "videoEditorLoopLabel": "Подравни цикъла",
+  "videoEditorLoopSemanticLabel": "Подравни цикъла",
   "videoEditorLoopAlreadySmooth": "Това вече се върти гладко в цикъл.",
   "videoEditorLoopFailed": "Цикълът не можа да се провери. Опитай отново.",
   "videoEditorLoopNoMatch": "Не успяхме да подобрим този цикъл",
@@ -5983,6 +5983,6 @@
   "listAddToLists": "Добави към списъци",
   "accountDeletionProcessingSignOutFailed": "Изтриването на акаунта ти е в ход, но не успяхме да завършим излизането. Опитай отново.",
   "videoEditorLoopRepairSmoothed": "Цикълът е изгладен",
-  "videoEditorLoopRepairProgress": "Изглаждане на цикъла…",
+  "videoEditorLoopRepairProgress": "Подравняване на цикъла…",
   "videoEditorLoopRepairTrimmed": "Цикълът е изгладен. Премахнати са {seconds} сек."
 }

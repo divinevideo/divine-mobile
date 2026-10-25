@@ -95,6 +95,7 @@ void main() {
         ),
       );
 
+      expect(find.text(l10n.videoEditorLoopLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorCameraLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorLibraryLabel), findsOneWidget);
       expect(find.text(l10n.videoEditorAudioLabel), findsOneWidget);
@@ -107,40 +108,146 @@ void main() {
       expect(find.text(l10n.videoEditorMarkerLabel), findsOneWidget);
     });
 
-    testWidgets('offers Fix loop with the other editing tools for long clips', (
+    testWidgets(
+      'offers Align loop with the other editing tools for long clips',
+      (
+        tester,
+      ) async {
+        when(() => clipBloc.state).thenReturn(
+          ClipEditorState(
+            clips: [
+              DivineVideoClip(
+                id: 'recording',
+                video: EditorVideo.file('/documents/recording.mp4'),
+                duration: const Duration(milliseconds: 8140),
+                recordedAt: DateTime(2026),
+                targetAspectRatio: model.AspectRatio.vertical,
+                originalAspectRatio: 9 / 16,
+              ),
+            ],
+          ),
+        );
+        await tester.pumpWidget(
+          _buildShowHost(
+            mainBloc: mainBloc,
+            clipBloc: clipBloc,
+            timelineOverlayBloc: timelineOverlayBloc,
+            tuneBloc: tuneBloc,
+            drawBloc: drawBloc,
+          ),
+        );
+
+        await tester.tap(find.byKey(const Key('open-sheet')));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.videoEditorLoopLabel), findsOneWidget);
+        expect(
+          find.bySemanticsLabel(l10n.videoEditorLoopSemanticLabel),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('Align loop in the drawer invokes its editor callback', (
       tester,
     ) async {
+      var aligned = false;
       when(() => clipBloc.state).thenReturn(
         ClipEditorState(
           clips: [
             DivineVideoClip(
-              id: 'recording',
-              video: EditorVideo.file('/documents/recording.mp4'),
-              duration: const Duration(milliseconds: 8140),
+              id: 'sample-clip',
+              stopMotionFrames: const [
+                StopMotionClipFrame(
+                  path: '/frames/sample.jpg',
+                  duration: Duration(seconds: 6),
+                ),
+              ],
+              duration: const Duration(seconds: 6),
               recordedAt: DateTime(2026),
-              targetAspectRatio: model.AspectRatio.vertical,
-              originalAspectRatio: 9 / 16,
+              targetAspectRatio: model.AspectRatio.square,
+              originalAspectRatio: 1,
             ),
           ],
         ),
       );
       await tester.pumpWidget(
-        _buildShowHost(
+        _buildWidget(
           mainBloc: mainBloc,
           clipBloc: clipBloc,
           timelineOverlayBloc: timelineOverlayBloc,
-          tuneBloc: tuneBloc,
-          drawBloc: drawBloc,
+          onAlignLoop: () => aligned = true,
         ),
       );
-
-      await tester.tap(find.byKey(const Key('open-sheet')));
-      await tester.pumpAndSettle();
-
-      expect(find.text(l10n.videoEditorLoopLabel), findsOneWidget);
-      expect(
+      await tester.tap(
         find.bySemanticsLabel(l10n.videoEditorLoopSemanticLabel),
-        findsOneWidget,
+      );
+      expect(aligned, isTrue);
+    });
+
+    testWidgets('Align loop is disabled without clips', (tester) async {
+      await tester.pumpWidget(
+        _buildWidget(
+          mainBloc: mainBloc,
+          clipBloc: clipBloc,
+          timelineOverlayBloc: timelineOverlayBloc,
+        ),
+      );
+      final node = tester.getSemantics(
+        find.bySemanticsLabel(l10n.videoEditorLoopSemanticLabel),
+      );
+      expect(
+        node,
+        isSemantics(
+          label: l10n.videoEditorLoopSemanticLabel,
+          isButton: true,
+          hasEnabledState: true,
+          isEnabled: false,
+        ),
+      );
+    });
+
+    testWidgets('Align loop is disabled during another clip operation', (
+      tester,
+    ) async {
+      when(() => clipBloc.state).thenReturn(
+        ClipEditorState(
+          isRepairingLoop: true,
+          clips: [
+            DivineVideoClip(
+              id: 'sample-clip',
+              stopMotionFrames: const [
+                StopMotionClipFrame(
+                  path: '/frames/sample.jpg',
+                  duration: Duration(seconds: 6),
+                ),
+              ],
+              duration: const Duration(seconds: 6),
+              recordedAt: DateTime(2026),
+              targetAspectRatio: model.AspectRatio.square,
+              originalAspectRatio: 1,
+            ),
+          ],
+        ),
+      );
+      await tester.pumpWidget(
+        _buildWidget(
+          mainBloc: mainBloc,
+          clipBloc: clipBloc,
+          timelineOverlayBloc: timelineOverlayBloc,
+        ),
+      );
+      final node = tester.getSemantics(
+        find.bySemanticsLabel(l10n.videoEditorLoopSemanticLabel),
+      );
+      expect(
+        node,
+        isSemantics(
+          label: l10n.videoEditorLoopSemanticLabel,
+          isButton: true,
+          hasEnabledState: true,
+          isEnabled: false,
+        ),
       );
     });
 
@@ -531,6 +638,7 @@ Widget _buildWidget({
   VoidCallback? onOpenEffects,
   VoidCallback? onAddStickers,
   VoidCallback? onAddAudioVisualizer,
+  VoidCallback? onAlignLoop,
 }) => _app(
   child: MultiBlocProvider(
     providers: [
@@ -539,6 +647,7 @@ Widget _buildWidget({
       BlocProvider<TimelineOverlayBloc>.value(value: timelineOverlayBloc),
     ],
     child: VideoEditorMainActionsSheet(
+      onAlignLoop: onAlignLoop ?? () {},
       scope: _scope(
         onOpenClipsEditor: onOpenClipsEditor,
         onOpenMusicLibrary: onOpenMusicLibrary,

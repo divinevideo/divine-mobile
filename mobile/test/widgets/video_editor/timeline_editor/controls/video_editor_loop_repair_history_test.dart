@@ -215,8 +215,8 @@ void main() {
                         builder: (context) => Column(
                           children: [
                             TextButton(
-                              onPressed: () => fixEditorLoop(context),
-                              child: const Text('Fix loop'),
+                              onPressed: () => alignEditorLoop(context),
+                              child: const Text('Align loop'),
                             ),
                             TextButton(
                               onPressed: () =>
@@ -235,9 +235,12 @@ void main() {
           await tester.tap(find.text('More edit'));
           await tester.pumpAndSettle();
           await tester.tap(
-            find.bySemanticsLabel(
-              lookupAppLocalizations(const Locale('en'))
-                  .videoEditorLoopSemanticLabel,
+            find.byWidgetPredicate(
+              (widget) =>
+                  widget is Semantics &&
+                  widget.properties.label ==
+                      lookupAppLocalizations(const Locale('en'))
+                          .videoEditorLoopSemanticLabel,
             ),
           );
           await tester.pump();
@@ -305,7 +308,7 @@ void main() {
           final undo = tester
               .widget<SnackBarAction>(find.byType(SnackBarAction))
               .onPressed;
-          // Fix loop remains available while its own seam preview is playing.
+          // Align loop remains available while its own seam preview is playing.
           playerStates.add(
             VideoEditorMainState(
               isPlayerReady: true,
@@ -315,7 +318,7 @@ void main() {
           );
           await tester.pump();
           if (foreign) {
-            final screenContext = tester.element(find.text('Fix loop'));
+            final screenContext = tester.element(find.text('Align loop'));
             unawaited(
               showModalBottomSheet<void>(
                 context: screenContext,
@@ -348,7 +351,7 @@ void main() {
           ).thenAnswer(
             (_) async => const LoopRepairResult(status: .alreadySmooth),
           );
-          await tester.tap(find.text('Fix loop'));
+          await tester.tap(find.text('Align loop'));
           await tester.pumpAndSettle();
           verify(
             () => repository.repair(

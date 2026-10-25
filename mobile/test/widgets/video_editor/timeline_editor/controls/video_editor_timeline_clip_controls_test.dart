@@ -344,13 +344,13 @@ void main() {
       expect(controls.onDetach, isNotNull);
     });
 
-    testWidgets('keeps Fix loop out of the per-clip toolbar', (tester) async {
+    testWidgets('loop alignment is available only in the tools drawer', (
+      tester,
+    ) async {
       when(() => bloc.state).thenReturn(
         ClipEditorState(clips: [clip('a'), clip('b')], currentClipIndex: 1),
       );
-
       await tester.pumpWidget(build());
-
       final l10n = lookupAppLocalizations(const Locale('en'));
       expect(find.text(l10n.videoEditorLoopLabel), findsNothing);
     });

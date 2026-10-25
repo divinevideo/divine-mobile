@@ -5319,8 +5319,8 @@
   "videoEditorTrackNotFollowed": "اس کے پیچھے نہیں چلا جا سکا۔ زیادہ تفصیل والی چیز کو فریم میں لیں۔",
   "videoEditorTrackFailed": "ٹریکنگ کام نہیں کر سکی۔ دوبارہ کوشش کریں۔",
   "videoEditorTrackLostPartway": "راستے میں نظر سے اوجھل ہو گئی۔ وہاں سے لیئر ٹھہری رہتی ہے۔",
-  "videoEditorLoopLabel": "لوپ بہتر کریں",
-  "videoEditorLoopSemanticLabel": "لوپ کے جوڑ کو ہموار کریں",
+  "videoEditorLoopLabel": "لوپ سیدھا کریں",
+  "videoEditorLoopSemanticLabel": "لوپ سیدھا کریں",
   "videoEditorLoopAlreadySmooth": "یہ پہلے ہی ہموار طریقے سے لوپ ہوتا ہے۔",
   "videoEditorLoopFailed": "لوپ چیک نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
   "videoEditorLoopNoMatch": "اس لوپ کو بہتر نہیں کیا جا سکا",
@@ -7157,6 +7157,6 @@
   "listAddToLists": "فہرستوں میں شامل کریں",
   "accountDeletionProcessingSignOutFailed": "آپ کا اکاؤنٹ حذف کرنے کی کارروائی جاری ہے، لیکن ہم آپ کو سائن آؤٹ نہیں کر سکے۔ دوبارہ کوشش کریں۔",
   "videoEditorLoopRepairSmoothed": "لوپ ہموار ہو گیا",
-  "videoEditorLoopRepairProgress": "آپ کا لوپ بہتر کیا جا رہا ہے…",
+  "videoEditorLoopRepairProgress": "آپ کا لوپ سیدھا کیا جا رہا ہے…",
   "videoEditorLoopRepairTrimmed": "لوپ ہموار ہو گیا۔ {seconds} سیکنڈ ہٹا دیے گئے۔"
 }

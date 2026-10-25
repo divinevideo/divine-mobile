@@ -10555,10 +10555,10 @@ class AppLocalizationsBg extends AppLocalizations {
       'Изгубено по пътя. Оттам слоят остава на място.';
 
   @override
-  String get videoEditorLoopLabel => 'Изглади цикъла';
+  String get videoEditorLoopLabel => 'Подравни цикъла';
 
   @override
-  String get videoEditorLoopSemanticLabel => 'Изглади връзката на цикъла';
+  String get videoEditorLoopSemanticLabel => 'Подравни цикъла';
 
   @override
   String get videoEditorLoopAlreadySmooth =>
@@ -14565,7 +14565,7 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorLoopRepairSmoothed => 'Цикълът е изгладен';
 
   @override
-  String get videoEditorLoopRepairProgress => 'Изглаждане на цикъла…';
+  String get videoEditorLoopRepairProgress => 'Подравняване на цикъла…';
 
   @override
   String videoEditorLoopRepairTrimmed(String seconds) {
