@@ -77,8 +77,6 @@ Future<void> handleFirebaseMessagingBackgroundMessage(
     );
   }
 
-  // The OS already presents iOS alert pushes (aps.alert); only render a local
-  // notification for data-only messages so we don't double-render (#4731).
   final warming = () async {
     try {
       await preloadContent(message.data).timeout(const Duration(seconds: 6));
@@ -86,6 +84,8 @@ Future<void> handleFirebaseMessagingBackgroundMessage(
       // A failed warmup must never hide an alert or change its tap payload.
     }
   }();
+  // The OS already presents iOS alert pushes (aps.alert); only render a local
+  // notification for data-only messages so we don't double-render (#4731).
   if (!shouldRenderLocalPushNotification(message)) {
     await warming;
     return;
