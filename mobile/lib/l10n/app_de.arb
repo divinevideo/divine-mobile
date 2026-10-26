@@ -4097,6 +4097,8 @@
   "videoEditorShapeMaskCornersLabel": "Ecken",
   "videoEditorShapeMaskCornersSquare": "Eckig",
   "videoEditorShapeMaskCornersRound": "Rund",
+  "videoEditorShapeMaskKeyframesHint": "Füge einen Keyframe hinzu, versetz den Abspielkopf und öffne dann die Maske erneut, um die Form zu verschieben, zu skalieren, zu drehen oder weicher zu machen. Sie gleitet von Keyframe zu Keyframe.",
+  "videoEditorShapeMaskKeyframesSemanticLabel": "Keyframes der Formmaske bearbeiten",
   "videoEditorChromaKeyAutoDetect": "Automatisch erkennen",
   "videoEditorChromaKeyPresetGreen": "Grün",
   "videoEditorChromaKeyPresetBlue": "Blau",

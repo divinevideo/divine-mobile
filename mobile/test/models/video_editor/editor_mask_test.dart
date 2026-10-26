@@ -40,6 +40,35 @@ void main() {
         isNull,
       );
     });
+
+    test('moves every keyframe into the box the same way', () {
+      final mask = const LayerMask(shape: LayerMaskShape.ellipse).withKeyframes(
+        const [
+          LayerMaskKeyframe(time: Duration.zero, center: Offset(0.6, 0.4)),
+          LayerMaskKeyframe(
+            time: Duration(seconds: 1),
+            center: Offset(0.2, 0.8),
+            size: Size(1, 1),
+            feather: 0.2,
+          ),
+        ],
+      );
+
+      final detached = maskForDetachedClip(
+        mask,
+        boxSize: const Size(1, 2),
+        targetAspectRatio: 1,
+      )!;
+
+      expect(detached.keyframes.map((k) => k.time), [
+        Duration.zero,
+        const Duration(seconds: 1),
+      ]);
+      expect(detached.keyframes.first.center, const Offset(0.6, 0.45));
+      expect(detached.keyframes.last.center, const Offset(0.2, 0.65));
+      expect(detached.keyframes.last.size, const Size(1, 0.5));
+      expect(detached.keyframes.last.feather, 0.2);
+    });
   });
 
   group('canMaskLayer', () {
@@ -332,6 +361,28 @@ void main() {
       expect(moved.size.width * 100, closeTo(40, 1e-9));
       expect(moved.size.height * 300, closeTo(40, 1e-9));
       expect(moved.center, circle.center);
+    });
+
+    test('keeps every keyframe round on the new box too', () {
+      final keyframed = circle.withKeyframes(const [
+        LayerMaskKeyframe(time: Duration.zero, size: Size(0.2, 0.2)),
+        LayerMaskKeyframe(time: Duration(seconds: 1), size: Size(0.6, 0.6)),
+      ]);
+
+      final moved = transferEditorMask(
+        keyframed,
+        from: const Size(100, 100),
+        to: const Size(100, 300),
+      );
+
+      expect(moved.keyframes, hasLength(2));
+      for (final (keyframe, side) in [
+        (moved.keyframes.first, 20.0),
+        (moved.keyframes.last, 60.0),
+      ]) {
+        expect(keyframe.size.width * 100, closeTo(side, 1e-9));
+        expect(keyframe.size.height * 300, closeTo(side, 1e-9));
+      }
     });
 
     test('carries the mask over as it is while a box is unknown', () {

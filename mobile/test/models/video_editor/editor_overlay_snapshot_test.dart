@@ -243,6 +243,45 @@ void main() {
       });
     });
 
+    group('windowedTo mask keyframes', () {
+      test('keep a mask changing as it did on the timeline, in the box it '
+          'was captured with', () {
+        final layer = Layer(
+          startTime: const Duration(seconds: 2),
+          endTime: const Duration(seconds: 5),
+          mask: const LayerMask(shape: LayerMaskShape.ellipse).withKeyframes(
+            const [
+              LayerMaskKeyframe(time: Duration.zero, center: Offset(0.2, 0.5)),
+              LayerMaskKeyframe(
+                time: Duration(seconds: 2),
+                center: Offset(0.8, 0.5),
+              ),
+            ],
+          ),
+        );
+
+        final result = EditorOverlaySnapshot(
+          capturedLayers: [
+            ExportedLayer(
+              layer: layer,
+              bytes: Uint8List.fromList([0]),
+              logicalSize: const Size(20, 10),
+              boxSize: const Size(10, 20),
+            ),
+          ],
+        ).windowedTo(start: _s3, end: _s6);
+
+        final windowed = result.capturedLayers.single;
+        expect(windowed.boxSize, const Size(10, 20));
+        for (var ms = 0; ms <= 2000; ms += 250) {
+          expect(
+            windowed.layer.maskAt(Duration(milliseconds: ms)),
+            layer.maskAt(_s3 + Duration(milliseconds: ms)),
+          );
+        }
+      });
+    });
+
     group('windowedTo word highlights', () {
       // "one" is lit for the layer's first second, "two" for its second.
       ExportedLayer karaoke() => ExportedLayer(

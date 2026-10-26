@@ -4214,6 +4214,8 @@
   "videoEditorShapeMaskCornersLabel": "Ъгли",
   "videoEditorShapeMaskCornersSquare": "Прави",
   "videoEditorShapeMaskCornersRound": "Заоблени",
+  "videoEditorShapeMaskKeyframesHint": "Добави ключов кадър, премести главата за възпроизвеждане, после отвори маската отново, за да преместиш, оразмериш, завъртиш или омекотиш формата. Тя се плъзга от ключов кадър към ключов кадър.",
+  "videoEditorShapeMaskKeyframesSemanticLabel": "Редактирай ключовите кадри на маската с форма",
   "videoEditorChromaKeyAutoDetect": "Автоматично разпознаване",
   "videoEditorChromaKeyPresetGreen": "Зелено",
   "videoEditorChromaKeyPresetBlue": "Синьо",

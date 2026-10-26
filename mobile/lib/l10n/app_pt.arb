@@ -4097,6 +4097,8 @@
   "videoEditorShapeMaskCornersLabel": "Cantos",
   "videoEditorShapeMaskCornersSquare": "Retos",
   "videoEditorShapeMaskCornersRound": "Arredondados",
+  "videoEditorShapeMaskKeyframesHint": "Adicione um quadro-chave, mova a cabeça de reprodução e depois abra a máscara de novo para mover, redimensionar, girar ou suavizar a forma. Ela desliza de um quadro-chave para o outro.",
+  "videoEditorShapeMaskKeyframesSemanticLabel": "Editar quadros-chave da máscara de forma",
   "videoEditorChromaKeyAutoDetect": "Detetar automaticamente",
   "videoEditorChromaKeyPresetGreen": "Verde",
   "videoEditorChromaKeyPresetBlue": "Azul",

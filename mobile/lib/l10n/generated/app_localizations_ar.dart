@@ -9771,6 +9771,14 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'مستديرة';
 
   @override
+  String get videoEditorShapeMaskKeyframesHint =>
+      'إضافة إطار رئيسي، ثم تحريك رأس التشغيل، ثم فتح القناع مرة أخرى لتحريك الشكل أو تغيير حجمه أو تدويره أو تنعيم حافته. ينتقل الشكل بسلاسة من إطار رئيسي إلى آخر.';
+
+  @override
+  String get videoEditorShapeMaskKeyframesSemanticLabel =>
+      'تعديل الإطارات الرئيسية لقناع الشكل';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'كشف تلقائي';
 
   @override

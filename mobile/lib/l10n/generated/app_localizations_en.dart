@@ -9878,6 +9878,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'Round';
 
   @override
+  String get videoEditorShapeMaskKeyframesHint =>
+      'Add a keyframe, move the playhead, then open the mask again to move, resize, turn or soften the shape. It glides from keyframe to keyframe.';
+
+  @override
+  String get videoEditorShapeMaskKeyframesSemanticLabel =>
+      'Edit shape mask keyframes';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Auto-detect';
 
   @override

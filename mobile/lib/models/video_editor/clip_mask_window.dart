@@ -19,6 +19,9 @@ typedef LiveClipMask = ({String clipId, LayerMask? mask});
 /// [fadeIn] and out over [fadeOut] instead of cutting the other clip's half
 /// of the blend. A dip to black or white plays one clip at a time and fades
 /// nothing.
+///
+/// A mask with keyframes changes while the clip plays; its keyframes are
+/// measured from [origin], the clip's own start (see [maskAt]).
 @immutable
 class ClipMaskWindow {
   /// Creates a [ClipMaskWindow].
@@ -29,7 +32,8 @@ class ClipMaskWindow {
     required this.end,
     this.fadeIn = Duration.zero,
     this.fadeOut = Duration.zero,
-  });
+    Duration? origin,
+  }) : origin = origin ?? start;
 
   /// The clip whose mask this is.
   final String clipId;
@@ -50,6 +54,15 @@ class ClipMaskWindow {
 
   /// How long, on the editor timeline, the cover fades out before [end].
   final Duration fadeOut;
+
+  /// Where the clip starts on the editor timeline, which the keyframes of
+  /// [mask] are measured from. Later than [start] when a transition into the
+  /// clip blends it in early.
+  final Duration origin;
+
+  /// The still mask the clip shows through at [time] on the editor timeline:
+  /// [mask] as its keyframes make it then.
+  LayerMask maskAt(Duration time) => mask.at(time - origin);
 
   /// How strongly the cover shows at [time] on the editor timeline, from 0
   /// (not at all) to 1.
@@ -76,15 +89,17 @@ class ClipMaskWindow {
           other.start == start &&
           other.end == end &&
           other.fadeIn == fadeIn &&
-          other.fadeOut == fadeOut;
+          other.fadeOut == fadeOut &&
+          other.origin == origin;
 
   @override
-  int get hashCode => Object.hash(clipId, mask, start, end, fadeIn, fadeOut);
+  int get hashCode =>
+      Object.hash(clipId, mask, start, end, fadeIn, fadeOut, origin);
 
   @override
   String toString() =>
       'ClipMaskWindow(clipId: $clipId, start: $start, end: $end, '
-      'fadeIn: $fadeIn, fadeOut: $fadeOut)';
+      'fadeIn: $fadeIn, fadeOut: $fadeOut, origin: $origin)';
 }
 
 /// The windows of every masked clip in [clips], in timeline order.
@@ -124,6 +139,7 @@ List<ClipMaskWindow> clipMaskWindows(
           end: clipEnd + blendOut,
           fadeIn: blendIn * 2,
           fadeOut: blendOut * 2,
+          origin: clipStart,
         ),
       );
     }

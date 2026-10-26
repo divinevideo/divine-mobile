@@ -4097,6 +4097,8 @@
   "videoEditorShapeMaskCornersLabel": "Esquinas",
   "videoEditorShapeMaskCornersSquare": "Rectas",
   "videoEditorShapeMaskCornersRound": "Redondeadas",
+  "videoEditorShapeMaskKeyframesHint": "Agregá un fotograma clave, mové el cabezal de reproducción y después volvé a abrir la máscara para mover, escalar, girar o suavizar la forma. Se desliza de un fotograma clave al siguiente.",
+  "videoEditorShapeMaskKeyframesSemanticLabel": "Editar fotogramas clave de la máscara de forma",
   "videoEditorChromaKeyAutoDetect": "Detectar automáticamente",
   "videoEditorChromaKeyPresetGreen": "Verde",
   "videoEditorChromaKeyPresetBlue": "Azul",

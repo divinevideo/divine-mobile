@@ -163,6 +163,39 @@ void main() {
       );
 
       blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+        'carries the keyframe times of a layer mask apart from its own',
+        build: TimelineOverlayBloc.new,
+        act: (bloc) => bloc.add(
+          TimelineOverlayItemsUpdate(
+            layers: [
+              TextLayer(
+                id: 'text',
+                text: 'hi',
+                startTime: const Duration(seconds: 1),
+                endTime: const Duration(seconds: 4),
+                mask: const LayerMask(shape: LayerMaskShape.ellipse)
+                    .withKeyframes(const [
+                      LayerMaskKeyframe(time: Duration(seconds: 2)),
+                      LayerMaskKeyframe(time: Duration(milliseconds: 500)),
+                    ]),
+              ),
+            ],
+            filters: const <FilterState>[],
+            audioTracks: const [],
+            totalVideoDuration: const Duration(seconds: 12),
+          ),
+        ),
+        verify: (bloc) {
+          final item = bloc.state.items.single;
+          expect(item.keyframeTimes, isEmpty);
+          expect(item.maskKeyframeTimes, [
+            const Duration(milliseconds: 500),
+            const Duration(seconds: 2),
+          ]);
+        },
+      );
+
+      blocTest<TimelineOverlayBloc, TimelineOverlayState>(
         'caps a detached clip at its own length and leaves other layers '
         'running to the end',
         build: TimelineOverlayBloc.new,
@@ -1543,6 +1576,34 @@ void main() {
           ),
         ),
         verify: (bloc) => expect(bloc.state.items.single.keyframeTimes, [
+          const Duration(milliseconds: -500),
+          const Duration(milliseconds: 1500),
+        ]),
+      );
+
+      blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+        'keeps mask keyframes where they are on the video on a left-trim',
+        build: TimelineOverlayBloc.new,
+        seed: () => const TimelineOverlayState(
+          items: [
+            TimelineOverlayItem(
+              id: 'text',
+              type: TimelineOverlayType.layer,
+              startTime: Duration(seconds: 1),
+              endTime: Duration(seconds: 4),
+              maskKeyframeTimes: [Duration.zero, Duration(seconds: 2)],
+            ),
+          ],
+        ),
+        act: (bloc) => bloc.add(
+          const TimelineOverlayItemTrimmed(
+            itemId: 'text',
+            isStart: true,
+            startTime: Duration(milliseconds: 1500),
+            endTime: Duration(seconds: 4),
+          ),
+        ),
+        verify: (bloc) => expect(bloc.state.items.single.maskKeyframeTimes, [
           const Duration(milliseconds: -500),
           const Duration(milliseconds: 1500),
         ]),

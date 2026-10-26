@@ -5,11 +5,12 @@ import 'dart:ui' show Offset, Size;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model;
+import 'package:openvine/extensions/layer_mask_keyframes.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/clip_mask_render.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
-    show LayerMask, LayerMaskShape;
+    show LayerMask, LayerMaskKeyframe, LayerMaskShape;
 import 'package:pro_video_editor/pro_video_editor.dart'
     show
         AnimationPhase,
@@ -19,6 +20,7 @@ import 'package:pro_video_editor/pro_video_editor.dart'
         EditorVideo,
         ImageLayer,
         LayerAnimationType,
+        LayerShapeMaskShape,
         VideoRenderData,
         VideoSegment;
 
@@ -42,16 +44,21 @@ void main() {
 
   group('clipMaskCoverLayers', () {
     final renders = <Size>[];
+    final rendered = <LayerMask>[];
 
     /// A blank image of [size], so the layers can be built without drawing.
     Future<ui.Image> fakeRender(LayerMask mask, Size size) {
       renders.add(size);
+      rendered.add(mask);
       final recorder = ui.PictureRecorder();
       ui.Canvas(recorder);
       return recorder.endRecording().toImage(2, 2);
     }
 
-    setUp(renders.clear);
+    setUp(() {
+      renders.clear();
+      rendered.clear();
+    });
 
     testWidgets('covers what each masked clip hides while it plays, over the '
         'part of the frame the export keeps', (tester) async {
@@ -105,6 +112,80 @@ void main() {
       expect(fadeIn.type, LayerAnimationType.fade);
       expect(fadeIn.phase, AnimationPhase.animateIn);
       expect(fadeIn.duration, const Duration(milliseconds: 300));
+    });
+
+    group('a mask with keyframes', () {
+      final moving = circle.withKeyframes(const [
+        LayerMaskKeyframe(time: Duration.zero, size: Size(0.2, 0.2)),
+        LayerMaskKeyframe(
+          time: Duration(seconds: 1),
+          size: Size(1, 1),
+          feather: 0.1,
+        ),
+      ]);
+
+      Future<List<ImageLayer>> coverLayers(
+        WidgetTester tester,
+        List<DivineVideoClip> clips,
+      ) async => (await tester.runAsync(
+        () => clipMaskCoverLayers(
+          clips: clips,
+          videoSize: const Size(1080, 1920),
+          targetAspectRatio: 9 / 16,
+          timelineMap: TransitionTimelineMap.fromClips(clips),
+          render: fakeRender,
+        ),
+      ))!;
+
+      testWidgets('leaves the shape to the export and covers with plain '
+          'black', (tester) async {
+        final layers = await coverLayers(tester, [
+          clip('a'),
+          clip('b', mask: moving),
+        ]);
+
+        final shapeMask = layers.single.shapeMask!;
+        // The cover is what the mask hides: the mask turned inside out.
+        expect(shapeMask.invert, isTrue);
+        expect(shapeMask.shape, LayerShapeMaskShape.ellipse);
+        expect(rendered.single.hasKeyframes, isFalse);
+        expect(rendered.single.size, Size.zero);
+      });
+
+      testWidgets('times the keyframes from the clip start on the editor '
+          'timeline, read on its clock', (tester) async {
+        const dissolve = ClipTransition(
+          type: ClipTransitionType.dissolve,
+          duration: Duration(milliseconds: 300),
+        );
+        final clips = [
+          clip('a', transition: dissolve),
+          clip('b', mask: moving),
+        ];
+
+        final layer = (await coverLayers(tester, clips)).single;
+
+        expect(layer.shapeMask!.keyframes.map((k) => k.time), [
+          const Duration(seconds: 2),
+          const Duration(seconds: 3),
+        ]);
+        expect(layer.keyframeClock, isNotEmpty);
+      });
+
+      testWidgets('shares one black image between moving masks', (
+        tester,
+      ) async {
+        final layers = await coverLayers(tester, [
+          clip('a', mask: moving),
+          clip('b', mask: moving.shiftedBy(const Duration(seconds: 1))),
+          clip('c', mask: circle),
+        ]);
+
+        expect(identical(layers[0].image, layers[1].image), isTrue);
+        expect(layers[2].shapeMask, isNull);
+        expect(layers[2].keyframeClock, isEmpty);
+        expect(renders, hasLength(2));
+      });
     });
 
     testWidgets('renders a mask shared by several clips once', (tester) async {

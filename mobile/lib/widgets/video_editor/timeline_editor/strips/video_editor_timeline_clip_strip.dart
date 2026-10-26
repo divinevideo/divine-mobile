@@ -19,6 +19,7 @@ import 'package:openvine/services/video_editor/clip_thumbnail_manager.dart';
 import 'package:openvine/services/video_editor/clip_waveform_manager.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/keyframes/timeline_keyframe_dot.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/clip_waveform_overlay.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/timeline_trim_handles.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_transition_buttons.dart';

@@ -8,6 +8,7 @@ import 'package:openvine/extensions/layer_animation_storage.dart'
     show ExportLayerMapping, exportedLayerTopLeft, unrotatedLayerBox;
 import 'package:openvine/extensions/layer_blend_mode.dart';
 import 'package:openvine/extensions/layer_keyframes.dart';
+import 'package:openvine/extensions/layer_mask_export.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
@@ -162,7 +163,9 @@ Size detachedClipExportSize({
 /// [mask] is the layer's shape mask rendered as an alpha matte over its box
 /// (see [detachedClipExportSize]). The composition stretches it over the
 /// clip's own frame after the key and before placing it, so what the mask
-/// hides shows the track underneath, as the canvas does.
+/// hides shows the track underneath, as the canvas does. A mask whose
+/// keyframes change it over time goes on the layer as its `shapeMask`
+/// instead, which the composition draws on every frame in the same place.
 VideoLayer buildDetachedClipVideoLayer({
   required DetachedClipExportLayer item,
   required EditorVideo resolvedVideo,
@@ -210,6 +213,9 @@ VideoLayer buildDetachedClipVideoLayer({
   return VideoLayer(
     chromaKey: item.chromaKey?.key,
     mask: mask,
+    shapeMask: layer.hasKeyframedMask
+        ? layer.mask!.divineShapeMaskForExport(origin: layer.keyframeOrigin)
+        : null,
     // The whole layer fades, so a keyed clip's fill fades with it — the
     // composition applies the opacity after the key, as the canvas does.
     // Keyframes carry the opacity of a keyframed clip instead.

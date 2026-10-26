@@ -4097,6 +4097,8 @@
   "videoEditorShapeMaskCornersLabel": "角",
   "videoEditorShapeMaskCornersSquare": "四角",
   "videoEditorShapeMaskCornersRound": "丸",
+  "videoEditorShapeMaskKeyframesHint": "キーフレームを追加し、再生ヘッドを動かしてから、もう一度マスクを開いて図形を移動・拡大縮小・回転したり、ぼかしたりします。図形はキーフレームからキーフレームへなめらかに動きます。",
+  "videoEditorShapeMaskKeyframesSemanticLabel": "シェイプマスクのキーフレームを編集",
   "videoEditorChromaKeyAutoDetect": "自動検出",
   "videoEditorChromaKeyPresetGreen": "グリーン",
   "videoEditorChromaKeyPresetBlue": "ブルー",

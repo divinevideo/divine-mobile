@@ -9935,6 +9935,14 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'Arrondis';
 
   @override
+  String get videoEditorShapeMaskKeyframesHint =>
+      'Ajoute une image clé, déplace la tête de lecture, puis rouvre le masque pour déplacer, redimensionner, faire pivoter ou adoucir la forme. Elle glisse d\'une image clé à l\'autre.';
+
+  @override
+  String get videoEditorShapeMaskKeyframesSemanticLabel =>
+      'Modifier les images clés du masque de forme';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Détection auto';
 
   @override

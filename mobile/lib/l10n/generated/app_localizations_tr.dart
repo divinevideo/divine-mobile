@@ -9703,6 +9703,14 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'Yuvarlak';
 
   @override
+  String get videoEditorShapeMaskKeyframesHint =>
+      'Bir ana kare ekle, oynatma kafasını kaydır, sonra şekli taşımak, boyutlandırmak, döndürmek ya da yumuşatmak için maskeyi yeniden aç. Şekil ana kareden ana kareye kayar.';
+
+  @override
+  String get videoEditorShapeMaskKeyframesSemanticLabel =>
+      'Şekil maskesinin ana karelerini düzenle';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Otomatik algıla';
 
   @override

@@ -4943,6 +4943,8 @@
   "videoEditorShapeMaskCornersLabel": "Góc",
   "videoEditorShapeMaskCornersSquare": "Vuông",
   "videoEditorShapeMaskCornersRound": "Bo tròn",
+  "videoEditorShapeMaskKeyframesHint": "Thêm khung hình chính, di chuyển đầu phát, rồi mở lại mặt nạ để di chuyển, đổi kích thước, xoay hoặc làm mềm hình. Hình sẽ lướt từ khung hình chính này sang khung hình chính tiếp theo.",
+  "videoEditorShapeMaskKeyframesSemanticLabel": "Chỉnh sửa khung hình chính của mặt nạ hình dạng",
   "videoEditorChromaKeyAutoDetect": "Tự động nhận diện",
   "videoEditorChromaKeyPresetGreen": "Xanh lá",
   "videoEditorChromaKeyPresetBlue": "Xanh dương",

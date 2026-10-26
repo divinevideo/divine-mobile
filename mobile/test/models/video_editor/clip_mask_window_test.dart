@@ -5,7 +5,7 @@ import 'package:models/models.dart' as model;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_mask_window.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
-    show LayerMask, LayerMaskShape;
+    show LayerMask, LayerMaskKeyframe, LayerMaskShape;
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ClipTransition, ClipTransitionType, EditorVideo;
 
@@ -77,6 +77,35 @@ void main() {
 
       expect(windows.single.start, const Duration(seconds: 2));
       expect(windows.single.fadeIn, Duration.zero);
+    });
+
+    test("measures a mask's keyframes from the clip's own start", () {
+      const dissolve = ClipTransition(
+        type: ClipTransitionType.dissolve,
+        duration: Duration(milliseconds: 300),
+      );
+      final moving = circle.withKeyframes(const [
+        LayerMaskKeyframe(time: Duration.zero, center: Offset(0.2, 0.5)),
+        LayerMaskKeyframe(time: Duration(seconds: 1), center: Offset(0.8, 0.5)),
+      ]);
+
+      final window = clipMaskWindows([
+        clip('a', transition: dissolve),
+        clip('b', mask: moving),
+      ]).single;
+
+      // It blends in from 1.7 s, but its mask counts from 2 s.
+      expect(window.start, const Duration(milliseconds: 1700));
+      expect(window.origin, const Duration(seconds: 2));
+      expect(
+        window.maskAt(const Duration(milliseconds: 1700)).center.dx,
+        closeTo(0.2, 1e-9),
+      );
+      expect(
+        window.maskAt(const Duration(milliseconds: 2500)).center.dx,
+        closeTo(0.5, 1e-9),
+      );
+      expect(window.maskAt(const Duration(seconds: 3)).hasKeyframes, isFalse);
     });
 
     test('takes a live mask over the clip it names, and removes one', () {

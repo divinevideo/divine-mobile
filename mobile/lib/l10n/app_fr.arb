@@ -4097,6 +4097,8 @@
   "videoEditorShapeMaskCornersLabel": "Coins",
   "videoEditorShapeMaskCornersSquare": "Carrés",
   "videoEditorShapeMaskCornersRound": "Arrondis",
+  "videoEditorShapeMaskKeyframesHint": "Ajoute une image clé, déplace la tête de lecture, puis rouvre le masque pour déplacer, redimensionner, faire pivoter ou adoucir la forme. Elle glisse d'une image clé à l'autre.",
+  "videoEditorShapeMaskKeyframesSemanticLabel": "Modifier les images clés du masque de forme",
   "videoEditorChromaKeyAutoDetect": "Détection auto",
   "videoEditorChromaKeyPresetGreen": "Vert",
   "videoEditorChromaKeyPresetBlue": "Bleu",

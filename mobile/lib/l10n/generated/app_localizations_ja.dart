@@ -9312,6 +9312,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => '丸';
 
   @override
+  String get videoEditorShapeMaskKeyframesHint =>
+      'キーフレームを追加し、再生ヘッドを動かしてから、もう一度マスクを開いて図形を移動・拡大縮小・回転したり、ぼかしたりします。図形はキーフレームからキーフレームへなめらかに動きます。';
+
+  @override
+  String get videoEditorShapeMaskKeyframesSemanticLabel => 'シェイプマスクのキーフレームを編集';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => '自動検出';
 
   @override

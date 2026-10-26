@@ -194,6 +194,11 @@ class TimelineOverlayBloc
             label: _labelForLayer(layer),
             layer: layer,
             keyframeTimes: [for (final k in layer.keyframes) k.time],
+            maskKeyframeTimes: [
+              for (final k
+                  in layer.mask?.keyframes ?? const <LayerMaskKeyframe>[])
+                k.time,
+            ],
             // A detached clip is real footage of a fixed length; stretching its
             // bar past that would promise frames the file does not have. Every
             // other layer is a drawing that can be held for as long as the user
@@ -478,6 +483,14 @@ class TimelineOverlayBloc
           event.isStart && (item.layer?.keepsMotionOnStartTrim ?? true)
           ? [
               for (final time in item.keyframeTimes)
+                time - (newStart - item.startTime),
+            ]
+          : null,
+      // So do the keyframes of its mask.
+      maskKeyframeTimes:
+          event.isStart && (item.layer?.keepsMotionOnStartTrim ?? true)
+          ? [
+              for (final time in item.maskKeyframeTimes)
                 time - (newStart - item.startTime),
             ]
           : null,

@@ -5,11 +5,13 @@ import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/editor_mask.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/keyframes/layer_keyframes_sheet.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
-    show LayerMask, LayerMaskShape;
+    show AnimationCurve, LayerMask, LayerMaskShape;
 
 /// Where the masked item sits on screen: the box its mask is measured in, and
 /// the transform from that box to the screen.
@@ -74,6 +76,14 @@ bool _showsCorners(LayerMask? mask) => mask?.shape == LayerMaskShape.rectangle;
 /// panel picks the shape, how soft its edge is, how round a rectangle's
 /// corners are and whether it is inverted. The top bar cancels or confirms;
 /// confirming pops a [MaskEditorResult].
+///
+/// The shape it edits is the mask at [keyframeTime]. Once the mask has
+/// keyframes, moving, resizing, turning or softening the shape changes the
+/// keyframe there, adding one when there is none, as moving a keyframed
+/// layer on the canvas does; the shape, its corners and the inversion stay
+/// the same throughout. The keyframe button in the top bar opens the
+/// keyframe sheet, which adds or removes the keyframe there and eases the
+/// change to the next one.
 @visibleForTesting
 class VideoEditorMaskEditorView extends StatefulWidget {
   /// Creates a [VideoEditorMaskEditorView].
@@ -82,11 +92,16 @@ class VideoEditorMaskEditorView extends StatefulWidget {
     required this.resolveGeometry,
     required this.canvasChanges,
     required this.onChanged,
+    this.keyframeTime = Duration.zero,
     super.key,
   });
 
   /// The mask the item has when the editor opens, or `null` for none.
   final LayerMask? initialMask;
+
+  /// The playhead, measured like the mask's keyframes from the start of the
+  /// item: where the mask is shown, and edited when it has keyframes.
+  final Duration keyframeTime;
 
   /// Reads where the item sits on screen right now, or `null` while it
   /// cannot be measured.
@@ -106,8 +121,35 @@ class VideoEditorMaskEditorView extends StatefulWidget {
 enum _Drag { move, width, height }
 
 class _VideoEditorMaskEditorViewState extends State<VideoEditorMaskEditorView> {
+  /// The whole mask, with its keyframes.
   late LayerMask? _mask = widget.initialMask;
   bool _refreshScheduled = false;
+
+  /// The mask as it shows at the playhead, which is what is edited.
+  LayerMask? get _shown => _mask?.at(widget.keyframeTime);
+
+  /// Whether the playhead sits on one of the mask's keyframes.
+  bool get _isOnKeyframe =>
+      (_mask?.keyframeIndexAt(
+            widget.keyframeTime,
+            tolerance: VideoEditorConstants.keyframeTolerance,
+          ) ??
+          -1) >=
+      0;
+
+  /// Index of the keyframe whose curve eases the mask at the playhead: the
+  /// last one at or before it, held between the first and the second to last.
+  /// `null` while the mask has fewer than two keyframes.
+  int? get _segmentIndex {
+    final keyframes = _mask?.keyframes ?? const [];
+    if (keyframes.length < 2) return null;
+    final atOrBefore = keyframes.lastIndexWhere(
+      (k) =>
+          k.time <=
+          widget.keyframeTime + VideoEditorConstants.keyframeTolerance,
+    );
+    return atOrBefore.clamp(0, keyframes.length - 2);
+  }
 
   _Drag? _drag;
   LayerMask? _dragStartMask;
@@ -148,21 +190,126 @@ class _VideoEditorMaskEditorViewState extends State<VideoEditorMaskEditorView> {
     widget.onChanged(mask);
   }
 
-  void _selectShape(LayerMaskShape? shape) {
-    if (shape == null) return _setMask(null);
-    if (shape == _mask?.shape) return;
-    final geometry = widget.resolveGeometry();
+  /// Shows [shown] at the playhead: as the mask itself, or as its keyframe
+  /// there when it has keyframes.
+  void _setShown(LayerMask? shown) {
+    final mask = _mask;
+    if (shown == null || mask == null || !mask.hasKeyframes) {
+      return _setMask(shown);
+    }
     _setMask(
-      editorMaskForShape(
-        shape,
-        boxSize: geometry?.size ?? Size.zero,
-        previous: _mask,
+      mask.withKeyframeAt(
+        widget.keyframeTime,
+        geometry: shown,
+        tolerance: VideoEditorConstants.keyframeTolerance,
+      ),
+    );
+  }
+
+  void _selectShape(LayerMaskShape? shape) {
+    final mask = _mask;
+    if (shape == null) return _setMask(null);
+    if (shape == mask?.shape) return;
+    final geometry = widget.resolveGeometry();
+    final switched = editorMaskForShape(
+      shape,
+      boxSize: geometry?.size ?? Size.zero,
+      previous: _shown,
+    );
+    // Keyframes keep where the shape is and how big it is at each of them;
+    // only the shape and its corners change.
+    if (mask != null && mask.hasKeyframes) {
+      return _setMask(
+        mask.copyWith(shape: shape, cornerRadius: switched.cornerRadius),
+      );
+    }
+    _setMask(switched);
+  }
+
+  /// Adds a keyframe at the playhead that holds the mask as it shows there,
+  /// or removes the one there, leaving the mask as it showed.
+  void _toggleKeyframe() {
+    final mask = _mask;
+    if (mask == null) return;
+    const tolerance = VideoEditorConstants.keyframeTolerance;
+    _setMask(
+      _isOnKeyframe
+          ? mask.withoutKeyframeAt(widget.keyframeTime, tolerance: tolerance)
+          : mask.withKeyframeAt(
+              widget.keyframeTime,
+              geometry: _shown,
+              tolerance: tolerance,
+            ),
+    );
+  }
+
+  /// Eases the change from the keyframe at or before the playhead to the
+  /// next one along [curve].
+  void _selectCurve(AnimationCurve curve) {
+    final mask = _mask;
+    final index = _segmentIndex;
+    if (mask == null || index == null) return;
+    final keyframes = [...mask.keyframes];
+    keyframes[index] = keyframes[index].copyWith(curve: curve);
+    _setMask(mask.withKeyframes(keyframes));
+  }
+
+  /// Opens the keyframe sheet of the mask: a line on how mask keyframes work,
+  /// the button that adds the keyframe at the playhead or removes the one
+  /// there, and the curve of the change the playhead is in.
+  ///
+  /// The button closes the sheet, so the shape can be changed right away.
+  Future<void> _editKeyframes() async {
+    final mask = _mask;
+    if (mask == null) return;
+    final l10n = context.l10n;
+    final segment = _segmentIndex;
+    BuildContext? sheetContext;
+    await VineBottomSheet.show<void>(
+      context: context,
+      expanded: false,
+      scrollable: false,
+      isScrollControlled: true,
+      // Clear, so the change is judged on the item itself.
+      barrierColor: VineTheme.transparent,
+      title: Text(
+        l10n.videoEditorKeyframesLabel,
+        style: VineTheme.titleMediumFont(
+          color: context.vineColors.primaryText,
+        ),
+      ),
+      body: Builder(
+        builder: (context) {
+          sheetContext = context;
+          return LayerKeyframesSheet(
+            hint: l10n.videoEditorShapeMaskKeyframesHint,
+            isOnKeyframe: _isOnKeyframe,
+            opacity: null,
+            segment: segment == null
+                ? null
+                : (
+                    from: segment + 1,
+                    curve: mask.keyframes[segment].curve,
+                    effect: null,
+                  ),
+            allowsEffects: false,
+            onToggleKeyframe: () {
+              _toggleKeyframe();
+              final routeContext = sheetContext;
+              if (routeContext != null) Navigator.of(routeContext).pop();
+            },
+            // A mask has no opacity and plays no effect.
+            onOpacityChanged: (_) {},
+            onEffectChanged: (_) {},
+            onCurveSelected: _selectCurve,
+          );
+        },
       ),
     );
   }
 
   void _onScaleStart(ScaleStartDetails details) {
-    final mask = _mask;
+    final mask = _shown;
     final geometry = widget.resolveGeometry();
     if (mask == null || geometry == null) return;
     final local = maskLocalPoint(geometry, details.focalPoint);
@@ -203,7 +350,7 @@ class _VideoEditorMaskEditorViewState extends State<VideoEditorMaskEditorView> {
 
   void _onScaleUpdate(ScaleUpdateDetails details) {
     final start = _dragStartMask;
-    final mask = _mask;
+    final mask = _shown;
     final geometry = widget.resolveGeometry();
     if (start == null || mask == null || geometry == null) return;
     final local = maskLocalPoint(geometry, details.focalPoint);
@@ -224,7 +371,7 @@ class _VideoEditorMaskEditorViewState extends State<VideoEditorMaskEditorView> {
 
     switch (_drag) {
       case _Drag.width || _Drag.height:
-        _setMask(
+        _setShown(
           maskResizedTowards(
             start,
             box,
@@ -244,7 +391,7 @@ class _VideoEditorMaskEditorViewState extends State<VideoEditorMaskEditorView> {
         }
         // Kept on the item at the size and turn it now has.
         final moved = local - _dragStartLocal;
-        _setMask(
+        _setShown(
           fitEditorMask(
             next.copyWith(
               center:
@@ -268,7 +415,7 @@ class _VideoEditorMaskEditorViewState extends State<VideoEditorMaskEditorView> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final geometry = widget.resolveGeometry();
-    final mask = _mask;
+    final mask = _shown;
 
     return Scaffold(
       backgroundColor: VineTheme.transparent,
@@ -306,6 +453,9 @@ class _VideoEditorMaskEditorViewState extends State<VideoEditorMaskEditorView> {
               onCancel: () => Navigator.of(context).pop(),
               onDone: () =>
                   Navigator.of(context).pop<MaskEditorResult>((mask: _mask)),
+              onKeyframes: mask == null ? null : _editKeyframes,
+              hasKeyframes: _mask?.hasKeyframes ?? false,
+              isOnKeyframe: _isOnKeyframe,
             ),
           ),
           Align(
@@ -314,11 +464,13 @@ class _VideoEditorMaskEditorViewState extends State<VideoEditorMaskEditorView> {
               mask: mask,
               onShapeSelected: _selectShape,
               onFeatherChanged: (feather) =>
-                  _setMask(mask?.copyWith(feather: feather)),
+                  _setShown(mask?.copyWith(feather: feather)),
+              // The corners and the inversion stay the same throughout, so
+              // they change the whole mask rather than a keyframe.
               onCornerRadiusChanged: (corners) =>
-                  _setMask(mask?.copyWith(cornerRadius: corners)),
+                  _setMask(_mask?.copyWith(cornerRadius: corners)),
               onInvertToggled: () =>
-                  _setMask(mask?.copyWith(invert: !mask.invert)),
+                  _setMask(_mask?.copyWith(invert: !(_mask?.invert ?? false))),
             ),
           ),
         ],
@@ -472,15 +624,31 @@ class MaskOutlinePainter extends CustomPainter {
       oldDelegate.handleColor != handleColor;
 }
 
-/// Cancel on the left, confirm on the right.
+/// Cancel on the left, the keyframes and confirm on the right.
 ///
-/// Only the two buttons catch touches: everything else of the bar's width
+/// Only the buttons catch touches: everything else of the bar's width
 /// belongs to the canvas, where the shape may be dragged under it.
 class _MaskEditorToolbar extends StatelessWidget {
-  const _MaskEditorToolbar({required this.onCancel, required this.onDone});
+  const _MaskEditorToolbar({
+    required this.onCancel,
+    required this.onDone,
+    required this.onKeyframes,
+    required this.hasKeyframes,
+    required this.isOnKeyframe,
+  });
 
   final VoidCallback onCancel;
   final VoidCallback onDone;
+
+  /// Opens the keyframe sheet; `null` hides the button while there is no
+  /// mask to keyframe.
+  final VoidCallback? onKeyframes;
+
+  /// Whether the mask has keyframes, which the button shows.
+  final bool hasKeyframes;
+
+  /// Whether the playhead is on one of them, which fills the button in.
+  final bool isOnKeyframe;
 
   @override
   Widget build(BuildContext context) {
@@ -499,11 +667,29 @@ class _MaskEditorToolbar extends StatelessWidget {
               type: .ghostSecondary,
               onPressed: onCancel,
             ),
-            DivineIconButton(
-              icon: .check,
-              semanticLabel: l10n.videoEditorDoneLabel,
-              size: .small,
-              onPressed: onDone,
+            Row(
+              spacing: 8,
+              children: [
+                if (onKeyframes case final onKeyframes?)
+                  DivineIconButton(
+                    icon: .diamond,
+                    semanticLabel:
+                        l10n.videoEditorShapeMaskKeyframesSemanticLabel,
+                    size: .small,
+                    type: isOnKeyframe
+                        ? .primary
+                        : hasKeyframes
+                        ? .secondary
+                        : .ghostSecondary,
+                    onPressed: onKeyframes,
+                  ),
+                DivineIconButton(
+                  icon: .check,
+                  semanticLabel: l10n.videoEditorDoneLabel,
+                  size: .small,
+                  onPressed: onDone,
+                ),
+              ],
             ),
           ],
         ),

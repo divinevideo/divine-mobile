@@ -9,6 +9,7 @@ import 'package:loop_alignment_repository/loop_alignment_repository.dart';
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
+import 'package:openvine/extensions/layer_mask_keyframes.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
@@ -1238,10 +1239,16 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         ? maxTrim - clampedStart
         : event.trimEnd;
 
+    // A trimmed start leaves a mask's motion on the frames it was set on:
+    // its keyframes count from the clip's start, so they move against it.
+    final mask = clip.mask?.shiftedBy(
+      -clip.sourceOffsetToPlaybackOffset(clampedStart - clip.trimStart),
+    );
     final newClips = List<DivineVideoClip>.of(state.clips);
     newClips[index] = newClips[index].copyWith(
       trimStart: clampedStart,
       trimEnd: clampedEnd,
+      mask: mask,
     );
 
     // Position of the dragged handle within the clip's *untrimmed*

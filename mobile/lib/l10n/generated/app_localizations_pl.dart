@@ -9987,6 +9987,14 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'Zaokrąglone';
 
   @override
+  String get videoEditorShapeMaskKeyframesHint =>
+      'Dodaj klatkę kluczową, przesuń głowicę odtwarzania, a potem otwórz maskę ponownie, aby przesunąć, przeskalować, obrócić lub zmiękczyć kształt. Kształt płynnie przechodzi między klatkami kluczowymi.';
+
+  @override
+  String get videoEditorShapeMaskKeyframesSemanticLabel =>
+      'Edytuj klatki kluczowe maski kształtu';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Wykryj automatycznie';
 
   @override

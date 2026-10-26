@@ -11,11 +11,13 @@ import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart'
     show ExportLayerMapping;
+import 'package:openvine/extensions/layer_mask_export.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_mask_window.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
-import 'package:pro_image_editor/pro_image_editor.dart' show LayerMask;
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show LayerMask, LayerMaskShape;
 import 'package:pro_video_editor/pro_video_editor.dart'
     show
         AnimationPhase,
@@ -106,6 +108,11 @@ Future<VideoRenderData> withClipMaskCovers(
 ///
 /// The layers go first in the export's image layers, so that every overlay
 /// stays on top of the cover. Clips that share a mask share one image.
+///
+/// A mask whose keyframes change it is not baked into the cover: its layer is
+/// all black, and the export cuts the shape out of it on every frame from the
+/// mask turned inside out, read on the editor's timeline from the clip's
+/// start like the preview reads it.
 Future<List<ImageLayer>> clipMaskCoverLayers({
   required List<DivineVideoClip> clips,
   required Size videoSize,
@@ -117,11 +124,17 @@ Future<List<ImageLayer>> clipMaskCoverLayers({
   if (windows.isEmpty) return const [];
 
   final frame = ExportLayerMapping.keptRect(videoSize, targetAspectRatio);
-  final images = <LayerMask, EditorLayerImage>{};
+  final images = <LayerMask?, EditorLayerImage>{};
   final layers = <ImageLayer>[];
   for (final window in windows) {
-    final image = images[window.mask] ??= EditorLayerImage.memory(
-      await _encodePng(await render(window.mask, frame.size)),
+    final moves = window.mask.hasKeyframes;
+    // Keyed by the mask the image bakes in; every moving mask shares the
+    // plain black one.
+    final baked = moves ? null : window.mask;
+    final image = images[baked] ??= EditorLayerImage.memory(
+      await _encodePng(
+        await render(baked ?? _hidesAll, frame.size),
+      ),
     );
 
     final start = timelineMap.editorToOutput(
@@ -141,6 +154,12 @@ Future<List<ImageLayer>> clipMaskCoverLayers({
         endTime: end,
         offset: frame.topLeft,
         size: frame.size,
+        shapeMask: moves
+            ? window.mask
+                  .copyWith(invert: !window.mask.invert)
+                  .divineShapeMaskForExport(origin: window.origin)
+            : null,
+        keyframeClock: moves ? divineKeyframeClock(timelineMap) : const [],
         animations: [
           if (fadeIn > Duration.zero)
             LayerAnimation(
@@ -160,6 +179,13 @@ Future<List<ImageLayer>> clipMaskCoverLayers({
   }
   return layers;
 }
+
+/// A mask that hides all of a frame, so its cover is solid black: a shape
+/// of no size.
+const LayerMask _hidesAll = LayerMask(
+  shape: LayerMaskShape.ellipse,
+  size: Size.zero,
+);
 
 Future<Uint8List> _encodePng(ui.Image image) async {
   try {

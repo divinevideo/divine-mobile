@@ -10001,6 +10001,14 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'Rotunjite';
 
   @override
+  String get videoEditorShapeMaskKeyframesHint =>
+      'Adaugă un cadru cheie, mută capul de redare, apoi deschide din nou masca ca să muți, să redimensionezi, să rotești sau să estompezi forma. Forma alunecă de la un cadru cheie la altul.';
+
+  @override
+  String get videoEditorShapeMaskKeyframesSemanticLabel =>
+      'Editează cadrele cheie ale măștii de formă';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Detectare automată';
 
   @override

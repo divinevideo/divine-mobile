@@ -9696,6 +9696,14 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'Bulat';
 
   @override
+  String get videoEditorShapeMaskKeyframesHint =>
+      'Tambahkan keyframe, geser playhead, lalu buka masking lagi untuk memindahkan, mengubah ukuran, memutar, atau melembutkan bentuk. Bentuk akan meluncur dari keyframe ke keyframe.';
+
+  @override
+  String get videoEditorShapeMaskKeyframesSemanticLabel =>
+      'Edit keyframe masking bentuk';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Deteksi otomatis';
 
   @override

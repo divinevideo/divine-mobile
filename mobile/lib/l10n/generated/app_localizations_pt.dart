@@ -9865,6 +9865,14 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'Arredondados';
 
   @override
+  String get videoEditorShapeMaskKeyframesHint =>
+      'Adicione um quadro-chave, mova a cabeça de reprodução e depois abra a máscara de novo para mover, redimensionar, girar ou suavizar a forma. Ela desliza de um quadro-chave para o outro.';
+
+  @override
+  String get videoEditorShapeMaskKeyframesSemanticLabel =>
+      'Editar quadros-chave da máscara de forma';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Detetar automaticamente';
 
   @override

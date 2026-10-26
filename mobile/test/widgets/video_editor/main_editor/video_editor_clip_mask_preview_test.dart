@@ -10,7 +10,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_mask_window.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_clip_mask_preview.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
-    show LayerMask, LayerMaskBox, LayerMaskShape;
+    show LayerMask, LayerMaskBox, LayerMaskKeyframe, LayerMaskShape;
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
 void main() {
@@ -76,6 +76,27 @@ void main() {
       playTime.value = const Duration(milliseconds: 1500);
       await tester.pump();
       expect(covers(tester), isEmpty);
+    });
+
+    testWidgets('moves a mask with keyframes as the playhead moves through '
+        'the clip', (tester) async {
+      final moving = heart.withKeyframes(const [
+        LayerMaskKeyframe(time: Duration.zero, center: Offset(0.2, 0.5)),
+        LayerMaskKeyframe(time: Duration(seconds: 2), center: Offset(0.8, 0.5)),
+      ]);
+      liveMask.value = (clipId: 'b', mask: moving);
+      playTime.value = const Duration(seconds: 2);
+      await pumpCover(tester);
+
+      // Clip b starts at 2 s, so its mask counts from there.
+      expect(covers(tester).single!.center.dx, closeTo(0.2, 1e-9));
+      expect(covers(tester).single!.hasKeyframes, isFalse);
+
+      playTime.value = const Duration(seconds: 3);
+      await tester.pump();
+
+      expect(covers(tester).single!.center.dx, closeTo(0.5, 1e-9));
+      expect(covers(tester).single!.invert, isTrue);
     });
 
     testWidgets("draws a mask being changed in place of the clip's own", (

@@ -3124,6 +3124,8 @@
   "videoEditorShapeMaskCornersLabel": "Mga sulok",
   "videoEditorShapeMaskCornersSquare": "Kuwadrado",
   "videoEditorShapeMaskCornersRound": "Pabilog",
+  "videoEditorShapeMaskKeyframesHint": "Magdagdag ng keyframe, ilipat ang playhead, tapos buksan ulit ang mask para ilipat, i-resize, i-rotate o palambutin ang hugis. Dadausdos ito mula keyframe hanggang keyframe.",
+  "videoEditorShapeMaskKeyframesSemanticLabel": "I-edit ang mga keyframe ng shape mask",
   "videoEditorChromaKeyAutoDetect": "Auto-detect",
   "videoEditorChromaKeyPresetGreen": "Berde",
   "videoEditorChromaKeyPresetBlue": "Asul",
