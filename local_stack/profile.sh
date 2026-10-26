@@ -65,7 +65,12 @@ echo "Report:     ${REPORT_FILE}" >&2
 echo "" >&2
 
 # --- Verify docker stack is running ---
-if ! local_stack_has_running_container "$COMPOSE_FILE"; then
+if [[ -n "${E2E_BACKEND_LOG:-}" ]]; then
+    if [[ ! -f "$E2E_BACKEND_LOG" ]]; then
+        echo "ERROR: E2E_BACKEND_LOG must name the running local backend's log." >&2
+        exit 1
+    fi
+elif ! local_stack_has_running_container "$COMPOSE_FILE"; then
     echo "ERROR: Docker stack is not running. Start with: mise run local_up" >&2
     exit 1
 fi
@@ -98,10 +103,15 @@ if [ "$PATROL_CURRENT_VERSION" != "$PATROL_CLI_VERSION" ]; then
 fi
 
 # --- Start docker log capture (background, from now only) ---
-echo "Starting docker log capture..." >&2
-docker compose -f "$COMPOSE_FILE" logs -f -t --since "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    keycast funnelcake-relay funnelcake-api blossom blossom-proxy \
-    > "$DOCKER_LOG" 2>&1 &
+if [[ -n "${E2E_BACKEND_LOG:-}" ]]; then
+    echo "Capturing isolated local backend: $E2E_BACKEND_LOG" >&2
+    tail -n +1 -F "$E2E_BACKEND_LOG" > "$DOCKER_LOG" 2>&1 &
+else
+    echo "Starting docker log capture..." >&2
+    docker compose -f "$COMPOSE_FILE" logs -f -t --since "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        keycast funnelcake-relay funnelcake-api blossom blossom-proxy \
+        > "$DOCKER_LOG" 2>&1 &
+fi
 DOCKER_PID=$!
 
 # --- Detect connected Android device ---
@@ -178,6 +188,14 @@ else
             echo "WARNING: could not pre-grant POST_NOTIFICATIONS to co.openvine.app.staging." >&2
             echo "Below Android 13 that is expected; otherwise its dialog can block the run." >&2
         fi
+        # Native capture acceptance explicitly opts into camera/audio grants.
+        # Flutter install may uninstall the old debug app and clear grants.
+        for permission in ${E2E_TEST_PERMISSIONS:-}; do
+            adb -s "$DEVICE" shell pm grant co.openvine.app.staging "$permission" || {
+                echo "ERROR: could not grant requested test permission: $permission" >&2
+                exit 1
+            }
+        done
         flutter test "$TEST_PATH" \
             --device-id "$DEVICE" \
             --dart-define=DEFAULT_ENV=LOCAL \
