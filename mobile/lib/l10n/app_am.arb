@@ -3698,6 +3698,8 @@
   "videoEditorInfoStickerDayTotalLabel": "ጠቅላላ ቀናት (አማራጭ)",
   "videoEditorInfoStickerSymbolPin": "ፒን",
   "videoEditorInfoStickerSymbolFlag": "ባንዲራ",
+  "videoEditorInfoStickerSymbolGlobe": "ሉል",
+  "videoEditorInfoStickerSymbolMap": "ካርታ",
   "videoEditorInfoStickerMoonNew": "አዲስ ጨረቃ",
   "videoEditorInfoStickerMoonWaxingCrescent": "እያደገ ያለ ቀጭን ጨረቃ",
   "videoEditorInfoStickerMoonFirstQuarter": "የመጀመሪያ ሩብ",

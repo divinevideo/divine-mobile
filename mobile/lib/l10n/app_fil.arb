@@ -2362,6 +2362,8 @@
   "videoEditorInfoStickerDayTotalLabel": "Kabuuang araw (opsyonal)",
   "videoEditorInfoStickerSymbolPin": "Pin",
   "videoEditorInfoStickerSymbolFlag": "Bandila",
+  "videoEditorInfoStickerSymbolGlobe": "Globo",
+  "videoEditorInfoStickerSymbolMap": "Mapa",
   "videoEditorInfoStickerMoonNew": "Bagong buwan",
   "videoEditorInfoStickerMoonWaxingCrescent": "Waxing crescent",
   "videoEditorInfoStickerMoonFirstQuarter": "First quarter",

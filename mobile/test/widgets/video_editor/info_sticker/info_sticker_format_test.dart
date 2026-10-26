@@ -181,18 +181,40 @@ void main() {
         expect(InfoStickerFormat.flag('C1'), isNull);
       });
 
-      test('shows the flag on a location sticker only when chosen', () {
+      test('shows the symbol chosen for a location sticker', () {
         const data = InfoStickerData(
           kind: InfoStickerKind.location,
           localeName: 'en',
           placeName: 'Zermatt',
           countryCode: 'CH',
+          globe: InfoStickerGlobe.europeAfrica,
+        );
+
+        expect(
+          [
+            for (final symbol in InfoStickerPlaceSymbol.values)
+              InfoStickerFormat.emoji(data.copyWith(placeSymbol: symbol)),
+          ],
+          equals(['📍', '🇨🇭', '🌍', '🗺️']),
+        );
+      });
+
+      test('falls back to a pin for a flag of an unknown country', () {
+        const data = InfoStickerData(
+          kind: InfoStickerKind.location,
+          localeName: 'en',
+          placeName: 'Zermatt',
+          placeSymbol: InfoStickerPlaceSymbol.flag,
         );
 
         expect(InfoStickerFormat.emoji(data), equals('📍'));
+      });
+
+      test('shows a globe with meridians for an unknown side', () {
+        expect(InfoStickerFormat.globe(null), equals('🌐'));
         expect(
-          InfoStickerFormat.emoji(data.copyWith(showFlag: true)),
-          equals('🇨🇭'),
+          InfoStickerFormat.globe(InfoStickerGlobe.americas),
+          equals('🌎'),
         );
       });
     });

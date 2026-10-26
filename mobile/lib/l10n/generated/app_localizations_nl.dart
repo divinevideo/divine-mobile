@@ -10813,6 +10813,12 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorInfoStickerSymbolFlag => 'Vlag';
 
   @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Wereldbol';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Kaart';
+
+  @override
   String get videoEditorInfoStickerMoonNew => 'Nieuwe maan';
 
   @override

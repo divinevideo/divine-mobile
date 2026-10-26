@@ -8020,6 +8020,14 @@
   "@videoEditorInfoStickerSymbolFlag": {
     "description": "Choice that shows the country's flag in front of the place name on a location sticker."
   },
+  "videoEditorInfoStickerSymbolGlobe": "Globe",
+  "@videoEditorInfoStickerSymbolGlobe": {
+    "description": "Choice that shows a globe turned to the place's side of the world in front of the place name on a location sticker."
+  },
+  "videoEditorInfoStickerSymbolMap": "Map",
+  "@videoEditorInfoStickerSymbolMap": {
+    "description": "Choice that shows a folded map in front of the place name on a location sticker."
+  },
   "videoEditorInfoStickerMoonNew": "New moon",
   "@videoEditorInfoStickerMoonNew": {
     "description": "Moon phase shown on the moon sticker."

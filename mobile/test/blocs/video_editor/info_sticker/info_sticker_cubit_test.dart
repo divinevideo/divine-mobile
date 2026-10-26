@@ -347,6 +347,7 @@ void main() {
         act: (cubit) => cubit.placeSelected(_bern),
         verify: (cubit) {
           expect(cubit.state.data.placeName, equals('Bern'));
+          expect(cubit.state.data.globe, InfoStickerGlobe.europeAfrica);
           expect(cubit.state.data.isComplete, isTrue);
           expect(cubit.state.step, InfoStickerStep.design);
         },

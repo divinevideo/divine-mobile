@@ -10138,6 +10138,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorInfoStickerSymbolFlag => '国旗';
 
   @override
+  String get videoEditorInfoStickerSymbolGlobe => '地球仪';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => '地图';
+
+  @override
   String get videoEditorInfoStickerMoonNew => '新月';
 
   @override

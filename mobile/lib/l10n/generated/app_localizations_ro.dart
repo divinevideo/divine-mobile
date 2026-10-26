@@ -10991,6 +10991,12 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorInfoStickerSymbolFlag => 'Steag';
 
   @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Glob';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Hartă';
+
+  @override
   String get videoEditorInfoStickerMoonNew => 'Lună nouă';
 
   @override

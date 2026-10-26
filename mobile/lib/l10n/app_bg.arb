@@ -3309,6 +3309,8 @@
   "videoEditorInfoStickerDayTotalLabel": "Общо дни (по желание)",
   "videoEditorInfoStickerSymbolPin": "Карфица",
   "videoEditorInfoStickerSymbolFlag": "Знаме",
+  "videoEditorInfoStickerSymbolGlobe": "Глобус",
+  "videoEditorInfoStickerSymbolMap": "Карта",
   "videoEditorInfoStickerMoonNew": "Новолуние",
   "videoEditorInfoStickerMoonWaxingCrescent": "Растящ сърп",
   "videoEditorInfoStickerMoonFirstQuarter": "Първа четвърт",

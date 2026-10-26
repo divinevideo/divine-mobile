@@ -2968,6 +2968,8 @@
   "videoEditorInfoStickerDayTotalLabel": "全日数（任意）",
   "videoEditorInfoStickerSymbolPin": "ピン",
   "videoEditorInfoStickerSymbolFlag": "国旗",
+  "videoEditorInfoStickerSymbolGlobe": "地球儀",
+  "videoEditorInfoStickerSymbolMap": "地図",
   "videoEditorInfoStickerMoonNew": "新月",
   "videoEditorInfoStickerMoonWaxingCrescent": "三日月",
   "videoEditorInfoStickerMoonFirstQuarter": "上弦の月",

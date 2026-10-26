@@ -1,23 +1,43 @@
 // ABOUTME: Renders the frames a REC timer sticker exports as: one image per
-// ABOUTME: second of the video, each showing the time that second shows.
+// ABOUTME: frame of a 30 fps video, each showing the time that frame shows.
 
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:ui' show Size;
 
+import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/utils/rec_timer_paint.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:unified_logger/unified_logger.dart';
+
+/// How often an exported REC timer changes: every frame of a 30 fps video,
+/// so its hundredths run on the way a stopwatch's do when it is filmed. Any
+/// slower and the hundredths visibly stutter.
+const recTimerFrameStep = Duration(microseconds: 33333);
+
+/// The pixels all frames of one exported REC timer may hold together.
+///
+/// The renderer keeps every frame decoded for the whole export, at four
+/// bytes a pixel, the way it keeps every step of a typewriter text. A timer
+/// as wide as the video still changes 25 times a second within this; only
+/// one scaled up past the frame changes less often, instead of holding
+/// gigabytes.
+const int recTimerPixelBudget = 48 * 1000 * 1000;
+
+/// How many frames are painted at once: enough to keep the raster thread
+/// busy, few enough that their images do not pile up in memory.
+const _paintBatch = 24;
 
 /// The frames every REC timer among [layers] exports as, keyed by layer id.
 ///
 /// The layer capture holds one still of the timer at rest, but the timer
-/// runs with the video, so it is painted again for every second it shows,
-/// at the size, mask, turn, flip and opacity the capture baked into that
-/// still. The renderer shows the frames one after the other, the way it
-/// shows a typewriter text, so the timer reads 00:00, 00:01 and so on
+/// runs with the video, so it is painted again for every frame it shows, at
+/// the size, mask, turn, flip and opacity the capture baked into that still.
+/// The renderer shows the frames one after the other, the way it shows a
+/// typewriter text, so the timer reads 00:00, 00:03, 00:06 and so on
 /// wherever it sits on the timeline.
 ///
 /// [editorDuration] is where a timer without an end stops counting.
@@ -29,31 +49,39 @@ Future<Map<String, List<ExportedLayerFrame>>> recTimerLayerFrames(
   for (final item in layers) {
     final data = InfoStickerData.of(item.layer);
     if (data == null || data.kind != InfoStickerKind.recTimer) continue;
+    final stopwatch = clock.stopwatch()..start();
     frames[item.layer.id] = await _framesOf(item, data.style, editorDuration);
+    Log.debug(
+      'Painted ${frames[item.layer.id]!.length} REC timer frames of '
+      '${item.logicalSize} logical px for layer ${item.layer.id} in '
+      '${stopwatch.elapsedMilliseconds} ms',
+      name: 'RecTimerFrames',
+      category: LogCategory.video,
+    );
   }
   return frames;
 }
 
 /// The time windows of a timer from [start] until [end], or until the
-/// video ends when [end] is `null`: one per second of the video the timer
-/// shows, cut at its own start and end.
-List<({Duration second, Duration? start, Duration? end})> recTimerWindows({
+/// video ends when [end] is `null`: one per [step] of the video, each with
+/// the time it shows, cut at the timer's own start and end.
+List<({Duration shown, Duration? start, Duration? end})> recTimerWindows({
   required Duration? start,
   required Duration? end,
   required Duration editorDuration,
+  Duration step = recTimerFrameStep,
 }) {
   final from = start ?? Duration.zero;
   final to = end ?? editorDuration;
-  const second = Duration(seconds: 1);
-  final windows = <({Duration second, Duration? start, Duration? end})>[];
+  final windows = <({Duration shown, Duration? start, Duration? end})>[];
   for (
-    var shown = Duration(seconds: from.inSeconds);
+    var shown = step * (from.inMicroseconds ~/ step.inMicroseconds);
     shown < to;
-    shown += second
+    shown += step
   ) {
-    final windowEnd = shown + second;
+    final windowEnd = shown + step;
     windows.add((
-      second: shown,
+      shown: shown,
       start: shown < from ? start : shown,
       // The last window keeps the layer's own end, which may be "the end of
       // the video".
@@ -61,6 +89,17 @@ List<({Duration second, Duration? start, Duration? end})> recTimerWindows({
     ));
   }
   return windows;
+}
+
+/// The step between the frames of a timer painted [frame] pixels large that
+/// runs for [span]: [recTimerFrameStep], or longer when that many frames
+/// would hold more than [recTimerPixelBudget] pixels.
+Duration recTimerFrameStepFor({required Size frame, required Duration span}) {
+  final pixels = frame.width * frame.height;
+  final budgeted = span.inMicroseconds * pixels / recTimerPixelBudget;
+  return Duration(
+    microseconds: math.max(recTimerFrameStep.inMicroseconds, budgeted.ceil()),
+  );
 }
 
 Future<List<ExportedLayerFrame>> _framesOf(
@@ -71,18 +110,27 @@ Future<List<ExportedLayerFrame>> _framesOf(
   final layer = item.layer;
   final pixelRatio = await _capturedPixelRatio(item);
   final box = _unturnedSize(item.logicalSize, layer.rotation) * pixelRatio;
-  final frames = <ExportedLayerFrame>[];
-  for (final window in recTimerWindows(
+  final span =
+      (layer.endTime ?? editorDuration) - (layer.startTime ?? Duration.zero);
+  final windows = recTimerWindows(
     start: layer.startTime,
     end: layer.endTime,
     editorDuration: editorDuration,
-  )) {
-    frames.add(
-      ExportedLayerFrame(
-        bytes: await _paintFrame(layer, style, box, window.second),
-        startTime: window.start,
-        endTime: window.end,
-      ),
+    step: recTimerFrameStepFor(frame: box, span: span),
+  );
+  final frames = <ExportedLayerFrame>[];
+  for (var i = 0; i < windows.length; i += _paintBatch) {
+    frames.addAll(
+      await Future.wait([
+        for (final window in windows.skip(i).take(_paintBatch))
+          _paintFrame(layer, style, box, window.shown).then(
+            (bytes) => ExportedLayerFrame(
+              bytes: bytes,
+              startTime: window.start,
+              endTime: window.end,
+            ),
+          ),
+      ]),
     );
   }
   return frames;

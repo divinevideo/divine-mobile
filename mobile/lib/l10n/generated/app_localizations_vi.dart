@@ -10722,6 +10722,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorInfoStickerSymbolFlag => 'Cờ';
 
   @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Quả địa cầu';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Bản đồ';
+
+  @override
   String get videoEditorInfoStickerMoonNew => 'Trăng non';
 
   @override

@@ -10928,6 +10928,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorInfoStickerSymbolFlag => 'Drapeau';
 
   @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Globe';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Carte';
+
+  @override
   String get videoEditorInfoStickerMoonNew => 'Nouvelle lune';
 
   @override

@@ -3068,6 +3068,8 @@
   "videoEditorInfoStickerDayTotalLabel": "Anzahl Tage (optional)",
   "videoEditorInfoStickerSymbolPin": "Pin",
   "videoEditorInfoStickerSymbolFlag": "Flagge",
+  "videoEditorInfoStickerSymbolGlobe": "Globus",
+  "videoEditorInfoStickerSymbolMap": "Karte",
   "videoEditorInfoStickerMoonNew": "Neumond",
   "videoEditorInfoStickerMoonWaxingCrescent": "Zunehmende Sichel",
   "videoEditorInfoStickerMoonFirstQuarter": "Erstes Viertel",

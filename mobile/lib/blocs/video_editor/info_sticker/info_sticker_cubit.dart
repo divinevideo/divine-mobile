@@ -216,9 +216,9 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
     ),
   );
 
-  /// Whether a location sticker shows its country's flag instead of a pin.
-  void showFlagChanged(bool showFlag) =>
-      emit(state.copyWith(data: state.data.copyWith(showFlag: showFlag)));
+  /// What a location sticker shows in front of the place's name.
+  void placeSymbolChanged(InfoStickerPlaceSymbol symbol) =>
+      emit(state.copyWith(data: state.data.copyWith(placeSymbol: symbol)));
 
   void batteryLevelChanged(int level) => emit(
     state.copyWith(
@@ -243,6 +243,7 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
             ? data.copyWith(
                 placeName: place.name,
                 countryCode: place.countryCode,
+                globe: InfoStickerGlobe.at(place.longitude),
               )
             : data,
         valueStatus: kind == InfoStickerKind.location ? .success : .loading,

@@ -2968,6 +2968,8 @@
   "videoEditorInfoStickerDayTotalLabel": "إجمالي الأيام (اختياري)",
   "videoEditorInfoStickerSymbolPin": "دبوس",
   "videoEditorInfoStickerSymbolFlag": "علم",
+  "videoEditorInfoStickerSymbolGlobe": "كرة أرضية",
+  "videoEditorInfoStickerSymbolMap": "خريطة",
   "videoEditorInfoStickerMoonNew": "محاق",
   "videoEditorInfoStickerMoonWaxingCrescent": "هلال متزايد",
   "videoEditorInfoStickerMoonFirstQuarter": "تربيع أول",

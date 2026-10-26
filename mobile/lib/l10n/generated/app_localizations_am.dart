@@ -10520,6 +10520,12 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorInfoStickerSymbolFlag => 'ባንዲራ';
 
   @override
+  String get videoEditorInfoStickerSymbolGlobe => 'ሉል';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'ካርታ';
+
+  @override
   String get videoEditorInfoStickerMoonNew => 'አዲስ ጨረቃ';
 
   @override

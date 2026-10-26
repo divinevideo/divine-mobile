@@ -18335,6 +18335,18 @@ abstract class AppLocalizations {
   /// **'Flag'**
   String get videoEditorInfoStickerSymbolFlag;
 
+  /// Choice that shows a globe turned to the place's side of the world in front of the place name on a location sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Globe'**
+  String get videoEditorInfoStickerSymbolGlobe;
+
+  /// Choice that shows a folded map in front of the place name on a location sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Map'**
+  String get videoEditorInfoStickerSymbolMap;
+
   /// Moon phase shown on the moon sticker.
   ///
   /// In en, this message translates to:

@@ -263,35 +263,50 @@ class InfoStickerDayCountFields extends StatelessWidget {
   }
 }
 
-/// Picks a pin or the country's flag in front of a location sticker's name,
-/// when the place's country is known.
+/// Picks what a location sticker shows in front of the place's name: a pin,
+/// the country's flag when the country is known, a globe or a map.
 class InfoStickerSymbolChoice extends StatelessWidget {
   const InfoStickerSymbolChoice({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final (countryCode, showFlag) = context.select(
+    final (countryCode, globe, symbol) = context.select(
       (InfoStickerCubit cubit) => (
         cubit.state.data.countryCode,
-        cubit.state.data.showFlag,
+        cubit.state.data.globe,
+        cubit.state.data.placeSymbol,
       ),
     );
     final flag = InfoStickerFormat.flag(countryCode);
-    if (flag == null) return const SizedBox.shrink();
     final cubit = context.read<InfoStickerCubit>();
     final l10n = context.l10n;
     return _ChipRow(
       children: [
-        _ChoiceChip(
-          label: '📍 ${l10n.videoEditorInfoStickerSymbolPin}',
-          selected: !showFlag,
-          onTap: () => cubit.showFlagChanged(false),
-        ),
-        _ChoiceChip(
-          label: '$flag ${l10n.videoEditorInfoStickerSymbolFlag}',
-          selected: showFlag,
-          onTap: () => cubit.showFlagChanged(true),
-        ),
+        for (final (option, label) in [
+          (
+            InfoStickerPlaceSymbol.pin,
+            '📍 ${l10n.videoEditorInfoStickerSymbolPin}',
+          ),
+          if (flag != null)
+            (
+              InfoStickerPlaceSymbol.flag,
+              '$flag ${l10n.videoEditorInfoStickerSymbolFlag}',
+            ),
+          (
+            InfoStickerPlaceSymbol.globe,
+            '${InfoStickerFormat.globe(globe)} '
+                '${l10n.videoEditorInfoStickerSymbolGlobe}',
+          ),
+          (
+            InfoStickerPlaceSymbol.map,
+            '🗺️ ${l10n.videoEditorInfoStickerSymbolMap}',
+          ),
+        ])
+          _ChoiceChip(
+            label: label,
+            selected: symbol == option,
+            onTap: () => cubit.placeSymbolChanged(option),
+          ),
       ],
     );
   }

@@ -6233,6 +6233,8 @@
   "videoEditorInfoStickerDayTotalLabel": "మొత్తం రోజులు (ఐచ్ఛికం)",
   "videoEditorInfoStickerSymbolPin": "పిన్",
   "videoEditorInfoStickerSymbolFlag": "జెండా",
+  "videoEditorInfoStickerSymbolGlobe": "గ్లోబ్",
+  "videoEditorInfoStickerSymbolMap": "మ్యాప్",
   "videoEditorInfoStickerMoonNew": "అమావాస్య",
   "videoEditorInfoStickerMoonWaxingCrescent": "పెరుగుతున్న నెలవంక",
   "videoEditorInfoStickerMoonFirstQuarter": "మొదటి పావు",

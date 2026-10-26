@@ -2975,6 +2975,8 @@
   "videoEditorInfoStickerDayTotalLabel": "Jumlah hari (opsional)",
   "videoEditorInfoStickerSymbolPin": "Pin",
   "videoEditorInfoStickerSymbolFlag": "Bendera",
+  "videoEditorInfoStickerSymbolGlobe": "Globe",
+  "videoEditorInfoStickerSymbolMap": "Peta",
   "videoEditorInfoStickerMoonNew": "Bulan baru",
   "videoEditorInfoStickerMoonWaxingCrescent": "Sabit awal",
   "videoEditorInfoStickerMoonFirstQuarter": "Kuartal pertama",

@@ -64,11 +64,16 @@ abstract final class InfoStickerFormat {
     };
   }
 
-  /// The symbol in front of the sticker's text, or `null` for none.
+  /// The emoji in front of the sticker's text, or `null` for none; a
+  /// battery sticker draws its own battery instead.
   static String? emoji(InfoStickerData data) => switch (data.kind) {
-    InfoStickerKind.location =>
-      data.showFlag ? flag(data.countryCode) ?? '📍' : '📍',
-    InfoStickerKind.altitude => '⛰️',
+    InfoStickerKind.location => switch (data.placeSymbol) {
+      InfoStickerPlaceSymbol.pin => '📍',
+      InfoStickerPlaceSymbol.flag => flag(data.countryCode) ?? '📍',
+      InfoStickerPlaceSymbol.globe => globe(data.globe),
+      InfoStickerPlaceSymbol.map => '🗺️',
+    },
+    InfoStickerKind.altitude => '🏔️',
     InfoStickerKind.moon => switch (_phase(data)) {
       null => null,
       InfoStickerMoonPhase.newMoon => '🌑',
@@ -104,6 +109,15 @@ abstract final class InfoStickerFormat {
       for (final unit in code.codeUnits) 0x1F1E6 + unit - 0x41,
     ]);
   }
+
+  /// A globe turned to [side] of the world, or one with meridians for a
+  /// place whose side is not known.
+  static String globe(InfoStickerGlobe? side) => switch (side) {
+    null => '🌐',
+    InfoStickerGlobe.americas => '🌎',
+    InfoStickerGlobe.europeAfrica => '🌍',
+    InfoStickerGlobe.asiaPacific => '🌏',
+  };
 
   /// What a screen reader says for the sticker.
   static String semanticLabel(InfoStickerData data) => text(data);

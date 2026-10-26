@@ -2514,6 +2514,8 @@
   "videoEditorInfoStickerDayTotalLabel": "전체 일수(선택)",
   "videoEditorInfoStickerSymbolPin": "핀",
   "videoEditorInfoStickerSymbolFlag": "국기",
+  "videoEditorInfoStickerSymbolGlobe": "지구본",
+  "videoEditorInfoStickerSymbolMap": "지도",
   "videoEditorInfoStickerMoonNew": "삭",
   "videoEditorInfoStickerMoonWaxingCrescent": "초승달",
   "videoEditorInfoStickerMoonFirstQuarter": "상현달",

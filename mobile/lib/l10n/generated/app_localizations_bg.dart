@@ -10864,6 +10864,12 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorInfoStickerSymbolFlag => 'Знаме';
 
   @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Глобус';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Карта';
+
+  @override
   String get videoEditorInfoStickerMoonNew => 'Новолуние';
 
   @override

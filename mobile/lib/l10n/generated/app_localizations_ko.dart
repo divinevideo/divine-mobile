@@ -10261,6 +10261,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorInfoStickerSymbolFlag => '국기';
 
   @override
+  String get videoEditorInfoStickerSymbolGlobe => '지구본';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => '지도';
+
+  @override
   String get videoEditorInfoStickerMoonNew => '삭';
 
   @override

@@ -10845,6 +10845,12 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorInfoStickerSymbolFlag => 'Bandila';
 
   @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Globo';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Mapa';
+
+  @override
   String get videoEditorInfoStickerMoonNew => 'Bagong buwan';
 
   @override

@@ -11053,6 +11053,12 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorInfoStickerSymbolFlag => 'జెండా';
 
   @override
+  String get videoEditorInfoStickerSymbolGlobe => 'గ్లోబ్';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'మ్యాప్';
+
+  @override
   String get videoEditorInfoStickerMoonNew => 'అమావాస్య';
 
   @override

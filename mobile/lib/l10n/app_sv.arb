@@ -3068,6 +3068,8 @@
   "videoEditorInfoStickerDayTotalLabel": "Antal dagar (valfritt)",
   "videoEditorInfoStickerSymbolPin": "Nål",
   "videoEditorInfoStickerSymbolFlag": "Flagga",
+  "videoEditorInfoStickerSymbolGlobe": "Jordglob",
+  "videoEditorInfoStickerSymbolMap": "Karta",
   "videoEditorInfoStickerMoonNew": "Nymåne",
   "videoEditorInfoStickerMoonWaxingCrescent": "Tilltagande skära",
   "videoEditorInfoStickerMoonFirstQuarter": "Första kvarteret",

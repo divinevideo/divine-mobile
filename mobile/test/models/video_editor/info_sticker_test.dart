@@ -22,7 +22,8 @@ void main() {
           dateFormat: InfoStickerDateFormat.full,
           placeName: 'Bern',
           countryCode: 'CH',
-          showFlag: true,
+          placeSymbol: InfoStickerPlaceSymbol.globe,
+          globe: InfoStickerGlobe.asiaPacific,
           dayNumber: 12,
           dayTotal: 30,
           sunrise: DateTime(2026, 10, 26, 7),
@@ -185,6 +186,28 @@ void main() {
         expect(data.isComplete, isFalse);
         expect(data.copyWith(placeName: 'Bern').isComplete, isTrue);
       });
+    });
+  });
+
+  group(InfoStickerGlobe, () {
+    test('turns to the side of the world a place is on', () {
+      expect(
+        [
+          for (final longitude in [-74.0, -157.8, 7.4, 55.3, 139.7, -172.0])
+            InfoStickerGlobe.at(longitude),
+        ],
+        equals([
+          InfoStickerGlobe.americas,
+          // Honolulu.
+          InfoStickerGlobe.americas,
+          InfoStickerGlobe.europeAfrica,
+          // Dubai.
+          InfoStickerGlobe.europeAfrica,
+          InfoStickerGlobe.asiaPacific,
+          // Samoa, past the edge of the globe with the Americas.
+          InfoStickerGlobe.asiaPacific,
+        ]),
+      );
     });
   });
 

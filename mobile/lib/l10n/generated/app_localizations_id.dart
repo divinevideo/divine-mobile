@@ -10676,6 +10676,12 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorInfoStickerSymbolFlag => 'Bendera';
 
   @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Globe';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Peta';
+
+  @override
   String get videoEditorInfoStickerMoonNew => 'Bulan baru';
 
   @override

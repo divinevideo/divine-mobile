@@ -10851,6 +10851,12 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorInfoStickerSymbolFlag => 'Bandeira';
 
   @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Globo';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Mapa';
+
+  @override
   String get videoEditorInfoStickerMoonNew => 'Lua nova';
 
   @override

@@ -2975,6 +2975,8 @@
   "videoEditorInfoStickerDayTotalLabel": "Toplam gün (isteğe bağlı)",
   "videoEditorInfoStickerSymbolPin": "İğne",
   "videoEditorInfoStickerSymbolFlag": "Bayrak",
+  "videoEditorInfoStickerSymbolGlobe": "Küre",
+  "videoEditorInfoStickerSymbolMap": "Harita",
   "videoEditorInfoStickerMoonNew": "Yeni ay",
   "videoEditorInfoStickerMoonWaxingCrescent": "Büyüyen hilal",
   "videoEditorInfoStickerMoonFirstQuarter": "İlk dördün",

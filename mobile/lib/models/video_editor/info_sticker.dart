@@ -108,6 +108,51 @@ enum InfoStickerDateFormat {
   stamp,
 }
 
+/// What a location sticker shows in front of the place's name.
+enum InfoStickerPlaceSymbol {
+  pin,
+
+  /// The flag of the place's country.
+  flag,
+
+  /// A globe turned to the place's side of the world.
+  globe,
+
+  /// A folded map.
+  map,
+}
+
+/// The side of the world a globe shows, for a location sticker's globe.
+///
+/// Kept instead of the place's longitude, which would say far more about
+/// where the place is than the sticker shows.
+enum InfoStickerGlobe {
+  americas,
+  europeAfrica,
+  asiaPacific;
+
+  /// Where the globe with the Americas ends in the east, in degrees.
+  static const double _americasEast = -25;
+
+  /// Where the globe with the Americas ends in the west; the Pacific islands
+  /// past it sit on the one with Asia and Australia.
+  static const double _americasWest = -170;
+
+  /// Where the globe with Europe and Africa ends in the east.
+  static const double _europeAfricaEast = 60;
+
+  /// The globe that shows [longitude], in degrees east.
+  static InfoStickerGlobe at(double longitude) {
+    if (longitude >= _americasWest && longitude < _americasEast) {
+      return americas;
+    }
+    if (longitude >= _americasEast && longitude < _europeAfricaEast) {
+      return europeAfrica;
+    }
+    return asiaPacific;
+  }
+}
+
 /// The phase of the moon, in eight steps from new moon to new moon.
 enum InfoStickerMoonPhase {
   newMoon,
@@ -183,7 +228,8 @@ class InfoStickerData extends Equatable {
     this.dateFormat = InfoStickerDateFormat.dayMonth,
     this.placeName,
     this.countryCode,
-    this.showFlag = false,
+    this.placeSymbol = InfoStickerPlaceSymbol.pin,
+    this.globe,
     this.dayNumber,
     this.dayTotal,
     this.sunrise,
@@ -260,8 +306,11 @@ class InfoStickerData extends Equatable {
   /// The ISO 3166 code of the country the place is in, for its flag.
   final String? countryCode;
 
-  /// Whether a location sticker shows the country's flag instead of a pin.
-  final bool showFlag;
+  /// What a location sticker shows in front of the place's name.
+  final InfoStickerPlaceSymbol placeSymbol;
+
+  /// The side of the world the place is on, for a globe in front of it.
+  final InfoStickerGlobe? globe;
 
   /// The day a day counter shows, such as 12 in "Day 12 of 30".
   final int? dayNumber;
@@ -352,7 +401,8 @@ class InfoStickerData extends Equatable {
     'dateFormat': dateFormat.name,
     'placeName': ?placeName,
     'countryCode': ?countryCode,
-    'showFlag': showFlag,
+    'placeSymbol': placeSymbol.name,
+    'globe': ?globe?.name,
     'dayNumber': ?dayNumber,
     'dayTotal': ?dayTotal,
     if (sunrise case final sunrise?)
@@ -375,7 +425,8 @@ class InfoStickerData extends Equatable {
     InfoStickerDateFormat? dateFormat,
     String? placeName,
     String? countryCode,
-    bool? showFlag,
+    InfoStickerPlaceSymbol? placeSymbol,
+    InfoStickerGlobe? globe,
     int? dayNumber,
     int? dayTotal,
     bool clearDayTotal = false,
@@ -397,7 +448,8 @@ class InfoStickerData extends Equatable {
     dateFormat: dateFormat ?? this.dateFormat,
     placeName: placeName ?? this.placeName,
     countryCode: countryCode ?? this.countryCode,
-    showFlag: showFlag ?? this.showFlag,
+    placeSymbol: placeSymbol ?? this.placeSymbol,
+    globe: globe ?? this.globe,
     dayNumber: dayNumber ?? this.dayNumber,
     dayTotal: clearDayTotal ? null : dayTotal ?? this.dayTotal,
     sunrise: sunrise ?? this.sunrise,
@@ -411,8 +463,8 @@ class InfoStickerData extends Equatable {
     batteryLevel: batteryLevel ?? this.batteryLevel,
   );
 
-  /// This sticker without what a place gave it: the place name and country,
-  /// the weather, the sun times and the altitude. [copyWith] cannot unset
+  /// This sticker without what a place gave it: the place name, country and
+  /// side of the world, the weather, the sun times and the altitude. [copyWith] cannot unset
   /// them, so another place's values start from here, and a value the new
   /// place lacks is not left over from the last one.
   InfoStickerData withoutPlaceValues() => InfoStickerData(
@@ -422,7 +474,7 @@ class InfoStickerData extends Equatable {
     dateTime: dateTime,
     use24HourFormat: use24HourFormat,
     dateFormat: dateFormat,
-    showFlag: showFlag,
+    placeSymbol: placeSymbol,
     dayNumber: dayNumber,
     dayTotal: dayTotal,
     useFahrenheit: useFahrenheit,
@@ -471,7 +523,10 @@ class InfoStickerData extends Equatable {
       countryCode: meta['countryCode'] is String
           ? meta['countryCode'] as String
           : null,
-      showFlag: meta['showFlag'] == true,
+      placeSymbol:
+          _byName(InfoStickerPlaceSymbol.values, meta['placeSymbol']) ??
+          InfoStickerPlaceSymbol.pin,
+      globe: _byName(InfoStickerGlobe.values, meta['globe']),
       dayNumber: dayNumber is int ? dayNumber : null,
       dayTotal: dayTotal is int ? dayTotal : null,
       sunrise: sunrise is String ? DateTime.tryParse(sunrise) : null,
@@ -522,7 +577,8 @@ class InfoStickerData extends Equatable {
     dateFormat,
     placeName,
     countryCode,
-    showFlag,
+    placeSymbol,
+    globe,
     dayNumber,
     dayTotal,
     sunrise,

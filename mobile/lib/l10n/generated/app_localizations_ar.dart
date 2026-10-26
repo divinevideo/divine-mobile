@@ -10743,6 +10743,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorInfoStickerSymbolFlag => 'علم';
 
   @override
+  String get videoEditorInfoStickerSymbolGlobe => 'كرة أرضية';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'خريطة';
+
+  @override
   String get videoEditorInfoStickerMoonNew => 'محاق';
 
   @override

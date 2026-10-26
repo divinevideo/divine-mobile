@@ -10767,6 +10767,12 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorInfoStickerSymbolFlag => 'جھنڈا';
 
   @override
+  String get videoEditorInfoStickerSymbolGlobe => 'گلوب';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'نقشہ';
+
+  @override
   String get videoEditorInfoStickerMoonNew => 'نیا چاند';
 
   @override

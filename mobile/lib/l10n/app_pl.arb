@@ -3068,6 +3068,8 @@
   "videoEditorInfoStickerDayTotalLabel": "Liczba dni (opcjonalnie)",
   "videoEditorInfoStickerSymbolPin": "Pinezka",
   "videoEditorInfoStickerSymbolFlag": "Flaga",
+  "videoEditorInfoStickerSymbolGlobe": "Globus",
+  "videoEditorInfoStickerSymbolMap": "Mapa",
   "videoEditorInfoStickerMoonNew": "Nów",
   "videoEditorInfoStickerMoonWaxingCrescent": "Przybywający sierp",
   "videoEditorInfoStickerMoonFirstQuarter": "Pierwsza kwadra",

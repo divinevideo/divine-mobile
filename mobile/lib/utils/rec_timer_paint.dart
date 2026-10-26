@@ -10,11 +10,12 @@ import 'package:openvine/models/video_editor/info_sticker.dart';
 /// The size a REC timer is laid out at before it is scaled.
 const Size recTimerDesignSize = Size(460, 120);
 
-/// How long a REC timer has been running, such as `00:03`.
+/// How long a REC timer has been running, in seconds and hundredths such as
+/// `03:42`: a video runs for a few seconds, so minutes would stay at zero.
 String recTimerText(Duration elapsed) {
-  final seconds = elapsed.inSeconds;
-  final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
-  return '$minutes:${(seconds % 60).toString().padLeft(2, '0')}';
+  final hundredths = elapsed.inMilliseconds ~/ 10;
+  final seconds = (hundredths ~/ 100).toString().padLeft(2, '0');
+  return '$seconds:${(hundredths % 100).toString().padLeft(2, '0')}';
 }
 
 /// Paints a REC timer in [style] showing [elapsed] into [size].

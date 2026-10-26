@@ -3068,6 +3068,8 @@
   "videoEditorInfoStickerDayTotalLabel": "Nombre de jours (facultatif)",
   "videoEditorInfoStickerSymbolPin": "Épingle",
   "videoEditorInfoStickerSymbolFlag": "Drapeau",
+  "videoEditorInfoStickerSymbolGlobe": "Globe",
+  "videoEditorInfoStickerSymbolMap": "Carte",
   "videoEditorInfoStickerMoonNew": "Nouvelle lune",
   "videoEditorInfoStickerMoonWaxingCrescent": "Premier croissant",
   "videoEditorInfoStickerMoonFirstQuarter": "Premier quartier",

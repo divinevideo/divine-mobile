@@ -3068,6 +3068,8 @@
   "videoEditorInfoStickerDayTotalLabel": "Aantal dagen (optioneel)",
   "videoEditorInfoStickerSymbolPin": "Speld",
   "videoEditorInfoStickerSymbolFlag": "Vlag",
+  "videoEditorInfoStickerSymbolGlobe": "Wereldbol",
+  "videoEditorInfoStickerSymbolMap": "Kaart",
   "videoEditorInfoStickerMoonNew": "Nieuwe maan",
   "videoEditorInfoStickerMoonWaxingCrescent": "Wassende sikkel",
   "videoEditorInfoStickerMoonFirstQuarter": "Eerste kwartier",

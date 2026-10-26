@@ -5431,6 +5431,8 @@
   "videoEditorInfoStickerDayTotalLabel": "总天数（可选）",
   "videoEditorInfoStickerSymbolPin": "图钉",
   "videoEditorInfoStickerSymbolFlag": "国旗",
+  "videoEditorInfoStickerSymbolGlobe": "地球仪",
+  "videoEditorInfoStickerSymbolMap": "地图",
   "videoEditorInfoStickerMoonNew": "新月",
   "videoEditorInfoStickerMoonWaxingCrescent": "蛾眉月",
   "videoEditorInfoStickerMoonFirstQuarter": "上弦月",

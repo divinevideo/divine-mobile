@@ -10241,6 +10241,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorInfoStickerSymbolFlag => '国旗';
 
   @override
+  String get videoEditorInfoStickerSymbolGlobe => '地球儀';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => '地図';
+
+  @override
   String get videoEditorInfoStickerMoonNew => '新月';
 
   @override

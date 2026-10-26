@@ -10679,6 +10679,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorInfoStickerSymbolFlag => 'Bayrak';
 
   @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Küre';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Harita';
+
+  @override
   String get videoEditorInfoStickerMoonNew => 'Yeni ay';
 
   @override
