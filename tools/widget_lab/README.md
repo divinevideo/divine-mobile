@@ -6,10 +6,11 @@ The question: can a highlighted video show a two-second moving preview inside a 
 
 ## What to try
 
-- Add **Divine · Moment of joy** on iOS, or the **Divine Widget Lab** widget on Android.
+- Add **Divine · Moment of joy** on iOS, or the **Divine Widget Lab** widget on Android. Start with the small square tile. The iOS large family and Android's taller resize show the highlight title and caption; the compact tile leaves the image room to breathe.
 - Tap **Next** in the widget to select another sample and attempt a two-second preview. Both prototypes use 16 frames sampled at 8 fps. There is no GIF player or embedded video player in the widget.
 - **Like** toggles local state for that sample. It does not publish a Nostr reaction.
 - **Open** opens that sample in the standalone host app's native player.
+- The green **camera** button opens Divine's camera directly from either card size, using the app's existing iOS URL or Android quick-action intent. Install Divine separately first. Android shows an install message when it is missing; camera taps do not increment the local sample-watch counter.
 - The host app has a motion/still switch, local action counts, a reset button, and a creative prompt with the existing Divine camera shortcut. Install Divine separately to use that shortcut (the stable `co.openvine.app` package on Android). iOS uses a URL; Android uses Divine's native quick-action intent.
 
 The three samples and the selection are shared across instances of the widget on each platform. The widgets change on explicit actions; automatic background highlight selection is outside this experiment. Changing sample in the host app also requests a widget refresh, but refresh timing belongs to the OS.
@@ -22,7 +23,7 @@ Requirements: Python 3 and FFmpeg. Run from this directory:
 python3 prepare_media.py
 ```
 
-By default this samples the three videos already checked into the repository's seed-media directory. It only reads those content-addressed originals. All resized clips, JPEG frames, build products, debug signing keys, recordings, and test artifacts are ignored by Git. Do not add generated media or real account identifiers to the branch.
+By default this samples the three videos already checked into the repository's seed-media directory. It only reads those content-addressed originals. Resized clips, JPEG frames, build products, debug signing keys, recordings, and test artifacts stay ignored by Git. The two review screenshots under `screenshots/` are intentionally checked in so they can be embedded in the PR. Do not add generated video assets or real account identifiers to the branch.
 
 To try your own human-made clips, provide exactly three local files, each at least two seconds long:
 
@@ -30,7 +31,7 @@ To try your own human-made clips, provide exactly three local files, each at lea
 python3 prepare_media.py /absolute/path/one.mp4 /absolute/path/two.mp4 /absolute/path/three.mp4
 ```
 
-Each sample's first two seconds become the preview; up to six seconds become the host-app playback sample. Generated samples are silent. Preview frames are center-cropped to a landscape card; host-app playback samples retain their source aspect ratio. There is no media download or backend dependency.
+Each sample's first two seconds become the preview; up to six seconds become the host-app playback sample. Generated samples are silent. Preview frames are square (320 × 320), preserving the square seed videos instead of cutting off their top and bottom. Other source shapes are center-cropped to square; host-app playback samples retain their source aspect ratio. There is no media download or backend dependency. Regenerate media when updating from the earlier landscape experiment.
 
 ## iOS
 
@@ -51,7 +52,7 @@ xcrun simctl install booted ../.build/ios/Build/Products/Debug-iphonesimulator/W
 xcrun simctl launch booted video.divine.widgetlab
 ```
 
-Long-press the home screen, choose **Edit → Add Widget**, search for **Divine Widget Lab**, and add the medium or large widget. Then tap **Next in the widget** to test motion. The first static gallery snapshot does not test animation.
+Long-press the home screen, choose **Edit → Add Widget**, search for **Divine Widget Lab**, and add the small or large widget. The horizontal medium family is no longer offered. iOS owns the available widget dimensions; the large family provides more space but is not an arbitrary portrait size. Then tap **Next in the widget** to test motion. The first static gallery snapshot does not test animation.
 
 For a physical device, open the generated project in Xcode, select your signing team for both targets, and register the shared app group for your team. If changing the group identifier, change `Lab.entitlements` and `Shared/LabStore.swift` together. Simulator builds use ad-hoc signing so the shared app-group entitlement is retained. No signing team or credentials are checked in.
 
@@ -71,7 +72,7 @@ adb install --no-streaming -r .build/android/widget-lab.apk
 adb shell am start -n video.divine.widgetlab/.LabActivity
 ```
 
-Use **Add home-screen widget** in the app, or long-press the home screen and select it from Widgets. Resize it to allow space for the image and 48 dp action buttons.
+Use **Add home-screen widget** in the app, or long-press the home screen and select it from Widgets. It requests a 2 × 2 square footprint by default. Resize vertically toward 2 × 3 for a taller card: at 240 dp or more of available height, the title and caption appear in a separate footer. Android 12+ launchers select between responsive RemoteViews for their displayed size; older hosts receive portrait and landscape layouts based on their reported size bounds. Both layouts retain 48 dp action targets. Actual cell dimensions and allowed resize shapes belong to the launcher.
 
 The Android hypothesis uses a launcher-owned `ViewFlipper` containing 16 local image resources. The receiver sends one update to start the sequence and another after two seconds to show the resting poster. A revision guard prevents an older preview's completion from replacing a newer card. The receiver uses `goAsync()` for the bounded completion; it does not send 16 updates per second or run a background service. System-disabled animations use the still fallback. Different launchers and physical devices need separate checks for timing and memory.
 
@@ -88,7 +89,7 @@ python3 test_state.py
 python3 -m unittest discover -s tests -p 'test_*.py'
 ```
 
-iOS home-screen test (install the lab and add the medium widget at the top of home-screen page two first):
+iOS home-screen test (use a disposable test simulator with a standard home-screen layout):
 
 ```sh
 cd ios
@@ -98,7 +99,7 @@ xcodebuild -project WidgetLab.xcodeproj -scheme WidgetLab \
   CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- test
 ```
 
-The XCTest exercises Next, Like, and Open on the actual medium home-screen widget and verifies the resulting local counters in the app. Screenshots are attached to the result bundle. SpringBoard does not expose the remote widget buttons consistently, so the test uses documented positions within the medium card. Use a new result-bundle path for each run.
+The XCTest adds a small square widget on home-screen page two if one is not already present, then exercises Next, Like, and Open and verifies the resulting local counters in the app. Screenshots are attached to the result bundle, including both gallery sizes on initial setup. SpringBoard does not expose the remote widget buttons consistently, so the test uses documented positions within the square card. Use a new result-bundle path for each run.
 
 Find your simulator's UDID with `xcrun simctl list devices available` and replace `YOUR_SIMULATOR_UDID` above.
 
@@ -110,7 +111,9 @@ adb shell am instrument -w video.divine.widgetlab/.AndroidRenderingTests
 adb shell appwidget revokebind --package video.divine.widgetlab
 ```
 
-The binding grant permits the test app to host its own widget without a picker. The test restores local demo state, removes its allocated widget, and stops the host listener. It checks repeated playback uses one surface, the native camera-intent contract, RemoteViews inflation, action pending intents, frame advancement in a system widget host, and the return to the resting poster. It does not launch an installed Divine app or validate its camera screen. Check the explicit `PASS`/`FAIL` text; Android's instrumentation CLI can exit zero even when this minimal runner reports failure.
+The binding grant permits the test app to host its own widget without a picker. The test restores local demo state, removes its allocated widget, and stops the host listener. It checks that compact and tall controls fit and retain 48 dp targets, context changes on system-host resize, repeated playback uses one surface, the native camera-intent contract, RemoteViews inflation, action pending intents, frame advancement in a system widget host, and the return to the resting poster. It does not launch an installed Divine app or validate its camera screen. Check the explicit `PASS`/`FAIL` text; Android's instrumentation CLI can exit zero even when this minimal runner reports failure.
+
+Pass `-e screenshots true` to the instrumentation command to save `files/widget-shapes.png` in the lab app's sandbox. This captures native RemoteViews previews of the compact and tall layouts in the test activity, not a physical launcher screenshot. Retrieve it with `adb exec-out run-as video.divine.widgetlab cat files/widget-shapes.png > widget-shapes.png`.
 
 ## Observed results (2026-10-23)
 
@@ -119,6 +122,14 @@ The binding grant permits the test app to host its own widget without a picker. 
 - The standalone Android APK builds and its signature verifies. The rendering test passes on an API 36 emulator, including Next, Like, Open, advancing frames in a system widget host, and return to the resting poster. The initial failure was a test lookup across the widget host's isolated view namespace, not missing widget content. Physical devices and launcher-specific rendering remain untested.
 - Useful two-second motion has **not** been established on either platform. The Android test observes frame advancement, not visual quality or exact presentation timing. Treat the frame sequences as experiments and use the still fallback until assessed on target devices.
 - The repository's Flutter CI analysis scope (`flutter analyze lib test integration_test tools`) passes; the prototypes add no Flutter app code.
+
+## Square and tall revision (2026-10-24)
+
+- iOS 26.1 simulator: the small square widget is added through the system gallery; Reset → Next → Like → Open passes on the home screen with the expected local counters. Both small and large gallery layouts were captured and visually inspected.
+- Android API 36 emulator: native rendering and system-host tests pass, including 144/160 dp-wide compact/tall control bounds, 48 dp touch targets, context appearing and disappearing when the host resizes, camera-intent construction and missing-app routing, and the existing action and frame-sequence checks. The optional native preview capture shows both shapes; it is not evidence of a physical launcher's presentation.
+- Both native builds, APK signature verification, Swift/Java state tests, the media regression test, and Flutter CI-scope analysis pass. Generated preview frames are 320 × 320.
+- Motion quality and physical-device behavior remain experimental; the shape revision does not establish either.
+- Camera shortcuts reuse the shipping app's route contracts, but the installed Divine camera screen was not exercised end to end. The iOS route is checked in the native state/route tests; Android verifies the launch intent and taps the widget control through to the missing-app message on a fixture without Divine installed.
 
 ## Measurement boundaries
 

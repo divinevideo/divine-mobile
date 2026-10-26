@@ -11,9 +11,18 @@ import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.ViewFlipper;
+import android.widget.LinearLayout;
+import android.graphics.Bitmap;
+import java.io.File;
+import java.io.FileOutputStream;
 
 public final class AndroidRenderingTests extends Instrumentation {
-    @Override public void onCreate(Bundle arguments) { super.onCreate(arguments); start(); }
+    private boolean screenshots;
+    @Override public void onCreate(Bundle arguments) {
+        super.onCreate(arguments);
+        screenshots = arguments != null && "true".equals(arguments.getString("screenshots"));
+        start();
+    }
 
     @Override public void runOnMainSync(Runnable action) {
         // Report assertions on the instrumentation thread so finally blocks
@@ -38,12 +47,18 @@ public final class AndroidRenderingTests extends Instrumentation {
             LabState original = LabStore.load(activity);
             final View[] dashboard = {null};
             try {
+                checkShapes(activity);
                 ComponentName divine = new ComponentName("co.openvine.app", "co.openvine.app.MainActivity");
-                Intent camera = LabActivity.cameraIntent(divine);
+                Intent camera = HighlightProvider.cameraIntent(activity, divine);
                 require(divine.equals(camera.getComponent()), "camera intent targets the installed Divine activity");
                 require("co.openvine.divine_quick_actions.ACTION_QUICK_ACTION".equals(camera.getAction()), "Android camera action contract");
                 require("camera".equals(camera.getStringExtra("co.openvine.divine_quick_actions.extra.ACTION_TYPE")), "camera action type");
                 require(camera.getBundleExtra("co.openvine.divine_quick_actions.extra.ACTION_PAYLOAD") != null, "camera payload bundle");
+                require((camera.getFlags() & Intent.FLAG_ACTIVITY_NEW_TASK) != 0, "widget camera launches a separate app task");
+                Intent missingCamera = HighlightProvider.cameraIntent(activity, null);
+                require("camera".equals(missingCamera.getAction())
+                    && new ComponentName(activity, LabActivity.class).equals(missingCamera.getComponent()),
+                    "missing Divine routes to the lab install message");
                 runOnMainSync(() -> {
                     dashboard[0] = ((android.view.ViewGroup) activity.findViewById(android.R.id.content)).getChildAt(0);
                     View watch = findText(activity.getWindow().getDecorView(), "Watch selected sample");
@@ -86,15 +101,117 @@ public final class AndroidRenderingTests extends Instrumentation {
                 await(() -> LabStore.load(activity).isLiked(), "Like broadcast persists");
                 checkSystemHost(activity, dashboard[0]);
                 await(() -> LabStore.load(activity).openCount == 1, "Open pending intent");
-                result.putString("stream", "PASS: RemoteViews inflation, Next, Like, Open, system widget host animation, two-second stop.\n");
+                if (activity.getPackageManager().getLaunchIntentForPackage("co.openvine.app") == null) {
+                    runOnMainSync(() -> {
+                        View card = HighlightProvider.card(activity, LabStore.load(activity), false).apply(activity, new FrameLayout(activity));
+                        card.findViewById(R.id.camera).performClick();
+                    });
+                    await(() -> {
+                        final boolean[] shown = {false};
+                        runOnMainSync(() -> shown[0] = findText(activity.getWindow().getDecorView(),
+                            "Install Divine to open the camera.") != null);
+                        return shown[0];
+                    }, "widget camera reaches the missing-app message");
+                    require(LabStore.load(activity).openCount == 1, "camera action is not counted as watching a sample");
+                }
+                if (screenshots) captureShapes(activity);
+                result.putString("stream", "PASS: square/tall control bounds, 48 dp targets, mixed-height resize, Next, Like, Open, system widget host animation, two-second stop.\n");
             } finally {
                 runOnMainSync(() -> { LabStore.save(activity, original); HighlightProvider.render(activity, false); });
             }
             finish(-1, result);
         } catch (Throwable failure) {
-            result.putString("stream", "FAIL: " + failure + "\n");
+            result.putString("stream", "FAIL: " + android.util.Log.getStackTraceString(failure) + "\n");
             finish(0, result);
         }
+    }
+
+    private void checkShapes(LabActivity activity) {
+        runOnMainSync(() -> {
+            for (int widthDp : new int[] {144, 160}) {
+              for (boolean expanded : new boolean[] {false, true}) {
+                FrameLayout parent = new FrameLayout(activity);
+                View card = HighlightProvider.card(activity, new LabState(), false, expanded).apply(activity, parent);
+                parent.addView(card);
+                int width = dp(activity, widthDp);
+                int height = dp(activity, expanded ? 280 : widthDp);
+                card.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY));
+                card.layout(0, 0, width, height);
+                require(card.findViewById(R.id.context).getVisibility() == (expanded ? View.VISIBLE : View.GONE),
+                    "only the tall card shows extra context");
+                for (int id : new int[] {R.id.like, R.id.camera, R.id.next, R.id.open}) {
+                    View control = card.findViewById(id);
+                    require(control.getWidth() >= dp(activity, 48) && control.getHeight() >= dp(activity, 48),
+                        "square and tall controls retain 48 dp touch targets");
+                    android.graphics.Rect bounds = new android.graphics.Rect();
+                    control.getDrawingRect(bounds);
+                    ((android.view.ViewGroup) card).offsetDescendantRectToMyCoords(control, bounds);
+                    require(bounds.left >= 0 && bounds.top >= 0 && bounds.right <= width && bounds.bottom <= height,
+                        "all controls fit inside each card: expanded=" + expanded + ", id=" + id
+                            + ", bounds=" + bounds + ", card=" + width + "x" + height);
+                }
+              }
+            }
+        });
+    }
+
+    private void captureShapes(LabActivity activity) throws Exception {
+        final LinearLayout[] preview = {null};
+        runOnMainSync(() -> {
+            LinearLayout page = new LinearLayout(activity);
+            preview[0] = page;
+            page.setOrientation(LinearLayout.VERTICAL);
+            page.setPadding(dp(activity, 16), dp(activity, 24), dp(activity, 16), 0);
+            page.setBackgroundColor(0xFFF8F8F8);
+            TextView heading = new TextView(activity);
+            heading.setText("Divine · widget shapes");
+            heading.setTextSize(24);
+            heading.setTextColor(0xFF202020);
+            page.addView(heading);
+            LinearLayout row = new LinearLayout(activity);
+            for (boolean expanded : new boolean[] {false, true}) {
+                LinearLayout column = new LinearLayout(activity);
+                column.setOrientation(LinearLayout.VERTICAL);
+                TextView label = new TextView(activity);
+                label.setText(expanded ? "Tall · 2 × 3" : "Square · 2 × 2");
+                label.setTextColor(0xFF202020);
+                label.setPadding(0, dp(activity, 20), 0, dp(activity, 12));
+                column.addView(label);
+                View card = HighlightProvider.card(activity, new LabState(), false, expanded).apply(activity, column);
+                column.addView(card, new LinearLayout.LayoutParams(dp(activity, 160), dp(activity, expanded ? 280 : 160)));
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(dp(activity, 160), -2);
+                params.setMarginEnd(dp(activity, 12));
+                row.addView(column, params);
+            }
+            page.addView(row);
+            activity.setContentView(page);
+        });
+        waitForIdleSync();
+        final android.graphics.Rect[] region = {null};
+        runOnMainSync(() -> {
+            LinearLayout page = preview[0];
+            int[] location = new int[2];
+            page.getLocationOnScreen(location);
+            int bottom = page.getChildAt(page.getChildCount() - 1).getBottom() + dp(activity, 16);
+            region[0] = new android.graphics.Rect(location[0], location[1] + page.getPaddingTop(),
+                location[0] + page.getWidth(), location[1] + bottom);
+        });
+        // Capture the composed window: software View.draw omits hardware outline clipping.
+        Bitmap window = getUiAutomation().takeScreenshot();
+        require(window != null, "capture native previews");
+        android.graphics.Rect bounds = region[0];
+        Bitmap image = Bitmap.createBitmap(window, bounds.left, bounds.top, bounds.width(), bounds.height());
+        File file = new File(activity.getFilesDir(), "widget-shapes.png");
+        try (FileOutputStream stream = new FileOutputStream(file)) {
+            image.compress(Bitmap.CompressFormat.PNG, 100, stream);
+        }
+        image.recycle();
+        window.recycle();
+    }
+
+    private int dp(LabActivity activity, int value) {
+        return Math.round(value * activity.getResources().getDisplayMetrics().density);
     }
 
     private void checkSystemHost(LabActivity activity, View dashboard) throws InterruptedException {
@@ -109,7 +226,10 @@ public final class AndroidRenderingTests extends Instrumentation {
                 host.startListening();
                 AppWidgetHostView view = host.createView(activity, widgetId, manager.getAppWidgetInfo(widgetId));
                 hosted[0] = view;
-                activity.setContentView(view);
+                FrameLayout parent = new FrameLayout(activity);
+                parent.addView(view, new FrameLayout.LayoutParams(dp(activity, 160), dp(activity, 160)));
+                activity.setContentView(parent);
+                view.updateAppWidgetSize(new Bundle(), 160, 160, 160, 160);
                 HighlightProvider.render(activity, false);
             });
             waitForIdleSync();
@@ -158,6 +278,26 @@ public final class AndroidRenderingTests extends Instrumentation {
                     && hosted[0].findViewById(R.id.poster).getVisibility() == View.VISIBLE);
                 return resting[0];
             }, "preview stops and returns to poster");
+            for (int height : new int[] {280, 160}) {
+                Bundle size = new Bundle();
+                size.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 160);
+                size.putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 160);
+                // Portrait can be tall while the landscape minimum stays square.
+                size.putInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 160);
+                size.putInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, height);
+                runOnMainSync(() -> {
+                    hosted[0].setLayoutParams(new FrameLayout.LayoutParams(dp(activity, 160), dp(activity, height)));
+                    hosted[0].updateAppWidgetSize(size, 160, 160, 160, height);
+                });
+                await(() -> {
+                    final boolean[] resized = {false};
+                    runOnMainSync(() -> {
+                        View context = hosted[0].findViewById(R.id.context);
+                        resized[0] = context != null && context.getVisibility() == (height >= 240 ? View.VISIBLE : View.GONE);
+                    });
+                    return resized[0];
+                }, "system host switches square/tall context on resize");
+            }
             runOnMainSync(() -> {
                 activity.setContentView(dashboard);
                 hosted[0].findViewById(R.id.open).performClick();
