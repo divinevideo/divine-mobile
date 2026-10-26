@@ -484,7 +484,9 @@ class _MinorConsentSubmitFormState
           const SizedBox(height: 12),
           Text(
             l10n.minorAccountReviewRecordConsentSubmitError,
-            style: VineTheme.bodyMediumFont(color: VineTheme.error),
+            style: VineTheme.bodyMediumFont(
+              color: context.vineColors.onErrorContainer,
+            ),
           ),
         ],
         const SizedBox(height: 24),

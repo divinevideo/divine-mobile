@@ -3,6 +3,7 @@
 
 import 'dart:async' show Completer;
 import 'dart:io' show Directory, File, SocketException;
+import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -722,6 +723,68 @@ void main() {
         findsOneWidget,
       );
     });
+
+    for (final (appearance, theme, colors) in [
+      ('dark', VineTheme.theme, VineTheme.darkColors),
+      ('light', VineTheme.lightTheme, VineTheme.lightColors),
+    ]) {
+      testWidgets('keeps the submit error legible in $appearance mode', (
+        tester,
+      ) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final repository = _FakeRepository()..throwOnSubmit = true;
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(prefs),
+              minorAccountReviewOverrideServiceProvider.overrideWithValue(
+                MinorAccountReviewOverrideService(prefs: prefs),
+              ),
+              currentMinorAccountReviewStatusProvider.overrideWith(
+                (ref) async => _statusWithCase(),
+              ),
+              minorAccountReviewRepositoryProvider.overrideWithValue(
+                repository,
+              ),
+            ],
+            child: MaterialApp(
+              theme: theme,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: MinorConsentSubmitView(
+                  videoPath: '/tmp/consent.mp4',
+                  onUseEmailFallback: () {},
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.byType(TextFormField),
+          'parent@example.com',
+        );
+        await tester.tap(
+          find.text(l10n.minorAccountReviewRecordConsentSubmitCta),
+        );
+        await tester.pumpAndSettle();
+
+        final error = tester.widget<Text>(
+          find.text(l10n.minorAccountReviewRecordConsentSubmitError),
+        );
+        final ink = error.style!.color!.computeLuminance();
+        final page = colors.background.computeLuminance();
+        final contrast =
+            (math.max(ink, page) + 0.05) / (math.min(ink, page) + 0.05);
+        // WCAG AA for body text against the screen's page background.
+        expect(contrast, greaterThanOrEqualTo(4.5));
+      });
+    }
 
     testWidgets(
       'offers a retry when submit fails offline',
