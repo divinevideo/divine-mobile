@@ -4826,6 +4826,33 @@ void main() {
       );
 
       test(
+        'a relevance search lists a profile only NIP-50 found after the '
+        "server's",
+        () async {
+          when(() => mockProfileEvent.content).thenReturn(
+            jsonEncode({'display_name': 'lauren'}),
+          );
+          when(
+            () => mockNostrClient.queryUsers(
+              any(),
+              limit: any(named: 'limit'),
+              timeout: any(named: 'timeout'),
+            ),
+          ).thenAnswer((_) async => [mockProfileEvent]);
+          stubRestResults([restProfile(pk1Video, 'laurence')]);
+
+          final result = await repoWithFunnelcake
+              .searchUsersProgressive(
+                query: 'lauren',
+                sortBy: profileSearchSortRelevance,
+              )
+              .last;
+
+          expect(result.profiles.map((p) => p.pubkey), [pk1Video, testPubkey]);
+        },
+      );
+
+      test(
         'a relevance search keeps a prefix match the server listed first '
         'ahead of an exact match',
         () async {
