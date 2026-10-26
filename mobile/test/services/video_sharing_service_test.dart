@@ -51,6 +51,7 @@ void main() {
   /// Any `sendSharedVideo` call, for `when` and `verifyNever`.
   Future<NIP17SendResult> anySharedVideoSend() =>
       mockDmRepository.sendSharedVideo(
+        backgroundDelivery: true,
         recipientPubkey: any(named: 'recipientPubkey'),
         baseContent: any(named: 'baseContent'),
         videoKind: any(named: 'videoKind'),
@@ -76,6 +77,7 @@ void main() {
   String sharedMessage() {
     final captured = verify(
       () => mockDmRepository.sendSharedVideo(
+        backgroundDelivery: true,
         recipientPubkey: any(named: 'recipientPubkey'),
         baseContent: captureAny(named: 'baseContent'),
         videoKind: any(named: 'videoKind'),
@@ -392,6 +394,7 @@ void main() {
       // signs nothing itself.
       verify(
         () => mockDmRepository.sendSharedVideo(
+          backgroundDelivery: true,
           recipientPubkey: _recipientPubkey,
           baseContent: any(named: 'baseContent'),
           videoKind: NIP71VideoKinds.addressableShortVideo,
@@ -792,6 +795,7 @@ void main() {
         expect(results[goodC]!.delivery, ShareDelivery.sent);
         verify(
           () => mockDmRepository.sendSharedVideo(
+            backgroundDelivery: true,
             recipientPubkey: goodC,
             baseContent: any(named: 'baseContent'),
             videoKind: any(named: 'videoKind'),

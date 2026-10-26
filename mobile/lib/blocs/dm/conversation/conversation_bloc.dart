@@ -370,6 +370,7 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
       final partialRumorIds = <String>[];
       if (event.recipientPubkeys.length == 1) {
         final result = await _dmRepository.sendMessage(
+          backgroundDelivery: true,
           recipientPubkey: event.recipientPubkeys.first,
           content: event.content,
         );
@@ -380,11 +381,9 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
             return;
           }
           if (result.retryablePending) {
-            // Soft-unconfirmed: the recipient frame was written but no NIP-20
-            // OK arrived yet. The durable queue keeps the plain optimistic
-            // bubble and the retry sweep re-drives it — a lost OK is not proof
-            // of loss, so surface no red failure. Treat as optimistically
-            // sent.
+            // Accepted into the durable queue: inbox lookup, encryption and
+            // relay confirmation continue without holding the composer.
+            // The outgoing-row stream owns subsequent delivery feedback.
             emit(state.copyWith(sendStatus: SendStatus.sent));
             return;
           }
@@ -402,6 +401,7 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
         }
       } else {
         final results = await _dmRepository.sendGroupMessage(
+          backgroundDelivery: true,
           recipientPubkeys: event.recipientPubkeys,
           content: event.content,
         );
@@ -418,10 +418,9 @@ class ConversationBloc extends Bloc<ConversationEvent, ConversationState> {
             emit(state.copyWith(sendStatus: SendStatus.tooLong));
             return;
           }
-          // No recipient confirmed. If every unconfirmed recipient is soft
-          // (frame written, OK pending) with no hard failure, treat the group
-          // send as optimistically sent — the durable queue re-drives each
-          // pending row. Only a genuine hard failure raises the red SnackBar.
+          // Every recipient durably queued is enough to release the
+          // composer. Delivery and recovery update the outgoing-row stream;
+          // only a local refusal/storage failure blocks this submission.
           final anyHard = results.any(
             (r) => !r.success && !r.blocked && !r.retryablePending,
           );
