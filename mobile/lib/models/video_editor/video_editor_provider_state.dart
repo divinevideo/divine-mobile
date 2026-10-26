@@ -258,10 +258,18 @@ class VideoEditorProviderState {
 
   /// Whether the post's sound is licensed without derivatives.
   ///
-  /// A clip taken from the video carries its sound along, so such a post
-  /// cannot be offered for reuse.
-  bool get soundForbidsDerivatives =>
-      audioForAttribution?.externalSource?.license.allowsDerivatives == false;
+  /// A clip taken from the video carries every mixed sound along, so check
+  /// both the recorder selection and all editor tracks, not just the sound
+  /// chosen for attribution.
+  bool get soundForbidsDerivatives {
+    if (selectedSound?.externalSource?.license.allowsDerivatives == false) {
+      return true;
+    }
+    final tracks = editorEditingParameters?.audioTracksFromMeta ?? const [];
+    return tracks.any(
+      (track) => track.externalSource?.license.allowsDerivatives == false,
+    );
+  }
 
   /// Whether the published video lets others add it to their clips.
   bool get offersVideoReuse => allowVideoReuse && !soundForbidsDerivatives;
