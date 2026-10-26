@@ -9739,6 +9739,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorVoiceEffectEcho => '에코';
 
   @override
+  String get videoEditorVoiceEffectReverb => '리버브';
+
+  @override
+  String get videoEditorVoiceEffectTelephone => '전화';
+
+  @override
+  String get videoEditorVoiceEffectMegaphone => '확성기';
+
+  @override
+  String get videoEditorVoiceEffectUnderwater => '물속';
+
+  @override
+  String get videoEditorVoiceEffectSlowedReverb => '슬로우 + 리버브';
+
+  @override
   String get videoEditorVoiceEffectPitch => '피치';
 
   @override

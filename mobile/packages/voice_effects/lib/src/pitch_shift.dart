@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:voice_effects/src/audio_effect.dart';
+import 'package:voice_effects/src/biquad.dart';
 import 'package:voice_effects/src/fft.dart';
 
 /// Moves a voice [semitones] up or down while keeping its timing.
@@ -34,39 +35,53 @@ class PitchShift extends AudioEffect {
   static const int _coarseStep = 4;
 
   @override
-  Float32List apply(Float32List samples, int sampleRate) {
+  Float32List apply(Float32List samples, int sampleRate) =>
+      applyToChannels([samples], sampleRate).single;
+
+  /// Shifts every channel through the same frames: where the frames line up
+  /// best is searched on the channels' average, so a sound in the middle of a
+  /// stereo mix stays there instead of smearing between channels that were
+  /// stretched apart.
+  @override
+  List<Float32List> applyToChannels(
+    List<Float32List> channels,
+    int sampleRate,
+  ) {
     final ratio = math.pow(2, semitones / 12).toDouble();
-    if (ratio == 1 || samples.isEmpty) return Float32List.fromList(samples);
-    final stretched = _stretch(samples, sampleRate, ratio);
-    if (ratio > 1) {
-      _lowPass(stretched, sampleRate / (2 * ratio) * 0.9, sampleRate);
+    if (ratio == 1 || channels.first.isEmpty) {
+      return [for (final channel in channels) Float32List.fromList(channel)];
     }
-    return _resample(stretched, samples.length, ratio);
+    final frame = math.max(4, (sampleRate * _frameSeconds).round() & ~1);
+    final guide = channels.length == 1 ? channels.single : _average(channels);
+    final positions = _alignments(guide, sampleRate, ratio, frame);
+    return [
+      for (final channel in channels)
+        _shift(channel, positions, sampleRate, ratio, frame),
+    ];
   }
 
-  /// [samples] made [ratio] times longer at the same pitch.
-  Float64List _stretch(Float32List samples, int sampleRate, double ratio) {
-    final frame = math.max(4, (sampleRate * _frameSeconds).round() & ~1);
+  /// Where each WSOLA frame of [samples] is read from to stretch them
+  /// [ratio] times longer at the same pitch, as positions in the samples
+  /// padded by a [frame] on each side, so the edges are covered by whole
+  /// frames.
+  static List<int> _alignments(
+    Float32List samples,
+    int sampleRate,
+    double ratio,
+    int frame,
+  ) {
     final synthesisHop = frame ~/ 2;
     final analysisHop = synthesisHop / ratio;
     final tolerance = math.min(
       synthesisHop - 1,
       (sampleRate * _toleranceSeconds).round(),
     );
-    final window = hannWindow(frame);
     // Every sample's correlation is not needed to find the alignment; a
     // decimated sum finds the same peak for a fraction of the work.
     final stride = math.max(1, sampleRate ~/ 16000);
-
-    // Pad by a frame on each side so the edges are covered by whole frames.
-    final pad = frame;
-    final input = Float64List(samples.length + 2 * pad);
-    for (var i = 0; i < samples.length; i++) {
-      input[pad + i] = samples[i];
-    }
-    final outputLength = (input.length * ratio).ceil() + frame;
-    final output = Float64List(outputLength);
-
+    final input = _Padded(samples, frame);
+    final outputLength = _stretchedLength(samples, ratio, frame);
+    final positions = <int>[];
     var previous = 0;
     for (var k = 0; ; k++) {
       final outStart = k * synthesisHop;
@@ -82,26 +97,66 @@ class PitchShift extends AudioEffect {
               length: frame - synthesisHop,
               stride: stride,
             );
-      for (var i = 0; i < frame; i++) {
-        output[outStart + i] += window[i] * _at(input, position + i);
-      }
+      positions.add(position);
       previous = position;
     }
+    return positions;
+  }
 
-    // Crop the stretched padding back off.
-    final start = (pad * ratio).round();
-    final length = (samples.length * ratio).ceil();
-    final cropped = Float64List(length);
-    for (var i = 0; i < length; i++) {
-      cropped[i] = _at(output, start + i);
+  /// [samples] stretched through the frames at [positions], then read back
+  /// at [ratio] times the speed into their original length.
+  static Float32List _shift(
+    Float32List samples,
+    List<int> positions,
+    int sampleRate,
+    double ratio,
+    int frame,
+  ) {
+    final synthesisHop = frame ~/ 2;
+    final window = hannWindow(frame);
+    final input = _Padded(samples, frame);
+    final stretched = Float32List(_stretchedLength(samples, ratio, frame));
+    for (var k = 0; k < positions.length; k++) {
+      final outStart = k * synthesisHop;
+      final position = positions[k];
+      for (var i = 0; i < frame; i++) {
+        stretched[outStart + i] += window[i] * input[position + i];
+      }
     }
-    return cropped;
+    if (ratio > 1) {
+      _lowPass(stretched, sampleRate / (2 * ratio) * 0.9, sampleRate);
+    }
+    // The stretched padding is skipped.
+    return _resample(
+      stretched,
+      start: (frame * ratio).round(),
+      length: samples.length,
+      ratio: ratio,
+    );
+  }
+
+  /// Length of the overlap-add buffer for [samples] padded by a [frame] on
+  /// each side and stretched [ratio] times.
+  static int _stretchedLength(Float32List samples, double ratio, int frame) =>
+      ((samples.length + 2 * frame) * ratio).ceil() + frame;
+
+  /// The sample-by-sample average of [channels].
+  static Float32List _average(List<Float32List> channels) {
+    final average = Float32List(channels.first.length);
+    for (var i = 0; i < average.length; i++) {
+      var sum = 0.0;
+      for (final channel in channels) {
+        sum += channel[i];
+      }
+      average[i] = sum / channels.length;
+    }
+    return average;
   }
 
   /// Position within `nominal ± tolerance` whose next [length] samples best
   /// continue the waveform at [target].
   static int _bestAlignment(
-    Float64List input, {
+    _Padded input, {
     required int target,
     required int nominal,
     required int tolerance,
@@ -111,7 +166,7 @@ class PitchShift extends AudioEffect {
     double correlation(int candidate) {
       var sum = 0.0;
       for (var i = 0; i < length; i += stride) {
-        sum += _at(input, target + i) * _at(input, candidate + i);
+        sum += input[target + i] * input[candidate + i];
       }
       return sum;
     }
@@ -137,16 +192,17 @@ class PitchShift extends AudioEffect {
     return math.max(0, best);
   }
 
-  /// [stretched] read back at [ratio] times the speed into [length] samples,
-  /// with cubic interpolation between source samples.
+  /// [stretched] from [start] on, read back at [ratio] times the speed into
+  /// [length] samples, with cubic interpolation between source samples.
   static Float32List _resample(
-    Float64List stretched,
-    int length,
-    double ratio,
-  ) {
+    Float32List stretched, {
+    required int start,
+    required int length,
+    required double ratio,
+  }) {
     final output = Float32List(length);
     for (var i = 0; i < length; i++) {
-      final position = i * ratio;
+      final position = start + i * ratio;
       final index = position.floor();
       final t = position - index;
       final p0 = _at(stretched, index - 1);
@@ -173,32 +229,28 @@ class PitchShift extends AudioEffect {
   /// Filters [signal] in place with two cascaded Butterworth low-pass biquads
   /// at [cutoffHz], so content the speed-up would fold back below Nyquist is
   /// removed first.
-  static void _lowPass(Float64List signal, double cutoffHz, int sampleRate) {
-    final omega = 2 * math.pi * cutoffHz / sampleRate;
-    final alpha = math.sin(omega) / math.sqrt2;
-    final cosine = math.cos(omega);
-    final a0 = 1 + alpha;
-    final b0 = (1 - cosine) / 2 / a0;
-    final b1 = (1 - cosine) / a0;
-    final a1 = -2 * cosine / a0;
-    final a2 = (1 - alpha) / a0;
-    for (var pass = 0; pass < 2; pass++) {
-      var x1 = 0.0;
-      var x2 = 0.0;
-      var y1 = 0.0;
-      var y2 = 0.0;
-      for (var i = 0; i < signal.length; i++) {
-        final x0 = signal[i];
-        final y0 = b0 * x0 + b1 * x1 + b0 * x2 - a1 * y1 - a2 * y2;
-        x2 = x1;
-        x1 = x0;
-        y2 = y1;
-        y1 = y0;
-        signal[i] = y0;
-      }
+  static void _lowPass(Float32List signal, double cutoffHz, int sampleRate) {
+    final first = Biquad.lowPass(cutoffHz, sampleRate);
+    final second = Biquad.lowPass(cutoffHz, sampleRate);
+    for (var i = 0; i < signal.length; i++) {
+      signal[i] = second.next(first.next(signal[i]));
     }
   }
 
-  static double _at(Float64List signal, int index) =>
+  static double _at(Float32List signal, int index) =>
       index >= 0 && index < signal.length ? signal[index] : 0;
+}
+
+/// Samples read as if padded with [pad] zeros on each side, without copying
+/// them.
+class _Padded {
+  const _Padded(this.samples, this.pad);
+
+  final Float32List samples;
+  final int pad;
+
+  double operator [](int index) {
+    final i = index - pad;
+    return i >= 0 && i < samples.length ? samples[i] : 0;
+  }
 }

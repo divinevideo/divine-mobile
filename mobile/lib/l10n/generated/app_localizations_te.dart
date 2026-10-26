@@ -10506,6 +10506,21 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorVoiceEffectEcho => 'ప్రతిధ్వని';
 
   @override
+  String get videoEditorVoiceEffectReverb => 'రివర్బ్';
+
+  @override
+  String get videoEditorVoiceEffectTelephone => 'ఫోన్';
+
+  @override
+  String get videoEditorVoiceEffectMegaphone => 'మెగాఫోన్';
+
+  @override
+  String get videoEditorVoiceEffectUnderwater => 'నీటి అడుగున';
+
+  @override
+  String get videoEditorVoiceEffectSlowedReverb => 'స్లోడ్ + రివర్బ్';
+
+  @override
   String get videoEditorVoiceEffectPitch => 'పిచ్';
 
   @override

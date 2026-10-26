@@ -10208,6 +10208,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorVoiceEffectEcho => 'صدى';
 
   @override
+  String get videoEditorVoiceEffectReverb => 'ريفيرب';
+
+  @override
+  String get videoEditorVoiceEffectTelephone => 'هاتف';
+
+  @override
+  String get videoEditorVoiceEffectMegaphone => 'مكبر صوت';
+
+  @override
+  String get videoEditorVoiceEffectUnderwater => 'تحت الماء';
+
+  @override
+  String get videoEditorVoiceEffectSlowedReverb => 'بطيء + ريفيرب';
+
+  @override
   String get videoEditorVoiceEffectPitch => 'طبقة الصوت';
 
   @override

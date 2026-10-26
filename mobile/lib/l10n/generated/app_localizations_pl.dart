@@ -10435,6 +10435,21 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorVoiceEffectEcho => 'Echo';
 
   @override
+  String get videoEditorVoiceEffectReverb => 'Pogłos';
+
+  @override
+  String get videoEditorVoiceEffectTelephone => 'Telefon';
+
+  @override
+  String get videoEditorVoiceEffectMegaphone => 'Megafon';
+
+  @override
+  String get videoEditorVoiceEffectUnderwater => 'Pod wodą';
+
+  @override
+  String get videoEditorVoiceEffectSlowedReverb => 'Slowed + reverb';
+
+  @override
   String get videoEditorVoiceEffectPitch => 'Wysokość';
 
   @override

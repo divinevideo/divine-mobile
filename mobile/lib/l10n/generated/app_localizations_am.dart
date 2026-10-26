@@ -9989,6 +9989,21 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorVoiceEffectEcho => 'ማሚቶ';
 
   @override
+  String get videoEditorVoiceEffectReverb => 'ሪቨርብ';
+
+  @override
+  String get videoEditorVoiceEffectTelephone => 'ስልክ';
+
+  @override
+  String get videoEditorVoiceEffectMegaphone => 'ድምፅ ማጉያ';
+
+  @override
+  String get videoEditorVoiceEffectUnderwater => 'በውሃ ውስጥ';
+
+  @override
+  String get videoEditorVoiceEffectSlowedReverb => 'ስሎውድ + ሪቨርብ';
+
+  @override
   String get videoEditorVoiceEffectPitch => 'የድምፅ ከፍታ';
 
   @override

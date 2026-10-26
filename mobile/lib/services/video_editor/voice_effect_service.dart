@@ -8,7 +8,7 @@ import 'dart:isolate';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:models/models.dart'
-    show AudioEvent, AudioSourceKind, VoiceEffect;
+    show AudioEvent, AudioSourceKind, VoiceEffect, VoiceFilter;
 import 'package:openvine/services/video_editor/render_audio_fetcher.dart';
 import 'package:openvine/utils/audio_mime_type.dart';
 import 'package:openvine/utils/draft_audio_path_resolver.dart';
@@ -59,8 +59,19 @@ const double _echoMixAtFull = 0.6;
 /// Level of each further echo repeat at full [VoiceEffect.echo].
 const double _echoFeedbackAtFull = 0.5;
 
+/// Level of the reverb tail at full [VoiceEffect.reverb].
+const double _reverbMixAtFull = 0.6;
+
+/// Room size of the reverb at the least [VoiceEffect.reverb], a small room.
+const double _reverbRoomAtLeast = 0.55;
+
+/// Room size of the reverb at full [VoiceEffect.reverb], a large hall.
+const double _reverbRoomAtFull = 0.9;
+
 /// The DSP chain that gives a sound [effect]: noise reduction first, so the
-/// effects work on the clean signal, then pitch, robot and echo.
+/// effects work on the clean signal, then pitch and robot, which change the
+/// voice itself, then what it is played through, and last the echo and the
+/// reverb of the space it is heard in.
 @visibleForTesting
 List<AudioEffect> voiceEffectChain(
   VoiceEffect effect, {
@@ -68,12 +79,26 @@ List<AudioEffect> voiceEffectChain(
 }) {
   const full = VoiceEffect.maxAmount;
   final echo = effect.echo / full;
+  final reverb = effect.reverb / full;
   return [
     if (noiseReduction) const NoiseReduction(),
     if (effect.pitch != 0) PitchShift(effect.pitch.toDouble()),
     if (effect.robot > 0) Robotize(mix: effect.robot / full),
+    ...switch (effect.filter) {
+      VoiceFilter.none => const <AudioEffect>[],
+      VoiceFilter.telephone => const [Telephone()],
+      VoiceFilter.megaphone => const [Megaphone()],
+      VoiceFilter.underwater => const [Underwater()],
+    },
     if (effect.echo > 0)
       Echo(mix: _echoMixAtFull * echo, feedback: _echoFeedbackAtFull * echo),
+    if (effect.reverb > 0)
+      Reverb(
+        mix: _reverbMixAtFull * reverb,
+        roomSize:
+            _reverbRoomAtLeast +
+            (_reverbRoomAtFull - _reverbRoomAtLeast) * reverb,
+      ),
   ];
 }
 
@@ -249,8 +274,12 @@ class VoiceEffectService {
     required bool noiseReduction,
     required String documentsPath,
   }) {
+    // Settings that came later join the name only when they are used, so a
+    // file rendered before them is still found under its name.
     final settings =
         'p${effect.pitch}_r${effect.robot}_e${effect.echo}'
+        '${effect.reverb != 0 ? '_v${effect.reverb}' : ''}'
+        '${effect.filter != VoiceFilter.none ? '_${effect.filter.name}' : ''}'
         '${noiseReduction ? '_nr' : ''}';
     if (source.kind == AudioSourceKind.file &&
         isDraftLocalAudioPath(source.path)) {
@@ -391,22 +420,26 @@ Uint8List _processWav(
   required Duration start,
   required Duration? length,
 }) {
-  final audio = decodeWav(wav);
+  final audio = decodeWavChannels(wav);
   final rate = audio.sampleRate;
-  final total = audio.samples.length;
+  final total = audio.channels.first.length;
   final first = (start.inMicroseconds * rate ~/ Duration.microsecondsPerSecond)
       .clamp(0, total);
   final end = length == null
       ? total
       : (first + length.inMicroseconds * rate ~/ Duration.microsecondsPerSecond)
             .clamp(first, total);
-  final samples = first == 0 && end == total
-      ? audio.samples
-      : Float32List.sublistView(audio.samples, first, end);
-  final processed = applyAudioEffects(
-    samples,
+  final channels = first == 0 && end == total
+      ? audio.channels
+      : [
+          for (final channel in audio.channels)
+            Float32List.sublistView(channel, first, end),
+        ];
+  // Every channel is kept, so a stereo song stays stereo.
+  final processed = applyAudioEffectsToChannels(
+    channels,
     rate,
     voiceEffectChain(effect, noiseReduction: noiseReduction),
   );
-  return encodeWav(processed, rate);
+  return encodeWavChannels(processed, rate);
 }

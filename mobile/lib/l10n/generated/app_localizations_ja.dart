@@ -9719,6 +9719,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorVoiceEffectEcho => 'エコー';
 
   @override
+  String get videoEditorVoiceEffectReverb => 'リバーブ';
+
+  @override
+  String get videoEditorVoiceEffectTelephone => '電話';
+
+  @override
+  String get videoEditorVoiceEffectMegaphone => 'メガホン';
+
+  @override
+  String get videoEditorVoiceEffectUnderwater => '水中';
+
+  @override
+  String get videoEditorVoiceEffectSlowedReverb => 'スロー + リバーブ';
+
+  @override
   String get videoEditorVoiceEffectPitch => 'ピッチ';
 
   @override

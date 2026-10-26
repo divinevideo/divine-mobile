@@ -10227,6 +10227,21 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorVoiceEffectEcho => 'گونج';
 
   @override
+  String get videoEditorVoiceEffectReverb => 'ریورب';
+
+  @override
+  String get videoEditorVoiceEffectTelephone => 'فون';
+
+  @override
+  String get videoEditorVoiceEffectMegaphone => 'میگافون';
+
+  @override
+  String get videoEditorVoiceEffectUnderwater => 'زیرِ آب';
+
+  @override
+  String get videoEditorVoiceEffectSlowedReverb => 'سلوڈ + ریورب';
+
+  @override
   String get videoEditorVoiceEffectPitch => 'پچ';
 
   @override
