@@ -27,6 +27,23 @@ VideoEvent _post({required String id, required String sha256}) => VideoEvent(
   sha256: sha256,
 );
 
+VideoEvent _vine({
+  required String id,
+  required String sha256,
+  int createdAt = 1458771798,
+}) => VideoEvent(
+  id: id,
+  pubkey: _owner,
+  createdAt: createdAt,
+  content: '',
+  timestamp: DateTime.fromMillisecondsSinceEpoch(
+    createdAt * 1000,
+    isUtc: true,
+  ),
+  sha256: sha256,
+  rawTags: const {'platform': 'vine'},
+);
+
 http.Response _provenance({Object? owner = _owner}) => http.Response(
   jsonEncode({
     'owner': owner,
@@ -42,13 +59,18 @@ void main() {
     late List<Uri> requested;
     late List<({String pubkey, int limit, int? before})> authorQueries;
 
+    late List<String> hashQueries;
+
     PublishedClipSourceResolver buildResolver({
       required http.Response Function() respond,
       List<VideoEvent> authorVideos = const [],
       Object? authorError,
+      List<VideoEvent> hashVideos = const [],
+      Object? hashError,
     }) {
       requested = [];
       authorQueries = [];
+      hashQueries = [];
       return PublishedClipSourceResolver(
         mediaServer: Uri.parse('https://media.divine.video'),
         httpClientFactory: () => MockClient((request) async {
@@ -59,6 +81,11 @@ void main() {
           authorQueries.add((pubkey: pubkey, limit: limit, before: before));
           if (authorError != null) throw authorError;
           return authorVideos;
+        },
+        videosByFileHash: (sha256) async {
+          hashQueries.add(sha256);
+          if (hashError != null) throw hashError;
+          return hashVideos;
         },
       );
     }
@@ -132,6 +159,63 @@ void main() {
 
         await expectLater(
           resolver.resolve(_sha256),
+          throwsA(isA<PublishedClipSourceLookupException>()),
+        );
+      });
+    });
+
+    group('findArchivedVine', () {
+      http.Response unused() => throw StateError('no provenance request');
+
+      test('returns the oldest Vine post that names the file', () async {
+        final claim = _post(id: 'f' * 64, sha256: _sha256);
+        final vine = _vine(id: 'e' * 64, sha256: _sha256);
+        final laterVine = _vine(
+          id: 'd' * 64,
+          sha256: _sha256,
+          createdAt: 1772932336,
+        );
+        final resolver = buildResolver(
+          respond: unused,
+          hashVideos: [claim, laterVine, vine],
+        );
+
+        final found = await resolver.findArchivedVine(_sha256.toUpperCase());
+
+        expect(found, same(vine));
+        expect(hashQueries, equals([_sha256]));
+        expect(requested, isEmpty);
+      });
+
+      test(
+        'is null when only posts that are not Vines name the file',
+        () async {
+          final resolver = buildResolver(
+            respond: unused,
+            hashVideos: [_post(id: 'f' * 64, sha256: _sha256)],
+          );
+
+          expect(await resolver.findArchivedVine(_sha256), isNull);
+        },
+      );
+
+      test('ignores a Vine post that names another file', () async {
+        final resolver = buildResolver(
+          respond: unused,
+          hashVideos: [_vine(id: 'e' * 64, sha256: 'a' * 64)],
+        );
+
+        expect(await resolver.findArchivedVine(_sha256), isNull);
+      });
+
+      test('throws when the relays cannot be asked', () async {
+        final resolver = buildResolver(
+          respond: unused,
+          hashError: Exception('no relay took the read'),
+        );
+
+        await expectLater(
+          resolver.findArchivedVine(_sha256),
           throwsA(isA<PublishedClipSourceLookupException>()),
         );
       });

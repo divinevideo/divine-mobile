@@ -1312,6 +1312,152 @@ void main() {
     });
   });
 
+  group('importReceivedVine', () {
+    const messageClipId = 'dm_clip_$_messageId';
+    late _MockPublishedClipSourceResolver resolver;
+
+    setUp(() {
+      resolver = _MockPublishedClipSourceResolver();
+      when(
+        () => clipLibraryService.getClipById(messageClipId),
+      ).thenAnswer((_) async => null);
+    });
+
+    VideoClipImportService buildVineService() => buildService(
+      readVideoMetadata: (_) async => VideoMetadata(
+        duration: const Duration(milliseconds: 6200),
+        extension: 'mp4',
+        fileSize: 16,
+        resolution: const Size(480, 480),
+        rotation: 0,
+        bitrate: 0,
+      ),
+      publishedSourceResolver: resolver,
+    );
+
+    test(
+      'saves the Vine like a feed import, crediting the viner, not the sender',
+      () async {
+        final vine = _video();
+        when(
+          () => resolver.findArchivedVine(_receivedClipHash),
+        ).thenAnswer((_) async => vine);
+
+        final result = await buildVineService().importReceivedVine(
+          source: sourceVideo,
+          messageId: _messageId,
+        );
+
+        final clip = (result as VideoClipImportSuccess).clip;
+        expect(clip.id, equals(messageClipId));
+        expect(clip.isFromDirectMessage, isTrue);
+        expect(clip.sourceAuthorPubkey, equals(vine.pubkey));
+        expect(clip.sourceEventId, equals(vine.id));
+        expect(clip.sourceAddressableId, equals(vine.addressableId));
+        expect(clip.targetAspectRatio, equals(models.AspectRatio.square));
+        expect(clip.duration, equals(const Duration(milliseconds: 6200)));
+        expect(clip.libraryTitle, equals('classic vine'));
+        expect(clip.proofManifestJson, isNull);
+        expect(
+          File(clip.requireVideo.file!.path).readAsBytesSync(),
+          sourceVideo.readAsBytesSync(),
+        );
+        expect(sourceVideo.existsSync(), isTrue);
+        verify(() => clipLibraryService.saveClip(clip)).called(1);
+      },
+    );
+
+    test('turns away a file no Vine post names', () async {
+      when(
+        () => resolver.findArchivedVine(_receivedClipHash),
+      ).thenAnswer((_) async => null);
+
+      final result = await buildVineService().importReceivedVine(
+        source: sourceVideo,
+        messageId: _messageId,
+      );
+
+      expect(
+        result,
+        isA<VideoClipImportFailure>().having(
+          (result) => result.reason,
+          'reason',
+          VideoClipImportFailureReason.notArchivedVine,
+        ),
+      );
+      expect(docsDir.listSync(), isEmpty);
+      verifyNever(() => clipLibraryService.saveClip(any()));
+    });
+
+    test('imports nothing when it cannot tell whether it is a Vine', () async {
+      when(() => resolver.findArchivedVine(_receivedClipHash)).thenThrow(
+        const PublishedClipSourceLookupException('no relay took the read'),
+      );
+
+      final result = await buildVineService().importReceivedVine(
+        source: sourceVideo,
+        messageId: _messageId,
+      );
+
+      expect(
+        result,
+        isA<VideoClipImportFailure>().having(
+          (result) => result.reason,
+          'reason',
+          VideoClipImportFailureReason.sourceLookupFailed,
+        ),
+      );
+      verifyNever(() => clipLibraryService.saveClip(any()));
+    });
+
+    test('returns the clip already saved from the message', () async {
+      final saved = DivineVideoClip(
+        id: messageClipId,
+        video: EditorVideo.file('${docsDir.path}/$messageClipId.mp4'),
+        duration: const Duration(seconds: 6),
+        recordedAt: DateTime.utc(2026, 10, 25),
+        targetAspectRatio: models.AspectRatio.square,
+        originalAspectRatio: 1,
+      );
+      when(
+        () => clipLibraryService.getClipById(messageClipId),
+      ).thenAnswer((_) async => saved);
+
+      final result = await buildVineService().importReceivedVine(
+        source: sourceVideo,
+        messageId: _messageId,
+      );
+
+      expect(
+        result,
+        isA<VideoClipImportSuccess>()
+            .having((result) => result.clip, 'clip', same(saved))
+            .having((result) => result.alreadyInLibrary, 'already', isTrue),
+      );
+      verifyNever(() => resolver.findArchivedVine(any()));
+    });
+
+    test(
+      'leaves neither the copy nor its frames behind when it may no longer '
+      'keep the Vine',
+      () async {
+        when(
+          () => resolver.findArchivedVine(_receivedClipHash),
+        ).thenAnswer((_) async => _video());
+
+        final result = await buildVineService().importReceivedVine(
+          source: sourceVideo,
+          messageId: _messageId,
+          beforeSave: () async => throw StateError('the message was retracted'),
+        );
+
+        expect(result, isA<VideoClipImportFailure>());
+        expect(docsDir.listSync(), isEmpty);
+        verifyNever(() => clipLibraryService.saveClip(any()));
+      },
+    );
+  });
+
   group('importGalleryClip', () {
     const galleryClipId = 'gallery_clip_${_ownerPubkey}_$_receivedClipHash';
 

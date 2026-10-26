@@ -383,6 +383,99 @@ void main() {
       },
     );
 
+    group('with a clip that has no credential', () {
+      setUp(() {
+        when(() => verifier.verify(any())).thenAnswer(
+          (_) async =>
+              const ClipProvenanceResult(ClipProvenanceStatus.noCredentials),
+        );
+      });
+
+      VideoDmSendCubit createVineCubit(ArchivedVineCheck isArchivedVine) =>
+          VideoDmSendCubit(
+            service: service,
+            clipVerifier: verifier,
+            isArchivedVine: isArchivedVine,
+          );
+
+      test('sends an archived Vine, which the recipient adds too', () async {
+        final checked = <String>[];
+        final cubit = createVineCubit((path) async {
+          checked.add(path);
+          return true;
+        });
+        addTearDown(cubit.close);
+
+        final outcome = await cubit.sendClips(
+          recipientPubkey: _recipientPubkey,
+          clips: [_clip('clip-a')],
+        );
+
+        expect(outcome?.status, VideoDmSendStatus.sent);
+        expect(checked, ['/documents/clip-a.mp4']);
+        expect(sentPaths, ['/documents/clip-a.mp4']);
+      });
+
+      test('holds back footage that is not an archived Vine', () async {
+        final cubit = createVineCubit((_) async => false);
+        addTearDown(cubit.close);
+
+        final outcome = await cubit.sendClips(
+          recipientPubkey: _recipientPubkey,
+          clips: [_clip('clip-a')],
+        );
+
+        expect(outcome?.status, VideoDmSendStatus.clipNotVerified);
+        expect(sentPaths, isEmpty);
+      });
+
+      test(
+        'leaves the decision to the recipient when the Vine lookup fails',
+        () async {
+          final cubit = createVineCubit(
+            (_) async => throw Exception('no relay took the read'),
+          );
+          addTearDown(cubit.close);
+
+          final outcome = await cubit.sendClips(
+            recipientPubkey: _recipientPubkey,
+            clips: [_clip('clip-a')],
+          );
+
+          expect(outcome?.status, VideoDmSendStatus.sent);
+          expect(sentPaths, ['/documents/clip-a.mp4']);
+        },
+      );
+    });
+
+    test(
+      'never asks whether a clip with a credential that fails is a Vine',
+      () async {
+        when(() => verifier.verify(any())).thenAnswer(
+          (_) async =>
+              const ClipProvenanceResult(ClipProvenanceStatus.notCameraCapture),
+        );
+        var asked = false;
+        final cubit = VideoDmSendCubit(
+          service: service,
+          clipVerifier: verifier,
+          isArchivedVine: (_) async => asked = true,
+        );
+        addTearDown(cubit.close);
+
+        final outcome = await cubit.sendClips(
+          recipientPubkey: _recipientPubkey,
+          clips: [_clip('clip-a')],
+        );
+
+        // An archived Vine carries no manifest at all; one that fails the check
+        // is footage that claims a history it cannot show.
+        expect(outcome?.status, VideoDmSendStatus.clipNotVerified);
+        expect(asked, isFalse);
+        expect(sentPaths, isEmpty);
+      },
+    );
+
     test('reports how many clips went out when a later send fails', () async {
       when(() => verifier.verify(any())).thenAnswer(
         (_) async => const ClipProvenanceResult(ClipProvenanceStatus.verified),
