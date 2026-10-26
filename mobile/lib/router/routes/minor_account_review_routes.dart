@@ -1,6 +1,7 @@
 // ABOUTME: Minor-account-review flow routes (welcome / review / parent / under-13)
 // ABOUTME: Split from app_router.dart (#4508)
 
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 import 'package:openvine/router/navigator_keys.dart';
 import 'package:openvine/screens/minor_account_review_parent_consent_screen.dart';
@@ -9,6 +10,25 @@ import 'package:openvine/screens/minor_account_review_record_consent_screen.dart
 import 'package:openvine/screens/minor_account_review_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_screen.dart';
 import 'package:openvine/screens/minor_account_review_under13_support_screen.dart';
+
+part 'minor_account_review_routes.g.dart';
+
+/// The in-app recording step uses the typed route contract for new routes.
+@TypedGoRoute<MinorAccountReviewRecordConsentRouteData>(
+  path: MinorAccountReviewRecordConsentScreen.path,
+  name: MinorAccountReviewRecordConsentScreen.routeName,
+)
+class MinorAccountReviewRecordConsentRouteData extends GoRouteData
+    with $MinorAccountReviewRecordConsentRouteData {
+  const MinorAccountReviewRecordConsentRouteData();
+
+  static final GlobalKey<NavigatorState> $parentNavigatorKey =
+      NavigatorKeys.root;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      const MinorAccountReviewRecordConsentScreen();
+}
 
 List<RouteBase> minorAccountReviewRoutes() {
   return [
@@ -38,12 +58,7 @@ List<RouteBase> minorAccountReviewRoutes() {
       parentNavigatorKey: NavigatorKeys.root,
       builder: (ctx, st) => const MinorAccountReviewParentConsentScreen(),
     ),
-    GoRoute(
-      path: MinorAccountReviewRecordConsentScreen.path,
-      name: MinorAccountReviewRecordConsentScreen.routeName,
-      parentNavigatorKey: NavigatorKeys.root,
-      builder: (ctx, st) => const MinorAccountReviewRecordConsentScreen(),
-    ),
+    ...$appRoutes,
     GoRoute(
       path: MinorAccountReviewParentContactScreen.path,
       name: MinorAccountReviewParentContactScreen.routeName,
