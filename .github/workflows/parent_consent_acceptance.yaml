@@ -36,6 +36,7 @@ jobs:
     timeout-minutes: 45
     env:
       DISPLAY: ":99"
+      E2E_PREBUILT_APK: ${{ github.workspace }}/mobile/build/app/outputs/flutter-apk/app-debug.apk
     steps:
       - uses: actions/checkout@v7
       - name: Check out the matching backend candidate
@@ -69,7 +70,25 @@ jobs:
           cd mobile
           flutter pub get
       - name: Exercise real client and Worker HTTP contract
-        run: python3 local_stack/consent_acceptance/run.py .consent-backend
+        run: |
+          python3 local_stack/consent_acceptance/test_profile.py
+          python3 local_stack/consent_acceptance/run.py .consent-backend
+      - name: Build the exact native test before starting the emulator
+        run: |
+          mkdir -p "$HOME/.gradle"
+          cat >> "$HOME/.gradle/gradle.properties" <<'GRADLE'
+          org.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=768m -XX:ReservedCodeCacheSize=256m -XX:+HeapDumpOnOutOfMemoryError
+          org.gradle.workers.max=2
+          org.gradle.daemon=false
+          kotlin.compiler.execution.strategy=in-process
+          kotlin.daemon.jvmargs=-Xmx1g
+          GRADLE
+          free -h
+          cd mobile
+          flutter build apk --debug --target-platform android-x64 --dart-define=DEFAULT_ENV=LOCAL --target integration_test/consent/native_consent_capture_test.dart
+          cd android
+          ./gradlew --stop
+          free -h
       - name: Enable Linux emulator acceleration and display
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-consent-kvm.rules

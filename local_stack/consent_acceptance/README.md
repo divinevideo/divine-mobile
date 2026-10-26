@@ -40,6 +40,13 @@ E2E_TEST_PERMISSIONS='android.permission.CAMERA android.permission.RECORD_AUDIO'
   bash local_stack/profile.sh integration_test/consent/native_consent_capture_test.dart
 ```
 
+On CI, the workflow builds the exact integration-test APK **before** booting the
+emulator and sets `E2E_PREBUILT_APK` to that file. The profiler then uses the
+existing Flutter integration driver with `--use-application-binary`, so no Gradle
+build competes with the running emulator. CI-only Gradle/Kotlin limits bound
+build memory; local/release defaults are unchanged. The prebuilt dispatch and
+failure reporting have four command-boundary regressions in `test_profile.py`.
+
 The native test uses the real camera service, recorder, preview, submission
 Cubit/repository and HTTP upload. Only the account identity is synthetic; the
 backend's external dependencies remain synthetic as above. A focused two-route

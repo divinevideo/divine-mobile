@@ -143,6 +143,16 @@ adb -s "$DEVICE" logcat -c 2>/dev/null || true
 adb -s "$DEVICE" logcat -v UTC -v year flutter:I BandwidthTracker:I IndividualVideoController:I C2PAManager:D OpenVineProofMode:D '*:S' > "$LOGCAT_LOG" 2>&1 &
 LOGCAT_PID=$!
 
+grant_test_permissions() {
+    if ! adb -s "$DEVICE" shell pm grant co.openvine.app.staging \
+        android.permission.POST_NOTIFICATIONS; then
+        echo "WARNING: could not pre-grant POST_NOTIFICATIONS; expected below Android 13." >&2
+    fi
+    for permission in ${E2E_TEST_PERMISSIONS:-}; do
+        adb -s "$DEVICE" shell pm grant co.openvine.app.staging "$permission" || return 1
+    done
+}
+
 # --- Run E2E test ---
 # Not every suite under integration_test/ is a patrol suite. `patrol test`
 # can only drive a patrolTest body, so dispatch on what the target actually
@@ -159,6 +169,25 @@ if grep -rq 'patrolTest' "$TEST_PATH"; then
         "${PATROL_EXTRA_ARGS[@]+"${PATROL_EXTRA_ARGS[@]}"}" \
         2>&1 | tee "$APP_LOG"
     TEST_EXIT="${PIPESTATUS[0]}"
+elif [[ -n "${E2E_PREBUILT_APK:-}" ]]; then
+    # Build the exact integration target before booting resource-heavy
+    # emulators; drive uses this APK without invoking Gradle again.
+    if [[ -f "$E2E_PREBUILT_APK" ]]; then
+        adb -s "$DEVICE" install -r -t "$E2E_PREBUILT_APK" 2>&1 | tee "$APP_LOG"
+        INSTALL_EXIT="${PIPESTATUS[0]}"
+    else
+        echo "ERROR: prebuilt integration APK not found: $E2E_PREBUILT_APK" | tee "$APP_LOG"
+        INSTALL_EXIT=1
+    fi
+    if [[ $INSTALL_EXIT -eq 0 ]] && grant_test_permissions; then
+        flutter drive --driver=test_driver/integration_test.dart \
+            --target="$TEST_PATH" --device-id="$DEVICE" \
+            --use-application-binary="$E2E_PREBUILT_APK" \
+            --dart-define=DEFAULT_ENV=LOCAL 2>&1 | tee -a "$APP_LOG"
+        TEST_EXIT="${PIPESTATUS[0]}"
+    else
+        TEST_EXIT=1
+    fi
 else
     # Plain integration_test suite. There is no native automator on this
     # path, so a permission dialog would block Flutter interaction with no
@@ -182,27 +211,14 @@ else
         flutter install --debug --device-id "$DEVICE" 2>&1 | tee -a "$APP_LOG"
         INSTALL_EXIT="${PIPESTATUS[0]}"
     fi
-    if [[ $INSTALL_EXIT -eq 0 ]]; then
-        if ! adb -s "$DEVICE" shell pm grant co.openvine.app.staging \
-            android.permission.POST_NOTIFICATIONS; then
-            echo "WARNING: could not pre-grant POST_NOTIFICATIONS to co.openvine.app.staging." >&2
-            echo "Below Android 13 that is expected; otherwise its dialog can block the run." >&2
-        fi
-        # Native capture acceptance explicitly opts into camera/audio grants.
-        # Flutter install may uninstall the old debug app and clear grants.
-        for permission in ${E2E_TEST_PERMISSIONS:-}; do
-            adb -s "$DEVICE" shell pm grant co.openvine.app.staging "$permission" || {
-                echo "ERROR: could not grant requested test permission: $permission" >&2
-                exit 1
-            }
-        done
+    if [[ $INSTALL_EXIT -eq 0 ]] && grant_test_permissions; then
         flutter test "$TEST_PATH" \
             --device-id "$DEVICE" \
             --dart-define=DEFAULT_ENV=LOCAL \
             2>&1 | tee -a "$APP_LOG"
         TEST_EXIT="${PIPESTATUS[0]}"
     else
-        TEST_EXIT="$INSTALL_EXIT"
+        TEST_EXIT=1
     fi
 fi
 set -e
