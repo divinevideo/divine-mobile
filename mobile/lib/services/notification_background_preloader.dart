@@ -24,7 +24,11 @@ Future<void> cacheNotificationThumbnail(String url) async {
 /// unsupported target, or OS suspension must never prevent notification display.
 /// Only public thumbnails are warmed here; the account's foreground repository
 /// owns metadata/profile persistence and all content filtering on open.
-Future<void> preloadBackgroundNotification(Map<String, dynamic> data) async {
+Future<void> preloadBackgroundNotification(
+  Map<String, dynamic> data, {
+  FunnelcakeApiClient? apiClient,
+  Future<void> Function(String) cacheThumbnail = cacheNotificationThumbnail,
+}) async {
   final payload = parseFcmPayload(data);
   if (payload == null ||
       !const {
@@ -40,11 +44,15 @@ Future<void> preloadBackgroundNotification(Map<String, dynamic> data) async {
   FunnelcakeApiClient? client;
   NotificationContentPreloader? preloader;
   try {
-    await environment.initialize().timeout(const Duration(seconds: 1));
-    final api = FunnelcakeApiClient(
-      baseUrl: environment.currentConfig.apiBaseUrl,
-      timeout: const Duration(seconds: 3),
-    );
+    if (apiClient == null) {
+      await environment.initialize().timeout(const Duration(seconds: 1));
+    }
+    final api =
+        apiClient ??
+        FunnelcakeApiClient(
+          baseUrl: environment.currentConfig.apiBaseUrl,
+          timeout: const Duration(seconds: 3),
+        );
     client = api;
     preloader = NotificationContentPreloader(
       loadVideo: (routeId) async {
@@ -54,19 +62,28 @@ Future<void> preloadBackgroundNotification(Map<String, dynamic> data) async {
         // target's author before using a same-d-tag REST result.
         final event = await api.getVideoEvent(id);
         if (event == null ||
-            (coordinate != null && event.pubkey != coordinate.pubkey)) {
+            (coordinate == null && event.id != routeId) ||
+            (coordinate != null &&
+                (event.pubkey != coordinate.pubkey ||
+                    event.kind != coordinate.kind ||
+                    !event.tags.any(
+                      (tag) =>
+                          tag.length >= 2 &&
+                          tag[0] == 'd' &&
+                          tag[1] == coordinate.dTag,
+                    )))) {
           return null;
         }
         return VideoEvent.fromNostrEvent(event);
       },
-      cacheThumbnail: cacheNotificationThumbnail,
+      cacheThumbnail: cacheThumbnail,
     );
     await preloader.preload(data);
   } on Object {
     // Preloading is expendable; opening follows the normal repository path.
   } finally {
     preloader?.dispose();
-    client?.dispose();
+    if (apiClient == null) client?.dispose();
     environment.dispose();
   }
 }
