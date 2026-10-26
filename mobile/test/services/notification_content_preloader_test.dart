@@ -122,9 +122,35 @@ void main() {
         loadVideo: (_) async => throw StateError('offline'),
         cacheThumbnail: (_) async {},
       );
+      await expectLater(
+        preloader.preload({'type': 'like', 'eventId': event}),
+        completes,
+      );
+    });
+
+    test('does no work after dispose', () async {
+      final requested = <String>[];
+      final preloader = NotificationContentPreloader(
+        loadVideo: (id) async {
+          requested.add(id);
+          return null;
+        },
+        loadProfile: (pubkey) async {
+          requested.add(pubkey);
+        },
+        cacheThumbnail: (_) async {},
+      );
       await preloader.preload({'type': 'like', 'eventId': event});
+      expect(requested, [event]);
+
       preloader.dispose();
-      await preloader.preload({'type': 'like', 'eventId': reference});
+      await preloader.preload({
+        'type': 'like',
+        'eventId': reference,
+        'senderPubkey': actor,
+      });
+
+      expect(requested, [event]);
     });
   });
 }
