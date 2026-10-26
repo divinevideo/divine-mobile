@@ -974,11 +974,11 @@ class VideoEditorRenderService {
         timelineMap: timelineMap,
         beats: beats,
       ),
-      // An Adjust set's highlights, shadows, vibrance and sharpening first,
-      // so they adjust the clip as recorded, as the preview draws them.
+      // Adjust after the effects editor's effects, as in the preview; see
+      // adjustVideoEffectsOf for why.
       customEffects: customVideoEffectsOnOutput([
-        ...adjustVideoEffectsOf(parameters?.tuneAdjustments ?? const []),
         ...?parameters?.customVideoEffectsFromCompleteMeta,
+        ...adjustVideoEffectsOf(parameters?.tuneAdjustments ?? const []),
       ], timelineMap),
       imageBytesWithCropping: true,
       qualityConfig: VideoQualityConfig.custom(

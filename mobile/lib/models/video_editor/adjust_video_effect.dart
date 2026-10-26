@@ -47,9 +47,13 @@ CustomVideoEffect? adjustVideoEffect(
 /// [adjustVideoEffectKinds], over the set's time window, in the order the
 /// sets come in.
 ///
-/// The render draws custom effects before its colour filters, as the preview
-/// draws the player's frame effects before the editor's colour matrix, so in
-/// both these come before brightness, contrast and the rest of their set.
+/// The preview and the export both draw these after the effects editor's own
+/// custom effects (Echo, Drops, Fisheye) and before the colour matrices. An
+/// effect that reads earlier frames, like Echo, gets them unprocessed in the
+/// preview and in the iOS export, but in the Android export from the effect
+/// before it in the chain. Running Adjust last keeps it out of those frames, so
+/// Echo's trail looks the same everywhere, and Adjust then grades the finished
+/// picture, as brightness and contrast do.
 List<CustomVideoEffect> adjustVideoEffectsOf(
   List<TuneAdjustmentMatrix> adjustments,
 ) => [

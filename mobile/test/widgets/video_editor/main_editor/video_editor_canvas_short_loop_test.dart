@@ -670,6 +670,24 @@ void main() {
         await unmount(tester);
       });
 
+      testWidgets('draws Adjust after the echo, as the export does', (
+        tester,
+      ) async {
+        await pumpCanvas(tester, loop);
+        effectsCubit.syncApplied(const [echo]);
+        await tester.pump();
+
+        await openAdjust(tester, {'shadows': 0.5});
+
+        expect(frameEffectCalls().last.arguments, {
+          'effects': [
+            ...echoArguments['effects']!,
+            ...adjustArguments({'shadows': 0.5})['effects']! as List<Object?>,
+          ],
+        });
+        await unmount(tester);
+      });
+
       testWidgets('drops the session once Adjust closes', (tester) async {
         await pumpCanvas(tester, loop);
         await openAdjust(tester, {'sharpen': 0.5});

@@ -164,7 +164,7 @@ void main() {
     );
 
     test('draws highlights, shadows, vibrance and sharpening natively, '
-        'before the echo trail and outside the colour filters', () async {
+        'after the echo trail and outside the colour filters', () async {
       TuneAdjustmentMatrix member(String kind, double value, List<double> m) =>
           TuneAdjustmentMatrix(
             id: TuneSet.memberId(kind: kind, setId: 'set-1'),
@@ -197,16 +197,18 @@ void main() {
       );
 
       final task = plugin.tasks.single;
+      // Last, so the echo's earlier frames are the same unadjusted frames
+      // the preview and the iOS export hand it.
       expect(task.customEffects, const [
+        CustomVideoEffect(
+          id: echoVideoEffectId,
+          params: {EditorVideoEffect.intensityParam: 0.5},
+        ),
         CustomVideoEffect(
           id: adjustVideoEffectId,
           params: {'shadows': 0.6, 'sharpen': 0.3},
           startTime: Duration.zero,
           endTime: Duration(seconds: 2),
-        ),
-        CustomVideoEffect(
-          id: echoVideoEffectId,
-          params: {EditorVideoEffect.intensityParam: 0.5},
         ),
       ]);
       expect(task.colorFilters.map((filter) => filter.matrix), const [

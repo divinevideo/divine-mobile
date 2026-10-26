@@ -2007,8 +2007,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// player's timeline.
   ///
   /// The Adjust sets' highlights, shadows, vibrance and sharpening come
-  /// first, as in the export; while the Adjust editor is open its sliders
-  /// stand in for them.
+  /// last, as in the export (see `adjustVideoEffectsOf`); while the Adjust
+  /// editor is open its sliders stand in for them.
   void _syncFrameEffects() {
     final player = _videoPlayer;
     if (player == null || !mounted) return;
@@ -2016,6 +2016,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         context.read<VideoEditorMainBloc>().state.openSubEditor ==
         SubEditorType.tune;
     final effects = [
+      ...context.read<VideoEditorEffectsCubit>().state.previewCustomEffects,
       ...previewAdjustVideoEffects(
         applied:
             VideoEditorScope.of(
@@ -2026,7 +2027,6 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             ? context.read<VideoEditorTuneBloc>().state.values
             : null,
       ),
-      ...context.read<VideoEditorEffectsCubit>().state.previewCustomEffects,
     ];
     int? onPlayer(Duration? time) => time == null
         ? null
