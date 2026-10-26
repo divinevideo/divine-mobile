@@ -12,7 +12,7 @@ import 'package:http/http.dart' as http;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show ProVideoEditor;
-import 'package:timezone/data/latest_10y.dart' as tz_data;
+import 'package:timezone/data/latest.dart' deferred as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 /// A place the place search found.
@@ -255,6 +255,7 @@ class InfoStickerRepository {
           'The sun neither rose nor set there that day',
         );
       }
+      if (place.timeZone != null) await _loadTimeZones();
       return (
         sunrise: _placeTime(sunrise, place.timeZone),
         sunset: _placeTime(sunset, place.timeZone),
@@ -418,17 +419,30 @@ class InfoStickerRepository {
     );
   }
 
+  /// [utc] in [timeZone], once [_loadTimeZones] has run.
   static DateTime _inTimeZone(DateTime utc, String? timeZone) {
     if (timeZone == null) return utc.toLocal();
-    if (!_timeZonesLoaded) {
-      tz_data.initializeTimeZones();
-      _timeZonesLoaded = true;
-    }
     try {
       return tz.TZDateTime.from(utc, tz.getLocation(timeZone));
     } on tz.LocationNotFoundException {
       return utc.toLocal();
     }
+  }
+
+  /// Loads the time zone database once. It holds each zone's whole history,
+  /// so an older day gets the summer or winter time it had then; on the web
+  /// it is a library of its own, fetched when a sun sticker first needs it.
+  ///
+  /// Throws an [InfoStickerLookupException] when it cannot be fetched.
+  static Future<void> _loadTimeZones() async {
+    if (_timeZonesLoaded) return;
+    try {
+      await tz_data.loadLibrary();
+    } on Exception catch (error) {
+      throw InfoStickerLookupException('No time zone data: $error');
+    }
+    tz_data.initializeTimeZones();
+    _timeZonesLoaded = true;
   }
 
   static bool _timeZonesLoaded = false;

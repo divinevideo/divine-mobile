@@ -280,6 +280,31 @@ void main() {
         expect(times.sunset, equals(DateTime(2026, 8, 30, 20, 11)));
       });
 
+      test('reads the times in the winter time of an older year', () async {
+        final client = MockClient(
+          (_) async => http.Response(
+            jsonEncode({
+              'daily': {
+                'sunrise': ['2019-12-15T07:06'],
+                'sunset': ['2019-12-15T15:35'],
+              },
+            }),
+            200,
+          ),
+        );
+
+        final times = await withClock(
+          Clock.fixed(DateTime(2026, 10, 27)),
+          () => _repository(
+            client: client,
+          ).sunTimesAt(_bern, DateTime(2019, 12, 15, 12)),
+        );
+
+        // Zurich is one hour ahead of UTC in winter, in 2019 as now.
+        expect(times.sunrise, equals(DateTime(2019, 12, 15, 8, 6)));
+        expect(times.sunset, equals(DateTime(2019, 12, 15, 16, 35)));
+      });
+
       test('fails when no service has the day', () async {
         final client = MockClient((_) async => http.Response('oops', 500));
 
