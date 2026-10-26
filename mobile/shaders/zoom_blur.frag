@@ -28,6 +28,10 @@ vec3 tap(vec2 q) {
 void main() {
   vec2 fragCoord = FlutterFragCoord().xy;
   vec2 p = vec2(fragCoord.x, uSize.y - fragCoord.y);
+  if (uStrength <= 0.0) {
+    fragColor = vec4(tap(p), 1.0);
+    return;
+  }
   vec2 c = uSize * 0.5;
   float jitter = fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
   vec3 color = vec3(0.0);

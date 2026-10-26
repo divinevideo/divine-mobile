@@ -8,7 +8,8 @@ import pro_video_editor
 /// Each pixel averages 32 taps along the line from it towards the centre,
 /// reaching up to 22% of the way there. The taps start at a different point
 /// from pixel to pixel, by interleaved gradient noise, so they leave a fine
-/// grain rather than rings.
+/// grain rather than rings. A frame without streaks, such as one between two
+/// hits on the beat, is left as it is.
 ///
 /// Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how
 /// long the streaks are) and, for an effect on the beat, `beatsUs`: the beats,
@@ -54,6 +55,10 @@ final class ZoomBlurVideoEffect: ShaderVideoEffect {
       Frame f = frameOf(u);
       float strength = u[3].x;
       float2 p = pixelOf(u, gid, target.get_height());
+      if (strength <= 0.0) {
+        target.write(float4(tap(frame, f, p), 1.0), gid);
+        return;
+      }
       float2 c = f.size * 0.5;
       float jitter = fract(52.9829189 * fract(dot(p, float2(0.06711056, 0.00583715))));
       float3 color = float3(0.0);

@@ -11,7 +11,8 @@ import com.divinevideo.divine_video_player.VideoFrameEffects
  * Each pixel averages 32 taps along the line from it towards the centre,
  * reaching up to 22% of the way there. The taps start at a different point
  * from pixel to pixel, by interleaved gradient noise, so they leave a fine
- * grain rather than rings.
+ * grain rather than rings. A frame without streaks, such as one between two
+ * hits on the beat, reads each pixel once.
  *
  * Its params, from the Dart `CustomVideoEffect`, are `intensity` (0–1: how
  * long the streaks are) and, for an effect on the beat, `beatsUs`: the beats,
@@ -43,6 +44,10 @@ uniform float uStrength;
 
 void main() {
   vec2 p = vTexCoord * uSize;
+  if (uStrength <= 0.0) {
+    gl_FragColor = vec4(tap(p), 1.0);
+    return;
+  }
   vec2 c = uSize * 0.5;
   float jitter = fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
   vec3 color = vec3(0.0);
