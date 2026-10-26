@@ -45,7 +45,8 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
 
   /// Fills in what a new sticker starts with: the time its clip was recorded
   /// (now when there is no clip), or the battery level. A sticker that
-  /// already has its value keeps it.
+  /// already has its value keeps it. The weather or sun times of a place
+  /// picked before the recording time was known are read for that time.
   Future<void> load() async {
     final data = state.data;
     switch (data.kind) {
@@ -66,9 +67,9 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
           return;
         }
         emit(state.copyWith(valueStatus: .loading));
-        final DateTime time;
+        DateTime? recordedAt;
         try {
-          time = await _repository.recordingTimeOf(clip);
+          recordedAt = await _repository.recordingTimeOf(clip);
         } catch (error, stackTrace) {
           // The repository answers a file it cannot read with the clip's own
           // time, so only a defect lands here; the sheet goes on with now.
@@ -79,23 +80,23 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
             ),
             stackTrace,
           );
-          emitIfOpen(
-            state.copyWith(
-              data: state.data.copyWith(dateTime: _now()),
-              timeSource: InfoStickerTimeSource.now,
-              valueStatus: .idle,
-            ),
-          );
-          return;
         }
-        emitIfOpen(
+        if (isClosed) return;
+        final place = state.place;
+        emit(
           state.copyWith(
-            data: state.data.copyWith(dateTime: time),
-            recordedAt: time,
-            timeSource: InfoStickerTimeSource.recording,
-            valueStatus: .idle,
+            data: state.data.copyWith(dateTime: recordedAt ?? _now()),
+            recordedAt: recordedAt,
+            timeSource: recordedAt == null
+                ? InfoStickerTimeSource.now
+                : InfoStickerTimeSource.recording,
+            // A place picked meanwhile is still to be looked up.
+            valueStatus: place == null ? .idle : null,
           ),
         );
+        // The creator picked a place before the time was known, and
+        // placeSelected left its weather or sun times to be read here.
+        if (place != null) await _lookUpPlaceValues(place);
       case InfoStickerKind.battery when data.batteryLevel == null:
         emit(state.copyWith(valueStatus: .loading));
         try {
@@ -247,8 +248,24 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
         valueStatus: kind == InfoStickerKind.location ? .success : .loading,
       ),
     );
+    // Read at the wrong time otherwise: load() looks them up once it knows.
+    if (_awaitsRecordingTime) return;
+    await _lookUpPlaceValues(place);
+  }
+
+  /// Whether the sticker reads the weather or the sun at the time its clip
+  /// was recorded, which load() is still reading.
+  bool get _awaitsRecordingTime =>
+      _clip != null &&
+      state.data.dateTime == null &&
+      (state.data.kind == InfoStickerKind.weather ||
+          state.data.kind == InfoStickerKind.sun);
+
+  /// Looks up the weather, sun times or altitude at [place], unless another
+  /// place was picked meanwhile.
+  Future<void> _lookUpPlaceValues(InfoStickerPlace place) async {
     try {
-      switch (kind) {
+      switch (state.data.kind) {
         case InfoStickerKind.weather:
           final reading = await _repository.weatherAt(
             place,

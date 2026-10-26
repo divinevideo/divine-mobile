@@ -1,6 +1,8 @@
 // ABOUTME: Tests the info sticker sheet's cubit: what a new sticker starts
 // ABOUTME: with, the place and design steps, and the lookups for a place.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:clock/clock.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -210,6 +212,66 @@ void main() {
           expect(cubit.state.valueStatus, InfoStickerValueStatus.failure);
         },
       );
+    });
+
+    group('place picked before the recording time is known', () {
+      test('reads the weather there at the recording time', () async {
+        final recorded = Completer<DateTime>();
+        when(
+          () => repository.recordingTimeOf(_clip),
+        ).thenAnswer((_) => recorded.future);
+        when(() => repository.weatherAt(_bern, any())).thenAnswer(
+          (_) async => const InfoStickerWeatherReading(
+            temperatureCelsius: 18,
+            isDay: true,
+          ),
+        );
+        final cubit = InfoStickerCubit(
+          repository: repository,
+          initial: _sticker(InfoStickerKind.weather),
+          clip: _clip,
+        );
+        addTearDown(cubit.close);
+
+        final loading = cubit.load();
+        await cubit.placeSelected(_bern);
+        expect(cubit.state.valueStatus, InfoStickerValueStatus.loading);
+        recorded.complete(DateTime(2026, 8, 1, 7, 30));
+        await loading;
+
+        verify(
+          () => repository.weatherAt(_bern, DateTime(2026, 8, 1, 7, 30)),
+        ).called(1);
+        expect(cubit.state.data.temperatureCelsius, equals(18));
+        expect(cubit.state.timeSource, InfoStickerTimeSource.recording);
+        expect(cubit.state.valueStatus, InfoStickerValueStatus.success);
+      });
+
+      test('reads the sun times there on the recording day', () async {
+        final recorded = Completer<DateTime>();
+        when(
+          () => repository.recordingTimeOf(_clip),
+        ).thenAnswer((_) => recorded.future);
+        when(() => repository.sunTimesAt(_bern, any())).thenAnswer(
+          (_) async => (sunrise: DateTime(2025, 1, 4, 8, 14), sunset: null),
+        );
+        final cubit = InfoStickerCubit(
+          repository: repository,
+          initial: _sticker(InfoStickerKind.sun),
+          clip: _clip,
+        );
+        addTearDown(cubit.close);
+
+        final loading = cubit.load();
+        await cubit.placeSelected(_bern);
+        recorded.complete(DateTime(2025, 1, 4, 12));
+        await loading;
+
+        verify(
+          () => repository.sunTimesAt(_bern, DateTime(2025, 1, 4, 12)),
+        ).called(1);
+        expect(cubit.state.data.sunrise, equals(DateTime(2025, 1, 4, 8, 14)));
+      });
     });
 
     group('time source', () {
