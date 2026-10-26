@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
+import 'package:media_cache/media_cache.dart';
 import 'package:models/models.dart';
 import 'package:openvine/services/environment_service.dart';
 import 'package:openvine/services/notification_content_preloader.dart';
@@ -11,8 +12,19 @@ import 'package:openvine/services/notification_helpers.dart';
 import 'package:openvine/utils/open_vine_image_cache.dart';
 
 /// Cache the same URL key used by VineCachedImage, cancelling slow downloads.
-Future<void> cacheNotificationThumbnail(String url) async {
-  final operation = openVineImageCache.cacheFileCancellable(url, key: url);
+///
+/// [cache] replaces [openVineImageCache] in tests.
+Future<void> cacheNotificationThumbnail(
+  String url, {
+  MediaCacheManager? cache,
+}) async {
+  final imageCache = cache ?? openVineImageCache;
+  // The image cache keeps no sync manifest, so cacheFileCancellable would
+  // download again even when the file is on disk. Check the shared index
+  // first, as MediaCacheImageProvider does.
+  final existing = await imageCache.getFileFromCache(url);
+  if (existing != null && existing.file.existsSync()) return;
+  final operation = imageCache.cacheFileCancellable(url, key: url);
   try {
     await operation.result.timeout(const Duration(seconds: 3));
   } on TimeoutException {
