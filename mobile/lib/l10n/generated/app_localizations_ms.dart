@@ -10660,6 +10660,180 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorStickerSearchHint => 'Cari pelekat...';
 
   @override
+  String get videoEditorInfoStickersTitle => 'Info';
+
+  @override
+  String get videoEditorInfoStickerTime => 'Masa';
+
+  @override
+  String get videoEditorInfoStickerDate => 'Tarikh';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'Lokasi';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'Cuaca';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'Ketinggian';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'Bateri';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'Cerah';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'Gelap';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'Hijau';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'Garis luar';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'Digital';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'Analog';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'Kaca';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'Kuning';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'Neon';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'Ringkas';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'Tukar tempat';
+
+  @override
+  String get videoEditorInfoStickerPlaceAttribution =>
+      'Data tempat daripada GeoNames melalui Open-Meteo.com.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'Rakaman · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'Sekarang · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'Hari ini · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'Pengira hari';
+
+  @override
+  String get videoEditorInfoStickerSun => 'Matahari';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'Bulan';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'Pemasa REC';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'Filem';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'Kamera video';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'Hari ke-$day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'Hari ke-$day daripada $total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'Hari';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'Jumlah hari (pilihan)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'Pin';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'Bendera';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'Anak bulan';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'Sabit muda';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'Suku pertama';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'Bulan cembung muda';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'Bulan purnama';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'Bulan cembung tua';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'Suku akhir';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'Sabit tua';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint => 'Cari bandar atau tempat';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'Tiada tempat ditemui';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'Tidak dapat mencari tempat. Cuba lagi.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'Hanya nama tempat yang masuk ke dalam video anda, bukan kedudukan tepat anda.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'Memuatkan…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed =>
+      'Tidak dapat dimuatkan. Cuba lagi.';
+
+  @override
+  String get videoEditorInfoStickerWeatherAttribution =>
+      'Data cuaca oleh Open-Meteo.com';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'Suhu';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'Unit';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'Tahap bateri';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'Tambah pelekat';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => 'Pilih fon';
 
   @override

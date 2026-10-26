@@ -10751,6 +10751,180 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorStickerSearchHint => 'Търсене на стикери...';
 
   @override
+  String get videoEditorInfoStickersTitle => 'Инфо';
+
+  @override
+  String get videoEditorInfoStickerTime => 'Час';
+
+  @override
+  String get videoEditorInfoStickerDate => 'Дата';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'Място';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'Времето';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'Надморска височина';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'Батерия';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'Светъл';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'Тъмен';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'Зелен';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'Контур';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'Цифров';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'Аналогов';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'Стъкло';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'Жълт';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'Неон';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'Семпъл';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'Смени мястото';
+
+  @override
+  String get videoEditorInfoStickerPlaceAttribution =>
+      'Данни за места от GeoNames чрез Open-Meteo.com.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'Заснемане · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'Сега · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'Днес · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'Брояч на дни';
+
+  @override
+  String get videoEditorInfoStickerSun => 'Слънце';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'Луна';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC таймер';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'Филм';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'Видеокамера';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'Ден $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'Ден $day от $total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'Ден';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'Общо дни (по желание)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'Карфица';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'Знаме';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'Новолуние';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'Растящ сърп';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'Първа четвърт';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'Растяща луна';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'Пълнолуние';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'Намаляваща луна';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'Последна четвърт';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'Намаляващ сърп';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint => 'Потърси град или място';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'Няма намерени места';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'Не успяхме да потърсим места. Опитай пак.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'Във видеото ти влиза само името на мястото, никога точното ти местоположение.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'Зарежда се…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed =>
+      'Не успяхме да заредим. Опитай пак.';
+
+  @override
+  String get videoEditorInfoStickerWeatherAttribution =>
+      'Данни за времето от Open-Meteo.com';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'Температура';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'Мерна единица';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'Ниво на батерията';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'Добави стикер';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => 'Избери шрифт';
 
   @override

@@ -7856,6 +7856,246 @@
   "videoEditorFeedPreviewContent": "Avoid placing content behind these areas.",
   "videoEditorStickersDivineOriginals": "Divine Originals",
   "videoEditorStickerSearchHint": "Search stickers...",
+  "videoEditorInfoStickersTitle": "Info",
+  "@videoEditorInfoStickersTitle": {
+    "description": "Heading of the info stickers (time, date, weather and so on) in the video editor's sticker sheet."
+  },
+  "videoEditorInfoStickerTime": "Time",
+  "@videoEditorInfoStickerTime": {
+    "description": "Name of the info sticker that shows the time a clip was recorded."
+  },
+  "videoEditorInfoStickerDate": "Date",
+  "@videoEditorInfoStickerDate": {
+    "description": "Name of the info sticker that shows the date a clip was recorded."
+  },
+  "videoEditorInfoStickerLocation": "Location",
+  "@videoEditorInfoStickerLocation": {
+    "description": "Name of the info sticker that shows a place name."
+  },
+  "videoEditorInfoStickerWeather": "Weather",
+  "@videoEditorInfoStickerWeather": {
+    "description": "Name of the info sticker that shows the weather at a place."
+  },
+  "videoEditorInfoStickerAltitude": "Altitude",
+  "@videoEditorInfoStickerAltitude": {
+    "description": "Name of the info sticker that shows the altitude of a place."
+  },
+  "videoEditorInfoStickerBattery": "Battery",
+  "@videoEditorInfoStickerBattery": {
+    "description": "Name of the info sticker that shows the phone's battery level."
+  },
+  "videoEditorInfoStickerStyleLight": "Light",
+  "@videoEditorInfoStickerStyleLight": {
+    "description": "Name of the info sticker style with a white background."
+  },
+  "videoEditorInfoStickerStyleDark": "Dark",
+  "@videoEditorInfoStickerStyleDark": {
+    "description": "Name of the info sticker style with a dark see-through background."
+  },
+  "videoEditorInfoStickerStyleBrand": "Green",
+  "@videoEditorInfoStickerStyleBrand": {
+    "description": "Name of the info sticker style with Divine's green background."
+  },
+  "videoEditorInfoStickerStyleOutline": "Outline",
+  "@videoEditorInfoStickerStyleOutline": {
+    "description": "Name of the info sticker style with a white outline and no background."
+  },
+  "videoEditorInfoStickerStyleDigital": "Digital",
+  "@videoEditorInfoStickerStyleDigital": {
+    "description": "Name of the time sticker style that looks like a digital clock."
+  },
+  "videoEditorInfoStickerStyleAnalog": "Analog",
+  "@videoEditorInfoStickerStyleAnalog": {
+    "description": "Name of the time sticker style that looks like a clock with hands."
+  },
+  "videoEditorInfoStickerStyleGlass": "Glass",
+  "@videoEditorInfoStickerStyleGlass": {
+    "description": "Name of the info sticker style with a pale see-through background the video shows through."
+  },
+  "videoEditorInfoStickerStyleHighlight": "Yellow",
+  "@videoEditorInfoStickerStyleHighlight": {
+    "description": "Name of the info sticker style with a yellow background, like a highlighter."
+  },
+  "videoEditorInfoStickerStyleNeon": "Neon",
+  "@videoEditorInfoStickerStyleNeon": {
+    "description": "Name of the info sticker style with white text glowing green and no background."
+  },
+  "videoEditorInfoStickerStylePlain": "Plain",
+  "@videoEditorInfoStickerStylePlain": {
+    "description": "Name of the info sticker style with white text, a soft shadow and no background."
+  },
+  "videoEditorInfoStickerChangePlace": "Change place",
+  "@videoEditorInfoStickerChangePlace": {
+    "description": "Row in the info sticker sheet that goes back to the place search to pick another place."
+  },
+  "videoEditorInfoStickerPlaceAttribution": "Place data from GeoNames via Open-Meteo.com.",
+  "@videoEditorInfoStickerPlaceAttribution": {
+    "description": "Credit for the place search data, required by its licence. Keep the names GeoNames and Open-Meteo.com as they are."
+  },
+  "videoEditorInfoStickerRecordedValue": "Recorded · {value}",
+  "@videoEditorInfoStickerRecordedValue": {
+    "description": "Chip in the time and date sticker sheet that picks the time the clip was recorded; value is that time or date.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorInfoStickerNowValue": "Now · {value}",
+  "@videoEditorInfoStickerNowValue": {
+    "description": "Chip in the time sticker sheet that picks the current time; value is the time now.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorInfoStickerTodayValue": "Today · {value}",
+  "@videoEditorInfoStickerTodayValue": {
+    "description": "Chip in the date sticker sheet that picks today's date; value is today's date.",
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorInfoStickerDayCount": "Day counter",
+  "@videoEditorInfoStickerDayCount": {
+    "description": "Name of the info sticker that counts days of a challenge or series, such as 'Day 12 of 30'."
+  },
+  "videoEditorInfoStickerSun": "Sun",
+  "@videoEditorInfoStickerSun": {
+    "description": "Name of the info sticker that shows when the sun rose and set at a place."
+  },
+  "videoEditorInfoStickerMoon": "Moon",
+  "@videoEditorInfoStickerMoon": {
+    "description": "Name of the info sticker that shows the phase of the moon."
+  },
+  "videoEditorInfoStickerRecTimer": "REC timer",
+  "@videoEditorInfoStickerRecTimer": {
+    "description": "Name of the info sticker that shows a camcorder's recording timer running with the video. Keep REC as it is."
+  },
+  "videoEditorInfoStickerStyleFilm": "Film",
+  "@videoEditorInfoStickerStyleFilm": {
+    "description": "Name of the info sticker style that looks like the orange date a film camera prints on a photo."
+  },
+  "videoEditorInfoStickerStyleCamcorder": "Camcorder",
+  "@videoEditorInfoStickerStyleCamcorder": {
+    "description": "Name of the info sticker style that looks like a camcorder's viewfinder, with a red recording dot."
+  },
+  "videoEditorInfoStickerDayCountValue": "Day {day}",
+  "@videoEditorInfoStickerDayCountValue": {
+    "description": "Day counter sticker without an end; day is the already formatted day number, an ordinal rather than a quantity.",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorInfoStickerDayCountOfValue": "Day {day} of {total}",
+  "@videoEditorInfoStickerDayCountOfValue": {
+    "description": "Day counter sticker with an end, such as 'Day 12 of 30'; day and total are already formatted numbers.",
+    "placeholders": {
+      "day": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "videoEditorInfoStickerDayLabel": "Day",
+  "@videoEditorInfoStickerDayLabel": {
+    "description": "Label of the field for the day number a day counter sticker shows."
+  },
+  "videoEditorInfoStickerDayTotalLabel": "Total days (optional)",
+  "@videoEditorInfoStickerDayTotalLabel": {
+    "description": "Label of the optional field for how many days a day counter counts to."
+  },
+  "videoEditorInfoStickerSymbolPin": "Pin",
+  "@videoEditorInfoStickerSymbolPin": {
+    "description": "Choice that shows a pin in front of the place name on a location sticker."
+  },
+  "videoEditorInfoStickerSymbolFlag": "Flag",
+  "@videoEditorInfoStickerSymbolFlag": {
+    "description": "Choice that shows the country's flag in front of the place name on a location sticker."
+  },
+  "videoEditorInfoStickerMoonNew": "New moon",
+  "@videoEditorInfoStickerMoonNew": {
+    "description": "Moon phase shown on the moon sticker."
+  },
+  "videoEditorInfoStickerMoonWaxingCrescent": "Waxing crescent",
+  "@videoEditorInfoStickerMoonWaxingCrescent": {
+    "description": "Moon phase shown on the moon sticker."
+  },
+  "videoEditorInfoStickerMoonFirstQuarter": "First quarter",
+  "@videoEditorInfoStickerMoonFirstQuarter": {
+    "description": "Moon phase shown on the moon sticker."
+  },
+  "videoEditorInfoStickerMoonWaxingGibbous": "Waxing gibbous",
+  "@videoEditorInfoStickerMoonWaxingGibbous": {
+    "description": "Moon phase shown on the moon sticker."
+  },
+  "videoEditorInfoStickerMoonFull": "Full moon",
+  "@videoEditorInfoStickerMoonFull": {
+    "description": "Moon phase shown on the moon sticker."
+  },
+  "videoEditorInfoStickerMoonWaningGibbous": "Waning gibbous",
+  "@videoEditorInfoStickerMoonWaningGibbous": {
+    "description": "Moon phase shown on the moon sticker."
+  },
+  "videoEditorInfoStickerMoonLastQuarter": "Last quarter",
+  "@videoEditorInfoStickerMoonLastQuarter": {
+    "description": "Moon phase shown on the moon sticker."
+  },
+  "videoEditorInfoStickerMoonWaningCrescent": "Waning crescent",
+  "@videoEditorInfoStickerMoonWaningCrescent": {
+    "description": "Moon phase shown on the moon sticker."
+  },
+  "videoEditorInfoStickerPlaceSearchHint": "Search for a city or place",
+  "@videoEditorInfoStickerPlaceSearchHint": {
+    "description": "Hint of the search field for the place a location, weather or altitude sticker shows."
+  },
+  "videoEditorInfoStickerPlaceNoResults": "No places found",
+  "@videoEditorInfoStickerPlaceNoResults": {
+    "description": "Shown when the place search for an info sticker finds nothing."
+  },
+  "videoEditorInfoStickerPlaceSearchFailed": "Couldn't search for places. Try again.",
+  "@videoEditorInfoStickerPlaceSearchFailed": {
+    "description": "Shown when the place search for an info sticker fails."
+  },
+  "videoEditorInfoStickerPlacePrivacyNote": "Only the place name goes into your video, never your exact position.",
+  "@videoEditorInfoStickerPlacePrivacyNote": {
+    "description": "Note under the place search of an info sticker."
+  },
+  "videoEditorInfoStickerLoading": "Loading…",
+  "@videoEditorInfoStickerLoading": {
+    "description": "Shown while an info sticker loads the weather, the altitude or the battery level."
+  },
+  "videoEditorInfoStickerLoadFailed": "Couldn't load this. Try again.",
+  "@videoEditorInfoStickerLoadFailed": {
+    "description": "Shown when an info sticker cannot load the weather or the altitude."
+  },
+  "videoEditorInfoStickerWeatherAttribution": "Weather data by Open-Meteo.com",
+  "@videoEditorInfoStickerWeatherAttribution": {
+    "description": "Credit for the weather service, required by its licence. Keep the name Open-Meteo.com as it is."
+  },
+  "videoEditorInfoStickerTemperatureLabel": "Temperature",
+  "@videoEditorInfoStickerTemperatureLabel": {
+    "description": "Label of the field where the creator can change the temperature a weather sticker shows."
+  },
+  "videoEditorInfoStickerUnitLabel": "Unit",
+  "@videoEditorInfoStickerUnitLabel": {
+    "description": "Accessibility label of the switch between units, such as °C and °F, on an info sticker."
+  },
+  "videoEditorInfoStickerBatteryLevelLabel": "Battery level",
+  "@videoEditorInfoStickerBatteryLevelLabel": {
+    "description": "Label of the slider that sets the battery level a battery sticker shows."
+  },
+  "videoEditorInfoStickerAdd": "Add sticker",
+  "@videoEditorInfoStickerAdd": {
+    "description": "Button that places the info sticker on the video."
+  },
   "videoEditorSelectFontSemanticLabel": "Select font",
   "videoEditorFontUnknown": "Unknown",
   "videoEditorSplitPlayheadOutsideClip": "Playhead must be within the selected clip to split.",

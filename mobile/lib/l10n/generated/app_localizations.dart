@@ -18131,6 +18131,324 @@ abstract class AppLocalizations {
   /// **'Search stickers...'**
   String get videoEditorStickerSearchHint;
 
+  /// Heading of the info stickers (time, date, weather and so on) in the video editor's sticker sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Info'**
+  String get videoEditorInfoStickersTitle;
+
+  /// Name of the info sticker that shows the time a clip was recorded.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get videoEditorInfoStickerTime;
+
+  /// Name of the info sticker that shows the date a clip was recorded.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get videoEditorInfoStickerDate;
+
+  /// Name of the info sticker that shows a place name.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get videoEditorInfoStickerLocation;
+
+  /// Name of the info sticker that shows the weather at a place.
+  ///
+  /// In en, this message translates to:
+  /// **'Weather'**
+  String get videoEditorInfoStickerWeather;
+
+  /// Name of the info sticker that shows the altitude of a place.
+  ///
+  /// In en, this message translates to:
+  /// **'Altitude'**
+  String get videoEditorInfoStickerAltitude;
+
+  /// Name of the info sticker that shows the phone's battery level.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery'**
+  String get videoEditorInfoStickerBattery;
+
+  /// Name of the info sticker style with a white background.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get videoEditorInfoStickerStyleLight;
+
+  /// Name of the info sticker style with a dark see-through background.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get videoEditorInfoStickerStyleDark;
+
+  /// Name of the info sticker style with Divine's green background.
+  ///
+  /// In en, this message translates to:
+  /// **'Green'**
+  String get videoEditorInfoStickerStyleBrand;
+
+  /// Name of the info sticker style with a white outline and no background.
+  ///
+  /// In en, this message translates to:
+  /// **'Outline'**
+  String get videoEditorInfoStickerStyleOutline;
+
+  /// Name of the time sticker style that looks like a digital clock.
+  ///
+  /// In en, this message translates to:
+  /// **'Digital'**
+  String get videoEditorInfoStickerStyleDigital;
+
+  /// Name of the time sticker style that looks like a clock with hands.
+  ///
+  /// In en, this message translates to:
+  /// **'Analog'**
+  String get videoEditorInfoStickerStyleAnalog;
+
+  /// Name of the info sticker style with a pale see-through background the video shows through.
+  ///
+  /// In en, this message translates to:
+  /// **'Glass'**
+  String get videoEditorInfoStickerStyleGlass;
+
+  /// Name of the info sticker style with a yellow background, like a highlighter.
+  ///
+  /// In en, this message translates to:
+  /// **'Yellow'**
+  String get videoEditorInfoStickerStyleHighlight;
+
+  /// Name of the info sticker style with white text glowing green and no background.
+  ///
+  /// In en, this message translates to:
+  /// **'Neon'**
+  String get videoEditorInfoStickerStyleNeon;
+
+  /// Name of the info sticker style with white text, a soft shadow and no background.
+  ///
+  /// In en, this message translates to:
+  /// **'Plain'**
+  String get videoEditorInfoStickerStylePlain;
+
+  /// Row in the info sticker sheet that goes back to the place search to pick another place.
+  ///
+  /// In en, this message translates to:
+  /// **'Change place'**
+  String get videoEditorInfoStickerChangePlace;
+
+  /// Credit for the place search data, required by its licence. Keep the names GeoNames and Open-Meteo.com as they are.
+  ///
+  /// In en, this message translates to:
+  /// **'Place data from GeoNames via Open-Meteo.com.'**
+  String get videoEditorInfoStickerPlaceAttribution;
+
+  /// Chip in the time and date sticker sheet that picks the time the clip was recorded; value is that time or date.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded · {value}'**
+  String videoEditorInfoStickerRecordedValue(String value);
+
+  /// Chip in the time sticker sheet that picks the current time; value is the time now.
+  ///
+  /// In en, this message translates to:
+  /// **'Now · {value}'**
+  String videoEditorInfoStickerNowValue(String value);
+
+  /// Chip in the date sticker sheet that picks today's date; value is today's date.
+  ///
+  /// In en, this message translates to:
+  /// **'Today · {value}'**
+  String videoEditorInfoStickerTodayValue(String value);
+
+  /// Name of the info sticker that counts days of a challenge or series, such as 'Day 12 of 30'.
+  ///
+  /// In en, this message translates to:
+  /// **'Day counter'**
+  String get videoEditorInfoStickerDayCount;
+
+  /// Name of the info sticker that shows when the sun rose and set at a place.
+  ///
+  /// In en, this message translates to:
+  /// **'Sun'**
+  String get videoEditorInfoStickerSun;
+
+  /// Name of the info sticker that shows the phase of the moon.
+  ///
+  /// In en, this message translates to:
+  /// **'Moon'**
+  String get videoEditorInfoStickerMoon;
+
+  /// Name of the info sticker that shows a camcorder's recording timer running with the video. Keep REC as it is.
+  ///
+  /// In en, this message translates to:
+  /// **'REC timer'**
+  String get videoEditorInfoStickerRecTimer;
+
+  /// Name of the info sticker style that looks like the orange date a film camera prints on a photo.
+  ///
+  /// In en, this message translates to:
+  /// **'Film'**
+  String get videoEditorInfoStickerStyleFilm;
+
+  /// Name of the info sticker style that looks like a camcorder's viewfinder, with a red recording dot.
+  ///
+  /// In en, this message translates to:
+  /// **'Camcorder'**
+  String get videoEditorInfoStickerStyleCamcorder;
+
+  /// Day counter sticker without an end; day is the already formatted day number, an ordinal rather than a quantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Day {day}'**
+  String videoEditorInfoStickerDayCountValue(String day);
+
+  /// Day counter sticker with an end, such as 'Day 12 of 30'; day and total are already formatted numbers.
+  ///
+  /// In en, this message translates to:
+  /// **'Day {day} of {total}'**
+  String videoEditorInfoStickerDayCountOfValue(String day, String total);
+
+  /// Label of the field for the day number a day counter sticker shows.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get videoEditorInfoStickerDayLabel;
+
+  /// Label of the optional field for how many days a day counter counts to.
+  ///
+  /// In en, this message translates to:
+  /// **'Total days (optional)'**
+  String get videoEditorInfoStickerDayTotalLabel;
+
+  /// Choice that shows a pin in front of the place name on a location sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Pin'**
+  String get videoEditorInfoStickerSymbolPin;
+
+  /// Choice that shows the country's flag in front of the place name on a location sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Flag'**
+  String get videoEditorInfoStickerSymbolFlag;
+
+  /// Moon phase shown on the moon sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'New moon'**
+  String get videoEditorInfoStickerMoonNew;
+
+  /// Moon phase shown on the moon sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Waxing crescent'**
+  String get videoEditorInfoStickerMoonWaxingCrescent;
+
+  /// Moon phase shown on the moon sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'First quarter'**
+  String get videoEditorInfoStickerMoonFirstQuarter;
+
+  /// Moon phase shown on the moon sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Waxing gibbous'**
+  String get videoEditorInfoStickerMoonWaxingGibbous;
+
+  /// Moon phase shown on the moon sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Full moon'**
+  String get videoEditorInfoStickerMoonFull;
+
+  /// Moon phase shown on the moon sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Waning gibbous'**
+  String get videoEditorInfoStickerMoonWaningGibbous;
+
+  /// Moon phase shown on the moon sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Last quarter'**
+  String get videoEditorInfoStickerMoonLastQuarter;
+
+  /// Moon phase shown on the moon sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Waning crescent'**
+  String get videoEditorInfoStickerMoonWaningCrescent;
+
+  /// Hint of the search field for the place a location, weather or altitude sticker shows.
+  ///
+  /// In en, this message translates to:
+  /// **'Search for a city or place'**
+  String get videoEditorInfoStickerPlaceSearchHint;
+
+  /// Shown when the place search for an info sticker finds nothing.
+  ///
+  /// In en, this message translates to:
+  /// **'No places found'**
+  String get videoEditorInfoStickerPlaceNoResults;
+
+  /// Shown when the place search for an info sticker fails.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t search for places. Try again.'**
+  String get videoEditorInfoStickerPlaceSearchFailed;
+
+  /// Note under the place search of an info sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Only the place name goes into your video, never your exact position.'**
+  String get videoEditorInfoStickerPlacePrivacyNote;
+
+  /// Shown while an info sticker loads the weather, the altitude or the battery level.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading…'**
+  String get videoEditorInfoStickerLoading;
+
+  /// Shown when an info sticker cannot load the weather or the altitude.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load this. Try again.'**
+  String get videoEditorInfoStickerLoadFailed;
+
+  /// Credit for the weather service, required by its licence. Keep the name Open-Meteo.com as it is.
+  ///
+  /// In en, this message translates to:
+  /// **'Weather data by Open-Meteo.com'**
+  String get videoEditorInfoStickerWeatherAttribution;
+
+  /// Label of the field where the creator can change the temperature a weather sticker shows.
+  ///
+  /// In en, this message translates to:
+  /// **'Temperature'**
+  String get videoEditorInfoStickerTemperatureLabel;
+
+  /// Accessibility label of the switch between units, such as °C and °F, on an info sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get videoEditorInfoStickerUnitLabel;
+
+  /// Label of the slider that sets the battery level a battery sticker shows.
+  ///
+  /// In en, this message translates to:
+  /// **'Battery level'**
+  String get videoEditorInfoStickerBatteryLevelLabel;
+
+  /// Button that places the info sticker on the video.
+  ///
+  /// In en, this message translates to:
+  /// **'Add sticker'**
+  String get videoEditorInfoStickerAdd;
+
   /// No description provided for @videoEditorSelectFontSemanticLabel.
   ///
   /// In en, this message translates to:

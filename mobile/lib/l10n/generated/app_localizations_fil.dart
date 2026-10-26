@@ -10732,6 +10732,180 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorStickerSearchHint => 'Maghanap ng mga sticker...';
 
   @override
+  String get videoEditorInfoStickersTitle => 'Info';
+
+  @override
+  String get videoEditorInfoStickerTime => 'Oras';
+
+  @override
+  String get videoEditorInfoStickerDate => 'Petsa';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'Lokasyon';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'Panahon';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'Altitude';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'Baterya';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'Light';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'Dark';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'Green';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'Outline';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'Digital';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'Analog';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'Glass';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'Yellow';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'Neon';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'Plain';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'Palitan ang lugar';
+
+  @override
+  String get videoEditorInfoStickerPlaceAttribution =>
+      'Place data mula sa GeoNames sa pamamagitan ng Open-Meteo.com.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'Na-record · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'Ngayon · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'Ngayong araw · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'Bilang ng araw';
+
+  @override
+  String get videoEditorInfoStickerSun => 'Sunrise at sunset';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'Buwan';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC timer';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'Film';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'Camcorder';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'Day $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'Day $day ng $total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'Araw';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'Kabuuang araw (opsyonal)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'Pin';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'Bandila';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'Bagong buwan';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'Waxing crescent';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'First quarter';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'Waxing gibbous';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'Kabilugan ng buwan';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'Waning gibbous';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'Last quarter';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'Waning crescent';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint =>
+      'Maghanap ng lungsod o lugar';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'Walang nahanap na lugar';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'Hindi makapaghanap ng mga lugar. Subukan ulit.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'Pangalan lang ng lugar ang mapupunta sa video mo, hindi kailanman ang eksaktong lokasyon mo.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'Naglo-load…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed => 'Hindi ma-load. Subukan ulit.';
+
+  @override
+  String get videoEditorInfoStickerWeatherAttribution =>
+      'Weather data mula sa Open-Meteo.com';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'Temperatura';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'Unit';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'Antas ng baterya';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'Magdagdag ng sticker';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => 'Pumili ng font';
 
   @override

@@ -39,6 +39,7 @@ import 'package:openvine/models/video_editor/caption_layer_mapping.dart';
 import 'package:openvine/models/video_editor/caption_style_preset.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/models/video_editor/clip_mask_window.dart';
+import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
 import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
@@ -65,6 +66,8 @@ import 'package:openvine/widgets/video_editor/audio_editor/audio_selection_botto
 import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_layer_actions.dart';
 import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_sheet.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/open_effects_editor.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_layer_actions.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_sheet.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas_fit.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_clip_mask_preview.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
@@ -792,7 +795,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     // Reset search when opening the sheet
     _stickerBloc.add(const VideoEditorStickerSearch(''));
 
-    final sticker = await VineBottomSheet.show<StickerData>(
+    final picked = await VineBottomSheet.show<Object>(
       context: context,
       title: Text(context.l10n.videoEditorStickers),
       maxChildSize: 1,
@@ -804,7 +807,11 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       ),
     );
 
-    if (sticker != null) {
+    if (picked is InfoStickerKind) {
+      if (mounted) await _addInfoSticker(picked);
+      return;
+    }
+    if (picked case final StickerData sticker) {
       Log.debug(
         '🎨 Adding sticker layer: ${sticker.description.fallback}',
         name: 'VideoEditorScreen',
@@ -828,6 +835,38 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       );
       _editor!.addLayer(layer, blockSelectLayer: true);
     }
+  }
+
+  /// Opens the info sticker sheet for a new sticker of [kind] and adds the
+  /// sticker set up there, half as wide as the canvas body.
+  Future<void> _addInfoSticker(InfoStickerKind kind) async {
+    final initial = InfoStickerData.initial(
+      kind: kind,
+      locale: Localizations.localeOf(context),
+      use24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
+      regionCode: View.of(context).platformDispatcher.locale.countryCode,
+    );
+    final data = await showInfoStickerSheet(
+      context,
+      initial: initial,
+      isNew: true,
+      clip: _clip,
+    );
+    final editor = _editor;
+    if (data == null || editor == null || !mounted) return;
+    Log.debug(
+      'Adding info sticker layer: ${data.kind.name}',
+      name: 'VideoEditorScreen',
+      category: LogCategory.video,
+    );
+    final bodySize = _bodySizeNotifier.value;
+    editor.addLayer(
+      infoStickerWidgetLayer(
+        data,
+        width: min(420, (bodySize.width / 2) / _fittedBoxScale),
+      ),
+      blockSelectLayer: true,
+    );
   }
 
   /// Opens the audio visualizer sheet and adds the visualizer picked there.

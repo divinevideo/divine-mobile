@@ -10654,6 +10654,180 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorStickerSearchHint => 'اسٹیکرز تلاش کریں...';
 
   @override
+  String get videoEditorInfoStickersTitle => 'معلومات';
+
+  @override
+  String get videoEditorInfoStickerTime => 'وقت';
+
+  @override
+  String get videoEditorInfoStickerDate => 'تاریخ';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'مقام';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'موسم';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'بلندی';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'بیٹری';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'ہلکا';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'گہرا';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'سبز';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'خاکہ';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'ڈیجیٹل';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'اینالاگ';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'شیشہ';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'پیلا';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'نیون';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'سادہ';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'جگہ تبدیل کریں';
+
+  @override
+  String get videoEditorInfoStickerPlaceAttribution =>
+      'جگہوں کا ڈیٹا GeoNames سے، Open-Meteo.com کے ذریعے۔';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'ریکارڈنگ · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'ابھی · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'آج · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'دنوں کا شمار';
+
+  @override
+  String get videoEditorInfoStickerSun => 'سورج';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'چاند';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC ٹائمر';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'فلم';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'کیم کورڈر';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'دن $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'دن $day از $total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'دن';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'کل دن (اختیاری)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'پن';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'جھنڈا';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'نیا چاند';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'بڑھتا ہلال';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'پہلی چوتھائی';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'بڑھتا چاند';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'پورا چاند';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'گھٹتا چاند';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'آخری چوتھائی';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'گھٹتا ہلال';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint => 'شہر یا جگہ تلاش کریں';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'کوئی جگہ نہیں ملی';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'جگہیں تلاش نہیں ہو سکیں۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'آپ کی ویڈیو میں صرف جگہ کا نام جاتا ہے، آپ کا درست مقام کبھی نہیں۔';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'لوڈ ہو رہا ہے…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed =>
+      'لوڈ نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
+
+  @override
+  String get videoEditorInfoStickerWeatherAttribution =>
+      'موسم کا ڈیٹا Open-Meteo.com سے';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'درجہ حرارت';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'اکائی';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'بیٹری لیول';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'اسٹیکر شامل کریں';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => 'فانٹ منتخب کریں';
 
   @override

@@ -115,6 +115,35 @@ void main() {
       );
     });
 
+    test('shows the frames a layer brings, one after the other', () {
+      final frames = [
+        pie.ExportedLayerFrame(
+          bytes: Uint8List.fromList(const [1]),
+          startTime: Duration.zero,
+          endTime: const Duration(seconds: 1),
+        ),
+        pie.ExportedLayerFrame(
+          bytes: Uint8List.fromList(const [2]),
+          startTime: const Duration(seconds: 1),
+          endTime: null,
+        ),
+      ];
+
+      final timer = layer();
+
+      final exported = VideoEditorRenderService.buildImageLayers(
+        capturedLayers: [timer],
+        bodySize: const Size(100, 200),
+        videoSize: const Size(300, 600),
+        targetAspectRatio: vertical,
+        timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
+        layerFrames: {timer.layer.id: frames},
+      )!;
+
+      expect(exported, hasLength(2));
+      expect(exported.last.startTime, equals(const Duration(seconds: 1)));
+    });
+
     test('draws each layer in the blend mode the canvas shows it in', () {
       final blended = pie.ExportedLayer(
         layer: pie.Layer(blendMode: BlendMode.screen),

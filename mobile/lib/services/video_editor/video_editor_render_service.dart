@@ -30,6 +30,7 @@ import 'package:openvine/services/video_editor/detached_clip_composite.dart';
 import 'package:openvine/services/video_editor/detached_clip_render_pass.dart';
 import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/native_render_task_registry.dart';
+import 'package:openvine/services/video_editor/rec_timer_frames.dart';
 import 'package:openvine/services/video_editor/render_audio_fetcher.dart';
 import 'package:openvine/services/video_editor/render_audio_visualizer_energies.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
@@ -960,6 +961,10 @@ class VideoEditorRenderService {
         // fallback instead of filtering again by the kind marker.
         excludeDetachedClips: imageLayerOverride == null,
         audioEnergies: audioEnergies,
+        layerFrames: await recTimerLayerFrames(
+          capturedLayers,
+          editorDuration: timelineMap.editorDuration,
+        ),
       ),
       blur: parameters?.blur,
       colorFilters: buildColorFilters(
@@ -1153,6 +1158,7 @@ class VideoEditorRenderService {
     required TransitionTimelineMap timelineMap,
     bool excludeDetachedClips = true,
     Float32List? audioEnergies,
+    Map<String, List<ExportedLayerFrame>> layerFrames = const {},
   }) {
     if (capturedLayers.isEmpty || bodySize == null) return null;
     final mapping = ExportLayerMapping(
@@ -1170,6 +1176,7 @@ class VideoEditorRenderService {
             mapping: mapping,
             timelineMap: timelineMap,
             audioEnergies: audioEnergies,
+            frames: layerFrames[item.layer.id],
           ),
     ];
   }
@@ -1181,6 +1188,7 @@ class VideoEditorRenderService {
     required ExportLayerMapping mapping,
     required TransitionTimelineMap timelineMap,
     Float32List? audioEnergies,
+    List<ExportedLayerFrame>? frames,
   }) {
     final layer = item.layer;
     if (AudioVisualizerLayerData.of(layer) case final visualizer?) {
@@ -1235,10 +1243,11 @@ class VideoEditorRenderService {
     final keyframeClock = item.layer.divineKeyframeClockForExport(
       timelineMap: timelineMap,
     );
-    final frames = item.frames;
-    final split = frames.length > 1;
+    // A REC timer brings its own frames (see recTimerLayerFrames).
+    final shown = frames ?? item.frames;
+    final split = shown.length > 1;
     return [
-      for (final (index, frame) in frames.indexed)
+      for (final (index, frame) in shown.indexed)
         ImageLayer(
           image: EditorLayerImage.memory(frame.bytes),
           startTime: timelineMap.editorToOutputOrNull(frame.startTime),
@@ -1246,8 +1255,8 @@ class VideoEditorRenderService {
           // inclusive, so a frame ending where the next one starts would draw
           // both on that instant and stack the translucent pill. Every frame
           // but the last ends one tick early.
-          endTime: index < frames.length - 1
-              ? timelineMap.editorToOutput(frames[index + 1].startTime!) -
+          endTime: index < shown.length - 1
+              ? timelineMap.editorToOutput(shown[index + 1].startTime!) -
                     const Duration(microseconds: 1)
               : timelineMap.editorToOutputOrNull(frame.endTime),
           offset: offset,

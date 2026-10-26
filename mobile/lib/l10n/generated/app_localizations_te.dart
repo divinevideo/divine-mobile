@@ -10940,6 +10940,181 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorStickerSearchHint => 'స్టిక్కర్‌లను శోధించండి...';
 
   @override
+  String get videoEditorInfoStickersTitle => 'సమాచారం';
+
+  @override
+  String get videoEditorInfoStickerTime => 'సమయం';
+
+  @override
+  String get videoEditorInfoStickerDate => 'తేదీ';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'స్థలం';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'వాతావరణం';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'ఎత్తు';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'బ్యాటరీ';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'లేత';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'ముదురు';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'ఆకుపచ్చ';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'అవుట్‌లైన్';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'డిజిటల్';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'అనలాగ్';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'గ్లాస్';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'పసుపు';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'నియాన్';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'సాదా';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'స్థలం మార్చండి';
+
+  @override
+  String get videoEditorInfoStickerPlaceAttribution =>
+      'స్థల డేటా: GeoNames, Open-Meteo.com ద్వారా.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'రికార్డింగ్ · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'ఇప్పుడు · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'ఈరోజు · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'రోజుల లెక్కింపు';
+
+  @override
+  String get videoEditorInfoStickerSun => 'సూర్యుడు';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'చంద్రుడు';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC టైమర్';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'ఫిల్మ్';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'కామ్‌కార్డర్';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'రోజు $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return '$totalలో రోజు $day';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'రోజు';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'మొత్తం రోజులు (ఐచ్ఛికం)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'పిన్';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'జెండా';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'అమావాస్య';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'పెరుగుతున్న నెలవంక';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'మొదటి పావు';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'పెరుగుతున్న చంద్రుడు';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'పౌర్ణమి';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'తగ్గుతున్న చంద్రుడు';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'చివరి పావు';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'తగ్గుతున్న నెలవంక';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint =>
+      'నగరం లేదా స్థలం కోసం వెతకండి';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'స్థలాలు ఏవీ కనుగొనబడలేదు';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'స్థలాల కోసం వెతకడం సాధ్యం కాలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'మీ వీడియోలో స్థలం పేరు మాత్రమే ఉంటుంది, మీ ఖచ్చితమైన స్థానం ఎప్పుడూ ఉండదు.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'లోడ్ అవుతోంది…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed =>
+      'లోడ్ చేయడం సాధ్యం కాలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get videoEditorInfoStickerWeatherAttribution =>
+      'వాతావరణ డేటా: Open-Meteo.com';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'ఉష్ణోగ్రత';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'యూనిట్';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'బ్యాటరీ స్థాయి';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'స్టిక్కర్ జోడించండి';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => 'ఫాంట్‌ని ఎంచుకోండి';
 
   @override

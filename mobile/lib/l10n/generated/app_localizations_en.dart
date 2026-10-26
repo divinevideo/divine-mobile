@@ -10749,6 +10749,181 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorStickerSearchHint => 'Search stickers...';
 
   @override
+  String get videoEditorInfoStickersTitle => 'Info';
+
+  @override
+  String get videoEditorInfoStickerTime => 'Time';
+
+  @override
+  String get videoEditorInfoStickerDate => 'Date';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'Location';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'Weather';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'Altitude';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'Battery';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'Light';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'Dark';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'Green';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'Outline';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'Digital';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'Analog';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'Glass';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'Yellow';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'Neon';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'Plain';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'Change place';
+
+  @override
+  String get videoEditorInfoStickerPlaceAttribution =>
+      'Place data from GeoNames via Open-Meteo.com.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'Recorded · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'Now · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'Today · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'Day counter';
+
+  @override
+  String get videoEditorInfoStickerSun => 'Sun';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'Moon';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC timer';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'Film';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'Camcorder';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'Day $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'Day $day of $total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'Day';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'Total days (optional)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'Pin';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'Flag';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'New moon';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'Waxing crescent';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'First quarter';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'Waxing gibbous';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'Full moon';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'Waning gibbous';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'Last quarter';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'Waning crescent';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint =>
+      'Search for a city or place';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'No places found';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'Couldn\'t search for places. Try again.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'Only the place name goes into your video, never your exact position.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'Loading…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed =>
+      'Couldn\'t load this. Try again.';
+
+  @override
+  String get videoEditorInfoStickerWeatherAttribution =>
+      'Weather data by Open-Meteo.com';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'Temperature';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'Unit';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'Battery level';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'Add sticker';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => 'Select font';
 
   @override

@@ -10657,6 +10657,181 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorStickerSearchHint => 'Sök stickers...';
 
   @override
+  String get videoEditorInfoStickersTitle => 'Info';
+
+  @override
+  String get videoEditorInfoStickerTime => 'Tid';
+
+  @override
+  String get videoEditorInfoStickerDate => 'Datum';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'Plats';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'Väder';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'Höjd';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'Batteri';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'Ljus';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'Mörk';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'Grön';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'Kontur';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'Digital';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'Analog';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'Glas';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'Gul';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'Neon';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'Enkel';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'Byt plats';
+
+  @override
+  String get videoEditorInfoStickerPlaceAttribution =>
+      'Platsdata från GeoNames via Open-Meteo.com.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'Inspelning · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'Nu · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'Idag · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'Dagräknare';
+
+  @override
+  String get videoEditorInfoStickerSun => 'Sol';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'Måne';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC-timer';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'Film';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'Videokamera';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'Dag $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'Dag $day av $total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'Dag';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'Antal dagar (valfritt)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'Nål';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'Flagga';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'Nymåne';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'Tilltagande skära';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'Första kvarteret';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'Tilltagande måne';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'Fullmåne';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'Avtagande måne';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'Sista kvarteret';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'Avtagande skära';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint =>
+      'Sök efter en stad eller plats';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'Inga platser hittades';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'Det gick inte att söka efter platser. Försök igen.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'Bara platsens namn hamnar i din video, aldrig din exakta position.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'Laddar…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed =>
+      'Det gick inte att ladda. Försök igen.';
+
+  @override
+  String get videoEditorInfoStickerWeatherAttribution =>
+      'Väderdata från Open-Meteo.com';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'Temperatur';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'Enhet';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'Batterinivå';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'Lägg till sticker';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => 'Välj typsnitt';
 
   @override

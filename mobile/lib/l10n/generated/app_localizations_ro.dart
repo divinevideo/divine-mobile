@@ -10878,6 +10878,184 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorStickerSearchHint => 'Caută stickere...';
 
   @override
+  String get videoEditorInfoStickersTitle => 'Info';
+
+  @override
+  String get videoEditorInfoStickerTime => 'Ora';
+
+  @override
+  String get videoEditorInfoStickerDate => 'Data';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'Locație';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'Vremea';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'Altitudine';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'Baterie';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'Luminos';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'Întunecat';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'Verde';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'Contur';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'Digital';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'Analogic';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'Sticlă';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'Galben';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'Neon';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'Simplu';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'Schimbă locul';
+
+  @override
+  String get videoEditorInfoStickerPlaceAttribution =>
+      'Date despre locuri de la GeoNames prin Open-Meteo.com.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'Înregistrare · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'Acum · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'Azi · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'Contor de zile';
+
+  @override
+  String get videoEditorInfoStickerSun => 'Soare';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'Lună';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'Cronometru REC';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'Film';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'Cameră video';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'Ziua $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'Ziua $day din $total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'Ziua';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'Total zile (opțional)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'Pin';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'Steag';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'Lună nouă';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'Semilună în creștere';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'Primul pătrar';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous =>
+      'Lună gibboasă în creștere';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'Lună plină';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous =>
+      'Lună gibboasă în descreștere';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'Ultimul pătrar';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent =>
+      'Semilună în descreștere';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint =>
+      'Caută un oraș sau un loc';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'Nu am găsit niciun loc';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'Nu am putut căuta locuri. Încearcă din nou.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'În video ajunge doar numele locului, niciodată poziția ta exactă.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'Se încarcă…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed =>
+      'Nu am putut încărca. Încearcă din nou.';
+
+  @override
+  String get videoEditorInfoStickerWeatherAttribution =>
+      'Date meteo de la Open-Meteo.com';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'Temperatură';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'Unitate';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'Nivelul bateriei';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'Adaugă sticker';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => 'Selectează fontul';
 
   @override

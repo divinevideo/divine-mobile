@@ -424,6 +424,8 @@ dependencies:
   pointer_interceptor: ^0.10.1+2
   volume_controller: ^3.4.4
   meta: ^1.18.0
+  battery_plus: ^7.1.2
+  timezone: ^0.11.0
 
 dependency_overrides:
   # TODO(#3638): Keep device_info_plus on 10.x until the app is ready for the
