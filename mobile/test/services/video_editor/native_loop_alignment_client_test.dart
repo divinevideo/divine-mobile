@@ -192,6 +192,103 @@ void main() {
       },
     );
     test(
+      'iOS 30fps output accepts the same 29.97fps source pictures',
+      () async {
+        const length = Duration(milliseconds: 6300);
+        final backend = FakeBackend()
+          ..texture = true
+          ..outputDuration = length
+          ..sourceFrameRate = 30000 / 1001
+          ..outputFrameRate = 30
+          ..times = [
+            for (var i = 0; i < 189; i++)
+              Duration(microseconds: 50000000 + (i * 1001000 / 30).round()),
+          ]
+          ..outputTimes = [
+            for (var i = 0; i < 189; i++)
+              Duration(microseconds: 50000000 + (i * 1000000 / 30).round()),
+          ];
+        final request = input(duration: length);
+        final plan = repairPlan(duration: length);
+        final client = NativeLoopAlignmentClient(backend: backend);
+        await client.analyze(
+          request,
+          const LoopAlignmentLimits(),
+          'cadence',
+          (_) {},
+        );
+        final output = await client.render(request, plan, 'cadence', (_) {});
+        final proof = await client.inspect(request, plan, output, 'cadence');
+        expect(proof.covered, isTrue);
+        final regularOutput = backend.outputTimes!;
+        backend.outputTimes = [
+          for (var i = 0; i < regularOutput.length; i++)
+            regularOutput[i] + Duration(milliseconds: i == 90 ? 10 : 0),
+        ];
+        final jittered = await client.inspect(request, plan, output, 'cadence');
+        expect(jittered.covered, isFalse);
+        backend.outputTimes = regularOutput;
+        backend.outputFrameRate = null;
+        final unknownClock = await client.inspect(
+          request,
+          plan,
+          output,
+          'cadence',
+        );
+        expect(unknownClock.covered, isFalse);
+        backend.outputFrameRate = 30;
+        backend.outputTimes = [
+          for (var i = 0; i < 189; i++)
+            Duration(
+              microseconds:
+                  50000000 + (i * 1000000 / 30).round() + (i == 0 ? 0 : 33000),
+            ),
+        ];
+        final shifted = await client.inspect(request, plan, output, 'cadence');
+        expect(shifted.covered, isFalse);
+        await client.discard(output);
+        await client.finish('cadence');
+      },
+    );
+
+    test('same-rate middle-frame jitter is still rejected', () async {
+      final backend = FakeBackend()
+        ..texture = true
+        ..sourceFrameRate = 30
+        ..outputFrameRate = 30
+        ..times = [
+          for (var i = 0; i < 30; i++)
+            Duration(microseconds: 50000000 + (i * 1000000 / 30).round()),
+        ];
+      backend.outputTimes = [
+        for (var i = 0; i < backend.times.length; i++)
+          backend.times[i] + Duration(milliseconds: i == 15 ? 10 : 0),
+      ];
+      final client = NativeLoopAlignmentClient(backend: backend);
+      await client.analyze(
+        input(),
+        const LoopAlignmentLimits(),
+        'jitter',
+        (_) {},
+      );
+      final output = await client.render(
+        input(),
+        repairPlan(),
+        'jitter',
+        (_) {},
+      );
+      final proof = await client.inspect(
+        input(),
+        repairPlan(),
+        output,
+        'jitter',
+      );
+      expect(proof.covered, isFalse);
+      await client.discard(output);
+      await client.finish('jitter');
+    });
+
+    test(
       'watchdog cancels a stuck metadata call and ignores its late result',
       () {
         fakeAsync((clock) {
@@ -292,20 +389,21 @@ void main() {
   });
 }
 
-LoopRepairInput input() => LoopRepairInput(
-  clips: [
-    const LoopClipInput(
-      clipId: 'a',
-      path: '/source.mp4',
-      sourceStart: Duration(seconds: 50),
-      sourceEnd: Duration(seconds: 51),
-      speed: 1,
-      width: 180,
-      height: 320,
-    ),
-  ],
-  revision: 'a',
-);
+LoopRepairInput input({Duration duration = const Duration(seconds: 1)}) =>
+    LoopRepairInput(
+      clips: [
+        LoopClipInput(
+          clipId: 'a',
+          path: '/source.mp4',
+          sourceStart: const Duration(seconds: 50),
+          sourceEnd: const Duration(seconds: 50) + duration,
+          speed: 1,
+          width: 180,
+          height: 320,
+        ),
+      ],
+      revision: 'a',
+    );
 VideoMetadata metadata() => VideoMetadata(
   duration: const Duration(seconds: 60),
   extension: 'mp4',
@@ -321,6 +419,10 @@ class FakeBackend implements LoopNativeBackend {
     for (final ms in [50000, 50017, 50034, 50052, 50070, 50087])
       Duration(milliseconds: ms),
   ];
+  double? sourceFrameRate;
+  double? outputFrameRate;
+  List<Duration>? outputTimes;
+  Duration outputDuration = const Duration(seconds: 1);
   bool badSize = false;
   bool renderFails = false;
   bool texture = false;
@@ -367,7 +469,13 @@ class FakeBackend implements LoopNativeBackend {
               .luma
         : pixels;
     for (final time
-        in (output && dropOutput ? times.take(times.length - 1) : times)) {
+        in (output
+            ? (dropOutput
+                  ? (outputTimes ?? times).take(
+                      (outputTimes ?? times).length - 1,
+                    )
+                  : outputTimes ?? times)
+            : times)) {
       yield LumaFrame(
         time: output ? time - const Duration(seconds: 50) : time,
         width: 180,
@@ -383,10 +491,13 @@ class FakeBackend implements LoopNativeBackend {
       ? nativeMetadata(output: path.startsWith('/output/'))
       : await metadataGate!.future;
   VideoMetadata nativeMetadata({bool output = false}) => VideoMetadata(
-    duration: Duration(seconds: output ? 1 : 60),
+    frameRate: output ? outputFrameRate : sourceFrameRate,
+    duration: output ? outputDuration : const Duration(seconds: 60),
     audioDuration: output && loseAudio
         ? null
-        : Duration(seconds: output ? 1 : 60),
+        : output
+        ? outputDuration
+        : const Duration(seconds: 60),
     extension: 'mp4',
     fileSize: 1,
     resolution: const Size(180, 320),
@@ -414,12 +525,14 @@ class FakeBackend implements LoopNativeBackend {
   }
 }
 
-LoopAlignmentPlan repairPlan() => LoopAlignmentPlan(
+LoopAlignmentPlan repairPlan({
+  Duration duration = const Duration(seconds: 1),
+}) => LoopAlignmentPlan(
   clips: [
     LoopClipPlan(
       clipId: 'a',
       sourceStart: const Duration(seconds: 50),
-      sourceEnd: const Duration(seconds: 51),
+      sourceEnd: const Duration(seconds: 50) + duration,
       keyframes: [
         const LoopKeyframe(
           sourceTime: Duration(seconds: 50),

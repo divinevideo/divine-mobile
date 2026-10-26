@@ -452,9 +452,39 @@ final class NativeLoopAlignmentClient implements LoopAlignmentClient {
           frames.first.time > tolerance) {
         covered = false;
       }
+      final nativeClockRounding = _usesNativeFrameClock(
+        expected,
+        frames.map((frame) => frame.time).toList(),
+        original.frameRate,
+        m.frameRate,
+      );
       for (var j = 0; j < math.min(frames.length, expected.length); j++) {
+        // Only verified fixed-clock conversion can exceed 2ms. Stay within
+        // half of both intervals, retaining count and pixel-progression checks.
+        final sourceInterval = expected.length < 2
+            ? Duration.zero
+            : j == 0
+            ? expected[1] - expected[0]
+            : expected[j] - expected[j - 1];
+        final renderedInterval = frames.length < 2
+            ? Duration.zero
+            : j == 0
+            ? frames[1].time - frames[0].time
+            : frames[j].time - frames[j - 1].time;
+        final timingTolerance = Duration(
+          microseconds: math.max(
+            2000,
+            nativeClockRounding && j > 0
+                ? math.min(
+                        sourceInterval.inMicroseconds,
+                        renderedInterval.inMicroseconds,
+                      ) ~/
+                      2
+                : 2000,
+          ),
+        );
         if ((frames[j].time - (expected[j] - cp.sourceStart)).abs() >
-            const Duration(milliseconds: 2)) {
+            timingTolerance) {
           covered = false;
         }
       }
@@ -662,6 +692,38 @@ final class _LoopOperation {
   ReceivePort? workerPort;
   Completer<dynamic>? workerCompleter;
   final cancelSignal = Completer<void>();
+}
+
+// The iOS compositor uses 1 / floor(max(30, nominal fps)). Require both
+// measured timelines to follow those clocks before allowing accumulated drift;
+// equal-rate jitter and unknown or variable clocks keep the strict 2ms check.
+bool _usesNativeFrameClock(
+  List<Duration> sourceTimes,
+  List<Duration> renderedTimes,
+  double? sourceFps,
+  double? renderedFps,
+) {
+  if (sourceFps == null ||
+      renderedFps == null ||
+      !sourceFps.isFinite ||
+      !renderedFps.isFinite ||
+      sourceFps <= 0 ||
+      renderedFps <= 0 ||
+      (sourceFps - renderedFps).abs() < 1e-6 ||
+      (renderedFps - math.max(30, sourceFps).floor()).abs() > 1e-6 ||
+      sourceTimes.length < 2 ||
+      sourceTimes.length != renderedTimes.length) {
+    return false;
+  }
+  for (var i = 0; i < sourceTimes.length; i++) {
+    final sourceAt = sourceTimes.first.inMicroseconds + i * 1000000 / sourceFps;
+    final renderedAt = i * 1000000 / renderedFps;
+    if ((sourceTimes[i].inMicroseconds - sourceAt).abs() > 2000 ||
+        (renderedTimes[i].inMicroseconds - renderedAt).abs() > 2000) {
+      return false;
+    }
+  }
+  return true;
 }
 
 List<LoopFrame> _playbackFrames(List<LoopFrame> frames, double speed) => [
