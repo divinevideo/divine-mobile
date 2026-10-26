@@ -288,6 +288,50 @@ void main() {
           throwsA(isA<InfoStickerLookupException>()),
         );
       });
+
+      // Open-Meteo's archive for Tromsø (69.65 N), read 2026-10-27.
+      for (final (label, day, sunrise, sunset) in [
+        (
+          'midnight sun',
+          DateTime(2025, 6, 21),
+          '2025-06-21T00:00',
+          '2025-06-22T00:00',
+        ),
+        (
+          'polar night',
+          DateTime(2025, 12, 21),
+          '2025-12-21T00:00',
+          '2025-12-21T00:00',
+        ),
+      ]) {
+        test('reads no times on a day of $label', () async {
+          final client = MockClient(
+            (_) async => http.Response(
+              jsonEncode({
+                'daily': {
+                  'sunrise': [sunrise],
+                  'sunset': [sunset],
+                },
+              }),
+              200,
+            ),
+          );
+          const tromso = InfoStickerPlace(
+            name: 'Tromsø',
+            latitude: 69.65,
+            longitude: 18.96,
+            timeZone: 'Europe/Oslo',
+          );
+
+          await expectLater(
+            withClock(
+              Clock.fixed(DateTime(2026, 10, 27)),
+              () => _repository(client: client).sunTimesAt(tromso, day),
+            ),
+            throwsA(isA<InfoStickerLookupException>()),
+          );
+        });
+      }
     });
 
     group('elevationAt', () {

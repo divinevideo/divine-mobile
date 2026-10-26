@@ -205,8 +205,8 @@ class InfoStickerRepository {
   /// time. The times are turned into the place's time zone here instead, or
   /// the phone's when the search named none.
   ///
-  /// Throws an [InfoStickerLookupException] when Open-Meteo cannot be reached
-  /// or has no times for that day.
+  /// Throws an [InfoStickerLookupException] when Open-Meteo cannot be reached,
+  /// has no times for that day, or the sun neither rose nor set there.
   Future<InfoStickerSunTimes> sunTimesAt(
     InfoStickerPlace place,
     DateTime day,
@@ -247,13 +247,29 @@ class InfoStickerRepository {
       }
       final daily = body['daily'];
       if (daily is! Map) continue;
-      final sunrise = _placeTime(daily['sunrise'], place.timeZone);
-      final sunset = _placeTime(daily['sunset'], place.timeZone);
-      if (sunrise != null || sunset != null) {
-        return (sunrise: sunrise, sunset: sunset);
+      final sunrise = _firstUtcTime(daily['sunrise']);
+      final sunset = _firstUtcTime(daily['sunset']);
+      if (sunrise == null && sunset == null) continue;
+      if (_isPolarDay(sunrise, sunset)) {
+        throw const InfoStickerLookupException(
+          'The sun neither rose nor set there that day',
+        );
       }
+      return (
+        sunrise: _placeTime(sunrise, place.timeZone),
+        sunset: _placeTime(sunset, place.timeZone),
+      );
     }
     throw const InfoStickerLookupException('No sun times for that day');
+  }
+
+  /// Whether Open-Meteo's [sunrise] and [sunset] stand for a day the sun
+  /// stays up or down: it answers with midnight for both, the same one in a
+  /// polar night and the next day's in a midnight sun.
+  static bool _isPolarDay(DateTime? sunrise, DateTime? sunset) {
+    if (sunrise == null || sunset == null) return false;
+    final span = sunset.difference(sunrise);
+    return span == Duration.zero || span == const Duration(days: 1);
   }
 
   /// The altitude of [place] above sea level, in metres: the one the search
@@ -383,11 +399,14 @@ class InfoStickerRepository {
     throw InfoStickerLookupException('${uri.host} sent no JSON object');
   }
 
-  /// The first UTC time in [values] as a wall-clock time in [timeZone].
-  static DateTime? _placeTime(Object? values, String? timeZone) {
+  /// The first time in [values], read as UTC.
+  static DateTime? _firstUtcTime(Object? values) {
     final raw = values is List && values.isNotEmpty ? values.first : null;
-    if (raw is! String) return null;
-    final utc = DateTime.tryParse('${raw}Z');
+    return raw is String ? DateTime.tryParse('${raw}Z') : null;
+  }
+
+  /// [utc] as a wall-clock time in [timeZone].
+  static DateTime? _placeTime(DateTime? utc, String? timeZone) {
     if (utc == null) return null;
     final local = _inTimeZone(utc, timeZone);
     return DateTime(
