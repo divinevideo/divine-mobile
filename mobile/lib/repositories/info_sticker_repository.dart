@@ -383,8 +383,10 @@ class InfoStickerRepository {
           .timeout(InfoStickerRepositoryConfig.requestTimeout);
     } on TimeoutException {
       throw InfoStickerLookupException('${uri.host} timed out');
-    } on http.ClientException catch (error) {
-      throw InfoStickerLookupException('${uri.host}: ${error.message}');
+    } on Exception catch (error) {
+      // Not only a ClientException: http lets a TLS failure, such as a
+      // HandshakeException on a captive portal, through unwrapped.
+      throw InfoStickerLookupException('${uri.host}: $error');
     }
     if (response.statusCode != 200) {
       throw InfoStickerLookupException(

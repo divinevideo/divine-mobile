@@ -2,6 +2,7 @@
 // ABOUTME: from Open-Meteo, the battery level and the recording time.
 
 import 'dart:convert';
+import 'dart:io' show HandshakeException;
 import 'dart:ui' show Size;
 
 import 'package:battery_plus/battery_plus.dart';
@@ -161,6 +162,17 @@ void main() {
 
       test('fails when the search cannot be reached', () async {
         final client = MockClient((_) async => http.Response('oops', 503));
+
+        await expectLater(
+          _repository(client: client).searchPlaces('Bern', languageCode: 'de'),
+          throwsA(isA<InfoStickerLookupException>()),
+        );
+      });
+
+      test('fails as a lookup when the TLS handshake fails', () async {
+        final client = MockClient(
+          (_) async => throw const HandshakeException('captive portal'),
+        );
 
         await expectLater(
           _repository(client: client).searchPlaces('Bern', languageCode: 'de'),
