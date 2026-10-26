@@ -4,7 +4,6 @@
 import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -306,52 +305,20 @@ class _DigitalClock extends StatelessWidget {
 
 /// A REC timer running with the playhead in the editor; at rest, at 00:00,
 /// anywhere else.
-///
-/// It shows whole seconds, so it repaints when the second changes rather
-/// than on every tick of the playhead.
-class _RecTimer extends StatefulWidget {
+class _RecTimer extends StatelessWidget {
   const _RecTimer({required this.style});
 
   final InfoStickerStyle style;
-
-  @override
-  State<_RecTimer> createState() => _RecTimerState();
-}
-
-class _RecTimerState extends State<_RecTimer> {
-  ValueListenable<Duration>? _playTime;
-  Duration _shown = Duration.zero;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final playTime = VideoEditorScope.maybeOf(context)?.playTimeNotifier;
-    if (playTime == _playTime) return;
-    _playTime?.removeListener(_onPlayTime);
-    _playTime = playTime?..addListener(_onPlayTime);
-    _shown = _wholeSeconds(playTime?.value);
-  }
-
-  @override
-  void dispose() {
-    _playTime?.removeListener(_onPlayTime);
-    super.dispose();
-  }
-
-  void _onPlayTime() {
-    final shown = _wholeSeconds(_playTime?.value);
-    if (shown != _shown) setState(() => _shown = shown);
-  }
-
-  static Duration _wholeSeconds(Duration? time) =>
-      Duration(seconds: time?.inSeconds ?? 0);
 
   @override
   Widget build(BuildContext context) {
     return RepaintBoundary(
       child: CustomPaint(
         size: RecTimerPainter.designSize,
-        painter: RecTimerPainter(style: widget.style, elapsed: _shown),
+        painter: RecTimerPainter(
+          style: style,
+          playTime: VideoEditorScope.maybeOf(context)?.playTimeNotifier,
+        ),
       ),
     );
   }
