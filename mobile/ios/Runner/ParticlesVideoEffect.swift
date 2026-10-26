@@ -67,7 +67,8 @@ final class ParticlesVideoEffect: ShaderVideoEffect {
   /// Sizes within a cell are in cells; `s` is the frame's shorter side. The
   /// hash is Dave Hoskins' "hash without sine" with 3.33 in place of its
   /// 33.33, which keeps its values small enough for 32-bit floats to land
-  /// within a thousandth of the exact result.
+  /// within a thousandth of the exact result. The heart is Inigo Quilez's
+  /// `sdHeart`.
   static let source = """
     static float3 hash3(float2 p) {
       float3 q = fract(float3(p.xyx) * float3(0.1031, 0.1030, 0.0973));

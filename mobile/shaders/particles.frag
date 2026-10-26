@@ -9,6 +9,9 @@
 // Distances are in pixels with y up, from the bottom left, as natively;
 // Flutter counts y down, so it is flipped on the way in. Sizes within a cell
 // are in cells; `s` is the shorter side.
+//
+// The hash is Dave Hoskins' "hash without sine" with 3.33 in place of its
+// 33.33, and the heart is Inigo Quilez's `sdHeart`.
 
 #include <flutter/runtime_effect.glsl>
 

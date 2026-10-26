@@ -51,7 +51,8 @@ class ParticlesVideoEffect(private val style: Style, params: Map<String, Any?>) 
         // Sizes within a cell are in cells; `s` is the frame's shorter side.
         // The hash is Dave Hoskins' "hash without sine" with 3.33 in place of
         // its 33.33, which keeps its values small enough for 32-bit floats to
-        // land within a thousandth of the exact result.
+        // land within a thousandth of the exact result. The heart is Inigo
+        // Quilez's `sdHeart`.
         private const val FRAGMENT_SHADER = ShaderVideoEffect.PRELUDE + """
 uniform float uIntensity;
 uniform float uTime;
