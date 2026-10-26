@@ -7,7 +7,10 @@ import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_format.dart';
 
 void main() {
-  setUpAll(() => initializeDateFormatting('de'));
+  setUpAll(() async {
+    await initializeDateFormatting('de');
+    await initializeDateFormatting('tr');
+  });
 
   group(InfoStickerFormat, () {
     group('time', () {
@@ -46,6 +49,43 @@ void main() {
         );
 
         expect(InfoStickerFormat.text(data), equals('MONTAG'));
+      });
+
+      test('capitalises a Turkish weekday with a dotted I', () {
+        final data = InfoStickerData(
+          kind: InfoStickerKind.date,
+          localeName: 'tr',
+          dateTime: DateTime(2026, 10, 26),
+          dateFormat: InfoStickerDateFormat.weekday,
+        );
+
+        expect(InfoStickerFormat.text(data), equals('PAZARTESİ'));
+      });
+    });
+
+    group('upperCase', () {
+      test('keeps the dotless and dotted i of Turkish apart', () {
+        const data = InfoStickerData(
+          kind: InfoStickerKind.location,
+          localeName: 'tr_TR',
+        );
+
+        expect(
+          InfoStickerFormat.upperCase(data, 'Iğdır ili'),
+          equals('IĞDIR İLİ'),
+        );
+      });
+
+      test('capitalises i as I in other languages', () {
+        const data = InfoStickerData(
+          kind: InfoStickerKind.location,
+          localeName: 'de',
+        );
+
+        expect(
+          InfoStickerFormat.upperCase(data, 'Zürich mit'),
+          equals('ZÜRICH MIT'),
+        );
       });
     });
 

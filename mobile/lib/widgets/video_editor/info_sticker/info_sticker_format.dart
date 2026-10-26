@@ -34,15 +34,24 @@ abstract final class InfoStickerFormat {
     return _clock(data, dateTime);
   }
 
+  /// [text] in capitals the way the sticker's language writes them: Turkish
+  /// and Azerbaijani capitalise i as İ, which [String.toUpperCase] does not.
+  static String upperCase(InfoStickerData data, String text) {
+    final language = data.locale.languageCode;
+    final dottedI = language == 'tr' || language == 'az';
+    return (dottedI ? text.replaceAll('i', 'İ') : text).toUpperCase();
+  }
+
   /// The date a date sticker shows, written as [format] or the sticker's own.
   static String date(InfoStickerData data, [InfoStickerDateFormat? format]) {
     final dateTime = data.dateTime;
     if (dateTime == null) return '';
     final locale = data.localeName;
     return switch (format ?? data.dateFormat) {
-      InfoStickerDateFormat.weekday => DateFormat.EEEE(
-        locale,
-      ).format(dateTime).toUpperCase(),
+      InfoStickerDateFormat.weekday => upperCase(
+        data,
+        DateFormat.EEEE(locale).format(dateTime),
+      ),
       InfoStickerDateFormat.dayMonth => DateFormat.MMMEd(
         locale,
       ).format(dateTime),

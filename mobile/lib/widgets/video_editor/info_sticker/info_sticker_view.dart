@@ -42,7 +42,10 @@ class InfoStickerView extends StatelessWidget {
             text: InfoStickerFormat.text(data),
           ),
           InfoStickerStyle.camcorder => _Camcorder(
-            text: InfoStickerFormat.text(data),
+            text: InfoStickerFormat.upperCase(
+              data,
+              InfoStickerFormat.text(data),
+            ),
           ),
           _ => _Card(data: data, palette: _Palette.of(data.style)),
         },
@@ -347,7 +350,8 @@ class _FilmStamp extends StatelessWidget {
   }
 }
 
-/// A camcorder's viewfinder: a red recording dot, REC, then [text].
+/// A camcorder's viewfinder: a red recording dot, REC, then [text], which
+/// comes in capitals.
 class _Camcorder extends StatelessWidget {
   const _Camcorder({required this.text});
 
@@ -373,7 +377,7 @@ class _Camcorder extends StatelessWidget {
           child: SizedBox.square(dimension: 26),
         ),
         Text('REC', style: style),
-        Text(text.toUpperCase(), style: style, maxLines: 1),
+        Text(text, style: style, maxLines: 1),
       ],
     );
   }
