@@ -385,8 +385,8 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
   ) async {
     if (state.selectedRecipients.isEmpty || state.isSending) return;
 
-    // Deliberate compose-then-send: the awaited flow keeps a visible
-    // "sending" spinner (isSending) and reports the outcome in-sheet.
+    // Wait only for local validation and durable enqueue. Relay discovery,
+    // publishing and retries belong to the repository after the sheet closes.
     emit(state.copyWith(isSending: true, clearActionResult: true));
 
     try {

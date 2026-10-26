@@ -674,6 +674,7 @@ void main() {
           setUp: () {
             when(
               () => mockDmRepository.sendMessage(
+                backgroundDelivery: true,
                 recipientPubkey: recipientPubkey,
                 content: 'Hello',
               ),
@@ -711,6 +712,7 @@ void main() {
           setUp: () {
             when(
               () => mockDmRepository.sendMessage(
+                backgroundDelivery: true,
                 recipientPubkey: recipientPubkey,
                 content: 'Hello',
               ),
@@ -749,6 +751,7 @@ void main() {
           setUp: () {
             when(
               () => mockDmRepository.sendMessage(
+                backgroundDelivery: true,
                 recipientPubkey: recipientPubkey,
                 content: 'Hello',
               ),
@@ -811,12 +814,14 @@ void main() {
           verify: (_) {
             verifyNever(
               () => mockDmRepository.sendMessage(
+                backgroundDelivery: true,
                 recipientPubkey: any(named: 'recipientPubkey'),
                 content: any(named: 'content'),
               ),
             );
             verifyNever(
               () => mockDmRepository.sendGroupMessage(
+                backgroundDelivery: true,
                 recipientPubkeys: any(named: 'recipientPubkeys'),
                 content: any(named: 'content'),
               ),
@@ -830,6 +835,7 @@ void main() {
           setUp: () {
             when(
               () => mockDmRepository.sendMessage(
+                backgroundDelivery: true,
                 recipientPubkey: recipientPubkey,
                 content: 'Hello',
               ),
@@ -870,6 +876,7 @@ void main() {
           setUp: () {
             when(
               () => mockDmRepository.sendMessage(
+                backgroundDelivery: true,
                 recipientPubkey: recipientPubkey,
                 content: 'Hello',
               ),
@@ -906,6 +913,7 @@ void main() {
           setUp: () {
             when(
               () => mockDmRepository.sendGroupMessage(
+                backgroundDelivery: true,
                 recipientPubkeys: [recipientPubkey, recipientPubkey2],
                 content: 'Group hello',
               ),
@@ -956,6 +964,7 @@ void main() {
             ).thenAnswer((_) => failOutCtrl.stream);
             when(
               () => mockDmRepository.sendMessage(
+                backgroundDelivery: true,
                 recipientPubkey: recipientPubkey,
                 content: 'Hello',
               ),
@@ -1071,6 +1080,7 @@ void main() {
           setUp: () {
             when(
               () => mockDmRepository.sendMessage(
+                backgroundDelivery: true,
                 recipientPubkey: recipientPubkey,
                 content: 'Hello',
               ),
@@ -1109,6 +1119,7 @@ void main() {
           setUp: () {
             when(
               () => mockDmRepository.sendMessage(
+                backgroundDelivery: true,
                 recipientPubkey: recipientPubkey,
                 content: 'Hello',
               ),
@@ -1165,6 +1176,7 @@ void main() {
           setUp: () {
             when(
               () => mockDmRepository.sendGroupMessage(
+                backgroundDelivery: true,
                 recipientPubkeys: [recipientPubkey, recipientPubkey2],
                 content: 'Group hello',
               ),
@@ -1206,6 +1218,7 @@ void main() {
           setUp: () {
             when(
               () => mockDmRepository.sendGroupMessage(
+                backgroundDelivery: true,
                 recipientPubkeys: [recipientPubkey, recipientPubkey2],
                 content: 'Group hello',
               ),
@@ -1247,6 +1260,7 @@ void main() {
             const partialQueueId = '$sharedRumorId:$recipientPubkey2';
             when(
               () => mockDmRepository.sendGroupMessage(
+                backgroundDelivery: true,
                 recipientPubkeys: [recipientPubkey, recipientPubkey2],
                 content: 'Group hello',
               ),
@@ -1307,6 +1321,7 @@ void main() {
           setUp: () {
             when(
               () => mockDmRepository.sendGroupMessage(
+                backgroundDelivery: true,
                 recipientPubkeys: [recipientPubkey, recipientPubkey2],
                 content: 'Group hello',
               ),
@@ -1359,12 +1374,14 @@ void main() {
             slowFirstPartial = Completer<NIP17SendResult>();
             when(
               () => mockDmRepository.sendMessage(
+                backgroundDelivery: true,
                 recipientPubkey: recipientPubkey,
                 content: 'First partial',
               ),
             ).thenAnswer((_) => slowFirstPartial.future);
             when(
               () => mockDmRepository.sendMessage(
+                backgroundDelivery: true,
                 recipientPubkey: recipientPubkey,
                 content: 'Second partial',
               ),
@@ -1387,6 +1404,7 @@ void main() {
             );
             await untilCalled(
               () => mockDmRepository.sendMessage(
+                backgroundDelivery: true,
                 recipientPubkey: recipientPubkey,
                 content: 'First partial',
               ),
@@ -1445,6 +1463,7 @@ void main() {
           setUp: () {
             when(
               () => mockDmRepository.sendMessage(
+                backgroundDelivery: true,
                 recipientPubkey: recipientPubkey,
                 content: 'Hello',
               ),
@@ -1476,6 +1495,7 @@ void main() {
           setUp: () {
             when(
               () => mockDmRepository.sendGroupMessage(
+                backgroundDelivery: true,
                 recipientPubkeys: [recipientPubkey, recipientPubkey2],
                 content: 'Group hello',
               ),
@@ -1511,6 +1531,7 @@ void main() {
           setUp: () {
             when(
               () => mockDmRepository.sendMessage(
+                backgroundDelivery: true,
                 recipientPubkey: recipientPubkey,
                 content: 'Hello',
               ),
@@ -1563,6 +1584,7 @@ void main() {
             var callCount = 0;
             when(
               () => mockDmRepository.sendMessage(
+                backgroundDelivery: true,
                 recipientPubkey: recipientPubkey,
                 content: any(named: 'content'),
               ),
@@ -1588,6 +1610,7 @@ void main() {
             );
             await untilCalled(
               () => mockDmRepository.sendMessage(
+                backgroundDelivery: true,
                 recipientPubkey: recipientPubkey,
                 content: 'First message',
               ),
@@ -1605,6 +1628,7 @@ void main() {
             );
             verify(
               () => mockDmRepository.sendMessage(
+                backgroundDelivery: true,
                 recipientPubkey: recipientPubkey,
                 content: any(named: 'content'),
               ),
@@ -1647,6 +1671,7 @@ void main() {
             var callCount = 0;
             when(
               () => mockDmRepository.sendMessage(
+                backgroundDelivery: true,
                 recipientPubkey: recipientPubkey,
                 content: any(named: 'content'),
               ),
@@ -1705,6 +1730,7 @@ void main() {
           verify: (_) {
             verify(
               () => mockDmRepository.sendMessage(
+                backgroundDelivery: true,
                 recipientPubkey: recipientPubkey,
                 content: any(named: 'content'),
               ),
@@ -1906,12 +1932,14 @@ void main() {
           // Pin the no-duplicate-recipient-publish contract from #4102.
           verifyNever(
             () => mockDmRepository.sendMessage(
+              backgroundDelivery: true,
               recipientPubkey: any(named: 'recipientPubkey'),
               content: any(named: 'content'),
             ),
           );
           verifyNever(
             () => mockDmRepository.sendGroupMessage(
+              backgroundDelivery: true,
               recipientPubkeys: any(named: 'recipientPubkeys'),
               content: any(named: 'content'),
             ),
@@ -2277,12 +2305,14 @@ void main() {
           // The anti-duplication contract: no fresh rumor is ever minted.
           verifyNever(
             () => mockDmRepository.sendMessage(
+              backgroundDelivery: true,
               recipientPubkey: any(named: 'recipientPubkey'),
               content: any(named: 'content'),
             ),
           );
           verifyNever(
             () => mockDmRepository.sendGroupMessage(
+              backgroundDelivery: true,
               recipientPubkeys: any(named: 'recipientPubkeys'),
               content: any(named: 'content'),
             ),

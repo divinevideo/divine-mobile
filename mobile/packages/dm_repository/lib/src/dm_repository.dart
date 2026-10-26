@@ -1436,6 +1436,7 @@ class DmRepository {
     // so the incoming user's startListening() is not blocked at its entry
     // guard by the outgoing user's still-resolving subscribe. See #4974.
     _resetGeneration++;
+    _backgroundDeliveryTail = Future<void>.value();
     _subscribing = false;
     _disposed = true;
     _eventLock = null;
@@ -6357,8 +6358,9 @@ class DmRepository {
     await _conversationsDao.markAsRead(id, ownerPubkey: ownerPubkey);
   }
 
-  /// Make a conversation whose FIRST send did not deliver visible in the
-  /// inbox list. Creates the `dm_conversations` row only when none exists —
+  /// Make a conversation with a queued first send visible in the inbox,
+  /// including before a background send has received relay confirmation.
+  /// Creates the `dm_conversations` row only when none exists —
   /// without this, the first-ever message of a new thread composed offline
   /// (or otherwise hard-failed) leaves no conversation row at all, so the
   /// thread is invisible in the inbox and the user cannot find the failed
@@ -6375,13 +6377,20 @@ class DmRepository {
     required List<String> participants,
     required bool isGroup,
     required String content,
+    String? ownerPubkey,
+    int? expectedGeneration,
   }) async {
+    final owner = ownerPubkey ?? _userPubkey;
+    final generation = expectedGeneration ?? _resetGeneration;
+    bool isCurrent() =>
+        !_disposed && _resetGeneration == generation && _userPubkey == owner;
+    if (!isCurrent()) return;
     try {
       final existing = await _conversationsDao.getConversation(
         conversationId,
-        ownerPubkey: _userPubkey,
+        ownerPubkey: owner,
       );
-      if (existing != null) return;
+      if (!isCurrent() || existing != null) return;
       if (participants.length > 2 &&
           await _isLeftConversation(conversationId)) {
         Log.debug(
@@ -6391,8 +6400,10 @@ class DmRepository {
         );
         return;
       }
+      if (!isCurrent()) return;
       final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       await _conversationsDao.runInTransaction(() async {
+        if (!isCurrent()) return;
         await _upsertSentConversationAndMarkRead(
           id: conversationId,
           participantPubkeys: jsonEncode(participants),
@@ -6400,8 +6411,8 @@ class DmRepository {
           createdAt: now,
           lastMessageContent: content,
           lastMessageTimestamp: now,
-          lastMessageSenderPubkey: _userPubkey,
-          ownerPubkey: _userPubkey,
+          lastMessageSenderPubkey: owner,
+          ownerPubkey: owner,
         );
       });
     } on Object catch (e) {
@@ -6467,6 +6478,21 @@ class DmRepository {
     List<List<String>> additionalTags = const [],
   }) async {
     _assertInitialized();
+    final owner = _userPubkey;
+    final generation = _resetGeneration;
+    final messageService = _messageService!;
+    bool isCurrent() =>
+        !_disposed && _resetGeneration == generation && _userPubkey == owner;
+    const abandoned = (
+      refusal: NIP17SendResult.failure(
+        'account changed before send was queued',
+      ),
+      rumor: null,
+      conversationId: null,
+      sendBatchId: null,
+      rumorTags: null,
+      participants: null,
+    );
     validatePubkey(recipientPubkey);
     if (content.trim().isEmpty) {
       throw ArgumentError.value(content, 'content', 'must not be empty');
@@ -6503,7 +6529,9 @@ class DmRepository {
     // NIP17MessageService.sendRumor is the authoritative choke point (it also
     // covers the drain replay); this earlier check avoids storing a queue row
     // that would only ever re-fail the gate.
-    if (!await _messageService!.canSendTo(recipientPubkey)) {
+    final permitted = await messageService.canSendTo(recipientPubkey);
+    if (!isCurrent()) return abandoned;
+    if (!permitted) {
       return (
         refusal: const NIP17SendResult.blocked(
           'blocked: recipient not permitted by send policy',
@@ -6520,7 +6548,7 @@ class DmRepository {
       ...additionalTags,
       if (replyToId != null) ['e', replyToId],
     ];
-    final participants = [_userPubkey, recipientPubkey]..sort();
+    final participants = [owner, recipientPubkey]..sort();
     final conversationId = computeConversationId(participants);
 
     // Durable, collision-proof identity for this send, minted BEFORE the
@@ -6551,7 +6579,7 @@ class DmRepository {
     // the happy path persists as the local row's `tagsJson`, and the group path
     // likewise keeps its wire-only token out of the happy-path persisted tags.
     // Recovery reconstructs `tagsJson` from the full stored rumor instead.
-    final rumor = _messageService!.buildRumor(
+    final rumor = messageService.buildRumor(
       recipientPubkey: recipientPubkey,
       content: content,
       createdAt: createdAt,
@@ -6576,6 +6604,7 @@ class DmRepository {
     // Enqueue before publish so an app crash mid-send leaves a
     // recoverable trace. No-op when the queue dao isn't wired in
     // (older test fixtures, NIP-04-only callers).
+    if (!isCurrent()) return abandoned;
     final outgoingDao = _outgoingDmsDao;
     if (outgoingDao != null) {
       await outgoingDao.enqueue(
@@ -6591,7 +6620,7 @@ class DmRepository {
           recipientWrapStatus: OutgoingWrapStatus.pending,
           selfWrapStatus: OutgoingWrapStatus.pending,
           queuedAt: DateTime.now(),
-          ownerPubkey: _userPubkey,
+          ownerPubkey: owner,
           // Stamped verbatim, as the group path stamps its siblings: a 1:1
           // row has no siblings, but carrying the token makes a deleted
           // bubble's cancellation match by exact value instead of falling
@@ -6681,6 +6710,10 @@ class DmRepository {
   /// - Recipient publish failure: mark both wraps `failed` and leave
   ///   the row queued for replay.
   ///
+  /// With [backgroundDelivery] and a durable queue, returns a pending handle
+  /// after local persistence and starts delivery independently of the caller.
+  /// Without a queue, retains awaited delivery so no intent is lost.
+  ///
   /// A [recoverFullSend] for the same rumor issued before this call returns
   /// joins this attempt rather than publishing again.
   @useResult
@@ -6690,7 +6723,9 @@ class DmRepository {
     String? replyToId,
     List<List<String>> additionalTags = const [],
     bool skipNip04Fallback = false,
+    bool backgroundDelivery = false,
   }) async {
+    final generation = _resetGeneration;
     final prep = await _prepareAndEnqueueSend(
       recipientPubkey: recipientPubkey,
       content: content,
@@ -6713,7 +6748,24 @@ class DmRepository {
     // ended. The rumor carries a freshly minted batch token, so no recovery
     // can hold this key first: the closure always runs here, and this call
     // always owns the finalization.
-    return _joinOrStartRecovery('full:${rumor.id}', () async {
+    if (backgroundDelivery && _outgoingDmsDao != null) {
+      await _ensureConversationVisibleAfterSendFailure(
+        conversationId: prep.conversationId!,
+        participants: prep.participants!,
+        isGroup: false,
+        content: content,
+        ownerPubkey: rumor.pubkey,
+        expectedGeneration: generation,
+      );
+    }
+    final previousDelivery = backgroundDelivery && _outgoingDmsDao != null
+        ? _backgroundDeliveryTail
+        : null;
+    final delivery = _joinOrStartRecovery('full:${rumor.id}', () async {
+      if (previousDelivery != null) await previousDelivery;
+      if (_disposed || _resetGeneration != generation) {
+        return _queuedForDelivery(rumor.id);
+      }
       _setOriginalSendInFlight(rumor.id, inFlight: true);
       try {
         return await _publishPreparedSend(
@@ -6726,11 +6778,67 @@ class DmRepository {
           content: content,
           replyToId: replyToId,
           skipNip04Fallback: skipNip04Fallback,
+          generation: generation,
+          checkCancelledBeforePublish: backgroundDelivery,
         );
       } finally {
         _setOriginalSendInFlight(rumor.id, inFlight: false);
       }
     });
+    if (backgroundDelivery && _outgoingDmsDao != null) {
+      _continueDelivery(delivery, [rumor.id], generation);
+      return _queuedForDelivery(rumor.id);
+    }
+    return delivery;
+  }
+
+  /// A locally accepted intent, never a claim of relay delivery.
+  NIP17SendResult _queuedForDelivery(String id) => NIP17SendResult.failure(
+    'Message queued for delivery',
+    retryablePending: true,
+    queuedRumorId: id,
+  );
+
+  /// Owns the transport after the composer has returned. A durable row and
+  /// stable rumor remain available to the retry service across restarts.
+  Future<void> _backgroundDeliveryTail = Future<void>.value();
+
+  void _continueDelivery<T>(
+    Future<T> delivery,
+    List<String> queueIds,
+    int generation,
+  ) {
+    // Queue writes remain fast even when a previous transport is slow.
+    // Serialize initial transports to avoid a multi-share relay/signing burst.
+    _backgroundDeliveryTail = () async {
+      try {
+        await delivery;
+      } on Object catch (error, stackTrace) {
+        Log.error(
+          'Background DM delivery failed; durable messages remain queued',
+          category: LogCategory.system,
+          error: error,
+          stackTrace: stackTrace,
+        );
+        _errorReporter?.call(
+          error,
+          stackTrace,
+          site: DmRepositoryReportableSites.backgroundDeliveryUnexpectedThrow,
+        );
+        if (_disposed || _resetGeneration != generation) return;
+        final dao = _outgoingDmsDao;
+        if (dao == null) return;
+        for (final id in queueIds) {
+          await _finalizeAfterRecipientFailure(
+            outgoingDao: dao,
+            rumorId: id,
+            errorMessage: 'Background delivery failed: $error',
+          );
+        }
+      } finally {
+        _notifyRetryableWork();
+      }
+    }();
   }
 
   /// Publishes a rumor [sendMessage] has built and enqueued, then finalizes
@@ -6745,8 +6853,11 @@ class DmRepository {
     required String content,
     required String? replyToId,
     required bool skipNip04Fallback,
+    required int generation,
+    required bool checkCancelledBeforePublish,
   }) async {
     final outgoingDao = _outgoingDmsDao;
+    final owner = rumor.pubkey;
 
     // Route the gift wrap to the recipient's NIP-17 DM inbox relays
     // (kind 10050) when they advertise one; null falls back to the
@@ -6777,6 +6888,14 @@ class DmRepository {
     // `found` only. `absent` and `unreadable` route to the same place but mean
     // different things — `unreadable` is a failed lookup, not evidence the
     // peer cannot read NIP-17 — and treating them alike is the #7317 mistake.
+    if (_disposed || _resetGeneration != generation) {
+      return _queuedForDelivery(rumor.id);
+    }
+    if (checkCancelledBeforePublish &&
+        outgoingDao != null &&
+        !_isLiveDelivery(await outgoingDao.getById(rumor.id))) {
+      return const NIP17SendResult.failure('send cancelled before publish');
+    }
     await _clearLatchOnAdvertisedInbox(conversationId, inbox.state);
 
     // OK-confirm the recipient wrap: a WebSocket frame-accept is a false
@@ -6785,6 +6904,9 @@ class DmRepository {
     // lost/late OK comes back soft (retryablePending) and keeps the durable
     // queue row pending for the sweep — never a false "delivered". See #5977
     // for the reaction precedent this mirrors.
+    if (_disposed || _resetGeneration != generation) {
+      return _queuedForDelivery(rumor.id);
+    }
     final publishResult = await _sendRumorWithTimeout(
       rumor: rumor,
       recipientPubkey: recipientPubkey,
@@ -6810,6 +6932,9 @@ class DmRepository {
     // Only when the queue is wired: with no row to preserve there is nothing to
     // gain, and downgrading would skip the local persist and drop the message
     // from the conversation.
+    if (_disposed || _resetGeneration != generation) {
+      return _queuedForDelivery(rumor.id);
+    }
     final result = outgoingDao == null
         ? publishResult
         : downgradeFallbackPoolDelivery(publishResult, inbox.state);
@@ -6827,6 +6952,7 @@ class DmRepository {
         String? protocol;
         var persistedLocally = false;
         await _conversationsDao.runInTransaction(() async {
+          if (_disposed || _resetGeneration != generation) return;
           // Cancel interlock (mirrors _recoverFullSendLocked): the row may be
           // gone by the time this publish lands — the user deleted the send
           // (cancelOutgoingSend) during the publish window (OK-confirmation
@@ -6848,10 +6974,11 @@ class DmRepository {
             );
             return;
           }
+          if (_disposed || _resetGeneration != generation) return;
           await _directMessagesDao.insertMessage(
             id: result.rumorEventId!,
             conversationId: conversationId,
-            senderPubkey: _userPubkey,
+            senderPubkey: owner,
             content: content,
             // The rumor's canonical timestamp, NOT confirm-time `now`: the
             // optimistic bubble sorts by rumor.createdAt, so stamping the
@@ -6861,13 +6988,13 @@ class DmRepository {
             giftWrapId: result.messageEventId!,
             replyToId: replyToId,
             tagsJson: rumorTags.isEmpty ? null : jsonEncode(rumorTags),
-            ownerPubkey: _userPubkey,
+            ownerPubkey: owner,
             sendBatchId: sendBatchId,
           );
 
           final existingSend = await _conversationsDao.getConversation(
             conversationId,
-            ownerPubkey: _userPubkey,
+            ownerPubkey: owner,
           );
           // Mark the conversation as NIP-17 once we successfully publish
           // a NIP-17 message ourselves. Without this, `dmProtocol` only
@@ -6880,6 +7007,7 @@ class DmRepository {
           // pre-upsert row there left it null on a conversation the user
           // initiates, so message #1 of every self-initiated thread also
           // published a cleartext kind-4 copy (#7342).
+          if (_disposed || _resetGeneration != generation) return;
           final nextProtocol = existingSend?.dmProtocol ?? 'nip17';
           protocol = nextProtocol;
           await _upsertSentConversationAndMarkRead(
@@ -6889,8 +7017,8 @@ class DmRepository {
             createdAt: existingSend?.createdAt ?? now,
             lastMessageContent: content,
             lastMessageTimestamp: now,
-            lastMessageSenderPubkey: _userPubkey,
-            ownerPubkey: _userPubkey,
+            lastMessageSenderPubkey: owner,
+            ownerPubkey: owner,
             dmProtocol: nextProtocol,
           );
 
@@ -6919,7 +7047,11 @@ class DmRepository {
         // duplicate. `persistedLocally` also covers the cancel interlock:
         // it stays false when the transaction bailed out, and a plaintext
         // copy of a message the user just deleted must not go out.
-        if (persistedLocally && protocol != 'nip17' && !skipNip04Fallback) {
+        if (!_disposed &&
+            _resetGeneration == generation &&
+            persistedLocally &&
+            protocol != 'nip17' &&
+            !skipNip04Fallback) {
           _fireNip04Copy(
             recipientPubkey: recipientPubkey,
             content: content,
@@ -6970,6 +7102,8 @@ class DmRepository {
         participants: participants,
         isGroup: false,
         content: content,
+        ownerPubkey: owner,
+        expectedGeneration: generation,
       );
       return _stampQueuedRow(result, rumor.id);
     } else if (outgoingDao != null) {
@@ -6990,6 +7124,8 @@ class DmRepository {
         participants: participants,
         isGroup: false,
         content: content,
+        ownerPubkey: owner,
+        expectedGeneration: generation,
       );
       return _stampQueuedRow(result, rumor.id);
     }
@@ -7050,6 +7186,7 @@ class DmRepository {
     String? relayHint,
     String? replyToId,
     bool skipNip04Fallback = false,
+    bool backgroundDelivery = false,
   }) async {
     final citation = DmSharedVideoCitation.build(
       videoKind: videoKind,
@@ -7076,6 +7213,7 @@ class DmRepository {
         recipientPubkey: recipientPubkey,
         content: baseContent,
         replyToId: replyToId,
+        backgroundDelivery: backgroundDelivery,
         skipNip04Fallback: skipNip04Fallback,
       );
     }
@@ -7085,6 +7223,7 @@ class DmRepository {
       content: '$baseContent\n${citation.nostrUri}',
       additionalTags: [citation.qTag],
       replyToId: replyToId,
+      backgroundDelivery: backgroundDelivery,
       skipNip04Fallback: skipNip04Fallback,
     );
   }
@@ -7109,6 +7248,7 @@ class DmRepository {
     String? videoEventId,
     String? relayHint,
     String? replyToId,
+    bool backgroundDelivery = false,
   }) async {
     final citation = DmSharedVideoCitation.build(
       videoKind: videoKind,
@@ -7133,6 +7273,7 @@ class DmRepository {
         recipientPubkeys: recipientPubkeys,
         content: baseContent,
         replyToId: replyToId,
+        backgroundDelivery: backgroundDelivery,
       );
     }
 
@@ -7141,6 +7282,7 @@ class DmRepository {
       content: '$baseContent\n${citation.nostrUri}',
       additionalTags: [citation.qTag],
       replyToId: replyToId,
+      backgroundDelivery: backgroundDelivery,
     );
   }
 
@@ -8698,8 +8840,17 @@ class DmRepository {
     required String content,
     String? replyToId,
     List<List<String>> additionalTags = const [],
+    bool backgroundDelivery = false,
   }) async {
+    final generation = _resetGeneration;
     _assertInitialized();
+    final owner = _userPubkey;
+    final messageService = _messageService!;
+    bool isCurrent() =>
+        !_disposed && _resetGeneration == generation && _userPubkey == owner;
+    const abandoned = NIP17SendResult.failure(
+      'account changed before group send was queued',
+    );
     if (recipientPubkeys.isEmpty) {
       throw ArgumentError.value(
         recipientPubkeys,
@@ -8744,7 +8895,11 @@ class DmRepository {
     // decoy to slip content to the rest. Refuse the whole send if any recipient
     // is blocked — before building or enqueuing anything.
     for (final pubkey in recipientPubkeys) {
-      if (!await _messageService!.canSendTo(pubkey)) {
+      final permitted = await messageService.canSendTo(pubkey);
+      if (!isCurrent()) {
+        return [for (final _ in recipientPubkeys) abandoned];
+      }
+      if (!permitted) {
         return [
           for (final _ in recipientPubkeys)
             const NIP17SendResult.blocked(
@@ -8754,7 +8909,7 @@ class DmRepository {
       }
     }
 
-    final participants = [_userPubkey, ...recipientPubkeys]..sort();
+    final participants = [owner, ...recipientPubkeys]..sort();
     final conversationId = computeConversationId(participants);
     final outgoingDao = _outgoingDmsDao;
 
@@ -8765,7 +8920,6 @@ class DmRepository {
     // rather than migrated because nothing reads this column's format — see
     // [_groupQueueId].
     final queueIds = <String>[];
-    final results = <NIP17SendResult>[];
 
     // Durable, collision-proof identity for this whole fan-out, minted BEFORE
     // any rumor is built. A rumor's event id is
@@ -8811,7 +8965,7 @@ class DmRepository {
     // in the same second (#6046) — it is one shared tag, so it does not
     // re-fork the id within a batch.
     final batchCreatedAt = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final groupRumor = _messageService!.buildGroupRumor(
+    final groupRumor = messageService.buildGroupRumor(
       recipientPubkeys: recipientPubkeys,
       content: content,
       additionalTags: <List<String>>[
@@ -8843,7 +8997,7 @@ class DmRepository {
     if (participants.length > 2) {
       await _removedConversationsDao?.markRejoined(
         conversationId: conversationId,
-        ownerPubkey: _userPubkey,
+        ownerPubkey: owner,
         at: batchCreatedAt,
         // Establish the local rejoin before relay discovery can suspend us.
         // A Leave completed during discovery must remain left, not be
@@ -8867,6 +9021,12 @@ class DmRepository {
     // minting a duplicating fresh fan-out (#7316).
     if (outgoingDao != null) {
       for (var i = 0; i < recipientPubkeys.length; i++) {
+        if (!isCurrent()) {
+          return [
+            for (var j = 0; j < recipientPubkeys.length; j++)
+              if (j < i) _stampQueuedRow(abandoned, queueIds[j]) else abandoned,
+          ];
+        }
         final queueId = queueIds[i];
         try {
           await outgoingDao.enqueue(
@@ -8882,7 +9042,7 @@ class DmRepository {
               recipientWrapStatus: OutgoingWrapStatus.pending,
               selfWrapStatus: OutgoingWrapStatus.pending,
               queuedAt: DateTime.now(),
-              ownerPubkey: _userPubkey,
+              ownerPubkey: owner,
               sendBatchId: sendBatchId,
               environment: _environment,
             ),
@@ -8933,6 +9093,60 @@ class DmRepository {
       }
     }
 
+    if (backgroundDelivery && outgoingDao != null) {
+      await _ensureConversationVisibleAfterSendFailure(
+        conversationId: conversationId,
+        participants: participants,
+        isGroup: true,
+        content: content,
+        ownerPubkey: groupRumor.pubkey,
+        expectedGeneration: generation,
+      );
+    }
+    final delivery = _publishPreparedGroup(
+      recipientPubkeys: recipientPubkeys,
+      content: content,
+      replyToId: replyToId,
+      additionalTags: additionalTags,
+      participants: participants,
+      conversationId: conversationId,
+      queueIds: queueIds,
+      sendBatchId: sendBatchId,
+      groupRumor: groupRumor,
+      batchCreatedAt: batchCreatedAt,
+      generation: generation,
+      startAfter: backgroundDelivery && outgoingDao != null
+          ? _backgroundDeliveryTail
+          : null,
+    );
+    if (backgroundDelivery && outgoingDao != null) {
+      _continueDelivery(delivery, queueIds, generation);
+      return [for (final id in queueIds) _queuedForDelivery(id)];
+    }
+    return delivery;
+  }
+
+  Future<List<NIP17SendResult>> _publishPreparedGroup({
+    required List<String> recipientPubkeys,
+    required String content,
+    required String? replyToId,
+    required List<List<String>> additionalTags,
+    required List<String> participants,
+    required String conversationId,
+    required List<String> queueIds,
+    required String sendBatchId,
+    required Event groupRumor,
+    required int batchCreatedAt,
+    required int generation,
+    required Future<void>? startAfter,
+  }) async {
+    if (startAfter != null) await startAfter;
+    if (_disposed || _resetGeneration != generation) {
+      return [for (final id in queueIds) _queuedForDelivery(id)];
+    }
+    final outgoingDao = _outgoingDmsDao;
+    final owner = groupRumor.pubkey;
+    final results = <NIP17SendResult>[];
     // Resolve relays only after the local rejoin and queue writes. Leave can
     // then cancel this send while discovery is pending; the pre-publish
     // checks below observe its tombstone and deleted queue rows.
@@ -8951,6 +9165,10 @@ class DmRepository {
       ]),
       _selfWrapTargetRelays(),
     ).wait;
+
+    if (_disposed || _resetGeneration != generation) {
+      return [for (final id in queueIds) _queuedForDelivery(id)];
+    }
 
     // Delivery below is per-recipient and NOT atomic: a mid-loop publish
     // failure can leave the group partially delivered. That is a reliability/UX
@@ -8973,6 +9191,9 @@ class DmRepository {
     // attempts (#8619). Only the durable handle is stamped for these.
     final joinedRecovery = <int>{};
     for (var i = 0; i < recipientPubkeys.length; i++) {
+      if (_disposed || _resetGeneration != generation) {
+        return [for (final id in queueIds) _queuedForDelivery(id)];
+      }
       final pubkey = recipientPubkeys[i];
       // Leave can delete only the siblings already queued when it runs.
       // Copies queued afterwards must also be cancelled before publication.
@@ -9026,6 +9247,9 @@ class DmRepository {
       try {
         result = await _joinOrStartRecovery('full:${queueIds[i]}', () async {
           attemptRanHere = true;
+          if (_disposed || _resetGeneration != generation) {
+            return _queuedForDelivery(queueIds[i]);
+          }
           final published = await _sendRumorWithTimeout(
             rumor: groupRumor,
             recipientPubkey: pubkey,
@@ -9073,6 +9297,9 @@ class DmRepository {
     // same transaction so a watcher never observes a window where the
     // message is in neither table — and partial deliveries preserve
     // the retry row for the recovery path.
+    if (_disposed || _resetGeneration != generation) {
+      return [for (final id in queueIds) _queuedForDelivery(id)];
+    }
     if (results.any((r) => r.success)) {
       final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       final localTags = <List<String>>[
@@ -9082,6 +9309,7 @@ class DmRepository {
       ];
 
       await _conversationsDao.runInTransaction(() async {
+        if (_disposed || _resetGeneration != generation) return;
         // A Leave that landed after the rejoin above found nothing to rejoin,
         // but before every sibling was queued, took only the rows queued
         // before it. The leave wins: the rest go too, and the group stays out
@@ -9146,18 +9374,19 @@ class DmRepository {
             outgoingDao != null &&
             await _directMessagesDao.hasMessageWithSendBatchId(
               batchId: sendBatchId,
-              ownerPubkey: _userPubkey,
+              ownerPubkey: owner,
             );
 
         // Key the insert off the first LIVE success so a cancelled sibling's
         // giftWrapId does not land in storage. If cancellation removed every
         // success, there is no local message to persist.
+        if (_disposed || _resetGeneration != generation) return;
         final firstLiveSuccess = results[liveSuccessIndexes.first];
         if (!alreadyPersisted) {
           await _directMessagesDao.insertMessage(
             id: firstLiveSuccess.rumorEventId!,
             conversationId: conversationId,
-            senderPubkey: _userPubkey,
+            senderPubkey: owner,
             content: content,
             // The rumor's canonical batch timestamp, NOT confirm-time `now`:
             // the optimistic bubble sorts by rumor.createdAt, so stamping the
@@ -9167,7 +9396,7 @@ class DmRepository {
             giftWrapId: firstLiveSuccess.messageEventId!,
             replyToId: replyToId,
             tagsJson: localTags.isEmpty ? null : jsonEncode(localTags),
-            ownerPubkey: _userPubkey,
+            ownerPubkey: owner,
             // Stamp the persisted row with the batch id so the recovery path
             // (and a racing sibling) dedup against it by exact match.
             sendBatchId: sendBatchId,
@@ -9176,8 +9405,9 @@ class DmRepository {
 
         final existingGroup = await _conversationsDao.getConversation(
           conversationId,
-          ownerPubkey: _userPubkey,
+          ownerPubkey: owner,
         );
+        if (_disposed || _resetGeneration != generation) return;
         await _upsertSentConversationAndMarkRead(
           id: conversationId,
           participantPubkeys: jsonEncode(participants),
@@ -9185,8 +9415,8 @@ class DmRepository {
           createdAt: existingGroup?.createdAt ?? now,
           lastMessageContent: content,
           lastMessageTimestamp: now,
-          lastMessageSenderPubkey: _userPubkey,
-          ownerPubkey: _userPubkey,
+          lastMessageSenderPubkey: owner,
+          ownerPubkey: owner,
           dmProtocol: existingGroup?.dmProtocol,
         );
 
@@ -9281,6 +9511,8 @@ class DmRepository {
         participants: participants,
         isGroup: true,
         content: content,
+        ownerPubkey: owner,
+        expectedGeneration: generation,
       );
     }
 
