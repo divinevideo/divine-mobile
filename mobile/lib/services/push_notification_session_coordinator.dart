@@ -91,7 +91,10 @@ class PushNotificationSessionCoordinator {
   NostrIdentity? _lastReadyIdentity;
   CleanupClientFactory? _lastReadyCleanupClientFactory;
 
+  bool _disposed = false;
+
   void dispose() {
+    _disposed = true;
     if (_tokenRefreshSubscription != null) {
       runDetached(
         _tokenRefreshSubscription!.cancel(),
@@ -102,6 +105,27 @@ class PushNotificationSessionCoordinator {
     }
     _tokenRefreshSubscription = null;
     _invalidateActiveRegistrations();
+  }
+
+  bool _refreshingTimezone = false;
+
+  /// Refresh registration metadata after travel or a device timezone change.
+  Future<void> handleAppResumed() async {
+    if (_disposed || _refreshingTimezone) return;
+    final service = _lastReadyPushService;
+    final pubkey = _lastReadyPubkey;
+    final client = _lastReadyClient;
+    if (service == null || pubkey == null || client == null) return;
+    _refreshingTimezone = true;
+    try {
+      if (await service.registrationTimezoneChanged() &&
+          !_disposed &&
+          _isSessionCurrent(pubkey, client, service)) {
+        handleReadiness(_readReadiness());
+      }
+    } finally {
+      _refreshingTimezone = false;
+    }
   }
 
   void handleAuthStateChange() {

@@ -23,6 +23,7 @@ import 'package:openvine/screens/other_profile_screen.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/services/deep_link_service.dart';
 import 'package:openvine/services/firebase_initialization.dart';
+import 'package:openvine/services/notification_background_preloader.dart';
 import 'package:openvine/services/notification_helpers.dart'
     show
         NotificationWireValues,
@@ -63,6 +64,8 @@ Future<void> handleFirebaseMessagingBackgroundMessage(
   BackgroundFirebaseInitializer initializeFirebase =
       ensureDefaultFirebaseInitialized,
   BackgroundLocalPushRenderer renderLocalPush = _renderBackgroundLocalPush,
+  Future<void> Function(Map<String, dynamic>) preloadContent =
+      preloadBackgroundNotification,
 }) async {
   try {
     await initializeFirebase();
@@ -76,7 +79,17 @@ Future<void> handleFirebaseMessagingBackgroundMessage(
 
   // The OS already presents iOS alert pushes (aps.alert); only render a local
   // notification for data-only messages so we don't double-render (#4731).
-  if (!shouldRenderLocalPushNotification(message)) return;
+  final warming = () async {
+    try {
+      await preloadContent(message.data).timeout(const Duration(seconds: 6));
+    } on Object {
+      // A failed warmup must never hide an alert or change its tap payload.
+    }
+  }();
+  if (!shouldRenderLocalPushNotification(message)) {
+    await warming;
+    return;
+  }
 
   final data = fcmPayloadWithMessageId(message.data, message.messageId);
   final title = data['title'] as String? ?? 'Divine';
@@ -88,6 +101,7 @@ Future<void> handleFirebaseMessagingBackgroundMessage(
     body: body,
     data: data,
   );
+  await warming;
 }
 
 Future<void> _renderBackgroundLocalPush({

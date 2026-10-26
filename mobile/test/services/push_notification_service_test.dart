@@ -122,6 +122,7 @@ void main() {
     Future<String?> Function()? getToken,
     FutureOr<bool> Function()? isCurrent,
     int Function()? timeZoneOffsetMinutes,
+    Future<String?> Function()? timeZoneIdentifier,
   }) {
     return PushNotificationService(
       authService: mockAuthService,
@@ -130,6 +131,7 @@ void main() {
       environmentConfig: testEnvironment,
       getToken: getToken ?? () async => token,
       isCurrent: isCurrent,
+      timeZoneIdentifier: timeZoneIdentifier ?? () async => null,
       timeZoneOffsetMinutes:
           timeZoneOffsetMinutes ?? () => testTimeZoneOffsetMinutes,
     );
@@ -169,8 +171,12 @@ void main() {
           ),
         );
 
-        final service = buildService();
+        var timezone = 'Pacific/Auckland';
+        final service = buildService(timeZoneIdentifier: () async => timezone);
         await service.register(testPubkey);
+        expect(await service.registrationTimezoneChanged(), isFalse);
+        timezone = 'Pacific/Fiji';
+        expect(await service.registrationTimezoneChanged(), isTrue);
 
         final registrationCapture = verify(
           () => mockNostrSigner.nip44Encrypt(
@@ -183,6 +189,7 @@ void main() {
           registrationCapture.captured.single as String,
         ) as Map<String, dynamic>;
         expect(registrationJson['token'], testToken);
+        expect(registrationJson['timezone'], 'Pacific/Auckland');
         expect(
           registrationJson['timezoneOffsetMinutes'],
           testTimeZoneOffsetMinutes,
