@@ -474,10 +474,14 @@ class _CommentContent extends StatelessWidget {
       linkStyle: baseStyle.copyWith(
         color: context.vineColors.link,
         fontWeight: FontWeight.w500,
+        decoration: TextDecoration.underline,
+        decorationColor: context.vineColors.link,
       ),
       mentionStyle: baseStyle.copyWith(
         color: context.vineColors.link,
         fontWeight: FontWeight.w600,
+        decoration: TextDecoration.underline,
+        decorationColor: context.vineColors.link,
       ),
     );
   }

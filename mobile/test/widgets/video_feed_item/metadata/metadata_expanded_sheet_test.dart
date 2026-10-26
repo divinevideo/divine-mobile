@@ -260,6 +260,7 @@ void main() {
   /// Pumps a metadata widget inside the required provider tree.
   Widget buildSubject({
     required Widget child,
+    ThemeData? theme,
     List<Override> providerOverrides = const [],
     VideoRepostersState? repostersState,
     SharedPreferences? sharedPreferences,
@@ -279,6 +280,7 @@ void main() {
         ],
       ),
       child: MaterialApp(
+        theme: theme,
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
@@ -385,6 +387,41 @@ void main() {
       expect(find.text('@shutupphia FOLLOW HER'), findsOneWidget);
       expect(find.byType(LinkifiedText), findsOneWidget);
     });
+
+    for (final (name, theme, colors) in [
+      ('dark', VineTheme.theme, VineTheme.darkColors),
+      ('light', VineTheme.lightTheme, VineTheme.lightColors),
+    ]) {
+      testWidgetsWithSurfaceSize('underlines links inside a bold $name title', (
+        tester,
+      ) async {
+        final video = _makeVideo(
+          title: 'Read #topic https://example.com @creator',
+        );
+        await tester.pumpWidget(
+          buildSubject(
+            theme: theme,
+            child: MetadataExpandedSheet(video: video),
+          ),
+        );
+
+        final text = tester.widget<Text>(
+          find.descendant(
+            of: find.byType(LinkifiedText),
+            matching: find.byType(Text),
+          ),
+        );
+        final spans = (text.textSpan! as TextSpan).children!.cast<TextSpan>();
+        final links = spans.where((span) => span.recognizer != null);
+        expect(links, hasLength(3));
+        for (final link in links) {
+          expect(link.style?.fontWeight, FontWeight.w700);
+          expect(link.style?.color, colors.link);
+          expect(link.style?.decoration, TextDecoration.underline);
+          expect(link.style?.decorationColor, colors.link);
+        }
+      });
+    }
 
     testWidgetsWithSurfaceSize(
       'still renders the section without title or description',

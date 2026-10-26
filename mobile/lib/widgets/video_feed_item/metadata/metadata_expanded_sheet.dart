@@ -178,12 +178,20 @@ class _OverviewSection extends ConsumerWidget {
               style: VineTheme.headlineSmallFont(
                 color: context.vineColors.primaryText,
               ),
-              linkStyle: VineTheme.headlineSmallFont(
-                color: context.vineColors.link,
-              ),
-              mentionStyle: VineTheme.headlineSmallFont(
-                color: context.vineColors.link,
-              ),
+              linkStyle:
+                  VineTheme.headlineSmallFont(
+                    color: context.vineColors.link,
+                  ).copyWith(
+                    decoration: TextDecoration.underline,
+                    decorationColor: context.vineColors.link,
+                  ),
+              mentionStyle:
+                  VineTheme.headlineSmallFont(
+                    color: context.vineColors.link,
+                  ).copyWith(
+                    decoration: TextDecoration.underline,
+                    decorationColor: context.vineColors.link,
+                  ),
               mentionProfilePubkeys: video.mentionedPubkeys,
               dismissModalBeforeNavigation: true,
             ),

@@ -197,6 +197,8 @@ void main() {
       );
 
       expect(linkSpan.recognizer, isA<TapGestureRecognizer>());
+      expect(linkSpan.style?.decoration, TextDecoration.underline);
+      expect(linkSpan.style?.decorationColor, VineTheme.darkColors.link);
     });
   });
 

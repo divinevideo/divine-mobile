@@ -251,6 +251,17 @@ void main() {
         expect(find.byType(LinkifiedText), findsOneWidget);
         expect(find.text('hi @Alice', findRichText: true), findsOneWidget);
         expect(find.textContaining('nostr:$mentionedNpub'), findsNothing);
+        final text = tester.widget<Text>(
+          find.descendant(
+            of: find.byType(LinkifiedText),
+            matching: find.byType(Text),
+          ),
+        );
+        final mention = (text.textSpan! as TextSpan).children!
+            .cast<TextSpan>()
+            .firstWhere((span) => span.text == '@Alice');
+        expect(mention.style?.decoration, TextDecoration.underline);
+        expect(mention.style?.decorationColor, VineTheme.darkColors.link);
       });
 
       testWidgets('both sections when both types exist', (tester) async {

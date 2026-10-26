@@ -263,10 +263,14 @@ class _ProfileCommentCard extends StatelessWidget {
                       linkStyle: baseStyle.copyWith(
                         color: context.vineColors.link,
                         fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
+                        decorationColor: context.vineColors.link,
                       ),
                       mentionStyle: baseStyle.copyWith(
                         color: context.vineColors.link,
                         fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
+                        decorationColor: context.vineColors.link,
                       ),
                     ),
                     const SizedBox(height: 4),
