@@ -338,7 +338,8 @@ void main() {
       });
 
       test(
-        'progressive snapshots retain visible rows and rank only new arrivals',
+        'a complete snapshot takes the server order and ranks only new '
+        'arrivals',
         () async {
           final stream = StreamController<ProgressiveSearchResult>();
           addTearDown(stream.close);
@@ -386,57 +387,82 @@ void main() {
           await second;
           expect(bloc.state.results, [
             profiles[1],
-            updated,
             profiles[3],
             profiles[2],
+            updated,
           ]);
           // UserProfile equality ignores the display name, so the list match
           // above cannot tell the updated row from the stale one.
-          expect(bloc.state.results[1].displayName, 'Updated');
+          expect(bloc.state.results[3].displayName, 'Updated');
           verify(() => loader.load([profiles[2].pubkey, profiles[3].pubkey]))
               .called(1);
         },
       );
 
-      test('load more keeps an exact match ahead of known accounts', () async {
-        final exact = createTestProfile('e' * 64, 'Alice');
-        when(
-          () => mockProfileRepository.searchUsersProgressive(
-            query: any(named: 'query'),
-            limit: any(named: 'limit'),
-            offset: any(named: 'offset'),
-            sortBy: any(named: 'sortBy'),
-          ),
-        ).thenAnswer(
-          (invocation) => progressive(
-            invocation.namedArguments[#offset] == 0
-                ? profiles.take(2).toList()
-                : [profiles[2], exact, profiles[3]],
-            restHasMore: invocation.namedArguments[#offset] == 0,
-          ),
-        );
-        final bloc = createBloc(rankingSignalsLoader: loader);
-        addTearDown(bloc.close);
-        await search(bloc);
-        when(() => loader.load(any())).thenAnswer(
-          (invocation) async => {
-            for (final key
-                in invocation.positionalArguments.single as Iterable<String>)
-              key: UserRankingSignals(
-                pubkey: key,
-                youFollow: key == profiles[3].pubkey,
-              ),
-          },
-        );
-        await loadMore(bloc);
-        expect(bloc.state.results, [
-          profiles[1],
-          profiles[0],
-          exact,
-          profiles[3],
-          profiles[2],
-        ]);
-      });
+      test(
+        'load more promotes a known account only up to an exact match',
+        () async {
+          final exact = createTestProfile('e' * 64, 'Alice');
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer(
+            (invocation) => progressive(
+              invocation.namedArguments[#offset] == 0
+                  ? profiles.take(2).toList()
+                  : [profiles[2], exact, profiles[3]],
+              restHasMore: invocation.namedArguments[#offset] == 0,
+            ),
+          );
+          final bloc = createBloc(rankingSignalsLoader: loader);
+          addTearDown(bloc.close);
+          await search(bloc);
+          when(() => loader.load(any())).thenAnswer(
+            (invocation) async => {
+              for (final key
+                  in invocation.positionalArguments.single as Iterable<String>)
+                key: UserRankingSignals(
+                  pubkey: key,
+                  youFollow: key == profiles[3].pubkey,
+                ),
+            },
+          );
+          await loadMore(bloc);
+          expect(bloc.state.results, [
+            profiles[1],
+            profiles[0],
+            profiles[2],
+            exact,
+            profiles[3],
+          ]);
+        },
+      );
+
+      test(
+        'keeps a match the server ranked first ahead of an exact match',
+        () async {
+          // The server weighs activity against match strength, so a busier
+          // near match can lead an exact one; a known account still cannot
+          // pass the exact match.
+          final exact = createTestProfile('e' * 64, 'Alice');
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer((_) => progressive([profiles[0], exact, profiles[1]]));
+          final bloc = createBloc(rankingSignalsLoader: loader);
+          addTearDown(bloc.close);
+          await search(bloc);
+          expect(bloc.state.results, [profiles[0], exact, profiles[1]]);
+        },
+      );
 
       test('a retained snapshot keeps the viewer on global search', () {
         final viewer = createTestProfile('f' * 64, 'Me');

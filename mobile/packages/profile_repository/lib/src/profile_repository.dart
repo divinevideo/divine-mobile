@@ -69,8 +69,8 @@ const _divineNip05Suffix = '.$_divineDomain';
 const String profileSearchSortFollowers =
     FunnelcakeApiClient.profileSortFollowers;
 
-/// Sort key for profile searches ordered by match strength, then creator
-/// activity. Within a relevance tier, results keep the server's order.
+/// Sort key for profile searches Funnelcake orders by one score of match
+/// strength and creator activity; results keep the server's order.
 const String profileSearchSortRelevance =
     FunnelcakeApiClient.profileSortRelevance;
 
@@ -2702,8 +2702,7 @@ class ProfileRepository implements ProfileReader {
   /// name server says it owns the username searched for.
   ///
   /// [serverPositions] maps each pubkey the REST page returned to its position
-  /// there; a [profileSearchSortRelevance] search keeps that order within a
-  /// relevance tier.
+  /// there; a [profileSearchSortRelevance] search keeps that order.
   List<UserProfile> _applyFilter(
     String query,
     List<UserProfile> profiles,
@@ -2735,9 +2734,11 @@ class ProfileRepository implements ProfileReader {
       }).toList();
     }
 
-    final ordered = useServerSort
-        ? _boostBehindExactMatches(query, filtered, boostPubkeys)
-        : _boostProfiles(filtered, boostPubkeys);
+    final ordered = !useServerSort
+        ? _boostProfiles(filtered, boostPubkeys)
+        : sortBy == profileSearchSortRelevance
+        ? _boostBelowExactMatches(query, filtered, boostPubkeys)
+        : _boostBehindExactMatches(query, filtered, boostPubkeys);
     final blockFilter = _blockFilter;
     if (blockFilter == null) return [...pinned, ...ordered];
     return [
@@ -2784,13 +2785,45 @@ class ProfileRepository implements ProfileReader {
     ];
   }
 
-  /// Orders people search by textual relevance before popularity.
+  /// Applies the follow-graph boost within the server's order without moving a
+  /// followed account above an exact account match: each run of profiles
+  /// between two exact matches lists its followed ones first. Exact matches
+  /// keep their places, so three followed partial matches cannot push an exact
+  /// account out of the three-row preview (#8578), while the server still
+  /// decides where that exact match stands against unfollowed profiles.
+  List<UserProfile> _boostBelowExactMatches(
+    String query,
+    List<UserProfile> profiles,
+    Set<String>? boostPubkeys,
+  ) {
+    if (boostPubkeys == null || boostPubkeys.isEmpty) return profiles;
+    final normalizedQuery = query.trim().toLowerCase();
+    final queryHex = _npubQueryToHex(normalizedQuery);
+    final ordered = <UserProfile>[];
+    var run = <UserProfile>[];
+    for (final profile in profiles) {
+      final relevance = _searchRelevance(profile, normalizedQuery, queryHex);
+      if (relevance == _exactMatchRelevance) {
+        ordered
+          ..addAll(_boostProfiles(run, boostPubkeys))
+          ..add(profile);
+        run = [];
+      } else {
+        run.add(profile);
+      }
+    }
+    return ordered..addAll(_boostProfiles(run, boostPubkeys));
+  }
+
+  /// Orders people search results.
   ///
-  /// Within a relevance tier, a [profileSearchSortRelevance] search keeps
-  /// Funnelcake's order, which ranks by creator activity, and lists profiles
-  /// only a local source found after it; a follower sort ranks by the REST
-  /// counts. Either way, an exact account match must never be buried beneath
-  /// popular substring matches.
+  /// A [profileSearchSortRelevance] search keeps Funnelcake's order for the
+  /// profiles it returned: the server already weighs match strength against
+  /// creator activity, so an active near match can lead an empty exact one.
+  /// Profiles only a local source found follow, by textual relevance, as does
+  /// everything before the server answers. A follower sort orders by textual
+  /// relevance before the REST counts, so an exact account match is never
+  /// buried beneath popular substring matches.
   static List<UserProfile> _rankSearchResults(
     String query,
     List<UserProfile> profiles,
@@ -2805,8 +2838,9 @@ class ProfileRepository implements ProfileReader {
     final matching = profiles
         .where((p) => _searchRelevance(p, normalizedQuery, queryHex) > 0)
         .toList();
-    final popularityRanked = sortBy == profileSearchSortRelevance
-        ? _inServerOrder(matching, serverPositions)
+    final serverOrdered = sortBy == profileSearchSortRelevance;
+    final popularityRanked = serverOrdered
+        ? matching
         : _rankServerSortedPage(matching, sortBy);
     final popularityIndex = {
       for (final (index, profile) in popularityRanked.indexed)
@@ -2817,6 +2851,13 @@ class ProfileRepository implements ProfileReader {
         profile.pubkey: _searchRelevance(profile, normalizedQuery, queryHex),
     };
     return matching..sort((a, b) {
+      if (serverOrdered) {
+        final first = serverPositions[a.pubkey];
+        final second = serverPositions[b.pubkey];
+        if (first != null && second != null) return first.compareTo(second);
+        if (first != null) return -1;
+        if (second != null) return 1;
+      }
       final relevance = relevanceByPubkey[b.pubkey]!.compareTo(
         relevanceByPubkey[a.pubkey]!,
       );
@@ -3014,25 +3055,6 @@ class ProfileRepository implements ProfileReader {
           return byVideos != 0 ? byVideos : a.$1.compareTo(b.$1);
         });
     return [for (final entry in indexed) entry.$2];
-  }
-
-  /// [profiles] in the order the server returned them, by [serverPositions],
-  /// followed by those the server did not return, in their current order.
-  static List<UserProfile> _inServerOrder(
-    List<UserProfile> profiles,
-    Map<String, int> serverPositions,
-  ) {
-    final listed =
-        profiles.where((p) => serverPositions.containsKey(p.pubkey)).toList()
-          ..sort(
-            (a, b) => serverPositions[a.pubkey]!.compareTo(
-              serverPositions[b.pubkey]!,
-            ),
-          );
-    return [
-      ...listed,
-      ...profiles.where((p) => !serverPositions.containsKey(p.pubkey)),
-    ];
   }
 
   /// Moves profiles whose pubkey is in [boostPubkeys] to the front of
