@@ -11,6 +11,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_ce/hive.dart';
+import 'package:openvine/notifications/services/announcement_store.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/background_activity_provider.dart';
 import 'package:openvine/providers/container_swap_host.dart';
@@ -38,6 +39,7 @@ class NativeAccountTestScope {
     deviceScope = DeviceScope(
       database: database,
       sharedPreferences: prefs,
+      announcementSessions: AnnouncementSessions(),
       feedModePersistence: FeedModePersistenceRegistry(
         sharedPreferences: prefs,
       ),

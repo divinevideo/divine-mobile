@@ -7157,5 +7157,7 @@
   "accountDeletionProcessingSignOutFailed": "你的账号删除请求正在处理中，但我们未能完成退出登录。请重试。",
   "videoEditorLoopRepairSmoothed": "循环已优化",
   "videoEditorLoopRepairProgress": "正在对齐循环…",
-  "videoEditorLoopRepairTrimmed": "循环已优化。已移除 {seconds} 秒。"
+  "videoEditorLoopRepairTrimmed": "循环已优化。已移除 {seconds} 秒。",
+  "notificationFromDivine": "来自 Divine",
+  "announcementUnavailable": "此公告已不可用。"
 }

@@ -22,6 +22,7 @@ import 'package:openvine/router/route_error_screen.dart';
 import 'package:openvine/router/route_extra_codec.dart';
 import 'package:openvine/router/router_refresh_listenable.dart';
 import 'package:openvine/router/routes/account_deletion_recovery_routes.dart';
+import 'package:openvine/router/routes/announcement_routes.dart';
 import 'package:openvine/router/routes/apps_routes.dart';
 import 'package:openvine/router/routes/auth_routes.dart';
 import 'package:openvine/router/routes/chat_routes.dart';
@@ -94,6 +95,7 @@ final routerInitialLocationProvider = Provider<String?>((_) => null);
 /// shared first segment, place it deliberately and guard the ordering.
 List<RouteBase> appRoutes(Ref ref) => [
   ...videoRoutes(),
+  ...announcementRoutes(),
   ...shellRoutes(),
   ...searchRoutes(),
   ...messagingRoutes(),

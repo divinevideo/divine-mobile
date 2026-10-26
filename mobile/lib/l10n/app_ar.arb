@@ -5866,5 +5866,7 @@
   "accountDeletionProcessingSignOutFailed": "حذف الحساب قيد المعالجة، لكن تعذّر إكمال تسجيل الخروج. يرجى المحاولة مجددًا.",
   "videoEditorLoopRepairSmoothed": "تم تنعيم التكرار",
   "videoEditorLoopRepairProgress": "جارٍ محاذاة الحلقة…",
-  "videoEditorLoopRepairTrimmed": "تم تنعيم التكرار. أُزيلت {seconds} ث."
+  "videoEditorLoopRepairTrimmed": "تم تنعيم التكرار. أُزيلت {seconds} ث.",
+  "notificationFromDivine": "من Divine",
+  "announcementUnavailable": "لم يعد هذا الإعلان متاحًا."
 }

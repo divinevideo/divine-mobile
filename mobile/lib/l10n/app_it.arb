@@ -5866,5 +5866,7 @@
   "accountDeletionProcessingSignOutFailed": "L’eliminazione del tuo account è in corso, ma non siamo riusciti a completare la disconnessione. Riprova.",
   "videoEditorLoopRepairSmoothed": "Loop reso più fluido",
   "videoEditorLoopRepairProgress": "Allineamento del loop…",
-  "videoEditorLoopRepairTrimmed": "Loop reso più fluido. Rimossi {seconds} s."
+  "videoEditorLoopRepairTrimmed": "Loop reso più fluido. Rimossi {seconds} s.",
+  "notificationFromDivine": "Da Divine",
+  "announcementUnavailable": "Questo annuncio non è più disponibile."
 }

@@ -14722,4 +14722,10 @@ class AppLocalizationsRo extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'Buclă netezită. S-au eliminat $seconds s.';
   }
+
+  @override
+  String get notificationFromDivine => 'De la Divine';
+
+  @override
+  String get announcementUnavailable => 'Acest anunț nu mai este disponibil.';
 }

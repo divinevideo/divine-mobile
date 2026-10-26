@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "announcements": [
+    {
+      "id": "cc3897b7-a83f-4d9f-9ce4-a7daa7c07a63",
+      "title": "A little news from Divine",
+      "body": "A new place for human creativity.\nMade by people, for people.",
+      "publishedAt": "2026-10-23T00:00:00.000Z",
+      "expiresAt": "2026-11-22T00:00:00.000Z",
+      "platforms": [],
+      "minimumAppVersion": null,
+      "learnMoreUrl": "https://divine.video/"
+    }
+  ]
+}

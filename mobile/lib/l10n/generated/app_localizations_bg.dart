@@ -14568,4 +14568,10 @@ class AppLocalizationsBg extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'Цикълът е изгладен. Премахнати са $seconds сек.';
   }
+
+  @override
+  String get notificationFromDivine => 'От Divine';
+
+  @override
+  String get announcementUnavailable => 'Това съобщение вече не е налично.';
 }

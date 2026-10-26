@@ -14729,4 +14729,10 @@ class AppLocalizationsPl extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'Pętla wygładzona. Usunięto $seconds s.';
   }
+
+  @override
+  String get notificationFromDivine => 'Od Divine';
+
+  @override
+  String get announcementUnavailable => 'To ogłoszenie nie jest już dostępne.';
 }

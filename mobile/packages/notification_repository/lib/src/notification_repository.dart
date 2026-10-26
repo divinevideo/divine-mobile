@@ -14,6 +14,7 @@ import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/nip19.dart';
 import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:notification_repository/src/announcements_repository.dart';
 import 'package:notification_repository/src/blocked_notification_filter.dart';
 import 'package:notification_repository/src/comment_like_cache_codec.dart';
 import 'package:notification_repository/src/notification_page.dart';
@@ -232,6 +233,7 @@ class NotificationRepository {
     Duration readStateRetryDelay = const Duration(seconds: 5),
     void Function(String owner, Future<void> Function() close)?
     onAccountCreated,
+    this.announcementsRepository,
   }) : _funnelcakeApiClient = funnelcakeApiClient,
        _profileRepository = profileRepository,
        _notificationsDao = notificationsDao,
@@ -560,6 +562,10 @@ class NotificationRepository {
     }
   }
 
+  /// Public, independently cached official messages.
+  /// Never part of social cursors.
+  final AnnouncementsRepository? announcementsRepository;
+
   final Map<NotificationKind?, _NotificationFeed> _feeds = {};
   bool _closed = false;
   Future<void>? _closing;
@@ -655,8 +661,30 @@ class NotificationRepository {
   /// Use this for screen-level rendering. For badge counts, prefer
   /// [watchUnreadCount] — it is `.distinct()`-filtered so the badge
   /// only rebuilds on actual count changes.
-  Stream<NotificationPage> watchSnapshot({NotificationKind? filter}) =>
-      _feedFor(filter).snapshot.stream;
+  Stream<NotificationPage> watchSnapshot({NotificationKind? filter}) {
+    final social = _feedFor(filter).snapshot.stream;
+    final announcements = announcementsRepository;
+    if (filter != null || announcements == null) return social;
+    return Rx.combineLatest2<
+      NotificationPage,
+      List<AnnouncementNotification>,
+      NotificationPage
+    >(
+      social,
+      announcements.watchSnapshot(),
+      (page, official) {
+        final items = <NotificationItem>[...page.items, ...official]
+          ..sort((a, b) {
+            final order = b.timestamp.compareTo(a.timestamp);
+            return order != 0 ? order : a.id.compareTo(b.id);
+          });
+        return page.copyWith(
+          items: items,
+          unreadCount: items.where((item) => !item.isRead).length,
+        );
+      },
+    );
+  }
 
   /// Stream of the unread badge count derived from the consolidated
   /// visible list.
@@ -666,7 +694,7 @@ class NotificationRepository {
   /// reports one row per Kind 3 republish per follower (tracked at
   /// funnelcake#234); this method matches the same post-consolidation
   /// derivation that `NotificationFeedState.unreadBadgeCount` documents.
-  Stream<int> watchUnreadCount() => _snapshot.stream
+  Stream<int> watchUnreadCount() => watchSnapshot()
       .map((page) => page.items.where((n) => !n.isRead).length)
       .distinct();
 
@@ -681,6 +709,7 @@ class NotificationRepository {
     _closed = true;
     _readRetryTimer?.cancel();
     _readRetryTimer = null;
+    await announcementsRepository?.close();
     // Drop the queue tail. Every later mutation throws on [_closed] before it
     // can enqueue, so this releases the old chain rather than gating new work
     // — it keeps a mutation hung in the signer from retaining this instance.
@@ -1042,6 +1071,7 @@ class NotificationRepository {
               return switch (item) {
                 VideoNotification() => item.copyWith(notificationIds: ids),
                 ActorNotification() => item.copyWith(notificationIds: ids),
+                AnnouncementNotification() => item,
               };
             })
             .whereType<NotificationItem>()
@@ -1081,6 +1111,7 @@ class NotificationRepository {
                 (actor) => actor.pubkey,
               ),
               ActorNotification() => item.actors.map((actor) => actor.pubkey),
+              AnnouncementNotification() => const <String>[],
             },
           )
           .where((pubkey) => pubkey.isNotEmpty)
@@ -1111,6 +1142,7 @@ class NotificationRepository {
 
       final enriched = current.items.map((item) {
         return switch (item) {
+          AnnouncementNotification() => item,
           VideoNotification(:final actors, :final videoEventId) => () {
             final actor = actors.first;
             final video = videoMetadata.videosById[videoEventId];
@@ -1367,6 +1399,9 @@ class NotificationRepository {
           commentText,
           false,
         ),
+      AnnouncementNotification() => throw StateError(
+        'Official messages are not social cache rows',
+      ),
       ActorNotification(
         :final actor,
         :final targetEventId,
@@ -1428,6 +1463,9 @@ class NotificationRepository {
     NotificationKind.likeComment => 'likeComment',
     NotificationKind.reply => 'reply',
     NotificationKind.system => 'system',
+    NotificationKind.announcement => throw StateError(
+      'Official messages are not social cache rows',
+    ),
     NotificationKind.newPost => 'newPost',
     NotificationKind.listAdd => 'listAdd',
   };
@@ -1443,9 +1481,25 @@ class NotificationRepository {
         NotificationKind.likeComment => const ['reaction', 'zap'],
         NotificationKind.reply => const ['reply'],
         NotificationKind.system => const ['system'],
+        NotificationKind.announcement => const [],
         NotificationKind.newPost => const ['newPost'],
         NotificationKind.listAdd => const ['list_add'],
       };
+
+  void _refreshAnnouncements() {
+    if (_closed) return;
+    final announcements = announcementsRepository;
+    if (announcements == null) return;
+    // Public catalog failures must never fail a social refresh.
+    unawaited(
+      announcements.refresh().catchError((Object error) {
+        Log.warning(
+          'Announcement refresh unavailable',
+          name: 'NotificationRepository',
+        );
+      }),
+    );
+  }
 
   static final math.Random _jitter = math.Random();
 
@@ -1464,10 +1518,12 @@ class NotificationRepository {
   /// when the refresh was superseded by another first-page fetch before it
   /// could apply.
   Future<bool> refreshApplied() {
+    _refreshAnnouncements();
     return _refreshAppliedForLiveFeeds();
   }
 
   Future<({NotificationPage page, bool applied})> _refreshResult() {
+    _refreshAnnouncements();
     return _refreshResultFor(null);
   }
 
@@ -1540,6 +1596,7 @@ class NotificationRepository {
 
   /// Refreshes one filtered notification feed from the beginning.
   Future<NotificationPage> refreshFeed(NotificationKind? filter) {
+    if (filter == null) _refreshAnnouncements();
     return _refreshResultFor(filter).then((result) => result.page);
   }
 
@@ -1649,6 +1706,16 @@ class NotificationRepository {
   Future<void> markAsRead(List<String> ids) async {
     if (ids.isEmpty) return;
     _throwIfClosed();
+    final official = ids.where((id) => id.startsWith('announcement:')).toList();
+    final social = ids.where((id) => !id.startsWith('announcement:')).toList();
+    await Future.wait([
+      if (official.isNotEmpty && announcementsRepository != null)
+        announcementsRepository!.markSeen(official),
+      if (social.isNotEmpty) _markSocialAsRead(social),
+    ]);
+  }
+
+  Future<void> _markSocialAsRead(List<String> ids) async {
     if (_readStateDao != null) {
       final captured = _expandServerNotificationIds(
         [for (final feed in _liveFeeds.toList()) ...feed.snapshot.value.items],
@@ -1725,8 +1792,15 @@ class NotificationRepository {
     // The existing server API offers no arrival watermark. A failed bare
     // mark-all cannot be retried safely: it would consume later arrivals.
     // Preserve its acknowledged online semantics instead of queueing all:true.
+    final official = announcementsRepository;
+    // Capture the visible catalog now: later arrivals remain unread.
+    final officialIds =
+        official?.items.map((item) => item.id).toList() ?? <String>[];
     final callTimeFlips = _flipUnread();
-    await _enqueueReadMutation(() => _writeMarkAllAsRead(callTimeFlips));
+    await Future.wait([
+      if (official != null) official.markSeen(officialIds),
+      _enqueueReadMutation(() => _writeMarkAllAsRead(callTimeFlips)),
+    ]);
   }
 
   Future<void> _writeMarkAllAsRead(List<_ReadFlips> callTimeFlips) async {
@@ -2077,6 +2151,7 @@ class NotificationRepository {
     return switch (item) {
       VideoNotification() => item.copyWith(isRead: isRead),
       ActorNotification() => item.copyWith(isRead: isRead),
+      AnnouncementNotification() => item.copyWith(isRead: isRead),
     };
   }
 
@@ -2223,6 +2298,7 @@ class NotificationRepository {
               return n.copyWith(actors: filtered, totalCount: filtered.length);
             }(),
             ActorNotification() => filter(n.actor.pubkey) ? null : n,
+            AnnouncementNotification() => n,
           },
         )
         .whereType<NotificationItem>()

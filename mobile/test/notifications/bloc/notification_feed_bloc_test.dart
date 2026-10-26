@@ -630,7 +630,119 @@ void main() {
       );
     });
 
+    blocTest<NotificationFeedBloc, NotificationFeedState>(
+      'an independently arriving announcement recovers a failed social inbox',
+      build: createBloc,
+      seed: () => NotificationFeedState(
+        status: NotificationFeedStatus.failure,
+        refreshError: true,
+      ),
+      act: (_) => snapshotController.add(
+        NotificationPage(
+          items: [
+            AnnouncementNotification(
+              announcementId: '9cf3daa0-d982-47a9-a942-c907c223b8b5',
+              title: 'From the team',
+              body: 'Your profile has its own website.',
+              timestamp: DateTime.utc(2026, 10, 23),
+              expiresAt: DateTime.utc(2026, 11, 23),
+            ),
+          ],
+          unreadCount: 1,
+          lastRefreshError: true,
+        ),
+      ),
+      expect: () => [
+        isA<NotificationFeedState>()
+            .having(
+              (state) => state.status,
+              'status',
+              NotificationFeedStatus.loaded,
+            )
+            .having(
+              (state) => state.notifications.single,
+              'message',
+              isA<AnnouncementNotification>(),
+            )
+            .having(
+              (state) => state.refreshError,
+              'social refresh error stays visible',
+              isTrue,
+            ),
+      ],
+    );
+
+    test(
+      'withdrawing the last announcement preserves a social refresh failure',
+      () async {
+        when(() => mockNotificationRepo.refreshFeed(any())).thenAnswer(
+          (_) async => throw Exception('offline'),
+        );
+        final bloc = createBloc();
+        addTearDown(bloc.close);
+        snapshotController.add(
+          NotificationPage(
+            items: [
+              AnnouncementNotification(
+                announcementId: '9cf3daa0-d982-47a9-a942-c907c223b8b5',
+                title: 'From the team',
+                body: 'A useful announcement.',
+                timestamp: DateTime.utc(2026, 10, 23),
+                expiresAt: DateTime.utc(2026, 11, 23),
+              ),
+            ],
+            unreadCount: 1,
+          ),
+        );
+        await pumpEventQueue();
+        bloc.add(NotificationFeedStarted());
+        await pumpEventQueue();
+        expect(bloc.state.status, NotificationFeedStatus.loaded);
+        expect(bloc.state.refreshError, isTrue);
+
+        snapshotController.add(
+          NotificationPage(
+            items: const [],
+            unreadCount: 0,
+            lastRefreshError: true,
+          ),
+        );
+        await pumpEventQueue();
+        expect(bloc.state.notifications, isEmpty);
+        expect(bloc.state.refreshError, isTrue);
+        expect(bloc.state.status, NotificationFeedStatus.failure);
+      },
+    );
+
     group('NotificationFeedLoadMore', () {
+      test(
+        'an announcement does not stop empty social page continuation',
+        () async {
+          final bloc = createBloc();
+          addTearDown(bloc.close);
+          bloc.add(NotificationFeedStarted());
+          await pumpEventQueue();
+          clearInteractions(mockNotificationRepo);
+          snapshotController.add(
+            NotificationPage(
+              items: [
+                AnnouncementNotification(
+                  announcementId: '9cf3daa0-d982-47a9-a942-c907c223b8b5',
+                  title: 'From the team',
+                  body: 'A useful announcement.',
+                  timestamp: DateTime.utc(2026, 10, 23),
+                  expiresAt: DateTime.utc(2026, 11, 23),
+                ),
+              ],
+              unreadCount: 1,
+              hasMore: true,
+            ),
+          );
+          await pumpEventQueue();
+          verify(() => mockNotificationRepo.loadNextPageFor(null)).called(1);
+        },
+      );
+
       blocTest<NotificationFeedBloc, NotificationFeedState>(
         'continues past an empty page from the bloc',
         build: createBloc,

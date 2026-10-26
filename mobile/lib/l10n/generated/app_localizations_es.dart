@@ -14596,4 +14596,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'Bucle suavizado. Se quitaron $seconds s.';
   }
+
+  @override
+  String get notificationFromDivine => 'De Divine';
+
+  @override
+  String get announcementUnavailable => 'Este anuncio ya no está disponible.';
 }

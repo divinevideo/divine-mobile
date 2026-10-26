@@ -13551,4 +13551,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return '循环已优化。已移除 $seconds 秒。';
   }
+
+  @override
+  String get notificationFromDivine => '来自 Divine';
+
+  @override
+  String get announcementUnavailable => '此公告已不可用。';
 }

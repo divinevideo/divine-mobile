@@ -5919,5 +5919,7 @@
   "accountDeletionProcessingSignOutFailed": "መለያዎን የመሰረዝ ሂደት በመካሄድ ላይ ነው፣ ግን ማስወጣት አልቻልንም። እንደገና ይሞክሩ።",
   "videoEditorLoopRepairSmoothed": "ሉፑ ተስተካክሏል",
   "videoEditorLoopRepairProgress": "ዙርህን በማስተካከል ላይ…",
-  "videoEditorLoopRepairTrimmed": "ሉፑ ተስተካክሏል። {seconds} ሰከንድ ተወግዷል።"
+  "videoEditorLoopRepairTrimmed": "ሉፑ ተስተካክሏል። {seconds} ሰከንድ ተወግዷል።",
+  "notificationFromDivine": "ከDivine",
+  "announcementUnavailable": "ይህ ማስታወቂያ ከእንግዲህ የለም።"
 }

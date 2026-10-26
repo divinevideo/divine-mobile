@@ -5866,5 +5866,7 @@
   "accountDeletionProcessingSignOutFailed": "Hesabının silinmesi işleniyor, ancak çıkışını tamamlayamadık. Tekrar dene.",
   "videoEditorLoopRepairSmoothed": "Döngü yumuşatıldı",
   "videoEditorLoopRepairProgress": "Döngün hizalanıyor…",
-  "videoEditorLoopRepairTrimmed": "Döngü yumuşatıldı. {seconds} sn kaldırıldı."
+  "videoEditorLoopRepairTrimmed": "Döngü yumuşatıldı. {seconds} sn kaldırıldı.",
+  "notificationFromDivine": "Divine’dan",
+  "announcementUnavailable": "Bu duyuru artık kullanılamıyor."
 }

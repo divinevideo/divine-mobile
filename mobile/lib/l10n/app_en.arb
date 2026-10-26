@@ -11194,5 +11194,13 @@
         "example": "0.12"
       }
     }
+  },
+  "notificationFromDivine": "From Divine",
+  "announcementUnavailable": "This announcement is no longer available.",
+  "@notificationFromDivine": {
+    "description": "Official source label shown only on announcements from the Divine staff catalog."
+  },
+  "@announcementUnavailable": {
+    "description": "Announcement detail empty state when the announcement has expired, was withdrawn, or is not cached."
   }
 }

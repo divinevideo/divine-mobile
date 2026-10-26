@@ -5866,5 +5866,7 @@
   "accountDeletionProcessingSignOutFailed": "La eliminación de tu cuenta sigue en curso, pero no pudimos cerrar tu sesión. Volvé a intentarlo.",
   "videoEditorLoopRepairSmoothed": "Bucle suavizado",
   "videoEditorLoopRepairProgress": "Alineando tu bucle…",
-  "videoEditorLoopRepairTrimmed": "Bucle suavizado. Se quitaron {seconds} s."
+  "videoEditorLoopRepairTrimmed": "Bucle suavizado. Se quitaron {seconds} s.",
+  "notificationFromDivine": "De Divine",
+  "announcementUnavailable": "Este anuncio ya no está disponible."
 }

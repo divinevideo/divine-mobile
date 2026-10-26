@@ -4893,5 +4893,7 @@
   "accountDeletionProcessingSignOutFailed": "Pinoproseso ang pag-delete ng account mo, pero hindi ka namin ma-sign out. Subukan ulit.",
   "videoEditorLoopRepairSmoothed": "Mas maayos na ang loop",
   "videoEditorLoopRepairProgress": "Inihahanay ang loop mo…",
-  "videoEditorLoopRepairTrimmed": "Mas maayos na ang loop. Inalis ang {seconds} s."
+  "videoEditorLoopRepairTrimmed": "Mas maayos na ang loop. Inalis ang {seconds} s.",
+  "notificationFromDivine": "Mula sa Divine",
+  "announcementUnavailable": "Hindi na available ang anunsyong ito."
 }

@@ -14370,4 +14370,10 @@ class AppLocalizationsVi extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'Đã làm mượt vòng lặp. Đã cắt $seconds giây.';
   }
+
+  @override
+  String get notificationFromDivine => 'Từ Divine';
+
+  @override
+  String get announcementUnavailable => 'Thông báo này không còn khả dụng.';
 }

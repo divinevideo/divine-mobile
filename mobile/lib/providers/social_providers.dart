@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/config/official_accounts.dart';
+import 'package:openvine/notifications/providers/announcement_providers.dart';
 import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
@@ -916,6 +917,14 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
             () => deleteUserData
                 ? db.dmReactionsDao.deleteAllForOwner(userPubkey)
                 : db.dmReactionsDao.deleteNonRetryableForOwner(userPubkey),
+          );
+        }
+        // Seen IDs have no server-side copy. Owner scoping makes them safe
+        // to retain when switching away from an account that can return.
+        if (userPubkey != null && (deleteUserData || forgetAccount)) {
+          await requiredCleanup(
+            'announcements',
+            () => ref.read(announcementOwnerCleanupProvider)(userPubkey),
           );
         }
         // Scoped to the leaving account so a switch does not wipe the other

@@ -2461,6 +2461,7 @@ void main() {
         'resets prior source outcomes before timing out a new query',
         setUp: () {
           final controller = StreamController<ProgressiveSearchResult>();
+          addTearDown(controller.close);
           when(
             () => mockProfileRepository.searchUsersProgressive(
               query: 'fresh-query',
@@ -2487,8 +2488,17 @@ void main() {
             ),
           },
         ),
-        act: (bloc) => bloc.add(const UserSearchQueryChanged('fresh-query')),
-        wait: const Duration(milliseconds: 500),
+        act: (bloc) async {
+          final finished = bloc.stream.firstWhere(
+            (state) =>
+                state.query == 'fresh-query' &&
+                state.status == UserSearchStatus.success,
+          );
+          bloc.add(const UserSearchQueryChanged('fresh-query'));
+          // The timeout starts after the debounce callback actually runs.
+          // Await its state transition, not a competing wall-clock test wait.
+          await finished;
+        },
         verify: (bloc) {
           expect(bloc.state.status, UserSearchStatus.success);
           expect(bloc.state.query, 'fresh-query');

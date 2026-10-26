@@ -14654,4 +14654,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'Boucle lissée. $seconds s retirées.';
   }
+
+  @override
+  String get notificationFromDivine => 'De Divine';
+
+  @override
+  String get announcementUnavailable => 'Cette annonce n’est plus disponible.';
 }

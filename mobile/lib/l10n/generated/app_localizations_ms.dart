@@ -14428,4 +14428,10 @@ class AppLocalizationsMs extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'Gelung dilancarkan. $seconds s dibuang.';
   }
+
+  @override
+  String get notificationFromDivine => 'Daripada Divine';
+
+  @override
+  String get announcementUnavailable => 'Pengumuman ini tidak lagi tersedia.';
 }

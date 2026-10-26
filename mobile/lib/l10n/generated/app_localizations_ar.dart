@@ -14427,4 +14427,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'تم تنعيم التكرار. أُزيلت $seconds ث.';
   }
+
+  @override
+  String get notificationFromDivine => 'من Divine';
+
+  @override
+  String get announcementUnavailable => 'لم يعد هذا الإعلان متاحًا.';
 }

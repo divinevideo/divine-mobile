@@ -14327,4 +14327,10 @@ class AppLocalizationsId extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'Loop diperhalus. $seconds dtk dihapus.';
   }
+
+  @override
+  String get notificationFromDivine => 'Dari Divine';
+
+  @override
+  String get announcementUnavailable => 'Pengumuman ini sudah tidak tersedia.';
 }

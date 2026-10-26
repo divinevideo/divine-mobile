@@ -5412,5 +5412,7 @@
   "accountDeletionProcessingSignOutFailed": "계정 삭제는 진행 중이지만 로그아웃을 완료하지 못했어요. 다시 시도해 주세요.",
   "videoEditorLoopRepairSmoothed": "루프를 부드럽게 다듬었어요",
   "videoEditorLoopRepairProgress": "루프를 정렬하는 중…",
-  "videoEditorLoopRepairTrimmed": "루프를 다듬었어요. {seconds}초를 잘라냈어요."
+  "videoEditorLoopRepairTrimmed": "루프를 다듬었어요. {seconds}초를 잘라냈어요.",
+  "notificationFromDivine": "Divine의 소식",
+  "announcementUnavailable": "이 공지는 더 이상 볼 수 없습니다."
 }

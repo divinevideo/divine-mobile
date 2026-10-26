@@ -5866,5 +5866,7 @@
   "accountDeletionProcessingSignOutFailed": "Akunmu sedang dihapus, tapi kami belum bisa mengeluarkanmu. Coba lagi.",
   "videoEditorLoopRepairSmoothed": "Loop diperhalus",
   "videoEditorLoopRepairProgress": "Menyelaraskan loop…",
-  "videoEditorLoopRepairTrimmed": "Loop diperhalus. {seconds} dtk dihapus."
+  "videoEditorLoopRepairTrimmed": "Loop diperhalus. {seconds} dtk dihapus.",
+  "notificationFromDivine": "Dari Divine",
+  "announcementUnavailable": "Pengumuman ini sudah tidak tersedia."
 }

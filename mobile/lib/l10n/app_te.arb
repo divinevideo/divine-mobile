@@ -8786,5 +8786,7 @@
   "accountDeletionProcessingSignOutFailed": "మీ ఖాతాను తొలగించే ప్రక్రియ కొనసాగుతోంది, కానీ మేము సైన్ అవుట్‌ను పూర్తి చేయలేకపోయాము. మళ్లీ ప్రయత్నించండి.",
   "videoEditorLoopRepairSmoothed": "లూప్ సాఫీగా మారింది",
   "videoEditorLoopRepairProgress": "మీ లూప్‌ను సమలేఖనం చేస్తున్నాం…",
-  "videoEditorLoopRepairTrimmed": "లూప్ సాఫీగా మారింది. {seconds} సె. తొలగించాం."
+  "videoEditorLoopRepairTrimmed": "లూప్ సాఫీగా మారింది. {seconds} సె. తొలగించాం.",
+  "notificationFromDivine": "Divine నుండి",
+  "announcementUnavailable": "ఈ ప్రకటన ఇకపై అందుబాటులో లేదు."
 }

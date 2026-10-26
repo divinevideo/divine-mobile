@@ -8,6 +8,10 @@ import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+import 'package:notification_repository/notification_repository.dart';
+import 'package:openvine/notifications/providers/announcement_providers.dart';
+import 'package:openvine/notifications/services/announcement_store.dart';
 import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/container_swap_host.dart';
@@ -26,6 +30,9 @@ import 'package:openvine/services/startup_performance_service.dart';
 import 'package:openvine/utils/log_message_batcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+class _AnnouncementsRepository extends Mock
+    implements AnnouncementsRepository {}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -42,6 +49,7 @@ void main() {
     deviceScope = DeviceScope(
       database: database,
       sharedPreferences: prefs,
+      announcementSessions: AnnouncementSessions(),
       feedModePersistence: FeedModePersistenceRegistry(
         sharedPreferences: prefs,
       ),
@@ -133,6 +141,46 @@ void main() {
         same(b.read(curatedListCacheWriteCoordinatorProvider)),
       );
     });
+
+    test(
+      'removing an account after a swap drains its outgoing announcement writes',
+      () async {
+        const owner =
+            '31ef21a624ab5576f14705fdbb56bead914b20154baf8a47d7c28c8103718b04';
+        final store = SharedPreferencesAnnouncementStore(
+          prefs: prefs,
+          owner: owner,
+        );
+        await store.writeSeen(['announcement:old']);
+        final repository = _AnnouncementsRepository();
+        final finishing = Completer<void>();
+        final closeFuture = finishing.future.then(
+          (_) => store.writeSeen(['announcement:late']),
+        );
+        when(repository.close).thenAnswer((_) => closeFuture);
+        final outgoing = buildAccountContainer(deviceScope);
+        final sessions = outgoing.read(announcementSessionsProvider);
+        sessions.register(owner, repository);
+        final release = sessions.release(owner, repository);
+        outgoing.dispose();
+
+        final incoming = buildAccountContainer(deviceScope);
+        addTearDown(incoming.dispose);
+        var cleaned = false;
+        final cleanup = incoming
+            .read(announcementOwnerCleanupProvider)(owner)
+            .then((_) => cleaned = true);
+        await pumpEventQueue();
+        try {
+          expect(cleaned, isFalse);
+        } finally {
+          finishing.complete();
+          await release;
+          await cleanup;
+        }
+        expect(await store.readSeen(), isEmpty);
+      },
+    );
 
     test('shared instances survive disposing a container', () {
       final a = buildAccountContainer(deviceScope);

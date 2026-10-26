@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
+import 'package:openvine/notifications/services/announcement_store.dart';
 import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/device_scope.dart';
@@ -320,6 +321,7 @@ void main() {
             final prefs = await SharedPreferences.getInstance();
             final database = AppDatabase.test(NativeDatabase.memory());
             final device = DeviceScope(
+              announcementSessions: AnnouncementSessions(),
               database: database,
               sharedPreferences: prefs,
               feedModePersistence: FeedModePersistenceRegistry(

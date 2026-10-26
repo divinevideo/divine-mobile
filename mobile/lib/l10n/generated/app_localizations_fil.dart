@@ -14553,4 +14553,10 @@ class AppLocalizationsFil extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'Mas maayos na ang loop. Inalis ang $seconds s.';
   }
+
+  @override
+  String get notificationFromDivine => 'Mula sa Divine';
+
+  @override
+  String get announcementUnavailable => 'Hindi na available ang anunsyong ito.';
 }

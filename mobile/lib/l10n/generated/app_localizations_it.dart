@@ -14612,4 +14612,11 @@ class AppLocalizationsIt extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'Loop reso più fluido. Rimossi $seconds s.';
   }
+
+  @override
+  String get notificationFromDivine => 'Da Divine';
+
+  @override
+  String get announcementUnavailable =>
+      'Questo annuncio non è più disponibile.';
 }

@@ -14426,4 +14426,10 @@ class AppLocalizationsUr extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'لوپ ہموار ہو گیا۔ $seconds سیکنڈ ہٹا دیے گئے۔';
   }
+
+  @override
+  String get notificationFromDivine => 'Divine کی طرف سے';
+
+  @override
+  String get announcementUnavailable => 'یہ اعلان اب دستیاب نہیں ہے۔';
 }

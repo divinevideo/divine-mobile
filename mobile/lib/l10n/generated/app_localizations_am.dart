@@ -14069,4 +14069,10 @@ class AppLocalizationsAm extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'ሉፑ ተስተካክሏል። $seconds ሰከንድ ተወግዷል።';
   }
+
+  @override
+  String get notificationFromDivine => 'ከDivine';
+
+  @override
+  String get announcementUnavailable => 'ይህ ማስታወቂያ ከእንግዲህ የለም።';
 }

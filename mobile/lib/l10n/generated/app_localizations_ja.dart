@@ -13718,4 +13718,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'ループを滑らかにしました。$seconds秒を削除しました。';
   }
+
+  @override
+  String get notificationFromDivine => 'Divineからのお知らせ';
+
+  @override
+  String get announcementUnavailable => 'このお知らせは現在ご覧いただけません。';
 }

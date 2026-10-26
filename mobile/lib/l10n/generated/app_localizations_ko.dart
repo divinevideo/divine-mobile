@@ -13733,4 +13733,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return '루프를 다듬었어요. $seconds초를 잘라냈어요.';
   }
+
+  @override
+  String get notificationFromDivine => 'Divine의 소식';
+
+  @override
+  String get announcementUnavailable => '이 공지는 더 이상 볼 수 없습니다.';
 }

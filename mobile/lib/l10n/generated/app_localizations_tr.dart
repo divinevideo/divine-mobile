@@ -14356,4 +14356,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'Döngü yumuşatıldı. $seconds sn kaldırıldı.';
   }
+
+  @override
+  String get notificationFromDivine => 'Divine’dan';
+
+  @override
+  String get announcementUnavailable => 'Bu duyuru artık kullanılamıyor.';
 }

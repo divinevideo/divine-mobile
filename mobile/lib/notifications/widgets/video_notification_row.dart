@@ -338,6 +338,7 @@ String _verbFor(AppLocalizations l10n, NotificationKind type) {
     NotificationKind.reply ||
     NotificationKind.follow ||
     NotificationKind.listAdd ||
+    NotificationKind.announcement ||
     NotificationKind.system => '',
   };
 }
@@ -361,6 +362,7 @@ String _messageFor(
     NotificationKind.reply ||
     NotificationKind.follow ||
     NotificationKind.listAdd ||
+    NotificationKind.announcement ||
     NotificationKind.system => '',
   };
 }

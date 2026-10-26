@@ -14786,4 +14786,10 @@ class AppLocalizationsTe extends AppLocalizations {
   String videoEditorLoopRepairTrimmed(String seconds) {
     return 'లూప్ సాఫీగా మారింది. $seconds సె. తొలగించాం.';
   }
+
+  @override
+  String get notificationFromDivine => 'Divine నుండి';
+
+  @override
+  String get announcementUnavailable => 'ఈ ప్రకటన ఇకపై అందుబాటులో లేదు.';
 }
