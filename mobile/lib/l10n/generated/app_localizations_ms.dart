@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -5791,10 +5792,8 @@ class AppLocalizationsMs extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other:
-          'Mesej mereka disembunyikan di sini. Mereka masih boleh melihat apa yang anda hantar.',
-      one:
-          'Mesej orang ini disembunyikan di sini. Dia masih boleh melihat apa yang anda hantar.',
+      other: 'Mesej mereka disembunyikan di sini. Mereka masih boleh melihat apa yang anda hantar.',
+      one: 'Mesej orang ini disembunyikan di sini. Dia masih boleh melihat apa yang anda hantar.',
     );
     return '$_temp0';
   }
@@ -6614,8 +6613,7 @@ class AppLocalizationsMs extends AppLocalizations {
       locale: localeName,
       other:
           '$count klip disimpan tanpa buktinya, jadi ia tidak boleh kembali ke klip anda.',
-      one:
-          '1 klip disimpan tanpa buktinya, jadi ia tidak boleh kembali ke klip anda.',
+      one: '1 klip disimpan tanpa buktinya, jadi ia tidak boleh kembali ke klip anda.',
     );
     return '$_temp0';
   }
@@ -11405,8 +11403,7 @@ class AppLocalizationsMs extends AppLocalizations {
       locale: localeName,
       other:
           'Ini menyekat $count akaun yang sedang memegang lencana ini. Siaran mereka tidak akan muncul dalam suapan anda dan mereka tidak akan diberitahu.',
-      one:
-          'Ini menyekat akaun yang sedang memegang lencana ini. Siaran mereka tidak akan muncul dalam suapan anda dan mereka tidak akan diberitahu.',
+      one: 'Ini menyekat akaun yang sedang memegang lencana ini. Siaran mereka tidak akan muncul dalam suapan anda dan mereka tidak akan diberitahu.',
     );
     return '$_temp0';
   }
@@ -14014,10 +14011,13 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
-    String _temp0 = intl.Intl.selectLogic(visibility, {
-      'private': '$name, Peribadi, $count',
-      'other': '$name, $count',
-    });
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Peribadi, $count',
+        'other': '$name, $count',
+      },
+    );
     return '$_temp0';
   }
 

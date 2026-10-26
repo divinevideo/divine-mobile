@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -5756,8 +5757,7 @@ class AppLocalizationsVi extends AppLocalizations {
       locale: localeName,
       other:
           'Tin nhắn của họ được ẩn ở đây. Họ vẫn có thể xem những gì bạn gửi.',
-      one:
-          'Tin nhắn của người này được ẩn ở đây. Người này vẫn có thể xem những gì bạn gửi.',
+      one: 'Tin nhắn của người này được ẩn ở đây. Người này vẫn có thể xem những gì bạn gửi.',
     );
     return '$_temp0';
   }
@@ -6573,8 +6573,7 @@ class AppLocalizationsVi extends AppLocalizations {
       locale: localeName,
       other:
           'Đã lưu $count clip mà không có bằng chứng, nên các clip này không thể quay lại clip của bạn.',
-      one:
-          'Đã lưu 1 clip mà không có bằng chứng, nên clip này không thể quay lại clip của bạn.',
+      one: 'Đã lưu 1 clip mà không có bằng chứng, nên clip này không thể quay lại clip của bạn.',
     );
     return '$_temp0';
   }
@@ -11349,8 +11348,7 @@ class AppLocalizationsVi extends AppLocalizations {
       locale: localeName,
       other:
           'Thao tác này chặn $count tài khoản đang gắn huy hiệu này. Bài đăng của họ sẽ không xuất hiện trong bảng tin của bạn và họ sẽ không được thông báo.',
-      one:
-          'Thao tác này chặn tài khoản đang gắn huy hiệu này. Bài đăng của họ sẽ không xuất hiện trong bảng tin của bạn và họ sẽ không được thông báo.',
+      one: 'Thao tác này chặn tài khoản đang gắn huy hiệu này. Bài đăng của họ sẽ không xuất hiện trong bảng tin của bạn và họ sẽ không được thông báo.',
     );
     return '$_temp0';
   }
@@ -13956,10 +13954,13 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
-    String _temp0 = intl.Intl.selectLogic(visibility, {
-      'private': '$name, Riêng tư, $count',
-      'other': '$name, $count',
-    });
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Riêng tư, $count',
+        'other': '$name, $count',
+      },
+    );
     return '$_temp0';
   }
 

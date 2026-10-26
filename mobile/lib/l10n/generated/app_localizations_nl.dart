@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -5810,10 +5811,8 @@ class AppLocalizationsNl extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other:
-          'Hun berichten zijn hier verborgen. Ze zien nog steeds wat je stuurt.',
-      one:
-          'De berichten van deze persoon zijn hier verborgen. Die ziet nog steeds wat je stuurt.',
+      other: 'Hun berichten zijn hier verborgen. Ze zien nog steeds wat je stuurt.',
+      one: 'De berichten van deze persoon zijn hier verborgen. Die ziet nog steeds wat je stuurt.',
     );
     return '$_temp0';
   }
@@ -6642,8 +6641,7 @@ class AppLocalizationsNl extends AppLocalizations {
       locale: localeName,
       other:
           '$count clips zijn zonder bewijs opgeslagen, dus die kunnen niet terug naar je clips.',
-      one:
-          '1 clip is zonder bewijs opgeslagen, dus die kan niet terug naar je clips.',
+      one: '1 clip is zonder bewijs opgeslagen, dus die kan niet terug naar je clips.',
     );
     return '$_temp0';
   }
@@ -10824,8 +10822,7 @@ class AppLocalizationsNl extends AppLocalizations {
       locale: localeName,
       other:
           'Kon het kleurmasker niet op $count clips plakken. De rest van de stijl staat erop.',
-      one:
-          'Kon het kleurmasker niet op 1 clip plakken. De rest van de stijl staat erop.',
+      one: 'Kon het kleurmasker niet op 1 clip plakken. De rest van de stijl staat erop.',
     );
     return '$_temp0';
   }
@@ -11457,8 +11454,7 @@ class AppLocalizationsNl extends AppLocalizations {
       locale: localeName,
       other:
           'Dit blokkeert de $count accounts die deze badge nu hebben. Hun posts verschijnen niet meer in jouw feeds en ze krijgen hiervan geen melding.',
-      one:
-          'Dit blokkeert het account dat deze badge nu heeft. Hun posts verschijnen niet meer in jouw feeds en ze krijgen hiervan geen melding.',
+      one: 'Dit blokkeert het account dat deze badge nu heeft. Hun posts verschijnen niet meer in jouw feeds en ze krijgen hiervan geen melding.',
     );
     return '$_temp0';
   }
@@ -14094,10 +14090,13 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
-    String _temp0 = intl.Intl.selectLogic(visibility, {
-      'private': '$name, Privé, $count',
-      'other': '$name, $count',
-    });
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Privé, $count',
+        'other': '$name, $count',
+      },
+    );
     return '$_temp0';
   }
 

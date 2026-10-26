@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -5798,10 +5799,8 @@ class AppLocalizationsUr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other:
-          'ان کے پیغامات یہاں چھپے ہوئے ہیں۔ آپ کے بھیجے گئے پیغامات انہیں اب بھی نظر آتے ہیں۔',
-      one:
-          'ان کے پیغامات یہاں چھپے ہوئے ہیں۔ آپ کے بھیجے گئے پیغامات انہیں اب بھی نظر آتے ہیں۔',
+      other: 'ان کے پیغامات یہاں چھپے ہوئے ہیں۔ آپ کے بھیجے گئے پیغامات انہیں اب بھی نظر آتے ہیں۔',
+      one: 'ان کے پیغامات یہاں چھپے ہوئے ہیں۔ آپ کے بھیجے گئے پیغامات انہیں اب بھی نظر آتے ہیں۔',
     );
     return '$_temp0';
   }
@@ -6618,8 +6617,7 @@ class AppLocalizationsUr extends AppLocalizations {
       locale: localeName,
       other:
           '$count کلپس اپنے ثبوت کے بغیر محفوظ ہوئیں، اس لیے یہ آپ کی کلپس میں واپس نہیں آ سکتیں۔',
-      one:
-          '1 کلپ اپنے ثبوت کے بغیر محفوظ ہوئی، اس لیے یہ آپ کی کلپس میں واپس نہیں آ سکتی۔',
+      one: '1 کلپ اپنے ثبوت کے بغیر محفوظ ہوئی، اس لیے یہ آپ کی کلپس میں واپس نہیں آ سکتی۔',
     );
     return '$_temp0';
   }
@@ -11404,8 +11402,7 @@ class AppLocalizationsUr extends AppLocalizations {
       locale: localeName,
       other:
           'اس سے وہ $count اکاؤنٹس بلاک ہو جائیں گے جو ابھی یہ بیج رکھتے ہیں۔ ان کی پوسٹیں آپ کے فیڈز میں نظر نہیں آئیں گی اور انہیں اطلاع نہیں دی جائے گی۔',
-      one:
-          'اس سے وہ اکاؤنٹ بلاک ہو جائے گا جو ابھی یہ بیج رکھتا ہے۔ ان کی پوسٹیں آپ کے فیڈز میں نظر نہیں آئیں گی اور انہیں اطلاع نہیں دی جائے گی۔',
+      one: 'اس سے وہ اکاؤنٹ بلاک ہو جائے گا جو ابھی یہ بیج رکھتا ہے۔ ان کی پوسٹیں آپ کے فیڈز میں نظر نہیں آئیں گی اور انہیں اطلاع نہیں دی جائے گی۔',
     );
     return '$_temp0';
   }
@@ -14015,10 +14012,13 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
-    String _temp0 = intl.Intl.selectLogic(visibility, {
-      'private': '$name، نجی، $count',
-      'other': '$name، $count',
-    });
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name، نجی، $count',
+        'other': '$name، $count',
+      },
+    );
     return '$_temp0';
   }
 

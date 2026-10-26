@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -5846,8 +5847,7 @@ class AppLocalizationsBg extends AppLocalizations {
       count,
       locale: localeName,
       other: 'Съобщенията им са скрити тук. Те все още виждат какво изпращаш.',
-      one:
-          'Съобщенията на този човек са скрити тук. Този човек все още вижда какво изпращаш.',
+      one: 'Съобщенията на този човек са скрити тук. Този човек все още вижда какво изпращаш.',
     );
     return '$_temp0';
   }
@@ -6673,8 +6673,7 @@ class AppLocalizationsBg extends AppLocalizations {
       locale: localeName,
       other:
           '$count клипа са запазени без доказателствата си, затова не могат да се върнат сред клиповете ти.',
-      one:
-          '1 клип е запазен без доказателството си, затова не може да се върне сред клиповете ти.',
+      one: '1 клип е запазен без доказателството си, затова не може да се върне сред клиповете ти.',
     );
     return '$_temp0';
   }
@@ -10875,8 +10874,7 @@ class AppLocalizationsBg extends AppLocalizations {
       locale: localeName,
       other:
           'Цветовата маска не можа да се постави върху $count клипа. Останалата част от стила е приложена.',
-      one:
-          'Цветовата маска не можа да се постави върху 1 клип. Останалата част от стила е приложена.',
+      one: 'Цветовата маска не можа да се постави върху 1 клип. Останалата част от стила е приложена.',
     );
     return '$_temp0';
   }
@@ -11509,8 +11507,7 @@ class AppLocalizationsBg extends AppLocalizations {
       locale: localeName,
       other:
           'Това блокира $count акаунта, които в момента заявяват тази значка. Публикациите им ще излязат от твоите фийдове и няма да получат известие.',
-      one:
-          'Това блокира акаунта, който в момента заявява тази значка. Публикациите му ще излязат от твоите фийдове и няма да получи известие.',
+      one: 'Това блокира акаунта, който в момента заявява тази значка. Публикациите му ще излязат от твоите фийдове и няма да получи известие.',
     );
     return '$_temp0';
   }
@@ -14155,10 +14152,13 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
-    String _temp0 = intl.Intl.selectLogic(visibility, {
-      'private': '$name, Частен, $count',
-      'other': '$name, $count',
-    });
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Частен, $count',
+        'other': '$name, $count',
+      },
+    );
     return '$_temp0';
   }
 

@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -6781,8 +6782,7 @@ class AppLocalizationsPl extends AppLocalizations {
           'Zapisano $count klipów bez ich dowodu, więc nie mogą wrócić do twoich klipów.',
       few:
           'Zapisano $count klipy bez ich dowodu, więc nie mogą wrócić do twoich klipów.',
-      one:
-          'Zapisano 1 klip bez jego dowodu, więc nie może wrócić do twoich klipów.',
+      one: 'Zapisano 1 klip bez jego dowodu, więc nie może wrócić do twoich klipów.',
     );
     return '$_temp0';
   }
@@ -11633,8 +11633,7 @@ class AppLocalizationsPl extends AppLocalizations {
           'To zablokuje $count kont, które mają teraz tę odznakę. Ich posty nie będą pojawiać się w twoich kanałach i nie zostaną powiadomione.',
       few:
           'To zablokuje $count konta, które mają teraz tę odznakę. Ich posty nie będą pojawiać się w twoich kanałach i nie zostaną powiadomione.',
-      one:
-          'To zablokuje konto, które ma teraz tę odznakę. Jego posty nie będą pojawiać się w twoich kanałach i nie zostanie powiadomione.',
+      one: 'To zablokuje konto, które ma teraz tę odznakę. Jego posty nie będą pojawiać się w twoich kanałach i nie zostanie powiadomione.',
     );
     return '$_temp0';
   }
@@ -14311,10 +14310,13 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
-    String _temp0 = intl.Intl.selectLogic(visibility, {
-      'private': '$name, Prywatna, $count',
-      'other': '$name, $count',
-    });
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Prywatna, $count',
+        'other': '$name, $count',
+      },
+    );
     return '$_temp0';
   }
 

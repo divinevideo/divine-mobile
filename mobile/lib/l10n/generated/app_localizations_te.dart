@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -6813,8 +6814,7 @@ class AppLocalizationsTe extends AppLocalizations {
       locale: localeName,
       other:
           '$count క్లిప్‌లు వాటి రుజువు లేకుండా సేవ్ అయ్యాయి, కాబట్టి అవి మీ క్లిప్‌లలోకి తిరిగి రాలేవు.',
-      one:
-          '1 క్లిప్ దాని రుజువు లేకుండా సేవ్ అయింది, కాబట్టి అది మీ క్లిప్‌లలోకి తిరిగి రాలేదు.',
+      one: '1 క్లిప్ దాని రుజువు లేకుండా సేవ్ అయింది, కాబట్టి అది మీ క్లిప్‌లలోకి తిరిగి రాలేదు.',
     );
     return '$_temp0';
   }
@@ -11064,8 +11064,7 @@ class AppLocalizationsTe extends AppLocalizations {
       locale: localeName,
       other:
           '$count క్లిప్‌లపై రంగు మాస్క్‌ను పేస్ట్ చేయడం సాధ్యపడలేదు. మిగతా శైలి వర్తింపజేయబడింది.',
-      one:
-          '1 క్లిప్‌పై రంగు మాస్క్‌ను పేస్ట్ చేయడం సాధ్యపడలేదు. మిగతా శైలి వర్తింపజేయబడింది.',
+      one: '1 క్లిప్‌పై రంగు మాస్క్‌ను పేస్ట్ చేయడం సాధ్యపడలేదు. మిగతా శైలి వర్తింపజేయబడింది.',
     );
     return '$_temp0';
   }
@@ -11704,8 +11703,7 @@ class AppLocalizationsTe extends AppLocalizations {
       locale: localeName,
       other:
           'ఇది బ్లాక్ చేస్తుంది $countఖాతాలు ప్రస్తుతం ఈ బ్యాడ్జ్‌ను క్లెయిమ్ చేస్తున్నాయి. వారి పోస్ట్‌లు మీ ఫీడ్‌లను వదిలివేస్తాయి మరియు వారికి తెలియజేయబడదు.',
-      one:
-          'ఇది ప్రస్తుతం ఈ బ్యాడ్జ్‌ను క్లెయిమ్ చేస్తున్న ఖాతాను బ్లాక్ చేస్తుంది. వారి పోస్ట్‌లు మీ ఫీడ్‌లను వదిలివేస్తాయి మరియు వారికి తెలియజేయబడదు.',
+      one: 'ఇది ప్రస్తుతం ఈ బ్యాడ్జ్‌ను క్లెయిమ్ చేస్తున్న ఖాతాను బ్లాక్ చేస్తుంది. వారి పోస్ట్‌లు మీ ఫీడ్‌లను వదిలివేస్తాయి మరియు వారికి తెలియజేయబడదు.',
     );
     return '$_temp0';
   }
@@ -14371,10 +14369,13 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
-    String _temp0 = intl.Intl.selectLogic(visibility, {
-      'private': '$name, ప్రైవేట్, $count',
-      'other': '$name, $count',
-    });
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, ప్రైవేట్, $count',
+        'other': '$name, $count',
+      },
+    );
     return '$_temp0';
   }
 

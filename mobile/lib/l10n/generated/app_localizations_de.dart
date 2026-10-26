@@ -1,5 +1,6 @@
 // ignore: unused_import
 import 'package:intl/intl.dart' as intl;
+
 import 'app_localizations.dart';
 
 // ignore_for_file: type=lint
@@ -5866,10 +5867,8 @@ class AppLocalizationsDe extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other:
-          'Was sie schreiben, ist hier ausgeblendet. Was du sendest, sehen sie weiterhin.',
-      one:
-          'Was diese Person schreibt, ist hier ausgeblendet. Was du sendest, sieht sie weiterhin.',
+      other: 'Was sie schreiben, ist hier ausgeblendet. Was du sendest, sehen sie weiterhin.',
+      one: 'Was diese Person schreibt, ist hier ausgeblendet. Was du sendest, sieht sie weiterhin.',
     );
     return '$_temp0';
   }
@@ -6698,8 +6697,7 @@ class AppLocalizationsDe extends AppLocalizations {
       locale: localeName,
       other:
           '$count Clips wurden ohne ihren Nachweis gespeichert und können deshalb nicht zurück in deine Clips.',
-      one:
-          '1 Clip wurde ohne seinen Nachweis gespeichert und kann deshalb nicht zurück in deine Clips.',
+      one: '1 Clip wurde ohne seinen Nachweis gespeichert und kann deshalb nicht zurück in deine Clips.',
     );
     return '$_temp0';
   }
@@ -10908,8 +10906,7 @@ class AppLocalizationsDe extends AppLocalizations {
       locale: localeName,
       other:
           'Die Farbmaske konnte nicht auf $count Clips übertragen werden. Der Rest des Stils ist drauf.',
-      one:
-          'Die Farbmaske konnte nicht auf 1 Clip übertragen werden. Der Rest des Stils ist drauf.',
+      one: 'Die Farbmaske konnte nicht auf 1 Clip übertragen werden. Der Rest des Stils ist drauf.',
     );
     return '$_temp0';
   }
@@ -11540,8 +11537,7 @@ class AppLocalizationsDe extends AppLocalizations {
       locale: localeName,
       other:
           'Das blockiert die $count Konten, die dieses Badge gerade tragen. Ihre Beiträge tauchen nicht mehr in deinen Feeds auf, und sie werden nicht informiert.',
-      one:
-          'Das blockiert das Konto, das dieses Badge gerade trägt. Seine Beiträge tauchen nicht mehr in deinen Feeds auf, und es wird nicht informiert.',
+      one: 'Das blockiert das Konto, das dieses Badge gerade trägt. Seine Beiträge tauchen nicht mehr in deinen Feeds auf, und es wird nicht informiert.',
     );
     return '$_temp0';
   }
@@ -14189,10 +14185,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String listCardSemanticLabel(String name, String visibility, String count) {
-    String _temp0 = intl.Intl.selectLogic(visibility, {
-      'private': '$name, Privat, $count',
-      'other': '$name, $count',
-    });
+    String _temp0 = intl.Intl.selectLogic(
+      visibility,
+      {
+        'private': '$name, Privat, $count',
+        'other': '$name, $count',
+      },
+    );
     return '$_temp0';
   }
 
