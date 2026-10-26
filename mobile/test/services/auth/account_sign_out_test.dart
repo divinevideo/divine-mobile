@@ -24,6 +24,7 @@ import 'package:openvine/services/background_activity_manager.dart';
 import 'package:openvine/services/curated_lists/curated_list_account_authority.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
+import 'package:openvine/services/saved_sounds_service.dart';
 import 'package:openvine/services/user_data_cleanup_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -210,8 +211,9 @@ void main() {
     RemoteSignerFactory? remoteSignerFactory,
     KeycastOAuth? oauthClient,
     bool injectSecureStorage = true,
+    UserDataCleanupService? cleanupService,
   }) {
-    final cleanup = UserDataCleanupService(prefs);
+    final cleanup = cleanupService ?? UserDataCleanupService(prefs);
     cleanup.onDatabaseCleanup =
         ({
           String? userPubkey,
@@ -265,6 +267,81 @@ void main() {
   }
 
   group('ownerless sign out ownership', () {
+    test('failed forget remains replayable after removing the login', () async {
+      final cleanup = UserDataCleanupService(prefs);
+      final auth = subject(cleanupService: cleanup);
+      expect((await auth.importFromHex('3' * 64)).success, isTrue);
+      final owner = auth.currentPublicKeyHex!;
+      final npub = auth.currentNpub!;
+      final retainedSounds = SavedSoundsService.accountStorageKey(owner);
+      final otherSounds = SavedSoundsService.accountStorageKey('b' * 64);
+      await prefs.setString(retainedSounds, 'retained owner library');
+      await prefs.setString(otherSounds, 'other account library');
+      cleanup.onDatabaseCleanup =
+          ({
+            String? userPubkey,
+            bool deleteUserData = false,
+            bool preserveActiveSession = false,
+            bool forgetAccount = false,
+          }) async {
+            expect(userPubkey, owner);
+            expect(deleteUserData, isFalse);
+            expect(forgetAccount, isTrue);
+            throw StateError('Required accountSync cleanup failed');
+          };
+
+      await expectLater(
+        auth.signOut(deleteKeys: true, abortOnKeyDeletionFailure: true),
+        throwsA(isA<UserDataCleanupException>()),
+      );
+      expect(native[primaryKey], isNull);
+      expect(native['saved_identity_$npub'], isNull);
+      expect(auth.currentPublicKeyHex, isNull);
+      expect(auth.authState, AuthState.unauthenticated);
+      expect(await auth.getKnownAccounts(), isEmpty);
+      expect(
+        AccountActivationCoordinator.forPreferences(prefs)
+            .hasUnresolvedActivation,
+        isTrue,
+      );
+
+      SharedPreferences.resetStatic();
+      final restartedPrefs = await SharedPreferences.getInstance();
+      final pending = PendingAccountCleanup.read(restartedPrefs);
+      expect(pending, isNotNull);
+      expect(pending!.userPubkey, owner);
+      expect(pending.deleteUserData, isFalse);
+      final encoded = jsonDecode(
+        restartedPrefs.getString(PendingAccountCleanup.storageKey)!,
+      ) as Map<String, dynamic>;
+      expect(encoded['version'], 3);
+      expect(encoded['forgetAccount'], isTrue);
+      final replayed = <({String? owner, bool delete, bool forget})>[];
+      final retry = UserDataCleanupService(restartedPrefs)
+        ..onDatabaseCleanup =
+            ({
+              String? userPubkey,
+              bool deleteUserData = false,
+              bool preserveActiveSession = false,
+              bool forgetAccount = false,
+            }) async {
+              replayed.add((
+                owner: userPubkey,
+                delete: deleteUserData,
+                forget: forgetAccount,
+              ));
+            };
+      expect(retry.shouldClearDataForUser(owner), isTrue);
+      await retry.clearUserSpecificData(userPubkey: owner, forgetAccount: true);
+      expect(replayed, [(owner: owner, delete: false, forget: true)]);
+      expect(PendingAccountCleanup.read(restartedPrefs), isNull);
+      expect(
+        restartedPrefs.getString(retainedSounds),
+        'retained owner library',
+      );
+      expect(restartedPrefs.getString(otherSounds), 'other account library');
+    });
+
     for (final retryRemoval in [false, true]) {
       test('Keycast public-only archive removal completes '
           '(retry=$retryRemoval)', () async {

@@ -17,12 +17,14 @@ import 'package:openvine/notifications/services/notification_refresh_coordinator
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/notification_preferences_service.dart';
 import 'package:openvine/services/notification_service.dart';
 import 'package:openvine/services/push_notification_service.dart';
 import 'package:riverpod/misc.dart' show Override;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockFirebaseMessaging extends Mock implements FirebaseMessaging {}
 
@@ -88,12 +90,17 @@ class _FakeNotificationPreferencesStore
   }
 
   @override
-  Future<void> markDirty(
+  Future<bool> markDirty(
     String pubkey,
     NotificationPreferences preferences,
   ) async {
     dirtyPreferencesByPubkey[pubkey] = preferences;
+    return true;
   }
+
+  @override
+  Future<NotificationPreferencesDirtyRead> readDirty(String pubkey) async =>
+      (preferences: await loadDirty(pubkey), succeeded: true);
 
   @override
   Future<NotificationPreferences?> loadDirty(String pubkey) async {
@@ -191,6 +198,7 @@ PublishOutcome _acceptedOutcome(Event event, String relayUrl) => PublishOutcome(
 );
 
 void main() {
+  late SharedPreferences sharedPreferences;
   late _MockFirebaseMessaging messaging;
   late _MockAuthService authService;
   late _MockPushNotificationService pushService;
@@ -226,7 +234,9 @@ void main() {
     registerFallbackValue(Duration.zero);
   });
 
-  setUp(() {
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    sharedPreferences = await SharedPreferences.getInstance();
     messaging = _MockFirebaseMessaging();
     authService = _MockAuthService();
     pushService = _MockPushNotificationService();
@@ -323,6 +333,7 @@ void main() {
   }) {
     final container = ProviderContainer(
       overrides: [
+        sharedPreferencesProvider.overrideWithValue(sharedPreferences),
         firebaseMessagingProvider.overrideWithValue(messaging),
         authServiceProvider.overrideWithValue(authService),
         pushNotificationServiceProvider.overrideWithValue(pushService),
@@ -470,6 +481,7 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
             notificationPreferencesStoreProvider.overrideWithValue(
@@ -1782,6 +1794,7 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
             notificationPreferencesStoreProvider.overrideWithValue(
@@ -1872,6 +1885,7 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
             notificationPreferencesStoreProvider.overrideWithValue(
@@ -1973,6 +1987,7 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
             notificationPreferencesStoreProvider.overrideWithValue(
@@ -2121,6 +2136,7 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
             notificationPreferencesStoreProvider.overrideWithValue(
@@ -2253,6 +2269,7 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
             notificationPreferencesStoreProvider.overrideWithValue(
@@ -2353,6 +2370,7 @@ void main() {
 
         final container = ProviderContainer(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
             notificationPreferencesStoreProvider.overrideWithValue(
@@ -2399,6 +2417,7 @@ void main() {
 
         final container = ProviderContainer(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
             notificationPreferencesStoreProvider.overrideWithValue(
@@ -2445,6 +2464,7 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
             notificationPreferencesStoreProvider.overrideWithValue(
@@ -2513,6 +2533,7 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             authServiceProvider.overrideWithValue(authService),
             notificationPreferencesStoreProvider.overrideWithValue(
               preferenceStore,
@@ -2561,6 +2582,7 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
             notificationPreferencesStoreProvider.overrideWithValue(
@@ -2621,6 +2643,7 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
             notificationPreferencesStoreProvider.overrideWithValue(
@@ -2678,6 +2701,7 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
             notificationPreferencesStoreProvider.overrideWithValue(
@@ -2741,6 +2765,7 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
             notificationPreferencesStoreProvider.overrideWithValue(
@@ -2794,6 +2819,7 @@ void main() {
         );
         final container = ProviderContainer(
           overrides: [
+            sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             firebaseMessagingProvider.overrideWithValue(messaging),
             authServiceProvider.overrideWithValue(authService),
             notificationPreferencesStoreProvider.overrideWithValue(

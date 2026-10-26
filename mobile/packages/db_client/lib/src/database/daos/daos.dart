@@ -1,3 +1,4 @@
+export 'account_sync_dao.dart';
 export 'clip_categories_dao.dart';
 export 'clips_dao.dart';
 export 'concord_store_dao.dart';

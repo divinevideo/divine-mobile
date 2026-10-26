@@ -15,6 +15,7 @@ class PendingAccountCleanup {
     required this.isIdentityChange,
     required this.deleteUserData,
     this.preserveActiveSession = false,
+    this.forgetAccount = false,
   });
 
   static const storageKey = 'pending_account_data_cleanup';
@@ -33,6 +34,9 @@ class PendingAccountCleanup {
   final bool isIdentityChange;
   final bool deleteUserData;
 
+  /// Removes account sync state while retaining the owner's saved libraries.
+  final bool forgetAccount;
+
   /// An inactive-account removal never authorizes device-wide teardown.
   final bool preserveActiveSession;
 
@@ -46,15 +50,23 @@ class PendingAccountCleanup {
     }
     final decoded = jsonDecode(raw);
     if (decoded is! Map<String, dynamic> ||
-        (decoded['version'] != 1 && decoded['version'] != 2) ||
+        (decoded['version'] != 1 &&
+            decoded['version'] != 2 &&
+            decoded['version'] != 3) ||
         (decoded['version'] == 2 && decoded['preserveActiveSession'] != true) ||
-        (decoded['version'] == 1 && decoded['preserveActiveSession'] == true) ||
+        (decoded['version'] != 2 && decoded['preserveActiveSession'] == true) ||
+        (decoded['version'] == 3 && decoded['forgetAccount'] != true) ||
+        (decoded['version'] != 3 && decoded.containsKey('forgetAccount')) ||
         !decoded.containsKey('userPubkey') ||
         decoded['userPubkey'] is! String? ||
         decoded['isIdentityChange'] is! bool ||
         decoded['deleteUserData'] is! bool ||
         (decoded.containsKey('preserveActiveSession') &&
             decoded['preserveActiveSession'] is! bool) ||
+        (decoded['version'] == 3 &&
+            decoded['userPubkey'] != null &&
+            !RegExp(r'^[0-9a-f]{64}$')
+                .hasMatch(decoded['userPubkey'] as String)) ||
         (decoded['preserveActiveSession'] == true &&
             (decoded['deleteUserData'] != true ||
                 decoded['isIdentityChange'] != false ||
@@ -62,7 +74,8 @@ class PendingAccountCleanup {
                 !RegExp(r'^[0-9a-f]{64}$')
                     .hasMatch(decoded['userPubkey'] as String))) ||
         (decoded['isIdentityChange'] != true &&
-            decoded['deleteUserData'] != true)) {
+            decoded['deleteUserData'] != true &&
+            decoded['forgetAccount'] != true)) {
       throw const AccountStorageException('Account cleanup intent is invalid');
     }
     return PendingAccountCleanup(
@@ -70,6 +83,7 @@ class PendingAccountCleanup {
       isIdentityChange: decoded['isIdentityChange'] as bool,
       deleteUserData: decoded['deleteUserData'] as bool,
       preserveActiveSession: decoded['preserveActiveSession'] == true,
+      forgetAccount: decoded['forgetAccount'] == true,
     );
   }
 
@@ -78,11 +92,13 @@ class PendingAccountCleanup {
     required bool isIdentityChange,
     required bool deleteUserData,
     bool preserveActiveSession = false,
+    bool forgetAccount = false,
   }) =>
       this.userPubkey == userPubkey &&
       this.preserveActiveSession == preserveActiveSession &&
       (!isIdentityChange || this.isIdentityChange) &&
-      (!deleteUserData || this.deleteUserData);
+      (!deleteUserData || this.deleteUserData) &&
+      (!forgetAccount || this.forgetAccount || this.deleteUserData);
 
   Future<void> record(SharedPreferences preferences) async {
     final encoded = _encoded;
@@ -150,11 +166,12 @@ class PendingAccountCleanup {
   }
 
   String get _encoded => jsonEncode({
-    // Older builds reject v2 instead of widening an inactive-account removal.
-    'version': preserveActiveSession ? 2 : 1,
+    // Older builds reject new scopes instead of silently dropping their flags.
+    'version': forgetAccount ? 3 : (preserveActiveSession ? 2 : 1),
     'userPubkey': userPubkey,
     'isIdentityChange': isIdentityChange,
     'deleteUserData': deleteUserData,
     if (preserveActiveSession) 'preserveActiveSession': true,
+    if (forgetAccount) 'forgetAccount': true,
   });
 }

@@ -23,6 +23,8 @@ import 'package:openvine/features/people_lists/people_lists.dart';
 import 'package:openvine/l10n/current_app_l10n.dart';
 import 'package:openvine/l10n/email_verification_error_l10n.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
+import 'package:openvine/providers/account_sync_lifecycle_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/creator_sync_provider.dart';
@@ -66,6 +68,8 @@ class AppCompositionRoot extends ConsumerWidget {
       required OnProgressChanged onProgress,
     }) async => createBackgroundPublishService(ref, onProgress: onProgress);
 
+    ref.watch(accountPreferenceSyncProvider);
+    ref.watch(accountSyncLifecycleProvider);
     final oauthClient = ref.watch(oauthClientProvider);
     final authService = ref.watch(authServiceProvider);
     // Keep notification subscriptions aligned with confirmed follow changes
@@ -106,6 +110,7 @@ class AppCompositionRoot extends ConsumerWidget {
               create: (_) => LocaleCubit(
                 localePreferenceService: LocalePreferenceService(
                   sharedPreferences: ref.read(sharedPreferencesProvider),
+                  accountPreferences: ref.read(accountPreferenceStoreProvider),
                 ),
                 preloadLocale: preloadAppUiLocalizationsFor,
               ),

@@ -4,6 +4,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:openvine/l10n/current_app_l10n.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/listenable_provider_bridge.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/service_providers.dart';
@@ -30,7 +31,13 @@ final subtitlePollDelayProvider = Provider<SubtitlePollDelay>(
 /// Owns the viewer's subtitle translation preferences.
 final subtitleLanguagePreferenceServiceProvider =
     Provider<SubtitleLanguagePreferenceService>(
-      (_) => SubtitleLanguagePreferenceService(),
+      (ref) {
+        final service = SubtitleLanguagePreferenceService(
+          accountPreferences: ref.watch(accountPreferenceStoreProvider),
+        );
+        ref.onDispose(service.dispose);
+        return service;
+      },
     );
 
 /// Publishes preference changes without recreating the service listener.

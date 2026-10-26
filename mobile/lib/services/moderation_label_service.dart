@@ -10,7 +10,9 @@ import 'package:nostr_sdk/filter.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/nostr_event_kinds.dart';
+import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/services/moderation_account_preferences.dart';
 import 'package:openvine/services/moderation_pubkey_resolver.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -96,6 +98,7 @@ class ModerationLabelService {
     required NostrClient nostrClient,
     required AuthService authService,
     required SharedPreferences sharedPreferences,
+    AccountPreferenceStore? accountPreferences,
     bool Function()? canQueryRelays,
     ModerationPubkeyResolver? pubkeyResolver,
     int labelerHistoryPageSize = defaultLabelerHistoryPageSize,
@@ -112,7 +115,47 @@ class ModerationLabelService {
        _maxLabelerHistoryPages = maxLabelerHistoryPages,
        _labelerHistoryBudget = labelerHistoryBudget,
        _tailReconnectDelay = tailReconnectDelay,
-       _tailMaxReconnectDelay = tailMaxReconnectDelay;
+       _tailMaxReconnectDelay = tailMaxReconnectDelay,
+       _accountPreferences = accountPreferences {
+    if (accountPreferences != null) {
+      _accountBinding = ModerationAccountPreferences(
+        preferences: accountPreferences,
+        labelersStorageKey: subscribedLabelersStorageKey,
+        followingEnabledStorageKey: followingModerationEnabledStorageKey,
+        reconcile: _reconcileAccountPreferences,
+      );
+    }
+  }
+
+  final AccountPreferenceStore? _accountPreferences;
+  ModerationAccountPreferences? _accountBinding;
+  Stream<void>? get changes => _accountPreferences?.changes;
+  Set<String> _lastFollowedPubkeys = {};
+  final _followedReconciliation = FollowedLabelerReconciliation();
+
+  Future<void> _reconcileAccountPreferences(
+    ModerationAccountPreferenceSnapshot snapshot,
+    bool Function() isCurrent,
+  ) async {
+    if (_disposed || !isCurrent()) return;
+    final previous = Set<String>.of(_subscribedLabelers);
+    _subscribedLabelers
+      ..clear()
+      ..addAll(snapshot.labelers)
+      ..add(_divineModerationPubkey);
+    _isFollowingModerationEnabled = snapshot.followingEnabled;
+    for (final removed in previous.difference(_subscribedLabelers)) {
+      if (_disposed || !isCurrent()) return;
+      if (!_followedLabelers.contains(removed)) await _unloadLabeler(removed);
+    }
+    if (_disposed || !isCurrent()) return;
+    await _syncFollowedLabelersInternal(
+      _isFollowingModerationEnabled ? _lastFollowedPubkeys : const <String>[],
+      isCurrent: isCurrent,
+    );
+    if (_disposed || !isCurrent()) return;
+    await _syncSubscribedLabelersWithRelays(isCurrent: isCurrent);
+  }
 
   final NostrClient _nostrClient;
   // Retained to preserve constructor compatibility for generated-provider
@@ -352,12 +395,16 @@ class ModerationLabelService {
       // initialize(), which is called only from relay-ready paths.
       _adoptModerationPubkey(_pubkeyResolver.cached(_prefs));
 
-      final saved = _prefs.getStringList(subscribedLabelersStorageKey);
-      if (saved != null) {
-        _subscribedLabelers.addAll(saved);
-      }
+      final choices = _accountBinding?.current;
+      _subscribedLabelers.addAll(
+        choices?.labelers ??
+            _prefs.getStringList(subscribedLabelersStorageKey) ??
+            const <String>[],
+      );
       _isFollowingModerationEnabled =
-          _prefs.getBool(followingModerationEnabledStorageKey) ?? false;
+          choices?.followingEnabled ??
+          _prefs.getBool(followingModerationEnabledStorageKey) ??
+          false;
 
       // Migrate retired pubkeys if present in stored subscriptions
       await _migrateLegacyPubkey();
@@ -387,9 +434,13 @@ class ModerationLabelService {
     }
   }
 
-  Future<void> _syncSubscribedLabelersWithRelays() async {
+  Future<void> _syncSubscribedLabelersWithRelays({
+    bool Function()? isCurrent,
+  }) async {
     await _withDeferredTailRebuild(() async {
-      for (final pubkey in _subscribedLabelers) {
+      for (final pubkey in _subscribedLabelers.toList()) {
+        if (_disposed || (isCurrent != null && !isCurrent())) return;
+        if (!_subscribedLabelers.contains(pubkey)) continue;
         await subscribeToLabeler(pubkey);
       }
     });
@@ -930,7 +981,12 @@ class ModerationLabelService {
 
   /// Add a new labeler and persist.
   Future<void> addLabeler(String pubkey) async {
+    final write = _accountPreferences?.captureWrite();
     await _ensurePersistedStateLoaded();
+    if (_accountPreferences != null) {
+      await write!.write('trusted_labeler/$pubkey', true);
+      return;
+    }
     _subscribedLabelers.add(pubkey);
     await _saveSubscribedLabelers();
     await subscribeToLabeler(pubkey);
@@ -938,9 +994,14 @@ class ModerationLabelService {
 
   /// Remove a labeler and clean up.
   Future<void> removeLabeler(String pubkey) async {
+    final write = _accountPreferences?.captureWrite();
     await _ensurePersistedStateLoaded();
     // Don't allow removing the built-in Divine labeler
     if (pubkey == _divineModerationPubkey) return;
+    if (_accountPreferences != null) {
+      await write!.write('trusted_labeler/$pubkey', false);
+      return;
+    }
 
     _subscribedLabelers.remove(pubkey);
     await _saveSubscribedLabelers();
@@ -954,7 +1015,17 @@ class ModerationLabelService {
     bool enabled, {
     Iterable<String> followedPubkeys = const [],
   }) async {
+    final write = _accountPreferences?.captureWrite();
     await _ensurePersistedStateLoaded();
+    write?.ensureCurrent();
+    _lastFollowedPubkeys = followedPubkeys.toSet();
+    if (_accountPreferences != null) {
+      await write!.write(
+        followingModerationEnabledStorageKey,
+        enabled,
+      );
+      return;
+    }
     _isFollowingModerationEnabled = enabled;
     await _saveFollowingModerationEnabled();
     await _syncFollowedLabelersInternal(
@@ -964,6 +1035,7 @@ class ModerationLabelService {
 
   /// Sync the currently followed pubkeys that should act as trusted labelers.
   Future<void> syncFollowedLabelers(Iterable<String> followedPubkeys) async {
+    _lastFollowedPubkeys = followedPubkeys.toSet();
     await _ensurePersistedStateLoaded();
     if (!_isFollowingModerationEnabled) return;
     await _syncFollowedLabelersInternal(followedPubkeys);
@@ -1221,31 +1293,18 @@ class ModerationLabelService {
   }
 
   Future<void> _syncFollowedLabelersInternal(
-    Iterable<String> followedPubkeys,
-  ) async {
-    final normalized = followedPubkeys
-        .where((pubkey) => pubkey.isNotEmpty)
-        .toSet();
-
-    await _withDeferredTailRebuild(() async {
-      final toRemove = _followedLabelers.difference(normalized);
-
-      for (final pubkey in toRemove) {
-        _followedLabelers.remove(pubkey);
-        if (!_subscribedLabelers.contains(pubkey)) {
-          await _unloadLabeler(pubkey);
-        }
-      }
-
-      for (final pubkey in normalized) {
-        _followedLabelers.add(pubkey);
-        if (!_subscribedLabelers.contains(pubkey) &&
-            !_loadedLabelers.contains(pubkey)) {
-          await subscribeToLabeler(pubkey);
-        }
-      }
-    });
-  }
+    Iterable<String> followedPubkeys, {
+    bool Function()? isCurrent,
+  }) => _followedReconciliation.reconcile(
+    next: followedPubkeys,
+    followed: _followedLabelers,
+    subscribed: _subscribedLabelers,
+    loaded: _loadedLabelers,
+    unload: _unloadLabeler,
+    subscribe: subscribeToLabeler,
+    deferTail: _withDeferredTailRebuild,
+    isCurrent: () => !_disposed && (isCurrent?.call() ?? true),
+  );
 
   Future<void> _unloadLabeler(String pubkey) async {
     // Synchronously, before the first await: a walk in flight has to see this
@@ -1374,6 +1433,8 @@ class ModerationLabelService {
 
   /// Clean up subscriptions.
   void dispose() {
+    if (_disposed) return;
+    _accountBinding?.close();
     _disposed = true;
     _tailGeneration++;
     unawaited(_relayReadyRetrySubscription?.cancel());

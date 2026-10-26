@@ -22830,6 +22830,953 @@ class SoundRequestStatesCompanion
   }
 }
 
+class $AccountSyncRecordsTable extends AccountSyncRecords
+    with TableInfo<$AccountSyncRecordsTable, AccountSyncRecord> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AccountSyncRecordsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerPubkeyMeta = const VerificationMeta(
+    'ownerPubkey',
+  );
+  @override
+  late final GeneratedColumn<String> ownerPubkey = GeneratedColumn<String>(
+    'owner_pubkey',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _namespaceMeta = const VerificationMeta(
+    'namespace',
+  );
+  @override
+  late final GeneratedColumn<String> namespace = GeneratedColumn<String>(
+    'namespace',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sectionMeta = const VerificationMeta(
+    'section',
+  );
+  @override
+  late final GeneratedColumn<String> section = GeneratedColumn<String>(
+    'section',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _recordKeyMeta = const VerificationMeta(
+    'recordKey',
+  );
+  @override
+  late final GeneratedColumn<String> recordKey = GeneratedColumn<String>(
+    'record_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _valueMeta = const VerificationMeta('value');
+  @override
+  late final GeneratedColumn<String> value = GeneratedColumn<String>(
+    'value',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    ownerPubkey,
+    namespace,
+    section,
+    recordKey,
+    value,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'account_sync_records';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AccountSyncRecord> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_pubkey')) {
+      context.handle(
+        _ownerPubkeyMeta,
+        ownerPubkey.isAcceptableOrUnknown(
+          data['owner_pubkey']!,
+          _ownerPubkeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerPubkeyMeta);
+    }
+    if (data.containsKey('namespace')) {
+      context.handle(
+        _namespaceMeta,
+        namespace.isAcceptableOrUnknown(data['namespace']!, _namespaceMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_namespaceMeta);
+    }
+    if (data.containsKey('section')) {
+      context.handle(
+        _sectionMeta,
+        section.isAcceptableOrUnknown(data['section']!, _sectionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sectionMeta);
+    }
+    if (data.containsKey('record_key')) {
+      context.handle(
+        _recordKeyMeta,
+        recordKey.isAcceptableOrUnknown(data['record_key']!, _recordKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_recordKeyMeta);
+    }
+    if (data.containsKey('value')) {
+      context.handle(
+        _valueMeta,
+        value.isAcceptableOrUnknown(data['value']!, _valueMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_valueMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {
+    ownerPubkey,
+    namespace,
+    section,
+    recordKey,
+  };
+  @override
+  AccountSyncRecord map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AccountSyncRecord(
+      ownerPubkey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_pubkey'],
+      )!,
+      namespace: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}namespace'],
+      )!,
+      section: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}section'],
+      )!,
+      recordKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}record_key'],
+      )!,
+      value: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}value'],
+      )!,
+    );
+  }
+
+  @override
+  $AccountSyncRecordsTable createAlias(String alias) {
+    return $AccountSyncRecordsTable(attachedDatabase, alias);
+  }
+}
+
+class AccountSyncRecord extends DataClass
+    implements Insertable<AccountSyncRecord> {
+  final String ownerPubkey;
+  final String namespace;
+  final String section;
+  final String recordKey;
+  final String value;
+  const AccountSyncRecord({
+    required this.ownerPubkey,
+    required this.namespace,
+    required this.section,
+    required this.recordKey,
+    required this.value,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_pubkey'] = Variable<String>(ownerPubkey);
+    map['namespace'] = Variable<String>(namespace);
+    map['section'] = Variable<String>(section);
+    map['record_key'] = Variable<String>(recordKey);
+    map['value'] = Variable<String>(value);
+    return map;
+  }
+
+  AccountSyncRecordsCompanion toCompanion(bool nullToAbsent) {
+    return AccountSyncRecordsCompanion(
+      ownerPubkey: Value(ownerPubkey),
+      namespace: Value(namespace),
+      section: Value(section),
+      recordKey: Value(recordKey),
+      value: Value(value),
+    );
+  }
+
+  factory AccountSyncRecord.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AccountSyncRecord(
+      ownerPubkey: serializer.fromJson<String>(json['ownerPubkey']),
+      namespace: serializer.fromJson<String>(json['namespace']),
+      section: serializer.fromJson<String>(json['section']),
+      recordKey: serializer.fromJson<String>(json['recordKey']),
+      value: serializer.fromJson<String>(json['value']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerPubkey': serializer.toJson<String>(ownerPubkey),
+      'namespace': serializer.toJson<String>(namespace),
+      'section': serializer.toJson<String>(section),
+      'recordKey': serializer.toJson<String>(recordKey),
+      'value': serializer.toJson<String>(value),
+    };
+  }
+
+  AccountSyncRecord copyWith({
+    String? ownerPubkey,
+    String? namespace,
+    String? section,
+    String? recordKey,
+    String? value,
+  }) => AccountSyncRecord(
+    ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+    namespace: namespace ?? this.namespace,
+    section: section ?? this.section,
+    recordKey: recordKey ?? this.recordKey,
+    value: value ?? this.value,
+  );
+  AccountSyncRecord copyWithCompanion(AccountSyncRecordsCompanion data) {
+    return AccountSyncRecord(
+      ownerPubkey: data.ownerPubkey.present
+          ? data.ownerPubkey.value
+          : this.ownerPubkey,
+      namespace: data.namespace.present ? data.namespace.value : this.namespace,
+      section: data.section.present ? data.section.value : this.section,
+      recordKey: data.recordKey.present ? data.recordKey.value : this.recordKey,
+      value: data.value.present ? data.value.value : this.value,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AccountSyncRecord(')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('namespace: $namespace, ')
+          ..write('section: $section, ')
+          ..write('recordKey: $recordKey, ')
+          ..write('value: $value')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(ownerPubkey, namespace, section, recordKey, value);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AccountSyncRecord &&
+          other.ownerPubkey == this.ownerPubkey &&
+          other.namespace == this.namespace &&
+          other.section == this.section &&
+          other.recordKey == this.recordKey &&
+          other.value == this.value);
+}
+
+class AccountSyncRecordsCompanion extends UpdateCompanion<AccountSyncRecord> {
+  final Value<String> ownerPubkey;
+  final Value<String> namespace;
+  final Value<String> section;
+  final Value<String> recordKey;
+  final Value<String> value;
+  final Value<int> rowid;
+  const AccountSyncRecordsCompanion({
+    this.ownerPubkey = const Value.absent(),
+    this.namespace = const Value.absent(),
+    this.section = const Value.absent(),
+    this.recordKey = const Value.absent(),
+    this.value = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AccountSyncRecordsCompanion.insert({
+    required String ownerPubkey,
+    required String namespace,
+    required String section,
+    required String recordKey,
+    required String value,
+    this.rowid = const Value.absent(),
+  }) : ownerPubkey = Value(ownerPubkey),
+       namespace = Value(namespace),
+       section = Value(section),
+       recordKey = Value(recordKey),
+       value = Value(value);
+  static Insertable<AccountSyncRecord> custom({
+    Expression<String>? ownerPubkey,
+    Expression<String>? namespace,
+    Expression<String>? section,
+    Expression<String>? recordKey,
+    Expression<String>? value,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerPubkey != null) 'owner_pubkey': ownerPubkey,
+      if (namespace != null) 'namespace': namespace,
+      if (section != null) 'section': section,
+      if (recordKey != null) 'record_key': recordKey,
+      if (value != null) 'value': value,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AccountSyncRecordsCompanion copyWith({
+    Value<String>? ownerPubkey,
+    Value<String>? namespace,
+    Value<String>? section,
+    Value<String>? recordKey,
+    Value<String>? value,
+    Value<int>? rowid,
+  }) {
+    return AccountSyncRecordsCompanion(
+      ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+      namespace: namespace ?? this.namespace,
+      section: section ?? this.section,
+      recordKey: recordKey ?? this.recordKey,
+      value: value ?? this.value,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerPubkey.present) {
+      map['owner_pubkey'] = Variable<String>(ownerPubkey.value);
+    }
+    if (namespace.present) {
+      map['namespace'] = Variable<String>(namespace.value);
+    }
+    if (section.present) {
+      map['section'] = Variable<String>(section.value);
+    }
+    if (recordKey.present) {
+      map['record_key'] = Variable<String>(recordKey.value);
+    }
+    if (value.present) {
+      map['value'] = Variable<String>(value.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AccountSyncRecordsCompanion(')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('namespace: $namespace, ')
+          ..write('section: $section, ')
+          ..write('recordKey: $recordKey, ')
+          ..write('value: $value, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $NotificationReadsTable extends NotificationReads
+    with TableInfo<$NotificationReadsTable, NotificationReadRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $NotificationReadsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerPubkeyMeta = const VerificationMeta(
+    'ownerPubkey',
+  );
+  @override
+  late final GeneratedColumn<String> ownerPubkey = GeneratedColumn<String>(
+    'owner_pubkey',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _notificationIdMeta = const VerificationMeta(
+    'notificationId',
+  );
+  @override
+  late final GeneratedColumn<String> notificationId = GeneratedColumn<String>(
+    'notification_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pendingMeta = const VerificationMeta(
+    'pending',
+  );
+  @override
+  late final GeneratedColumn<bool> pending = GeneratedColumn<bool>(
+    'pending',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("pending" IN (0, 1))',
+    ),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [ownerPubkey, notificationId, pending];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'notification_reads';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<NotificationReadRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_pubkey')) {
+      context.handle(
+        _ownerPubkeyMeta,
+        ownerPubkey.isAcceptableOrUnknown(
+          data['owner_pubkey']!,
+          _ownerPubkeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerPubkeyMeta);
+    }
+    if (data.containsKey('notification_id')) {
+      context.handle(
+        _notificationIdMeta,
+        notificationId.isAcceptableOrUnknown(
+          data['notification_id']!,
+          _notificationIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_notificationIdMeta);
+    }
+    if (data.containsKey('pending')) {
+      context.handle(
+        _pendingMeta,
+        pending.isAcceptableOrUnknown(data['pending']!, _pendingMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pendingMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ownerPubkey, notificationId};
+  @override
+  NotificationReadRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return NotificationReadRow(
+      ownerPubkey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_pubkey'],
+      )!,
+      notificationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notification_id'],
+      )!,
+      pending: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}pending'],
+      )!,
+    );
+  }
+
+  @override
+  $NotificationReadsTable createAlias(String alias) {
+    return $NotificationReadsTable(attachedDatabase, alias);
+  }
+}
+
+class NotificationReadRow extends DataClass
+    implements Insertable<NotificationReadRow> {
+  final String ownerPubkey;
+  final String notificationId;
+  final bool pending;
+  const NotificationReadRow({
+    required this.ownerPubkey,
+    required this.notificationId,
+    required this.pending,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_pubkey'] = Variable<String>(ownerPubkey);
+    map['notification_id'] = Variable<String>(notificationId);
+    map['pending'] = Variable<bool>(pending);
+    return map;
+  }
+
+  NotificationReadsCompanion toCompanion(bool nullToAbsent) {
+    return NotificationReadsCompanion(
+      ownerPubkey: Value(ownerPubkey),
+      notificationId: Value(notificationId),
+      pending: Value(pending),
+    );
+  }
+
+  factory NotificationReadRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return NotificationReadRow(
+      ownerPubkey: serializer.fromJson<String>(json['ownerPubkey']),
+      notificationId: serializer.fromJson<String>(json['notificationId']),
+      pending: serializer.fromJson<bool>(json['pending']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerPubkey': serializer.toJson<String>(ownerPubkey),
+      'notificationId': serializer.toJson<String>(notificationId),
+      'pending': serializer.toJson<bool>(pending),
+    };
+  }
+
+  NotificationReadRow copyWith({
+    String? ownerPubkey,
+    String? notificationId,
+    bool? pending,
+  }) => NotificationReadRow(
+    ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+    notificationId: notificationId ?? this.notificationId,
+    pending: pending ?? this.pending,
+  );
+  NotificationReadRow copyWithCompanion(NotificationReadsCompanion data) {
+    return NotificationReadRow(
+      ownerPubkey: data.ownerPubkey.present
+          ? data.ownerPubkey.value
+          : this.ownerPubkey,
+      notificationId: data.notificationId.present
+          ? data.notificationId.value
+          : this.notificationId,
+      pending: data.pending.present ? data.pending.value : this.pending,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NotificationReadRow(')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('notificationId: $notificationId, ')
+          ..write('pending: $pending')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(ownerPubkey, notificationId, pending);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is NotificationReadRow &&
+          other.ownerPubkey == this.ownerPubkey &&
+          other.notificationId == this.notificationId &&
+          other.pending == this.pending);
+}
+
+class NotificationReadsCompanion extends UpdateCompanion<NotificationReadRow> {
+  final Value<String> ownerPubkey;
+  final Value<String> notificationId;
+  final Value<bool> pending;
+  final Value<int> rowid;
+  const NotificationReadsCompanion({
+    this.ownerPubkey = const Value.absent(),
+    this.notificationId = const Value.absent(),
+    this.pending = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  NotificationReadsCompanion.insert({
+    required String ownerPubkey,
+    required String notificationId,
+    required bool pending,
+    this.rowid = const Value.absent(),
+  }) : ownerPubkey = Value(ownerPubkey),
+       notificationId = Value(notificationId),
+       pending = Value(pending);
+  static Insertable<NotificationReadRow> custom({
+    Expression<String>? ownerPubkey,
+    Expression<String>? notificationId,
+    Expression<bool>? pending,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerPubkey != null) 'owner_pubkey': ownerPubkey,
+      if (notificationId != null) 'notification_id': notificationId,
+      if (pending != null) 'pending': pending,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  NotificationReadsCompanion copyWith({
+    Value<String>? ownerPubkey,
+    Value<String>? notificationId,
+    Value<bool>? pending,
+    Value<int>? rowid,
+  }) {
+    return NotificationReadsCompanion(
+      ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+      notificationId: notificationId ?? this.notificationId,
+      pending: pending ?? this.pending,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerPubkey.present) {
+      map['owner_pubkey'] = Variable<String>(ownerPubkey.value);
+    }
+    if (notificationId.present) {
+      map['notification_id'] = Variable<String>(notificationId.value);
+    }
+    if (pending.present) {
+      map['pending'] = Variable<bool>(pending.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NotificationReadsCompanion(')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('notificationId: $notificationId, ')
+          ..write('pending: $pending, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $NotificationReadMembersTable extends NotificationReadMembers
+    with TableInfo<$NotificationReadMembersTable, NotificationReadMember> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $NotificationReadMembersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerPubkeyMeta = const VerificationMeta(
+    'ownerPubkey',
+  );
+  @override
+  late final GeneratedColumn<String> ownerPubkey = GeneratedColumn<String>(
+    'owner_pubkey',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _cacheIdMeta = const VerificationMeta(
+    'cacheId',
+  );
+  @override
+  late final GeneratedColumn<String> cacheId = GeneratedColumn<String>(
+    'cache_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _notificationIdMeta = const VerificationMeta(
+    'notificationId',
+  );
+  @override
+  late final GeneratedColumn<String> notificationId = GeneratedColumn<String>(
+    'notification_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [ownerPubkey, cacheId, notificationId];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'notification_read_members';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<NotificationReadMember> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_pubkey')) {
+      context.handle(
+        _ownerPubkeyMeta,
+        ownerPubkey.isAcceptableOrUnknown(
+          data['owner_pubkey']!,
+          _ownerPubkeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerPubkeyMeta);
+    }
+    if (data.containsKey('cache_id')) {
+      context.handle(
+        _cacheIdMeta,
+        cacheId.isAcceptableOrUnknown(data['cache_id']!, _cacheIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cacheIdMeta);
+    }
+    if (data.containsKey('notification_id')) {
+      context.handle(
+        _notificationIdMeta,
+        notificationId.isAcceptableOrUnknown(
+          data['notification_id']!,
+          _notificationIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_notificationIdMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {
+    ownerPubkey,
+    cacheId,
+    notificationId,
+  };
+  @override
+  NotificationReadMember map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return NotificationReadMember(
+      ownerPubkey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_pubkey'],
+      )!,
+      cacheId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cache_id'],
+      )!,
+      notificationId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notification_id'],
+      )!,
+    );
+  }
+
+  @override
+  $NotificationReadMembersTable createAlias(String alias) {
+    return $NotificationReadMembersTable(attachedDatabase, alias);
+  }
+}
+
+class NotificationReadMember extends DataClass
+    implements Insertable<NotificationReadMember> {
+  final String ownerPubkey;
+  final String cacheId;
+  final String notificationId;
+  const NotificationReadMember({
+    required this.ownerPubkey,
+    required this.cacheId,
+    required this.notificationId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_pubkey'] = Variable<String>(ownerPubkey);
+    map['cache_id'] = Variable<String>(cacheId);
+    map['notification_id'] = Variable<String>(notificationId);
+    return map;
+  }
+
+  NotificationReadMembersCompanion toCompanion(bool nullToAbsent) {
+    return NotificationReadMembersCompanion(
+      ownerPubkey: Value(ownerPubkey),
+      cacheId: Value(cacheId),
+      notificationId: Value(notificationId),
+    );
+  }
+
+  factory NotificationReadMember.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return NotificationReadMember(
+      ownerPubkey: serializer.fromJson<String>(json['ownerPubkey']),
+      cacheId: serializer.fromJson<String>(json['cacheId']),
+      notificationId: serializer.fromJson<String>(json['notificationId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerPubkey': serializer.toJson<String>(ownerPubkey),
+      'cacheId': serializer.toJson<String>(cacheId),
+      'notificationId': serializer.toJson<String>(notificationId),
+    };
+  }
+
+  NotificationReadMember copyWith({
+    String? ownerPubkey,
+    String? cacheId,
+    String? notificationId,
+  }) => NotificationReadMember(
+    ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+    cacheId: cacheId ?? this.cacheId,
+    notificationId: notificationId ?? this.notificationId,
+  );
+  NotificationReadMember copyWithCompanion(
+    NotificationReadMembersCompanion data,
+  ) {
+    return NotificationReadMember(
+      ownerPubkey: data.ownerPubkey.present
+          ? data.ownerPubkey.value
+          : this.ownerPubkey,
+      cacheId: data.cacheId.present ? data.cacheId.value : this.cacheId,
+      notificationId: data.notificationId.present
+          ? data.notificationId.value
+          : this.notificationId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NotificationReadMember(')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('cacheId: $cacheId, ')
+          ..write('notificationId: $notificationId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(ownerPubkey, cacheId, notificationId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is NotificationReadMember &&
+          other.ownerPubkey == this.ownerPubkey &&
+          other.cacheId == this.cacheId &&
+          other.notificationId == this.notificationId);
+}
+
+class NotificationReadMembersCompanion
+    extends UpdateCompanion<NotificationReadMember> {
+  final Value<String> ownerPubkey;
+  final Value<String> cacheId;
+  final Value<String> notificationId;
+  final Value<int> rowid;
+  const NotificationReadMembersCompanion({
+    this.ownerPubkey = const Value.absent(),
+    this.cacheId = const Value.absent(),
+    this.notificationId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  NotificationReadMembersCompanion.insert({
+    required String ownerPubkey,
+    required String cacheId,
+    required String notificationId,
+    this.rowid = const Value.absent(),
+  }) : ownerPubkey = Value(ownerPubkey),
+       cacheId = Value(cacheId),
+       notificationId = Value(notificationId);
+  static Insertable<NotificationReadMember> custom({
+    Expression<String>? ownerPubkey,
+    Expression<String>? cacheId,
+    Expression<String>? notificationId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerPubkey != null) 'owner_pubkey': ownerPubkey,
+      if (cacheId != null) 'cache_id': cacheId,
+      if (notificationId != null) 'notification_id': notificationId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  NotificationReadMembersCompanion copyWith({
+    Value<String>? ownerPubkey,
+    Value<String>? cacheId,
+    Value<String>? notificationId,
+    Value<int>? rowid,
+  }) {
+    return NotificationReadMembersCompanion(
+      ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+      cacheId: cacheId ?? this.cacheId,
+      notificationId: notificationId ?? this.notificationId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerPubkey.present) {
+      map['owner_pubkey'] = Variable<String>(ownerPubkey.value);
+    }
+    if (cacheId.present) {
+      map['cache_id'] = Variable<String>(cacheId.value);
+    }
+    if (notificationId.present) {
+      map['notification_id'] = Variable<String>(notificationId.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('NotificationReadMembersCompanion(')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('cacheId: $cacheId, ')
+          ..write('notificationId: $notificationId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -22892,6 +23839,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $ConcordStoreEntriesTable(this);
   late final $SoundRequestStatesTable soundRequestStates =
       $SoundRequestStatesTable(this);
+  late final $AccountSyncRecordsTable accountSyncRecords =
+      $AccountSyncRecordsTable(this);
+  late final $NotificationReadsTable notificationReads =
+      $NotificationReadsTable(this);
+  late final $NotificationReadMembersTable notificationReadMembers =
+      $NotificationReadMembersTable(this);
   late final Index idxMetricsLoopCount = Index(
     'idx_metrics_loop_count',
     'CREATE INDEX IF NOT EXISTS idx_metrics_loop_count ON video_metrics (loop_count)',
@@ -23063,6 +24016,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final SoundRequestStateDao soundRequestStateDao = SoundRequestStateDao(
     this as AppDatabase,
   );
+  late final AccountSyncDao accountSyncDao = AccountSyncDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -23105,6 +24061,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     scheduledPosts,
     concordStoreEntries,
     soundRequestStates,
+    accountSyncRecords,
+    notificationReads,
+    notificationReadMembers,
     idxMetricsLoopCount,
     idxMetricsLikes,
     idxMetricsViews,
@@ -34119,6 +35078,585 @@ typedef $$SoundRequestStatesTableProcessedTableManager =
       SoundRequestStateRow,
       PrefetchHooks Function()
     >;
+typedef $$AccountSyncRecordsTableCreateCompanionBuilder =
+    AccountSyncRecordsCompanion Function({
+      required String ownerPubkey,
+      required String namespace,
+      required String section,
+      required String recordKey,
+      required String value,
+      Value<int> rowid,
+    });
+typedef $$AccountSyncRecordsTableUpdateCompanionBuilder =
+    AccountSyncRecordsCompanion Function({
+      Value<String> ownerPubkey,
+      Value<String> namespace,
+      Value<String> section,
+      Value<String> recordKey,
+      Value<String> value,
+      Value<int> rowid,
+    });
+
+class $$AccountSyncRecordsTableFilterComposer
+    extends Composer<_$AppDatabase, $AccountSyncRecordsTable> {
+  $$AccountSyncRecordsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get namespace => $composableBuilder(
+    column: $table.namespace,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get section => $composableBuilder(
+    column: $table.section,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recordKey => $composableBuilder(
+    column: $table.recordKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$AccountSyncRecordsTableOrderingComposer
+    extends Composer<_$AppDatabase, $AccountSyncRecordsTable> {
+  $$AccountSyncRecordsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get namespace => $composableBuilder(
+    column: $table.namespace,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get section => $composableBuilder(
+    column: $table.section,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get recordKey => $composableBuilder(
+    column: $table.recordKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get value => $composableBuilder(
+    column: $table.value,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AccountSyncRecordsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $AccountSyncRecordsTable> {
+  $$AccountSyncRecordsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get namespace =>
+      $composableBuilder(column: $table.namespace, builder: (column) => column);
+
+  GeneratedColumn<String> get section =>
+      $composableBuilder(column: $table.section, builder: (column) => column);
+
+  GeneratedColumn<String> get recordKey =>
+      $composableBuilder(column: $table.recordKey, builder: (column) => column);
+
+  GeneratedColumn<String> get value =>
+      $composableBuilder(column: $table.value, builder: (column) => column);
+}
+
+class $$AccountSyncRecordsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $AccountSyncRecordsTable,
+          AccountSyncRecord,
+          $$AccountSyncRecordsTableFilterComposer,
+          $$AccountSyncRecordsTableOrderingComposer,
+          $$AccountSyncRecordsTableAnnotationComposer,
+          $$AccountSyncRecordsTableCreateCompanionBuilder,
+          $$AccountSyncRecordsTableUpdateCompanionBuilder,
+          (
+            AccountSyncRecord,
+            BaseReferences<
+              _$AppDatabase,
+              $AccountSyncRecordsTable,
+              AccountSyncRecord
+            >,
+          ),
+          AccountSyncRecord,
+          PrefetchHooks Function()
+        > {
+  $$AccountSyncRecordsTableTableManager(
+    _$AppDatabase db,
+    $AccountSyncRecordsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AccountSyncRecordsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AccountSyncRecordsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AccountSyncRecordsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> ownerPubkey = const Value.absent(),
+                Value<String> namespace = const Value.absent(),
+                Value<String> section = const Value.absent(),
+                Value<String> recordKey = const Value.absent(),
+                Value<String> value = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AccountSyncRecordsCompanion(
+                ownerPubkey: ownerPubkey,
+                namespace: namespace,
+                section: section,
+                recordKey: recordKey,
+                value: value,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String ownerPubkey,
+                required String namespace,
+                required String section,
+                required String recordKey,
+                required String value,
+                Value<int> rowid = const Value.absent(),
+              }) => AccountSyncRecordsCompanion.insert(
+                ownerPubkey: ownerPubkey,
+                namespace: namespace,
+                section: section,
+                recordKey: recordKey,
+                value: value,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$AccountSyncRecordsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $AccountSyncRecordsTable,
+      AccountSyncRecord,
+      $$AccountSyncRecordsTableFilterComposer,
+      $$AccountSyncRecordsTableOrderingComposer,
+      $$AccountSyncRecordsTableAnnotationComposer,
+      $$AccountSyncRecordsTableCreateCompanionBuilder,
+      $$AccountSyncRecordsTableUpdateCompanionBuilder,
+      (
+        AccountSyncRecord,
+        BaseReferences<
+          _$AppDatabase,
+          $AccountSyncRecordsTable,
+          AccountSyncRecord
+        >,
+      ),
+      AccountSyncRecord,
+      PrefetchHooks Function()
+    >;
+typedef $$NotificationReadsTableCreateCompanionBuilder =
+    NotificationReadsCompanion Function({
+      required String ownerPubkey,
+      required String notificationId,
+      required bool pending,
+      Value<int> rowid,
+    });
+typedef $$NotificationReadsTableUpdateCompanionBuilder =
+    NotificationReadsCompanion Function({
+      Value<String> ownerPubkey,
+      Value<String> notificationId,
+      Value<bool> pending,
+      Value<int> rowid,
+    });
+
+class $$NotificationReadsTableFilterComposer
+    extends Composer<_$AppDatabase, $NotificationReadsTable> {
+  $$NotificationReadsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notificationId => $composableBuilder(
+    column: $table.notificationId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get pending => $composableBuilder(
+    column: $table.pending,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$NotificationReadsTableOrderingComposer
+    extends Composer<_$AppDatabase, $NotificationReadsTable> {
+  $$NotificationReadsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notificationId => $composableBuilder(
+    column: $table.notificationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get pending => $composableBuilder(
+    column: $table.pending,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$NotificationReadsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $NotificationReadsTable> {
+  $$NotificationReadsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get notificationId => $composableBuilder(
+    column: $table.notificationId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get pending =>
+      $composableBuilder(column: $table.pending, builder: (column) => column);
+}
+
+class $$NotificationReadsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $NotificationReadsTable,
+          NotificationReadRow,
+          $$NotificationReadsTableFilterComposer,
+          $$NotificationReadsTableOrderingComposer,
+          $$NotificationReadsTableAnnotationComposer,
+          $$NotificationReadsTableCreateCompanionBuilder,
+          $$NotificationReadsTableUpdateCompanionBuilder,
+          (
+            NotificationReadRow,
+            BaseReferences<
+              _$AppDatabase,
+              $NotificationReadsTable,
+              NotificationReadRow
+            >,
+          ),
+          NotificationReadRow,
+          PrefetchHooks Function()
+        > {
+  $$NotificationReadsTableTableManager(
+    _$AppDatabase db,
+    $NotificationReadsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$NotificationReadsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$NotificationReadsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$NotificationReadsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> ownerPubkey = const Value.absent(),
+                Value<String> notificationId = const Value.absent(),
+                Value<bool> pending = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => NotificationReadsCompanion(
+                ownerPubkey: ownerPubkey,
+                notificationId: notificationId,
+                pending: pending,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String ownerPubkey,
+                required String notificationId,
+                required bool pending,
+                Value<int> rowid = const Value.absent(),
+              }) => NotificationReadsCompanion.insert(
+                ownerPubkey: ownerPubkey,
+                notificationId: notificationId,
+                pending: pending,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$NotificationReadsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $NotificationReadsTable,
+      NotificationReadRow,
+      $$NotificationReadsTableFilterComposer,
+      $$NotificationReadsTableOrderingComposer,
+      $$NotificationReadsTableAnnotationComposer,
+      $$NotificationReadsTableCreateCompanionBuilder,
+      $$NotificationReadsTableUpdateCompanionBuilder,
+      (
+        NotificationReadRow,
+        BaseReferences<
+          _$AppDatabase,
+          $NotificationReadsTable,
+          NotificationReadRow
+        >,
+      ),
+      NotificationReadRow,
+      PrefetchHooks Function()
+    >;
+typedef $$NotificationReadMembersTableCreateCompanionBuilder =
+    NotificationReadMembersCompanion Function({
+      required String ownerPubkey,
+      required String cacheId,
+      required String notificationId,
+      Value<int> rowid,
+    });
+typedef $$NotificationReadMembersTableUpdateCompanionBuilder =
+    NotificationReadMembersCompanion Function({
+      Value<String> ownerPubkey,
+      Value<String> cacheId,
+      Value<String> notificationId,
+      Value<int> rowid,
+    });
+
+class $$NotificationReadMembersTableFilterComposer
+    extends Composer<_$AppDatabase, $NotificationReadMembersTable> {
+  $$NotificationReadMembersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get cacheId => $composableBuilder(
+    column: $table.cacheId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notificationId => $composableBuilder(
+    column: $table.notificationId,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$NotificationReadMembersTableOrderingComposer
+    extends Composer<_$AppDatabase, $NotificationReadMembersTable> {
+  $$NotificationReadMembersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get cacheId => $composableBuilder(
+    column: $table.cacheId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notificationId => $composableBuilder(
+    column: $table.notificationId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$NotificationReadMembersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $NotificationReadMembersTable> {
+  $$NotificationReadMembersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get cacheId =>
+      $composableBuilder(column: $table.cacheId, builder: (column) => column);
+
+  GeneratedColumn<String> get notificationId => $composableBuilder(
+    column: $table.notificationId,
+    builder: (column) => column,
+  );
+}
+
+class $$NotificationReadMembersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $NotificationReadMembersTable,
+          NotificationReadMember,
+          $$NotificationReadMembersTableFilterComposer,
+          $$NotificationReadMembersTableOrderingComposer,
+          $$NotificationReadMembersTableAnnotationComposer,
+          $$NotificationReadMembersTableCreateCompanionBuilder,
+          $$NotificationReadMembersTableUpdateCompanionBuilder,
+          (
+            NotificationReadMember,
+            BaseReferences<
+              _$AppDatabase,
+              $NotificationReadMembersTable,
+              NotificationReadMember
+            >,
+          ),
+          NotificationReadMember,
+          PrefetchHooks Function()
+        > {
+  $$NotificationReadMembersTableTableManager(
+    _$AppDatabase db,
+    $NotificationReadMembersTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$NotificationReadMembersTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$NotificationReadMembersTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$NotificationReadMembersTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> ownerPubkey = const Value.absent(),
+                Value<String> cacheId = const Value.absent(),
+                Value<String> notificationId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => NotificationReadMembersCompanion(
+                ownerPubkey: ownerPubkey,
+                cacheId: cacheId,
+                notificationId: notificationId,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String ownerPubkey,
+                required String cacheId,
+                required String notificationId,
+                Value<int> rowid = const Value.absent(),
+              }) => NotificationReadMembersCompanion.insert(
+                ownerPubkey: ownerPubkey,
+                cacheId: cacheId,
+                notificationId: notificationId,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$NotificationReadMembersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $NotificationReadMembersTable,
+      NotificationReadMember,
+      $$NotificationReadMembersTableFilterComposer,
+      $$NotificationReadMembersTableOrderingComposer,
+      $$NotificationReadMembersTableAnnotationComposer,
+      $$NotificationReadMembersTableCreateCompanionBuilder,
+      $$NotificationReadMembersTableUpdateCompanionBuilder,
+      (
+        NotificationReadMember,
+        BaseReferences<
+          _$AppDatabase,
+          $NotificationReadMembersTable,
+          NotificationReadMember
+        >,
+      ),
+      NotificationReadMember,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -34200,4 +35738,13 @@ class $AppDatabaseManager {
       $$ConcordStoreEntriesTableTableManager(_db, _db.concordStoreEntries);
   $$SoundRequestStatesTableTableManager get soundRequestStates =>
       $$SoundRequestStatesTableTableManager(_db, _db.soundRequestStates);
+  $$AccountSyncRecordsTableTableManager get accountSyncRecords =>
+      $$AccountSyncRecordsTableTableManager(_db, _db.accountSyncRecords);
+  $$NotificationReadsTableTableManager get notificationReads =>
+      $$NotificationReadsTableTableManager(_db, _db.notificationReads);
+  $$NotificationReadMembersTableTableManager get notificationReadMembers =>
+      $$NotificationReadMembersTableTableManager(
+        _db,
+        _db.notificationReadMembers,
+      );
 }

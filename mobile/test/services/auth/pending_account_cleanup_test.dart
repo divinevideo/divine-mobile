@@ -1,6 +1,8 @@
 // ABOUTME: Account cleanup intent is authoritative only after durable readback.
 // ABOUTME: False acknowledgements cannot authorize erasure or completed cleanup.
 
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/auth/account_storage_exception.dart';
 import 'package:openvine/services/auth/pending_account_cleanup.dart';
@@ -137,6 +139,148 @@ void main() {
         expect(PendingAccountCleanup.read(prefs)?.deleteUserData, isTrue);
       },
     );
+  });
+
+  group('forget intent', () {
+    Map<String, Object?> encodedIntent({int version = 3}) => {
+      'version': version,
+      'userPubkey': _owner,
+      'isIdentityChange': false,
+      'deleteUserData': false,
+      'forgetAccount': true,
+    };
+
+    test(
+      'version three retains the exact forget scope across restart',
+      () async {
+        await prefs.setString(
+          PendingAccountCleanup.storageKey,
+          jsonEncode(encodedIntent()),
+        );
+        final pending = PendingAccountCleanup.read(prefs)!;
+        expect(pending.userPubkey, _owner);
+        expect(pending.deleteUserData, isFalse);
+        expect(pending.isIdentityChange, isFalse);
+        await pending.record(prefs);
+        await restart();
+        expect(
+          jsonDecode(prefs.getString(PendingAccountCleanup.storageKey)!),
+          encodedIntent(),
+        );
+      },
+    );
+
+    for (final version in [1, 2]) {
+      test('legacy version $version retains its existing scope', () async {
+        final encoded = {
+          'version': version,
+          'userPubkey': _owner,
+          'isIdentityChange': false,
+          'deleteUserData': true,
+          if (version == 2) 'preserveActiveSession': true,
+        };
+        await prefs.setString(
+          PendingAccountCleanup.storageKey,
+          jsonEncode(encoded),
+        );
+        final pending = PendingAccountCleanup.read(prefs)!;
+        expect(pending.deleteUserData, isTrue);
+        expect(pending.preserveActiveSession, version == 2);
+        await pending.record(prefs);
+        expect(
+          jsonDecode(prefs.getString(PendingAccountCleanup.storageKey)!),
+          encoded,
+        );
+      });
+    }
+
+    final invalid = <String, Map<String, Object?>>{
+      'newer version': {...encodedIntent(), 'version': 4},
+      'legacy forget flag': {
+        ...encodedIntent(),
+        'version': 1,
+        'deleteUserData': true,
+      },
+      'missing forget flag': encodedIntent()..remove('forgetAccount'),
+      'false forget flag': {...encodedIntent(), 'forgetAccount': false},
+      'nonboolean forget flag': {...encodedIntent(), 'forgetAccount': 'true'},
+      'missing owner': encodedIntent()..remove('userPubkey'),
+      'invalid owner': {...encodedIntent(), 'userPubkey': 'invalid'},
+      'unproven inactive scope': {
+        ...encodedIntent(),
+        'preserveActiveSession': true,
+      },
+    };
+    for (final entry in invalid.entries) {
+      test('${entry.key} remains unchanged without cleanup', () async {
+        final raw = jsonEncode(entry.value);
+        await prefs.setString(PendingAccountCleanup.storageKey, raw);
+        await prefs.setString('content_language', 'es');
+        var stops = 0;
+        var databaseCalls = 0;
+        final cleanup =
+            UserDataCleanupService(
+                prefs,
+                onAccountStateWritesStop: (_) async => stops++,
+              )
+              ..onDatabaseCleanup = ({
+                String? userPubkey,
+                bool deleteUserData = false,
+                bool preserveActiveSession = false,
+                bool forgetAccount = false,
+              }) async => databaseCalls++;
+        await expectLater(
+          cleanup.clearUserSpecificData(
+            userPubkey: _owner,
+            forgetAccount: true,
+          ),
+          throwsA(isA<UserDataCleanupException>()),
+        );
+        expect(stops, 0);
+        expect(databaseCalls, 0);
+        await restart();
+        expect(prefs.getString(PendingAccountCleanup.storageKey), raw);
+        expect(prefs.getString('content_language'), 'es');
+      });
+    }
+
+    for (final failure in ['lying', 'refused', 'throwing']) {
+      test(
+        '$failure forget marker stops before any cleanup mutation',
+        () async {
+          await prefs.setString('content_language', 'es');
+          const journal = 'account_state_divine/preferences/v1_${_owner}_state';
+          await prefs.setString(journal, 'retained journal');
+          final before = await store.getAll();
+          store.lieAboutWrite = failure == 'lying';
+          store.refuseWrite = failure == 'refused';
+          store.throwWrite = failure == 'throwing';
+          var stops = 0;
+          var databaseCalls = 0;
+          final cleanup =
+              UserDataCleanupService(
+                  prefs,
+                  onAccountStateWritesStop: (_) async => stops++,
+                )
+                ..onDatabaseCleanup = ({
+                  String? userPubkey,
+                  bool deleteUserData = false,
+                  bool preserveActiveSession = false,
+                  bool forgetAccount = false,
+                }) async => databaseCalls++;
+          await expectLater(
+            cleanup.clearUserSpecificData(
+              userPubkey: _owner,
+              forgetAccount: true,
+            ),
+            throwsA(isA<UserDataCleanupException>()),
+          );
+          expect(stops, 0);
+          expect(databaseCalls, 0);
+          expect(await store.getAll(), before);
+        },
+      );
+    }
   });
 
   group('complete', () {

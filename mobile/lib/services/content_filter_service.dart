@@ -1,25 +1,19 @@
 // ABOUTME: Service for per-category content filtering with Show/Warn/Hide preferences
 // ABOUTME: Stores preferences in SharedPreferences, enforces age gate for adult categories
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:openvine/models/content_filter_preference.dart';
 import 'package:openvine/models/content_label.dart';
+import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// User preference for how a content category should be handled in feeds.
-enum ContentFilterPreference {
-  /// Show content normally without any overlay.
-  show,
-
-  /// Show content with a blur overlay and "View Anyway" button.
-  warn,
-
-  /// Filter content completely from feeds (not visible at all).
-  hide,
-}
+export 'package:openvine/models/content_filter_preference.dart'
+    show ContentFilterPreference;
 
 /// Service that manages per-category content filter preferences.
 ///
@@ -33,8 +27,71 @@ enum ContentFilterPreference {
 class ContentFilterService extends ChangeNotifier {
   ContentFilterService({
     required this.ageVerificationService,
+    AccountPreferenceStore? accountPreferences,
     Future<void> Function()? onAdultMediaAccessRevoked,
-  }) : _onAdultMediaAccessRevoked = onAdultMediaAccessRevoked;
+  }) : _accountPreferences = accountPreferences,
+       _onAdultMediaAccessRevoked = onAdultMediaAccessRevoked {
+    _captureEffectivePreferences();
+    _accountSubscription = _accountPreferences?.changes.listen(
+      (_) => _reloadAccountPreferences(),
+    );
+  }
+
+  bool _disposed = false;
+  final AccountPreferenceStore? _accountPreferences;
+  StreamSubscription<void>? _accountSubscription;
+  ContentFilterPreference _lastAccountAdultPreference =
+      ContentFilterPreference.hide;
+  late Map<ContentLabel, ContentFilterPreference> _lastEffectivePreferences;
+  Future<void>? _pendingRevocation;
+
+  void _captureEffectivePreferences() {
+    if (_disposed) return;
+    _lastEffectivePreferences = allPreferences;
+    _lastAccountAdultPreference = adultPlaybackPreference;
+  }
+
+  void _reloadAccountPreferences() => unawaited(_refreshEffectivePreferences());
+
+  Future<void> _refreshEffectivePreferences() {
+    if (_disposed) return _pendingRevocation ?? Future<void>.value();
+    final current = allPreferences;
+    if (mapEquals(current, _lastEffectivePreferences)) {
+      return _pendingRevocation ?? Future<void>.value();
+    }
+    final previous = _lastAccountAdultPreference;
+    _lastEffectivePreferences = current;
+    _lastAccountAdultPreference = adultPlaybackPreference;
+    // Both the stream and a local setter can observe the same durable write.
+    // Reconcile once, including the awaited adult-media revocation callback.
+    // Later snapshots must retain any revocation that is still in flight.
+    final revocation = _notifyIfAdultPassiveAccessRevoked(
+      previousAdultPreference: previous,
+    );
+    if (revocation != null) {
+      final previousPending = _pendingRevocation;
+      late final Future<void> pending;
+      pending =
+          Future.wait<void>([
+            ?previousPending,
+            revocation,
+          ]).then((_) {}).whenComplete(() {
+            if (identical(_pendingRevocation, pending)) {
+              _pendingRevocation = null;
+            }
+          });
+      _pendingRevocation = pending;
+    }
+    notifyListeners();
+    return _pendingRevocation ?? Future<void>.value();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    unawaited(_accountSubscription?.cancel());
+    super.dispose();
+  }
 
   /// Public so `UserDataCleanupService` can clear it by reference.
   /// A copied literal cannot detect that this key was renamed (#8314).
@@ -110,34 +167,6 @@ class ContentFilterService extends ChangeNotifier {
     ContentLabel.scam,
   };
 
-  /// Default preferences for each category.
-  static const Map<ContentLabel, ContentFilterPreference> _defaults = {
-    // Adult content stays hidden even after age verification; the user must
-    // opt in per category via Content Filters.
-    ContentLabel.nudity: ContentFilterPreference.hide,
-    ContentLabel.sexual: ContentFilterPreference.hide,
-    ContentLabel.drugs: ContentFilterPreference.hide,
-    // Always-filtered categories are not user-configurable.
-    ContentLabel.graphicMedia: ContentFilterPreference.hide,
-    ContentLabel.violence: ContentFilterPreference.hide,
-    ContentLabel.selfHarm: ContentFilterPreference.hide,
-    ContentLabel.porn: ContentFilterPreference.hide,
-    ContentLabel.hate: ContentFilterPreference.hide,
-    ContentLabel.harassment: ContentFilterPreference.hide,
-    ContentLabel.aiGenerated: ContentFilterPreference.hide,
-    ContentLabel.deepfake: ContentFilterPreference.hide,
-    ContentLabel.spam: ContentFilterPreference.hide,
-    ContentLabel.scam: ContentFilterPreference.hide,
-    // Visible non-adult categories start at warn.
-    ContentLabel.alcohol: ContentFilterPreference.warn,
-    ContentLabel.tobacco: ContentFilterPreference.warn,
-    ContentLabel.gambling: ContentFilterPreference.warn,
-    ContentLabel.profanity: ContentFilterPreference.warn,
-    ContentLabel.flashingLights: ContentFilterPreference.warn,
-    ContentLabel.spoiler: ContentFilterPreference.warn,
-    ContentLabel.misleading: ContentFilterPreference.warn,
-  };
-
   /// Whether the service has been initialized.
   bool get isInitialized => _initialized;
 
@@ -153,17 +182,17 @@ class ContentFilterService extends ChangeNotifier {
   /// so every holder of this instance sees the incoming account's filters.
   Future<void> reloadFromStorage() async {
     await initialized;
-    final previous = Map.of(_preferences);
 
+    // Cleanup may already have removed the unbound projection. Keep the last
+    // observed effective snapshot until the reloaded values are reconciled.
     _preferences.clear();
     _initialized = false;
-    _initializeFuture = null;
+    _initializeFuture = _initialize(captureEffectivePreferences: false);
     await initialized;
-
-    if (!mapEquals(previous, _preferences)) notifyListeners();
+    await _refreshEffectivePreferences();
   }
 
-  Future<void> _initialize() async {
+  Future<void> _initialize({bool captureEffectivePreferences = true}) async {
     if (_initialized) return;
 
     try {
@@ -215,6 +244,7 @@ class ContentFilterService extends ChangeNotifier {
       _enforceAlwaysFilteredCategories();
       _initialized = true;
     }
+    if (captureEffectivePreferences) _captureEffectivePreferences();
   }
 
   /// Get the preference for a specific content label.
@@ -227,6 +257,13 @@ class ContentFilterService extends ChangeNotifier {
     if (ageRestrictedCategories.contains(label) &&
         !ageVerificationService.isAdultContentVerified) {
       return ContentFilterPreference.hide;
+    }
+    if (_accountPreferences != null) {
+      final value = _accountPreferences.read('content_filter/${label.value}');
+      if (value is String) {
+        return _preferenceFromString(value) ?? _defaultFor(label);
+      }
+      if (_accountPreferences.isBound) return _defaultFor(label);
     }
     return _preferences[label] ?? _defaultFor(label);
   }
@@ -273,7 +310,7 @@ class ContentFilterService extends ChangeNotifier {
       _preferences[label] = ContentFilterPreference.hide;
       if (changed) {
         await _save();
-        notifyListeners();
+        await _refreshEffectivePreferences();
       }
       if (preference != ContentFilterPreference.hide) {
         Log.warning(
@@ -298,14 +335,16 @@ class ContentFilterService extends ChangeNotifier {
       return;
     }
 
-    final previousAdultPreference = adultPlaybackPreference;
-    _preferences[label] = preference;
-    await _save();
-    await _notifyIfAdultPassiveAccessRevoked(
-      label: label,
-      previousAdultPreference: previousAdultPreference,
-    );
-    notifyListeners();
+    if (_accountPreferences != null) {
+      await _accountPreferences.write(
+        'content_filter/${label.value}',
+        preference.name,
+      );
+    } else {
+      _preferences[label] = preference;
+      await _save();
+    }
+    await _refreshEffectivePreferences();
 
     Log.debug(
       'Content filter updated: ${label.displayName} → ${preference.name}',
@@ -341,7 +380,9 @@ class ContentFilterService extends ChangeNotifier {
 
   /// Get all current preferences as a map.
   Map<ContentLabel, ContentFilterPreference> get allPreferences =>
-      Map.unmodifiable(_preferences);
+      Map.unmodifiable({
+        for (final label in ContentLabel.values) label: getPreference(label),
+      });
 
   /// Aggregate the adult-category preferences for generic 18+ media playback.
   ///
@@ -369,15 +410,20 @@ class ContentFilterService extends ChangeNotifier {
   ///
   /// Called when the user un-checks age verification.
   Future<void> lockAdultCategories() async {
-    final previousAdultPreference = adultPlaybackPreference;
-    for (final label in ageRestrictedCategories) {
-      _preferences[label] = ContentFilterPreference.hide;
+    final write = _accountPreferences?.captureWrite();
+    if (write != null) {
+      await write.writeValues({
+        for (final label in ageRestrictedCategories)
+          'content_filter/${label.value}': ContentFilterPreference.hide.name,
+      });
+    } else {
+      for (final label in ageRestrictedCategories) {
+        _preferences[label] = ContentFilterPreference.hide;
+      }
+      await _save();
     }
-    await _save();
-    await _notifyIfAdultPassiveAccessRevoked(
-      previousAdultPreference: previousAdultPreference,
-    );
-    notifyListeners();
+    await _refreshEffectivePreferences();
+    write?.ensureCurrent();
   }
 
   /// Unlock age-restricted categories when the user enables age verification.
@@ -394,16 +440,29 @@ class ContentFilterService extends ChangeNotifier {
   /// explicitly changed to [warn] or [show] are left untouched, so this
   /// never overwrites a deliberate preference.
   Future<void> unlockAdultCategories() async {
+    final write = _accountPreferences?.captureWrite();
+    if (write != null && !ageVerificationService.isAdultContentVerified) return;
+    final promoted = <ContentLabel>{};
     for (final label in ageRestrictedCategories) {
       if (alwaysFilteredCategories.contains(label)) continue;
       if (_adultOptInCategories.contains(label)) continue;
-      if ((_preferences[label] ?? _defaultFor(label)) ==
-          ContentFilterPreference.hide) {
+      final preference = write == null
+          ? _preferences[label] ?? _defaultFor(label)
+          : getPreference(label);
+      if (preference == ContentFilterPreference.hide) promoted.add(label);
+    }
+    if (write != null) {
+      await write.writeValues({
+        for (final label in promoted)
+          'content_filter/${label.value}': ContentFilterPreference.warn.name,
+      });
+    } else {
+      for (final label in promoted) {
         _preferences[label] = ContentFilterPreference.warn;
       }
+      await _save();
     }
-    await _save();
-    notifyListeners();
+    await _refreshEffectivePreferences();
   }
 
   /// Migrate from the old `adult_content_preference` integer.
@@ -492,7 +551,7 @@ class ContentFilterService extends ChangeNotifier {
 
   /// Get the default preference for a given label.
   static ContentFilterPreference _defaultFor(ContentLabel label) {
-    return _defaults[label] ?? ContentFilterPreference.show;
+    return contentFilterDefaults[label] ?? ContentFilterPreference.show;
   }
 
   bool _enforceAlwaysFilteredCategories() {
@@ -506,18 +565,15 @@ class ContentFilterService extends ChangeNotifier {
     return changed;
   }
 
-  Future<void> _notifyIfAdultPassiveAccessRevoked({
+  Future<void>? _notifyIfAdultPassiveAccessRevoked({
     required ContentFilterPreference previousAdultPreference,
-    ContentLabel? label,
-  }) async {
-    if (label != null && !configurableAdultCategories.contains(label)) {
-      return;
-    }
+  }) {
     if (previousAdultPreference != ContentFilterPreference.show ||
-        adultPlaybackPreference == ContentFilterPreference.show) {
-      return;
+        adultPlaybackPreference == ContentFilterPreference.show ||
+        _onAdultMediaAccessRevoked == null) {
+      return null;
     }
-    await _notifyAdultMediaAccessRevoked();
+    return _notifyAdultMediaAccessRevoked();
   }
 
   Future<void> _notifyAdultMediaAccessRevoked() async {

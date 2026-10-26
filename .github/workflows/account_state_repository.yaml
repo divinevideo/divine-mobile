@@ -1,0 +1,27 @@
+# ABOUTME: Validates the shared encrypted account-state repository.
+# ABOUTME: Runs package tests, formatting, analysis, and coverage checks.
+
+name: Account State Repository CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/packages/account_state_repository/**"
+      - ".github/workflows/account_state_repository.yaml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "mobile/packages/account_state_repository/**"
+      - ".github/workflows/account_state_repository.yaml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
+    with:
+      working_directory: "mobile/packages/account_state_repository"
+      flutter_version: "3.47.2"

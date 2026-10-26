@@ -22,6 +22,7 @@ import 'dart:convert';
 
 import 'package:meta/meta.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// One relay's part of a catch-up window that it may have withheld at its
 /// result cap and that has not been read yet: its events at or above
@@ -75,6 +76,26 @@ class DmSyncState {
   /// Creates a [DmSyncState] backed by [_prefs].
   DmSyncState(this._prefs);
   final SharedPreferences _prefs;
+
+  // Instances sharing the native preference cache share the owner queue too.
+  static final _readQueues = Expando<Map<String, Future<void>>>();
+
+  Future<T> _serializeReadState<T>(
+    String owner,
+    Future<T> Function() action,
+  ) {
+    final queues = _readQueues[_prefs] ??= {};
+    final previous = queues[owner] ?? Future<void>.value();
+    final operation = previous.then((_) => action());
+    late final Future<void> settled;
+    settled = operation
+        .then<void>((_) {}, onError: (Object _, StackTrace _) {})
+        .whenComplete(() {
+          if (identical(queues[owner], settled)) queues.remove(owner)?.ignore();
+        });
+    queues[owner] = settled;
+    return operation;
+  }
 
   static const _newestPrefix = 'dm.newestSyncedAt.';
   static const _newestWirePrefix = 'dm.newestWireSyncedAt.';
@@ -641,6 +662,170 @@ class DmSyncState {
             ]),
           );
     if (!saved) throw const DmCatchUpDebtNotSavedException();
+  }
+
+  /// Captures one committed revision and cursor union in the owner's queue.
+  ///
+  /// SharedPreferences changes its cache before native persistence settles.
+  /// Reading inside the queue prevents publishing a refused optimistic value.
+  Future<({int revision, Map<String, int> cursors})> readPublicationSnapshot(
+    String pubkey,
+  ) => _serializeReadState(pubkey, () async {
+    final state = _readState(pubkey);
+    return (
+      revision: state['pending'] == true ? state['revision'] as int : 0,
+      cursors: Map<String, int>.unmodifiable(
+        ((state['cursors'] as Map?) ?? {}).cast<String, int>(),
+      ),
+    );
+  });
+
+  /// Account-lifetime read journal, retained across disposable cache cleanup.
+  static String readStateStorageKey(String pubkey) =>
+      'dm_read_state_v1_$pubkey';
+
+  /// Keys removed only by explicit account-data erasure.
+  static Iterable<String> readStateStorageKeys(String pubkey) => [
+    readStateStorageKey(pubkey),
+    '${readStateStorageKey(pubkey)}_quarantine',
+    '${readStateStorageKey(pubkey)}_quarantine_history',
+  ];
+
+  Map<String, dynamic> _readState(String pubkey) {
+    final raw = _prefs.getString(readStateStorageKey(pubkey));
+    if (raw == null) return {};
+    try {
+      final state = jsonDecode(raw) as Map<String, dynamic>;
+      if (state['revision'] is! int ||
+          state['pending'] is! bool ||
+          state['cursors'] is! Map) {
+        throw const FormatException('Invalid DM read journal');
+      }
+      (state['cursors'] as Map).cast<String, int>().forEach((key, value) {});
+      final boundaries = state['boundaryIds'];
+      if (boundaries != null) {
+        for (final entry in (boundaries as Map).entries) {
+          entry.key as String;
+          (entry.value as List).cast<String>().toSet();
+        }
+      }
+      return state;
+    } on Object catch (error) {
+      Log.warning(
+        'Unreadable DM read journal preserved (${error.runtimeType})',
+        name: 'DmSyncState',
+        category: LogCategory.storage,
+      );
+      return {};
+    }
+  }
+
+  /// Durable revision not yet acknowledged by a relay; zero when idle.
+  int pendingReadRevision(String pubkey) {
+    final state = _readState(pubkey);
+    return state['pending'] == true ? state['revision'] as int : 0;
+  }
+
+  /// Union retained independently of the disposable conversation cache.
+  Map<String, int> readCursors(String pubkey) =>
+      ((_readState(pubkey)['cursors'] as Map?) ?? {}).cast<String, int>();
+
+  /// IDs observed at a retained cursor; null for older timestamp-only journals.
+  Set<String>? readBoundaryMessageIds(String pubkey, String tuple) {
+    final boundary = (_readState(pubkey)['boundaryIds'] as Map?)?[tuple];
+    return boundary == null ? null : (boundary as List).cast<String>().toSet();
+  }
+
+  /// Records the exact read boundaries before changing local cache rows.
+  Future<void> rememberReadCursors(
+    String pubkey,
+    Map<String, int> cursors, {
+    Map<String, Set<String>> boundaryMessageIds = const {},
+  }) => _serializeReadState(pubkey, () async {
+    final state = _readState(pubkey);
+    final boundaries = Map<String, dynamic>.of(
+      (state['boundaryIds'] as Map?)?.cast<String, dynamic>() ?? {},
+    );
+    final merged = Map<String, int>.of(readCursors(pubkey));
+    for (final entry in cursors.entries) {
+      final previous = merged[entry.key] ?? 0;
+      if (entry.value > previous) {
+        merged[entry.key] = entry.value;
+        boundaries.remove(entry.key);
+      }
+      final known = boundaryMessageIds[entry.key];
+      if (known != null && entry.value >= previous) {
+        boundaries[entry.key] = {
+          if (entry.value == previous && boundaries[entry.key] is List)
+            ...(boundaries[entry.key] as List).cast<String>(),
+          ...known,
+        }.toList()..sort();
+      }
+    }
+    await _saveReadState(
+      pubkey,
+      jsonEncode({
+        'revision': (state['revision'] as int? ?? 0) + 1,
+        'pending': true,
+        'cursors': merged,
+        'boundaryIds': boundaries,
+      }),
+    );
+  });
+
+  /// A later read supersedes the publication being acknowledged.
+  Future<void> acknowledgeReadRevision(String pubkey, int revision) =>
+      _serializeReadState(pubkey, () async {
+        if (pendingReadRevision(pubkey) != revision) return;
+        final state = _readState(pubkey)..['pending'] = false;
+        await _saveReadState(pubkey, jsonEncode(state));
+      });
+
+  Future<void> _saveReadState(String pubkey, String value) async {
+    final key = readStateStorageKey(pubkey);
+    final previous = _prefs.getString(key);
+    if (previous != null && _readState(pubkey).isEmpty) {
+      final quarantine = '${key}_quarantine';
+      final quarantined = _prefs.getString(quarantine);
+      if (quarantined == null || quarantined == previous) {
+        await _saveReadPreference(quarantine, previous);
+      } else {
+        final historyKey = '${key}_quarantine_history';
+        final raw = _prefs.getString(historyKey);
+        var history = <String>[];
+        if (raw != null) {
+          try {
+            history = (jsonDecode(raw) as List).cast<String>().toList();
+          } on Object {
+            history = [raw];
+          }
+        }
+        if (!history.contains(previous)) history.add(previous);
+        await _saveReadPreference(historyKey, jsonEncode(history));
+      }
+    }
+    await _saveReadPreference(key, value);
+  }
+
+  Future<void> _saveReadPreference(String key, String value) async {
+    final previous = _prefs.getString(key);
+    try {
+      if (!await _prefs.setString(key, value)) {
+        throw StateError('DM read state was not saved');
+      }
+    } on Object catch (error, stack) {
+      // Restore the eager SharedPreferences cache on rejected or thrown writes.
+      try {
+        if (previous == null) {
+          await _prefs.remove(key);
+        } else {
+          await _prefs.setString(key, previous);
+        }
+      } on Object {
+        // Preserve the original storage failure; rollback updates cache first.
+      }
+      Error.throwWithStackTrace(error, stack);
+    }
   }
 
   /// Removes all sync state for [pubkey]. Called on account switch.

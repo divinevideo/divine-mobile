@@ -4,6 +4,7 @@
 import 'package:app_update_repository/app_update_repository.dart';
 import 'package:db_client/db_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';
@@ -17,6 +18,7 @@ import 'package:openvine/providers/log_message_batcher_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/shorebird_availability_provider.dart';
 import 'package:openvine/providers/startup_performance_provider.dart';
+import 'package:openvine/services/account_state_write_barrier.dart';
 import 'package:openvine/services/crash_reporting_service.dart';
 import 'package:openvine/services/database_corruption_service.dart';
 import 'package:openvine/services/feed_mode_persistence.dart';
@@ -52,7 +54,7 @@ final deviceScopeProvider = Provider<DeviceScope>(
 /// overridden *with values*, their factories (and their `onDispose(db.close)`)
 /// never run, so disposing a container does not tear down the shared instance.
 class DeviceScope {
-  const DeviceScope({
+  DeviceScope({
     required this.database,
     required this.sharedPreferences,
     required this.feedModePersistence,
@@ -67,7 +69,8 @@ class DeviceScope {
     this.installSource = InstallSource.sideload,
     this.shorebirdAvailable = false,
     this.accountOverrides = const [],
-  });
+    AccountStateWriteBarrier? accountStateWrites,
+  }) : accountStateWrites = accountStateWrites ?? AccountStateWriteBarrier();
 
   /// The single open database connection, shared across every container.
   ///
@@ -79,6 +82,9 @@ class DeviceScope {
   final AppDatabase database;
 
   final SharedPreferences sharedPreferences;
+
+  /// Retains local journal drains from disposed account containers.
+  final AccountStateWriteBarrier accountStateWrites;
 
   /// Pending Home writes must share ownership across routes and account swaps.
   final FeedModePersistenceRegistry feedModePersistence;
@@ -146,6 +152,7 @@ class DeviceScope {
   List<Override> get overrides => [
     databaseProvider.overrideWithValue(database),
     sharedPreferencesProvider.overrideWithValue(sharedPreferences),
+    accountStateWriteBarrierProvider.overrideWithValue(accountStateWrites),
     feedModePersistenceRegistryProvider.overrideWithValue(feedModePersistence),
     appVersionProvider.overrideWithValue(appVersion),
     documentsPathProvider.overrideWithValue(documentsPath),

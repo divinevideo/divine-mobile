@@ -647,8 +647,12 @@ void main() {
     testWidgets('hides the line when the viewer turns total loops off', (
       tester,
     ) async {
-      final prefs = MockSharedPreferences();
-      when(() => prefs.getBool(any())).thenReturn(false);
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: false,
+        StatsVisibilityPreferences.showVideoLoopsKey: false,
+        StatsVisibilityPreferences.showPublishedDateKey: false,
+      });
+      final prefs = await SharedPreferences.getInstance();
       await pump(
         tester,
         video: _video(rawTags: {'views': '50000'}),
@@ -687,8 +691,12 @@ void main() {
     testWidgets('skips the author stats lookup while total loops are off', (
       tester,
     ) async {
-      final prefs = MockSharedPreferences();
-      when(() => prefs.getBool(any())).thenReturn(false);
+      SharedPreferences.setMockInitialValues({
+        StatsVisibilityPreferences.showTotalLoopsKey: false,
+        StatsVisibilityPreferences.showVideoLoopsKey: false,
+        StatsVisibilityPreferences.showPublishedDateKey: false,
+      });
+      final prefs = await SharedPreferences.getInstance();
       var lookups = 0;
       await pump(
         tester,

@@ -49,6 +49,10 @@ void main() {
         );
 
         expect(
+          service.getPreference(ContentLabel.flashingLights),
+          ContentFilterPreference.hide,
+        );
+        expect(
           container.read(contentFilterVersionProvider),
           initialVersion + 1,
         );

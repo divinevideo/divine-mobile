@@ -41,6 +41,7 @@ import 'package:openvine/screens/inbox/conversation/dm_video_play_page.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/widgets.dart';
 import 'package:openvine/screens/inbox/dm_display_text.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
+import 'package:openvine/services/auth_service.dart' show AuthState;
 import 'package:openvine/services/dm_video_blur_preference_service.dart';
 import 'package:openvine/services/dm_video_preview_memory.dart';
 import 'package:openvine/services/dm_video_send_service.dart';
@@ -136,7 +137,11 @@ class _FakeVideoSendService extends DmVideoSendService {
 }
 
 class _MockAuthService extends MockAuthService {
-  _MockAuthService(this._pubkey);
+  _MockAuthService(this._pubkey) {
+    when(() => authState).thenReturn(AuthState.authenticated);
+    when(() => authStateStream)
+        .thenAnswer((_) => const Stream<AuthState>.empty());
+  }
   final String _pubkey;
 
   @override

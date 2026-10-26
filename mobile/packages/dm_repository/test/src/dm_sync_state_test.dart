@@ -1,6 +1,8 @@
 // ABOUTME: Tests for DmSyncState — persistence of per-pubkey DM sync
 // ABOUTME: boundaries (newestSyncedAt / oldestSyncedAt) in SharedPreferences.
 
+import 'dart:convert';
+
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -40,6 +42,161 @@ void main() {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       prefs = await SharedPreferences.getInstance();
       state = DmSyncState(prefs);
+    });
+
+    group('rememberReadCursors (repeated corruption)', () {
+      test(
+        'damaged history and repeat recovery preserve every source',
+        () async {
+          final key = DmSyncState.readStateStorageKey(pkA);
+          await prefs.setString('${key}_quarantine', '{first');
+          await prefs.setString(
+            '${key}_quarantine_history',
+            '{damaged-archive',
+          );
+          for (var i = 0; i < 2; i++) {
+            await prefs.setString(key, '{second');
+            await state.rememberReadCursors(pkA, {'tuple': 200});
+          }
+          expect(prefs.getString('${key}_quarantine'), '{first');
+          expect(jsonDecode(prefs.getString('${key}_quarantine_history')!), [
+            '{damaged-archive',
+            '{second',
+          ]);
+          expect(state.readCursors(pkA), {'tuple': 200});
+        },
+      );
+
+      test(
+        'refused history leaves the current and prior source intact',
+        () async {
+          final key = DmSyncState.readStateStorageKey(pkA);
+          await prefs.setString(key, '{second');
+          await prefs.setString('${key}_quarantine', '{first');
+          final original = SharedPreferencesStorePlatform.instance;
+          addTearDown(() => SharedPreferencesStorePlatform.instance = original);
+          SharedPreferencesStorePlatform.instance = _RefusingStore.withData({});
+          await expectLater(
+            state.rememberReadCursors(pkA, {'tuple': 200}),
+            throwsStateError,
+          );
+          expect(prefs.getString(key), '{second');
+          expect(prefs.getString('${key}_quarantine'), '{first');
+          expect(prefs.getString('${key}_quarantine_history'), isNull);
+        },
+      );
+
+      test(
+        'preserves earlier quarantine and recovers the second source',
+        () async {
+          final key = DmSyncState.readStateStorageKey(pkA);
+          await prefs.setString(key, '{first');
+          await state.rememberReadCursors(pkA, {'tuple': 100});
+          await prefs.setString(key, '{second');
+          await state.rememberReadCursors(pkA, {'tuple': 200});
+          expect(state.readCursors(pkA), {'tuple': 200});
+          expect(prefs.getString('${key}_quarantine'), '{first');
+          expect(prefs.getString('${key}_quarantine_history'), '["{second"]');
+          expect(
+            DmSyncState.readStateStorageKeys(pkA),
+            contains('${key}_quarantine_history'),
+          );
+        },
+      );
+    });
+
+    for (final corrupt in [
+      '{',
+      '{"revision":"bad","pending":true,"cursors":[]}',
+    ]) {
+      test(
+        'corrupt read intent is preserved before recovery: $corrupt',
+        () async {
+          final key = DmSyncState.readStateStorageKey(pkA);
+          await prefs.setString(key, corrupt);
+          expect(state.readCursors(pkA), isEmpty);
+          expect(state.pendingReadRevision(pkA), 0);
+          expect(prefs.getString(key), corrupt);
+          await state.rememberReadCursors(pkA, {'tuple': 100});
+          expect(state.readCursors(pkA), {'tuple': 100});
+          expect(prefs.getString('${key}_quarantine'), corrupt);
+        },
+      );
+    }
+
+    test(
+      'boundary IDs survive restart and only merge at their own cursor',
+      () async {
+        await state.rememberReadCursors(
+          pkA,
+          {'tuple': 100},
+          boundaryMessageIds: {
+            'tuple': {'known'},
+          },
+        );
+        await state.rememberReadCursors(
+          pkA,
+          {'tuple': 50},
+          boundaryMessageIds: {
+            'tuple': {'older'},
+          },
+        );
+        expect(DmSyncState(prefs).readBoundaryMessageIds(pkA, 'tuple'), {
+          'known',
+        });
+        await state.rememberReadCursors(
+          pkA,
+          {'tuple': 100},
+          boundaryMessageIds: {
+            'tuple': {'new'},
+          },
+        );
+        expect(state.readBoundaryMessageIds(pkA, 'tuple'), {'known', 'new'});
+        await state.rememberReadCursors(
+          pkA,
+          {'tuple': 200},
+          boundaryMessageIds: {
+            'tuple': {'latest'},
+          },
+        );
+        expect(state.readBoundaryMessageIds(pkA, 'tuple'), {'latest'});
+        expect(state.readCursors(pkA)['tuple'], 200);
+      },
+    );
+
+    test(
+      'read journal survives cache cleanup and stale acknowledgments',
+      () async {
+        await state.rememberReadCursors(pkA, {'tuple': 100});
+        final first = state.pendingReadRevision(pkA);
+        await state.rememberReadCursors(pkA, {'tuple': 50, 'other': 200});
+        await state.acknowledgeReadRevision(pkA, first);
+        expect(state.pendingReadRevision(pkA), greaterThan(first));
+        await state.clear(pkA);
+        await state.clearAll();
+        expect(state.readCursors(pkA), {'tuple': 100, 'other': 200});
+        final revision = state.pendingReadRevision(pkA);
+        await state.acknowledgeReadRevision(pkA, revision);
+        expect(state.pendingReadRevision(pkA), 0);
+        expect(state.readCursors(pkA), {'tuple': 100, 'other': 200});
+        expect(state.readCursors(pkB), isEmpty);
+        expect(
+          DmSyncState.readStateStorageKeys(pkA),
+          contains(DmSyncState.readStateStorageKey(pkA)),
+        );
+      },
+    );
+
+    test('refused read intent restores the preferences cache', () async {
+      final original = SharedPreferencesStorePlatform.instance;
+      addTearDown(() => SharedPreferencesStorePlatform.instance = original);
+      SharedPreferencesStorePlatform.instance = _RefusingStore.withData({});
+      await expectLater(
+        state.rememberReadCursors(pkA, {'tuple': 100}),
+        throwsStateError,
+      );
+      expect(DmSyncState(prefs).readCursors(pkA), isEmpty);
+      expect(state.pendingReadRevision(pkA), 0);
     });
 
     test(

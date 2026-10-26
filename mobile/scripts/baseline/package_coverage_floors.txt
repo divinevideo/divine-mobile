@@ -4,6 +4,7 @@
 # workflow omits min_coverage, since VGV defaults that input to 100. Floors are a
 # MONOTONIC ratchet: they may only RISE (a decrease fails CI vs origin/main). A
 # trailing '# reason' documents an unusual floor. Follow-up to issue #3575.
+account_state_repository 100
 analytics 73
 app_update_repository 89
 app_version_client 76

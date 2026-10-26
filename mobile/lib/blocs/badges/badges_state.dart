@@ -26,7 +26,7 @@ enum BadgeActionStatus {
   /// A remove action is publishing.
   removing,
 
-  /// A local hide action is saving.
+  /// A hide or restore action is syncing.
   hiding,
 
   /// The last mutation completed.
@@ -63,7 +63,7 @@ class BadgesState extends Equatable {
   /// Badge definitions authored by the current user.
   final List<CreatedBadgeViewData> created;
 
-  /// Awards the user dismissed on this device, kept so they can be restored.
+  /// Awards the account dismissed, kept so they can be restored.
   final List<BadgeAwardViewData> hidden;
 
   /// Awards waiting on a decision — offered, not yet accepted or dismissed.

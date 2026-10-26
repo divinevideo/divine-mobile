@@ -454,6 +454,44 @@ class _GatedPubkeySigner implements NostrSigner {
 /// Test double for [DmSyncState] that stores values in memory and captures
 /// [recordSeen] calls for assertions.
 class _FakeDmSyncState implements DmSyncState {
+  @override
+  Future<({int revision, Map<String, int> cursors})> readPublicationSnapshot(
+    String pubkey,
+  ) async => (
+    revision: pendingReadRevision(pubkey),
+    cursors: Map<String, int>.of(readCursors(pubkey)),
+  );
+
+  final Map<String, Map<String, int>> _reads = {};
+  final Map<String, int> _readRevisions = {};
+
+  @override
+  int pendingReadRevision(String pubkey) => _readRevisions[pubkey] ?? 0;
+
+  @override
+  Map<String, int> readCursors(String pubkey) => _reads[pubkey] ?? {};
+
+  @override
+  Future<void> rememberReadCursors(
+    String pubkey,
+    Map<String, int> cursors, {
+    Map<String, Set<String>> boundaryMessageIds = const {},
+  }) async {
+    final read = _reads.putIfAbsent(pubkey, () => {});
+    for (final entry in cursors.entries) {
+      if (entry.value > (read[entry.key] ?? 0)) read[entry.key] = entry.value;
+    }
+    _readRevisions[pubkey] = pendingReadRevision(pubkey) + 1;
+  }
+
+  @override
+  Future<void> acknowledgeReadRevision(String pubkey, int revision) async {
+    if (pendingReadRevision(pubkey) == revision) _readRevisions.remove(pubkey);
+  }
+
+  @override
+  Set<String>? readBoundaryMessageIds(String pubkey, String tuple) => null;
+
   int? newestOverride;
   int? newestWireOverride;
   int? oldestOverride;
@@ -790,7 +828,8 @@ void main() {
     //   * queryEventsDetailed -- send/listener inbox resolution catches its
     //                            throw; RC3 re-declares the answered-empty
     //                            decision explicitly in its own group
-    //   * getAllConversations, both backfills, publishSelfApplicationMarker
+    //   * getAllConversations, both backfills,
+    //     publishSelfApplicationMarkerDetailed
     //                         -- production CATCHES their throw and logs it, so
     //                            removing them keeps the suite green while
     //                            silently running it against an error branch
@@ -883,12 +922,12 @@ void main() {
         ),
       ).thenAnswer((_) async => <String, int>{});
       when(
-        () => mockMessageService.publishSelfApplicationMarker(
+        () => mockMessageService.publishSelfApplicationMarkerDetailed(
           content: any(named: 'content'),
           tags: any(named: 'tags'),
           eventKind: any(named: 'eventKind'),
         ),
-      ).thenAnswer((_) async => true);
+      ).thenAnswer((_) async => SelfApplicationMarkerResult.published);
 
       // Default stub for buildRumor — production sendMessage now calls
       // buildRumor first to enqueue a queue row keyed by the rumor's id
@@ -14272,7 +14311,7 @@ void main() {
             isFalse,
           );
           verifyNever(
-            () => mockMessageService.publishSelfApplicationMarker(
+            () => mockMessageService.publishSelfApplicationMarkerDetailed(
               content: any(named: 'content'),
               tags: any(named: 'tags'),
               eventKind: any(named: 'eventKind'),
@@ -14306,7 +14345,7 @@ void main() {
             isFalse,
           );
           verifyNever(
-            () => mockMessageService.publishSelfApplicationMarker(
+            () => mockMessageService.publishSelfApplicationMarkerDetailed(
               content: any(named: 'content'),
               tags: any(named: 'tags'),
               eventKind: any(named: 'eventKind'),
@@ -14340,7 +14379,7 @@ void main() {
             isFalse,
           );
           verify(
-            () => mockMessageService.publishSelfApplicationMarker(
+            () => mockMessageService.publishSelfApplicationMarkerDetailed(
               content: any(named: 'content'),
               tags: any(named: 'tags'),
               eventKind: any(named: 'eventKind'),
@@ -14366,7 +14405,7 @@ void main() {
           await Future<void>.delayed(const Duration(milliseconds: 20));
 
           final captured = verify(
-            () => mockMessageService.publishSelfApplicationMarker(
+            () => mockMessageService.publishSelfApplicationMarkerDetailed(
               content: captureAny(named: 'content'),
               tags: captureAny(named: 'tags'),
               eventKind: any(named: 'eventKind'),
@@ -14410,7 +14449,7 @@ void main() {
           await Future<void>.delayed(const Duration(milliseconds: 20));
 
           verifyNever(
-            () => mockMessageService.publishSelfApplicationMarker(
+            () => mockMessageService.publishSelfApplicationMarkerDetailed(
               content: any(named: 'content'),
               tags: any(named: 'tags'),
               eventKind: any(named: 'eventKind'),
@@ -14435,7 +14474,7 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 160));
 
         verify(
-          () => mockMessageService.publishSelfApplicationMarker(
+          () => mockMessageService.publishSelfApplicationMarkerDetailed(
             content: any(named: 'content'),
             tags: any(named: 'tags'),
             eventKind: any(named: 'eventKind'),
@@ -14560,7 +14599,7 @@ void main() {
             ),
           ).called(1);
           verify(
-            () => mockMessageService.publishSelfApplicationMarker(
+            () => mockMessageService.publishSelfApplicationMarkerDetailed(
               content: any(named: 'content'),
               tags: any(named: 'tags'),
               eventKind: any(named: 'eventKind'),
@@ -14583,7 +14622,7 @@ void main() {
           ),
         );
         verifyNever(
-          () => mockMessageService.publishSelfApplicationMarker(
+          () => mockMessageService.publishSelfApplicationMarkerDetailed(
             content: any(named: 'content'),
             tags: any(named: 'tags'),
             eventKind: any(named: 'eventKind'),
@@ -14625,7 +14664,7 @@ void main() {
 
           // The only conversation yields no tuple key → empty map → no publish.
           verifyNever(
-            () => mockMessageService.publishSelfApplicationMarker(
+            () => mockMessageService.publishSelfApplicationMarkerDetailed(
               content: any(named: 'content'),
               tags: any(named: 'tags'),
               eventKind: any(named: 'eventKind'),
@@ -14649,7 +14688,7 @@ void main() {
         await Future<void>.delayed(const Duration(milliseconds: 20));
 
         verifyNever(
-          () => mockMessageService.publishSelfApplicationMarker(
+          () => mockMessageService.publishSelfApplicationMarkerDetailed(
             content: any(named: 'content'),
             tags: any(named: 'tags'),
             eventKind: any(named: 'eventKind'),

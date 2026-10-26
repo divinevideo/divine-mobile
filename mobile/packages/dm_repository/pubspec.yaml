@@ -8,6 +8,7 @@ environment:
   sdk: ^3.11.0
 
 dependencies:
+  account_state_repository:
   crypto: ^3.0.7
   db_client:
     path: ../db_client

@@ -3,14 +3,20 @@
 
 import 'dart:convert';
 
+import 'package:account_state_repository/account_state_repository.dart';
+import 'package:badge_repository/badge_repository.dart';
 import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:creator_sync/creator_sync.dart';
+import 'package:dm_repository/dm_repository.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:notification_repository/notification_repository.dart';
 import 'package:openvine/constants/terms_acceptance_keys.dart';
+import 'package:openvine/features/appearance/repositories/appearance_repository.dart';
 import 'package:openvine/features/hashtag_follows/data/shared_preferences_hashtag_subscription_store.dart';
 import 'package:openvine/models/known_account.dart';
 import 'package:openvine/services/account_label_service.dart';
+import 'package:openvine/services/account_preference_store.dart';
 import 'package:openvine/services/age_verification_service.dart';
 import 'package:openvine/services/audio_sharing_preference_service.dart';
 import 'package:openvine/services/auth/following_prefetch_marker.dart';
@@ -27,7 +33,9 @@ import 'package:openvine/services/curated_lists/curated_list_session_coordinator
 import 'package:openvine/services/curated_lists/prefs_curated_list_store.dart';
 import 'package:openvine/services/divine_host_filter_service.dart';
 import 'package:openvine/services/dm_video_blur_preference_service.dart';
+import 'package:openvine/services/feed_aspect_ratio_preference_service.dart';
 import 'package:openvine/services/language_preference_service.dart';
+import 'package:openvine/services/locale_preference_service.dart';
 import 'package:openvine/services/messages_preference_service.dart';
 import 'package:openvine/services/minor_account_review_status_store.dart';
 import 'package:openvine/services/moderation_label_service.dart';
@@ -35,6 +43,7 @@ import 'package:openvine/services/relay_discovery_service.dart';
 import 'package:openvine/services/saved_sounds_service.dart';
 import 'package:openvine/services/seen_videos_service.dart';
 import 'package:openvine/services/sound_library_service.dart';
+import 'package:openvine/services/stats_visibility_preferences.dart';
 import 'package:openvine/services/subtitle_language_preference_service.dart';
 import 'package:openvine/services/video_provenance_filter_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
@@ -48,11 +57,15 @@ import 'package:unified_logger/unified_logger.dart';
 /// detects identity changes and clears user-specific data to prevent
 /// data leakage between accounts.
 class UserDataCleanupService {
-  UserDataCleanupService(this._prefs)
+  UserDataCleanupService(this._prefs, {this.onAccountStateWritesStop})
     : _listSessions = CuratedListSessionCoordinator.forPreferences(_prefs);
 
   final SharedPreferences _prefs;
   final CuratedListSessionCoordinator _listSessions;
+
+  /// Drains account-local journal writers before removing their durable data.
+  /// The provider layer retains close operations even after provider disposal.
+  final Future<void> Function(String owner)? onAccountStateWritesStop;
 
   /// Optional callback invoked during cleanup to clear user-specific
   /// database tables (DMs, conversations, notifications, per-user DAOs).
@@ -204,6 +217,12 @@ class UserDataCleanupService {
     SubtitleLanguagePreferenceService.targetLanguageStorageKey,
     SubtitleLanguagePreferenceService.keepOriginalLanguagesStorageKey,
     AudioSharingPreferenceService.prefsKey,
+    LocalePreferenceService.prefsKey,
+    AppearanceRepository.preferenceKey,
+    FeedAspectRatioPreferenceService.prefsKey,
+    StatsVisibilityPreferences.showTotalLoopsKey,
+    StatsVisibilityPreferences.showVideoLoopsKey,
+    StatsVisibilityPreferences.showPublishedDateKey,
     // Per-category filter choices. The migration flag travels with the
     // preferences it guards: clearing one without the other leaves the next
     // account with an empty map instead of the defaults.
@@ -224,6 +243,15 @@ class UserDataCleanupService {
     ...TermsAcceptanceKeys.all,
   ];
 
+  // Unbound account stores also project typed keys directly, including dynamic
+  // trusted-labeler entries. Classify by key so malformed values are cleared too.
+  static Set<String> _userSpecificKeysIn(SharedPreferences prefs) => {
+    ...userSpecificKeys,
+    ...prefs.getKeys().where(
+      (key) => AccountPreferenceRegistry.accepts(key, null),
+    ),
+  };
+
   /// Checks for retained account preferences after live services have reset.
   ///
   /// Reloading the content filter recreates its completed-migration marker
@@ -231,7 +259,7 @@ class UserDataCleanupService {
   /// state is safe to settle; incomplete markers and retained settings are not.
   /// The marker remains account-scoped and cleanup removes it before reset.
   static bool hasRetainedUserSpecificDataAfterReset(SharedPreferences prefs) {
-    return userSpecificKeys.any((key) {
+    return _userSpecificKeysIn(prefs).any((key) {
       if (!prefs.containsKey(key)) return false;
       return key != ContentFilterService.filterMigratedStorageKey ||
           prefs.get(key) != true ||
@@ -294,7 +322,7 @@ class UserDataCleanupService {
     // No stored pubkey - check if orphaned user data exists. Owner-scoped
     // legacy data may belong to the same account after Remove from Device; keep
     // it only when the preserved owner marker matches the logging-in pubkey.
-    for (final key in userSpecificKeys) {
+    for (final key in _userSpecificKeysIn(_prefs)) {
       if (_prefs.containsKey(key)) {
         return true;
       }
@@ -385,6 +413,10 @@ class UserDataCleanupService {
     )) {
       throw const CuratedListRecoveryException();
     }
+    await onAccountStateWritesStop?.call(userPubkey);
+    // Intent readback can discard optimistic values from native writes that
+    // were still pending. Inspect committed owner data only after their drain.
+    await _prefs.reload();
     await CuratedListRecoveryJournal.invalidateOwner(_prefs, userPubkey);
     var clearedCount = 0;
 
@@ -402,7 +434,7 @@ class UserDataCleanupService {
         legacyOwner: _prefs.getString('current_user_pubkey_hex'),
         deletingOwner: userPubkey,
       );
-      for (final key in userSpecificKeys) {
+      for (final key in _userSpecificKeysIn(_prefs)) {
         await remove(key);
       }
       final draftOwner = _prefs.getString(legacyDraftOwnerKey);
@@ -444,6 +476,27 @@ class UserDataCleanupService {
     await remove(MinorAccountReviewStatusStore.storageKey(userPubkey));
     await remove(MessagesPreferenceService.storageKey(userPubkey));
     await remove(DmVideoBlurPreferenceService.storageKey(userPubkey));
+    for (final key in AccountStateRepository.localAccountKeys(
+      _prefs,
+      userPubkey,
+    )) {
+      await remove(key);
+    }
+    for (final key in BadgeRepository.localAccountKeys(userPubkey)) {
+      await remove(key);
+    }
+    for (final key in DmSyncState.readStateStorageKeys(userPubkey)) {
+      await remove(key);
+    }
+    await remove(NotificationRepository.readStateStorageKey(userPubkey));
+    await remove(AccountPreferenceStore.migrationStorageKey(userPubkey));
+    await remove(
+      AccountPreferenceStore.notificationMigrationStorageKey(userPubkey),
+    );
+    if (_prefs.getString(AccountPreferenceStore.projectionOwnerStorageKey) ==
+        userPubkey) {
+      await remove(AccountPreferenceStore.projectionOwnerStorageKey);
+    }
     await remove(RelayDiscoveryService.cacheStorageKey(userNpub));
 
     await onDatabaseCleanup?.call(
@@ -532,16 +585,16 @@ class UserDataCleanupService {
                   isIdentityChange: pending.isIdentityChange,
                   userPubkey: pending.userPubkey,
                   deleteUserData: pending.deleteUserData,
+                  forgetAccount: pending.forgetAccount,
                 );
-          // Only a full deletion also removes rows kept for a returning
-          // account; an identity-only retry cannot consume a new forget request.
-          if ((!forgetAccount || pending.deleteUserData) &&
-              pending.covers(
-                userPubkey: userPubkey,
-                isIdentityChange: isIdentityChange,
-                deleteUserData: deleteUserData,
-                preserveActiveSession: pending.preserveActiveSession,
-              )) {
+          // Replaying identity cleanup cannot consume a new forget request.
+          if (pending.covers(
+            userPubkey: userPubkey,
+            isIdentityChange: isIdentityChange,
+            deleteUserData: deleteUserData,
+            preserveActiveSession: pending.preserveActiveSession,
+            forgetAccount: forgetAccount,
+          )) {
             return resumedCount;
           }
         }
@@ -563,6 +616,7 @@ class UserDataCleanupService {
             isIdentityChange: isIdentityChange,
             deleteUserData: deleteUserData,
             preserveActiveSession: true,
+            forgetAccount: forgetAccount,
           );
       return preservesScope
           ? await _listSessions.writes.runExclusive(runCleanup)
@@ -604,16 +658,23 @@ class UserDataCleanupService {
       category: LogCategory.auth,
     );
 
-    final requiredCleanup = deleteUserData || isIdentityChange
+    final requiredCleanup = deleteUserData || isIdentityChange || forgetAccount
         ? PendingAccountCleanup(
             userPubkey: userPubkey,
             isIdentityChange: isIdentityChange,
             deleteUserData: deleteUserData,
+            forgetAccount: forgetAccount,
           )
         : null;
     // A refusal must stop before the first cache removal; otherwise a restart
     // would lose the only evidence that database cleanup is still required.
     await requiredCleanup?.record(_prefs);
+    if ((deleteUserData || forgetAccount) && userPubkey != null) {
+      await onAccountStateWritesStop?.call(userPubkey);
+      // The intent's readback may have preceded a held native projection.
+      // Refresh after it settles before enumerating keys or checking ownership.
+      await _prefs.reload();
+    }
 
     int clearedCount = 0;
     final clearedKeys = <String>[];
@@ -654,8 +715,8 @@ class UserDataCleanupService {
       throw const CuratedListRecoveryException();
     }
 
-    // Clear exact-match keys (always).
-    for (final key in userSpecificKeys) {
+    // Clear unscoped account keys, including typed account projections.
+    for (final key in _userSpecificKeysIn(_prefs)) {
       await remove(key);
     }
 
@@ -688,6 +749,34 @@ class UserDataCleanupService {
       }
     }
 
+    // Forgetting an account removes its sync journals without deleting its
+    // retained libraries. An ordinary switch preserves every owner's journal.
+    if ((deleteUserData || forgetAccount) &&
+        userPubkey != null &&
+        userPubkey.isNotEmpty) {
+      for (final key in AccountStateRepository.localAccountKeys(
+        _prefs,
+        userPubkey,
+      )) {
+        await remove(key);
+      }
+      for (final key in BadgeRepository.localAccountKeys(userPubkey)) {
+        await remove(key);
+      }
+      for (final key in DmSyncState.readStateStorageKeys(userPubkey)) {
+        await remove(key);
+      }
+      await remove(NotificationRepository.readStateStorageKey(userPubkey));
+      await remove(AccountPreferenceStore.migrationStorageKey(userPubkey));
+      await remove(
+        AccountPreferenceStore.notificationMigrationStorageKey(userPubkey),
+      );
+      if (_prefs.getString(AccountPreferenceStore.projectionOwnerStorageKey) ==
+          userPubkey) {
+        await remove(AccountPreferenceStore.projectionOwnerStorageKey);
+      }
+    }
+
     // Clear user-specific database tables (DMs, conversations, notifications,
     // and optionally per-user DAO rows when deleteUserData is true)
     if (onDatabaseCleanup != null) {
@@ -714,7 +803,7 @@ class UserDataCleanupService {
         // database cleanup fails can expose the departing account's local DM
         // state to the incoming session. Ordinary same-account logout remains
         // best-effort unless it is explicitly destructive.
-        if (deleteUserData || isIdentityChange) {
+        if (deleteUserData || forgetAccount || isIdentityChange) {
           rethrow;
         }
       }

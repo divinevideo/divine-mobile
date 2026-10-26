@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/notification_preferences.dart';
 import 'package:openvine/notifications/services/notification_refresh_coordinator.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
@@ -227,7 +228,8 @@ final notificationPreferencesServiceProvider =
     Provider<NotificationPreferencesService>((ref) {
       final authService = ref.watch(authServiceProvider);
 
-      return NotificationPreferencesService(
+      final service = NotificationPreferencesService(
+        accountPreferences: ref.watch(accountPreferenceStoreProvider),
         store: ref.watch(notificationPreferencesStoreProvider),
         currentPubkey: () => authService.currentIdentity?.pubkey,
         onStillDirty: (pubkey) {
@@ -250,6 +252,8 @@ final notificationPreferencesServiceProvider =
           return _updateNotificationPreferencesSafely(pushService, prefs);
         },
       );
+      ref.onDispose(service.dispose);
+      return service;
     });
 
 /// Bridges Nostr session readiness to push notification registration.

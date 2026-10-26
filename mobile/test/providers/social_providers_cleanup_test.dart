@@ -224,6 +224,52 @@ void main() {
       }
     });
 
+    for (final removal in ['switch', 'erase', 'forget']) {
+      test('account sync journals respect owner during $removal', () async {
+        for (final owner in [_pubkeyA, _pubkeyB]) {
+          await db.accountSyncDao.writeState(owner, 'dm', {
+            'entries': {'tuple': 'null'},
+          });
+          await db.accountSyncDao.writeNotificationReads(
+            owner,
+            {'raw'},
+            {'raw'},
+            {
+              'group': ['raw'],
+            },
+          );
+        }
+        final subscription = container.listen(
+          userDataCleanupServiceProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        await subscription.read().onDatabaseCleanup!(
+          userPubkey: _pubkeyA,
+          deleteUserData: removal == 'erase',
+          forgetAccount: removal == 'forget',
+        );
+        final kept = removal == 'switch';
+        expect(
+          await db.accountSyncDao.readState(_pubkeyA, 'dm'),
+          kept ? isNotEmpty : isEmpty,
+        );
+        expect(
+          await db.accountSyncDao.readNotificationReads(_pubkeyA),
+          kept ? isNotEmpty : isEmpty,
+        );
+        expect(
+          await db.accountSyncDao.readNotificationMembers(_pubkeyA),
+          kept ? isNotEmpty : isEmpty,
+        );
+        expect(await db.accountSyncDao.readState(_pubkeyB, 'dm'), isNotEmpty);
+        expect(
+          await db.accountSyncDao.readNotificationReads(_pubkeyB),
+          isNotEmpty,
+        );
+      });
+    }
+
     test(
       'destructive cleanup removes only the departing account people-list '
       'follows, and the copies held for them',

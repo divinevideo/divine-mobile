@@ -2,6 +2,7 @@
 // ABOUTME: Separate from LanguagePreferenceService which handles Nostr content
 // tagging
 
+import 'package:openvine/services/account_preference_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -14,8 +15,14 @@ import 'package:unified_logger/unified_logger.dart';
 /// content language for NIP-32 tagging on video events.
 class LocalePreferenceService {
   /// Creates a [LocalePreferenceService] backed by [sharedPreferences].
-  const LocalePreferenceService({required SharedPreferences sharedPreferences})
-    : _prefs = sharedPreferences;
+  const LocalePreferenceService({
+    required SharedPreferences sharedPreferences,
+    AccountPreferenceStore? accountPreferences,
+  }) : _prefs = sharedPreferences,
+       _accountPreferences = accountPreferences;
+
+  final AccountPreferenceStore? _accountPreferences;
+  Stream<void>? get changes => _accountPreferences?.changes;
 
   final SharedPreferences _prefs;
 
@@ -25,7 +32,10 @@ class LocalePreferenceService {
   /// Returns the stored locale code, or `null` if using device default.
   String? getLocale() {
     try {
-      return _prefs.getString(prefsKey);
+      return (_accountPreferences == null
+              ? _prefs.getString(prefsKey)
+              : _accountPreferences.read(prefsKey))
+          as String?;
     } catch (e) {
       Log.error(
         'Error reading app locale preference: $e',
@@ -41,13 +51,18 @@ class LocalePreferenceService {
   /// [localeCode] must be an ISO-639-1 code (e.g. `'en'`, `'es'`, `'tr'`).
   Future<void> setLocale(String localeCode) async {
     try {
-      await _prefs.setString(prefsKey, localeCode);
+      if (_accountPreferences != null) {
+        await _accountPreferences.write(prefsKey, localeCode);
+      } else {
+        await _prefs.setString(prefsKey, localeCode);
+      }
       Log.debug(
         'App locale set to: $localeCode',
         name: 'LocalePreferenceService',
         category: LogCategory.system,
       );
     } catch (e) {
+      if (_accountPreferences != null) rethrow;
       Log.error(
         'Error saving app locale preference: $e',
         name: 'LocalePreferenceService',
@@ -59,13 +74,18 @@ class LocalePreferenceService {
   /// Clears the custom locale, reverting to device default.
   Future<void> clearLocale() async {
     try {
-      await _prefs.remove(prefsKey);
+      if (_accountPreferences != null) {
+        await _accountPreferences.write(prefsKey, null);
+      } else {
+        await _prefs.remove(prefsKey);
+      }
       Log.debug(
         'App locale cleared, using device default',
         name: 'LocalePreferenceService',
         category: LogCategory.system,
       );
     } catch (e) {
+      if (_accountPreferences != null) rethrow;
       Log.error(
         'Error clearing app locale preference: $e',
         name: 'LocalePreferenceService',

@@ -4,6 +4,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:account_state_repository/account_state_repository.dart';
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:drift/native.dart';
@@ -12,11 +13,199 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
+import 'package:nostr_sdk/filter.dart' as nostr;
 import 'package:nostr_sdk/relay/query_result.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
+import 'package:nostr_sdk/subscription.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
+
+class _RefusingSeedState extends AccountStateRepository {
+  _RefusingSeedState({
+    required super.nostrClient,
+    required super.sharedPreferences,
+    required super.pubkey,
+    required super.signer,
+    required super.namespace,
+  });
+
+  bool refuseSeeds = false;
+
+  @override
+  Future<void> seed(Map<String, Object?> values) {
+    if (refuseSeeds) throw const AccountStateException('storage unavailable');
+    return super.seed(values);
+  }
+}
+
+class _ObservedAccountSyncDao extends AccountSyncDao {
+  _ObservedAccountSyncDao(super.attachedDatabase);
+  bool observeNextWrite = false;
+  final entered = Completer<void>();
+  final committed = Completer<void>();
+  final abort = Completer<void>();
+  final ordering = <String>[];
+  bool holdLegacyWrite = true;
+  final legacyEntered = Completer<void>();
+  final legacyRelease = Completer<void>();
+  @override
+  Future<void> writeState(
+    String owner,
+    String namespace,
+    Map<String, Map<String, String>> sections,
+  ) async {
+    final legacy =
+        entered.isCompleted && (sections['entries']?.isNotEmpty ?? false);
+    if (legacy) ordering.add('legacy seed');
+    final write = super.writeState(owner, namespace, sections);
+    if (legacy && holdLegacyWrite) {
+      holdLegacyWrite = false;
+      legacyEntered.complete();
+      await write;
+      await legacyRelease.future;
+      return;
+    }
+    if (!observeNextWrite) return write;
+    observeNextWrite = false;
+    entered.complete();
+    ordering.add('outside issued');
+    // A failed test can release the queue in finally. Success must await the
+    // actual shared-Drift write; there is no elapsed-time race or fake adapter.
+    await Future.any([
+      write,
+      abort.future.then((_) => throw StateError('test aborted')),
+    ]);
+    ordering.add('outside committed');
+    committed.complete();
+  }
+}
+
+class _ReadState extends DmSyncState {
+  _ReadState(super._prefs);
+  bool blockNext = false;
+  final entered = Completer<void>();
+  final release = Completer<void>();
+  @override
+  Future<void> rememberReadCursors(
+    String pubkey,
+    Map<String, int> cursors, {
+    Map<String, Set<String>> boundaryMessageIds = const {},
+  }) async {
+    if (blockNext) {
+      blockNext = false;
+      entered.complete();
+      await release.future;
+    }
+    await super.rememberReadCursors(
+      pubkey,
+      cursors,
+      boundaryMessageIds: boundaryMessageIds,
+    );
+  }
+}
+
+class _OverlapDao extends ConversationsDao {
+  _OverlapDao(super.attachedDatabase);
+  static final _transactionZone = Object();
+  bool holdNextDismissal = false;
+  final dismissalEntered = Completer<void>();
+  final dismissalRelease = Completer<void>();
+
+  @override
+  Future<void> applySyncedDismissal(
+    String id, {
+    required String ownerPubkey,
+    required bool dismissed,
+    int boundaryTimestamp = 0,
+    Set<String> knownMessageIds = const {},
+  }) async {
+    if (holdNextDismissal) {
+      holdNextDismissal = false;
+      dismissalEntered.complete();
+      await dismissalRelease.future;
+    }
+    await super.applySyncedDismissal(
+      id,
+      ownerPubkey: ownerPubkey,
+      dismissed: dismissed,
+      boundaryTimestamp: boundaryTimestamp,
+      knownMessageIds: knownMessageIds,
+    );
+  }
+
+  bool holdNextCapture = false;
+  final captureEntered = Completer<void>();
+  final captureRelease = Completer<void>();
+
+  @override
+  Future<({int timestamp, Set<String> knownMessageIds})?>
+  captureDismissalBoundary(String id, {required String ownerPubkey}) async {
+    final boundary = await super.captureDismissalBoundary(
+      id,
+      ownerPubkey: ownerPubkey,
+    );
+    if (holdNextCapture) {
+      holdNextCapture = false;
+      captureEntered.complete();
+      await captureRelease.future;
+    }
+    return boundary;
+  }
+
+  bool holdNextLegacyQuery = false;
+  final legacyQueryEntered = Completer<void>();
+  final legacyQueryRelease = Completer<void>();
+  bool holdNextTransaction = false;
+  bool transactionHeld = false;
+  final entered = Completer<void>();
+  final release = Completer<void>();
+  final outsideQueryStarted = Completer<void>();
+
+  @override
+  Future<T> runInTransaction<T>(Future<T> Function() action) => runZoned(
+    () => super.runInTransaction(() async {
+      if (holdNextTransaction) {
+        holdNextTransaction = false;
+        await super.getAllConversations(ownerPubkey: _owner);
+        transactionHeld = true;
+        entered.complete();
+        await release.future;
+      }
+      return action();
+    }),
+    zoneValues: {_transactionZone: true},
+  );
+
+  @override
+  Future<List<ConversationRow>> getAllConversations({
+    int? limit,
+    int? offset,
+    String? ownerPubkey,
+  }) {
+    final result = super.getAllConversations(
+      limit: limit,
+      offset: offset,
+      ownerPubkey: ownerPubkey,
+    );
+    if (holdNextLegacyQuery) {
+      holdNextLegacyQuery = false;
+      return () async {
+        final rows = await result;
+        legacyQueryEntered.complete();
+        await legacyQueryRelease.future;
+        return rows;
+      }();
+    }
+    if (transactionHeld && Zone.current[_transactionZone] != true) {
+      if (!outsideQueryStarted.isCompleted) outsideQueryStarted.complete();
+      // Only a failed regression needs this escape hatch: the real outside
+      // DB query remains blocked until the ingestion transaction commits.
+      return result.timeout(const Duration(seconds: 1));
+    }
+    return result;
+  }
+}
 
 const _owner =
     'a4f5c1b2d3e4f5061728394a5b6c7d8e9f0a1b2c3d4e5f60718293a4b5c6d7e8';
@@ -31,6 +220,7 @@ const _baseCreatedAt = 1700000000;
 void main() {
   setUpAll(() {
     registerFallbackValue(Duration.zero);
+    registerFallbackValue(nostr.Filter());
   });
 
   // Drives the real ConversationsDao against a real database. The mock suite
@@ -42,13 +232,15 @@ void main() {
     'read-cursor retry for a marker that arrives before its conversation',
     () {
       late AppDatabase db;
-      late ConversationsDao conversationsDao;
+      late _OverlapDao conversationsDao;
+      late AccountStateRepository accountState;
       late DirectMessagesDao messagesDao;
       late _MockNostrClient nostrClient;
       late StreamController<Event> relay;
       late DmRepository repository;
       late Map<String, Event> rumorByWrapId;
-      late DmSyncState syncState;
+      late _ReadState syncState;
+      late void Function(StoredEventsEnd) endStoredEvents;
 
       /// The conversation the marker names — deliberately not created yet.
       final participants = [_owner, _peer]..sort();
@@ -56,12 +248,12 @@ void main() {
 
       setUp(() async {
         SharedPreferences.setMockInitialValues(<String, Object>{});
-        syncState = DmSyncState(await SharedPreferences.getInstance());
+        syncState = _ReadState(await SharedPreferences.getInstance());
         db = AppDatabase.test(NativeDatabase.memory());
-        conversationsDao = ConversationsDao(db);
+        conversationsDao = _OverlapDao(db);
         messagesDao = DirectMessagesDao(db);
         nostrClient = _MockNostrClient();
-        relay = StreamController<Event>();
+        relay = StreamController<Event>.broadcast();
         rumorByWrapId = <String, Event>{};
         conversationId = DmRepository.computeConversationId(participants);
 
@@ -114,23 +306,37 @@ void main() {
             onStoredEventsStart: any(named: 'onStoredEventsStart'),
             onStoredEventsEnd: any(named: 'onStoredEventsEnd'),
           ),
-        ).thenAnswer((_) => relay.stream);
+        ).thenAnswer((call) {
+          final ended = call.namedArguments[#onStoredEventsEnd];
+          if (ended is void Function(StoredEventsEnd)) endStoredEvents = ended;
+          return relay.stream;
+        });
 
+        accountState = _RefusingSeedState(
+          nostrClient: nostrClient,
+          sharedPreferences: await SharedPreferences.getInstance(),
+          pubkey: _owner,
+          signer: () => LocalNostrSigner(_privateKey),
+          namespace: 'divine/dm-dismissals/v1',
+        );
         repository = DmRepository(
           nostrClient: nostrClient,
           directMessagesDao: messagesDao,
           conversationsDao: conversationsDao,
           userPubkey: _owner,
           syncState: syncState,
+          accountStateRepository: accountState,
           signer: LocalNostrSigner(_privateKey),
           rumorDecryptor: (_, giftWrap) async => rumorByWrapId[giftWrap.id],
           nip04Decryptor: (_, ciphertext) async => ciphertext,
         );
         await repository.startListening();
+        await repository.flushPendingReadState();
       });
 
       tearDown(() async {
         await repository.stopListening();
+        await accountState.close();
         await relay.close();
         await db.close();
       });
@@ -229,6 +435,483 @@ void main() {
         );
         return rows.where((r) => r.id == conversationId).firstOrNull;
       }
+
+      test(
+        'post-commit dismissal failure keeps message sync boundaries',
+        () async {
+          endStoredEvents(const StoredEventsEnd(deliveredEventCount: 0));
+          await pumpEventQueue();
+          await conversationsDao.upsertConversation(
+            id: conversationId,
+            participantPubkeys: jsonEncode(participants),
+            isGroup: false,
+            createdAt: _baseCreatedAt,
+            lastMessageTimestamp: _baseCreatedAt + 100,
+            ownerPubkey: _owner,
+          );
+          await conversationsDao.setDismissed(
+            conversationId,
+            ownerPubkey: _owner,
+            dismissed: true,
+          );
+          (accountState as _RefusingSeedState).refuseSeeds = true;
+          expect(syncState.newestSyncedAt(_owner), isNull);
+          await ingestMessage(
+            wrapId: '4' * 64,
+            rumorId: '5' * 64,
+            sender: _peer,
+            messageAt: _baseCreatedAt + 50,
+          );
+          expect(
+            await messagesDao.getMessageById('5' * 64, ownerPubkey: _owner),
+            isNotNull,
+          );
+          expect(syncState.newestSyncedAt(_owner), _baseCreatedAt + 50);
+          expect(syncState.newestWireSyncedAt(_owner), _baseCreatedAt + 50);
+          expect((await conversation())!.isDismissed, isTrue);
+        },
+      );
+
+      for (final dismiss in [false, true]) {
+        test(
+          'stop fences a pending ${dismiss ? 'dismissal' : 'read'} capture',
+          () async {
+            await ingestConversation(messageAt: _baseCreatedAt + 100);
+            conversationsDao.holdNextCapture = true;
+            final action = dismiss
+                ? repository.setConversationDismissed(
+                    conversationId,
+                    dismissed: true,
+                  )
+                : repository.markConversationAsRead(conversationId);
+            await conversationsDao.captureEntered.future;
+            await repository.stopListening();
+            final prefs = await SharedPreferences.getInstance();
+            for (final key in DmSyncState.readStateStorageKeys(_owner)) {
+              await prefs.remove(key);
+            }
+            conversationsDao.captureRelease.complete();
+            await action;
+            await prefs.reload();
+            expect(syncState.readCursors(_owner), isEmpty);
+            expect(accountState.values, isEmpty);
+            expect((await conversation())!.isRead, isFalse);
+            await repository.startListening();
+            expect(
+              await repository.markConversationAsRead(conversationId),
+              isTrue,
+            );
+            expect(syncState.readCursors(_owner), isNotEmpty);
+          },
+        );
+      }
+
+      test(
+        'owner close drains an issued remote dismissal projection',
+        () async {
+          await ingestConversation(messageAt: _baseCreatedAt + 100);
+          conversationsDao.holdNextDismissal = true;
+          await accountState.setValue(participants.join(','), {
+            'through': _baseCreatedAt + 100,
+            'known': ['f' * 64],
+          });
+          await conversationsDao.dismissalEntered.future;
+          var closed = false;
+          final close = repository.closeLocalReadState().then(
+            (_) => closed = true,
+          );
+          await settle();
+          final closedBeforeWrite = closed;
+          conversationsDao.dismissalRelease.complete();
+          await close;
+          await settle();
+          expect(closedBeforeWrite, isFalse);
+          expect((await conversation())!.isDismissed, isTrue);
+        },
+      );
+
+      test('stop drains an issued local read write', () async {
+        await ingestConversation(messageAt: _baseCreatedAt + 100);
+        syncState.blockNext = true;
+        final read = repository.markConversationAsRead(conversationId);
+        await syncState.entered.future;
+        var stopped = false;
+        final stop = repository.stopListening().then((_) => stopped = true);
+        await settle();
+        final stoppedBeforeWrite = stopped;
+        syncState.release.complete();
+        await read;
+        await stop;
+        expect(stoppedBeforeWrite, isFalse);
+      });
+
+      test(
+        'same-second arrival during durable read persistence remains unread',
+        () async {
+          await ingestConversation(messageAt: _baseCreatedAt + 100);
+          syncState.blockNext = true;
+          final read = repository.markConversationAsRead(conversationId);
+          await syncState.entered.future;
+          await ingestMessage(
+            wrapId: '1' * 64,
+            rumorId: '2' * 64,
+            sender: _peer,
+            messageAt: _baseCreatedAt + 100,
+          );
+          await messagesDao
+              .watchMessagesForConversation(conversationId, ownerPubkey: _owner)
+              .firstWhere((rows) => rows.length == 2)
+              .timeout(const Duration(seconds: 2));
+          syncState.release.complete();
+          expect(await read, isTrue);
+          expect((await conversation())!.isRead, isFalse);
+        },
+      );
+
+      test(
+        'remote timestamp-only marker keeps inherited same-second precision',
+        () async {
+          await ingestConversation(messageAt: _baseCreatedAt + 100);
+          await ingestMessage(
+            wrapId: '1' * 64,
+            rumorId: '2' * 64,
+            sender: _peer,
+            messageAt: _baseCreatedAt + 100,
+          );
+          await deliverReadMarker(
+            wrapId: '4' * 64,
+            rumorId: '5' * 64,
+            readAt: _baseCreatedAt + 100,
+          );
+          expect((await conversation())!.isRead, isTrue);
+        },
+      );
+
+      for (final legacy in [false, true]) {
+        test(
+          '${legacy ? 'NIP-04' : 'NIP-17'} same-second restore stays unread',
+          () async {
+            await ingestConversation(messageAt: _baseCreatedAt + 100);
+            await repository.setConversationDismissed(
+              conversationId,
+              dismissed: true,
+            );
+            await repository.flushPendingReadState();
+            if (legacy) {
+              relay.add(
+                Event.fromJson({
+                  'id': '3' * 64,
+                  'pubkey': _peer,
+                  'created_at': _baseCreatedAt + 100,
+                  'kind': EventKind.directMessage,
+                  'tags': [
+                    ['p', _owner],
+                  ],
+                  'content': 'new legacy message',
+                  'sig': '',
+                }),
+              );
+            } else {
+              await ingestMessage(
+                wrapId: '1' * 64,
+                rumorId: '2' * 64,
+                sender: _peer,
+                messageAt: _baseCreatedAt + 100,
+              );
+            }
+            await messagesDao
+                .watchMessagesForConversation(
+                  conversationId,
+                  ownerPubkey: _owner,
+                )
+                .firstWhere((rows) => rows.length == 2)
+                .timeout(const Duration(seconds: 2));
+            final row = (await conversation())!;
+            expect(row.isDismissed, isFalse);
+            expect(row.isRead, isFalse);
+            await deliverReadMarker(
+              wrapId: '4' * 64,
+              rumorId: '5' * 64,
+              readAt: _baseCreatedAt + 100,
+            );
+            expect((await conversation())!.isRead, isFalse);
+            expect(
+              await repository.markConversationAsRead(conversationId),
+              isTrue,
+            );
+            expect((await conversation())!.isRead, isTrue);
+          },
+        );
+      }
+
+      for (final lifecycle in ['active', 'stop', 'erase']) {
+        test(
+          'legacy ingest never waits on a generic write blocked by its '
+          'Drift transaction ($lifecycle)',
+          () async {
+            final signer = LocalNostrSigner(_privateKey);
+            final owner = (await signer.getPublicKey())!;
+            final participants = [owner, _peer]..sort();
+            conversationId = DmRepository.computeConversationId(participants);
+            await repository.stopListening();
+            await accountState.close();
+            await conversationsDao.upsertConversation(
+              id: conversationId,
+              participantPubkeys: jsonEncode(participants),
+              isGroup: false,
+              createdAt: _baseCreatedAt,
+              lastMessageTimestamp: _baseCreatedAt + 100,
+              ownerPubkey: owner,
+            );
+            await conversationsDao.applySyncedDismissal(
+              conversationId,
+              ownerPubkey: owner,
+              dismissed: true,
+              boundaryTimestamp: _baseCreatedAt + 100,
+              knownMessageIds: {'1' * 64},
+            );
+            const namespace = 'divine/dm-dismissals/v1';
+            await db.accountSyncDao.writeState(_owner, namespace, {
+              'entries': {
+                'other-owner': '{"value":true,"clock":1,"device":"other"}',
+              },
+            });
+            final otherOwnerBefore = await db.accountSyncDao.readState(
+              _owner,
+              namespace,
+            );
+            final journalDao = _ObservedAccountSyncDao(db);
+            final sourceClient = _MockNostrClient();
+            final sources = StreamController<Event>.broadcast();
+            addTearDown(sources.close);
+            when(
+              () => sourceClient.subscribe(any()),
+            ).thenAnswer((_) => sources.stream);
+            when(
+              () => sourceClient.relayStatusStream,
+            ).thenAnswer((_) => const Stream.empty());
+            when(() => sourceClient.readAllEvents(any())).thenAnswer(
+              (_) async => const PagedQueryResult(
+                events: [],
+                isComplete: false,
+                pages: 1,
+              ),
+            );
+            accountState = AccountStateRepository(
+              nostrClient: sourceClient,
+              sharedPreferences: await SharedPreferences.getInstance(),
+              pubkey: owner,
+              signer: () => LocalNostrSigner(_privateKey),
+              namespace: 'divine/dm-dismissals/v1',
+              perFieldSnapshots: true,
+              storage: DriftAccountStateStorage(
+                journalDao,
+                owner: owner,
+                namespace: 'divine/dm-dismissals/v1',
+              ),
+            );
+            await accountState.start();
+            await expectLater(
+              accountState.synchronize(),
+              throwsA(isA<AccountStateException>()),
+            );
+            await accountState.seed({});
+            repository = DmRepository(
+              nostrClient: nostrClient,
+              directMessagesDao: messagesDao,
+              conversationsDao: conversationsDao,
+              userPubkey: owner,
+              syncState: syncState,
+              accountStateRepository: accountState,
+              signer: LocalNostrSigner(_privateKey),
+              rumorDecryptor: (_, wrap) async => rumorByWrapId[wrap.id],
+            );
+            addTearDown(() {
+              if (!conversationsDao.legacyQueryRelease.isCompleted) {
+                conversationsDao.legacyQueryRelease.complete();
+              }
+              if (!conversationsDao.release.isCompleted) {
+                conversationsDao.release.complete();
+              }
+            });
+            conversationsDao.holdNextLegacyQuery = true;
+            await repository.startListening();
+            await conversationsDao.legacyQueryEntered.future;
+            expect(accountState.contains(participants.join(',')), isFalse);
+            conversationsDao.holdNextTransaction = true;
+            final wrapId = 'e' * 64;
+            rumorByWrapId[wrapId] = Event.fromJson({
+              'id': 'f' * 64,
+              'pubkey': _peer,
+              'created_at': _baseCreatedAt + 50,
+              'kind': EventKind.privateDirectMessage,
+              'tags': [
+                ['p', owner],
+              ],
+              'content': 'older message',
+              'sig': '',
+            });
+            relay.add(
+              Event.fromJson({
+                'id': wrapId,
+                'pubkey': _peer,
+                'created_at': _baseCreatedAt + 50,
+                'kind': EventKind.giftWrap,
+                'tags': [
+                  ['p', owner],
+                ],
+                'content': 'wrapped',
+                'sig': '',
+              }),
+            );
+            await conversationsDao.entered.future;
+            journalDao.observeNextWrite = true;
+            final source = (await signer.signEvent(
+              Event(
+                owner,
+                30078,
+                [
+                  ['d', 'divine/dm-dismissals/v1'],
+                ],
+                'opaque received source',
+                createdAt: _baseCreatedAt,
+              ),
+            ))!;
+            expect(source.isValid, isTrue);
+            expect(source.isSigned, isTrue);
+            sources.add(source);
+            await journalDao.entered.future;
+            conversationsDao.release.complete();
+            final committed = messagesDao
+                .watchMessagesForConversation(
+                  conversationId,
+                  ownerPubkey: owner,
+                )
+                .firstWhere((rows) => rows.isNotEmpty);
+            try {
+              // Only a deadlock safety bound; no performance/elapsed-time assertion.
+              await committed.timeout(const Duration(seconds: 30));
+              await journalDao.committed.future;
+              expect(journalDao.abort.isCompleted, isFalse);
+              await journalDao.legacyEntered.future;
+              conversationsDao.transactionHeld = false;
+              conversationsDao.legacyQueryRelease.complete();
+              var drained = false;
+              final drain = (switch (lifecycle) {
+                'stop' => repository.stopListening(),
+                'erase' => repository.closeLocalReadState(),
+                _ => repository.flushPendingReadState(),
+              }).then((_) => drained = true);
+              await pumpEventQueue();
+              expect(
+                drained,
+                isFalse,
+                reason: 'the issued local seed is still held',
+              );
+              journalDao.legacyRelease.complete();
+              await drain;
+              expect(drained, isTrue);
+            } finally {
+              if (!journalDao.abort.isCompleted) journalDao.abort.complete();
+              conversationsDao.transactionHeld = false;
+              if (!conversationsDao.legacyQueryRelease.isCompleted) {
+                conversationsDao.legacyQueryRelease.complete();
+              }
+              if (!journalDao.legacyRelease.isCompleted) {
+                journalDao.legacyRelease.complete();
+              }
+              await repository.flushPendingReadState();
+            }
+            expect(
+              journalDao.ordering,
+              containsAllInOrder([
+                'outside issued',
+                'outside committed',
+                'legacy seed',
+              ]),
+            );
+            final row = await conversationsDao.getConversation(
+              conversationId,
+              ownerPubkey: owner,
+            );
+            expect(row!.isDismissed, isTrue);
+            expect(accountState.value(participants.join(',')), {
+              'through': _baseCreatedAt + 100,
+              'known': ['1' * 64],
+            });
+            await repository.closeLocalReadState();
+            await repository.stopListening();
+            await accountState.close();
+            final restarted = AccountStateRepository(
+              nostrClient: sourceClient,
+              sharedPreferences: await SharedPreferences.getInstance(),
+              pubkey: owner,
+              signer: () => LocalNostrSigner(_privateKey),
+              namespace: 'divine/dm-dismissals/v1',
+              perFieldSnapshots: true,
+              storage: DriftAccountStateStorage(
+                db.accountSyncDao,
+                owner: owner,
+                namespace: 'divine/dm-dismissals/v1',
+              ),
+            );
+            await restarted.seed({});
+            expect(
+              restarted.value(participants.join(',')),
+              accountState.value(participants.join(',')),
+            );
+            await restarted.close();
+            if (lifecycle == 'erase') {
+              await db.accountSyncDao.clearAccount(owner);
+              await messagesDao.deleteAllForOwner(owner);
+              await conversationsDao.deleteAllForOwner(owner);
+              await conversationsDao.clearDismissalsForOwner(owner);
+              expect(
+                await db.accountSyncDao.readState(owner, namespace),
+                isEmpty,
+              );
+              expect(
+                await conversationsDao.getDismissal(
+                  conversationId,
+                  ownerPubkey: owner,
+                ),
+                isNull,
+              );
+            }
+            expect(
+              await db.accountSyncDao.readState(_owner, namespace),
+              otherOwnerBefore,
+            );
+          },
+        );
+      }
+
+      test(
+        'ingest cannot wait behind outside dismissal reconciliation',
+        () async {
+          conversationsDao.holdNextTransaction = true;
+          await ingestConversation(messageAt: _baseCreatedAt + 100);
+          await conversationsDao.entered.future.timeout(
+            const Duration(seconds: 2),
+          );
+          await accountState.setValue(participants.join(','), null);
+          await conversationsDao.outsideQueryStarted.future.timeout(
+            const Duration(seconds: 2),
+          );
+          conversationsDao.release.complete();
+          final committed = messagesDao
+              .watchMessagesForConversation(conversationId, ownerPubkey: _owner)
+              .firstWhere((rows) => rows.isNotEmpty);
+          try {
+            await committed.timeout(const Duration(milliseconds: 300));
+          } finally {
+            // Allow the deliberately timed-out outside query to settle on RED.
+            await committed.timeout(const Duration(seconds: 3));
+            conversationsDao.transactionHeld = false;
+            await repository.flushPendingReadState();
+          }
+        },
+      );
 
       test(
         'a marker landing before its conversation applies when the '
