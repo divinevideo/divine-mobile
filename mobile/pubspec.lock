@@ -2286,10 +2286,10 @@ packages:
     dependency: transitive
     description:
       name: sqflite_common_ffi
-      sha256: "9faa2fedc5385ef238ce772589f7718c24cdddd27419b609bb9c6f703ea27988"
+      sha256: cd0c7f7de39a08f2d54ef144d9058c46eca8461879aaa648025643455c1e5a20
       url: "https://pub.dev"
     source: hosted
-    version: "2.3.6"
+    version: "2.4.0+3"
   sqflite_common_ffi_web:
     dependency: transitive
     description:
