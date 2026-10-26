@@ -4943,6 +4943,7 @@
   "videoEditorShapeMaskCornersLabel": "Góc",
   "videoEditorShapeMaskCornersSquare": "Vuông",
   "videoEditorShapeMaskCornersRound": "Bo tròn",
+  "videoEditorShapeMaskBackgroundLabel": "Nền",
   "videoEditorChromaKeyAutoDetect": "Tự động nhận diện",
   "videoEditorChromaKeyPresetGreen": "Xanh lá",
   "videoEditorChromaKeyPresetBlue": "Xanh dương",

@@ -4094,6 +4094,7 @@
   "videoEditorShapeMaskCornersLabel": "Esquinas",
   "videoEditorShapeMaskCornersSquare": "Rectas",
   "videoEditorShapeMaskCornersRound": "Redondeadas",
+  "videoEditorShapeMaskBackgroundLabel": "Fondo",
   "videoEditorChromaKeyAutoDetect": "Detectar automáticamente",
   "videoEditorChromaKeyPresetGreen": "Verde",
   "videoEditorChromaKeyPresetBlue": "Azul",

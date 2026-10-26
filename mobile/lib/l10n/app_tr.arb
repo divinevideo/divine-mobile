@@ -4094,6 +4094,7 @@
   "videoEditorShapeMaskCornersLabel": "Köşeler",
   "videoEditorShapeMaskCornersSquare": "Köşeli",
   "videoEditorShapeMaskCornersRound": "Yuvarlak",
+  "videoEditorShapeMaskBackgroundLabel": "Arka plan",
   "videoEditorChromaKeyAutoDetect": "Otomatik algıla",
   "videoEditorChromaKeyPresetGreen": "Yeşil",
   "videoEditorChromaKeyPresetBlue": "Mavi",

@@ -4094,6 +4094,7 @@
   "videoEditorShapeMaskCornersLabel": "الزوايا",
   "videoEditorShapeMaskCornersSquare": "مربعة",
   "videoEditorShapeMaskCornersRound": "مستديرة",
+  "videoEditorShapeMaskBackgroundLabel": "الخلفية",
   "videoEditorChromaKeyAutoDetect": "كشف تلقائي",
   "videoEditorChromaKeyPresetGreen": "أخضر",
   "videoEditorChromaKeyPresetBlue": "أزرق",

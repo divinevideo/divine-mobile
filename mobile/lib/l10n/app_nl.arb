@@ -4094,6 +4094,7 @@
   "videoEditorShapeMaskCornersLabel": "Hoeken",
   "videoEditorShapeMaskCornersSquare": "Recht",
   "videoEditorShapeMaskCornersRound": "Rond",
+  "videoEditorShapeMaskBackgroundLabel": "Achtergrond",
   "videoEditorChromaKeyAutoDetect": "Automatisch detecteren",
   "videoEditorChromaKeyPresetGreen": "Groen",
   "videoEditorChromaKeyPresetBlue": "Blauw",

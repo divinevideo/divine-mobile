@@ -9312,6 +9312,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => '丸';
 
   @override
+  String get videoEditorShapeMaskBackgroundLabel => '背景';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => '自動検出';
 
   @override

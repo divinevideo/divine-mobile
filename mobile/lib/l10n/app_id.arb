@@ -4094,6 +4094,7 @@
   "videoEditorShapeMaskCornersLabel": "Sudut",
   "videoEditorShapeMaskCornersSquare": "Siku",
   "videoEditorShapeMaskCornersRound": "Bulat",
+  "videoEditorShapeMaskBackgroundLabel": "Latar",
   "videoEditorChromaKeyAutoDetect": "Deteksi otomatis",
   "videoEditorChromaKeyPresetGreen": "Hijau",
   "videoEditorChromaKeyPresetBlue": "Biru",

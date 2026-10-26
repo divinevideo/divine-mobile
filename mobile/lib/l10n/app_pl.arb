@@ -4094,6 +4094,7 @@
   "videoEditorShapeMaskCornersLabel": "Rogi",
   "videoEditorShapeMaskCornersSquare": "Proste",
   "videoEditorShapeMaskCornersRound": "Zaokrąglone",
+  "videoEditorShapeMaskBackgroundLabel": "Tło",
   "videoEditorChromaKeyAutoDetect": "Wykryj automatycznie",
   "videoEditorChromaKeyPresetGreen": "Zielony",
   "videoEditorChromaKeyPresetBlue": "Niebieski",

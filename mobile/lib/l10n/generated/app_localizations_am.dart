@@ -9562,6 +9562,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'የተጠጋጋ';
 
   @override
+  String get videoEditorShapeMaskBackgroundLabel => 'ዳራ';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'በራስ-ሰር ለይ';
 
   @override

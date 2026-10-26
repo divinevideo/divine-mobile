@@ -4943,6 +4943,7 @@
   "videoEditorShapeMaskCornersLabel": "边角",
   "videoEditorShapeMaskCornersSquare": "直角",
   "videoEditorShapeMaskCornersRound": "圆角",
+  "videoEditorShapeMaskBackgroundLabel": "背景",
   "videoEditorChromaKeyAutoDetect": "自动识别",
   "videoEditorChromaKeyPresetGreen": "绿色",
   "videoEditorChromaKeyPresetBlue": "蓝色",

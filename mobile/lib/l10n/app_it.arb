@@ -4094,6 +4094,7 @@
   "videoEditorShapeMaskCornersLabel": "Angoli",
   "videoEditorShapeMaskCornersSquare": "Squadrati",
   "videoEditorShapeMaskCornersRound": "Arrotondati",
+  "videoEditorShapeMaskBackgroundLabel": "Sfondo",
   "videoEditorChromaKeyAutoDetect": "Rilevamento automatico",
   "videoEditorChromaKeyPresetGreen": "Verde",
   "videoEditorChromaKeyPresetBlue": "Blu",

@@ -355,6 +355,23 @@ void main() {
       expect(masked.copyWith(id: 'c2').mask, mask);
       expect(masked.copyWith(clearMask: true).mask, isNull);
     });
+
+    test('keeps its background color through JSON and loses it with the '
+        'mask', () {
+      const pink = Color(0xFFFF7FAF);
+      final colored = clip(
+        '/videos/clip.mp4',
+      ).copyWith(mask: mask, maskBackgroundColor: pink);
+
+      expect(
+        DivineVideoClip.fromJson(
+          colored.toJson(),
+          '/videos',
+        ).maskBackgroundColor,
+        pink,
+      );
+      expect(colored.copyWith(clearMask: true).maskBackgroundColor, isNull);
+    });
   });
 
   group('DivineVideoClip.minTrimStart', () {

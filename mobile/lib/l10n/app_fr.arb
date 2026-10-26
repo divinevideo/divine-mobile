@@ -4094,6 +4094,7 @@
   "videoEditorShapeMaskCornersLabel": "Coins",
   "videoEditorShapeMaskCornersSquare": "Carrés",
   "videoEditorShapeMaskCornersRound": "Arrondis",
+  "videoEditorShapeMaskBackgroundLabel": "Arrière-plan",
   "videoEditorChromaKeyAutoDetect": "Détection auto",
   "videoEditorChromaKeyPresetGreen": "Vert",
   "videoEditorChromaKeyPresetBlue": "Bleu",

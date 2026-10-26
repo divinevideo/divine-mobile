@@ -9696,6 +9696,9 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'Bulat';
 
   @override
+  String get videoEditorShapeMaskBackgroundLabel => 'Latar';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Deteksi otomatis';
 
   @override

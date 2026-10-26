@@ -9703,6 +9703,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'Yuvarlak';
 
   @override
+  String get videoEditorShapeMaskBackgroundLabel => 'Arka plan';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Otomatik algıla';
 
   @override

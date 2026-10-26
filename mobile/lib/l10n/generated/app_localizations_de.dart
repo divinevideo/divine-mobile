@@ -9908,6 +9908,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'Rund';
 
   @override
+  String get videoEditorShapeMaskBackgroundLabel => 'Hintergrund';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Automatisch erkennen';
 
   @override

@@ -4943,6 +4943,7 @@
   "videoEditorShapeMaskCornersLabel": "Penjuru",
   "videoEditorShapeMaskCornersSquare": "Bersegi",
   "videoEditorShapeMaskCornersRound": "Bulat",
+  "videoEditorShapeMaskBackgroundLabel": "Latar belakang",
   "videoEditorChromaKeyAutoDetect": "Kesan automatik",
   "videoEditorChromaKeyPresetGreen": "Hijau",
   "videoEditorChromaKeyPresetBlue": "Biru",

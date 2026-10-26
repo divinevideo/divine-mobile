@@ -4094,6 +4094,7 @@
   "videoEditorShapeMaskCornersLabel": "角",
   "videoEditorShapeMaskCornersSquare": "四角",
   "videoEditorShapeMaskCornersRound": "丸",
+  "videoEditorShapeMaskBackgroundLabel": "背景",
   "videoEditorChromaKeyAutoDetect": "自動検出",
   "videoEditorChromaKeyPresetGreen": "グリーン",
   "videoEditorChromaKeyPresetBlue": "ブルー",

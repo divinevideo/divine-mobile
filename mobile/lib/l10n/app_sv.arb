@@ -4094,6 +4094,7 @@
   "videoEditorShapeMaskCornersLabel": "Hörn",
   "videoEditorShapeMaskCornersSquare": "Raka",
   "videoEditorShapeMaskCornersRound": "Rundade",
+  "videoEditorShapeMaskBackgroundLabel": "Bakgrund",
   "videoEditorChromaKeyAutoDetect": "Hitta automatiskt",
   "videoEditorChromaKeyPresetGreen": "Grön",
   "videoEditorChromaKeyPresetBlue": "Blå",

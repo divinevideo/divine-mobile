@@ -9783,6 +9783,9 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'Rundade';
 
   @override
+  String get videoEditorShapeMaskBackgroundLabel => 'Bakgrund';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Hitta automatiskt';
 
   @override

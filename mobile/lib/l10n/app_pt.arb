@@ -4094,6 +4094,7 @@
   "videoEditorShapeMaskCornersLabel": "Cantos",
   "videoEditorShapeMaskCornersSquare": "Retos",
   "videoEditorShapeMaskCornersRound": "Arredondados",
+  "videoEditorShapeMaskBackgroundLabel": "Fundo",
   "videoEditorChromaKeyAutoDetect": "Detetar automaticamente",
   "videoEditorChromaKeyPresetGreen": "Verde",
   "videoEditorChromaKeyPresetBlue": "Azul",
