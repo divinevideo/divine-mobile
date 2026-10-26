@@ -817,12 +817,8 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         name: 'VideoEditorScreen',
         category: LogCategory.video,
       );
-      // 1/3 of screen width, converted to render coordinates
-      final bodySize = _bodySizeNotifier.value;
-      final stickerWidth = min(300.0, (bodySize.width / 3) / _fittedBoxScale);
-
       final layer = WidgetLayer(
-        width: stickerWidth,
+        width: _newStickerWidth,
         widget: VideoEditorSticker(
           sticker: sticker,
           enableLimitCacheSize: false,
@@ -859,15 +855,16 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       name: 'VideoEditorScreen',
       category: LogCategory.video,
     );
-    final bodySize = _bodySizeNotifier.value;
     editor.addLayer(
-      infoStickerWidgetLayer(
-        data,
-        width: min(300, (bodySize.width / 3) / _fittedBoxScale),
-      ),
+      infoStickerWidgetLayer(data, width: _newStickerWidth),
       blockSelectLayer: true,
     );
   }
+
+  /// How wide a new image or info sticker is: a third of the screen, at most
+  /// 300, converted to render coordinates.
+  double get _newStickerWidth =>
+      min(300, (_bodySizeNotifier.value.width / 3) / _fittedBoxScale);
 
   /// Opens the audio visualizer sheet and adds the visualizer picked there.
   ///
