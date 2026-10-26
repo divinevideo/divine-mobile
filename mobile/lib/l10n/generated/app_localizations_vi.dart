@@ -8845,6 +8845,30 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectDrops => 'Giọt nước';
 
   @override
+  String get videoEditorEffectLightLeak => 'Rò sáng';
+
+  @override
+  String get videoEditorEffectSnow => 'Tuyết';
+
+  @override
+  String get videoEditorEffectConfetti => 'Hoa giấy';
+
+  @override
+  String get videoEditorEffectHearts => 'Trái tim';
+
+  @override
+  String get videoEditorEffectSparkles => 'Lấp lánh';
+
+  @override
+  String get videoEditorEffectTiltShift => 'Tilt-shift';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'Mờ phóng to';
+
+  @override
+  String get videoEditorEffectComic => 'Truyện tranh';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Điều chỉnh giọt nước';
 
   @override
@@ -11000,6 +11024,18 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get videoMetadataAudioReuseSubtitle =>
       'Cho phép người khác lưu và dùng lại âm thanh của video này.';
+
+  @override
+  String get videoMetadataVideoReuseTitle =>
+      'Cho phép người khác dùng video này';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'Họ có thể thêm video vào clip của họ và đăng lên, kèm ghi công cho bạn.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'Giấy phép của âm thanh này không cho phép sử dụng lại.';
 
   @override
   String get publishAudioReuseDegradedWarning =>

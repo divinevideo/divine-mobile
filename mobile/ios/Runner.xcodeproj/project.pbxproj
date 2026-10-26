@@ -16,6 +16,12 @@
 		D150030F477BE488B34D632A /* EchoVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F393B56E54D79C2C88D6946 /* EchoVideoEffect.swift */; };
 		F15E7E0E1A2B3C4D5E6F7A02 /* FisheyeVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = F15E7E0E1A2B3C4D5E6F7A01 /* FisheyeVideoEffect.swift */; };
 		6A1C55E0B7D24F3E9A8C2B12 /* DropsVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A1C55E0B7D24F3E9A8C2B11 /* DropsVideoEffect.swift */; };
+		BA67C8A6C7AA24585A7D2F1E /* ShaderVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC2190C6853C240C061F1859 /* ShaderVideoEffect.swift */; };
+		22F65C6F0F818989726F0A3F /* LightLeakVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = F04F53101310A6170DC32453 /* LightLeakVideoEffect.swift */; };
+		471F845B0AF47A6A09F7F2B5 /* ParticlesVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2243434A8B856B12D3B4AAE /* ParticlesVideoEffect.swift */; };
+		960CE7DEA255575B6D5E6016 /* TiltShiftVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3C7A619738432CD04F0D5B2 /* TiltShiftVideoEffect.swift */; };
+		3022EC47C146DD5616AECD1C /* ZoomBlurVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACBE0FACDF9FD247E54F0256 /* ZoomBlurVideoEffect.swift */; };
+		768CADD7E65FAEA3BBE0BDD6 /* ComicVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = DDBBD1276DE7929A25452428 /* ComicVideoEffect.swift */; };
 		AD1A57E0B7D24F3E9A8C2C12 /* AdjustVideoEffect.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD1A57E0B7D24F3E9A8C2C11 /* AdjustVideoEffect.swift */; };
 		4538A593ED259ADE95BE0F82 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9F614F010AAECBECA4DA109 /* Foundation.framework */; };
 		4F86E81FB269DE72E2131EBC /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E86217C65C2A7ED5885FDC2 /* NotificationService.swift */; };
@@ -99,6 +105,12 @@
 		8F393B56E54D79C2C88D6946 /* EchoVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EchoVideoEffect.swift; sourceTree = "<group>"; };
 		F15E7E0E1A2B3C4D5E6F7A01 /* FisheyeVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FisheyeVideoEffect.swift; sourceTree = "<group>"; };
 		6A1C55E0B7D24F3E9A8C2B11 /* DropsVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DropsVideoEffect.swift; sourceTree = "<group>"; };
+		CC2190C6853C240C061F1859 /* ShaderVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShaderVideoEffect.swift; sourceTree = "<group>"; };
+		F04F53101310A6170DC32453 /* LightLeakVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LightLeakVideoEffect.swift; sourceTree = "<group>"; };
+		C2243434A8B856B12D3B4AAE /* ParticlesVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ParticlesVideoEffect.swift; sourceTree = "<group>"; };
+		B3C7A619738432CD04F0D5B2 /* TiltShiftVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TiltShiftVideoEffect.swift; sourceTree = "<group>"; };
+		ACBE0FACDF9FD247E54F0256 /* ZoomBlurVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ZoomBlurVideoEffect.swift; sourceTree = "<group>"; };
+		DDBBD1276DE7929A25452428 /* ComicVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ComicVideoEffect.swift; sourceTree = "<group>"; };
 		AD1A57E0B7D24F3E9A8C2C11 /* AdjustVideoEffect.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AdjustVideoEffect.swift; sourceTree = "<group>"; };
 		0E3A100F5AEE1456DCC23B03 /* Pods-Runner.debug-divineuitests.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug-divineuitests.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug-divineuitests.xcconfig"; sourceTree = "<group>"; };
 		0F9089E8B21DD51EA95A008F /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
@@ -291,6 +303,12 @@
 				8F393B56E54D79C2C88D6946 /* EchoVideoEffect.swift */,
 				F15E7E0E1A2B3C4D5E6F7A01 /* FisheyeVideoEffect.swift */,
 				6A1C55E0B7D24F3E9A8C2B11 /* DropsVideoEffect.swift */,
+				CC2190C6853C240C061F1859 /* ShaderVideoEffect.swift */,
+				F04F53101310A6170DC32453 /* LightLeakVideoEffect.swift */,
+				C2243434A8B856B12D3B4AAE /* ParticlesVideoEffect.swift */,
+				B3C7A619738432CD04F0D5B2 /* TiltShiftVideoEffect.swift */,
+				ACBE0FACDF9FD247E54F0256 /* ZoomBlurVideoEffect.swift */,
+				DDBBD1276DE7929A25452428 /* ComicVideoEffect.swift */,
 				AD1A57E0B7D24F3E9A8C2C11 /* AdjustVideoEffect.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 				1D777AEE1B05282C0928DE2F /* PrivacyInfo.xcprivacy */,
@@ -721,6 +739,12 @@
 				D150030F477BE488B34D632A /* EchoVideoEffect.swift in Sources */,
 				F15E7E0E1A2B3C4D5E6F7A02 /* FisheyeVideoEffect.swift in Sources */,
 				6A1C55E0B7D24F3E9A8C2B12 /* DropsVideoEffect.swift in Sources */,
+				BA67C8A6C7AA24585A7D2F1E /* ShaderVideoEffect.swift in Sources */,
+				22F65C6F0F818989726F0A3F /* LightLeakVideoEffect.swift in Sources */,
+				471F845B0AF47A6A09F7F2B5 /* ParticlesVideoEffect.swift in Sources */,
+				960CE7DEA255575B6D5E6016 /* TiltShiftVideoEffect.swift in Sources */,
+				3022EC47C146DD5616AECD1C /* ZoomBlurVideoEffect.swift in Sources */,
+				768CADD7E65FAEA3BBE0BDD6 /* ComicVideoEffect.swift in Sources */,
 				AD1A57E0B7D24F3E9A8C2C12 /* AdjustVideoEffect.swift in Sources */,
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 			);

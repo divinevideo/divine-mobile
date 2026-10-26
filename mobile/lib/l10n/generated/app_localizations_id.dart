@@ -8796,6 +8796,30 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorEffectDrops => 'Tetesan';
 
   @override
+  String get videoEditorEffectLightLeak => 'Kebocoran Cahaya';
+
+  @override
+  String get videoEditorEffectSnow => 'Salju';
+
+  @override
+  String get videoEditorEffectConfetti => 'Konfeti';
+
+  @override
+  String get videoEditorEffectHearts => 'Hati';
+
+  @override
+  String get videoEditorEffectSparkles => 'Kilauan';
+
+  @override
+  String get videoEditorEffectTiltShift => 'Tilt-Shift';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'Blur Zoom';
+
+  @override
+  String get videoEditorEffectComic => 'Komik';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Sesuaikan tetesan';
 
   @override
@@ -10957,6 +10981,18 @@ class AppLocalizationsId extends AppLocalizations {
   @override
   String get videoMetadataAudioReuseSubtitle =>
       'Izinkan orang lain menyimpan dan menggunakan kembali audio video ini.';
+
+  @override
+  String get videoMetadataVideoReuseTitle =>
+      'Izinkan orang lain memakai video ini';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'Mereka bisa menambahkannya ke klip mereka dan mempostingnya, dengan kredit untukmu.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'Lisensi suara ini tidak mengizinkan penggunaan ulang.';
 
   @override
   String get publishAudioReuseDegradedWarning =>

@@ -8802,6 +8802,30 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectDrops => 'Damlalar';
 
   @override
+  String get videoEditorEffectLightLeak => 'Işık Sızıntısı';
+
+  @override
+  String get videoEditorEffectSnow => 'Kar';
+
+  @override
+  String get videoEditorEffectConfetti => 'Konfeti';
+
+  @override
+  String get videoEditorEffectHearts => 'Kalpler';
+
+  @override
+  String get videoEditorEffectSparkles => 'Pırıltılar';
+
+  @override
+  String get videoEditorEffectTiltShift => 'Tilt-Shift';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'Zoom Bulanıklığı';
+
+  @override
+  String get videoEditorEffectComic => 'Çizgi Roman';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Damlaları ayarla';
 
   @override
@@ -10966,6 +10990,18 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get videoMetadataAudioReuseSubtitle =>
       'Başkalarının bu videonun sesini kaydedip yeniden kullanmasına izin ver.';
+
+  @override
+  String get videoMetadataVideoReuseTitle =>
+      'Başkalarının bu videoyu kullanmasına izin ver';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'Kendi kliplerine ekleyip paylaşabilirler; seni de kaynak olarak gösterirler.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'Bu sesin lisansı yeniden kullanıma izin vermiyor.';
 
   @override
   String get publishAudioReuseDegradedWarning =>

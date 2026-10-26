@@ -50,6 +50,7 @@ class DivineVideoDraft {
     this.publishError,
     this.sourceDraftId,
     this.allowAudioReuse = false,
+    this.allowVideoReuse = false,
     this.expireTime,
     this.scheduledAt,
     this.proofManifestJson,
@@ -79,6 +80,7 @@ class DivineVideoDraft {
     required Set<String> hashtags,
     required String selectedApproach,
     bool allowAudioReuse = false,
+    bool allowVideoReuse = false,
     Duration? expireTime,
     DateTime? scheduledAt,
     String? id,
@@ -111,6 +113,7 @@ class DivineVideoDraft {
       createdAt: now,
       lastModified: now,
       allowAudioReuse: allowAudioReuse,
+      allowVideoReuse: allowVideoReuse,
       expireTime: expireTime,
       scheduledAt: scheduledAt,
       publishStatus: PublishStatus.draft,
@@ -198,6 +201,7 @@ class DivineVideoDraft {
           ? PublishStatus.values.byName(json['publishStatus'] as String)
           : PublishStatus.draft, // Migration: default for old drafts
       allowAudioReuse: json['allowAudioReuse'] as bool? ?? false,
+      allowVideoReuse: json['allowVideoReuse'] as bool? ?? false,
       publishError: json['publishError'] as String?,
       publishAttempts: json['publishAttempts'] as int? ?? 0,
       sourceDraftId: json['sourceDraftId'] as String?,
@@ -334,6 +338,9 @@ class DivineVideoDraft {
   final int publishAttempts;
   final bool allowAudioReuse;
 
+  /// Whether others may add the published video to their clips.
+  final bool allowVideoReuse;
+
   final Map<String, dynamic> editorStateHistory;
   final Map<String, dynamic> editorEditingParameters;
 
@@ -455,6 +462,7 @@ class DivineVideoDraft {
     DateTime? scheduledAt,
     bool clearScheduledAt = false,
     bool? allowAudioReuse,
+    bool? allowVideoReuse,
     int? publishAttempts,
     String? proofManifestJson,
     bool clearProofManifestJson = false,
@@ -492,6 +500,7 @@ class DivineVideoDraft {
     expireTime: expireTime ?? this.expireTime,
     scheduledAt: clearScheduledAt ? null : (scheduledAt ?? this.scheduledAt),
     allowAudioReuse: allowAudioReuse ?? this.allowAudioReuse,
+    allowVideoReuse: allowVideoReuse ?? this.allowVideoReuse,
     publishStatus: publishStatus ?? this.publishStatus,
     publishError: clearPublishError
         ? null
@@ -570,6 +579,7 @@ class DivineVideoDraft {
       lastModified: now,
       expireTime: expireTime,
       allowAudioReuse: allowAudioReuse,
+      allowVideoReuse: allowVideoReuse,
       publishStatus: PublishStatus.draft,
       publishAttempts: 0,
       proofManifestJson: proofManifestJson,
@@ -617,6 +627,7 @@ class DivineVideoDraft {
     if (scheduledAt != null)
       'scheduledAt': scheduledAt!.toUtc().toIso8601String(),
     'allowAudioReuse': allowAudioReuse,
+    'allowVideoReuse': allowVideoReuse,
     'publishStatus': publishStatus.name,
     'publishError': publishError,
     if (sourceDraftId != null) 'sourceDraftId': sourceDraftId,
@@ -724,9 +735,10 @@ class DivineVideoDraft {
   /// Whether the draft has been edited beyond its initial recording.
   ///
   /// Checks metadata and editor state but ignores clips.
-  /// Note: [allowAudioReuse] is intentionally excluded — it is a publish-time
-  /// permission toggle (default `false`), not a content edit, so flipping it
-  /// alone should not mark the draft as edited or trigger autosave.
+  /// Note: [allowAudioReuse] and [allowVideoReuse] are intentionally
+  /// excluded — they are publish-time permission toggles (default `false`),
+  /// not content edits, so flipping one alone should not mark the draft as
+  /// edited or trigger autosave.
   bool get hasBeenEdited =>
       clips.isNotEmpty &&
       (hasTitle ||

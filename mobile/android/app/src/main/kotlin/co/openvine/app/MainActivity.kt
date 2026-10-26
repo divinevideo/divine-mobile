@@ -14,9 +14,14 @@ import android.util.Log
 import android.window.OnBackInvokedCallback
 import co.openvine.app.proofmode.HardwareAttestationNotarizationProvider
 import co.openvine.app.videoeffects.AdjustVideoEffect
+import co.openvine.app.videoeffects.ComicVideoEffect
 import co.openvine.app.videoeffects.DropsVideoEffect
 import co.openvine.app.videoeffects.EchoVideoEffect
 import co.openvine.app.videoeffects.FisheyeVideoEffect
+import co.openvine.app.videoeffects.LightLeakVideoEffect
+import co.openvine.app.videoeffects.ParticlesVideoEffect
+import co.openvine.app.videoeffects.TiltShiftVideoEffect
+import co.openvine.app.videoeffects.ZoomBlurVideoEffect
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -104,6 +109,11 @@ class MainActivity : FlutterFragmentActivity() {
         EchoVideoEffect.register()
         FisheyeVideoEffect.register()
         DropsVideoEffect.register()
+        LightLeakVideoEffect.register()
+        ParticlesVideoEffect.register()
+        TiltShiftVideoEffect.register()
+        ZoomBlurVideoEffect.register()
+        ComicVideoEffect.register()
         AdjustVideoEffect.register()
 
         // Set up Nostr bridge frame attestation channel. Must run after

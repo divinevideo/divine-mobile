@@ -652,6 +652,26 @@ void main() {
         expect(snapshot.customEffects, [echo.custom]);
         expect(snapshot.isEmpty, isFalse);
       });
+
+      test('leaves out a zoom blur on the beat, which follows the music of '
+          'this video', () async {
+        final onBeat = EditorVideoEffect.of(
+          id: 'zoom-1',
+          type: EditorEffectType.zoomBlur,
+          intensity: 0.6,
+          onBeat: true,
+        );
+        when(() => stateManager.activeMeta).thenReturn({
+          VideoEditorConstants.effectsStateHistoryKey: [
+            echo.toMap(),
+            onBeat.toMap(),
+          ],
+        });
+
+        final snapshot = await editor.captureOverlaySnapshot();
+
+        expect(snapshot.customEffects, [echo.custom]);
+      });
     });
   });
 

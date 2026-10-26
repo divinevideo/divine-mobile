@@ -8462,6 +8462,30 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectDrops => '물방울';
 
   @override
+  String get videoEditorEffectLightLeak => '빛 번짐';
+
+  @override
+  String get videoEditorEffectSnow => '눈';
+
+  @override
+  String get videoEditorEffectConfetti => '색종이';
+
+  @override
+  String get videoEditorEffectHearts => '하트';
+
+  @override
+  String get videoEditorEffectSparkles => '반짝이';
+
+  @override
+  String get videoEditorEffectTiltShift => '틸트 시프트';
+
+  @override
+  String get videoEditorEffectZoomBlur => '줌 블러';
+
+  @override
+  String get videoEditorEffectComic => '만화';
+
+  @override
   String get videoEditorDropsSettingsTitle => '물방울 조정';
 
   @override
@@ -10516,6 +10540,17 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get videoMetadataAudioReuseSubtitle =>
       '다른 사람들이 이 동영상의 오디오를 저장하고 재사용할 수 있도록 합니다.';
+
+  @override
+  String get videoMetadataVideoReuseTitle => '다른 사람이 이 영상을 사용하도록 허용';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      '상대방이 자기 클립에 추가해서 게시할 수 있어요. 이때 회원님이 출처로 표시돼요.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      '이 사운드의 라이선스는 재사용을 허용하지 않아요.';
 
   @override
   String get publishAudioReuseDegradedWarning =>

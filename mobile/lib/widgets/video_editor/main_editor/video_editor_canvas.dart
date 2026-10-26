@@ -42,8 +42,10 @@ import 'package:openvine/models/video_editor/clip_snapshot_sync_op.dart';
 import 'package:openvine/models/video_editor/composition_duration.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
+import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
+import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/screens/video_metadata/video_metadata_screen.dart';
@@ -2003,8 +2005,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   ];
 
   /// Hands the effects Divine renders itself to the native player, which
-  /// draws them on the preview (#9708), with their windows moved onto the
-  /// player's timeline.
+  /// draws them on the preview (#9708), with their windows, and the beats of
+  /// an effect on the beat, moved onto the player's timeline.
   ///
   /// The Adjust sets' highlights, shadows, vibrance and sharpening come
   /// last, as in the export (see `adjustVideoEffectsOf`); while the Adjust
@@ -2012,11 +2014,15 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   void _syncFrameEffects() {
     final player = _videoPlayer;
     if (player == null || !mounted) return;
+    final state = context.read<VideoEditorEffectsCubit>().state;
+    final timelineMap = TransitionTimelineMap.fromClips(
+      context.read<ClipEditorBloc>().state.clips,
+    );
     final isTuning =
         context.read<VideoEditorMainBloc>().state.openSubEditor ==
         SubEditorType.tune;
     final effects = [
-      ...context.read<VideoEditorEffectsCubit>().state.previewCustomEffects,
+      ...state.previewCustomEffects,
       ...previewAdjustVideoEffects(
         applied:
             VideoEditorScope.of(
@@ -2035,12 +2041,19 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       player
           .setFrameEffects([
             for (final effect in effects)
-              {
-                'id': effect.id,
-                'params': effect.params,
-                'startUs': onPlayer(effect.startTime),
-                'endUs': onPlayer(effect.endTime),
-              },
+              if (customVideoEffectRenderParams(
+                    effect,
+                    timelineMap,
+                    state.beats,
+                    toPlayer: _composition.timelineToPlayer,
+                  )
+                  case final params?)
+                {
+                  'id': effect.id,
+                  'params': params,
+                  'startUs': onPlayer(effect.startTime),
+                  'endUs': onPlayer(effect.endTime),
+                },
           ])
           .catchError(
             (Object e, StackTrace s) => Log.warning(
@@ -2851,10 +2864,12 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           },
         ),
         BlocListener<VideoEditorEffectsCubit, VideoEditorEffectsState>(
-          listenWhen: (previous, current) => !listEquals(
-            previous.previewCustomEffects,
-            current.previewCustomEffects,
-          ),
+          listenWhen: (previous, current) =>
+              !listEquals(
+                previous.previewCustomEffects,
+                current.previewCustomEffects,
+              ) ||
+              !listEquals(previous.beats, current.beats),
           listener: (context, state) => _syncFrameEffects(),
         ),
         // The Adjust editor previews its highlights, shadows, vibrance and

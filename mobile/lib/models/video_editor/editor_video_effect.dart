@@ -20,6 +20,30 @@ const fisheyeVideoEffectId = 'divine.fisheye';
 /// the native `DropsVideoEffect` on Android, iOS and macOS.
 const dropsVideoEffectId = 'divine.drops';
 
+/// The id Divine's light leak is registered under with pro_video_editor, by
+/// the native `LightLeakVideoEffect` on Android, iOS and macOS.
+const lightLeakVideoEffectId = 'divine.lightLeak';
+
+/// The ids Divine's falling and floating particles are registered under with
+/// pro_video_editor, one per style, all drawn by the native
+/// `ParticlesVideoEffect` on Android, iOS and macOS.
+const snowVideoEffectId = 'divine.snow';
+const confettiVideoEffectId = 'divine.confetti';
+const heartsVideoEffectId = 'divine.hearts';
+const sparklesVideoEffectId = 'divine.sparkles';
+
+/// The id Divine's tilt-shift is registered under with pro_video_editor, by
+/// the native `TiltShiftVideoEffect` on Android, iOS and macOS.
+const tiltShiftVideoEffectId = 'divine.tiltShift';
+
+/// The id Divine's zoom blur is registered under with pro_video_editor, by
+/// the native `ZoomBlurVideoEffect` on Android, iOS and macOS.
+const zoomBlurVideoEffectId = 'divine.zoomBlur';
+
+/// The id Divine's comic look is registered under with pro_video_editor, by
+/// the native `ComicVideoEffect` on Android, iOS and macOS.
+const comicVideoEffectId = 'divine.comic';
+
 /// What an editor effect looks like: one of pro_video_editor's built-in
 /// effects, or one Divine implements natively and registers with it.
 @immutable
@@ -51,12 +75,47 @@ class EditorEffectType {
   /// other; see `DropsEffectSettings` for how they can be set.
   static const drops = EditorEffectType.custom(dropsVideoEffectId);
 
+  /// Light leak: warm light washes in from the edges and drifts across the
+  /// picture, without changing how bright it is.
+  static const lightLeak = EditorEffectType.custom(lightLeakVideoEffectId);
+
+  /// Snow: soft flakes fall over the picture.
+  static const snow = EditorEffectType.custom(snowVideoEffectId);
+
+  /// Confetti: coloured paper pieces tumble down over the picture.
+  static const confetti = EditorEffectType.custom(confettiVideoEffectId);
+
+  /// Hearts: hearts float up over the picture.
+  static const hearts = EditorEffectType.custom(heartsVideoEffectId);
+
+  /// Sparkles: four-pointed glints twinkle over the picture.
+  static const sparkles = EditorEffectType.custom(sparklesVideoEffectId);
+
+  /// Tilt-shift: the top and bottom of the picture blur, so the scene looks
+  /// like a miniature.
+  static const tiltShift = EditorEffectType.custom(tiltShiftVideoEffectId);
+
+  /// Zoom blur: the picture streaks outward from its centre, all the time or
+  /// on the beat.
+  static const zoomBlur = EditorEffectType.custom(zoomBlurVideoEffectId);
+
+  /// Comic: flat poster colours, halftone dots and ink outlines.
+  static const comic = EditorEffectType.custom(comicVideoEffectId);
+
   /// Every type the effects editor offers, in picker order.
   static final List<EditorEffectType> values = List.unmodifiable([
     for (final type in VideoEffectType.values) EditorEffectType.builtIn(type),
     echo,
     fisheye,
     drops,
+    lightLeak,
+    snow,
+    confetti,
+    hearts,
+    sparkles,
+    tiltShift,
+    zoomBlur,
+    comic,
   ]);
 
   /// The built-in effect, or `null` for a custom one.
@@ -71,9 +130,12 @@ class EditorEffectType {
   /// Whether this type flashes; see [isFlashingVideoEffect].
   bool get isFlashing => builtIn != null && isFlashingVideoEffect(builtIn!);
 
-  /// Whether this type can fire on the beat; see [canFireOnBeat]. A custom
-  /// effect plays all through its window.
-  bool get supportsOnBeat => builtIn != null && canFireOnBeat(builtIn!);
+  /// Whether this type can fire on the beat; see [canFireOnBeat]. Of the
+  /// custom effects only the zoom blur has a hit; the others play all through
+  /// their window.
+  bool get supportsOnBeat => builtIn != null
+      ? canFireOnBeat(builtIn!)
+      : customId == zoomBlurVideoEffectId;
 
   @override
   bool operator ==(Object other) =>
@@ -99,16 +161,18 @@ class EditorVideoEffect extends Equatable {
   const EditorVideoEffect({
     required this.id,
     required VideoEffect this.effect,
-    this.onBeat = false,
-  }) : custom = null;
+    bool onBeat = false,
+  }) : custom = null,
+       _onBeat = onBeat;
 
   /// An effect Divine renders natively; its `intensity` param drives it, next
-  /// to any settings of its own.
+  /// to any settings of its own, and its `onBeat` param says whether it fires
+  /// on the beat.
   const EditorVideoEffect.custom({
     required this.id,
     required CustomVideoEffect this.custom,
   }) : effect = null,
-       onBeat = false;
+       _onBeat = false;
 
   /// A new effect of [type] at [intensity], placed from [startTime] until
   /// [endTime]. [onBeat] only applies to a type that
@@ -140,7 +204,12 @@ class EditorVideoEffect extends Equatable {
       id: id,
       custom: CustomVideoEffect(
         id: type.customId!,
-        params: {...settings, intensityParam: intensity},
+        params: {
+          for (final MapEntry(:key, :value) in settings.entries)
+            if (key != onBeatParam) key: value,
+          if (onBeat && type.supportsOnBeat) onBeatParam: true,
+          intensityParam: intensity,
+        },
         startTime: startTime,
         endTime: endTime,
       ),
@@ -188,6 +257,15 @@ class EditorVideoEffect extends Equatable {
   /// The param a custom effect reads its intensity from.
   static const intensityParam = 'intensity';
 
+  /// The param a custom effect that fires on the beat stores `true` under;
+  /// left out when it plays all through its window.
+  static const onBeatParam = 'onBeat';
+
+  /// The param a custom effect on the beat reads its beats from, when it is
+  /// rendered: microseconds after the start of its window, in order. See
+  /// [customVideoEffectRenderParams].
+  static const beatsParam = 'beatsUs';
+
   /// Identifies the effect on the timeline and across undo steps.
   final String id;
 
@@ -197,10 +275,17 @@ class EditorVideoEffect extends Equatable {
   /// The custom effect and its window, or `null` for a built-in one.
   final CustomVideoEffect? custom;
 
+  /// Whether a built-in effect fires on the beat; a custom one keeps it in
+  /// its params.
+  final bool _onBeat;
+
   /// Whether the effect fires on the beats of the video's music instead of
-  /// playing all through its window; see [videoEffectsOnOutput]. Only for a
-  /// type that [EditorEffectType.supportsOnBeat].
-  final bool onBeat;
+  /// playing all through its window; see [videoEffectsOnOutput] and
+  /// [customVideoEffectRenderParams]. Only for a type that
+  /// [EditorEffectType.supportsOnBeat].
+  bool get onBeat => effect != null
+      ? _onBeat
+      : custom!.params[onBeatParam] == true && type.supportsOnBeat;
 
   /// What the effect looks like.
   EditorEffectType get type => effect != null
@@ -259,7 +344,7 @@ class EditorVideoEffect extends Equatable {
       : {customKey: custom!.toMap(), idKey: id};
 
   @override
-  List<Object?> get props => [id, effect, custom, onBeat];
+  List<Object?> get props => [id, effect, custom, _onBeat];
 }
 
 /// Whether an effect of [type] can fire on the beat: the effects with a clear
@@ -278,18 +363,64 @@ bool canFireOnBeat(VideoEffectType type) => switch (type) {
 
 /// [effects] with their windows moved from the editor timeline onto the
 /// exported video, like [videoEffectsOnOutput] for built-in effects.
+///
+/// An effect on the beat fires on the [beats], on the exported video, that
+/// fall in its window, and is left out when none does; see
+/// [customVideoEffectRenderParams].
 List<CustomVideoEffect> customVideoEffectsOnOutput(
   List<CustomVideoEffect> effects,
-  TransitionTimelineMap timelineMap,
-) => [
+  TransitionTimelineMap timelineMap, {
+  List<Duration> beats = const [],
+}) => [
   for (final effect in effects)
-    CustomVideoEffect(
-      id: effect.id,
-      params: effect.params,
-      startTime: timelineMap.editorToOutputOrNull(effect.startTime),
-      endTime: timelineMap.editorToOutputOrNull(effect.endTime),
-    ),
+    if (customVideoEffectRenderParams(effect, timelineMap, beats)
+        case final params?)
+      CustomVideoEffect(
+        id: effect.id,
+        params: params,
+        startTime: timelineMap.editorToOutputOrNull(effect.startTime),
+        endTime: timelineMap.editorToOutputOrNull(effect.endTime),
+      ),
 ];
+
+/// The params a renderer draws [effect] with, its window on the editor
+/// timeline.
+///
+/// An effect that plays all through its window keeps its own. One on the
+/// beat also gets the times it fires at, under
+/// [EditorVideoEffect.beatsParam]: the [beats] of the exported video that fall
+/// in its window, as microseconds after its start. It moves with the time
+/// since it started in the preview as in the export, so the beats are counted
+/// the same way. For a player whose timeline is not the exported video's,
+/// [toPlayer] maps a time on the editor timeline onto the player's, and the
+/// beats are counted on it.
+///
+/// Returns `null` for an effect on the beat without a beat in its window,
+/// which is left out, as a built-in one is.
+Map<String, Object?>? customVideoEffectRenderParams(
+  CustomVideoEffect effect,
+  TransitionTimelineMap timelineMap,
+  List<Duration> beats, {
+  Duration Function(Duration editorTime)? toPlayer,
+}) {
+  if (effect.params[EditorVideoEffect.onBeatParam] != true) {
+    return effect.params;
+  }
+  final editorStart = effect.startTime ?? Duration.zero;
+  final start = timelineMap.editorToOutput(editorStart);
+  final end = timelineMap.editorToOutputOrNull(effect.endTime);
+  final playerStart = toPlayer?.call(editorStart);
+  final offsets = [
+    for (final beat in [...beats]..sort())
+      if (beat >= start && (end == null || beat < end))
+        (playerStart == null
+                ? beat - start
+                : toPlayer!(timelineMap.outputToEditor(beat)) - playerStart)
+            .inMicroseconds,
+  ];
+  if (offsets.isEmpty) return null;
+  return {...effect.params, EditorVideoEffect.beatsParam: offsets};
+}
 
 /// [effects] with their windows moved from the editor timeline onto the
 /// exported video, which an overlap transition makes shorter.

@@ -6228,6 +6228,38 @@
   "@videoEditorEffectDrops": {
     "description": "Name of a video effect: clear glass drops drift over the picture, bend it at their edges and flow into each other when they meet."
   },
+  "videoEditorEffectLightLeak": "Light Leak",
+  "@videoEditorEffectLightLeak": {
+    "description": "Name of a video effect: warm light washes in from the edges of the picture and drifts across it, as when stray light fogs a strip of film."
+  },
+  "videoEditorEffectSnow": "Snow",
+  "@videoEditorEffectSnow": {
+    "description": "Name of a video effect: snowflakes fall over the picture."
+  },
+  "videoEditorEffectConfetti": "Confetti",
+  "@videoEditorEffectConfetti": {
+    "description": "Name of a video effect: coloured paper confetti tumbles down over the picture, as at a party."
+  },
+  "videoEditorEffectHearts": "Hearts",
+  "@videoEditorEffectHearts": {
+    "description": "Name of a video effect: little hearts float up over the picture."
+  },
+  "videoEditorEffectSparkles": "Sparkles",
+  "@videoEditorEffectSparkles": {
+    "description": "Name of a video effect: small four-pointed glints twinkle over the picture."
+  },
+  "videoEditorEffectTiltShift": "Tilt-Shift",
+  "@videoEditorEffectTiltShift": {
+    "description": "Name of a video effect: the top and bottom of the picture are blurred, so the scene looks like a miniature model. Tilt-shift is the photography term for this look."
+  },
+  "videoEditorEffectZoomBlur": "Zoom Blur",
+  "@videoEditorEffectZoomBlur": {
+    "description": "Name of a video effect: the picture streaks outward from its centre, as if the camera zoomed in during the shot."
+  },
+  "videoEditorEffectComic": "Comic",
+  "@videoEditorEffectComic": {
+    "description": "Name of a video effect: the picture looks like a printed comic book, with flat colours, halftone dots and ink outlines."
+  },
   "videoEditorDropsSettingsTitle": "Adjust drops",
   "@videoEditorDropsSettingsTitle": {
     "description": "Header of the expandable card in the video effects editor that holds the settings of the Drops effect."
@@ -8213,6 +8245,18 @@
     "description": "Note under the Flashing Lights content warning, which is locked on because the video uses a flashing effect (strobe, negative flash) from the editor."
   },
   "videoMetadataAudioReuseSubtitle": "Let others save and reuse this video's audio.",
+  "videoMetadataVideoReuseTitle": "Allow others to use this video",
+  "@videoMetadataVideoReuseTitle": {
+    "description": "Label of the switch on the post screen that lets other people add this video to their clip library and use it in their own posts. Off by default."
+  },
+  "videoMetadataVideoReuseSubtitle": "They can add it to their clips and post it. You'll get credit.",
+  "@videoMetadataVideoReuseSubtitle": {
+    "description": "Helper text under the video reuse switch. Tells the creator that others can add the video to their clips and post it, and that the creator is credited publicly in those posts."
+  },
+  "videoMetadataVideoReuseSoundLicenseSubtitle": "This sound's license doesn't allow reuse.",
+  "@videoMetadataVideoReuseSoundLicenseSubtitle": {
+    "description": "Helper text under the video reuse switch when it is disabled because the post's sound comes with a license that forbids derivatives; a reused clip would carry that sound along."
+  },
   "publishAudioReuseDegradedWarning": "Your video is up, but the sound didn't publish. Edit the video to share it.",
   "@publishAudioReuseDegradedWarning": {
     "description": "Snackbar shown after a successful publish when the creator opted into a reusable sound but extracting or publishing it failed, so the video posted without the sharing choice they made."

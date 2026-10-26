@@ -8880,6 +8880,30 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectDrops => 'Droppar';
 
   @override
+  String get videoEditorEffectLightLeak => 'Ljusläcka';
+
+  @override
+  String get videoEditorEffectSnow => 'Snö';
+
+  @override
+  String get videoEditorEffectConfetti => 'Konfetti';
+
+  @override
+  String get videoEditorEffectHearts => 'Hjärtan';
+
+  @override
+  String get videoEditorEffectSparkles => 'Gnistor';
+
+  @override
+  String get videoEditorEffectTiltShift => 'Tilt-shift';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'Zoomoskärpa';
+
+  @override
+  String get videoEditorEffectComic => 'Serie';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Justera droppar';
 
   @override
@@ -11053,6 +11077,17 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get videoMetadataAudioReuseSubtitle =>
       'Låt andra spara och återanvända videons ljud.';
+
+  @override
+  String get videoMetadataVideoReuseTitle => 'Låt andra använda den här videon';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'De kan lägga till den i sina klipp och publicera den, och du krediteras.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'Ljudets licens tillåter inte återanvändning.';
 
   @override
   String get publishAudioReuseDegradedWarning =>

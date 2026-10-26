@@ -1083,6 +1083,13 @@ class VideoEvent {
   /// Whether the creator explicitly marked this video's audio as reusable.
   bool get allowAudioReuse => audioReuseConsent == AudioReuseConsent.granted;
 
+  /// Whether the creator lets others add this video to their clips.
+  ///
+  /// Only the exact `allow_video_reuse=true` marker grants it; an absent or
+  /// malformed marker does not.
+  bool get allowVideoReuse =>
+      _firstNostrTagValue('allow_video_reuse') == 'true';
+
   /// Whether this video has any content warnings.
   bool get hasContentWarning => contentWarningLabels.isNotEmpty;
 

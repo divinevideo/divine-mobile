@@ -8964,6 +8964,30 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectDrops => 'Капки';
 
   @override
+  String get videoEditorEffectLightLeak => 'Светлинен отблясък';
+
+  @override
+  String get videoEditorEffectSnow => 'Сняг';
+
+  @override
+  String get videoEditorEffectConfetti => 'Конфети';
+
+  @override
+  String get videoEditorEffectHearts => 'Сърца';
+
+  @override
+  String get videoEditorEffectSparkles => 'Искри';
+
+  @override
+  String get videoEditorEffectTiltShift => 'Тилт-шифт';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'Зум размазване';
+
+  @override
+  String get videoEditorEffectComic => 'Комикс';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Настройка на капките';
 
   @override
@@ -11155,6 +11179,18 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String get videoMetadataAudioReuseSubtitle =>
       'Позволи на другите да запазват и използват повторно звука на това видео.';
+
+  @override
+  String get videoMetadataVideoReuseTitle =>
+      'Позволи на другите да използват това видео';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'Могат да го добавят към клиповете си и да го публикуват, като те посочат.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'Лицензът на този звук не позволява повторна употреба.';
 
   @override
   String get publishAudioReuseDegradedWarning =>

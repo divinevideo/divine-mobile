@@ -335,6 +335,7 @@ void main() {
           'finalRenderVersion', // stamp on the cached render, not an edit
           'editorEditingParameters', // editor internals, not user-facing edit
           'allowAudioReuse', // publishing option, not edit indicator
+          'allowVideoReuse', // publishing option, not edit indicator
           // Implied by 'description': a mention only exists because the
           // author typed into the caption, which already marks the draft
           // edited. Checking it again could never flip the result.

@@ -8684,6 +8684,30 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectDrops => 'ጠብታዎች';
 
   @override
+  String get videoEditorEffectLightLeak => 'የብርሃን ፍሰት';
+
+  @override
+  String get videoEditorEffectSnow => 'በረዶ';
+
+  @override
+  String get videoEditorEffectConfetti => 'ኮንፈቲ';
+
+  @override
+  String get videoEditorEffectHearts => 'ልቦች';
+
+  @override
+  String get videoEditorEffectSparkles => 'ብልጭታዎች';
+
+  @override
+  String get videoEditorEffectTiltShift => 'ቲልት-ሺፍት';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'የማጉላት ብዥታ';
+
+  @override
+  String get videoEditorEffectComic => 'ኮሚክ';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'ጠብታዎችን አስተካክል';
 
   @override
@@ -10791,6 +10815,17 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get videoMetadataAudioReuseSubtitle =>
       'ሌሎች የዚህን ቪዲዮ ድምፅ እንዲያስቀምጡ እና እንደገና እንዲጠቀሙ ፍቀድ።';
+
+  @override
+  String get videoMetadataVideoReuseTitle => 'ሌሎች ይህን ቪዲዮ እንዲጠቀሙ ፍቀድ';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'ወደ ክሊፖቻቸው ጨምረው መለጠፍ ይችላሉ። እርስዎ ይጠቀሳሉ።';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'የዚህ ድምፅ ፈቃድ እንደገና መጠቀምን አይፈቅድም።';
 
   @override
   String get publishAudioReuseDegradedWarning =>

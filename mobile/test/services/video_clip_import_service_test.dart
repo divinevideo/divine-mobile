@@ -346,7 +346,7 @@ void main() {
 
         expect(result, isA<VideoClipImportSuccess>());
         final success = result as VideoClipImportSuccess;
-        expect(success.clip.id, startsWith('own_video_own-video-event-id_'));
+        expect(success.clip.id, startsWith('video_own-video-event-id_'));
         expect(success.clip.sourceAuthorPubkey, 'own-video-author-pubkey');
         expect(success.clip.sourceEventId, 'own-video-event-id');
         expect(success.clip.sourceAddressableId, isNull);

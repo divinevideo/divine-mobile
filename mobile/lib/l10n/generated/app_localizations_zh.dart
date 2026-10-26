@@ -8371,6 +8371,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectDrops => '水滴';
 
   @override
+  String get videoEditorEffectLightLeak => '漏光';
+
+  @override
+  String get videoEditorEffectSnow => '雪花';
+
+  @override
+  String get videoEditorEffectConfetti => '彩纸屑';
+
+  @override
+  String get videoEditorEffectHearts => '爱心';
+
+  @override
+  String get videoEditorEffectSparkles => '闪光';
+
+  @override
+  String get videoEditorEffectTiltShift => '移轴';
+
+  @override
+  String get videoEditorEffectZoomBlur => '变焦模糊';
+
+  @override
+  String get videoEditorEffectComic => '漫画';
+
+  @override
   String get videoEditorDropsSettingsTitle => '调节水滴';
 
   @override
@@ -10382,6 +10406,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoMetadataAudioReuseSubtitle => '让其他人保存并二次使用这个视频的音频。';
+
+  @override
+  String get videoMetadataVideoReuseTitle => '允许他人使用此视频';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle => '他们可以把它加入自己的片段库并发布，同时会注明你。';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle => '此声音的许可不允许再次使用。';
 
   @override
   String get publishAudioReuseDegradedWarning => '你的视频已发布，但声音未能发布。编辑视频以分享声音。';

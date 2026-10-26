@@ -1725,6 +1725,518 @@ final class DropsVideoEffectTests: XCTestCase {
   }
 }
 
+/// Light leak, particles, tilt-shift, zoom blur and comic are drawn with Metal
+/// kernels on iOS and macOS (`ShaderVideoEffect`), and with the same shaders in
+/// GLSL on Android and in the effects picker (`shaders/*.frag`). These tests
+/// check every pixel each kernel draws against its shader's formulas computed
+/// here on the CPU, so a change to one copy that is not made to the others
+/// fails, and so does a kernel that reads its textures upside down.
+///
+/// The CPU copies spell out every type and keep each statement short: Swift
+/// type-checks a long arithmetic expression over overloaded functions such as
+/// `max`, `exp` and `sin` by trying their overloads together, and older Xcode
+/// releases give up on the longer ones.
+final class ShaderVideoEffectTests: XCTestCase {
+  private let width = 144
+  private let height = 256
+
+  /// Red and green hold each pixel's position, so a wrong offset shows; blue
+  /// is a checkerboard, so blurs, edges, the ink and the dots show. Every value
+  /// is a multiple of 1/256, which the kernels' half-float textures hold
+  /// exactly.
+  private lazy var rgb: [Double] = {
+    var rgb = [Double](repeating: 0, count: width * height * 3)
+    for y in 0..<height {
+      for x in 0..<width {
+        let i: Int = (y * width + x) * 3
+        let red: Int = x * 256 / width
+        let green: Int = y * 256 / height
+        let blue: Int = (x / 12 + y / 12) % 2 == 0 ? 0 : 255
+        rgb[i] = Double(red) / 256
+        rgb[i + 1] = Double(green) / 256
+        rgb[i + 2] = Double(blue) / 256
+      }
+    }
+    return rgb
+  }()
+
+  /// The frame as Core Image sees it: a bitmap's first row is the top of the
+  /// image, Core Image's y = 0 the bottom.
+  private lazy var frame: CIImage = {
+    var pixels = [Float](repeating: 1, count: width * height * 4)
+    for y in 0..<height {
+      for x in 0..<width {
+        let s: Int = (y * width + x) * 3
+        let d: Int = ((height - 1 - y) * width + x) * 4
+        for k in 0..<3 { pixels[d + k] = Float(rgb[s + k]) }
+      }
+    }
+    return CIImage(
+      bitmapData: Data(bytes: pixels, count: pixels.count * 4),
+      bytesPerRow: width * 16,
+      size: CGSize(width: width, height: height),
+      format: .RGBAf,
+      colorSpace: nil)
+  }()
+
+  private let context = CIContext(options: [.workingColorSpace: NSNull()])
+
+  func testLightLeakDrawsWhatTheAndroidShaderDraws() {
+    for (intensity, seconds) in [(0.7, 0.0), (1.0, 9.0), (0.35, 23.5)] {
+      let effect = LightLeakVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.lightLeak(px, py, intensity: intensity, seconds: seconds)
+      }
+      let difference = compare(effect, seconds: seconds, expected)
+      // Half-float textures round to about 0.0005.
+      XCTAssertLessThan(difference.worst, 0.003, "intensity \(intensity), \(seconds) s")
+    }
+  }
+
+  func testParticlesDrawWhatTheAndroidShaderDraws() {
+    for style in ParticlesVideoEffect.Style.allCases {
+      for (intensity, seconds) in [(1.0, 3.0), (0.6, 17.25)] {
+        let effect = ParticlesVideoEffect(style: style, params: ["intensity": intensity])
+        let look = ParticleLook(style: style.rawValue)
+        let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+          self.particles(px, py, look: look, intensity: intensity, seconds: seconds)
+        }
+        let difference = compare(effect, seconds: seconds, expected)
+        // The GPU's sine drifts from the CPU's at large angles, which moves a
+        // few of the confetti's hard edges by a fraction of a pixel; a change
+        // to any particle's shape, place or colour moves far more.
+        XCTAssertLessThan(difference.share, 0.002, "\(style), \(intensity), \(seconds) s")
+      }
+    }
+  }
+
+  func testTiltShiftDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = TiltShiftVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.tiltShift(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      XCTAssertLessThan(difference.worst, 0.003, "intensity \(intensity)")
+    }
+  }
+
+  func testZoomBlurDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = ZoomBlurVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.zoomBlur(px, py, strength: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      XCTAssertLessThan(difference.worst, 0.006, "intensity \(intensity)")
+    }
+  }
+
+  func testComicDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let effect = ComicVideoEffect(params: ["intensity": intensity])
+      let expected = eachPixel { (px: Double, py: Double) -> [Double] in
+        self.comic(px, py, intensity: intensity)
+      }
+      let difference = compare(effect, seconds: 0, expected)
+      // A pixel whose brightness lies right on the edge of a band can land in
+      // either, on the GPU and here; a change to the bands, the dots or the
+      // ink moves far more.
+      XCTAssertLessThan(difference.share, 0.002, "intensity \(intensity)")
+    }
+  }
+
+  func testLeavesTheFrameAloneAtNoIntensity() {
+    let effects: [ShaderVideoEffect] = [
+      LightLeakVideoEffect(params: ["intensity": 0]),
+      ParticlesVideoEffect(style: .snow, params: ["intensity": 0]),
+      TiltShiftVideoEffect(params: ["intensity": 0]),
+      ZoomBlurVideoEffect(params: ["intensity": 0]),
+      ComicVideoEffect(params: ["intensity": 0]),
+    ]
+    for effect in effects {
+      let output = effect.render(frame, history: [], timeUs: 0, effectTimeUs: 1_000_000)
+      XCTAssertTrue(output === frame, "\(type(of: effect))")
+    }
+  }
+
+  func testZoomBlurOnTheBeatFadesEachHitOutOverHalfASecond() {
+    let beats: [Int64]? = ZoomBlurHits.beats(["beatsUs": [1_200_000, 200_000]])
+    XCTAssertEqual(beats, [200_000, 1_200_000])
+    XCTAssertNil(ZoomBlurHits.beats(["intensity": 0.5]))
+    let cases: [(Int64, Double)] = [
+      (0, 0), (200_000, 0.8), (450_000, 0.2), (699_999, 0), (1_200_000, 0.8),
+      (1_325_000, 0.45),
+    ]
+    for (time, expected) in cases {
+      let strength: Double = ZoomBlurHits.strength(
+        intensity: 0.8, beatsUs: beats, effectTimeUs: time)
+      XCTAssertEqual(strength, expected, accuracy: 1e-5, "\(time) us")
+    }
+    let allThrough: Double = ZoomBlurHits.strength(
+      intensity: 0.8, beatsUs: nil, effectTimeUs: 123)
+    XCTAssertEqual(allThrough, 0.8)
+  }
+
+  /// How far `effect`'s output is from `expected`: the worst channel, and the
+  /// share of channels off by more than 0.01.
+  private func compare(_ effect: ShaderVideoEffect, seconds: Double, _ expected: [Double])
+    -> (worst: Double, share: Double)
+  {
+    let effectTimeUs = Int64(seconds * 1_000_000)
+    let output = effect.render(frame, history: [], timeUs: 0, effectTimeUs: effectTimeUs)
+    XCTAssertEqual(output.extent, frame.extent)
+    var drawn = [Float](repeating: 0, count: width * height * 4)
+    drawn.withUnsafeMutableBytes {
+      context.render(
+        output, toBitmap: $0.baseAddress!, rowBytes: width * 16,
+        bounds: frame.extent, format: .RGBAf, colorSpace: nil)
+    }
+    var worst: Double = 0
+    var off = 0
+    for y in 0..<height {
+      for x in 0..<width {
+        for k in 0..<3 {
+          let got = Double(drawn[((height - 1 - y) * width + x) * 4 + k])
+          let difference: Double = abs(got - expected[(y * width + x) * 3 + k])
+          worst = max(worst, difference)
+          if difference > 0.01 { off += 1 }
+        }
+      }
+    }
+    return (worst, Double(off) / Double(width * height * 3))
+  }
+
+  // MARK: The shaders on the CPU, for the RGB frame stored bottom row first.
+
+  /// Runs `shade` for each pixel's centre, in pixels with y up.
+  private func eachPixel(_ shade: (Double, Double) -> [Double]) -> [Double] {
+    var out = [Double](repeating: 0, count: rgb.count)
+    for yi in 0..<height {
+      for xi in 0..<width {
+        let color: [Double] = shade(Double(xi) + 0.5, Double(yi) + 0.5)
+        for k in 0..<3 { out[(yi * width + xi) * 3 + k] = color[k] }
+      }
+    }
+    return out
+  }
+
+  /// The frame at a point, bilinear, clamped to its edge pixels.
+  private func tap(_ qx: Double, _ qy: Double) -> [Double] {
+    let w = Double(width)
+    let h = Double(height)
+    let x: Double = min(max(qx, 0.5), w - 0.5) - 0.5
+    let y: Double = min(max(qy, 0.5), h - 0.5) - 0.5
+    let x0 = Int(x)
+    let y0 = Int(y)
+    let x1: Int = min(x0 + 1, width - 1)
+    let y1: Int = min(y0 + 1, height - 1)
+    let fx: Double = x - Double(x0)
+    let fy: Double = y - Double(y0)
+    var color = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let a: Double = rgb[(y0 * width + x0) * 3 + k]
+      let b: Double = rgb[(y0 * width + x1) * 3 + k]
+      let c: Double = rgb[(y1 * width + x0) * 3 + k]
+      let d: Double = rgb[(y1 * width + x1) * 3 + k]
+      let bottom: Double = a + (b - a) * fx
+      let top: Double = c + (d - c) * fx
+      color[k] = bottom + (top - bottom) * fy
+    }
+    return color
+  }
+
+  private func fract(_ x: Double) -> Double { x - x.rounded(.down) }
+
+  private func clamp(_ x: Double) -> Double { min(max(x, 0), 1) }
+
+  private func sign(_ x: Double) -> Double { x > 0 ? 1 : (x < 0 ? -1 : 0) }
+
+  private func mix(_ a: [Double], _ b: [Double], _ t: Double) -> [Double] {
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 { out[k] = a[k] + (b[k] - a[k]) * t }
+    return out
+  }
+
+  private func smoothstep(_ edge0: Double, _ edge1: Double, _ x: Double) -> Double {
+    let v: Double = clamp((x - edge0) / (edge1 - edge0))
+    return v * v * (3 - 2 * v)
+  }
+
+  /// Interleaved gradient noise, which turns or shifts each pixel's taps.
+  private func noise(_ px: Double, _ py: Double) -> Double {
+    let inner: Double = fract(px * 0.06711056 + py * 0.00583715)
+    return fract(52.9829189 * inner)
+  }
+
+  /// `a + b · sin(f · t + phase)`, a light's path along one axis.
+  private func path(_ a: Double, _ b: Double, _ f: Double, _ phase: Double, _ t: Double)
+    -> Double
+  {
+    let angle: Double = f * t + phase
+    return a + b * sin(angle)
+  }
+
+  /// What one light adds at a pixel, its centre and reach as shares of the
+  /// frame's size and longer side.
+  private func light(
+    _ px: Double, _ py: Double, x: Double, y: Double, reachX: Double, reachY: Double,
+    color: [Double]
+  ) -> [Double] {
+    let w = Double(width)
+    let h = Double(height)
+    let l: Double = max(w, h)
+    let dx: Double = (px - x * w) / (reachX * l)
+    let dy: Double = (py - y * h) / (reachY * l)
+    let falloff: Double = exp(-(dx * dx + dy * dy))
+    return [color[0] * falloff, color[1] * falloff, color[2] * falloff]
+  }
+
+  private func lightLeak(_ px: Double, _ py: Double, intensity: Double, seconds t: Double)
+    -> [Double]
+  {
+    let base: [Double] = tap(px, py)
+    let orange: [Double] = light(
+      px, py, x: path(-0.06, 0.16, 0.37, 0.4, t), y: path(0.62, 0.3, 0.21, 1.1, t),
+      reachX: 0.32, reachY: 0.6, color: [0.95, 0.49, 0.17])
+    let red: [Double] = light(
+      px, py, x: path(0.45, 0.4, 0.18, 2.2, t), y: path(1.04, 0.08, 0.31, 0.3, t),
+      reachX: 0.55, reachY: 0.26, color: [0.75, 0.21, 0.24])
+    let gold: [Double] = light(
+      px, py, x: path(0.18, 0.42, 0.27, 4.0, t), y: path(0.8, 0.18, 0.47, 2.6, t),
+      reachX: 0.24, reachY: 0.24, color: [0.55, 0.45, 0.28])
+    var color = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let glow: Double = orange[k] + red[k] + gold[k]
+      let leak: Double = clamp(glow * intensity)
+      color[k] = 1 - (1 - base[k]) * (1 - leak)
+    }
+    return color
+  }
+
+  private func hash3(_ px: Double, _ py: Double) -> [Double] {
+    let qx: Double = fract(px * 0.1031)
+    let qy: Double = fract(py * 0.1030)
+    let qz: Double = fract(px * 0.0973)
+    let dx: Double = qx * (qy + 3.33)
+    let dy: Double = qy * (qx + 3.33)
+    let dz: Double = qz * (qz + 3.33)
+    let d: Double = dx + dy + dz
+    let x: Double = qx + d
+    let y: Double = qy + d
+    let z: Double = qz + d
+    return [fract((x + y) * z), fract((x + z) * y), fract((y + z) * x)]
+  }
+
+  /// Signed distance to a heart with its tip at the origin, one unit tall.
+  private func heart(_ px: Double, _ y: Double) -> Double {
+    let x: Double = abs(px)
+    if y + x > 1 { return hypot(x - 0.25, y - 0.75) - 0.353553 }
+    let m: Double = 0.5 * max(x + y, 0)
+    let a: Double = x * x + (y - 1) * (y - 1)
+    let b: Double = (x - m) * (x - m) + (y - m) * (y - m)
+    return min(a, b).squareRoot() * sign(x - y)
+  }
+
+  private func turn(_ dx: Double, _ dy: Double, _ angle: Double) -> (x: Double, y: Double) {
+    let c: Double = cos(angle)
+    let n: Double = sin(angle)
+    return (c * dx + n * dy, c * dy - n * dx)
+  }
+
+  /// Per style: the cell size, how fast and which way the cells move, how far
+  /// a particle sways and how many cells hold one.
+  private struct ParticleLook {
+    let style: Double
+    var cell = 0.14
+    var speed = -0.22
+    var sway = 0.1
+    var density = 0.75
+
+    init(style: Double) {
+      self.style = style
+      if style > 2.5 {
+        (cell, speed, sway, density) = (0.15, 0.03, 0.0, 0.45)
+      } else if style > 1.5 {
+        (cell, speed, sway, density) = (0.17, 0.12, 0.1, 0.35)
+      } else if style > 0.5 {
+        (cell, speed, sway, density) = (0.13, -0.32, 0.08, 0.6)
+      }
+    }
+  }
+
+  private func particles(
+    _ px: Double, _ py: Double, look: ParticleLook, intensity: Double, seconds t: Double
+  ) -> [Double] {
+    let s = Double(min(width, height))
+    var color: [Double] = tap(px, py)
+    for k in 0..<3 {
+      let layer = Double(k)
+      let depth: Double = 0.55 + 0.225 * layer
+      let size: Double = s * look.cell * depth
+      let qx: Double = px / size + 0.37 * layer
+      let qy: Double = (py - look.speed * depth * t * s) / size
+      let idx: Double = qx.rounded(.down) + 131 * layer
+      let idy: Double = qy.rounded(.down) + 71 * layer
+      let h: [Double] = hash3(idx, idy)
+      if h[2] >= look.density * intensity { continue }
+      let g: [Double] = hash3(idx + 17, idy + 17)
+      let swayAngle: Double = t * (0.6 + 0.6 * g[0]) + 6.2832 * g[1]
+      let dx: Double = fract(qx) - (0.25 + 0.5 * h[0]) - look.sway * sin(swayAngle)
+      let dy: Double = fract(qy) - (0.25 + 0.5 * h[1])
+      let alpha: Double = 0.55 + 0.45 * depth
+      if look.style > 2.5 {
+        color = sparkle(color, dx, dy, g, alpha: alpha, seconds: t)
+      } else if look.style > 1.5 {
+        color = heartParticle(color, dx, dy, g, alpha: alpha, seconds: t)
+      } else if look.style > 0.5 {
+        color = confetti(color, dx, dy, h, g, alpha: alpha, seconds: t)
+      } else {
+        color = snowflake(color, dx, dy, g, alpha: alpha)
+      }
+    }
+    return color
+  }
+
+  private func sparkle(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ g: [Double], alpha: Double,
+    seconds t: Double
+  ) -> [Double] {
+    let twinkleAngle: Double = t * (1.6 + 1.6 * g[0]) + 6.2832 * g[1]
+    let twinkle: Double = 0.5 + 0.5 * sin(twinkleAngle)
+    let reach: Double = (0.1 + 0.1 * g[2]) * (0.3 + 0.7 * twinkle)
+    let mx: Double = abs(dx)
+    let my: Double = abs(dy)
+    let across: Double = exp(-mx / 0.016) * max(1 - my / reach, 0)
+    let up: Double = exp(-my / 0.016) * max(1 - mx / reach, 0)
+    let core: Double = exp(-(dx * dx + dy * dy) / (reach * reach * 0.05))
+    let glint: Double = min(across + up + core, 1)
+    return mix(color, [1.0, 0.93, 0.75], alpha * twinkle * glint)
+  }
+
+  private func heartParticle(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ g: [Double], alpha: Double,
+    seconds t: Double
+  ) -> [Double] {
+    let size: Double = 0.13 + 0.04 * g[2]
+    let wobbleAngle: Double = t * (1 + g[0]) + 6.2832 * g[1]
+    let turned = turn(dx, dy, 0.3 * sin(wobbleAngle))
+    let edge: Double = heart(turned.x / size, turned.y / size + 0.5) * size
+    let pink: [Double] = mix([0.93, 0.13, 0.3], [1.0, 0.45, 0.65], fract(g[2] * 7.31))
+    let cover: Double = 1 - smoothstep(-0.012, 0.012, edge)
+    return mix(color, pink, alpha * 0.92 * cover)
+  }
+
+  private func confetti(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ h: [Double], _ g: [Double],
+    alpha: Double, seconds t: Double
+  ) -> [Double] {
+    let tumbleAngle: Double = t * (3 + 3 * g[1]) + 6.2832 * h[1]
+    let tumble: Double = cos(tumbleAngle)
+    let spin: Double = t * (1.5 + 2.5 * g[0]) * sign(h[0] - 0.5)
+    let turned = turn(dx, dy, 6.2832 * g[2] + spin)
+    let bx: Double = abs(turned.x) - (0.11 * abs(tumble) + 0.01)
+    let by: Double = abs(turned.y) - 0.05
+    let outside: Double = hypot(max(bx, 0), max(by, 0))
+    let inside: Double = min(max(bx, by), 0)
+    let edge: Double = outside + inside
+    let hue: Double = fract(g[2] * 7.31)
+    let shade: Double = 0.65 + 0.35 * abs(tumble)
+    var paper = [Double](repeating: 0, count: 3)
+    let offsets: [Double] = [0.0, 0.33, 0.67]
+    for k in 0..<3 {
+      let wave: Double = cos(6.2832 * (hue + offsets[k]))
+      paper[k] = (0.55 + 0.45 * wave) * shade
+    }
+    let cover: Double = 1 - smoothstep(-0.012, 0.012, edge)
+    return mix(color, paper, alpha * cover)
+  }
+
+  private func snowflake(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ g: [Double], alpha: Double
+  ) -> [Double] {
+    let r: Double = 0.07 + 0.05 * g[2]
+    let cover: Double = 1 - smoothstep(r * 0.3, r, hypot(dx, dy))
+    return mix(color, [0.97, 0.98, 1.0], alpha * cover)
+  }
+
+  private func tiltShift(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let s = Double(min(width, height))
+    let away: Double = abs(py / Double(height) - 0.5)
+    let r: Double = 0.03 * s * intensity * smoothstep(0.1, 0.42, away)
+    var color: [Double] = tap(px, py)
+    if r > 0.5 {
+      let spin: Double = 6.2832 * noise(px, py)
+      for i in 0..<32 {
+        let n = Double(i)
+        let angle: Double = n * 2.399963 + spin
+        let reach: Double = r * ((n + 0.5) / 32).squareRoot()
+        let more: [Double] = tap(px + reach * cos(angle), py + reach * sin(angle))
+        for k in 0..<3 { color[k] += more[k] }
+      }
+      for k in 0..<3 { color[k] /= 33 }
+    }
+    let luma: Double = color[0] * 0.2126 + color[1] * 0.7152 + color[2] * 0.0722
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let vivid: Double = luma + (color[k] - luma) * (1 + 0.4 * intensity)
+      out[k] = clamp((vivid - 0.5) * (1 + 0.12 * intensity) + 0.5)
+    }
+    return out
+  }
+
+  private func zoomBlur(_ px: Double, _ py: Double, strength: Double) -> [Double] {
+    let cx: Double = Double(width) / 2
+    let cy: Double = Double(height) / 2
+    let jitter: Double = noise(px, py)
+    var color = [Double](repeating: 0, count: 3)
+    for i in 0..<32 {
+      let share: Double = (Double(i) + jitter) / 32
+      let reach: Double = 1 - 0.22 * strength * share
+      let more: [Double] = tap(cx + (px - cx) * reach, cy + (py - cy) * reach)
+      for k in 0..<3 { color[k] += more[k] }
+    }
+    for k in 0..<3 { color[k] /= 32 }
+    return color
+  }
+
+  private func luma(_ c: [Double]) -> Double { c[0] * 0.299 + c[1] * 0.587 + c[2] * 0.114 }
+
+  private func comic(_ px: Double, _ py: Double, intensity: Double) -> [Double] {
+    let s = Double(min(width, height))
+    let e: Double = max(1, s / 540)
+    let color: [Double] = tap(px, py)
+    let tl: Double = luma(tap(px - e, py + e))
+    let tc: Double = luma(tap(px, py + e))
+    let tr: Double = luma(tap(px + e, py + e))
+    let ml: Double = luma(tap(px - e, py))
+    let mr: Double = luma(tap(px + e, py))
+    let bl: Double = luma(tap(px - e, py - e))
+    let bc: Double = luma(tap(px, py - e))
+    let br: Double = luma(tap(px + e, py - e))
+    let gx: Double = tr + 2 * mr + br - tl - 2 * ml - bl
+    let gy: Double = tl + 2 * tc + tr - bl - 2 * bc - br
+    let ink: Double = smoothstep(0.3, 0.8, hypot(gx, gy))
+    let l: Double = luma(color)
+    let band: Double = 0.2 + 0.27 * min((l * 4).rounded(.down), 3)
+    let cell: Double = 0.018 * s
+    let gridX: Double = (px + py) * 0.70710678 / cell
+    let gridY: Double = (py - px) * 0.70710678 / cell
+    let dx: Double = (fract(gridX) - 0.5) * cell
+    let dy: Double = (fract(gridY) - 0.5) * cell
+    let radius: Double = 0.6 * cell * max(0.7 - l, 0).squareRoot()
+    let spot: Double = clamp(radius - hypot(dx, dy))
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let vivid: Double = l + (color[k] - l) * 1.4
+      let poster: Double = clamp(vivid * band / max(l, 0.04))
+      let comic: Double = poster * (1 - 0.35 * spot) * (1 - 0.85 * ink)
+      out[k] = color[k] + (comic - color[k]) * intensity
+    }
+    return out
+  }
+}
+
 /// Highlights, shadows, vibrance and sharpening are drawn with a Metal kernel
 /// on iOS and macOS, and with the same shader in GLSL on Android
 /// (`AdjustVideoEffect`). This checks every pixel of the kernel against the

@@ -431,6 +431,40 @@ void main() {
         verify: (cubit) => expect(cubit.state.onBeat, isTrue),
       );
 
+      test('commits the zoom blur on the beat as a custom effect', () {
+        final cubit = buildCubit()
+          ..startEditing()
+          ..selectType(EditorEffectType.zoomBlur)
+          ..setOnBeat(onBeat: true);
+
+        final committed = cubit.confirm().effects.single;
+
+        expect(committed.custom?.id, zoomBlurVideoEffectId);
+        expect(committed.onBeat, isTrue);
+        expect(cubit.state.needsBeats, isTrue);
+      });
+
+      blocTest<VideoEditorEffectsCubit, VideoEditorEffectsState>(
+        'opens a zoom blur on the beat with the switch on',
+        build: buildCubit,
+        seed: () => VideoEditorEffectsState(
+          applied: [
+            EditorVideoEffect.of(
+              id: 'zoom',
+              type: EditorEffectType.zoomBlur,
+              intensity: 0.6,
+              onBeat: true,
+            ),
+          ],
+        ),
+        act: (cubit) => cubit.startEditing(effectId: 'zoom'),
+        verify: (cubit) {
+          expect(cubit.state.selectedType, EditorEffectType.zoomBlur);
+          expect(cubit.state.onBeat, isTrue);
+          expect(cubit.state.selectionOnBeat, isTrue);
+        },
+      );
+
       test('finds the beats of the music once an effect needs them', () async {
         final reads = <AudioExtractConfigs>[];
         final cubit = buildWithMusic(reads: reads)

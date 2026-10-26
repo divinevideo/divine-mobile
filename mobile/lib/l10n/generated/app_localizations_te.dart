@@ -9136,6 +9136,30 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectDrops => 'బిందువులు';
 
   @override
+  String get videoEditorEffectLightLeak => 'కాంతి లీక్';
+
+  @override
+  String get videoEditorEffectSnow => 'మంచు';
+
+  @override
+  String get videoEditorEffectConfetti => 'కాన్ఫెట్టి';
+
+  @override
+  String get videoEditorEffectHearts => 'హృదయాలు';
+
+  @override
+  String get videoEditorEffectSparkles => 'మెరుపులు';
+
+  @override
+  String get videoEditorEffectTiltShift => 'టిల్ట్-షిఫ్ట్';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'జూమ్ బ్లర్';
+
+  @override
+  String get videoEditorEffectComic => 'కామిక్';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'బిందువుల సర్దుబాటు';
 
   @override
@@ -11347,6 +11371,18 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoMetadataAudioReuseSubtitle =>
       'ఇతరులను ఈ వీడియో ఆడియోను సేవ్ చేసి, మళ్లీ ఉపయోగించనివ్వండి.';
+
+  @override
+  String get videoMetadataVideoReuseTitle =>
+      'ఈ వీడియోను ఉపయోగించడానికి ఇతరులను అనుమతించండి';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'వారు దీన్ని తమ క్లిప్‌లకు జోడించి పోస్ట్ చేయవచ్చు, మీకు క్రెడిట్ ఇస్తారు.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'ఈ ధ్వని లైసెన్స్ మళ్లీ ఉపయోగించడాన్ని అనుమతించదు.';
 
   @override
   String get publishAudioReuseDegradedWarning =>

@@ -8444,6 +8444,30 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectDrops => 'しずく';
 
   @override
+  String get videoEditorEffectLightLeak => '光漏れ';
+
+  @override
+  String get videoEditorEffectSnow => '雪';
+
+  @override
+  String get videoEditorEffectConfetti => '紙吹雪';
+
+  @override
+  String get videoEditorEffectHearts => 'ハート';
+
+  @override
+  String get videoEditorEffectSparkles => 'キラキラ';
+
+  @override
+  String get videoEditorEffectTiltShift => 'ティルトシフト';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'ズームブラー';
+
+  @override
+  String get videoEditorEffectComic => 'コミック';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'しずくを調整';
 
   @override
@@ -10497,6 +10521,17 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get videoMetadataAudioReuseSubtitle =>
       '他のユーザーがこの動画の音声を保存して再利用できるようにします。';
+
+  @override
+  String get videoMetadataVideoReuseTitle => '他の人がこの動画を使うのを許可';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      '相手は自分のクリップに追加して投稿できます。その際、あなたがクレジットされます。';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'このサウンドのライセンスでは再利用できません。';
 
   @override
   String get publishAudioReuseDegradedWarning =>

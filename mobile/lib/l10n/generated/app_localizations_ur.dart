@@ -8885,6 +8885,30 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectDrops => 'قطرے';
 
   @override
+  String get videoEditorEffectLightLeak => 'روشنی کا رساؤ';
+
+  @override
+  String get videoEditorEffectSnow => 'برف';
+
+  @override
+  String get videoEditorEffectConfetti => 'کنفیٹی';
+
+  @override
+  String get videoEditorEffectHearts => 'دل';
+
+  @override
+  String get videoEditorEffectSparkles => 'چمک';
+
+  @override
+  String get videoEditorEffectTiltShift => 'ٹلٹ شفٹ';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'زوم بلر';
+
+  @override
+  String get videoEditorEffectComic => 'کامک';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'قطرے ایڈجسٹ کریں';
 
   @override
@@ -11054,6 +11078,18 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoMetadataAudioReuseSubtitle =>
       'دوسروں کو اس ویڈیو کی آڈیو محفوظ اور دوبارہ استعمال کرنے دیں۔';
+
+  @override
+  String get videoMetadataVideoReuseTitle =>
+      'دوسروں کو یہ ویڈیو استعمال کرنے دیں';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'وہ اسے اپنی کلپس میں شامل کر کے پوسٹ کر سکتے ہیں، اور آپ کا نام دیا جائے گا۔';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'اس ساؤنڈ کا لائسنس دوبارہ استعمال کی اجازت نہیں دیتا۔';
 
   @override
   String get publishAudioReuseDegradedWarning =>

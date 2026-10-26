@@ -9088,6 +9088,30 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectDrops => 'Picături';
 
   @override
+  String get videoEditorEffectLightLeak => 'Scurgere de lumină';
+
+  @override
+  String get videoEditorEffectSnow => 'Zăpadă';
+
+  @override
+  String get videoEditorEffectConfetti => 'Confetti';
+
+  @override
+  String get videoEditorEffectHearts => 'Inimi';
+
+  @override
+  String get videoEditorEffectSparkles => 'Sclipiri';
+
+  @override
+  String get videoEditorEffectTiltShift => 'Tilt-shift';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'Estompare zoom';
+
+  @override
+  String get videoEditorEffectComic => 'Benzi desenate';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Ajustează picăturile';
 
   @override
@@ -11289,6 +11313,18 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String get videoMetadataAudioReuseSubtitle =>
       'Permite altora să salveze și să reutilizeze audio-ul acestui videoclip.';
+
+  @override
+  String get videoMetadataVideoReuseTitle =>
+      'Permite altora să folosească acest videoclip';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'Îl pot adăuga la clipurile lor și îl pot publica, menționându-te.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'Licența acestui sunet nu permite reutilizarea.';
 
   @override
   String get publishAudioReuseDegradedWarning =>

@@ -976,10 +976,14 @@ class VideoEditorRenderService {
       ),
       // Adjust after the effects editor's effects, as in the preview; see
       // adjustVideoEffectsOf for why.
-      customEffects: customVideoEffectsOnOutput([
-        ...?parameters?.customVideoEffectsFromCompleteMeta,
-        ...adjustVideoEffectsOf(parameters?.tuneAdjustments ?? const []),
-      ], timelineMap),
+      customEffects: customVideoEffectsOnOutput(
+        [
+          ...?parameters?.customVideoEffectsFromCompleteMeta,
+          ...adjustVideoEffectsOf(parameters?.tuneAdjustments ?? const []),
+        ],
+        timelineMap,
+        beats: beats,
+      ),
       imageBytesWithCropping: true,
       qualityConfig: VideoQualityConfig.custom(
         bitrate: VideoEditorConstants.quality.bitrate,

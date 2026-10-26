@@ -8982,6 +8982,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorEffectDrops => 'Drops';
 
   @override
+  String get videoEditorEffectLightLeak => 'Light Leak';
+
+  @override
+  String get videoEditorEffectSnow => 'Snow';
+
+  @override
+  String get videoEditorEffectConfetti => 'Confetti';
+
+  @override
+  String get videoEditorEffectHearts => 'Hearts';
+
+  @override
+  String get videoEditorEffectSparkles => 'Sparkles';
+
+  @override
+  String get videoEditorEffectTiltShift => 'Tilt-Shift';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'Zoom Blur';
+
+  @override
+  String get videoEditorEffectComic => 'Comic';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Adjust drops';
 
   @override
@@ -11146,6 +11170,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get videoMetadataAudioReuseSubtitle =>
       'Let others save and reuse this video\'s audio.';
+
+  @override
+  String get videoMetadataVideoReuseTitle => 'Allow others to use this video';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'They can add it to their clips and post it. You\'ll get credit.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'This sound\'s license doesn\'t allow reuse.';
 
   @override
   String get publishAudioReuseDegradedWarning =>

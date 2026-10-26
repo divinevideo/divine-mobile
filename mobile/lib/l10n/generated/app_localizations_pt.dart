@@ -8960,6 +8960,30 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorEffectDrops => 'Gotas';
 
   @override
+  String get videoEditorEffectLightLeak => 'Vazamento de luz';
+
+  @override
+  String get videoEditorEffectSnow => 'Neve';
+
+  @override
+  String get videoEditorEffectConfetti => 'Confete';
+
+  @override
+  String get videoEditorEffectHearts => 'Corações';
+
+  @override
+  String get videoEditorEffectSparkles => 'Brilhos';
+
+  @override
+  String get videoEditorEffectTiltShift => 'Tilt-shift';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'Desfoque de zoom';
+
+  @override
+  String get videoEditorEffectComic => 'Quadrinhos';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Ajustar gotas';
 
   @override
@@ -11147,6 +11171,18 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get videoMetadataAudioReuseSubtitle =>
       'Permita que outros salvem e reutilizem o áudio deste vídeo.';
+
+  @override
+  String get videoMetadataVideoReuseTitle =>
+      'Permitir que outras pessoas usem este vídeo';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'Elas podem adicioná-lo aos clipes delas e publicar, com crédito para você.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'A licença deste som não permite a reutilização.';
 
   @override
   String get publishAudioReuseDegradedWarning =>

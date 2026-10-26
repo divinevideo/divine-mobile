@@ -266,7 +266,10 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
     // could expose owner UI without installing its cubit.
     final isOwnContent = _ownerVideoActionsCubit != null;
     final canAddVideoToClips =
-        (widget.video.isOriginalVine || isOwnContent) && !kIsWeb;
+        (widget.video.isOriginalVine ||
+            isOwnContent ||
+            widget.video.allowVideoReuse) &&
+        !kIsWeb;
 
     final sheetView = _UnifiedShareSheetView(
       video: widget.video,

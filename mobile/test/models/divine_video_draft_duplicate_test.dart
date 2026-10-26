@@ -32,6 +32,7 @@ DivineVideoDraft _createDraft() => DivineVideoDraft(
   sourceDraftId: 'draft_source',
   expireTime: const Duration(days: 7),
   allowAudioReuse: true,
+  allowVideoReuse: true,
   proofManifestJson: '{"videoHash":"abc"}',
   editorStateHistory: const {'foo': 'bar'},
   editorEditingParameters: const {'brightness': 0.5},
@@ -121,6 +122,7 @@ void main() {
 
       expect(copy.expireTime, equals(draft.expireTime));
       expect(copy.allowAudioReuse, equals(draft.allowAudioReuse));
+      expect(copy.allowVideoReuse, isTrue);
       expect(
         copy.editorEditingParameters,
         equals(draft.editorEditingParameters),

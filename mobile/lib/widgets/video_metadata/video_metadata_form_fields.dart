@@ -2,7 +2,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
-import 'package:openvine/features/feature_flags/widgets/feature_flag_widget.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/publishing_ideas/publishing_ideas.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -16,6 +16,7 @@ import 'package:openvine/widgets/video_metadata/video_metadata_inspired_by_input
 import 'package:openvine/widgets/video_metadata/video_metadata_limit_warning_banner.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_schedule_selector.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_tags_selector.dart';
+import 'package:openvine/widgets/video_metadata/video_metadata_video_reuse_toggle.dart';
 import 'package:publishing_suggestions/publishing_suggestions.dart';
 
 class VideoMetadataFormFields extends ConsumerStatefulWidget {
@@ -130,6 +131,11 @@ class _VideoMetadataFormFieldsState
     final reusesExternalAudio = ref.watch(
       videoEditorProvider.select((state) => state.reusesExternalAudio),
     );
+    // Gated here rather than with FeatureFlagWidget: an empty child would
+    // still take a `spacing` gap and double the space above the tags.
+    final showIdeas =
+        widget.enableIdeas &&
+        ref.watch(isFeatureEnabledProvider(FeatureFlag.publishingIdeas));
 
     return Padding(
       padding: const .symmetric(horizontal: 16),
@@ -169,11 +175,7 @@ class _VideoMetadataFormFieldsState
             ),
           ),
 
-          if (widget.enableIdeas)
-            FeatureFlagWidget(
-              flag: FeatureFlag.publishingIdeas,
-              child: PublishingIdeas(onApply: _applyIdea),
-            ),
+          if (showIdeas) PublishingIdeas(onApply: _applyIdea),
 
           if (widget.enableTags)
             const _InputWrapper(child: VideoMetadataTagsSelector()),
@@ -195,6 +197,8 @@ class _VideoMetadataFormFieldsState
 
           if (widget.enableAudioReuse && !reusesExternalAudio)
             const _InputWrapper(child: VideoMetadataAudioSharingSection()),
+
+          const _InputWrapper(child: VideoMetadataVideoReuseToggle()),
 
           if (widget.enableVideoReply)
             const _InputWrapper(child: _VideoReplyVisibilityToggle()),
