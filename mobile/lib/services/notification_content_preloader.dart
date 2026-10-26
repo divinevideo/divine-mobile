@@ -46,9 +46,12 @@ class NotificationContentPreloader {
         }.contains(payload.notificationType)) {
       return;
     }
-    final coordinate = videoAddressableTarget(payload.referencedAddress);
-    final eventId = payload.referencedEventId ?? payload.eventId;
-    final routeId = coordinate ?? eventId;
+    final (:videoCoordinate, :targetEventId) = pushVideoTarget(
+      referencedAddress: payload.referencedAddress,
+      referencedEventId: payload.referencedEventId,
+      eventId: payload.eventId,
+    );
+    final routeId = videoCoordinate ?? targetEventId;
     final isFollow = payload.notificationType == 'follow';
     final key = isFollow ? payload.senderPubkey : routeId;
     if (key == null || !_active.add(key)) return;
@@ -65,7 +68,7 @@ class NotificationContentPreloader {
     final work = () async {
       try {
         if (isFollow || routeId == null || !current()) return;
-        final resolved = coordinate != null || _resolveVideoTarget == null
+        final resolved = videoCoordinate != null || _resolveVideoTarget == null
             ? routeId
             : await _resolveVideoTarget(routeId);
         if (resolved == null || !current()) return;

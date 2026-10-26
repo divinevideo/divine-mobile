@@ -151,17 +151,11 @@ Future<void> _renderBackgroundLocalPush({
 /// navigate to, and the authoritative video coordinate, via the shared
 /// [resolveNotificationTapTarget] contract.
 ///
-/// `referencedAddress` (the signed NIP-33 coordinate of the referenced video)
-/// is the authoritative target: when it is a usable video coordinate
-/// ([videoAddressableTarget]) it is returned as `videoCoordinate` and the
-/// executor routes to it directly. Otherwise the video target is
-/// `referencedEventId` (the event acted upon), falling back to `eventId` (the
-/// source event) for follow/mention, which the executor walks to a root video.
-///
-/// At most one of `videoCoordinate` / `targetEventId` is non-null: a usable
-/// coordinate suppresses the event-id walk entirely, encoding the
-/// coordinate-over-walk precedence in the returned value rather than leaving
-/// it to the executor's branch order.
+/// The video target comes from [pushVideoTarget], which the notification
+/// preloader shares: a usable signed coordinate is routed to directly, and
+/// otherwise the executor walks `targetEventId` to a root video. Encoding the
+/// coordinate-over-walk precedence in the returned value keeps it out of the
+/// executor's branch order.
 ///
 /// Extracted and `@visibleForTesting` so the push-side per-kind routing can be
 /// asserted without a navigator — mirrors [resolveVideoDeepLinkNavAction].
@@ -199,12 +193,11 @@ pushNotificationTapTarget({
       videoCoordinate: null,
     );
   }
-  final videoCoordinate = videoAddressableTarget(referencedAddress);
-  final targetEventId = videoCoordinate != null
-      ? null
-      : (referencedEventId != null && referencedEventId.isNotEmpty)
-      ? referencedEventId
-      : eventId;
+  final (:videoCoordinate, :targetEventId) = pushVideoTarget(
+    referencedAddress: referencedAddress,
+    referencedEventId: referencedEventId,
+    eventId: eventId,
+  );
   final hasVideoTarget =
       videoCoordinate != null ||
       (targetEventId != null && targetEventId.isNotEmpty);
