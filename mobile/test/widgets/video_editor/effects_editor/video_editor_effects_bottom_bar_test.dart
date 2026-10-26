@@ -60,6 +60,14 @@ void main() {
         l10n.videoEditorEffectEcho,
         l10n.videoEditorEffectFisheye,
         l10n.videoEditorEffectDrops,
+        l10n.videoEditorEffectLightLeak,
+        l10n.videoEditorEffectSnow,
+        l10n.videoEditorEffectConfetti,
+        l10n.videoEditorEffectHearts,
+        l10n.videoEditorEffectSparkles,
+        l10n.videoEditorEffectTiltShift,
+        l10n.videoEditorEffectZoomBlur,
+        l10n.videoEditorEffectComic,
       ]) {
         await tester.scrollUntilVisible(
           find.text(label),
@@ -80,6 +88,29 @@ void main() {
 
       await tester.tap(find.text(l10n.videoEditorEffectNone));
       expect(cubit.state.selectedType, isNull);
+    });
+
+    test('draws the tile of every effect Divine renders but the echo with '
+        'its shader', () {
+      for (final type in EditorEffectType.values) {
+        final tile = shaderTileOf(type);
+        if (type.builtIn != null || type == EditorEffectType.echo) {
+          expect(tile, isNull, reason: type.name);
+        } else {
+          expect(tile?.asset, startsWith('shaders/'), reason: type.name);
+          expect(tile?.values, isNotEmpty, reason: type.name);
+        }
+      }
+      // One shader draws every particle style, told apart by its last value.
+      expect(
+        [
+          EditorEffectType.snow,
+          EditorEffectType.confetti,
+          EditorEffectType.hearts,
+          EditorEffectType.sparkles,
+        ].map((type) => shaderTileOf(type)!.values.last),
+        [0, 1, 2, 3],
+      );
     });
 
     testWidgets('marks the picked effect as selected for screen readers', (

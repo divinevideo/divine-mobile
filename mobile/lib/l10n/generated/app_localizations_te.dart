@@ -9136,6 +9136,30 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectDrops => 'బిందువులు';
 
   @override
+  String get videoEditorEffectLightLeak => 'కాంతి లీక్';
+
+  @override
+  String get videoEditorEffectSnow => 'మంచు';
+
+  @override
+  String get videoEditorEffectConfetti => 'కాన్ఫెట్టి';
+
+  @override
+  String get videoEditorEffectHearts => 'హృదయాలు';
+
+  @override
+  String get videoEditorEffectSparkles => 'మెరుపులు';
+
+  @override
+  String get videoEditorEffectTiltShift => 'టిల్ట్-షిఫ్ట్';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'జూమ్ బ్లర్';
+
+  @override
+  String get videoEditorEffectComic => 'కామిక్';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'బిందువుల సర్దుబాటు';
 
   @override

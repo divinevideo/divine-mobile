@@ -8946,6 +8946,30 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorEffectDrops => 'Drops';
 
   @override
+  String get videoEditorEffectLightLeak => 'Light Leak';
+
+  @override
+  String get videoEditorEffectSnow => 'Niyebe';
+
+  @override
+  String get videoEditorEffectConfetti => 'Confetti';
+
+  @override
+  String get videoEditorEffectHearts => 'Mga Puso';
+
+  @override
+  String get videoEditorEffectSparkles => 'Kislap';
+
+  @override
+  String get videoEditorEffectTiltShift => 'Tilt-Shift';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'Zoom Blur';
+
+  @override
+  String get videoEditorEffectComic => 'Komiks';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Isaayos ang drops';
 
   @override

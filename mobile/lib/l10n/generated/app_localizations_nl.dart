@@ -8924,6 +8924,30 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorEffectDrops => 'Druppels';
 
   @override
+  String get videoEditorEffectLightLeak => 'Lichtlek';
+
+  @override
+  String get videoEditorEffectSnow => 'Sneeuw';
+
+  @override
+  String get videoEditorEffectConfetti => 'Confetti';
+
+  @override
+  String get videoEditorEffectHearts => 'Hartjes';
+
+  @override
+  String get videoEditorEffectSparkles => 'Glinstering';
+
+  @override
+  String get videoEditorEffectTiltShift => 'Tilt-shift';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'Zoomvervaging';
+
+  @override
+  String get videoEditorEffectComic => 'Strip';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Druppels aanpassen';
 
   @override

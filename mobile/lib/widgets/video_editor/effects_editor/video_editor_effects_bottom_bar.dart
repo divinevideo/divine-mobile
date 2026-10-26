@@ -122,18 +122,20 @@ class _EffectItem extends StatelessWidget {
                       ? const SizedBox.expand()
                       : type == EditorEffectType.echo
                       ? _EchoThumbnail(path: path)
-                      : type == EditorEffectType.fisheye
-                      ? _FisheyeThumbnail(path: path)
-                      : type == EditorEffectType.drops
-                      ? _DropsThumbnail(path: path)
-                      : VideoEffectPreview(
-                          effects: [
-                            if (type?.builtIn case final builtIn?)
-                              VideoEffect(type: builtIn),
-                          ],
-                          position: _still,
-                          child: _Thumbnail(path: path),
-                        ),
+                      : switch (shaderTileOf(type)) {
+                          final tile? => _ShaderThumbnail(
+                            path: path,
+                            tile: tile,
+                          ),
+                          null => VideoEffectPreview(
+                            effects: [
+                              if (type?.builtIn case final builtIn?)
+                                VideoEffect(type: builtIn),
+                            ],
+                            position: _still,
+                            child: _Thumbnail(path: path),
+                          ),
+                        },
                 ),
               ),
               // The tile's Semantics already carries the name.
@@ -202,125 +204,134 @@ class _EchoThumbnail extends StatelessWidget {
   }
 }
 
-/// The fisheye tile: the thumbnail through `shaders/fisheye.frag`, the bulge
-/// the native `FisheyeVideoEffect` draws, at full strength.
+/// How the tile of an effect Divine draws itself shows it: the thumbnail
+/// through [asset], the same shader the native effect runs, with [values] for
+/// the uniforms after the texture size.
+typedef ShaderTile = ({String asset, List<double> values});
+
+/// Seconds into the particles at which their tiles show them.
+const _particlesTileSeconds = 3.0;
+
+/// The tile of [type], or `null` for an effect whose tile is drawn otherwise.
+///
+/// Each shows the effect at full strength. The fisheye's value is the
+/// `CIBumpDistortion` scale `FisheyeVideoEffect` uses at intensity 1; the
+/// drops show the default settings at a moment where two of them flow into
+/// each other; the particles' last value is the style the native
+/// `ParticlesVideoEffect` draws.
+@visibleForTesting
+ShaderTile? shaderTileOf(EditorEffectType? type) => switch (type?.customId) {
+  fisheyeVideoEffectId => (asset: 'shaders/fisheye.frag', values: const [0.8]),
+  dropsVideoEffectId => (asset: 'shaders/drops.frag', values: _dropsTileValues),
+  lightLeakVideoEffectId => (
+    asset: 'shaders/light_leak.frag',
+    values: const [1.0, 0.0],
+  ),
+  snowVideoEffectId => (
+    asset: 'shaders/particles.frag',
+    values: const [1.0, _particlesTileSeconds, 0.0],
+  ),
+  confettiVideoEffectId => (
+    asset: 'shaders/particles.frag',
+    values: const [1.0, _particlesTileSeconds, 1.0],
+  ),
+  heartsVideoEffectId => (
+    asset: 'shaders/particles.frag',
+    values: const [1.0, _particlesTileSeconds, 2.0],
+  ),
+  sparklesVideoEffectId => (
+    asset: 'shaders/particles.frag',
+    values: const [1.0, _particlesTileSeconds, 3.0],
+  ),
+  tiltShiftVideoEffectId => (
+    asset: 'shaders/tilt_shift.frag',
+    values: const [1.0],
+  ),
+  zoomBlurVideoEffectId => (
+    asset: 'shaders/zoom_blur.frag',
+    values: const [1.0],
+  ),
+  comicVideoEffectId => (asset: 'shaders/comic.frag', values: const [1.0]),
+  _ => null,
+};
+
+/// The drops' tile values: the intensity, the scale, the frost, the fringes
+/// and each drop, seven seconds in.
+final List<double> _dropsTileValues = () {
+  const settings = DropsEffectSettings();
+  return List<double>.unmodifiable([
+    1.0,
+    dropsScale(settings),
+    settings.frost,
+    settings.fringes,
+    for (final drop in dropsLayout(settings, seconds: 7)) ...[
+      drop.x,
+      drop.y,
+      drop.radius,
+    ],
+  ]);
+}();
+
+/// The tile of an effect Divine draws itself: the thumbnail through the
+/// [tile]'s shader.
 ///
 /// Shows the plain thumbnail where the backend has no shader image filter
 /// (Skia), as the chroma-key preview does.
-class _FisheyeThumbnail extends StatefulWidget {
-  const _FisheyeThumbnail({required this.path});
+class _ShaderThumbnail extends StatefulWidget {
+  const _ShaderThumbnail({required this.path, required this.tile});
 
   final String path;
+  final ShaderTile tile;
 
   @override
-  State<_FisheyeThumbnail> createState() => _FisheyeThumbnailState();
+  State<_ShaderThumbnail> createState() => _ShaderThumbnailState();
 }
 
-class _FisheyeThumbnailState extends State<_FisheyeThumbnail> {
-  /// `FisheyeVideoEffect`'s `CIBumpDistortion` scale at intensity 1.
-  static const _fullStrengthScale = 0.8;
-
-  static Future<ui.FragmentProgram>? _program;
+class _ShaderThumbnailState extends State<_ShaderThumbnail> {
+  /// Each shader is read once, whichever tiles show it.
+  static final _programs = <String, Future<ui.FragmentProgram>>{};
 
   ui.FragmentShader? _shader;
 
   @override
   void initState() {
     super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(_ShaderThumbnail oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.tile.asset != widget.tile.asset) {
+      _shader?.dispose();
+      _shader = null;
+      _load();
+    } else if (!listEquals(oldWidget.tile.values, widget.tile.values)) {
+      final shader = _shader;
+      if (shader != null) _configure(shader);
+    }
+  }
+
+  void _load() {
     if (!ui.ImageFilter.isShaderFilterSupported) return;
+    final asset = widget.tile.asset;
     runDetached(
-      (_program ??= ui.FragmentProgram.fromAsset('shaders/fisheye.frag')).then((
+      (_programs[asset] ??= ui.FragmentProgram.fromAsset(asset)).then((
         program,
       ) {
-        if (!mounted) return;
-        // Uniforms 0 and 1 are the bound texture's size, which the engine
-        // sets.
-        setState(
-          () =>
-              _shader = program.fragmentShader()
-                ..setFloat(2, _fullStrengthScale),
-        );
+        if (!mounted || widget.tile.asset != asset) return;
+        setState(() => _shader = _configure(program.fragmentShader()));
       }),
-      'load the fisheye tile shader',
+      'load the effect tile shader',
       logName: 'VideoEditorEffectsBottomBar',
       category: LogCategory.video,
     );
   }
 
-  @override
-  void dispose() {
-    _shader?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final shader = _shader;
-    final thumbnail = _Thumbnail(path: widget.path);
-    if (shader == null) return thumbnail;
-    return ImageFiltered(
-      imageFilter: ui.ImageFilter.shader(shader),
-      child: thumbnail,
-    );
-  }
-}
-
-/// The drops tile: the thumbnail through `shaders/drops.frag`, the drops the
-/// native `DropsVideoEffect` draws, at full strength with the default
-/// settings, at a moment where two of them flow into each other.
-///
-/// Shows the plain thumbnail where the backend has no shader image filter
-/// (Skia), as the chroma-key preview does.
-class _DropsThumbnail extends StatefulWidget {
-  const _DropsThumbnail({required this.path});
-
-  final String path;
-
-  @override
-  State<_DropsThumbnail> createState() => _DropsThumbnailState();
-}
-
-class _DropsThumbnailState extends State<_DropsThumbnail> {
-  /// Seconds into the effect, where two drops have just met.
-  static const _seconds = 7.0;
-
-  static Future<ui.FragmentProgram>? _program;
-
-  ui.FragmentShader? _shader;
-
-  @override
-  void initState() {
-    super.initState();
-    if (!ui.ImageFilter.isShaderFilterSupported) return;
-    runDetached(
-      (_program ??= ui.FragmentProgram.fromAsset('shaders/drops.frag')).then((
-        program,
-      ) {
-        if (!mounted) return;
-        setState(() => _shader = _configured(program.fragmentShader()));
-      }),
-      'load the drops tile shader',
-      logName: 'VideoEditorEffectsBottomBar',
-      category: LogCategory.video,
-    );
-  }
-
-  /// Uniforms 0 and 1 are the bound texture's size, which the engine sets;
-  /// then the intensity, the scale, the frost, the fringes and each drop.
-  static ui.FragmentShader _configured(ui.FragmentShader shader) {
-    const settings = DropsEffectSettings();
+  /// Uniforms 0 and 1 are the bound texture's size, which the engine sets.
+  ui.FragmentShader _configure(ui.FragmentShader shader) {
     var index = 2;
-    for (final value in [
-      1.0,
-      dropsScale(settings),
-      settings.frost,
-      settings.fringes,
-      for (final drop in dropsLayout(settings, seconds: _seconds)) ...[
-        drop.x,
-        drop.y,
-        drop.radius,
-      ],
-    ]) {
+    for (final value in widget.tile.values) {
       shader.setFloat(index++, value);
     }
     return shader;
@@ -350,11 +361,18 @@ String videoEffectLabel(BuildContext context, EditorEffectType? type) {
   if (type.builtIn case final builtIn?) {
     return builtInVideoEffectLabel(context, builtIn);
   }
-  // Divine renders three effects itself: the echo trail, the fisheye and
-  // the drops.
+  // The others Divine renders itself.
   return switch (type.customId) {
     fisheyeVideoEffectId => context.l10n.videoEditorEffectFisheye,
     dropsVideoEffectId => context.l10n.videoEditorEffectDrops,
+    lightLeakVideoEffectId => context.l10n.videoEditorEffectLightLeak,
+    snowVideoEffectId => context.l10n.videoEditorEffectSnow,
+    confettiVideoEffectId => context.l10n.videoEditorEffectConfetti,
+    heartsVideoEffectId => context.l10n.videoEditorEffectHearts,
+    sparklesVideoEffectId => context.l10n.videoEditorEffectSparkles,
+    tiltShiftVideoEffectId => context.l10n.videoEditorEffectTiltShift,
+    zoomBlurVideoEffectId => context.l10n.videoEditorEffectZoomBlur,
+    comicVideoEffectId => context.l10n.videoEditorEffectComic,
     _ => context.l10n.videoEditorEffectEcho,
   };
 }

@@ -8878,6 +8878,30 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorEffectDrops => 'قطرات';
 
   @override
+  String get videoEditorEffectLightLeak => 'تسرّب الضوء';
+
+  @override
+  String get videoEditorEffectSnow => 'ثلج';
+
+  @override
+  String get videoEditorEffectConfetti => 'قصاصات ملوّنة';
+
+  @override
+  String get videoEditorEffectHearts => 'قلوب';
+
+  @override
+  String get videoEditorEffectSparkles => 'بريق';
+
+  @override
+  String get videoEditorEffectTiltShift => 'منظر مصغّر';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'تمويه التكبير';
+
+  @override
+  String get videoEditorEffectComic => 'رسوم مصوّرة';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'ضبط القطرات';
 
   @override

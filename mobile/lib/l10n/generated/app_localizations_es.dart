@@ -8974,6 +8974,30 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorEffectDrops => 'Gotas';
 
   @override
+  String get videoEditorEffectLightLeak => 'Fuga de luz';
+
+  @override
+  String get videoEditorEffectSnow => 'Nieve';
+
+  @override
+  String get videoEditorEffectConfetti => 'Confeti';
+
+  @override
+  String get videoEditorEffectHearts => 'Corazones';
+
+  @override
+  String get videoEditorEffectSparkles => 'Destellos';
+
+  @override
+  String get videoEditorEffectTiltShift => 'Tilt-shift';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'Desenfoque de zoom';
+
+  @override
+  String get videoEditorEffectComic => 'Cómic';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Ajustar gotas';
 
   @override

@@ -8889,6 +8889,30 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorEffectDrops => 'Titisan';
 
   @override
+  String get videoEditorEffectLightLeak => 'Kebocoran Cahaya';
+
+  @override
+  String get videoEditorEffectSnow => 'Salji';
+
+  @override
+  String get videoEditorEffectConfetti => 'Konfeti';
+
+  @override
+  String get videoEditorEffectHearts => 'Hati';
+
+  @override
+  String get videoEditorEffectSparkles => 'Kilauan';
+
+  @override
+  String get videoEditorEffectTiltShift => 'Tilt-Shift';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'Kabur Zum';
+
+  @override
+  String get videoEditorEffectComic => 'Komik';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Laras titisan';
 
   @override

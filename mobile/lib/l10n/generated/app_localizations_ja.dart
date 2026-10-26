@@ -8444,6 +8444,30 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectDrops => 'しずく';
 
   @override
+  String get videoEditorEffectLightLeak => '光漏れ';
+
+  @override
+  String get videoEditorEffectSnow => '雪';
+
+  @override
+  String get videoEditorEffectConfetti => '紙吹雪';
+
+  @override
+  String get videoEditorEffectHearts => 'ハート';
+
+  @override
+  String get videoEditorEffectSparkles => 'キラキラ';
+
+  @override
+  String get videoEditorEffectTiltShift => 'ティルトシフト';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'ズームブラー';
+
+  @override
+  String get videoEditorEffectComic => 'コミック';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'しずくを調整';
 
   @override

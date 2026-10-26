@@ -9086,6 +9086,30 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorEffectDrops => 'Krople';
 
   @override
+  String get videoEditorEffectLightLeak => 'Wyciek światła';
+
+  @override
+  String get videoEditorEffectSnow => 'Śnieg';
+
+  @override
+  String get videoEditorEffectConfetti => 'Konfetti';
+
+  @override
+  String get videoEditorEffectHearts => 'Serca';
+
+  @override
+  String get videoEditorEffectSparkles => 'Iskierki';
+
+  @override
+  String get videoEditorEffectTiltShift => 'Tilt-shift';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'Rozmycie zoomu';
+
+  @override
+  String get videoEditorEffectComic => 'Komiks';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Dostosuj krople';
 
   @override
