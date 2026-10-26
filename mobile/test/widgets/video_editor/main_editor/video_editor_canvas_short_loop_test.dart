@@ -17,6 +17,7 @@ import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/draw_editor/video_editor_draw_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
+import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/blocs/video_editor/text_wrap_hint/text_wrap_hint_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
@@ -42,6 +43,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../helpers/divine_video_player_channel.dart';
 import '../../../helpers/test_provider_overrides.dart';
+import '../../../helpers/video_editor/loop_repair.dart';
 
 class _MockClipEditorBloc extends MockBloc<ClipEditorEvent, ClipEditorState>
     implements ClipEditorBloc {}
@@ -294,6 +296,12 @@ void main() {
               BlocProvider(create: (_) => VideoEditorAudioVisualizerCubit()),
               // Read on every history change, before it is persisted.
               BlocProvider(create: (_) => TextWrapHintCubit()),
+              // Read on every history change too, before the capability sync
+              // that hands the Adjust sets to the player.
+              BlocProvider(
+                create: (_) =>
+                    LoopSuggestionCubit(repository: noMatchLoopRepository()),
+              ),
             ],
             child: VideoEditorScope(
               editorKey: GlobalKey(),
