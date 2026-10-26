@@ -8462,6 +8462,30 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectDrops => '물방울';
 
   @override
+  String get videoEditorEffectLightLeak => '빛 번짐';
+
+  @override
+  String get videoEditorEffectSnow => '눈';
+
+  @override
+  String get videoEditorEffectConfetti => '색종이';
+
+  @override
+  String get videoEditorEffectHearts => '하트';
+
+  @override
+  String get videoEditorEffectSparkles => '반짝이';
+
+  @override
+  String get videoEditorEffectTiltShift => '틸트 시프트';
+
+  @override
+  String get videoEditorEffectZoomBlur => '줌 블러';
+
+  @override
+  String get videoEditorEffectComic => '만화';
+
+  @override
   String get videoEditorDropsSettingsTitle => '물방울 조정';
 
   @override

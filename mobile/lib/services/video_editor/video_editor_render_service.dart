@@ -975,6 +975,7 @@ class VideoEditorRenderService {
       customEffects: customVideoEffectsOnOutput(
         parameters?.customVideoEffectsFromCompleteMeta ?? const [],
         timelineMap,
+        beats: beats,
       ),
       imageBytesWithCropping: true,
       qualityConfig: VideoQualityConfig.custom(

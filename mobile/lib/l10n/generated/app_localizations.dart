@@ -14981,6 +14981,54 @@ abstract class AppLocalizations {
   /// **'Drops'**
   String get videoEditorEffectDrops;
 
+  /// Name of a video effect: warm light washes in from the edges of the picture and drifts across it, as when stray light fogs a strip of film.
+  ///
+  /// In en, this message translates to:
+  /// **'Light Leak'**
+  String get videoEditorEffectLightLeak;
+
+  /// Name of a video effect: snowflakes fall over the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Snow'**
+  String get videoEditorEffectSnow;
+
+  /// Name of a video effect: coloured paper confetti tumbles down over the picture, as at a party.
+  ///
+  /// In en, this message translates to:
+  /// **'Confetti'**
+  String get videoEditorEffectConfetti;
+
+  /// Name of a video effect: little hearts float up over the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Hearts'**
+  String get videoEditorEffectHearts;
+
+  /// Name of a video effect: small four-pointed glints twinkle over the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Sparkles'**
+  String get videoEditorEffectSparkles;
+
+  /// Name of a video effect: the top and bottom of the picture are blurred, so the scene looks like a miniature model. Tilt-shift is the photography term for this look.
+  ///
+  /// In en, this message translates to:
+  /// **'Tilt-Shift'**
+  String get videoEditorEffectTiltShift;
+
+  /// Name of a video effect: the picture streaks outward from its centre, as if the camera zoomed in during the shot.
+  ///
+  /// In en, this message translates to:
+  /// **'Zoom Blur'**
+  String get videoEditorEffectZoomBlur;
+
+  /// Name of a video effect: the picture looks like a printed comic book, with flat colours, halftone dots and ink outlines.
+  ///
+  /// In en, this message translates to:
+  /// **'Comic'**
+  String get videoEditorEffectComic;
+
   /// Header of the expandable card in the video effects editor that holds the settings of the Drops effect.
   ///
   /// In en, this message translates to:

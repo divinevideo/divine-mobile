@@ -1724,3 +1724,385 @@ final class DropsVideoEffectTests: XCTestCase {
     return out
   }
 }
+
+/// Light leak, particles, tilt-shift, zoom blur and comic are drawn with Metal
+/// kernels on iOS and macOS (`ShaderVideoEffect`), and with the same shaders in
+/// GLSL on Android and in the effects picker (`shaders/*.frag`). These tests
+/// check every pixel each kernel draws against its shader's formulas computed
+/// here on the CPU, so a change to one copy that is not made to the others
+/// fails, and so does a kernel that reads its textures upside down.
+final class ShaderVideoEffectTests: XCTestCase {
+  private let width = 144
+  private let height = 256
+
+  /// Red and green hold each pixel's position, so a wrong offset shows; blue
+  /// is a checkerboard, so blurs, edges, the ink and the dots show. Every value is a
+  /// multiple of 1/256, which the kernels' half-float textures hold exactly.
+  private lazy var rgb: [Double] = {
+    var rgb = [Double](repeating: 0, count: width * height * 3)
+    for y in 0..<height {
+      for x in 0..<width {
+        let i = (y * width + x) * 3
+        rgb[i] = Double(x * 256 / width) / 256
+        rgb[i + 1] = Double(y * 256 / height) / 256
+        rgb[i + 2] = (x / 12 + y / 12) % 2 == 0 ? 0 : 255.0 / 256
+      }
+    }
+    return rgb
+  }()
+
+  /// The frame as Core Image sees it: a bitmap's first row is the top of the
+  /// image, Core Image's y = 0 the bottom.
+  private lazy var frame: CIImage = {
+    var pixels = [Float](repeating: 1, count: width * height * 4)
+    for y in 0..<height {
+      for x in 0..<width {
+        let s = (y * width + x) * 3, d = ((height - 1 - y) * width + x) * 4
+        for k in 0..<3 { pixels[d + k] = Float(rgb[s + k]) }
+      }
+    }
+    return CIImage(
+      bitmapData: Data(bytes: pixels, count: pixels.count * 4),
+      bytesPerRow: width * 16,
+      size: CGSize(width: width, height: height),
+      format: .RGBAf,
+      colorSpace: nil)
+  }()
+
+  private let context = CIContext(options: [.workingColorSpace: NSNull()])
+
+  func testLightLeakDrawsWhatTheAndroidShaderDraws() {
+    for (intensity, seconds) in [(0.7, 0.0), (1.0, 9.0), (0.35, 23.5)] {
+      let difference = compare(
+        LightLeakVideoEffect(params: ["intensity": intensity]), seconds: seconds,
+        lightLeak(intensity: intensity, seconds: seconds))
+      // Half-float textures round to about 0.0005.
+      XCTAssertLessThan(difference.worst, 0.003, "intensity \(intensity), \(seconds) s")
+    }
+  }
+
+  func testParticlesDrawWhatTheAndroidShaderDraws() {
+    for style in ParticlesVideoEffect.Style.allCases {
+      for (intensity, seconds) in [(1.0, 3.0), (0.6, 17.25)] {
+        let difference = compare(
+          ParticlesVideoEffect(style: style, params: ["intensity": intensity]),
+          seconds: seconds,
+          particles(style: style.rawValue, intensity: intensity, seconds: seconds))
+        // The GPU's sine drifts from the CPU's at large angles, which moves a
+        // few of the confetti's hard edges by a fraction of a pixel; a change
+        // to any particle's shape, place or colour moves far more.
+        XCTAssertLessThan(difference.share, 0.002, "\(style), \(intensity), \(seconds) s")
+      }
+    }
+  }
+
+  func testTiltShiftDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let difference = compare(
+        TiltShiftVideoEffect(params: ["intensity": intensity]), seconds: 0,
+        tiltShift(intensity: intensity))
+      XCTAssertLessThan(difference.worst, 0.003, "intensity \(intensity)")
+    }
+  }
+
+  func testZoomBlurDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let difference = compare(
+        ZoomBlurVideoEffect(params: ["intensity": intensity]), seconds: 0,
+        zoomBlur(strength: intensity))
+      XCTAssertLessThan(difference.worst, 0.006, "intensity \(intensity)")
+    }
+  }
+
+  func testComicDrawsWhatTheAndroidShaderDraws() {
+    for intensity in [1.0, 0.45] {
+      let difference = compare(
+        ComicVideoEffect(params: ["intensity": intensity]), seconds: 0,
+        comic(intensity: intensity))
+      // A pixel whose brightness lies right on the edge of a band can land in
+      // either, on the GPU and here; a change to the bands, the dots or the
+      // ink moves far more.
+      XCTAssertLessThan(difference.share, 0.002, "intensity \(intensity)")
+    }
+  }
+
+  func testLeavesTheFrameAloneAtNoIntensity() {
+    let effects: [ShaderVideoEffect] = [
+      LightLeakVideoEffect(params: ["intensity": 0]),
+      ParticlesVideoEffect(style: .snow, params: ["intensity": 0]),
+      TiltShiftVideoEffect(params: ["intensity": 0]),
+      ZoomBlurVideoEffect(params: ["intensity": 0]),
+      ComicVideoEffect(params: ["intensity": 0]),
+    ]
+    for effect in effects {
+      XCTAssertTrue(
+        effect.render(frame, history: [], timeUs: 0, effectTimeUs: 1_000_000) === frame,
+        "\(type(of: effect))")
+    }
+  }
+
+  func testZoomBlurOnTheBeatFadesEachHitOutOverHalfASecond() {
+    let beats = ZoomBlurHits.beats(["beatsUs": [1_200_000, 200_000]])
+    XCTAssertEqual(beats, [200_000, 1_200_000])
+    XCTAssertNil(ZoomBlurHits.beats(["intensity": 0.5]))
+    let cases: [(Int64, Double)] = [
+      (0, 0), (200_000, 0.8), (450_000, 0.2), (699_999, 0), (1_200_000, 0.8),
+      (1_325_000, 0.45),
+    ]
+    for (time, expected) in cases {
+      XCTAssertEqual(
+        ZoomBlurHits.strength(intensity: 0.8, beatsUs: beats, effectTimeUs: time),
+        expected, accuracy: 1e-5, "\(time) us")
+    }
+    XCTAssertEqual(
+      ZoomBlurHits.strength(intensity: 0.8, beatsUs: nil, effectTimeUs: 123), 0.8)
+  }
+
+  /// How far `effect`'s output is from `expected`: the worst channel, and the
+  /// share of channels off by more than 0.01.
+  private func compare(_ effect: ShaderVideoEffect, seconds: Double, _ expected: [Double])
+    -> (worst: Double, share: Double)
+  {
+    let output = effect.render(
+      frame, history: [], timeUs: 0, effectTimeUs: Int64(seconds * 1_000_000))
+    XCTAssertEqual(output.extent, frame.extent)
+    var drawn = [Float](repeating: 0, count: width * height * 4)
+    drawn.withUnsafeMutableBytes {
+      context.render(
+        output, toBitmap: $0.baseAddress!, rowBytes: width * 16,
+        bounds: frame.extent, format: .RGBAf, colorSpace: nil)
+    }
+    var worst = 0.0, off = 0
+    for y in 0..<height {
+      for x in 0..<width {
+        for k in 0..<3 {
+          let got = Double(drawn[((height - 1 - y) * width + x) * 4 + k])
+          let difference = abs(got - expected[(y * width + x) * 3 + k])
+          worst = max(worst, difference)
+          if difference > 0.01 { off += 1 }
+        }
+      }
+    }
+    return (worst, Double(off) / Double(width * height * 3))
+  }
+
+  // MARK: The shaders on the CPU, for the RGB frame stored bottom row first.
+
+  private func tap(_ qx: Double, _ qy: Double) -> [Double] {
+    let w = Double(width), h = Double(height)
+    let x = min(max(qx, 0.5), w - 0.5) - 0.5, y = min(max(qy, 0.5), h - 0.5) - 0.5
+    let x0 = Int(x), y0 = Int(y), x1 = min(x0 + 1, width - 1), y1 = min(y0 + 1, height - 1)
+    let fx = x - Double(x0), fy = y - Double(y0)
+    return (0..<3).map { k in
+      let row0 = rgb[(y0 * width + x0) * 3 + k] * (1 - fx) + rgb[(y0 * width + x1) * 3 + k] * fx
+      let row1 = rgb[(y1 * width + x0) * 3 + k] * (1 - fx) + rgb[(y1 * width + x1) * 3 + k] * fx
+      return row0 * (1 - fy) + row1 * fy
+    }
+  }
+
+  /// Runs `shade` for each pixel's centre, in pixels with y up.
+  private func eachPixel(_ shade: (Double, Double) -> [Double]) -> [Double] {
+    var out = [Double](repeating: 0, count: rgb.count)
+    for yi in 0..<height {
+      for xi in 0..<width {
+        let color = shade(Double(xi) + 0.5, Double(yi) + 0.5)
+        for k in 0..<3 { out[(yi * width + xi) * 3 + k] = color[k] }
+      }
+    }
+    return out
+  }
+
+  private func fract(_ x: Double) -> Double { x - x.rounded(.down) }
+
+  private func clamp(_ x: Double) -> Double { min(max(x, 0), 1) }
+
+  private func sign(_ x: Double) -> Double { x > 0 ? 1 : (x < 0 ? -1 : 0) }
+
+  private func mix(_ a: [Double], _ b: [Double], _ t: Double) -> [Double] {
+    (0..<3).map { a[$0] + (b[$0] - a[$0]) * t }
+  }
+
+  private func smoothstep(_ edge0: Double, _ edge1: Double, _ x: Double) -> Double {
+    let v = clamp((x - edge0) / (edge1 - edge0))
+    return v * v * (3 - 2 * v)
+  }
+
+  /// Interleaved gradient noise, which turns or shifts each pixel's taps.
+  private func noise(_ px: Double, _ py: Double) -> Double {
+    fract(52.9829189 * fract(px * 0.06711056 + py * 0.00583715))
+  }
+
+  private func lightLeak(intensity: Double, seconds t: Double) -> [Double] {
+    let w = Double(width), h = Double(height), l = max(w, h)
+    let lights: [(x: Double, y: Double, reachX: Double, reachY: Double, color: [Double])] = [
+      (
+        -0.06 + 0.16 * sin(0.37 * t + 0.4), 0.62 + 0.3 * sin(0.21 * t + 1.1), 0.32, 0.6,
+        [0.95, 0.49, 0.17]
+      ),
+      (
+        0.45 + 0.4 * sin(0.18 * t + 2.2), 1.04 + 0.08 * sin(0.31 * t + 0.3), 0.55, 0.26,
+        [0.75, 0.21, 0.24]
+      ),
+      (
+        0.18 + 0.42 * sin(0.27 * t + 4.0), 0.8 + 0.18 * sin(0.47 * t + 2.6), 0.24, 0.24,
+        [0.55, 0.45, 0.28]
+      ),
+    ]
+    return eachPixel { px, py in
+      let base = tap(px, py)
+      var glow = [0.0, 0.0, 0.0]
+      for light in lights {
+        let dx = (px - light.x * w) / (light.reachX * l)
+        let dy = (py - light.y * h) / (light.reachY * l)
+        let falloff = exp(-(dx * dx + dy * dy))
+        for k in 0..<3 { glow[k] += light.color[k] * falloff }
+      }
+      return (0..<3).map { 1 - (1 - base[$0]) * (1 - clamp(glow[$0] * intensity)) }
+    }
+  }
+
+  private func hash3(_ px: Double, _ py: Double) -> [Double] {
+    var q = [fract(px * 0.1031), fract(py * 0.1030), fract(px * 0.0973)]
+    let d = q[0] * (q[1] + 3.33) + q[1] * (q[0] + 3.33) + q[2] * (q[2] + 3.33)
+    q = q.map { $0 + d }
+    return [
+      fract((q[0] + q[1]) * q[2]), fract((q[0] + q[2]) * q[1]), fract((q[1] + q[2]) * q[0]),
+    ]
+  }
+
+  private func heart(_ px: Double, _ y: Double) -> Double {
+    let x = abs(px)
+    if y + x > 1 { return hypot(x - 0.25, y - 0.75) - 0.353553 }
+    let m = 0.5 * max(x + y, 0)
+    let a = x * x + (y - 1) * (y - 1), b = (x - m) * (x - m) + (y - m) * (y - m)
+    return min(a, b).squareRoot() * sign(x - y)
+  }
+
+  private func turn(_ dx: Double, _ dy: Double, _ angle: Double) -> (x: Double, y: Double) {
+    let c = cos(angle), n = sin(angle)
+    return (c * dx + n * dy, c * dy - n * dx)
+  }
+
+  private func particles(style: Double, intensity: Double, seconds t: Double) -> [Double] {
+    let s = Double(min(width, height))
+    var (cell, speed, sway, density) = (0.14, -0.22, 0.1, 0.75)
+    if style > 2.5 {
+      (cell, speed, sway, density) = (0.15, 0.03, 0.0, 0.45)
+    } else if style > 1.5 {
+      (cell, speed, sway, density) = (0.17, 0.12, 0.1, 0.35)
+    } else if style > 0.5 {
+      (cell, speed, sway, density) = (0.13, -0.32, 0.08, 0.6)
+    }
+    return eachPixel { px, py in
+      var color = tap(px, py)
+      for k in 0..<3 {
+        let depth = 0.55 + 0.225 * Double(k)
+        let size = s * cell * depth
+        let qx = px / size + 0.37 * Double(k)
+        let qy = (py - speed * depth * t * s) / size
+        let idx = qx.rounded(.down) + 131 * Double(k), idy = qy.rounded(.down) + 71 * Double(k)
+        let h = hash3(idx, idy)
+        if h[2] >= density * intensity { continue }
+        let g = hash3(idx + 17, idy + 17)
+        var dx = fract(qx) - (0.25 + 0.5 * h[0])
+        let dy = fract(qy) - (0.25 + 0.5 * h[1])
+        dx -= sway * sin(t * (0.6 + 0.6 * g[0]) + 6.2832 * g[1])
+        let alpha = 0.55 + 0.45 * depth
+        if style > 2.5 {
+          let twinkle = 0.5 + 0.5 * sin(t * (1.6 + 1.6 * g[0]) + 6.2832 * g[1])
+          let reach = (0.1 + 0.1 * g[2]) * (0.3 + 0.7 * twinkle)
+          let mx = abs(dx), my = abs(dy)
+          let rays =
+            exp(-mx / 0.016) * max(1 - my / reach, 0) + exp(-my / 0.016) * max(1 - mx / reach, 0)
+          let core = exp(-(dx * dx + dy * dy) / (reach * reach * 0.05))
+          color = mix(color, [1.0, 0.93, 0.75], alpha * twinkle * min(rays + core, 1))
+        } else if style > 1.5 {
+          let size = 0.13 + 0.04 * g[2]
+          let turned = turn(dx, dy, 0.3 * sin(t * (1 + g[0]) + 6.2832 * g[1]))
+          let edge = heart(turned.x / size, turned.y / size + 0.5) * size
+          let pink = mix([0.93, 0.13, 0.3], [1.0, 0.45, 0.65], fract(g[2] * 7.31))
+          color = mix(color, pink, alpha * 0.92 * (1 - smoothstep(-0.012, 0.012, edge)))
+        } else if style > 0.5 {
+          let tumble = cos(t * (3 + 3 * g[1]) + 6.2832 * h[1])
+          let turned = turn(dx, dy, 6.2832 * g[2] + t * (1.5 + 2.5 * g[0]) * sign(h[0] - 0.5))
+          let bx = abs(turned.x) - (0.11 * abs(tumble) + 0.01), by = abs(turned.y) - 0.05
+          let edge = hypot(max(bx, 0), max(by, 0)) + min(max(bx, by), 0)
+          let hue = fract(g[2] * 7.31)
+          let paper = [0.0, 0.33, 0.67].map {
+            (0.55 + 0.45 * cos(6.2832 * (hue + $0))) * (0.65 + 0.35 * abs(tumble))
+          }
+          color = mix(color, paper, alpha * (1 - smoothstep(-0.012, 0.012, edge)))
+        } else {
+          let r = 0.07 + 0.05 * g[2]
+          color = mix(
+            color, [0.97, 0.98, 1.0], alpha * (1 - smoothstep(r * 0.3, r, hypot(dx, dy))))
+        }
+      }
+      return color
+    }
+  }
+
+  private func tiltShift(intensity: Double) -> [Double] {
+    let s = Double(min(width, height)), h = Double(height)
+    return eachPixel { px, py in
+      let r = 0.03 * s * intensity * smoothstep(0.1, 0.42, abs(py / h - 0.5))
+      var color = tap(px, py)
+      if r > 0.5 {
+        let spin = 6.2832 * noise(px, py)
+        for i in 0..<32 {
+          let n = Double(i), angle = n * 2.399963 + spin
+          let reach = r * ((n + 0.5) / 32).squareRoot()
+          let more = tap(px + reach * cos(angle), py + reach * sin(angle))
+          for k in 0..<3 { color[k] += more[k] }
+        }
+        color = color.map { $0 / 33 }
+      }
+      let luma = color[0] * 0.2126 + color[1] * 0.7152 + color[2] * 0.0722
+      return color.map { channel in
+        let vivid = luma + (channel - luma) * (1 + 0.4 * intensity)
+        return clamp((vivid - 0.5) * (1 + 0.12 * intensity) + 0.5)
+      }
+    }
+  }
+
+  private func zoomBlur(strength: Double) -> [Double] {
+    let cx = Double(width) / 2, cy = Double(height) / 2
+    return eachPixel { px, py in
+      let jitter = noise(px, py)
+      var color = [0.0, 0.0, 0.0]
+      for i in 0..<32 {
+        let reach = 1 - 0.22 * strength * (Double(i) + jitter) / 32
+        let more = tap(cx + (px - cx) * reach, cy + (py - cy) * reach)
+        for k in 0..<3 { color[k] += more[k] }
+      }
+      return color.map { $0 / 32 }
+    }
+  }
+
+  private func comic(intensity: Double) -> [Double] {
+    let s = Double(min(width, height)), e = max(1, s / 540)
+    func luma(_ c: [Double]) -> Double { c[0] * 0.299 + c[1] * 0.587 + c[2] * 0.114 }
+    return eachPixel { px, py in
+      let color = tap(px, py)
+      let tl = luma(tap(px - e, py + e)), tc = luma(tap(px, py + e))
+      let tr = luma(tap(px + e, py + e)), ml = luma(tap(px - e, py))
+      let mr = luma(tap(px + e, py)), bl = luma(tap(px - e, py - e))
+      let bc = luma(tap(px, py - e)), br = luma(tap(px + e, py - e))
+      let gx = tr + 2 * mr + br - tl - 2 * ml - bl
+      let gy = tl + 2 * tc + tr - bl - 2 * bc - br
+      let ink = smoothstep(0.3, 0.8, hypot(gx, gy))
+      let l = luma(color)
+      let band = 0.2 + 0.27 * min((l * 4).rounded(.down), 3)
+      let cell = 0.018 * s
+      let gridX = (px + py) * 0.70710678 / cell, gridY = (py - px) * 0.70710678 / cell
+      let dx = (fract(gridX) - 0.5) * cell, dy = (fract(gridY) - 0.5) * cell
+      let radius = 0.6 * cell * max(0.7 - l, 0).squareRoot()
+      let spot = clamp(radius - hypot(dx, dy))
+      return color.map { channel in
+        let poster = clamp((l + (channel - l) * 1.4) * band / max(l, 0.04))
+        let comic = poster * (1 - 0.35 * spot) * (1 - 0.85 * ink)
+        return channel + (comic - channel) * intensity
+      }
+    }
+  }
+}

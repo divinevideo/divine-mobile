@@ -8684,6 +8684,30 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectDrops => 'ጠብታዎች';
 
   @override
+  String get videoEditorEffectLightLeak => 'የብርሃን ፍሰት';
+
+  @override
+  String get videoEditorEffectSnow => 'በረዶ';
+
+  @override
+  String get videoEditorEffectConfetti => 'ኮንፈቲ';
+
+  @override
+  String get videoEditorEffectHearts => 'ልቦች';
+
+  @override
+  String get videoEditorEffectSparkles => 'ብልጭታዎች';
+
+  @override
+  String get videoEditorEffectTiltShift => 'ቲልት-ሺፍት';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'የማጉላት ብዥታ';
+
+  @override
+  String get videoEditorEffectComic => 'ኮሚክ';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'ጠብታዎችን አስተካክል';
 
   @override

@@ -9088,6 +9088,30 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectDrops => 'Picături';
 
   @override
+  String get videoEditorEffectLightLeak => 'Scurgere de lumină';
+
+  @override
+  String get videoEditorEffectSnow => 'Zăpadă';
+
+  @override
+  String get videoEditorEffectConfetti => 'Confetti';
+
+  @override
+  String get videoEditorEffectHearts => 'Inimi';
+
+  @override
+  String get videoEditorEffectSparkles => 'Sclipiri';
+
+  @override
+  String get videoEditorEffectTiltShift => 'Tilt-shift';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'Estompare zoom';
+
+  @override
+  String get videoEditorEffectComic => 'Benzi desenate';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Ajustează picăturile';
 
   @override

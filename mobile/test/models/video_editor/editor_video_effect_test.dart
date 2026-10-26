@@ -876,6 +876,64 @@ void main() {
         expect(onOutput.single.startTime, ms(1000));
         expect(onOutput.single.endTime, isNull);
       });
+
+      group('on the beat', () {
+        final zoomBlur = EditorVideoEffect.of(
+          id: 'zoom',
+          type: EditorEffectType.zoomBlur,
+          intensity: 0.8,
+          startTime: const Duration(seconds: 1),
+          endTime: const Duration(seconds: 4),
+          onBeat: true,
+        ).custom!;
+
+        test('fires on the beats in its window, counted from its start on '
+            'the exported video', () {
+          final onOutput = customVideoEffectsOnOutput(
+            [zoomBlur],
+            compressed,
+            beats: [ms(3000), ms(500), ms(1500), ms(3600), ms(4000)],
+          );
+
+          expect(onOutput.single.startTime, ms(1000));
+          expect(onOutput.single.endTime, ms(3600));
+          expect(onOutput.single.params, {
+            ...zoomBlur.params,
+            EditorVideoEffect.beatsParam: [500000, 2000000],
+          });
+        });
+
+        test('is left out without a beat in its window', () {
+          expect(
+            customVideoEffectsOnOutput(
+              [zoomBlur, echo],
+              compressed,
+              beats: [ms(500), ms(4000)],
+            ).map((effect) => effect.id),
+            [echoVideoEffectId],
+          );
+        });
+
+        test('leaves an effect that plays all through without beats', () {
+          expect(
+            customVideoEffectsOnOutput(const [echo], plain, beats: [ms(2000)]),
+            const [echo],
+          );
+        });
+
+        test('counts the beats on the player when one maps the timeline', () {
+          Duration slowed(Duration editorTime) => editorTime * 2;
+
+          final params = customVideoEffectRenderParams(
+            zoomBlur,
+            plain,
+            [ms(2000)],
+            toPlayer: slowed,
+          );
+
+          expect(params?[EditorVideoEffect.beatsParam], [2000000]);
+        });
+      });
     });
   });
 
@@ -969,6 +1027,79 @@ void main() {
       expect(moved.custom!.params, echo.custom!.params);
       expect(moved.startTime, const Duration(seconds: 2));
       expect(moved.endTime, const Duration(seconds: 3));
+    });
+
+    test('reads every custom type back as itself', () {
+      final custom = [
+        for (final type in EditorEffectType.values)
+          if (type.customId != null) type,
+      ];
+      expect(custom, hasLength(11));
+      for (final type in custom) {
+        final effect = EditorVideoEffect.of(
+          id: 'x',
+          type: type,
+          intensity: 0.5,
+        );
+        expect(
+          EditorVideoEffect.fromMap(effect.toMap(), fallbackId: 'y').type,
+          type,
+        );
+      }
+    });
+
+    test('only the zoom blur of the custom effects fires on the beat', () {
+      expect(EditorEffectType.zoomBlur.supportsOnBeat, isTrue);
+      for (final type in [
+        EditorEffectType.echo,
+        EditorEffectType.drops,
+        EditorEffectType.lightLeak,
+        EditorEffectType.confetti,
+        EditorEffectType.comic,
+      ]) {
+        expect(type.supportsOnBeat, isFalse, reason: type.name);
+        expect(
+          EditorVideoEffect.of(
+            id: 'x',
+            type: type,
+            intensity: 0.5,
+            onBeat: true,
+          ).onBeat,
+          isFalse,
+          reason: type.name,
+        );
+      }
+    });
+
+    test('keeps onBeat in its params, through toMap, fromMap and a move', () {
+      final zoomBlur = EditorVideoEffect.of(
+        id: 'zoom',
+        type: EditorEffectType.zoomBlur,
+        intensity: 0.5,
+        onBeat: true,
+      );
+
+      expect(zoomBlur.custom!.params[EditorVideoEffect.onBeatParam], isTrue);
+      final read = EditorVideoEffect.fromMap(zoomBlur.toMap(), fallbackId: 'x');
+      expect(read, zoomBlur);
+      expect(read.onBeat, isTrue);
+      expect(
+        read
+            .retimed(
+              startTime: const Duration(seconds: 1),
+              endTime: const Duration(seconds: 2),
+            )
+            .onBeat,
+        isTrue,
+      );
+      expect(
+        EditorVideoEffect.of(
+          id: 'zoom',
+          type: EditorEffectType.zoomBlur,
+          intensity: 0.5,
+        ).custom!.params,
+        isNot(contains(EditorVideoEffect.onBeatParam)),
+      );
     });
 
     test('never counts as flashing', () {
