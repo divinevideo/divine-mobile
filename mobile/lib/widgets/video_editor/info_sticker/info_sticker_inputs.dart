@@ -244,6 +244,7 @@ class InfoStickerDayCountFields extends StatelessWidget {
               value: day,
               label: l10n.videoEditorInfoStickerDayLabel,
               signed: false,
+              textInputAction: .next,
               onChanged: cubit.dayNumberEntered,
             ),
           ),
@@ -364,6 +365,7 @@ class _NumberField extends StatefulWidget {
     required this.label,
     required this.onChanged,
     this.signed = true,
+    this.textInputAction = TextInputAction.done,
     this.onCleared,
   });
 
@@ -373,6 +375,9 @@ class _NumberField extends StatefulWidget {
 
   /// Whether the number may be negative.
   final bool signed;
+
+  /// [TextInputAction.next] for a field with another one after it.
+  final TextInputAction textInputAction;
 
   /// Called when the creator empties the field, for a value that may be
   /// left out.
@@ -410,7 +415,7 @@ class _NumberFieldState extends State<_NumberField> {
       controller: _controller,
       labelText: widget.label,
       keyboardType: .numberWithOptions(signed: widget.signed),
-      textInputAction: .done,
+      textInputAction: widget.textInputAction,
       textCapitalization: .none,
       autocorrect: false,
       inputFormatters: [

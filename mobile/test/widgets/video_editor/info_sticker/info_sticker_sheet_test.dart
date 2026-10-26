@@ -137,6 +137,23 @@ void main() {
         );
       });
 
+      testWidgets('moves on from the day to the total days', (tester) async {
+        await pumpSheet(
+          tester,
+          initial: const InfoStickerData(
+            kind: InfoStickerKind.dayCount,
+            localeName: 'en',
+            dayNumber: 1,
+          ),
+        );
+
+        final fields = tester.widgetList<TextField>(find.byType(TextField));
+        expect(
+          [for (final field in fields) field.textInputAction],
+          equals([TextInputAction.next, TextInputAction.done]),
+        );
+      });
+
       testWidgets('returns the style picked for a sticker on the canvas', (
         tester,
       ) async {
