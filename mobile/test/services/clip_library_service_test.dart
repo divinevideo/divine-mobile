@@ -339,6 +339,52 @@ void main() {
       );
 
       test(
+        'lists the library row of a clip the recorder deleted and the trash '
+        'restored',
+        () async {
+          final draftService = DraftStorageService(
+            draftsDao: database.draftsDao,
+            clipsDao: database.clipsDao,
+          );
+          // Made in the editor, so it starts without a ghost frame or a
+          // library row of its own.
+          final clip = DivineVideoClip(
+            id: 'split_layout_1',
+            video: EditorVideo.file('/tmp/test_video.mp4'),
+            thumbnailPath: '/tmp/test_thumb.jpg',
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime(2026),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+          );
+          DivineVideoDraft autosave(List<DivineVideoClip> clips) =>
+              DivineVideoDraft.create(
+                id: VideoEditorConstants.autoSaveId,
+                clips: clips,
+                title: '',
+                description: '',
+                hashtags: const {},
+                selectedApproach: '',
+              );
+
+          await draftService.saveDraft(autosave([clip]));
+          // The recorder's delete-last-clip detaches the autosave copy.
+          await service.softDelete('split_layout_1', clearDraftId: true);
+          await draftService.saveDraft(autosave(const []));
+          await draftService.deleteDraft(VideoEditorConstants.autoSaveId);
+          await service.restore('split_layout_1');
+          // What asset recovery writes for the restored clip.
+          await service.saveClip(
+            clip.copyWith(ghostFramePath: '/tmp/test_ghost.jpg'),
+          );
+
+          final clips = await service.getAllClips();
+          expect(clips.map((c) => c.id), equals(['split_layout_1']));
+          expect(clips.single.ghostFramePath, endsWith('test_ghost.jpg'));
+        },
+      );
+
+      test(
         'trashing a dual-row set with clearDraftId shows once in trash',
         () async {
           final draftService = DraftStorageService(
