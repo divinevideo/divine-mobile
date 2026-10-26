@@ -278,6 +278,10 @@ class InfoStickerSymbolChoice extends StatelessWidget {
       ),
     );
     final flag = InfoStickerFormat.flag(countryCode);
+    // A flag kept from the last place shows as a pin where there is none.
+    final shown = symbol == InfoStickerPlaceSymbol.flag && flag == null
+        ? InfoStickerPlaceSymbol.pin
+        : symbol;
     final cubit = context.read<InfoStickerCubit>();
     final l10n = context.l10n;
     return _ChipRow(
@@ -304,7 +308,7 @@ class InfoStickerSymbolChoice extends StatelessWidget {
         ])
           _ChoiceChip(
             label: label,
-            selected: symbol == option,
+            selected: shown == option,
             onTap: () => cubit.placeSymbolChanged(option),
           ),
       ],

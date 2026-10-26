@@ -21,6 +21,14 @@ const _bern = InfoStickerPlace(
   longitude: 7.45,
 );
 
+const _bernWithCountry = InfoStickerPlace(
+  name: 'Bern',
+  detail: 'Switzerland',
+  latitude: 46.95,
+  longitude: 7.45,
+  countryCode: 'CH',
+);
+
 const _thun = InfoStickerPlace(
   name: 'Thun',
   detail: 'Switzerland',
@@ -135,6 +143,43 @@ void main() {
           find.text(l10n.videoEditorInfoStickerLoadFailed),
           findsOneWidget,
         );
+      });
+
+      testWidgets('marks the pin when a place has no flag for the one picked', (
+        tester,
+      ) async {
+        when(
+          () => repository.searchPlaces('Bern', languageCode: 'en'),
+        ).thenAnswer((_) async => [_bernWithCountry, _thun]);
+        await pumpSheet(
+          tester,
+          initial: const InfoStickerData(
+            kind: InfoStickerKind.location,
+            localeName: 'en',
+          ),
+        );
+        await tester.enterText(find.byType(TextField), 'Bern');
+        await tester.pump(searchDebounceDuration);
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(DivineSelectableRow, 'Bern'));
+        await tester.pumpAndSettle();
+        final pin = find.bySemanticsLabel(
+          '📍 ${l10n.videoEditorInfoStickerSymbolPin}',
+        );
+        await tester.tap(
+          find.bySemanticsLabel(
+            '🇨🇭 ${l10n.videoEditorInfoStickerSymbolFlag}',
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(tester.getSemantics(pin), isSemantics(isSelected: false));
+
+        await tester.tap(find.text(l10n.videoEditorInfoStickerChangePlace));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(DivineSelectableRow, 'Thun'));
+        await tester.pumpAndSettle();
+
+        expect(tester.getSemantics(pin), isSemantics(isSelected: true));
       });
 
       testWidgets('moves on from the day to the total days', (tester) async {
