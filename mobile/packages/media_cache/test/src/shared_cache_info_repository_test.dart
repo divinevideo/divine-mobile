@@ -84,5 +84,36 @@ void main() {
       expect(repository, isA<SafeCacheInfoRepository>());
       // No open means there is no repository connection or timer to close.
     });
+
+    test(
+      'recreates an unreadable native index before serving images',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        final database = File('${directory.path}/images.db');
+        await database.writeAsString('not a SQLite database');
+        final media = File('${directory.path}/thumbnail.jpg');
+        await media.writeAsBytes([1, 2, 3]);
+        final unrelated = File('${directory.path}/other.db');
+        await unrelated.writeAsString('unrelated index');
+        final repository = createSharedCacheInfoRepository('images');
+        await repository.open();
+        addTearDown(repository.close);
+        expect(await repository.getAllObjects(), isEmpty);
+        await repository.insert(
+          CacheObject(
+            'https://example.com/recovered.jpg',
+            key: 'recovered',
+            relativePath: 'recovered.jpg',
+            validTill: DateTime.utc(2030),
+          ),
+        );
+        expect(
+          (await repository.get('recovered'))?.relativePath,
+          'recovered.jpg',
+        );
+        expect(await media.readAsBytes(), [1, 2, 3]);
+        expect(await unrelated.readAsString(), 'unrelated index');
+      },
+    );
   });
 }

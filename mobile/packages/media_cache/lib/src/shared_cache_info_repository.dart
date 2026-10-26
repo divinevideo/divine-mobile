@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 import 'package:media_cache/src/safe_cache_info_repository.dart';
+import 'package:media_cache/src/sqlite_cache_info_repository.dart';
 
 /// Creates an index shared by foreground and notification background engines.
 ///
@@ -17,7 +18,7 @@ CacheInfoRepository createSharedCacheInfoRepository(String databaseName) {
         TargetPlatform.iOS,
         TargetPlatform.macOS,
       }.contains(defaultTargetPlatform)) {
-    return CacheObjectProvider(databaseName: databaseName);
+    return SqliteCacheInfoRepository(databaseName: databaseName);
   }
   return SafeCacheInfoRepository(databaseName: databaseName);
 }
