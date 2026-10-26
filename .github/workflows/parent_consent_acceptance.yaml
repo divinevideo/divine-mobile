@@ -63,7 +63,9 @@ jobs:
           cache-provider: basic
       - name: Install backend and client dependencies
         run: |
-          npm ci --prefix .consent-backend/worker
+          # Matches the pinned backend's CI: its unused Vitest worker-pool
+          # dependency still declares a Vitest 3 peer while tests use Vitest 4.
+          npm ci --legacy-peer-deps --prefix .consent-backend/worker
           cd mobile
           flutter pub get
       - name: Exercise real client and Worker HTTP contract
