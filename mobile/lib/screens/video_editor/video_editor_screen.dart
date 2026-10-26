@@ -838,7 +838,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   }
 
   /// Opens the info sticker sheet for a new sticker of [kind] and adds the
-  /// sticker set up there, half as wide as the canvas body.
+  /// sticker set up there, as large as a new image sticker.
   Future<void> _addInfoSticker(InfoStickerKind kind) async {
     final initial = InfoStickerData.initial(
       kind: kind,
@@ -863,7 +863,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     editor.addLayer(
       infoStickerWidgetLayer(
         data,
-        width: min(420, (bodySize.width / 2) / _fittedBoxScale),
+        width: min(300, (bodySize.width / 3) / _fittedBoxScale),
       ),
       blockSelectLayer: true,
     );
