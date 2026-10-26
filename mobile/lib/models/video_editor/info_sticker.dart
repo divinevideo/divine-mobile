@@ -464,9 +464,10 @@ class InfoStickerData extends Equatable {
   );
 
   /// This sticker without what a place gave it: the place name, country and
-  /// side of the world, the weather, the sun times and the altitude. [copyWith] cannot unset
-  /// them, so another place's values start from here, and a value the new
-  /// place lacks is not left over from the last one.
+  /// side of the world, the weather, the sun times and the altitude.
+  /// [copyWith] cannot unset them, so another place's values start from
+  /// here, and a value the new place lacks is not left over from the last
+  /// one.
   InfoStickerData withoutPlaceValues() => InfoStickerData(
     kind: kind,
     localeName: localeName,
