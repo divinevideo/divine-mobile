@@ -642,6 +642,53 @@ void main() {
       expect(fallbackTapped, isFalse);
     });
 
+    testWidgets('submits from the keyboard Done action', (tester) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      final repository = _FakeRepository();
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            sharedPreferencesProvider.overrideWithValue(prefs),
+            minorAccountReviewOverrideServiceProvider.overrideWithValue(
+              MinorAccountReviewOverrideService(prefs: prefs),
+            ),
+            currentMinorAccountReviewStatusProvider.overrideWith(
+              (ref) async => _statusWithCase(),
+            ),
+            minorAccountReviewRepositoryProvider.overrideWithValue(repository),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: MinorConsentSubmitView(
+                videoPath: '/tmp/consent.mp4',
+                onUseEmailFallback: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byType(TextFormField),
+        'parent@example.com',
+      );
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+
+      expect(repository.submittedCaseId, 'case-1');
+      expect(repository.submittedEmail, 'parent@example.com');
+      expect(
+        find.text(l10n.minorAccountReviewVideoSubmittedTitle),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('offers a retry and the email fallback when submit fails', (
       tester,
     ) async {

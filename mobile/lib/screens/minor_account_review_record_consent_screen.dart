@@ -473,7 +473,10 @@ class _MinorConsentSubmitFormState
             controller: _emailController,
             enabled: state.status == MinorConsentSubmitStatus.editing,
             keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.done,
             autocorrect: false,
+            autofillHints: const [AutofillHints.email],
+            onSubmitted: (_) => _submit(caseId),
             validator: (value) => Validators.validateEmail(
               value,
               messages: validationMessages,
