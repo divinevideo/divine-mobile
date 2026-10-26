@@ -8880,6 +8880,30 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectDrops => 'Droppar';
 
   @override
+  String get videoEditorEffectLightLeak => 'Ljusläcka';
+
+  @override
+  String get videoEditorEffectSnow => 'Snö';
+
+  @override
+  String get videoEditorEffectConfetti => 'Konfetti';
+
+  @override
+  String get videoEditorEffectHearts => 'Hjärtan';
+
+  @override
+  String get videoEditorEffectSparkles => 'Gnistor';
+
+  @override
+  String get videoEditorEffectTiltShift => 'Tilt-shift';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'Zoomoskärpa';
+
+  @override
+  String get videoEditorEffectComic => 'Serie';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Justera droppar';
 
   @override

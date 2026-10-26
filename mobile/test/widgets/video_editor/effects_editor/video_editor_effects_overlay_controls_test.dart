@@ -146,6 +146,21 @@ void main() {
         expect(cubit.state.onBeat, isTrue);
       });
 
+      testWidgets('shows for the zoom blur, the one effect Divine draws that '
+          'can fire on the beat', (tester) async {
+        cubit.selectType(EditorEffectType.tiltShift);
+        await tester.pumpWidget(buildWidget());
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.videoEditorEffectsOnBeat), findsNothing);
+
+        cubit.selectType(EditorEffectType.zoomBlur);
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.videoEditorEffectsOnBeat));
+        await tester.pumpAndSettle();
+
+        expect(cubit.state.selectionOnBeat, isTrue);
+      });
+
       testWidgets('says when nothing in the video makes a sound', (
         tester,
       ) async {

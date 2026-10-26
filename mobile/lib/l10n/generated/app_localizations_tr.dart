@@ -8802,6 +8802,30 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectDrops => 'Damlalar';
 
   @override
+  String get videoEditorEffectLightLeak => 'Işık Sızıntısı';
+
+  @override
+  String get videoEditorEffectSnow => 'Kar';
+
+  @override
+  String get videoEditorEffectConfetti => 'Konfeti';
+
+  @override
+  String get videoEditorEffectHearts => 'Kalpler';
+
+  @override
+  String get videoEditorEffectSparkles => 'Pırıltılar';
+
+  @override
+  String get videoEditorEffectTiltShift => 'Tilt-Shift';
+
+  @override
+  String get videoEditorEffectZoomBlur => 'Zoom Bulanıklığı';
+
+  @override
+  String get videoEditorEffectComic => 'Çizgi Roman';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Damlaları ayarla';
 
   @override
