@@ -8,6 +8,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_editor/info_sticker/info_sticker_cubit.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/repositories/info_sticker_repository.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
@@ -159,6 +160,53 @@ void main() {
         act: (cubit) => cubit.load(),
         verify: (cubit) {
           expect(cubit.state.data.isComplete, isTrue);
+          expect(cubit.state.valueStatus, InfoStickerValueStatus.failure);
+        },
+      );
+      blocTest<InfoStickerCubit, InfoStickerState>(
+        'goes on with now when reading the recording time is a defect',
+        setUp: () => when(
+          () => repository.recordingTimeOf(_clip),
+        ).thenAnswer((_) async => throw UnsupportedError('no metadata here')),
+        build: () => InfoStickerCubit(
+          repository: repository,
+          initial: _sticker(InfoStickerKind.time),
+          clip: _clip,
+        ),
+        act: (cubit) => cubit.load(),
+        errors: () => [
+          isA<Reportable<Object>>().having(
+            (error) => error.unwrap(),
+            'unwrap',
+            isA<UnsupportedError>(),
+          ),
+        ],
+        verify: (cubit) {
+          expect(cubit.state.valueStatus, InfoStickerValueStatus.idle);
+          expect(cubit.state.timeSource, InfoStickerTimeSource.now);
+          expect(cubit.state.data.isComplete, isTrue);
+        },
+      );
+
+      blocTest<InfoStickerCubit, InfoStickerState>(
+        'leaves a level to set when reading the battery is a defect',
+        setUp: () => when(
+          () => repository.batteryLevel(),
+        ).thenAnswer((_) async => throw StateError('no battery here')),
+        build: () => InfoStickerCubit(
+          repository: repository,
+          initial: _sticker(InfoStickerKind.battery),
+        ),
+        act: (cubit) => cubit.load(),
+        errors: () => [
+          isA<Reportable<Object>>().having(
+            (error) => error.unwrap(),
+            'unwrap',
+            isA<StateError>(),
+          ),
+        ],
+        verify: (cubit) {
+          expect(cubit.state.data.batteryLevel, equals(50));
           expect(cubit.state.valueStatus, InfoStickerValueStatus.failure);
         },
       );

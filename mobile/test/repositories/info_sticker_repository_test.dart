@@ -7,7 +7,8 @@ import 'dart:ui' show Size;
 
 import 'package:battery_plus/battery_plus.dart';
 import 'package:clock/clock.dart';
-import 'package:flutter/services.dart' show PlatformException;
+import 'package:flutter/services.dart'
+    show MissingPluginException, PlatformException;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -420,6 +421,18 @@ void main() {
           throwsA(isA<InfoStickerLookupException>()),
         );
       });
+
+      test('fails as a lookup on a platform without the plugin', () async {
+        final battery = _MockBattery();
+        when(
+          () => battery.batteryLevel,
+        ).thenThrow(MissingPluginException('getBatteryLevel'));
+
+        await expectLater(
+          _repository(battery: battery).batteryLevel(),
+          throwsA(isA<InfoStickerLookupException>()),
+        );
+      });
     });
 
     group('recordingTimeOf', () {
@@ -475,6 +488,24 @@ void main() {
 
         expect(time, equals(clip.recordedAt));
       });
+
+      test(
+        'keeps the clip time on a platform without the metadata plugin',
+        () async {
+          final editor = _MockProVideoEditor();
+          when(
+            () => editor.getMetadata(any()),
+          ).thenAnswer(
+            (_) async => throw MissingPluginException('getMetadata'),
+          );
+
+          final time = await _repository(
+            videoEditor: editor,
+          ).recordingTimeOf(clip);
+
+          expect(time, equals(clip.recordedAt));
+        },
+      );
     });
   });
 }

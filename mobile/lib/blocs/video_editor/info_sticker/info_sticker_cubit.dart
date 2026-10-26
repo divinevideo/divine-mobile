@@ -5,8 +5,10 @@ import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/blocs/video_editor/info_sticker/info_sticker_reportable_sites.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
+import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/repositories/info_sticker_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -64,7 +66,28 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
           return;
         }
         emit(state.copyWith(valueStatus: .loading));
-        final time = await _repository.recordingTimeOf(clip);
+        final DateTime time;
+        try {
+          time = await _repository.recordingTimeOf(clip);
+        } catch (error, stackTrace) {
+          // The repository answers a file it cannot read with the clip's own
+          // time, so only a defect lands here; the sheet goes on with now.
+          addError(
+            Reportable(
+              error,
+              context: InfoStickerReportableSites.loadRecordingTime,
+            ),
+            stackTrace,
+          );
+          emitIfOpen(
+            state.copyWith(
+              data: state.data.copyWith(dateTime: _now()),
+              timeSource: InfoStickerTimeSource.now,
+              valueStatus: .idle,
+            ),
+          );
+          return;
+        }
         emitIfOpen(
           state.copyWith(
             data: state.data.copyWith(dateTime: time),
@@ -85,18 +108,30 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
           );
         } on InfoStickerLookupException catch (error) {
           Log.warning('$error', name: _logName, category: LogCategory.video);
-          // The slider stays usable: the creator sets the level instead.
-          emitIfOpen(
-            state.copyWith(
-              data: state.data.copyWith(batteryLevel: 50),
-              valueStatus: .failure,
+          _batteryLevelUnknown();
+        } catch (error, stackTrace) {
+          addError(
+            Reportable(
+              error,
+              context: InfoStickerReportableSites.loadBatteryLevel,
             ),
+            stackTrace,
           );
+          _batteryLevelUnknown();
         }
       default:
         return;
     }
   }
+
+  /// Keeps the slider usable when the level cannot be read: the creator
+  /// sets it instead.
+  void _batteryLevelUnknown() => emitIfOpen(
+    state.copyWith(
+      data: state.data.copyWith(batteryLevel: 50),
+      valueStatus: .failure,
+    ),
+  );
 
   void styleChanged(InfoStickerStyle style) =>
       emit(state.copyWith(data: state.data.copyWith(style: style)));

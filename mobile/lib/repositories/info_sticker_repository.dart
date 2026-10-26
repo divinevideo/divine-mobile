@@ -7,7 +7,6 @@ import 'dart:convert';
 import 'package:battery_plus/battery_plus.dart';
 import 'package:clock/clock.dart';
 import 'package:equatable/equatable.dart';
-import 'package:flutter/services.dart' show PlatformException;
 import 'package:http/http.dart' as http;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
@@ -295,12 +294,13 @@ class InfoStickerRepository {
 
   /// The battery level, from 0 to 100.
   ///
-  /// Throws an [InfoStickerLookupException] when the platform cannot tell.
+  /// Throws an [InfoStickerLookupException] when the platform cannot tell,
+  /// or has no battery plugin at all.
   Future<int> batteryLevel() async {
     try {
       return (await _battery.batteryLevel).clamp(0, 100);
-    } on PlatformException catch (error) {
-      throw InfoStickerLookupException('No battery level: ${error.code}');
+    } on Exception catch (error) {
+      throw InfoStickerLookupException('No battery level: $error');
     }
   }
 
@@ -325,10 +325,9 @@ class InfoStickerRepository {
           !date.isAfter(clock.now().toUtc())) {
         return date.toLocal();
       }
-    } on TimeoutException {
-      // The file date is a refinement; the clip's own time stands in.
-    } on PlatformException {
-      // As above: a file the platform cannot read keeps the clip's time.
+    } on Exception {
+      // The file date is a refinement: a file that cannot be read in time,
+      // or by a platform without the plugin, keeps the clip's own time.
     }
     return clip.recordedAt;
   }
