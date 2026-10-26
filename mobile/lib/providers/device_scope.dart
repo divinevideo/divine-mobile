@@ -4,9 +4,9 @@
 import 'package:app_update_repository/app_update_repository.dart';
 import 'package:db_client/db_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/notifications/providers/announcement_providers.dart';
 import 'package:openvine/notifications/services/announcement_store.dart';
+import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/app_version_provider.dart';
 import 'package:openvine/providers/container_swap_host.dart';
 import 'package:openvine/providers/crash_reporting_provider.dart';

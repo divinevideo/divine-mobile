@@ -1,6 +1,7 @@
 // ABOUTME: Keeps official announcements separate from social cursors/writes.
 
 import 'package:db_client/db_client.dart';
+import 'package:drift/native.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
@@ -57,6 +58,54 @@ void main() {
   });
 
   group('NotificationRepository announcement composition', () {
+    test(
+      'mixed reads keep official IDs out of the durable social journal',
+      () async {
+        final database = AppDatabase.test(NativeDatabase.memory());
+        const owner =
+            '45f311307ca34091492a80b694b624e780e65655de49396b6f788e09303e9f5a';
+        when(
+          () => api.notificationsReadUri(pubkey: any(named: 'pubkey')),
+        ).thenReturn(Uri.parse('https://api.test/notifications/read'));
+        when(
+          () => api.markNotificationsRead(
+            pubkey: any(named: 'pubkey'),
+            notificationIds: any(named: 'notificationIds'),
+            authHeaders: any(named: 'authHeaders'),
+          ),
+        ).thenAnswer((_) async => throw StateError('offline'));
+        final durable = NotificationRepository(
+          funnelcakeApiClient: api,
+          profileRepository: _Profiles(),
+          notificationsDao: dao,
+          userPubkey: owner,
+          readStateDao: database.accountSyncDao,
+          readStateRetryDelay: const Duration(days: 1),
+          announcementsRepository: announcements,
+          hydrateOnStart: false,
+        );
+        addTearDown(() async {
+          await durable.close();
+          await database.close();
+        });
+
+        await durable.markAsRead([item.id, 'social-read']);
+        await durable.flushPendingReadState();
+
+        final rows = await database.accountSyncDao.readNotificationReads(owner);
+        expect(rows.map((row) => row.notificationId), ['social-read']);
+        expect(rows.single.pending, isTrue);
+        verify(() => announcements.markSeen([item.id])).called(1);
+        verify(
+          () => api.markNotificationsRead(
+            pubkey: owner,
+            notificationIds: ['social-read'],
+            authHeaders: any(named: 'authHeaders'),
+          ),
+        ).called(greaterThanOrEqualTo(1));
+      },
+    );
+
     test(
       'All and badge include official rows, social tabs stay separate',
       () async {

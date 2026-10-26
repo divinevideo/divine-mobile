@@ -1071,6 +1071,7 @@ class NotificationRepository {
               return switch (item) {
                 VideoNotification() => item.copyWith(notificationIds: ids),
                 ActorNotification() => item.copyWith(notificationIds: ids),
+                AnnouncementNotification() => item,
               };
             })
             .whereType<NotificationItem>()
