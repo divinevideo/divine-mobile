@@ -411,6 +411,25 @@ class InfoStickerData extends Equatable {
     batteryLevel: batteryLevel ?? this.batteryLevel,
   );
 
+  /// This sticker without what a place gave it: the place name and country,
+  /// the weather, the sun times and the altitude. [copyWith] cannot unset
+  /// them, so another place's values start from here, and a value the new
+  /// place lacks is not left over from the last one.
+  InfoStickerData withoutPlaceValues() => InfoStickerData(
+    kind: kind,
+    localeName: localeName,
+    style: style,
+    dateTime: dateTime,
+    use24HourFormat: use24HourFormat,
+    dateFormat: dateFormat,
+    showFlag: showFlag,
+    dayNumber: dayNumber,
+    dayTotal: dayTotal,
+    useFahrenheit: useFahrenheit,
+    useFeet: useFeet,
+    batteryLevel: batteryLevel,
+  );
+
   /// Whether [meta] describes an info sticker.
   static bool isInfoStickerMeta(Map<String, dynamic>? meta) =>
       meta != null && meta[infoStickerLayerKindKey] == infoStickerLayerKind;

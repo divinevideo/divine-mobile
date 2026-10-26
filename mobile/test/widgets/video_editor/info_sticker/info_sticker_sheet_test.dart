@@ -21,6 +21,13 @@ const _bern = InfoStickerPlace(
   longitude: 7.45,
 );
 
+const _thun = InfoStickerPlace(
+  name: 'Thun',
+  detail: 'Switzerland',
+  latitude: 46.76,
+  longitude: 7.63,
+);
+
 void main() {
   group(InfoStickerSheet, () {
     final l10n = lookupAppLocalizations(const Locale('en'));
@@ -91,6 +98,43 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(results.single?.placeName, equals('Bern'));
+      });
+
+      testWidgets("empties the altitude when another place's lookup fails", (
+        tester,
+      ) async {
+        when(
+          () => repository.searchPlaces('Bern', languageCode: 'en'),
+        ).thenAnswer((_) async => [_bern, _thun]);
+        when(() => repository.elevationAt(_bern)).thenAnswer((_) async => 540);
+        when(
+          () => repository.elevationAt(_thun),
+        ).thenThrow(const InfoStickerLookupException('offline'));
+        await pumpSheet(
+          tester,
+          initial: const InfoStickerData(
+            kind: InfoStickerKind.altitude,
+            localeName: 'en',
+          ),
+        );
+
+        await tester.enterText(find.byType(TextField), 'Bern');
+        await tester.pump(searchDebounceDuration);
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(DivineSelectableRow, 'Bern'));
+        await tester.pumpAndSettle();
+        expect(find.text('540'), findsOneWidget);
+
+        await tester.tap(find.text(l10n.videoEditorInfoStickerChangePlace));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(DivineSelectableRow, 'Thun'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('540'), findsNothing);
+        expect(
+          find.text(l10n.videoEditorInfoStickerLoadFailed),
+          findsOneWidget,
+        );
       });
 
       testWidgets('returns the style picked for a sticker on the canvas', (

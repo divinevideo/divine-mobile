@@ -198,16 +198,17 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
   /// sun or altitude sticker it also looks up the value there.
   Future<void> placeSelected(InfoStickerPlace place) async {
     final kind = state.data.kind;
+    final data = state.data.withoutPlaceValues();
     emit(
       state.copyWith(
         place: place,
         step: InfoStickerStep.design,
         data: kind == InfoStickerKind.location
-            ? state.data.copyWith(
+            ? data.copyWith(
                 placeName: place.name,
                 countryCode: place.countryCode,
               )
-            : state.data,
+            : data,
         valueStatus: kind == InfoStickerKind.location ? .success : .loading,
       ),
     );

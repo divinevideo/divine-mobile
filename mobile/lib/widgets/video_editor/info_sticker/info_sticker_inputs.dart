@@ -390,9 +390,11 @@ class _NumberFieldState extends State<_NumberField> {
   @override
   void didUpdateWidget(_NumberField oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // A value gone from outside, as when another place is picked, empties
+    // the field rather than leaving the last place's number in it.
     final value = widget.value;
-    if (value != null && int.tryParse(_controller.text) != value) {
-      _controller.text = '$value';
+    if (int.tryParse(_controller.text) != value) {
+      _controller.text = value?.toString() ?? '';
     }
   }
 

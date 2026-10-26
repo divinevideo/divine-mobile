@@ -21,6 +21,21 @@ const _bern = InfoStickerPlace(
   longitude: 7.45,
 );
 
+const _bernWithCountry = InfoStickerPlace(
+  name: 'Bern',
+  detail: 'Schweiz',
+  latitude: 46.95,
+  longitude: 7.45,
+  countryCode: 'CH',
+);
+
+/// A place the search found without a country.
+const _atSea = InfoStickerPlace(
+  name: 'Open sea',
+  latitude: 47.5,
+  longitude: -30,
+);
+
 InfoStickerData _sticker(InfoStickerKind kind) =>
     InfoStickerData(kind: kind, localeName: 'en');
 
@@ -37,7 +52,10 @@ void main() {
   group(InfoStickerCubit, () {
     late _MockInfoStickerRepository repository;
 
-    setUpAll(() => registerFallbackValue(_clip));
+    setUpAll(() {
+      registerFallbackValue(_clip);
+      registerFallbackValue(DateTime(2026));
+    });
 
     setUp(() {
       repository = _MockInfoStickerRepository();
@@ -252,6 +270,83 @@ void main() {
       );
 
       blocTest<InfoStickerCubit, InfoStickerState>(
+        "drops the last place's flag for a place found without a country",
+        build: () => InfoStickerCubit(
+          repository: repository,
+          initial: _sticker(InfoStickerKind.location),
+        ),
+        act: (cubit) async {
+          await cubit.placeSelected(_bernWithCountry);
+          expect(cubit.state.data.countryCode, equals('CH'));
+          await cubit.placeSelected(_atSea);
+        },
+        verify: (cubit) {
+          expect(cubit.state.data.placeName, equals('Open sea'));
+          expect(cubit.state.data.countryCode, isNull);
+        },
+      );
+
+      blocTest<InfoStickerCubit, InfoStickerState>(
+        "drops the last place's weather when the next has a code without one",
+        setUp: () {
+          when(() => repository.weatherAt(_bern, any())).thenAnswer(
+            (_) async => const InfoStickerWeatherReading(
+              temperatureCelsius: 18,
+              isDay: true,
+              weather: InfoStickerWeather.rain,
+            ),
+          );
+          when(() => repository.weatherAt(_atSea, any())).thenAnswer(
+            (_) async => const InfoStickerWeatherReading(
+              temperatureCelsius: 9,
+              isDay: true,
+            ),
+          );
+        },
+        build: () => InfoStickerCubit(
+          repository: repository,
+          initial: _sticker(
+            InfoStickerKind.weather,
+          ).copyWith(dateTime: DateTime(2026, 8, 1, 7)),
+        ),
+        act: (cubit) async {
+          await cubit.placeSelected(_bern);
+          expect(cubit.state.data.weather, InfoStickerWeather.rain);
+          await cubit.placeSelected(_atSea);
+        },
+        verify: (cubit) {
+          expect(cubit.state.data.temperatureCelsius, equals(9));
+          expect(cubit.state.data.weather, isNull);
+        },
+      );
+
+      blocTest<InfoStickerCubit, InfoStickerState>(
+        "does not keep the last place's value when the next lookup fails",
+        setUp: () {
+          when(
+            () => repository.elevationAt(_bern),
+          ).thenAnswer((_) async => 540);
+          when(
+            () => repository.elevationAt(_atSea),
+          ).thenThrow(const InfoStickerLookupException('offline'));
+        },
+        build: () => InfoStickerCubit(
+          repository: repository,
+          initial: _sticker(InfoStickerKind.altitude),
+        ),
+        act: (cubit) async {
+          await cubit.placeSelected(_bern);
+          expect(cubit.state.data.altitudeMeters, equals(540));
+          await cubit.placeSelected(_atSea);
+        },
+        verify: (cubit) {
+          expect(cubit.state.data.altitudeMeters, isNull);
+          expect(cubit.state.data.isComplete, isFalse);
+          expect(cubit.state.valueStatus, InfoStickerValueStatus.failure);
+        },
+      );
+
+      blocTest<InfoStickerCubit, InfoStickerState>(
         'reports a lookup that failed',
         setUp: () => when(
           () => repository.elevationAt(_bern),
@@ -293,6 +388,36 @@ void main() {
             equals(DateTime(2026, 8, 30, 6, 47)),
           );
           expect(cubit.state.data.isComplete, isTrue);
+        },
+      );
+
+      blocTest<InfoStickerCubit, InfoStickerState>(
+        "drops the last place's sunset on a day the next place has none",
+        setUp: () {
+          when(() => repository.sunTimesAt(_bern, any())).thenAnswer(
+            (_) async => (
+              sunrise: DateTime(2026, 8, 30, 6, 47),
+              sunset: DateTime(2026, 8, 30, 20, 11),
+            ),
+          );
+          when(() => repository.sunTimesAt(_atSea, any())).thenAnswer(
+            (_) async => (sunrise: DateTime(2026, 8, 30, 2, 5), sunset: null),
+          );
+        },
+        build: () => InfoStickerCubit(
+          repository: repository,
+          initial: _sticker(
+            InfoStickerKind.sun,
+          ).copyWith(dateTime: DateTime(2026, 8, 30, 15)),
+        ),
+        act: (cubit) async {
+          await cubit.placeSelected(_bern);
+          expect(cubit.state.data.sunset, isNotNull);
+          await cubit.placeSelected(_atSea);
+        },
+        verify: (cubit) {
+          expect(cubit.state.data.sunrise, equals(DateTime(2026, 8, 30, 2, 5)));
+          expect(cubit.state.data.sunset, isNull);
         },
       );
 
