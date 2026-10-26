@@ -32,8 +32,8 @@ final class ClipsLibraryLoadRequested extends ClipsLibraryEvent {
 }
 
 /// Clips changed in storage behind the bloc's back — a chroma-key take whose
-/// keyed file landed while the library was open — so the listing reloads in
-/// place.
+/// keyed file landed while the library was open, or thumbnails recovered in
+/// the background — so the listing reloads in place.
 ///
 /// Unlike [ClipsLibraryLoadRequested] it keeps what the user has selected and
 /// does not pass through a loading state, so an update arriving mid-browse

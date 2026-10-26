@@ -484,6 +484,91 @@ void main() {
           expect(observer.errors, isEmpty);
         },
       );
+
+      group('background asset recovery', () {
+        final clipMissingGhost = DivineVideoClip(
+          id: 'clip-missing-ghost',
+          video: EditorVideo.file('/path/to/clip.mp4'),
+          thumbnailPath: '/path/to/thumb.jpg',
+          duration: const Duration(seconds: 5),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+        );
+        final recoveredClip = clipMissingGhost.copyWith(
+          ghostFramePath: '/path/to/ghost.jpg',
+        );
+
+        blocTest<ClipsLibraryBloc, ClipsLibraryState>(
+          'shows the recovered assets without loading again',
+          setUp: () {
+            var reads = 0;
+            when(() => mockClipLibraryService.getAllClips()).thenAnswer(
+              (_) async => reads++ == 0 ? [clipMissingGhost] : [recoveredClip],
+            );
+            when(
+              () => mockClipLibraryService.recoverMissingAssets(any()),
+            ).thenAnswer((_) async => [recoveredClip]);
+          },
+          build: createBloc,
+          act: (bloc) => bloc.add(const ClipsLibraryLoadRequested()),
+          expect: () => [
+            isA<ClipsLibraryState>().having(
+              (s) => s.status,
+              'status',
+              ClipsLibraryStatus.loading,
+            ),
+            isA<ClipsLibraryState>()
+                .having((s) => s.status, 'status', ClipsLibraryStatus.loaded)
+                .having((s) => s.clips, 'clips', [clipMissingGhost]),
+            isA<ClipsLibraryState>()
+                .having((s) => s.status, 'status', ClipsLibraryStatus.loaded)
+                .having((s) => s.clips, 'clips', [recoveredClip]),
+          ],
+        );
+
+        test('does not reload forever when the recovered assets never reach '
+            'the listing', () async {
+          // Recovery writes, but the listing still reads the clip without
+          // its ghost frame — a trashed library row behind a live autosave
+          // copy did this. Each fresh load used to start recovery again and
+          // blank the grid.
+          when(
+            () => mockClipLibraryService.getAllClips(),
+          ).thenAnswer((_) async => [clipMissingGhost]);
+          var recoveries = 0;
+          when(
+            () => mockClipLibraryService.recoverMissingAssets(any()),
+          ).thenAnswer((invocation) async {
+            recoveries++;
+            // Past a few rounds, report nothing recovered: a loop that never
+            // yields to the event loop would otherwise hang the test instead
+            // of failing it.
+            if (recoveries > 3) {
+              return invocation.positionalArguments.first
+                  as List<DivineVideoClip>;
+            }
+            return [clipMissingGhost];
+          });
+
+          final bloc = createBloc();
+          addTearDown(bloc.close);
+          final statuses = <ClipsLibraryStatus>[];
+          final subscription = bloc.stream.listen(
+            (s) => statuses.add(s.status),
+          );
+          addTearDown(subscription.cancel);
+
+          bloc.add(const ClipsLibraryLoadRequested());
+          await pumpEventQueue();
+
+          expect(recoveries, equals(1));
+          expect(
+            statuses.where((s) => s == ClipsLibraryStatus.loading),
+            hasLength(1),
+          );
+        });
+      });
     });
 
     group('ClipsLibraryToggleSelection', () {

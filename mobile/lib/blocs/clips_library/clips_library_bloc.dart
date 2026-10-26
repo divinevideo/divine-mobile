@@ -216,8 +216,8 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
       );
 
       // Kick off background recovery for clips missing thumbnails/ghost
-      // frames. When done, a fresh load event is dispatched so the UI
-      // picks up the updated assets.
+      // frames. When done, the listing refreshes in place so the UI picks
+      // up the updated assets.
       final hasIncomplete = clips.any(
         (c) => c.thumbnailPath == null || c.ghostFramePath == null,
       );
@@ -564,18 +564,18 @@ class ClipsLibraryBloc extends Bloc<ClipsLibraryEvent, ClipsLibraryState> {
     }
   }
 
-  /// Runs asset recovery in the background and dispatches a fresh load
-  /// event when done so the UI picks up the updated thumbnails/ghost frames.
+  /// Runs asset recovery in the background and refreshes the listing in place
+  /// when done so the UI picks up the updated thumbnails/ghost frames.
+  ///
+  /// The refresh is [ClipsLibraryClipsChanged], not a fresh load: a load
+  /// starts recovery again, so a clip whose recovered assets never reach the
+  /// listing would reload the grid forever, flashing the loading state each
+  /// time.
   Future<void> _recoverAndReload(List<DivineVideoClip> clips) async {
     try {
       final recovered = await _clipLibraryService.recoverMissingAssets(clips);
       if (!identical(recovered, clips) && !isClosed) {
-        add(
-          ClipsLibraryLoadRequested(
-            preSelectedIds: state.preSelectedIds,
-            disabledClipIds: state.disabledClipIds,
-          ),
-        );
+        add(const ClipsLibraryClipsChanged());
       }
     } catch (e, stackTrace) {
       Log.error(
