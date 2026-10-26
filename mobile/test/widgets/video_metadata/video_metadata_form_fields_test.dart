@@ -6,6 +6,7 @@ import 'package:models/models.dart'
     show AudioEvent, AudioExternalSource, AudioLicenseMetadata, VineSound;
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/features/publishing_ideas/publishing_ideas.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_reply_context.dart';
@@ -26,6 +27,7 @@ void main() {
       bool enableInspiredBy = true,
       bool enableSchedule = true,
       bool enableIdeas = false,
+      bool publishingIdeasEnabled = false,
       VideoReplyContext? replyContext,
     }) {
       return ProviderScope(
@@ -35,7 +37,7 @@ void main() {
           ),
           isFeatureEnabledProvider(
             FeatureFlag.publishingIdeas,
-          ).overrideWithValue(false),
+          ).overrideWithValue(publishingIdeasEnabled),
           videoReplyContextProvider.overrideWith(
             () => _TestVideoReplyContextNotifier(replyContext),
           ),
@@ -207,6 +209,16 @@ void main() {
             .dy;
 
         expect(tagsTop - descriptionBottom, moreOrLessEquals(16));
+      },
+    );
+
+    testWidgets(
+      'ignores the publishing ideas flag when enableIdeas is false',
+      (tester) async {
+        await tester.pumpWidget(buildWidget(publishingIdeasEnabled: true));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(PublishingIdeas), findsNothing);
       },
     );
 
