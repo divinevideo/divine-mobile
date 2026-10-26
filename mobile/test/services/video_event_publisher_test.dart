@@ -215,7 +215,34 @@ void main() {
         _containsTag(capturedTags, const ['allow_audio_reuse', 'false']),
         isTrue,
       );
+      expect(
+        _containsTag(capturedTags, const ['allow_video_reuse', 'false']),
+        isTrue,
+      );
     });
+
+    test(
+      'publishVideoEvent marks the video as reusable when allowed',
+      () async {
+        stubSignAndPublish();
+
+        expect(
+          await publisher.publishVideoEvent(
+            upload: createUpload(),
+            allowVideoReuse: true,
+          ),
+          isTrue,
+        );
+        expect(
+          _containsTag(capturedTags, const ['allow_video_reuse', 'true']),
+          isTrue,
+        );
+        expect(
+          capturedTags.where((tag) => tag.first == 'allow_video_reuse'),
+          hasLength(1),
+        );
+      },
+    );
 
     test(
       'publishVideoEvent attaches text-track tags to the initial event',

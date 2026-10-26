@@ -11043,6 +11043,17 @@ class AppLocalizationsSv extends AppLocalizations {
       'Låt andra spara och återanvända videons ljud.';
 
   @override
+  String get videoMetadataVideoReuseTitle => 'Låt andra använda den här videon';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'De kan lägga till den i sina klipp och publicera den, och du krediteras.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'Ljudets licens tillåter inte återanvändning.';
+
+  @override
   String get publishAudioReuseDegradedWarning =>
       'Din video är uppe, men ljudet publicerades inte. Redigera videon för att dela ljudet.';
 

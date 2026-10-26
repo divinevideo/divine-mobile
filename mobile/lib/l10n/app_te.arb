@@ -6412,6 +6412,9 @@
   "videoMetadataContentWarningSelectAllThatApply": "వర్తించే అన్నింటినీ ఎంచుకోండి",
   "videoMetadataContentWarningRequiredByEffect": "ఆన్‌లోనే ఉంటుంది: మీ వీడియోలో మెరిసే ఎఫెక్ట్ ఉంది",
   "videoMetadataAudioReuseSubtitle": "ఇతరులను ఈ వీడియో ఆడియోను సేవ్ చేసి, మళ్లీ ఉపయోగించనివ్వండి.",
+  "videoMetadataVideoReuseTitle": "ఈ వీడియోను ఉపయోగించడానికి ఇతరులను అనుమతించండి",
+  "videoMetadataVideoReuseSubtitle": "వారు దీన్ని తమ క్లిప్‌లకు జోడించి పోస్ట్ చేయవచ్చు, మీకు క్రెడిట్ ఇస్తారు.",
+  "videoMetadataVideoReuseSoundLicenseSubtitle": "ఈ ధ్వని లైసెన్స్ మళ్లీ ఉపయోగించడాన్ని అనుమతించదు.",
   "publishAudioReuseDegradedWarning": "మీ వీడియో ముగిసింది, కానీ ధ్వని ప్రచురించబడలేదు. భాగస్వామ్యం చేయడానికి వీడియోను సవరించండి.",
   "@publishAudioReuseDegradedWarning": {
     "description": "Snackbar shown after a successful publish when the creator opted into a reusable sound but extracting or publishing it failed, so the video posted without the sharing choice they made."

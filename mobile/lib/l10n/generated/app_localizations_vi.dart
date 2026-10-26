@@ -10990,6 +10990,18 @@ class AppLocalizationsVi extends AppLocalizations {
       'Cho phép người khác lưu và dùng lại âm thanh của video này.';
 
   @override
+  String get videoMetadataVideoReuseTitle =>
+      'Cho phép người khác dùng video này';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'Họ có thể thêm video vào clip của họ và đăng lên, kèm ghi công cho bạn.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'Giấy phép của âm thanh này không cho phép sử dụng lại.';
+
+  @override
   String get publishAudioReuseDegradedWarning =>
       'Video của bạn đã lên, nhưng âm thanh chưa đăng được. Chỉnh sửa video để chia sẻ âm thanh.';
 

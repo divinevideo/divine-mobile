@@ -102,6 +102,22 @@ provenance. Publishing lives in
 `mobile/lib/services/video_publish/video_event_tags.dart`; parsing in
 `mobile/packages/models/lib/src/video_event.dart`.
 
+### Divine Reuse Markers
+
+| Tag | Format | Description |
+|-----|--------|-------------|
+| `allow_audio_reuse` | `["allow_audio_reuse", "true"]` | The creator lets others reuse the video's audio. |
+| `allow_video_reuse` | `["allow_video_reuse", "true"]` | The creator lets others add the video to their clips and post it. |
+
+Both are Divine conventions. The app writes each one as `true` or `false` on
+every publish and metadata edit, so an edit keeps an explicit decline; only the
+exact value `true` grants reuse. Archived Vines (`platform` = `vine`) and the
+viewer's own videos can be added to clips without `allow_video_reuse`. A post
+that uses such a clip credits its source with the `clip-source` markers above.
+Publishing lives in `mobile/lib/services/video_event_publisher.dart` and
+`mobile/lib/services/video_metadata_update_service.dart`; parsing in
+`mobile/packages/models/lib/src/video_event.dart`.
+
 ### Event Metadata
 
 | Tag | Format | Description | Required |

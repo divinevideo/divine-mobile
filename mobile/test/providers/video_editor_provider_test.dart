@@ -2609,6 +2609,20 @@ void main() {
       expect(container.read(videoEditorProvider).allowAudioReuse, isFalse);
     });
 
+    test('seeds allowVideoReuse from the published marker', () {
+      container
+          .read(videoEditorProvider.notifier)
+          .initFromPublishedVideo(
+            buildVideo(
+              nostrEventTags: const [
+                ['allow_video_reuse', 'true'],
+              ],
+            ),
+          );
+
+      expect(container.read(videoEditorProvider).allowVideoReuse, isTrue);
+    });
+
     test('strips a trailing inspired-by line from the description', () {
       container
           .read(videoEditorProvider.notifier)

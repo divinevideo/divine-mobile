@@ -80,6 +80,7 @@ const _editRebuiltTagNames = {
   'duration',
   'alt',
   'allow_audio_reuse',
+  'allow_video_reuse',
 };
 
 /// Whether [tag] is rebuilt by the edit flow instead of copied verbatim.
@@ -417,6 +418,10 @@ class VideoMetadataUpdateService {
       }
 
       tags.add(['allow_audio_reuse', editorState.allowAudioReuse.toString()]);
+      tags.add([
+        'allow_video_reuse',
+        editorState.offersVideoReuse.toString(),
+      ]);
 
       tags.addAll(preservedTags);
       tags.addAll(

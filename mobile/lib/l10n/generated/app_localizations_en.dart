@@ -11136,6 +11136,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'Let others save and reuse this video\'s audio.';
 
   @override
+  String get videoMetadataVideoReuseTitle => 'Allow others to use this video';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'They can add it to their clips and post it. You\'ll get credit.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'This sound\'s license doesn\'t allow reuse.';
+
+  @override
   String get publishAudioReuseDegradedWarning =>
       'Your video is up, but the sound didn\'t publish. Edit the video to share it.';
 

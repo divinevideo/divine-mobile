@@ -18645,6 +18645,24 @@ abstract class AppLocalizations {
   /// **'Let others save and reuse this video\'s audio.'**
   String get videoMetadataAudioReuseSubtitle;
 
+  /// Label of the switch on the post screen that lets other people add this video to their clip library and use it in their own posts. Off by default.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow others to use this video'**
+  String get videoMetadataVideoReuseTitle;
+
+  /// Helper text under the video reuse switch. Tells the creator that others can add the video to their clips and post it, and that the creator is credited publicly in those posts.
+  ///
+  /// In en, this message translates to:
+  /// **'They can add it to their clips and post it. You\'ll get credit.'**
+  String get videoMetadataVideoReuseSubtitle;
+
+  /// Helper text under the video reuse switch when it is disabled because the post's sound comes with a license that forbids derivatives; a reused clip would carry that sound along.
+  ///
+  /// In en, this message translates to:
+  /// **'This sound\'s license doesn\'t allow reuse.'**
+  String get videoMetadataVideoReuseSoundLicenseSubtitle;
+
   /// Snackbar shown after a successful publish when the creator opted into a reusable sound but extracting or publishing it failed, so the video posted without the sharing choice they made.
   ///
   /// In en, this message translates to:

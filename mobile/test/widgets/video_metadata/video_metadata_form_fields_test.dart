@@ -2,7 +2,8 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:models/models.dart' show AudioEvent, VineSound;
+import 'package:models/models.dart'
+    show AudioEvent, AudioExternalSource, AudioLicenseMetadata, VineSound;
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_reply_context.dart';
@@ -344,6 +345,98 @@ void main() {
         findsOneWidget,
       );
     });
+
+    group('video reuse toggle', () {
+      testWidgets('starts off and turns on when tapped', (tester) async {
+        final mockNotifier = _MockVideoEditorNotifier(
+          VideoEditorProviderState(),
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              videoEditorProvider.overrideWith(() => mockNotifier),
+            ],
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: SingleChildScrollView(child: VideoMetadataFormFields()),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(VideoMetadataFormFields)),
+        );
+        final tile = find.widgetWithText(
+          DivineSwitchTile,
+          l10n.videoMetadataVideoReuseTitle,
+        );
+        expect(tester.widget<DivineSwitchTile>(tile).value, isFalse);
+
+        await tester.ensureVisible(tile);
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.descendant(of: tile, matching: find.byType(Switch)),
+        );
+        await tester.pumpAndSettle();
+
+        expect(mockNotifier.lastAllowVideoReuse, isTrue);
+        expect(tester.widget<DivineSwitchTile>(tile).value, isTrue);
+      });
+
+      testWidgets('is locked off when the sound forbids derivatives', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(
+            state: VideoEditorProviderState(
+              allowVideoReuse: true,
+              selectedSound: AudioEvent(
+                id: 'external_provider_freesound_42',
+                pubkey: AudioEvent.externalProviderMarker,
+                createdAt: 1700000000,
+                externalSource: AudioExternalSource(
+                  provider: 'freesound',
+                  providerSoundId: '42',
+                  providerName: 'Freesound',
+                  sourceUrl: 'https://freesound.org/s/42',
+                  previewUrl: 'https://cdn.example.com/42.mp3',
+                  license: AudioLicenseMetadata(
+                    type: 'cc-by-nd',
+                    name: 'CC BY-ND 4.0',
+                    url: 'https://creativecommons.org/licenses/by-nd/4.0/',
+                    allowsCommercialUse: true,
+                    allowsDerivatives: false,
+                    requiresAttribution: true,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(VideoMetadataFormFields)),
+        );
+        final tile = tester.widget<DivineSwitchTile>(
+          find.widgetWithText(
+            DivineSwitchTile,
+            l10n.videoMetadataVideoReuseTitle,
+          ),
+        );
+        expect(tile.value, isFalse);
+        expect(tile.onChanged, isNull);
+        expect(
+          tile.subtitle,
+          equals(l10n.videoMetadataVideoReuseSoundLicenseSubtitle),
+        );
+      });
+    });
   });
 }
 
@@ -355,6 +448,7 @@ class _MockVideoEditorNotifier extends VideoEditorNotifier {
   String? lastTitle;
   String? lastDescription;
   bool? lastShareReplyToFeed;
+  bool? lastAllowVideoReuse;
 
   @override
   VideoEditorProviderState build() => _state;
@@ -369,6 +463,12 @@ class _MockVideoEditorNotifier extends VideoEditorNotifier {
   void setShareReplyToFeed(bool shareReplyToFeed) {
     lastShareReplyToFeed = shareReplyToFeed;
     state = state.copyWith(shareReplyToFeed: shareReplyToFeed);
+  }
+
+  @override
+  void setAllowVideoReuse(bool allowVideoReuse) {
+    lastAllowVideoReuse = allowVideoReuse;
+    state = state.copyWith(allowVideoReuse: allowVideoReuse);
   }
 }
 

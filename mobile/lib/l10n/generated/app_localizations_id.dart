@@ -10947,6 +10947,18 @@ class AppLocalizationsId extends AppLocalizations {
       'Izinkan orang lain menyimpan dan menggunakan kembali audio video ini.';
 
   @override
+  String get videoMetadataVideoReuseTitle =>
+      'Izinkan orang lain memakai video ini';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'Mereka bisa menambahkannya ke klip mereka dan mempostingnya, dengan kredit untukmu.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'Lisensi suara ini tidak mengizinkan penggunaan ulang.';
+
+  @override
   String get publishAudioReuseDegradedWarning =>
       'Videomu sudah tayang, tapi suaranya belum terbit. Edit videonya untuk membagikan suaranya.';
 

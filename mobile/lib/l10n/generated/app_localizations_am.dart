@@ -10781,6 +10781,17 @@ class AppLocalizationsAm extends AppLocalizations {
       'ሌሎች የዚህን ቪዲዮ ድምፅ እንዲያስቀምጡ እና እንደገና እንዲጠቀሙ ፍቀድ።';
 
   @override
+  String get videoMetadataVideoReuseTitle => 'ሌሎች ይህን ቪዲዮ እንዲጠቀሙ ፍቀድ';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'ወደ ክሊፖቻቸው ጨምረው መለጠፍ ይችላሉ። እርስዎ ይጠቀሳሉ።';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'የዚህ ድምፅ ፈቃድ እንደገና መጠቀምን አይፈቅድም።';
+
+  @override
   String get publishAudioReuseDegradedWarning =>
       'ቪዲዮህ ወጥቷል፣ ነገር ግን ድምፁ አልታተመም። ለማጋራት ቪዲዮውን አርም።';
 

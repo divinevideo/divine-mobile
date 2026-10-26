@@ -630,7 +630,7 @@ class VideoClipImportService {
       RegExp('[^a-zA-Z0-9_-]'),
       '_',
     );
-    final prefix = video.isOriginalVine ? 'classic_vine' : 'own_video';
+    final prefix = video.isOriginalVine ? 'classic_vine' : 'video';
     return '${prefix}_${safeStableId}_${importedAt.microsecondsSinceEpoch}';
   }
 

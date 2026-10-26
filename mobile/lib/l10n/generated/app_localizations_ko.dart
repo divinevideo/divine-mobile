@@ -10506,6 +10506,17 @@ class AppLocalizationsKo extends AppLocalizations {
       '다른 사람들이 이 동영상의 오디오를 저장하고 재사용할 수 있도록 합니다.';
 
   @override
+  String get videoMetadataVideoReuseTitle => '다른 사람이 이 영상을 사용하도록 허용';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      '상대방이 자기 클립에 추가해서 게시할 수 있어요. 이때 회원님이 출처로 표시돼요.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      '이 사운드의 라이선스는 재사용을 허용하지 않아요.';
+
+  @override
   String get publishAudioReuseDegradedWarning =>
       '영상은 올라갔지만 사운드는 게시되지 않았어요. 공유하려면 영상을 편집하세요.';
 
