@@ -35,7 +35,7 @@ class InfoStickerPlaceSearchBloc
     Emitter<InfoStickerPlaceSearchState> emit,
   ) async {
     final query = event.query.trim();
-    if (query.length < InfoStickerRepositoryConfig.minQueryLength) {
+    if (query.length < minSearchQueryLength) {
       emit(InfoStickerPlaceSearchState(query: query));
       return;
     }
