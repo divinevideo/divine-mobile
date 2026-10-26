@@ -660,12 +660,14 @@ void main() {
               expect(decoration.color, VineTheme.transparent);
               expect(decoration.border, isNull);
               expect(decoration.boxShadow, isNull);
-              final style = tester.widget<Text>(find.text('Test')).style!;
-              expect(style.fontFamily, contains('Inter'));
-              expect(style.decoration, isNot(TextDecoration.underline));
+              // Only Inter 400 and 600 ship, so the label must use the
+              // bundled body style unmodified: a weight override would
+              // request a face the app cannot render.
               expect(
-                style.color,
-                theme.extension<VineThemeColors>()!.onSurfaceVariant,
+                tester.widget<Text>(find.text('Test')).style,
+                VineTheme.bodyMediumFont(
+                  color: theme.extension<VineThemeColors>()!.onSurfaceVariant,
+                ),
               );
               await tester.tap(find.text('Test'));
               expect(pressed, isTrue);

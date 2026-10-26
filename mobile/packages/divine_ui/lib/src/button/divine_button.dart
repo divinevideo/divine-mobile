@@ -53,6 +53,10 @@ enum DivineButtonType {
 /// height. Use [tiny] only where the layout's grid module is the
 /// constraint and the surrounding context can absorb the smaller tap
 /// area.
+///
+/// [DivineButtonType.quiet] keeps each size's height but uses 14px
+/// `bodyMediumFont` text and a 16px icon, so its padding differs from the
+/// figures below (see `_verticalPadding`).
 enum DivineButtonSize {
   /// Tiny button: no outer tap-padding, 12px horizontal / 6px vertical
   /// inner padding (6px symmetric when stretched or icon-only),
@@ -254,7 +258,8 @@ class _DivineButtonContent extends StatelessWidget {
   ///
   /// When true, padding and spacing match `DivineIconButton` for
   /// visual parity between a label-less [DivineButton] and a
-  /// `DivineIconButton`.
+  /// `DivineIconButton`. A quiet button matches its outer size only,
+  /// padding its smaller icon further.
   bool get _noLabel => label.isEmpty;
 
   /// Border thickness that the `Ink` decoration adds around its child.
@@ -269,10 +274,12 @@ class _DivineButtonContent extends StatelessWidget {
 
   double get _borderInset => _hasBorder ? _kBorderWidth : 0;
 
-  /// Vertical inner padding. Fixed per size — it sets the button height
-  /// (32 / 40 / 48px) and never changes with stretch state. The border
-  /// thickness is subtracted so the total height stays constant across
-  /// bordered and unbordered types (see [_borderInset]).
+  /// Vertical inner padding, chosen per size so the button is 32 / 40 /
+  /// 48px tall whatever its stretch state. The border thickness is
+  /// subtracted so the total height stays constant across bordered and
+  /// unbordered types (see [_borderInset]). Quiet pads its 20px label line
+  /// or 16px icon to the same heights, so its value also depends on
+  /// whether there is a label.
   double get _verticalPadding {
     if (type == DivineButtonType.quiet) {
       return switch (size) {
@@ -349,9 +356,7 @@ class _DivineButtonContent extends StatelessWidget {
   TextStyle _textStyle(VineThemeColors colors) {
     final foreground = _foregroundColor(colors);
     if (type == DivineButtonType.quiet) {
-      return VineTheme.bodyMediumFont(color: foreground).copyWith(
-        fontWeight: FontWeight.w500,
-      );
+      return VineTheme.bodyMediumFont(color: foreground);
     }
     if (type == DivineButtonType.link) {
       return VineTheme.bodyLargeFont(color: foreground).copyWith(
