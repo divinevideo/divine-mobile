@@ -11268,6 +11268,17 @@ class AppLocalizationsPl extends AppLocalizations {
       'Pozwól innym zapisać i ponownie użyć dźwięku z tego wideo.';
 
   @override
+  String get videoMetadataVideoReuseTitle => 'Pozwól innym używać tego filmu';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'Mogą dodać go do swoich klipów i opublikować. Pojawisz się jako źródło.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'Licencja tego dźwięku nie pozwala na ponowne użycie.';
+
+  @override
   String get publishAudioReuseDegradedWarning =>
       'Twój film jest opublikowany, ale dźwięk nie. Edytuj film, aby go udostępnić.';
 

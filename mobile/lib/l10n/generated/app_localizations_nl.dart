@@ -11091,6 +11091,18 @@ class AppLocalizationsNl extends AppLocalizations {
       'Laat anderen de audio van deze video opslaan en hergebruiken.';
 
   @override
+  String get videoMetadataVideoReuseTitle =>
+      'Laat anderen deze video gebruiken';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'Ze kunnen hem aan hun clips toevoegen en posten, met vermelding van jou.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'De licentie van dit geluid staat hergebruik niet toe.';
+
+  @override
   String get publishAudioReuseDegradedWarning =>
       'Je video staat online, maar het geluid is niet gepubliceerd. Bewerk de video om het te delen.';
 

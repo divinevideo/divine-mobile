@@ -152,6 +152,26 @@ void main() {
       );
     });
 
+    test('replaces the video-reuse marker with the edited choice', () async {
+      final result = await service.updateVideo(
+        originalVideo: _testVideo(
+          extraTags: const [
+            ['allow_video_reuse', 'false'],
+          ],
+        ),
+        editorState: VideoEditorProviderState(allowVideoReuse: true),
+        initialCollaboratorPubkeys: const {},
+      );
+
+      expect(result, isA<VideoUpdateSuccess>());
+      expect(
+        capturedTags.where((tag) => tag.first == 'allow_video_reuse'),
+        equals([
+          ['allow_video_reuse', 'true'],
+        ]),
+      );
+    });
+
     group('auth guard', () {
       test('returns VideoUpdateFailure when not authenticated', () async {
         when(() => mockAuthService.isAuthenticated).thenReturn(false);

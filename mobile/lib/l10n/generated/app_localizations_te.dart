@@ -11337,6 +11337,18 @@ class AppLocalizationsTe extends AppLocalizations {
       'ఇతరులను ఈ వీడియో ఆడియోను సేవ్ చేసి, మళ్లీ ఉపయోగించనివ్వండి.';
 
   @override
+  String get videoMetadataVideoReuseTitle =>
+      'ఈ వీడియోను ఉపయోగించడానికి ఇతరులను అనుమతించండి';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'వారు దీన్ని తమ క్లిప్‌లకు జోడించి పోస్ట్ చేయవచ్చు, మీకు క్రెడిట్ ఇస్తారు.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'ఈ ధ్వని లైసెన్స్ మళ్లీ ఉపయోగించడాన్ని అనుమతించదు.';
+
+  @override
   String get publishAudioReuseDegradedWarning =>
       'మీ వీడియో ముగిసింది, కానీ ధ్వని ప్రచురించబడలేదు. భాగస్వామ్యం చేయడానికి వీడియోను సవరించండి.';
 

@@ -11137,6 +11137,18 @@ class AppLocalizationsPt extends AppLocalizations {
       'Permita que outros salvem e reutilizem o áudio deste vídeo.';
 
   @override
+  String get videoMetadataVideoReuseTitle =>
+      'Permitir que outras pessoas usem este vídeo';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'Elas podem adicioná-lo aos clipes delas e publicar, com crédito para você.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'A licença deste som não permite a reutilização.';
+
+  @override
   String get publishAudioReuseDegradedWarning =>
       'Seu vídeo está no ar, mas o som não foi publicado. Edite o vídeo para compartilhar o som.';
 

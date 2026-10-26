@@ -11145,6 +11145,18 @@ class AppLocalizationsBg extends AppLocalizations {
       'Позволи на другите да запазват и използват повторно звука на това видео.';
 
   @override
+  String get videoMetadataVideoReuseTitle =>
+      'Позволи на другите да използват това видео';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'Могат да го добавят към клиповете си и да го публикуват, като те посочат.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'Лицензът на този звук не позволява повторна употреба.';
+
+  @override
   String get publishAudioReuseDegradedWarning =>
       'Видеото ти е качено, но звукът не се публикува. Редактирай видеото, за да го споделиш.';
 

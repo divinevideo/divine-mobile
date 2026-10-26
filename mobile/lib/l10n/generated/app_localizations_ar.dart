@@ -11030,6 +11030,18 @@ class AppLocalizationsAr extends AppLocalizations {
       'اسمح للآخرين بحفظ صوت هذا الفيديو وإعادة استخدامه.';
 
   @override
+  String get videoMetadataVideoReuseTitle =>
+      'اسمح للآخرين باستخدام هذا الفيديو';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'يمكنهم إضافته إلى مقاطعهم ونشره، مع الإشارة إليك.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'ترخيص هذا الصوت لا يسمح بإعادة الاستخدام.';
+
+  @override
   String get publishAudioReuseDegradedWarning =>
       'تم نشر فيديوك، لكن الصوت لم يُنشر. عدّل الفيديو لمشاركته.';
 

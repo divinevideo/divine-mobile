@@ -31,6 +31,7 @@ class VideoEditorProviderState {
     this.isPosting = false,
     this.isAutosavedDraft = true,
     this.allowAudioReuse = false,
+    this.allowVideoReuse = false,
     this.audioShareAttribution,
     this.shareReplyToFeed = false,
     this.title = '',
@@ -122,6 +123,11 @@ class VideoEditorProviderState {
 
   /// Whether the audio from the original video can be reused in other videos.
   final bool allowAudioReuse;
+
+  /// Whether the creator lets others add this video to their clips.
+  ///
+  /// The creator's choice; [offersVideoReuse] is what gets published.
+  final bool allowVideoReuse;
 
   /// Public credit for audio the user chooses to share with this post.
   ///
@@ -250,6 +256,24 @@ class VideoEditorProviderState {
       !requiresPublicAudioAttribution ||
       (audioShareAttribution?.isValid ?? false);
 
+  /// Whether the post's sound is licensed without derivatives.
+  ///
+  /// A clip taken from the video carries every mixed sound along, so check
+  /// both the recorder selection and all editor tracks, not just the sound
+  /// chosen for attribution.
+  bool get soundForbidsDerivatives {
+    if (selectedSound?.externalSource?.license.allowsDerivatives == false) {
+      return true;
+    }
+    final tracks = editorEditingParameters?.audioTracksFromMeta ?? const [];
+    return tracks.any(
+      (track) => track.externalSource?.license.allowsDerivatives == false,
+    );
+  }
+
+  /// Whether the published video lets others add it to their clips.
+  bool get offersVideoReuse => allowVideoReuse && !soundForbidsDerivatives;
+
   /// Whether the video's audio is reused from *another creator* — a sound the
   /// user is not entitled to re-offer for reuse.
   ///
@@ -295,6 +319,7 @@ class VideoEditorProviderState {
     bool? isPosting,
     bool? isAutosavedDraft,
     bool? allowAudioReuse,
+    bool? allowVideoReuse,
     AudioShareAttribution? audioShareAttribution,
     bool clearAudioShareAttribution = false,
     bool? shareReplyToFeed,
@@ -356,6 +381,7 @@ class VideoEditorProviderState {
       isPosting: isPosting ?? this.isPosting,
       isAutosavedDraft: isAutosavedDraft ?? this.isAutosavedDraft,
       allowAudioReuse: allowAudioReuse ?? this.allowAudioReuse,
+      allowVideoReuse: allowVideoReuse ?? this.allowVideoReuse,
       audioShareAttribution: clearAudioShareAttribution
           ? null
           : (audioShareAttribution ?? this.audioShareAttribution),

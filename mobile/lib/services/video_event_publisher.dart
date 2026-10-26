@@ -202,6 +202,7 @@ class VideoEventPublisher {
     List<String>? hashtags,
     int? expirationTimestamp,
     bool allowAudioReuse = false,
+    bool allowVideoReuse = false,
     Duration? thumbnailTimestamp,
     List<String> collaboratorPubkeys = const [],
     List<String> mentionedPubkeys = const [],
@@ -235,6 +236,7 @@ class VideoEventPublisher {
       updatedUpload,
       expirationTimestamp: expirationTimestamp,
       allowAudioReuse: allowAudioReuse,
+      allowVideoReuse: allowVideoReuse,
       collaboratorPubkeys: collaboratorPubkeys,
       mentionedPubkeys: mentionedPubkeys,
       inspiredByAddressableId: inspiredByAddressableId,
@@ -297,6 +299,7 @@ class VideoEventPublisher {
     PendingUpload upload, {
     int? expirationTimestamp,
     bool allowAudioReuse = false,
+    bool allowVideoReuse = false,
     List<String> collaboratorPubkeys = const [],
     List<String> mentionedPubkeys = const [],
     Duration? thumbnailTimestamp,
@@ -344,6 +347,7 @@ class VideoEventPublisher {
       upload,
       expirationTimestamp: expirationTimestamp,
       allowAudioReuse: allowAudioReuse,
+      allowVideoReuse: allowVideoReuse,
       collaboratorPubkeys: collaboratorPubkeys,
       mentionedPubkeys: mentionedPubkeys,
       thumbnailTimestamp: thumbnailTimestamp,
@@ -384,6 +388,7 @@ class VideoEventPublisher {
     PendingUpload upload, {
     required int? expirationTimestamp,
     required bool allowAudioReuse,
+    required bool allowVideoReuse,
     required List<String> collaboratorPubkeys,
     required List<String> mentionedPubkeys,
     required Duration? thumbnailTimestamp,
@@ -469,6 +474,8 @@ class VideoEventPublisher {
         inspiredByNpubs: inspiredByNpubs,
         clipSourceCredits: clipSourceCredits,
       );
+      // Written as true or false, so an edit keeps an explicit decline.
+      tags.add(['allow_video_reuse', allowVideoReuse.toString()]);
 
       final audio = await _audioPublisher.resolveForPublish(
         upload: upload,

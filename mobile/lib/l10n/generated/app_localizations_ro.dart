@@ -11279,6 +11279,18 @@ class AppLocalizationsRo extends AppLocalizations {
       'Permite altora să salveze și să reutilizeze audio-ul acestui videoclip.';
 
   @override
+  String get videoMetadataVideoReuseTitle =>
+      'Permite altora să folosească acest videoclip';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'Îl pot adăuga la clipurile lor și îl pot publica, menționându-te.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'Licența acestui sunet nu permite reutilizarea.';
+
+  @override
   String get publishAudioReuseDegradedWarning =>
       'Videoclipul tău e publicat, dar sunetul nu. Editează videoclipul ca să îl împarți.';
 

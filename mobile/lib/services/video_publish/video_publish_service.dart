@@ -368,6 +368,7 @@ class VideoPublishService {
                     expireTime.inSeconds
               : null,
           allowAudioReuse: draft.allowAudioReuse,
+          allowVideoReuse: draft.allowVideoReuse,
           collaboratorPubkeys: collaboratorPubkeys.toList(),
           mentionedPubkeys: mentionedPubkeys,
           inspiredByAddressableId: draft.inspiredByVideo?.addressableId,

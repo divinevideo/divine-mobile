@@ -554,6 +554,13 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     triggerAutosave();
   }
 
+  /// Set whether others may add this post to their clips.
+  void setAllowVideoReuse(bool allowVideoReuse) {
+    if (state.allowVideoReuse == allowVideoReuse) return;
+    state = state.copyWith(allowVideoReuse: allowVideoReuse);
+    triggerAutosave();
+  }
+
   /// Update durable public credit for audio shared with the current post.
   void setAudioShareAttribution(AudioShareAttribution? attribution) {
     if (state.audioShareAttribution == attribution) return;
@@ -749,6 +756,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       description: state.description,
       hashtags: state.tags,
       allowAudioReuse: state.allowAudioReuse,
+      allowVideoReuse: state.offersVideoReuse,
       audioShareAttribution: state.audioShareAttribution,
       expireTime: state.expiration.value,
       scheduledAt: state.scheduledAt,
@@ -891,6 +899,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     state = VideoEditorProviderState(
       // Getter falls back to rawTags so the toggle survives a cache round-trip.
       allowAudioReuse: video.allowAudioReuse,
+      allowVideoReuse: video.allowVideoReuse,
       title: video.title ?? '',
       description: content,
       // Older events can carry mixed-case or over-long tags, and caption
@@ -1376,6 +1385,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       description: draft.description,
       tags: HashtagExtractor.normalizeVideoHashtags(draft.hashtags).toSet(),
       allowAudioReuse: draft.allowAudioReuse,
+      allowVideoReuse: draft.allowVideoReuse,
       audioShareAttribution: draft.audioShareAttribution,
       shareReplyToFeed: draft.shareReplyToFeed,
       expiration: VideoMetadataExpiration.fromDuration(draft.expireTime),

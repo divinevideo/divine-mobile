@@ -10956,6 +10956,18 @@ class AppLocalizationsTr extends AppLocalizations {
       'Başkalarının bu videonun sesini kaydedip yeniden kullanmasına izin ver.';
 
   @override
+  String get videoMetadataVideoReuseTitle =>
+      'Başkalarının bu videoyu kullanmasına izin ver';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'Kendi kliplerine ekleyip paylaşabilirler; seni de kaynak olarak gösterirler.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'Bu sesin lisansı yeniden kullanıma izin vermiyor.';
+
+  @override
   String get publishAudioReuseDegradedWarning =>
       'Videon yayında ama ses yayınlanmadı. Sesi paylaşmak için videoyu düzenle.';
 

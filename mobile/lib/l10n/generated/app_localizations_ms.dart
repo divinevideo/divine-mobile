@@ -11044,6 +11044,18 @@ class AppLocalizationsMs extends AppLocalizations {
       'Benarkan orang lain menyimpan dan menggunakan semula audio video ini.';
 
   @override
+  String get videoMetadataVideoReuseTitle =>
+      'Benarkan orang lain menggunakan video ini';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'Mereka boleh tambahkannya ke klip mereka dan siarkannya, dengan kredit kepada anda.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'Lesen bunyi ini tidak membenarkan penggunaan semula.';
+
+  @override
   String get publishAudioReuseDegradedWarning =>
       'Video anda sudah naik, tetapi bunyinya tidak diterbitkan. Sunting video untuk berkongsi bunyi itu.';
 

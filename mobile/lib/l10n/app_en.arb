@@ -8209,6 +8209,18 @@
     "description": "Note under the Flashing Lights content warning, which is locked on because the video uses a flashing effect (strobe, negative flash) from the editor."
   },
   "videoMetadataAudioReuseSubtitle": "Let others save and reuse this video's audio.",
+  "videoMetadataVideoReuseTitle": "Allow others to use this video",
+  "@videoMetadataVideoReuseTitle": {
+    "description": "Label of the switch on the post screen that lets other people add this video to their clip library and use it in their own posts. Off by default."
+  },
+  "videoMetadataVideoReuseSubtitle": "They can add it to their clips and post it. You'll get credit.",
+  "@videoMetadataVideoReuseSubtitle": {
+    "description": "Helper text under the video reuse switch. Tells the creator that others can add the video to their clips and post it, and that the creator is credited publicly in those posts."
+  },
+  "videoMetadataVideoReuseSoundLicenseSubtitle": "This sound's license doesn't allow reuse.",
+  "@videoMetadataVideoReuseSoundLicenseSubtitle": {
+    "description": "Helper text under the video reuse switch when it is disabled because the post's sound comes with a license that forbids derivatives; a reused clip would carry that sound along."
+  },
   "publishAudioReuseDegradedWarning": "Your video is up, but the sound didn't publish. Edit the video to share it.",
   "@publishAudioReuseDegradedWarning": {
     "description": "Snackbar shown after a successful publish when the creator opted into a reusable sound but extracting or publishing it failed, so the video posted without the sharing choice they made."

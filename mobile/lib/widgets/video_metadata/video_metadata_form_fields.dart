@@ -16,6 +16,7 @@ import 'package:openvine/widgets/video_metadata/video_metadata_inspired_by_input
 import 'package:openvine/widgets/video_metadata/video_metadata_limit_warning_banner.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_schedule_selector.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_tags_selector.dart';
+import 'package:openvine/widgets/video_metadata/video_metadata_video_reuse_toggle.dart';
 import 'package:publishing_suggestions/publishing_suggestions.dart';
 
 class VideoMetadataFormFields extends ConsumerStatefulWidget {
@@ -195,6 +196,8 @@ class _VideoMetadataFormFieldsState
 
           if (widget.enableAudioReuse && !reusesExternalAudio)
             const _InputWrapper(child: VideoMetadataAudioSharingSection()),
+
+          const _InputWrapper(child: VideoMetadataVideoReuseToggle()),
 
           if (widget.enableVideoReply)
             const _InputWrapper(child: _VideoReplyVisibilityToggle()),

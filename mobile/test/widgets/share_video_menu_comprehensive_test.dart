@@ -331,6 +331,21 @@ void main() {
     });
 
     testWidgets(
+      'More actions row shows Add to clips for videos offered for reuse',
+      (tester) async {
+        final reusableVideo = _testVideo(
+          rawTags: const {'allow_video_reuse': 'true'},
+        );
+
+        await tester.pumpWidget(buildSubject(video: reusableVideo));
+        await tester.tap(find.byType(ShareActionButton));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Add to clips'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
       'More actions row hides Add to clips for non-classic, non-own videos',
       (tester) async {
         await tester.pumpWidget(buildSubject());

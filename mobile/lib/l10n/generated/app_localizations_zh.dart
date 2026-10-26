@@ -10372,6 +10372,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoMetadataAudioReuseSubtitle => '让其他人保存并二次使用这个视频的音频。';
 
   @override
+  String get videoMetadataVideoReuseTitle => '允许他人使用此视频';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle => '他们可以把它加入自己的片段库并发布，同时会注明你。';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle => '此声音的许可不允许再次使用。';
+
+  @override
   String get publishAudioReuseDegradedWarning => '你的视频已发布，但声音未能发布。编辑视频以分享声音。';
 
   @override

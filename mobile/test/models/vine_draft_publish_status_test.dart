@@ -113,6 +113,27 @@ void main() {
       expect(draft.allowAudioReuse, isFalse);
     });
 
+    test('should round-trip allowVideoReuse through JSON', () {
+      final now = DateTime.now();
+      final draft = DivineVideoDraft(
+        id: 'reusable_draft',
+        clips: const [],
+        title: 'Reusable',
+        description: '',
+        hashtags: const {},
+        selectedApproach: 'native',
+        createdAt: now,
+        lastModified: now,
+        publishStatus: PublishStatus.draft,
+        publishAttempts: 0,
+        allowVideoReuse: true,
+      );
+
+      final restored = DivineVideoDraft.fromJson(draft.toJson(), '/path/to');
+
+      expect(restored.allowVideoReuse, isTrue);
+    });
+
     test('should serialize publishError when present', () {
       final now = DateTime.now();
       final draft = DivineVideoDraft(

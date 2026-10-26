@@ -11126,6 +11126,18 @@ class AppLocalizationsFil extends AppLocalizations {
       'Hayaan ang iba na i-save at gamitin ulit ang audio ng video na ito.';
 
   @override
+  String get videoMetadataVideoReuseTitle =>
+      'Payagan ang iba na gamitin ang video na ito';
+
+  @override
+  String get videoMetadataVideoReuseSubtitle =>
+      'Puwede nila itong idagdag sa clips nila at i-post, at mababanggit ka.';
+
+  @override
+  String get videoMetadataVideoReuseSoundLicenseSubtitle =>
+      'Hindi pinapayagan ng lisensya ng sound na ito ang muling paggamit.';
+
+  @override
   String get publishAudioReuseDegradedWarning =>
       'Nakalabas na ang video mo, pero hindi na-publish ang sound. I-edit ang video para maibahagi ito.';
 
