@@ -4,12 +4,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart'
     show AudioEvent, AudioExternalSource, AudioLicenseMetadata, VineSound;
+import 'package:openvine/features/feature_flags/models/feature_flag.dart';
+import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_reply_context.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_reply_context_provider.dart';
+import 'package:openvine/widgets/video_metadata/video_metadata_caption_field.dart';
 import 'package:openvine/widgets/video_metadata/video_metadata_form_fields.dart';
+import 'package:openvine/widgets/video_metadata/video_metadata_tags_selector.dart';
 
 void main() {
   group(VideoMetadataFormFields, () {
@@ -21,6 +25,7 @@ void main() {
       bool enableCollaborators = true,
       bool enableInspiredBy = true,
       bool enableSchedule = true,
+      bool enableIdeas = false,
       VideoReplyContext? replyContext,
     }) {
       return ProviderScope(
@@ -28,6 +33,9 @@ void main() {
           videoEditorProvider.overrideWith(
             () => _MockVideoEditorNotifier(state ?? VideoEditorProviderState()),
           ),
+          isFeatureEnabledProvider(
+            FeatureFlag.publishingIdeas,
+          ).overrideWithValue(false),
           videoReplyContextProvider.overrideWith(
             () => _TestVideoReplyContextNotifier(replyContext),
           ),
@@ -44,6 +52,7 @@ void main() {
                 enableCollaborators: enableCollaborators,
                 enableInspiredBy: enableInspiredBy,
                 enableSchedule: enableSchedule,
+                enableIdeas: enableIdeas,
               ),
             ),
           ),
@@ -183,6 +192,23 @@ void main() {
 
       expect(find.text('Tags'), findsNothing);
     });
+
+    testWidgets(
+      'keeps the regular gap above tags while publishing ideas are off',
+      (tester) async {
+        await tester.pumpWidget(buildWidget(enableIdeas: true));
+        await tester.pumpAndSettle();
+
+        final descriptionBottom = tester
+            .getBottomLeft(find.byType(VideoMetadataCaptionField))
+            .dy;
+        final tagsTop = tester
+            .getTopLeft(find.byType(VideoMetadataTagsSelector))
+            .dy;
+
+        expect(tagsTop - descriptionBottom, moreOrLessEquals(16));
+      },
+    );
 
     testWidgets('shows MetadataLimitWarningBanner when present', (
       tester,
