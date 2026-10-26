@@ -10,8 +10,9 @@ credentials are loaded.
 
 Use backend PR #312's exact candidate
 `85d5015785b97d8d0082d3aa3743dbe395ac90ba` and the mobile repository's pinned
-Flutter SDK. In an isolated backend checkout/snapshot, run `npm ci` from
-`worker/`, then from the mobile repository root:
+Flutter SDK. In an isolated backend checkout/snapshot, run
+`npm ci --legacy-peer-deps` from `worker/` (matching that candidate's CI),
+then from the mobile repository root:
 
 ```sh
 python3 local_stack/consent_acceptance/run.py /path/to/backend-candidate
