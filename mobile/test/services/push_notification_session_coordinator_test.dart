@@ -151,6 +151,44 @@ void main() {
       );
     });
 
+    test(
+      'a stale timezone result cannot register a replacement session',
+      () async {
+        readiness = NostrSessionReadiness.nostrReady(
+          pubkey: 'a' * 64,
+          client: client,
+        );
+        coordinator.handleReadiness(readiness);
+        await pumpEventQueue(times: 2);
+        clearInteractions(pushService);
+        final lookup = Completer<bool>();
+        when(pushService.registrationTimezoneChanged)
+            .thenAnswer((_) => lookup.future);
+        final refresh = coordinator.handleAppResumed();
+
+        final replacement = _MockNostrClient();
+        when(() => replacement.hasKeys).thenReturn(true);
+        when(() => replacement.publicKey).thenReturn('b' * 64);
+        when(() => authService.currentIdentity).thenReturn(
+          KeycastNostrIdentity(
+            pubkey: 'b' * 64,
+            rpcSigner: _MockNostrSigner(),
+          ),
+        );
+        readiness = NostrSessionReadiness.nostrReady(
+          pubkey: 'b' * 64,
+          client: replacement,
+        );
+        lookup.complete(true);
+        await refresh;
+        await pumpEventQueue(times: 2);
+
+        verifyNever(
+          () => pushService.register(any(), isCurrent: any(named: 'isCurrent')),
+        );
+      },
+    );
+
     test('registers once the matching signer-backed client is ready', () async {
       readiness = NostrSessionReadiness.nostrReady(
         pubkey: 'a' * 64,
