@@ -8,9 +8,13 @@ import 'package:pro_video_editor/pro_video_editor.dart'
         AnimationPhase,
         EditorLayerImage,
         ImageLayer,
+        KeyframeClockPoint,
         LayerAnimation,
         LayerAnimationType,
-        LayerBlendMode;
+        LayerBlendMode,
+        LayerShapeMask,
+        LayerShapeMaskShape,
+        TimelineKeyframe;
 
 void main() {
   group('imageLayerSequence', () {
@@ -30,6 +34,13 @@ void main() {
       animationStartTime: const Duration(seconds: 1),
       animationEndTime: const Duration(seconds: 3),
       blendMode: LayerBlendMode.screen,
+      keyframes: const [
+        TimelineKeyframe(time: Duration(seconds: 2), offset: Offset(50, 70)),
+      ],
+      keyframeClock: const [
+        KeyframeClockPoint(output: Duration.zero, keyframe: Duration.zero),
+      ],
+      shapeMask: const LayerShapeMask(shape: LayerShapeMaskShape.ellipse),
     );
 
     test('plays the parts one after the other from one layer', () {
@@ -54,6 +65,9 @@ void main() {
       expect(sequence.animations, hasLength(1));
       expect(sequence.animationStartTime, const Duration(seconds: 1));
       expect(sequence.animationEndTime, const Duration(seconds: 3));
+      expect(sequence.keyframes.single.offset, const Offset(50, 70));
+      expect(sequence.keyframeClock, hasLength(1));
+      expect(sequence.shapeMask?.shape, LayerShapeMaskShape.ellipse);
     });
   });
 }
