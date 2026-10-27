@@ -540,6 +540,29 @@ class NIP17MessageService {
     );
   }
 
+  /// Build the unsigned NIP-09 kind-5 rumor that retracts [targetEventId], a
+  /// rumor of [targetKind] this account sent, for wrapping to every member of
+  /// its conversation (`17.md:87`).
+  ///
+  /// It carries the deleted event and its kind (`09.md:9`) and no `p` tag:
+  /// NIP-09 asks for none, and naming one member would make the rumor read,
+  /// by its `pubkey` + `p` tags, as the one-to-one of the sender and that
+  /// member rather than the room it was sent to (#9774).
+  Event buildDeletionRumor({
+    required String targetEventId,
+    required int targetKind,
+  }) {
+    return Event(
+      _senderPublicKey,
+      EventKind.eventDeletion,
+      <List<String>>[
+        ['e', targetEventId],
+        ['k', '$targetKind'],
+      ],
+      '',
+    );
+  }
+
   /// OK-confirmation window for the recipient wrap when [sendRumor] runs
   /// with `awaitRecipientOk: true` (reaction sends and message sends). Kept
   /// well under the caller's outer publish cap so the confirmation resolves

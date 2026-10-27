@@ -197,6 +197,72 @@ void main() {
       });
     });
 
+    group('removeOwn', () {
+      test('sends a removal that names no one', () async {
+        final room = await seedConversation([_owner, _alice, _bob]);
+        final message = 'e' * 64;
+        await seedMessage(id: message, conversationId: room, sender: _alice);
+        final reaction = await react(
+          conversationId: room,
+          targetMessageId: message,
+          targetMessageAuthor: _alice,
+        );
+
+        await reactions.removeOwn(
+          rumorId: reaction,
+          targetMessageAuthor: _alice,
+        );
+        await pumpEventQueue();
+
+        final removal = messageService.sentRumor(EventKind.eventDeletion);
+        expect(_tagValues(removal, 'p'), isEmpty);
+        expect(_tagValues(removal, 'e'), equals([reaction]));
+        expect(_tagValues(removal, 'k'), equals(['${EventKind.reaction}']));
+        expect(
+          messageService.recipientsOf(EventKind.eventDeletion),
+          equals({_alice, _bob}),
+        );
+      });
+
+      test('stores a removal that names no one when it is held', () async {
+        // No conversation row and no stored message: nothing proves the room,
+        // so the removal is recorded and left for the retry sweep.
+        final reactionId = '9' * 64;
+        await reactionsDao.insertOwnReactionSuperseding(
+          placeholderId: reactionId,
+          conversationId: DmRepository.computeConversationId([
+            _owner,
+            _alice,
+            _bob,
+          ]),
+          targetMessageId: 'b' * 64,
+          targetMessageAuthor: _owner,
+          reactorPubkey: _owner,
+          emoji: '❤️',
+          createdAt: _messageCreatedAt + 1,
+          ownerPubkey: _owner,
+          rumorEventJson: '{}',
+        );
+
+        await reactions.removeOwn(
+          rumorId: reactionId,
+          targetMessageAuthor: _owner,
+        );
+
+        expect(messageService.wire, isEmpty, reason: 'the removal is held');
+        final row = await reactionsDao.getById(
+          id: reactionId,
+          ownerPubkey: _owner,
+        );
+        final stored = Event.fromJson(
+          jsonDecode(row!.rumorEventJson!) as Map<String, dynamic>,
+        );
+        expect(stored.kind, equals(EventKind.eventDeletion));
+        expect(_tagValues(stored, 'e'), equals([reactionId]));
+        expect(_tagValues(stored, 'p'), isEmpty);
+      });
+    });
+
     group('rumors queued before #9774', () {
       test('retry sends a queued reaction exactly as stored', () async {
         final room = await seedConversation([_owner, _alice]);
@@ -236,6 +302,52 @@ void main() {
         final sent = messageService.sentRumor(EventKind.reaction);
         expect(sent.id, equals(queued.id));
         expect(sent.tags, equals(queued.tags));
+      });
+
+      test('retryDeletion sends a queued removal exactly as stored', () async {
+        final room = await seedConversation([_owner, _alice, _bob]);
+        final reactionId = '7' * 64;
+        await reactionsDao.insertOwnReactionSuperseding(
+          placeholderId: reactionId,
+          conversationId: room,
+          targetMessageId: 'a' * 64,
+          targetMessageAuthor: _alice,
+          reactorPubkey: _owner,
+          emoji: '❤️',
+          createdAt: _messageCreatedAt + 1,
+          ownerPubkey: _owner,
+          rumorEventJson: '{}',
+          recipientPubkeys: jsonEncode([_alice, _bob]),
+        );
+        final queued = Event(
+          _owner,
+          EventKind.eventDeletion,
+          [
+            ['p', _alice],
+            ['e', reactionId],
+            ['k', '${EventKind.reaction}'],
+          ],
+          '',
+          createdAt: _messageCreatedAt + 2,
+        );
+        await reactionsDao.markOwnDeletionPending(
+          id: reactionId,
+          ownerPubkey: _owner,
+          deletionRumorJson: jsonEncode(queued.toJson()),
+        );
+
+        await reactions.retryDeletion(
+          rumorId: reactionId,
+          targetMessageAuthor: _alice,
+        );
+
+        final sent = messageService.sentRumor(EventKind.eventDeletion);
+        expect(sent.id, equals(queued.id));
+        expect(sent.tags, equals(queued.tags));
+        expect(
+          messageService.recipientsOf(EventKind.eventDeletion),
+          equals({_alice, _bob}),
+        );
       });
 
       test(

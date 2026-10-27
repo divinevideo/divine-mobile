@@ -662,7 +662,6 @@ class DmReactionsRepository {
     final inboxes = _inboxesForTap(recipients, priors.values);
     await _removeSuperseded(
       priors,
-      targetMessageAuthor: targetMessageAuthor,
       ownerPubkey: ownerPubkey,
       messageService: messageService,
       inboxes: inboxes,
@@ -1045,7 +1044,6 @@ class DmReactionsRepository {
     await _durablyDeleteReaction(
       rumorId: rumorId,
       recipients: recipients,
-      targetMessageAuthor: targetMessageAuthor,
       ownerPubkey: ownerPubkey,
       messageService: messageService,
       reportSite: DmReactionsRepositoryReportableSites.removeOwnSoftDelete,
@@ -1070,13 +1068,13 @@ class DmReactionsRepository {
   /// the sweep to deliver.
   ///
   /// An empty [recipients] means they could not be established. The removal
-  /// is recorded all the same, tagged with [targetMessageAuthor] like the
-  /// reaction it removes, and left for the retry sweep: dropping it would
-  /// leave the reaction live while the UI shows it removed.
+  /// is recorded all the same and left for the retry sweep: dropping it would
+  /// leave the reaction live while the UI shows it removed. It names no one
+  /// either way, so what it says does not depend on who was known when it was
+  /// recorded (#9774).
   Future<void> _durablyDeleteReaction({
     required String rumorId,
     required List<String> recipients,
-    required String targetMessageAuthor,
     required String ownerPubkey,
     required NIP17MessageService messageService,
     required String reportSite,
@@ -1084,14 +1082,9 @@ class DmReactionsRepository {
   }) async {
     final Event deletion;
     try {
-      deletion = messageService.buildRumor(
-        recipientPubkey: recipients.firstOrNull ?? targetMessageAuthor,
-        content: '',
-        eventKind: EventKind.eventDeletion,
-        additionalTags: [
-          ['e', rumorId],
-          ['k', EventKind.reaction.toString()],
-        ],
+      deletion = messageService.buildDeletionRumor(
+        targetEventId: rumorId,
+        targetKind: EventKind.reaction,
       );
       await _reactionsDao.markOwnDeletionPending(
         id: rumorId,
@@ -1894,7 +1887,6 @@ class DmReactionsRepository {
   /// re-driving) the new emoji.
   Future<void> _removeSuperseded(
     Map<String, List<String>> priors, {
-    required String targetMessageAuthor,
     required String ownerPubkey,
     required NIP17MessageService messageService,
     required Future<Map<String, DmInboxLookup>> inboxes,
@@ -1905,7 +1897,6 @@ class DmReactionsRepository {
         await _durablyDeleteReaction(
           rumorId: priorId,
           recipients: priorRecipients,
-          targetMessageAuthor: targetMessageAuthor,
           ownerPubkey: ownerPubkey,
           messageService: messageService,
           reportSite:
