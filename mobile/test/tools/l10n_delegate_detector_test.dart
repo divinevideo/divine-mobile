@@ -67,7 +67,9 @@ void main() {
       expect(sites.single.line, 2);
     });
 
-    test('does not count a MaterialApp that registers the delegates', () {
+    test('counts a MaterialApp using the generated delegate list', () {
+      // Its deferred locale load, started inside a widget test, hangs later
+      // loads in the merged CI shard (#10517).
       final sites = scan('''
 void main() {
   pumpWidget(
@@ -80,7 +82,27 @@ void main() {
 }
 ''');
 
-      expect(sites, isEmpty);
+      expect(sites, hasLength(1));
+      expect(sites.single.line, 3);
+    });
+
+    test('counts a hand-built list around the generated delegate', () {
+      final sites = scan('''
+void main() {
+  pumpWidget(
+    MaterialApp(
+      localizationsDelegates: [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+      ],
+      home: Foo(),
+    ),
+  );
+}
+''');
+
+      expect(sites, hasLength(1));
+      expect(sites.single.line, 3);
     });
 
     test('does not count a MaterialApp using appLocalizationsDelegates', () {
@@ -90,6 +112,21 @@ void main() {
     MaterialApp(
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      home: Foo(),
+    ),
+  );
+}
+''');
+
+      expect(sites, isEmpty);
+    });
+
+    test('does not count a list that spreads appLocalizationsDelegates', () {
+      final sites = scan('''
+void main() {
+  pumpWidget(
+    MaterialApp(
+      localizationsDelegates: [...extraDelegates, ...appLocalizationsDelegates],
       home: Foo(),
     ),
   );
@@ -160,7 +197,7 @@ void main() {
 void main() {
   pumpWidget(
     MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       home: Foo(),
     ),
   );
@@ -244,7 +281,7 @@ void main() {
 void main() {
   pumpWidget(
     MaterialApp.router(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       routerConfig: router,
     ),
   );
@@ -259,7 +296,7 @@ void main() {
 void main() {
   pumpWidget(
     MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       home: MaterialApp(home: Foo()),
     ),
   );
