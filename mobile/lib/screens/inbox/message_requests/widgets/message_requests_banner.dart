@@ -18,9 +18,9 @@ class MessageRequestsBanner extends StatelessWidget {
     super.key,
   });
 
-  /// Number of unread message requests, shown by the badge and announced by
-  /// the semantics label. A read request still awaiting a decision is not
-  /// counted.
+  /// Number of unread live message requests, shown by the badge and
+  /// announced by the semantics label. Dismissed requests, and read requests
+  /// still awaiting a decision, are not counted.
   final int requestCount;
 
   /// Called when the banner is tapped.
