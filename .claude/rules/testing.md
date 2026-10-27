@@ -805,7 +805,7 @@ never satisfy the app's delegate.
 
 `scripts/check_l10n_delegates_ceiling.sh` freezes the per-file count of
 `MaterialApp` / `CupertinoApp` / `WidgetsApp` constructions under
-`mobile/test` that do not register `appLocalizationsDelegates` alone —
+`mobile/test` that do not register `appLocalizationsDelegates` —
 passing any other delegate list, such as
 `GlobalMaterialLocalizations.delegates` or the generated
 `AppLocalizations.localizationsDelegates`, or naming `AppLocalizations`

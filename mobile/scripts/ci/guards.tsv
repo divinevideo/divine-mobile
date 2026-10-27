@@ -91,12 +91,12 @@
 
 # Issue #3613. Freezes the per-file count of MaterialApp / CupertinoApp /
 # WidgetsApp constructions under mobile/test that do not register
-# appLocalizationsDelegates alone, so `context.l10n` under a test app can only
-# get safer; the generated delegate's deferred load hangs later loads in a
-# merged shard (#10517). Without a delegate that read is
-# `Localizations.of<AppLocalizations>(...)!` on a null and throws "Null check
-# operator used on a null value" — silently, only once a widget under test
-# happens to reach it. Prefer testMaterialApp(...) from
+# appLocalizationsDelegates, or name AppLocalizations beside it, so
+# `context.l10n` under a test app can only get safer; the generated delegate's
+# deferred load hangs later loads in a merged shard (#10517). Without a
+# delegate that read is `Localizations.of<AppLocalizations>(...)!` on a null
+# and throws "Null check operator used on a null value" — silently, only once a
+# widget under test happens to reach it. Prefer testMaterialApp(...) from
 # test/helpers/test_provider_overrides.dart.
 🌍 Verify delegate-less MaterialApp count does not increase (l10n ratchet)	-	bash scripts/check_l10n_delegates_ceiling.sh
 
