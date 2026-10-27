@@ -29,6 +29,51 @@ void main() {
       );
       expect(h.signatures, 1);
     });
+    for (final setup in [
+      'unopened rules',
+      'closed rules',
+      'cancelled rules',
+      'unsupported video',
+      'unverifiable video',
+    ]) {
+      test('preparation with $setup requires review', () async {
+        final h = Harness();
+        var definition = h.definition;
+        var video = h.video;
+        switch (setup) {
+          case 'unopened rules':
+            h.now = 99;
+          case 'closed rules':
+            h.now = 200;
+          case 'cancelled rules':
+            definition = NostrEvent.fromJson(
+              h.organizer.definition(status: 'cancelled'),
+            );
+          case 'unsupported video':
+            video = NostrEvent.fromJson(h.creator.sign(kind: 1));
+          case 'unverifiable video':
+            video = NostrEvent(
+              id: h.video.id,
+              pubkey: h.video.pubkey,
+              sig: '0' * 128,
+              createdAt: h.video.createdAt,
+              kind: h.video.kind,
+              content: h.video.content,
+              tags: h.video.tags,
+            );
+        }
+        await expectLater(
+          h.repository.prepareEntry(definition: definition, video: video),
+          throwsA(
+            isA<SubmissionException>().having(
+              (e) => e.status,
+              'status',
+              SubmissionStatus.reviewRequired,
+            ),
+          ),
+        );
+      });
+    }
     test('closed and cancelled revisions require review', () async {
       for (final replacement in ['closed', 'cancelled']) {
         final h = Harness();

@@ -140,7 +140,8 @@ enum SubmissionStatus {
   /// Reviewed snapshots/client metadata exceed the signed-record size limit.
   eventTooLarge,
 
-  /// Consent, current rules, window, or current video revision differs.
+  /// Consent, current rules, window, or current video revision differs, or
+  /// the reviewed sources cannot form a valid action.
   reviewRequired,
 
   /// Current cancellation pauses persisted entry delivery. Keep the signed
