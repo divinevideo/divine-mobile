@@ -200,6 +200,7 @@ void main() {
       );
       await lookup;
       await tester.pumpAndSettle();
+      expect(cubit.state, isA<ShortLinkReady>());
       expect(find.text('another page'), findsOneWidget);
       expect(find.text('resolved video'), findsNothing);
       await tester.pumpWidget(const SizedBox());
