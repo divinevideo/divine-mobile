@@ -13,7 +13,7 @@ import 'package:openvine/l10n/l10n.dart';
 /// right chevron. Tapping navigates to the message requests inbox.
 class MessageRequestsBanner extends StatelessWidget {
   const MessageRequestsBanner({
-    required this.requestCount,
+    required this.unreadCount,
     required this.onTap,
     super.key,
   });
@@ -21,7 +21,7 @@ class MessageRequestsBanner extends StatelessWidget {
   /// Number of unread live message requests, shown by the badge and
   /// announced by the semantics label. Dismissed requests, and read requests
   /// still awaiting a decision, are not counted.
-  final int requestCount;
+  final int unreadCount;
 
   /// Called when the banner is tapped.
   final VoidCallback onTap;
@@ -36,7 +36,7 @@ class MessageRequestsBanner extends StatelessWidget {
       button: true,
       excludeSemantics: true,
       label: context.l10n.inboxMessageRequestsUnreadSemanticLabel(
-        requestCount,
+        unreadCount,
       ),
       onTap: onTap,
       child: GestureDetector(
@@ -60,7 +60,7 @@ class MessageRequestsBanner extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (requestCount > 0) _RequestCountBadge(count: requestCount),
+                if (unreadCount > 0) _RequestCountBadge(count: unreadCount),
                 const SizedBox(width: 8),
                 DivineIcon(
                   icon: DivineIconName.caretRight,

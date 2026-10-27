@@ -15,7 +15,7 @@ void main() {
         await tester.pumpWidget(
           testMaterialApp(
             home: Scaffold(
-              body: MessageRequestsBanner(requestCount: 5, onTap: () {}),
+              body: MessageRequestsBanner(unreadCount: 5, onTap: () {}),
             ),
           ),
         );
@@ -27,7 +27,7 @@ void main() {
         await tester.pumpWidget(
           testMaterialApp(
             home: Scaffold(
-              body: MessageRequestsBanner(requestCount: 42, onTap: () {}),
+              body: MessageRequestsBanner(unreadCount: 42, onTap: () {}),
             ),
           ),
         );
@@ -35,11 +35,11 @@ void main() {
         expect(find.text('42'), findsOneWidget);
       });
 
-      testWidgets('hides count badge when requestCount is 0', (tester) async {
+      testWidgets('hides count badge when unreadCount is 0', (tester) async {
         await tester.pumpWidget(
           testMaterialApp(
             home: Scaffold(
-              body: MessageRequestsBanner(requestCount: 0, onTap: () {}),
+              body: MessageRequestsBanner(unreadCount: 0, onTap: () {}),
             ),
           ),
         );
@@ -52,7 +52,7 @@ void main() {
         await tester.pumpWidget(
           testMaterialApp(
             home: Scaffold(
-              body: MessageRequestsBanner(requestCount: 150, onTap: () {}),
+              body: MessageRequestsBanner(unreadCount: 150, onTap: () {}),
             ),
           ),
         );
@@ -66,7 +66,7 @@ void main() {
         await tester.pumpWidget(
           testMaterialApp(
             home: Scaffold(
-              body: MessageRequestsBanner(requestCount: 3, onTap: () {}),
+              body: MessageRequestsBanner(unreadCount: 3, onTap: () {}),
             ),
           ),
         );
@@ -91,7 +91,7 @@ void main() {
         await tester.pumpWidget(
           testMaterialApp(
             home: Scaffold(
-              body: MessageRequestsBanner(requestCount: 0, onTap: () {}),
+              body: MessageRequestsBanner(unreadCount: 0, onTap: () {}),
             ),
           ),
         );
@@ -107,7 +107,7 @@ void main() {
         await tester.pumpWidget(
           testMaterialApp(
             home: Scaffold(
-              body: MessageRequestsBanner(requestCount: 3, onTap: () {}),
+              body: MessageRequestsBanner(unreadCount: 3, onTap: () {}),
             ),
           ),
         );
@@ -128,7 +128,7 @@ void main() {
           testMaterialApp(
             home: Scaffold(
               body: MessageRequestsBanner(
-                requestCount: 3,
+                unreadCount: 3,
                 onTap: () => tapped = true,
               ),
             ),
@@ -149,7 +149,7 @@ void main() {
           testMaterialApp(
             home: Scaffold(
               body: MessageRequestsBanner(
-                requestCount: 3,
+                unreadCount: 3,
                 onTap: () => tapped = true,
               ),
             ),
