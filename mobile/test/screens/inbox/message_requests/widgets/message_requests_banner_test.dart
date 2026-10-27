@@ -105,6 +105,24 @@ void main() {
         );
       });
 
+      testWidgets('announces the exact count when the badge caps at 99+', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: Scaffold(
+              body: MessageRequestsBanner(unreadCount: 150, onTap: () {}),
+            ),
+          ),
+        );
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          tester.getSemantics(find.byType(MessageRequestsBanner)).label,
+          equals(l10n.inboxMessageRequestsUnreadSemanticLabel(150)),
+        );
+      });
+
       testWidgets('exposes the banner as a button', (tester) async {
         await tester.pumpWidget(
           testMaterialApp(
