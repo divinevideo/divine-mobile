@@ -16,8 +16,10 @@ import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/extensions/layer_blend_mode.dart';
 import 'package:openvine/extensions/layer_keyframes.dart';
 import 'package:openvine/extensions/layer_mask_export.dart';
+import 'package:openvine/extensions/tune_adjustment_matrix_extensions.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/adjust_video_effect.dart';
 import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
@@ -973,8 +975,13 @@ class VideoEditorRenderService {
         timelineMap: timelineMap,
         beats: beats,
       ),
+      // Adjust after the effects editor's effects, as in the preview; see
+      // adjustVideoEffectsOf for why.
       customEffects: customVideoEffectsOnOutput(
-        parameters?.customVideoEffectsFromCompleteMeta ?? const [],
+        [
+          ...?parameters?.customVideoEffectsFromCompleteMeta,
+          ...adjustVideoEffectsOf(parameters?.tuneAdjustments ?? const []),
+        ],
         timelineMap,
         beats: beats,
       ),
@@ -1285,6 +1292,8 @@ class VideoEditorRenderService {
   /// overlap transition can't push a filter (or its leave animation) past the
   /// real video end. A `null` start/end stays un-anchored (spans the whole
   /// video). One [ColorFilter] is emitted per filter matrix.
+  /// Highlights, shadows, vibrance and sharpening are left out: their
+  /// matrix is the identity, and `adjustVideoEffectsOf` draws them.
   @visibleForTesting
   static List<ColorFilter> buildColorFilters({
     required List<TuneAdjustmentMatrix> tuneAdjustments,
@@ -1293,11 +1302,12 @@ class VideoEditorRenderService {
   }) {
     return [
       for (final tune in tuneAdjustments)
-        ColorFilter(
-          matrix: tune.matrix,
-          startTime: timelineMap.editorToOutputOrNull(tune.startTime),
-          endTime: timelineMap.editorToOutputOrNull(tune.endTime),
-        ),
+        if (!adjustVideoEffectKinds.contains(tune.tuneKind))
+          ColorFilter(
+            matrix: tune.matrix,
+            startTime: timelineMap.editorToOutputOrNull(tune.startTime),
+            endTime: timelineMap.editorToOutputOrNull(tune.endTime),
+          ),
       for (final filter in filterStates)
         for (final matrix in filter.matrices)
           ColorFilter(

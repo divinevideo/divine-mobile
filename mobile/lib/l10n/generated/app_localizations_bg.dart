@@ -9071,6 +9071,18 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorTuneFade => 'Избледняване';
 
   @override
+  String get videoEditorTuneHighlights => 'Светлини';
+
+  @override
+  String get videoEditorTuneShadows => 'Сенки';
+
+  @override
+  String get videoEditorTuneVibrance => 'Живост';
+
+  @override
+  String get videoEditorTuneSharpen => 'Острота';
+
+  @override
   String get videoEditorAudioLabel => 'Аудио';
 
   @override

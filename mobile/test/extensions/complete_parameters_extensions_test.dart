@@ -247,6 +247,15 @@ void main() {
         expect(a.diff(b), containsAll(['blur', 'flipX', 'rotateTurns']));
       });
 
+      test('reports a change to an adjustment that has no colour matrix', () {
+        TuneAdjustmentMatrix sharpen(double value) =>
+            TuneAdjustmentMatrix(id: 'sharpen', value: value, matrix: const []);
+        final a = _makeParams().copyWith(tuneAdjustments: [sharpen(0.3)]);
+        final b = _makeParams().copyWith(tuneAdjustments: [sharpen(0.6)]);
+
+        expect(a.diff(b), equals(['tuneAdjustments']));
+      });
+
       test('reports image when bytes differ', () {
         final a = _makeParams(image: Uint8List.fromList([1]));
         final b = _makeParams(image: Uint8List.fromList([2]));

@@ -147,6 +147,11 @@ extension CompleteParametersEquality on CompleteParameters {
         other.matrixTuneAdjustmentsList,
       ))
         'matrixTuneAdjustmentsList',
+      // The matrices miss what has none: highlights, shadows, vibrance and
+      // sharpening all carry the identity, so a change to only those (or to
+      // an Adjust set's time window) shows here.
+      if (!listEquals(tuneAdjustments, other.tuneAdjustments))
+        'tuneAdjustments',
       if (!listEquals(image, other.image)) 'image',
     ];
   }

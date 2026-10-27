@@ -8474,6 +8474,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorTuneFade => '褪色';
 
   @override
+  String get videoEditorTuneHighlights => '高光';
+
+  @override
+  String get videoEditorTuneShadows => '阴影';
+
+  @override
+  String get videoEditorTuneVibrance => '自然饱和度';
+
+  @override
+  String get videoEditorTuneSharpen => '锐化';
+
+  @override
   String get videoEditorAudioLabel => '音频';
 
   @override

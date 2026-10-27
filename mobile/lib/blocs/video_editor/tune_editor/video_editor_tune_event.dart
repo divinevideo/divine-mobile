@@ -15,13 +15,22 @@ sealed class VideoEditorTuneEvent extends Equatable {
 /// [VideoEditorTuneEditorInitialized] and the commit both know the session
 /// kind.
 class VideoEditorTuneSessionStarted extends VideoEditorTuneEvent {
-  const VideoEditorTuneSessionStarted({this.setId});
+  const VideoEditorTuneSessionStarted({this.setId, this.values = const {}});
 
   /// The timeline set being edited, or `null` for a new set.
   final String? setId;
 
+  /// The values the session starts from, by adjustment kind: the edited
+  /// set's, or none for a new set.
+  ///
+  /// The editor seeds the sliders with the same values once it is built, but
+  /// the native preview shows the session's highlights, shadows, vibrance and
+  /// sharpening from the moment the editor opens, rather than the previous
+  /// session's until then.
+  final Map<String, double> values;
+
   @override
-  List<Object?> get props => [setId];
+  List<Object?> get props => [setId, values];
 }
 
 /// Triggered when the tune editor is initialized.

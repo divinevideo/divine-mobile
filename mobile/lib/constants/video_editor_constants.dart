@@ -1092,14 +1092,28 @@ class VideoEditorConstants {
   /// exposes no `IconData`.
   static const IconData _unusedTuneIcon = IconData(0);
 
+  /// The colour matrix of the adjustments no matrix can express, which
+  /// leaves every pixel as it is: the native `divine.adjust` effect draws
+  /// them instead (see `adjustVideoEffectKinds`).
+  static List<double> _noColorMatrix(double _) => const [
+    1, 0, 0, 0, 0, //
+    0, 1, 0, 0, 0, //
+    0, 0, 1, 0, 0, //
+    0, 0, 0, 1, 0, //
+  ];
+
   /// Tune adjustment options exposed by the tune sub-editor.
   ///
   /// Mirrors pro_image_editor's `tunePresets` (which is not part of the
   /// package's public API) so the same list can be passed to both the editor
   /// config and the custom bottom bar, guaranteeing the `TuneEditorState`'s
-  /// `selectedIndex` maps to the same adjustment our UI shows. The `icon` /
-  /// `label` fields are never rendered — the custom bar draws its own
-  /// localized text chips (see [_unusedTuneIcon]).
+  /// `selectedIndex` maps to the same adjustment our UI shows. The `icon` is
+  /// never rendered — the custom bar draws its own localized text chips (see
+  /// [_unusedTuneIcon]) — but the English `label` names the adjustment on its
+  /// timeline bar (`TimelineOverlayBloc`).
+  ///
+  /// Highlights, shadows, vibrance and sharpen carry no colour matrix
+  /// ([_noColorMatrix]); the native `divine.adjust` effect draws them.
   static const List<TuneAdjustmentItem> tuneAdjustments = [
     TuneAdjustmentItem(
       id: 'brightness',
@@ -1120,6 +1134,22 @@ class VideoEditorConstants {
       toMatrix: ColorFilterAddons.contrast,
     ),
     TuneAdjustmentItem(
+      id: 'highlights',
+      icon: _unusedTuneIcon,
+      label: 'Highlights',
+      min: -1,
+      max: 1,
+      toMatrix: _noColorMatrix,
+    ),
+    TuneAdjustmentItem(
+      id: 'shadows',
+      icon: _unusedTuneIcon,
+      label: 'Shadows',
+      min: -1,
+      max: 1,
+      toMatrix: _noColorMatrix,
+    ),
+    TuneAdjustmentItem(
       id: 'saturation',
       icon: _unusedTuneIcon,
       label: 'Saturation',
@@ -1127,6 +1157,14 @@ class VideoEditorConstants {
       max: 0.5,
       labelMultiplier: 200,
       toMatrix: ColorFilterAddons.saturation,
+    ),
+    TuneAdjustmentItem(
+      id: 'vibrance',
+      icon: _unusedTuneIcon,
+      label: 'Vibrance',
+      min: -1,
+      max: 1,
+      toMatrix: _noColorMatrix,
     ),
     TuneAdjustmentItem(
       id: 'exposure',
@@ -1171,6 +1209,15 @@ class VideoEditorConstants {
       min: -1,
       max: 1,
       toMatrix: ColorFilterAddons.fade,
+    ),
+    TuneAdjustmentItem(
+      id: 'sharpen',
+      icon: _unusedTuneIcon,
+      label: 'Sharpen',
+      min: 0,
+      max: 1,
+      divisions: 100,
+      toMatrix: _noColorMatrix,
     ),
   ];
 }
