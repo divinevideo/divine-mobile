@@ -512,21 +512,10 @@ void main() {
       final h = Harness();
       final review = await h.prepare();
       final original = (await h.repository.submit(review)).action!;
-      final wire = jsonDecode(original.signedBody) as Map<String, Object?>;
-      wire['content'] = 'Forged';
-      await h.store.saveAction(
-        review.owner,
-        PendingChallengeAction(
-          review: review,
-          signedBody: jsonEncode(wire),
-          challengeRelays: original.challengeRelays,
-          targets: original.targets,
-        ),
-      );
-      expect(
-        (await h.createRepository().retry(review.id)).status,
-        SubmissionStatus.invalidSignedEvent,
-      );
+      final tampered = await _storeTamperedBody(h, original);
+      final retried = await h.createRepository().retry(review.id);
+      expect(retried.status, SubmissionStatus.invalidSignedEvent);
+      expect(retried.action!.signedBody, tampered);
       expect(h.transport.bodies, hasLength(1));
     });
     test(
@@ -563,4 +552,23 @@ void main() {
       },
     );
   });
+}
+
+Future<String> _storeTamperedBody(
+  Harness h,
+  PendingChallengeAction original,
+) async {
+  final wire = jsonDecode(original.signedBody) as Map<String, Object?>;
+  wire['content'] = 'Forged';
+  final tampered = jsonEncode(wire);
+  await h.store.saveAction(
+    original.review.owner,
+    PendingChallengeAction(
+      review: original.review,
+      signedBody: tampered,
+      challengeRelays: original.challengeRelays,
+      targets: original.targets,
+    ),
+  );
+  return tampered;
 }

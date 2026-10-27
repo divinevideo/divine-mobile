@@ -158,7 +158,8 @@ enum SubmissionStatus {
   /// and retry delivery when the read recovers; do not replace its consent.
   readUnavailable,
 
-  /// Signer changed fields or returned invalid signature/protocol semantics.
+  /// A signer response, stored action or observation fails signature or
+  /// protocol validation.
   invalidSignedEvent,
 
   /// Signing failed without producing durable work.
