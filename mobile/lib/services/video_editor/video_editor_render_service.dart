@@ -1246,7 +1246,7 @@ class VideoEditorRenderService {
     // A REC timer brings its own frames (see recTimerLayerFrames).
     final shown = frames ?? item.frames;
     final split = shown.length > 1;
-    return [
+    final layers = <ImageLayer>[
       for (final (index, frame) in shown.indexed)
         ImageLayer(
           image: EditorLayerImage.memory(frame.bytes),
@@ -1281,6 +1281,8 @@ class VideoEditorRenderService {
               : null,
         ),
     ];
+    // ...and plays them from one layer (see recTimerSequence).
+    return frames == null ? layers : [recTimerSequence(layers)];
   }
 
   /// Builds the [ColorFilter]s applied to the exported video from the tune

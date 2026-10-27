@@ -11,6 +11,8 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/utils/rec_timer_paint.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show ImageLayer, ImageLayerFrame;
 import 'package:unified_logger/unified_logger.dart';
 
 /// How often an exported REC timer changes, per second: every frame of a
@@ -61,6 +63,48 @@ Future<Map<String, List<ExportedLayerFrame>>> recTimerLayerFrames(
   }
   return frames;
 }
+
+/// The image layers of one REC timer — a layer for each frame, timed one
+/// after the other — as one layer that plays them as a frame sequence.
+///
+/// Every frame keeps the time its own layer started at and lasts until the
+/// next one starts; the last one holds until the timer ends. The renderer
+/// draws a sequence with one overlay that swaps its image, where a timed
+/// layer per frame is a pass over the whole picture each on Android, and a
+/// timer that runs for the whole video stalls the export.
+ImageLayer recTimerSequence(List<ImageLayer> parts) {
+  final first = parts.first;
+  final frames = <ImageLayerFrame>[];
+  for (final (index, part) in parts.indexed) {
+    final duration = index < parts.length - 1
+        ? (parts[index + 1].startTime ?? Duration.zero) -
+              (part.startTime ?? Duration.zero)
+        : _lastFrameDuration;
+    // A frame squeezed to nothing by the output timeline never shows.
+    if (duration <= Duration.zero) continue;
+    frames.add(ImageLayerFrame(image: part.image, duration: duration));
+  }
+  return ImageLayer.sequence(
+    frames: frames,
+    startTime: first.startTime,
+    endTime: parts.last.endTime,
+    offset: first.offset,
+    size: first.size,
+    rotation: first.rotation,
+    // The last frame holds until the timer ends.
+    loop: false,
+    animations: first.animations,
+    animationStartTime: first.animationStartTime,
+    animationEndTime: first.animationEndTime,
+    keyframes: first.keyframes,
+    keyframeClock: first.keyframeClock,
+    blendMode: first.blendMode,
+  );
+}
+
+/// How long the last frame of a sequence lasts; it holds until the timer
+/// ends anyway, as the sequence does not loop.
+const _lastFrameDuration = Duration(seconds: 1);
 
 /// The time windows of a timer from [start] until [end], or until the
 /// video ends when [end] is `null`: one for each of [framesPerSecond] frames

@@ -115,7 +115,7 @@ void main() {
       );
     });
 
-    test('shows the frames a layer brings, one after the other', () {
+    test('plays the frames a layer brings from one layer', () {
       final frames = [
         pie.ExportedLayerFrame(
           bytes: Uint8List.fromList(const [1]),
@@ -140,8 +140,22 @@ void main() {
         layerFrames: {timer.layer.id: frames},
       )!;
 
-      expect(exported, hasLength(2));
-      expect(exported.last.startTime, equals(const Duration(seconds: 1)));
+      final sequence = exported.single;
+      expect(
+        sequence.frames.map((f) => f.image.byteArray),
+        equals([
+          [1],
+          [2],
+        ]),
+      );
+      // Each frame lasts until the next one starts; the last one holds.
+      expect(
+        sequence.frames.first.duration,
+        equals(const Duration(seconds: 1)),
+      );
+      expect(sequence.loop, isFalse);
+      expect(sequence.startTime, equals(Duration.zero));
+      expect(sequence.endTime, isNull);
     });
 
     test('draws each layer in the blend mode the canvas shows it in', () {
