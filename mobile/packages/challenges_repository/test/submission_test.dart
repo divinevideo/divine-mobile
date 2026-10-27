@@ -221,6 +221,17 @@ void main() {
         },
       );
     }
+    test('account switch during publication returns saved outcomes', () async {
+      final h = Harness();
+      final review = await h.prepare();
+      h.transport
+        ..outcomes = {h.relay: RelayOutcome.accepted}
+        ..onPublish = () => h.owner = h.organizer.pubkey;
+      final result = await h.repository.submit(review);
+      expect(result.status, SubmissionStatus.ownerChanged);
+      expect(result.action!.submitted, isTrue);
+      expect(result.action!.outcomes, h.store.actions.values.single.outcomes);
+    });
     test(
       'account switch during handoff persistence invalidates preparation',
       () async {

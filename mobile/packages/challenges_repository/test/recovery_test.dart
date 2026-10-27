@@ -385,6 +385,7 @@ void main() {
         final result = await h.repository.submit(review);
         expect(result.status, SubmissionStatus.persistenceFailed);
         expect(h.transport.bodies.single, result.action!.signedBody);
+        expect(result.action!.outcomes, isEmpty);
         h.store.onSave = null;
         expect(
           (await h.createRepository().retry(review.id)).action!.signedBody,
