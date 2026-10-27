@@ -93,6 +93,7 @@ void main() {
     testWidgets(
       'failed resolution offers retry and retry opens the destination',
       (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
         var fail = true;
         final uri = Uri.parse('https://divine.video/l/Abc12345');
         final client = MockClient(
@@ -133,9 +134,9 @@ void main() {
         );
         unawaited(cubit.resolve(uri));
         await tester.pumpAndSettle();
-        expect(find.text('Retry'), findsOneWidget);
+        expect(find.text(l10n.commonRetry), findsOneWidget);
         fail = false;
-        await tester.tap(find.text('Retry'));
+        await tester.tap(find.text(l10n.commonRetry));
         await tester.pumpAndSettle();
         expect(find.text('resolved video'), findsOneWidget);
         expect(
@@ -199,6 +200,66 @@ void main() {
       );
       await lookup;
       await tester.pumpAndSettle();
+      expect(find.text('another page'), findsOneWidget);
+      expect(find.text('resolved video'), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+      router.dispose();
+      await cubit.close();
+      client.close();
+    });
+
+    testWidgets('lookup finishing under a pushed page does not replace it', (
+      tester,
+    ) async {
+      final pending = Completer<http.Response>();
+      final uri = Uri.parse('https://divine.video/l/Abc12345');
+      final client = MockClient((_) => pending.future);
+      final cubit = ShortLinkCubit(ShortLinkResolver(client: client));
+      final router = GoRouter(
+        initialLocation: '/l/Abc12345',
+        routes: [
+          GoRoute(
+            path: '/l/:code',
+            builder: (_, _) => BlocProvider.value(
+              value: cubit,
+              child: ShortLinkScreen(uri: uri),
+            ),
+          ),
+          GoRoute(
+            path: '/other',
+            builder: (_, _) => const Scaffold(body: Text('another page')),
+          ),
+          GoRoute(
+            path: '/video/:id',
+            builder: (_, _) => const Scaffold(body: Text('resolved video')),
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      );
+      final lookup = cubit.resolve(uri);
+      // Unlike `go`, a push keeps the short-link screen mounted underneath,
+      // so its listener still hears the late result.
+      unawaited(router.push<void>('/other'));
+      await tester.pumpAndSettle();
+      pending.complete(
+        http.Response(
+          jsonEncode({
+            'code': 'Abc12345',
+            'short_url': uri.toString(),
+            'url': 'https://divine.video/video/stale',
+          }),
+          200,
+        ),
+      );
+      await lookup;
+      await tester.pumpAndSettle();
+      expect(cubit.state, isA<ShortLinkReady>());
       expect(find.text('another page'), findsOneWidget);
       expect(find.text('resolved video'), findsNothing);
       await tester.pumpWidget(const SizedBox());
