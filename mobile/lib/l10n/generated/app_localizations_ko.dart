@@ -6928,8 +6928,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get inboxMessageRequestsEmpty => '메시지 요청 없음';
 
   @override
-  String inboxMessageRequestsSemanticLabel(int requestCount) {
-    return '메시지 요청, $requestCount건 대기 중';
+  String inboxMessageRequestsUnreadSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '메시지 요청, 읽지 않음 $count건',
+      zero: '메시지 요청',
+    );
+    return '$_temp0';
   }
 
   @override

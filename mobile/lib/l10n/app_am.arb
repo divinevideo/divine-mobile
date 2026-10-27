@@ -4934,10 +4934,10 @@
   "inboxConversationOptionsLabel": "አማራጮች",
   "inboxConversationViewProfileButton": "መገለጫ ይመልከቱ",
   "inboxMessageRequestsEmpty": "ምንም የመልእክት ጥያቄዎች የሉም",
-  "inboxMessageRequestsSemanticLabel": "የመልእክት ጥያቄዎች፣ {requestCount} በመጠባበቅ ላይ",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{የመልእክት ጥያቄዎች} =1{የመልእክት ጥያቄዎች፣ {count} ያልተነበበ} other{የመልእክት ጥያቄዎች፣ {count} ያልተነበቡ}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

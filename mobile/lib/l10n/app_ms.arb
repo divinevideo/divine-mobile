@@ -3609,10 +3609,10 @@
   "inboxConversationOptionsLabel": "Pilihan",
   "inboxConversationViewProfileButton": "Lihat profil",
   "inboxMessageRequestsEmpty": "Tiada permintaan mesej",
-  "inboxMessageRequestsSemanticLabel": "Permintaan mesej, {requestCount} belum selesai",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{Permintaan mesej} other{Permintaan mesej, {count} belum dibaca}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

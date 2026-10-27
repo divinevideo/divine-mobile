@@ -4964,10 +4964,10 @@
   "inboxConversationOptionsLabel": "Опции",
   "inboxConversationViewProfileButton": "Виж профила",
   "inboxMessageRequestsEmpty": "Няма заявки за съобщения",
-  "inboxMessageRequestsSemanticLabel": "Заявки за съобщения, {requestCount} в очакване",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{Заявки за съобщения} =1{Заявки за съобщения, {count} непрочетена} other{Заявки за съобщения, {count} непрочетени}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

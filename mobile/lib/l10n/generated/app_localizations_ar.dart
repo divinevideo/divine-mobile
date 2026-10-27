@@ -7277,8 +7277,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get inboxMessageRequestsEmpty => 'لا توجد طلبات رسائل';
 
   @override
-  String inboxMessageRequestsSemanticLabel(int requestCount) {
-    return 'طلبات الرسائل، $requestCount قيد الانتظار';
+  String inboxMessageRequestsUnreadSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'طلبات الرسائل، $count طلب غير مقروء',
+      many: 'طلبات الرسائل، $count طلبًا غير مقروء',
+      few: 'طلبات الرسائل، $count طلبات غير مقروءة',
+      two: 'طلبات الرسائل، طلبان غير مقروءين',
+      one: 'طلبات الرسائل، طلب واحد غير مقروء',
+      zero: 'طلبات الرسائل',
+    );
+    return '$_temp0';
   }
 
   @override

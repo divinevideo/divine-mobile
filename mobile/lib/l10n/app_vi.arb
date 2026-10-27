@@ -3609,10 +3609,10 @@
   "inboxConversationOptionsLabel": "Tùy chọn",
   "inboxConversationViewProfileButton": "Xem hồ sơ",
   "inboxMessageRequestsEmpty": "Không có yêu cầu nhắn tin nào",
-  "inboxMessageRequestsSemanticLabel": "Yêu cầu nhắn tin, {requestCount} đang chờ",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{Yêu cầu nhắn tin} other{Yêu cầu nhắn tin, {count} chưa đọc}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

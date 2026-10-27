@@ -7340,8 +7340,15 @@ class AppLocalizationsFil extends AppLocalizations {
   String get inboxMessageRequestsEmpty => 'Walang message request';
 
   @override
-  String inboxMessageRequestsSemanticLabel(int requestCount) {
-    return 'Mga message request, $requestCount nakabinbin';
+  String inboxMessageRequestsUnreadSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Mga message request, $count hindi pa nababasa',
+      one: 'Mga message request, $count hindi pa nababasa',
+      zero: 'Mga message request',
+    );
+    return '$_temp0';
   }
 
   @override

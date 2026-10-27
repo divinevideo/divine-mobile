@@ -3609,10 +3609,10 @@
   "inboxConversationOptionsLabel": "اختیارات",
   "inboxConversationViewProfileButton": "پروفائل دیکھیں",
   "inboxMessageRequestsEmpty": "کوئی پیغام درخواست نہیں",
-  "inboxMessageRequestsSemanticLabel": "پیغام درخواستیں، {requestCount} زیر التواء",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{پیغام درخواستیں} =1{پیغام درخواستیں، {count} غیر پڑھی ہوئی} other{پیغام درخواستیں، {count} غیر پڑھی ہوئی}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

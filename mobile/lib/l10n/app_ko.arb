@@ -4393,10 +4393,10 @@
   "inboxConversationOptionsLabel": "옵션",
   "inboxConversationViewProfileButton": "프로필 보기",
   "inboxMessageRequestsEmpty": "메시지 요청 없음",
-  "inboxMessageRequestsSemanticLabel": "메시지 요청, {requestCount}건 대기 중",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{메시지 요청} other{메시지 요청, 읽지 않음 {count}건}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

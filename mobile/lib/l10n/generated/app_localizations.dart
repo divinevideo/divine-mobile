@@ -12361,11 +12361,11 @@ abstract class AppLocalizations {
   /// **'No message requests'**
   String get inboxMessageRequestsEmpty;
 
-  /// No description provided for @inboxMessageRequestsSemanticLabel.
+  /// Screen-reader label for the Message requests banner at the top of the Messages inbox. {count} is the number of unread requests: the badge shows it capped at 99+, the label says it exactly. At 0 the badge is hidden and the label is only the title.
   ///
   /// In en, this message translates to:
-  /// **'Message requests, {requestCount} pending'**
-  String inboxMessageRequestsSemanticLabel(int requestCount);
+  /// **'{count, plural, =0{Message requests} =1{Message requests, {count} unread} other{Message requests, {count} unread}}'**
+  String inboxMessageRequestsUnreadSemanticLabel(int count);
 
   /// No description provided for @inboxMessageRequestsTitle.
   ///

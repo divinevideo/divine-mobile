@@ -4847,10 +4847,10 @@
   "inboxConversationOptionsLabel": "خيارات",
   "inboxConversationViewProfileButton": "عرض الملف الشخصي",
   "inboxMessageRequestsEmpty": "لا توجد طلبات رسائل",
-  "inboxMessageRequestsSemanticLabel": "طلبات الرسائل، {requestCount} قيد الانتظار",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{طلبات الرسائل} one{طلبات الرسائل، طلب واحد غير مقروء} two{طلبات الرسائل، طلبان غير مقروءين} few{طلبات الرسائل، {count} طلبات غير مقروءة} many{طلبات الرسائل، {count} طلبًا غير مقروء} other{طلبات الرسائل، {count} طلب غير مقروء}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }
