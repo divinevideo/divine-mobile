@@ -10,8 +10,8 @@ import 'package:equatable/equatable.dart';
 import 'package:http/http.dart' as http;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
+import 'package:openvine/repositories/info_sticker_time_zones.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show ProVideoEditor;
-import 'package:timezone/data/latest.dart' deferred as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
 /// A place the place search found.
@@ -438,11 +438,10 @@ class InfoStickerRepository {
   static Future<void> _loadTimeZones() async {
     if (_timeZonesLoaded) return;
     try {
-      await tz_data.loadLibrary();
+      await loadTimeZoneDatabase();
     } on Exception catch (error) {
       throw InfoStickerLookupException('No time zone data: $error');
     }
-    tz_data.initializeTimeZones();
     _timeZonesLoaded = true;
   }
 
