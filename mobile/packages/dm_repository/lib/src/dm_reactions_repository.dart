@@ -556,9 +556,10 @@ class DmReactionsRepository {
       );
     }
 
+    // buildRumor already tags the author, the one `p` NIP-25 asks for
+    // (25.md:25); repeating it here put the author in twice (#9774).
     final additionalTags = <List<String>>[
       ['e', targetMessageId],
-      ['p', targetMessageAuthor],
       ['k', EventKind.privateDirectMessage.toString()],
     ];
     final rumor = messageService.buildRumor(
