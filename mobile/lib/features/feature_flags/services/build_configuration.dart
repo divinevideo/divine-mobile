@@ -9,6 +9,8 @@ class BuildConfiguration {
   /// Get the default value for a feature flag from environment variables
   bool getDefault(FeatureFlag flag) {
     switch (flag) {
+      case FeatureFlag.shortLinksSharing:
+        return const bool.fromEnvironment('FF_SHORT_LINKS_SHARING');
       case FeatureFlag.publishingIdeas:
         return const bool.fromEnvironment('FF_PUBLISHING_IDEAS');
       case FeatureFlag.enhancedAnalytics:
@@ -84,6 +86,8 @@ class BuildConfiguration {
   /// Get the environment variable key for a flag
   String getEnvironmentKey(FeatureFlag flag) {
     switch (flag) {
+      case FeatureFlag.shortLinksSharing:
+        return 'FF_SHORT_LINKS_SHARING';
       case FeatureFlag.publishingIdeas:
         return 'FF_PUBLISHING_IDEAS';
       case FeatureFlag.enhancedAnalytics:

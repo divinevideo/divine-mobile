@@ -6,10 +6,13 @@ import 'dart:async';
 
 import 'package:dm_repository/dm_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
+import 'package:openvine/services/short_link_client.dart';
 import 'package:openvine/services/video_sharing_service.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -811,6 +814,54 @@ void main() {
   });
 
   group('sharing utilities', () {
+    test(
+      'external shortening preserves the canonical URL in DM messages',
+      () async {
+        const canonical = 'https://divine.video/video/synthetic-video';
+        const shortened = 'https://divine.video/l/Abc12345';
+        final httpClient = MockClient(
+          (_) async => http.Response(
+            '{"code":"Abc12345","short_url":"$shortened","url":"$canonical"}',
+            201,
+          ),
+        );
+        final shortener = ShortLinkClient(
+          client: httpClient,
+          enabled: true,
+          authorize: (_, _) async => 'Nostr synthetic',
+        );
+        service = VideoSharingService(
+          authService: mockAuthService,
+          profileRepository: mockProfileRepository,
+          dmRepository: mockDmRepository,
+          shortLinkClient: shortener,
+        );
+        final video = VideoEvent(
+          id: _testVideoId,
+          pubkey: _testPubkey,
+          createdAt: 1,
+          timestamp: DateTime.fromMillisecondsSinceEpoch(1000, isUtc: true),
+          content: 'Synthetic',
+          vineId: 'synthetic-video',
+          rawTags: const {'d': 'synthetic-video'},
+        );
+        expect(
+          await service.shortenExternalUrl(service.generateShareUrl(video)),
+          shortened,
+        );
+        expect(service.generateShareData(video).shareUrl, canonical);
+        stubSharesSucceed();
+        when(() => mockAuthService.isAuthenticated).thenReturn(true);
+        when(() => mockAuthService.canPublishNostrWritesNow).thenReturn(true);
+        await service.shareVideoWithUser(
+          video: video,
+          recipientPubkey: _recipientPubkey,
+        );
+        expect(sharedMessage(), contains(canonical));
+        shortener.close();
+        httpClient.close();
+      },
+    );
     test('generateShareUrl uses stableId when video has a d tag', () {
       final now = DateTime.now();
       final video = VideoEvent(

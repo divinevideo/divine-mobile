@@ -110,6 +110,9 @@ void main() {
 
     setUp(() {
       mockSharingService = _MockVideoSharingService();
+      when(() => mockSharingService.shortenExternalUrl(any())).thenAnswer(
+        (invocation) async => invocation.positionalArguments.first as String,
+      );
       mockProfileRepository = _MockProfileRepository();
       mockFollowRepository = _MockFollowRepository();
       mockRankingSignalsLoader = _MockRankingSignalsLoader();
@@ -2361,6 +2364,28 @@ void main() {
     // -----------------------------------------------------------------------
 
     group('ShareSheetCopyLinkRequested', () {
+      blocTest<ShareSheetBloc, ShareSheetState>(
+        'external copy emits a prepared short URL',
+        setUp: () {
+          when(() => mockSharingService.generateShareUrl(any()))
+              .thenReturn('https://divine.video/video/synthetic');
+          when(() => mockSharingService.shortenExternalUrl(any()))
+              .thenAnswer((_) async => 'https://divine.video/l/Abc12345');
+        },
+        build: createBloc,
+        act: (bloc) => bloc.add(const ShareSheetCopyLinkRequested()),
+        expect: () => [
+          isA<ShareSheetState>().having(
+            (state) => state.actionResult,
+            'copied URL',
+            isA<ShareSheetCopiedToClipboard>().having(
+              (result) => result.text,
+              'text',
+              'https://divine.video/l/Abc12345',
+            ),
+          ),
+        ],
+      );
       blocTest<ShareSheetBloc, ShareSheetState>(
         'emits $ShareSheetCopiedToClipboard with generated URL',
         setUp: () {

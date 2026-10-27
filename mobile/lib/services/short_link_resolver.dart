@@ -5,7 +5,6 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:openvine/services/deep_link_service.dart';
-import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/short_link_url.dart';
 
 class ShortLinkResolutionException implements Exception {
@@ -20,7 +19,6 @@ class ShortLinkResolver {
 
   final http.Client _client;
   final Duration timeout;
-  static final _identifier = RegExp(r'^[A-Za-z0-9._~-]{1,1024}$');
 
   Future<DeepLink> resolve(Uri shortUrl) async {
     final code = shortLinkCodeFor(shortUrl);
@@ -60,35 +58,11 @@ class ShortLinkResolver {
           decoded['code'] != code ||
           decoded['short_url'] != 'https://divine.video/l/$code' ||
           decoded['url'] is! String ||
-          !_validDestination(decoded['url'] as String)) {
+          !isShortLinkDestination(decoded['url'] as String)) {
         throw const ShortLinkResolutionException();
       }
       return DeepLinkService.parseDeepLink(decoded['url'] as String);
     }
     throw const ShortLinkResolutionException();
-  }
-
-  static bool _validDestination(String raw) {
-    if (raw.length > 2048 ||
-        !raw.startsWith('https://divine.video/') ||
-        RegExp(r'[\\%?#\s\x00-\x1f\x7f]').hasMatch(raw)) {
-      return false;
-    }
-    final uri = Uri.tryParse(raw);
-    if (uri == null ||
-        uri.userInfo.isNotEmpty ||
-        uri.hasPort ||
-        uri.toString() != raw ||
-        uri.pathSegments.length != 2) {
-      return false;
-    }
-    final kind = uri.pathSegments[0];
-    final id = uri.pathSegments[1];
-    if (!_identifier.hasMatch(id) || id == '.' || id == '..') return false;
-    if (kind == 'video') return true;
-    if (kind != 'profile') return false;
-    if (RegExp(r'^[0-9A-Fa-f]{64}$').hasMatch(id)) return true;
-    return id.toLowerCase().startsWith('npub1') &&
-        NostrKeyUtils.isValidKey(NostrKeyUtils.decode(id));
   }
 }
