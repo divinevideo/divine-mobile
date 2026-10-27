@@ -732,6 +732,25 @@ void main() {
       expect(details['audioTracks'], equals(2));
       expect(details['maxAudioVolume'], equals(3.0));
     });
+
+    test('counts every frame a frame sequence holds', () {
+      final frame = ImageLayerFrame(
+        image: EditorLayerImage.memory(_pngHeader(1000, 500)),
+        duration: const Duration(milliseconds: 100),
+      );
+      final details = describeVideoRender(
+        VideoRenderData(
+          videoSegments: [VideoSegment(video: EditorVideo.file('/a.mp4'))],
+          imageLayers: [
+            ImageLayer.sequence(frames: [frame, frame, frame]),
+          ],
+        ),
+      );
+
+      expect(details['imageLayers'], equals(1));
+      expect(details['largestLayer'], equals('1000x500'));
+      expect(details['layerMegapixels'], equals('1.5'));
+    });
   });
 
   group('summarizeMarker', () {
