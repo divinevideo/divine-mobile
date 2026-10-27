@@ -534,6 +534,7 @@ void main() {
         required DivineVideoClip clip,
         required Duration position,
         required bool isShortLoop,
+        bool isEditingClipMotion = false,
       }) async {
         final states = StreamController<VideoEditorMainState>.broadcast();
         addTearDown(states.close);
@@ -550,6 +551,7 @@ void main() {
           VideoEditorMainState(
             currentPosition: position,
             isShortLoop: isShortLoop,
+            isEditingClipMotion: isEditingClipMotion,
           ),
         );
         await tester.pump();
@@ -579,6 +581,23 @@ void main() {
           clip: _createTestClip(id: 'a', seconds: 0, milliseconds: 130),
           position: const Duration(milliseconds: 100),
           isShortLoop: true,
+        );
+
+        expect(settled, greaterThan(0));
+        expect(onArrival, settled);
+      });
+
+      testWidgets('jumps while the clip motion editor hides it', (
+        tester,
+      ) async {
+        // Its scroll drives the paused play time, and the motion editor's
+        // own scrubber already put the play time on the position.
+        final (onArrival, settled) = await followTo(
+          tester,
+          clip: _createTestClip(id: 'a', seconds: 6),
+          position: const Duration(seconds: 2),
+          isShortLoop: false,
+          isEditingClipMotion: true,
         );
 
         expect(settled, greaterThan(0));

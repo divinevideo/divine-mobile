@@ -9997,6 +9997,16 @@ class AppLocalizationsKo extends AppLocalizations {
       '키프레임을 추가하고 재생 헤드를 옮긴 다음 레이어를 이동하거나 크기를 조절하거나 회전하세요. 레이어가 키프레임 사이를 부드럽게 움직여요.';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      '키프레임을 추가하고 재생 헤드를 옮긴 다음 동영상을 드래그하거나 확대하거나 회전하세요. 동영상이 키프레임 사이를 부드럽게 움직여요.';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel => '클립 이동, 확대, 회전';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel => '클립 안의 재생 헤드';
+
+  @override
   String get videoEditorTrackLabel => '트래킹';
 
   @override

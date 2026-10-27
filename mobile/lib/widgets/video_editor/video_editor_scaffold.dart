@@ -106,10 +106,11 @@ class _ScaffoldBody extends StatelessWidget {
   }
 }
 
-/// Keeps the mask editor's panel clear of the canvas.
+/// Keeps the panel of the mask editor or a clip's motion editor clear of the
+/// canvas.
 ///
-/// The timeline steps aside while the mask editor is open, as it does for
-/// every full-screen canvas tool; without this the canvas would grow under the
+/// The timeline steps aside while either is open, as it does for every
+/// full-screen canvas tool; without this the canvas would grow under the
 /// panel, and a shape dragged there could be neither seen nor grabbed again.
 /// The space follows the panel as it grows and shrinks with its sliders.
 class _MaskEditorPanelSpace extends StatelessWidget {
@@ -118,11 +119,12 @@ class _MaskEditorPanelSpace extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isEditingMask = context.select(
-      (VideoEditorMainBloc bloc) => bloc.state.isEditingMask,
+      (VideoEditorMainBloc bloc) =>
+          bloc.state.isEditingMask || bloc.state.isEditingClipMotion,
     );
     final panelHeight = VideoEditorScope.maybeOf(
       context,
-    )?.maskPanelHeightNotifier;
+    )?.canvasToolPanelHeightNotifier;
     if (panelHeight == null) {
       return _MaskEditorPanelSpaceBox(
         height: isEditingMask ? videoEditorMaskPanelMaxHeight : 0,
@@ -283,13 +285,15 @@ class _OverlayControls extends StatelessWidget {
           previous.openSubEditor != current.openSubEditor ||
           previous.isPlacingSlidePoint != current.isPlacingSlidePoint ||
           previous.isEditingMask != current.isEditingMask ||
+          previous.isEditingClipMotion != current.isEditingClipMotion ||
           previous.isMarkingTrackRegion != current.isMarkingTrackRegion,
       builder: (context, state) => switch (state) {
-        // The point picker, the mask editor and the tracking region picker
-        // bring their own controls and own the whole screen.
+        // The point picker, the mask and motion editors and the tracking
+        // region picker bring their own controls and own the whole screen.
         _
             when state.isPlacingSlidePoint ||
                 state.isEditingMask ||
+                state.isEditingClipMotion ||
                 state.isMarkingTrackRegion =>
           const SizedBox.shrink(),
         _ when state.isLayerInteractionActive => const SizedBox(),

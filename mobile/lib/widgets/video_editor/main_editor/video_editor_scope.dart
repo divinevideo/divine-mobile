@@ -2,6 +2,7 @@
 // ABOUTME: Allows child widgets to call editor methods directly without callbacks.
 
 import 'package:flutter/widgets.dart';
+import 'package:openvine/extensions/clip_keyframes.dart';
 import 'package:openvine/models/video_editor/clip_mask_window.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
@@ -45,7 +46,8 @@ class VideoEditorScope extends InheritedWidget {
     this.cancelLiveVolumePreview,
     this.liveEqualizerNotifier,
     this.liveClipMaskNotifier,
-    this.maskPanelHeightNotifier,
+    this.liveClipKeyframesNotifier,
+    this.canvasToolPanelHeightNotifier,
     this.clipFrameTracker,
     this.previewReleasedNotifier,
     this.onAddAudioVisualizer,
@@ -157,11 +159,17 @@ class VideoEditorScope extends InheritedWidget {
   /// none is. The preview draws it before it is committed on confirm.
   final ValueNotifier<LiveClipMask?>? liveClipMaskNotifier;
 
-  /// How tall the mask editor's panel is while it is open, above the bottom
-  /// safe area. It grows and shrinks with the sliders the panel shows, and
-  /// the editor keeps that much free below the canvas. Optional, like
-  /// [canvasBodyKey]; without it the editor keeps room for the tallest panel.
-  final ValueNotifier<double>? maskPanelHeightNotifier;
+  /// The keyframes of the timeline clip whose motion is being changed, null
+  /// while none is. The preview moves the clip by them before they are
+  /// committed on confirm.
+  final ValueNotifier<LiveClipKeyframes?>? liveClipKeyframesNotifier;
+
+  /// How tall the panel of the open canvas tool — the mask editor or a
+  /// clip's motion editor — is, above the bottom safe area. It grows and
+  /// shrinks with what the panel shows, and the editor keeps that much free
+  /// below the canvas. Optional, like [canvasBodyKey]; without it the editor
+  /// keeps room for the tallest panel.
+  final ValueNotifier<double>? canvasToolPanelHeightNotifier;
 
   /// Knows the box the preview frame fills on the canvas — the part of the
   /// video the export keeps, which a timeline clip's mask is measured in.
@@ -311,7 +319,9 @@ class VideoEditorScope extends InheritedWidget {
       cancelLiveVolumePreview != oldWidget.cancelLiveVolumePreview ||
       liveEqualizerNotifier != oldWidget.liveEqualizerNotifier ||
       liveClipMaskNotifier != oldWidget.liveClipMaskNotifier ||
-      maskPanelHeightNotifier != oldWidget.maskPanelHeightNotifier ||
+      liveClipKeyframesNotifier != oldWidget.liveClipKeyframesNotifier ||
+      canvasToolPanelHeightNotifier !=
+          oldWidget.canvasToolPanelHeightNotifier ||
       clipFrameTracker != oldWidget.clipFrameTracker ||
       previewReleasedNotifier != oldWidget.previewReleasedNotifier;
 }

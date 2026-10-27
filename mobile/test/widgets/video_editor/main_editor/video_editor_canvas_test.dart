@@ -31,7 +31,8 @@ import 'package:pro_image_editor/pro_image_editor.dart'
         ProImageEditorState,
         ProVideoController,
         SubEditor;
-import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show EditorVideo, SegmentKeyframe;
 
 void main() {
   group('VideoEditorCanvas.overlayHistoryDuration', () {
@@ -289,6 +290,26 @@ void main() {
           current: ClipEditorState(
             clips: [
               clip.copyWith(maskBackgroundColor: const Color(0xFFFF0000)),
+            ],
+          ),
+        ),
+        isFalse,
+      );
+    });
+
+    test('skips a keyframe change, which moves the drawn frame', () {
+      final clip = _createClip(id: 'end');
+
+      expect(
+        VideoEditorCanvas.shouldSyncPlayerForClipStateChange(
+          previous: ClipEditorState(clips: [clip]),
+          current: ClipEditorState(
+            clips: [
+              clip.copyWith(
+                keyframes: const [
+                  SegmentKeyframe(time: Duration(seconds: 1), scale: 2),
+                ],
+              ),
             ],
           ),
         ),
@@ -965,6 +986,15 @@ void main() {
       final a = _createClip(id: 'c')
           .copyWith(mask: const LayerMask(shape: LayerMaskShape.heart));
       final b = a.copyWith(maskBackgroundColor: const Color(0xFFFF0000));
+
+      expect(VideoEditorCanvas.clipsChanged([a], [b]), isTrue);
+    });
+
+    test('detects a keyframe change, so the export renders the motion', () {
+      final a = _createClip(id: 'c');
+      final b = a.copyWith(
+        keyframes: const [SegmentKeyframe(time: Duration.zero, scale: 1.5)],
+      );
 
       expect(VideoEditorCanvas.clipsChanged([a], [b]), isTrue);
     });

@@ -148,9 +148,9 @@ class VideoEditorCanvas extends StatelessWidget {
     if (previous.isSplitting && !current.isSplitting) return true;
 
     // A background thumbnail refresh (e.g. after a split) changes only the
-    // clip's poster path, and a shape mask and its background color are drawn
-    // over the frame rather than played — the player composition uses none of
-    // them, so skip the redundant reload.
+    // clip's poster path, and a shape mask, its background color and clip
+    // motion are drawn over the frame rather than played — the player
+    // composition uses none of them, so skip the redundant reload.
     if (_onlyNonPlaybackFieldsChanged(previous.clips, current.clips)) {
       return false;
     }
@@ -232,7 +232,8 @@ class VideoEditorCanvas extends StatelessWidget {
       DetachedClipLayerData.historyContainsDetachedClip(editorStateHistory);
 
   /// Whether [current] differs from [previous] *only* in clip thumbnail paths,
-  /// shape masks and mask background colors, none of which the player plays.
+  /// shape masks, mask background colors and keyframes, none of which the
+  /// player plays.
   ///
   /// Conservative: any difference in a composition-relevant field (video,
   /// trims, duration, volume, speed, transition, …) returns `false`, so the
@@ -265,7 +266,8 @@ class VideoEditorCanvas extends StatelessWidget {
       }
       if (a.thumbnailPath != b.thumbnailPath ||
           a.mask != b.mask ||
-          a.maskBackgroundColor != b.maskBackgroundColor) {
+          a.maskBackgroundColor != b.maskBackgroundColor ||
+          !listEquals(a.keyframes, b.keyframes)) {
         anyDiff = true;
       }
     }
@@ -563,7 +565,10 @@ class VideoEditorCanvas extends StatelessWidget {
           // surface of a stop-motion clip — without this the clip manager
           // (publish render, autosave, metadata preview) and undo/redo never
           // see them.
-          !listEquals(a.stopMotionFrames, b.stopMotionFrames)) {
+          !listEquals(a.stopMotionFrames, b.stopMotionFrames) ||
+          // Without this, motion set in the clip keyframe editor never
+          // reaches the clip manager, so the export renders the clip still.
+          !listEquals(a.keyframes, b.keyframes)) {
         return true;
       }
     }

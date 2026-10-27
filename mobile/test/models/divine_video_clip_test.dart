@@ -374,6 +374,48 @@ void main() {
     });
   });
 
+  group('DivineVideoClip.keyframes', () {
+    const keyframes = [
+      editor.SegmentKeyframe(
+        time: Duration(milliseconds: 400),
+        curve: editor.AnimationCurve.easeInOut,
+      ),
+      editor.SegmentKeyframe(
+        time: Duration(seconds: 2),
+        offset: Offset(0.1, -0.05),
+        scale: 1.6,
+        rotation: 0.2,
+      ),
+    ];
+
+    test('round-trip through JSON and are absent without any', () {
+      final plain = clip('/videos/clip.mp4');
+      final moving = plain.copyWith(keyframes: keyframes);
+
+      expect(plain.toJson(), isNot(contains('keyframes')));
+      expect(
+        DivineVideoClip.fromJson(moving.toJson(), '/videos').keyframes,
+        keyframes,
+      );
+    });
+
+    test('survive a split or duplicate', () {
+      final moving = clip('/videos/clip.mp4').copyWith(keyframes: keyframes);
+
+      expect(moving.copyWith(id: 'c2').keyframes, keyframes);
+    });
+
+    test('leave the clip still when they do not parse', () {
+      final json = clip('/videos/clip.mp4').toJson()
+        ..['keyframes'] = [
+          {'timeUs': 0},
+          'not a keyframe',
+        ];
+
+      expect(DivineVideoClip.fromJson(json, '/videos').keyframes, isEmpty);
+    });
+  });
+
   group('DivineVideoClip.minTrimStart', () {
     test('defaults to zero and survives copyWith', () {
       final original = clip('/videos/clip.mp4');

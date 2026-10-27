@@ -279,6 +279,7 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
           listener: (context, state) => _syncScrollToPosition(
             state.currentPosition,
             isShortLoop: state.isShortLoop,
+            isHidden: state.isEditingClipMotion,
           ),
         ),
         BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
@@ -1256,7 +1257,11 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
         wrap: _wrapDisplay,
       );
 
-  void _syncScrollToPosition(Duration position, {required bool isShortLoop}) {
+  void _syncScrollToPosition(
+    Duration position, {
+    required bool isShortLoop,
+    required bool isHidden,
+  }) {
     if (!_scrollController.hasClients) return;
 
     final target = _positionToScrollOffset(position);
@@ -1266,7 +1271,11 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
     // hovers mid-strip instead of sweeping. Jumping keeps it on the position
     // the preview is showing. The canvas decides by the same predicate to
     // feed these positions from its display-rate playhead ticker.
-    if (isShortLoop) {
+    //
+    // A hidden timeline has nothing to glide for, and while paused its
+    // scroll drives the play time: gliding there from where a scrub that
+    // did not move it started would run the play time back through it.
+    if (isShortLoop || isHidden) {
       _scrollController.jumpTo(target.clamp(0, maxExtent));
       return;
     }

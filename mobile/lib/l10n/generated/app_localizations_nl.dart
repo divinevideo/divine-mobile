@@ -10540,6 +10540,18 @@ class AppLocalizationsNl extends AppLocalizations {
       'Voeg een keyframe toe, verplaats de afspeelkop en verschuif, schaal of draai dan de laag. Die glijdt van keyframe naar keyframe.';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      'Voeg een keyframe toe, verplaats de afspeelkop en sleep, zoom of draai dan de video. Die glijdt van keyframe naar keyframe.';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel =>
+      'Clip pannen, zoomen en draaien';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel =>
+      'Afspeelkop in de clip';
+
+  @override
   String get videoEditorTrackLabel => 'Volgen';
 
   @override

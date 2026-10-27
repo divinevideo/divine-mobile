@@ -17825,6 +17825,24 @@ abstract class AppLocalizations {
   /// **'Add a keyframe, move the playhead, then move, resize or turn the layer. It glides from keyframe to keyframe.'**
   String get videoEditorKeyframesHint;
 
+  /// Hint at the top of the motion editor of a timeline clip in the video editor. Keyframes pin where the clip's picture is panned to, how far it is zoomed and how far it is turned at points in time; the picture moves between them while the video plays. Translate keyframe as the standard term video editors use.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a keyframe, move the playhead, then drag, pinch or turn the video. It glides from keyframe to keyframe.'**
+  String get videoEditorClipKeyframesHint;
+
+  /// Accessibility label for the Keyframes button in the bottom bar of a selected timeline clip in the video editor, which opens the editor that pans, zooms and turns the clip's picture over time.
+  ///
+  /// In en, this message translates to:
+  /// **'Pan, zoom and turn the clip'**
+  String get videoEditorClipKeyframesSemanticLabel;
+
+  /// Accessibility label for the slider in a timeline clip's motion editor in the video editor that moves the playhead within that clip.
+  ///
+  /// In en, this message translates to:
+  /// **'Playhead in the clip'**
+  String get videoEditorClipKeyframesScrubberSemanticLabel;
+
   /// Action in the bar of a selected layer (text, sticker, drawing) in the video editor timeline: pins the layer to a moving object so it follows it. Short, shown under an icon.
   ///
   /// In en, this message translates to:

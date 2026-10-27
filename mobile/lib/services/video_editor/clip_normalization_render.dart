@@ -75,6 +75,7 @@ abstract final class ClipNormalizationRender {
                 playbackSpeed: c.playbackSpeed,
                 speedRamp: c.speedRamp,
                 transition: clampedTransitions[c.id],
+                keyframes: c.keyframes,
               ),
             )
             .toList(),
@@ -120,6 +121,7 @@ abstract final class ClipNormalizationRender {
             playbackSpeed: entry.clip.playbackSpeed,
             speedRamp: entry.clip.speedRamp,
             transition: clampedTransitions[entry.clip.id],
+            keyframes: entry.clip.keyframes,
           ),
         );
       } else {
@@ -194,6 +196,9 @@ abstract final class ClipNormalizationRender {
           equalizer: clip.equalizer.toRenderEqualizer(),
           playbackSpeed: clip.playbackSpeed,
           speedRamp: clip.speedRamp,
+          // Moved before the crop, as in the concatenation; the normalized
+          // file carries the motion.
+          keyframes: clip.keyframes,
         ),
       ],
       shouldOptimizeForNetworkUse: true,

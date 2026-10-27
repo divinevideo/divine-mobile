@@ -10617,6 +10617,18 @@ class AppLocalizationsIt extends AppLocalizations {
       'Aggiungi un fotogramma chiave, sposta la testina di riproduzione, poi sposta, ridimensiona o ruota il livello. Scorre da un fotogramma chiave all\'altro.';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      'Aggiungi un fotogramma chiave, sposta la testina di riproduzione, poi trascina, ingrandisci o ruota il video. Scorre da un fotogramma chiave all\'altro.';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel =>
+      'Sposta, ingrandisci e ruota la clip';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel =>
+      'Testina di riproduzione nella clip';
+
+  @override
   String get videoEditorTrackLabel => 'Traccia';
 
   @override

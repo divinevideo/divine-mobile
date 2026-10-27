@@ -10596,6 +10596,18 @@ class AppLocalizationsEs extends AppLocalizations {
       'Agregá un fotograma clave, mové el cabezal de reproducción y después mové, escalá o girá la capa. Se desliza de un fotograma clave al siguiente.';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      'Agregá un fotograma clave, mové el cabezal de reproducción y después arrastrá, acercá o girá el video. Se desliza de un fotograma clave al siguiente.';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel =>
+      'Desplazar, acercar y girar el clip';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel =>
+      'Cabezal de reproducción en el clip';
+
+  @override
   String get videoEditorTrackLabel => 'Seguir';
 
   @override

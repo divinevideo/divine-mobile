@@ -261,6 +261,20 @@ class VideoEditorMaskEditingChanged extends VideoEditorMainEvent {
   List<Object?> get props => [isEditing];
 }
 
+/// Enters or exits the motion editor of a timeline clip.
+///
+/// Like the shape mask editor, it gives the canvas the whole screen while it
+/// is open, so the clip is panned, zoomed and turned on the video as large as
+/// it gets; the motion editor brings its own controls.
+class VideoEditorClipMotionEditingChanged extends VideoEditorMainEvent {
+  const VideoEditorClipMotionEditingChanged({required this.isEditing});
+
+  final bool isEditing;
+
+  @override
+  List<Object?> get props => [isEditing];
+}
+
 /// Enters or exits marking the object a layer is tracked to.
 ///
 /// Like placing a slide point, the editor gives the canvas the whole screen

@@ -2103,6 +2103,43 @@ void main() {
         ],
       );
 
+      // The reversed render holds the window backwards, so each keyframe moves
+      // to the frame that shows its own frame there, and the motion between
+      // two plays backwards along the mirror of its curve.
+      blocTest<ClipEditorBloc, ClipEditorState>(
+        'keeps every frame on its motion when the window is reversed',
+        build: () => buildBloc(reverseClip: _fakeReverseClip),
+        seed: () => ClipEditorState(
+          clips: [
+            _createClipWithFile().copyWith(
+              keyframes: const [
+                SegmentKeyframe(
+                  time: Duration(seconds: 2),
+                  curve: AnimationCurve.easeIn,
+                ),
+                SegmentKeyframe(time: Duration(seconds: 3), scale: 2),
+              ],
+            ),
+          ],
+        ),
+        act: (bloc) => bloc.add(
+          const ClipEditorClipReverseRequested(clipId: 'clip-local'),
+        ),
+        verify: (bloc) {
+          // The window runs from 1 s to 4.5 s; the reversed file opens on
+          // its last frame.
+          const opening = Duration(microseconds: 4500000 - 33333);
+          expect(bloc.state.clips.first.keyframes, [
+            SegmentKeyframe(
+              time: opening - const Duration(seconds: 3),
+              scale: 2,
+              curve: AnimationCurve.easeOut,
+            ),
+            SegmentKeyframe(time: opening - const Duration(seconds: 2)),
+          ]);
+        },
+      );
+
       blocTest<ClipEditorBloc, ClipEditorState>(
         'restores cached forward clip without calling reverse service',
         build: () => buildBloc(

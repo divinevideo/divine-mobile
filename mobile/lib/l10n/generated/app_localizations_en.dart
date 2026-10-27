@@ -10592,6 +10592,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Add a keyframe, move the playhead, then move, resize or turn the layer. It glides from keyframe to keyframe.';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      'Add a keyframe, move the playhead, then drag, pinch or turn the video. It glides from keyframe to keyframe.';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel =>
+      'Pan, zoom and turn the clip';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel =>
+      'Playhead in the clip';
+
+  @override
   String get videoEditorTrackLabel => 'Track';
 
   @override

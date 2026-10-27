@@ -10623,6 +10623,18 @@ class AppLocalizationsDe extends AppLocalizations {
       'Füge einen Keyframe hinzu, versetz den Abspielkopf und verschieb, skalier oder dreh dann die Ebene. Sie gleitet von Keyframe zu Keyframe.';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      'Füge einen Keyframe hinzu, versetz den Abspielkopf und zieh, zoom oder dreh dann das Video. Es gleitet von Keyframe zu Keyframe.';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel =>
+      'Clip schwenken, zoomen und drehen';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel =>
+      'Abspielkopf im Clip';
+
+  @override
   String get videoEditorTrackLabel => 'Verfolgen';
 
   @override

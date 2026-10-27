@@ -6,7 +6,7 @@ import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/utils/path_resolver.dart';
 import 'package:path/path.dart' as p;
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show VideoSpeedRamp, VideoSpeedRampPoint;
+    show SegmentKeyframe, VideoSpeedRamp, VideoSpeedRampPoint;
 
 /// Marks a clip whose file plays its footage forward and then backward, and
 /// records what it was rendered from.
@@ -26,6 +26,7 @@ class ClipBoomerang {
     this.sourceMinTrimStart = Duration.zero,
     this.sourceStartOffset = Duration.zero,
     this.sourceDerivedFrom,
+    this.sourceKeyframes = const [],
   });
 
   /// Rebuilds the record from persisted JSON, re-anchoring file paths under
@@ -56,6 +57,14 @@ class ClipBoomerang {
         documentsPath,
         useOriginalPath: useOriginalPath,
       ),
+      sourceKeyframes: [
+        for (final keyframe
+            in json['sourceKeyframes'] is List
+                ? json['sourceKeyframes'] as List
+                : const [])
+          if (keyframe is Map)
+            SegmentKeyframe.fromMap(keyframe.cast<String, dynamic>()),
+      ],
     );
   }
 
@@ -82,6 +91,10 @@ class ClipBoomerang {
   /// video was its own source.
   final List<C2paEditSource>? sourceDerivedFrom;
 
+  /// The clip's keyframes before the boomerang. The render bakes the motion
+  /// in, forward and back, so the boomerang clip has none of its own.
+  final List<SegmentKeyframe> sourceKeyframes;
+
   /// How long the part of [sourcePath] the boomerang bounces lasts.
   Duration get sourceWindow {
     final window = sourceDuration - sourceTrimStart - sourceTrimEnd;
@@ -106,6 +119,10 @@ class ClipBoomerang {
       'sourceStartOffsetUs': sourceStartOffset.inMicroseconds,
     if (sourceDerivedFrom case final sources?)
       'sourceDerivedFrom': [for (final source in sources) source.toJson()],
+    if (sourceKeyframes.isNotEmpty)
+      'sourceKeyframes': [
+        for (final keyframe in sourceKeyframes) keyframe.toMap(),
+      ],
   };
 
   /// The speed curve of a boomerang made from a clip that played along
@@ -154,7 +171,8 @@ class ClipBoomerang {
           other.sourceTrimEnd == sourceTrimEnd &&
           other.sourceMinTrimStart == sourceMinTrimStart &&
           other.sourceStartOffset == sourceStartOffset &&
-          listEquals(other.sourceDerivedFrom, sourceDerivedFrom);
+          listEquals(other.sourceDerivedFrom, sourceDerivedFrom) &&
+          listEquals(other.sourceKeyframes, sourceKeyframes);
 
   @override
   int get hashCode => Object.hash(
@@ -165,6 +183,7 @@ class ClipBoomerang {
     sourceMinTrimStart,
     sourceStartOffset,
     sourceDerivedFrom == null ? null : Object.hashAll(sourceDerivedFrom!),
+    Object.hashAll(sourceKeyframes),
   );
 
   @override

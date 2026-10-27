@@ -10579,6 +10579,18 @@ class AppLocalizationsPt extends AppLocalizations {
       'Adicione um quadro-chave, mova a cabeça de reprodução e depois mova, redimensione ou gire a camada. Ela desliza de um quadro-chave para o outro.';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      'Adicione um quadro-chave, mova a cabeça de reprodução e depois arraste, amplie ou gire o vídeo. Ele desliza de um quadro-chave para o outro.';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel =>
+      'Mover, ampliar e girar o clipe';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel =>
+      'Cabeça de reprodução no clipe';
+
+  @override
   String get videoEditorTrackLabel => 'Rastrear';
 
   @override

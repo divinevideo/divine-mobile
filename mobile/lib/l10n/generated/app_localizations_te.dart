@@ -10775,6 +10775,18 @@ class AppLocalizationsTe extends AppLocalizations {
       'కీఫ్రేమ్‌ను జోడించండి, ప్లేహెడ్‌ను కదిలించండి, ఆపై లేయర్‌ను కదిలించండి, పరిమాణం మార్చండి లేదా తిప్పండి. అది ఒక కీఫ్రేమ్ నుండి తదుపరి కీఫ్రేమ్‌కు సాఫీగా కదులుతుంది.';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      'కీఫ్రేమ్‌ను జోడించండి, ప్లేహెడ్‌ను కదిలించండి, ఆపై వీడియోను లాగండి, జూమ్ చేయండి లేదా తిప్పండి. అది ఒక కీఫ్రేమ్ నుండి తదుపరి కీఫ్రేమ్‌కు సాఫీగా కదులుతుంది.';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel =>
+      'క్లిప్‌ను కదిలించండి, జూమ్ చేయండి, తిప్పండి';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel =>
+      'క్లిప్‌లో ప్లేహెడ్';
+
+  @override
   String get videoEditorTrackLabel => 'ట్రాక్';
 
   @override

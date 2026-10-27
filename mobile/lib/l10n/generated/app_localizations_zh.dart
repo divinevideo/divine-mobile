@@ -9877,6 +9877,16 @@ class AppLocalizationsZh extends AppLocalizations {
       '添加关键帧，移动播放头，然后移动、缩放或旋转图层。图层会在关键帧之间平滑移动。';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      '添加关键帧，移动播放头，然后拖动、缩放或旋转视频。视频会在关键帧之间平滑移动。';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel => '平移、缩放和旋转片段';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel => '片段中的播放头';
+
+  @override
   String get videoEditorTrackLabel => '跟踪';
 
   @override

@@ -10704,6 +10704,18 @@ class AppLocalizationsPl extends AppLocalizations {
       'Dodaj klatkę kluczową, przesuń głowicę odtwarzania, a potem przesuń, przeskaluj lub obróć warstwę. Warstwa płynnie przechodzi między klatkami kluczowymi.';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      'Dodaj klatkę kluczową, przesuń głowicę odtwarzania, a potem przeciągnij, przybliż lub obróć wideo. Wideo płynnie przechodzi między klatkami kluczowymi.';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel =>
+      'Przesuwaj, przybliżaj i obracaj klip';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel =>
+      'Głowica odtwarzania w klipie';
+
+  @override
   String get videoEditorTrackLabel => 'Śledź';
 
   @override

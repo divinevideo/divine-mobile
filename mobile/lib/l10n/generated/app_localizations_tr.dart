@@ -10409,6 +10409,18 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bir ana kare ekle, oynatma kafasını kaydır, sonra katmanı taşı, boyutlandır ya da döndür. Katman ana kareden ana kareye kayar.';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      'Bir ana kare ekle, oynatma kafasını kaydır, sonra videoyu sürükle, yakınlaştır ya da döndür. Video ana kareden ana kareye kayar.';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel =>
+      'Klibi kaydır, yakınlaştır ve döndür';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel =>
+      'Klipteki oynatma kafası';
+
+  @override
   String get videoEditorTrackLabel => 'Takip';
 
   @override

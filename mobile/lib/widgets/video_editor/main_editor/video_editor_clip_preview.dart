@@ -9,7 +9,9 @@ import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_clip_motion.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_player.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
 
 /// The preview surface for the current clip: a [DivineVideoPlayer] for a normal
@@ -76,6 +78,14 @@ class VideoEditorClipPreview extends StatelessWidget {
             bodySize: bodySize,
             renderSize: renderSize,
             frameBuilder: frameBuilder,
+            surfaceBuilder: (surface) => ClipMotionSurface(
+              clips: liveClips,
+              playTime: playTime,
+              liveKeyframes: VideoEditorScope.maybeOf(
+                context,
+              )?.liveClipKeyframesNotifier,
+              child: surface,
+            ),
           ),
         ),
       );

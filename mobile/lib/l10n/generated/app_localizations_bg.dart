@@ -10584,6 +10584,18 @@ class AppLocalizationsBg extends AppLocalizations {
       'Добави ключов кадър, премести главата за възпроизвеждане, после премести, оразмери или завърти слоя. Той се плъзга от ключов кадър към ключов кадър.';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      'Добави ключов кадър, премести главата за възпроизвеждане, после плъзни, приближи или завърти видеото. То се плъзга от ключов кадър към ключов кадър.';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel =>
+      'Премести, приближи и завърти клипа';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel =>
+      'Глава за възпроизвеждане в клипа';
+
+  @override
   String get videoEditorTrackLabel => 'Проследи';
 
   @override

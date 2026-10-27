@@ -123,7 +123,7 @@ void main() {
           zoomMatrixNotifier: ValueNotifier(Matrix4.identity()),
           playTimeNotifier: ValueNotifier(Duration.zero),
           playheadAdvancingNotifier: ValueNotifier<bool>(false),
-          maskPanelHeightNotifier: maskPanelHeight,
+          canvasToolPanelHeightNotifier: maskPanelHeight,
           fromLibrary: false,
           child: MultiBlocProvider(
             providers: [

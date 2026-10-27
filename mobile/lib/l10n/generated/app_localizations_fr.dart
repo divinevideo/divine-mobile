@@ -10653,6 +10653,18 @@ class AppLocalizationsFr extends AppLocalizations {
       'Ajoute une image clé, déplace la tête de lecture, puis déplace, redimensionne ou fais pivoter le calque. Il glisse d\'une image clé à l\'autre.';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      'Ajoute une image clé, déplace la tête de lecture, puis fais glisser, zoome ou fais pivoter la vidéo. Elle glisse d\'une image clé à l\'autre.';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel =>
+      'Déplacer, zoomer et faire pivoter le clip';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel =>
+      'Tête de lecture dans le clip';
+
+  @override
   String get videoEditorTrackLabel => 'Suivi';
 
   @override
