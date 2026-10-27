@@ -136,6 +136,48 @@ void main() {
       expect(sites, isEmpty);
     });
 
+    test('counts the generated delegate listed ahead of the app list', () {
+      // Localizations loads the first delegate of each type, so the generated
+      // deferred loader runs and appLocalizationsDelegates' own is ignored.
+      final sites = scan('''
+void main() {
+  pumpWidget(
+    MaterialApp(
+      localizationsDelegates: [
+        AppLocalizations.delegate,
+        ...appLocalizationsDelegates,
+      ],
+      home: Foo(),
+    ),
+  );
+}
+''');
+
+      expect(sites, hasLength(1));
+      expect(sites.single.line, 3);
+    });
+
+    test('counts an import-prefixed generated list beside the app list', () {
+      final sites = scan('''
+import 'package:openvine/l10n/l10n.dart' as l10n;
+
+void main() {
+  pumpWidget(
+    MaterialApp(
+      localizationsDelegates: [
+        ...l10n.AppLocalizations.localizationsDelegates,
+        ...l10n.appLocalizationsDelegates,
+      ],
+      home: Foo(),
+    ),
+  );
+}
+''');
+
+      expect(sites, hasLength(1));
+      expect(sites.single.line, 5);
+    });
+
     test('counts a MaterialApp with delegates that omit AppLocalizations', () {
       final sites = scan('''
 void main() {

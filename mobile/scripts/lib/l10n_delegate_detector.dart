@@ -27,11 +27,11 @@
 // So a site counts when, and only when, it is an actual `MaterialApp(...)` or
 // `MaterialApp.router(...)` construction whose argument list has no
 // `localizationsDelegates:` value that references `appLocalizationsDelegates`,
-// the app's own list (lib/l10n/l10n.dart); the generated
-// `AppLocalizations.localizationsDelegates` does not clear a site (see
-// `_appDelegates` below). Anything that merely *contains* `MaterialApp` —
-// `testMaterialApp`, `MyMaterialAppWrapper`, a doc comment, a string literal —
-// is not a construction and is never counted.
+// the app's own list (lib/l10n/l10n.dart), without also naming
+// `AppLocalizations`; the generated `AppLocalizations.localizationsDelegates`
+// does not clear a site (see `_appDelegates` below). Anything that merely
+// *contains* `MaterialApp` — `testMaterialApp`, `MyMaterialAppWrapper`, a doc
+// comment, a string literal — is not a construction and is never counted.
 //
 // Why this matters: `context.l10n` is `AppLocalizations.of(context)`, which is
 // `Localizations.of<AppLocalizations>(context, AppLocalizations)!`. With no
@@ -62,7 +62,12 @@ const _delegatesArg = 'localizationsDelegates';
 /// load of any other locale later in the same merged CI shard never completes
 /// (#10517). The generated list also lacks material_ui's
 /// `MaterialLocalizations` (#8916).
+///
+/// A list that names `AppLocalizations` beside it still counts: `Localizations`
+/// loads only the first delegate of each type, so the generated one wins when
+/// listed first and is redundant when listed after.
 const _appDelegates = 'appLocalizationsDelegates';
+const _generatedDelegateOwner = 'AppLocalizations';
 
 /// Thrown when a scanned file cannot be parsed.
 ///
@@ -154,15 +159,11 @@ class _Visitor extends RecursiveAstVisitor<void> {
     for (final argument in args.arguments) {
       if (argument is! NamedExpression) continue;
       if (argument.name.label.name != _delegatesArg) continue;
-      return _referencesAppDelegates(argument.expression);
+      final visitor = _DelegateReferenceVisitor();
+      argument.expression.accept(visitor);
+      return visitor.namesAppDelegates && !visitor.namesGeneratedDelegate;
     }
     return false;
-  }
-
-  bool _referencesAppDelegates(Expression expression) {
-    final visitor = _AppDelegatesReferenceVisitor();
-    expression.accept(visitor);
-    return visitor.found;
   }
 }
 
@@ -175,12 +176,14 @@ String? _lastIdentifierName(Expression? expression) {
   };
 }
 
-class _AppDelegatesReferenceVisitor extends RecursiveAstVisitor<void> {
-  bool found = false;
+class _DelegateReferenceVisitor extends RecursiveAstVisitor<void> {
+  bool namesAppDelegates = false;
+  bool namesGeneratedDelegate = false;
 
   @override
   void visitSimpleIdentifier(SimpleIdentifier node) {
-    if (node.name == _appDelegates) found = true;
+    if (node.name == _appDelegates) namesAppDelegates = true;
+    if (node.name == _generatedDelegateOwner) namesGeneratedDelegate = true;
     super.visitSimpleIdentifier(node);
   }
 }
