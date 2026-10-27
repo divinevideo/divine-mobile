@@ -13644,7 +13644,10 @@ class OutgoingDmRow extends DataClass implements Insertable<OutgoingDmRow> {
   final String selfWrapStatus;
 
   /// Recipient gift-wrap event id (kind 1059) once published. Null while
-  /// `recipient_wrap_status` is `pending` or `failed`.
+  /// `recipient_wrap_status` is `pending` or `failed`, unless the fallback
+  /// pool accepted a wrap while the recipient's inbox was unreadable: that
+  /// held attempt records the wrap's id, so a retry does not publish another
+  /// while the inbox stays unreadable (#10012).
   final String? recipientWrapEventId;
 
   /// Self gift-wrap event id (kind 1059) once published. Null while

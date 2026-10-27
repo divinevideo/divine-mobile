@@ -382,7 +382,9 @@ class OutgoingDmsDao extends DatabaseAccessor<AppDatabase>
 
   /// Update the recipient gift-wrap status for [id]. Pass [eventId] when
   /// transitioning to [OutgoingWrapStatus.sent] so the published id is
-  /// recorded for downstream debugging. Pass [lastError] when transitioning
+  /// recorded for downstream debugging, or with the row's current status to
+  /// record the wrap a held attempt left on the fallback pool (#10012), which
+  /// stops a retry from publishing another. Pass [lastError] when transitioning
   /// to [OutgoingWrapStatus.failed]; it lands in `recipient_wrap_last_error`
   /// so the self-wrap's own error history is never overwritten.
   ///
