@@ -21,14 +21,34 @@ class _MockNostrClient extends Mock implements NostrClient {}
 
 /// A signer whose key is held on the device, as for a local-key account.
 class _LocalKeySigner extends LocalNostrSigner implements IsolateDecryptSigner {
-  _LocalKeySigner() : super(_ownerPrivateKey);
+  _LocalKeySigner(this._privateKeyHex) : super(_privateKeyHex);
+
+  final String _privateKeyHex;
 
   @override
   bool get canDecryptInIsolate => true;
 
   @override
   T withPrivateKeyHex<T>(T Function(String hex) operation) =>
-      operation(_ownerPrivateKey);
+      operation(_privateKeyHex);
+}
+
+/// Holds the dedup probe for [holdId] until [resume] completes.
+class _HeldProcessedGiftWrapsDao extends ProcessedGiftWrapsDao {
+  _HeldProcessedGiftWrapsDao(super.attachedDatabase);
+
+  String? holdId;
+  final started = Completer<void>();
+  final resume = Completer<void>();
+
+  @override
+  Future<bool> hasGiftWrap(String giftWrapId) async {
+    if (giftWrapId == holdId && !started.isCompleted) {
+      started.complete();
+      await resume.future;
+    }
+    return super.hasGiftWrap(giftWrapId);
+  }
 }
 
 // Synthetic keys. The peer encrypted [_payloadForAnotherRecipient] to a third
@@ -37,6 +57,8 @@ const _ownerPrivateKey =
     '1d2c3b4a59687766554433221100ffeeddccbbaa99887766554433221100ff01';
 const _peerPrivateKey =
     '7f4c11a9b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d';
+const _nextAccountPrivateKey =
+    '2e3d4c5b6a79887766554433221100ffeeddccbbaa99887766554433221100f2';
 const _payloadForAnotherRecipient =
     'frkb1N4rnki0zNjn4gnQKSbcUEcgY2X8lgN8zk+MT4qUxMB2IIlUH9dURh0H014W'
     '?iv=KR5RbN4CZE7tdq9XxeeLsA==';
@@ -55,6 +77,8 @@ void main() {
 
     late AppDatabase db;
     late StreamController<Event> relay;
+    late _MockNostrClient nostrClient;
+    late _HeldProcessedGiftWrapsDao ledger;
     late DmRepository repository;
 
     Event kind4(String id, String content) => Event.fromJson({
@@ -68,6 +92,12 @@ void main() {
       'content': content,
       'sig': '',
     });
+
+    String readablePayload() => NIP04.encrypt(
+      'hello from the peer',
+      NIP04.getAgreement(_peerPrivateKey),
+      ownerPubkey,
+    );
 
     Future<List<DirectMessageRow>> messages() => DirectMessagesDao(
       db,
@@ -92,7 +122,8 @@ void main() {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       db = AppDatabase.test(NativeDatabase.memory());
       relay = StreamController<Event>();
-      final nostrClient = _MockNostrClient();
+      nostrClient = _MockNostrClient();
+      ledger = _HeldProcessedGiftWrapsDao(db);
       when(() => nostrClient.connectedRelayCount).thenReturn(1);
       when(() => nostrClient.configuredRelayCount).thenReturn(1);
       when(
@@ -117,10 +148,10 @@ void main() {
         nostrClient: nostrClient,
         directMessagesDao: DirectMessagesDao(db),
         conversationsDao: ConversationsDao(db),
-        processedGiftWrapsDao: ProcessedGiftWrapsDao(db),
+        processedGiftWrapsDao: ledger,
         userPubkey: ownerPubkey,
         syncState: DmSyncState(await SharedPreferences.getInstance()),
-        signer: _LocalKeySigner(),
+        signer: _LocalKeySigner(_ownerPrivateKey),
         rumorDecryptor: (_, _) async => null,
       );
       await repository.startListening();
@@ -135,16 +166,7 @@ void main() {
     test(
       'leaves a kind 4 the key can read to be stored with its text',
       () async {
-        relay.add(
-          kind4(
-            _readableId,
-            NIP04.encrypt(
-              'hello from the peer',
-              NIP04.getAgreement(_peerPrivateKey),
-              ownerPubkey,
-            ),
-          ),
-        );
+        relay.add(kind4(_readableId, readablePayload()));
         await handled(_readableId);
 
         expect(
@@ -167,5 +189,31 @@ void main() {
 
       expect(await recorded(_unreadableId), isTrue);
     });
+
+    test(
+      'is not recorded for an account that switched away while the event '
+      'was checked',
+      () async {
+        ledger.holdId = _readableId;
+        relay.add(kind4(_readableId, readablePayload()));
+        await ledger.started.future;
+
+        final nextSigner = _LocalKeySigner(_nextAccountPrivateKey);
+        final nextPubkey = getPublicKey(_nextAccountPrivateKey);
+        repository.setCredentials(
+          userPubkey: nextPubkey,
+          signer: nextSigner,
+          messageService: NIP17MessageService(
+            signer: nextSigner,
+            senderPublicKey: nextPubkey,
+            nostrService: nostrClient,
+          ),
+        );
+        ledger.resume.complete();
+        await pumpEventQueue();
+
+        expect(await recorded(_readableId), isFalse);
+      },
+    );
   });
 }

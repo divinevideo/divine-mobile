@@ -5129,6 +5129,7 @@ class DmRepository {
     Event nip04Event, {
     _LiveCatchUp? deferWireTo,
   }) async {
+    final gen = _resetGeneration;
     final ownerPubkey = _userPubkey;
     try {
       // Dedup: use event ID as giftWrapId for the unique index. The
@@ -5174,6 +5175,13 @@ class DmRepository {
             category: LogCategory.system,
           );
         }
+        return;
+      }
+
+      // After an account switch during the probe above, the signer below holds
+      // the next account's key. The event comes back in this account's next
+      // session, as a gift wrap does.
+      if (_disposed || _resetGeneration != gen || _userPubkey != ownerPubkey) {
         return;
       }
 
@@ -5229,10 +5237,11 @@ class DmRepository {
 
       // Determine sender and the other party's pubkey for decryption
       final senderPubkey = nip04Event.pubkey;
-      final isSentByMe = senderPubkey == _userPubkey;
+      final isSentByMe = senderPubkey == ownerPubkey;
       final peerPubkey = isSentByMe ? recipientPubkey : senderPubkey;
 
-      // Decrypt using injected decryptor or signer fallback
+      // Decrypt with the injected decryptor, else with the account's key when
+      // it is on this device, else through the signer.
       final signer = _signer;
       // Keep missing-decryptor events retryable: signer availability can
       // change without the relay event changing.
@@ -5454,9 +5463,9 @@ class DmRepository {
       // kinds [1059, 4, 5] with one filter, so the wire boundary has to track
       // whichever kind carried the newest wire stamp. See #8209.
       // Scoped to the delivering account, not whichever is current after the
-      // decrypt and transaction return: this handler has no generation guard
-      // to abandon on, and a switch inside that window would import this
-      // stamp into the next account's maximum, narrowing its `since:`.
+      // decrypt and transaction return: nothing re-checks the session inside
+      // that window, and a switch there would import this stamp into the next
+      // account's maximum, narrowing its `since:`.
       await _recordSeen(ownerPubkey, persistedCreatedAt, deferTo: deferWireTo);
       await _recordWireSeen(
         ownerPubkey,
