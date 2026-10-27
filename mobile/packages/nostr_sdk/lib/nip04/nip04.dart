@@ -55,18 +55,23 @@ class NIP04 {
     return "${base64.encode(result)}?iv=${base64.encode(ivData)}";
   }
 
+  /// Decrypts [message], a NIP-04 `<ciphertext>?iv=<iv>` payload.
+  ///
+  /// Throws a [FormatException] when [message] is not a payload that can be
+  /// decrypted, so it is never mistaken for one that decrypted to an empty
+  /// string (#8712).
   static String decrypt(
     String message,
     ECDHBasicAgreement agreement,
     String pk,
   ) {
-    var strs = message.split("?iv=");
-    if (strs.length != 2) {
-      return "";
+    var payload = _parsePayload(message);
+    if (payload == null) {
+      throw const FormatException(
+        "Not a NIP-04 payload: expected <ciphertext>?iv=<iv>",
+      );
     }
-    message = strs[0];
-    var iv = strs[1];
-    var ivData = base64.decode(iv);
+    var ivData = payload.iv;
 
     var pubkey = getPubkey(pk);
     var agreementD0 = agreement.calculateAgreement(pubkey);
@@ -90,10 +95,34 @@ class NIP04 {
     );
     cipherCbc.init(false, paramsCbc);
 
-    var result = cipherCbc.process(base64.decode(message));
+    var result = cipherCbc.process(payload.ciphertext);
 
     return utf8.decode(result);
   }
+
+  /// The ciphertext and IV of a NIP-04 payload, or `null` when [payload] has
+  /// anything other than one `?iv=`, a 16-byte IV, and ciphertext made of
+  /// whole AES blocks. The cipher reports those as raw [Error]s otherwise.
+  static ({Uint8List ciphertext, Uint8List iv})? _parsePayload(String payload) {
+    var parts = payload.split("?iv=");
+    if (parts.length != 2) {
+      return null;
+    }
+    try {
+      var ciphertext = base64.decode(parts[0]);
+      var iv = base64.decode(parts[1]);
+      if (iv.length != _aesBlockSize ||
+          ciphertext.isEmpty ||
+          ciphertext.length % _aesBlockSize != 0) {
+        return null;
+      }
+      return (ciphertext: ciphertext, iv: iv);
+    } on FormatException {
+      return null;
+    }
+  }
+
+  static const _aesBlockSize = 16;
 
   static ECPublicKey getPubkey(String pk) {
     // BigInt x = BigInt.parse(pk, radix: 16);
@@ -139,4 +168,12 @@ class NIP04 {
   static bool isEncrypted(String text) {
     return text.indexOf("?iv=") > 0;
   }
+
+  /// Whether [payload] has the shape [decrypt] can work on: one `?iv=`, a
+  /// 16-byte IV, and ciphertext made of whole AES blocks.
+  ///
+  /// Stricter than [isEncrypted], which only spots the marker. A payload
+  /// that fails this check cannot be decrypted under any key or signer.
+  static bool isWellFormedPayload(String payload) =>
+      _parsePayload(payload) != null;
 }

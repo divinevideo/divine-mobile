@@ -212,14 +212,52 @@ void main() {
 
         final signer = LocalKeySigner(mockKeyContainer);
 
-        // The IV must be real base64, or `base64.decode` throws a
-        // FormatException — an Exception, which the old handler already
-        // caught — and we never reach the off-curve `Error` path.
+        // A well-formed payload, so the peer key is what fails here and not
+        // the payload shape NIP04.decrypt rejects on its own (#8712).
         await expectLater(
-          signer.decrypt(offCurvePubkey, 'AA==?iv=AAAAAAAAAAAAAAAAAAAAAA=='),
-          throwsA(isA<LocalSignerOperationException>()),
+          signer.decrypt(
+            offCurvePubkey,
+            'AAAAAAAAAAAAAAAAAAAAAA==?iv=AAAAAAAAAAAAAAAAAAAAAA==',
+          ),
+          throwsA(
+            isA<LocalSignerOperationException>().having(
+              (e) => e.cause,
+              'cause',
+              isA<Error>(),
+            ),
+          ),
         );
       });
+
+      test(
+        'decrypt throws a typed failure for a payload without ?iv=',
+        () async {
+          when(() => mockKeyContainer.withPrivateKey<String>(any())).thenAnswer(
+            (
+              invocation,
+            ) {
+              final callback =
+                  invocation.positionalArguments[0] as String Function(String);
+              return callback(testPrivateKey);
+            },
+          );
+
+          final signer = LocalKeySigner(mockKeyContainer);
+
+          // This used to come back as "", which callers read as a message that
+          // decrypted to nothing (#8712).
+          await expectLater(
+            signer.decrypt(testPublicKey, 'garbage!!!'),
+            throwsA(
+              isA<LocalSignerOperationException>().having(
+                (e) => e.cause,
+                'cause',
+                isA<FormatException>(),
+              ),
+            ),
+          );
+        },
+      );
 
       test('decrypt decrypts ciphertext', () async {
         when(() => mockKeyContainer.withPrivateKey<String>(any())).thenAnswer((

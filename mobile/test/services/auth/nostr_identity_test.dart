@@ -194,16 +194,32 @@ void main() {
           () => mockRpc.decrypt(any(), any()),
         ).thenAnswer((_) async => 'rpc-nip04-plaintext');
 
+        // A well-formed payload, so the peer key is what makes the local
+        // signer fail, not the payload shape (#8712).
         expect(
           await identity.decrypt(
             offCurvePubkey,
-            'AA==?iv=AAAAAAAAAAAAAAAAAAAAAA==',
+            'AAAAAAAAAAAAAAAAAAAAAA==?iv=AAAAAAAAAAAAAAAAAAAAAA==',
           ),
           equals('rpc-nip04-plaintext'),
         );
         verify(() => mockRpc.decrypt(any(), any())).called(1);
         // Pins that the local signer really attempted the operation and
         // failed, rather than an unstubbed mock handing back null.
+        verify(() => container.withPrivateKey<String>(any())).called(1);
+      });
+
+      test('decrypt falls back to RPC for a payload without ?iv=', () async {
+        when(
+          () => mockRpc.decrypt(any(), any()),
+        ).thenAnswer((_) async => 'rpc-nip04-plaintext');
+
+        // The local signer used to return "" here, which skipped RPC (#8712).
+        expect(
+          await identity.decrypt(testPublicKey, 'garbage!!!'),
+          equals('rpc-nip04-plaintext'),
+        );
+        verify(() => mockRpc.decrypt(testPublicKey, 'garbage!!!')).called(1);
         verify(() => container.withPrivateKey<String>(any())).called(1);
       });
     });
