@@ -3874,10 +3874,10 @@
   "inboxConversationOptionsLabel": "Mga Option",
   "inboxConversationViewProfileButton": "Tingnan ang profile",
   "inboxMessageRequestsEmpty": "Walang message request",
-  "inboxMessageRequestsSemanticLabel": "Mga message request, {requestCount} nakabinbin",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{Mga message request} =1{Mga message request, {count} hindi pa nababasa} other{Mga message request, {count} hindi pa nababasa}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

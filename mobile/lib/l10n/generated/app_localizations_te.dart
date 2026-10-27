@@ -7504,8 +7504,15 @@ class AppLocalizationsTe extends AppLocalizations {
   String get inboxMessageRequestsEmpty => 'సందేశ అభ్యర్థనలు లేవు';
 
   @override
-  String inboxMessageRequestsSemanticLabel(int requestCount) {
-    return 'సందేశ అభ్యర్థనలు, $requestCountపెండింగ్‌లో ఉంది';
+  String inboxMessageRequestsUnreadSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'సందేశ అభ్యర్థనలు, $count చదవనివి',
+      one: 'సందేశ అభ్యర్థనలు, $count చదవనిది',
+      zero: 'సందేశ అభ్యర్థనలు',
+    );
+    return '$_temp0';
   }
 
   @override

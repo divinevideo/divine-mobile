@@ -1,8 +1,9 @@
 // ABOUTME: Widget tests for MessageRequestsBanner.
-// ABOUTME: Verifies count badge, tap callback, and visibility.
+// ABOUTME: Verifies count badge, semantics label, taps, and visibility.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/inbox/message_requests/widgets/message_requests_banner.dart';
 
 import '../../../../helpers/test_provider_overrides.dart';
@@ -60,6 +61,49 @@ void main() {
       });
     });
 
+    group('semantics', () {
+      testWidgets('announces the unread count once', (tester) async {
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: Scaffold(
+              body: MessageRequestsBanner(requestCount: 3, onTap: () {}),
+            ),
+          ),
+        );
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          tester.getSemantics(find.byType(MessageRequestsBanner)).label,
+          equals(l10n.inboxMessageRequestsUnreadSemanticLabel(3)),
+        );
+        // The visible title must not surface as a second node either.
+        expect(
+          find.semantics.byLabel(
+            RegExp(RegExp.escape(l10n.inboxMessageRequestsTitle)),
+          ),
+          findsOne,
+        );
+      });
+
+      testWidgets('announces only the title when no request is unread', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: Scaffold(
+              body: MessageRequestsBanner(requestCount: 0, onTap: () {}),
+            ),
+          ),
+        );
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(
+          tester.getSemantics(find.byType(MessageRequestsBanner)).label,
+          equals(l10n.inboxMessageRequestsTitle),
+        );
+      });
+    });
+
     group('interactions', () {
       testWidgets('calls onTap when tapped', (tester) async {
         var tapped = false;
@@ -76,6 +120,32 @@ void main() {
         );
 
         await tester.tap(find.byType(MessageRequestsBanner));
+
+        expect(tapped, isTrue);
+      });
+
+      testWidgets('calls onTap when activated by a screen reader', (
+        tester,
+      ) async {
+        var tapped = false;
+
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: Scaffold(
+              body: MessageRequestsBanner(
+                requestCount: 3,
+                onTap: () => tapped = true,
+              ),
+            ),
+          ),
+        );
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        tester.semantics.tap(
+          find.semantics.byLabel(
+            l10n.inboxMessageRequestsUnreadSemanticLabel(3),
+          ),
+        );
 
         expect(tapped, isTrue);
       });

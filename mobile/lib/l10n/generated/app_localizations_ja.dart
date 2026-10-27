@@ -6906,8 +6906,14 @@ class AppLocalizationsJa extends AppLocalizations {
   String get inboxMessageRequestsEmpty => 'メッセージリクエストはないよ';
 
   @override
-  String inboxMessageRequestsSemanticLabel(int requestCount) {
-    return 'メッセージリクエスト、$requestCount件保留中';
+  String inboxMessageRequestsUnreadSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'メッセージリクエスト、未読$count件',
+      zero: 'メッセージリクエスト',
+    );
+    return '$_temp0';
   }
 
   @override

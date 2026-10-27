@@ -7294,8 +7294,14 @@ class AppLocalizationsMs extends AppLocalizations {
   String get inboxMessageRequestsEmpty => 'Tiada permintaan mesej';
 
   @override
-  String inboxMessageRequestsSemanticLabel(int requestCount) {
-    return 'Permintaan mesej, $requestCount belum selesai';
+  String inboxMessageRequestsUnreadSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Permintaan mesej, $count belum dibaca',
+      zero: 'Permintaan mesej',
+    );
+    return '$_temp0';
   }
 
   @override

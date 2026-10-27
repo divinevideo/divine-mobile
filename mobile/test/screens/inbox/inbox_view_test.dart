@@ -1221,6 +1221,60 @@ void main() {
         },
       );
 
+      group('$MessageRequestsBanner semantics label (#9620)', () {
+        Future<String> pumpBannerLabel(
+          WidgetTester tester, {
+          required bool isRead,
+        }) async {
+          final request = DmConversation(
+            id: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+            participantPubkeys: const [currentPubkey, otherPubkey],
+            isGroup: false,
+            createdAt: nowUnix,
+            lastMessageContent: 'Hey',
+            lastMessageTimestamp: nowUnix,
+            isRead: isRead,
+          );
+
+          await tester.pumpWidget(
+            buildSubject(
+              state: ConversationListState(
+                status: ConversationListStatus.loaded,
+                requestConversations: [request],
+                hasMore: false,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.tap(find.text('Messages'));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 350));
+
+          return tester.getSemantics(find.byType(MessageRequestsBanner)).label;
+        }
+
+        testWidgets(
+          'announces a read request awaiting a decision without a count',
+          (tester) async {
+            final l10n = lookupAppLocalizations(const Locale('en'));
+            expect(
+              await pumpBannerLabel(tester, isRead: true),
+              equals(l10n.inboxMessageRequestsTitle),
+            );
+          },
+        );
+
+        testWidgets('announces an unread request as one unread', (
+          tester,
+        ) async {
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          expect(
+            await pumpBannerLabel(tester, isRead: false),
+            equals(l10n.inboxMessageRequestsUnreadSemanticLabel(1)),
+          );
+        });
+      });
+
       testWidgets(
         'renders $MessageRequestsBanner above conversations when both exist',
         (tester) async {

@@ -7255,8 +7255,14 @@ class AppLocalizationsVi extends AppLocalizations {
   String get inboxMessageRequestsEmpty => 'Không có yêu cầu nhắn tin nào';
 
   @override
-  String inboxMessageRequestsSemanticLabel(int requestCount) {
-    return 'Yêu cầu nhắn tin, $requestCount đang chờ';
+  String inboxMessageRequestsUnreadSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Yêu cầu nhắn tin, $count chưa đọc',
+      zero: 'Yêu cầu nhắn tin',
+    );
+    return '$_temp0';
   }
 
   @override

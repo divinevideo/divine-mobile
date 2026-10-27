@@ -7363,8 +7363,15 @@ class AppLocalizationsBg extends AppLocalizations {
   String get inboxMessageRequestsEmpty => 'Няма заявки за съобщения';
 
   @override
-  String inboxMessageRequestsSemanticLabel(int requestCount) {
-    return 'Заявки за съобщения, $requestCount в очакване';
+  String inboxMessageRequestsUnreadSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Заявки за съобщения, $count непрочетени',
+      one: 'Заявки за съобщения, $count непрочетена',
+      zero: 'Заявки за съобщения',
+    );
+    return '$_temp0';
   }
 
   @override

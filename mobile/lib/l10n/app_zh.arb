@@ -3609,10 +3609,10 @@
   "inboxConversationOptionsLabel": "选项",
   "inboxConversationViewProfileButton": "查看主页",
   "inboxMessageRequestsEmpty": "没有消息请求",
-  "inboxMessageRequestsSemanticLabel": "消息请求，{requestCount} 条待处理",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{消息请求} other{消息请求，{count} 条未读}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

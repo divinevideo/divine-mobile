@@ -4847,10 +4847,10 @@
   "inboxConversationOptionsLabel": "Alternativ",
   "inboxConversationViewProfileButton": "Visa profil",
   "inboxMessageRequestsEmpty": "Inga meddelandeförfrågningar",
-  "inboxMessageRequestsSemanticLabel": "Meddelandeförfrågningar, {requestCount} väntande",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{Meddelandeförfrågningar} =1{Meddelandeförfrågningar, {count} oläst} other{Meddelandeförfrågningar, {count} olästa}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }
