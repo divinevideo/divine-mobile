@@ -32,18 +32,6 @@ class SqliteChallengeStore
 
   bool _revoked = false;
 
-  /// Fences fallback draft persistence as tightly as the challenge journal.
-  /// Invalidation during the callback rolls its SQLite writes back; removal
-  /// before the transaction starts rejects the old durable generation.
-  Future<void> recoveryWrite(Future<void> Function() write) async {
-    checkCurrent();
-    await dao.withOwner(owner, generation, () async {
-      checkCurrent();
-      await write();
-      checkCurrent();
-    });
-  }
-
   Future<void> retire() async {
     _revoked = true;
   }

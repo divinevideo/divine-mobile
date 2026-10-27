@@ -103,19 +103,6 @@ class ChallengeRecordsDao extends DatabaseAccessor<AppDatabase>
     return payload;
   });
 
-  /// Runs a challenge-owned recovery write in the same generation transaction.
-  /// The callback may write another table on this database (such as drafts).
-  Future<T> withOwner<T>(
-    String owner,
-    String generation,
-    Future<T> Function() write,
-  ) => transaction(() async {
-    await checkOwner(owner, generation);
-    final result = await write();
-    await checkOwner(owner, generation);
-    return result;
-  });
-
   Future<void> remove(
     String owner,
     String generation,

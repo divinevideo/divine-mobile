@@ -15,6 +15,7 @@ final class ChallengeSubmissionRepository {
     required this.sign,
     required this.writableRelays,
     this.refreshVideo,
+    this.useReadDefinitions,
   });
 
   /// Verified known-coordinate read repository and current clock/policy.
@@ -45,6 +46,11 @@ final class ChallengeSubmissionRepository {
 
   /// App refresh of exact current video/policy before new consent/signing.
   final Future<void> Function(NostrEvent)? refreshVideo;
+
+  /// Optional adapter read hints from authenticated definitions for one
+  /// coordinate. Hints never grant publication or revision-completeness
+  /// authority.
+  final void Function(List<ChallengeDefinition>)? useReadDefinitions;
 
   /// Normalizes protocol construction failures into an explainable UI status.
   Future<T> _preparation<T>(Future<T> Function() operation) async {
@@ -428,6 +434,7 @@ final class ChallengeSubmissionRepository {
     _checkLocal(review);
     final d = _validateReview(review);
     if (review.withdrawalEntry != null) return d;
+    useReadDefinitions?.call([d]);
     final read = await reads.refresh(d.coordinate);
     _checkLocal(review);
     if (!read.observation.revisionsComplete) {
@@ -553,6 +560,20 @@ final class ChallengeSubmissionRepository {
     _checkOwnerAndPolicy(review);
     final definition = _validateReview(review);
     if (review.withdrawalEntry != null) return definition;
+    // The action is validated before delivery. Parse through the canonical
+    // codec rather than treating stored relay metadata as read authority.
+    final delivery = action.deliveryDefinition == null
+        ? null
+        : parseChallengeEvent(action.deliveryDefinition).value;
+    if (action.deliveryDefinition != null &&
+        (delivery is! ChallengeDefinition ||
+            delivery.coordinate != definition.coordinate)) {
+      throw const SubmissionException(SubmissionStatus.invalidSignedEvent);
+    }
+    useReadDefinitions?.call([
+      definition,
+      if (delivery is ChallengeDefinition) delivery,
+    ]);
     final current = await reads.refresh(definition.coordinate);
     _checkOwnerAndPolicy(review);
     if (!current.observation.revisionsComplete ||

@@ -28,6 +28,7 @@ import 'package:openvine/providers/account_sync_lifecycle_provider.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/creator_sync_provider.dart';
+import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/install_source_provider.dart';
 import 'package:openvine/providers/layer_rasterizer_provider.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
@@ -35,6 +36,7 @@ import 'package:openvine/providers/scheduled_posts_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/sounds_providers.dart';
+import 'package:openvine/services/challenges/challenge_video_success_store.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
 import 'package:openvine/services/locale_preference_service.dart';
 import 'package:openvine/services/mention_resolution_service.dart';
@@ -68,6 +70,11 @@ class AppCompositionRoot extends ConsumerWidget {
       required OnProgressChanged onProgress,
     }) async => createBackgroundPublishService(ref, onProgress: onProgress);
 
+    // Capture the device database before asynchronous success callbacks. This
+    // bookkeeping must outlive account-provider disposal and signer readiness.
+    final successfulVideos = ChallengeVideoSuccessStore(
+      ref.read(databaseProvider),
+    );
     ref.watch(accountPreferenceSyncProvider);
     ref.watch(accountSyncLifecycleProvider);
     final oauthClient = ref.watch(oauthClientProvider);
@@ -121,15 +128,8 @@ class AppCompositionRoot extends ConsumerWidget {
                 videoPublishServiceFactory: createPublishService,
                 draftStorageService: ref.read(draftStorageServiceProvider),
                 foregroundSession: ref.read(publishForegroundSessionProvider),
-                challengeRecovery: (draft, write) async {
-                  final session = await ref.read(
-                    challengeAppSessionProvider.future,
-                  );
-                  if (session == null) {
-                    throw StateError('Challenge recovery owner changed');
-                  }
-                  await session.recoverPublishedDraft(draft, write);
-                },
+                challengeVideoSuccess: successfulVideos.record,
+                challengeDraftCleanup: successfulVideos.discardDrafts,
                 challengeHandoff: (draft, signedVideo) async {
                   final session = await ref.read(
                     challengeAppSessionProvider.future,

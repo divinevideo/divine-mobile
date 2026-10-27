@@ -2333,6 +2333,11 @@ class ChallengeOwners extends Table {
 /// Dedicated challenge journals: retained observations, recording contexts,
 /// successful video handoffs, reviews and immutable signed outbox records.
 /// There is deliberately no nullable or legacy ownership path.
+/// Retained observations have repository byte/count bounds. Reviewed context,
+/// handoffs and outbox evidence remain until explicit account removal; no TTL
+/// may discard undelivered signed work. Future settled-flow cleanup must keep
+/// exact recovery/evidence until it is no longer needed. Orphan generations are
+/// removed during database repair.
 class ChallengeRecords extends Table {
   TextColumn get ownerPubkey => text()();
   TextColumn get generation => text()();

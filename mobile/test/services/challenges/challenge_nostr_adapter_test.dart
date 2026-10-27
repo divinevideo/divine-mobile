@@ -1,6 +1,3 @@
-@Tags(['skip_very_good_optimization', 'integration'])
-library;
-
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
@@ -10,63 +7,79 @@ import 'package:challenges_repository/challenges_repository.dart';
 import 'package:db_client/db_client.dart' hide Filter;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
 import 'package:openvine/services/challenges/challenge_nostr_adapter.dart';
 
+import 'package:openvine/services/challenges/challenge_video_policy.dart';
+import 'package:openvine/services/media_availability_checker.dart';
+import 'package:openvine/services/video_moderation_status_service.dart';
+
 import '../../../packages/challenges_repository/test/synthetic.dart';
+
+class _Media extends Mock implements MediaAvailabilityChecker {}
+
+class _Moderation extends Mock implements VideoModerationStatusService {}
+
+class _LoopbackHttpOverrides extends HttpOverrides {}
 
 void main() {
   group('actual challenge relay wire', () {
     test(
       'reopened SQLite body is sent exactly and ACK maps to original target',
-      () async {
-        final oldOverrides = HttpOverrides.current;
-        HttpOverrides.global = null;
-        addTearDown(() => HttpOverrides.global = oldOverrides);
+      () => HttpOverrides.runWithHttpOverrides(() async {
         final directory = await Directory.systemTemp.createTemp(
           'challenge-wire-',
         );
         final file = File('${directory.path}/app.sqlite');
         var db = AppDatabase.test(NativeDatabase(file));
-        final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+        final servers = [
+          for (var i = 0; i < 3; i++)
+            await HttpServer.bind(InternetAddress.loopbackIPv4, 0),
+        ];
+        final server = servers.first;
         final sockets = <WebSocket>[];
         final frames = <String>[];
         final requests = <Map<String, dynamic>>[];
         var replies = <Event>[];
-        server.listen((request) async {
-          if (!WebSocketTransformer.isUpgradeRequest(request)) {
-            request.response.statusCode = HttpStatus.notFound;
-            await request.response.close();
-            return;
-          }
-          final socket = await WebSocketTransformer.upgrade(request);
-          sockets.add(socket);
-          socket.listen((raw) {
-            final message = jsonDecode(raw as String) as List<dynamic>;
-            if (message.first == 'EVENT') {
-              frames.add(raw);
-              socket.add(
-                jsonEncode([
-                  'OK',
-                  (message[1] as Map<String, dynamic>)['id'],
-                  true,
-                  '',
-                ]),
-              );
-            } else if (message.first == 'REQ') {
-              requests.add(message[2] as Map<String, dynamic>);
-              for (final event in replies) {
-                if ((requests.last['kinds'] as List<dynamic>).contains(
-                  event.kind,
-                )) {
-                  socket.add(jsonEncode(['EVENT', message[1], event.toJson()]));
-                }
-              }
-              socket.add(jsonEncode(['EOSE', message[1]]));
+        for (final listener in servers) {
+          listener.listen((request) async {
+            if (!WebSocketTransformer.isUpgradeRequest(request)) {
+              request.response.statusCode = HttpStatus.notFound;
+              await request.response.close();
+              return;
             }
+            final socket = await WebSocketTransformer.upgrade(request);
+            sockets.add(socket);
+            socket.listen((raw) {
+              final message = jsonDecode(raw as String) as List<dynamic>;
+              if (message.first == 'EVENT') {
+                frames.add(raw);
+                socket.add(
+                  jsonEncode([
+                    'OK',
+                    (message[1] as Map<String, dynamic>)['id'],
+                    true,
+                    '',
+                  ]),
+                );
+              } else if (message.first == 'REQ') {
+                requests.add(message[2] as Map<String, dynamic>);
+                for (final event in replies) {
+                  if ((requests.last['kinds'] as List<dynamic>).contains(
+                    event.kind,
+                  )) {
+                    socket.add(
+                      jsonEncode(['EVENT', message[1], event.toJson()]),
+                    );
+                  }
+                }
+                socket.add(jsonEncode(['EOSE', message[1]]));
+              }
+            });
           });
-        });
+        }
         final random = Random.secure();
         final key = List.generate(
           32,
@@ -87,6 +100,12 @@ void main() {
             34236,
             [
               ['d', 'synthetic-video'],
+              [
+                'imeta',
+                'url https://media.example.test/video.mp4',
+                'm video/mp4',
+                'x ${'a' * 64}',
+              ],
             ],
             'Synthetic video',
             createdAt: 140,
@@ -150,14 +169,16 @@ void main() {
           for (final socket in sockets) {
             await socket.close();
           }
-          await server.close(force: true);
+          for (final listener in servers) {
+            await listener.close(force: true);
+          }
           await db.close();
           await directory.delete(recursive: true);
         });
         await client.initialize();
         final adapter = ChallengeNostrAdapter(
           client: client,
-          knownRelays: () => [relay],
+          knownRelays: () => client.configuredRelays,
           checkOwner: () =>
               db.challengeRecordsDao.checkOwner(owner, generation),
           timeout: const Duration(seconds: 2),
@@ -202,6 +223,38 @@ void main() {
           expect(bounded.possiblyCapped, isTrue);
           expect(bounded.confirmedExhaustive, isFalse);
         }
+        for (final replica in servers.skip(1)) {
+          expect(
+            await client.addRelay('ws://127.0.0.1:${replica.port}'),
+            isTrue,
+          );
+        }
+        replies = [video];
+        final media = _Media();
+        final moderation = _Moderation();
+        when(() => media.isConfirmedAvailable(any()))
+            .thenAnswer((_) async => true);
+        when(() => moderation.fetchStatus(any())).thenAnswer(
+          (_) async => const VideoModerationStatus(
+            moderated: true,
+            blocked: false,
+            quarantined: false,
+            ageRestricted: false,
+            needsReview: false,
+            aiGenerated: false,
+          ),
+        );
+        final policy = ChallengeVideoPolicy(
+          client: client,
+          moderation: moderation,
+          media: media,
+          checkOwner: () async {},
+          sourceAllowed: (_) => true,
+        );
+        final verifiedVideo = protocol.NostrEvent.fromJson(video.toJson());
+        await policy.refresh(verifiedVideo);
+        expect(policy.currentVideoId(verifiedVideo), video.id);
+        expect(policy.isVisible(verifiedVideo), isTrue);
         replies = [
           (await signer.signEvent(
             Event(owner, 31923, [
@@ -213,12 +266,28 @@ void main() {
         expect(read.completeness, ReadCompleteness.partial);
         expect(read.revisionsComplete, isTrue);
         expect(read.records, hasLength(1));
-        final definitionFilter = requests[requests.length - 2];
+        final definitionFilter = requests.lastWhere(
+          (filter) => (filter['kinds'] as List<dynamic>).contains(31923),
+        );
         expect(definitionFilter['authors'], [owner]);
         expect(definitionFilter['#d'], ['synthetic:challenge']);
         expect(definitionFilter.containsKey('#t'), isFalse);
         expect(requests.last['#A'], ['31923:$owner:synthetic:challenge']);
         expect(requests.last.containsKey('#a'), isFalse);
+        replies = [
+          for (var i = 0; i < 22; i++)
+            (await signer.signEvent(
+              Event(owner, 31923, [
+                ['d', 'synthetic:challenge'],
+              ], 'Replicated revision $i'),
+            ))!,
+        ];
+        final replicated = await adapter.read(
+          '31923:$owner:synthetic:challenge',
+        );
+        expect(replicated.records, hasLength(22));
+        expect(replicated.revisionsComplete, isTrue);
+        expect(replicated.retentionLimited, isFalse);
         replies = [
           for (var i = 0; i < 65; i++)
             (await signer.signEvent(
@@ -231,7 +300,7 @@ void main() {
         expect(capped.records.length, lessThanOrEqualTo(64));
         expect(capped.revisionsComplete, isFalse);
         expect(capped.completeness, ReadCompleteness.partial);
-      },
+      }, _LoopbackHttpOverrides()),
     );
   });
 }

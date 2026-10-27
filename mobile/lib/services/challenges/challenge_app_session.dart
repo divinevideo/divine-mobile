@@ -24,7 +24,8 @@ class ChallengeAppSession {
   }) {
     adapter = ChallengeNostrAdapter(
       client: nostr,
-      knownRelays: () => [..._challengeRelays, ...nostr.configuredRelays],
+      knownRelays: () => nostr.configuredRelays,
+      challengeRelays: (coordinate) => _challengeRelays[coordinate] ?? const [],
       checkOwner: store.checkLive,
     );
     reads = ChallengesRepository(
@@ -49,6 +50,12 @@ class ChallengeAppSession {
       currentVideoId: currentVideoId,
       canPublish: canPublish,
       refreshVideo: refreshVideo,
+      useReadDefinitions: (definitions) {
+        final coordinate = definitions.first.coordinate;
+        _challengeRelays[coordinate] = {
+          for (final definition in definitions) ...definition.relays,
+        }.toList();
+      },
       writableRelays: () => nostr.writableRelays,
       sign: (fields) async {
         await store.checkLive();
@@ -71,7 +78,7 @@ class ChallengeAppSession {
       },
     );
   }
-  final _challengeRelays = <String>{};
+  final _challengeRelays = <String, List<String>>{};
   final SqliteChallengeStore store;
   final AuthService auth;
   final NostrClient nostr;
@@ -88,7 +95,7 @@ class ChallengeAppSession {
     if (parsed is! ChallengeDefinition) {
       throw const SubmissionException(SubmissionStatus.reviewRequired);
     }
-    _challengeRelays.addAll(parsed.relays);
+    _challengeRelays[parsed.coordinate] = parsed.relays;
     final current = await reads.refresh(parsed.coordinate);
     await store.checkLive();
     if (!current.observation.revisionsComplete ||
@@ -128,23 +135,10 @@ class ChallengeAppSession {
       throw const ChallengeOwnerRevoked();
     }
     final parsed = parseChallengeEvent(context.definition).value;
-    if (parsed is ChallengeDefinition) _challengeRelays.addAll(parsed.relays);
-    return context;
-  }
-
-  /// The generic draft fallback must retain this recording's original lease.
-  /// Re-adding the same public key does not reconnect removed consent.
-  Future<void> recoverPublishedDraft(
-    DivineVideoDraft draft,
-    Future<void> Function() write,
-  ) async {
-    final context = draft.challengeContext;
-    if (context == null ||
-        context.owner != store.owner ||
-        context.generation != store.generation) {
-      throw const ChallengeOwnerRevoked();
+    if (parsed is ChallengeDefinition) {
+      _challengeRelays[parsed.coordinate] = parsed.relays;
     }
-    await store.recoveryWrite(write);
+    return context;
   }
 
   /// Called only on PublishSuccess, before either source/publish draft cleanup.
@@ -201,7 +195,9 @@ class ChallengeAppSession {
       throw const ChallengeOwnerRevoked();
     }
     final parsed = parseChallengeEvent(context.definition).value;
-    if (parsed is ChallengeDefinition) _challengeRelays.addAll(parsed.relays);
+    if (parsed is ChallengeDefinition) {
+      _challengeRelays[parsed.coordinate] = parsed.relays;
+    }
     return submissions.prepareEntry(
       definition: context.definition,
       video: NostrEvent.fromJson(

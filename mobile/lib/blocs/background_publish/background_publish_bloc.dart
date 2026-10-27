@@ -28,16 +28,15 @@ class BackgroundPublishBloc
     PublishForegroundSession? foregroundSession,
     Future<void> Function(DivineVideoDraft draft, String signedVideo)?
     challengeHandoff,
-    Future<void> Function(
-      DivineVideoDraft draft,
-      Future<void> Function() write,
-    )?
-    challengeRecovery,
+    Future<void> Function(DivineVideoDraft draft, String? signedVideo)?
+    challengeVideoSuccess,
+    Future<void> Function(DivineVideoDraft draft)? challengeDraftCleanup,
   }) : _videoPublishServiceFactory = videoPublishServiceFactory,
        _draftStorageService = draftStorageService,
        _foregroundSession = foregroundSession,
        _challengeHandoff = challengeHandoff,
-       _challengeRecovery = challengeRecovery,
+       _challengeVideoSuccess = challengeVideoSuccess,
+       _challengeDraftCleanup = challengeDraftCleanup,
        super(const BackgroundPublishState()) {
     on<BackgroundPublishRequested>(_onBackgroundPublishRequested);
     on<_BackgroundPublishQueued>(
@@ -59,11 +58,9 @@ class BackgroundPublishBloc
   final Future<void> Function(DivineVideoDraft draft, String signedVideo)?
   _challengeHandoff;
 
-  final Future<void> Function(
-    DivineVideoDraft draft,
-    Future<void> Function() write,
-  )?
-  _challengeRecovery;
+  final Future<void> Function(DivineVideoDraft draft, String? signedVideo)?
+  _challengeVideoSuccess;
+  final Future<void> Function(DivineVideoDraft draft)? _challengeDraftCleanup;
 
   /// Keeps the process foregrounded for the whole publish so the in-process
   /// steps after the OS-backed upload (signing, relay broadcast) survive app
@@ -185,10 +182,23 @@ class BackgroundPublishBloc
       // After the emit — the video is already live, so the draft row and its
       // unreferenced media are reclaimed off the publish critical path
       // rather than in front of the success state (#6548). Still inside the
-      // foreground session: deleting the row is the only record that this
-      // publish finished, so losing the process first makes resume offer a
-      // retry for an already-published video.
+      // foreground session. Challenge videos first persist terminal status
+      // independently of signing readiness; ordinary videos retain cleanup.
       if (event.draft.challengeContext != null) {
+        try {
+          final record = _challengeVideoSuccess;
+          if (record == null) {
+            throw StateError('Video success store unavailable');
+          }
+          await record(event.draft, result.signedEventBody);
+        } on Object catch (error, stackTrace) {
+          Log.error(
+            'Could not persist successful challenge video',
+            error: error,
+            stackTrace: stackTrace,
+            category: LogCategory.video,
+          );
+        }
         try {
           final body = result.signedEventBody;
           final handoff = _challengeHandoff;
@@ -196,47 +206,22 @@ class BackgroundPublishBloc
             throw StateError('Challenge handoff unavailable');
           }
           await handoff(event.draft, body);
-        } on Object catch (error, stackTrace) {
-          // Video success is final. Preserve a published draft for entry-only
-          // recovery; never feed this into the failed-video upload queue.
-          try {
-            final recover = _challengeRecovery;
-            if (recover == null) {
-              throw StateError('Challenge recovery session unavailable');
-            }
-            await recover(event.draft, () async {
-              final recovery = event.draft.copyWith(
-                publishStatus: PublishStatus.published,
-                publishedVideoEvent: result.signedEventBody,
-              );
-              await _draftStorageService.saveDraft(
-                recovery,
-                deferOrphanCleanup: (_) {},
-              );
-              final sourceId = event.draft.sourceDraftId;
-              if (sourceId != null && sourceId != event.draft.id) {
-                await _draftStorageService.saveDraft(
-                  recovery.copyWith(id: sourceId),
-                  deferOrphanCleanup: (_) {},
-                );
-              }
-            });
-          } on Object catch (storageError, storageStack) {
-            Log.error(
-              'Could not persist successful challenge video recovery',
-              error: storageError,
-              stackTrace: storageStack,
-              category: LogCategory.video,
-            );
+          final cleanup = _challengeDraftCleanup;
+          if (cleanup == null) {
+            throw StateError('Challenge draft cleanup unavailable');
           }
+          await cleanup(event.draft);
+        } on Object catch (error, stackTrace) {
+          // Video success is terminal even when signing capability disappeared.
+          // A successful terminal write above keeps it out of resume queues.
           Log.error(
             'Challenge handoff needs retry after successful video',
             error: error,
             stackTrace: stackTrace,
             category: LogCategory.video,
           );
-          return;
         }
+        return;
       }
       await _deletePublishedDrafts(event.draft);
       return;

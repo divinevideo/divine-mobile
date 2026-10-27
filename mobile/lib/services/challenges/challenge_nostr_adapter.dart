@@ -12,22 +12,35 @@ class ChallengeNostrAdapter {
     required this.client,
     required this.knownRelays,
     required this.checkOwner,
+    this.challengeRelays,
     this.timeout = const Duration(seconds: 8),
   });
   final NostrClient client;
   final List<String> Function() knownRelays;
   final Future<void> Function() checkOwner;
+  final List<String> Function(String coordinate)? challengeRelays;
   final Duration timeout;
   static const definitionLimit = 64;
   static const entryLimit = 256;
   static const int maxReadBytes = 4 * 1024 * 1024;
   static const maxKnownRelays = 16;
 
-  List<String> _allowed() => knownRelays()
-      .where(client.isRelayAllowed)
-      .toSet()
-      .take(maxKnownRelays)
-      .toList();
+  ({List<String> relays, bool truncated}) _allowed([String? coordinate]) {
+    final selected = <String, String>{};
+    for (final relay in [
+      if (coordinate != null) ...?challengeRelays?.call(coordinate),
+      ...knownRelays(),
+    ]) {
+      final normalized = normalizeRelayUrl(relay);
+      if (normalized != null && client.isRelayAllowed(relay)) {
+        selected.putIfAbsent(normalized, () => relay);
+      }
+    }
+    return (
+      relays: selected.values.take(maxKnownRelays).toList(),
+      truncated: selected.length > maxKnownRelays,
+    );
+  }
 
   Future<RawChallengeRead> read(String coordinate) async {
     await checkOwner();
@@ -39,7 +52,8 @@ class ChallengeNostrAdapter {
       'authors': [parts[1]],
       '#d': [parts.skip(2).join(':')],
     };
-    final relays = _allowed();
+    final selection = _allowed(coordinate);
+    final relays = selection.relays;
     if (relays.isEmpty) {
       return RawChallengeRead(
         records: const [],
@@ -98,7 +112,7 @@ class ChallengeNostrAdapter {
       source: ReadSource.relay,
       completeness: ReadCompleteness.partial,
       revisionsComplete:
-          relays.length < maxKnownRelays &&
+          !selection.truncated &&
           definitions.isComplete &&
           !definitions.possiblyCapped &&
           definitions.answeredNetworkRelayCount == normalizedCount &&
@@ -109,7 +123,7 @@ class ChallengeNostrAdapter {
   /// Exact revision lookup, never an addressable latest-video substitution.
   Future<NostrEvent?> exactEvent(String id) async {
     await checkOwner();
-    final relays = _allowed();
+    final relays = _allowed().relays;
     if (relays.isEmpty) return null;
     final result = await client.readEvents(
       [

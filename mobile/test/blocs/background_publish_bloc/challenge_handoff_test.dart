@@ -58,7 +58,14 @@ void main() {
             throw StateError('Must not upload again'),
         draftStorageService: drafts,
         challengeHandoff: (_, _) async => throw StateError('Disk unavailable'),
-        challengeRecovery: (_, write) => write(),
+        challengeVideoSuccess: (value, signedVideo) async {
+          saved.complete(
+            value.copyWith(
+              publishStatus: PublishStatus.published,
+              publishedVideoEvent: signedVideo,
+            ),
+          );
+        },
       );
       addTearDown(bloc.close);
       bloc.add(
@@ -169,6 +176,8 @@ void main() {
           videoPublishServiceFactory: ({required onProgress}) async =>
               throw StateError('Must not upload again'),
           draftStorageService: drafts,
+          challengeVideoSuccess: (_, _) async {},
+          challengeDraftCleanup: (value) => drafts.deleteDraft(value.id),
           challengeHandoff: (value, signedVideo) async {
             expect(signedVideo, body);
             entered.complete();

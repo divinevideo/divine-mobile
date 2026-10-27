@@ -739,6 +739,13 @@ class Nostr {
         filters,
         (event) {
           if (collectionLimited) return;
+          // Pool admission has checked the envelope; share the bounded box's
+          // existing IDs rather than retaining an unbounded delivery history.
+          // Replication across relays consumes one retained event/byte budget.
+          if (eventBox.getById(event.id) != null) {
+            eventBox.add(event); // Preserve source attribution for duplicates.
+            return;
+          }
           final bytes = maxCollectedBytes == null
               ? 0
               : utf8.encode(jsonEncode(event.toJson())).length;

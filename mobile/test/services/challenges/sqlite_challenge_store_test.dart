@@ -6,14 +6,10 @@ import 'package:challenges_repository/challenges_repository.dart';
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
-import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/models/challenge_recording_context.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/services/account_state_write_barrier.dart';
 import 'package:openvine/services/challenges/sqlite_challenge_store.dart';
-import 'package:openvine/services/draft_storage_service.dart';
-import 'package:openvine/services/video_publish/video_publish_service.dart';
 
 import '../../../packages/challenges_repository/test/harness.dart' show Harness;
 
@@ -22,20 +18,6 @@ class _HeldDao extends ChallengeRecordsDao {
   Completer<void>? entered;
   Completer<void>? release;
   String heldCategory = 'action';
-  bool pauseRecovery = false;
-  @override
-  Future<T> withOwner<T>(
-    String owner,
-    String generation,
-    Future<T> Function() write,
-  ) async {
-    if (pauseRecovery) {
-      entered!.complete();
-      await release!.future;
-    }
-    return super.withOwner(owner, generation, write);
-  }
-
   @override
   Future<String> put(
     String owner,
@@ -61,8 +43,6 @@ class _HeldDao extends ChallengeRecordsDao {
     );
   }
 }
-
-class _Drafts extends Mock implements DraftStorageService {}
 
 void main() {
   group('SQLite app challenge adapter', () {
@@ -133,104 +113,6 @@ void main() {
       );
     }
 
-    test('paused successful-video draft fallback cannot recreate removed owner data', () async {
-      final h = Harness();
-      final directory = await Directory.systemTemp.createTemp(
-        'challenge-recovery-race-',
-      );
-      final db = AppDatabase.test(
-        NativeDatabase(File('${directory.path}/app.sqlite')),
-      );
-      addTearDown(() async {
-        await db.close();
-        await directory.delete(recursive: true);
-      });
-      final dao = _HeldDao(db)
-        ..pauseRecovery = true
-        ..entered = Completer<void>()
-        ..release = Completer<void>();
-      final store = await SqliteChallengeStore.open(
-        dao: dao,
-        owner: h.creator.pubkey,
-        currentOwner: () => h.owner,
-      );
-      final context = ChallengeRecordingContext(
-        generation: store.generation,
-        owner: h.creator.pubkey,
-        definition: h.definition,
-        recordingId: 'recording',
-        clientTags: const [],
-      );
-      final draft = DivineVideoDraft.create(
-        id: 'successful-video',
-        clips: const [],
-        title: '',
-        description: '',
-        hashtags: {},
-        selectedApproach: 'video',
-        challengeContext: context,
-      );
-      final drafts = _Drafts();
-      registerFallbackValue(draft);
-      when(
-        () => drafts.saveDraft(
-          any(),
-          deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
-        ),
-      ).thenAnswer((invocation) async {
-        final saved = invocation.positionalArguments.first as DivineVideoDraft;
-        await db.draftsDao.upsertDraft(
-          id: saved.id,
-          title: saved.title,
-          description: saved.description,
-          publishStatus: saved.publishStatus.name,
-          createdAt: saved.createdAt,
-          lastModified: saved.lastModified,
-          data: jsonEncode(saved.toJson()),
-          renderedFilePath: null,
-          renderedThumbnailPath: null,
-          ownerPubkey: context.owner,
-        );
-      });
-      final barrier = AccountStateWriteBarrier();
-      barrier.register(context.owner, store.retire);
-      final bloc = BackgroundPublishBloc(
-        videoPublishServiceFactory: ({required onProgress}) async =>
-            throw StateError('Never upload a successful video again'),
-        draftStorageService: drafts,
-        challengeHandoff: (_, _) async =>
-            throw StateError('Handoff unavailable'),
-        challengeRecovery: (_, write) => store.recoveryWrite(write),
-      );
-      final body = jsonEncode(h.video.toJson());
-      bloc.add(
-        BackgroundPublishRequested(
-          draft: draft,
-          publishmentProcess: Future.value(
-            PublishSuccess(signedEventBody: body),
-          ),
-        ),
-      );
-      await dao.entered!.future;
-      expect(bloc.state.recentlyPublished.single.signedVideoBody, body);
-      h.owner = null;
-      await barrier.stop(context.owner);
-      await db.challengeRecordsDao.removeOwner(context.owner);
-      dao.release!.complete();
-      await bloc.close();
-      expect(await db.customSelect('SELECT * FROM drafts').get(), isEmpty);
-      expect(
-        await db.customSelect('SELECT * FROM challenge_records').get(),
-        isEmpty,
-      );
-      verifyNever(
-        () => drafts.saveDraft(
-          any(),
-          deferOrphanCleanup: any(named: 'deferOrphanCleanup'),
-        ),
-      );
-      verifyNever(() => drafts.deleteDraft(any()));
-    });
     test(
       'draft JSON and publish copy preserve context while duplicate retires it',
       () {
