@@ -178,7 +178,7 @@ void main() {
       expect(sites.single.line, 5);
     });
 
-    test('counts a MaterialApp with delegates that omit AppLocalizations', () {
+    test('counts a delegate list without appLocalizationsDelegates', () {
       final sites = scan('''
 void main() {
   pumpWidget(
@@ -318,7 +318,7 @@ void main() {
       expect(sites.single.line, 4);
     });
 
-    test('does not count MaterialApp.router that registers delegates', () {
+    test('does not count MaterialApp.router using the app list', () {
       final sites = scan('''
 void main() {
   pumpWidget(
