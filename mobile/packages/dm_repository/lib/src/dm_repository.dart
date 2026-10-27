@@ -5220,9 +5220,10 @@ class DmRepository {
       // the processed ledger would not avoid cryptographic work on replay.
       if (recipientPubkey == null) return;
 
-      // Content that is not `<ciphertext>?iv=<iv>` cannot decrypt under any
-      // key or signer: drop it for good instead of asking one (#8712). An
-      // injected decryptor replaces NIP-04 decryption and judges its own input.
+      // Content that is not a NIP-04 payload, `<ciphertext>?iv=<iv>` with its
+      // base64 read as leniently as common decoders read it, is dropped for
+      // good instead of handed to a signer (#8712). An injected decryptor
+      // replaces NIP-04 decryption and judges its own input.
       if (_nip04Decryptor == null &&
           !NIP04.isWellFormedPayload(nip04Event.content)) {
         await _recordProcessedWrap(nip04Event.id, ownerPubkey: ownerPubkey);

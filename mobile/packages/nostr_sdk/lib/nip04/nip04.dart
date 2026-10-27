@@ -120,19 +120,33 @@ class NIP04 {
     if (parts.length != 2) {
       return null;
     }
+    var ciphertext = _decodeBase64(parts[0]);
+    var iv = _decodeBase64(parts[1]);
+    if (ciphertext == null ||
+        iv == null ||
+        iv.length != _aesBlockSize ||
+        ciphertext.isEmpty ||
+        ciphertext.length % _aesBlockSize != 0) {
+      return null;
+    }
+    return (ciphertext: ciphertext, iv: iv);
+  }
+
+  /// [text] read as base64 the way lenient decoders read it: ASCII
+  /// whitespace, such as the line breaks of wrapped output, is skipped and
+  /// missing `=` padding is restored. `null` when it is not base64 even so.
+  static Uint8List? _decodeBase64(String text) {
+    var compact = text.replaceAll(_asciiWhitespace, "");
     try {
-      var ciphertext = base64.decode(parts[0]);
-      var iv = base64.decode(parts[1]);
-      if (iv.length != _aesBlockSize ||
-          ciphertext.isEmpty ||
-          ciphertext.length % _aesBlockSize != 0) {
-        return null;
-      }
-      return (ciphertext: ciphertext, iv: iv);
+      return base64.decode(
+        compact.padRight((compact.length + 3) ~/ 4 * 4, "="),
+      );
     } on FormatException {
       return null;
     }
   }
+
+  static final _asciiWhitespace = RegExp(r"[\t\n\v\f\r ]");
 
   static const _aesBlockSize = 16;
 
@@ -188,8 +202,8 @@ class NIP04 {
   /// Whether [payload] has the shape [decrypt] can work on: one `?iv=`, a
   /// 16-byte IV, and ciphertext made of whole AES blocks.
   ///
-  /// Stricter than [isEncrypted], which only spots the marker. A payload
-  /// that fails this check cannot be decrypted under any key or signer.
+  /// Stricter than [isEncrypted], which only spots the marker. A payload that
+  /// fails this check is not one [decrypt] can read under any key.
   static bool isWellFormedPayload(String payload) =>
       _parsePayload(payload) != null;
 }

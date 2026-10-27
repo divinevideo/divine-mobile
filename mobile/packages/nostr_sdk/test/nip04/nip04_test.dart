@@ -32,6 +32,16 @@ const _malformedPayloads = <String, String>{
   'ciphertext that is not base64': '!!!!?iv=$_iv',
 };
 
+/// [_payload] as other encoders and lenient decoders write and read it.
+const _lenientPayloads = <String, String>{
+  'an iv without = padding': '$_ciphertext?iv=7nPnLlh3IwQzb+Z8xwpdkg',
+  'ciphertext wrapped onto a second line':
+      'WpJTI8eH70aeA/LAneRTOtppZ37p\r\n3cR1vsG+FosC3b9FtIwqknvTc6qvL2RUOGrp'
+      '?iv=$_iv',
+  'a trailing newline': '$_payload\n',
+  'a space before ?iv=': '$_ciphertext ?iv=$_iv',
+};
+
 /// Peer keys no point on secp256k1 has: the curve's maths cannot give them a
 /// y, so neither direction can derive a shared key from them.
 const _invalidPeerKeys = <String, String>{
@@ -48,6 +58,13 @@ void main() {
       test('accepts a payload produced by another implementation', () {
         expect(NIP04.isWellFormedPayload(_payload), isTrue);
       });
+
+      for (final MapEntry(key: shape, value: payload)
+          in _lenientPayloads.entries) {
+        test('accepts $shape', () {
+          expect(NIP04.isWellFormedPayload(payload), isTrue);
+        });
+      }
 
       for (final MapEntry(key: shape, value: payload)
           in _malformedPayloads.entries) {
@@ -68,6 +85,20 @@ void main() {
           equals('hello from an independent implementation'),
         );
       });
+
+      for (final MapEntry(key: shape, value: payload)
+          in _lenientPayloads.entries) {
+        test('decrypts $shape', () {
+          expect(
+            NIP04.decrypt(
+              payload,
+              NIP04.getAgreement(_recipientPrivateKey),
+              _senderPubkey,
+            ),
+            equals('hello from an independent implementation'),
+          );
+        });
+      }
 
       test('throws FormatException for a payload sent to another key', () {
         expect(
