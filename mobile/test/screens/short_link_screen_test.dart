@@ -12,8 +12,83 @@ import 'package:openvine/blocs/short_link/short_link_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/short_link_screen.dart';
 import 'package:openvine/services/short_link_resolver.dart';
+import 'package:openvine/utils/external_link_launcher.dart';
 
 void main() {
+  testWidgets(
+    'resolving a short link preserves the originating page for Back',
+    (tester) async {
+      final pending = Completer<http.Response>();
+      final uri = Uri.parse('https://divine.video/l/Abc12345');
+      final client = MockClient((_) => pending.future);
+      final cubit = ShortLinkCubit(ShortLinkResolver(client: client));
+      final router = GoRouter(
+        initialLocation: '/source',
+        routes: [
+          GoRoute(
+            path: '/source',
+            builder: (context, _) => Scaffold(
+              body: TextButton(
+                onPressed: () =>
+                    unawaited(openExternalLink(context, uri.toString())),
+                child: const Text('open link'),
+              ),
+            ),
+          ),
+          GoRoute(
+            path: '/l/:code',
+            builder: (_, _) => BlocProvider.value(
+              value: cubit,
+              child: ShortLinkScreen(uri: uri),
+            ),
+          ),
+          GoRoute(
+            path: '/video/:id',
+            builder: (_, _) => const Scaffold(body: Text('resolved video')),
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('open link'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(
+        router.canPop(),
+        isTrue,
+        reason: 'receiver is pushed above source',
+      );
+      final lookup = cubit.resolve(uri);
+      pending.complete(
+        http.Response(
+          jsonEncode({
+            'code': 'Abc12345',
+            'short_url': uri.toString(),
+            'url': 'https://divine.video/video/shared',
+          }),
+          200,
+        ),
+      );
+      await lookup;
+      await tester.pumpAndSettle();
+      expect(find.text('resolved video'), findsOneWidget);
+      expect(router.canPop(), isTrue);
+      router.pop();
+      await tester.pumpAndSettle();
+      expect(find.text('open link'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+      router.dispose();
+      await cubit.close();
+      client.close();
+    },
+  );
+
   testWidgets(
     'failed resolution offers retry and retry opens the destination',
     (tester) async {
@@ -62,6 +137,11 @@ void main() {
       await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
       expect(find.text('resolved video'), findsOneWidget);
+      expect(
+        router.canPop(),
+        isFalse,
+        reason: 'cold start must not retain the alias page',
+      );
       await tester.pumpWidget(const SizedBox());
       router.dispose();
       await cubit.close();

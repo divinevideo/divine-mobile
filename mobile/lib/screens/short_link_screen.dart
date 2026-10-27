@@ -23,7 +23,9 @@ class ShortLinkScreen extends StatelessWidget {
             return;
           }
           final target = deepLinkRouterPath(state.link);
-          if (target != null) context.go(target);
+          if (target != null) {
+            context.pushReplacement(target);
+          }
         },
         builder: (context, state) {
           if (state is ShortLinkLoading) return const BrandedLoadingScaffold();
