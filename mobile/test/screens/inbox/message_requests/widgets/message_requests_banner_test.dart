@@ -102,6 +102,22 @@ void main() {
           equals(l10n.inboxMessageRequestsTitle),
         );
       });
+
+      testWidgets('exposes the banner as a button', (tester) async {
+        await tester.pumpWidget(
+          testMaterialApp(
+            home: Scaffold(
+              body: MessageRequestsBanner(requestCount: 3, onTap: () {}),
+            ),
+          ),
+        );
+
+        // The children are excluded, so this flag is the only button role.
+        expect(
+          tester.getSemantics(find.byType(MessageRequestsBanner)),
+          isSemantics(isButton: true),
+        );
+      });
     });
 
     group('interactions', () {
