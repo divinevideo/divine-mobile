@@ -15,6 +15,7 @@ import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/extensions/layer_blend_mode.dart';
 import 'package:openvine/extensions/layer_keyframes.dart';
+import 'package:openvine/extensions/layer_mask_export.dart';
 import 'package:openvine/extensions/tune_adjustment_matrix_extensions.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -1242,6 +1243,7 @@ class VideoEditorRenderService {
     final keyframeClock = item.layer.divineKeyframeClockForExport(
       timelineMap: timelineMap,
     );
+    final shapeMask = item.divineShapeMaskForExport();
     final frames = item.frames;
     final split = frames.length > 1;
     return [
@@ -1262,6 +1264,7 @@ class VideoEditorRenderService {
           animations: animations,
           keyframes: keyframes,
           keyframeClock: keyframeClock,
+          shapeMask: shapeMask,
           blendMode: item.layer.exportBlendMode,
           // A layer without a start or end begins or ends with the video, so
           // its implicit range is the output's. Left null, the native

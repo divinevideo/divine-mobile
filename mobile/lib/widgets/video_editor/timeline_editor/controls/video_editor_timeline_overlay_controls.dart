@@ -9,6 +9,7 @@ import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bl
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/layer_keyframes.dart';
+import 'package:openvine/extensions/layer_mask_keyframes.dart';
 import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/extensions/tune_adjustment_matrix_extensions.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
@@ -423,14 +424,15 @@ class _LayerOverlayControls extends StatelessWidget {
           DetachedClipLayerData.metaOf(layer),
         ) ??
         Duration.zero;
-    // Each part keeps the keyframes that move it, so both go on exactly as
-    // the whole layer did.
+    // Each part keeps the keyframes that move it and its mask, so both go on
+    // exactly as the whole layer did.
     final second = _reownDetachedClip(
       layer.copyWith(
         id: secondId,
         startTime: splitAt,
         endTime: item.endTime,
         keyframes: layer.keyframesForPart(splitAt, item.endTime),
+        mask: layer.maskForPart(splitAt, item.endTime),
       ),
       layerId: secondId,
       sourceOffset: headOffset + (splitAt - item.startTime),
@@ -439,6 +441,7 @@ class _LayerOverlayControls extends StatelessWidget {
     layers[layerIdx] = layer.copyWith(
       endTime: splitAt,
       keyframes: layer.keyframesForPart(item.startTime, splitAt),
+      mask: layer.maskForPart(item.startTime, splitAt),
     );
     layers.insert(layerIdx + 1, second);
     editor.addHistory(layers: layers);

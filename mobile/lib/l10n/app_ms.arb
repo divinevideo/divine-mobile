@@ -4955,6 +4955,8 @@
   "videoEditorShapeMaskCornersLabel": "Penjuru",
   "videoEditorShapeMaskCornersSquare": "Bersegi",
   "videoEditorShapeMaskCornersRound": "Bulat",
+  "videoEditorShapeMaskKeyframesHint": "Tambah bingkai kunci, alihkan kepala main, kemudian buka semula topeng untuk mengalihkan, mengubah saiz, memutar atau melembutkan bentuk. Bentuk meluncur dari bingkai kunci ke bingkai kunci.",
+  "videoEditorShapeMaskKeyframesSemanticLabel": "Edit bingkai kunci topeng bentuk",
   "videoEditorShapeMaskBackgroundLabel": "Latar belakang",
   "videoEditorChromaKeyAutoDetect": "Kesan automatik",
   "videoEditorChromaKeyPresetGreen": "Hijau",

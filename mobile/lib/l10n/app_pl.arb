@@ -4109,6 +4109,8 @@
   "videoEditorShapeMaskCornersLabel": "Rogi",
   "videoEditorShapeMaskCornersSquare": "Proste",
   "videoEditorShapeMaskCornersRound": "Zaokrąglone",
+  "videoEditorShapeMaskKeyframesHint": "Dodaj klatkę kluczową, przesuń głowicę odtwarzania, a potem otwórz maskę ponownie, aby przesunąć, przeskalować, obrócić lub zmiękczyć kształt. Kształt płynnie przechodzi między klatkami kluczowymi.",
+  "videoEditorShapeMaskKeyframesSemanticLabel": "Edytuj klatki kluczowe maski kształtu",
   "videoEditorShapeMaskBackgroundLabel": "Tło",
   "videoEditorChromaKeyAutoDetect": "Wykryj automatycznie",
   "videoEditorChromaKeyPresetGreen": "Zielony",

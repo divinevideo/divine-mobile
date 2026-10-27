@@ -9826,6 +9826,14 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'گول';
 
   @override
+  String get videoEditorShapeMaskKeyframesHint =>
+      'کی فریم شامل کریں، پلے ہیڈ کو آگے پیچھے کریں، پھر شکل کو ہلانے، اس کا سائز بدلنے، گھمانے یا نرم کرنے کے لیے ماسک دوبارہ کھولیں۔ شکل ایک کی فریم سے اگلے تک سرکتی ہے۔';
+
+  @override
+  String get videoEditorShapeMaskKeyframesSemanticLabel =>
+      'شیپ ماسک کے کی فریمز میں ترمیم کریں';
+
+  @override
   String get videoEditorShapeMaskBackgroundLabel => 'پس منظر';
 
   @override

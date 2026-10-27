@@ -9370,6 +9370,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => '둥글게';
 
   @override
+  String get videoEditorShapeMaskKeyframesHint =>
+      '키프레임을 추가하고 재생 헤드를 옮긴 다음 마스크를 다시 열어 모양을 이동하거나 크기를 조절하거나 회전하거나 부드럽게 만드세요. 모양이 키프레임 사이를 부드럽게 움직여요.';
+
+  @override
+  String get videoEditorShapeMaskKeyframesSemanticLabel => '모양 마스크 키프레임 편집';
+
+  @override
   String get videoEditorShapeMaskBackgroundLabel => '배경';
 
   @override

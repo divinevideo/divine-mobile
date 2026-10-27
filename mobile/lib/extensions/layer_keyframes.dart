@@ -4,6 +4,7 @@
 import 'dart:ui';
 
 import 'package:openvine/extensions/layer_animation_storage.dart';
+import 'package:openvine/extensions/layer_mask_export.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
@@ -104,26 +105,14 @@ extension LayerExportKeyframes on Layer {
     ];
   }
 
-  /// The clock [divineKeyframesForExport] are timed on: each frame of the
-  /// output at its time on the editor's timeline. Empty when this layer has
-  /// no keyframes or [timelineMap] runs as fast as the editor throughout.
-  ///
-  /// A clip transition plays both clips at once, where the editor shows one
-  /// after the other, so the output runs at half the editor's pace through
-  /// it. A point at each edge of every transition lets the export place every
-  /// frame where the editor shows the layer at that moment, whichever curve
-  /// the layer moves along and however short the stretch.
+  /// The clock [divineKeyframesForExport] and the keyframes of the layer's
+  /// mask are timed on; see [divineKeyframeClock]. Empty when neither has
+  /// keyframes or [timelineMap] runs as fast as the editor throughout.
   List<pve.KeyframeClockPoint> divineKeyframeClockForExport({
     required TransitionTimelineMap timelineMap,
   }) {
-    if (keyframes.isEmpty) return const [];
-    return [
-      for (final boundary in timelineMap.clockBoundaries)
-        pve.KeyframeClockPoint(
-          output: timelineMap.editorToOutput(boundary),
-          keyframe: boundary,
-        ),
-    ];
+    if (keyframes.isEmpty && !hasKeyframedMask) return const [];
+    return divineKeyframeClock(timelineMap);
   }
 
   /// The [Layer.keyframeEffects] as pro_video_editor loops that repeat only

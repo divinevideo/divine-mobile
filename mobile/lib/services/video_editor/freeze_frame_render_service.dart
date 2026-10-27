@@ -181,7 +181,10 @@ class FreezeFrameRenderService {
       videoAspectRatio: source.targetAspectRatio.value,
       thumbnailPath: imagePath,
       isFreezeFrame: true,
-      mask: source.mask,
+      // The held frame holds the mask as it is there, too.
+      mask: source.mask?.at(
+        source.sourceOffsetToPlaybackOffset(framePosition - source.trimStart),
+      ),
       maskBackgroundColor: source.maskBackgroundColor,
       // The rendered still carries no sound; a zero volume says so to every
       // control that offers to turn it up.

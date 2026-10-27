@@ -9914,6 +9914,14 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'Заоблени';
 
   @override
+  String get videoEditorShapeMaskKeyframesHint =>
+      'Добави ключов кадър, премести главата за възпроизвеждане, после отвори маската отново, за да преместиш, оразмериш, завъртиш или омекотиш формата. Тя се плъзга от ключов кадър към ключов кадър.';
+
+  @override
+  String get videoEditorShapeMaskKeyframesSemanticLabel =>
+      'Редактирай ключовите кадри на маската с форма';
+
+  @override
   String get videoEditorShapeMaskBackgroundLabel => 'Фон';
 
   @override

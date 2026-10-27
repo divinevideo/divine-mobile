@@ -19,9 +19,12 @@ import 'package:openvine/router/app_router.dart';
 import 'package:openvine/services/video_editor/clip_thumbnail_manager.dart';
 import 'package:openvine/services/video_editor/clip_waveform_manager.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/keyframes/timeline_keyframe_dot.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/clip_waveform_overlay.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/timeline_trim_handles.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/strips/video_editor_timeline_clip_strip.dart';
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show LayerMask, LayerMaskKeyframe, LayerMaskShape;
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 class _MockClipEditorBloc extends MockBloc<ClipEditorEvent, ClipEditorState>
@@ -133,6 +136,34 @@ void main() {
 
         // Each clip gets a ClipRRect for the tile
         expect(find.byType(ClipRRect), findsNWidgets(3));
+      });
+
+      testWidgets("marks the keyframes of a clip's moving mask on its tile", (
+        tester,
+      ) async {
+        final masked = _createTestClip(id: 'masked', seconds: 4).copyWith(
+          mask: const LayerMask(shape: LayerMaskShape.ellipse).withKeyframes(
+            const [
+              LayerMaskKeyframe(time: Duration(seconds: 1)),
+              LayerMaskKeyframe(time: Duration(seconds: 3)),
+              // Past the clip's end, so not shown.
+              LayerMaskKeyframe(time: Duration(seconds: 9)),
+            ],
+          ),
+        );
+
+        await tester.pumpWidget(
+          buildWidget(
+            clips: [
+              masked,
+              _createTestClip(id: 'plain'),
+            ],
+            waveformManager: buildWaveformManager(),
+          ),
+        );
+        await tester.pump();
+
+        expect(find.byType(TimelineKeyframeDot), findsNWidgets(2));
       });
 
       testWidgets('renders single clip filling total width', (tester) async {

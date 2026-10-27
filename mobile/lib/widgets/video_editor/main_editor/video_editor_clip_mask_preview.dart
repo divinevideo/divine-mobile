@@ -126,7 +126,7 @@ class _ClipMaskCoverState extends State<ClipMaskCover> {
     return [
       for (final window in _windows)
         if (window.weightAt(time) case final weight when weight > 0)
-          (window.mask, window.color, weight),
+          (window.maskAt(time), window.color, weight),
     ];
   }
 
@@ -136,7 +136,8 @@ class _ClipMaskCoverState extends State<ClipMaskCover> {
   }
 
   /// Rebuilds only when what is drawn changes: during playback the playhead
-  /// moves every frame, but the covers only while a fade runs.
+  /// moves every frame, but the covers only while a fade runs or a mask's
+  /// keyframes change it.
   void _onPlayTimeChanged() {
     final covers = _computeCovers();
     if (listEquals(covers, _covers)) return;

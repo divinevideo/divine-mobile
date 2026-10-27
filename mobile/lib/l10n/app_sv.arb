@@ -4109,6 +4109,8 @@
   "videoEditorShapeMaskCornersLabel": "Hörn",
   "videoEditorShapeMaskCornersSquare": "Raka",
   "videoEditorShapeMaskCornersRound": "Rundade",
+  "videoEditorShapeMaskKeyframesHint": "Lägg till en nyckelbildruta, flytta uppspelningshuvudet och öppna sedan masken igen för att flytta, skala, vrida eller mjuka upp formen. Den glider från nyckelbildruta till nyckelbildruta.",
+  "videoEditorShapeMaskKeyframesSemanticLabel": "Redigera formmaskens nyckelbildrutor",
   "videoEditorShapeMaskBackgroundLabel": "Bakgrund",
   "videoEditorChromaKeyAutoDetect": "Hitta automatiskt",
   "videoEditorChromaKeyPresetGreen": "Grön",

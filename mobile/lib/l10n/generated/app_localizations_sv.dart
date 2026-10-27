@@ -9826,6 +9826,14 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'Rundade';
 
   @override
+  String get videoEditorShapeMaskKeyframesHint =>
+      'Lägg till en nyckelbildruta, flytta uppspelningshuvudet och öppna sedan masken igen för att flytta, skala, vrida eller mjuka upp formen. Den glider från nyckelbildruta till nyckelbildruta.';
+
+  @override
+  String get videoEditorShapeMaskKeyframesSemanticLabel =>
+      'Redigera formmaskens nyckelbildrutor';
+
+  @override
   String get videoEditorShapeMaskBackgroundLabel => 'Bakgrund';
 
   @override

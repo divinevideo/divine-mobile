@@ -39,8 +39,12 @@ class LayerKeyframesSheet extends StatefulWidget {
     required this.onOpacityChanged,
     required this.onEffectChanged,
     required this.onCurveSelected,
+    this.hint,
     super.key,
   });
+
+  /// The line on how the keyframes work, or `null` for a layer's.
+  final String? hint;
 
   /// Whether the playhead sits on a keyframe, which the button then removes.
   final bool isOnKeyframe;
@@ -113,7 +117,7 @@ class _LayerKeyframesSheetState extends State<LayerKeyframesSheet> {
             spacing: 16,
             children: [
               Text(
-                l10n.videoEditorKeyframesHint,
+                widget.hint ?? l10n.videoEditorKeyframesHint,
                 style: VineTheme.bodyMediumFont(
                   color: context.vineColors.secondaryText,
                 ),

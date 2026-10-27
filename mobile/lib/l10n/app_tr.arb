@@ -4109,6 +4109,8 @@
   "videoEditorShapeMaskCornersLabel": "Köşeler",
   "videoEditorShapeMaskCornersSquare": "Köşeli",
   "videoEditorShapeMaskCornersRound": "Yuvarlak",
+  "videoEditorShapeMaskKeyframesHint": "Bir ana kare ekle, oynatma kafasını kaydır, sonra şekli taşımak, boyutlandırmak, döndürmek ya da yumuşatmak için maskeyi yeniden aç. Şekil ana kareden ana kareye kayar.",
+  "videoEditorShapeMaskKeyframesSemanticLabel": "Şekil maskesinin ana karelerini düzenle",
   "videoEditorShapeMaskBackgroundLabel": "Arka plan",
   "videoEditorChromaKeyAutoDetect": "Otomatik algıla",
   "videoEditorChromaKeyPresetGreen": "Yeşil",

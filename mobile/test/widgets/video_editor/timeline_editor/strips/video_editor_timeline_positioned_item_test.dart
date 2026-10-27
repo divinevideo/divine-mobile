@@ -428,6 +428,29 @@ void main() {
         );
       });
 
+      testWidgets("marks the mask's keyframes along the top edge, apart "
+          "from the layer's own along the bottom", (tester) async {
+        await pumpSelected(
+          tester,
+          item.copyWith(
+            keyframeTimes: const [Duration(milliseconds: 500)],
+            maskKeyframeTimes: const [Duration(milliseconds: 1500)],
+          ),
+        );
+
+        expect(markers(), findsNWidgets(2));
+        final tile = tester.getRect(find.byType(TimelineOverlayItemTile));
+        final centres = [
+          for (var i = 0; i < 2; i++) tester.getCenter(markers().at(i)),
+        ]..sort((a, b) => a.dx.compareTo(b.dx));
+        // The layer's at 0.5 s on the bottom edge, the mask's at 1.5 s on
+        // the top one.
+        expect(centres.first.dx - tile.left, closeTo(50, 0.5));
+        expect(centres.last.dx - tile.left, closeTo(150, 0.5));
+        expect(centres.first.dy, greaterThan(centres.last.dy));
+        expect(centres.last.dy, closeTo(tile.top, 2));
+      });
+
       testWidgets('leave the trim handle grab zone to the handle', (
         tester,
       ) async {
