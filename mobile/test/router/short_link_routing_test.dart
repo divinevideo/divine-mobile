@@ -24,7 +24,7 @@ void main() {
         when(() => state.uri).thenReturn(Uri.parse(raw));
         await tester.pumpWidget(
           MaterialApp(
-            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: Builder(
               builder: (context) =>
