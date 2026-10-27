@@ -178,6 +178,28 @@ void main() {
       expect(sites.single.line, 5);
     });
 
+    test('counts the generated delegate listed after the app list too', () {
+      // Never loaded there, since the app list's loader comes first, but
+      // counted anyway: the rule is that a test app names AppLocalizations
+      // nowhere in its delegates.
+      final sites = scan('''
+void main() {
+  pumpWidget(
+    MaterialApp(
+      localizationsDelegates: [
+        ...appLocalizationsDelegates,
+        AppLocalizations.delegate,
+      ],
+      home: Foo(),
+    ),
+  );
+}
+''');
+
+      expect(sites, hasLength(1));
+      expect(sites.single.line, 3);
+    });
+
     test('counts a delegate list without appLocalizationsDelegates', () {
       final sites = scan('''
 void main() {
