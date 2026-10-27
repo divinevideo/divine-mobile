@@ -42,6 +42,11 @@ abstract class DmReactionsRepositoryReportableSites {
   /// still publishes; the superseded emoji's kind-5 removal is lost (#9915).
   static const String publishSupersedeDeletion = 'publish.supersedeDeletion';
 
+  /// `publish`: reading the reacted message, for the kind its `k` tag names,
+  /// threw. The reaction is still sent, tagged as a reaction to a kind-14
+  /// text message.
+  static const String publishTargetKindRead = 'publish.targetKindRead';
+
   /// `publish`: reading a superseded prior reaction's row, to see who it was
   /// sent to, threw. Its removal is recorded, if that write succeeds, and
   /// held for the retry sweep, which reads the row again.

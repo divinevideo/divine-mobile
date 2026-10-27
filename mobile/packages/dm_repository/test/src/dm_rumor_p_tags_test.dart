@@ -73,6 +73,17 @@ class _WireRecordingMessageService extends NIP17MessageService {
   };
 }
 
+/// A message store whose reads fail, as on a damaged database.
+class _UnreadableMessagesDao extends DirectMessagesDao {
+  _UnreadableMessagesDao(super.attachedDatabase);
+
+  @override
+  Future<DirectMessageRow?> getMessageById(
+    String id, {
+    String? ownerPubkey,
+  }) async => throw StateError('disk I/O error');
+}
+
 List<String> _tagValues(Event rumor, String name) => [
   for (final tag in rumor.tags)
     if (tag.length >= 2 && tag[0] == name) tag[1],
@@ -92,18 +103,24 @@ void main() {
     late DirectMessagesDao messagesDao;
     late _WireRecordingMessageService messageService;
     late DmReactionsRepository reactions;
+    late List<String> reportedSites;
 
-    void openFreshDatabase() {
+    void openFreshDatabase({
+      DirectMessagesDao Function(AppDatabase) messagesDaoFor =
+          DirectMessagesDao.new,
+    }) {
       db = AppDatabase.test(NativeDatabase.memory());
       reactionsDao = DmReactionsDao(db);
       conversationsDao = ConversationsDao(db);
-      messagesDao = DirectMessagesDao(db);
+      messagesDao = messagesDaoFor(db);
+      reportedSites = <String>[];
       messageService = _WireRecordingMessageService(_MockNostrClient());
       reactions =
           DmReactionsRepository(
             reactionsDao: reactionsDao,
             conversationsDao: conversationsDao,
             directMessagesDao: messagesDao,
+            errorReporter: (_, _, {required site}) => reportedSites.add(site),
           )..setCredentials(
             userPubkey: _owner,
             messageService: messageService,
@@ -194,6 +211,103 @@ void main() {
           messageService.recipientsOf(EventKind.reaction),
           equals({_alice, _bob}),
         );
+      });
+
+      test('carries the kind of a file message it reacts to', () async {
+        final room = await seedConversation([_owner, _alice]);
+        final message = 'c' * 64;
+        await seedMessage(
+          id: message,
+          conversationId: room,
+          sender: _alice,
+          kind: EventKind.fileMessage,
+        );
+
+        await react(
+          conversationId: room,
+          targetMessageId: message,
+          targetMessageAuthor: _alice,
+        );
+
+        final rumor = messageService.sentRumor(EventKind.reaction);
+        expect(_tagValues(rumor, 'k'), equals(['${EventKind.fileMessage}']));
+      });
+
+      test('carries kind 4 for a legacy NIP-04 message', () async {
+        final room = await seedConversation([_owner, _alice]);
+        final message = '4' * 64;
+        await seedMessage(
+          id: message,
+          conversationId: room,
+          sender: _alice,
+          kind: EventKind.directMessage,
+        );
+
+        await react(
+          conversationId: room,
+          targetMessageId: message,
+          targetMessageAuthor: _alice,
+        );
+
+        final rumor = messageService.sentRumor(EventKind.reaction);
+        expect(_tagValues(rumor, 'k'), equals(['${EventKind.directMessage}']));
+      });
+
+      test('carries kind 14 for a text message', () async {
+        final room = await seedConversation([_owner, _alice]);
+        final message = 'd' * 64;
+        await seedMessage(id: message, conversationId: room, sender: _alice);
+
+        await react(
+          conversationId: room,
+          targetMessageId: message,
+          targetMessageAuthor: _alice,
+        );
+
+        final rumor = messageService.sentRumor(EventKind.reaction);
+        expect(
+          _tagValues(rumor, 'k'),
+          equals(['${EventKind.privateDirectMessage}']),
+        );
+      });
+
+      test('carries kind 14 when the reacted message cannot be read', () async {
+        await db.close();
+        openFreshDatabase(messagesDaoFor: _UnreadableMessagesDao.new);
+        final room = await seedConversation([_owner, _alice]);
+
+        await react(
+          conversationId: room,
+          targetMessageId: 'f' * 64,
+          targetMessageAuthor: _alice,
+        );
+
+        final rumor = messageService.sentRumor(EventKind.reaction);
+        expect(
+          _tagValues(rumor, 'k'),
+          equals(['${EventKind.privateDirectMessage}']),
+        );
+        expect(
+          reportedSites,
+          equals([DmReactionsRepositoryReportableSites.publishTargetKindRead]),
+        );
+      });
+
+      test('carries kind 14 when the reacted message is not stored', () async {
+        final room = await seedConversation([_owner, _alice]);
+
+        await react(
+          conversationId: room,
+          targetMessageId: 'f' * 64,
+          targetMessageAuthor: _alice,
+        );
+
+        final rumor = messageService.sentRumor(EventKind.reaction);
+        expect(
+          _tagValues(rumor, 'k'),
+          equals(['${EventKind.privateDirectMessage}']),
+        );
+        expect(reportedSites, isEmpty);
       });
     });
 

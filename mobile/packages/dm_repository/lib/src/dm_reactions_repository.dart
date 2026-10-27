@@ -556,11 +556,15 @@ class DmReactionsRepository {
       );
     }
 
+    final targetKind = await _targetMessageKind(
+      targetMessageId,
+      ownerPubkey: ownerPubkey,
+    );
     // buildRumor already tags the author, the one `p` NIP-25 asks for
     // (25.md:25); repeating it here put the author in twice (#9774).
     final additionalTags = <List<String>>[
       ['e', targetMessageId],
-      ['k', EventKind.privateDirectMessage.toString()],
+      ['k', '$targetKind'],
     ];
     final rumor = messageService.buildRumor(
       recipientPubkey: targetMessageAuthor,
@@ -583,6 +587,35 @@ class DmReactionsRepository {
         messageService: messageService,
       ),
     );
+  }
+
+  /// The kind of the stored message [messageId], for a reaction's `k` tag
+  /// (25.md:31), so a reaction to a kind-15 file message says so. A message
+  /// that is not stored, or cannot be read, is taken as a kind-14 text
+  /// message, which every reaction was tagged as before #9774.
+  Future<int> _targetMessageKind(
+    String messageId, {
+    required String ownerPubkey,
+  }) async {
+    try {
+      final message = await _directMessagesDao?.getMessageById(
+        messageId,
+        ownerPubkey: ownerPubkey,
+      );
+      return message?.messageKind ?? EventKind.privateDirectMessage;
+    } on Object catch (e, st) {
+      Log.warning(
+        'DM reaction to $messageId: its kind cannot be read '
+        '(${e.runtimeType}), so it is tagged as a text message',
+        category: LogCategory.system,
+      );
+      _errorReporter?.call(
+        e,
+        st,
+        site: DmReactionsRepositoryReportableSites.publishTargetKindRead,
+      );
+      return EventKind.privateDirectMessage;
+    }
   }
 
   Future<DmReactionPublishResult> _publishRumor({

@@ -779,9 +779,12 @@ void main() {
           await pumpEventQueue();
 
           expect(result.success, isTrue);
+          // The same unreadable row costs the new reaction its `k` (#9774) and
+          // the old one's removal its recipients; each is reported once.
           expect(
             reporterSites,
             equals([
+              DmReactionsRepositoryReportableSites.publishTargetKindRead,
               DmReactionsRepositoryReportableSites
                   .wrapRecipientsTargetMessageRead,
             ]),
@@ -3406,9 +3409,12 @@ void main() {
 
           expect(result.success, isFalse);
           expect(result.optimisticInsertSucceeded, isTrue);
+          // The unreadable row costs the reaction both its `k` (#9774) and
+          // its recipients; each is reported once.
           expect(
             reporterSites,
             equals([
+              DmReactionsRepositoryReportableSites.publishTargetKindRead,
               DmReactionsRepositoryReportableSites
                   .wrapRecipientsTargetMessageRead,
             ]),
