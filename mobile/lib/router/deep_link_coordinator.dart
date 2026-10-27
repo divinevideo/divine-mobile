@@ -217,6 +217,15 @@ class DeepLinkCoordinator {
         );
 
         switch (deepLink.type) {
+          case DeepLinkType.shortLink:
+            final target = deepLinkRouterPath(deepLink);
+            if (target != null) {
+              _navigateToListRoute(
+                currentLocation: currentLocation,
+                targetPath: target,
+                familyPrefix: '/l/',
+              );
+            }
           case DeepLinkType.video:
             final targetPath = deepLinkRouterPath(deepLink);
             if (targetPath != null) {

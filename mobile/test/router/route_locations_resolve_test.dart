@@ -135,6 +135,7 @@ final _locations = <String, List<String>>{
   'profileUnavailablePinsForNpub': [
     RoutePaths.profileUnavailablePinsForNpub(_npub),
   ],
+  'shortLinkForCode': [RoutePaths.shortLinkForCode('Abc12345')],
   'soundDetailForId': [RoutePaths.soundDetailForId(_eventId)],
   'subtitleEditorFor': [RoutePaths.subtitleEditorFor(_eventId)],
   'videoDetailForId': [RoutePaths.videoDetailForId(_eventId)],
@@ -165,6 +166,8 @@ const _notLocations = {
   'followingNewSubject',
   // A route pattern with an :npub placeholder; its builder is checked instead.
   'profileUnavailablePins',
+  // Alias route pattern; the complete shortLinkForCode location is checked above.
+  'shortLink',
   // Web and Share addresses. No route is registered at them: the deep-link
   // service maps them onto an in-app location (peopleListForId with an
   // owner query), which is checked itself.
