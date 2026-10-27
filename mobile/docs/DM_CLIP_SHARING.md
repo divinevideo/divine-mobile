@@ -165,13 +165,15 @@ so nothing unverified gets in, but nothing verified does either.
 | Result | What the recipient sees |
 |---|---|
 | verified | the clip is added to their library |
-| no credentials, untrusted signer, invalid, not a camera capture | "We couldn't confirm this was shot with the Divine camera…" — nothing is saved |
-| check could not run (offline without anchors), or it could not be told whether the file is a published post | "Couldn't check this clip right now…" — try again later |
+| no credentials, and the exact file of an archived Vine | the Vine is added to their library (see [Archived Vines](#archived-vines)) |
+| no credentials and not an archived Vine, untrusted signer, invalid, not a camera capture | "We couldn't confirm this was shot with the Divine camera…" — nothing is saved |
+| check could not run (offline without anchors), or it could not be told whether the file is a published post or an archived Vine | "Couldn't check this clip right now…" — try again later |
 
 On the sending side, every picked clip is checked before the first upload. If
-one fails a check that ran, none of them is sent, and the sender sees "We
-couldn't confirm this clip was shot with the Divine camera, so it can't be
-sent as a clip." Clips then go out one after another and keep going if the
+one fails a check that ran and is not an archived Vine, none of them is sent,
+and the sender sees "We couldn't confirm this clip was shot with the Divine
+camera, so it can't be sent as a clip." When it cannot be told whether a clip
+is an archived Vine, it goes out like one whose check could not run. Clips then go out one after another and keep going if the
 sender leaves the chat; the outcome is reported wherever they are. If a later
 upload fails, the ones before it are already sent and the sender sees how many
 went out ("Sent 2 of 3").
@@ -214,6 +216,36 @@ uploaded it). A match credits whoever published the post, linked to it with an
 `a` tag the way a clip imported from a published video is, and not the person
 who forwarded it. If the lookup cannot run, nothing is imported and the
 recipient is asked to try again rather than credit the wrong person.
+
+### Archived Vines
+
+An archived Vine was filmed years before Divine existed, so its file carries no
+C2PA manifest and fails the check as having no credentials. Adding it to clips
+from the feed needs no check, though, so a received copy of it is let in too,
+as long as it is the archive's exact file:
+
+- Only a file with no manifest at all is looked at. One whose manifest fails
+  is footage claiming a history it cannot show, and stays out.
+- Its SHA-256 is looked up on the relays as the `x` tag of a video event
+  (`VideosRepository.getVideosByFileHash`). The media server cannot answer
+  this: for older Vines it names the archive's importer rather than the viner
+  as the owner, and their posts keep their original Vine date, so they fall
+  outside the window the forwarded-post lookup searches.
+- A post that says it is a Vine (`platform` `vine`) and names that file
+  identifies it; when several do, the oldest is taken. This is the same mark
+  the feed's **Add to clips** relies on, so a Vine let in this way is never
+  one the recipient could not have added from the feed.
+
+`VideoClipImportService.importReceivedVine` then stores it the way a feed
+import of that post does: credited to the viner and linked to the post,
+cropped square, with no proof record. The sender is not credited.
+
+Only the archive's exact file matches. A Vine saved with **Save video** from
+the feed is a watermarked re-encode, and an edit that mixes a Vine with other
+footage is never signed (see [How a clip is signed](#how-a-clip-is-signed)), so
+neither can be told apart from other footage and both stay out. A Vine added
+to clips from the feed, sent from the clip library or saved to the gallery
+from there, keeps its exact file.
 
 ## Back from the gallery
 

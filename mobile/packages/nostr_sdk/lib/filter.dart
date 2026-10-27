@@ -48,6 +48,10 @@ class Filter {
   /// a list of MIME types that are referenced in an "m" tag (NIP-94 file metadata)
   List<String>? m;
 
+  /// a list of SHA-256 file hashes that are referenced in an "x" tag (NIP-94
+  /// file metadata)
+  List<String>? x;
+
   /// a timestamp, events must be newer than this to pass
   int? since;
 
@@ -76,6 +80,7 @@ class Filter {
     this.uppercaseA,
     this.uppercaseK,
     this.m,
+    this.x,
     this.since,
     this.until,
     this.limit,
@@ -100,6 +105,7 @@ class Filter {
     uppercaseA = json['#A'] == null ? null : List<String>.from(json['#A']);
     uppercaseK = json['#K'] == null ? null : List<String>.from(json['#K']);
     m = json['#m'] == null ? null : List<String>.from(json['#m']);
+    x = json['#x'] == null ? null : List<String>.from(json['#x']);
     since = json['since'];
     until = json['until'];
     limit = json['limit'];
@@ -151,6 +157,9 @@ class Filter {
     if (m != null) {
       data['#m'] = m;
     }
+    if (x != null) {
+      data['#x'] = x;
+    }
     if (since != null) {
       data['since'] = since;
     }
@@ -198,6 +207,7 @@ class Filter {
     List<String> uppercaseAs = [];
     List<String> uppercaseKs = [];
     List<String> ms = [];
+    List<String> xs = [];
     for (var tag in event.tags) {
       if (tag.length > 1) {
         var name = tag[0];
@@ -225,6 +235,8 @@ class Filter {
           uppercaseKs.add(value);
         } else if (name == "m") {
           ms.add(value);
+        } else if (name == "x") {
+          xs.add(value);
         }
       }
     }
@@ -303,6 +315,13 @@ class Filter {
           return m!.contains(v);
         })))) {
       // filter query m but ms don't contains m.
+      return false;
+    }
+    if (x != null &&
+        (!(xs.any((v) {
+          return x!.contains(v);
+        })))) {
+      // filter query x but xs don't contains x.
       return false;
     }
 

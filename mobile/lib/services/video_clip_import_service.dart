@@ -79,6 +79,10 @@ enum VideoClipImportFailureReason {
   /// It could not be determined whether the received file is an already
   /// published post, so it is not known whom to credit.
   sourceLookupFailed,
+
+  /// The received file is not the file of a published Vine post, so nothing
+  /// shows where it came from.
+  notArchivedVine,
   saveFailed,
 }
 
@@ -150,49 +154,15 @@ class VideoClipImportService {
     }
 
     final importedAt = _now();
-    final clipId = _clipIdFor(video, importedAt);
 
     try {
-      await Directory(documentsPath).create(recursive: true);
-      final copiedVideo = await _copyVideoIntoDocuments(
-        downloaded,
-        documentsPath,
-        clipId,
-      );
-
-      final metadata = await _probeMetadata(copiedVideo);
-      final duration = _durationFor(video, metadata);
-
-      final thumbnail = await _extractThumbnail(
-        videoPath: copiedVideo.path,
-        targetTimestamp: _thumbnailTimestampFor(duration),
-      );
-      final ghostFramePath = await _extractLastFrame(
-        videoPath: copiedVideo.path,
-        videoDuration: duration,
-      );
-
-      final actualRatio = _resolveAspectRatio(video, metadata);
-
-      final clip = DivineVideoClip(
-        id: clipId,
-        video: EditorVideo.file(copiedVideo.path),
-        libraryTitle: defaultLibraryTitleFor(
-          video,
-          libraryTitle: libraryTitle,
-          fallbackTime: importedAt,
-        ),
-        duration: duration,
-        recordedAt: importedAt,
-        thumbnailPath: thumbnail?.path,
-        thumbnailTimestamp: thumbnail?.timestamp,
-        originalAspectRatio: actualRatio ?? 1,
-        targetAspectRatio: _targetAspectRatioFor(video, actualRatio),
-        ghostFramePath: ghostFramePath,
-        sourceAuthorPubkey: video.pubkey,
-        sourceEventId: video.id,
-        sourceAddressableId: video.addressableId,
-        sourceRelayHint: video.sourceRelay,
+      final clip = await _clipOfPublishedVideo(
+        video,
+        source: downloaded,
+        documentsPath: documentsPath,
+        clipId: _clipIdFor(video, importedAt),
+        importedAt: importedAt,
+        libraryTitle: libraryTitle,
       );
 
       await _clipLibraryService.saveClip(clip);
@@ -263,15 +233,123 @@ class VideoClipImportService {
   }) {
     return _importVerifiedClip(
       source: source,
-      clipId:
-          '${DivineVideoClip.receivedDmClipIdPrefix}'
-          '${messageId.replaceAll(RegExp('[^a-zA-Z0-9]'), '')}',
+      clipId: _receivedClipIdFor(messageId),
       c2paManifestId: c2paManifestId,
       senderPubkey: senderPubkey,
       targetAspectRatio: targetAspectRatio,
       contributorPubkeys: contributorPubkeys,
       beforeSave: beforeSave,
     );
+  }
+
+  /// Returns the archived Vine whose exact file [source] is, or null when it
+  /// is none.
+  ///
+  /// An archived Vine carries no C2PA credential, so a received one is told
+  /// apart from other footage without proof by its SHA-256: it must be the
+  /// file a published Vine post names (see
+  /// [PublishedClipSourceResolver.findArchivedVine]).
+  ///
+  /// Throws a [PublishedClipSourceLookupException] when the relays cannot be
+  /// asked, and whatever reading [source] throws when it cannot be read.
+  Future<models.VideoEvent?> findArchivedVine(File source) async {
+    final resolver = _publishedSourceResolver;
+    if (resolver == null) return null;
+    return resolver.findArchivedVine(await _hashFile(source.path));
+  }
+
+  /// Imports an archived Vine received in a direct message into the library.
+  ///
+  /// It is added only when [source] is the exact file of a published Vine
+  /// post (see [findArchivedVine]), so it is the same footage adding that
+  /// post to clips from the feed brings in, and it is stored the same way:
+  /// crediting the viner, linked to the post, without a proof record. Any
+  /// other file fails with [VideoClipImportFailureReason.notArchivedVine],
+  /// and one that cannot be told with
+  /// [VideoClipImportFailureReason.sourceLookupFailed].
+  ///
+  /// The clip's id is derived from [messageId] and [beforeSave] is awaited
+  /// just before the save, both as for [importReceivedClip].
+  ///
+  /// [source] is copied, never moved; the caller still owns it.
+  Future<VideoClipImportResult> importReceivedVine({
+    required File source,
+    required String messageId,
+    Future<void> Function()? beforeSave,
+  }) async {
+    final documentsPath = await _getDocumentsPath();
+    if (documentsPath.isEmpty) {
+      return const VideoClipImportFailure(
+        VideoClipImportFailureReason.unsupportedPlatform,
+      );
+    }
+
+    final clipId = _receivedClipIdFor(messageId);
+    final existing = await _existingClip(clipId);
+    if (existing != null) return existing;
+
+    final models.VideoEvent? vine;
+    try {
+      vine = await findArchivedVine(source);
+    } on PublishedClipSourceLookupException catch (e) {
+      Log.warning(
+        'Could not tell whether a received clip is an archived Vine: $e',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      return const VideoClipImportFailure(
+        VideoClipImportFailureReason.sourceLookupFailed,
+      );
+    } catch (e) {
+      Log.warning(
+        'Failed to hash received clip: ${_failureKind(e)}',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      return const VideoClipImportFailure(
+        VideoClipImportFailureReason.copyFailed,
+      );
+    }
+    if (vine == null) {
+      return const VideoClipImportFailure(
+        VideoClipImportFailureReason.notArchivedVine,
+      );
+    }
+
+    final written = <String>[];
+    try {
+      final clip = await _clipOfPublishedVideo(
+        vine,
+        source: source,
+        documentsPath: documentsPath,
+        clipId: clipId,
+        importedAt: _now(),
+        written: written,
+      );
+      await beforeSave?.call();
+      await _clipLibraryService.saveClip(clip);
+      return VideoClipImportSuccess(clip);
+    } on FileSystemException catch (e) {
+      Log.warning(
+        'Failed to copy received Vine into documents: ${_failureKind(e)}',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      await _deleteAllQuietly(written);
+      return const VideoClipImportFailure(
+        VideoClipImportFailureReason.copyFailed,
+      );
+    } catch (e) {
+      Log.warning(
+        'Failed to save received Vine: ${_failureKind(e)}',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      await _deleteAllQuietly(written);
+      return const VideoClipImportFailure(
+        VideoClipImportFailureReason.saveFailed,
+      );
+    }
   }
 
   /// Imports a video picked from the device gallery into the library.
@@ -386,27 +464,8 @@ class VideoClipImportService {
       );
     }
 
-    final existing = await _clipLibraryService.getClipById(clipId);
-    if (existing != null) {
-      // Another account's trash is not this library's to restore.
-      if (existing.deletedAt == null ||
-          await _clipLibraryService.belongsToAnotherAccount(clipId)) {
-        return VideoClipImportSuccess(existing, alreadyInLibrary: true);
-      }
-      // Saving over a trashed row leaves it in the trash, so the clip would
-      // be reported as added while staying out of sight.
-      final restored = await _clipLibraryService.restore(clipId);
-      final clip = restored
-          ? await _clipLibraryService.getClipById(clipId)
-          : null;
-      // The trash can be emptied or the clip trashed again during import.
-      if (clip == null || clip.deletedAt != null) {
-        return const VideoClipImportFailure(
-          VideoClipImportFailureReason.saveFailed,
-        );
-      }
-      return VideoClipImportSuccess(clip);
-    }
+    final existing = await _existingClip(clipId);
+    if (existing != null) return existing;
 
     final importedAt = _now();
 
@@ -528,6 +587,93 @@ class VideoClipImportService {
     }
   }
 
+  /// The outcome for a clip already saved under [clipId], or null when there
+  /// is none.
+  ///
+  /// It is returned as it is, and restored when it is in this library's
+  /// trash, since bringing it back is what was asked for.
+  Future<VideoClipImportResult?> _existingClip(String clipId) async {
+    final existing = await _clipLibraryService.getClipById(clipId);
+    if (existing == null) return null;
+    // Another account's trash is not this library's to restore.
+    if (existing.deletedAt == null ||
+        await _clipLibraryService.belongsToAnotherAccount(clipId)) {
+      return VideoClipImportSuccess(existing, alreadyInLibrary: true);
+    }
+    // Saving over a trashed row leaves it in the trash, so the clip would
+    // be reported as added while staying out of sight.
+    final restored = await _clipLibraryService.restore(clipId);
+    final clip = restored
+        ? await _clipLibraryService.getClipById(clipId)
+        : null;
+    // The trash can be emptied or the clip trashed again during import.
+    if (clip == null || clip.deletedAt != null) {
+      return const VideoClipImportFailure(
+        VideoClipImportFailureReason.saveFailed,
+      );
+    }
+    return VideoClipImportSuccess(clip);
+  }
+
+  /// Copies [source], the file of the published [video], into
+  /// [documentsPath] as [clipId], and describes the copy as a clip of that
+  /// post. Every file it writes is added to [written], so a failed import
+  /// can delete them.
+  Future<DivineVideoClip> _clipOfPublishedVideo(
+    models.VideoEvent video, {
+    required File source,
+    required String documentsPath,
+    required String clipId,
+    required DateTime importedAt,
+    String? libraryTitle,
+    List<String>? written,
+  }) async {
+    await Directory(documentsPath).create(recursive: true);
+    final copiedVideo = await _copyVideoIntoDocuments(
+      source,
+      documentsPath,
+      clipId,
+    );
+    written?.add(copiedVideo.path);
+
+    final metadata = await _probeMetadata(copiedVideo);
+    final duration = _durationFor(video, metadata);
+
+    final thumbnail = await _extractThumbnail(
+      videoPath: copiedVideo.path,
+      targetTimestamp: _thumbnailTimestampFor(duration),
+    );
+    if (thumbnail != null) written?.add(thumbnail.path);
+    final ghostFramePath = await _extractLastFrame(
+      videoPath: copiedVideo.path,
+      videoDuration: duration,
+    );
+    if (ghostFramePath != null) written?.add(ghostFramePath);
+
+    final actualRatio = _resolveAspectRatio(video, metadata);
+
+    return DivineVideoClip(
+      id: clipId,
+      video: EditorVideo.file(copiedVideo.path),
+      libraryTitle: defaultLibraryTitleFor(
+        video,
+        libraryTitle: libraryTitle,
+        fallbackTime: importedAt,
+      ),
+      duration: duration,
+      recordedAt: importedAt,
+      thumbnailPath: thumbnail?.path,
+      thumbnailTimestamp: thumbnail?.timestamp,
+      originalAspectRatio: actualRatio ?? 1,
+      targetAspectRatio: _targetAspectRatioFor(video, actualRatio),
+      ghostFramePath: ghostFramePath,
+      sourceAuthorPubkey: video.pubkey,
+      sourceEventId: video.id,
+      sourceAddressableId: video.addressableId,
+      sourceRelayHint: video.sourceRelay,
+    );
+  }
+
   static String defaultLibraryTitleFor(
     models.VideoEvent video, {
     String? libraryTitle,
@@ -624,6 +770,11 @@ class VideoClipImportService {
     final targetPath = p.join(documentsPath, '$clipId$extension');
     return source.copy(targetPath);
   }
+
+  /// The id of the clip added from the received video DM [messageId].
+  static String _receivedClipIdFor(String messageId) =>
+      '${DivineVideoClip.receivedDmClipIdPrefix}'
+      '${messageId.replaceAll(RegExp('[^a-zA-Z0-9]'), '')}';
 
   String _clipIdFor(models.VideoEvent video, DateTime importedAt) {
     final safeStableId = video.stableId.replaceAll(

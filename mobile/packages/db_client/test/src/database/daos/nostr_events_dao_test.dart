@@ -1025,6 +1025,36 @@ void main() {
         expect(results.first.id, equals(audioFile.id));
       });
 
+      test('filters by x tags (NIP-94 file hash)', () async {
+        final hash = 'a' * 64;
+        final matching = createEvent(
+          kind: 34236,
+          tags: [
+            ['d', 'matching'],
+            ['x', hash],
+          ],
+          content: '',
+          createdAt: 1000,
+        );
+        final other = createEvent(
+          kind: 34236,
+          tags: [
+            ['d', 'other'],
+            ['x', 'b' * 64],
+          ],
+          content: '',
+          createdAt: 2000,
+        );
+
+        await dao.upsertEventsBatch([matching, other]);
+
+        final results = await dao.getEventsByFilter(
+          Filter(kinds: [34236], x: [hash]),
+        );
+
+        expect(results.map((event) => event.id), [matching.id]);
+      });
+
       test(
         'filters by uppercase A tags (NIP-22 root addressable event reference)',
         () async {
