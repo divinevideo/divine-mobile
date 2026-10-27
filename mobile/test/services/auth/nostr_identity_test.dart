@@ -222,6 +222,28 @@ void main() {
         verify(() => mockRpc.decrypt(testPublicKey, 'garbage!!!')).called(1);
         verify(() => container.withPrivateKey<String>(any())).called(1);
       });
+
+      test('decrypt falls back to RPC for a payload sent to another key', () async {
+        // A well-formed payload this sender encrypted to a third key.
+        const otherSenderPubkey =
+            '6f84e1157c594a3a30ee25943c44a96106076e9184aded89c2f73946e0252286';
+        const payloadForAnotherRecipient =
+            'frkb1N4rnki0zNjn4gnQKSbcUEcgY2X8lgN8zk+MT4qUxMB2IIlUH9dURh0H014W'
+            '?iv=KR5RbN4CZE7tdq9XxeeLsA==';
+        when(
+          () => mockRpc.decrypt(any(), any()),
+        ).thenAnswer((_) async => 'rpc-nip04-plaintext');
+
+        // The cipher's raw ArgumentError used to escape _tryLocal (#8712).
+        expect(
+          await identity.decrypt(otherSenderPubkey, payloadForAnotherRecipient),
+          equals('rpc-nip04-plaintext'),
+        );
+        verify(
+          () => mockRpc.decrypt(otherSenderPubkey, payloadForAnotherRecipient),
+        ).called(1);
+        verify(() => container.withPrivateKey<String>(any())).called(1);
+      });
     });
 
     test('pubkey is set at construction', () {

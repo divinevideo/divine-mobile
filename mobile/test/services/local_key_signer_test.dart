@@ -22,6 +22,13 @@ void main() {
   // Well-formed 32-byte hex that is not a point on secp256k1.
   const offCurvePubkey =
       '0000000000000000000000000000000000000000000000000000000000000000';
+  // A well-formed payload this sender encrypted to a third key, so the test
+  // key cannot read it.
+  const otherSenderPubkey =
+      '6f84e1157c594a3a30ee25943c44a96106076e9184aded89c2f73946e0252286';
+  const payloadForAnotherRecipient =
+      'frkb1N4rnki0zNjn4gnQKSbcUEcgY2X8lgN8zk+MT4qUxMB2IIlUH9dURh0H014W'
+      '?iv=KR5RbN4CZE7tdq9XxeeLsA==';
 
   setUpAll(() {
     registerFallbackValue(_MockSecureKeyContainer());
@@ -248,6 +255,33 @@ void main() {
           // decrypted to nothing (#8712).
           await expectLater(
             signer.decrypt(testPublicKey, 'garbage!!!'),
+            throwsA(
+              isA<LocalSignerOperationException>().having(
+                (e) => e.cause,
+                'cause',
+                isA<FormatException>(),
+              ),
+            ),
+          );
+        },
+      );
+
+      test(
+        'decrypt throws a typed failure for a payload sent to another key',
+        () async {
+          when(() => mockKeyContainer.withPrivateKey<String>(any())).thenAnswer(
+            (invocation) {
+              final callback =
+                  invocation.positionalArguments[0] as String Function(String);
+              return callback(testPrivateKey);
+            },
+          );
+
+          final signer = LocalKeySigner(mockKeyContainer);
+
+          // The cipher used to throw a raw ArgumentError here (#8712).
+          await expectLater(
+            signer.decrypt(otherSenderPubkey, payloadForAnotherRecipient),
             throwsA(
               isA<LocalSignerOperationException>().having(
                 (e) => e.cause,

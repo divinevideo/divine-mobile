@@ -13,6 +13,11 @@ const _ciphertext =
 const _iv = '7nPnLlh3IwQzb+Z8xwpdkg==';
 const _payload = '$_ciphertext?iv=$_iv';
 
+/// From the same sender to a different recipient, also produced by `nak`.
+const _payloadForAnotherRecipient =
+    'frkb1N4rnki0zNjn4gnQKSbcUEcgY2X8lgN8zk+MT4qUxMB2IIlUH9dURh0H014W'
+    '?iv=KR5RbN4CZE7tdq9XxeeLsA==';
+
 const _malformedPayloads = <String, String>{
   'no ?iv= separator': 'garbage!!!',
   'an empty payload': '',
@@ -51,6 +56,17 @@ void main() {
             _senderPubkey,
           ),
           equals('hello from an independent implementation'),
+        );
+      });
+
+      test('throws FormatException for a payload sent to another key', () {
+        expect(
+          () => NIP04.decrypt(
+            _payloadForAnotherRecipient,
+            NIP04.getAgreement(_recipientPrivateKey),
+            _senderPubkey,
+          ),
+          throwsFormatException,
         );
       });
 

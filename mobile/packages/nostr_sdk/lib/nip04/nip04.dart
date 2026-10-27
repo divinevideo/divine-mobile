@@ -58,8 +58,8 @@ class NIP04 {
   /// Decrypts [message], a NIP-04 `<ciphertext>?iv=<iv>` payload.
   ///
   /// Throws a [FormatException] when [message] is not a payload that can be
-  /// decrypted, so it is never mistaken for one that decrypted to an empty
-  /// string (#8712).
+  /// decrypted, or does not decrypt under this key, so it is never mistaken
+  /// for one that decrypted to an empty string (#8712).
   static String decrypt(
     String message,
     ECDHBasicAgreement agreement,
@@ -95,7 +95,16 @@ class NIP04 {
     );
     cipherCbc.init(false, paramsCbc);
 
-    var result = cipherCbc.process(payload.ciphertext);
+    Uint8List result;
+    try {
+      result = cipherCbc.process(payload.ciphertext);
+    } on ArgumentError {
+      // The payload's shape is already checked, so this is padding that does
+      // not check out: it was encrypted to a different key.
+      throw const FormatException(
+        "NIP-04 payload does not decrypt under this key",
+      );
+    }
 
     return utf8.decode(result);
   }
