@@ -344,7 +344,7 @@ run_scan() {
     echo "      Do NOT add 'integration', and do NOT touch vgv_tag_baseline.txt:"
     echo "      only mobile_ci.yaml passes --exclude-tags integration, and both"
     echo "      that baseline and the VGV Tag Gate count mobile/test only. The"
-    echo "      shared VeryGood package workflow (flutter_package.yml@v1) exposes"
+    echo "      shared VeryGood package workflow (flutter_package.yml) exposes"
     echo "      no such input and no package ships a dart_test.yaml, so inside a"
     echo "      package 'integration' excludes nothing and the file still RUNS."
     echo "  (d) [irreversible initializer] Move it to flutter_test_config.dart"

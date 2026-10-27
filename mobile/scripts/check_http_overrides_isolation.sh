@@ -82,7 +82,7 @@ if [[ -n "$violations" ]]; then
   echo "      already prescribes for the channel analogue."
   echo "      Do NOT add 'integration' as well: only mobile_ci.yaml passes"
   echo "      --exclude-tags integration; the shared VeryGood package workflow"
-  echo "      (flutter_package.yml@v1) exposes no such input and no package has"
+  echo "      (flutter_package.yml) exposes no such input and no package has"
   echo "      a dart_test.yaml, so the tag excludes nothing and the file still"
   echo "      RUNS. If the file does REAL network I/O, tagging it merely moves"
   echo "      that I/O to its own isolate -- use (b) or move it out of test/."

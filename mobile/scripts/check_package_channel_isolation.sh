@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Per-package merged-isolate channel-handler ratchet (#5838). Each package under
 # mobile/packages runs its OWN fully-merged `very_good test --optimization`
-# bundle (the reusable flutter_package.yml@v1 defaults test_optimization: true),
+# bundle (the reusable flutter_package.yml defaults test_optimization: true),
 # and — unlike mobile/test — NO package has a flutter_test_config.dart
 # heal-and-blame harness. So a package test that installs a MethodChannel /
 # EventChannel mock handler WITHOUT tearing it back down leaks that handler into
