@@ -13,10 +13,10 @@ import 'package:openvine/utils/rec_timer_paint.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// How often an exported REC timer changes: every frame of a 30 fps video,
-/// so its hundredths run on the way a stopwatch's do when it is filmed. Any
-/// slower and the hundredths visibly stutter.
-const recTimerFrameStep = Duration(microseconds: 33333);
+/// How often an exported REC timer changes, per second: every frame of a
+/// 30 fps video, so its hundredths run on the way a stopwatch's do when it is
+/// filmed. Any slower and the hundredths visibly stutter.
+const double recTimerFramesPerSecond = 30;
 
 /// The pixels all frames of one exported REC timer may hold together.
 ///
@@ -63,23 +63,34 @@ Future<Map<String, List<ExportedLayerFrame>>> recTimerLayerFrames(
 }
 
 /// The time windows of a timer from [start] until [end], or until the
-/// video ends when [end] is `null`: one per [step] of the video, each with
-/// the time it shows, cut at the timer's own start and end.
+/// video ends when [end] is `null`: one for each of [framesPerSecond] frames
+/// a second of the video, each with the time it shows, cut at the timer's
+/// own start and end.
 List<({Duration shown, Duration? start, Duration? end})> recTimerWindows({
   required Duration? start,
   required Duration? end,
   required Duration editorDuration,
-  Duration step = recTimerFrameStep,
+  double framesPerSecond = recTimerFramesPerSecond,
 }) {
   final from = start ?? Duration.zero;
   final to = end ?? editorDuration;
+  // Each frame's own time, rounded to the microsecond. Adding up a rounded
+  // step instead falls behind: thirty steps of 33333 µs end short of a
+  // second, and the timer read 00:99 on the frame at one second.
+  Duration frameTime(int index) => Duration(
+    microseconds: (index * Duration.microsecondsPerSecond / framesPerSecond)
+        .round(),
+  );
+  var index =
+      (from.inMicroseconds * framesPerSecond / Duration.microsecondsPerSecond)
+          .floor();
+  while (index > 0 && frameTime(index) > from) {
+    index--;
+  }
   final windows = <({Duration shown, Duration? start, Duration? end})>[];
-  for (
-    var shown = step * (from.inMicroseconds ~/ step.inMicroseconds);
-    shown < to;
-    shown += step
-  ) {
-    final windowEnd = shown + step;
+  for (; frameTime(index) < to; index++) {
+    final shown = frameTime(index);
+    final windowEnd = frameTime(index + 1);
     windows.add((
       shown: shown,
       start: shown < from ? start : shown,
@@ -91,14 +102,19 @@ List<({Duration shown, Duration? start, Duration? end})> recTimerWindows({
   return windows;
 }
 
-/// The step between the frames of a timer painted [frame] pixels large that
-/// runs for [span]: [recTimerFrameStep], or longer when that many frames
-/// would hold more than [recTimerPixelBudget] pixels.
-Duration recTimerFrameStepFor({required Size frame, required Duration span}) {
+/// How many frames a second a timer painted [frame] pixels large that runs
+/// for [span] changes: [recTimerFramesPerSecond], or fewer when that many
+/// frames would hold more than [recTimerPixelBudget] pixels.
+double recTimerFramesPerSecondFor({
+  required Size frame,
+  required Duration span,
+}) {
   final pixels = frame.width * frame.height;
-  final budgeted = span.inMicroseconds * pixels / recTimerPixelBudget;
-  return Duration(
-    microseconds: math.max(recTimerFrameStep.inMicroseconds, budgeted.ceil()),
+  final seconds = span.inMicroseconds / Duration.microsecondsPerSecond;
+  if (pixels <= 0 || seconds <= 0) return recTimerFramesPerSecond;
+  return math.min(
+    recTimerFramesPerSecond,
+    recTimerPixelBudget / pixels / seconds,
   );
 }
 
@@ -116,7 +132,7 @@ Future<List<ExportedLayerFrame>> _framesOf(
     start: layer.startTime,
     end: layer.endTime,
     editorDuration: editorDuration,
-    step: recTimerFrameStepFor(frame: box, span: span),
+    framesPerSecond: recTimerFramesPerSecondFor(frame: box, span: span),
   );
   final frames = <ExportedLayerFrame>[];
   for (var i = 0; i < windows.length; i += _paintBatch) {

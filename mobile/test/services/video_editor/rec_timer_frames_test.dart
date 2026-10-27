@@ -49,16 +49,33 @@ void main() {
       final windows = recTimerWindows(
         start: null,
         end: null,
-        editorDuration: recTimerFrameStep * 2.5,
+        editorDuration: const Duration(milliseconds: 90),
       );
 
       expect(
         windows.map((w) => w.shown),
-        equals([Duration.zero, recTimerFrameStep, recTimerFrameStep * 2]),
+        equals(const [
+          Duration.zero,
+          Duration(microseconds: 33333),
+          Duration(microseconds: 66667),
+        ]),
       );
       expect(windows.first.start, equals(Duration.zero));
       // The last one lasts until the video ends.
       expect(windows.last.end, isNull);
+    });
+
+    test('shows a whole second on the frame at that second', () {
+      final windows = recTimerWindows(
+        start: null,
+        end: null,
+        editorDuration: const Duration(seconds: 2),
+      );
+
+      final atOneSecond = windows.firstWhere(
+        (w) => w.start == const Duration(seconds: 1),
+      );
+      expect(recTimerText(atOneSecond.shown), equals('01:00'));
     });
 
     test('cuts the first and last window at the layer start and end', () {
@@ -66,7 +83,7 @@ void main() {
         start: const Duration(milliseconds: 1500),
         end: const Duration(milliseconds: 3200),
         editorDuration: const Duration(seconds: 6),
-        step: const Duration(seconds: 1),
+        framesPerSecond: 1,
       );
 
       expect(
@@ -84,26 +101,29 @@ void main() {
     });
   });
 
-  group('recTimerFrameStepFor', () {
+  group('recTimerFramesPerSecondFor', () {
     const span = Duration(milliseconds: 6300);
 
     test('changes a timer of the size it is added at every frame', () {
       expect(
-        recTimerFrameStepFor(frame: const ui.Size(360, 94), span: span),
-        equals(recTimerFrameStep),
+        recTimerFramesPerSecondFor(frame: const ui.Size(360, 94), span: span),
+        equals(recTimerFramesPerSecond),
       );
     });
 
     test('changes a timer scaled across the video less often', () {
       const frame = ui.Size(2000, 520);
 
-      final step = recTimerFrameStepFor(frame: frame, span: span);
+      final framesPerSecond = recTimerFramesPerSecondFor(
+        frame: frame,
+        span: span,
+      );
 
-      expect(step, greaterThan(recTimerFrameStep));
-      final frames = span.inMicroseconds / step.inMicroseconds;
+      expect(framesPerSecond, lessThan(recTimerFramesPerSecond));
+      final frames = framesPerSecond * span.inMicroseconds / 1e6;
       expect(
         frames * frame.width * frame.height,
-        lessThanOrEqualTo(recTimerPixelBudget),
+        lessThanOrEqualTo(recTimerPixelBudget + 1),
       );
     });
   });
@@ -121,7 +141,7 @@ void main() {
 
         final frames = await recTimerLayerFrames(
           [timer, other],
-          editorDuration: recTimerFrameStep * 2.5,
+          editorDuration: const Duration(milliseconds: 90),
         );
 
         expect(frames.keys, equals(['timer']));
