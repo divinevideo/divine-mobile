@@ -8,13 +8,16 @@ import 'dart:ui' show Size;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/tune_adjustment_matrix_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/adjust_video_effect.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-import 'package:pro_image_editor/pro_image_editor.dart' show CompleteParameters;
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show CompleteParameters, TuneAdjustmentMatrix;
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 class _FakePathProviderPlatform extends Fake
@@ -118,6 +121,15 @@ void main() {
     if (tempDir.existsSync()) tempDir.deleteSync(recursive: true);
   });
 
+  DivineVideoClip clip() => DivineVideoClip(
+    id: 'clip-a',
+    video: EditorVideo.file('${tempDir.path}/clip-a.mp4'),
+    duration: const Duration(seconds: 3),
+    recordedAt: DateTime(2026),
+    targetAspectRatio: model.AspectRatio.vertical,
+    originalAspectRatio: 9 / 16,
+  );
+
   group('VideoEditorRenderService.renderVideo', () {
     test(
       'hands the echo trail from the editor history to the export',
@@ -131,16 +143,7 @@ void main() {
         );
 
         await VideoEditorRenderService.renderVideo(
-          clips: [
-            DivineVideoClip(
-              id: 'clip-a',
-              video: EditorVideo.file('${tempDir.path}/clip-a.mp4'),
-              duration: const Duration(seconds: 3),
-              recordedAt: DateTime(2026),
-              targetAspectRatio: model.AspectRatio.vertical,
-              originalAspectRatio: 9 / 16,
-            ),
-          ],
+          clips: [clip()],
           aspectRatio: model.AspectRatio.vertical,
           taskId: 'export',
           parameters: _parameters({
@@ -159,5 +162,58 @@ void main() {
         ]);
       },
     );
+
+    test('draws highlights, shadows, vibrance and sharpening natively, '
+        'after the echo trail and outside the colour filters', () async {
+      TuneAdjustmentMatrix member(String kind, double value, List<double> m) =>
+          TuneAdjustmentMatrix(
+            id: TuneSet.memberId(kind: kind, setId: 'set-1'),
+            value: value,
+            matrix: m,
+            startTime: Duration.zero,
+            endTime: const Duration(seconds: 2),
+            meta: TuneSet.metaFor(setId: 'set-1', kind: kind),
+          );
+      final echo = EditorVideoEffect.of(
+        id: 'echo-1',
+        type: EditorEffectType.echo,
+        intensity: 0.5,
+      );
+
+      await VideoEditorRenderService.renderVideo(
+        clips: [clip()],
+        aspectRatio: model.AspectRatio.vertical,
+        taskId: 'export',
+        parameters:
+            _parameters({
+              VideoEditorConstants.effectsStateHistoryKey: [echo.toMap()],
+            }).copyWith(
+              tuneAdjustments: [
+                member('brightness', 0.2, const [2, 0, 0]),
+                member('shadows', 0.6, const [1, 0, 0]),
+                member('sharpen', 0.3, const [1, 0, 0]),
+              ],
+            ),
+      );
+
+      final task = plugin.tasks.single;
+      // Last, so the echo's earlier frames are the same unadjusted frames
+      // the preview and the iOS export hand it.
+      expect(task.customEffects, const [
+        CustomVideoEffect(
+          id: echoVideoEffectId,
+          params: {EditorVideoEffect.intensityParam: 0.5},
+        ),
+        CustomVideoEffect(
+          id: adjustVideoEffectId,
+          params: {'shadows': 0.6, 'sharpen': 0.3},
+          startTime: Duration.zero,
+          endTime: Duration(seconds: 2),
+        ),
+      ]);
+      expect(task.colorFilters.map((filter) => filter.matrix), const [
+        [2, 0, 0],
+      ]);
+    });
   });
 }

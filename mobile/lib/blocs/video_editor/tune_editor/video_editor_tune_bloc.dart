@@ -36,6 +36,7 @@ class VideoEditorTuneBloc
   ) {
     emit(
       state.copyWith(
+        values: event.values,
         editingSetId: event.setId,
         clearEditingSetId: event.setId == null,
       ),

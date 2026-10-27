@@ -9241,6 +9241,18 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorTuneFade => 'ఫేడ్';
 
   @override
+  String get videoEditorTuneHighlights => 'హైలైట్స్';
+
+  @override
+  String get videoEditorTuneShadows => 'నీడలు';
+
+  @override
+  String get videoEditorTuneVibrance => 'వైబ్రెన్స్';
+
+  @override
+  String get videoEditorTuneSharpen => 'పదును';
+
+  @override
   String get videoEditorAudioLabel => 'ఆడియో';
 
   @override

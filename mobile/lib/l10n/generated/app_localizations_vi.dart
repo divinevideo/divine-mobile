@@ -8950,6 +8950,18 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorTuneFade => 'Mờ dần';
 
   @override
+  String get videoEditorTuneHighlights => 'Vùng sáng';
+
+  @override
+  String get videoEditorTuneShadows => 'Vùng tối';
+
+  @override
+  String get videoEditorTuneVibrance => 'Độ sống động';
+
+  @override
+  String get videoEditorTuneSharpen => 'Độ sắc nét';
+
+  @override
   String get videoEditorAudioLabel => 'Âm thanh';
 
   @override

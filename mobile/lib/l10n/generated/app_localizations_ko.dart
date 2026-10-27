@@ -8565,6 +8565,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorTuneFade => '페이드';
 
   @override
+  String get videoEditorTuneHighlights => '하이라이트';
+
+  @override
+  String get videoEditorTuneShadows => '그림자';
+
+  @override
+  String get videoEditorTuneVibrance => '생동감';
+
+  @override
+  String get videoEditorTuneSharpen => '선명도';
+
+  @override
   String get videoEditorAudioLabel => '오디오';
 
   @override

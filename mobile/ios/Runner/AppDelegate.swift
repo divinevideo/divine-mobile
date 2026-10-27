@@ -26,6 +26,7 @@ extension FlutterError: @retroactive Error {}
     TiltShiftVideoEffect.register()
     ZoomBlurVideoEffect.register()
     ComicVideoEffect.register()
+    AdjustVideoEffect.register()
     #if DEBUG
     exportScreenshotLaunchConfig()
     #endif

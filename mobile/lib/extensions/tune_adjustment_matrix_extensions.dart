@@ -37,6 +37,23 @@ abstract class TuneSet {
   static String memberId({required String kind, required String setId}) =>
       '${kind}__$setId';
 
+  /// The non-neutral members of [adjustments], by set, in the order the sets
+  /// first appear.
+  ///
+  /// A member with value 0 is left out, and so is a set with no other
+  /// member. Every member of a set shares one time window, so a set's first
+  /// member stands for it.
+  static Map<String, List<TuneAdjustmentMatrix>> groupBySet(
+    Iterable<TuneAdjustmentMatrix> adjustments,
+  ) {
+    final sets = <String, List<TuneAdjustmentMatrix>>{};
+    for (final adjustment in adjustments) {
+      if (adjustment.value == 0) continue;
+      (sets[adjustment.tuneSetId] ??= []).add(adjustment);
+    }
+    return sets;
+  }
+
   /// The `meta` map that records a member's [setId] and adjustment [kind].
   static Map<String, dynamic> metaFor({
     required String setId,

@@ -15167,6 +15167,30 @@ abstract class AppLocalizations {
   /// **'Fade'**
   String get videoEditorTuneFade;
 
+  /// No description provided for @videoEditorTuneHighlights.
+  ///
+  /// In en, this message translates to:
+  /// **'Highlights'**
+  String get videoEditorTuneHighlights;
+
+  /// No description provided for @videoEditorTuneShadows.
+  ///
+  /// In en, this message translates to:
+  /// **'Shadows'**
+  String get videoEditorTuneShadows;
+
+  /// No description provided for @videoEditorTuneVibrance.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibrance'**
+  String get videoEditorTuneVibrance;
+
+  /// No description provided for @videoEditorTuneSharpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharpen'**
+  String get videoEditorTuneSharpen;
+
   /// No description provided for @videoEditorAudioLabel.
   ///
   /// In en, this message translates to:
