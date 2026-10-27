@@ -1,6 +1,5 @@
 import 'dart:convert';
-import 'dart:developer';
-import 'dart:math' hide log;
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:convert/convert.dart';
@@ -19,6 +18,9 @@ class NIP04 {
     return agreement;
   }
 
+  /// Encrypts [message] for [pk] as a NIP-04 `<ciphertext>?iv=<iv>` payload.
+  ///
+  /// Throws a [FormatException] when [pk] is not a public key.
   static String encrypt(
     String message,
     ECDHBasicAgreement agreement,
@@ -58,8 +60,9 @@ class NIP04 {
   /// Decrypts [message], a NIP-04 `<ciphertext>?iv=<iv>` payload.
   ///
   /// Throws a [FormatException] when [message] is not a payload that can be
-  /// decrypted, or does not decrypt under this key, so it is never mistaken
-  /// for one that decrypted to an empty string (#8712).
+  /// decrypted, does not decrypt under this key, or [pk] is not a public key,
+  /// so a failure is never mistaken for a message that decrypted to an empty
+  /// string (#8712).
   static String decrypt(
     String message,
     ECDHBasicAgreement agreement,
@@ -133,19 +136,23 @@ class NIP04 {
 
   static const _aesBlockSize = 16;
 
+  /// The secp256k1 point for the x-only public key [pk].
+  ///
+  /// Throws a [FormatException] when [pk] is not a public key: not hex, or an
+  /// x that no point on the curve has.
   static ECPublicKey getPubkey(String pk) {
     // BigInt x = BigInt.parse(pk, radix: 16);
     BigInt x = BigInt.parse(
       hex.encode(hex.decode(pk.padLeft(64, '0'))),
       radix: 16,
     );
-    BigInt? y;
+    BigInt y;
     try {
       y = liftX(x);
     } on Error {
-      log("error in handle pubkey");
+      throw const FormatException("Not a public key on secp256k1");
     }
-    ECPoint endPoint = secp256k1.curve.createPoint(x, y!);
+    ECPoint endPoint = secp256k1.curve.createPoint(x, y);
     return ECPublicKey(endPoint, secp256k1);
   }
 

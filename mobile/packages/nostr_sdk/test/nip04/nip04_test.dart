@@ -32,6 +32,16 @@ const _malformedPayloads = <String, String>{
   'ciphertext that is not base64': '!!!!?iv=$_iv',
 };
 
+/// Peer keys no point on secp256k1 has: the curve's maths cannot give them a
+/// y, so neither direction can derive a shared key from them.
+const _invalidPeerKeys = <String, String>{
+  'x = 0, which is not on the curve':
+      '0000000000000000000000000000000000000000000000000000000000000000',
+  'x past the field prime':
+      'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+  'a 33-byte compressed key': '02$_senderPubkey',
+};
+
 void main() {
   group(NIP04, () {
     group('isWellFormedPayload', () {
@@ -78,6 +88,36 @@ void main() {
               payload,
               NIP04.getAgreement(_recipientPrivateKey),
               _senderPubkey,
+            ),
+            throwsFormatException,
+          );
+        });
+      }
+
+      for (final MapEntry(key: shape, value: peerKey)
+          in _invalidPeerKeys.entries) {
+        test('throws FormatException for a peer key that is $shape', () {
+          expect(
+            () => NIP04.decrypt(
+              _payload,
+              NIP04.getAgreement(_recipientPrivateKey),
+              peerKey,
+            ),
+            throwsFormatException,
+          );
+        });
+      }
+    });
+
+    group('encrypt', () {
+      for (final MapEntry(key: shape, value: peerKey)
+          in _invalidPeerKeys.entries) {
+        test('throws FormatException for a peer key that is $shape', () {
+          expect(
+            () => NIP04.encrypt(
+              'hello',
+              NIP04.getAgreement(_recipientPrivateKey),
+              peerKey,
             ),
             throwsFormatException,
           );
