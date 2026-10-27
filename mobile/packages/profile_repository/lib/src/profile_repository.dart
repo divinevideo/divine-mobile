@@ -2595,10 +2595,14 @@ class ProfileRepository implements ProfileReader {
       }
     }
 
-    // Yield after Phase 2 if new results were added or the owner was pinned.
-    // Skips enrichment for faster progressive display; the final Phase 3
-    // yield enriches all results from cache.
-    if (resultMap.length > prevCount || ownerPubkey != null) {
+    // Yield after Phase 2 if new results were added or the owner was pinned,
+    // or if a relevance search got the server's order: it can reorder rows the
+    // cache already listed without adding any. Skips enrichment for faster
+    // progressive display; the final Phase 3 yield enriches all results from
+    // cache.
+    if (resultMap.length > prevCount ||
+        ownerPubkey != null ||
+        (sortBy == profileSearchSortRelevance && restPositions.isNotEmpty)) {
       yield snapshot(isComplete: false);
     }
 

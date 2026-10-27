@@ -4795,6 +4795,45 @@ void main() {
       });
 
       test(
+        'a relevance search yields the server order when the server answers '
+        'with profiles the cache already listed',
+        () async {
+          UserProfile cached(String pubkey) => UserProfile(
+            pubkey: pubkey,
+            name: 'lauren',
+            createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+            eventId: 'kind0-$pubkey',
+            rawData: const {},
+          );
+          when(
+            () => mockUserProfilesDao.getAllProfiles(),
+          ).thenAnswer((_) async => [cached(pk18Videos), cached(pk1Video)]);
+          stubRestResults([
+            restProfile(pk1Video, 'lauren'),
+            restProfile(pk18Videos, 'lauren'),
+          ]);
+
+          final snapshots = await repoWithFunnelcake
+              .searchUsersProgressive(
+                query: 'lauren',
+                sortBy: profileSearchSortRelevance,
+              )
+              .toList();
+
+          final answered = snapshots.where(
+            (s) =>
+                !s.isComplete &&
+                s.sources[SearchSource.funnelcakeApi] is SearchSourceSuccess,
+          );
+          expect(answered, isNotEmpty);
+          expect(answered.first.profiles.map((p) => p.pubkey), [
+            pk1Video,
+            pk18Videos,
+          ]);
+        },
+      );
+
+      test(
         'a relevance search lists a profile only the cache found after the '
         "server's",
         () async {
