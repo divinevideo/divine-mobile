@@ -49,11 +49,13 @@ import 'package:openvine/services/video_event_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/composable_video_grid.dart';
+import 'package:openvine/widgets/video_thumbnail_widget.dart';
 // Override lives in riverpod's misc barrel; flutter_riverpod does not
 // re-export the type name even though it accepts List<Override>.
 import 'package:riverpod/misc.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/decoded_images.dart';
 import '../helpers/test_provider_overrides.dart';
 
 const _ownPubkey =
@@ -1048,6 +1050,57 @@ void main() {
           ),
         );
       }
+
+      group('screen reader', () {
+        Finder thumbnails() => find.descendant(
+          of: find.byType(VideoThumbnailWidget),
+          matching: find.byType(Image),
+        );
+
+        SemanticsData firstTile(WidgetTester tester) => tester
+            .getSemantics(find.bySemanticsIdentifier('video_thumbnail_0'))
+            .getSemanticsData();
+
+        testWidgets(
+          'announces a tile as a button, not an image, once its thumbnail '
+          'loads',
+          (tester) async {
+            final semantics = tester.ensureSemantics();
+            try {
+              await pumpWithDecodedImages(
+                tester,
+                buildGrid(showBadge: false),
+                images: thumbnails(),
+              );
+
+              expect(firstTile(tester).flagsCollection.isButton, isTrue);
+              expect(firstTile(tester).flagsCollection.isImage, isFalse);
+            } finally {
+              semantics.dispose();
+            }
+          },
+        );
+
+        testWidgets(
+          'keeps the subscribed-list badge out of the tile button',
+          (tester) async {
+            final semantics = tester.ensureSemantics();
+            try {
+              await pumpWithDecodedImages(
+                tester,
+                buildGrid(showBadge: true),
+                images: thumbnails(),
+              );
+              expect(badgeFinder(), findsNWidgets(2));
+
+              expect(firstTile(tester).flagsCollection.isButton, isTrue);
+              expect(firstTile(tester).flagsCollection.isImage, isFalse);
+            } finally {
+              semantics.dispose();
+            }
+          },
+        );
+      });
 
       testWidgets('marks tiles whose video is in a subscribed list', (
         tester,
