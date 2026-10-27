@@ -148,9 +148,9 @@ class VideoEditorCanvas extends StatelessWidget {
     if (previous.isSplitting && !current.isSplitting) return true;
 
     // A background thumbnail refresh (e.g. after a split) changes only the
-    // clip's poster path, and a shape mask is drawn over the frame rather
-    // than played — the player composition uses neither, so skip the
-    // redundant reload.
+    // clip's poster path, and a shape mask and its background color are drawn
+    // over the frame rather than played — the player composition uses none of
+    // them, so skip the redundant reload.
     if (_onlyNonPlaybackFieldsChanged(previous.clips, current.clips)) {
       return false;
     }
@@ -231,8 +231,8 @@ class VideoEditorCanvas extends StatelessWidget {
       detachResult is ClipDetachSuccess ||
       DetachedClipLayerData.historyContainsDetachedClip(editorStateHistory);
 
-  /// Whether [current] differs from [previous] *only* in clip thumbnail paths
-  /// and shape masks, neither of which the player plays.
+  /// Whether [current] differs from [previous] *only* in clip thumbnail paths,
+  /// shape masks and mask background colors, none of which the player plays.
   ///
   /// Conservative: any difference in a composition-relevant field (video,
   /// trims, duration, volume, speed, transition, …) returns `false`, so the
@@ -263,7 +263,9 @@ class VideoEditorCanvas extends StatelessWidget {
           a.transition != b.transition) {
         return false;
       }
-      if (a.thumbnailPath != b.thumbnailPath || a.mask != b.mask) {
+      if (a.thumbnailPath != b.thumbnailPath ||
+          a.mask != b.mask ||
+          a.maskBackgroundColor != b.maskBackgroundColor) {
         anyDiff = true;
       }
     }
@@ -556,6 +558,7 @@ class VideoEditorCanvas extends StatelessWidget {
           a.speedRamp != b.speedRamp ||
           a.transition != b.transition ||
           a.mask != b.mask ||
+          a.maskBackgroundColor != b.maskBackgroundColor ||
           // Frame edits (hold changes, delete, reorder) are the whole edit
           // surface of a stop-motion clip — without this the clip manager
           // (publish render, autosave, metadata preview) and undo/redo never

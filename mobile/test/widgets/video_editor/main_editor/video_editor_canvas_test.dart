@@ -270,9 +270,25 @@ void main() {
           previous: ClipEditorState(clips: [clip]),
           current: ClipEditorState(
             clips: [
-              clip.copyWith(
-                mask: const LayerMask(shape: LayerMaskShape.heart),
-              ),
+              clip.copyWith(mask: const LayerMask(shape: LayerMaskShape.heart)),
+            ],
+          ),
+        ),
+        isFalse,
+      );
+    });
+
+    test('skips a mask background-color change, which is drawn over the '
+        'frame', () {
+      final clip = _createClip(id: 'end')
+          .copyWith(mask: const LayerMask(shape: LayerMaskShape.heart));
+
+      expect(
+        VideoEditorCanvas.shouldSyncPlayerForClipStateChange(
+          previous: ClipEditorState(clips: [clip]),
+          current: ClipEditorState(
+            clips: [
+              clip.copyWith(maskBackgroundColor: const Color(0xFFFF0000)),
             ],
           ),
         ),
@@ -449,22 +465,19 @@ void main() {
       );
     });
 
-    test(
-      'rejects the position-0 reset report a seam swap emits while paused',
-      () {
-        // The reported regression: a transition finishes rendering, the player
-        // loads the seam file and reports position 0. Accepting it would snap the
-        // playhead back to the start.
-        expect(
-          VideoEditorCanvas.shouldAcceptPlayerReport(
-            report: Duration.zero,
-            seekTarget: target,
-            isPlaying: false,
-          ),
-          isFalse,
-        );
-      },
-    );
+    test('rejects the position-0 reset report a seam swap emits while paused', () {
+      // The reported regression: a transition finishes rendering, the player
+      // loads the seam file and reports position 0. Accepting it would snap the
+      // playhead back to the start.
+      expect(
+        VideoEditorCanvas.shouldAcceptPlayerReport(
+          report: Duration.zero,
+          seekTarget: target,
+          isPlaying: false,
+        ),
+        isFalse,
+      );
+    });
 
     test('rejects a stale paused report from a superseded scrub seek', () {
       // Scrubbed 2s -> 4s -> 3.5s; a late report for the 2s leading seek must
@@ -947,6 +960,15 @@ void main() {
       expect(VideoEditorCanvas.clipsChanged([a], [b]), isTrue);
     });
 
+    test('detects a mask background-color change, so the export, undo and '
+        'redo see it', () {
+      final a = _createClip(id: 'c')
+          .copyWith(mask: const LayerMask(shape: LayerMaskShape.heart));
+      final b = a.copyWith(maskBackgroundColor: const Color(0xFFFF0000));
+
+      expect(VideoEditorCanvas.clipsChanged([a], [b]), isTrue);
+    });
+
     test('detects a clip-count change', () {
       final a = _createStopMotionClip(id: 'sm', holds: [hold2]);
 
@@ -970,11 +992,7 @@ void main() {
       (SubEditor.tune, SubEditorType.tune),
     ]) {
       test('resets the zoom and opens $type for $mode', () {
-        VideoEditorCanvas.handleOpenSubEditor(
-          mode,
-          editor: editor,
-          bloc: bloc,
-        );
+        VideoEditorCanvas.handleOpenSubEditor(mode, editor: editor, bloc: bloc);
 
         verify(() => editor.resetZoom()).called(1);
         expect(bloc.events, [VideoEditorMainOpenSubEditor(type)]);
@@ -986,11 +1004,7 @@ void main() {
       (SubEditor.sticker, SubEditorType.stickers),
     ]) {
       test('keeps the zoom and opens $type for $mode', () {
-        VideoEditorCanvas.handleOpenSubEditor(
-          mode,
-          editor: editor,
-          bloc: bloc,
-        );
+        VideoEditorCanvas.handleOpenSubEditor(mode, editor: editor, bloc: bloc);
 
         verifyNever(() => editor.resetZoom());
         expect(bloc.events, [VideoEditorMainOpenSubEditor(type)]);
