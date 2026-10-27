@@ -1,6 +1,8 @@
 // ABOUTME: BLoC for managing draft video projects in the library
 // ABOUTME: Handles loading and deleting drafts with proper state management
 
+import 'dart:async';
+
 import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -20,6 +22,7 @@ class DraftsLibraryBloc extends Bloc<DraftsLibraryEvent, DraftsLibraryState> {
   DraftsLibraryBloc({
     required DraftStorageService draftStorageService,
     this.includeAutosaveDraft = true,
+    Stream<void>? changes,
   }) : _draftStorageService = draftStorageService,
        super(const DraftsLibraryInitial()) {
     // Restartable, not droppable: a reload asked for *after* a write has to
@@ -35,6 +38,16 @@ class DraftsLibraryBloc extends Bloc<DraftsLibraryEvent, DraftsLibraryState> {
     // interleave; separate buckets would let one finish mid-flight and emit a
     // stale draft list (see [DraftsLibraryMutationEvent]).
     on<DraftsLibraryMutationEvent>(_onMutation, transformer: sequential());
+    _changes = changes?.listen((_) {
+      if (!isClosed) add(const DraftsLibraryLoadRequested());
+    });
+  }
+
+  StreamSubscription<void>? _changes;
+  @override
+  Future<void> close() async {
+    await _changes?.cancel();
+    return super.close();
   }
 
   final DraftStorageService _draftStorageService;

@@ -11283,5 +11283,197 @@
   },
   "@announcementUnavailable": {
     "description": "Announcement detail empty state when the announcement has expired, was withdrawn, or is not cached."
+  },
+  "challengeTitle": "Challenges",
+  "@challengeTitle": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeTestNotice": "Test build. Some challenges and entries may be missing.",
+  "@challengeTestNotice": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeOpenLink": "Open a challenge link",
+  "@challengeOpenLink": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeLinkLabel": "Challenge naddr or Divine link",
+  "@challengeLinkLabel": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeUnavailable": "This challenge is unavailable. Refresh to check its current rules.",
+  "@challengeUnavailable": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeSignIn": "Sign in to view and enter a challenge.",
+  "@challengeSignIn": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeRecord": "Record a video",
+  "@challengeRecord": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeChoose": "Choose one of your videos",
+  "@challengeChoose": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeReview": "Review your entry",
+  "@challengeReview": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeAgree": "Agree and submit",
+  "@challengeAgree": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeWithdraw": "Withdraw entry",
+  "@challengeWithdraw": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeWithdrawReview": "Review withdrawal",
+  "@challengeWithdrawReview": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeWithdrawConfirm": "Confirm withdrawal",
+  "@challengeWithdrawConfirm": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeWithdrawExplanation": "This withdraws this entry. Your video stays published.",
+  "@challengeWithdrawExplanation": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeEmpty": "No visible entries on the relays checked.",
+  "@challengeEmpty": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeNoVideos": "No published videos found for your account.",
+  "@challengeNoVideos": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeRules": "Current rules",
+  "@challengeRules": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeDeadline": "Deadline (UTC)",
+  "@challengeDeadline": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeOwner": "Signing account",
+  "@challengeOwner": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeVideoRevision": "Video revision",
+  "@challengeVideoRevision": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeRulesRevision": "Rules revision",
+  "@challengeRulesRevision": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeRetry": "Retry delivery",
+  "@challengeRetry": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengePending": "Delivery pending",
+  "@challengePending": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeSubmitted": "Submitted to a challenge relay",
+  "@challengeSubmitted": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeIndexing": "Indexing not yet confirmed",
+  "@challengeIndexing": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeIndexed": "Indexing confirmed",
+  "@challengeIndexed": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeWithdrawn": "Withdrawal submitted",
+  "@challengeWithdrawn": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeRecover": "Review your published video",
+  "@challengeRecover": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeEntries": "Entries",
+  "@challengeEntries": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeResults": "Results",
+  "@challengeResults": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeWinnerUnavailable": "Selected entry unavailable",
+  "@challengeWinnerUnavailable": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengePlay": "Play video",
+  "@challengePlay": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeOpen": "Open for entries",
+  "@challengeOpen": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeScheduled": "Not open yet",
+  "@challengeScheduled": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeClosed": "Entries closed",
+  "@challengeClosed": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeCancelled": "Challenge cancelled",
+  "@challengeCancelled": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeResult": "Results published",
+  "@challengeResult": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeChanged": "Rules changed — review the current rules again.",
+  "@challengeChanged": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengePaused": "Delivery paused. Your signed entry is saved.",
+  "@challengePaused": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeBlocked": "This action is unavailable under current account or content rules.",
+  "@challengeBlocked": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeOwnerChanged": "The signing account changed. Return with the original account.",
+  "@challengeOwnerChanged": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeFailed": "Could not complete the action. Your published video is unchanged.",
+  "@challengeFailed": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeTooLarge": "This video or rules snapshot is too large for an entry.",
+  "@challengeTooLarge": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeReviewRequired": "Review the current rules and exact video before submitting.",
+  "@challengeReviewRequired": {
+    "description": "Native challenge participation test-build flow."
+  },
+  "challengeYourAccount": "Your current account",
+  "@challengeYourAccount": {
+    "description": "Challenge entry review challengeYourAccount"
+  },
+  "challengePreviewUnavailable": "This video cannot be previewed right now. Try again before submitting.",
+  "@challengePreviewUnavailable": {
+    "description": "Challenge entry review challengePreviewUnavailable"
+  },
+  "challengePublicConsent": "Your entry will be public and linked to this video and these rules.",
+  "@challengePublicConsent": {
+    "description": "Challenge entry review challengePublicConsent"
+  },
+  "challengeDetails": "Technical details",
+  "@challengeDetails": {
+    "description": "Challenge entry review challengeDetails"
   }
 }

@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:app_links/app_links.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
+import 'package:openvine/features/challenges/challenge_link.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/people_list_owner.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
@@ -15,6 +16,7 @@ import 'package:unified_logger/unified_logger.dart';
 
 /// Types of deep links supported by the app
 enum DeepLinkType {
+  challenge,
   shortLink,
   video,
   profile,
@@ -36,6 +38,7 @@ class DeepLink {
   const DeepLink({
     required this.type,
     this.videoRef,
+    this.challengeNaddr,
     this.shortCode,
     this.npub,
     this.hashtag,
@@ -50,6 +53,7 @@ class DeepLink {
 
   final DeepLinkType type;
   final String? shortCode;
+  final String? challengeNaddr;
 
   /// Raw `/video/:id` route reference from the incoming URL.
   ///
@@ -80,6 +84,8 @@ class DeepLink {
   String toString() {
     final indexStr = index != null ? ', index: $index' : '';
     switch (type) {
+      case DeepLinkType.challenge:
+        return 'DeepLink(type: challenge, naddr: $challengeNaddr)';
       case DeepLinkType.shortLink:
         return 'DeepLink(type: shortLink, code: $shortCode)';
       case DeepLinkType.video:
@@ -243,6 +249,15 @@ class DeepLinkService {
       }
 
       final pathSegments = uri.pathSegments;
+      if (pathSegments.length == 2 &&
+          pathSegments.first == 'challenges' &&
+          (host == 'divine.video' || host == 'www.divine.video') &&
+          ChallengeLink.parse(pathSegments[1]) != null) {
+        return DeepLink(
+          type: DeepLinkType.challenge,
+          challengeNaddr: pathSegments[1],
+        );
+      }
 
       final shortCode = shortLinkCodeFor(uri);
       if (shortCode != null) {
@@ -494,6 +509,14 @@ class DeepLinkService {
 
   static DeepLink _parseCustomSchemeAppRoute(Uri uri) {
     final segments = uri.pathSegments;
+    if (segments.length == 2 &&
+        segments.first == 'challenges' &&
+        ChallengeLink.parse(segments[1]) != null) {
+      return DeepLink(
+        type: DeepLinkType.challenge,
+        challengeNaddr: segments[1],
+      );
+    }
     final type = segments.length == 1
         ? _customSchemeAppRoutes[segments.single]
         : null;

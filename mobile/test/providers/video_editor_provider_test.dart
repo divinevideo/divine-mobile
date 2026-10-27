@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:challenge_protocol/challenge_protocol.dart';
 import 'package:characters/characters.dart';
 import 'package:db_client/db_client.dart';
 import 'package:drift/native.dart';
@@ -17,6 +18,7 @@ import 'package:models/models.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/models/caption_mention.dart';
+import 'package:openvine/models/challenge_recording_context.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
@@ -47,6 +49,7 @@ import 'package:pro_image_editor/pro_image_editor.dart'
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../packages/challenges_repository/test/synthetic.dart';
 import '../helpers/test_provider_overrides.dart';
 import '../mocks/mock_path_provider_platform.dart';
 
@@ -180,6 +183,38 @@ void main() {
     });
 
     group('reset', () {
+      test(
+        'mode reset preserves owned challenge; ordinary reset retires it',
+        () async {
+          final signer = SyntheticSigner();
+          final auth = createMockAuthService(
+            currentPublicKeyHex: signer.pubkey,
+          );
+          container.dispose();
+          container = ProviderContainer(
+            overrides: [
+              sharedPreferencesProvider.overrideWithValue(
+                await SharedPreferences.getInstance(),
+              ),
+              authServiceProvider.overrideWithValue(auth),
+            ],
+          );
+          final notifier = container.read(videoEditorProvider.notifier);
+          final context = ChallengeRecordingContext(
+            owner: signer.pubkey,
+            generation: 'generation',
+            definition: NostrEvent.fromJson(signer.definition()),
+            recordingId: 'recording',
+            clientTags: const [],
+          );
+          notifier.attachChallengeContext(context);
+          await notifier.resetForRecorderMode(keepAutosavedDraft: true);
+          expect(notifier.getActiveDraft().challengeContext, context);
+          await notifier.reset(keepAutosavedDraft: true);
+          expect(notifier.getActiveDraft().challengeContext, isNull);
+        },
+      );
+
       test('should reset all state to defaults', () async {
         // Modify some provider-owned state
         container

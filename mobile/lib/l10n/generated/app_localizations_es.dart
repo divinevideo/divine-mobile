@@ -14684,4 +14684,159 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get announcementUnavailable => 'Este anuncio ya no está disponible.';
+
+  @override
+  String get challengeTitle => 'Challenges';
+
+  @override
+  String get challengeTestNotice =>
+      'Test build. Some challenges and entries may be missing.';
+
+  @override
+  String get challengeOpenLink => 'Open a challenge link';
+
+  @override
+  String get challengeLinkLabel => 'Challenge naddr or Divine link';
+
+  @override
+  String get challengeUnavailable =>
+      'This challenge is unavailable. Refresh to check its current rules.';
+
+  @override
+  String get challengeSignIn => 'Sign in to view and enter a challenge.';
+
+  @override
+  String get challengeRecord => 'Record a video';
+
+  @override
+  String get challengeChoose => 'Choose one of your videos';
+
+  @override
+  String get challengeReview => 'Review your entry';
+
+  @override
+  String get challengeAgree => 'Agree and submit';
+
+  @override
+  String get challengeWithdraw => 'Withdraw entry';
+
+  @override
+  String get challengeWithdrawReview => 'Review withdrawal';
+
+  @override
+  String get challengeWithdrawConfirm => 'Confirm withdrawal';
+
+  @override
+  String get challengeWithdrawExplanation =>
+      'This withdraws this entry. Your video stays published.';
+
+  @override
+  String get challengeEmpty => 'No visible entries on the relays checked.';
+
+  @override
+  String get challengeNoVideos => 'No published videos found for your account.';
+
+  @override
+  String get challengeRules => 'Current rules';
+
+  @override
+  String get challengeDeadline => 'Deadline (UTC)';
+
+  @override
+  String get challengeOwner => 'Signing account';
+
+  @override
+  String get challengeVideoRevision => 'Video revision';
+
+  @override
+  String get challengeRulesRevision => 'Rules revision';
+
+  @override
+  String get challengeRetry => 'Retry delivery';
+
+  @override
+  String get challengePending => 'Delivery pending';
+
+  @override
+  String get challengeSubmitted => 'Submitted to a challenge relay';
+
+  @override
+  String get challengeIndexing => 'Indexing not yet confirmed';
+
+  @override
+  String get challengeIndexed => 'Indexing confirmed';
+
+  @override
+  String get challengeWithdrawn => 'Withdrawal submitted';
+
+  @override
+  String get challengeRecover => 'Review your published video';
+
+  @override
+  String get challengeEntries => 'Entries';
+
+  @override
+  String get challengeResults => 'Results';
+
+  @override
+  String get challengeWinnerUnavailable => 'Selected entry unavailable';
+
+  @override
+  String get challengePlay => 'Play video';
+
+  @override
+  String get challengeOpen => 'Open for entries';
+
+  @override
+  String get challengeScheduled => 'Not open yet';
+
+  @override
+  String get challengeClosed => 'Entries closed';
+
+  @override
+  String get challengeCancelled => 'Challenge cancelled';
+
+  @override
+  String get challengeResult => 'Results published';
+
+  @override
+  String get challengeChanged =>
+      'Rules changed — review the current rules again.';
+
+  @override
+  String get challengePaused => 'Delivery paused. Your signed entry is saved.';
+
+  @override
+  String get challengeBlocked =>
+      'This action is unavailable under current account or content rules.';
+
+  @override
+  String get challengeOwnerChanged =>
+      'The signing account changed. Return with the original account.';
+
+  @override
+  String get challengeFailed =>
+      'Could not complete the action. Your published video is unchanged.';
+
+  @override
+  String get challengeTooLarge =>
+      'This video or rules snapshot is too large for an entry.';
+
+  @override
+  String get challengeReviewRequired =>
+      'Review the current rules and exact video before submitting.';
+
+  @override
+  String get challengeYourAccount => 'Your current account';
+
+  @override
+  String get challengePreviewUnavailable =>
+      'This video cannot be previewed right now. Try again before submitting.';
+
+  @override
+  String get challengePublicConsent =>
+      'Your entry will be public and linked to this video and these rules.';
+
+  @override
+  String get challengeDetails => 'Technical details';
 }

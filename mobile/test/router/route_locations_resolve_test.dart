@@ -9,6 +9,7 @@ import 'package:analyzer/dart/ast/ast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:nostr_sdk/nip19/nip19_tlv.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/router.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
@@ -25,6 +26,9 @@ const _conversationId =
 const _listId = 'weekend-picks';
 const _announcementId = 'cc3897b7-a83f-4d9f-9ce4-a7daa7c07a63';
 final String _npub = NostrKeyUtils.encodePubKey(_pubkeyHex);
+final String _challengeNaddr = NIP19Tlv.encodeNaddr(
+  Naddr(id: 'synthetic:challenge', author: _pubkeyHex, kind: 31923),
+);
 
 /// Every location a [RoutePaths] member produces, keyed by the member's name.
 final _locations = <String, List<String>>{
@@ -37,6 +41,8 @@ final _locations = <String, List<String>>{
   'badges': [RoutePaths.badges],
   'blossomSettings': [RoutePaths.blossomSettings],
   'blueskySettings': [RoutePaths.blueskySettings],
+  'challenges': [RoutePaths.challenges],
+  'challengeFor': [RoutePaths.challengeFor(_challengeNaddr)],
   'chat': [RoutePaths.chat],
   'clipRecovery': [RoutePaths.clipRecovery],
   'contentFilters': [RoutePaths.contentFilters],
@@ -145,6 +151,8 @@ final _locations = <String, List<String>>{
 
 /// [RoutePaths] members that are not a whole location on their own.
 const _notLocations = {
+  // The :naddr route pattern; challengeFor is checked with a full naddr above.
+  'challenge',
   // Prefixes the builders extend. No route is registered at the bare prefix.
   'announcementDetailBase',
   'curatedListFeedBase',

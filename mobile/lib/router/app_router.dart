@@ -25,6 +25,7 @@ import 'package:openvine/router/routes/account_deletion_recovery_routes.dart';
 import 'package:openvine/router/routes/announcement_routes.dart';
 import 'package:openvine/router/routes/apps_routes.dart';
 import 'package:openvine/router/routes/auth_routes.dart';
+import 'package:openvine/router/routes/challenge_routes.dart';
 import 'package:openvine/router/routes/chat_routes.dart';
 import 'package:openvine/router/routes/library_routes.dart';
 import 'package:openvine/router/routes/lists_routes.dart';
@@ -96,6 +97,7 @@ final routerInitialLocationProvider = Provider<String?>((_) => null);
 /// shared first segment, place it deliberately and guard the ordering.
 List<RouteBase> appRoutes(Ref ref) => [
   ...shortLinkRoutes(),
+  ...challengeRoutes(),
   ...videoRoutes(),
   ...announcementRoutes(),
   ...shellRoutes(),

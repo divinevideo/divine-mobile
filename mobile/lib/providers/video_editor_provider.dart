@@ -375,6 +375,24 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     );
   }
 
+  /// Camera-mode changes keep the same challenge recording, while ordinary
+  /// reset remains a session boundary. A concurrent reset/account switch wins.
+  Future<void> resetForRecorderMode({bool keepAutosavedDraft = false}) async {
+    final context = _challengeContext;
+    final expectedSession = _autosaveSession + 1;
+    await reset(keepAutosavedDraft: keepAutosavedDraft);
+    if (_autosaveSession == expectedSession &&
+        context != null &&
+        ref.read(authServiceProvider).currentPublicKeyHex == context.owner) {
+      _challengeContext = context;
+    }
+  }
+
+  /// A recorder opened without a durable challenge context is unrelated work.
+  void clearChallengeContext() {
+    _challengeContext = null;
+  }
+
   /// Reset editor state and metadata to defaults.
   ///
   /// Also cancels any pending autosave and deletes the autosaved draft

@@ -20,7 +20,7 @@ class ChallengeAppSession {
     required bool Function(NostrEvent) isVisible,
     required bool Function(SubmissionReview) canPublish,
     required String? Function(NostrEvent) currentVideoId,
-    Future<void> Function(NostrEvent)? refreshVideo,
+    this.refreshVideo,
   }) {
     adapter = ChallengeNostrAdapter(
       client: nostr,
@@ -78,6 +78,7 @@ class ChallengeAppSession {
       },
     );
   }
+  final Future<void> Function(NostrEvent)? refreshVideo;
   final _challengeRelays = <String, List<String>>{};
   final SqliteChallengeStore store;
   final AuthService auth;
@@ -85,6 +86,57 @@ class ChallengeAppSession {
   late final ChallengeNostrAdapter adapter;
   late final ChallengesRepository reads;
   late final ChallengeSubmissionRepository submissions;
+
+  /// Hints only select permitted read relays; verified definitions still gate UI.
+  void useLinkHints(String coordinate, List<String> hints) {
+    _challengeRelays[coordinate] = hints;
+  }
+
+  Future<ChallengeRead> refreshForDisplay(String coordinate) async {
+    await reads.refresh(coordinate);
+    await store.checkLive();
+    final retained = await store.load(coordinate);
+    if (!reads.limits.accepts(retained)) return reads.refresh(coordinate);
+    final videos = <String, NostrEvent>{};
+    for (final body in retained) {
+      final parsed = parseChallengeEvent(jsonDecode(body)).value;
+      if (parsed is ChallengeEntry) videos[parsed.video.id] = parsed.video;
+    }
+    // Bounded retained set; refresh current media policy before replay. A
+    // failed policy lookup removes playback, never substitutes a revision.
+    for (final video in videos.values) {
+      try {
+        await refreshVideo?.call(video);
+      } on Object {
+        /* fail closed */
+      }
+      await store.checkLive();
+    }
+    return reads.refresh(coordinate);
+  }
+
+  Future<List<String>> publishedHandoffs(String coordinate) async {
+    await store.checkLive();
+    final rows = await store.dao.read(store.owner, store.generation, 'handoff');
+    await store.checkLive();
+    return [
+      for (final row in rows)
+        if (_handoffCoordinate(row.payload) == coordinate) row.recordKey,
+    ];
+  }
+
+  String? _handoffCoordinate(String payload) {
+    final data = jsonDecode(payload) as Map<String, dynamic>;
+    final context = ChallengeRecordingContext.fromJson(
+      data['context'] as Map<String, dynamic>,
+    );
+    if (context.owner != store.owner ||
+        context.generation != store.generation) {
+      return null;
+    }
+    final parsed = parseChallengeEvent(context.definition).value;
+    return parsed is ChallengeDefinition ? parsed.coordinate : null;
+  }
 
   Future<ChallengeRecordingContext> prepareRecording({
     required String recordingId,

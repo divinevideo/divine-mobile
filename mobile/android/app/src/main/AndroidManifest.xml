@@ -225,6 +225,7 @@
 
                 <data android:pathPrefix="/video"/>
                 <data android:pathPattern="/l/.*"/>
+                <data android:pathPattern="/challenges/.*"/>
                 <data android:pathPrefix="/profile"/>
                 <data android:pathPrefix="/hashtag"/>
                 <data android:pathPrefix="/search"/>

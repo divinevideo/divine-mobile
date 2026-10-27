@@ -32,6 +32,9 @@ String? divineUrlToPushRoute(Uri uri) {
 /// mapping, so a link reaches one location whichever of them delivers it.
 String? deepLinkRouterPath(DeepLink deepLink) {
   switch (deepLink.type) {
+    case DeepLinkType.challenge:
+      final naddr = deepLink.challengeNaddr;
+      return naddr == null ? null : RoutePaths.challengeFor(naddr);
     case DeepLinkType.shortLink:
       final code = deepLink.shortCode;
       return code == null ? null : RoutePaths.shortLinkForCode(code);
@@ -136,6 +139,7 @@ String? customSchemeToRouterPath(Uri uri) {
 /// files, so the custom scheme reaches exactly what a web page can already
 /// reach over https — and nothing more.
 const _customSchemeRoutablePrefixes = <String>{
+  'challenges',
   'video',
   'profile',
   'hashtag',
@@ -180,6 +184,7 @@ String? universalLinkToRouterPath(Uri uri) {
     case DeepLinkType.signerCallback:
     case DeepLinkType.unknown:
       return _invalidPeopleListRoute(uri, deepLink);
+    case DeepLinkType.challenge:
     case DeepLinkType.profile:
     case DeepLinkType.hashtag:
     case DeepLinkType.search:
