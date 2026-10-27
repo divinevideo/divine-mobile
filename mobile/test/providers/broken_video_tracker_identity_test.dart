@@ -20,6 +20,9 @@ class _AlwaysConfirmedMissingChecker implements MediaAvailabilityChecker {
 
   @override
   Future<bool> isConfirmedMissing(String url) async => true;
+
+  @override
+  Future<bool> isConfirmedAvailable(String url) async => false;
 }
 
 class _AlwaysBlockedModerationStatusService

@@ -26,9 +26,18 @@ class BackgroundPublishBloc
     videoPublishServiceFactory,
     required DraftStorageService draftStorageService,
     PublishForegroundSession? foregroundSession,
+    Future<void> Function(DivineVideoDraft draft, String signedVideo)?
+    challengeHandoff,
+    Future<void> Function(
+      DivineVideoDraft draft,
+      Future<void> Function() write,
+    )?
+    challengeRecovery,
   }) : _videoPublishServiceFactory = videoPublishServiceFactory,
        _draftStorageService = draftStorageService,
        _foregroundSession = foregroundSession,
+       _challengeHandoff = challengeHandoff,
+       _challengeRecovery = challengeRecovery,
        super(const BackgroundPublishState()) {
     on<BackgroundPublishRequested>(_onBackgroundPublishRequested);
     on<_BackgroundPublishQueued>(
@@ -47,6 +56,14 @@ class BackgroundPublishBloc
   _videoPublishServiceFactory;
 
   final DraftStorageService _draftStorageService;
+  final Future<void> Function(DivineVideoDraft draft, String signedVideo)?
+  _challengeHandoff;
+
+  final Future<void> Function(
+    DivineVideoDraft draft,
+    Future<void> Function() write,
+  )?
+  _challengeRecovery;
 
   /// Keeps the process foregrounded for the whole publish so the in-process
   /// steps after the OS-backed upload (signing, relay broadcast) survive app
@@ -158,6 +175,9 @@ class BackgroundPublishBloc
               stableId: result.stableId,
               eventId: result.eventId,
               thumbnailBytes: thumbnailBytes,
+              challengeEntryPending: event.draft.challengeContext != null,
+              challengeRecordingId: event.draft.challengeContext?.recordingId,
+              signedVideoBody: result.signedEventBody,
             ),
           ],
         ),
@@ -168,6 +188,56 @@ class BackgroundPublishBloc
       // foreground session: deleting the row is the only record that this
       // publish finished, so losing the process first makes resume offer a
       // retry for an already-published video.
+      if (event.draft.challengeContext != null) {
+        try {
+          final body = result.signedEventBody;
+          final handoff = _challengeHandoff;
+          if (body == null || handoff == null) {
+            throw StateError('Challenge handoff unavailable');
+          }
+          await handoff(event.draft, body);
+        } on Object catch (error, stackTrace) {
+          // Video success is final. Preserve a published draft for entry-only
+          // recovery; never feed this into the failed-video upload queue.
+          try {
+            final recover = _challengeRecovery;
+            if (recover == null) {
+              throw StateError('Challenge recovery session unavailable');
+            }
+            await recover(event.draft, () async {
+              final recovery = event.draft.copyWith(
+                publishStatus: PublishStatus.published,
+                publishedVideoEvent: result.signedEventBody,
+              );
+              await _draftStorageService.saveDraft(
+                recovery,
+                deferOrphanCleanup: (_) {},
+              );
+              final sourceId = event.draft.sourceDraftId;
+              if (sourceId != null && sourceId != event.draft.id) {
+                await _draftStorageService.saveDraft(
+                  recovery.copyWith(id: sourceId),
+                  deferOrphanCleanup: (_) {},
+                );
+              }
+            });
+          } on Object catch (storageError, storageStack) {
+            Log.error(
+              'Could not persist successful challenge video recovery',
+              error: storageError,
+              stackTrace: storageStack,
+              category: LogCategory.video,
+            );
+          }
+          Log.error(
+            'Challenge handoff needs retry after successful video',
+            error: error,
+            stackTrace: stackTrace,
+            category: LogCategory.video,
+          );
+          return;
+        }
+      }
       await _deletePublishedDrafts(event.draft);
       return;
     }

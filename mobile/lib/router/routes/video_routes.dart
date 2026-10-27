@@ -39,6 +39,8 @@ List<RouteBase> videoRoutes() {
         child: ReleaseCachedImagesOnDispose(
           child: VideoRecorderRoute(
             initialSound: extraAs<RecorderSoundSelection>(state.extra),
+            challengeRecordingId:
+                state.uri.queryParameters['challenge_recording'],
             entryPoint: CreationEntryPoint.fromName(
               state.uri.queryParameters['entry_point'],
             ),

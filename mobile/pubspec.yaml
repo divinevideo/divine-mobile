@@ -325,6 +325,10 @@ dependencies:
   # Direct workspace dependencies used by app-layer repositories and blocs.
   app_update_repository:
   app_version_client:
+  challenge_protocol:
+    path: packages/challenge_protocol
+  challenges_repository:
+    path: packages/challenges_repository
   db_client:
   loop_alignment_repository:
     path: packages/loop_alignment_repository

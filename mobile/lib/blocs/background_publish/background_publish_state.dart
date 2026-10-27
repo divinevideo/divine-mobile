@@ -46,6 +46,9 @@ class PublishedVideo extends Equatable {
     this.stableId,
     this.eventId,
     this.thumbnailBytes,
+    this.challengeEntryPending = false,
+    this.challengeRecordingId,
+    this.signedVideoBody,
   });
 
   final String draftId;
@@ -56,11 +59,23 @@ class PublishedVideo extends Equatable {
   final String? eventId;
   final Uint8List? thumbnailBytes;
 
+  /// Entry review/retry is separate from the already-successful video.
+  final bool challengeEntryPending;
+  final String? challengeRecordingId;
+  final String? signedVideoBody;
+
   /// [thumbnailBytes] is deliberately absent: it is read from the draft
   /// identified by [draftId], so it cannot vary independently, and comparing
   /// it would mean an element-wise walk of a JPEG on every state comparison.
   @override
-  List<Object?> get props => [draftId, stableId, eventId];
+  List<Object?> get props => [
+    draftId,
+    stableId,
+    eventId,
+    challengeEntryPending,
+    challengeRecordingId,
+    signedVideoBody,
+  ];
 }
 
 class BackgroundPublishState extends Equatable {

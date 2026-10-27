@@ -1005,6 +1005,10 @@ UserDataCleanupService userDataCleanupService(Ref ref) {
 
         if ((deleteUserData || forgetAccount) && userPubkey != null) {
           await requiredCleanup(
+            'challenges',
+            () => db.challengeRecordsDao.removeOwner(userPubkey),
+          );
+          await requiredCleanup(
             'accountSync',
             () => db.accountSyncDao.clearAccount(userPubkey),
           );

@@ -121,6 +121,24 @@ class AppCompositionRoot extends ConsumerWidget {
                 videoPublishServiceFactory: createPublishService,
                 draftStorageService: ref.read(draftStorageServiceProvider),
                 foregroundSession: ref.read(publishForegroundSessionProvider),
+                challengeRecovery: (draft, write) async {
+                  final session = await ref.read(
+                    challengeAppSessionProvider.future,
+                  );
+                  if (session == null) {
+                    throw StateError('Challenge recovery owner changed');
+                  }
+                  await session.recoverPublishedDraft(draft, write);
+                },
+                challengeHandoff: (draft, signedVideo) async {
+                  final session = await ref.read(
+                    challengeAppSessionProvider.future,
+                  );
+                  if (session == null) {
+                    throw StateError('Challenge owner session unavailable');
+                  }
+                  await session.recordPublished(draft, signedVideo);
+                },
               ),
             ),
             BlocProvider(

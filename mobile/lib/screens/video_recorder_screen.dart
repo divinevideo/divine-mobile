@@ -22,9 +22,11 @@ import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/overlay_visibility_provider.dart';
+import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/router/challenge_recording_gate.dart';
 import 'package:openvine/router/recorder_sound_selection.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/utils/detached_future.dart';
@@ -78,18 +80,20 @@ class VideoRecorderRoute extends ConsumerWidget {
     this.entryPoint = CreationEntryPoint.direct,
     this.autoRecord = false,
     this.initialSound,
+    this.challengeRecordingId,
   });
 
   final String entryPoint;
 
   final RecorderSoundSelection? initialSound;
+  final String? challengeRecordingId;
 
   /// See [VideoRecorderView.autoRecord].
   final bool autoRecord;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final recorder = _VideoRecorderBlocScope(
+    Widget recorder = _VideoRecorderBlocScope(
       child: CameraPermissionGate(
         child: VideoRecorderView(
           entryPoint: entryPoint,
@@ -97,6 +101,25 @@ class VideoRecorderRoute extends ConsumerWidget {
         ),
       ),
     );
+    final recordingId = challengeRecordingId;
+    if (recordingId != null) {
+      recorder = ChallengeRecordingGate(
+        key: ValueKey(recordingId),
+        prepare: () async {
+          final session = await ref.read(challengeAppSessionProvider.future);
+          final context = await session?.recording(recordingId);
+          if (!ref.context.mounted || context == null) {
+            throw StateError('Challenge recording unavailable');
+          }
+          await session!.store.checkLive();
+          if (!ref.context.mounted) throw StateError('Recorder closed');
+          ref
+              .read(videoEditorProvider.notifier)
+              .attachChallengeContext(context);
+        },
+        child: recorder,
+      );
+    }
     final selection = initialSound;
     if (selection == null) return recorder;
     return RecorderSoundSelectionGate(
