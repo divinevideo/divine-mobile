@@ -84,8 +84,10 @@ the three-row preview (#8578), while the server still decides where that exact
 match stands against unknown profiles.
 
 With a ranking loader the bloc keeps rows already shown in place until
-Funnelcake answers, then moves the whole list into the repository's order once,
-so rows from the local cache can shift a single time.
+Funnelcake answers, then moves the whole list into the repository's order. The
+profiles Funnelcake returned move once and then keep their places; a row only
+the local cache found can move again when NIP-50 adds a better match ahead of
+it.
 
 A `sort_by=followers` search, which other callers still use, keeps the app's
 relevance tiers first and orders each tier by the REST follower and video
