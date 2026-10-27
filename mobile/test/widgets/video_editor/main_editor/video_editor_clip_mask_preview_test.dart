@@ -1,4 +1,4 @@
-// ABOUTME: Tests the black cover a timeline clip's shape mask draws over the
+// ABOUTME: Tests the cover a timeline clip's shape mask draws over the
 // ABOUTME: preview frame while that clip plays.
 
 import 'dart:io';
@@ -78,18 +78,25 @@ void main() {
       expect(covers(tester), isEmpty);
     });
 
-    testWidgets("draws a mask being changed in place of the clip's own", (
-      tester,
-    ) async {
+    testWidgets('draws a mask being changed, in its color, in place of the '
+        "clip's own", (tester) async {
       const circle = LayerMask(shape: LayerMaskShape.ellipse);
+      const pink = Color(0xFFFF7FAF);
       playTime.value = const Duration(milliseconds: 500);
       await pumpCover(tester);
       expect(covers(tester), isEmpty);
 
-      liveMask.value = (clipId: 'a', mask: circle);
+      liveMask.value = (clipId: 'a', mask: circle, backgroundColor: pink);
       await tester.pump();
 
       expect(covers(tester), [circle.copyWith(invert: true)]);
+      final fill = tester.widget<ColoredBox>(
+        find.descendant(
+          of: find.byType(LayerMaskBox),
+          matching: find.byType(ColoredBox),
+        ),
+      );
+      expect(fill.color, pink);
     });
   });
 

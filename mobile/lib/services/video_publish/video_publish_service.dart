@@ -165,6 +165,14 @@ class VideoPublishService {
   /// garbage collection only delays the UI (#6548). The bloc also deletes the
   /// source draft this publish copy came from, which this service never saw.
   Future<PublishResult> publishVideo({required DivineVideoDraft draft}) async {
+    if (draft.publishStatus == PublishStatus.published) {
+      // Entry recovery cannot re-upload or re-sign an already-successful video.
+      final body = draft.publishedVideoEvent;
+      final event = body == null
+          ? null
+          : Event.fromJson(jsonDecode(body) as Map<String, dynamic>);
+      return PublishSuccess(eventId: event?.id, signedEventBody: body);
+    }
     final timeline = PublishTimeline(
       draft.id,
       performanceMonitor: _performanceMonitor,
@@ -354,6 +362,7 @@ class VideoPublishService {
       final scheduledAt = _effectiveScheduledAt(draft);
       final expireTime = draft.expireTime;
       Event? scheduledEvent;
+      Event? publishedEvent;
       final published = await timeline.measure(
         PublishPhases.nostr,
         () => videoEventPublisher.publishVideoEvent(
@@ -395,6 +404,7 @@ class VideoPublishService {
             progress: _progressAfterSigning,
           ),
           onAudioReuseDegraded: () => audioReuseDegraded = true,
+          onPublishedEvent: (event) => publishedEvent = event,
           scheduledAt: scheduledAt,
           onScheduledEventSigned: scheduledAt == null
               ? null
@@ -456,7 +466,12 @@ class VideoPublishService {
         stableId: (videoId == null || videoId.isEmpty) ? null : videoId,
         // The publisher records the signed event's id on the upload once the
         // relay confirms it.
-        eventId: uploadManager.getUpload(pendingUpload.id)?.nostrEventId,
+        eventId:
+            publishedEvent?.id ??
+            uploadManager.getUpload(pendingUpload.id)?.nostrEventId,
+        signedEventBody: publishedEvent == null
+            ? null
+            : jsonEncode(publishedEvent!.toJson()),
         inviteWarnings: inviteWarnings,
         audioReuseDegraded: audioReuseDegraded,
       );

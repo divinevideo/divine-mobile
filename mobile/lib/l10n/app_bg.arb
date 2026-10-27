@@ -2866,6 +2866,10 @@
   "videoEditorTuneTemperature": "Температура",
   "videoEditorTuneTint": "Отенък",
   "videoEditorTuneFade": "Избледняване",
+  "videoEditorTuneHighlights": "Светлини",
+  "videoEditorTuneShadows": "Сенки",
+  "videoEditorTuneVibrance": "Живост",
+  "videoEditorTuneSharpen": "Острота",
   "videoEditorAudioLabel": "Аудио",
   "videoEditorMarkerLabel": "Маркер",
   "videoEditorAddTimelineMarkerSemanticLabel": "Добавяне на маркер в хронологията",
@@ -4277,6 +4281,7 @@
   "videoEditorShapeMaskCornersLabel": "Ъгли",
   "videoEditorShapeMaskCornersSquare": "Прави",
   "videoEditorShapeMaskCornersRound": "Заоблени",
+  "videoEditorShapeMaskBackgroundLabel": "Фон",
   "videoEditorChromaKeyAutoDetect": "Автоматично разпознаване",
   "videoEditorChromaKeyPresetGreen": "Зелено",
   "videoEditorChromaKeyPresetBlue": "Синьо",
@@ -5019,10 +5024,10 @@
   "inboxConversationOptionsLabel": "Опции",
   "inboxConversationViewProfileButton": "Виж профила",
   "inboxMessageRequestsEmpty": "Няма заявки за съобщения",
-  "inboxMessageRequestsSemanticLabel": "Заявки за съобщения, {requestCount} в очакване",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{Заявки за съобщения} =1{Заявки за съобщения, {count} непрочетена} other{Заявки за съобщения, {count} непрочетени}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

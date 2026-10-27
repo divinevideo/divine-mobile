@@ -33,6 +33,19 @@ typedef ReceivedClipImporter = Future<VideoClipImportResult> Function({
 /// and the clip belongs to the account that received it and asked to save it.
 typedef ReceivedClipImporterResolver = ReceivedClipImporter Function();
 
+/// Adds a received archived Vine to one account's clip library, awaiting
+/// [beforeSave] just before it saves the clip there.
+typedef ReceivedVineImporter = Future<VideoClipImportResult> Function({
+  required File source,
+  required String messageId,
+  Future<void> Function()? beforeSave,
+});
+
+/// Returns the [ReceivedVineImporter] for the signed-in account's library,
+/// resolved when a save starts for the same reasons as
+/// [ReceivedClipImporterResolver].
+typedef ReceivedVineImporterResolver = ReceivedVineImporter Function();
+
 /// Lifecycle of adding one received clip to the library.
 enum DmClipSaveStatus {
   /// Nothing is being saved.
@@ -44,8 +57,8 @@ enum DmClipSaveStatus {
   /// The clip passed the check and is in the library.
   saved,
 
-  /// The clip's credential does not prove a Divine camera capture, so it was
-  /// not added.
+  /// The clip's credential does not prove a Divine camera capture, and it is
+  /// not an archived Vine either, so it was not added.
   notVerified,
 
   /// The check could not run right now; nothing is known about the clip.
@@ -70,10 +83,11 @@ class DmClipSaveState extends Equatable {
 /// Adds a clip received in a direct message to the clip library.
 ///
 /// A clip is only added when [ClipProvenanceVerifier] confirms it is a
-/// Divine camera capture or a signed edit of captures, so a clip library
-/// never holds footage whose origin is unknown or generated. The video comes
-/// from the [DmVideoStore] of the account signed in when the save starts,
-/// held until the library has its own copy.
+/// Divine camera capture or a signed edit of captures, or, for a file with no
+/// credential at all, when it is the exact file of a published Vine post, so
+/// a clip library never holds footage whose origin is unknown or generated.
+/// The video comes from the [DmVideoStore] of the account signed in when the
+/// save starts, held until the library has its own copy.
 class DmClipSaveCubit extends Cubit<DmClipSaveState>
     with CloseGuardedEmit<DmClipSaveState> {
   /// Creates a [DmClipSaveCubit].
@@ -81,14 +95,17 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
     required DmVideoStoreResolver resolveStore,
     required ClipProvenanceVerifier verifier,
     required ReceivedClipImporterResolver resolveImporter,
+    required ReceivedVineImporterResolver resolveVineImporter,
   }) : _resolveStore = resolveStore,
        _verifier = verifier,
        _resolveImporter = resolveImporter,
+       _resolveVineImporter = resolveVineImporter,
        super(const DmClipSaveState());
 
   final DmVideoStoreResolver _resolveStore;
   final ClipProvenanceVerifier _verifier;
   final ReceivedClipImporterResolver _resolveImporter;
+  final ReceivedVineImporterResolver _resolveVineImporter;
 
   /// Containers the C2PA reader is given. The decrypted file's extension
   /// comes from the sender's `file-type` tag and picks the reader's parser,
@@ -109,9 +126,10 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
   Future<DmClipSaveStatus> save(DmMessage message) async {
     final store = _resolveStore();
     final importClip = _resolveImporter();
+    final importVine = _resolveVineImporter();
     emit(const DmClipSaveState(status: DmClipSaveStatus.checking));
 
-    final status = await _save(message, store, importClip);
+    final status = await _save(message, store, importClip, importVine);
     emitIfOpen(DmClipSaveState(status: status));
     return status;
   }
@@ -120,6 +138,7 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
     DmMessage message,
     DmVideoStore? store,
     ReceivedClipImporter importClip,
+    ReceivedVineImporter importVine,
   ) async {
     final fileType = message.fileMetadata?.fileType.toLowerCase();
     if (!verifiableFileTypes.contains(fileType)) {
@@ -133,29 +152,37 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
         );
       }
       final video = await store.videoFor(message);
+      // Asked again just before the save: the check, the import's lookups and
+      // its frames take seconds, and a message retracted by then must not
+      // reach the library.
+      Future<void> stillReceived() async =>
+          store.releaseVideo(await store.videoFor(message));
       final VideoClipImportResult result;
       try {
         final provenance = await _verifier.verify(video.path);
-        if (!provenance.isVerified) {
+        if (provenance.status == ClipProvenanceStatus.noCredentials) {
+          // An archived Vine was filmed before Divine and carries no
+          // credential; only the exact file of its post gets in.
+          result = await importVine(
+            source: video,
+            messageId: message.id,
+            beforeSave: stillReceived,
+          );
+        } else if (!provenance.isVerified) {
           return provenance.isRejected
               ? DmClipSaveStatus.notVerified
               : DmClipSaveStatus.checkUnavailable;
+        } else {
+          result = await importClip(
+            source: video,
+            messageId: message.id,
+            senderPubkey: message.senderPubkey,
+            c2paManifestId: provenance.activeManifestId!,
+            targetAspectRatio: message.clipTargetAspectRatio,
+            contributorPubkeys: provenance.contributors,
+            beforeSave: stillReceived,
+          );
         }
-
-        result = await importClip(
-          source: video,
-          messageId: message.id,
-          senderPubkey: message.senderPubkey,
-          c2paManifestId: provenance.activeManifestId!,
-          targetAspectRatio: message.clipTargetAspectRatio,
-          contributorPubkeys: provenance.contributors,
-          // Asked again just before the save: the check, the import's lookups
-          // and its frames take seconds, and a message retracted by then must
-          // not reach the library.
-          beforeSave: () async => store.releaseVideo(
-            await store.videoFor(message),
-          ),
-        );
       } finally {
         store.releaseVideo(video);
       }
@@ -163,10 +190,15 @@ class DmClipSaveCubit extends Cubit<DmClipSaveState>
         case VideoClipImportSuccess():
           return DmClipSaveStatus.saved;
         case VideoClipImportFailure(
+          reason: VideoClipImportFailureReason.notArchivedVine,
+        ):
+          return DmClipSaveStatus.notVerified;
+        case VideoClipImportFailure(
           reason: VideoClipImportFailureReason.sourceLookupFailed,
         ):
-          // Whether it is a published post, and so whom to credit, could not
-          // be checked; like a check that could not run, try again later.
+          // Whether it is a published post or an archived Vine, and so whom
+          // to credit, could not be checked; like a check that could not run,
+          // try again later.
           return DmClipSaveStatus.checkUnavailable;
         case VideoClipImportFailure(:final reason):
           addError(DmClipImportFailure(reason), StackTrace.current);

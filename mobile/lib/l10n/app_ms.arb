@@ -3609,10 +3609,10 @@
   "inboxConversationOptionsLabel": "Pilihan",
   "inboxConversationViewProfileButton": "Lihat profil",
   "inboxMessageRequestsEmpty": "Tiada permintaan mesej",
-  "inboxMessageRequestsSemanticLabel": "Permintaan mesej, {requestCount} belum selesai",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{Permintaan mesej} other{Permintaan mesej, {count} belum dibaca}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }
@@ -4664,6 +4664,10 @@
   "videoEditorTuneTemperature": "Suhu",
   "videoEditorTuneTint": "Ton",
   "videoEditorTuneFade": "Pudar",
+  "videoEditorTuneHighlights": "Serlahan",
+  "videoEditorTuneShadows": "Bayang",
+  "videoEditorTuneVibrance": "Kerancakan",
+  "videoEditorTuneSharpen": "Ketajaman",
   "videoEditorAudioLabel": "Audio",
   "videoEditorAddTitle": "Tambah",
   "videoEditorOpenLibrarySemanticLabel": "Buka Pustaka",
@@ -4951,6 +4955,7 @@
   "videoEditorShapeMaskCornersLabel": "Penjuru",
   "videoEditorShapeMaskCornersSquare": "Bersegi",
   "videoEditorShapeMaskCornersRound": "Bulat",
+  "videoEditorShapeMaskBackgroundLabel": "Latar belakang",
   "videoEditorChromaKeyAutoDetect": "Kesan automatik",
   "videoEditorChromaKeyPresetGreen": "Hijau",
   "videoEditorChromaKeyPresetBlue": "Biru",

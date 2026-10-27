@@ -1221,6 +1221,132 @@ void main() {
         },
       );
 
+      group('$MessageRequestsBanner semantics label (#9620)', () {
+        Future<String> pumpBannerLabel(
+          WidgetTester tester, {
+          required bool isRead,
+          bool isDismissed = false,
+          List<DmConversation> conversations = const [],
+          List<DmConversation>? visibleConversations,
+          InboxFilter filter = InboxFilter.all,
+        }) async {
+          final request = DmConversation(
+            id: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+            participantPubkeys: const [currentPubkey, otherPubkey],
+            isGroup: false,
+            createdAt: nowUnix,
+            lastMessageContent: 'Hey',
+            lastMessageTimestamp: nowUnix,
+            isRead: isRead,
+            isDismissed: isDismissed,
+          );
+
+          await tester.pumpWidget(
+            buildSubject(
+              state: ConversationListState(
+                status: ConversationListStatus.loaded,
+                conversations: conversations,
+                visibleConversations: visibleConversations ?? conversations,
+                filter: filter,
+                requestConversations: isDismissed ? const [] : [request],
+                dismissedRequestConversations: isDismissed
+                    ? [request]
+                    : const [],
+                hasMore: false,
+              ),
+            ),
+          );
+          await tester.pump();
+          await tester.tap(find.text('Messages'));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 350));
+
+          return tester.getSemantics(find.byType(MessageRequestsBanner)).label;
+        }
+
+        testWidgets(
+          'announces a read request awaiting a decision without a count',
+          (tester) async {
+            final l10n = lookupAppLocalizations(const Locale('en'));
+            expect(
+              await pumpBannerLabel(tester, isRead: true),
+              equals(l10n.inboxMessageRequestsTitle),
+            );
+          },
+        );
+
+        testWidgets('announces an unread request as one unread', (
+          tester,
+        ) async {
+          final l10n = lookupAppLocalizations(const Locale('en'));
+          expect(
+            await pumpBannerLabel(tester, isRead: false),
+            equals(l10n.inboxMessageRequestsUnreadSemanticLabel(1)),
+          );
+        });
+
+        testWidgets(
+          'shows the banner for a dismissed request without counting it',
+          (tester) async {
+            final l10n = lookupAppLocalizations(const Locale('en'));
+            expect(
+              await pumpBannerLabel(tester, isRead: false, isDismissed: true),
+              equals(l10n.inboxMessageRequestsTitle),
+            );
+          },
+        );
+
+        testWidgets(
+          'counts unread requests above the conversation list',
+          (tester) async {
+            final conversation = DmConversation(
+              id: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+              participantPubkeys: const [currentPubkey, otherPubkey],
+              isGroup: false,
+              createdAt: nowUnix,
+              lastMessageContent: 'Hello',
+              lastMessageTimestamp: nowUnix,
+            );
+
+            final l10n = lookupAppLocalizations(const Locale('en'));
+            expect(
+              await pumpBannerLabel(
+                tester,
+                isRead: false,
+                conversations: [conversation],
+              ),
+              equals(l10n.inboxMessageRequestsUnreadSemanticLabel(1)),
+            );
+          },
+        );
+
+        testWidgets(
+          'counts unread requests when the filter hides every conversation',
+          (tester) async {
+            final conversation = DmConversation(
+              id: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+              participantPubkeys: const [currentPubkey, otherPubkey],
+              isGroup: false,
+              createdAt: nowUnix,
+              lastMessageContent: 'Hello',
+              lastMessageTimestamp: nowUnix,
+            );
+
+            final l10n = lookupAppLocalizations(const Locale('en'));
+            expect(
+              await pumpBannerLabel(
+                tester,
+                isRead: false,
+                conversations: [conversation],
+                visibleConversations: const [],
+                filter: InboxFilter.unread,
+              ),
+              equals(l10n.inboxMessageRequestsUnreadSemanticLabel(1)),
+            );
+          },
+        );
+      });
+
       testWidgets(
         'renders $MessageRequestsBanner above conversations when both exist',
         (tester) async {

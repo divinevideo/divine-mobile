@@ -3609,10 +3609,10 @@
   "inboxConversationOptionsLabel": "اختیارات",
   "inboxConversationViewProfileButton": "پروفائل دیکھیں",
   "inboxMessageRequestsEmpty": "کوئی پیغام درخواست نہیں",
-  "inboxMessageRequestsSemanticLabel": "پیغام درخواستیں، {requestCount} زیر التواء",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{پیغام درخواستیں} =1{پیغام درخواستیں، {count} غیر پڑھی ہوئی} other{پیغام درخواستیں، {count} غیر پڑھی ہوئی}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }
@@ -4664,6 +4664,10 @@
   "videoEditorTuneTemperature": "درجہ حرارت",
   "videoEditorTuneTint": "ٹنٹ",
   "videoEditorTuneFade": "فیڈ",
+  "videoEditorTuneHighlights": "ہائی لائٹس",
+  "videoEditorTuneShadows": "سائے",
+  "videoEditorTuneVibrance": "وائبرنس",
+  "videoEditorTuneSharpen": "شارپنس",
   "videoEditorAudioLabel": "آڈیو",
   "videoEditorAddTitle": "شامل کریں",
   "videoEditorOpenLibrarySemanticLabel": "لائبریری کھولیں",
@@ -4951,6 +4955,7 @@
   "videoEditorShapeMaskCornersLabel": "کونے",
   "videoEditorShapeMaskCornersSquare": "چوکور",
   "videoEditorShapeMaskCornersRound": "گول",
+  "videoEditorShapeMaskBackgroundLabel": "پس منظر",
   "videoEditorChromaKeyAutoDetect": "خودکار شناخت",
   "videoEditorChromaKeyPresetGreen": "سبز",
   "videoEditorChromaKeyPresetBlue": "نیلا",

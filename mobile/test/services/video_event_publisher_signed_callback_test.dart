@@ -177,11 +177,21 @@ void main() {
           ),
         ).thenAnswer((_) async => <Event>[signedEvent]);
 
-        final result = await publisher.publishDirectUpload(
-          createUpload(),
-          onEventSigned: () => signedSteps++,
-        );
-
+        final publishedEvents = <Event>[];
+        final results = await Future.wait([
+          publisher.publishDirectUpload(
+            createUpload(),
+            onEventSigned: () => signedSteps++,
+            onPublishedEvent: publishedEvents.add,
+          ),
+          publisher.publishDirectUpload(
+            createUpload(),
+            onPublishedEvent: publishedEvents.add,
+          ),
+        ]);
+        final result = results.first;
+        expect(results, [true, true]);
+        expect(publishedEvents, [same(signedEvent), same(signedEvent)]);
         expect(result, isTrue);
         expect(signedSteps, equals(1));
       });

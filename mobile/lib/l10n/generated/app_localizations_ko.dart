@@ -6928,8 +6928,14 @@ class AppLocalizationsKo extends AppLocalizations {
   String get inboxMessageRequestsEmpty => '메시지 요청 없음';
 
   @override
-  String inboxMessageRequestsSemanticLabel(int requestCount) {
-    return '메시지 요청, $requestCount건 대기 중';
+  String inboxMessageRequestsUnreadSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '메시지 요청, 읽지 않음 $count건',
+      zero: '메시지 요청',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -8559,6 +8565,18 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorTuneFade => '페이드';
 
   @override
+  String get videoEditorTuneHighlights => '하이라이트';
+
+  @override
+  String get videoEditorTuneShadows => '그림자';
+
+  @override
+  String get videoEditorTuneVibrance => '생동감';
+
+  @override
+  String get videoEditorTuneSharpen => '선명도';
+
+  @override
   String get videoEditorAudioLabel => '오디오';
 
   @override
@@ -9350,6 +9368,9 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorShapeMaskCornersRound => '둥글게';
+
+  @override
+  String get videoEditorShapeMaskBackgroundLabel => '배경';
 
   @override
   String get videoEditorChromaKeyAutoDetect => '자동 감지';

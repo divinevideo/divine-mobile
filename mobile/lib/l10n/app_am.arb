@@ -3255,6 +3255,10 @@
   "videoEditorTuneTemperature": "ሙቀት",
   "videoEditorTuneTint": "ቲንት",
   "videoEditorTuneFade": "መደብዘዝ",
+  "videoEditorTuneHighlights": "ብሩህ ክፍሎች",
+  "videoEditorTuneShadows": "ጥላዎች",
+  "videoEditorTuneVibrance": "ሕያውነት",
+  "videoEditorTuneSharpen": "ጥርትነት",
   "videoEditorAudioLabel": "ኦዲዮ",
   "videoEditorMarkerLabel": "ማርከር",
   "videoEditorAddTimelineMarkerSemanticLabel": "የጊዜ መስመር ማርከር አክል",
@@ -4247,6 +4251,7 @@
   "videoEditorShapeMaskCornersLabel": "ማዕዘኖች",
   "videoEditorShapeMaskCornersSquare": "ካሬ",
   "videoEditorShapeMaskCornersRound": "የተጠጋጋ",
+  "videoEditorShapeMaskBackgroundLabel": "ዳራ",
   "videoEditorChromaKeyAutoDetect": "በራስ-ሰር ለይ",
   "videoEditorChromaKeyPresetGreen": "አረንጓዴ",
   "videoEditorChromaKeyPresetBlue": "ሰማያዊ",
@@ -4989,10 +4994,10 @@
   "inboxConversationOptionsLabel": "አማራጮች",
   "inboxConversationViewProfileButton": "መገለጫ ይመልከቱ",
   "inboxMessageRequestsEmpty": "ምንም የመልእክት ጥያቄዎች የሉም",
-  "inboxMessageRequestsSemanticLabel": "የመልእክት ጥያቄዎች፣ {requestCount} በመጠባበቅ ላይ",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{የመልእክት ጥያቄዎች} =1{የመልእክት ጥያቄዎች፣ {count} ያልተነበበ} other{የመልእክት ጥያቄዎች፣ {count} ያልተነበቡ}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

@@ -2605,6 +2605,10 @@
   "videoEditorTuneTemperature": "Suhu",
   "videoEditorTuneTint": "Semburat",
   "videoEditorTuneFade": "Pudar",
+  "videoEditorTuneHighlights": "Sorotan",
+  "videoEditorTuneShadows": "Bayangan",
+  "videoEditorTuneVibrance": "Vibransi",
+  "videoEditorTuneSharpen": "Ketajaman",
   "videoEditorFailedLoadStickers": "Gagal memuat stiker",
   "videoEditorFeedPreviewContent": "Hindari menempatkan konten di belakang area ini.",
   "videoEditorFinishTimelineEditingSemanticLabel": "Selesai mengedit timeline",
@@ -4160,6 +4164,7 @@
   "videoEditorShapeMaskCornersLabel": "Sudut",
   "videoEditorShapeMaskCornersSquare": "Siku",
   "videoEditorShapeMaskCornersRound": "Bulat",
+  "videoEditorShapeMaskBackgroundLabel": "Latar",
   "videoEditorChromaKeyAutoDetect": "Deteksi otomatis",
   "videoEditorChromaKeyPresetGreen": "Hijau",
   "videoEditorChromaKeyPresetBlue": "Biru",
@@ -4902,10 +4907,10 @@
   "inboxConversationOptionsLabel": "Opsi",
   "inboxConversationViewProfileButton": "Lihat profil",
   "inboxMessageRequestsEmpty": "Tidak ada permintaan pesan",
-  "inboxMessageRequestsSemanticLabel": "Permintaan pesan, {requestCount} menunggu",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{Permintaan pesan} other{Permintaan pesan, {count} belum dibaca}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

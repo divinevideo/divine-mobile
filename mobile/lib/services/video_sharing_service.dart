@@ -10,6 +10,7 @@ import 'package:models/models.dart';
 // one (used by [ShareableUser.fromProfile]) resolves unambiguously.
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
+import 'package:openvine/services/short_link_client.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -112,7 +113,7 @@ typedef ShareData = ({String shareUrl, String? title, String? thumbnailUrl});
 /// to tell them apart (#8672): a send the durable queue will keep retrying,
 /// and a send nothing will ever retry.
 enum ShareDelivery {
-  /// Published, or queued with the relay's `OK` still pending — reported as
+  /// Published, or durably queued for background delivery — reported as
   /// sent, the same way the DM composer reports it.
   sent,
 
@@ -168,12 +169,15 @@ class VideoSharingService {
     required AuthService authService,
     required ProfileReader profileRepository,
     required DmRepository dmRepository,
+    ShortLinkClient? shortLinkClient,
   }) : _authService = authService,
        _profileRepository = profileRepository,
-       _dmRepository = dmRepository;
+       _dmRepository = dmRepository,
+       _shortLinkClient = shortLinkClient;
   final AuthService _authService;
   final ProfileReader _profileRepository;
   final DmRepository _dmRepository;
+  final ShortLinkClient? _shortLinkClient;
 
   final List<ShareableUser> _recentlySharedWith = [];
   final Map<String, DateTime> _shareHistory = {};
@@ -238,6 +242,7 @@ class VideoSharingService {
     required String content,
   }) async {
     final result = await _dmRepository.sendSharedVideo(
+      backgroundDelivery: true,
       recipientPubkey: recipientPubkey,
       baseContent: content,
       videoKind: video.shareKind,
@@ -253,9 +258,9 @@ class VideoSharingService {
       skipNip04Fallback: true,
     );
 
-    // Soft-unconfirmed sends stay in the durable queue and render like the
-    // ordinary DM optimistic bubble. Use that queue handle as the share result
-    // identity so the sheet reports success without minting a second rumor.
+    // A durably queued send is enough to dismiss the sheet. The repository
+    // owns delivery and retries under this same rumor id; relay confirmation
+    // never blocks composing or sharing the next message.
     final optimisticMessageId = result.success
         ? result.messageEventId
         : result.retryablePending
@@ -317,10 +322,9 @@ class VideoSharingService {
   }) async {
     final results = <String, ShareResult>{};
 
-    // Sequential (not parallel) so N recipients' gift-wrap publishes are spaced
-    // out under the relay's per-connection burst limit. Each iteration is
-    // guarded so one recipient's failure — or an unexpected throw — becomes a
-    // failure entry for that recipient instead of aborting the remaining sends.
+    // Queue each recipient locally; network delivery continues independently
+    // of this sheet. Each enqueue is guarded so one validation/storage error
+    // does not prevent sharing with the remaining recipients.
     for (final pubkey in recipientPubkeys) {
       try {
         results[pubkey] = await shareVideoWithUser(
@@ -358,6 +362,10 @@ class VideoSharingService {
   /// returns a non-routable URL.
   String generateShareUrl(VideoEvent video) =>
       shareUrlForStableId(video.stableId);
+
+  /// Shorten only explicit external shares; protocol and DM builders stay canonical.
+  Future<String> shortenExternalUrl(String url) =>
+      _shortLinkClient?.shorten(url) ?? Future.value(url);
 
   /// Generate share text for external sharing (social media, etc.)
   ///

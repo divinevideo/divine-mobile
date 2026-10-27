@@ -2991,6 +2991,17 @@ void main() {
           addTearDown(tuneBloc.close);
           when(() => mockEditor.openTuneEditor()).thenAnswer((_) {});
           when(() => mainBloc.state).thenReturn(const VideoEditorMainState());
+          when(() => mockStateManager.activeTuneAdjustments).thenReturn([
+            TuneAdjustmentMatrix(
+              id: 'shadows__set-1',
+              value: 0.4,
+              matrix: const [],
+              meta: const {
+                VideoEditorConstants.tuneSetIdMetaKey: 'set-1',
+                VideoEditorConstants.tuneKindMetaKey: 'shadows',
+              },
+            ),
+          ]);
 
           const item = TimelineOverlayItem(
             id: 'set-1',
@@ -3047,6 +3058,7 @@ void main() {
 
           verify(() => mockEditor.openTuneEditor()).called(1);
           expect(tuneBloc.state.editingSetId, 'set-1');
+          expect(tuneBloc.state.values, {'shadows': 0.4});
         },
       );
 

@@ -34,6 +34,7 @@ import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/router/routes/search_routes.dart';
 import 'package:openvine/router/routes/settings_routes.dart';
 import 'package:openvine/router/routes/shell.dart';
+import 'package:openvine/router/routes/short_link_routes.dart';
 import 'package:openvine/router/routes/video_routes.dart';
 import 'package:openvine/router/universal_link_resolver.dart';
 import 'package:openvine/screens/account_deletion_recovery_screen.dart';
@@ -94,6 +95,7 @@ final routerInitialLocationProvider = Provider<String?>((_) => null);
 /// Both constraints have route-order regression tests. If you add another
 /// shared first segment, place it deliberately and guard the ordering.
 List<RouteBase> appRoutes(Ref ref) => [
+  ...shortLinkRoutes(),
   ...videoRoutes(),
   ...announcementRoutes(),
   ...shellRoutes(),

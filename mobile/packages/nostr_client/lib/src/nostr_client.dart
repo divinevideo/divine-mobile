@@ -1113,6 +1113,9 @@ class NostrClient {
   /// [QueryEnd.deadline]. Every other read reports how the relay pool's own
   /// read ended, including one this client believed had no relay connected —
   /// `queryEventsDetailed`'s `noRelays` flag is what carries that belief.
+  /// [maxCollectedEvents] and [maxCollectedBytes] optionally bound the SDK
+  /// network collector. Use [useCache] false for a bounded returned batch;
+  /// excess network events are discarded and reported as possibly capped.
   Future<QueryResult> readEvents(
     List<Filter> filters, {
     String? subscriptionId,
@@ -1123,6 +1126,8 @@ class NostrClient {
     bool useQueryPool = true,
     Duration timeout = const Duration(seconds: 5),
     bool requireAllRelaysSettled = false,
+    int? maxCollectedEvents,
+    int? maxCollectedBytes,
   }) async {
     final read = await _read(
       filters,
@@ -1134,6 +1139,8 @@ class NostrClient {
       useQueryPool: useQueryPool,
       timeout: timeout,
       requireAllRelaysSettled: requireAllRelaysSettled,
+      maxCollectedEvents: maxCollectedEvents,
+      maxCollectedBytes: maxCollectedBytes,
     );
     return read.result;
   }
@@ -1183,6 +1190,8 @@ class NostrClient {
     required bool useQueryPool,
     required Duration timeout,
     required bool requireAllRelaysSettled,
+    int? maxCollectedEvents,
+    int? maxCollectedBytes,
   }) async {
     final startedAt = clock.now();
     // A disposed client's query pool is closed; querying it is a no-op
@@ -1306,6 +1315,8 @@ class NostrClient {
       sendAfterAuth: sendAfterAuth,
       deadline: deadline,
       requireAllRelaysSettled: requireAllRelaysSettled,
+      maxCollectedEvents: maxCollectedEvents,
+      maxCollectedBytes: maxCollectedBytes,
     );
 
     // Always at least the grace from now: a read whose budget is already
@@ -2155,6 +2166,16 @@ class NostrClient {
 
   /// Gets list of configured relay URLs
   List<String> get configuredRelays => _relayManager.configuredRelays;
+
+  /// Configured relays that currently permit EVENT writes. Explicit delivery
+  /// adapters must not turn a read-only pool member into a temporary writer.
+  List<String> get writableRelays => configuredRelays
+      .where(
+        (url) =>
+            isRelayAllowed(url) &&
+            _nostr.getRelay(url)?.relayStatus.writeAccess == true,
+      )
+      .toList();
 
   /// Gets list of connected relay URLs
   List<String> get connectedRelays => _relayManager.connectedRelays;

@@ -24,6 +24,11 @@ String videoDmMimeTypeFor(String path) {
   return dmVideoMimeTypesByExtension[extension] ?? 'video/mp4';
 }
 
+/// Whether the file at `path` is the exact file of a published Vine post.
+///
+/// Throws when that cannot be told.
+typedef ArchivedVineCheck = Future<bool> Function(String path);
+
 /// How a [VideoDmSendCubit.sendClips] call ended.
 class ClipSendOutcome extends Equatable {
   /// Creates a [ClipSendOutcome].
@@ -73,8 +78,9 @@ enum VideoDmSendStatus {
   /// uploaded.
   tooLarge,
 
-  /// A library clip failed its C2PA camera-capture check, so it was not
-  /// sent: the recipient could never add it to their clips.
+  /// A library clip failed its C2PA camera-capture check and is not an
+  /// archived Vine, so it was not sent: the recipient could never add it to
+  /// their clips.
   clipNotVerified,
 
   /// The send did not complete. The cause is reported through `addError`.
@@ -115,18 +121,25 @@ class VideoDmSendCubit extends Cubit<VideoDmSendState>
   /// [signOwnRecordings] signs the sender's own recordings among the clips
   /// whose signing at record time failed, for example offline, so they can
   /// still be sent as clips.
+  ///
+  /// [isArchivedVine] lets a clip with no credential through when it is an
+  /// archived Vine, which the recipient adds too. Without it such a clip is
+  /// held back like any other that fails the check.
   VideoDmSendCubit({
     required DmVideoSendService service,
     ClipProvenanceVerifier? clipVerifier,
     Future<void> Function(List<DivineVideoClip> clips)? signOwnRecordings,
+    ArchivedVineCheck? isArchivedVine,
   }) : _service = service,
        _clipVerifier = clipVerifier,
        _signOwnRecordings = signOwnRecordings,
+       _isArchivedVine = isArchivedVine,
        super(const VideoDmSendState());
 
   final DmVideoSendService _service;
   final ClipProvenanceVerifier? _clipVerifier;
   final Future<void> Function(List<DivineVideoClip> clips)? _signOwnRecordings;
+  final ArchivedVineCheck? _isArchivedVine;
 
   /// Sends [videoFile] to [recipientPubkey] as a NIP-17 kind 15 file message.
   ///
@@ -223,7 +236,8 @@ class VideoDmSendCubit extends Cubit<VideoDmSendState>
         await _signOwnRecordings?.call(clips);
         for (final path in paths) {
           final provenance = await verifier.verify(path);
-          if (provenance.isRejected) {
+          if (provenance.isRejected &&
+              !await _isSendableVine(provenance, path)) {
             return outcome(VideoDmSendStatus.clipNotVerified);
           }
         }
@@ -257,6 +271,26 @@ class VideoDmSendCubit extends Cubit<VideoDmSendState>
     } catch (error, stackTrace) {
       addError(error, stackTrace);
       return outcome(VideoDmSendStatus.failed);
+    }
+  }
+
+  /// Whether a clip the check rejected for having no credential is an
+  /// archived Vine, which the recipient adds anyway. When that cannot be
+  /// told, the clip goes out like one whose check could not run, and the
+  /// recipient's check decides.
+  Future<bool> _isSendableVine(
+    ClipProvenanceResult provenance,
+    String path,
+  ) async {
+    final isArchivedVine = _isArchivedVine;
+    if (isArchivedVine == null ||
+        provenance.status != ClipProvenanceStatus.noCredentials) {
+      return false;
+    }
+    try {
+      return await isArchivedVine(path);
+    } on Exception {
+      return true;
     }
   }
 

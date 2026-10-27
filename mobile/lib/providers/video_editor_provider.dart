@@ -23,6 +23,7 @@ import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/mentions/mention_text_editing.dart';
 import 'package:openvine/models/audio_share_attribution.dart';
 import 'package:openvine/models/caption_mention.dart';
+import 'package:openvine/models/challenge_recording_context.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
@@ -129,6 +130,17 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
   static const Duration _autosaveDebounce = Duration(milliseconds: 800);
 
   /// Current draft ID for save/load operations.
+  ChallengeRecordingContext? _challengeContext;
+
+  /// The caller must durably prepare this owner-scoped recording context
+  /// before navigating to the recorder. Autosave and publish copies carry it.
+  void attachChallengeContext(ChallengeRecordingContext context) {
+    if (ref.read(authServiceProvider).currentPublicKeyHex != context.owner) {
+      throw StateError('Challenge recording owner changed');
+    }
+    _challengeContext = context;
+  }
+
   String? _draftId;
   String get draftId => _draftId ?? VideoEditorConstants.autoSaveId;
   set draftId(String? id) {
@@ -395,6 +407,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     _waitingAutosave = null;
     _ownedFilesMemo.forget();
     draftId = null;
+    _challengeContext = null;
     if (!keepAutosavedDraft) {
       await removeAutosavedDraft();
     }
@@ -789,6 +802,7 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       customThumbnailPath:
           state.customThumbnailPath ?? state.finalRenderedClip?.thumbnailPath,
       videoReplyContext: ref.read(videoReplyContextProvider),
+      challengeContext: _challengeContext,
       shareReplyToFeed: state.shareReplyToFeed,
     );
   }
@@ -1263,6 +1277,8 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
       );
       return false;
     }
+
+    _challengeContext = draft.challengeContext;
 
     // Drop clips whose source video file is gone. A draft can outlive its
     // media: a clip removed mid-session has its file deleted by

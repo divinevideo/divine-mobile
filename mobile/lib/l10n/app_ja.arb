@@ -2598,6 +2598,10 @@
   "videoEditorTuneTemperature": "色温度",
   "videoEditorTuneTint": "色かぶり",
   "videoEditorTuneFade": "フェード",
+  "videoEditorTuneHighlights": "ハイライト",
+  "videoEditorTuneShadows": "シャドウ",
+  "videoEditorTuneVibrance": "自然な彩度",
+  "videoEditorTuneSharpen": "シャープネス",
   "videoEditorFailedLoadStickers": "ステッカーの読み込みに失敗しました",
   "videoEditorFeedPreviewContent": "これらのエリアの後ろにコンテンツを配置しないでください。",
   "videoEditorFinishTimelineEditingSemanticLabel": "タイムライン編集を終了",
@@ -4160,6 +4164,7 @@
   "videoEditorShapeMaskCornersLabel": "角",
   "videoEditorShapeMaskCornersSquare": "四角",
   "videoEditorShapeMaskCornersRound": "丸",
+  "videoEditorShapeMaskBackgroundLabel": "背景",
   "videoEditorChromaKeyAutoDetect": "自動検出",
   "videoEditorChromaKeyPresetGreen": "グリーン",
   "videoEditorChromaKeyPresetBlue": "ブルー",
@@ -4902,10 +4907,10 @@
   "inboxConversationOptionsLabel": "オプション",
   "inboxConversationViewProfileButton": "プロフィールを表示",
   "inboxMessageRequestsEmpty": "メッセージリクエストはないよ",
-  "inboxMessageRequestsSemanticLabel": "メッセージリクエスト、{requestCount}件保留中",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{メッセージリクエスト} other{メッセージリクエスト、未読{count}件}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

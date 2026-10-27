@@ -40,6 +40,7 @@ VideoClipImportService videoClipImportService(Ref ref) {
     publishedSourceResolver: PublishedClipSourceResolver(
       mediaServer: Uri.parse(ref.watch(currentEnvironmentProvider).blossomUrl),
       videosByAuthor: ref.watch(videosRepositoryProvider).getVideosByAuthor,
+      videosByFileHash: ref.watch(videosRepositoryProvider).getVideosByFileHash,
     ),
   );
 }

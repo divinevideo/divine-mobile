@@ -2144,6 +2144,10 @@
   "videoEditorTuneTemperature": "색온도",
   "videoEditorTuneTint": "틴트",
   "videoEditorTuneFade": "페이드",
+  "videoEditorTuneHighlights": "하이라이트",
+  "videoEditorTuneShadows": "그림자",
+  "videoEditorTuneVibrance": "생동감",
+  "videoEditorTuneSharpen": "선명도",
   "videoEditorFailedLoadStickers": "스티커 로드 실패",
   "videoEditorFeedPreviewContent": "이 영역 뒤에 콘텐츠를 배치하지 마세요.",
   "videoEditorFinishTimelineEditingSemanticLabel": "타임라인 편집 완료",
@@ -3706,6 +3710,7 @@
   "videoEditorShapeMaskCornersLabel": "모서리",
   "videoEditorShapeMaskCornersSquare": "각지게",
   "videoEditorShapeMaskCornersRound": "둥글게",
+  "videoEditorShapeMaskBackgroundLabel": "배경",
   "videoEditorChromaKeyAutoDetect": "자동 감지",
   "videoEditorChromaKeyPresetGreen": "초록",
   "videoEditorChromaKeyPresetBlue": "파랑",
@@ -4448,10 +4453,10 @@
   "inboxConversationOptionsLabel": "옵션",
   "inboxConversationViewProfileButton": "프로필 보기",
   "inboxMessageRequestsEmpty": "메시지 요청 없음",
-  "inboxMessageRequestsSemanticLabel": "메시지 요청, {requestCount}건 대기 중",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{메시지 요청} other{메시지 요청, 읽지 않음 {count}건}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

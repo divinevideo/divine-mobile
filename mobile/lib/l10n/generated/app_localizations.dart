@@ -12361,11 +12361,11 @@ abstract class AppLocalizations {
   /// **'No message requests'**
   String get inboxMessageRequestsEmpty;
 
-  /// No description provided for @inboxMessageRequestsSemanticLabel.
+  /// Screen-reader label for the Message requests banner at the top of the Messages inbox. {count} is the number of unread requests: the badge shows it capped at 99+, the label says it exactly. At 0 the badge is hidden and the label is only the title.
   ///
   /// In en, this message translates to:
-  /// **'Message requests, {requestCount} pending'**
-  String inboxMessageRequestsSemanticLabel(int requestCount);
+  /// **'{count, plural, =0{Message requests} =1{Message requests, {count} unread} other{Message requests, {count} unread}}'**
+  String inboxMessageRequestsUnreadSemanticLabel(int count);
 
   /// No description provided for @inboxMessageRequestsTitle.
   ///
@@ -15167,6 +15167,30 @@ abstract class AppLocalizations {
   /// **'Fade'**
   String get videoEditorTuneFade;
 
+  /// No description provided for @videoEditorTuneHighlights.
+  ///
+  /// In en, this message translates to:
+  /// **'Highlights'**
+  String get videoEditorTuneHighlights;
+
+  /// No description provided for @videoEditorTuneShadows.
+  ///
+  /// In en, this message translates to:
+  /// **'Shadows'**
+  String get videoEditorTuneShadows;
+
+  /// No description provided for @videoEditorTuneVibrance.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibrance'**
+  String get videoEditorTuneVibrance;
+
+  /// No description provided for @videoEditorTuneSharpen.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharpen'**
+  String get videoEditorTuneSharpen;
+
   /// No description provided for @videoEditorAudioLabel.
   ///
   /// In en, this message translates to:
@@ -16672,6 +16696,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Round'**
   String get videoEditorShapeMaskCornersRound;
+
+  /// Name of the row of colors on the shape mask screen of a timeline clip: the color that fills the frame around the shape, where the clip is hidden. Shown beside the colors, at most about 112dp wide.
+  ///
+  /// In en, this message translates to:
+  /// **'Background'**
+  String get videoEditorShapeMaskBackgroundLabel;
 
   /// No description provided for @videoEditorChromaKeyAutoDetect.
   ///

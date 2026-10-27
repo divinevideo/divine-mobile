@@ -14,6 +14,7 @@ import 'package:models/models.dart'
         NativeProofData;
 import 'package:openvine/models/audio_share_attribution.dart';
 import 'package:openvine/models/caption_mention.dart';
+import 'package:openvine/models/challenge_recording_context.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
@@ -49,6 +50,8 @@ class DivineVideoDraft {
     required this.publishAttempts,
     this.publishError,
     this.sourceDraftId,
+    this.challengeContext,
+    this.publishedVideoEvent,
     this.allowAudioReuse = false,
     this.allowVideoReuse = false,
     this.expireTime,
@@ -101,6 +104,7 @@ class DivineVideoDraft {
     bool shareReplyToFeed = false,
     Duration? thumbnailTimestamp,
     String? customThumbnailPath,
+    ChallengeRecordingContext? challengeContext,
   }) {
     final now = DateTime.now();
     return DivineVideoDraft(
@@ -132,6 +136,7 @@ class DivineVideoDraft {
       audioShareAttribution: audioShareAttribution,
       contentWarning: contentWarning,
       videoReplyContext: videoReplyContext,
+      challengeContext: challengeContext,
       shareReplyToFeed: shareReplyToFeed,
       thumbnailTimestamp: thumbnailTimestamp,
       customThumbnailPath: customThumbnailPath,
@@ -205,6 +210,12 @@ class DivineVideoDraft {
       publishError: json['publishError'] as String?,
       publishAttempts: json['publishAttempts'] as int? ?? 0,
       sourceDraftId: json['sourceDraftId'] as String?,
+      challengeContext: json['challengeContext'] == null
+          ? null
+          : ChallengeRecordingContext.fromJson(
+              json['challengeContext'] as Map<String, dynamic>,
+            ),
+      publishedVideoEvent: json['publishedVideoEvent'] as String?,
       proofManifestJson: json['proofManifestJson'] as String?,
       // Expanded after the paths resolve, so the resolver walks each shared
       // meta once too. The detached-clip repairs run here, where every draft
@@ -335,6 +346,13 @@ class DivineVideoDraft {
   final String? proofManifestJson;
   final String? publishError;
   final String? sourceDraftId;
+
+  /// Rules reviewed before recording; never inherited by unrelated duplicates.
+  final ChallengeRecordingContext? challengeContext;
+
+  /// Recovery evidence for a successful video whose challenge handoff needs
+  /// retry. A published draft never starts another video upload.
+  final String? publishedVideoEvent;
   final int publishAttempts;
   final bool allowAudioReuse;
 
@@ -458,6 +476,9 @@ class DivineVideoDraft {
     bool clearPublishError = false,
     String? sourceDraftId,
     bool clearSourceDraftId = false,
+    ChallengeRecordingContext? challengeContext,
+    bool clearChallengeContext = false,
+    String? publishedVideoEvent,
     Duration? expireTime,
     DateTime? scheduledAt,
     bool clearScheduledAt = false,
@@ -505,6 +526,10 @@ class DivineVideoDraft {
     publishError: clearPublishError
         ? null
         : (publishError ?? this.publishError),
+    challengeContext: clearChallengeContext
+        ? null
+        : (challengeContext ?? this.challengeContext),
+    publishedVideoEvent: publishedVideoEvent ?? this.publishedVideoEvent,
     sourceDraftId: clearSourceDraftId
         ? null
         : (sourceDraftId ?? this.sourceDraftId),
@@ -631,6 +656,9 @@ class DivineVideoDraft {
     'publishStatus': publishStatus.name,
     'publishError': publishError,
     if (sourceDraftId != null) 'sourceDraftId': sourceDraftId,
+    if (challengeContext != null)
+      'challengeContext': challengeContext!.toJson(),
+    if (publishedVideoEvent != null) 'publishedVideoEvent': publishedVideoEvent,
     'publishAttempts': publishAttempts,
     'proofManifestJson': proofManifestJson,
     // Compacted first so the path rewrite walks each shared meta once.
@@ -716,7 +744,8 @@ class DivineVideoDraft {
   /// filters, tune adjustments and audio restored from [editorStateHistory]
   /// and [editorEditingParameters] first — so posting no longer depends on a
   /// render happening to be cached.
-  bool get canPost => clips.isNotEmpty;
+  bool get canPost =>
+      clips.isNotEmpty && publishStatus != PublishStatus.published;
 
   bool get hasEditorStateEdits {
     if (editorStateHistory.isEmpty) return false;

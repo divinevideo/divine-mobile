@@ -7322,8 +7322,15 @@ class AppLocalizationsNl extends AppLocalizations {
   String get inboxMessageRequestsEmpty => 'Geen berichtverzoeken';
 
   @override
-  String inboxMessageRequestsSemanticLabel(int requestCount) {
-    return 'Berichtverzoeken, $requestCount in behandeling';
+  String inboxMessageRequestsUnreadSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Berichtverzoeken, $count ongelezen',
+      one: 'Berichtverzoeken, $count ongelezen',
+      zero: 'Berichtverzoeken',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -9022,6 +9029,18 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorTuneFade => 'Vervagen';
 
   @override
+  String get videoEditorTuneHighlights => 'Hooglichten';
+
+  @override
+  String get videoEditorTuneShadows => 'Schaduwen';
+
+  @override
+  String get videoEditorTuneVibrance => 'Levendigheid';
+
+  @override
+  String get videoEditorTuneSharpen => 'Scherpte';
+
+  @override
   String get videoEditorAudioLabel => 'Audio';
 
   @override
@@ -9848,6 +9867,9 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorShapeMaskCornersRound => 'Rond';
+
+  @override
+  String get videoEditorShapeMaskBackgroundLabel => 'Achtergrond';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Automatisch detecteren';

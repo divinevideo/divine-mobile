@@ -73,7 +73,18 @@ void main() {
     resolveStore: () => store,
     verifier: verifier,
     resolveImporter: () => importService.importReceivedClip,
+    resolveVineImporter: () => importService.importReceivedVine,
   );
+
+  void stubVineImport(VideoClipImportResult result) {
+    when(
+      () => importService.importReceivedVine(
+        source: any(named: 'source'),
+        messageId: any(named: 'messageId'),
+        beforeSave: any(named: 'beforeSave'),
+      ),
+    ).thenAnswer((_) async => result);
+  }
 
   void stubVerification(
     ClipProvenanceStatus status, {
@@ -174,6 +185,74 @@ void main() {
         },
       );
 
+      group('with no credential', () {
+        setUp(() => stubVerification(ClipProvenanceStatus.noCredentials));
+
+        blocTest<DmClipSaveCubit, DmClipSaveState>(
+          'adds the exact file of an archived Vine',
+          setUp: () => stubVineImport(
+            VideoClipImportSuccess(
+              DivineVideoClip(
+                id: 'dm_clip_1',
+                video: EditorVideo.file('/documents/dm_clip_1.mp4'),
+                duration: const Duration(seconds: 6),
+                recordedAt: DateTime.utc(2026, 10, 26),
+                targetAspectRatio: AspectRatio.square,
+                originalAspectRatio: 1,
+              ),
+            ),
+          ),
+          build: buildCubit,
+          act: (cubit) => cubit.save(_clipMessage()),
+          expect: () => const [
+            DmClipSaveState(status: DmClipSaveStatus.checking),
+            DmClipSaveState(status: DmClipSaveStatus.saved),
+          ],
+          verify: (_) {
+            final captured = verify(
+              () => importService.importReceivedVine(
+                source: captureAny(named: 'source'),
+                messageId: captureAny(named: 'messageId'),
+                beforeSave: any(named: 'beforeSave'),
+              ),
+            ).captured;
+            expect((captured[0] as File).path, equals(_decryptedPath));
+            expect(captured[1], equals(_clipMessage().id));
+            verify(() => store.releaseVideo(any())).called(1);
+          },
+        );
+
+        blocTest<DmClipSaveCubit, DmClipSaveState>(
+          'keeps out a file that is not an archived Vine',
+          setUp: () => stubVineImport(
+            const VideoClipImportFailure(
+              VideoClipImportFailureReason.notArchivedVine,
+            ),
+          ),
+          build: buildCubit,
+          act: (cubit) => cubit.save(_clipMessage()),
+          expect: () => const [
+            DmClipSaveState(status: DmClipSaveStatus.checking),
+            DmClipSaveState(status: DmClipSaveStatus.notVerified),
+          ],
+        );
+
+        blocTest<DmClipSaveCubit, DmClipSaveState>(
+          'reports it as unchecked when the Vine lookup could not run',
+          setUp: () => stubVineImport(
+            const VideoClipImportFailure(
+              VideoClipImportFailureReason.sourceLookupFailed,
+            ),
+          ),
+          build: buildCubit,
+          act: (cubit) => cubit.save(_clipMessage()),
+          expect: () => const [
+            DmClipSaveState(status: DmClipSaveStatus.checking),
+            DmClipSaveState(status: DmClipSaveStatus.checkUnavailable),
+          ],
+        );
+      });
+
       blocTest<DmClipSaveCubit, DmClipSaveState>(
         'reports a check that could not run without adding the clip',
         setUp: () => stubVerification(ClipProvenanceStatus.unavailable),
@@ -218,6 +297,7 @@ void main() {
           resolveStore: () => null,
           verifier: verifier,
           resolveImporter: () => importService.importReceivedClip,
+          resolveVineImporter: () => importService.importReceivedVine,
         ),
         act: (cubit) => cubit.save(_clipMessage()),
         expect: () => const [
@@ -241,6 +321,7 @@ void main() {
           resolveStore: () => store,
           verifier: verifier,
           resolveImporter: () => signedIn.importReceivedClip,
+          resolveVineImporter: () => signedIn.importReceivedVine,
         );
         addTearDown(cubit.close);
 

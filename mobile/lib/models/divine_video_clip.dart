@@ -3,9 +3,11 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' show Color;
 
 import 'package:divine_camera/divine_camera.dart'
     show CameraLensMetadata, DivineCameraLens;
+import 'package:divine_ui/divine_ui.dart' show colorFromArgb32;
 import 'package:models/models.dart'
     as model
     show AspectRatio, ClipSourceCredit, EqualizerSettings;
@@ -59,6 +61,7 @@ class DivineVideoClip {
     this.archivedAt,
     this.transition,
     this.mask,
+    this.maskBackgroundColor,
     this.chromaKey,
     this.chromaKeySourcePath,
     this.captureChromaKey,
@@ -263,9 +266,15 @@ class DivineVideoClip {
   ///
   /// Measured in the exported frame, the part of the canvas the video keeps,
   /// and never baked into [video]: the preview and the export both cover what
-  /// the mask hides with black while the clip plays, fading the cover across
-  /// a dissolve, slide, push or wipe on either side (see `clipMaskWindows`).
+  /// the mask hides with [maskBackgroundColor] while the clip plays, fading
+  /// the cover across a dissolve, slide, push or wipe on either side (see
+  /// `clipMaskWindows`).
   final LayerMask? mask;
+
+  /// The color [mask] covers what it hides with, or `null` for black.
+  ///
+  /// Goes with the mask: taking the mask off takes it off too.
+  final Color? maskBackgroundColor;
 
   /// Green-screen settings the clip's file was last baked with, or `null` when
   /// it carries no key.
@@ -770,6 +779,8 @@ class DivineVideoClip {
     bool clearTransition = false,
     LayerMask? mask,
     bool clearMask = false,
+    Color? maskBackgroundColor,
+    bool clearMaskBackgroundColor = false,
     ClipChromaKey? chromaKey,
     String? chromaKeySourcePath,
     bool clearChromaKey = false,
@@ -852,6 +863,9 @@ class DivineVideoClip {
       transition: clearTransition ? null : (transition ?? this.transition),
       // Kept by a split or duplicate: both parts keep the look of the clip.
       mask: clearMask ? null : (mask ?? this.mask),
+      maskBackgroundColor: clearMask || clearMaskBackgroundColor
+          ? null
+          : (maskBackgroundColor ?? this.maskBackgroundColor),
       chromaKey: isNewLogicalClip || clearChromaKey
           ? null
           : (chromaKey ?? this.chromaKey),
@@ -934,6 +948,8 @@ class DivineVideoClip {
       if (proofManifestJson != null) 'proofManifestJson': proofManifestJson,
       if (transition != null) 'transition': transition!.toMap(),
       if (mask case final mask?) 'mask': mask.toMap(),
+      if (maskBackgroundColor case final color?)
+        'maskBackgroundColor': color.toARGB32(),
       if (chromaKey != null) 'chromaKey': chromaKey!.toJson(),
       if (chromaKeySourcePath != null)
         'chromaKeySourcePath': p.basename(chromaKeySourcePath!),
@@ -1093,6 +1109,10 @@ class DivineVideoClip {
       proofManifestJson: json['proofManifestJson'] as String?,
       transition: _transitionFromJson(json['transition']),
       mask: _maskFromJson(json['mask']),
+      maskBackgroundColor: switch (json['maskBackgroundColor']) {
+        final int argb => colorFromArgb32(argb),
+        _ => null,
+      },
       chromaKey: _chromaKeyFromJson(
         json['chromaKey'],
         documentsPath,

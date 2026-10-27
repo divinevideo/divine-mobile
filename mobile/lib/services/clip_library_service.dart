@@ -205,11 +205,13 @@ class ClipLibraryService {
       final documentsPath = await getDocumentsPath();
 
       // The clips table keys draft clips by `<draftId>:<clipId>` (composite row
-      // id) but library clips by the plain clip id, so the same clip can have a
-      // library row (draftId == null) and an autosave-draft row. Both parse to
-      // the same `clip.id`; keep one per clip id — preferring the library row —
-      // so a just-recorded clip shows exactly once.
-      final byClipId = <String, ({String? draftId, DivineVideoClip clip})>{};
+      // id) but library clips by the plain clip id, so several rows can parse
+      // to the same `clip.id`: the library row, an autosave-draft row, and an
+      // autosave copy the recorder's delete detached from its draft (see
+      // [softDelete]) that a restore from the trash brought back. Keep one per
+      // clip id, preferring the library row: it is the row [saveClip] writes,
+      // so a clip shows exactly once and with the assets recovered for it.
+      final byClipId = <String, ({int rank, DivineVideoClip clip})>{};
       for (final row in rows) {
         final clip = _tryParseClipRow(row, documentsPath, label: 'clip');
         if (clip == null) continue;
@@ -221,11 +223,12 @@ class ClipLibraryService {
         // library next to real recordings. A freeze frame is the same kind of
         // generated still, held between two halves of a clip.
         if (clip.isPlaceholder || clip.isFreezeFrame) continue;
-        if (row.draftId != null && trashedClipIds.contains(clip.id)) continue;
+        final isLibraryRow = row.id == clip.id;
+        if (!isLibraryRow && trashedClipIds.contains(clip.id)) continue;
+        final rank = isLibraryRow ? 0 : (row.draftId == null ? 1 : 2);
         final existing = byClipId[clip.id];
-        if (existing == null ||
-            (existing.draftId != null && row.draftId == null)) {
-          byClipId[clip.id] = (draftId: row.draftId, clip: clip);
+        if (existing == null || rank < existing.rank) {
+          byClipId[clip.id] = (rank: rank, clip: clip);
         }
       }
 

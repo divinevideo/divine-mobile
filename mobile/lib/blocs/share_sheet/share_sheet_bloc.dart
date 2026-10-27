@@ -75,8 +75,14 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
       _onAddVideoToClipsRequested,
       transformer: droppable(),
     );
-    on<ShareSheetCopyLinkRequested>(_onCopyLinkRequested);
-    on<ShareSheetShareViaRequested>(_onShareViaRequested);
+    on<ShareSheetCopyLinkRequested>(
+      _onCopyLinkRequested,
+      transformer: droppable(),
+    );
+    on<ShareSheetShareViaRequested>(
+      _onShareViaRequested,
+      transformer: droppable(),
+    );
     on<ShareSheetCopyEventJsonRequested>(_onCopyEventJsonRequested);
     on<ShareSheetCopyEventIdRequested>(_onCopyEventIdRequested);
   }
@@ -385,8 +391,8 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
   ) async {
     if (state.selectedRecipients.isEmpty || state.isSending) return;
 
-    // Deliberate compose-then-send: the awaited flow keeps a visible
-    // "sending" spinner (isSending) and reports the outcome in-sheet.
+    // Wait only for local validation and durable enqueue. Relay discovery,
+    // publishing and retries belong to the repository after the sheet closes.
     emit(state.copyWith(isSending: true, clearActionResult: true));
 
     try {
@@ -701,12 +707,14 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
   // Copy / Share actions (BLoC generates data, UI handles platform calls)
   // --------------------------------------------------------------------------
 
-  void _onCopyLinkRequested(
+  Future<void> _onCopyLinkRequested(
     ShareSheetCopyLinkRequested event,
     Emitter<ShareSheetState> emit,
-  ) {
+  ) async {
     try {
-      final url = _videoSharingService.generateShareUrl(_video);
+      final canonical = _videoSharingService.generateShareUrl(_video);
+      final url = await _videoSharingService.shortenExternalUrl(canonical);
+      if (isClosed || emit.isDone) return;
       emit(
         state.copyWith(
           actionResult: ShareSheetCopiedToClipboard(
@@ -726,6 +734,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         name: 'ShareSheetBloc',
         category: LogCategory.ui,
       );
+      if (isClosed || emit.isDone) return;
       emit(state.copyWith(actionResult: ShareSheetActionFailure()));
     }
   }
@@ -736,6 +745,10 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
   ) async {
     try {
       final shareData = _videoSharingService.generateShareData(_video);
+      final shareUrl = await _videoSharingService.shortenExternalUrl(
+        shareData.shareUrl,
+      );
+      if (isClosed || emit.isDone) return;
 
       // Download thumbnail if available and a cache manager was provided.
       // Copy to a temp file with a .jpg extension so iOS recognises it as
@@ -763,11 +776,12 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         }
       }
 
+      if (isClosed || emit.isDone) return;
       final title = shareData.title;
       emit(
         state.copyWith(
           actionResult: ShareSheetShareViaTriggered(
-            shareUrl: shareData.shareUrl,
+            shareUrl: shareUrl,
             thumbnailPath: thumbnailPath,
             title: title,
             subject: title,
@@ -785,6 +799,7 @@ class ShareSheetBloc extends Bloc<ShareSheetEvent, ShareSheetState>
         name: 'ShareSheetBloc',
         category: LogCategory.ui,
       );
+      if (isClosed || emit.isDone) return;
       emit(state.copyWith(actionResult: ShareSheetActionFailure()));
     }
   }

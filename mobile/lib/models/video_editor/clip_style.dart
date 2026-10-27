@@ -2,6 +2,8 @@
 // ABOUTME: color mask and shape mask — as one unit that Copy style lifts off a clip and Paste
 // ABOUTME: style writes onto others (#10258).
 
+import 'dart:ui' show Color;
+
 import 'package:equatable/equatable.dart';
 import 'package:models/models.dart' show EqualizerSettings;
 import 'package:openvine/models/divine_video_clip.dart';
@@ -37,6 +39,7 @@ class ClipStyle extends Equatable {
     this.speedRamp,
     this.chromaKey,
     this.mask,
+    this.maskBackgroundColor,
   });
 
   /// The style [clip] currently has.
@@ -50,6 +53,7 @@ class ClipStyle extends Equatable {
     speedRamp: clip.speedRamp,
     chromaKey: clip.chromaKey,
     mask: clip.mask,
+    maskBackgroundColor: clip.maskBackgroundColor,
   );
 
   /// Playback volume, 0 for muted.
@@ -81,6 +85,9 @@ class ClipStyle extends Equatable {
   /// carries over as it is.
   final LayerMask? mask;
 
+  /// The color [mask] covers what it hides with, or `null` for black.
+  final Color? maskBackgroundColor;
+
   /// Whether pasting onto [clip] would leave it as it is.
   bool isOn(DivineVideoClip clip) =>
       hasSettingsOn(clip) && !needsColorMaskChange(clip);
@@ -89,7 +96,9 @@ class ClipStyle extends Equatable {
   /// color mask aside.
   bool hasSettingsOn(DivineVideoClip clip) {
     if (!canPasteClipStyle(clip)) return true;
-    if (clip.mask != mask) return false;
+    if (clip.mask != mask || clip.maskBackgroundColor != maskBackgroundColor) {
+      return false;
+    }
     if (clip.isFreezeFrame) return true;
     return clip.volume == volume &&
         clip.equalizer == equalizer &&
@@ -113,7 +122,12 @@ class ClipStyle extends Equatable {
   DivineVideoClip applyTo(DivineVideoClip clip) {
     if (!canPasteClipStyle(clip)) return clip;
     if (clip.isFreezeFrame) {
-      return clip.copyWith(mask: mask, clearMask: mask == null);
+      return clip.copyWith(
+        mask: mask,
+        clearMask: mask == null,
+        maskBackgroundColor: maskBackgroundColor,
+        clearMaskBackgroundColor: maskBackgroundColor == null,
+      );
     }
     // A clip plays at one constant speed or along one ramp, never both, as
     // the speed sheet writes it.
@@ -127,6 +141,8 @@ class ClipStyle extends Equatable {
       clearSpeedRamp: ramp == null,
       mask: mask,
       clearMask: mask == null,
+      maskBackgroundColor: maskBackgroundColor,
+      clearMaskBackgroundColor: maskBackgroundColor == null,
     );
   }
 
@@ -138,5 +154,6 @@ class ClipStyle extends Equatable {
     speedRamp,
     chromaKey,
     mask,
+    maskBackgroundColor,
   ];
 }

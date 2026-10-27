@@ -30,6 +30,8 @@ class DmClipSaveProvider extends BlocProvider<DmClipSaveCubit> {
       verifier: container.read(clipProvenanceVerifierProvider),
       resolveImporter: () =>
           container.read(videoClipImportServiceProvider).importReceivedClip,
+      resolveVineImporter: () =>
+          container.read(videoClipImportServiceProvider).importReceivedVine,
     );
   }
 }

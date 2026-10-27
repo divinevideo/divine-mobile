@@ -16,6 +16,11 @@ typedef PublishedVideosByAuthor = Future<List<VideoEvent>> Function({
   int? before,
 });
 
+/// Lists the videos whose event names the file with SHA-256 `sha256`.
+typedef PublishedVideosByFileHash = Future<List<VideoEvent>> Function(
+  String sha256,
+);
+
 /// A Divine post whose exact file a received clip turned out to be.
 class PublishedClipSource {
   /// Creates a [PublishedClipSource].
@@ -56,9 +61,11 @@ class PublishedClipSourceResolver {
   PublishedClipSourceResolver({
     required Uri mediaServer,
     required PublishedVideosByAuthor videosByAuthor,
+    required PublishedVideosByFileHash videosByFileHash,
     http.Client Function()? httpClientFactory,
   }) : _mediaServer = mediaServer,
        _videosByAuthor = videosByAuthor,
+       _videosByFileHash = videosByFileHash,
        _httpClientFactory = httpClientFactory ?? http.Client.new;
 
   /// Upper bound on the provenance request.
@@ -75,6 +82,7 @@ class PublishedClipSourceResolver {
 
   final Uri _mediaServer;
   final PublishedVideosByAuthor _videosByAuthor;
+  final PublishedVideosByFileHash _videosByFileHash;
   final http.Client Function() _httpClientFactory;
 
   /// Returns who published the file with SHA-256 [sha256], or null when the
@@ -90,6 +98,36 @@ class PublishedClipSourceResolver {
       ownerPubkey: upload.owner,
       video: await _findPost(sha256.toLowerCase(), upload),
     );
+  }
+
+  /// Returns the archived Vine whose post names the file with SHA-256
+  /// [sha256], or null when no Vine post names it.
+  ///
+  /// An archived Vine carries no C2PA credential, since it was filmed before
+  /// Divine existed, and the media server may name the archive's importer
+  /// rather than the viner as its owner. Its post names the file in an `x`
+  /// tag and says it is a Vine, which is what adding it to clips from the
+  /// feed relies on too. When several Vine posts name the file, the oldest
+  /// is taken.
+  ///
+  /// Throws a [PublishedClipSourceLookupException] when the relays cannot be
+  /// asked, since a null answer would then turn a real Vine away.
+  Future<VideoEvent?> findArchivedVine(String sha256) async {
+    final hash = sha256.toLowerCase();
+    final List<VideoEvent> videos;
+    try {
+      videos = await _videosByFileHash(hash);
+    } on Exception catch (error) {
+      throw PublishedClipSourceLookupException('$error');
+    }
+    VideoEvent? oldest;
+    for (final video in videos) {
+      if (!video.isOriginalVine || video.sha256?.toLowerCase() != hash) {
+        continue;
+      }
+      if (oldest == null || video.createdAt < oldest.createdAt) oldest = video;
+    }
+    return oldest;
   }
 
   Future<({String owner, int uploadedAt})?> _fetchUpload(String sha256) async {

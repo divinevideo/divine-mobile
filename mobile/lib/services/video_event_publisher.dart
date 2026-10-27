@@ -134,7 +134,8 @@ class VideoEventPublisher {
   /// ([PendingUpload.videoId]). Coalesces concurrent
   /// [publishDirectUpload] calls for the same upload so only one
   /// addressable event is signed and broadcast (#6018).
-  final Map<String, Future<bool>> _inFlightDirectPublishes = {};
+  final Map<String, Future<({bool success, Event? event})>>
+  _inFlightDirectPublishes = {};
 
   /// The outer timeout that will bound the next WebSocket publish; see
   /// [SignedEventRelayPublisher.currentOuterPublishTimeout].
@@ -224,6 +225,7 @@ class VideoEventPublisher {
     void Function()? onAudioReuseDegraded,
     DateTime? scheduledAt,
     void Function(Event event)? onScheduledEventSigned,
+    void Function(Event event)? onPublishedEvent,
   }) async {
     // Create a temporary upload with updated metadata
     final updatedUpload = upload.copyWith(
@@ -258,6 +260,7 @@ class VideoEventPublisher {
       onAudioReuseDegraded: onAudioReuseDegraded,
       scheduledAt: scheduledAt,
       onScheduledEventSigned: onScheduledEventSigned,
+      onPublishedEvent: onPublishedEvent,
     );
   }
 
@@ -321,6 +324,7 @@ class VideoEventPublisher {
     void Function()? onAudioReuseDegraded,
     DateTime? scheduledAt,
     void Function(Event event)? onScheduledEventSigned,
+    void Function(Event event)? onPublishedEvent,
   }) async {
     final videoId = upload.videoId;
     if (videoId == null || upload.cdnUrl == null) {
@@ -340,9 +344,12 @@ class VideoEventPublisher {
         name: _logName,
         category: LogCategory.video,
       );
-      return inFlight;
+      final outcome = await inFlight;
+      if (outcome.event != null) onPublishedEvent?.call(outcome.event!);
+      return outcome.success;
     }
 
+    Event? publishedEvent;
     final publish = _publishDirectUploadUnlocked(
       upload,
       expirationTimestamp: expirationTimestamp,
@@ -369,10 +376,13 @@ class VideoEventPublisher {
       onAudioReuseDegraded: onAudioReuseDegraded,
       scheduledAt: scheduledAt,
       onScheduledEventSigned: onScheduledEventSigned,
-    );
+      onPublishedEvent: (event) => publishedEvent = event,
+    ).then((success) => (success: success, event: publishedEvent));
     _inFlightDirectPublishes[videoId] = publish;
     try {
-      return await publish;
+      final outcome = await publish;
+      if (outcome.event != null) onPublishedEvent?.call(outcome.event!);
+      return outcome.success;
     } finally {
       final _ = _inFlightDirectPublishes.remove(videoId);
     }
@@ -410,6 +420,7 @@ class VideoEventPublisher {
     required void Function()? onAudioReuseDegraded,
     required DateTime? scheduledAt,
     required void Function(Event event)? onScheduledEventSigned,
+    required void Function(Event event)? onPublishedEvent,
   }) async {
     // Validate that at least one video URL is publishable. This prevents
     // local file paths and known dead media hosts from being published.
@@ -674,6 +685,7 @@ class VideoEventPublisher {
         event,
         addToDiscoveryCache: replyContext == null || addReplyToFeed,
       );
+      onPublishedEvent?.call(event);
       return true;
     } on AudioReuseNotPermittedException {
       // Not a publish failure the user can retry their way out of: the sound's

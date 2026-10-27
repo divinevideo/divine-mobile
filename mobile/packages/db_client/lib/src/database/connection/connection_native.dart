@@ -239,6 +239,8 @@ const salvageableLocalOnlyTables = <String>[
   'concord_store_entries',
   'sound_request_states',
   'account_sync_records',
+  'challenge_owners',
+  'challenge_records',
   'notification_reads',
   'dm_message_reactions',
   'removed_conversations',
@@ -1327,6 +1329,10 @@ bool _databaseHasTable(Database db, String tableName) {
 }
 
 const _localOnlyDataQueries = [
+  _LocalOnlyDataQuery(
+    'challenge_records',
+    'SELECT 1 FROM challenge_records LIMIT 1',
+  ),
   _LocalOnlyDataQuery(
     'pending_uploads',
     'SELECT 1 FROM pending_uploads WHERE status NOT IN '

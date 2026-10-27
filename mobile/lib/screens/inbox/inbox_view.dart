@@ -827,7 +827,7 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
         if (hasRequests)
           SliverToBoxAdapter(
             child: MessageRequestsBanner(
-              requestCount: requestUnreadCount,
+              unreadCount: requestUnreadCount,
               onTap: () => _openMessageRequests(context),
             ),
           ),
@@ -880,7 +880,7 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
         if (hasRequests && !showingBlocked)
           SliverToBoxAdapter(
             child: MessageRequestsBanner(
-              requestCount: requestUnreadCount,
+              unreadCount: requestUnreadCount,
               onTap: () => _openMessageRequests(context),
             ),
           ),
@@ -918,7 +918,7 @@ class _MessagesScrollViewState extends ConsumerState<_MessagesScrollView>
         if (hasRequests && !showingBlocked)
           SliverToBoxAdapter(
             child: MessageRequestsBanner(
-              requestCount: requestUnreadCount,
+              unreadCount: requestUnreadCount,
               onTap: () => _openMessageRequests(context),
             ),
           ),

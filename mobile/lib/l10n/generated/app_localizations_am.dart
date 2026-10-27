@@ -7121,8 +7121,15 @@ class AppLocalizationsAm extends AppLocalizations {
   String get inboxMessageRequestsEmpty => 'ምንም የመልእክት ጥያቄዎች የሉም';
 
   @override
-  String inboxMessageRequestsSemanticLabel(int requestCount) {
-    return 'የመልእክት ጥያቄዎች፣ $requestCount በመጠባበቅ ላይ';
+  String inboxMessageRequestsUnreadSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'የመልእክት ጥያቄዎች፣ $count ያልተነበቡ',
+      one: 'የመልእክት ጥያቄዎች፣ $count ያልተነበበ',
+      zero: 'የመልእክት ጥያቄዎች',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -8781,6 +8788,18 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorTuneFade => 'መደብዘዝ';
 
   @override
+  String get videoEditorTuneHighlights => 'ብሩህ ክፍሎች';
+
+  @override
+  String get videoEditorTuneShadows => 'ጥላዎች';
+
+  @override
+  String get videoEditorTuneVibrance => 'ሕያውነት';
+
+  @override
+  String get videoEditorTuneSharpen => 'ጥርትነት';
+
+  @override
   String get videoEditorAudioLabel => 'ኦዲዮ';
 
   @override
@@ -9584,6 +9603,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorShapeMaskCornersRound => 'የተጠጋጋ';
+
+  @override
+  String get videoEditorShapeMaskBackgroundLabel => 'ዳራ';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'በራስ-ሰር ለይ';

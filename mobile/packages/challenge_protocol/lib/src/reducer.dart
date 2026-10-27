@@ -159,3 +159,96 @@ ChallengeView reduceChallenge(
     pending: pending.toList()..sort(),
   );
 }
+
+/// Authenticated retained envelopes for a known coordinate. This boundary
+/// deliberately authenticates oversized/malformed definitions too: they can
+/// invalidate older rules, although they can never authorize participation.
+/// Callers must bound input bytes before calling this CPU-intensive operation.
+final class AuthenticatedChallengeBatch {
+  AuthenticatedChallengeBatch._(
+    this.records,
+    this.events,
+    this.policyEvents,
+    this.invalidInput,
+  );
+
+  /// Deduplicates by verified ID, never by an untrusted claimed identifier.
+  factory AuthenticatedChallengeBatch.verify(
+    List<String> records,
+    String coordinate,
+  ) {
+    _parseCoordinate(coordinate);
+    final verified = <String, (String, NostrEvent)>{};
+    var invalid = false;
+    for (final body in records) {
+      try {
+        final decoded = jsonDecode(body);
+        if (decoded is! Map<String, Object?>) {
+          invalid = true;
+          continue;
+        }
+        final event = _verifiedEvent(decoded, enforceSize: false);
+        final existing = verified[event.id];
+        if (existing == null || event.sig.compareTo(existing.$2.sig) < 0) {
+          verified[event.id] = (body, event);
+        }
+      } on FormatException {
+        invalid = true;
+      } on ContractError {
+        // Unauthenticated objects never have replacement authority.
+      }
+    }
+    final retained = <String>[];
+    final events = <NostrEvent>[];
+    final policy = <String, NostrEvent>{};
+    final revisions =
+        verified.values
+            .where((item) => _definitionCoordinate(item.$2) == coordinate)
+            .toList()
+          ..sort((a, b) => _newest(a.$2, b.$2));
+    // Embedded exact definitions carry historical consent. Only the newest
+    // top-level revision controls current rules, including malformed ones.
+    if (revisions.isNotEmpty) {
+      retained.add(revisions.first.$1);
+      events.add(revisions.first.$2);
+      policy[revisions.first.$2.id] = revisions.first.$2;
+    }
+    for (final (body, event) in verified.values) {
+      if (event.kind != 1111) continue;
+      final parsed = parseChallengeEvent(event).value;
+      if (parsed == null || parsed.coordinate != coordinate) continue;
+      retained.add(body);
+      events.add(event);
+      policy[event.id] = event;
+      switch (parsed) {
+        case ChallengeEntry():
+          policy[parsed.video.id] = parsed.video;
+          policy[parsed.definition.event.id] = parsed.definition.event;
+        case ChallengeResult():
+          policy[parsed.definition.event.id] = parsed.definition.event;
+        case ChallengeWithdrawal():
+        case ChallengeDefinition():
+          break;
+      }
+    }
+    return AuthenticatedChallengeBatch._(
+      List.unmodifiable(retained),
+      List.unmodifiable(events),
+      List.unmodifiable(policy.values),
+      invalid,
+    );
+  }
+
+  /// Original wire bodies, authenticated and deduplicated.
+  final List<String> records;
+
+  /// Authenticated top-level events.
+  final List<NostrEvent> events;
+
+  /// Sources, including exact embedded snapshots, needing current policy.
+  final List<NostrEvent> policyEvents;
+
+  /// At least one record was not a JSON object. Unauthenticated objects are
+  /// discarded without replacement authority.
+  final bool invalidInput;
+}

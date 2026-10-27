@@ -2625,6 +2625,10 @@
   "videoEditorTuneTemperature": "Temperatura",
   "videoEditorTuneTint": "Zabarwienie",
   "videoEditorTuneFade": "Zanikanie",
+  "videoEditorTuneHighlights": "Światła",
+  "videoEditorTuneShadows": "Cienie",
+  "videoEditorTuneVibrance": "Jaskrawość",
+  "videoEditorTuneSharpen": "Ostrość",
   "videoEditorAudioLabel": "Audio",
   "videoEditorMarkerLabel": "Znacznik",
   "videoEditorAddTimelineMarkerSemanticLabel": "Dodaj znacznik osi czasu",
@@ -4160,6 +4164,7 @@
   "videoEditorShapeMaskCornersLabel": "Rogi",
   "videoEditorShapeMaskCornersSquare": "Proste",
   "videoEditorShapeMaskCornersRound": "Zaokrąglone",
+  "videoEditorShapeMaskBackgroundLabel": "Tło",
   "videoEditorChromaKeyAutoDetect": "Wykryj automatycznie",
   "videoEditorChromaKeyPresetGreen": "Zielony",
   "videoEditorChromaKeyPresetBlue": "Niebieski",
@@ -4902,10 +4907,10 @@
   "inboxConversationOptionsLabel": "Opcje",
   "inboxConversationViewProfileButton": "Zobacz profil",
   "inboxMessageRequestsEmpty": "Brak próśb o wiadomość",
-  "inboxMessageRequestsSemanticLabel": "Prośby o wiadomość, {requestCount} oczekujących",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{Prośby o wiadomość} =1{Prośby o wiadomość, {count} nieprzeczytana} few{Prośby o wiadomość, {count} nieprzeczytane} many{Prośby o wiadomość, {count} nieprzeczytanych} other{Prośby o wiadomość, {count} nieprzeczytanej}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

@@ -7504,8 +7504,15 @@ class AppLocalizationsTe extends AppLocalizations {
   String get inboxMessageRequestsEmpty => 'సందేశ అభ్యర్థనలు లేవు';
 
   @override
-  String inboxMessageRequestsSemanticLabel(int requestCount) {
-    return 'సందేశ అభ్యర్థనలు, $requestCountపెండింగ్‌లో ఉంది';
+  String inboxMessageRequestsUnreadSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'సందేశ అభ్యర్థనలు, $count చదవని అభ్యర్థనలు',
+      one: 'సందేశ అభ్యర్థనలు, $count చదవని అభ్యర్థన',
+      zero: 'సందేశ అభ్యర్థనలు',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -9234,6 +9241,18 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorTuneFade => 'ఫేడ్';
 
   @override
+  String get videoEditorTuneHighlights => 'హైలైట్స్';
+
+  @override
+  String get videoEditorTuneShadows => 'నీడలు';
+
+  @override
+  String get videoEditorTuneVibrance => 'వైబ్రెన్స్';
+
+  @override
+  String get videoEditorTuneSharpen => 'పదును';
+
+  @override
   String get videoEditorAudioLabel => 'ఆడియో';
 
   @override
@@ -10073,6 +10092,9 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorShapeMaskCornersRound => 'గుండ్రని';
+
+  @override
+  String get videoEditorShapeMaskBackgroundLabel => 'నేపథ్యం';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'ఆటో-డిటెక్ట్';

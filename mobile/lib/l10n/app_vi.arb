@@ -3609,10 +3609,10 @@
   "inboxConversationOptionsLabel": "Tùy chọn",
   "inboxConversationViewProfileButton": "Xem hồ sơ",
   "inboxMessageRequestsEmpty": "Không có yêu cầu nhắn tin nào",
-  "inboxMessageRequestsSemanticLabel": "Yêu cầu nhắn tin, {requestCount} đang chờ",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{Yêu cầu nhắn tin} other{Yêu cầu nhắn tin, {count} chưa đọc}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }
@@ -4664,6 +4664,10 @@
   "videoEditorTuneTemperature": "Nhiệt độ màu",
   "videoEditorTuneTint": "Sắc màu",
   "videoEditorTuneFade": "Mờ dần",
+  "videoEditorTuneHighlights": "Vùng sáng",
+  "videoEditorTuneShadows": "Vùng tối",
+  "videoEditorTuneVibrance": "Độ sống động",
+  "videoEditorTuneSharpen": "Độ sắc nét",
   "videoEditorAudioLabel": "Âm thanh",
   "videoEditorAddTitle": "Thêm",
   "videoEditorOpenLibrarySemanticLabel": "Mở thư viện",
@@ -4951,6 +4955,7 @@
   "videoEditorShapeMaskCornersLabel": "Góc",
   "videoEditorShapeMaskCornersSquare": "Vuông",
   "videoEditorShapeMaskCornersRound": "Bo tròn",
+  "videoEditorShapeMaskBackgroundLabel": "Nền",
   "videoEditorChromaKeyAutoDetect": "Tự động nhận diện",
   "videoEditorChromaKeyPresetGreen": "Xanh lá",
   "videoEditorChromaKeyPresetBlue": "Xanh dương",

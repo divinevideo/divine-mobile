@@ -11447,6 +11447,120 @@ void main() {
       });
     });
 
+    group('getVideosByFileHash', () {
+      final hash = 'f3a8' * 16;
+      final vinePubkey = '1' * 64;
+      final claimantPubkey = '2' * 64;
+
+      Event videoNaming(
+        String id, {
+        required String pubkey,
+        required String fileHash,
+        required int createdAt,
+      }) => _createVideoEvent(
+        id: id,
+        pubkey: pubkey,
+        videoUrl: 'https://media.divine.video/$fileHash',
+        createdAt: createdAt,
+        extraTags: [
+          ['x', fileHash],
+        ],
+      );
+
+      void stubRead({
+        List<Event> events = const [],
+        bool timedOut = false,
+        bool noRelays = false,
+      }) {
+        when(() => mockNostrClient.queryEventsDetailed(any())).thenAnswer(
+          (_) async => (events: events, timedOut: timedOut, noRelays: noRelays),
+        );
+      }
+
+      test(
+        'returns the videos naming the file, once each',
+        () async {
+          final claim = videoNaming(
+            '3' * 64,
+            pubkey: claimantPubkey,
+            fileHash: hash,
+            createdAt: 1772932336,
+          );
+          final vine = videoNaming(
+            '4' * 64,
+            pubkey: vinePubkey,
+            fileHash: hash,
+            createdAt: 1458771798,
+          );
+          // A relay that ignores the tag filter answers with other files.
+          final unrelated = videoNaming(
+            '5' * 64,
+            pubkey: vinePubkey,
+            fileHash: 'e8ba' * 16,
+            createdAt: 1458771000,
+          );
+          stubRead(events: [claim, vine, unrelated, vine]);
+
+          final result = await repository.getVideosByFileHash(
+            hash.toUpperCase(),
+          );
+
+          expect(result.map((video) => video.id), [claim.id, vine.id]);
+          final filters =
+              verify(
+                    () => mockNostrClient.queryEventsDetailed(captureAny()),
+                  ).captured.single
+                  as List<Filter>;
+          expect(filters.single.x, equals([hash]));
+          expect(
+            filters.single.kinds,
+            equals(NIP71VideoKinds.getAllVideoKinds()),
+          );
+        },
+      );
+
+      test(
+        'returns nothing when the relays know no video with the file',
+        () async {
+          stubRead();
+
+          expect(await repository.getVideosByFileHash(hash), isEmpty);
+        },
+      );
+
+      test('keeps what arrived before a read timed out', () async {
+        final vine = videoNaming(
+          '4' * 64,
+          pubkey: vinePubkey,
+          fileHash: hash,
+          createdAt: 1458771798,
+        );
+        stubRead(events: [vine], timedOut: true);
+
+        final result = await repository.getVideosByFileHash(hash);
+
+        expect(result.map((video) => video.id), [vine.id]);
+      });
+
+      test('throws when no relay took the read', () async {
+        stubRead(noRelays: true);
+
+        await expectLater(
+          repository.getVideosByFileHash(hash),
+          throwsA(isA<RelayReadUnavailableException>()),
+        );
+      });
+
+      test('throws when the read timed out with nothing', () async {
+        stubRead(timedOut: true);
+
+        await expectLater(
+          repository.getVideosByFileHash(hash),
+          throwsA(isA<RelayReadUnavailableException>()),
+        );
+      });
+    });
+
     group('getVideosByAuthors', () {
       String memberKey(int index) => index.toRadixString(16).padLeft(64, '0');
       String videoIdFor(int index) =>

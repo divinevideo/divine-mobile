@@ -8,6 +8,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/editor_mask.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
+import 'package:openvine/widgets/video_editor/video_editor_color_picker_sheet.dart';
+import 'package:openvine/widgets/video_editor/video_editor_color_row.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show LayerMask, LayerMaskShape;
 
@@ -15,8 +17,10 @@ import 'package:pro_image_editor/pro_image_editor.dart'
 /// the transform from that box to the screen.
 typedef MaskTargetGeometry = ({Size size, Matrix4 transform});
 
-/// What the mask editor closes with: the mask to keep, `null` for none.
-typedef MaskEditorResult = ({LayerMask? mask});
+/// What the mask editor closes with, and reports on every change: the mask to
+/// keep, `null` for none, and the color it covers what it hides with, `null`
+/// for an item that has no background to pick.
+typedef MaskEditorResult = ({LayerMask? mask, Color? backgroundColor});
 
 /// How close, in screen pixels, a touch has to land to a resize handle to
 /// grab it rather than move the whole shape.
@@ -40,6 +44,18 @@ const double _shapeRowHeight = 52 + 6 + 16;
 /// and the gap below it.
 const double _sliderRowHeight = 32 + 8;
 
+/// The height the background colors add to the panel: one row of color tiles
+/// and the gap below it.
+const double _backgroundRowHeight = VideoEditorColorRow.height + 8;
+
+/// The space around a setting above the shapes.
+const EdgeInsets _settingPadding = .fromLTRB(
+  _panelSideInset,
+  0,
+  _panelSideInset,
+  8,
+);
+
 /// How long the mask editor's panel takes to grow or shrink when a slider
 /// comes or goes.
 const Duration videoEditorMaskPanelResizeDuration = Duration(
@@ -48,19 +64,28 @@ const Duration videoEditorMaskPanelResizeDuration = Duration(
 
 /// The height of the mask editor's panel for [mask], above the bottom safe
 /// area: the shapes along the bottom and, above them, a slider for each
-/// setting [mask] has.
+/// setting [mask] has and, [withBackground], the colors it covers the item
+/// with.
 ///
 /// The editor keeps this much free below the canvas while the mask editor is
 /// open, so the video sits above the panel instead of under it.
-double videoEditorMaskPanelHeight(LayerMask? mask) {
+double videoEditorMaskPanelHeight(
+  LayerMask? mask, {
+  bool withBackground = false,
+}) {
+  if (mask == null) return _panelPadding.vertical + _shapeRowHeight;
   // Every shape has a softness, and a rectangle its corners as well.
-  final sliders = mask == null ? 0 : (_showsCorners(mask) ? 2 : 1);
-  return _panelPadding.vertical + _shapeRowHeight + sliders * _sliderRowHeight;
+  final sliders = _showsCorners(mask) ? 2 : 1;
+  return _panelPadding.vertical +
+      _shapeRowHeight +
+      sliders * _sliderRowHeight +
+      (withBackground ? _backgroundRowHeight : 0);
 }
 
-/// The height of the mask editor's panel with every slider it can show.
+/// The height of the mask editor's panel with every setting it can show.
 final double videoEditorMaskPanelMaxHeight = videoEditorMaskPanelHeight(
   const LayerMask(shape: LayerMaskShape.rectangle),
+  withBackground: true,
 );
 
 /// Whether the panel offers how round the corners of [mask] are.
@@ -72,7 +97,8 @@ bool _showsCorners(LayerMask? mask) => mask?.shape == LayerMaskShape.rectangle;
 /// through [onChanged], and its outline over it. One finger moves the shape,
 /// two resize and turn it, and the handles on its sides stretch it. The
 /// panel picks the shape, how soft its edge is, how round a rectangle's
-/// corners are and whether it is inverted. The top bar cancels or confirms;
+/// corners are, whether it is inverted and, for an item with a background,
+/// the color it covers the rest with. The top bar cancels or confirms;
 /// confirming pops a [MaskEditorResult].
 @visibleForTesting
 class VideoEditorMaskEditorView extends StatefulWidget {
@@ -82,11 +108,17 @@ class VideoEditorMaskEditorView extends StatefulWidget {
     required this.resolveGeometry,
     required this.canvasChanges,
     required this.onChanged,
+    this.initialBackgroundColor,
     super.key,
   });
 
   /// The mask the item has when the editor opens, or `null` for none.
   final LayerMask? initialMask;
+
+  /// The color the mask covers what it hides with when the editor opens, or
+  /// `null` when the item has none to pick: an overlay shows what lies
+  /// beneath it.
+  final Color? initialBackgroundColor;
 
   /// Reads where the item sits on screen right now, or `null` while it
   /// cannot be measured.
@@ -96,7 +128,7 @@ class VideoEditorMaskEditorView extends StatefulWidget {
   final Listenable canvasChanges;
 
   /// Called with every change, so the item shows it.
-  final ValueChanged<LayerMask?> onChanged;
+  final ValueChanged<MaskEditorResult> onChanged;
 
   @override
   State<VideoEditorMaskEditorView> createState() =>
@@ -107,6 +139,7 @@ enum _Drag { move, width, height }
 
 class _VideoEditorMaskEditorViewState extends State<VideoEditorMaskEditorView> {
   late LayerMask? _mask = widget.initialMask;
+  late Color? _backgroundColor = widget.initialBackgroundColor;
   bool _refreshScheduled = false;
 
   _Drag? _drag;
@@ -142,10 +175,19 @@ class _VideoEditorMaskEditorViewState extends State<VideoEditorMaskEditorView> {
     });
   }
 
+  MaskEditorResult get _result =>
+      (mask: _mask, backgroundColor: _backgroundColor);
+
   void _setMask(LayerMask? mask) {
     if (mask == _mask) return;
     setState(() => _mask = mask);
-    widget.onChanged(mask);
+    widget.onChanged(_result);
+  }
+
+  void _setBackgroundColor(Color color) {
+    if (color == _backgroundColor) return;
+    setState(() => _backgroundColor = color);
+    widget.onChanged(_result);
   }
 
   void _selectShape(LayerMaskShape? shape) {
@@ -305,14 +347,16 @@ class _VideoEditorMaskEditorViewState extends State<VideoEditorMaskEditorView> {
             child: _MaskEditorToolbar(
               onCancel: () => Navigator.of(context).pop(),
               onDone: () =>
-                  Navigator.of(context).pop<MaskEditorResult>((mask: _mask)),
+                  Navigator.of(context).pop<MaskEditorResult>(_result),
             ),
           ),
           Align(
             alignment: .bottomCenter,
             child: _MaskEditorPanel(
               mask: mask,
+              backgroundColor: _backgroundColor,
               onShapeSelected: _selectShape,
+              onBackgroundColorChanged: _setBackgroundColor,
               onFeatherChanged: (feather) =>
                   _setMask(mask?.copyWith(feather: feather)),
               onCornerRadiusChanged: (corners) =>
@@ -513,23 +557,30 @@ class _MaskEditorToolbar extends StatelessWidget {
 }
 
 /// The shapes and the invert toggle along the bottom, and above them the
-/// sliders for the edge and the corners while they apply.
+/// sliders for the edge and the corners and the colors of the background,
+/// while each applies.
 ///
 /// It fills the space the editor keeps free below the canvas while the mask
 /// editor is open ([videoEditorMaskPanelHeight]), so the whole video stays
 /// above it, where the shape can be seen and reached. That space follows
-/// the sliders, so none is left empty above the shapes.
+/// the settings, so none is left empty above the shapes.
 class _MaskEditorPanel extends StatelessWidget {
   const _MaskEditorPanel({
     required this.mask,
+    required this.backgroundColor,
     required this.onShapeSelected,
+    required this.onBackgroundColorChanged,
     required this.onFeatherChanged,
     required this.onCornerRadiusChanged,
     required this.onInvertToggled,
   });
 
   final LayerMask? mask;
+
+  /// `null` for an item with no background to pick.
+  final Color? backgroundColor;
   final ValueChanged<LayerMaskShape?> onShapeSelected;
+  final ValueChanged<Color> onBackgroundColorChanged;
   final ValueChanged<double> onFeatherChanged;
   final ValueChanged<double> onCornerRadiusChanged;
   final VoidCallback onInvertToggled;
@@ -538,6 +589,7 @@ class _MaskEditorPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final mask = this.mask;
+    final backgroundColor = this.backgroundColor;
     final colors = context.vineColors;
     return ColoredBox(
       color: colors.surfaceContainerHigh,
@@ -550,7 +602,10 @@ class _MaskEditorPanel extends StatelessWidget {
               ? Duration.zero
               : videoEditorMaskPanelResizeDuration,
           curve: Curves.easeInOut,
-          height: videoEditorMaskPanelHeight(mask),
+          height: videoEditorMaskPanelHeight(
+            mask,
+            withBackground: backgroundColor != null,
+          ),
           // Laid out from the bottom, so the shapes stay at the foot of the
           // panel and the sliders sit above them. A large system font can
           // outgrow the height; it scrolls then rather than overflow.
@@ -560,7 +615,17 @@ class _MaskEditorPanel extends StatelessWidget {
             child: Column(
               crossAxisAlignment: .stretch,
               children: [
-                _MaskSliderReveal(
+                _MaskSettingReveal(
+                  // The colors scroll out to the edge of the screen.
+                  padding: const .only(left: _panelSideInset, bottom: 8),
+                  child: mask == null || backgroundColor == null
+                      ? null
+                      : _MaskBackgroundRow(
+                          color: backgroundColor,
+                          onChanged: onBackgroundColorChanged,
+                        ),
+                ),
+                _MaskSettingReveal(
                   child: _showsCorners(mask)
                       ? _MaskSlider(
                           label: l10n.videoEditorShapeMaskCornersLabel,
@@ -571,7 +636,7 @@ class _MaskEditorPanel extends StatelessWidget {
                         )
                       : null,
                 ),
-                _MaskSliderReveal(
+                _MaskSettingReveal(
                   child: mask == null
                       ? null
                       : _MaskSlider(
@@ -646,15 +711,19 @@ class _MaskEditorPanel extends StatelessWidget {
 
 /// Shows [child] above the shapes, growing in from nothing as it appears and
 /// shrinking away as it goes; `null` shows nothing.
-class _MaskSliderReveal extends StatelessWidget {
-  const _MaskSliderReveal({required this.child});
+class _MaskSettingReveal extends StatelessWidget {
+  const _MaskSettingReveal({
+    required this.child,
+    this.padding = _settingPadding,
+  });
 
   final Widget? child;
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
     final child = this.child;
-    // Timed like the panel's own height, so the slider fills the room the
+    // Timed like the panel's own height, so the setting fills the room the
     // panel makes for it.
     return AnimatedSwitcher(
       duration: MediaQuery.disableAnimationsOf(context)
@@ -669,10 +738,7 @@ class _MaskSliderReveal extends StatelessWidget {
       ),
       child: child == null
           ? const SizedBox(width: double.infinity)
-          : Padding(
-              padding: const .fromLTRB(_panelSideInset, 0, _panelSideInset, 8),
-              child: child,
-            ),
+          : Padding(padding: padding, child: child),
     );
   }
 }
@@ -827,19 +893,7 @@ class _MaskSlider extends StatelessWidget {
       spacing: 12,
       children: [
         // The slider announces the name with its ends.
-        ExcludeSemantics(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 72, maxWidth: 112),
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: .ellipsis,
-              style: VineTheme.bodyMediumFont(
-                color: context.vineColors.primaryText,
-              ),
-            ),
-          ),
-        ),
+        _MaskSettingLabel(label),
         Expanded(
           child: DivineSlider(
             value: value,
@@ -849,6 +903,65 @@ class _MaskSlider extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// The colors the mask can cover what it hides with, named beside them like a
+/// slider.
+class _MaskBackgroundRow extends StatelessWidget {
+  const _MaskBackgroundRow({required this.color, required this.onChanged});
+
+  final Color color;
+  final ValueChanged<Color> onChanged;
+
+  Future<void> _pickCustom(BuildContext context) async {
+    final picked = await showFullColorPicker(context, initialColor: color);
+    if (picked != null) onChanged(picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final label = context.l10n.videoEditorShapeMaskBackgroundLabel;
+    return Row(
+      spacing: 12,
+      children: [
+        // The row announces the name before its colors.
+        _MaskSettingLabel(label),
+        Expanded(
+          child: VideoEditorColorRow(
+            selected: color,
+            semanticLabel: label,
+            padding: const .only(right: _panelSideInset),
+            onSelected: onChanged,
+            onCustom: () => _pickCustom(context),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The name of a setting, shown beside it. The setting announces it itself.
+class _MaskSettingLabel extends StatelessWidget {
+  const _MaskSettingLabel(this.label);
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 72, maxWidth: 112),
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: .ellipsis,
+          style: VineTheme.bodyMediumFont(
+            color: context.vineColors.primaryText,
+          ),
+        ),
+      ),
     );
   }
 }

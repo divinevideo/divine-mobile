@@ -58,6 +58,7 @@ class InlineReelReplyCubit extends Cubit<InlineReelReplyState> {
       if (_replyContext.isGroup) {
         final results = videoRef != null
             ? await _dmRepository.sendSharedVideoGroup(
+                backgroundDelivery: true,
                 recipientPubkeys: _replyContext.participantPubkeys,
                 baseContent: trimmed,
                 videoKind: videoRef.videoKind.kind,
@@ -68,6 +69,7 @@ class InlineReelReplyCubit extends Cubit<InlineReelReplyState> {
                 replyToId: _replyContext.sharedReelMessageId,
               )
             : await _dmRepository.sendGroupMessage(
+                backgroundDelivery: true,
                 recipientPubkeys: _replyContext.participantPubkeys,
                 content: trimmed,
                 replyToId: _replyContext.sharedReelMessageId,
@@ -81,6 +83,7 @@ class InlineReelReplyCubit extends Cubit<InlineReelReplyState> {
       } else {
         final result = videoRef != null
             ? await _dmRepository.sendSharedVideo(
+                backgroundDelivery: true,
                 recipientPubkey: _replyContext.participantPubkeys.single,
                 baseContent: trimmed,
                 videoKind: videoRef.videoKind.kind,
@@ -91,6 +94,7 @@ class InlineReelReplyCubit extends Cubit<InlineReelReplyState> {
                 replyToId: _replyContext.sharedReelMessageId,
               )
             : await _dmRepository.sendMessage(
+                backgroundDelivery: true,
                 recipientPubkey: _replyContext.participantPubkeys.single,
                 content: trimmed,
                 replyToId: _replyContext.sharedReelMessageId,

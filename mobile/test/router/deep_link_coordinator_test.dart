@@ -28,6 +28,7 @@ void main() {
             '/welcome',
             '/video/:id',
             '/profile/:npub',
+            '/l/:code',
             '/profile/:npub/:i',
             '/hashtag/:tag',
             '/search/:term',
@@ -50,6 +51,21 @@ void main() {
     }
 
     group('handle', () {
+      test('routes short links through the guarded receiver', () {
+        expect(
+          handleAndReadLocation(
+            const DeepLink(type: DeepLinkType.shortLink, shortCode: 'Abc12345'),
+          ),
+          equals('/l/Abc12345'),
+        );
+        expect(
+          handleAndReadLocation(
+            const DeepLink(type: DeepLinkType.shortLink, shortCode: 'Other123'),
+          ),
+          equals('/l/Other123'),
+        );
+      });
+
       test('routes a video link to its detail route', () {
         expect(
           handleAndReadLocation(

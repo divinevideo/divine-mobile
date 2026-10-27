@@ -7472,8 +7472,16 @@ class AppLocalizationsRo extends AppLocalizations {
   String get inboxMessageRequestsEmpty => 'Nicio cerere de mesaj';
 
   @override
-  String inboxMessageRequestsSemanticLabel(int requestCount) {
-    return 'Cereri de mesaj, $requestCount în așteptare';
+  String inboxMessageRequestsUnreadSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Cereri de mesaj, $count de cereri necitite',
+      few: 'Cereri de mesaj, $count cereri necitite',
+      one: 'Cereri de mesaj, $count cerere necitită',
+      zero: 'Cereri de mesaj',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -9188,6 +9196,18 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorTuneFade => 'Estompare';
 
   @override
+  String get videoEditorTuneHighlights => 'Lumini';
+
+  @override
+  String get videoEditorTuneShadows => 'Umbre';
+
+  @override
+  String get videoEditorTuneVibrance => 'Vivacitate';
+
+  @override
+  String get videoEditorTuneSharpen => 'Claritate';
+
+  @override
   String get videoEditorAudioLabel => 'Audio';
 
   @override
@@ -10023,6 +10043,9 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorShapeMaskCornersRound => 'Rotunjite';
+
+  @override
+  String get videoEditorShapeMaskBackgroundLabel => 'Fundal';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Detectare automată';

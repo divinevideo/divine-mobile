@@ -7376,8 +7376,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inboxMessageRequestsEmpty => 'No message requests';
 
   @override
-  String inboxMessageRequestsSemanticLabel(int requestCount) {
-    return 'Message requests, $requestCount pending';
+  String inboxMessageRequestsUnreadSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Message requests, $count unread',
+      one: 'Message requests, $count unread',
+      zero: 'Message requests',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -9080,6 +9087,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorTuneFade => 'Fade';
 
   @override
+  String get videoEditorTuneHighlights => 'Highlights';
+
+  @override
+  String get videoEditorTuneShadows => 'Shadows';
+
+  @override
+  String get videoEditorTuneVibrance => 'Vibrance';
+
+  @override
+  String get videoEditorTuneSharpen => 'Sharpen';
+
+  @override
   String get videoEditorAudioLabel => 'Audio';
 
   @override
@@ -9900,6 +9919,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get videoEditorShapeMaskCornersRound => 'Round';
+
+  @override
+  String get videoEditorShapeMaskBackgroundLabel => 'Background';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Auto-detect';

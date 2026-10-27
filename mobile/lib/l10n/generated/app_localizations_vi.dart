@@ -7255,8 +7255,14 @@ class AppLocalizationsVi extends AppLocalizations {
   String get inboxMessageRequestsEmpty => 'Không có yêu cầu nhắn tin nào';
 
   @override
-  String inboxMessageRequestsSemanticLabel(int requestCount) {
-    return 'Yêu cầu nhắn tin, $requestCount đang chờ';
+  String inboxMessageRequestsUnreadSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Yêu cầu nhắn tin, $count chưa đọc',
+      zero: 'Yêu cầu nhắn tin',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -8944,6 +8950,18 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorTuneFade => 'Mờ dần';
 
   @override
+  String get videoEditorTuneHighlights => 'Vùng sáng';
+
+  @override
+  String get videoEditorTuneShadows => 'Vùng tối';
+
+  @override
+  String get videoEditorTuneVibrance => 'Độ sống động';
+
+  @override
+  String get videoEditorTuneSharpen => 'Độ sắc nét';
+
+  @override
   String get videoEditorAudioLabel => 'Âm thanh';
 
   @override
@@ -9765,6 +9783,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorShapeMaskCornersRound => 'Bo tròn';
+
+  @override
+  String get videoEditorShapeMaskBackgroundLabel => 'Nền';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Tự động nhận diện';

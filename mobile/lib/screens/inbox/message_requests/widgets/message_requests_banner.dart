@@ -1,34 +1,42 @@
 // ABOUTME: Banner widget for message requests shown at top of inbox.
-// ABOUTME: Shows "Message requests" label with count badge and chevron.
-// ABOUTME: Only rendered when there are pending requests.
+// ABOUTME: Shows "Message requests" label with unread badge and chevron.
+// ABOUTME: InboxView decides when it shows; a zero count hides the badge.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 
 /// Banner row displayed at the top of the conversation list when there are
-/// pending message requests from non-followed users.
+/// message requests from non-followed users.
 ///
 /// Displays "Message requests" text, a red unread-count badge, and a
 /// right chevron. Tapping navigates to the message requests inbox.
 class MessageRequestsBanner extends StatelessWidget {
   const MessageRequestsBanner({
-    required this.requestCount,
+    required this.unreadCount,
     required this.onTap,
     super.key,
   });
 
-  /// Total number of pending message requests.
-  final int requestCount;
+  /// Number of unread live message requests, shown by the badge and
+  /// announced by the semantics label. Dismissed requests, and read requests
+  /// still awaiting a decision, are not counted.
+  final int unreadCount;
 
   /// Called when the banner is tapped.
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    // Excluding the children stops the title and badge being read twice, but
+    // also drops the GestureDetector's tap action, hence onTap here.
     return Semantics(
       button: true,
-      label: context.l10n.inboxMessageRequestsSemanticLabel(requestCount),
+      excludeSemantics: true,
+      label: context.l10n.inboxMessageRequestsUnreadSemanticLabel(
+        unreadCount,
+      ),
+      onTap: onTap,
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
@@ -50,7 +58,7 @@ class MessageRequestsBanner extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (requestCount > 0) _RequestCountBadge(count: requestCount),
+                if (unreadCount > 0) _RequestCountBadge(count: unreadCount),
                 const SizedBox(width: 8),
                 DivineIcon(
                   icon: DivineIconName.caretRight,
