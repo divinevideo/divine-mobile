@@ -3451,6 +3451,18 @@ abstract class AppLocalizations {
   /// **'Hashtag sticker, opens #{hashtag}'**
   String videoStickerHashtagSemanticLabel(String hashtag);
 
+  /// Screen reader label for the invisible button over a sound sticker on a playing video; tapping it opens the page of the video's sound.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound sticker, opens the sound'**
+  String get videoStickerSoundSemanticLabel;
+
+  /// Note in the sheet a link sticker on a video opens, above the link's full address: the page opens outside the app.
+  ///
+  /// In en, this message translates to:
+  /// **'This link opens outside Divine. Check the address before you go.'**
+  String get videoStickerLinkSheetBody;
+
   /// No description provided for @metadataOriginalSound.
   ///
   /// In en, this message translates to:

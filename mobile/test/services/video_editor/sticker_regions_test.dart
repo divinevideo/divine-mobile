@@ -16,7 +16,7 @@ import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
 const _link = SocialStickerData(
   kind: SocialStickerKind.link,
-  url: 'divine.video/about',
+  url: 'https://divine.video/about',
 );
 
 /// The capture of a sticker carrying [data], standing [offset] from the
@@ -98,6 +98,8 @@ void main() {
             rotation: 0.3,
             start: Duration(seconds: 1),
             end: Duration(seconds: 3),
+            style: 'light',
+            label: 'divine.video',
           ),
         ]),
       );
@@ -141,17 +143,36 @@ void main() {
       );
     });
 
-    test('leaves out a sound credit, which a tap does not open', () {
+    test('gives a sound credit a look only as the still note', () {
       final regions = _regions([
         _captured(
           const SocialStickerData(
             kind: SocialStickerKind.soundCredit,
             soundTitle: 'Song',
+            soundArtist: 'Artist',
+          ),
+        ),
+        _captured(
+          const SocialStickerData(
+            kind: SocialStickerKind.soundCredit,
+            soundTitle: 'Song',
+            soundId: 'bundled_song',
+            soundDesign: SocialStickerSoundDesign.vinyl,
           ),
         ),
       ]);
 
-      expect(regions, isEmpty);
+      expect(
+        regions.map((region) => (region.kind, region.style, region.label)),
+        equals([
+          (VideoStickerKind.sound, 'light', 'Song\nArtist'),
+          (VideoStickerKind.sound, null, 'Song'),
+        ]),
+      );
+      expect(
+        regions.map((region) => region.target),
+        equals(['', 'bundled_song']),
+      );
     });
 
     test('leaves out a sticker that moves', () {

@@ -2030,6 +2030,14 @@ class AppLocalizationsSv extends AppLocalizations {
   }
 
   @override
+  String get videoStickerSoundSemanticLabel =>
+      'Ljudklistermärke, öppnar ljudet';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Länken öppnas utanför Divine. Kolla adressen innan du fortsätter.';
+
+  @override
   String get metadataOriginalSound => 'Originalljud';
 
   @override

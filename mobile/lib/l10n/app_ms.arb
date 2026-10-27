@@ -983,6 +983,8 @@
   "videoStickerLinkSemanticLabel": "Pelekat pautan, membuka {url}",
   "videoStickerMentionSemanticLabel": "Pelekat sebutan, membuka profil",
   "videoStickerHashtagSemanticLabel": "Pelekat tanda pagar, membuka #{hashtag}",
+  "videoStickerSoundSemanticLabel": "Pelekat bunyi, membuka bunyi",
+  "videoStickerLinkSheetBody": "Pautan ini dibuka di luar Divine. Semak alamatnya sebelum anda teruskan.",
   "metadataOriginalSound": "Bunyi asal",
   "metadataVerificationLabel": "Pengesahan",
   "metadataDeviceAttestation": "Pengesahan peranti",

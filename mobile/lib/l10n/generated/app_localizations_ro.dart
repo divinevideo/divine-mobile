@@ -2092,6 +2092,14 @@ class AppLocalizationsRo extends AppLocalizations {
   }
 
   @override
+  String get videoStickerSoundSemanticLabel =>
+      'Sticker cu sunet, deschide sunetul';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Acest link se deschide în afara Divine. Verifică adresa înainte să continui.';
+
+  @override
   String get metadataOriginalSound => 'Sunet original';
 
   @override

@@ -171,6 +171,37 @@ void main() {
         soundArtist: 'Band',
       );
 
+      blocTest<SocialStickerCubit, SocialStickerState>(
+        'drops the artist and page id of the sound it credited before',
+        build: () => build(
+          song.copyWith(),
+          soundChoices: const [
+            SocialStickerData(
+              kind: SocialStickerKind.soundCredit,
+              soundTitle: 'Song',
+              soundArtist: 'Artist',
+              soundId: 'bundled_song',
+            ),
+            SocialStickerData(
+              kind: SocialStickerKind.soundCredit,
+              soundTitle: 'Untitled',
+            ),
+          ],
+        ),
+        act: (cubit) => cubit.soundPicked(
+          const SocialStickerData(
+            kind: SocialStickerKind.soundCredit,
+            soundTitle: 'Untitled',
+          ),
+        ),
+        expect: () => [
+          isA<SocialStickerState>()
+              .having((s) => s.data.soundTitle, 'soundTitle', 'Untitled')
+              .having((s) => s.data.soundArtist, 'soundArtist', isNull)
+              .having((s) => s.data.soundId, 'soundId', isNull),
+        ],
+      );
+
       test('keeps the credited sound a choice when it left the video', () {
         final cubit = build(song, soundChoices: const [other]);
         addTearDown(cubit.close);

@@ -555,6 +555,8 @@
   "videoStickerLinkSemanticLabel": "Link sticker, binubuksan ang {url}",
   "videoStickerMentionSemanticLabel": "Mention sticker, binubuksan ang profile",
   "videoStickerHashtagSemanticLabel": "Hashtag sticker, binubuksan ang #{hashtag}",
+  "videoStickerSoundSemanticLabel": "Sound sticker, binubuksan ang sound",
+  "videoStickerLinkSheetBody": "Bubuksan ang link na ito sa labas ng Divine. Tingnan muna ang address bago ka tumuloy.",
   "metadataOriginalSound": "Orihinal na sound",
   "metadataVerificationLabel": "Beripikasyon",
   "metadataDeviceAttestation": "Device attestation",

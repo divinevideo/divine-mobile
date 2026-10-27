@@ -983,6 +983,8 @@
   "videoStickerLinkSemanticLabel": "لنک اسٹیکر، {url} کھولتا ہے",
   "videoStickerMentionSemanticLabel": "ذکر اسٹیکر، پروفائل کھولتا ہے",
   "videoStickerHashtagSemanticLabel": "ہیش ٹیگ اسٹیکر، #{hashtag} کھولتا ہے",
+  "videoStickerSoundSemanticLabel": "ساؤنڈ اسٹیکر، ساؤنڈ کھولتا ہے",
+  "videoStickerLinkSheetBody": "یہ لنک Divine سے باہر کھلتا ہے۔ آگے جانے سے پہلے ایڈریس دیکھ لیں۔",
   "metadataOriginalSound": "اصل آواز",
   "metadataVerificationLabel": "تصدیق",
   "metadataDeviceAttestation": "ڈیوائس تصدیق",

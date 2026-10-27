@@ -686,6 +686,8 @@
   "videoStickerLinkSemanticLabel": "Naklejka z linkiem, otwiera {url}",
   "videoStickerMentionSemanticLabel": "Naklejka ze wzmianką, otwiera profil",
   "videoStickerHashtagSemanticLabel": "Naklejka z hashtagiem, otwiera #{hashtag}",
+  "videoStickerSoundSemanticLabel": "Naklejka z dźwiękiem, otwiera dźwięk",
+  "videoStickerLinkSheetBody": "Ten link otwiera się poza Divine. Sprawdź adres, zanim przejdziesz dalej.",
   "metadataOriginalSound": "Oryginalny dźwięk",
   "metadataVerificationLabel": "Weryfikacja",
   "metadataDeviceAttestation": "Atestacja urządzenia",

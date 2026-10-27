@@ -2003,6 +2003,13 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
+  String get videoStickerSoundSemanticLabel => 'Nhãn dán âm thanh, mở âm thanh';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Liên kết này mở bên ngoài Divine. Hãy kiểm tra địa chỉ trước khi tiếp tục.';
+
+  @override
   String get metadataOriginalSound => 'Âm thanh gốc';
 
   @override

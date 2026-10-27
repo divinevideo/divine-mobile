@@ -2066,6 +2066,14 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get videoStickerSoundSemanticLabel =>
+      'Sound-Sticker, öffnet den Sound';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Dieser Link öffnet sich außerhalb von Divine. Prüf die Adresse, bevor du weitergehst.';
+
+  @override
   String get metadataOriginalSound => 'Originalton';
 
   @override

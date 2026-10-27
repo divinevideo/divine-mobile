@@ -128,31 +128,50 @@ viewer can tap them. All of these are Divine conventions.
 | `t` | `["t", "summer"]` | A hashtag sticker's hashtag, written with the post's own hashtags. |
 | `p` | `["p", "<pubkey>", "<relay>", "mention"]` | A mention sticker's profile, written like a caption mention. |
 | `r` | `["r", "https://example.com/page", "link"]` | The web page of a link sticker. The `link` marker is required: an unmarked `r` tag on a video event is read as one of the video's own media URLs. |
-| `sticker` | `["sticker", "<kind>", "<target>", "<cx> <cy> <w> <h>", "<degrees>", "<start ms>", "<end ms>"]` | Where a link, mention or hashtag sticker stands on the video, so a tap there opens it. |
+| `sticker` | `["sticker", "<kind>", "<target>", "<cx> <cy> <w> <h>", "<degrees>", "<start ms>", "<end ms>", "<style>", "<label>"]` | Where a link, mention, hashtag or sound sticker stands on the video and how it looks, so a viewer can draw it again and tap it. |
 
 The `sticker` tag's fields:
 
-- `kind` is `link`, `mention` or `hashtag`.
+- `kind` is `link`, `mention`, `hashtag` or `sound`.
 - `target` is the full `http`/`https` address, the full hex pubkey, or the hashtag
   without `#`. A reader ignores any other scheme, a pubkey that is not 64 hex
-  characters, and a hashtag containing whitespace.
+  characters, and a hashtag containing whitespace. For `sound` it is the id the
+  credited sound's page opens it by: `bundled_<id>` for a sound from Divine's
+  library, or the event id of a sound published on Nostr. It is empty for a
+  sound only the video carries (an imported file, a provider sound, a video's
+  original sound), and the sticker then opens the video's own sound, the one its
+  audio reference names; such a sticker is only published when it credits that
+  sound.
 - The area gives the sticker's centre and its size before it is turned, as
   fractions of the video frame's width (`cx`, `w`) and height (`cy`, `h`).
 - `degrees` is how far it is turned clockwise around its centre.
 - `start ms` and `end ms` are when it shows on the published video. Both are
   optional: a missing start means from the beginning, a missing end means until
-  the video ends.
+  the video ends. Either may be an empty string when a later field follows.
+- `style` names the sticker's look (`light`, `dark`, `glass`, `brand`,
+  `highlight`, `neon`, `plain` or `outline`).
+- `label` is the text the sticker shows, without `@` or `#`: a link's title or
+  domain, a name, or a hashtag as typed; for a sound, its title, artist and line
+  of lyrics, one per line. At most 300 characters.
 
-A sticker that moves (keyframes, tracking or an animation) is never published
-with an area, which is why the editor offers none of those for these three
-sticker kinds. The app shows the full address before it opens a link outside
-`divine.video`.
+The sticker is also part of the video's frames, so other clients still show
+it. Divine draws it again from `style` and `label` exactly over the one in the
+frames, sharp at the screen's resolution, and makes it the button; without
+both fields it only places the button. A sound sticker whose design moves with
+the video (record, cassette, player, equalizer) is published without `style`,
+since a copy could not keep time with the frames beneath. A sticker that moves
+across the video (keyframes, tracking or an animation) is never published with
+an area, which is why the editor offers none of those for these four sticker
+kinds. Before a link
+outside `divine.video` opens, the app shows its domain and full address in a
+sheet.
 
 Publishing lives in `mobile/lib/services/video_publish/video_event_tags.dart`.
 The area is taken from the final render in
 `mobile/lib/services/video_editor/sticker_regions.dart`. Parsing is in
-`mobile/packages/models/lib/src/video_sticker_region.dart`, and the tap targets
-over the feed are in `mobile/lib/widgets/video_feed_item/video_sticker_tap_areas.dart`.
+`mobile/packages/models/lib/src/video_sticker_region.dart`, and the stickers
+drawn over the feed are in
+`mobile/lib/widgets/video_feed_item/video_sticker_tap_areas.dart`.
 
 ### Event Metadata
 

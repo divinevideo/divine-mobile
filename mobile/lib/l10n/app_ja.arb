@@ -683,6 +683,8 @@
   "videoStickerLinkSemanticLabel": "リンクステッカー、{url} を開きます",
   "videoStickerMentionSemanticLabel": "メンションステッカー、プロフィールを開きます",
   "videoStickerHashtagSemanticLabel": "ハッシュタグステッカー、#{hashtag} を開きます",
+  "videoStickerSoundSemanticLabel": "サウンドステッカー、サウンドを開きます",
+  "videoStickerLinkSheetBody": "このリンクはDivineの外で開きます。移動する前にアドレスを確認してください。",
   "metadataOriginalSound": "オリジナルサウンド",
   "metadataVerificationLabel": "認証",
   "metadataDeviceAttestation": "デバイスの認証",

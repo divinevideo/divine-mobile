@@ -1967,6 +1967,13 @@ class AppLocalizationsId extends AppLocalizations {
   }
 
   @override
+  String get videoStickerSoundSemanticLabel => 'Stiker suara, membuka suaranya';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Tautan ini terbuka di luar Divine. Periksa alamatnya sebelum kamu lanjut.';
+
+  @override
   String get metadataOriginalSound => 'Suara asli';
 
   @override

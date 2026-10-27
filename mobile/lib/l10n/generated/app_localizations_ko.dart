@@ -1885,6 +1885,13 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get videoStickerSoundSemanticLabel => '사운드 스티커, 사운드 열기';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      '이 링크는 Divine 밖에서 열려요. 이동하기 전에 주소를 확인하세요.';
+
+  @override
   String get metadataOriginalSound => '오리지널 사운드';
 
   @override

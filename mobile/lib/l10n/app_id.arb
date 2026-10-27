@@ -683,6 +683,8 @@
   "videoStickerLinkSemanticLabel": "Stiker tautan, membuka {url}",
   "videoStickerMentionSemanticLabel": "Stiker sebutan, membuka profil",
   "videoStickerHashtagSemanticLabel": "Stiker tagar, membuka #{hashtag}",
+  "videoStickerSoundSemanticLabel": "Stiker suara, membuka suaranya",
+  "videoStickerLinkSheetBody": "Tautan ini terbuka di luar Divine. Periksa alamatnya sebelum kamu lanjut.",
   "metadataOriginalSound": "Suara asli",
   "metadataVerificationLabel": "Verifikasi",
   "metadataDeviceAttestation": "Atestasi perangkat",

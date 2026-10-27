@@ -1,5 +1,5 @@
-// ABOUTME: Invisible buttons over a playing video's link, mention and hashtag
-// ABOUTME: stickers, each opening what its sticker points to while it shows.
+// ABOUTME: A playing video's link, mention and hashtag stickers, drawn sharp
+// ABOUTME: over its frames as buttons that open what each one points to.
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -11,24 +11,38 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart'
     show VideoEvent, VideoStickerKind, VideoStickerRegion;
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
+import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/external_link_launcher.dart';
+import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_navigation.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
+import 'package:openvine/widgets/video_feed_item/link_sticker_sheet.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Opens what a tapped sticker points to; replaced in tests.
+/// Opens what a tapped sticker on [video] points to; replaced in tests.
 typedef VideoStickerOpener = void Function(
   BuildContext context,
   VideoStickerRegion region,
+  VideoEvent video,
 );
 
-/// Opens what [region] points to: a link after the viewer has seen its
-/// address (see [openExternalLink]), a profile, or a hashtag's feed.
-void openVideoSticker(BuildContext context, VideoStickerRegion region) {
+/// Opens what [region] on [video] points to: a profile, a hashtag's feed, the
+/// video's own sound, or a link, one outside Divine after the viewer has seen
+/// its address in [showLinkStickerSheet].
+void openVideoSticker(
+  BuildContext context,
+  VideoStickerRegion region,
+  VideoEvent video,
+) {
   switch (region.kind) {
     case VideoStickerKind.link:
+      final host = Uri.tryParse(region.target)?.host ?? '';
       runDetached(
-        openExternalLink(context, region.target),
+        isTrustedExternalLinkHost(host)
+            ? openExternalLink(context, region.target)
+            : showLinkStickerSheet(context, region.target),
         'open a link sticker',
         logName: 'VideoStickerTapAreas',
         category: LogCategory.ui,
@@ -37,6 +51,20 @@ void openVideoSticker(BuildContext context, VideoStickerRegion region) {
       LinkifiedTextNavigation.navigateToProfile(context, region.target);
     case VideoStickerKind.hashtag:
       LinkifiedTextNavigation.navigateToHashtagFeed(context, region.target);
+    case VideoStickerKind.sound:
+      final soundId = region.target.isNotEmpty
+          ? region.target
+          : video.audioEventId;
+      if (soundId == null) return;
+      runDetached(
+        context.pushWithVideoPause(
+          SoundDetailScreen.pathForId(soundId),
+          extra: <String, dynamic>{'sourceVideo': video},
+        ),
+        'open the sound of a sound sticker',
+        logName: 'VideoStickerTapAreas',
+        category: LogCategory.ui,
+      );
   }
 }
 
@@ -62,12 +90,13 @@ Rect videoFrameRect(
   );
 }
 
-/// A button over each of [video]'s tappable stickers while it shows, placed
-/// where the sticker stands on the video as the feed fits it.
+/// Each of [video]'s tappable stickers while it shows, drawn again where it
+/// stands in the video's frames as the feed fits them, and made a button.
 ///
-/// The buttons let a tap anywhere else, and a double tap on them, reach the
-/// player beneath: a single tap on a sticker opens it, a double tap still
-/// likes the video.
+/// The frames carry the sticker at the video's resolution and compression;
+/// drawn over them, it is as sharp as the app's own buttons. The buttons let
+/// a tap anywhere else, and a double tap on them, reach the player beneath:
+/// a single tap on a sticker opens it, a double tap still likes the video.
 class VideoStickerTapAreas extends StatefulWidget {
   const VideoStickerTapAreas({
     required this.video,
@@ -96,7 +125,8 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
   /// The stickers showing at the player's position.
   List<VideoStickerRegion> _shown = const [];
 
-  /// The video's width over its height, `0` until it is known.
+  /// The video's width over its height, `0` until the player knows it, which
+  /// is when its frames show.
   double _aspectRatio = 0;
 
   @override
@@ -129,12 +159,10 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
   }
 
   void _update(DivineVideoPlayerState state, {bool rebuild = true}) {
-    final aspectRatio = state.aspectRatio > 0
-        ? state.aspectRatio
-        : _fallbackAspectRatio;
+    final aspectRatio = state.aspectRatio;
     final shown = [
       for (final region in widget.video.stickerRegions)
-        if (region.isShownAt(state.position)) region,
+        if (region.isShownAt(state.position) && _opensSomething(region)) region,
     ];
     if (aspectRatio == _aspectRatio && listEquals(shown, _shown)) return;
     if (!rebuild) {
@@ -149,15 +177,13 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
     });
   }
 
-  /// The aspect ratio the video's dimensions name, before the player knows.
-  double get _fallbackAspectRatio {
-    final width = widget.video.width;
-    final height = widget.video.height;
-    if (width == null || height == null || width <= 0 || height <= 0) {
-      return 0;
-    }
-    return width / height;
-  }
+  /// Whether a tap on [region] has somewhere to go: a sound sticker that
+  /// names no sound of its own needs the video's audio reference, which a
+  /// video whose sound was not published for reuse goes without.
+  bool _opensSomething(VideoStickerRegion region) =>
+      region.kind != VideoStickerKind.sound ||
+      region.target.isNotEmpty ||
+      widget.video.audioEventId != null;
 
   @override
   Widget build(BuildContext context) {
@@ -175,7 +201,7 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
               _StickerTapArea(
                 region: region,
                 frame: frame,
-                onTap: () => widget.onOpen(context, region),
+                onTap: () => widget.onOpen(context, region, widget.video),
               ),
           ],
         );
@@ -184,7 +210,7 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
   }
 }
 
-/// The button over one sticker: the sticker's own area, turned with it and
+/// One sticker drawn over its area, turned with it, and the button on it,
 /// grown to the smallest size a finger can hit.
 class _StickerTapArea extends StatelessWidget {
   const _StickerTapArea({
@@ -202,14 +228,13 @@ class _StickerTapArea extends StatelessWidget {
     final center =
         frame.topLeft +
         Offset(region.centerX * frame.width, region.centerY * frame.height);
-    final width = math.max(
+    final stickerSize = Size(
       region.width * frame.width,
-      kMinInteractiveDimension,
-    );
-    final height = math.max(
       region.height * frame.height,
-      kMinInteractiveDimension,
     );
+    final width = math.max(stickerSize.width, kMinInteractiveDimension);
+    final height = math.max(stickerSize.height, kMinInteractiveDimension);
+    final sticker = SocialStickerData.ofRegion(region);
     return Positioned(
       left: center.dx - width / 2,
       top: center.dy - height / 2,
@@ -217,16 +242,36 @@ class _StickerTapArea extends StatelessWidget {
       height: height,
       child: Transform.rotate(
         angle: region.rotation,
-        child: Semantics(
-          button: true,
-          label: _label(context),
-          child: GestureDetector(
-            // Translucent and empty, so the player beneath still sees the
-            // pointer: its double tap likes, its long press peeks.
-            behavior: HitTestBehavior.translucent,
-            onTap: onTap,
-            child: const SizedBox.expand(),
-          ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            if (sticker != null)
+              // Laid over the sticker in the frames at its exact size, so it
+              // covers that one; the button below names it, and only the
+              // button takes the pointer.
+              IgnorePointer(
+                child: ExcludeSemantics(
+                  child: SizedBox.fromSize(
+                    size: stickerSize,
+                    child: FittedBox(
+                      fit: BoxFit.fill,
+                      child: SocialStickerView(data: sticker),
+                    ),
+                  ),
+                ),
+              ),
+            Semantics(
+              button: true,
+              label: _label(context),
+              child: GestureDetector(
+                // Translucent and empty, so the player beneath still sees the
+                // pointer: its double tap likes, its long press peeks.
+                behavior: HitTestBehavior.translucent,
+                onTap: onTap,
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -240,5 +285,6 @@ class _StickerTapArea extends StatelessWidget {
     VideoStickerKind.hashtag => context.l10n.videoStickerHashtagSemanticLabel(
       region.target,
     ),
+    VideoStickerKind.sound => context.l10n.videoStickerSoundSemanticLabel,
   };
 }

@@ -983,6 +983,8 @@
   "videoStickerLinkSemanticLabel": "Nhãn dán liên kết, mở {url}",
   "videoStickerMentionSemanticLabel": "Nhãn dán nhắc đến, mở hồ sơ",
   "videoStickerHashtagSemanticLabel": "Nhãn dán hashtag, mở #{hashtag}",
+  "videoStickerSoundSemanticLabel": "Nhãn dán âm thanh, mở âm thanh",
+  "videoStickerLinkSheetBody": "Liên kết này mở bên ngoài Divine. Hãy kiểm tra địa chỉ trước khi tiếp tục.",
   "metadataOriginalSound": "Âm thanh gốc",
   "metadataVerificationLabel": "Xác minh",
   "metadataDeviceAttestation": "Chứng thực thiết bị",

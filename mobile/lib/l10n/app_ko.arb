@@ -492,6 +492,8 @@
   "videoStickerLinkSemanticLabel": "링크 스티커, {url} 열기",
   "videoStickerMentionSemanticLabel": "멘션 스티커, 프로필 열기",
   "videoStickerHashtagSemanticLabel": "해시태그 스티커, #{hashtag} 열기",
+  "videoStickerSoundSemanticLabel": "사운드 스티커, 사운드 열기",
+  "videoStickerLinkSheetBody": "이 링크는 Divine 밖에서 열려요. 이동하기 전에 주소를 확인하세요.",
   "metadataOriginalSound": "오리지널 사운드",
   "metadataVerificationLabel": "인증",
   "metadataDeviceAttestation": "기기 증명",

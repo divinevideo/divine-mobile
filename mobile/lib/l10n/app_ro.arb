@@ -686,6 +686,8 @@
   "videoStickerLinkSemanticLabel": "Sticker cu link, deschide {url}",
   "videoStickerMentionSemanticLabel": "Sticker cu menționare, deschide profilul",
   "videoStickerHashtagSemanticLabel": "Sticker cu hashtag, deschide #{hashtag}",
+  "videoStickerSoundSemanticLabel": "Sticker cu sunet, deschide sunetul",
+  "videoStickerLinkSheetBody": "Acest link se deschide în afara Divine. Verifică adresa înainte să continui.",
   "metadataOriginalSound": "Sunet original",
   "metadataVerificationLabel": "Verificare",
   "metadataDeviceAttestation": "Atestare de dispozitiv",

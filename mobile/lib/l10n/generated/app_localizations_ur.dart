@@ -2036,6 +2036,13 @@ class AppLocalizationsUr extends AppLocalizations {
   }
 
   @override
+  String get videoStickerSoundSemanticLabel => 'ساؤنڈ اسٹیکر، ساؤنڈ کھولتا ہے';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'یہ لنک Divine سے باہر کھلتا ہے۔ آگے جانے سے پہلے ایڈریس دیکھ لیں۔';
+
+  @override
   String get metadataOriginalSound => 'اصل آواز';
 
   @override

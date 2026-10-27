@@ -64,6 +64,86 @@ void main() {
     });
 
     group('fromTag', () {
+      test('publishes the look and text after the window', () {
+        const region = VideoStickerRegion(
+          kind: VideoStickerKind.mention,
+          target: _pubkey,
+          centerX: 0.5,
+          centerY: 0.5,
+          width: 0.2,
+          height: 0.1,
+          style: 'dark',
+          label: 'alice',
+        );
+
+        expect(
+          region.toTag(),
+          equals([
+            'sticker',
+            'mention',
+            _pubkey,
+            '0.5 0.5 0.2 0.1',
+            '0',
+            '',
+            '',
+            'dark',
+            'alice',
+          ]),
+        );
+        expect(VideoStickerRegion.fromTag(region.toTag()), equals(region));
+      });
+
+      test("reads a sound sticker, which opens the video's own sound", () {
+        final region = VideoStickerRegion.fromTag([
+          'sticker',
+          'sound',
+          '',
+          '0.5 0.5 0.3 0.1',
+          '0',
+          '',
+          '',
+          'light',
+          'Song\nArtist',
+        ]);
+
+        expect(region?.kind, equals(VideoStickerKind.sound));
+        expect(region?.target, isEmpty);
+        expect(region?.label, equals('Song\nArtist'));
+        expect(VideoStickerRegion.fromTag(region!.toTag()), equals(region));
+      });
+
+      test("keeps a sound's own page id and drops anything else", () {
+        String? target(String raw) => VideoStickerRegion.fromTag([
+          'sticker',
+          'sound',
+          raw,
+          '0.5 0.5 0.3 0.1',
+          '0',
+        ])?.target;
+
+        expect(target('bundled_potato_flew'), equals('bundled_potato_flew'));
+        expect(target('C' * 64), equals('c' * 64));
+        expect(target('https://example.com/song'), isEmpty);
+        expect(target('bundled_../../x'), isEmpty);
+      });
+
+      test('drops a text too long to show', () {
+        final region = VideoStickerRegion.fromTag([
+          'sticker',
+          'hashtag',
+          'summer',
+          '0.5 0.5 0.2 0.1',
+          '0',
+          '',
+          '',
+          'light',
+          'x' * (VideoStickerRegion.maxLabelLength + 1),
+        ]);
+
+        expect(region?.label, isNull);
+        expect(region?.style, equals('light'));
+      });
+
       test('reads back what it publishes', () {
         const region = VideoStickerRegion(
           kind: VideoStickerKind.mention,

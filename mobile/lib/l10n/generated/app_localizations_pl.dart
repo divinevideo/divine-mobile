@@ -2092,6 +2092,14 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
+  String get videoStickerSoundSemanticLabel =>
+      'Naklejka z dźwiękiem, otwiera dźwięk';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Ten link otwiera się poza Divine. Sprawdź adres, zanim przejdziesz dalej.';
+
+  @override
   String get metadataOriginalSound => 'Oryginalny dźwięk';
 
   @override

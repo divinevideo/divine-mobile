@@ -686,6 +686,8 @@
   "videoStickerLinkSemanticLabel": "Link-Sticker, öffnet {url}",
   "videoStickerMentionSemanticLabel": "Erwähnungs-Sticker, öffnet das Profil",
   "videoStickerHashtagSemanticLabel": "Hashtag-Sticker, öffnet #{hashtag}",
+  "videoStickerSoundSemanticLabel": "Sound-Sticker, öffnet den Sound",
+  "videoStickerLinkSheetBody": "Dieser Link öffnet sich außerhalb von Divine. Prüf die Adresse, bevor du weitergehst.",
   "metadataOriginalSound": "Originalton",
   "metadataVerificationLabel": "Verifizierung",
   "metadataDeviceAttestation": "Geräteattestierung",

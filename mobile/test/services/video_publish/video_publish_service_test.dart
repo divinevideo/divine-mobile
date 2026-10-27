@@ -11,7 +11,7 @@ import 'package:db_client/db_client.dart' show ScheduledPost;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart'
-    show AspectRatio, VideoStickerKind, VideoStickerRegion;
+    show AspectRatio, AudioEvent, VideoStickerKind, VideoStickerRegion;
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
@@ -1669,6 +1669,83 @@ void main() {
             ),
           ).captured;
           expect(captured.single, equals([region]));
+        },
+      );
+
+      test(
+        'publishes a sound sticker only when it can open its sound',
+        () async {
+          _setupSuccessfulPublish(
+            mockAuthService: mockAuthService,
+            mockUploadManager: mockUploadManager,
+            mockDraftService: mockDraftService,
+            mockVideoEventPublisher: mockVideoEventPublisher,
+          );
+          VideoStickerRegion sound(String label) => VideoStickerRegion(
+            kind: VideoStickerKind.sound,
+            target: '',
+            centerX: 0.5,
+            centerY: 0.5,
+            width: 0.3,
+            height: 0.1,
+            label: label,
+          );
+          final credited = sound('Song\nArtist');
+          const library = VideoStickerRegion(
+            kind: VideoStickerKind.sound,
+            target: 'bundled_potato_flew',
+            centerX: 0.5,
+            centerY: 0.2,
+            width: 0.3,
+            height: 0.1,
+            label: 'A Potato Flew Around My Room',
+          );
+
+          await service.publishVideo(
+            draft: _createTestDraft().copyWith(
+              selectedSound: AudioEvent(
+                id: 'sound',
+                pubkey: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+                createdAt: 0,
+                title: 'Song',
+                creatorName: 'Artist',
+              ),
+              finalRenderedClip: _createTestClip().copyWith(
+                stickerRegions: [credited, sound('Another song'), library],
+              ),
+            ),
+          );
+
+          final captured = verify(
+            () => mockVideoEventPublisher.publishVideoEvent(
+              upload: any(named: 'upload'),
+              title: any(named: 'title'),
+              description: any(named: 'description'),
+              hashtags: any(named: 'hashtags'),
+              expirationTimestamp: any(named: 'expirationTimestamp'),
+              allowAudioReuse: any(named: 'allowAudioReuse'),
+              collaboratorPubkeys: any(named: 'collaboratorPubkeys'),
+              mentionedPubkeys: any(named: 'mentionedPubkeys'),
+              linkUrls: any(named: 'linkUrls'),
+              stickerRegions: captureAny(named: 'stickerRegions'),
+              inspiredByAddressableId: any(named: 'inspiredByAddressableId'),
+              inspiredByRelayUrl: any(named: 'inspiredByRelayUrl'),
+              inspiredByNpubs: any(named: 'inspiredByNpubs'),
+              clipSourceCredits: any(named: 'clipSourceCredits'),
+              selectedAudio: any(named: 'selectedAudio'),
+              selectedAudioEventId: any(named: 'selectedAudioEventId'),
+              selectedAudioRelay: any(named: 'selectedAudioRelay'),
+              language: any(named: 'language'),
+              contentWarning: any(named: 'contentWarning'),
+              thumbnailTimestamp: any(named: 'thumbnailTimestamp'),
+              replyContext: any(named: 'replyContext'),
+              addReplyToFeed: any(named: 'addReplyToFeed'),
+              onEventSigned: any(named: 'onEventSigned'),
+              onPublishedEvent: any(named: 'onPublishedEvent'),
+              onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
+            ),
+          ).captured;
+          expect(captured.single, equals([credited, library]));
         },
       );
 

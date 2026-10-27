@@ -1372,6 +1372,14 @@
       }
     }
   },
+  "videoStickerSoundSemanticLabel": "Sound sticker, opens the sound",
+  "@videoStickerSoundSemanticLabel": {
+    "description": "Screen reader label for the invisible button over a sound sticker on a playing video; tapping it opens the page of the video's sound."
+  },
+  "videoStickerLinkSheetBody": "This link opens outside Divine. Check the address before you go.",
+  "@videoStickerLinkSheetBody": {
+    "description": "Note in the sheet a link sticker on a video opens, above the link's full address: the page opens outside the app."
+  },
   "metadataOriginalSound": "Original sound",
   "metadataVerificationLabel": "Verification",
   "metadataDeviceAttestation": "Device attestation",

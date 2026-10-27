@@ -1971,6 +1971,13 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get videoStickerSoundSemanticLabel => 'Ses çıkartması, sesi açar';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Bu bağlantı Divine dışında açılır. Devam etmeden önce adresi kontrol et.';
+
+  @override
   String get metadataOriginalSound => 'Orijinal ses';
 
   @override

@@ -2036,6 +2036,13 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
+  String get videoStickerSoundSemanticLabel => 'ملصق صوت، يفتح الصوت';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'يُفتح هذا الرابط خارج Divine. تحقّق من العنوان قبل أن تنتقل.';
+
+  @override
   String get metadataOriginalSound => 'صوت أصلي';
 
   @override

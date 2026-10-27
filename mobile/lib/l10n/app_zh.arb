@@ -983,6 +983,8 @@
   "videoStickerLinkSemanticLabel": "链接贴纸，打开 {url}",
   "videoStickerMentionSemanticLabel": "提及贴纸，打开个人主页",
   "videoStickerHashtagSemanticLabel": "话题标签贴纸，打开 #{hashtag}",
+  "videoStickerSoundSemanticLabel": "声音贴纸，打开声音",
+  "videoStickerLinkSheetBody": "此链接会在 Divine 之外打开。继续之前请先核对网址。",
   "metadataOriginalSound": "原声",
   "metadataVerificationLabel": "验证",
   "metadataDeviceAttestation": "设备证明",

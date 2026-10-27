@@ -4,7 +4,12 @@
 import 'package:equatable/equatable.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:models/models.dart'
-    show AudioEvent, NostrHexUtils, UserProfile, VideoStickerKind;
+    show
+        AudioEvent,
+        NostrHexUtils,
+        UserProfile,
+        VideoStickerKind,
+        VideoStickerRegion;
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
@@ -62,6 +67,7 @@ class SocialStickerData extends Equatable {
     this.linkTitle,
     this.soundTitle,
     this.soundArtist,
+    this.soundId,
     this.soundDesign = SocialStickerSoundDesign.note,
     this.lyric,
   });
@@ -101,6 +107,7 @@ class SocialStickerData extends Equatable {
       kind: SocialStickerKind.soundCredit,
       soundTitle: title,
       soundArtist: (artist?.isEmpty ?? true) ? null : artist,
+      soundId: sound.soundPageId,
     );
   }
 
@@ -171,6 +178,10 @@ class SocialStickerData extends Equatable {
   /// The artist of the credited sound.
   final String? soundArtist;
 
+  /// The id the credited sound's page opens it by, so a tap on the published
+  /// sticker opens that sound; see [AudioEvent.soundPageId].
+  final String? soundId;
+
   /// How a sound credit shows its sound.
   final SocialStickerSoundDesign soundDesign;
 
@@ -210,17 +221,17 @@ class SocialStickerData extends Equatable {
     SocialStickerKind.soundCredit => soundTitle?.isNotEmpty ?? false,
   };
 
-  /// What a tap on the sticker opens on the published video, or `null` for a
-  /// sound credit, which a tap does not open yet.
-  VideoStickerKind? get tapKind => switch (kind) {
+  /// What a tap on the sticker opens on the published video.
+  VideoStickerKind get tapKind => switch (kind) {
     SocialStickerKind.link => VideoStickerKind.link,
     SocialStickerKind.mention => VideoStickerKind.mention,
     SocialStickerKind.hashtag => VideoStickerKind.hashtag,
-    SocialStickerKind.soundCredit => null,
+    SocialStickerKind.soundCredit => VideoStickerKind.sound,
   };
 
   /// The web address, hex pubkey or hashtag a tap on the published sticker
-  /// opens, or `null` when it opens nothing or is not complete.
+  /// opens; for a sound credit its sound's page id, or empty when it has
+  /// none and opens the video's own sound; `null` when it is not complete.
   String? get tapTarget => switch (kind) {
     SocialStickerKind.link => normalizeLinkUrl(url ?? ''),
     SocialStickerKind.mention =>
@@ -228,15 +239,99 @@ class SocialStickerData extends Equatable {
     SocialStickerKind.hashtag => HashtagExtractor.normalizeVideoHashtag(
       hashtag ?? '',
     ),
-    SocialStickerKind.soundCredit => null,
+    SocialStickerKind.soundCredit => isComplete ? soundId ?? '' : null,
   };
+
+  /// The text the sticker shows, without its `@` or `#`, so the published
+  /// video can draw it again over itself: for a sound credit its title,
+  /// artist and line of lyrics, one per line.
+  String? get tapLabel => switch (kind) {
+    SocialStickerKind.link => linkTitle ?? linkDomain,
+    SocialStickerKind.mention => name,
+    SocialStickerKind.hashtag => hashtag,
+    SocialStickerKind.soundCredit => [
+      soundTitle ?? '',
+      soundArtist ?? '',
+      lyric ?? '',
+    ].join('\n').trimRight(),
+  };
+
+  /// Whether the sound credit [region] publishes credits [sound], read from
+  /// the title and artist on its first two lines.
+  static bool regionCreditsSound(VideoStickerRegion region, AudioEvent sound) {
+    final credit = soundCreditFor(sound);
+    final lines = (region.label ?? '').split('\n');
+    final artist = lines.elementAtOrNull(1) ?? '';
+    return region.kind == VideoStickerKind.sound &&
+        credit != null &&
+        lines.first == credit.soundTitle &&
+        (artist.isEmpty ? null : artist) == credit.soundArtist;
+  }
+
+  /// The sticker [region] of a published video shows, rebuilt from the look
+  /// and text it was published with, or `null` when it names no pill look
+  /// this app draws or carries no text. A sound credit comes back as the
+  /// still note design, the only one published with a look.
+  static SocialStickerData? ofRegion(VideoStickerRegion region) {
+    final style = InfoStickerStyle.values.asNameMap()[region.style];
+    final label = region.label;
+    if (style == null || !InfoStickerStyle.pills.contains(style)) return null;
+    if (label == null) return null;
+    return switch (region.kind) {
+      VideoStickerKind.link => SocialStickerData(
+        kind: SocialStickerKind.link,
+        style: style,
+        url: region.target,
+        linkTitle: label,
+      ),
+      VideoStickerKind.mention => SocialStickerData(
+        kind: SocialStickerKind.mention,
+        style: style,
+        pubkey: region.target,
+        name: label,
+      ),
+      VideoStickerKind.hashtag => SocialStickerData(
+        kind: SocialStickerKind.hashtag,
+        style: style,
+        hashtag: label,
+      ),
+      VideoStickerKind.sound => SocialStickerData._soundOf(
+        style,
+        label.split('\n'),
+        soundId: region.target,
+      ),
+    };
+  }
+
+  /// The still note design of a sound credit showing [lines]: its title,
+  /// artist and line of lyrics, crediting the sound [soundId] names, when it
+  /// names one.
+  factory SocialStickerData._soundOf(
+    InfoStickerStyle style,
+    List<String> lines, {
+    required String soundId,
+  }) {
+    String? line(int index) {
+      final text = lines.elementAtOrNull(index) ?? '';
+      return text.isEmpty ? null : text;
+    }
+
+    return SocialStickerData(
+      kind: SocialStickerKind.soundCredit,
+      style: style,
+      soundTitle: line(0),
+      soundArtist: line(1),
+      soundId: soundId.isEmpty ? null : soundId,
+      lyric: line(2),
+    );
+  }
 
   /// Whether [layer] is a sticker a viewer can tap on the published video.
   ///
   /// Such a sticker holds still, so its tap area stays where it shows: it
   /// takes no keyframes, no tracking and no animations.
   static bool isTappableLayer(Layer? layer) =>
-      layer != null && of(layer)?.tapKind != null;
+      layer != null && of(layer) != null;
 
   /// The meta stored on the layer.
   Map<String, dynamic> toMeta() => {
@@ -250,6 +345,7 @@ class SocialStickerData extends Equatable {
     'linkTitle': ?linkTitle,
     'soundTitle': ?soundTitle,
     'soundArtist': ?soundArtist,
+    'soundId': ?soundId,
     'soundDesign': soundDesign.name,
     'lyric': ?lyric,
   };
@@ -274,8 +370,22 @@ class SocialStickerData extends Equatable {
     linkTitle: linkTitle,
     soundTitle: soundTitle ?? this.soundTitle,
     soundArtist: soundArtist ?? this.soundArtist,
+    soundId: soundId,
     soundDesign: soundDesign ?? this.soundDesign,
     lyric: lyric ?? this.lyric,
+  );
+
+  /// This sound credit crediting the sound [sound] credits instead: its
+  /// title, artist and page id together, which [copyWith] could not clear
+  /// when the new sound has no artist or id.
+  SocialStickerData withSound(SocialStickerData sound) => SocialStickerData(
+    kind: kind,
+    style: style,
+    soundTitle: sound.soundTitle,
+    soundArtist: sound.soundArtist,
+    soundId: sound.soundId,
+    soundDesign: soundDesign,
+    lyric: lyric,
   );
 
   /// This sound credit with [lyric] as its line of lyrics, or with none when
@@ -287,6 +397,7 @@ class SocialStickerData extends Equatable {
       style: style,
       soundTitle: soundTitle,
       soundArtist: soundArtist,
+      soundId: soundId,
       soundDesign: soundDesign,
       lyric: line.isEmpty ? null : line,
     );
@@ -341,6 +452,7 @@ class SocialStickerData extends Equatable {
       linkTitle: text('linkTitle'),
       soundTitle: text('soundTitle'),
       soundArtist: text('soundArtist'),
+      soundId: text('soundId'),
       soundDesign:
           SocialStickerSoundDesign.values
               .where((value) => value.name == meta['soundDesign'])
@@ -368,6 +480,7 @@ class SocialStickerData extends Equatable {
     linkTitle,
     soundTitle,
     soundArtist,
+    soundId,
     soundDesign,
     lyric,
   ];

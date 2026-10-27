@@ -211,8 +211,9 @@ void main() {
             ),
           ),
         ),
-        isTrue,
+        isFalse,
       );
+      expect(canKeyframeLayer(WidgetLayer(widget: const SizedBox())), isTrue);
     });
   });
 

@@ -4,6 +4,7 @@
 import 'dart:math' as math;
 
 import 'package:equatable/equatable.dart';
+import 'package:models/src/audio_event.dart';
 import 'package:models/src/nostr_hex_utils.dart';
 
 /// What a tappable sticker on a video opens.
@@ -16,6 +17,9 @@ enum VideoStickerKind {
 
   /// The feed of a hashtag.
   hashtag,
+
+  /// The page of the video's own sound, the one its audio reference names.
+  sound,
 }
 
 /// A sticker on a published video that opens what it points to when tapped.
@@ -27,10 +31,12 @@ enum VideoStickerKind {
 /// gets no area.
 ///
 /// Published as a `sticker` tag of kind, target, `"cx cy w h"`, degrees,
-/// start and end in milliseconds, for example
-/// `["sticker", "link", "https://divine.video/", "0.5 0.3 0.4 0.06", "0",
-/// "1500", "4200"]`. A missing start or end means the sticker shows from the
-/// video's start or until its end.
+/// start and end in milliseconds, style and the text the sticker shows, for
+/// example `["sticker", "link", "https://divine.video/", "0.5 0.3 0.4 0.06",
+/// "0", "1500", "4200", "light", "divine.video"]`. A missing start or end
+/// means the sticker shows from the video's start or until its end; without a
+/// style and text a viewer still gets the area, just not the sticker drawn
+/// over it.
 class VideoStickerRegion extends Equatable {
   /// Creates the area of a tappable sticker.
   const VideoStickerRegion({
@@ -43,6 +49,8 @@ class VideoStickerRegion extends Equatable {
     this.rotation = 0,
     this.start,
     this.end,
+    this.style,
+    this.label,
   });
 
   /// The name of the event tag a region is published in.
@@ -51,7 +59,9 @@ class VideoStickerRegion extends Equatable {
   /// What a tap opens.
   final VideoStickerKind kind;
 
-  /// The web address, hex pubkey or hashtag (without `#`) a tap opens.
+  /// The web address, hex pubkey or hashtag (without `#`) a tap opens; for a
+  /// [VideoStickerKind.sound], the id of the credited sound's page (see
+  /// [AudioEvent.soundPageId]), or empty for the video's own sound.
   final String target;
 
   /// The sticker's centre, as a fraction of the frame's width.
@@ -77,6 +87,17 @@ class VideoStickerRegion extends Equatable {
   /// When the sticker disappears; `null` once the video ends.
   final Duration? end;
 
+  /// The name of the look the sticker was drawn in, such as `light`.
+  final String? style;
+
+  /// The text the sticker shows: a link's title or domain, a name, or a
+  /// hashtag as it was typed, without its `@` or `#`; for a sound, its title,
+  /// artist and line of lyrics, one per line.
+  final String? label;
+
+  /// The longest [label] a tag may carry.
+  static const int maxLabelLength = 300;
+
   /// Whether the sticker shows at [position] of the published video.
   bool isShownAt(Duration position) {
     final start = this.start;
@@ -87,17 +108,21 @@ class VideoStickerRegion extends Equatable {
 
   /// The event tag this region is published in.
   List<String> toTag() {
-    final start = this.start;
-    final end = this.end;
-    return [
+    final tag = [
       tagName,
       kind.name,
       target,
       [centerX, centerY, width, height].map(_fraction).join(' '),
       _degrees(rotation),
-      if (start != null || end != null) '${start?.inMilliseconds ?? ''}',
-      if (end != null) '${end.inMilliseconds}',
+      '${start?.inMilliseconds ?? ''}',
+      '${end?.inMilliseconds ?? ''}',
+      style ?? '',
+      label ?? '',
     ];
+    while (tag.last.isEmpty) {
+      tag.removeLast();
+    }
+    return tag;
   }
 
   /// The region [tag] publishes, or `null` when it is no sticker tag or
@@ -124,6 +149,8 @@ class VideoStickerRegion extends Equatable {
     if (start == false || end == false) return null;
     if (start is Duration && end is Duration && end <= start) return null;
 
+    final style = tag.elementAtOrNull(7)?.trim() ?? '';
+    final label = tag.elementAtOrNull(8)?.trim() ?? '';
     return VideoStickerRegion(
       kind: kind,
       target: target,
@@ -134,6 +161,8 @@ class VideoStickerRegion extends Equatable {
       rotation: degrees * math.pi / 180,
       start: start is Duration ? start : null,
       end: end is Duration ? end : null,
+      style: style.isEmpty ? null : style,
+      label: label.isEmpty || label.length > maxLabelLength ? null : label,
     );
   }
 
@@ -144,7 +173,8 @@ class VideoStickerRegion extends Equatable {
 
   /// [raw] as the target of a [kind] sticker, or `null` when it is not one:
   /// a link only to an http(s) page of a named host, a mention only to a
-  /// pubkey, a hashtag only as one word.
+  /// pubkey, a hashtag only as one word, a sound only by a library or event
+  /// id, and otherwise by nothing, meaning the video's own sound.
   static String? _target(VideoStickerKind kind, String raw) {
     final value = raw.trim();
     switch (kind) {
@@ -167,6 +197,15 @@ class VideoStickerRegion extends Equatable {
           return null;
         }
         return hashtag.toLowerCase();
+      case VideoStickerKind.sound:
+        // The credited sound's own page, or none for the video's own sound.
+        if (RegExp(
+          '^${AudioEvent.bundledMarker}_[a-z0-9_]+\$',
+        ).hasMatch(value)) {
+          return value;
+        }
+        final eventId = value.toLowerCase();
+        return NostrHexUtils.isValidEventId(eventId) ? eventId : '';
     }
   }
 
@@ -204,5 +243,7 @@ class VideoStickerRegion extends Equatable {
     rotation,
     start,
     end,
+    style,
+    label,
   ];
 }

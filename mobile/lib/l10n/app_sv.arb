@@ -686,6 +686,8 @@
   "videoStickerLinkSemanticLabel": "Länkklistermärke, öppnar {url}",
   "videoStickerMentionSemanticLabel": "Omnämnandeklistermärke, öppnar profilen",
   "videoStickerHashtagSemanticLabel": "Hashtagklistermärke, öppnar #{hashtag}",
+  "videoStickerSoundSemanticLabel": "Ljudklistermärke, öppnar ljudet",
+  "videoStickerLinkSheetBody": "Länken öppnas utanför Divine. Kolla adressen innan du fortsätter.",
   "metadataOriginalSound": "Originalljud",
   "metadataVerificationLabel": "Verifiering",
   "metadataDeviceAttestation": "Enhetsattestering",

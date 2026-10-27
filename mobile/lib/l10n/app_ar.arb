@@ -683,6 +683,8 @@
   "videoStickerLinkSemanticLabel": "ملصق رابط، يفتح {url}",
   "videoStickerMentionSemanticLabel": "ملصق إشارة، يفتح الملف الشخصي",
   "videoStickerHashtagSemanticLabel": "ملصق وسم، يفتح #{hashtag}",
+  "videoStickerSoundSemanticLabel": "ملصق صوت، يفتح الصوت",
+  "videoStickerLinkSheetBody": "يُفتح هذا الرابط خارج Divine. تحقّق من العنوان قبل أن تنتقل.",
   "metadataOriginalSound": "صوت أصلي",
   "metadataVerificationLabel": "التحقق",
   "metadataDeviceAttestation": "تصديق الجهاز",

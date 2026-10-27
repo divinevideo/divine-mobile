@@ -2032,6 +2032,14 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
+  String get videoStickerSoundSemanticLabel =>
+      'Sound sticker, binubuksan ang sound';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Bubuksan ang link na ito sa labas ng Divine. Tingnan muna ang address bago ka tumuloy.';
+
+  @override
   String get metadataOriginalSound => 'Orihinal na sound';
 
   @override

@@ -2079,6 +2079,14 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
+  String get videoStickerSoundSemanticLabel =>
+      'సౌండ్ స్టిక్కర్, సౌండ్‌ను తెరుస్తుంది';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'ఈ లింక్ Divine వెలుపల తెరుచుకుంటుంది. వెళ్లే ముందు చిరునామాను తనిఖీ చేయండి.';
+
+  @override
   String get metadataOriginalSound => 'అసలు ధ్వని';
 
   @override

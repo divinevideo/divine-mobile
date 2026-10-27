@@ -1895,6 +1895,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get videoStickerSoundSemanticLabel => '声音贴纸，打开声音';
+
+  @override
+  String get videoStickerLinkSheetBody => '此链接会在 Divine 之外打开。继续之前请先核对网址。';
+
+  @override
   String get metadataOriginalSound => '原声';
 
   @override

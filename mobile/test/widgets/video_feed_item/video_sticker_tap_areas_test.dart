@@ -6,11 +6,14 @@ import 'dart:math' as math;
 
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
+import 'package:openvine/widgets/video_feed_item/link_sticker_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/player_gesture_surface.dart';
 import 'package:openvine/widgets/video_feed_item/video_sticker_tap_areas.dart';
 
@@ -23,22 +26,32 @@ const _link = VideoStickerRegion(
   centerY: 0.25,
   width: 0.4,
   height: 0.05,
+  style: 'light',
+  label: 'divine.video',
 );
 
-VideoEvent _video(List<VideoStickerRegion> regions) => VideoEvent(
+VideoEvent _video(
+  List<VideoStickerRegion> regions, {
+  String? audioEventId,
+}) => VideoEvent(
   id: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
   pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
   createdAt: 1778120201,
   content: '',
   timestamp: DateTime.utc(2026),
+  audioEventId: audioEventId,
   stickerRegions: regions,
 );
 
-DivineVideoPlayerState _playing(Duration position) => DivineVideoPlayerState(
+DivineVideoPlayerState _playing(
+  Duration position, {
+  int videoWidth = 1080,
+  int videoHeight = 1920,
+}) => DivineVideoPlayerState(
   status: PlaybackStatus.playing,
   position: position,
-  videoWidth: 1080,
-  videoHeight: 1920,
+  videoWidth: videoWidth,
+  videoHeight: videoHeight,
 );
 
 void main() {
@@ -72,6 +85,42 @@ void main() {
     });
   });
 
+  group('openVideoSticker', () {
+    testWidgets('shows a link outside Divine in the sheet first', (
+      tester,
+    ) async {
+      const outside = VideoStickerRegion(
+        kind: VideoStickerKind.link,
+        target: 'https://example.com/hello',
+        centerX: 0.5,
+        centerY: 0.5,
+        width: 0.4,
+        height: 0.1,
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) => TextButton(
+                onPressed: () =>
+                    openVideoSticker(context, outside, _video(const [])),
+                child: const Text('tap'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('tap'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LinkStickerSheetTile), findsOneWidget);
+      expect(find.text('https://example.com/hello'), findsOneWidget);
+    });
+  });
+
   group(VideoStickerTapAreas, () {
     late _MockController controller;
     late StreamController<DivineVideoPlayerState> states;
@@ -93,8 +142,9 @@ void main() {
 
     Future<void> pump(
       WidgetTester tester,
-      List<VideoStickerRegion> regions,
-    ) async {
+      List<VideoStickerRegion> regions, {
+      String? audioEventId,
+    }) async {
       tester.view.physicalSize = const Size(360, 640);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
@@ -115,9 +165,9 @@ void main() {
               ),
               Positioned.fill(
                 child: VideoStickerTapAreas(
-                  video: _video(regions),
+                  video: _video(regions, audioEventId: audioEventId),
                   controller: controller,
-                  onOpen: (_, region) => opened.add(region),
+                  onOpen: (_, region, _) => opened.add(region),
                 ),
               ),
             ],
@@ -166,6 +216,52 @@ void main() {
         expect(opened, isEmpty);
       });
 
+      testWidgets('opens a sound sticker only on a video with a sound', (
+        tester,
+      ) async {
+        const sound = VideoStickerRegion(
+          kind: VideoStickerKind.sound,
+          target: '',
+          centerX: 0.5,
+          centerY: 0.5,
+          width: 0.4,
+          height: 0.1,
+          style: 'light',
+          label: 'Song\nArtist',
+        );
+        await pump(tester, [sound]);
+
+        await tapAt(tester, const Offset(180, 320));
+
+        expect(opened, isEmpty);
+        expect(playerTaps, equals(1));
+        expect(find.byType(SocialStickerView), findsNothing);
+
+        await pump(tester, [sound], audioEventId: 'f' * 64);
+        await tapAt(tester, const Offset(180, 320));
+
+        expect(opened, equals([sound]));
+        expect(find.byType(SocialStickerView), findsOneWidget);
+      });
+
+      testWidgets('opens a sound sticker naming its own sound anywhere', (
+        tester,
+      ) async {
+        const ownSound = VideoStickerRegion(
+          kind: VideoStickerKind.sound,
+          target: 'bundled_potato_flew',
+          centerX: 0.5,
+          centerY: 0.5,
+          width: 0.4,
+          height: 0.1,
+        );
+        await pump(tester, [ownSound]);
+
+        await tapAt(tester, const Offset(180, 320));
+
+        expect(opened, equals([ownSound]));
+      });
+
       testWidgets('turns its button with the sticker', (tester) async {
         // Upright, the sticker reaches 72 points above and below its centre
         // but only 24 to either side, half the smallest target.
@@ -210,6 +306,51 @@ void main() {
         await tester.pump();
 
         expect(find.bySemanticsLabel(label), findsOneWidget);
+      });
+
+      testWidgets('draws the sticker sharp over its area', (tester) async {
+        await pump(tester, [_link]);
+
+        expect(find.byType(SocialStickerView), findsOneWidget);
+        expect(find.text('divine.video'), findsOneWidget);
+        expect(
+          tester.getCenter(find.byType(SocialStickerView)),
+          equals(const Offset(180, 160)),
+        );
+      });
+
+      testWidgets('draws only the button for a sticker without its look', (
+        tester,
+      ) async {
+        const bare = VideoStickerRegion(
+          kind: VideoStickerKind.hashtag,
+          target: 'summer',
+          centerX: 0.5,
+          centerY: 0.5,
+          width: 0.4,
+          height: 0.1,
+        );
+        await pump(tester, [bare]);
+
+        expect(find.byType(SocialStickerView), findsNothing);
+        await tapAt(tester, const Offset(180, 320));
+        expect(opened, equals([bare]));
+      });
+
+      testWidgets('waits for the frames before drawing a sticker', (
+        tester,
+      ) async {
+        when(
+          () => controller.state,
+        ).thenReturn(_playing(Duration.zero, videoWidth: 0, videoHeight: 0));
+        await pump(tester, [_link]);
+
+        expect(find.byType(SocialStickerView), findsNothing);
+
+        states.add(_playing(const Duration(milliseconds: 200)));
+        await tester.pump();
+
+        expect(find.byType(SocialStickerView), findsOneWidget);
       });
 
       testWidgets('names the link a button opens', (tester) async {

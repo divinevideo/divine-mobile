@@ -820,6 +820,8 @@
   "videoStickerLinkSemanticLabel": "የሊንክ ተለጣፊ፣ {url} ይከፍታል",
   "videoStickerMentionSemanticLabel": "የመጥቀሻ ተለጣፊ፣ መገለጫውን ይከፍታል",
   "videoStickerHashtagSemanticLabel": "የሃሽታግ ተለጣፊ፣ #{hashtag} ይከፍታል",
+  "videoStickerSoundSemanticLabel": "የድምጽ ተለጣፊ፣ ድምጹን ይከፍታል",
+  "videoStickerLinkSheetBody": "ይህ ሊንክ ከDivine ውጭ ይከፈታል። ከመሄድዎ በፊት አድራሻውን ያረጋግጡ።",
   "metadataOriginalSound": "ኦሪጅናል ድምጽ",
   "metadataVerificationLabel": "ማረጋገጥ",
   "metadataDeviceAttestation": "የመሣሪያ ማረጋገጫ",

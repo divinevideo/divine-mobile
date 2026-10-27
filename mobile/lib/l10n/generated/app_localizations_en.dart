@@ -2040,6 +2040,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get videoStickerSoundSemanticLabel => 'Sound sticker, opens the sound';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'This link opens outside Divine. Check the address before you go.';
+
+  @override
   String get metadataOriginalSound => 'Original sound';
 
   @override

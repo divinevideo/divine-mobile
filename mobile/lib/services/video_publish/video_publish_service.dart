@@ -8,6 +8,7 @@ import 'dart:typed_data';
 
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:meta/meta.dart';
+import 'package:models/models.dart' show VideoStickerKind, VideoStickerRegion;
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/constants/nip71_migration.dart';
@@ -17,6 +18,7 @@ import 'package:openvine/extensions/draft_content_warning_extensions.dart';
 import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_publish/publish_result.dart';
 import 'package:openvine/models/video_publish/video_publish_state.dart';
 import 'package:openvine/repositories/scheduled_posts_repository.dart';
@@ -388,7 +390,7 @@ class VideoPublishService {
           collaboratorPubkeys: collaboratorPubkeys.toList(),
           mentionedPubkeys: mentionedPubkeys,
           linkUrls: draft.stickerCredits.links.toList(),
-          stickerRegions: draft.finalRenderedClip?.stickerRegions ?? const [],
+          stickerRegions: _publishedStickerRegions(draft),
           inspiredByAddressableId: draft.inspiredByVideo?.addressableId,
           inspiredByRelayUrl: draft.inspiredByVideo?.relayUrl,
           inspiredByNpubs: draft.inspiredByNpubs,
@@ -670,6 +672,23 @@ class VideoPublishService {
     return draft.stickerCredits.mentionPubkeys.where(
       (pubkey) => pubkey != self && !collaboratorPubkeys.contains(pubkey),
     );
+  }
+
+  /// The stickers of [draft]'s final render a viewer can tap, without a
+  /// sound sticker that names no sound of its own and credits a sound other
+  /// than the one the video points to: a tap on it opens the video's sound.
+  List<VideoStickerRegion> _publishedStickerRegions(DivineVideoDraft draft) {
+    final sound = draft.selectedSound;
+    return [
+      for (final region
+          in draft.finalRenderedClip?.stickerRegions ??
+              const <VideoStickerRegion>[])
+        if (region.kind != VideoStickerKind.sound ||
+            region.target.isNotEmpty ||
+            (sound != null &&
+                SocialStickerData.regionCreditsSound(region, sound)))
+          region,
+    ];
   }
 
   Future<List<String>> _resolveMentionedPubkeys(

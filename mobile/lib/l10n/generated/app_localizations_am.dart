@@ -1990,6 +1990,13 @@ class AppLocalizationsAm extends AppLocalizations {
   }
 
   @override
+  String get videoStickerSoundSemanticLabel => 'የድምጽ ተለጣፊ፣ ድምጹን ይከፍታል';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'ይህ ሊንክ ከDivine ውጭ ይከፈታል። ከመሄድዎ በፊት አድራሻውን ያረጋግጡ።';
+
+  @override
   String get metadataOriginalSound => 'ኦሪጅናል ድምጽ';
 
   @override

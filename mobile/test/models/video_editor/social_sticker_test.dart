@@ -3,7 +3,8 @@
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:models/models.dart' show AudioEvent, UserProfile;
+import 'package:models/models.dart'
+    show AudioEvent, UserProfile, VideoStickerKind, VideoStickerRegion;
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -153,6 +154,126 @@ void main() {
       });
     });
 
+    group('sound stickers', () {
+      const credit = SocialStickerData(
+        kind: SocialStickerKind.soundCredit,
+        style: InfoStickerStyle.dark,
+        soundTitle: 'Song',
+        soundArtist: 'Artist',
+        lyric: 'A line',
+      );
+      VideoStickerRegion region(String? label) => VideoStickerRegion(
+        kind: VideoStickerKind.sound,
+        target: '',
+        centerX: 0.5,
+        centerY: 0.5,
+        width: 0.3,
+        height: 0.1,
+        style: 'dark',
+        label: label,
+      );
+
+      test('come back as the still note they were published as', () {
+        final rebuilt = SocialStickerData.ofRegion(region(credit.tapLabel));
+
+        expect(credit.tapLabel, equals('Song\nArtist\nA line'));
+        expect(rebuilt, equals(credit));
+      });
+
+      test('credit the sound named on their first two lines', () {
+        AudioEvent sound({String? creatorName}) => AudioEvent(
+          id: 'sound',
+          pubkey: _pubkey,
+          createdAt: 0,
+          title: 'Song',
+          creatorName: creatorName,
+        );
+
+        expect(
+          SocialStickerData.regionCreditsSound(
+            region('Song\nArtist\nA line'),
+            sound(creatorName: 'Artist'),
+          ),
+          isTrue,
+        );
+        expect(
+          SocialStickerData.regionCreditsSound(region('Song'), sound()),
+          isTrue,
+        );
+        expect(
+          SocialStickerData.regionCreditsSound(
+            region('Song\nOther band'),
+            sound(creatorName: 'Artist'),
+          ),
+          isFalse,
+        );
+      });
+    });
+
+    group('ofRegion', () {
+      VideoStickerRegion region(
+        VideoStickerKind kind,
+        String target, {
+        String? style = 'dark',
+        String? label = 'label',
+      }) => VideoStickerRegion(
+        kind: kind,
+        target: target,
+        centerX: 0.5,
+        centerY: 0.5,
+        width: 0.2,
+        height: 0.1,
+        style: style,
+        label: label,
+      );
+
+      test('rebuilds the sticker a published video shows', () {
+        final link = SocialStickerData.ofRegion(
+          region(VideoStickerKind.link, 'https://divine.video/', label: 'Us'),
+        );
+        final mention = SocialStickerData.ofRegion(
+          region(VideoStickerKind.mention, _pubkey, label: 'alice'),
+        );
+
+        expect(link?.style, equals(InfoStickerStyle.dark));
+        expect(link?.url, equals('https://divine.video/'));
+        expect(link?.linkTitle, equals('Us'));
+        expect(mention?.pubkey, equals(_pubkey));
+        expect(mention?.name, equals('alice'));
+      });
+
+      test('rebuilds nothing without a pill look or a text', () {
+        expect(
+          [
+            region(VideoStickerKind.hashtag, 'summer', style: 'camcorder'),
+            region(VideoStickerKind.hashtag, 'summer', style: 'sparkle'),
+            region(VideoStickerKind.hashtag, 'summer', style: null),
+            region(VideoStickerKind.hashtag, 'summer', label: null),
+          ].map(SocialStickerData.ofRegion),
+          everyElement(isNull),
+        );
+      });
+
+      test('reads back the text the publish recorded', () {
+        const sticker = SocialStickerData(
+          kind: SocialStickerKind.hashtag,
+          style: InfoStickerStyle.glass,
+          hashtag: 'Summer',
+        );
+
+        final rebuilt = SocialStickerData.ofRegion(
+          region(
+            VideoStickerKind.hashtag,
+            sticker.tapTarget!,
+            style: sticker.style.name,
+            label: sticker.tapLabel,
+          ),
+        );
+
+        expect(rebuilt, equals(sticker));
+      });
+    });
+
     group('mentionOf', () {
       test('names the person by their handle without its @', () {
         final profile = UserProfile(
@@ -201,6 +322,8 @@ void main() {
         );
 
         expect(credit?.soundArtist, equals('Artist'));
+        expect(credit?.soundId, equals('bundled_song'));
+        expect(credit?.tapTarget, equals('bundled_song'));
       });
 
       test('offers each sound once, in order', () {

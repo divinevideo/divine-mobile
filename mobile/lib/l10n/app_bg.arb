@@ -754,6 +754,8 @@
   "videoStickerLinkSemanticLabel": "Стикер с линк, отваря {url}",
   "videoStickerMentionSemanticLabel": "Стикер със споменаване, отваря профила",
   "videoStickerHashtagSemanticLabel": "Стикер с хаштаг, отваря #{hashtag}",
+  "videoStickerSoundSemanticLabel": "Стикер със звук, отваря звука",
+  "videoStickerLinkSheetBody": "Този линк се отваря извън Divine. Провери адреса, преди да продължиш.",
   "metadataOriginalSound": "Оригинален звук",
   "metadataVerificationLabel": "Проверка",
   "metadataDeviceAttestation": "Атестация на устройството",

@@ -2064,6 +2064,13 @@ class AppLocalizationsBg extends AppLocalizations {
   }
 
   @override
+  String get videoStickerSoundSemanticLabel => 'Стикер със звук, отваря звука';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Този линк се отваря извън Divine. Провери адреса, преди да продължиш.';
+
+  @override
   String get metadataOriginalSound => 'Оригинален звук';
 
   @override

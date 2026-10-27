@@ -1217,6 +1217,8 @@
   "videoStickerLinkSemanticLabel": "లింక్ స్టిక్కర్, {url} తెరుస్తుంది",
   "videoStickerMentionSemanticLabel": "ప్రస్తావన స్టిక్కర్, ప్రొఫైల్ తెరుస్తుంది",
   "videoStickerHashtagSemanticLabel": "హ్యాష్‌ట్యాగ్ స్టిక్కర్, #{hashtag} తెరుస్తుంది",
+  "videoStickerSoundSemanticLabel": "సౌండ్ స్టిక్కర్, సౌండ్‌ను తెరుస్తుంది",
+  "videoStickerLinkSheetBody": "ఈ లింక్ Divine వెలుపల తెరుచుకుంటుంది. వెళ్లే ముందు చిరునామాను తనిఖీ చేయండి.",
   "metadataOriginalSound": "అసలు ధ్వని",
   "metadataVerificationLabel": "ధృవీకరణ",
   "metadataDeviceAttestation": "పరికర ధృవీకరణ",

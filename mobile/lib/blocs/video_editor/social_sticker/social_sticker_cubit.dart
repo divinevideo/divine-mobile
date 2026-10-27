@@ -94,14 +94,8 @@ class SocialStickerCubit extends Cubit<SocialStickerState> {
   );
 
   /// Credits [sound] instead, keeping the look and the line of lyrics.
-  void soundPicked(SocialStickerData sound) => emit(
-    state.copyWith(
-      data: state.data.copyWith(
-        soundTitle: sound.soundTitle,
-        soundArtist: sound.soundArtist,
-      ),
-    ),
-  );
+  void soundPicked(SocialStickerData sound) =>
+      emit(state.copyWith(data: state.data.withSound(sound)));
 
   /// Shows the sound credit as [design].
   void soundDesignChanged(SocialStickerSoundDesign design) => emit(

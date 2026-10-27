@@ -537,6 +537,7 @@ class _NumberFieldState extends State<_NumberField> {
   Widget build(BuildContext context) {
     return DivineTextField(
       controller: _controller,
+      filled: true,
       labelText: widget.label,
       keyboardType: .numberWithOptions(signed: widget.signed),
       textInputAction: widget.textInputAction,

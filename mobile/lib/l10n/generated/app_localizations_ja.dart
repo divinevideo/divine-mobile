@@ -1875,6 +1875,13 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String get videoStickerSoundSemanticLabel => 'サウンドステッカー、サウンドを開きます';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'このリンクはDivineの外で開きます。移動する前にアドレスを確認してください。';
+
+  @override
   String get metadataOriginalSound => 'オリジナルサウンド';
 
   @override

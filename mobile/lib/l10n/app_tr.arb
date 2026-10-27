@@ -683,6 +683,8 @@
   "videoStickerLinkSemanticLabel": "Bağlantı çıkartması, {url} adresini açar",
   "videoStickerMentionSemanticLabel": "Bahsetme çıkartması, profili açar",
   "videoStickerHashtagSemanticLabel": "Hashtag çıkartması, #{hashtag} etiketini açar",
+  "videoStickerSoundSemanticLabel": "Ses çıkartması, sesi açar",
+  "videoStickerLinkSheetBody": "Bu bağlantı Divine dışında açılır. Devam etmeden önce adresi kontrol et.",
   "metadataOriginalSound": "Orijinal ses",
   "metadataVerificationLabel": "Doğrulama",
   "metadataDeviceAttestation": "Cihaz tasdik",

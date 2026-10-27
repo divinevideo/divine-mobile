@@ -2013,6 +2013,13 @@ class AppLocalizationsMs extends AppLocalizations {
   }
 
   @override
+  String get videoStickerSoundSemanticLabel => 'Pelekat bunyi, membuka bunyi';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Pautan ini dibuka di luar Divine. Semak alamatnya sebelum anda teruskan.';
+
+  @override
   String get metadataOriginalSound => 'Bunyi asal';
 
   @override

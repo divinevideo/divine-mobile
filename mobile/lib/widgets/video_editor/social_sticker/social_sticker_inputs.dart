@@ -141,6 +141,7 @@ class _SocialStickerHashtagFieldState extends State<SocialStickerHashtagField> {
           padding: const .symmetric(horizontal: 16),
           child: DivineTextField(
             controller: _controller,
+            filled: true,
             labelText: l10n.videoEditorSocialStickerHashtagHint,
             prefixText: '#',
             autofocus: widget.autofocus,
@@ -251,6 +252,7 @@ class _SocialStickerLinkFieldsState extends State<SocialStickerLinkFields> {
           padding: const .symmetric(horizontal: 16),
           child: DivineTextField(
             controller: _url,
+            filled: true,
             labelText: l10n.videoEditorSocialStickerLinkUrlHint,
             autofocus: widget.autofocus,
             keyboardType: .url,
@@ -264,6 +266,7 @@ class _SocialStickerLinkFieldsState extends State<SocialStickerLinkFields> {
           padding: const .symmetric(horizontal: 16),
           child: DivineTextField(
             controller: _title,
+            filled: true,
             labelText: l10n.videoEditorSocialStickerLinkTitleHint,
             textInputAction: .done,
             inputFormatters: [
@@ -376,6 +379,7 @@ class _SocialStickerLyricFieldState extends State<SocialStickerLyricField> {
       padding: const .symmetric(horizontal: 16),
       child: DivineTextField(
         controller: _controller,
+        filled: true,
         labelText: context.l10n.videoEditorSocialStickerLyricHint,
         maxLength: SocialStickerData.maxLyricLength,
         textInputAction: .done,
