@@ -1,6 +1,5 @@
 import 'dart:convert';
-import 'dart:developer';
-import 'dart:math' hide log;
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:convert/convert.dart';
@@ -19,6 +18,9 @@ class NIP04 {
     return agreement;
   }
 
+  /// Encrypts [message] for [pk] as a NIP-04 `<ciphertext>?iv=<iv>` payload.
+  ///
+  /// Throws a [FormatException] when [pk] is not a public key.
   static String encrypt(
     String message,
     ECDHBasicAgreement agreement,
@@ -55,18 +57,24 @@ class NIP04 {
     return "${base64.encode(result)}?iv=${base64.encode(ivData)}";
   }
 
+  /// Decrypts [message], a NIP-04 `<ciphertext>?iv=<iv>` payload.
+  ///
+  /// Throws a [FormatException] when [message] is not a payload that can be
+  /// decrypted, does not decrypt under this key, or [pk] is not a public key,
+  /// so a failure is never mistaken for a message that decrypted to an empty
+  /// string (#8712).
   static String decrypt(
     String message,
     ECDHBasicAgreement agreement,
     String pk,
   ) {
-    var strs = message.split("?iv=");
-    if (strs.length != 2) {
-      return "";
+    var payload = _parsePayload(message);
+    if (payload == null) {
+      throw const FormatException(
+        "Not a NIP-04 payload: expected <ciphertext>?iv=<iv>",
+      );
     }
-    message = strs[0];
-    var iv = strs[1];
-    var ivData = base64.decode(iv);
+    var ivData = payload.iv;
 
     var pubkey = getPubkey(pk);
     var agreementD0 = agreement.calculateAgreement(pubkey);
@@ -90,24 +98,75 @@ class NIP04 {
     );
     cipherCbc.init(false, paramsCbc);
 
-    var result = cipherCbc.process(base64.decode(message));
+    Uint8List result;
+    try {
+      result = cipherCbc.process(payload.ciphertext);
+    } on ArgumentError {
+      // The payload's shape is already checked, so this is padding that does
+      // not check out: it was encrypted to a different key.
+      throw const FormatException(
+        "NIP-04 payload does not decrypt under this key",
+      );
+    }
 
     return utf8.decode(result);
   }
 
+  /// The ciphertext and IV of a NIP-04 payload, or `null` when [payload] has
+  /// anything other than one `?iv=`, a 16-byte IV, and ciphertext made of
+  /// whole AES blocks. The cipher reports those as raw [Error]s otherwise.
+  static ({Uint8List ciphertext, Uint8List iv})? _parsePayload(String payload) {
+    var parts = payload.split("?iv=");
+    if (parts.length != 2) {
+      return null;
+    }
+    var ciphertext = _decodeBase64(parts[0]);
+    var iv = _decodeBase64(parts[1]);
+    if (ciphertext == null ||
+        iv == null ||
+        iv.length != _aesBlockSize ||
+        ciphertext.isEmpty ||
+        ciphertext.length % _aesBlockSize != 0) {
+      return null;
+    }
+    return (ciphertext: ciphertext, iv: iv);
+  }
+
+  /// [text] read as base64 the way lenient decoders read it: ASCII
+  /// whitespace, such as the line breaks of wrapped output, is skipped and
+  /// missing `=` padding is restored. `null` when it is not base64 even so.
+  static Uint8List? _decodeBase64(String text) {
+    var compact = text.replaceAll(_asciiWhitespace, "");
+    try {
+      return base64.decode(
+        compact.padRight((compact.length + 3) ~/ 4 * 4, "="),
+      );
+    } on FormatException {
+      return null;
+    }
+  }
+
+  static final _asciiWhitespace = RegExp(r"[\t\n\v\f\r ]");
+
+  static const _aesBlockSize = 16;
+
+  /// The secp256k1 point for the x-only public key [pk].
+  ///
+  /// Throws a [FormatException] when [pk] is not a public key: not hex, or an
+  /// x that no point on the curve has.
   static ECPublicKey getPubkey(String pk) {
     // BigInt x = BigInt.parse(pk, radix: 16);
     BigInt x = BigInt.parse(
       hex.encode(hex.decode(pk.padLeft(64, '0'))),
       radix: 16,
     );
-    BigInt? y;
+    BigInt y;
     try {
       y = liftX(x);
     } on Error {
-      log("error in handle pubkey");
+      throw const FormatException("Not a public key on secp256k1");
     }
-    ECPoint endPoint = secp256k1.curve.createPoint(x, y!);
+    ECPoint endPoint = secp256k1.curve.createPoint(x, y);
     return ECPublicKey(endPoint, secp256k1);
   }
 
@@ -139,4 +198,12 @@ class NIP04 {
   static bool isEncrypted(String text) {
     return text.indexOf("?iv=") > 0;
   }
+
+  /// Whether [payload] has the shape [decrypt] can work on: one `?iv=`, a
+  /// 16-byte IV, and ciphertext made of whole AES blocks.
+  ///
+  /// Stricter than [isEncrypted], which only spots the marker. A payload that
+  /// fails this check is not one [decrypt] can read under any key.
+  static bool isWellFormedPayload(String payload) =>
+      _parsePayload(payload) != null;
 }
