@@ -264,6 +264,10 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
 
   /// Looks up the weather, sun times or altitude at [place], unless another
   /// place was picked meanwhile.
+  ///
+  /// Picking the place cleared its values, so a temperature or an altitude
+  /// that is set when the answer comes was typed while it was on its way, and
+  /// the creator's value wins.
   Future<void> _lookUpPlaceValues(InfoStickerPlace place) async {
     try {
       switch (state.data.kind) {
@@ -276,7 +280,8 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
           emitIfOpen(
             state.copyWith(
               data: state.data.copyWith(
-                temperatureCelsius: reading.temperatureCelsius,
+                temperatureCelsius:
+                    state.data.temperatureCelsius ?? reading.temperatureCelsius,
                 weather: reading.weather,
                 isDay: reading.isDay,
               ),
@@ -303,7 +308,9 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
           if (state.place != place) return;
           emitIfOpen(
             state.copyWith(
-              data: state.data.copyWith(altitudeMeters: meters),
+              data: state.data.copyWith(
+                altitudeMeters: state.data.altitudeMeters ?? meters,
+              ),
               valueStatus: .success,
             ),
           );

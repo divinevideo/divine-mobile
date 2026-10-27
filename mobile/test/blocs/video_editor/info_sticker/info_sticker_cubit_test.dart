@@ -337,6 +337,57 @@ void main() {
       );
     });
 
+    group('a value typed while the place lookup runs', () {
+      test('keeps the typed temperature and takes the weather', () async {
+        final reading = Completer<InfoStickerWeatherReading>();
+        when(
+          () => repository.weatherAt(_bern, any()),
+        ).thenAnswer((_) => reading.future);
+        final cubit = InfoStickerCubit(
+          repository: repository,
+          initial: _sticker(
+            InfoStickerKind.weather,
+          ).copyWith(dateTime: DateTime(2026, 8, 1, 7)),
+        );
+        addTearDown(cubit.close);
+
+        final lookingUp = cubit.placeSelected(_bern);
+        cubit.temperatureEntered(35);
+        reading.complete(
+          const InfoStickerWeatherReading(
+            temperatureCelsius: 8,
+            isDay: false,
+            weather: InfoStickerWeather.rain,
+          ),
+        );
+        await lookingUp;
+
+        expect(cubit.state.data.temperatureCelsius, equals(35));
+        expect(cubit.state.data.weather, InfoStickerWeather.rain);
+        expect(cubit.state.valueStatus, InfoStickerValueStatus.success);
+      });
+
+      test('keeps the typed altitude', () async {
+        final meters = Completer<double>();
+        when(
+          () => repository.elevationAt(_bern),
+        ).thenAnswer((_) => meters.future);
+        final cubit = InfoStickerCubit(
+          repository: repository,
+          initial: _sticker(InfoStickerKind.altitude),
+        );
+        addTearDown(cubit.close);
+
+        final lookingUp = cubit.placeSelected(_bern);
+        cubit.altitudeEntered(1500);
+        meters.complete(100);
+        await lookingUp;
+
+        expect(cubit.state.data.altitudeMeters, equals(1500));
+        expect(cubit.state.valueStatus, InfoStickerValueStatus.success);
+      });
+    });
+
     group('placeSelected', () {
       blocTest<InfoStickerCubit, InfoStickerState>(
         'puts the place on a location sticker and moves on to its look',
