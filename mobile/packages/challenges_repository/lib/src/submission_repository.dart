@@ -14,6 +14,8 @@ final class ChallengeSubmissionRepository {
     required this.canPublish,
     required this.sign,
     required this.writableRelays,
+    this.refreshVideo,
+    this.useReadDefinitions,
   });
 
   /// Verified known-coordinate read repository and current clock/policy.
@@ -42,9 +44,55 @@ final class ChallengeSubmissionRepository {
   /// Current configured writable relays; copied before publication.
   final List<String> Function() writableRelays;
 
+  /// App refresh of exact current video/policy before new consent/signing.
+  final Future<void> Function(NostrEvent)? refreshVideo;
+
+  /// Optional adapter read hints from authenticated definitions for one
+  /// coordinate. Hints never grant publication or revision-completeness
+  /// authority.
+  final void Function(List<ChallengeDefinition>)? useReadDefinitions;
+
+  /// Normalizes protocol construction failures into an explainable UI status.
+  Future<T> _preparation<T>(Future<T> Function() operation) async {
+    try {
+      return await operation();
+    } on ContractError catch (error) {
+      throw SubmissionException(
+        error.code == 'size'
+            ? SubmissionStatus.eventTooLarge
+            : SubmissionStatus.reviewRequired,
+      );
+    }
+  }
+
+  /// Freezes and persists reviewed entry fields with current authority.
+  Future<SubmissionReview> prepareEntry({
+    required NostrEvent definition,
+    required NostrEvent video,
+    List<List<String>> clientTags = const [],
+  }) => _preparation(
+    () => _prepareEntry(
+      definition: definition,
+      video: video,
+      clientTags: clientTags,
+    ),
+  );
+
+  /// Freezes exact withdrawal fields without a deadline gate.
+  Future<SubmissionReview> prepareWithdrawal({
+    required NostrEvent entry,
+    List<List<String>> clientTags = const [],
+  }) => _preparation(
+    () => _prepareWithdrawal(entry: entry, clientTags: clientTags),
+  );
+
+  /// Restores exact owner-scoped consent without authorizing a new signature.
+  Future<SubmissionReview?> restoreReview(String reviewId) =>
+      _preparation(() => _restoreReview(reviewId));
+
   /// Prepares and durably records the exact handoff before draft cleanup.
   /// Throws [SubmissionException] or a storage exception on failure.
-  Future<SubmissionReview> prepareEntry({
+  Future<SubmissionReview> _prepareEntry({
     required NostrEvent definition,
     required NostrEvent video,
     List<List<String>> clientTags = const [],
@@ -65,6 +113,7 @@ final class ChallengeSubmissionRepository {
       fields: _fields(template, clientTags),
     );
     await _checkCurrent(review);
+    await _refuseDuplicate(review, d);
     final existing = await store.loadAction(owner, review.id);
     _checkLocal(review);
     if (existing != null) {
@@ -77,8 +126,53 @@ final class ChallengeSubmissionRepository {
     return review;
   }
 
+  Future<void> _refuseDuplicate(
+    SubmissionReview review,
+    ChallengeDefinition d,
+  ) async {
+    final actions = await store.listActions(review.owner);
+    _checkLocal(review);
+    final retained = await reads.store.load(d.coordinate);
+    _checkLocal(review);
+    if (!reads.limits.accepts(retained)) {
+      throw const SubmissionException(SubmissionStatus.reviewRequired);
+    }
+    final batch = await reads.work(_VerifyJob(retained, d.coordinate).run);
+    _checkLocal(review);
+    final events = [
+      ...batch.events,
+      for (final action in actions) _validateAction(action),
+    ].map((event) => parseChallengeEvent(event).value).toList();
+    for (final entry in events.whereType<ChallengeEntry>()) {
+      if (entry.coordinate != d.coordinate ||
+          entry.event.pubkey != review.owner) {
+        continue;
+      }
+      final sameVideo =
+          entry.video.kind == review.video.kind &&
+          (const [34235, 34236].contains(review.video.kind)
+              ? _videoIdentifier(entry.video) == _videoIdentifier(review.video)
+              : entry.video.id == review.video.id);
+      if (!sameVideo) continue;
+      final withdrawn = events.whereType<ChallengeWithdrawal>().any(
+        (withdrawal) =>
+            withdrawal.coordinate == d.coordinate &&
+            withdrawal.event.pubkey == review.owner &&
+            withdrawal.entryId == entry.event.id,
+      );
+      if (!withdrawn) {
+        throw const SubmissionException(SubmissionStatus.reviewRequired);
+      }
+    }
+  }
+
+  String? _videoIdentifier(NostrEvent video) => video.tags
+      .where((tag) => tag.length >= 2 && tag.first == 'd')
+      .map((tag) => tag[1])
+      .firstOrNull;
+
   /// Prepares withdrawal of exactly one owned entry; never deletes a video.
-  Future<SubmissionReview> prepareWithdrawal({
+  Future<SubmissionReview> _prepareWithdrawal({
     required NostrEvent entry,
     List<List<String>> clientTags = const [],
   }) async {
@@ -103,7 +197,7 @@ final class ChallengeSubmissionRepository {
   }
 
   /// Restores owner-scoped review context without granting new consent.
-  Future<SubmissionReview?> restoreReview(String reviewId) async {
+  Future<SubmissionReview?> _restoreReview(String reviewId) async {
     final owner = currentOwner();
     if (owner == null) {
       throw const SubmissionException(SubmissionStatus.ownerChanged);
@@ -127,6 +221,7 @@ final class ChallengeSubmissionRepository {
         actions.any((action) => action.review.owner != owner)) {
       throw const SubmissionException(SubmissionStatus.ownerChanged);
     }
+    actions.forEach(_validateAction);
     return List.unmodifiable(actions);
   }
 
@@ -155,11 +250,11 @@ final class ChallengeSubmissionRepository {
           if (action == null) {
             return const SubmissionResult(SubmissionStatus.reviewRequired);
           }
-          _validateSigned(action.review, action.signedBody);
+          _validateAction(action);
           return await _deliver(action);
         } on SubmissionException catch (error) {
           return SubmissionResult(error.status);
-        } on Exception {
+        } on Object {
           return const SubmissionResult(SubmissionStatus.persistenceFailed);
         }
       });
@@ -170,49 +265,60 @@ final class ChallengeSubmissionRepository {
     String signedBody, {
     String? relay,
     bool indexed = false,
-  }) => _singleFlight(
-    'reconcile:$reviewId:$relay:$indexed:'
-    '${sha256.convert(utf8.encode(signedBody))}',
-    () async {
-      final owner = currentOwner();
-      if (owner == null) {
-        return const SubmissionResult(SubmissionStatus.ownerChanged);
-      }
-      PendingChallengeAction? action;
-      try {
-        action = await store.loadAction(owner, reviewId);
-        if (currentOwner() != owner) {
-          return SubmissionResult(SubmissionStatus.ownerChanged, action);
-        }
-        if (action == null) {
-          return const SubmissionResult(SubmissionStatus.reviewRequired);
-        }
-        final expected = _validateSigned(action.review, action.signedBody);
-        final observed = _validateSigned(action.review, signedBody);
-        if (observed.id != expected.id) {
-          return SubmissionResult(SubmissionStatus.invalidSignedEvent, action);
-        }
-        final updated = PendingChallengeAction(
-          review: action.review,
-          signedBody: action.signedBody,
-          challengeRelays: action.challengeRelays,
-          targets: action.targets,
-          outcomes: action.outcomes,
-          echoed: action.echoed || action.challengeRelays.contains(relay),
-          indexed: action.indexed || indexed,
+  }) => _transportActive
+      ? Future.value(const SubmissionResult(SubmissionStatus.retryable))
+      : _singleFlight(
+          'reconcile:$reviewId:$relay:$indexed:'
+          '${sha256.convert(utf8.encode(signedBody))}',
+          () async {
+            final owner = currentOwner();
+            if (owner == null) {
+              return const SubmissionResult(SubmissionStatus.ownerChanged);
+            }
+            PendingChallengeAction? action;
+            try {
+              action = await store.loadAction(owner, reviewId);
+              if (currentOwner() != owner) {
+                return SubmissionResult(SubmissionStatus.ownerChanged, action);
+              }
+              if (action == null) {
+                return const SubmissionResult(SubmissionStatus.reviewRequired);
+              }
+              final expected = _validateAction(action);
+              final observed = _validateSigned(action.review, signedBody);
+              if (observed.id != expected.id) {
+                return SubmissionResult(
+                  SubmissionStatus.invalidSignedEvent,
+                  action,
+                );
+              }
+              final updated = PendingChallengeAction(
+                review: action.review,
+                signedBody: action.signedBody,
+                challengeRelays: action.challengeRelays,
+                deliveryDefinition: action.deliveryDefinition,
+                targets: action.targets,
+                outcomes: action.outcomes,
+                echoed: action.echoed || action.challengeRelays.contains(relay),
+                indexed: action.indexed || indexed,
+              );
+              await store.saveAction(owner, updated);
+              if (currentOwner() != owner) {
+                return SubmissionResult(SubmissionStatus.ownerChanged, updated);
+              }
+              return _result(updated);
+            } on SubmissionException catch (error) {
+              return SubmissionResult(error.status, action);
+            } on Object {
+              return SubmissionResult(
+                SubmissionStatus.persistenceFailed,
+                action,
+              );
+            }
+          },
         );
-        await store.saveAction(owner, updated);
-        if (currentOwner() != owner) {
-          return SubmissionResult(SubmissionStatus.ownerChanged, updated);
-        }
-        return _result(updated);
-      } on SubmissionException catch (error) {
-        return SubmissionResult(error.status, action);
-      } on Exception {
-        return SubmissionResult(SubmissionStatus.persistenceFailed, action);
-      }
-    },
-  );
+
+  bool _transportActive = false;
 
   final _inFlight = <String, Future<SubmissionResult>>{};
   Future<void> _tail = Future<void>.value();
@@ -258,7 +364,7 @@ final class ChallengeSubmissionRepository {
       'sig': '0' * 128,
     };
     if (utf8.encode(jsonEncode(projected)).length > _signedActionByteLimit) {
-      throw const SubmissionException(SubmissionStatus.reviewRequired);
+      throw const SubmissionException(SubmissionStatus.eventTooLarge);
     }
     return fields;
   }
@@ -321,12 +427,17 @@ final class ChallengeSubmissionRepository {
   }
 
   Future<ChallengeDefinition> _checkCurrent(SubmissionReview review) async {
+    if (currentOwner() != review.owner) {
+      throw const SubmissionException(SubmissionStatus.ownerChanged);
+    }
+    if (review.withdrawalEntry == null) await refreshVideo?.call(review.video);
     _checkLocal(review);
     final d = _validateReview(review);
     if (review.withdrawalEntry != null) return d;
+    useReadDefinitions?.call([d]);
     final read = await reads.refresh(d.coordinate);
     _checkLocal(review);
-    if (read.observation.completeness != ReadCompleteness.complete) {
+    if (!read.observation.revisionsComplete) {
       throw const SubmissionException(SubmissionStatus.readUnavailable);
     }
     if (read.view.state != 'open' ||
@@ -366,21 +477,54 @@ final class ChallengeSubmissionRepository {
     }
   }
 
+  NostrEvent _validateAction(PendingChallengeAction action) {
+    final event = _validateSigned(action.review, action.signedBody);
+    final definition = _validateReview(action.review);
+    final delivery = action.deliveryDefinition == null
+        ? null
+        : parseChallengeEvent(action.deliveryDefinition).value;
+    if (action.deliveryDefinition != null &&
+        (delivery is! ChallengeDefinition ||
+            delivery.coordinate != definition.coordinate)) {
+      throw const SubmissionException(SubmissionStatus.invalidSignedEvent);
+    }
+    final advertised = {
+      ...definition.relays,
+      if (delivery is ChallengeDefinition) ...delivery.relays,
+    }.toList();
+    if (jsonEncode(action.challengeRelays) != jsonEncode(advertised) ||
+        !action.targets.toSet().containsAll(advertised)) {
+      throw const SubmissionException(SubmissionStatus.invalidSignedEvent);
+    }
+    return event;
+  }
+
   Future<SubmissionResult> _submit(SubmissionReview review) async {
     PendingChallengeAction? action;
     try {
+      if (currentOwner() != review.owner) {
+        throw const SubmissionException(SubmissionStatus.ownerChanged);
+      }
+      if (review.withdrawalEntry == null) {
+        await refreshVideo?.call(review.video);
+      }
       _checkLocal(review);
       action = await store.loadAction(review.owner, review.id);
       _checkLocal(review);
       if (action != null) {
-        _validateSigned(action.review, action.signedBody);
+        _validateAction(action);
         return _result(action);
       }
       final definition = await _checkCurrent(review);
+      if (review.withdrawalEntry == null) {
+        await _refuseDuplicate(review, definition);
+      }
       String body;
       try {
         body = await sign(review.fields);
-      } on Exception {
+      } on SubmissionException {
+        rethrow;
+      } on Object {
         return const SubmissionResult(SubmissionStatus.signerFailed);
       }
       _checkLocal(review);
@@ -396,22 +540,40 @@ final class ChallengeSubmissionRepository {
           targets: {...relays, ...writableRelays()}.toList(),
         ),
       );
-      _validateSigned(action.review, action.signedBody);
+      _validateAction(action);
       return await _deliver(action);
     } on SubmissionException catch (error) {
       return SubmissionResult(error.status, action);
     } on ContractError {
       return SubmissionResult(SubmissionStatus.reviewRequired, action);
-    } on Exception {
+    } on Object {
       return SubmissionResult(SubmissionStatus.persistenceFailed, action);
     }
   }
 
-  Future<void> _checkRetry(PendingChallengeAction action) async {
+  Future<ChallengeDefinition> _checkRetry(PendingChallengeAction action) async {
     final review = action.review;
+    if (currentOwner() != review.owner) {
+      throw const SubmissionException(SubmissionStatus.ownerChanged);
+    }
+    if (review.withdrawalEntry == null) await refreshVideo?.call(review.video);
     _checkOwnerAndPolicy(review);
     final definition = _validateReview(review);
-    if (review.withdrawalEntry != null) return;
+    if (review.withdrawalEntry != null) return definition;
+    // The action is validated before delivery. Parse through the canonical
+    // codec rather than treating stored relay metadata as read authority.
+    final delivery = action.deliveryDefinition == null
+        ? null
+        : parseChallengeEvent(action.deliveryDefinition).value;
+    if (action.deliveryDefinition != null &&
+        (delivery is! ChallengeDefinition ||
+            delivery.coordinate != definition.coordinate)) {
+      throw const SubmissionException(SubmissionStatus.invalidSignedEvent);
+    }
+    useReadDefinitions?.call([
+      definition,
+      if (delivery is ChallengeDefinition) delivery,
+    ]);
     final current = await reads.refresh(definition.coordinate);
     _checkOwnerAndPolicy(review);
     if (!current.observation.revisionsComplete ||
@@ -421,33 +583,70 @@ final class ChallengeSubmissionRepository {
     if (current.view.definition!.status == 'cancelled') {
       throw const SubmissionException(SubmissionStatus.deliveryPaused);
     }
+    return current.view.definition!;
   }
 
-  Future<SubmissionResult> _deliver(PendingChallengeAction action) async {
+  Future<SubmissionResult> _deliver(PendingChallengeAction persisted) async {
+    var action = persisted;
     final review = action.review;
     try {
       // Durable verified consent has identical delivery gates on its first
       // attempt and every retry; changes here must never request a new entry.
-      await _checkRetry(action);
-      final event = _validateSigned(review, action.signedBody);
+      final currentDefinition = await _checkRetry(action);
+      final event = _validateAction(action);
+      final pending = await store.listActions(review.owner);
+      _checkOwnerAndPolicy(review);
+      if (review.withdrawalEntry == null &&
+          pending.any(
+            (other) => other.review.withdrawalEntry?.id == event.id,
+          )) {
+        throw const SubmissionException(SubmissionStatus.deliveryPaused);
+      }
       if (review.withdrawalEntry == null && !reads.isVisible(event)) {
         throw const SubmissionException(SubmissionStatus.blocked);
       }
       if (action.submitted) return _result(action);
+      final original = _validateReview(review);
+      final advertised = {
+        ...original.relays,
+        ...currentDefinition.relays,
+      }.toList();
+      final targets = {...advertised, ...writableRelays()}.toList();
+      if (jsonEncode(targets) != jsonEncode(action.targets) ||
+          jsonEncode(advertised) != jsonEncode(action.challengeRelays)) {
+        final migrated = PendingChallengeAction(
+          review: review,
+          signedBody: action.signedBody,
+          challengeRelays: advertised,
+          targets: targets,
+          deliveryDefinition: currentDefinition.event,
+          outcomes: action.outcomes,
+          echoed: action.echoed,
+          indexed: action.indexed,
+        );
+        await store.saveAction(review.owner, migrated);
+        action = migrated;
+        _checkOwnerAndPolicy(review);
+      }
       Map<String, RelayOutcome> outcomes;
       try {
+        _transportActive = true;
         outcomes = await transport(action.signedBody, action.targets);
-      } on Exception {
+      } on Object {
         outcomes = {
           for (final relay in action.targets) relay: RelayOutcome.silence,
         };
+      } finally {
+        _transportActive = false;
       }
       final updated = PendingChallengeAction(
         review: review,
         signedBody: action.signedBody,
         challengeRelays: action.challengeRelays,
+        deliveryDefinition: action.deliveryDefinition,
         targets: action.targets,
         outcomes: {
+          ...action.outcomes,
           for (final relay in action.targets)
             relay: action.outcomes[relay] == RelayOutcome.accepted
                 ? RelayOutcome.accepted
@@ -459,11 +658,12 @@ final class ChallengeSubmissionRepository {
       // A response after account switch belongs only in the original owner's
       // outbox. Persist that evidence; never publish another owner's action.
       await store.saveAction(review.owner, updated);
+      action = updated;
       _checkOwnerAndPolicy(review);
-      return _result(updated);
+      return _result(action);
     } on SubmissionException catch (error) {
       return SubmissionResult(error.status, action);
-    } on Exception {
+    } on Object {
       return SubmissionResult(SubmissionStatus.persistenceFailed, action);
     }
   }

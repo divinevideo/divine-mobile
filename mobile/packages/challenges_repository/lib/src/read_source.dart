@@ -29,6 +29,7 @@ final class RawChallengeRead {
     required this.source,
     required this.completeness,
     this.indexedAt,
+    this.retentionLimited = false,
     bool? revisionsComplete,
   }) : revisionsComplete =
            revisionsComplete ?? completeness == ReadCompleteness.complete,
@@ -37,6 +38,9 @@ final class RawChallengeRead {
   /// Whether definition revision retrieval itself is complete. Partial entry
   /// pages retain verified rules only when the adapter sets this explicitly.
   final bool revisionsComplete;
+
+  /// Entry history exceeded local capacity; rules may still be complete.
+  final bool retentionLimited;
 
   /// Untrusted wire records, not index projections.
   final List<String> records;

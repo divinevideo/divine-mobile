@@ -63,6 +63,8 @@ class _ScriptedReadsNostr extends Mock implements Nostr {
     Duration timeout = const Duration(seconds: 5),
     DateTime? deadline,
     bool requireAllRelaysSettled = false,
+    int? maxCollectedEvents,
+    int? maxCollectedBytes,
   }) async {
     deadlines.add(deadline);
     return results[deadlines.length - 1];

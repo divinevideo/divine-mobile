@@ -2,32 +2,36 @@ part of '../challenges_repository.dart';
 
 /// Reduces bounded retained signed records using the current visibility policy.
 final class ChallengesRepository {
-  /// Creates a repository with no production adapter assumptions.
+  /// Connects bounded observations and durable retained state to replay.
   ChallengesRepository({
     required this.source,
     required this.store,
     required this.clock,
     required this.isVisible,
     this.limits = const ReadLimits(),
+    this.work = _inlineChallengeWork,
   });
 
-  /// Raw read boundary.
+  /// Current known-coordinate observation source.
   final ChallengeReadSource source;
 
-  /// Durable retained replay boundary.
+  /// Owner-scoped retained authenticated records.
   final RetainedChallengeStore store;
 
-  /// Unix seconds.
+  /// Current Unix seconds.
   final int Function() clock;
 
-  /// Current policy, including deletion/blocking and media availability.
+  /// Current policy for each signed source and embedded snapshot.
   final bool Function(NostrEvent) isVisible;
 
-  /// Bounds before JSON parsing, including retained replay.
+  /// Resource bounds for each input and retained batch.
   final ReadLimits limits;
+
+  /// CPU execution boundary; apps use [isolatedChallengeWork].
+  final ChallengeWork work;
   Future<void> _tail = Future<void>.value();
 
-  /// Refreshes known-coordinate state.
+  /// Serializes refreshes so retention and policy results cannot race.
   Future<ChallengeRead> refresh(String coordinate) {
     final result = _tail.then((_) => _refresh(coordinate));
     _tail = result.then<void>((_) {}, onError: (Object _, StackTrace _) {});
@@ -37,7 +41,7 @@ final class ChallengesRepository {
   Future<ChallengeRead> _refresh(String coordinate) async {
     var observation = RawChallengeRead(
       records: const [],
-      source: ReadSource.indexedApi,
+      source: ReadSource.relay,
       completeness: ReadCompleteness.unavailable,
     );
     try {
@@ -46,45 +50,91 @@ final class ChallengesRepository {
         return _unavailable(coordinate, observation);
       }
       final retained = await store.load(coordinate);
-      final merged = {...retained, ...observation.records}.toList();
-      if (!limits.accepts(merged)) return _unavailable(coordinate, observation);
-      // Decode independently so non-event wire input cannot permanently poison
-      // retained replay. Keep JSON objects even when challenge parsing fails:
-      // authenticated malformed replacements must invalidate older open rules.
-      final decoded = <String, Map<String, Object?>>{};
-      for (final body in merged) {
-        try {
-          final value = jsonDecode(body);
-          if (value is Map<String, Object?>) decoded[body] = value;
-        } on FormatException {
-          // Ignore malformed JSON, including legacy persisted junk records.
-        }
+      // Bound each input independently before verification. Invalid historical
+      // junk cannot be persisted again or trusted for deduplication.
+      if (!limits.accepts(retained)) {
+        return _unavailable(coordinate, observation);
       }
-      await store.retain(
-        coordinate,
-        observation.records.where(decoded.containsKey).toList(),
+      final fresh = await work(_VerifyJob(observation.records, coordinate).run);
+      final merged = await work(
+        _VerifyJob([...retained, ...fresh.records], coordinate).run,
       );
-      if (observation.records.any((body) => !decoded.containsKey(body)) ||
+      final boundedStore = store is BoundedRetainedChallengeStore
+          ? store as BoundedRetainedChallengeStore
+          : null;
+      var limited =
+          !(boundedStore == null) && await boundedStore.isLimited(coordinate);
+      final overflow = !limits.accepts(merged.records);
+      final durableLimited = limited || overflow;
+      limited = durableLimited || observation.retentionLimited;
+      var records = merged.records;
+      if (overflow) {
+        // Keep current signed rules independently from entry history. Capacity
+        // exhaustion pauses entry playback/counts, not fresh rules retrieval.
+        final selected = <String>[];
+        for (final body in records) {
+          if (limits.accepts([...selected, body])) selected.add(body);
+        }
+        records = selected;
+      }
+      if (boundedStore != null) {
+        await boundedStore.replace(
+          coordinate,
+          records,
+          limited: durableLimited,
+        );
+      } else {
+        await store.retain(coordinate, fresh.records);
+      }
+      if (fresh.invalidInput ||
           observation.completeness == ReadCompleteness.unavailable) {
         return _unavailable(coordinate, observation);
       }
-      return ChallengeRead(
-        view: reduceChallenge(
-          observation.revisionsComplete ? decoded.values.toList() : const [],
-          coordinate,
-          clock(),
-          isVisible,
-        ),
-        observation: observation,
+      observation = RawChallengeRead(
+        records: observation.records,
+        source: observation.source,
+        completeness: limited
+            ? ReadCompleteness.partial
+            : observation.completeness,
+        revisionsComplete: observation.revisionsComplete,
+        indexedAt: observation.indexedAt,
+        retentionLimited: limited,
       );
-    } on Exception {
+      final events = !observation.revisionsComplete
+          ? <NostrEvent>[]
+          : limited
+          ? merged.events.where((e) => e.kind == 31923).toList()
+          : merged.events;
+      // Policy is evaluated on the app isolate immediately before and after
+      // worker execution. An intervening hide never grants playback permission.
+      for (var attempt = 0; attempt < 3; attempt++) {
+        final hidden = {
+          for (final e in merged.policyEvents)
+            if (!isVisible(e)) e.id,
+        };
+        final now = clock();
+        final view = await work(
+          _ReduceJob(events, coordinate, now, hidden).run,
+        );
+        final current = {
+          for (final e in merged.policyEvents)
+            if (!isVisible(e)) e.id,
+        };
+        if (current.length == hidden.length &&
+            current.containsAll(hidden) &&
+            clock() == now) {
+          return ChallengeRead(view: view, observation: observation);
+        }
+      }
+      return _unavailable(coordinate, observation);
+    } on Object {
       return _unavailable(coordinate, observation);
     }
   }
 
   ChallengeRead _unavailable(String coordinate, RawChallengeRead read) =>
       ChallengeRead(
-        view: reduceChallenge(const [], coordinate, clock(), isVisible),
+        view: reduceChallenge(const [], coordinate, clock(), (_) => false),
         observation: RawChallengeRead(
           records: const [],
           source: read.source,

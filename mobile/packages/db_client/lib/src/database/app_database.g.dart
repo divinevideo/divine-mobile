@@ -23777,6 +23777,662 @@ class NotificationReadMembersCompanion
   }
 }
 
+class $ChallengeOwnersTable extends ChallengeOwners
+    with TableInfo<$ChallengeOwnersTable, ChallengeOwner> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ChallengeOwnersTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerPubkeyMeta = const VerificationMeta(
+    'ownerPubkey',
+  );
+  @override
+  late final GeneratedColumn<String> ownerPubkey = GeneratedColumn<String>(
+    'owner_pubkey',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _generationMeta = const VerificationMeta(
+    'generation',
+  );
+  @override
+  late final GeneratedColumn<String> generation = GeneratedColumn<String>(
+    'generation',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [ownerPubkey, generation];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'challenge_owners';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ChallengeOwner> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_pubkey')) {
+      context.handle(
+        _ownerPubkeyMeta,
+        ownerPubkey.isAcceptableOrUnknown(
+          data['owner_pubkey']!,
+          _ownerPubkeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerPubkeyMeta);
+    }
+    if (data.containsKey('generation')) {
+      context.handle(
+        _generationMeta,
+        generation.isAcceptableOrUnknown(data['generation']!, _generationMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_generationMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ownerPubkey};
+  @override
+  ChallengeOwner map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ChallengeOwner(
+      ownerPubkey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_pubkey'],
+      )!,
+      generation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}generation'],
+      )!,
+    );
+  }
+
+  @override
+  $ChallengeOwnersTable createAlias(String alias) {
+    return $ChallengeOwnersTable(attachedDatabase, alias);
+  }
+}
+
+class ChallengeOwner extends DataClass implements Insertable<ChallengeOwner> {
+  final String ownerPubkey;
+  final String generation;
+  const ChallengeOwner({required this.ownerPubkey, required this.generation});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_pubkey'] = Variable<String>(ownerPubkey);
+    map['generation'] = Variable<String>(generation);
+    return map;
+  }
+
+  ChallengeOwnersCompanion toCompanion(bool nullToAbsent) {
+    return ChallengeOwnersCompanion(
+      ownerPubkey: Value(ownerPubkey),
+      generation: Value(generation),
+    );
+  }
+
+  factory ChallengeOwner.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ChallengeOwner(
+      ownerPubkey: serializer.fromJson<String>(json['ownerPubkey']),
+      generation: serializer.fromJson<String>(json['generation']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerPubkey': serializer.toJson<String>(ownerPubkey),
+      'generation': serializer.toJson<String>(generation),
+    };
+  }
+
+  ChallengeOwner copyWith({String? ownerPubkey, String? generation}) =>
+      ChallengeOwner(
+        ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+        generation: generation ?? this.generation,
+      );
+  ChallengeOwner copyWithCompanion(ChallengeOwnersCompanion data) {
+    return ChallengeOwner(
+      ownerPubkey: data.ownerPubkey.present
+          ? data.ownerPubkey.value
+          : this.ownerPubkey,
+      generation: data.generation.present
+          ? data.generation.value
+          : this.generation,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ChallengeOwner(')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('generation: $generation')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(ownerPubkey, generation);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ChallengeOwner &&
+          other.ownerPubkey == this.ownerPubkey &&
+          other.generation == this.generation);
+}
+
+class ChallengeOwnersCompanion extends UpdateCompanion<ChallengeOwner> {
+  final Value<String> ownerPubkey;
+  final Value<String> generation;
+  final Value<int> rowid;
+  const ChallengeOwnersCompanion({
+    this.ownerPubkey = const Value.absent(),
+    this.generation = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ChallengeOwnersCompanion.insert({
+    required String ownerPubkey,
+    required String generation,
+    this.rowid = const Value.absent(),
+  }) : ownerPubkey = Value(ownerPubkey),
+       generation = Value(generation);
+  static Insertable<ChallengeOwner> custom({
+    Expression<String>? ownerPubkey,
+    Expression<String>? generation,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerPubkey != null) 'owner_pubkey': ownerPubkey,
+      if (generation != null) 'generation': generation,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ChallengeOwnersCompanion copyWith({
+    Value<String>? ownerPubkey,
+    Value<String>? generation,
+    Value<int>? rowid,
+  }) {
+    return ChallengeOwnersCompanion(
+      ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+      generation: generation ?? this.generation,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerPubkey.present) {
+      map['owner_pubkey'] = Variable<String>(ownerPubkey.value);
+    }
+    if (generation.present) {
+      map['generation'] = Variable<String>(generation.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ChallengeOwnersCompanion(')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('generation: $generation, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ChallengeRecordsTable extends ChallengeRecords
+    with TableInfo<$ChallengeRecordsTable, ChallengeRecord> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ChallengeRecordsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _ownerPubkeyMeta = const VerificationMeta(
+    'ownerPubkey',
+  );
+  @override
+  late final GeneratedColumn<String> ownerPubkey = GeneratedColumn<String>(
+    'owner_pubkey',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _generationMeta = const VerificationMeta(
+    'generation',
+  );
+  @override
+  late final GeneratedColumn<String> generation = GeneratedColumn<String>(
+    'generation',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _categoryMeta = const VerificationMeta(
+    'category',
+  );
+  @override
+  late final GeneratedColumn<String> category = GeneratedColumn<String>(
+    'category',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _recordKeyMeta = const VerificationMeta(
+    'recordKey',
+  );
+  @override
+  late final GeneratedColumn<String> recordKey = GeneratedColumn<String>(
+    'record_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _payloadMeta = const VerificationMeta(
+    'payload',
+  );
+  @override
+  late final GeneratedColumn<String> payload = GeneratedColumn<String>(
+    'payload',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _signedBodyMeta = const VerificationMeta(
+    'signedBody',
+  );
+  @override
+  late final GeneratedColumn<String> signedBody = GeneratedColumn<String>(
+    'signed_body',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    ownerPubkey,
+    generation,
+    category,
+    recordKey,
+    payload,
+    signedBody,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'challenge_records';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ChallengeRecord> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('owner_pubkey')) {
+      context.handle(
+        _ownerPubkeyMeta,
+        ownerPubkey.isAcceptableOrUnknown(
+          data['owner_pubkey']!,
+          _ownerPubkeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_ownerPubkeyMeta);
+    }
+    if (data.containsKey('generation')) {
+      context.handle(
+        _generationMeta,
+        generation.isAcceptableOrUnknown(data['generation']!, _generationMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_generationMeta);
+    }
+    if (data.containsKey('category')) {
+      context.handle(
+        _categoryMeta,
+        category.isAcceptableOrUnknown(data['category']!, _categoryMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_categoryMeta);
+    }
+    if (data.containsKey('record_key')) {
+      context.handle(
+        _recordKeyMeta,
+        recordKey.isAcceptableOrUnknown(data['record_key']!, _recordKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_recordKeyMeta);
+    }
+    if (data.containsKey('payload')) {
+      context.handle(
+        _payloadMeta,
+        payload.isAcceptableOrUnknown(data['payload']!, _payloadMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_payloadMeta);
+    }
+    if (data.containsKey('signed_body')) {
+      context.handle(
+        _signedBodyMeta,
+        signedBody.isAcceptableOrUnknown(data['signed_body']!, _signedBodyMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {ownerPubkey, category, recordKey};
+  @override
+  ChallengeRecord map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ChallengeRecord(
+      ownerPubkey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}owner_pubkey'],
+      )!,
+      generation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}generation'],
+      )!,
+      category: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category'],
+      )!,
+      recordKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}record_key'],
+      )!,
+      payload: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}payload'],
+      )!,
+      signedBody: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}signed_body'],
+      ),
+    );
+  }
+
+  @override
+  $ChallengeRecordsTable createAlias(String alias) {
+    return $ChallengeRecordsTable(attachedDatabase, alias);
+  }
+}
+
+class ChallengeRecord extends DataClass implements Insertable<ChallengeRecord> {
+  final String ownerPubkey;
+  final String generation;
+  final String category;
+  final String recordKey;
+  final String payload;
+  final String? signedBody;
+  const ChallengeRecord({
+    required this.ownerPubkey,
+    required this.generation,
+    required this.category,
+    required this.recordKey,
+    required this.payload,
+    this.signedBody,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['owner_pubkey'] = Variable<String>(ownerPubkey);
+    map['generation'] = Variable<String>(generation);
+    map['category'] = Variable<String>(category);
+    map['record_key'] = Variable<String>(recordKey);
+    map['payload'] = Variable<String>(payload);
+    if (!nullToAbsent || signedBody != null) {
+      map['signed_body'] = Variable<String>(signedBody);
+    }
+    return map;
+  }
+
+  ChallengeRecordsCompanion toCompanion(bool nullToAbsent) {
+    return ChallengeRecordsCompanion(
+      ownerPubkey: Value(ownerPubkey),
+      generation: Value(generation),
+      category: Value(category),
+      recordKey: Value(recordKey),
+      payload: Value(payload),
+      signedBody: signedBody == null && nullToAbsent
+          ? const Value.absent()
+          : Value(signedBody),
+    );
+  }
+
+  factory ChallengeRecord.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ChallengeRecord(
+      ownerPubkey: serializer.fromJson<String>(json['ownerPubkey']),
+      generation: serializer.fromJson<String>(json['generation']),
+      category: serializer.fromJson<String>(json['category']),
+      recordKey: serializer.fromJson<String>(json['recordKey']),
+      payload: serializer.fromJson<String>(json['payload']),
+      signedBody: serializer.fromJson<String?>(json['signedBody']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'ownerPubkey': serializer.toJson<String>(ownerPubkey),
+      'generation': serializer.toJson<String>(generation),
+      'category': serializer.toJson<String>(category),
+      'recordKey': serializer.toJson<String>(recordKey),
+      'payload': serializer.toJson<String>(payload),
+      'signedBody': serializer.toJson<String?>(signedBody),
+    };
+  }
+
+  ChallengeRecord copyWith({
+    String? ownerPubkey,
+    String? generation,
+    String? category,
+    String? recordKey,
+    String? payload,
+    Value<String?> signedBody = const Value.absent(),
+  }) => ChallengeRecord(
+    ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+    generation: generation ?? this.generation,
+    category: category ?? this.category,
+    recordKey: recordKey ?? this.recordKey,
+    payload: payload ?? this.payload,
+    signedBody: signedBody.present ? signedBody.value : this.signedBody,
+  );
+  ChallengeRecord copyWithCompanion(ChallengeRecordsCompanion data) {
+    return ChallengeRecord(
+      ownerPubkey: data.ownerPubkey.present
+          ? data.ownerPubkey.value
+          : this.ownerPubkey,
+      generation: data.generation.present
+          ? data.generation.value
+          : this.generation,
+      category: data.category.present ? data.category.value : this.category,
+      recordKey: data.recordKey.present ? data.recordKey.value : this.recordKey,
+      payload: data.payload.present ? data.payload.value : this.payload,
+      signedBody: data.signedBody.present
+          ? data.signedBody.value
+          : this.signedBody,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ChallengeRecord(')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('generation: $generation, ')
+          ..write('category: $category, ')
+          ..write('recordKey: $recordKey, ')
+          ..write('payload: $payload, ')
+          ..write('signedBody: $signedBody')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    ownerPubkey,
+    generation,
+    category,
+    recordKey,
+    payload,
+    signedBody,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ChallengeRecord &&
+          other.ownerPubkey == this.ownerPubkey &&
+          other.generation == this.generation &&
+          other.category == this.category &&
+          other.recordKey == this.recordKey &&
+          other.payload == this.payload &&
+          other.signedBody == this.signedBody);
+}
+
+class ChallengeRecordsCompanion extends UpdateCompanion<ChallengeRecord> {
+  final Value<String> ownerPubkey;
+  final Value<String> generation;
+  final Value<String> category;
+  final Value<String> recordKey;
+  final Value<String> payload;
+  final Value<String?> signedBody;
+  final Value<int> rowid;
+  const ChallengeRecordsCompanion({
+    this.ownerPubkey = const Value.absent(),
+    this.generation = const Value.absent(),
+    this.category = const Value.absent(),
+    this.recordKey = const Value.absent(),
+    this.payload = const Value.absent(),
+    this.signedBody = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ChallengeRecordsCompanion.insert({
+    required String ownerPubkey,
+    required String generation,
+    required String category,
+    required String recordKey,
+    required String payload,
+    this.signedBody = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : ownerPubkey = Value(ownerPubkey),
+       generation = Value(generation),
+       category = Value(category),
+       recordKey = Value(recordKey),
+       payload = Value(payload);
+  static Insertable<ChallengeRecord> custom({
+    Expression<String>? ownerPubkey,
+    Expression<String>? generation,
+    Expression<String>? category,
+    Expression<String>? recordKey,
+    Expression<String>? payload,
+    Expression<String>? signedBody,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (ownerPubkey != null) 'owner_pubkey': ownerPubkey,
+      if (generation != null) 'generation': generation,
+      if (category != null) 'category': category,
+      if (recordKey != null) 'record_key': recordKey,
+      if (payload != null) 'payload': payload,
+      if (signedBody != null) 'signed_body': signedBody,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ChallengeRecordsCompanion copyWith({
+    Value<String>? ownerPubkey,
+    Value<String>? generation,
+    Value<String>? category,
+    Value<String>? recordKey,
+    Value<String>? payload,
+    Value<String?>? signedBody,
+    Value<int>? rowid,
+  }) {
+    return ChallengeRecordsCompanion(
+      ownerPubkey: ownerPubkey ?? this.ownerPubkey,
+      generation: generation ?? this.generation,
+      category: category ?? this.category,
+      recordKey: recordKey ?? this.recordKey,
+      payload: payload ?? this.payload,
+      signedBody: signedBody ?? this.signedBody,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (ownerPubkey.present) {
+      map['owner_pubkey'] = Variable<String>(ownerPubkey.value);
+    }
+    if (generation.present) {
+      map['generation'] = Variable<String>(generation.value);
+    }
+    if (category.present) {
+      map['category'] = Variable<String>(category.value);
+    }
+    if (recordKey.present) {
+      map['record_key'] = Variable<String>(recordKey.value);
+    }
+    if (payload.present) {
+      map['payload'] = Variable<String>(payload.value);
+    }
+    if (signedBody.present) {
+      map['signed_body'] = Variable<String>(signedBody.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ChallengeRecordsCompanion(')
+          ..write('ownerPubkey: $ownerPubkey, ')
+          ..write('generation: $generation, ')
+          ..write('category: $category, ')
+          ..write('recordKey: $recordKey, ')
+          ..write('payload: $payload, ')
+          ..write('signedBody: $signedBody, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -23845,6 +24501,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $NotificationReadsTable(this);
   late final $NotificationReadMembersTable notificationReadMembers =
       $NotificationReadMembersTable(this);
+  late final $ChallengeOwnersTable challengeOwners = $ChallengeOwnersTable(
+    this,
+  );
+  late final $ChallengeRecordsTable challengeRecords = $ChallengeRecordsTable(
+    this,
+  );
   late final Index idxMetricsLoopCount = Index(
     'idx_metrics_loop_count',
     'CREATE INDEX IF NOT EXISTS idx_metrics_loop_count ON video_metrics (loop_count)',
@@ -24019,6 +24681,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final AccountSyncDao accountSyncDao = AccountSyncDao(
     this as AppDatabase,
   );
+  late final ChallengeRecordsDao challengeRecordsDao = ChallengeRecordsDao(
+    this as AppDatabase,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -24064,6 +24729,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     accountSyncRecords,
     notificationReads,
     notificationReadMembers,
+    challengeOwners,
+    challengeRecords,
     idxMetricsLoopCount,
     idxMetricsLikes,
     idxMetricsViews,
@@ -35657,6 +36324,390 @@ typedef $$NotificationReadMembersTableProcessedTableManager =
       NotificationReadMember,
       PrefetchHooks Function()
     >;
+typedef $$ChallengeOwnersTableCreateCompanionBuilder =
+    ChallengeOwnersCompanion Function({
+      required String ownerPubkey,
+      required String generation,
+      Value<int> rowid,
+    });
+typedef $$ChallengeOwnersTableUpdateCompanionBuilder =
+    ChallengeOwnersCompanion Function({
+      Value<String> ownerPubkey,
+      Value<String> generation,
+      Value<int> rowid,
+    });
+
+class $$ChallengeOwnersTableFilterComposer
+    extends Composer<_$AppDatabase, $ChallengeOwnersTable> {
+  $$ChallengeOwnersTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get generation => $composableBuilder(
+    column: $table.generation,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ChallengeOwnersTableOrderingComposer
+    extends Composer<_$AppDatabase, $ChallengeOwnersTable> {
+  $$ChallengeOwnersTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get generation => $composableBuilder(
+    column: $table.generation,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ChallengeOwnersTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ChallengeOwnersTable> {
+  $$ChallengeOwnersTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get generation => $composableBuilder(
+    column: $table.generation,
+    builder: (column) => column,
+  );
+}
+
+class $$ChallengeOwnersTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ChallengeOwnersTable,
+          ChallengeOwner,
+          $$ChallengeOwnersTableFilterComposer,
+          $$ChallengeOwnersTableOrderingComposer,
+          $$ChallengeOwnersTableAnnotationComposer,
+          $$ChallengeOwnersTableCreateCompanionBuilder,
+          $$ChallengeOwnersTableUpdateCompanionBuilder,
+          (
+            ChallengeOwner,
+            BaseReferences<
+              _$AppDatabase,
+              $ChallengeOwnersTable,
+              ChallengeOwner
+            >,
+          ),
+          ChallengeOwner,
+          PrefetchHooks Function()
+        > {
+  $$ChallengeOwnersTableTableManager(
+    _$AppDatabase db,
+    $ChallengeOwnersTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ChallengeOwnersTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ChallengeOwnersTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ChallengeOwnersTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> ownerPubkey = const Value.absent(),
+                Value<String> generation = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ChallengeOwnersCompanion(
+                ownerPubkey: ownerPubkey,
+                generation: generation,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String ownerPubkey,
+                required String generation,
+                Value<int> rowid = const Value.absent(),
+              }) => ChallengeOwnersCompanion.insert(
+                ownerPubkey: ownerPubkey,
+                generation: generation,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ChallengeOwnersTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ChallengeOwnersTable,
+      ChallengeOwner,
+      $$ChallengeOwnersTableFilterComposer,
+      $$ChallengeOwnersTableOrderingComposer,
+      $$ChallengeOwnersTableAnnotationComposer,
+      $$ChallengeOwnersTableCreateCompanionBuilder,
+      $$ChallengeOwnersTableUpdateCompanionBuilder,
+      (
+        ChallengeOwner,
+        BaseReferences<_$AppDatabase, $ChallengeOwnersTable, ChallengeOwner>,
+      ),
+      ChallengeOwner,
+      PrefetchHooks Function()
+    >;
+typedef $$ChallengeRecordsTableCreateCompanionBuilder =
+    ChallengeRecordsCompanion Function({
+      required String ownerPubkey,
+      required String generation,
+      required String category,
+      required String recordKey,
+      required String payload,
+      Value<String?> signedBody,
+      Value<int> rowid,
+    });
+typedef $$ChallengeRecordsTableUpdateCompanionBuilder =
+    ChallengeRecordsCompanion Function({
+      Value<String> ownerPubkey,
+      Value<String> generation,
+      Value<String> category,
+      Value<String> recordKey,
+      Value<String> payload,
+      Value<String?> signedBody,
+      Value<int> rowid,
+    });
+
+class $$ChallengeRecordsTableFilterComposer
+    extends Composer<_$AppDatabase, $ChallengeRecordsTable> {
+  $$ChallengeRecordsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get generation => $composableBuilder(
+    column: $table.generation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recordKey => $composableBuilder(
+    column: $table.recordKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get signedBody => $composableBuilder(
+    column: $table.signedBody,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ChallengeRecordsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ChallengeRecordsTable> {
+  $$ChallengeRecordsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get generation => $composableBuilder(
+    column: $table.generation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get recordKey => $composableBuilder(
+    column: $table.recordKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get payload => $composableBuilder(
+    column: $table.payload,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get signedBody => $composableBuilder(
+    column: $table.signedBody,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ChallengeRecordsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ChallengeRecordsTable> {
+  $$ChallengeRecordsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get ownerPubkey => $composableBuilder(
+    column: $table.ownerPubkey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get generation => $composableBuilder(
+    column: $table.generation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
+
+  GeneratedColumn<String> get recordKey =>
+      $composableBuilder(column: $table.recordKey, builder: (column) => column);
+
+  GeneratedColumn<String> get payload =>
+      $composableBuilder(column: $table.payload, builder: (column) => column);
+
+  GeneratedColumn<String> get signedBody => $composableBuilder(
+    column: $table.signedBody,
+    builder: (column) => column,
+  );
+}
+
+class $$ChallengeRecordsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ChallengeRecordsTable,
+          ChallengeRecord,
+          $$ChallengeRecordsTableFilterComposer,
+          $$ChallengeRecordsTableOrderingComposer,
+          $$ChallengeRecordsTableAnnotationComposer,
+          $$ChallengeRecordsTableCreateCompanionBuilder,
+          $$ChallengeRecordsTableUpdateCompanionBuilder,
+          (
+            ChallengeRecord,
+            BaseReferences<
+              _$AppDatabase,
+              $ChallengeRecordsTable,
+              ChallengeRecord
+            >,
+          ),
+          ChallengeRecord,
+          PrefetchHooks Function()
+        > {
+  $$ChallengeRecordsTableTableManager(
+    _$AppDatabase db,
+    $ChallengeRecordsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ChallengeRecordsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ChallengeRecordsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ChallengeRecordsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> ownerPubkey = const Value.absent(),
+                Value<String> generation = const Value.absent(),
+                Value<String> category = const Value.absent(),
+                Value<String> recordKey = const Value.absent(),
+                Value<String> payload = const Value.absent(),
+                Value<String?> signedBody = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ChallengeRecordsCompanion(
+                ownerPubkey: ownerPubkey,
+                generation: generation,
+                category: category,
+                recordKey: recordKey,
+                payload: payload,
+                signedBody: signedBody,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String ownerPubkey,
+                required String generation,
+                required String category,
+                required String recordKey,
+                required String payload,
+                Value<String?> signedBody = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ChallengeRecordsCompanion.insert(
+                ownerPubkey: ownerPubkey,
+                generation: generation,
+                category: category,
+                recordKey: recordKey,
+                payload: payload,
+                signedBody: signedBody,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ChallengeRecordsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ChallengeRecordsTable,
+      ChallengeRecord,
+      $$ChallengeRecordsTableFilterComposer,
+      $$ChallengeRecordsTableOrderingComposer,
+      $$ChallengeRecordsTableAnnotationComposer,
+      $$ChallengeRecordsTableCreateCompanionBuilder,
+      $$ChallengeRecordsTableUpdateCompanionBuilder,
+      (
+        ChallengeRecord,
+        BaseReferences<_$AppDatabase, $ChallengeRecordsTable, ChallengeRecord>,
+      ),
+      ChallengeRecord,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -35747,4 +36798,8 @@ class $AppDatabaseManager {
         _db,
         _db.notificationReadMembers,
       );
+  $$ChallengeOwnersTableTableManager get challengeOwners =>
+      $$ChallengeOwnersTableTableManager(_db, _db.challengeOwners);
+  $$ChallengeRecordsTableTableManager get challengeRecords =>
+      $$ChallengeRecordsTableTableManager(_db, _db.challengeRecords);
 }

@@ -7,6 +7,7 @@ import 'dart:async';
 import 'package:badge_repository/badge_repository.dart';
 import 'package:bookmarks_repository/bookmarks_repository.dart';
 import 'package:categories_repository/categories_repository.dart';
+import 'package:challenge_protocol/challenge_protocol.dart' as challenge;
 import 'package:comments_repository/comments_repository.dart';
 import 'package:content_policy/content_policy.dart';
 import 'package:curated_list_repository/curated_list_repository.dart';
@@ -19,12 +20,14 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:follow_repository/follow_repository.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:models/models.dart';
+import 'package:nostr_sdk/event.dart' as nostr;
 import 'package:openvine/config/app_config.dart';
 import 'package:openvine/config/official_accounts.dart';
 import 'package:openvine/constants/app_constants.dart';
 import 'package:openvine/constants/hive_box_names.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/providers/account_enforcement_providers.dart';
 import 'package:openvine/providers/account_preferences_provider.dart';
 import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -46,14 +49,19 @@ import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/repositories/profile_pins_repository.dart';
+import 'package:openvine/services/challenges/challenge_app_session.dart';
+import 'package:openvine/services/challenges/challenge_video_policy.dart';
+import 'package:openvine/services/challenges/sqlite_challenge_store.dart';
 import 'package:openvine/services/curated_list_service.dart';
 import 'package:openvine/services/curated_lists/curated_list_default_signed_intent_store.dart';
 import 'package:openvine/services/curated_lists/curated_list_session_coordinator.dart';
 import 'package:openvine/services/hive_box_opener.dart';
 import 'package:openvine/services/immediate_completion_helper.dart';
 import 'package:openvine/services/notify_subscriptions_unfollow_cleanup.dart';
+import 'package:openvine/services/nsfw_content_filter.dart';
 import 'package:openvine/services/pending_action_service.dart';
 import 'package:openvine/services/relay_discovery_service.dart';
+import 'package:openvine/services/video_moderation_status_service.dart';
 import 'package:openvine/utils/search_utils.dart';
 import 'package:people_lists_repository/people_lists_repository.dart';
 import 'package:profile_repository/profile_repository.dart';
@@ -1170,3 +1178,115 @@ CommentsRepository commentsRepository(Ref ref) {
   ref.onDispose(repository.clearCommentCountCache);
   return repository;
 }
+
+/// Dormant until an explicit challenge flow requests it. No Explore/global
+/// discovery route is enabled, and no unshipped API DTO is consumed.
+final challengeAppSessionProvider = FutureProvider<ChallengeAppSession?>((
+  ref,
+) async {
+  final readiness = ref.watch(nostrSessionProvider);
+  final auth = ref.watch(authServiceProvider);
+  final owner = readiness.pubkey;
+  final client = readiness.client;
+  if (!readiness.isReadyForActiveClient || owner == null || client == null) {
+    return null;
+  }
+  final receipt = auth.committedAccountActivationReceipt;
+  if (receipt == null || receipt.ownerPubkey != owner || !receipt.isCurrent) {
+    return null;
+  }
+  var active = true;
+  String? currentOwner() =>
+      active &&
+          receipt.isCurrent &&
+          identical(receipt, auth.committedAccountActivationReceipt) &&
+          auth.canPublishNostrWritesNow
+      ? auth.currentPublicKeyHex
+      : null;
+  final db = ref.watch(databaseProvider);
+  final writes = ref.watch(accountStateWriteBarrierProvider);
+  final blocklist = ref.watch(contentBlocklistRepositoryProvider);
+  final engine = ref.watch(contentPolicyEngineProvider);
+  final filters = ref.watch(contentFilterServiceProvider);
+  final labels = ref.watch(moderationLabelServiceProvider);
+  final videos = ref.watch(videoEventServiceProvider);
+  final moderation = ref.watch(videoModerationStatusServiceProvider);
+  Future<SqliteChallengeStore>? opening;
+  final close = writes.register(owner, () async {
+    active = false;
+    try {
+      await (await opening)?.retire();
+    } on Object {
+      /* An aborted open has no writer. */
+    }
+  });
+  ref.onDispose(() {
+    active = false;
+    unawaited(close());
+  });
+  final deletions = await ref.watch(contentDeletionServiceProvider.future);
+  if (currentOwner() != owner) return null;
+  opening = SqliteChallengeStore.open(
+    dao: db.challengeRecordsDao,
+    owner: owner,
+    currentOwner: currentOwner,
+  );
+  final store = await opening;
+  if (!active) {
+    await store.retire();
+    return null;
+  }
+  final hideVideo = createNsfwFilter(
+    filters,
+    moderationLabelService: labels,
+    viewerPubkey: () => auth.currentPublicKeyHex,
+  );
+  bool sourceAllowed(challenge.NostrEvent event) {
+    if (!active ||
+        currentOwner() != owner ||
+        !filters.isInitialized ||
+        !deletions.isInitialized ||
+        blocklist.currentState.currentUserPubkey != owner) {
+      return false;
+    }
+    if (engine.evaluate(
+          PolicyInput(
+            pubkey: event.pubkey,
+            kind: event.kind,
+            content: event.content,
+            tags: event.tags,
+          ),
+          blocklist.currentState,
+        ) is! Allow ||
+        deletions.hasBeenDeleted(event.id)) {
+      return false;
+    }
+    if (ChallengeVideoPolicy.isVideo(event)) {
+      final video = VideoEvent.fromNostrEvent(
+        nostr.Event.fromJson(event.toJson()),
+      );
+      return !videos.isVideoEventKnownDeleted(video) && !hideVideo(video);
+    }
+    return true;
+  }
+
+  final policy = ChallengeVideoPolicy(
+    client: client,
+    moderation: moderation,
+    checkOwner: store.checkLive,
+    sourceAllowed: sourceAllowed,
+  );
+  return ChallengeAppSession(
+    store: store,
+    auth: auth,
+    nostr: client,
+    isVisible: policy.isVisible,
+    currentVideoId: policy.currentVideoId,
+    refreshVideo: policy.refresh,
+    canPublish: (review) =>
+        active &&
+        currentOwner() == owner &&
+        ref.read(accountEnforcementStatusProvider).value?.isEnforced == false &&
+        engine.canTarget(review.definition.pubkey, blocklist.currentState),
+  );
+});

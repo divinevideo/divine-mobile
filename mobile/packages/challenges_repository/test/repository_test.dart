@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:challenges_repository/challenges_repository.dart';
 import 'package:test/test.dart';
 
+import 'harness.dart';
 import 'synthetic.dart';
 
 void main() {
@@ -222,55 +223,4 @@ void main() {
       },
     );
   });
-}
-
-class FakeSource {
-  FakeSource(this.records);
-  List<String> records;
-  bool fail = false;
-  RawChallengeRead? observation;
-  Future<void> Function()? beforeRead;
-  ReadCompleteness completeness = ReadCompleteness.complete;
-  Future<RawChallengeRead> read(String coordinate) async {
-    await beforeRead?.call();
-    if (fail) throw Exception('Synthetic read failure');
-    return observation ??
-        RawChallengeRead(
-          records: records,
-          source: ReadSource.indexedApi,
-          completeness: completeness,
-          indexedAt: 145,
-        );
-  }
-}
-
-class MemoryStore implements RetainedChallengeStore {
-  final records = <String, Set<String>>{};
-  @override
-  Future<List<String>> load(String coordinate) async =>
-      records[coordinate]?.toList() ?? [];
-  @override
-  Future<void> retain(String coordinate, List<String> values) async {
-    records.putIfAbsent(coordinate, () => {}).addAll(values);
-  }
-}
-
-class ReadHarness {
-  ReadHarness({ReadLimits limits = const ReadLimits()}) {
-    definition = signer.definition();
-    coordinate = definitionOf(definition).coordinate;
-    source = FakeSource([jsonEncode(definition)]);
-    repository = ChallengesRepository(
-      source: source.read,
-      store: MemoryStore(),
-      clock: () => 150,
-      isVisible: (_) => true,
-      limits: limits,
-    );
-  }
-  final signer = SyntheticSigner();
-  late Map<String, Object?> definition;
-  late String coordinate;
-  late FakeSource source;
-  late ChallengesRepository repository;
 }

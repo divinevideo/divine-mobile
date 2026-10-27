@@ -103,6 +103,8 @@ const legacyV1NormalizationRepairIndexes = <String>[
     AccountSyncRecords,
     NotificationReads,
     NotificationReadMembers,
+    ChallengeOwners,
+    ChallengeRecords,
   ],
   daos: [
     UserProfilesDao,
@@ -142,6 +144,7 @@ const legacyV1NormalizationRepairIndexes = <String>[
     ConcordStoreDao,
     SoundRequestStateDao,
     AccountSyncDao,
+    ChallengeRecordsDao,
   ],
 )
 class AppDatabase extends _$AppDatabase {
@@ -152,7 +155,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 29;
+  int get schemaVersion => 30;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -387,6 +390,10 @@ class AppDatabase extends _$AppDatabase {
           'ALTER TABLE removed_conversations DROP COLUMN rejoined_at',
         );
       }
+      if (from < 30 && to >= 30) {
+        await m.createTable(challengeOwners);
+        await m.createTable(challengeRecords);
+      }
       if (from < 29 && to >= 29) {
         await m.createTable(accountSyncRecords);
         await m.createTable(notificationReads);
@@ -394,6 +401,22 @@ class AppDatabase extends _$AppDatabase {
       }
     },
     beforeOpen: (details) async {
+      // Salvage may preserve only one of these local-only tables. A missing
+      // generation must never authorize rows whose revocation history was lost.
+      if (schemaVersion >= 30) {
+        if (!await _tableExists('challenge_owners')) {
+          await createMigrator().createTable(challengeOwners);
+        }
+        if (!await _tableExists('challenge_records')) {
+          await createMigrator().createTable(challengeRecords);
+        }
+        await customStatement(
+          'DELETE FROM challenge_records WHERE NOT EXISTS '
+          '(SELECT 1 FROM challenge_owners o WHERE o.owner_pubkey = '
+          'challenge_records.owner_pubkey '
+          'AND o.generation = challenge_records.generation)',
+        );
+      }
       // v1 databases are normalized by onUpgrade. This guarded path remains
       // only as recovery for damaged or manually-mutated databases.
       if (!details.wasCreated &&

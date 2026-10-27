@@ -16,6 +16,7 @@ class PublishSuccess extends PublishResult {
   const PublishSuccess({
     this.stableId,
     this.eventId,
+    this.signedEventBody,
     this.inviteWarnings = const [],
     this.audioReuseDegraded = false,
   });
@@ -34,6 +35,9 @@ class PublishSuccess extends PublishResult {
   /// upload record no longer carries it.
   final String? eventId;
 
+  /// Exact successful signed video, available before draft cleanup.
+  final String? signedEventBody;
+
   final List<CollaboratorInviteWarning> inviteWarnings;
 
   /// The creator asked for a reusable sound and the video published without
@@ -47,6 +51,7 @@ class PublishSuccess extends PublishResult {
   List<Object?> get props => [
     stableId,
     eventId,
+    signedEventBody,
     inviteWarnings,
     audioReuseDegraded,
   ];

@@ -2,6 +2,7 @@
 // ABOUTME: and the flags queryEventsDetailed and queryEvents map from it.
 
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
@@ -224,6 +225,56 @@ void main() {
         events.map((event) => event.id);
 
     group('readEvents', () {
+      for (final bytes in [false, true]) {
+        test(
+          'collection ${bytes ? 'byte' : 'event'} budget counts distinct verified events across relays',
+          () async {
+            final relays = [
+              for (var i = 0; i < 3; i++)
+                await addRelay('wss://replica$i.example'),
+            ];
+            final events = await signedEvents(3);
+            final pending = nostr.readEvents(
+              _filters(),
+              id: _readId,
+              timeout: _guard,
+              requireAllRelaysSettled: true,
+              maxCollectedEvents: bytes ? 10 : 2,
+              maxCollectedBytes: bytes
+                  ? utf8.encode(jsonEncode(events.first.toJson())).length
+                  : null,
+            );
+            for (final relay in relays) {
+              await reqLanded(relay);
+              await deliverEvents(relay, [events.first]);
+              await relay.deliver(['EOSE', _readId]);
+            }
+            final result = await pending;
+            expect(result.events.map((e) => e.id), [events.first.id]);
+            expect(result.possiblyCapped, isFalse);
+            expect(result.answeredNetworkRelayCount, 3);
+            final overflowing = nostr.readEvents(
+              _filters(),
+              id: _readId,
+              timeout: _guard,
+              maxCollectedEvents: 2,
+            );
+            for (final relay in relays) {
+              await reqLanded(relay);
+            }
+            await deliverEvents(relays.first, events);
+            for (final relay in relays) {
+              await relay.deliver(['EOSE', _readId]);
+            }
+            final capped = await overflowing;
+            expect(
+              capped.events.map((e) => e.id),
+              events.take(2).map((e) => e.id),
+            );
+            expect(capped.possiblyCapped, isTrue);
+          },
+        );
+      }
       group('when every relay sends EOSE', () {
         test('returns every event that arrived, as complete', () async {
           final answering = await addRelay('wss://answers.example');

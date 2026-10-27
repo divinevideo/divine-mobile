@@ -34,3 +34,18 @@ abstract interface class ChallengeSubmissionStore {
   /// Durably updates acknowledgement/indexing evidence, preserving the body.
   Future<void> saveAction(String owner, PendingChallengeAction action);
 }
+
+/// A bounded app store can replace verified replay and persist capacity loss.
+/// Once limited, retained entries cannot claim a complete historical reduction.
+abstract interface class BoundedRetainedChallengeStore
+    implements RetainedChallengeStore {
+  /// Whether historical entries exceeded the durable replay budget.
+  Future<bool> isLimited(String coordinate);
+
+  /// Atomically replaces authenticated records and capacity evidence.
+  Future<void> replace(
+    String coordinate,
+    List<String> records, {
+    required bool limited,
+  });
+}

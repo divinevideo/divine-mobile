@@ -2320,3 +2320,31 @@ class NotificationReadMembers extends Table {
   @override
   Set<Column> get primaryKey => {ownerPubkey, cacheId, notificationId};
 }
+
+/// Durable session generation. Removal deletes the marker and records in one
+/// transaction, preventing an already-started writer from restoring them.
+class ChallengeOwners extends Table {
+  TextColumn get ownerPubkey => text()();
+  TextColumn get generation => text()();
+  @override
+  Set<Column> get primaryKey => {ownerPubkey};
+}
+
+/// Dedicated challenge journals: retained observations, recording contexts,
+/// successful video handoffs, reviews and immutable signed outbox records.
+/// There is deliberately no nullable or legacy ownership path.
+/// Retained observations have repository byte/count bounds. Reviewed context,
+/// handoffs and outbox evidence remain until explicit account removal; no TTL
+/// may discard undelivered signed work. Future settled-flow cleanup must keep
+/// exact recovery/evidence until it is no longer needed. Orphan generations are
+/// removed during database repair.
+class ChallengeRecords extends Table {
+  TextColumn get ownerPubkey => text()();
+  TextColumn get generation => text()();
+  TextColumn get category => text()();
+  TextColumn get recordKey => text()();
+  TextColumn get payload => text()();
+  TextColumn get signedBody => text().nullable()();
+  @override
+  Set<Column> get primaryKey => {ownerPubkey, category, recordKey};
+}

@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'package:challenges_repository/challenges_repository.dart';
 import 'package:test/test.dart';
 
+import 'harness.dart' show FakeSource, MemoryStore;
 import 'protocol_fixture_file.dart';
-import 'repository_test.dart' show FakeSource, MemoryStore;
 
 void main() {
   final fixture = jsonDecode(

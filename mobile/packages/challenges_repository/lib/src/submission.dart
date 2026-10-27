@@ -99,6 +99,7 @@ final class PendingChallengeAction {
     Map<String, RelayOutcome> outcomes = const {},
     this.echoed = false,
     this.indexed = false,
+    this.deliveryDefinition,
   }) : challengeRelays = List.unmodifiable(challengeRelays),
        targets = List.unmodifiable(targets),
        outcomes = Map.unmodifiable(outcomes);
@@ -111,6 +112,10 @@ final class PendingChallengeAction {
 
   /// Verified advertised challenge relays at signing time.
   final List<String> challengeRelays;
+
+  /// Authenticated later advertised-relay revision used for delivery only.
+  /// Original entry consent and signed bytes remain bound to [review].
+  final NostrEvent? deliveryDefinition;
 
   /// Challenge relays plus configured writable relays.
   final List<String> targets;
@@ -132,6 +137,9 @@ final class PendingChallengeAction {
 
 /// Observable delivery decision; no UI strings or video pipeline failures.
 enum SubmissionStatus {
+  /// Reviewed snapshots/client metadata exceed the signed-record size limit.
+  eventTooLarge,
+
   /// Consent, current rules, window, or current video revision differs.
   reviewRequired,
 
@@ -187,6 +195,8 @@ final class SubmissionResult {
 }
 
 /// Transport must associate responses with the exact published event ID.
+/// Do not await reconcile inside transport: it returns retryable while an
+/// attempt is active. Queue echoes for ingestion after transport settles.
 typedef ChallengeRelayTransport = Future<Map<String, RelayOutcome>> Function(
   String signedBody,
   List<String> targets,

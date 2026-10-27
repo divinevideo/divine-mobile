@@ -35,6 +35,15 @@ DivineVideoDraft _draft({
 void main() {
   group(DivineVideoDraft, () {
     group('canPost', () {
+      test(
+        'successful-video recovery is never offered as another video post',
+        () {
+          expect(
+            _draft().copyWith(publishStatus: PublishStatus.published).canPost,
+            isFalse,
+          );
+        },
+      );
       // #5203 hid Post for these drafts because the publish path shipped the
       // raw recording, dropping every editor layer. Publish now renders them
       // with their layers restored, so gating on a cached render would only

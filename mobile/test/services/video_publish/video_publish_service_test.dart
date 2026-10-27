@@ -2,6 +2,7 @@
 // ABOUTME: Uses mocked dependencies to test publish flow without real uploads
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -183,6 +184,35 @@ void main() {
     );
   });
 
+  group('published challenge recovery', () {
+    test(
+      'published recovery returns its exact event without uploading or signing',
+      () async {
+        final event = Event('a' * 64, 34236, [
+          ['d', 'synthetic-video'],
+        ], 'Already published');
+        final body = jsonEncode(event.toJson());
+        final draft = _createTestDraft().copyWith(
+          publishStatus: PublishStatus.published,
+          publishedVideoEvent: body,
+        );
+        final result = await service.publishVideo(draft: draft);
+        expect(
+          result,
+          isA<PublishSuccess>().having(
+            (result) => result.signedEventBody,
+            'exact signed recovery',
+            body,
+          ),
+        );
+        verifyZeroInteractions(mockUploadManager);
+        verifyZeroInteractions(mockAuthService);
+        verifyZeroInteractions(mockVideoEventPublisher);
+        verifyZeroInteractions(mockBlossomService);
+      },
+    );
+  });
+
   VideoPublishService retryService(
     Future<DivineVideoDraft> Function(DivineVideoDraft) render,
   ) => VideoPublishService(
@@ -195,7 +225,6 @@ void main() {
     rerenderDraft: render,
     onProgressChanged: ({required draftId, required progress}) {},
   );
-
   group('VideoPublishService', () {
     group('publishVideo', () {
       test('never uploads source media after a legacy render is invalidated', () async {
@@ -529,6 +558,7 @@ void main() {
             textTrackRefs: any(named: 'textTrackRefs'),
             textTrackLang: any(named: 'textTrackLang'),
             onEventSigned: any(named: 'onEventSigned'),
+            onPublishedEvent: any(named: 'onPublishedEvent'),
             onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
           ),
         ).thenAnswer((_) async {
@@ -611,6 +641,7 @@ void main() {
             textTrackRefs: any(named: 'textTrackRefs'),
             textTrackLang: any(named: 'textTrackLang'),
             onEventSigned: any(named: 'onEventSigned'),
+            onPublishedEvent: any(named: 'onPublishedEvent'),
             onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
           ),
         ).thenAnswer((invocation) async {
@@ -1167,6 +1198,7 @@ void main() {
               replyContext: any(named: 'replyContext'),
               addReplyToFeed: any(named: 'addReplyToFeed'),
               onEventSigned: any(named: 'onEventSigned'),
+              onPublishedEvent: any(named: 'onPublishedEvent'),
               onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
             ),
           );
@@ -1317,6 +1349,7 @@ void main() {
               replyContext: any(named: 'replyContext'),
               addReplyToFeed: any(named: 'addReplyToFeed'),
               onEventSigned: any(named: 'onEventSigned'),
+              onPublishedEvent: any(named: 'onPublishedEvent'),
               onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
             ),
           ).called(1);
@@ -1404,6 +1437,7 @@ void main() {
               replyContext: any(named: 'replyContext'),
               addReplyToFeed: any(named: 'addReplyToFeed'),
               onEventSigned: any(named: 'onEventSigned'),
+              onPublishedEvent: any(named: 'onPublishedEvent'),
               onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
             ),
           ).called(1);
@@ -1485,6 +1519,7 @@ void main() {
             replyContext: any(named: 'replyContext'),
             addReplyToFeed: any(named: 'addReplyToFeed'),
             onEventSigned: any(named: 'onEventSigned'),
+            onPublishedEvent: any(named: 'onPublishedEvent'),
             onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
           ),
         )..called(1);
@@ -1601,6 +1636,7 @@ void main() {
                       replyContext: any(named: 'replyContext'),
                       addReplyToFeed: any(named: 'addReplyToFeed'),
                       onEventSigned: any(named: 'onEventSigned'),
+                      onPublishedEvent: any(named: 'onPublishedEvent'),
                       onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
                     ),
                   ).captured.single
@@ -1725,6 +1761,7 @@ void main() {
               replyContext: any(named: 'replyContext'),
               addReplyToFeed: any(named: 'addReplyToFeed'),
               onEventSigned: any(named: 'onEventSigned'),
+              onPublishedEvent: any(named: 'onPublishedEvent'),
               onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
             ),
             () => mockCollaboratorInviteService.sendInvites(
@@ -1782,6 +1819,7 @@ void main() {
               allowAudioReuse: any(named: 'allowAudioReuse'),
               selectedAudio: any(named: 'selectedAudio'),
               onEventSigned: any(named: 'onEventSigned'),
+              onPublishedEvent: any(named: 'onPublishedEvent'),
               onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
             ),
           ).thenAnswer((_) async => false);
@@ -1998,6 +2036,7 @@ void main() {
             allowAudioReuse: any(named: 'allowAudioReuse'),
             selectedAudio: any(named: 'selectedAudio'),
             onEventSigned: any(named: 'onEventSigned'),
+            onPublishedEvent: any(named: 'onPublishedEvent'),
             onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
           ),
         ).thenAnswer((_) async => false);
@@ -2072,6 +2111,7 @@ void main() {
             allowAudioReuse: any(named: 'allowAudioReuse'),
             selectedAudio: any(named: 'selectedAudio'),
             onEventSigned: any(named: 'onEventSigned'),
+            onPublishedEvent: any(named: 'onPublishedEvent'),
             onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
           ),
         ).thenAnswer((_) async => true);
@@ -2180,6 +2220,7 @@ void main() {
             description: any(named: 'description'),
             hashtags: any(named: 'hashtags'),
             onEventSigned: any(named: 'onEventSigned'),
+            onPublishedEvent: any(named: 'onPublishedEvent'),
             onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
           ),
         );
@@ -2324,6 +2365,7 @@ void main() {
             allowAudioReuse: any(named: 'allowAudioReuse'),
             selectedAudio: any(named: 'selectedAudio'),
             onEventSigned: any(named: 'onEventSigned'),
+            onPublishedEvent: any(named: 'onPublishedEvent'),
             onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
           ),
         ).thenAnswer((_) async => true);
@@ -2428,6 +2470,7 @@ void main() {
             allowAudioReuse: any(named: 'allowAudioReuse'),
             selectedAudio: any(named: 'selectedAudio'),
             onEventSigned: any(named: 'onEventSigned'),
+            onPublishedEvent: any(named: 'onPublishedEvent'),
             onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
           ),
         ).thenAnswer((_) async => true);
@@ -3092,6 +3135,7 @@ void main() {
             textTrackRefs: any(named: 'textTrackRefs'),
             textTrackLang: any(named: 'textTrackLang'),
             onEventSigned: any(named: 'onEventSigned'),
+            onPublishedEvent: any(named: 'onPublishedEvent'),
             onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
             scheduledAt: any(named: 'scheduledAt'),
             onScheduledEventSigned: any(named: 'onScheduledEventSigned'),
@@ -3138,6 +3182,7 @@ void main() {
             textTrackRefs: any(named: 'textTrackRefs'),
             textTrackLang: any(named: 'textTrackLang'),
             onEventSigned: any(named: 'onEventSigned'),
+            onPublishedEvent: any(named: 'onPublishedEvent'),
             onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
             scheduledAt: captureAny(named: 'scheduledAt'),
             onScheduledEventSigned: any(named: 'onScheduledEventSigned'),
@@ -3436,6 +3481,7 @@ void main() {
               textTrackRefs: any(named: 'textTrackRefs'),
               textTrackLang: any(named: 'textTrackLang'),
               onEventSigned: any(named: 'onEventSigned'),
+              onPublishedEvent: any(named: 'onPublishedEvent'),
               onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
               scheduledAt: any(named: 'scheduledAt'),
               onScheduledEventSigned: any(named: 'onScheduledEventSigned'),
@@ -3623,6 +3669,7 @@ void _stubPublishVideoEventThrows(
       textTrackRefs: any(named: 'textTrackRefs'),
       textTrackLang: any(named: 'textTrackLang'),
       onEventSigned: any(named: 'onEventSigned'),
+      onPublishedEvent: any(named: 'onPublishedEvent'),
       onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
       scheduledAt: any(named: 'scheduledAt'),
       onScheduledEventSigned: any(named: 'onScheduledEventSigned'),
@@ -3671,6 +3718,7 @@ Future<bool> _verifyPublishVideoEvent(
   textTrackRefs: textTrackRefs,
   textTrackLang: textTrackLang,
   onEventSigned: any(named: 'onEventSigned'),
+  onPublishedEvent: any(named: 'onPublishedEvent'),
   onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
 );
 
@@ -3777,6 +3825,7 @@ void _setupSuccessfulPublish({
       textTrackRefs: any(named: 'textTrackRefs'),
       textTrackLang: any(named: 'textTrackLang'),
       onEventSigned: any(named: 'onEventSigned'),
+      onPublishedEvent: any(named: 'onPublishedEvent'),
       onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
     ),
   ).thenAnswer((_) async => true);

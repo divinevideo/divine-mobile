@@ -8,6 +8,33 @@ import 'package:openvine/services/media_availability_checker.dart';
 
 void main() {
   group(MediaAvailabilityChecker, () {
+    for (final code in [200, 204, 302, 401, 403, 404, 500]) {
+      test('positive availability requires a successful HEAD: $code', () async {
+        final checker = MediaAvailabilityChecker(
+          client: MockClient((request) async {
+            expect(request.method, 'HEAD');
+            expect(request.followRedirects, isFalse);
+            return http.Response('', code);
+          }),
+        );
+        expect(
+          await checker.isConfirmedAvailable(
+            'https://media.example.test/video',
+          ),
+          code >= 200 && code < 300,
+        );
+      });
+    }
+    test('unknown media cannot grant positive availability', () async {
+      final checker = MediaAvailabilityChecker(
+        client: MockClient((_) async => throw http.ClientException('offline')),
+      );
+      expect(
+        await checker.isConfirmedAvailable('https://media.example.test/video'),
+        isFalse,
+      );
+      expect(await checker.isConfirmedAvailable(''), isFalse);
+    });
     group('isConfirmedMissing', () {
       test('returns true when HEAD returns 404', () async {
         final client = MockClient((request) async {

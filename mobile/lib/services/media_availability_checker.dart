@@ -17,6 +17,26 @@ class MediaAvailabilityChecker {
 
   final http.Client? _injectedClient;
 
+  /// Positive, short-lived availability evidence. A missing response, access
+  /// challenge, redirect, or error remains unknown and cannot grant playback.
+  Future<bool> isConfirmedAvailable(String videoUrl) async {
+    if (videoUrl.isEmpty) return false;
+    final client = _injectedClient ?? http.Client();
+    try {
+      final request = http.Request('HEAD', Uri.parse(videoUrl))
+        ..followRedirects = false;
+      final response = await client
+          .send(request)
+          .timeout(const Duration(seconds: 8));
+      await response.stream.drain<void>().timeout(const Duration(seconds: 8));
+      return response.statusCode >= 200 && response.statusCode < 300;
+    } on Exception {
+      return false;
+    } finally {
+      if (_injectedClient == null) client.close();
+    }
+  }
+
   /// Returns `true` only when a HEAD request to [videoUrl] returns a hard
   /// 404. Every other status — including 401 and 403 — and any network failure
   /// return `false`, so the caller must treat the failure as transient and keep
