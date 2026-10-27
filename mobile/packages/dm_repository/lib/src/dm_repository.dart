@@ -5259,6 +5259,23 @@ class DmRepository {
             ),
           );
         } on FormatException {
+          // Every account on this device skips an id in the ledger, so the
+          // failure is final only when no other account could be the one the
+          // event was encrypted to.
+          final namesOneRecipient = nip04Event.tags.every(
+            (tag) =>
+                tag.length < 2 || tag[0] != 'p' || tag[1] == recipientPubkey,
+          );
+          if (!namesOneRecipient ||
+              (!isSentByMe && recipientPubkey != ownerPubkey)) {
+            Log.debug(
+              'Skipped NIP-04 event ${nip04Event.id} from '
+              '${pubkeyForLogs(nip04Event.pubkey)}: it does not decrypt under '
+              "this account's key and names another recipient",
+              category: LogCategory.system,
+            );
+            return;
+          }
           // The key is on this device, so a retry would fail the same way.
           // Remote signers stay retryable below: their failure can be an
           // outage (#8712).

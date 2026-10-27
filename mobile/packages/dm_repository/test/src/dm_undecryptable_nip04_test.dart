@@ -59,6 +59,8 @@ const _peerPrivateKey =
     '7f4c11a9b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d';
 const _nextAccountPrivateKey =
     '2e3d4c5b6a79887766554433221100ffeeddccbbaa99887766554433221100f2';
+const _otherRecipientPrivateKey =
+    '3f4e5d6c7b8a99887766554433221100ffeeddccbbaa99887766554433221103';
 const _payloadForAnotherRecipient =
     'frkb1N4rnki0zNjn4gnQKSbcUEcgY2X8lgN8zk+MT4qUxMB2IIlUH9dURh0H014W'
     '?iv=KR5RbN4CZE7tdq9XxeeLsA==';
@@ -66,11 +68,14 @@ const _readableId =
     'c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3';
 const _unreadableId =
     'd4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4';
+const _sharedId =
+    'e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5';
 
 void main() {
   group('a kind 4 the local key cannot decrypt', () {
     final ownerPubkey = getPublicKey(_ownerPrivateKey);
     final peerPubkey = getPublicKey(_peerPrivateKey);
+    final otherRecipientPubkey = getPublicKey(_otherRecipientPrivateKey);
     final conversationId = DmRepository.computeConversationId(
       [ownerPubkey, peerPubkey]..sort(),
     );
@@ -81,17 +86,20 @@ void main() {
     late _HeldProcessedGiftWrapsDao ledger;
     late DmRepository repository;
 
-    Event kind4(String id, String content) => Event.fromJson({
-      'id': id,
-      'pubkey': peerPubkey,
-      'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000 - 60,
-      'kind': EventKind.directMessage,
-      'tags': [
-        ['p', ownerPubkey],
-      ],
-      'content': content,
-      'sig': '',
-    });
+    Event kind4(String id, String content, {List<List<String>>? tags}) =>
+        Event.fromJson({
+          'id': id,
+          'pubkey': peerPubkey,
+          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000 - 60,
+          'kind': EventKind.directMessage,
+          'tags':
+              tags ??
+              [
+                ['p', ownerPubkey],
+              ],
+          'content': content,
+          'sig': '',
+        });
 
     String readablePayload() => NIP04.encrypt(
       'hello from the peer',
@@ -189,6 +197,44 @@ void main() {
 
       expect(await recorded(_unreadableId), isTrue);
     });
+
+    // The ledger is shared by every account on the device, and the account
+    // this kind 4 was encrypted to may be one of them.
+    for (final (order, tags) in [
+      (
+        'the other recipient first',
+        [
+          ['p', otherRecipientPubkey],
+          ['p', ownerPubkey],
+        ],
+      ),
+      (
+        'this account first',
+        [
+          ['p', ownerPubkey],
+          ['p', otherRecipientPubkey],
+        ],
+      ),
+    ]) {
+      test(
+        'is not recorded when it also names another recipient, $order',
+        () async {
+          final forOtherRecipient = NIP04.encrypt(
+            'for the other recipient',
+            NIP04.getAgreement(_peerPrivateKey),
+            otherRecipientPubkey,
+          );
+          relay
+            ..add(kind4(_sharedId, forOtherRecipient, tags: tags))
+            // Kind 4s are handled one at a time, so once this one is stored
+            // the first has been handled too.
+            ..add(kind4(_readableId, readablePayload()));
+          await handled(_readableId);
+
+          expect(await recorded(_sharedId), isFalse);
+        },
+      );
+    }
 
     test(
       'is not recorded for an account that switched away while the event '
