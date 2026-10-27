@@ -1226,6 +1226,9 @@ void main() {
           WidgetTester tester, {
           required bool isRead,
           bool isDismissed = false,
+          List<DmConversation> conversations = const [],
+          List<DmConversation>? visibleConversations,
+          InboxFilter filter = InboxFilter.all,
         }) async {
           final request = DmConversation(
             id: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
@@ -1242,6 +1245,9 @@ void main() {
             buildSubject(
               state: ConversationListState(
                 status: ConversationListStatus.loaded,
+                conversations: conversations,
+                visibleConversations: visibleConversations ?? conversations,
+                filter: filter,
                 requestConversations: isDismissed ? const [] : [request],
                 dismissedRequestConversations: isDismissed
                     ? [request]
@@ -1286,6 +1292,56 @@ void main() {
             expect(
               await pumpBannerLabel(tester, isRead: false, isDismissed: true),
               equals(l10n.inboxMessageRequestsTitle),
+            );
+          },
+        );
+
+        testWidgets(
+          'counts unread requests above the conversation list',
+          (tester) async {
+            final conversation = DmConversation(
+              id: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+              participantPubkeys: const [currentPubkey, otherPubkey],
+              isGroup: false,
+              createdAt: nowUnix,
+              lastMessageContent: 'Hello',
+              lastMessageTimestamp: nowUnix,
+            );
+
+            final l10n = lookupAppLocalizations(const Locale('en'));
+            expect(
+              await pumpBannerLabel(
+                tester,
+                isRead: false,
+                conversations: [conversation],
+              ),
+              equals(l10n.inboxMessageRequestsUnreadSemanticLabel(1)),
+            );
+          },
+        );
+
+        testWidgets(
+          'counts unread requests when the filter hides every conversation',
+          (tester) async {
+            final conversation = DmConversation(
+              id: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+              participantPubkeys: const [currentPubkey, otherPubkey],
+              isGroup: false,
+              createdAt: nowUnix,
+              lastMessageContent: 'Hello',
+              lastMessageTimestamp: nowUnix,
+            );
+
+            final l10n = lookupAppLocalizations(const Locale('en'));
+            expect(
+              await pumpBannerLabel(
+                tester,
+                isRead: false,
+                conversations: [conversation],
+                visibleConversations: const [],
+                filter: InboxFilter.unread,
+              ),
+              equals(l10n.inboxMessageRequestsUnreadSemanticLabel(1)),
             );
           },
         );
