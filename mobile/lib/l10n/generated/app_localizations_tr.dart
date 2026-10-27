@@ -14499,7 +14499,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get challengeRules => 'Current rules';
 
   @override
-  String get challengeDeadline => 'Deadline (UTC)';
+  String challengeDeadline(String deadline) {
+    return 'Deadline (UTC): $deadline';
+  }
 
   @override
   String get challengeOwner => 'Signing account';

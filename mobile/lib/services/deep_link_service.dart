@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:app_links/app_links.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/features/challenges/challenge_link.dart';
+import 'package:openvine/features/challenges/challenge_test_build.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/people_list_owner.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
@@ -249,7 +250,8 @@ class DeepLinkService {
       }
 
       final pathSegments = uri.pathSegments;
-      if (pathSegments.length == 2 &&
+      if (challengesTestEnabled &&
+          pathSegments.length == 2 &&
           pathSegments.first == 'challenges' &&
           (host == 'divine.video' || host == 'www.divine.video') &&
           ChallengeLink.parse(pathSegments[1]) != null) {
@@ -509,7 +511,8 @@ class DeepLinkService {
 
   static DeepLink _parseCustomSchemeAppRoute(Uri uri) {
     final segments = uri.pathSegments;
-    if (segments.length == 2 &&
+    if (challengesTestEnabled &&
+        segments.length == 2 &&
         segments.first == 'challenges' &&
         ChallengeLink.parse(segments[1]) != null) {
       return DeepLink(

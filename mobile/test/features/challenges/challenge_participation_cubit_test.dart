@@ -1,10 +1,22 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:challenges_repository/challenges_repository.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/features/challenges/challenge_participation_cubit.dart';
+import 'package:openvine/observability/reportable_error.dart';
 
 import '../../../packages/challenges_repository/test/harness.dart';
+
+class _ErrorObserver extends BlocObserver {
+  final errors = <Object>[];
+  @override
+  void onError(BlocBase<dynamic> bloc, Object error, StackTrace stackTrace) {
+    super.onError(bloc, error, stackTrace);
+    errors.add(error);
+  }
+}
 
 void main() {
   late Harness h;
@@ -26,6 +38,97 @@ void main() {
   });
   tearDown(() => cubit.close());
   group('challenge_participation_cubit', () {
+    for (final error in <Object>[
+      const SubmissionException(SubmissionStatus.ownerChanged),
+      TimeoutException('Synthetic read timed out'),
+      StateError('Synthetic invariant'),
+      RangeError('Synthetic range'),
+      TypeError(),
+    ]) {
+      test(
+        'reports ${error.runtimeType} with the existing classification',
+        () async {
+          final originalObserver = Bloc.observer;
+          final observer = _ErrorObserver();
+          Bloc.observer = observer;
+          addTearDown(() {
+            Bloc.observer = originalObserver;
+          });
+          final observed = ChallengeParticipationCubit(
+            coordinate: cubit.coordinate,
+            submissions: h.repository,
+            refresh: () async => throw error,
+            loadCandidates: cubit.loadCandidates,
+            exactVideo: cubit.exactVideo,
+            clientTags: cubit.clientTags,
+            prepareRecording: cubit.prepareRecording,
+            handoffs: cubit.handoffs,
+            reviewPublished: cubit.reviewPublished,
+          );
+          addTearDown(observed.close);
+          await observed.load();
+          expect(observer.errors, hasLength(1));
+          if (error is StateError ||
+              error is TypeError ||
+              error is RangeError) {
+            expect(
+              observer.errors.single,
+              isA<Reportable<Object>>().having(
+                (e) => e.unwrap(),
+                'original invariant',
+                same(error),
+              ),
+            );
+          } else {
+            expect(observer.errors.single, same(error));
+            expect(observer.errors.single, isNot(isA<ReportableError>()));
+          }
+          expect(
+            observed.state.status,
+            error is SubmissionException
+                ? error.status
+                : SubmissionStatus.readUnavailable,
+          );
+          expect(observed.state.reviewPreviewAllowed, isFalse);
+          expect(h.signatures, 0);
+        },
+      );
+    }
+    test('queued renewal immediately revokes preview permission', () async {
+      await cubit.selectVideo(h.video.id);
+      final review = cubit.state.review;
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      final other = ChallengeParticipationCubit(
+        coordinate: cubit.coordinate,
+        submissions: h.repository,
+        refresh: () async {
+          entered.complete();
+          await release.future;
+          return cubit.refresh();
+        },
+        loadCandidates: cubit.loadCandidates,
+        exactVideo: cubit.exactVideo,
+        clientTags: cubit.clientTags,
+        prepareRecording: cubit.prepareRecording,
+        handoffs: cubit.handoffs,
+        reviewPublished: cubit.reviewPublished,
+      );
+      addTearDown(other.close);
+      final blocked = other.load();
+      await entered.future;
+      final renewal = cubit.refreshReview();
+      try {
+        expect(cubit.state.busy, isTrue);
+        expect(cubit.state.reviewPreviewAllowed, isFalse);
+        expect(cubit.state.review, same(review));
+        expect(h.signatures, 0);
+      } finally {
+        release.complete();
+        await blocked;
+        await renewal;
+      }
+    });
     test(
       'selection needs review; retry and restart retain exact signed action',
       () async {

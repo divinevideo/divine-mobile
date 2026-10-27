@@ -5,6 +5,7 @@ import 'package:challenge_protocol/challenge_protocol.dart';
 import 'package:challenges_repository/challenges_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:models/models.dart' show VideoEvent;
+import 'package:openvine/observability/reportable_error.dart';
 
 class ChallengeParticipationState {
   const ChallengeParticipationState({
@@ -17,6 +18,8 @@ class ChallengeParticipationState {
     this.candidates = const [],
     this.handoffs = const [],
     this.picking = false,
+    this.reviewPreviewAllowed = false,
+    this.previewGeneration = 0,
   });
   final NostrEvent? playing;
   final bool busy;
@@ -27,6 +30,8 @@ class ChallengeParticipationState {
   final List<VideoEvent> candidates;
   final List<String> handoffs;
   final bool picking;
+  final bool reviewPreviewAllowed;
+  final int previewGeneration;
 }
 
 /// Serializes UI operations, including echo ingestion after active transport.
@@ -66,6 +71,8 @@ class ChallengeParticipationCubit extends Cubit<ChallengeParticipationState> {
     List<VideoEvent>? candidates,
     List<String>? recovered,
     bool picking = false,
+    bool reviewPreviewAllowed = false,
+    int? previewGeneration,
   }) {
     if (isClosed) return;
     emit(
@@ -79,20 +86,42 @@ class ChallengeParticipationCubit extends Cubit<ChallengeParticipationState> {
         candidates: candidates ?? state.candidates,
         handoffs: recovered ?? state.handoffs,
         picking: picking,
+        reviewPreviewAllowed: reviewPreviewAllowed,
+        previewGeneration: previewGeneration ?? state.previewGeneration,
       ),
     );
   }
 
-  Future<void> _run(Future<void> Function() work) {
+  Future<void> _run(
+    Future<void> Function() work, {
+    bool keepReviewOnFailure = false,
+  }) {
     final next = (_queues[submissions] ?? Future<void>.value()).then((_) async {
       if (isClosed) return;
       _set(busy: true, review: state.review, picking: state.picking);
       try {
         await work();
-      } on SubmissionException catch (error) {
-        _set(status: error.status);
-      } on Object {
-        _set(status: SubmissionStatus.readUnavailable);
+      } on SubmissionException catch (error, stackTrace) {
+        if (isClosed) return;
+        addError(error, stackTrace);
+        _set(
+          status: error.status,
+          review: keepReviewOnFailure ? state.review : null,
+        );
+      } on Object catch (error, stackTrace) {
+        if (isClosed) return;
+        addError(
+          asReportableError(
+                error,
+                context: 'ChallengeParticipationCubit._run',
+              ) ??
+              error,
+          stackTrace,
+        );
+        _set(
+          status: SubmissionStatus.readUnavailable,
+          review: keepReviewOnFailure ? state.review : null,
+        );
       }
     });
     _queues[submissions] = next;
@@ -142,10 +171,52 @@ class ChallengeParticipationCubit extends Cubit<ChallengeParticipationState> {
       video: video,
       clientTags: await clientTags(),
     );
-    _set(read: read, review: review);
+    _set(read: read, review: review, reviewPreviewAllowed: true);
   });
-  Future<void> recover(String id) =>
-      _run(() async => _set(review: await reviewPublished(id)));
+  Future<void> recover(String id) => _run(
+    () async =>
+        _set(review: await reviewPublished(id), reviewPreviewAllowed: true),
+  );
+
+  /// Revalidates only the exact reviewed video; consent and signing stay in
+  /// the repository. Clear playback while its lease is renewed, then give the
+  /// view a new player generation so a transient lease gap cannot strand it.
+  Future<void> refreshReview() {
+    // Another mounted page may own the shared queue. Revoke local preview
+    // permission immediately, before waiting to fetch fresh evidence.
+    _set(busy: true, review: state.review);
+    return _run(() async {
+      final review = state.review;
+      if (review == null) return _set();
+      if (review.withdrawalEntry != null) {
+        _set(review: review);
+        return;
+      }
+      if (submissions.currentOwner() != review.owner) {
+        throw const SubmissionException(SubmissionStatus.ownerChanged);
+      }
+      final refreshVideo = submissions.refreshVideo;
+      if (refreshVideo == null) {
+        throw const SubmissionException(SubmissionStatus.readUnavailable);
+      }
+      await refreshVideo(review.video);
+      if (state.review != review) return;
+      if (submissions.currentOwner() != review.owner) {
+        throw const SubmissionException(SubmissionStatus.ownerChanged);
+      }
+      if (!submissions.canPublish(review) ||
+          !submissions.reads.isVisible(review.video) ||
+          !submissions.reads.isVisible(review.definition)) {
+        throw const SubmissionException(SubmissionStatus.blocked);
+      }
+      _set(
+        review: review,
+        reviewPreviewAllowed: true,
+        previewGeneration: state.previewGeneration + 1,
+      );
+    }, keepReviewOnFailure: true);
+  }
+
   Future<void> withdraw(String signedEntry) => _run(() async {
     final review = await submissions.prepareWithdrawal(
       entry: NostrEvent.fromJson(

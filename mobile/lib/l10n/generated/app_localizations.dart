@@ -24333,11 +24333,11 @@ abstract class AppLocalizations {
   /// **'Current rules'**
   String get challengeRules;
 
-  /// Native challenge participation test-build flow.
+  /// Challenge deadline, explicitly in UTC; deadline is formatted in the app locale.
   ///
   /// In en, this message translates to:
-  /// **'Deadline (UTC)'**
-  String get challengeDeadline;
+  /// **'Deadline (UTC): {deadline}'**
+  String challengeDeadline(String deadline);
 
   /// Native challenge participation test-build flow.
   ///

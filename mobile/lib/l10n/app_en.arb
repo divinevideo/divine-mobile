@@ -11352,9 +11352,10 @@
   "@challengeRules": {
     "description": "Native challenge participation test-build flow."
   },
-  "challengeDeadline": "Deadline (UTC)",
+  "challengeDeadline": "Deadline (UTC): {deadline}",
   "@challengeDeadline": {
-    "description": "Native challenge participation test-build flow."
+    "description": "Challenge deadline, explicitly in UTC; deadline is formatted in the app locale.",
+    "placeholders": {"deadline": {"type": "String"}}
   },
   "challengeOwner": "Signing account",
   "@challengeOwner": {

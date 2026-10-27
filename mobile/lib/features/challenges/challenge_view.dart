@@ -23,26 +23,40 @@ class _ChallengeViewState extends State<ChallengeView>
     with WidgetsBindingObserver {
   Timer? _refresh;
   String? _previewedVideo;
+  bool _foreground = true;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    _foreground = lifecycle == null || lifecycle == AppLifecycleState.resumed;
     // Policy leases expire after 30s. Rechecking also advances the deadline.
     _refresh = Timer.periodic(const Duration(seconds: 20), (_) => _reload());
   }
 
   void _reload() {
     final cubit = context.read<ChallengeParticipationCubit>();
-    if (!cubit.state.busy &&
-        cubit.state.review == null &&
-        !cubit.state.picking) {
-      unawaited(cubit.load());
+    if (_foreground && !cubit.state.busy && !cubit.state.picking) {
+      unawaited(
+        cubit.state.review == null ? cubit.load() : cubit.refreshReview(),
+      );
     }
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _reload();
+    setState(() {
+      _foreground = state == AppLifecycleState.resumed;
+      _previewedVideo = null;
+    });
+    if (_foreground) {
+      final cubit = context.read<ChallengeParticipationCubit>();
+      if (cubit.state.review != null) {
+        unawaited(cubit.refreshReview());
+      } else {
+        _reload();
+      }
+    }
   }
 
   @override
@@ -56,7 +70,10 @@ class _ChallengeViewState extends State<ChallengeView>
   Widget build(
     BuildContext context,
   ) => BlocConsumer<ChallengeParticipationCubit, ChallengeParticipationState>(
-    listenWhen: (previous, current) => previous.review != current.review,
+    listenWhen: (previous, current) =>
+        previous.review != current.review ||
+        current.busy ||
+        previous.previewGeneration != current.previewGeneration,
     listener: (_, _) => setState(() => _previewedVideo = null),
     builder: (context, state) {
       final l10n = context.l10n;
@@ -75,7 +92,7 @@ class _ChallengeViewState extends State<ChallengeView>
         ),
         body: SafeArea(
           child: RefreshIndicator(
-            onRefresh: cubit.load,
+            onRefresh: review == null ? cubit.load : cubit.refreshReview,
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
@@ -107,21 +124,48 @@ class _ChallengeViewState extends State<ChallengeView>
                   const SizedBox(height: 12),
                   SizedBox(
                     height: 220,
-                    child: ChallengePlayback(
-                      key: ValueKey(('review', review.video.id)),
-                      video: review.video,
-                      allowed: cubit.submissions.reads.isVisible,
-                      onAvailabilityChanged: (available) {
-                        if (mounted && cubit.state.review == review) {
-                          setState(
-                            () => _previewedVideo = available
-                                ? review.video.id
-                                : null,
-                          );
-                        }
-                      },
-                    ),
+                    child:
+                        !_foreground ||
+                            state.busy ||
+                            !state.reviewPreviewAllowed
+                        ? Center(child: Text(l10n.challengePreviewUnavailable))
+                        : ChallengePlayback(
+                            key: ValueKey((
+                              'review',
+                              review.video.id,
+                              state.previewGeneration,
+                            )),
+                            video: review.video,
+                            allowed: (video) =>
+                                cubit.submissions.currentOwner() ==
+                                    review.owner &&
+                                cubit.submissions.reads.isVisible(video),
+                            onAvailabilityChanged: (available) {
+                              if (mounted &&
+                                  _foreground &&
+                                  !cubit.state.busy &&
+                                  cubit.state.reviewPreviewAllowed &&
+                                  cubit.state.previewGeneration ==
+                                      state.previewGeneration &&
+                                  cubit.state.review == review) {
+                                setState(
+                                  () => _previewedVideo = available
+                                      ? review.video.id
+                                      : null,
+                                );
+                              }
+                            },
+                          ),
                   ),
+                  if (review.withdrawalEntry == null &&
+                      _previewedVideo != review.video.id)
+                    DivineButton(
+                      type: DivineButtonType.quiet,
+                      label: l10n.commonRetry,
+                      onPressed: !_foreground || state.busy
+                          ? null
+                          : cubit.refreshReview,
+                    ),
                   if (review.video.content.isNotEmpty)
                     Text(
                       review.video.content,
@@ -134,7 +178,12 @@ class _ChallengeViewState extends State<ChallengeView>
                   ),
                   Text(review.definition.content),
                   Text(
-                    '${l10n.challengeDeadline}: ${DateFormat.yMMMd().add_Hm().format(DateTime.fromMillisecondsSinceEpoch((parseChallengeEvent(review.definition).value! as ChallengeDefinition).end * 1000, isUtc: true))}',
+                    _deadline(
+                      context,
+                      (parseChallengeEvent(review.definition).value!
+                              as ChallengeDefinition)
+                          .end,
+                    ),
                   ),
                   Text(
                     review.withdrawalEntry == null
@@ -164,9 +213,13 @@ class _ChallengeViewState extends State<ChallengeView>
                         ? l10n.challengeAgree
                         : l10n.challengeWithdrawConfirm,
                     onPressed:
-                        state.busy ||
+                        !_foreground ||
+                            state.busy ||
                             (review.withdrawalEntry == null &&
-                                (_previewedVideo != review.video.id ||
+                                (!state.reviewPreviewAllowed ||
+                                    cubit.submissions.currentOwner() !=
+                                        review.owner ||
+                                    _previewedVideo != review.video.id ||
                                     !cubit.submissions.reads.isVisible(
                                       review.video,
                                     )))
@@ -221,7 +274,7 @@ class _ChallengeViewState extends State<ChallengeView>
                     const SizedBox(height: 8),
                     Text(challengeLifecycleText(l10n, view!.state)),
                     Text(
-                      '${l10n.challengeDeadline}: ${DateFormat.yMMMd().add_Hm().format(DateTime.fromMillisecondsSinceEpoch(definition.end * 1000, isUtc: true))}',
+                      _deadline(context, definition.end),
                     ),
                     const SizedBox(height: 20),
                     Text(
@@ -434,3 +487,12 @@ String challengeStatusText(AppLocalizations l10n, SubmissionStatus status) =>
       SubmissionStatus.eventTooLarge => l10n.challengeTooLarge,
       _ => l10n.challengeFailed,
     };
+
+String _deadline(BuildContext context, int end) =>
+    context.l10n.challengeDeadline(
+      DateFormat.yMMMd(Localizations.localeOf(context).toLanguageTag())
+          .add_Hm()
+          .format(
+            DateTime.fromMillisecondsSinceEpoch(end * 1000, isUtc: true),
+          ),
+    );

@@ -23,9 +23,11 @@ import 'package:openvine/services/upload_manager.dart';
 import 'package:openvine/services/video_event_publisher.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
 import 'package:openvine/utils/path_resolver.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 import '../../../packages/challenges_repository/test/synthetic.dart';
+import '../../mocks/mock_path_provider_platform.dart';
 
 class _Auth extends Mock implements AuthService {}
 
@@ -56,6 +58,24 @@ class _HeldDatabase extends AppDatabase {
 
 void main() {
   group('successful challenge video independent completion', () {
+    late Directory ownedRoot;
+    late Directory documents;
+    late PathProviderPlatform originalPathProvider;
+    setUp(() async {
+      ownedRoot = await Directory.systemTemp.createTemp(
+        'challenge-terminal-fixture-',
+      );
+      documents = await Directory('${ownedRoot.path}/documents').create();
+      originalPathProvider = PathProviderPlatform.instance;
+      PathProviderPlatform.instance = MockPathProviderPlatform()
+        ..setApplicationDocumentsPath(documents.path);
+      resetCachedDocumentsPath();
+    });
+    tearDown(() async {
+      PathProviderPlatform.instance = originalPathProvider;
+      resetCachedDocumentsPath();
+      await ownedRoot.delete(recursive: true);
+    });
     test(
       'direct terminal DAO writes refresh the visible draft library',
       () async {
