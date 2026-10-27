@@ -963,10 +963,7 @@ class VideoEditorRenderService {
         // fallback instead of filtering again by the kind marker.
         excludeDetachedClips: imageLayerOverride == null,
         audioEnergies: audioEnergies,
-        layerFrames: await recTimerLayerFrames(
-          capturedLayers,
-          editorDuration: timelineMap.editorDuration,
-        ),
+        layerFrames: await recTimerLayerFrames(capturedLayers, timelineMap),
       ),
       blur: parameters?.blur,
       colorFilters: buildColorFilters(
@@ -1250,10 +1247,9 @@ class VideoEditorRenderService {
     final keyframeClock = item.layer.divineKeyframeClockForExport(
       timelineMap: timelineMap,
     );
-    // A REC timer brings its own frames (see recTimerLayerFrames).
     final shown = frames ?? item.frames;
     final split = shown.length > 1;
-    final layers = <ImageLayer>[
+    return recTimerLayers(frames, [
       for (final (index, frame) in shown.indexed)
         ImageLayer(
           image: EditorLayerImage.memory(frame.bytes),
@@ -1287,9 +1283,7 @@ class VideoEditorRenderService {
                     timelineMap.outputDuration
               : null,
         ),
-    ];
-    // ...and plays them from one layer (see recTimerSequence).
-    return frames == null ? layers : [recTimerSequence(layers)];
+    ]);
   }
 
   /// Builds the [ColorFilter]s applied to the exported video from the tune

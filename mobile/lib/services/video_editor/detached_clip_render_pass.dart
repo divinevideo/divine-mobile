@@ -190,10 +190,7 @@ class DetachedClipRenderPass {
         // raster fallback for unreadable media and must stay visible.
         excludeDetachedClips: false,
         audioEnergies: audioEnergies,
-        layerFrames: await recTimerLayerFrames(
-          partitioned.above,
-          editorDuration: timelineMap.editorDuration,
-        ),
+        layerFrames: await recTimerLayerFrames(partitioned.above, timelineMap),
       ),
       imageBytesWithCropping: true,
       qualityConfig: VideoQualityConfig.custom(

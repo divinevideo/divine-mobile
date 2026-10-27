@@ -9,6 +9,7 @@ import 'dart:ui' show Size;
 import 'package:clock/clock.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
+import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/utils/rec_timer_paint.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
@@ -42,11 +43,13 @@ const _paintBatch = 24;
 /// typewriter text, so the timer reads 00:00, 00:03, 00:06 and so on
 /// wherever it sits on the timeline.
 ///
-/// [editorDuration] is where a timer without an end stops counting.
+/// A timer without an end stops counting where [timelineMap]'s editor
+/// timeline ends.
 Future<Map<String, List<ExportedLayerFrame>>> recTimerLayerFrames(
-  List<ExportedLayer> layers, {
-  required Duration editorDuration,
-}) async {
+  List<ExportedLayer> layers,
+  TransitionTimelineMap timelineMap,
+) async {
+  final editorDuration = timelineMap.editorDuration;
   final frames = <String, List<ExportedLayerFrame>>{};
   for (final item in layers) {
     final data = InfoStickerData.of(item.layer);
@@ -63,6 +66,13 @@ Future<Map<String, List<ExportedLayerFrame>>> recTimerLayerFrames(
   }
   return frames;
 }
+
+/// [layers] as they are, or, when [frames] holds a REC timer's frames, as
+/// the one layer [recTimerSequence] plays them from.
+List<ImageLayer> recTimerLayers(
+  List<ExportedLayerFrame>? frames,
+  List<ImageLayer> layers,
+) => frames == null ? layers : [recTimerSequence(layers)];
 
 /// The image layers of one REC timer — a layer for each frame, timed one
 /// after the other — as one layer that plays them as a frame sequence.

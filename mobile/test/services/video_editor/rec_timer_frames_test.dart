@@ -5,10 +5,13 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart' show SizedBox;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
+import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/rec_timer_frames.dart';
 import 'package:openvine/utils/rec_timer_paint.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
 /// A capture of [size] logical pixels at a pixel ratio of two.
 Future<ExportedLayer> _captured(Layer layer, ui.Size size) async {
@@ -141,7 +144,16 @@ void main() {
 
         final frames = await recTimerLayerFrames(
           [timer, other],
-          editorDuration: const Duration(milliseconds: 90),
+          TransitionTimelineMap.fromClips([
+            DivineVideoClip(
+              id: 'clip',
+              video: EditorVideo.file('/clip.mp4'),
+              duration: const Duration(milliseconds: 90),
+              recordedAt: DateTime(2026),
+              targetAspectRatio: .vertical,
+              originalAspectRatio: 9 / 16,
+            ),
+          ]),
         );
 
         expect(frames.keys, equals(['timer']));
