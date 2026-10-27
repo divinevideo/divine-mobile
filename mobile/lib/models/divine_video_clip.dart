@@ -1243,9 +1243,6 @@ class DivineVideoClip {
     }
   }
 
-  /// Parses the persisted shape mask, degrading to `null` when it can't be
-  /// read. Same rationale as [_transitionFromJson]: the clip then shows its
-  /// whole frame rather than taking the draft load down with it.
   /// The keyframes stored under `keyframes`, sorted by time. One that does
   /// not parse is dropped with the rest, leaving the clip still: half a
   /// motion would move it somewhere nobody set.
@@ -1267,6 +1264,9 @@ class DivineVideoClip {
     }
   }
 
+  /// Parses the persisted shape mask, degrading to `null` when it can't be
+  /// read. Same rationale as [_transitionFromJson]: the clip then shows its
+  /// whole frame rather than taking the draft load down with it.
   static LayerMask? _maskFromJson(Object? raw) {
     if (raw is! Map) return null;
     try {
