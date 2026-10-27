@@ -12,6 +12,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/minor_account_review_status.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/router/router.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/auth/welcome_screen.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
@@ -97,6 +98,7 @@ void main() {
       routes: [
         for (final path in <String>[
           WelcomeScreen.path,
+          RoutePaths.shortLink,
           VideoFeedPage.pathForIndex(0),
           MinorAccountReviewScreen.path,
           MinorAccountReviewLoadingScreen.path,
@@ -136,6 +138,8 @@ void main() {
   // signerCallback and unknown return null and already fell through to the
   // gates.
   const links = <(String, String)>[
+    ('https://divine.video/l/Abc12345', '/l/Abc12345'),
+    ('https://www.divine.video/l/Abc12345', '/l/Abc12345'),
     ('https://divine.video/profile/$_npub', '/profile/$_npub'),
     ('https://divine.video/hashtag/art', '/hashtag/art'),
     ('https://divine.video/search/music', '/search-results/music'),
