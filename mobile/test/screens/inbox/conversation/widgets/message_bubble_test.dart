@@ -2692,6 +2692,15 @@ void main() {
               );
 
               expect(find.bySemanticsLabel(playVideo), findsNothing);
+              // No second button that does nothing when activated.
+              expect(
+                find.semantics.byPredicate(
+                  (node) =>
+                      node.getSemanticsData().flagsCollection.isButton &&
+                      !node.getSemanticsData().hasAction(SemanticsAction.tap),
+                ),
+                findsNothing,
+              );
 
               tester.semantics.tap(
                 find.semantics.byLabel(
