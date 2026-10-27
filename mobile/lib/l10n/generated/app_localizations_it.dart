@@ -9932,6 +9932,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'Arrotondati';
 
   @override
+  String get videoEditorShapeMaskBackgroundLabel => 'Sfondo';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Rilevamento automatico';
 
   @override

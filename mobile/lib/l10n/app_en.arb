@@ -6956,6 +6956,10 @@
   "@videoEditorShapeMaskCornersRound": {
     "description": "Label under the right end of the corners slider on the shape mask screen: fully rounded corners."
   },
+  "videoEditorShapeMaskBackgroundLabel": "Background",
+  "@videoEditorShapeMaskBackgroundLabel": {
+    "description": "Name of the row of colors on the shape mask screen of a timeline clip: the color that fills the frame around the shape, where the clip is hidden. Shown beside the colors, at most about 112dp wide."
+  },
   "videoEditorChromaKeyAutoDetect": "Auto-detect",
   "videoEditorChromaKeyPresetGreen": "Green",
   "videoEditorChromaKeyPresetBlue": "Blue",

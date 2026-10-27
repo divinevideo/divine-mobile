@@ -1,7 +1,7 @@
-// ABOUTME: Covers the preview frame with black around a timeline clip's shape
-// ABOUTME: mask while that clip plays, as the export does.
+// ABOUTME: Covers the preview frame around a timeline clip's shape mask, in
+// ABOUTME: the clip's mask background color, while that clip plays, as the
+// ABOUTME: export does.
 
-import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -57,7 +57,8 @@ class VideoEditorClipMaskPreview extends StatelessWidget {
   }
 }
 
-/// The black cover of the clip masks [playTime] is in, drawn over its box.
+/// The cover of the clip masks [playTime] is in, drawn over its box in each
+/// clip's mask background color.
 @visibleForTesting
 class ClipMaskCover extends StatefulWidget {
   /// Creates a [ClipMaskCover].
@@ -83,7 +84,7 @@ class ClipMaskCover extends StatefulWidget {
 
 class _ClipMaskCoverState extends State<ClipMaskCover> {
   List<ClipMaskWindow> _windows = const [];
-  List<(LayerMask, double)> _covers = const [];
+  List<(LayerMask, Color, double)> _covers = const [];
 
   @override
   void initState() {
@@ -117,19 +118,15 @@ class _ClipMaskCoverState extends State<ClipMaskCover> {
   }
 
   List<ClipMaskWindow> _computeWindows() {
-    final live = widget.liveMask?.value;
-    return clipMaskWindows(
-      widget.clips,
-      masks: live == null ? const {} : {live.clipId: live.mask},
-    );
+    return clipMaskWindows(widget.clips, live: widget.liveMask?.value);
   }
 
-  List<(LayerMask, double)> _computeCovers() {
+  List<(LayerMask, Color, double)> _computeCovers() {
     final time = widget.playTime.value;
     return [
       for (final window in _windows)
         if (window.weightAt(time) case final weight when weight > 0)
-          (window.mask, weight),
+          (window.mask, window.color, weight),
     ];
   }
 
@@ -153,15 +150,16 @@ class _ClipMaskCoverState extends State<ClipMaskCover> {
       child: Stack(
         fit: .expand,
         children: [
-          for (final (mask, weight) in _covers)
+          for (final (mask, color, weight) in _covers)
             Opacity(
               opacity: weight.clamp(0.0, 1.0),
               child: LayerMaskBox(
                 // The cover is what the mask hides, so it is the mask turned
                 // inside out.
                 mask: mask.copyWith(invert: !mask.invert),
-                // The export covers with black too, whatever the appearance.
-                child: const ColoredBox(color: VineTheme.backgroundColor),
+                // The clip's own color, which the export covers with too,
+                // whatever the appearance.
+                child: ColoredBox(color: color),
               ),
             ),
         ],

@@ -9358,6 +9358,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => '둥글게';
 
   @override
+  String get videoEditorShapeMaskBackgroundLabel => '배경';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => '자동 감지';
 
   @override

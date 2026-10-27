@@ -4192,6 +4192,7 @@
   "videoEditorShapeMaskCornersLabel": "ማዕዘኖች",
   "videoEditorShapeMaskCornersSquare": "ካሬ",
   "videoEditorShapeMaskCornersRound": "የተጠጋጋ",
+  "videoEditorShapeMaskBackgroundLabel": "ዳራ",
   "videoEditorChromaKeyAutoDetect": "በራስ-ሰር ለይ",
   "videoEditorChromaKeyPresetGreen": "አረንጓዴ",
   "videoEditorChromaKeyPresetBlue": "ሰማያዊ",

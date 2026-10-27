@@ -9814,6 +9814,9 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'گول';
 
   @override
+  String get videoEditorShapeMaskBackgroundLabel => 'پس منظر';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'خودکار شناخت';
 
   @override

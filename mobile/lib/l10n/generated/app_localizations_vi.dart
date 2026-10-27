@@ -9773,6 +9773,9 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'Bo tròn';
 
   @override
+  String get videoEditorShapeMaskBackgroundLabel => 'Nền';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Tự động nhận diện';
 
   @override

@@ -3132,6 +3132,7 @@
   "videoEditorShapeMaskCornersLabel": "Mga sulok",
   "videoEditorShapeMaskCornersSquare": "Kuwadrado",
   "videoEditorShapeMaskCornersRound": "Pabilog",
+  "videoEditorShapeMaskBackgroundLabel": "Background",
   "videoEditorChromaKeyAutoDetect": "Auto-detect",
   "videoEditorChromaKeyPresetGreen": "Berde",
   "videoEditorChromaKeyPresetBlue": "Asul",

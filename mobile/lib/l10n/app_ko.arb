@@ -3651,6 +3651,7 @@
   "videoEditorShapeMaskCornersLabel": "모서리",
   "videoEditorShapeMaskCornersSquare": "각지게",
   "videoEditorShapeMaskCornersRound": "둥글게",
+  "videoEditorShapeMaskBackgroundLabel": "배경",
   "videoEditorChromaKeyAutoDetect": "자동 감지",
   "videoEditorChromaKeyPresetGreen": "초록",
   "videoEditorChromaKeyPresetBlue": "파랑",

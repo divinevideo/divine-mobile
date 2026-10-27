@@ -9902,6 +9902,9 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'Заоблени';
 
   @override
+  String get videoEditorShapeMaskBackgroundLabel => 'Фон';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Автоматично разпознаване';
 
   @override

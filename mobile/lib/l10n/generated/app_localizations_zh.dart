@@ -9257,6 +9257,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => '圆角';
 
   @override
+  String get videoEditorShapeMaskBackgroundLabel => '背景';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => '自动识别';
 
   @override

@@ -9890,6 +9890,9 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'Pabilog';
 
   @override
+  String get videoEditorShapeMaskBackgroundLabel => 'Background';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'Auto-detect';
 
   @override

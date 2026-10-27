@@ -16673,6 +16673,12 @@ abstract class AppLocalizations {
   /// **'Round'**
   String get videoEditorShapeMaskCornersRound;
 
+  /// Name of the row of colors on the shape mask screen of a timeline clip: the color that fills the frame around the shape, where the clip is hidden. Shown beside the colors, at most about 112dp wide.
+  ///
+  /// In en, this message translates to:
+  /// **'Background'**
+  String get videoEditorShapeMaskBackgroundLabel;
+
   /// No description provided for @videoEditorChromaKeyAutoDetect.
   ///
   /// In en, this message translates to:

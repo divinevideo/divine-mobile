@@ -10082,6 +10082,9 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'గుండ్రని';
 
   @override
+  String get videoEditorShapeMaskBackgroundLabel => 'నేపథ్యం';
+
+  @override
   String get videoEditorChromaKeyAutoDetect => 'ఆటో-డిటెక్ట్';
 
   @override

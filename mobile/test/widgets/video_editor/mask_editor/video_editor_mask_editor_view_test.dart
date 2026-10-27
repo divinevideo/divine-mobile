@@ -1,5 +1,6 @@
 // ABOUTME: Tests the shape mask editor: picking a shape, inverting it, moving
-// ABOUTME: and stretching it by touch, and what it closes with.
+// ABOUTME: and stretching it by touch, a clip's background color, and what it
+// ABOUTME: closes with.
 
 import 'dart:math' as math;
 
@@ -8,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/editor_mask.dart';
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor_view.dart';
+import 'package:openvine/widgets/video_editor/video_editor_color_row.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show LayerMask, LayerMaskShape;
 
@@ -21,18 +23,39 @@ void main() {
     transform: Matrix4.translationValues(100, 100, 0),
   );
 
+  const black = Color(0xFF000000);
+  const pink = Color(0xFFFF7FAF);
+
   group(VideoEditorMaskEditorView, () {
     late List<LayerMask?> changes;
+    late List<Color?> colors;
 
-    setUp(() => changes = []);
+    setUp(() {
+      changes = [];
+      colors = [];
+    });
 
-    Widget buildEditor({LayerMask? initialMask}) => testMaterialApp(
-      home: VideoEditorMaskEditorView(
-        initialMask: initialMask,
-        resolveGeometry: () => geometry,
-        canvasChanges: ValueNotifier<int>(0),
-        onChanged: changes.add,
-      ),
+    void record(MaskEditorResult result) {
+      changes.add(result.mask);
+      colors.add(result.backgroundColor);
+    }
+
+    Widget buildEditor({LayerMask? initialMask, Color? backgroundColor}) =>
+        testMaterialApp(
+          home: VideoEditorMaskEditorView(
+            initialMask: initialMask,
+            initialBackgroundColor: backgroundColor,
+            resolveGeometry: () => geometry,
+            canvasChanges: ValueNotifier<int>(0),
+            onChanged: record,
+          ),
+        );
+
+    final pinkTile = find.byWidgetPredicate(
+      (widget) =>
+          widget is VideoEditorColorTile &&
+          !widget.isCustom &&
+          widget.color == pink,
     );
 
     AppLocalizations l10nOf(WidgetTester tester) => AppLocalizations.of(
@@ -204,7 +227,7 @@ void main() {
                           initialMask: null,
                           resolveGeometry: () => geometry,
                           canvasChanges: ValueNotifier<int>(0),
-                          onChanged: changes.add,
+                          onChanged: record,
                         ),
                       ),
                     ),
@@ -232,9 +255,26 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(results, [
-          (mask: editorMaskForShape(LayerMaskShape.ellipse, boxSize: boxSize)),
+          (
+            mask: editorMaskForShape(LayerMaskShape.ellipse, boxSize: boxSize),
+            backgroundColor: null,
+          ),
           null,
         ]);
+      });
+
+      testWidgets('picks the background color of a clip', (tester) async {
+        const circle = LayerMask(shape: LayerMaskShape.ellipse);
+        await tester.pumpWidget(
+          buildEditor(initialMask: circle, backgroundColor: black),
+        );
+        await tester.pump();
+
+        await tester.tap(pinkTile);
+        await tester.pump();
+
+        expect(changes, [circle]);
+        expect(colors, [pink]);
       });
     });
 
@@ -258,23 +298,29 @@ void main() {
         expect(find.text(l10n.videoEditorShapeMaskSoftnessLabel), findsOne);
       });
 
-      testWidgets('fits the panel to its sliders, leaving no room above them', (
-        tester,
-      ) async {
+      testWidgets('fits the panel to its settings, leaving no room above '
+          'them', (tester) async {
         final panel = find.byWidgetPredicate(
           (widget) =>
               widget is SingleChildScrollView &&
               widget.scrollDirection == Axis.vertical,
         );
         final insets = <double>[];
-        for (final mask in [
-          null,
-          const LayerMask(shape: LayerMaskShape.ellipse),
-          const LayerMask(shape: LayerMaskShape.rectangle),
+        for (final (mask, withBackground) in [
+          (null, false),
+          (const LayerMask(shape: LayerMaskShape.ellipse), false),
+          (const LayerMask(shape: LayerMaskShape.rectangle), false),
+          (null, true),
+          (const LayerMask(shape: LayerMaskShape.rectangle), true),
         ]) {
           // A fresh editor each time: one keeps the mask it opened with.
           await tester.pumpWidget(const SizedBox.shrink());
-          await tester.pumpWidget(buildEditor(initialMask: mask));
+          await tester.pumpWidget(
+            buildEditor(
+              initialMask: mask,
+              backgroundColor: withBackground ? black : null,
+            ),
+          );
           await tester.pumpAndSettle();
 
           final content = find
@@ -285,7 +331,7 @@ void main() {
           );
           expect(
             tester.getSize(panel).height,
-            videoEditorMaskPanelHeight(mask),
+            videoEditorMaskPanelHeight(mask, withBackground: withBackground),
           );
           expect(scrollable.position.maxScrollExtent, 0, reason: '$mask');
           insets.add(
@@ -294,6 +340,28 @@ void main() {
         }
 
         expect(insets.toSet(), hasLength(1));
+      });
+
+      testWidgets('offers the background colors only for a clip with a '
+          'mask', (tester) async {
+        const circle = LayerMask(shape: LayerMaskShape.ellipse);
+        await tester.pumpWidget(buildEditor(initialMask: circle));
+        await tester.pump();
+        final label = l10nOf(tester).videoEditorShapeMaskBackgroundLabel;
+        expect(find.text(label), findsNothing);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpWidget(
+          buildEditor(initialMask: circle, backgroundColor: black),
+        );
+        await tester.pump();
+        expect(find.text(label), findsOne);
+
+        await tester.tap(
+          find.bySemanticsLabel(l10nOf(tester).videoEditorShapeMaskNone),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text(label), findsNothing);
       });
 
       testWidgets('offers no sliders without a mask', (tester) async {
