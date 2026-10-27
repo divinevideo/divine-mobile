@@ -10,6 +10,7 @@ import 'package:models/models.dart';
 // one (used by [ShareableUser.fromProfile]) resolves unambiguously.
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:openvine/services/auth_service.dart' hide UserProfile;
+import 'package:openvine/services/short_link_client.dart';
 import 'package:profile_repository/profile_repository.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -168,12 +169,15 @@ class VideoSharingService {
     required AuthService authService,
     required ProfileReader profileRepository,
     required DmRepository dmRepository,
+    ShortLinkClient? shortLinkClient,
   }) : _authService = authService,
        _profileRepository = profileRepository,
-       _dmRepository = dmRepository;
+       _dmRepository = dmRepository,
+       _shortLinkClient = shortLinkClient;
   final AuthService _authService;
   final ProfileReader _profileRepository;
   final DmRepository _dmRepository;
+  final ShortLinkClient? _shortLinkClient;
 
   final List<ShareableUser> _recentlySharedWith = [];
   final Map<String, DateTime> _shareHistory = {};
@@ -358,6 +362,10 @@ class VideoSharingService {
   /// returns a non-routable URL.
   String generateShareUrl(VideoEvent video) =>
       shareUrlForStableId(video.stableId);
+
+  /// Shorten only explicit external shares; protocol and DM builders stay canonical.
+  Future<String> shortenExternalUrl(String url) =>
+      _shortLinkClient?.shorten(url) ?? Future.value(url);
 
   /// Generate share text for external sharing (social media, etc.)
   ///

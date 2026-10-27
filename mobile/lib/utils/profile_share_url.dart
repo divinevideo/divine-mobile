@@ -4,6 +4,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:models/models.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
+import 'package:openvine/providers/short_link_provider.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 
 /// The URL a profile is shared under.
@@ -12,6 +13,20 @@ import 'package:openvine/utils/nostr_key_utils.dart';
 /// verifies. Anything else, including an external NIP-05, falls back to the
 /// npub profile URL without a verification lookup.
 Future<String> resolveProfileShareUrl(
+  WidgetRef ref, {
+  required String pubkey,
+  required UserProfile? profile,
+}) async {
+  final shortener = ref.read(shortLinkClientProvider);
+  final canonical = await _resolveCanonicalProfileShareUrl(
+    ref,
+    pubkey: pubkey,
+    profile: profile,
+  );
+  return shortener?.shorten(canonical) ?? canonical;
+}
+
+Future<String> _resolveCanonicalProfileShareUrl(
   WidgetRef ref, {
   required String pubkey,
   required UserProfile? profile,

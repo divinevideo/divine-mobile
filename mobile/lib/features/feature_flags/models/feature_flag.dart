@@ -4,6 +4,12 @@
 enum FeatureFlagAudience { user, internal }
 
 enum FeatureFlag {
+  shortLinksSharing(
+    'Short Links',
+    'Use permanent short URLs for external video and profile sharing. '
+        'Internal canary only; off preserves full URLs.',
+    audience: FeatureFlagAudience.internal,
+  ),
   publishingIdeas(
     'Publishing Ideas',
     'Inline title, description, and hashtag ideas.',
