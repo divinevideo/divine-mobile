@@ -5237,12 +5237,39 @@ class DmRepository {
       // Keep missing-decryptor events retryable: signer availability can
       // change without the relay event changing.
       if (signer == null && _nip04Decryptor == null) return;
-      final decryptor =
-          _nip04Decryptor ??
-          (String pubkey, String ciphertext) =>
-              signer!.decrypt(pubkey, ciphertext);
-      final plaintext = await decryptor(peerPubkey, nip04Event.content);
-      if (plaintext == null) {
+      final String? decrypted;
+      if (_nip04Decryptor == null &&
+          signer is IsolateDecryptSigner &&
+          signer.canDecryptInIsolate) {
+        try {
+          decrypted = signer.withPrivateKeyHex(
+            (privateKeyHex) => NIP04.decrypt(
+              nip04Event.content,
+              NIP04.getAgreement(privateKeyHex),
+              peerPubkey,
+            ),
+          );
+        } on FormatException {
+          // The key is on this device, so a retry would fail the same way.
+          // Remote signers stay retryable below: their failure can be an
+          // outage (#8712).
+          await _recordProcessedWrap(nip04Event.id, ownerPubkey: ownerPubkey);
+          Log.debug(
+            'Dropped NIP-04 event ${nip04Event.id} from '
+            '${pubkeyForLogs(nip04Event.pubkey)}: it does not decrypt under '
+            "this account's key",
+            category: LogCategory.system,
+          );
+          return;
+        }
+      } else {
+        final decryptor =
+            _nip04Decryptor ??
+            (String pubkey, String ciphertext) =>
+                signer!.decrypt(pubkey, ciphertext);
+        decrypted = await decryptor(peerPubkey, nip04Event.content);
+      }
+      if (decrypted == null) {
         // Keep failed decryptions retryable; a later attempt may succeed.
         Log.debug(
           'Failed to decrypt NIP-04 event ${nip04Event.id}',
@@ -5250,6 +5277,7 @@ class DmRepository {
         );
         return;
       }
+      final plaintext = decrypted;
 
       // Build participants and conversation ID
       final participants = [senderPubkey, recipientPubkey]..sort();
