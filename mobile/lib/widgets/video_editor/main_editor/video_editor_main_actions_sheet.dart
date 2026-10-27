@@ -97,6 +97,10 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
     final isStopMotion = context.select(
       (ClipEditorBloc b) => isStopMotionComposition(b.state.clips),
     );
+    final canAlignLoop = context.select(
+      (ClipEditorBloc b) =>
+          b.state.clips.isNotEmpty && !b.state.hasPendingClipOperation,
+    );
     return Padding(
       padding: const .all(16),
       child: Column(
@@ -196,17 +200,12 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
                 icon: .repeat,
                 label: context.l10n.videoEditorLoopLabel,
                 semanticLabel: context.l10n.videoEditorLoopSemanticLabel,
-                onTap:
-                    context.select(
-                      (ClipEditorBloc b) =>
-                          b.state.clips.isEmpty ||
-                          b.state.hasPendingClipOperation,
-                    )
-                    ? null
-                    : () {
+                onTap: canAlignLoop
+                    ? () {
                         Navigator.pop(context);
                         onAlignLoop();
-                      },
+                      }
+                    : null,
               ),
               _ItemButton(
                 icon: .slidersHorizontal,
@@ -316,6 +315,7 @@ class _ItemButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final enabled = onTap != null;
     return Column(
       mainAxisSize: .min,
       spacing: 8,
@@ -323,7 +323,7 @@ class _ItemButton extends StatelessWidget {
         Semantics(
           label: semanticLabel,
           button: true,
-          enabled: onTap != null,
+          enabled: enabled,
           child: GestureDetector(
             onTap: onTap,
             child: AspectRatio(
@@ -342,9 +342,9 @@ class _ItemButton extends StatelessWidget {
                 child: Center(
                   child: DivineIcon(
                     icon: icon,
-                    color: onTap == null
-                        ? context.vineColors.disabled
-                        : context.vineColors.accentPositive,
+                    color: enabled
+                        ? context.vineColors.accentPositive
+                        : context.vineColors.disabled,
                   ),
                 ),
               ),
@@ -360,9 +360,9 @@ class _ItemButton extends StatelessWidget {
               maxLines: 2,
               textAlign: .center,
               style: VineTheme.bodySmallFont(
-                color: onTap == null
-                    ? context.vineColors.disabled
-                    : context.vineColors.primaryText,
+                color: enabled
+                    ? context.vineColors.primaryText
+                    : context.vineColors.disabled,
               ),
             ),
           ),

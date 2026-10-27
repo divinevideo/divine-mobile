@@ -4107,6 +4107,7 @@
   "videoEditorShapeMaskCornersRound": "Arrotondati",
   "videoEditorShapeMaskKeyframesHint": "Aggiungi un fotogramma chiave, sposta la testina di riproduzione, poi riapri la maschera per spostare, ridimensionare, ruotare o ammorbidire la forma. Scorre da un fotogramma chiave all'altro.",
   "videoEditorShapeMaskKeyframesSemanticLabel": "Modifica i fotogrammi chiave della maschera forma",
+  "videoEditorShapeMaskBackgroundLabel": "Sfondo",
   "videoEditorChromaKeyAutoDetect": "Rilevamento automatico",
   "videoEditorChromaKeyPresetGreen": "Verde",
   "videoEditorChromaKeyPresetBlue": "Blu",
@@ -4849,10 +4850,10 @@
   "inboxConversationOptionsLabel": "Opzioni",
   "inboxConversationViewProfileButton": "Visualizza profilo",
   "inboxMessageRequestsEmpty": "Nessuna richiesta di messaggio",
-  "inboxMessageRequestsSemanticLabel": "Richieste di messaggio, {requestCount} in sospeso",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{Richieste di messaggio} =1{Richieste di messaggio, {count} non letta} many{Richieste di messaggio, {count} non lette} other{Richieste di messaggio, {count} non lette}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

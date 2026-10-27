@@ -4224,6 +4224,7 @@
   "videoEditorShapeMaskCornersRound": "Заоблени",
   "videoEditorShapeMaskKeyframesHint": "Добави ключов кадър, премести главата за възпроизвеждане, после отвори маската отново, за да преместиш, оразмериш, завъртиш или омекотиш формата. Тя се плъзга от ключов кадър към ключов кадър.",
   "videoEditorShapeMaskKeyframesSemanticLabel": "Редактирай ключовите кадри на маската с форма",
+  "videoEditorShapeMaskBackgroundLabel": "Фон",
   "videoEditorChromaKeyAutoDetect": "Автоматично разпознаване",
   "videoEditorChromaKeyPresetGreen": "Зелено",
   "videoEditorChromaKeyPresetBlue": "Синьо",
@@ -4966,10 +4967,10 @@
   "inboxConversationOptionsLabel": "Опции",
   "inboxConversationViewProfileButton": "Виж профила",
   "inboxMessageRequestsEmpty": "Няма заявки за съобщения",
-  "inboxMessageRequestsSemanticLabel": "Заявки за съобщения, {requestCount} в очакване",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{Заявки за съобщения} =1{Заявки за съобщения, {count} непрочетена} other{Заявки за съобщения, {count} непрочетени}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

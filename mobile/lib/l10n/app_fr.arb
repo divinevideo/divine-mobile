@@ -4107,6 +4107,7 @@
   "videoEditorShapeMaskCornersRound": "Arrondis",
   "videoEditorShapeMaskKeyframesHint": "Ajoute une image clé, déplace la tête de lecture, puis rouvre le masque pour déplacer, redimensionner, faire pivoter ou adoucir la forme. Elle glisse d'une image clé à l'autre.",
   "videoEditorShapeMaskKeyframesSemanticLabel": "Modifier les images clés du masque de forme",
+  "videoEditorShapeMaskBackgroundLabel": "Arrière-plan",
   "videoEditorChromaKeyAutoDetect": "Détection auto",
   "videoEditorChromaKeyPresetGreen": "Vert",
   "videoEditorChromaKeyPresetBlue": "Bleu",
@@ -4849,10 +4850,10 @@
   "inboxConversationOptionsLabel": "Options",
   "inboxConversationViewProfileButton": "Voir le profil",
   "inboxMessageRequestsEmpty": "Aucune demande de message",
-  "inboxMessageRequestsSemanticLabel": "Demandes de message, {requestCount} en attente",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{Demandes de message} =1{Demandes de message, {count} non lue} many{Demandes de message, {count} non lues} other{Demandes de message, {count} non lues}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

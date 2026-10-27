@@ -4107,6 +4107,7 @@
   "videoEditorShapeMaskCornersRound": "丸",
   "videoEditorShapeMaskKeyframesHint": "キーフレームを追加し、再生ヘッドを動かしてから、もう一度マスクを開いて図形を移動・拡大縮小・回転したり、ぼかしたりします。図形はキーフレームからキーフレームへなめらかに動きます。",
   "videoEditorShapeMaskKeyframesSemanticLabel": "シェイプマスクのキーフレームを編集",
+  "videoEditorShapeMaskBackgroundLabel": "背景",
   "videoEditorChromaKeyAutoDetect": "自動検出",
   "videoEditorChromaKeyPresetGreen": "グリーン",
   "videoEditorChromaKeyPresetBlue": "ブルー",
@@ -4849,10 +4850,10 @@
   "inboxConversationOptionsLabel": "オプション",
   "inboxConversationViewProfileButton": "プロフィールを表示",
   "inboxMessageRequestsEmpty": "メッセージリクエストはないよ",
-  "inboxMessageRequestsSemanticLabel": "メッセージリクエスト、{requestCount}件保留中",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{メッセージリクエスト} other{メッセージリクエスト、未読{count}件}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

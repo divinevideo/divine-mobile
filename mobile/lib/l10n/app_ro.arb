@@ -4107,6 +4107,7 @@
   "videoEditorShapeMaskCornersRound": "Rotunjite",
   "videoEditorShapeMaskKeyframesHint": "Adaugă un cadru cheie, mută capul de redare, apoi deschide din nou masca ca să muți, să redimensionezi, să rotești sau să estompezi forma. Forma alunecă de la un cadru cheie la altul.",
   "videoEditorShapeMaskKeyframesSemanticLabel": "Editează cadrele cheie ale măștii de formă",
+  "videoEditorShapeMaskBackgroundLabel": "Fundal",
   "videoEditorChromaKeyAutoDetect": "Detectare automată",
   "videoEditorChromaKeyPresetGreen": "Verde",
   "videoEditorChromaKeyPresetBlue": "Albastru",
@@ -4849,10 +4850,10 @@
   "inboxConversationOptionsLabel": "Opțiuni",
   "inboxConversationViewProfileButton": "Vezi profilul",
   "inboxMessageRequestsEmpty": "Nicio cerere de mesaj",
-  "inboxMessageRequestsSemanticLabel": "Cereri de mesaj, {requestCount} în așteptare",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{Cereri de mesaj} =1{Cereri de mesaj, {count} cerere necitită} few{Cereri de mesaj, {count} cereri necitite} other{Cereri de mesaj, {count} de cereri necitite}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

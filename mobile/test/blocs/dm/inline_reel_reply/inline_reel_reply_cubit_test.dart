@@ -94,6 +94,7 @@ void main() {
       final completer = Completer<NIP17SendResult>();
       when(
         () => repo.sendMessage(
+          backgroundDelivery: true,
           recipientPubkey: any(named: 'recipientPubkey'),
           content: any(named: 'content'),
           replyToId: any(named: 'replyToId'),
@@ -122,6 +123,7 @@ void main() {
     void stubSendSuccess() {
       when(
         () => repo.sendMessage(
+          backgroundDelivery: true,
           recipientPubkey: any(named: 'recipientPubkey'),
           content: any(named: 'content'),
           replyToId: any(named: 'replyToId'),
@@ -138,6 +140,7 @@ void main() {
     void stubSendSharedVideoSuccess() {
       when(
         () => repo.sendSharedVideo(
+          backgroundDelivery: true,
           recipientPubkey: any(named: 'recipientPubkey'),
           baseContent: any(named: 'baseContent'),
           videoKind: any(named: 'videoKind'),
@@ -159,6 +162,7 @@ void main() {
     void stubSendSharedVideoGroupSuccess() {
       when(
         () => repo.sendSharedVideoGroup(
+          backgroundDelivery: true,
           recipientPubkeys: any(named: 'recipientPubkeys'),
           baseContent: any(named: 'baseContent'),
           videoKind: any(named: 'videoKind'),
@@ -188,6 +192,7 @@ void main() {
       verify: (_) {
         verifyNever(
           () => repo.sendMessage(
+            backgroundDelivery: true,
             recipientPubkey: any(named: 'recipientPubkey'),
             content: any(named: 'content'),
             replyToId: any(named: 'replyToId'),
@@ -213,6 +218,7 @@ void main() {
       verify: (_) {
         verify(
           () => repo.sendMessage(
+            backgroundDelivery: true,
             recipientPubkey: _peer,
             content: 'lol same',
             replyToId: _reelId,
@@ -226,6 +232,7 @@ void main() {
       build: () {
         when(
           () => repo.sendGroupMessage(
+            backgroundDelivery: true,
             recipientPubkeys: any(named: 'recipientPubkeys'),
             content: any(named: 'content'),
             replyToId: any(named: 'replyToId'),
@@ -252,6 +259,7 @@ void main() {
       verify: (_) {
         verify(
           () => repo.sendGroupMessage(
+            backgroundDelivery: true,
             recipientPubkeys: const [_peer, _peer2],
             content: 'hi all',
             replyToId: _reelId,
@@ -265,6 +273,7 @@ void main() {
       build: () {
         when(
           () => repo.sendMessage(
+            backgroundDelivery: true,
             recipientPubkey: any(named: 'recipientPubkey'),
             content: any(named: 'content'),
             replyToId: any(named: 'replyToId'),
@@ -287,6 +296,7 @@ void main() {
       build: () {
         when(
           () => repo.sendMessage(
+            backgroundDelivery: true,
             recipientPubkey: any(named: 'recipientPubkey'),
             content: any(named: 'content'),
             replyToId: any(named: 'replyToId'),
@@ -315,6 +325,7 @@ void main() {
       build: () {
         when(
           () => repo.sendMessage(
+            backgroundDelivery: true,
             recipientPubkey: any(named: 'recipientPubkey'),
             content: any(named: 'content'),
             replyToId: any(named: 'replyToId'),
@@ -339,6 +350,7 @@ void main() {
       build: () {
         when(
           () => repo.sendMessage(
+            backgroundDelivery: true,
             recipientPubkey: any(named: 'recipientPubkey'),
             content: any(named: 'content'),
             replyToId: any(named: 'replyToId'),
@@ -371,6 +383,7 @@ void main() {
         sending = Completer<NIP17SendResult>();
         when(
           () => repo.sendMessage(
+            backgroundDelivery: true,
             recipientPubkey: any(named: 'recipientPubkey'),
             content: any(named: 'content'),
             replyToId: any(named: 'replyToId'),
@@ -397,6 +410,7 @@ void main() {
       verify: (_) {
         verify(
           () => repo.sendMessage(
+            backgroundDelivery: true,
             recipientPubkey: any(named: 'recipientPubkey'),
             content: any(named: 'content'),
             replyToId: any(named: 'replyToId'),
@@ -439,6 +453,7 @@ void main() {
       verify: (_) {
         verify(
           () => repo.sendSharedVideo(
+            backgroundDelivery: true,
             recipientPubkey: _peer,
             baseContent: 'hi',
             videoKind: 34236,
@@ -451,6 +466,7 @@ void main() {
         ).called(1);
         verifyNever(
           () => repo.sendMessage(
+            backgroundDelivery: true,
             recipientPubkey: any(named: 'recipientPubkey'),
             content: any(named: 'content'),
             replyToId: any(named: 'replyToId'),
@@ -476,6 +492,7 @@ void main() {
       verify: (_) {
         verify(
           () => repo.sendSharedVideoGroup(
+            backgroundDelivery: true,
             recipientPubkeys: const [_peer, _peer2],
             baseContent: 'hi',
             videoKind: 34236,
@@ -488,6 +505,7 @@ void main() {
         ).called(1);
         verifyNever(
           () => repo.sendGroupMessage(
+            backgroundDelivery: true,
             recipientPubkeys: any(named: 'recipientPubkeys'),
             content: any(named: 'content'),
             replyToId: any(named: 'replyToId'),
@@ -513,6 +531,7 @@ void main() {
       verify: (_) {
         verify(
           () => repo.sendSharedVideo(
+            backgroundDelivery: true,
             recipientPubkey: _peer,
             baseContent: 'hi',
             videoKind: 22,
@@ -539,6 +558,7 @@ void main() {
       verify: (_) {
         verify(
           () => repo.sendMessage(
+            backgroundDelivery: true,
             recipientPubkey: _peer,
             content: 'hi',
             replyToId: _reelId,
@@ -546,6 +566,7 @@ void main() {
         ).called(1);
         verifyNever(
           () => repo.sendSharedVideo(
+            backgroundDelivery: true,
             recipientPubkey: any(named: 'recipientPubkey'),
             baseContent: any(named: 'baseContent'),
             videoKind: any(named: 'videoKind'),
@@ -564,6 +585,7 @@ void main() {
       build: () {
         when(
           () => repo.sendGroupMessage(
+            backgroundDelivery: true,
             recipientPubkeys: any(named: 'recipientPubkeys'),
             content: any(named: 'content'),
             replyToId: any(named: 'replyToId'),
@@ -586,6 +608,7 @@ void main() {
       verify: (_) {
         verify(
           () => repo.sendGroupMessage(
+            backgroundDelivery: true,
             recipientPubkeys: const [_peer, _peer2],
             content: 'hi',
             replyToId: _reelId,
@@ -593,6 +616,7 @@ void main() {
         ).called(1);
         verifyNever(
           () => repo.sendSharedVideoGroup(
+            backgroundDelivery: true,
             recipientPubkeys: any(named: 'recipientPubkeys'),
             baseContent: any(named: 'baseContent'),
             videoKind: any(named: 'videoKind'),
@@ -617,6 +641,7 @@ void main() {
       void stubSendParks(String? queuedRumorId) {
         when(
           () => repo.sendMessage(
+            backgroundDelivery: true,
             recipientPubkey: any(named: 'recipientPubkey'),
             content: any(named: 'content'),
             replyToId: any(named: 'replyToId'),
@@ -632,6 +657,7 @@ void main() {
       void verifySendMessageCalled(int times) {
         verify(
           () => repo.sendMessage(
+            backgroundDelivery: true,
             recipientPubkey: any(named: 'recipientPubkey'),
             content: any(named: 'content'),
             replyToId: any(named: 'replyToId'),
@@ -643,6 +669,7 @@ void main() {
       void stubGroupSendParks(List<String> queuedRumorIds) {
         when(
           () => repo.sendGroupMessage(
+            backgroundDelivery: true,
             recipientPubkeys: any(named: 'recipientPubkeys'),
             content: any(named: 'content'),
             replyToId: any(named: 'replyToId'),
@@ -935,6 +962,7 @@ void main() {
         // The original fan-out and only it — retry adds no second one.
         verify(
           () => repo.sendGroupMessage(
+            backgroundDelivery: true,
             recipientPubkeys: any(named: 'recipientPubkeys'),
             content: any(named: 'content'),
             replyToId: any(named: 'replyToId'),

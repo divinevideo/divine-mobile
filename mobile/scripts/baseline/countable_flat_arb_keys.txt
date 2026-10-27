@@ -19,7 +19,6 @@ contentPreferencesDoneCount # detached: parenthetical "Done ({count} selected)"
 deleteAccountProgressEvents # ratio: "{current} / {total}"
 devOptionsClipRecoveryOrphanFiles # detached: colon form
 exploreVideoCounter # ratio: "Video {current}/{total}"
-inboxMessageRequestsSemanticLabel # detached: "{requestCount} pending" has no noun
 libraryClipsSavePartialResult # detached: "{n} saved, {n} failed" has no noun
 libraryCreateVideo # detached: parenthetical "Create Video ({count})"
 libraryDraftCopyTitle # ordinal: "(copy {number})"

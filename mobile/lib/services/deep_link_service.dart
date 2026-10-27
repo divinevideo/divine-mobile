@@ -10,10 +10,12 @@ import 'package:openvine/utils/people_list_owner.dart';
 import 'package:openvine/utils/public_identifier_normalizer.dart';
 import 'package:openvine/utils/relay_url_utils.dart';
 import 'package:openvine/utils/sensitive_uri_for_logs.dart';
+import 'package:openvine/utils/short_link_url.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Types of deep links supported by the app
 enum DeepLinkType {
+  shortLink,
   video,
   profile,
   hashtag,
@@ -34,6 +36,7 @@ class DeepLink {
   const DeepLink({
     required this.type,
     this.videoRef,
+    this.shortCode,
     this.npub,
     this.hashtag,
     this.searchTerm,
@@ -46,6 +49,7 @@ class DeepLink {
   });
 
   final DeepLinkType type;
+  final String? shortCode;
 
   /// Raw `/video/:id` route reference from the incoming URL.
   ///
@@ -76,6 +80,8 @@ class DeepLink {
   String toString() {
     final indexStr = index != null ? ', index: $index' : '';
     switch (type) {
+      case DeepLinkType.shortLink:
+        return 'DeepLink(type: shortLink, code: $shortCode)';
       case DeepLinkType.video:
         final commentsStr = autoOpenComments ? ', autoOpenComments: true' : '';
         return 'DeepLink(type: video, videoRef: $videoRef$commentsStr)';
@@ -237,6 +243,11 @@ class DeepLinkService {
       }
 
       final pathSegments = uri.pathSegments;
+
+      final shortCode = shortLinkCodeFor(uri);
+      if (shortCode != null) {
+        return DeepLink(type: DeepLinkType.shortLink, shortCode: shortCode);
+      }
 
       // Handle /video/{videoRef}. The path segment is preserved verbatim;
       // downstream resolution accepts raw IDs, stable IDs, and NIP-19 refs.

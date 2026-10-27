@@ -6860,8 +6860,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get inboxMessageRequestsEmpty => '没有消息请求';
 
   @override
-  String inboxMessageRequestsSemanticLabel(int requestCount) {
-    return '消息请求，$requestCount 条待处理';
+  String inboxMessageRequestsUnreadSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '消息请求，$count 条未读',
+      zero: '消息请求',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -9256,6 +9262,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorShapeMaskKeyframesSemanticLabel => '编辑形状蒙版关键帧';
+
+  @override
+  String get videoEditorShapeMaskBackgroundLabel => '背景';
 
   @override
   String get videoEditorChromaKeyAutoDetect => '自动识别';

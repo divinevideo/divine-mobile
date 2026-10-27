@@ -1,5 +1,6 @@
 // ABOUTME: Opens the shape mask editor for a layer or a timeline clip and
-// ABOUTME: writes the mask it settles on as one undo step.
+// ABOUTME: writes the mask it settles on, and a clip's background color, as
+// ABOUTME: one undo step.
 
 import 'package:collection/collection.dart';
 import 'package:divine_ui/divine_ui.dart';
@@ -9,6 +10,7 @@ import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
+import 'package:openvine/models/video_editor/clip_mask_window.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor_view.dart';
 import 'package:pro_image_editor/features/main_editor/services/layer_copy_manager.dart';
@@ -50,7 +52,7 @@ Future<void> editLayerMask(
     // Mask keyframes count from the layer's start, as its own do.
     keyframeTime: time - layer.keyframeOrigin,
     resolveGeometry: () => _layerGeometry(editor, layer.id),
-    onChanged: show,
+    onChanged: (result) => show(result.mask),
   );
 
   // The previews changed the layer in place of the current history step; it
@@ -63,9 +65,10 @@ Future<void> editLayerMask(
 /// Opens the mask editor for the timeline clip [clipId].
 ///
 /// A playhead outside the clip is moved into its middle first, where neither
-/// neighbour's transition blends into it. The mask previews through
-/// [VideoEditorScope.liveClipMaskNotifier] and is written to the clip, as one
-/// history step, only when it is confirmed.
+/// neighbour's transition blends into it. The mask and the color it covers
+/// the rest of the frame with preview through
+/// [VideoEditorScope.liveClipMaskNotifier] and are written to the clip, as
+/// one history step, only when they are confirmed.
 Future<void> editClipMask(BuildContext context, String clipId) async {
   final scope = VideoEditorScope.of(context);
   final editor = scope.editor;
@@ -94,8 +97,14 @@ Future<void> editClipMask(BuildContext context, String clipId) async {
     initialMask: clip.mask,
     // A clip's mask keyframes count from the clip's start on the timeline.
     keyframeTime: time - clipStart,
+    initialBackgroundColor:
+        clip.maskBackgroundColor ?? defaultClipMaskBackgroundColor,
     resolveGeometry: () => _boxGeometry(scope.clipFrameTracker?.box),
-    onChanged: (mask) => live?.value = (clipId: clipId, mask: mask),
+    onChanged: (result) => live?.value = (
+      clipId: clipId,
+      mask: result.mask,
+      backgroundColor: result.backgroundColor,
+    ),
   );
   // The notifier goes with the editor, which can be torn down meanwhile.
   if (!editor.mounted) return;
@@ -108,11 +117,22 @@ Future<void> editClipMask(BuildContext context, String clipId) async {
   final currentIndex = currentClips.indexWhere((c) => c.id == clipId);
   if (currentIndex < 0) return;
   final current = currentClips[currentIndex];
-  if (result.mask == current.mask) return;
+  // Black is what a clip shows without a color of its own, and a clip without
+  // a mask covers nothing, so neither keeps one.
+  final color =
+      result.mask == null ||
+          result.backgroundColor == defaultClipMaskBackgroundColor
+      ? null
+      : result.backgroundColor;
+  if (result.mask == current.mask && color == current.maskBackgroundColor) {
+    return;
+  }
 
   final updated = current.copyWith(
     mask: result.mask,
     clearMask: result.mask == null,
+    maskBackgroundColor: color,
+    clearMaskBackgroundColor: color == null,
   );
   final newClips = List.of(currentClips)..[currentIndex] = updated;
   clipBloc.add(ClipEditorClipUpdated(clipId: clipId, clip: updated));
@@ -122,6 +142,9 @@ Future<void> editClipMask(BuildContext context, String clipId) async {
 /// Hands the screen to the mask editor and returns what it closed with, or
 /// `null` when it was cancelled.
 ///
+/// [initialBackgroundColor] is the color the item is covered with around the
+/// shape, `null` for an item without one to pick.
+///
 /// The editor gives up the screen meanwhile — timeline and actions step aside
 /// so the video is as large as it gets — and playback pauses so the frame
 /// holds still, resuming afterwards only if it was running.
@@ -130,7 +153,8 @@ Future<MaskEditorResult?> _runMaskEditor(
   required LayerMask? initialMask,
   required Duration keyframeTime,
   required MaskTargetGeometry? Function() resolveGeometry,
-  required ValueChanged<LayerMask?> onChanged,
+  required ValueChanged<MaskEditorResult> onChanged,
+  Color? initialBackgroundColor,
 }) async {
   final scope = VideoEditorScope.of(context);
   final mainBloc = context.read<VideoEditorMainBloc>();
@@ -141,7 +165,11 @@ Future<MaskEditorResult?> _runMaskEditor(
   // Set before the editor makes room for the panel, so it makes as much as
   // the panel takes from the start.
   final panelHeight = scope.maskPanelHeightNotifier;
-  panelHeight?.value = videoEditorMaskPanelHeight(initialMask);
+  final withBackground = initialBackgroundColor != null;
+  panelHeight?.value = videoEditorMaskPanelHeight(
+    initialMask,
+    withBackground: withBackground,
+  );
   mainBloc.add(const VideoEditorMaskEditingChanged(isEditing: true));
 
   // The canvas resizes as the timeline collapses, and the editor rescales
@@ -162,13 +190,17 @@ Future<MaskEditorResult?> _runMaskEditor(
       pageBuilder: (_, _, _) => VideoEditorMaskEditorView(
         initialMask: initialMask,
         keyframeTime: keyframeTime,
+        initialBackgroundColor: initialBackgroundColor,
         resolveGeometry: resolveGeometry,
         canvasChanges: canvasChanges,
-        onChanged: (mask) {
-          // The panel grows or shrinks with the sliders the mask brings, and
+        onChanged: (result) {
+          // The panel grows or shrinks with the settings the mask brings, and
           // the canvas with it.
-          panelHeight?.value = videoEditorMaskPanelHeight(mask);
-          onChanged(mask);
+          panelHeight?.value = videoEditorMaskPanelHeight(
+            result.mask,
+            withBackground: withBackground,
+          );
+          onChanged(result);
         },
       ),
       transitionsBuilder: (_, animation, _, child) =>

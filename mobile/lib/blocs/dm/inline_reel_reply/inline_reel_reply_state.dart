@@ -8,7 +8,7 @@ enum InlineReelReplyStatus {
   /// A send is awaiting its outcome.
   sending,
 
-  /// The most recent reply send succeeded.
+  /// The reply is durably queued or confirmed; background delivery owns it.
   success,
 
   /// The most recent reply send failed (queued for retry).

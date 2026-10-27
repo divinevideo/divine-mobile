@@ -4107,6 +4107,7 @@
   "videoEditorShapeMaskCornersRound": "Redondeadas",
   "videoEditorShapeMaskKeyframesHint": "Agregá un fotograma clave, mové el cabezal de reproducción y después volvé a abrir la máscara para mover, escalar, girar o suavizar la forma. Se desliza de un fotograma clave al siguiente.",
   "videoEditorShapeMaskKeyframesSemanticLabel": "Editar fotogramas clave de la máscara de forma",
+  "videoEditorShapeMaskBackgroundLabel": "Fondo",
   "videoEditorChromaKeyAutoDetect": "Detectar automáticamente",
   "videoEditorChromaKeyPresetGreen": "Verde",
   "videoEditorChromaKeyPresetBlue": "Azul",
@@ -4849,10 +4850,10 @@
   "inboxConversationOptionsLabel": "Opciones",
   "inboxConversationViewProfileButton": "Ver perfil",
   "inboxMessageRequestsEmpty": "No hay solicitudes de mensaje",
-  "inboxMessageRequestsSemanticLabel": "Solicitudes de mensaje, {requestCount} pendientes",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{Solicitudes de mensaje} =1{Solicitudes de mensaje, {count} sin leer} many{Solicitudes de mensaje, {count} sin leer} other{Solicitudes de mensaje, {count} sin leer}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

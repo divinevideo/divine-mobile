@@ -75,6 +75,10 @@ const int _membersFeedApiAuthorCap = 100;
 /// How many of the fallback's per-member calls are in flight at once.
 const int _membersFeedApiConcurrency = 20;
 
+/// How many events naming one file a file-hash lookup reads. Normally one
+/// post names a file, so this only bounds a file many events claim.
+const int _fileHashLookupLimit = 20;
+
 /// In-memory cache key prefix for a single author's feed.
 const String _authorFeedCacheKeyPrefix = 'author:';
 
@@ -2704,6 +2708,43 @@ class VideosRepository {
       before: before,
     );
     return _transformVideoStats(result.videos);
+  }
+
+  /// Fetches the videos whose file has the SHA-256 [sha256], read from the
+  /// relays by the `x` tag a video event names its file with.
+  ///
+  /// Anyone can publish an event naming any file, so the result says who
+  /// claims the file, not who made it. Only events whose own file hash is
+  /// [sha256] are returned, filtered like any other relay read.
+  ///
+  /// Throws [RelayReadUnavailableException] when the read reached no relay or
+  /// ran out of time with nothing, since an empty list would then read as
+  /// "no video has this file".
+  Future<List<VideoEvent>> getVideosByFileHash(String sha256) async {
+    final hash = sha256.toLowerCase();
+    final read = await _nostrClient.queryEventsDetailed([
+      Filter(
+        kinds: NIP71VideoKinds.getAllVideoKinds(),
+        x: [hash],
+        limit: _fileHashLookupLimit,
+      ),
+    ]);
+    if (read.events.isEmpty && (read.noRelays || read.timedOut)) {
+      throw RelayReadUnavailableException(
+        read.noRelays ? 'no relay took the read' : 'the read timed out',
+      );
+    }
+    final videos = <VideoEvent>[];
+    final seen = <String>{};
+    for (final event in read.events) {
+      // Each relay that holds the event returns it.
+      if (!seen.add(event.id)) continue;
+      final video = _tryParseAndFilter(event, includeFeedShape: false);
+      if (video != null && video.sha256?.toLowerCase() == hash) {
+        videos.add(video);
+      }
+    }
+    return videos;
   }
 
   /// Fetches the newest videos published by any of [authorPubkeys], newest

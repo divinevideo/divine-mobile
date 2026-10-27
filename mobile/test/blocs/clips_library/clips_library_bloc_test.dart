@@ -530,9 +530,9 @@ void main() {
         test('does not reload forever when the recovered assets never reach '
             'the listing', () async {
           // Recovery writes, but the listing still reads the clip without
-          // its ghost frame — a trashed library row behind a live autosave
-          // copy did this. Each fresh load used to start recovery again and
-          // blank the grid.
+          // its ghost frame — it listed a copy of the clip rather than the
+          // row recovery wrote. Each fresh load used to start recovery again
+          // and blank the grid.
           when(
             () => mockClipLibraryService.getAllClips(),
           ).thenAnswer((_) async => [clipMissingGhost]);

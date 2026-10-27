@@ -3134,6 +3134,7 @@
   "videoEditorShapeMaskCornersRound": "Pabilog",
   "videoEditorShapeMaskKeyframesHint": "Magdagdag ng keyframe, ilipat ang playhead, tapos buksan ulit ang mask para ilipat, i-resize, i-rotate o palambutin ang hugis. Dadausdos ito mula keyframe hanggang keyframe.",
   "videoEditorShapeMaskKeyframesSemanticLabel": "I-edit ang mga keyframe ng shape mask",
+  "videoEditorShapeMaskBackgroundLabel": "Background",
   "videoEditorChromaKeyAutoDetect": "Auto-detect",
   "videoEditorChromaKeyPresetGreen": "Berde",
   "videoEditorChromaKeyPresetBlue": "Asul",
@@ -3876,10 +3877,10 @@
   "inboxConversationOptionsLabel": "Mga Option",
   "inboxConversationViewProfileButton": "Tingnan ang profile",
   "inboxMessageRequestsEmpty": "Walang message request",
-  "inboxMessageRequestsSemanticLabel": "Mga message request, {requestCount} nakabinbin",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{Mga message request} =1{Mga message request, {count} hindi pa nababasa} other{Mga message request, {count} hindi pa nababasa}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

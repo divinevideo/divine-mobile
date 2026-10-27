@@ -92,6 +92,35 @@ void main() {
       expect(filter.checkEvent(pdfEvent), isFalse);
       expect(filter.checkEvent(untypedEvent), isFalse);
     });
+
+    test('matches #x tags exactly', () {
+      final hash = 'a' * 64;
+      final matchingEvent = Event(
+        pubkey,
+        34236,
+        [
+          ['x', hash],
+        ],
+        '',
+        createdAt: 1,
+      );
+      final otherEvent = Event(
+        pubkey,
+        34236,
+        [
+          ['x', 'b' * 64],
+        ],
+        '',
+        createdAt: 1,
+      );
+      final unhashedEvent = Event(pubkey, 34236, const [], '', createdAt: 1);
+
+      final filter = Filter(x: [hash]);
+
+      expect(filter.checkEvent(matchingEvent), isTrue);
+      expect(filter.checkEvent(otherEvent), isFalse);
+      expect(filter.checkEvent(unhashedEvent), isFalse);
+    });
   });
 
   group('Filter #m serialization', () {
@@ -109,6 +138,25 @@ void main() {
 
       expect(json.containsKey('#m'), isFalse);
       expect(Filter.fromJson(json).m, isNull);
+    });
+  });
+
+  group('Filter #x serialization', () {
+    test('round trips the x tag filter through JSON as #x', () {
+      final hash = 'a' * 64;
+      final filter = Filter(kinds: [34236], x: [hash]);
+
+      final json = filter.toJson();
+      expect(json['#x'], equals([hash]));
+
+      expect(Filter.fromJson(json).x, equals([hash]));
+    });
+
+    test('omits #x when no x tag filter is set', () {
+      final json = Filter(kinds: [34236]).toJson();
+
+      expect(json.containsKey('#x'), isFalse);
+      expect(Filter.fromJson(json).x, isNull);
     });
   });
 

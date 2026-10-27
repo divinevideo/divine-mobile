@@ -4107,6 +4107,7 @@
   "videoEditorShapeMaskCornersRound": "مستديرة",
   "videoEditorShapeMaskKeyframesHint": "إضافة إطار رئيسي، ثم تحريك رأس التشغيل، ثم فتح القناع مرة أخرى لتحريك الشكل أو تغيير حجمه أو تدويره أو تنعيم حافته. ينتقل الشكل بسلاسة من إطار رئيسي إلى آخر.",
   "videoEditorShapeMaskKeyframesSemanticLabel": "تعديل الإطارات الرئيسية لقناع الشكل",
+  "videoEditorShapeMaskBackgroundLabel": "الخلفية",
   "videoEditorChromaKeyAutoDetect": "كشف تلقائي",
   "videoEditorChromaKeyPresetGreen": "أخضر",
   "videoEditorChromaKeyPresetBlue": "أزرق",
@@ -4849,10 +4850,10 @@
   "inboxConversationOptionsLabel": "خيارات",
   "inboxConversationViewProfileButton": "عرض الملف الشخصي",
   "inboxMessageRequestsEmpty": "لا توجد طلبات رسائل",
-  "inboxMessageRequestsSemanticLabel": "طلبات الرسائل، {requestCount} قيد الانتظار",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{طلبات الرسائل} one{طلبات الرسائل، طلب واحد غير مقروء} two{طلبات الرسائل، طلبان غير مقروءين} few{طلبات الرسائل، {count} طلبات غير مقروءة} many{طلبات الرسائل، {count} طلبًا غير مقروء} other{طلبات الرسائل، {count} طلب غير مقروء}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

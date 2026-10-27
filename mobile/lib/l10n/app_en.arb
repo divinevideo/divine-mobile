@@ -4910,10 +4910,11 @@
   "inboxConversationOptionsLabel": "Options",
   "inboxConversationViewProfileButton": "View profile",
   "inboxMessageRequestsEmpty": "No message requests",
-  "inboxMessageRequestsSemanticLabel": "Message requests, {requestCount} pending",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{Message requests} =1{Message requests, {count} unread} other{Message requests, {count} unread}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
+    "description": "Screen-reader label for the Message requests banner at the top of the Messages inbox. {count} is the number of unread requests: the badge shows it capped at 99+, the label says it exactly. At 0 the badge is hidden and the label is only the title.",
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }
@@ -6962,6 +6963,10 @@
   "videoEditorShapeMaskKeyframesSemanticLabel": "Edit shape mask keyframes",
   "@videoEditorShapeMaskKeyframesSemanticLabel": {
     "description": "Accessibility label of the diamond button in the top bar of the shape mask screen that opens the mask's keyframe sheet."
+  },
+  "videoEditorShapeMaskBackgroundLabel": "Background",
+  "@videoEditorShapeMaskBackgroundLabel": {
+    "description": "Name of the row of colors on the shape mask screen of a timeline clip: the color that fills the frame around the shape, where the clip is hidden. Shown beside the colors, at most about 112dp wide."
   },
   "videoEditorChromaKeyAutoDetect": "Auto-detect",
   "videoEditorChromaKeyPresetGreen": "Green",

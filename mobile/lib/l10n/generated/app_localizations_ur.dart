@@ -7292,8 +7292,15 @@ class AppLocalizationsUr extends AppLocalizations {
   String get inboxMessageRequestsEmpty => 'کوئی پیغام درخواست نہیں';
 
   @override
-  String inboxMessageRequestsSemanticLabel(int requestCount) {
-    return 'پیغام درخواستیں، $requestCount زیر التواء';
+  String inboxMessageRequestsUnreadSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'پیغام درخواستیں، $count غیر پڑھی ہوئی',
+      one: 'پیغام درخواستیں، $count غیر پڑھی ہوئی',
+      zero: 'پیغام درخواستیں',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -9813,6 +9820,9 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String get videoEditorShapeMaskKeyframesSemanticLabel =>
       'شیپ ماسک کے کی فریمز میں ترمیم کریں';
+
+  @override
+  String get videoEditorShapeMaskBackgroundLabel => 'پس منظر';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'خودکار شناخت';

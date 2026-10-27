@@ -1,24 +1,37 @@
 // ABOUTME: When a timeline clip's shape mask covers the picture, and how
 // ABOUTME: strongly, so the preview and the export fade it alike.
 
+import 'dart:ui' show Color;
+
+import 'package:divine_ui/divine_ui.dart' show VineTheme;
 import 'package:flutter/foundation.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_image_editor/pro_image_editor.dart' show LayerMask;
 
-/// A timeline clip's mask while it is being changed, before the change is
-/// written to the clip: shown on the canvas in place of the clip's own.
-typedef LiveClipMask = ({String clipId, LayerMask? mask});
+/// A timeline clip's mask and its background while they are being changed,
+/// before the change is written to the clip: shown on the canvas in place of
+/// the clip's own. A `null` background is black.
+typedef LiveClipMask = ({
+  String clipId,
+  LayerMask? mask,
+  Color? backgroundColor,
+});
+
+/// What a timeline clip's mask covers the picture with when the clip names no
+/// color: black, in the preview and the export alike, whatever the
+/// appearance.
+const Color defaultClipMaskBackgroundColor = VineTheme.backgroundColor;
 
 /// The stretch of the editor timeline a timeline clip's [mask] covers.
 ///
-/// A clip's mask is drawn over the whole picture as a black cover with the
-/// shape cut out of it, so it shows exactly while the clip does: from [start]
-/// to [end], on the editor timeline. Across an overlap transition (every type
-/// but the dips) both clips play at once, so the cover fades in over
-/// [fadeIn] and out over [fadeOut] instead of cutting the other clip's half
-/// of the blend. A dip to black or white plays one clip at a time and fades
-/// nothing.
+/// A clip's mask is drawn over the whole picture as a cover of [color] with
+/// the shape cut out of it, so it shows exactly while the clip does: from
+/// [start] to [end], on the editor timeline. Across an overlap transition
+/// (every type but the dips) both clips play at once, so the cover fades in
+/// over [fadeIn] and out over [fadeOut] instead of cutting the other clip's
+/// half of the blend. A dip to black or white plays one clip at a time and
+/// fades nothing.
 ///
 /// A mask with keyframes changes while the clip plays; its keyframes are
 /// measured from [origin], the clip's own start (see [maskAt]).
@@ -30,6 +43,7 @@ class ClipMaskWindow {
     required this.mask,
     required this.start,
     required this.end,
+    this.color = defaultClipMaskBackgroundColor,
     this.fadeIn = Duration.zero,
     this.fadeOut = Duration.zero,
     Duration? origin,
@@ -40,6 +54,9 @@ class ClipMaskWindow {
 
   /// The mask, measured in the exported frame.
   final LayerMask mask;
+
+  /// What the cover fills the picture around the shape with.
+  final Color color;
 
   /// Where the clip starts to show, on the editor timeline: its start, or the
   /// start of the transition into it.
@@ -86,6 +103,7 @@ class ClipMaskWindow {
       other is ClipMaskWindow &&
           other.clipId == clipId &&
           other.mask == mask &&
+          other.color == color &&
           other.start == start &&
           other.end == end &&
           other.fadeIn == fadeIn &&
@@ -94,7 +112,7 @@ class ClipMaskWindow {
 
   @override
   int get hashCode =>
-      Object.hash(clipId, mask, start, end, fadeIn, fadeOut, origin);
+      Object.hash(clipId, mask, color, start, end, fadeIn, fadeOut, origin);
 
   @override
   String toString() =>
@@ -104,11 +122,12 @@ class ClipMaskWindow {
 
 /// The windows of every masked clip in [clips], in timeline order.
 ///
-/// [masks] replaces the mask of the clips it names, which is how the editor
-/// previews a mask that is still being changed; a `null` value removes it.
+/// [live] replaces the mask and background of the clip it names, which is how
+/// the editor previews a mask that is still being changed; a `null` mask
+/// removes it.
 List<ClipMaskWindow> clipMaskWindows(
   List<DivineVideoClip> clips, {
-  Map<String, LayerMask?> masks = const {},
+  LiveClipMask? live,
 }) {
   final transitions = clampTransitions(clips);
   // The blend on the editor timeline reaches the transition's duration into
@@ -127,7 +146,9 @@ List<ClipMaskWindow> clipMaskWindows(
   for (var i = 0; i < clips.length; i++) {
     final clip = clips[i];
     final clipEnd = clipStart + clip.playbackDuration;
-    final mask = masks.containsKey(clip.id) ? masks[clip.id] : clip.mask;
+    final (mask, color) = live != null && live.clipId == clip.id
+        ? (live.mask, live.backgroundColor)
+        : (clip.mask, clip.maskBackgroundColor);
     if (mask != null) {
       final blendIn = overlapAfter(i - 1);
       final blendOut = overlapAfter(i);
@@ -135,6 +156,7 @@ List<ClipMaskWindow> clipMaskWindows(
         ClipMaskWindow(
           clipId: clip.id,
           mask: mask,
+          color: color ?? defaultClipMaskBackgroundColor,
           start: clipStart - blendIn,
           end: clipEnd + blendOut,
           fadeIn: blendIn * 2,

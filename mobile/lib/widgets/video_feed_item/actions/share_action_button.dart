@@ -345,6 +345,7 @@ class _UnifiedShareSheetState extends ConsumerState<_UnifiedShareSheet> {
   }
 
   void _handleActionResult(BuildContext context, ShareSheetState state) {
+    if (!context.mounted || ModalRoute.of(context)?.isCurrent == false) return;
     final result = state.actionResult;
     if (result == null) return;
 

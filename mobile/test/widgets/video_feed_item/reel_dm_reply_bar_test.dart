@@ -718,6 +718,7 @@ void main() {
       final pendingSend = Completer<NIP17SendResult>();
       when(
         () => dmRepo.sendMessage(
+          backgroundDelivery: true,
           recipientPubkey: any(named: 'recipientPubkey'),
           content: any(named: 'content'),
           replyToId: any(named: 'replyToId'),
@@ -740,6 +741,7 @@ void main() {
       expect(find.text('second reply'), findsOneWidget);
       verify(
         () => dmRepo.sendMessage(
+          backgroundDelivery: true,
           recipientPubkey: _peer,
           content: 'first reply',
           replyToId: _reelId,
@@ -747,6 +749,7 @@ void main() {
       ).called(1);
       verifyNever(
         () => dmRepo.sendMessage(
+          backgroundDelivery: true,
           recipientPubkey: _peer,
           content: 'second reply',
           replyToId: _reelId,
@@ -946,6 +949,7 @@ void main() {
     ) async {
       when(
         () => dmRepo.sendMessage(
+          backgroundDelivery: true,
           recipientPubkey: any(named: 'recipientPubkey'),
           content: any(named: 'content'),
           replyToId: any(named: 'replyToId'),
@@ -974,6 +978,7 @@ void main() {
       expect(tester.takeException(), isNull);
       verify(
         () => dmRepo.sendMessage(
+          backgroundDelivery: true,
           recipientPubkey: _peer,
           content: 'hello',
           replyToId: _reelId,
@@ -986,6 +991,7 @@ void main() {
     ) async {
       when(
         () => dmRepo.sendMessage(
+          backgroundDelivery: true,
           recipientPubkey: any(named: 'recipientPubkey'),
           content: any(named: 'content'),
           replyToId: any(named: 'replyToId'),
@@ -1017,6 +1023,7 @@ void main() {
     ) async {
       when(
         () => dmRepo.sendMessage(
+          backgroundDelivery: true,
           recipientPubkey: any(named: 'recipientPubkey'),
           content: any(named: 'content'),
           replyToId: any(named: 'replyToId'),
@@ -1065,6 +1072,7 @@ void main() {
       // The original send, and only it.
       verify(
         () => dmRepo.sendMessage(
+          backgroundDelivery: true,
           recipientPubkey: _peer,
           content: 'hello',
           replyToId: _reelId,
@@ -1077,6 +1085,7 @@ void main() {
     ) async {
       when(
         () => dmRepo.sendMessage(
+          backgroundDelivery: true,
           recipientPubkey: any(named: 'recipientPubkey'),
           content: any(named: 'content'),
           replyToId: any(named: 'replyToId'),
@@ -1127,6 +1136,7 @@ void main() {
       // action here. The success path covers that branch.)
       verify(
         () => dmRepo.sendMessage(
+          backgroundDelivery: true,
           recipientPubkey: _peer,
           content: 'hello',
           replyToId: _reelId,
@@ -1146,6 +1156,7 @@ void main() {
       var sends = 0;
       when(
         () => dmRepo.sendMessage(
+          backgroundDelivery: true,
           recipientPubkey: any(named: 'recipientPubkey'),
           content: any(named: 'content'),
           replyToId: any(named: 'replyToId'),
@@ -1227,6 +1238,7 @@ void main() {
     ) async {
       when(
         () => dmRepo.sendMessage(
+          backgroundDelivery: true,
           recipientPubkey: any(named: 'recipientPubkey'),
           content: any(named: 'content'),
           replyToId: any(named: 'replyToId'),
@@ -1278,6 +1290,7 @@ void main() {
 
       when(
         () => dmRepo.sendMessage(
+          backgroundDelivery: true,
           recipientPubkey: any(named: 'recipientPubkey'),
           content: any(named: 'content'),
           replyToId: any(named: 'replyToId'),
@@ -1312,6 +1325,7 @@ void main() {
     ) async {
       when(
         () => dmRepo.sendMessage(
+          backgroundDelivery: true,
           recipientPubkey: any(named: 'recipientPubkey'),
           content: any(named: 'content'),
           replyToId: any(named: 'replyToId'),

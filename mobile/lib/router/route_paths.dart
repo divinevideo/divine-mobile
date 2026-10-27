@@ -12,6 +12,8 @@
 /// Screens still expose their own `path` members as thin delegates to these
 /// values, so existing `SomeScreen.path` call sites are unaffected.
 abstract final class RoutePaths {
+  static const shortLink = '/l/:code';
+  static String shortLinkForCode(String code) => '/l/$code';
   static const accountDeletionRecovery = '/account-deletion-recovery';
   static const announcementDetailBase = '/announcements';
   static const appLanguage = '/app-language';

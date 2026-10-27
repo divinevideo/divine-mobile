@@ -35,6 +35,7 @@ import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/saved_sounds_provider.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
+import 'package:openvine/providers/short_link_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
 import 'package:openvine/services/audio_reuse_consent_resolver.dart';
@@ -466,6 +467,7 @@ VideoSharingService? videoSharingService(Ref ref) {
     authService: authService,
     profileRepository: profileRepository,
     dmRepository: dmRepository,
+    shortLinkClient: ref.watch(shortLinkClientProvider),
   );
 }
 

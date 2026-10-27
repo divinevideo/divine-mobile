@@ -4107,6 +4107,7 @@
   "videoEditorShapeMaskCornersRound": "Rund",
   "videoEditorShapeMaskKeyframesHint": "Füge einen Keyframe hinzu, versetz den Abspielkopf und öffne dann die Maske erneut, um die Form zu verschieben, zu skalieren, zu drehen oder weicher zu machen. Sie gleitet von Keyframe zu Keyframe.",
   "videoEditorShapeMaskKeyframesSemanticLabel": "Keyframes der Formmaske bearbeiten",
+  "videoEditorShapeMaskBackgroundLabel": "Hintergrund",
   "videoEditorChromaKeyAutoDetect": "Automatisch erkennen",
   "videoEditorChromaKeyPresetGreen": "Grün",
   "videoEditorChromaKeyPresetBlue": "Blau",
@@ -4849,10 +4850,10 @@
   "inboxConversationOptionsLabel": "Optionen",
   "inboxConversationViewProfileButton": "Profil ansehen",
   "inboxMessageRequestsEmpty": "Keine Nachrichtenanfragen",
-  "inboxMessageRequestsSemanticLabel": "Nachrichtenanfragen, {requestCount} ausstehend",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{Nachrichtenanfragen} =1{Nachrichtenanfragen, {count} ungelesen} other{Nachrichtenanfragen, {count} ungelesen}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

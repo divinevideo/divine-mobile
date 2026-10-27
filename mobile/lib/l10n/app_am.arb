@@ -4194,6 +4194,7 @@
   "videoEditorShapeMaskCornersRound": "የተጠጋጋ",
   "videoEditorShapeMaskKeyframesHint": "ቁልፍ ፍሬም ያክሉ፣ የመጫወቻ ቦታውን ያንቀሳቅሱ፣ ከዚያ ቅርጹን ለማንቀሳቀስ፣ መጠኑን ለመቀየር፣ ለማሽከርከር ወይም ለማለስለስ ጭንብሉን እንደገና ይክፈቱ። ቅርጹ ከቁልፍ ፍሬም ወደ ቁልፍ ፍሬም ይንሸራተታል።",
   "videoEditorShapeMaskKeyframesSemanticLabel": "የቅርጽ ጭንብሉን ቁልፍ ፍሬሞች ማስተካከያ",
+  "videoEditorShapeMaskBackgroundLabel": "ዳራ",
   "videoEditorChromaKeyAutoDetect": "በራስ-ሰር ለይ",
   "videoEditorChromaKeyPresetGreen": "አረንጓዴ",
   "videoEditorChromaKeyPresetBlue": "ሰማያዊ",
@@ -4936,10 +4937,10 @@
   "inboxConversationOptionsLabel": "አማራጮች",
   "inboxConversationViewProfileButton": "መገለጫ ይመልከቱ",
   "inboxMessageRequestsEmpty": "ምንም የመልእክት ጥያቄዎች የሉም",
-  "inboxMessageRequestsSemanticLabel": "የመልእክት ጥያቄዎች፣ {requestCount} በመጠባበቅ ላይ",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{የመልእክት ጥያቄዎች} =1{የመልእክት ጥያቄዎች፣ {count} ያልተነበበ} other{የመልእክት ጥያቄዎች፣ {count} ያልተነበቡ}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

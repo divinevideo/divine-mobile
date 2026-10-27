@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/clip_style.dart';
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show LayerMask, LayerMaskShape;
 import 'package:pro_video_editor/pro_video_editor.dart'
     show ChromaKey, EditorVideo, VideoSpeedRamp, VideoSpeedRampPoint;
 
@@ -84,6 +86,24 @@ void main() {
 
         expect(styled.speedRamp, isNull);
         expect(styled.playbackSpeed, 2);
+      });
+
+      test('pastes the mask with its background color, and a black one '
+          "takes the target's color off", () {
+        const heart = LayerMask(shape: LayerMaskShape.heart);
+        const pink = Color(0xFFFF7FAF);
+        final colored = _clip().copyWith(
+          mask: heart,
+          maskBackgroundColor: pink,
+        );
+
+        final pasted = ClipStyle.of(colored).applyTo(_clip());
+        expect(pasted.mask, heart);
+        expect(pasted.maskBackgroundColor, pink);
+
+        final black = ClipStyle.of(_clip().copyWith(mask: heart));
+        expect(black.isOn(colored), isFalse);
+        expect(black.applyTo(colored).maskBackgroundColor, isNull);
       });
     });
 

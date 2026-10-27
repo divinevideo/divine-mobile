@@ -61,6 +61,11 @@ abstract class DmRepositoryReportableSites {
   static const String retryPendingCollaboratorInviteUnexpectedThrow =
       'retryPendingCollaboratorInvite.unexpectedThrow';
 
+  /// A repository-owned background transport threw outside its domain result.
+  /// The durable row remains available for recovery.
+  static const String backgroundDeliveryUnexpectedThrow =
+      'backgroundDelivery.unexpectedThrow';
+
   /// `sendMessage` outer transaction catch: persisting the local
   /// message row or running `_finalizeAfterRecipientSuccess` threw
   /// after the recipient publish landed.

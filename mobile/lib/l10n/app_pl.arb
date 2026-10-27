@@ -4107,6 +4107,7 @@
   "videoEditorShapeMaskCornersRound": "Zaokrąglone",
   "videoEditorShapeMaskKeyframesHint": "Dodaj klatkę kluczową, przesuń głowicę odtwarzania, a potem otwórz maskę ponownie, aby przesunąć, przeskalować, obrócić lub zmiękczyć kształt. Kształt płynnie przechodzi między klatkami kluczowymi.",
   "videoEditorShapeMaskKeyframesSemanticLabel": "Edytuj klatki kluczowe maski kształtu",
+  "videoEditorShapeMaskBackgroundLabel": "Tło",
   "videoEditorChromaKeyAutoDetect": "Wykryj automatycznie",
   "videoEditorChromaKeyPresetGreen": "Zielony",
   "videoEditorChromaKeyPresetBlue": "Niebieski",
@@ -4849,10 +4850,10 @@
   "inboxConversationOptionsLabel": "Opcje",
   "inboxConversationViewProfileButton": "Zobacz profil",
   "inboxMessageRequestsEmpty": "Brak próśb o wiadomość",
-  "inboxMessageRequestsSemanticLabel": "Prośby o wiadomość, {requestCount} oczekujących",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{Prośby o wiadomość} =1{Prośby o wiadomość, {count} nieprzeczytana} few{Prośby o wiadomość, {count} nieprzeczytane} many{Prośby o wiadomość, {count} nieprzeczytanych} other{Prośby o wiadomość, {count} nieprzeczytanej}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

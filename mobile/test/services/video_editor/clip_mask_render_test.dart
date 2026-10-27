@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
-import 'dart:ui' show Offset, Size;
+import 'dart:ui' show Color, Offset, Size;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model;
@@ -26,10 +26,12 @@ import 'package:pro_video_editor/pro_video_editor.dart'
 
 void main() {
   const circle = LayerMask(shape: LayerMaskShape.ellipse, size: Size(1, 1));
+  const pink = Color(0xFFFF7FAF);
 
   DivineVideoClip clip(
     String id, {
     LayerMask? mask,
+    Color? maskBackgroundColor,
     ClipTransition? transition,
   }) => DivineVideoClip(
     id: id,
@@ -39,17 +41,20 @@ void main() {
     targetAspectRatio: model.AspectRatio.vertical,
     originalAspectRatio: 9 / 16,
     mask: mask,
+    maskBackgroundColor: maskBackgroundColor,
     transition: transition,
   );
 
   group('clipMaskCoverLayers', () {
     final renders = <Size>[];
     final rendered = <LayerMask>[];
+    final colors = <Color>[];
 
     /// A blank image of [size], so the layers can be built without drawing.
-    Future<ui.Image> fakeRender(LayerMask mask, Size size) {
+    Future<ui.Image> fakeRender(LayerMask mask, Size size, Color color) {
       renders.add(size);
       rendered.add(mask);
+      colors.add(color);
       final recorder = ui.PictureRecorder();
       ui.Canvas(recorder);
       return recorder.endRecording().toImage(2, 2);
@@ -58,6 +63,7 @@ void main() {
     setUp(() {
       renders.clear();
       rendered.clear();
+      colors.clear();
     });
 
     testWidgets('covers what each masked clip hides while it plays, over the '
@@ -186,6 +192,18 @@ void main() {
         expect(layers[2].keyframeClock, isEmpty);
         expect(renders, hasLength(2));
       });
+
+      testWidgets('covers a moving mask in its background color, one image '
+          'per color', (tester) async {
+        final layers = await coverLayers(tester, [
+          clip('a', mask: moving),
+          clip('b', mask: moving, maskBackgroundColor: pink),
+        ]);
+
+        expect(colors, [const Color(0xFF000000), pink]);
+        expect(identical(layers[0].image, layers[1].image), isFalse);
+        expect(layers.every((layer) => layer.shapeMask != null), isTrue);
+      });
     });
 
     testWidgets('renders a mask shared by several clips once', (tester) async {
@@ -205,10 +223,31 @@ void main() {
       expect(identical(layers.first.image, layers.last.image), isTrue);
       expect(renders, hasLength(1));
     });
+
+    testWidgets('covers each clip in its own background color, black '
+        'without one', (tester) async {
+      final clips = [
+        clip('a', mask: circle),
+        clip('b', mask: circle, maskBackgroundColor: pink),
+      ];
+
+      final layers = (await tester.runAsync(
+        () => clipMaskCoverLayers(
+          clips: clips,
+          videoSize: const Size(1080, 1920),
+          targetAspectRatio: 9 / 16,
+          timelineMap: TransitionTimelineMap.fromClips(clips),
+          render: fakeRender,
+        ),
+      ))!;
+
+      expect(colors, [const Color(0xFF000000), pink]);
+      expect(identical(layers.first.image, layers.last.image), isFalse);
+    });
   });
 
   group('withClipMaskCovers', () {
-    Future<ui.Image> blank(LayerMask mask, Size size) {
+    Future<ui.Image> blank(LayerMask mask, Size size, Color color) {
       final recorder = ui.PictureRecorder();
       ui.Canvas(recorder);
       return recorder.endRecording().toImage(2, 2);
@@ -262,10 +301,14 @@ void main() {
   });
 
   group('renderClipMaskCover', () {
-    testWidgets('is black where the mask hides the clip and clear where it '
-        'shows it', (tester) async {
+    testWidgets('is the given color where the mask hides the clip and clear '
+        'where it shows it', (tester) async {
       final bytes = (await tester.runAsync(() async {
-        final image = await renderClipMaskCover(circle, const Size(40, 40));
+        final image = await renderClipMaskCover(
+          circle,
+          const Size(40, 40),
+          pink,
+        );
         final data = await image.toByteData();
         image.dispose();
         return data!.buffer.asUint8List();
@@ -274,7 +317,7 @@ void main() {
       List<int> pixel(int x, int y) =>
           bytes.sublist((y * 40 + x) * 4, (y * 40 + x) * 4 + 4);
       expect(pixel(20, 20)[3], 0);
-      expect(pixel(1, 1), [0, 0, 0, 255]);
+      expect(pixel(1, 1), [0xFF, 0x7F, 0xAF, 255]);
     });
   });
 }

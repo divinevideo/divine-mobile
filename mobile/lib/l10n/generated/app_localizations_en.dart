@@ -7376,8 +7376,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inboxMessageRequestsEmpty => 'No message requests';
 
   @override
-  String inboxMessageRequestsSemanticLabel(int requestCount) {
-    return 'Message requests, $requestCount pending';
+  String inboxMessageRequestsUnreadSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Message requests, $count unread',
+      one: 'Message requests, $count unread',
+      zero: 'Message requests',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -9908,6 +9915,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get videoEditorShapeMaskKeyframesSemanticLabel =>
       'Edit shape mask keyframes';
+
+  @override
+  String get videoEditorShapeMaskBackgroundLabel => 'Background';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Auto-detect';

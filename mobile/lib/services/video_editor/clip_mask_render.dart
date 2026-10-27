@@ -1,10 +1,10 @@
-// ABOUTME: Turns timeline clip shape masks into the black image layers the
-// ABOUTME: export draws over the track while each masked clip plays.
+// ABOUTME: Turns timeline clip shape masks into the image layers, in each
+// ABOUTME: clip's mask background color, that the export draws over the track
+// ABOUTME: while each masked clip plays.
 
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
-import 'package:divine_ui/divine_ui.dart' show VineTheme;
 import 'package:flutter/painting.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -29,31 +29,35 @@ import 'package:pro_video_editor/pro_video_editor.dart'
         ProVideoEditor,
         VideoRenderData;
 
-/// Renders the cover of a timeline clip's [LayerMask] at [size]: black where
-/// the mask hides the clip, clear where it shows it, partly see-through across
-/// a soft edge.
+/// Renders the cover of a timeline clip's [LayerMask] at [size]: [color]
+/// where the mask hides the clip, clear where it shows it, partly see-through
+/// across a soft edge.
 typedef ClipMaskCoverRenderer = Future<ui.Image> Function(
   LayerMask mask,
   Size size,
+  Color color,
 );
 
-/// The cover [mask] draws over a frame of [size], as the preview does.
-Future<ui.Image> renderClipMaskCover(LayerMask mask, Size size) async {
+/// The cover [mask] draws in [color] over a frame of [size], as the preview
+/// does.
+Future<ui.Image> renderClipMaskCover(
+  LayerMask mask,
+  Size size,
+  Color color,
+) async {
   final recorder = ui.PictureRecorder();
-  Canvas(
-    recorder,
-  ).drawRect(Offset.zero & size, Paint()..color = VineTheme.backgroundColor);
+  Canvas(recorder).drawRect(Offset.zero & size, Paint()..color = color);
   final picture = recorder.endRecording();
-  final black = await picture.toImage(
+  final fill = await picture.toImage(
     size.width.ceil().clamp(1, 1 << 14),
     size.height.ceil().clamp(1, 1 << 14),
   );
   picture.dispose();
   try {
     // The cover is what the mask hides, so it is the mask turned inside out.
-    return await mask.copyWith(invert: !mask.invert).applyTo(black);
+    return await mask.copyWith(invert: !mask.invert).applyTo(fill);
   } finally {
-    black.dispose();
+    fill.dispose();
   }
 }
 
@@ -100,19 +104,21 @@ Future<VideoRenderData> withClipMaskCovers(
 ///
 /// A timeline clip is one segment of a single-track render, which has nothing
 /// underneath it to show through, so its mask is drawn over it instead: one
-/// black layer per masked clip, with the shape cut out, laid over the part of
-/// [videoSize] an export cropped to [targetAspectRatio] keeps. Each shows
-/// while its clip does, fading in and out across an overlap transition as
-/// [ClipMaskWindow.weightAt] does in the preview; its times are mapped onto
-/// the output through [timelineMap], like every other overlay window.
+/// layer per masked clip, in the clip's mask background color with the shape
+/// cut out, laid over the part of [videoSize] an export cropped to
+/// [targetAspectRatio] keeps. Each shows while its clip does, fading in and
+/// out across an overlap transition as [ClipMaskWindow.weightAt] does in the
+/// preview; its times are mapped onto the output through [timelineMap], like
+/// every other overlay window.
 ///
 /// The layers go first in the export's image layers, so that every overlay
-/// stays on top of the cover. Clips that share a mask share one image.
+/// stays on top of the cover. Clips that share a mask and its color share one
+/// image.
 ///
 /// A mask whose keyframes change it is not baked into the cover: its layer is
-/// all black, and the export cuts the shape out of it on every frame from the
-/// mask turned inside out, read on the editor's timeline from the clip's
-/// start like the preview reads it.
+/// all of its color, and the export cuts the shape out of it on every frame
+/// from the mask turned inside out, read on the editor's timeline from the
+/// clip's start like the preview reads it.
 Future<List<ImageLayer>> clipMaskCoverLayers({
   required List<DivineVideoClip> clips,
   required Size videoSize,
@@ -124,16 +130,16 @@ Future<List<ImageLayer>> clipMaskCoverLayers({
   if (windows.isEmpty) return const [];
 
   final frame = ExportLayerMapping.keptRect(videoSize, targetAspectRatio);
-  final images = <LayerMask?, EditorLayerImage>{};
+  final images = <(LayerMask?, Color), EditorLayerImage>{};
   final layers = <ImageLayer>[];
   for (final window in windows) {
     final moves = window.mask.hasKeyframes;
-    // Keyed by the mask the image bakes in; every moving mask shares the
-    // plain black one.
+    // Keyed by the mask the image bakes in and its color; every moving mask
+    // of one color shares the plain cover.
     final baked = moves ? null : window.mask;
-    final image = images[baked] ??= EditorLayerImage.memory(
+    final image = images[(baked, window.color)] ??= EditorLayerImage.memory(
       await _encodePng(
-        await render(baked ?? _hidesAll, frame.size),
+        await render(baked ?? _hidesAll, frame.size, window.color),
       ),
     );
 
@@ -180,8 +186,8 @@ Future<List<ImageLayer>> clipMaskCoverLayers({
   return layers;
 }
 
-/// A mask that hides all of a frame, so its cover is solid black: a shape
-/// of no size.
+/// A mask that hides all of a frame, so its cover is solid in its color: a
+/// shape of no size.
 const LayerMask _hidesAll = LayerMask(
   shape: LayerMaskShape.ellipse,
   size: Size.zero,

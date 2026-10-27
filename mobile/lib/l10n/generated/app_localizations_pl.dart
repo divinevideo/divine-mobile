@@ -7469,8 +7469,17 @@ class AppLocalizationsPl extends AppLocalizations {
   String get inboxMessageRequestsEmpty => 'Brak próśb o wiadomość';
 
   @override
-  String inboxMessageRequestsSemanticLabel(int requestCount) {
-    return 'Prośby o wiadomość, $requestCount oczekujących';
+  String inboxMessageRequestsUnreadSemanticLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Prośby o wiadomość, $count nieprzeczytanej',
+      many: 'Prośby o wiadomość, $count nieprzeczytanych',
+      few: 'Prośby o wiadomość, $count nieprzeczytane',
+      one: 'Prośby o wiadomość, $count nieprzeczytana',
+      zero: 'Prośby o wiadomość',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -10017,6 +10026,9 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get videoEditorShapeMaskKeyframesSemanticLabel =>
       'Edytuj klatki kluczowe maski kształtu';
+
+  @override
+  String get videoEditorShapeMaskBackgroundLabel => 'Tło';
 
   @override
   String get videoEditorChromaKeyAutoDetect => 'Wykryj automatycznie';

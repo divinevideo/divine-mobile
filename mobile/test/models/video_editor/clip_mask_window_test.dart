@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' show Color;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model;
@@ -17,6 +18,7 @@ void main() {
     String id, {
     Duration duration = const Duration(seconds: 2),
     LayerMask? mask,
+    Color? maskBackgroundColor,
     ClipTransition? transition,
   }) => DivineVideoClip(
     id: id,
@@ -26,6 +28,7 @@ void main() {
     targetAspectRatio: model.AspectRatio.vertical,
     originalAspectRatio: 9 / 16,
     mask: mask,
+    maskBackgroundColor: maskBackgroundColor,
     transition: transition,
   );
 
@@ -112,10 +115,41 @@ void main() {
       final clips = [clip('a', mask: circle), clip('b')];
 
       expect(
-        clipMaskWindows(clips, masks: {'b': heart}).map((w) => w.mask),
+        clipMaskWindows(
+          clips,
+          live: (clipId: 'b', mask: heart, backgroundColor: null),
+        ).map((w) => w.mask),
         [circle, heart],
       );
-      expect(clipMaskWindows(clips, masks: {'a': null}), isEmpty);
+      expect(
+        clipMaskWindows(
+          clips,
+          live: (clipId: 'a', mask: null, backgroundColor: null),
+        ),
+        isEmpty,
+      );
+    });
+
+    test("covers in the clip's background color, black without one, and "
+        'in a live one over it', () {
+      const pink = Color(0xFFFF7FAF);
+      const blue = Color(0xFF34BBF1);
+      final clips = [
+        clip('a', mask: circle),
+        clip('b', mask: circle, maskBackgroundColor: pink),
+      ];
+
+      expect(clipMaskWindows(clips).map((w) => w.color), [
+        defaultClipMaskBackgroundColor,
+        pink,
+      ]);
+      expect(
+        clipMaskWindows(
+          clips,
+          live: (clipId: 'a', mask: circle, backgroundColor: blue),
+        ).map((w) => w.color),
+        [blue, pink],
+      );
     });
   });
 

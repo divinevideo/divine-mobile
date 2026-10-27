@@ -41,6 +41,7 @@ import 'package:openvine/providers/follow_relationship_provider.dart';
 import 'package:openvine/providers/nip05_verification_provider.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/providers/video_clip_import_provider.dart';
 import 'package:openvine/router/routes/messaging_routes.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/feed/dm_reply_context.dart';
@@ -1020,12 +1021,15 @@ class _SendBar extends ConsumerWidget {
     // repository or Blossom client also rebuilds the cubit around them.
     final service = ref.watch(dmVideoSendServiceProvider);
     final clipVerifier = ref.watch(clipProvenanceVerifierProvider);
+    final clipImporter = ref.watch(videoClipImportServiceProvider);
     return BlocProvider<VideoDmSendCubit>(
-      key: ValueKey((service, clipVerifier)),
+      key: ValueKey((service, clipVerifier, clipImporter)),
       create: (_) => VideoDmSendCubit(
         service: service,
         clipVerifier: clipVerifier,
         signOwnRecordings: NativeProofModeService.signOwnRecordings,
+        isArchivedVine: (path) async =>
+            await clipImporter.findArchivedVine(File(path)) != null,
       ),
       child: _SendBarBody(participantPubkeys: participantPubkeys),
     );

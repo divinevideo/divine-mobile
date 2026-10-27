@@ -32,6 +32,9 @@ String? divineUrlToPushRoute(Uri uri) {
 /// mapping, so a link reaches one location whichever of them delivers it.
 String? deepLinkRouterPath(DeepLink deepLink) {
   switch (deepLink.type) {
+    case DeepLinkType.shortLink:
+      final code = deepLink.shortCode;
+      return code == null ? null : RoutePaths.shortLinkForCode(code);
     case DeepLinkType.video:
       final videoRef = deepLink.videoRef;
       if (videoRef == null || videoRef.isEmpty) return null;
@@ -182,6 +185,7 @@ String? universalLinkToRouterPath(Uri uri) {
     case DeepLinkType.search:
     case DeepLinkType.list:
     case DeepLinkType.peopleList:
+    case DeepLinkType.shortLink:
       return route;
   }
 }

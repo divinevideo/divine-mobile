@@ -4107,6 +4107,7 @@
   "videoEditorShapeMaskCornersRound": "Bulat",
   "videoEditorShapeMaskKeyframesHint": "Tambahkan keyframe, geser playhead, lalu buka masking lagi untuk memindahkan, mengubah ukuran, memutar, atau melembutkan bentuk. Bentuk akan meluncur dari keyframe ke keyframe.",
   "videoEditorShapeMaskKeyframesSemanticLabel": "Edit keyframe masking bentuk",
+  "videoEditorShapeMaskBackgroundLabel": "Latar",
   "videoEditorChromaKeyAutoDetect": "Deteksi otomatis",
   "videoEditorChromaKeyPresetGreen": "Hijau",
   "videoEditorChromaKeyPresetBlue": "Biru",
@@ -4849,10 +4850,10 @@
   "inboxConversationOptionsLabel": "Opsi",
   "inboxConversationViewProfileButton": "Lihat profil",
   "inboxMessageRequestsEmpty": "Tidak ada permintaan pesan",
-  "inboxMessageRequestsSemanticLabel": "Permintaan pesan, {requestCount} menunggu",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{Permintaan pesan} other{Permintaan pesan, {count} belum dibaca}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

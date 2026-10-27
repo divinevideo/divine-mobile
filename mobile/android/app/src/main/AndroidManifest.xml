@@ -224,6 +224,7 @@
                 <data android:scheme="https" android:host="login.divine.video" />
 
                 <data android:pathPrefix="/video"/>
+                <data android:pathPattern="/l/.*"/>
                 <data android:pathPrefix="/profile"/>
                 <data android:pathPrefix="/hashtag"/>
                 <data android:pathPrefix="/search"/>

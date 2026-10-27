@@ -3653,6 +3653,7 @@
   "videoEditorShapeMaskCornersRound": "둥글게",
   "videoEditorShapeMaskKeyframesHint": "키프레임을 추가하고 재생 헤드를 옮긴 다음 마스크를 다시 열어 모양을 이동하거나 크기를 조절하거나 회전하거나 부드럽게 만드세요. 모양이 키프레임 사이를 부드럽게 움직여요.",
   "videoEditorShapeMaskKeyframesSemanticLabel": "모양 마스크 키프레임 편집",
+  "videoEditorShapeMaskBackgroundLabel": "배경",
   "videoEditorChromaKeyAutoDetect": "자동 감지",
   "videoEditorChromaKeyPresetGreen": "초록",
   "videoEditorChromaKeyPresetBlue": "파랑",
@@ -4395,10 +4396,10 @@
   "inboxConversationOptionsLabel": "옵션",
   "inboxConversationViewProfileButton": "프로필 보기",
   "inboxMessageRequestsEmpty": "메시지 요청 없음",
-  "inboxMessageRequestsSemanticLabel": "메시지 요청, {requestCount}건 대기 중",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{메시지 요청} other{메시지 요청, 읽지 않음 {count}건}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }

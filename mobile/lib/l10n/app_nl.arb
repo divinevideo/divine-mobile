@@ -4107,6 +4107,7 @@
   "videoEditorShapeMaskCornersRound": "Rond",
   "videoEditorShapeMaskKeyframesHint": "Voeg een keyframe toe, verplaats de afspeelkop en open dan het masker opnieuw om de vorm te verschuiven, te schalen, te draaien of zachter te maken. Die glijdt van keyframe naar keyframe.",
   "videoEditorShapeMaskKeyframesSemanticLabel": "Keyframes van het vormmasker bewerken",
+  "videoEditorShapeMaskBackgroundLabel": "Achtergrond",
   "videoEditorChromaKeyAutoDetect": "Automatisch detecteren",
   "videoEditorChromaKeyPresetGreen": "Groen",
   "videoEditorChromaKeyPresetBlue": "Blauw",
@@ -4849,10 +4850,10 @@
   "inboxConversationOptionsLabel": "Opties",
   "inboxConversationViewProfileButton": "Profiel bekijken",
   "inboxMessageRequestsEmpty": "Geen berichtverzoeken",
-  "inboxMessageRequestsSemanticLabel": "Berichtverzoeken, {requestCount} in behandeling",
-  "@inboxMessageRequestsSemanticLabel": {
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{Berichtverzoeken} =1{Berichtverzoeken, {count} ongelezen} other{Berichtverzoeken, {count} ongelezen}}",
+  "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
-      "requestCount": {
+      "count": {
         "type": "int"
       }
     }
