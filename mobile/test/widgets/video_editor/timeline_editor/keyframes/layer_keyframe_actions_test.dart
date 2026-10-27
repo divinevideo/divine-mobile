@@ -16,6 +16,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_opacity.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
@@ -182,6 +183,36 @@ void main() {
       expect(canKeyframeLayer(_detachedLayer()), isTrue);
       expect(canKeyframeLayer(_censorLayer()), isFalse);
       expect(canKeyframeLayer(null), isFalse);
+    });
+
+    test('keeps a sticker a viewer taps where it stands', () {
+      WidgetLayer sticker(SocialStickerData data) => WidgetLayer(
+        widget: const SizedBox(),
+        meta: data.toMeta(),
+      );
+
+      expect(
+        canKeyframeLayer(
+          sticker(
+            const SocialStickerData(
+              kind: SocialStickerKind.link,
+              url: 'https://divine.video/',
+            ),
+          ),
+        ),
+        isFalse,
+      );
+      expect(
+        canKeyframeLayer(
+          sticker(
+            const SocialStickerData(
+              kind: SocialStickerKind.soundCredit,
+              soundTitle: 'Song',
+            ),
+          ),
+        ),
+        isTrue,
+      );
     });
   });
 

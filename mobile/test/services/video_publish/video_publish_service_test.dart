@@ -10,7 +10,8 @@ import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:db_client/db_client.dart' show ScheduledPost;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:models/models.dart' show AspectRatio;
+import 'package:models/models.dart'
+    show AspectRatio, VideoStickerKind, VideoStickerRegion;
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/exceptions/video_exceptions.dart';
@@ -20,6 +21,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/repositories/scheduled_posts_repository.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
@@ -128,6 +130,7 @@ void main() {
     );
     registerFallbackValue(_createPendingUpload(status: UploadStatus.pending));
     registerFallbackValue(_FakeEvent());
+    registerFallbackValue(<VideoStickerRegion>[]);
   });
 
   setUp(() {
@@ -1525,6 +1528,149 @@ void main() {
         )..called(1);
         expect(captured.captured.single, isEmpty);
       });
+
+      test('adds the hashtags, mentions and links of social stickers', () async {
+        _setupSuccessfulPublish(
+          mockAuthService: mockAuthService,
+          mockUploadManager: mockUploadManager,
+          mockDraftService: mockDraftService,
+          mockVideoEventPublisher: mockVideoEventPublisher,
+        );
+        const mentioned =
+            'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
+        Map<String, dynamic> layer(SocialStickerData sticker) => {
+          'type': 'widget',
+          'exportConfigs': {'meta': sticker.toMeta()},
+        };
+
+        final result = await service.publishVideo(
+          draft: _createTestDraft(
+            editorEditingParameters: {
+              'layers': [
+                layer(
+                  const SocialStickerData(
+                    kind: SocialStickerKind.hashtag,
+                    hashtag: 'summer',
+                  ),
+                ),
+                layer(
+                  const SocialStickerData(
+                    kind: SocialStickerKind.mention,
+                    pubkey: mentioned,
+                    name: 'alice',
+                  ),
+                ),
+                layer(
+                  const SocialStickerData(
+                    kind: SocialStickerKind.link,
+                    url: 'https://divine.video/',
+                  ),
+                ),
+              ],
+            },
+          ),
+        );
+
+        expect(result, isA<PublishSuccess>());
+        final captured = verify(
+          () => mockVideoEventPublisher.publishVideoEvent(
+            upload: any(named: 'upload'),
+            title: any(named: 'title'),
+            description: any(named: 'description'),
+            hashtags: captureAny(named: 'hashtags'),
+            expirationTimestamp: any(named: 'expirationTimestamp'),
+            allowAudioReuse: any(named: 'allowAudioReuse'),
+            collaboratorPubkeys: any(named: 'collaboratorPubkeys'),
+            mentionedPubkeys: captureAny(named: 'mentionedPubkeys'),
+            linkUrls: captureAny(named: 'linkUrls'),
+            inspiredByAddressableId: any(named: 'inspiredByAddressableId'),
+            inspiredByRelayUrl: any(named: 'inspiredByRelayUrl'),
+            inspiredByNpubs: any(named: 'inspiredByNpubs'),
+            clipSourceCredits: any(named: 'clipSourceCredits'),
+            selectedAudio: any(named: 'selectedAudio'),
+            selectedAudioEventId: any(named: 'selectedAudioEventId'),
+            selectedAudioRelay: any(named: 'selectedAudioRelay'),
+            language: any(named: 'language'),
+            contentWarning: any(named: 'contentWarning'),
+            thumbnailTimestamp: any(named: 'thumbnailTimestamp'),
+            replyContext: any(named: 'replyContext'),
+            addReplyToFeed: any(named: 'addReplyToFeed'),
+            onEventSigned: any(named: 'onEventSigned'),
+            onPublishedEvent: any(named: 'onPublishedEvent'),
+            onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
+          ),
+        ).captured;
+        // Mocktail hands named captures back in its own order, not the
+        // order they are written in.
+        expect(
+          captured,
+          unorderedEquals([
+            ['summer', 'test', 'video'],
+            [mentioned],
+            ['https://divine.video/'],
+          ]),
+        );
+      });
+
+      test(
+        'publishes where the final render shows its tappable stickers',
+        () async {
+          _setupSuccessfulPublish(
+            mockAuthService: mockAuthService,
+            mockUploadManager: mockUploadManager,
+            mockDraftService: mockDraftService,
+            mockVideoEventPublisher: mockVideoEventPublisher,
+          );
+          const region = VideoStickerRegion(
+            kind: VideoStickerKind.link,
+            target: 'https://divine.video/',
+            centerX: 0.5,
+            centerY: 0.25,
+            width: 0.4,
+            height: 0.05,
+          );
+
+          final result = await service.publishVideo(
+            draft: _createTestDraft().copyWith(
+              finalRenderedClip: _createTestClip().copyWith(
+                stickerRegions: const [region],
+              ),
+            ),
+          );
+
+          expect(result, isA<PublishSuccess>());
+          final captured = verify(
+            () => mockVideoEventPublisher.publishVideoEvent(
+              upload: any(named: 'upload'),
+              title: any(named: 'title'),
+              description: any(named: 'description'),
+              hashtags: any(named: 'hashtags'),
+              expirationTimestamp: any(named: 'expirationTimestamp'),
+              allowAudioReuse: any(named: 'allowAudioReuse'),
+              collaboratorPubkeys: any(named: 'collaboratorPubkeys'),
+              mentionedPubkeys: any(named: 'mentionedPubkeys'),
+              linkUrls: any(named: 'linkUrls'),
+              stickerRegions: captureAny(named: 'stickerRegions'),
+              inspiredByAddressableId: any(named: 'inspiredByAddressableId'),
+              inspiredByRelayUrl: any(named: 'inspiredByRelayUrl'),
+              inspiredByNpubs: any(named: 'inspiredByNpubs'),
+              clipSourceCredits: any(named: 'clipSourceCredits'),
+              selectedAudio: any(named: 'selectedAudio'),
+              selectedAudioEventId: any(named: 'selectedAudioEventId'),
+              selectedAudioRelay: any(named: 'selectedAudioRelay'),
+              language: any(named: 'language'),
+              contentWarning: any(named: 'contentWarning'),
+              thumbnailTimestamp: any(named: 'thumbnailTimestamp'),
+              replyContext: any(named: 'replyContext'),
+              addReplyToFeed: any(named: 'addReplyToFeed'),
+              onEventSigned: any(named: 'onEventSigned'),
+              onPublishedEvent: any(named: 'onPublishedEvent'),
+              onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
+            ),
+          ).captured;
+          expect(captured.single, equals([region]));
+        },
+      );
 
       test('collaborator invites are sent after successful publish', () async {
         _setupSuccessfulPublish(
@@ -3809,6 +3955,8 @@ void _setupSuccessfulPublish({
       allowAudioReuse: any(named: 'allowAudioReuse'),
       collaboratorPubkeys: any(named: 'collaboratorPubkeys'),
       mentionedPubkeys: any(named: 'mentionedPubkeys'),
+      linkUrls: any(named: 'linkUrls'),
+      stickerRegions: any(named: 'stickerRegions'),
       inspiredByAddressableId: any(named: 'inspiredByAddressableId'),
       inspiredByRelayUrl: any(named: 'inspiredByRelayUrl'),
       inspiredByNpubs: any(named: 'inspiredByNpubs'),

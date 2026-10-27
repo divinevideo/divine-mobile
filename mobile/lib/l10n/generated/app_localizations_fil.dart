@@ -2015,6 +2015,23 @@ class AppLocalizationsFil extends AppLocalizations {
   String get metadataSoundsLabel => 'Mga Tunog';
 
   @override
+  String get metadataLinksLabel => 'Mga Link';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'Link sticker, binubuksan ang $url';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel =>
+      'Mention sticker, binubuksan ang profile';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'Hashtag sticker, binubuksan ang #$hashtag';
+  }
+
+  @override
   String get metadataOriginalSound => 'Orihinal na sound';
 
   @override
@@ -10882,6 +10899,73 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorInfoStickersTitle => 'Info';
 
   @override
+  String get videoEditorSocialStickersTitle => 'Social';
+
+  @override
+  String get videoEditorSocialStickerMention => 'Mention';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'Sound';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'pangalanmo';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'hashtag';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'Pumili ng tao';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'Mamemention sila sa post mo at makakatanggap ng notification.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'Mag-type ng hashtag';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'Idadagdag din sa mga hashtag ng post mo.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint =>
+      'Isang linya ng lyrics (opsyonal)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'Link';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'Web address';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'Pamagat (opsyonal)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote =>
+      'Idadagdag ang address sa post mo.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid => 'Hindi pa ito web address.';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'Nota';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'Plaka';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'Cassette';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'Equalizer';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'Player';
+
+  @override
   String get videoEditorInfoStickerTime => 'Oras';
 
   @override
@@ -12707,6 +12791,11 @@ class AppLocalizationsFil extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Idagdag ang \"#$tag\"';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, mula sa sticker sa video mo';
   }
 
   @override

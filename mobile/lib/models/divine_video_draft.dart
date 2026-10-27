@@ -19,6 +19,7 @@ import 'package:openvine/models/content_label.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/ideas_transcript.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_reply_context.dart';
 import 'package:openvine/utils/draft_audio_path_resolver.dart';
 import 'package:openvine/utils/editor_state_history_compaction.dart';
@@ -361,6 +362,11 @@ class DivineVideoDraft {
 
   final Map<String, dynamic> editorStateHistory;
   final Map<String, dynamic> editorEditingParameters;
+
+  /// What the social stickers on the video add to the post, read from the
+  /// layers in [editorEditingParameters].
+  SocialStickerCredits get stickerCredits =>
+      SocialStickerCredits.fromLayerMaps(editorEditingParameters['layers']);
 
   /// The final rendered clip ready for publishing.
   /// Cached to avoid re-rendering when no changes are made.

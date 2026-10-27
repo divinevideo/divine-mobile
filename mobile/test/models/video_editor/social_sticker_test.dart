@@ -1,0 +1,323 @@
+// ABOUTME: Tests the social sticker model: its meta round trip, when it can be
+// ABOUTME: placed, and the hashtags and mentions the stickers add to a post.
+
+import 'package:flutter/widgets.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:models/models.dart' show AudioEvent, UserProfile;
+import 'package:openvine/models/video_editor/info_sticker.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
+import 'package:pro_image_editor/pro_image_editor.dart';
+
+const _pubkey =
+    'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2';
+
+WidgetLayer _layer(Map<String, dynamic> meta) => WidgetLayer(
+  widget: const SizedBox(),
+  meta: meta,
+  exportConfigs: WidgetLayerExportConfigs(id: '1', meta: meta),
+);
+
+void main() {
+  group(SocialStickerData, () {
+    group('toMeta and fromMeta', () {
+      test('round-trip a mention, a hashtag and a sound credit', () {
+        const stickers = [
+          SocialStickerData(
+            kind: SocialStickerKind.mention,
+            style: InfoStickerStyle.neon,
+            pubkey: _pubkey,
+            name: 'alice',
+          ),
+          SocialStickerData(kind: SocialStickerKind.hashtag, hashtag: 'summer'),
+          SocialStickerData(
+            kind: SocialStickerKind.link,
+            url: 'https://divine.video/',
+            linkTitle: 'Divine',
+          ),
+          SocialStickerData(
+            kind: SocialStickerKind.soundCredit,
+            style: InfoStickerStyle.glass,
+            soundTitle: 'Song',
+            soundArtist: 'Artist',
+            soundDesign: SocialStickerSoundDesign.cassette,
+            lyric: 'A line',
+          ),
+        ];
+
+        for (final sticker in stickers) {
+          expect(SocialStickerData.fromMeta(sticker.toMeta()), equals(sticker));
+        }
+      });
+
+      test('reads no sticker from an info sticker or an unknown kind', () {
+        const info = InfoStickerData(
+          kind: InfoStickerKind.battery,
+          localeName: 'en',
+        );
+        final unknown = const SocialStickerData(
+          kind: SocialStickerKind.hashtag,
+        ).toMeta()..['socialKind'] = 'poll';
+
+        expect(SocialStickerData.fromMeta(info.toMeta()), isNull);
+        expect(SocialStickerData.fromMeta(unknown), isNull);
+      });
+
+      test('falls back to the first pill look for a look it cannot take', () {
+        final meta = const SocialStickerData(
+          kind: SocialStickerKind.hashtag,
+          hashtag: 'summer',
+        ).toMeta()..['style'] = InfoStickerStyle.analog.name;
+
+        expect(
+          SocialStickerData.fromMeta(meta)!.style,
+          equals(InfoStickerStyle.light),
+        );
+      });
+    });
+
+    group('isComplete', () {
+      test('needs a valid public key and a name for a mention', () {
+        const mention = SocialStickerData(
+          kind: SocialStickerKind.mention,
+          pubkey: _pubkey,
+          name: 'alice',
+        );
+
+        expect(mention.isComplete, isTrue);
+        expect(mention.copyWith(pubkey: 'npub1alice').isComplete, isFalse);
+        expect(
+          const SocialStickerData(
+            kind: SocialStickerKind.mention,
+            pubkey: _pubkey,
+          ).isComplete,
+          isFalse,
+        );
+      });
+
+      test('needs a hashtag that can be published', () {
+        expect(
+          const SocialStickerData(
+            kind: SocialStickerKind.hashtag,
+            hashtag: 'summer',
+          ).isComplete,
+          isTrue,
+        );
+        expect(
+          const SocialStickerData(
+            kind: SocialStickerKind.hashtag,
+            hashtag: '!!',
+          ).isComplete,
+          isFalse,
+        );
+      });
+    });
+
+    group('normalizeLinkUrl', () {
+      test('adds https to an address typed without a scheme', () {
+        expect(
+          SocialStickerData.normalizeLinkUrl(' divine.video/about '),
+          equals('https://divine.video/about'),
+        );
+      });
+
+      test('keeps an http or https address', () {
+        expect(
+          SocialStickerData.normalizeLinkUrl('http://example.com'),
+          equals('http://example.com'),
+        );
+      });
+
+      test('rejects what is not a web address of a named host', () {
+        for (final raw in [
+          'ftp://example.com',
+          'javascript://example.com',
+          'localhost',
+          'two words.com',
+          '',
+        ]) {
+          expect(SocialStickerData.normalizeLinkUrl(raw), isNull, reason: raw);
+        }
+      });
+    });
+
+    group('withLink', () {
+      test('shows the domain until a title is given', () {
+        const link = SocialStickerData(kind: SocialStickerKind.link);
+
+        final untitled = link.withLink(url: 'www.divine.video', title: ' ');
+        final titled = link.withLink(url: 'www.divine.video', title: 'Divine');
+
+        expect(untitled.linkTitle, isNull);
+        expect(untitled.linkDomain, equals('divine.video'));
+        expect(titled.linkTitle, equals('Divine'));
+      });
+    });
+
+    group('mentionOf', () {
+      test('names the person by their handle without its @', () {
+        final profile = UserProfile(
+          pubkey: _pubkey,
+          name: 'alice',
+          displayName: 'Alice A.',
+          rawData: const {},
+          createdAt: DateTime(2026),
+          eventId: 'event',
+        );
+
+        final mention = SocialStickerData.mentionOf(profile);
+
+        expect(mention.pubkey, equals(_pubkey));
+        expect(mention.name, equals('alice'));
+      });
+    });
+
+    group('soundCreditFor', () {
+      AudioEvent sound({String? title, String? creatorName}) => AudioEvent(
+        id: 'sound',
+        pubkey: _pubkey,
+        createdAt: 0,
+        title: title,
+        creatorName: creatorName,
+      );
+
+      test('credits a sound with a title and an artist', () {
+        final credit = SocialStickerData.soundCreditFor(
+          sound(title: ' Song ', creatorName: 'Artist'),
+        );
+
+        expect(credit?.soundTitle, equals('Song'));
+        expect(credit?.soundArtist, equals('Artist'));
+      });
+
+      test("credits the artist of a sound from Divine's library", () {
+        final credit = SocialStickerData.soundCreditFor(
+          AudioEvent(
+            id: '${AudioEvent.bundledMarker}_song',
+            pubkey: _pubkey,
+            createdAt: 0,
+            title: 'Song',
+            source: 'Artist',
+          ),
+        );
+
+        expect(credit?.soundArtist, equals('Artist'));
+      });
+
+      test('offers each sound once, in order', () {
+        final credits = SocialStickerData.soundCreditsFor([
+          sound(title: 'Song', creatorName: 'Artist'),
+          sound(title: 'Other', creatorName: 'Band'),
+          sound(title: 'Song', creatorName: 'Artist'),
+          sound(creatorName: 'Nameless'),
+        ]);
+
+        expect(credits.map((c) => c.soundTitle), equals(['Song', 'Other']));
+      });
+
+      test('credits a sound without an artist by its title', () {
+        final credit = SocialStickerData.soundCreditFor(sound(title: 'Song'));
+
+        expect(credit?.soundTitle, equals('Song'));
+        expect(credit?.soundArtist, isNull);
+        expect(credit?.isComplete, isTrue);
+      });
+
+      test('offers no credit for a sound without a title', () {
+        expect(
+          SocialStickerData.soundCreditFor(sound(creatorName: 'Artist')),
+          isNull,
+        );
+      });
+    });
+
+    group('withLyric', () {
+      test('drops a blank line of lyrics', () {
+        const credit = SocialStickerData(
+          kind: SocialStickerKind.soundCredit,
+          soundTitle: 'Song',
+          soundArtist: 'Artist',
+          lyric: 'A line',
+        );
+
+        expect(credit.withLyric('  ').lyric, isNull);
+      });
+    });
+  });
+
+  group(SocialStickerCredits, () {
+    final hashtag = _layer(
+      const SocialStickerData(
+        kind: SocialStickerKind.hashtag,
+        hashtag: 'summer',
+      ).toMeta(),
+    );
+    final mention = _layer(
+      SocialStickerData(
+        kind: SocialStickerKind.mention,
+        pubkey: _pubkey.toUpperCase(),
+        name: 'alice',
+      ).toMeta(),
+    );
+    final soundCredit = _layer(
+      const SocialStickerData(
+        kind: SocialStickerKind.soundCredit,
+        soundTitle: 'Song',
+        soundArtist: 'Artist',
+      ).toMeta(),
+    );
+
+    final link = _layer(
+      const SocialStickerData(
+        kind: SocialStickerKind.link,
+        url: 'https://divine.video/',
+      ).toMeta(),
+    );
+
+    group('of', () {
+      test('collects the hashtags, mentioned public keys and links', () {
+        final credits = SocialStickerCredits.of([
+          hashtag,
+          mention,
+          link,
+          soundCredit,
+        ]);
+
+        expect(credits.hashtags, equals({'summer'}));
+        expect(credits.mentionPubkeys, equals({_pubkey}));
+        expect(credits.links, equals({'https://divine.video/'}));
+      });
+    });
+
+    group('fromLayerMaps', () {
+      test('reads the same credits from serialized layers', () {
+        final layers = [hashtag, mention, link, soundCredit];
+        final maps = layers.map((layer) => layer.toMap()).toList();
+
+        expect(
+          SocialStickerCredits.fromLayerMaps(maps),
+          equals(SocialStickerCredits.of(layers)),
+        );
+      });
+
+      test('reads no credits from a draft without layers', () {
+        expect(
+          SocialStickerCredits.fromLayerMaps(null),
+          equals(const SocialStickerCredits()),
+        );
+      });
+    });
+
+    group('hashtagsWith', () {
+      test("keeps the stickers' hashtags when the post has too many", () {
+        final credits = SocialStickerCredits.of([hashtag]);
+        final tags = [for (var i = 0; i < 10; i++) 'tag$i'];
+
+        final published = credits.hashtagsWith(tags);
+
+        expect(published, hasLength(10));
+        expect(published.first, equals('summer'));
+        expect(published, isNot(contains('tag9')));
+      });
+    });
+  });
+}

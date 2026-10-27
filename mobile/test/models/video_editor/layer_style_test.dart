@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/layer_style.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 
@@ -101,6 +102,27 @@ void main() {
         expect(styled, isA<PaintLayer>());
         expect(styled.divineEnterAnimations, [_fadeIn]);
         expect(styled.opacity, 0.5);
+      });
+
+      test('gives a sticker a viewer taps no animations', () {
+        final source = TextLayer(
+          text: 'Hi',
+          animations: const [_fadeIn].toLayerAnimations(),
+        );
+        final hashtag = WidgetLayer(
+          widget: const SizedBox(),
+          meta: const SocialStickerData(
+            kind: SocialStickerKind.hashtag,
+            hashtag: 'summer',
+          ).toMeta(),
+        );
+
+        final styled = LayerStyle.of(
+          source,
+          at: Duration.zero,
+        ).applyTo(hashtag, canvasSize: _canvas, totalDuration: _total);
+
+        expect(styled.divineAnimations, isEmpty);
       });
 
       test('leaves a keyframed layer fading through its keyframes', () {

@@ -12,6 +12,7 @@ import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_emoji.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_format.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/rec_timer_painter.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/sticker_pill_palette.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 
 /// An info sticker as it shows on the video.
@@ -49,7 +50,15 @@ class InfoStickerView extends StatelessWidget {
               InfoStickerFormat.text(data),
             ),
           ),
-          _ => _Card(data: data, palette: _Palette.of(data.style)),
+          _ => Builder(
+            builder: (context) {
+              final palette = StickerPillPalette.of(data.style);
+              return StickerPill(
+                palette: palette,
+                child: _LineContent(data: data, palette: palette),
+              );
+            },
+          ),
         },
       ),
     );
@@ -65,7 +74,7 @@ class InfoStickerView extends StatelessWidget {
 Future<void> preloadInfoStickerContent(Iterable<InfoStickerData> stickers) {
   if (stickers.isEmpty) return Future.value();
   return Future.wait([
-    _preloadFonts(),
+    preloadInfoStickerFonts(),
     for (final emoji in {
       for (final data in stickers) ...InfoStickerFormat.emojis(data),
     })
@@ -73,7 +82,9 @@ Future<void> preloadInfoStickerContent(Iterable<InfoStickerData> stickers) {
   ]);
 }
 
-Future<void> _preloadFonts() async {
+/// Loads the fonts info and social stickers draw with; see
+/// [preloadInfoStickerContent].
+Future<void> preloadInfoStickerFonts() async {
   // Each call registers its face with google_fonts; the color only fills the
   // style these calls return and throw away.
   VineTheme.titleLargeFont(color: VineTheme.whiteText);
@@ -105,101 +116,13 @@ Future<void> _precacheEmoji(InfoStickerEmoji emoji) {
   return completer.future;
 }
 
-/// The colors of a pill style.
-class _Palette {
-  const _Palette({
-    required this.ink,
-    this.background,
-    this.border,
-    this.glow,
-  });
-
-  factory _Palette.of(InfoStickerStyle style) => switch (style) {
-    InfoStickerStyle.dark => const _Palette(
-      background: VineTheme.scrim65,
-      ink: VineTheme.whiteText,
-    ),
-    InfoStickerStyle.glass => _Palette(
-      background: VineTheme.whiteText.withValues(alpha: 0.24),
-      border: VineTheme.whiteText.withValues(alpha: 0.5),
-      ink: VineTheme.whiteText,
-    ),
-    InfoStickerStyle.brand => const _Palette(
-      background: VineTheme.vineGreen,
-      ink: VineTheme.onPrimary,
-    ),
-    InfoStickerStyle.highlight => const _Palette(
-      background: VineTheme.accentYellow,
-      ink: VineTheme.onPrimary,
-    ),
-    InfoStickerStyle.neon => const _Palette(
-      ink: VineTheme.whiteText,
-      glow: VineTheme.vineGreen,
-    ),
-    InfoStickerStyle.plain => const _Palette(ink: VineTheme.whiteText),
-    InfoStickerStyle.outline => const _Palette(
-      border: VineTheme.whiteText,
-      ink: VineTheme.whiteText,
-    ),
-    _ => const _Palette(
-      background: VineTheme.whiteText,
-      ink: VineTheme.onPrimary,
-    ),
-  };
-
-  final Color? background;
-  final Color? border;
-  final Color ink;
-
-  /// The color the text glows in, for the neon look.
-  final Color? glow;
-
-  /// A glow for neon; otherwise, without an opaque background, a shadow so
-  /// the ink reads on a light video.
-  List<Shadow> get shadows => switch (glow) {
-    final glow? => [
-      Shadow(color: glow, blurRadius: 6),
-      Shadow(color: glow, blurRadius: 18),
-      Shadow(color: glow.withValues(alpha: 0.6), blurRadius: 36),
-    ],
-    null when background == null || background!.a < 1 => const [
-      Shadow(color: VineTheme.scrim50, blurRadius: 12),
-    ],
-    null => const [],
-  };
-}
-
-/// A pill holding one line: an emoji, a flag or a battery, then the text.
-class _Card extends StatelessWidget {
-  const _Card({required this.data, required this.palette});
-
-  final InfoStickerData data;
-  final _Palette palette;
-
-  @override
-  Widget build(BuildContext context) {
-    final border = palette.border;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: palette.background,
-        borderRadius: BorderRadius.circular(999),
-        border: border == null ? null : Border.all(color: border, width: 5),
-      ),
-      child: Padding(
-        padding: const .symmetric(horizontal: 32, vertical: 16),
-        child: _LineContent(data: data, palette: palette),
-      ),
-    );
-  }
-}
-
 /// One line: an emoji, a flag or a battery, then the text; or, for the sun,
 /// each time after its emoji.
 class _LineContent extends StatelessWidget {
   const _LineContent({required this.data, required this.palette});
 
   final InfoStickerData data;
-  final _Palette palette;
+  final StickerPillPalette palette;
 
   /// How large an emoji is next to the text, as large as an emoji glyph of
   /// the text's size.
@@ -207,9 +130,7 @@ class _LineContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final style = VineTheme.titleLargeFont(
-      color: palette.ink,
-    ).copyWith(fontSize: 48, height: 1.15, shadows: palette.shadows);
+    final style = palette.textStyle();
     if (data.kind == InfoStickerKind.sun) {
       return Row(
         mainAxisSize: .min,

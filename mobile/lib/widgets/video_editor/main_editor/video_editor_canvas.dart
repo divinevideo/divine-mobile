@@ -45,6 +45,7 @@ import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/live_volume.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
@@ -2401,8 +2402,11 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         detachedClips: detachedClips,
       )
       ..setActive(
+        // A sound credit's equalizer follows the sound as a visualizer does.
         isActive: editor.activeLayers.any(
-          AudioVisualizerLayerData.isAudioVisualizerLayer,
+          (layer) =>
+              AudioVisualizerLayerData.isAudioVisualizerLayer(layer) ||
+              (SocialStickerData.of(layer)?.listensToSound ?? false),
         ),
       );
 

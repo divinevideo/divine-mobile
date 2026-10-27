@@ -1,6 +1,6 @@
 // ABOUTME: Expanded video metadata bottom sheet opened by the info button.
 // ABOUTME: Header (date + title + badges + description + tags), stats, creator,
-// ABOUTME: collaborators, inspired by, reposted by, sounds, verification.
+// ABOUTME: collaborators, inspired by, reposted by, sounds, links, verification.
 // ABOUTME: Read-only, no new BLoC needed.
 
 import 'package:divine_ui/divine_ui.dart';
@@ -17,6 +17,7 @@ import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/proofmode_helpers.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_badges_row.dart';
+import 'package:openvine/widgets/video_feed_item/metadata/metadata_links_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_sounds_section.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_stats_row.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_tags_section.dart';
@@ -116,6 +117,7 @@ class _MetadataContent extends StatelessWidget {
         MetadataInspiredBySection(video: video),
         MetadataRepostedBySection(video: video),
         MetadataSoundsSection(video: video),
+        MetadataLinksSection(video: video),
         MetadataVerificationSection(video: video),
       ],
     );

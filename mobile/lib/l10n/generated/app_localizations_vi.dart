@@ -1987,6 +1987,22 @@ class AppLocalizationsVi extends AppLocalizations {
   String get metadataSoundsLabel => 'Âm thanh';
 
   @override
+  String get metadataLinksLabel => 'Liên kết';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'Nhãn dán liên kết, mở $url';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel => 'Nhãn dán nhắc đến, mở hồ sơ';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'Nhãn dán hashtag, mở #$hashtag';
+  }
+
+  @override
   String get metadataOriginalSound => 'Âm thanh gốc';
 
   @override
@@ -10757,6 +10773,75 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorInfoStickersTitle => 'Thông tin';
 
   @override
+  String get videoEditorSocialStickersTitle => 'Xã hội';
+
+  @override
+  String get videoEditorSocialStickerMention => 'Nhắc đến';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'Âm thanh';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'tencuaban';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'hashtag';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'Chọn một người';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'Người này được nhắc đến trong bài đăng của bạn và nhận thông báo.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'Nhập hashtag';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'Cũng được thêm vào hashtag của bài đăng.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint =>
+      'Một dòng lời bài hát (không bắt buộc)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'Liên kết';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'Địa chỉ web';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint =>
+      'Tiêu đề (không bắt buộc)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote =>
+      'Địa chỉ được thêm vào bài đăng của bạn.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid =>
+      'Đây chưa phải là địa chỉ web.';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'Nốt nhạc';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'Đĩa than';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'Băng cassette';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'Bộ chỉnh âm';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'Trình phát';
+
+  @override
   String get videoEditorInfoStickerTime => 'Giờ';
 
   @override
@@ -12557,6 +12642,11 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Thêm \"#$tag\"';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, từ một sticker trong video của bạn';
   }
 
   @override

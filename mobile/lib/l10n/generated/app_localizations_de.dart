@@ -2049,6 +2049,23 @@ class AppLocalizationsDe extends AppLocalizations {
   String get metadataSoundsLabel => 'Sounds';
 
   @override
+  String get metadataLinksLabel => 'Links';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'Link-Sticker, öffnet $url';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel =>
+      'Erwähnungs-Sticker, öffnet das Profil';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'Hashtag-Sticker, öffnet #$hashtag';
+  }
+
+  @override
   String get metadataOriginalSound => 'Originalton';
 
   @override
@@ -10934,6 +10951,74 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorInfoStickersTitle => 'Info';
 
   @override
+  String get videoEditorSocialStickersTitle => 'Social';
+
+  @override
+  String get videoEditorSocialStickerMention => 'Erwähnung';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'Sound';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'deinname';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'hashtag';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'Person auswählen';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'Die Person wird in deinem Post erwähnt und benachrichtigt.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'Hashtag eingeben';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'Wird auch zu den Hashtags deines Posts hinzugefügt.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint =>
+      'Eine Zeile Songtext (optional)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'Link';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'Webadresse';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'Titel (optional)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote =>
+      'Die Adresse wird deinem Post hinzugefügt.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid =>
+      'Das ist noch keine Webadresse.';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'Note';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'Schallplatte';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'Kassette';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'Equalizer';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'Player';
+
+  @override
   String get videoEditorInfoStickerTime => 'Uhrzeit';
 
   @override
@@ -12750,6 +12835,11 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '„#$tag\" hinzufügen';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, von einem Sticker in deinem Video';
   }
 
   @override

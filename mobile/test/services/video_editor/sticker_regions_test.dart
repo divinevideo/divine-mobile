@@ -1,0 +1,195 @@
+// ABOUTME: Tests where a rendered video's tappable stickers stand: placed on
+// ABOUTME: the kept frame from the export's capture, and timed on the output.
+
+import 'dart:typed_data';
+import 'dart:ui';
+
+import 'package:flutter/widgets.dart' show SizedBox;
+import 'package:flutter_test/flutter_test.dart';
+import 'package:models/models.dart' show VideoStickerKind, VideoStickerRegion;
+import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
+import 'package:openvine/models/video_editor/transition_geometry.dart';
+import 'package:openvine/services/video_editor/sticker_regions.dart';
+import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+
+const _link = SocialStickerData(
+  kind: SocialStickerKind.link,
+  url: 'divine.video/about',
+);
+
+/// The capture of a sticker carrying [data], standing [offset] from the
+/// body's centre, [box] big before it is turned by [rotation].
+ExportedLayer _captured(
+  SocialStickerData data, {
+  Offset offset = Offset.zero,
+  Size box = const Size(144, 32),
+  double rotation = 0,
+  Duration? startTime,
+  Duration? endTime,
+  List<LayerAnimation> animations = const [],
+}) {
+  final meta = data.toMeta();
+  return ExportedLayer(
+    layer: WidgetLayer(
+      id: 'sticker',
+      widget: const SizedBox(),
+      offset: offset,
+      rotation: rotation,
+      startTime: startTime,
+      endTime: endTime,
+      animations: animations,
+      meta: meta,
+      exportConfigs: WidgetLayerExportConfigs(id: 'sticker', meta: meta),
+    ),
+    bytes: Uint8List(0),
+    logicalSize: box,
+    boxSize: box,
+  );
+}
+
+/// The editor timeline of one clip lasting [duration].
+TransitionTimelineMap _timeline(Duration duration) =>
+    TransitionTimelineMap.fromClips([
+      DivineVideoClip(
+        id: 'clip',
+        video: EditorVideo.file('/clip.mp4'),
+        duration: duration,
+        recordedAt: DateTime(2026),
+        targetAspectRatio: .vertical,
+        originalAspectRatio: 9 / 16,
+      ),
+    ]);
+
+List<VideoStickerRegion> _regions(
+  List<ExportedLayer> layers, {
+  Size bodySize = const Size(360, 640),
+}) => stickerRegionsFor(
+  capturedLayers: layers,
+  bodySize: bodySize,
+  targetAspectRatio: 9 / 16,
+  timelineMap: _timeline(const Duration(seconds: 6)),
+);
+
+void main() {
+  group('stickerRegionsFor', () {
+    test('places a link sticker as a fraction of the frame', () {
+      final regions = _regions([
+        _captured(
+          _link,
+          offset: const Offset(0, -160),
+          rotation: 0.3,
+          startTime: const Duration(seconds: 1),
+          endTime: const Duration(seconds: 3),
+        ),
+      ]);
+
+      expect(
+        regions,
+        equals([
+          const VideoStickerRegion(
+            kind: VideoStickerKind.link,
+            target: 'https://divine.video/about',
+            centerX: 0.5,
+            centerY: 0.25,
+            width: 0.4,
+            height: 0.05,
+            rotation: 0.3,
+            start: Duration(seconds: 1),
+            end: Duration(seconds: 3),
+          ),
+        ]),
+      );
+    });
+
+    test('measures against the part of the body the export keeps', () {
+      // A 400 by 800 body keeps 400 by 711.1 of a 9:16 export, from 44.4
+      // down, so the body's centre is still the frame's.
+      final region = _regions([
+        _captured(_link),
+      ], bodySize: const Size(400, 800)).single;
+
+      expect(region.centerY, closeTo(0.5, 1e-9));
+      expect(region.height, closeTo(32 / (400 * 16 / 9), 1e-9));
+      expect(region.width, closeTo(144 / 400, 1e-9));
+    });
+
+    test('opens a hashtag and a mention by what they point to', () {
+      final regions = _regions([
+        _captured(
+          const SocialStickerData(
+            kind: SocialStickerKind.hashtag,
+            hashtag: 'Summer',
+          ),
+        ),
+        _captured(
+          SocialStickerData(
+            kind: SocialStickerKind.mention,
+            pubkey: 'A' * 64,
+            name: 'alice',
+          ),
+        ),
+      ]);
+
+      expect(
+        regions.map((region) => (region.kind, region.target)),
+        equals([
+          (VideoStickerKind.hashtag, 'summer'),
+          (VideoStickerKind.mention, 'a' * 64),
+        ]),
+      );
+    });
+
+    test('leaves out a sound credit, which a tap does not open', () {
+      final regions = _regions([
+        _captured(
+          const SocialStickerData(
+            kind: SocialStickerKind.soundCredit,
+            soundTitle: 'Song',
+          ),
+        ),
+      ]);
+
+      expect(regions, isEmpty);
+    });
+
+    test('leaves out a sticker that moves', () {
+      final regions = _regions([
+        _captured(
+          _link,
+          animations: const [
+            LayerAnimation(
+              type: LayerAnimationType.slide,
+              phase: AnimationPhase.animateIn,
+              duration: Duration(milliseconds: 300),
+              slideDirection: SlideDirection.left,
+            ),
+          ],
+        ),
+      ]);
+
+      expect(regions, isEmpty);
+    });
+
+    test('leaves out a sticker pushed off the frame', () {
+      final regions = _regions([
+        _captured(_link, offset: const Offset(0, -700)),
+      ]);
+
+      expect(regions, isEmpty);
+    });
+
+    test('places nothing without the body the offsets are measured in', () {
+      expect(
+        stickerRegionsFor(
+          capturedLayers: [_captured(_link)],
+          bodySize: null,
+          targetAspectRatio: 9 / 16,
+          timelineMap: _timeline(const Duration(seconds: 6)),
+        ),
+        isEmpty,
+      );
+    });
+  });
+}

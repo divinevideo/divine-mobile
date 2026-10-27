@@ -1869,6 +1869,22 @@ class AppLocalizationsKo extends AppLocalizations {
   String get metadataSoundsLabel => '사운드';
 
   @override
+  String get metadataLinksLabel => '링크';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return '링크 스티커, $url 열기';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel => '멘션 스티커, 프로필 열기';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return '해시태그 스티커, #$hashtag 열기';
+  }
+
+  @override
   String get metadataOriginalSound => '오리지널 사운드';
 
   @override
@@ -10294,6 +10310,69 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorInfoStickersTitle => '정보';
 
   @override
+  String get videoEditorSocialStickersTitle => '소셜';
+
+  @override
+  String get videoEditorSocialStickerMention => '멘션';
+
+  @override
+  String get videoEditorSocialStickerHashtag => '해시태그';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => '사운드';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => '이름';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => '해시태그';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => '사람 선택';
+
+  @override
+  String get videoEditorSocialStickerMentionNote => '게시물에서 멘션되고 알림을 받아요.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => '해시태그 입력';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote => '게시물 해시태그에도 추가돼요.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint => '가사 한 줄 (선택)';
+
+  @override
+  String get videoEditorSocialStickerLink => '링크';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => '웹 주소';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => '제목 (선택)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote => '주소가 게시물에 추가돼요.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid => '아직 웹 주소가 아니에요.';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => '음표';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => '레코드';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => '카세트';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => '이퀄라이저';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => '플레이어';
+
+  @override
   String get videoEditorInfoStickerTime => '시간';
 
   @override
@@ -12000,6 +12079,11 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '\"#$tag\" 추가';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, 동영상 속 스티커에서';
   }
 
   @override

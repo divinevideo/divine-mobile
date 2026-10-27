@@ -329,11 +329,18 @@ class VideoPublishService {
 
       final mentionedPubkeys = await timeline.measure(
         PublishPhases.mentions,
-        () => _resolveMentionedPubkeys(
-          draft,
-          currentUserPubkey: pubkey,
-          collaboratorPubkeys: collaboratorPubkeys,
-        ),
+        () async => [
+          ...await _resolveMentionedPubkeys(
+            draft,
+            currentUserPubkey: pubkey,
+            collaboratorPubkeys: collaboratorPubkeys,
+          ),
+          ..._stickerMentionedPubkeys(
+            draft,
+            currentUserPubkey: pubkey,
+            collaboratorPubkeys: collaboratorPubkeys,
+          ),
+        ],
       );
 
       final captionTrack = _captionTrackForPublish(draft);
@@ -369,7 +376,7 @@ class VideoPublishService {
           upload: pendingUpload,
           title: draft.title,
           description: draft.description,
-          hashtags: draft.hashtags.toList(),
+          hashtags: draft.stickerCredits.hashtagsWith(draft.hashtags),
           // Relative to the moment the post goes live, which for a scheduled
           // post is its publish time rather than now.
           expirationTimestamp: expireTime != null
@@ -380,6 +387,8 @@ class VideoPublishService {
           allowVideoReuse: draft.allowVideoReuse,
           collaboratorPubkeys: collaboratorPubkeys.toList(),
           mentionedPubkeys: mentionedPubkeys,
+          linkUrls: draft.stickerCredits.links.toList(),
+          stickerRegions: draft.finalRenderedClip?.stickerRegions ?? const [],
           inspiredByAddressableId: draft.inspiredByVideo?.addressableId,
           inspiredByRelayUrl: draft.inspiredByVideo?.relayUrl,
           inspiredByNpubs: draft.inspiredByNpubs,
@@ -649,6 +658,19 @@ class VideoPublishService {
 
   /// `de-CH` -> `de`; text-track lang tags carry the bare language code.
   String _languageCode(String languageTag) => languageTag.split('-').first;
+
+  /// The people the mention stickers name, other than the creator and the
+  /// collaborators, who carry their own `p` tags.
+  Iterable<String> _stickerMentionedPubkeys(
+    DivineVideoDraft draft, {
+    required String currentUserPubkey,
+    required Set<String> collaboratorPubkeys,
+  }) {
+    final self = currentUserPubkey.toLowerCase();
+    return draft.stickerCredits.mentionPubkeys.where(
+      (pubkey) => pubkey != self && !collaboratorPubkeys.contains(pubkey),
+    );
+  }
 
   Future<List<String>> _resolveMentionedPubkeys(
     DivineVideoDraft draft, {
@@ -964,7 +986,7 @@ class VideoPublishService {
       nostrPubkey: pubkey,
       title: draft.title,
       description: draft.description,
-      hashtags: draft.hashtags.toList(),
+      hashtags: draft.stickerCredits.hashtagsWith(draft.hashtags),
       videoWidth: materialized.videoWidth,
       videoHeight: materialized.videoHeight,
       videoDuration: materialized.videoDuration,

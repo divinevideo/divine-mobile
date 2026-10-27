@@ -2019,6 +2019,23 @@ class AppLocalizationsAr extends AppLocalizations {
   String get metadataSoundsLabel => 'أصوات';
 
   @override
+  String get metadataLinksLabel => 'الروابط';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'ملصق رابط، يفتح $url';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel =>
+      'ملصق إشارة، يفتح الملف الشخصي';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'ملصق وسم، يفتح #$hashtag';
+  }
+
+  @override
   String get metadataOriginalSound => 'صوت أصلي';
 
   @override
@@ -10783,6 +10800,72 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorInfoStickersTitle => 'معلومات';
 
   @override
+  String get videoEditorSocialStickersTitle => 'اجتماعي';
+
+  @override
+  String get videoEditorSocialStickerMention => 'إشارة';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'وسم';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'الصوت';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'اسمك';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'وسم';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'اختيار شخص';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'تتم الإشارة إلى هذا الشخص في منشورك ويصله إشعار.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'كتابة وسم';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'يُضاف أيضًا إلى وسوم منشورك.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint =>
+      'سطر من كلمات الأغنية (اختياري)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'رابط';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'عنوان الويب';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'العنوان (اختياري)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote => 'يُضاف العنوان إلى منشورك.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid => 'هذا ليس عنوان ويب بعد.';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'نوتة';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'أسطوانة';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'كاسيت';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'معادل الصوت';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'مشغّل';
+
+  @override
   String get videoEditorInfoStickerTime => 'الوقت';
 
   @override
@@ -12589,6 +12672,11 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'إضافة \"#$tag\"';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag، من ملصق في الفيديو';
   }
 
   @override

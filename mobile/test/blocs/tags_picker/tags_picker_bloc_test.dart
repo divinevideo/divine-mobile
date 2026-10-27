@@ -520,5 +520,52 @@ void main() {
         expect(state.canAddQuery, isFalse);
       });
     });
+    group('sticker tags', () {
+      const stickerTags = {'summer', 'beach'};
+      final eight = [for (var i = 0; i < 8; i++) 'tag$i'];
+
+      TagsPickerBloc createWithStickers({
+        Set<String> initial = const <String>{},
+      }) => TagsPickerBloc(
+        hashtagRepository: repo,
+        initialTags: initial,
+        stickerTags: stickerTags,
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
+        'count toward the limit',
+        build: createWithStickers,
+        act: (b) => b.add(TagsPickerTagsAdded([...eight, 'eleven'])),
+        expect: () => [
+          isA<TagsPickerState>()
+              .having((s) => s.selectedTags, 'selectedTags', eight.toSet())
+              .having((s) => s.isAtTagLimit, 'isAtTagLimit', isTrue),
+        ],
+      );
+
+      blocTest<TagsPickerBloc, TagsPickerState>(
+        'are not added again as tags of the creator',
+        build: createWithStickers,
+        act: (b) => b.add(const TagsPickerTagsAdded(['Summer', 'party'])),
+        expect: () => [
+          isA<TagsPickerState>().having(
+            (s) => s.selectedTags,
+            'selectedTags',
+            {'party'},
+          ),
+        ],
+      );
+
+      test('are not suggested', () {
+        const state = TagsPickerState(
+          stickerTags: stickerTags,
+          query: 'summer',
+          searchResults: ['summer', 'summertime'],
+        );
+
+        expect(state.suggestions, ['summertime']);
+        expect(state.canAddQuery, isFalse);
+      });
+    });
   });
 }

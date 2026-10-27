@@ -10,6 +10,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_opacity.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
@@ -21,8 +22,12 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 ///
 /// Every overlay layer can, except a hidden area (blur, pixelate): it hides
 /// what is beneath it, and one that drifted would show what it hid for a
-/// moment, as an animated one would.
-bool canKeyframeLayer(Layer? layer) => layer != null && !isCensorLayer(layer);
+/// moment, as an animated one would. A link, mention or hashtag sticker
+/// cannot either: a viewer taps it where it stands, so it holds still.
+bool canKeyframeLayer(Layer? layer) =>
+    layer != null &&
+    !isCensorLayer(layer) &&
+    !SocialStickerData.isTappableLayer(layer);
 
 /// [layer] with a keyframe at [time] (video time) added, or the one there
 /// removed.

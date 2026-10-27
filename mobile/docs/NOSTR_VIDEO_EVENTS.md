@@ -118,6 +118,42 @@ Publishing lives in `mobile/lib/services/video_event_publisher.dart` and
 `mobile/lib/services/video_metadata_update_service.dart`; parsing in
 `mobile/packages/models/lib/src/video_event.dart`.
 
+### Divine Sticker Tags
+
+Social stickers placed in the video editor add what they point to, plus where a
+viewer can tap them. All of these are Divine conventions.
+
+| Tag | Format | Description |
+|-----|--------|-------------|
+| `t` | `["t", "summer"]` | A hashtag sticker's hashtag, written with the post's own hashtags. |
+| `p` | `["p", "<pubkey>", "<relay>", "mention"]` | A mention sticker's profile, written like a caption mention. |
+| `r` | `["r", "https://example.com/page", "link"]` | The web page of a link sticker. The `link` marker is required: an unmarked `r` tag on a video event is read as one of the video's own media URLs. |
+| `sticker` | `["sticker", "<kind>", "<target>", "<cx> <cy> <w> <h>", "<degrees>", "<start ms>", "<end ms>"]` | Where a link, mention or hashtag sticker stands on the video, so a tap there opens it. |
+
+The `sticker` tag's fields:
+
+- `kind` is `link`, `mention` or `hashtag`.
+- `target` is the full `http`/`https` address, the full hex pubkey, or the hashtag
+  without `#`. A reader ignores any other scheme, a pubkey that is not 64 hex
+  characters, and a hashtag containing whitespace.
+- The area gives the sticker's centre and its size before it is turned, as
+  fractions of the video frame's width (`cx`, `w`) and height (`cy`, `h`).
+- `degrees` is how far it is turned clockwise around its centre.
+- `start ms` and `end ms` are when it shows on the published video. Both are
+  optional: a missing start means from the beginning, a missing end means until
+  the video ends.
+
+A sticker that moves (keyframes, tracking or an animation) is never published
+with an area, which is why the editor offers none of those for these three
+sticker kinds. The app shows the full address before it opens a link outside
+`divine.video`.
+
+Publishing lives in `mobile/lib/services/video_publish/video_event_tags.dart`.
+The area is taken from the final render in
+`mobile/lib/services/video_editor/sticker_regions.dart`. Parsing is in
+`mobile/packages/models/lib/src/video_sticker_region.dart`, and the tap targets
+over the feed are in `mobile/lib/widgets/video_feed_item/video_sticker_tap_areas.dart`.
+
 ### Event Metadata
 
 | Tag | Format | Description | Required |

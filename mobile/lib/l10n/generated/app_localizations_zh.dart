@@ -1879,6 +1879,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get metadataSoundsLabel => '声音';
 
   @override
+  String get metadataLinksLabel => '链接';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return '链接贴纸，打开 $url';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel => '提及贴纸，打开个人主页';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return '话题标签贴纸，打开 #$hashtag';
+  }
+
+  @override
   String get metadataOriginalSound => '原声';
 
   @override
@@ -10171,6 +10187,69 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorInfoStickersTitle => '信息';
 
   @override
+  String get videoEditorSocialStickersTitle => '社交';
+
+  @override
+  String get videoEditorSocialStickerMention => '提及';
+
+  @override
+  String get videoEditorSocialStickerHashtag => '话题标签';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => '声音';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => '你的名字';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => '话题';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => '选择一个人';
+
+  @override
+  String get videoEditorSocialStickerMentionNote => '对方会在你的帖子中被提及，并收到通知。';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => '输入话题标签';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote => '也会加到你帖子的话题标签里。';
+
+  @override
+  String get videoEditorSocialStickerLyricHint => '一句歌词（可选）';
+
+  @override
+  String get videoEditorSocialStickerLink => '链接';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => '网址';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => '标题（可选）';
+
+  @override
+  String get videoEditorSocialStickerLinkNote => '网址会添加到你的帖子里。';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid => '这还不是一个网址。';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => '音符';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => '黑胶唱片';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => '磁带';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => '均衡器';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => '播放器';
+
+  @override
   String get videoEditorInfoStickerTime => '时间';
 
   @override
@@ -11845,6 +11924,11 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '添加“#$tag”';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag，来自视频中的贴纸';
   }
 
   @override

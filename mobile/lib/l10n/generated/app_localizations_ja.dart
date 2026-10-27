@@ -1859,6 +1859,22 @@ class AppLocalizationsJa extends AppLocalizations {
   String get metadataSoundsLabel => 'サウンド';
 
   @override
+  String get metadataLinksLabel => 'リンク';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'リンクステッカー、$url を開きます';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel => 'メンションステッカー、プロフィールを開きます';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'ハッシュタグステッカー、#$hashtag を開きます';
+  }
+
+  @override
   String get metadataOriginalSound => 'オリジナルサウンド';
 
   @override
@@ -10274,6 +10290,69 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorInfoStickersTitle => '情報';
 
   @override
+  String get videoEditorSocialStickersTitle => 'ソーシャル';
+
+  @override
+  String get videoEditorSocialStickerMention => 'メンション';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'ハッシュタグ';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'サウンド';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'なまえ';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'ハッシュタグ';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => '相手を選択';
+
+  @override
+  String get videoEditorSocialStickerMentionNote => '投稿でメンションされ、通知が届きます。';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'ハッシュタグを入力';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote => '投稿のハッシュタグにも追加されます。';
+
+  @override
+  String get videoEditorSocialStickerLyricHint => '歌詞の1行（任意）';
+
+  @override
+  String get videoEditorSocialStickerLink => 'リンク';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'ウェブアドレス';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'タイトル（任意）';
+
+  @override
+  String get videoEditorSocialStickerLinkNote => 'アドレスは投稿に追加されます。';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid => 'まだウェブアドレスではありません。';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => '音符';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'レコード';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'カセット';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'イコライザー';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'プレーヤー';
+
+  @override
   String get videoEditorInfoStickerTime => '時刻';
 
   @override
@@ -11981,6 +12060,11 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '「#$tag」を追加';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag（動画内のステッカーから）';
   }
 
   @override

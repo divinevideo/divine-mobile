@@ -15,6 +15,7 @@ import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_inputs.d
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_labels.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_place_picker.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_view.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/sticker_sheet_controls.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Opens the info sticker sheet and resolves with the sticker as the creator
@@ -113,9 +114,6 @@ class _DesignStep extends StatelessWidget {
     final kind = context.select(
       (InfoStickerCubit cubit) => cubit.state.data.kind,
     );
-    final bottomInset =
-        MediaQuery.viewInsetsOf(context).bottom +
-        MediaQuery.viewPaddingOf(context).bottom;
     // The options scroll on a short screen, between the preview above them
     // and the button below them.
     return Column(
@@ -166,10 +164,7 @@ class _DesignStep extends StatelessWidget {
             ),
           ),
         ),
-        Padding(
-          padding: EdgeInsets.fromLTRB(16, 0, 16, 16 + bottomInset),
-          child: _ConfirmButton(isNew: isNew),
-        ),
+        StickerSheetFooter(child: _ConfirmButton(isNew: isNew)),
       ],
     );
   }

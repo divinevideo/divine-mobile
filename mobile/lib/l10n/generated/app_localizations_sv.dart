@@ -2013,6 +2013,23 @@ class AppLocalizationsSv extends AppLocalizations {
   String get metadataSoundsLabel => 'Ljud';
 
   @override
+  String get metadataLinksLabel => 'Länkar';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'Länkklistermärke, öppnar $url';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel =>
+      'Omnämnandeklistermärke, öppnar profilen';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'Hashtagklistermärke, öppnar #$hashtag';
+  }
+
+  @override
   String get metadataOriginalSound => 'Originalljud';
 
   @override
@@ -10807,6 +10824,73 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorInfoStickersTitle => 'Info';
 
   @override
+  String get videoEditorSocialStickersTitle => 'Socialt';
+
+  @override
+  String get videoEditorSocialStickerMention => 'Omnämnande';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'Hashtagg';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'Ljud';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'dittnamn';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'hashtagg';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'Välj någon';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'Personen nämns i ditt inlägg och får en avisering.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'Skriv en hashtagg';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'Läggs också till bland ditt inläggs hashtaggar.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint => 'En rad låttext (valfritt)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'Länk';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'Webbadress';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'Titel (valfritt)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote =>
+      'Adressen läggs till i ditt inlägg.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid =>
+      'Det är inte en webbadress än.';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'Not';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'Vinylskiva';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'Kassett';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'Equalizer';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'Spelare';
+
+  @override
   String get videoEditorInfoStickerTime => 'Tid';
 
   @override
@@ -12610,6 +12694,11 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Lägg till ”#$tag”';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, från ett klistermärke i din video';
   }
 
   @override

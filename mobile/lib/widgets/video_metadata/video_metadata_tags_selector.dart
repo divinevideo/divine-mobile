@@ -18,9 +18,12 @@ import 'package:openvine/widgets/video_metadata/video_metadata_selection_tile.da
 /// Opens the tags picker as a full-screen modal bottom sheet.
 ///
 /// Returns the updated [Set<String>] of tags, or `null` if dismissed.
+/// [stickerTags] are the hashtags of the hashtag stickers on the video:
+/// they are shown and counted, but only go away with their sticker.
 Future<Set<String>?> showVideoMetadataTagsSelector(
   BuildContext context, {
   required Set<String> initialTags,
+  Set<String> stickerTags = const {},
 }) {
   return VineBottomSheet.show<Set<String>>(
     context: context,
@@ -31,6 +34,7 @@ Future<Set<String>?> showVideoMetadataTagsSelector(
     showHeader: false,
     buildScrollBody: (scrollController) => _TagsPickerSheet(
       initialTags: initialTags,
+      stickerTags: stickerTags,
       scrollController: scrollController,
     ),
   );
@@ -44,11 +48,12 @@ class VideoMetadataTagsSelector extends ConsumerWidget {
   Future<void> _openSheet(BuildContext context, WidgetRef ref) async {
     FocusManager.instance.primaryFocus?.unfocus();
 
-    final current = ref.read(videoEditorProvider.select((s) => s.tags));
+    final state = ref.read(videoEditorProvider);
 
     final result = await showVideoMetadataTagsSelector(
       context,
-      initialTags: current,
+      initialTags: state.tags,
+      stickerTags: state.stickerCredits.hashtags,
     );
 
     if (result != null && context.mounted) {
@@ -58,13 +63,18 @@ class VideoMetadataTagsSelector extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tags = ref.watch(videoEditorProvider.select((s) => s.tags));
+    // The stickers' hashtags come first, as they do on the published post.
+    final tags = ref.watch(
+      videoEditorProvider.select(
+        (s) => {...s.stickerCredits.hashtags, ...s.tags}.join(', '),
+      ),
+    );
 
     return VideoMetadataSelectionTile(
       onTap: () => _openSheet(context, ref),
       semanticsLabel: context.l10n.videoMetadataTagsLabel,
       labelText: context.l10n.videoMetadataTagsLabel,
-      value: tags.isEmpty ? '' : tags.join(', '),
+      value: tags,
     );
   }
 }
@@ -72,9 +82,14 @@ class VideoMetadataTagsSelector extends ConsumerWidget {
 // ─── Sheet ─────────────────────────────────────────────────────────────────
 
 class _TagsPickerSheet extends ConsumerWidget {
-  const _TagsPickerSheet({required this.initialTags, this.scrollController});
+  const _TagsPickerSheet({
+    required this.initialTags,
+    required this.stickerTags,
+    this.scrollController,
+  });
 
   final Set<String> initialTags;
+  final Set<String> stickerTags;
   final ScrollController? scrollController;
 
   @override
@@ -88,6 +103,7 @@ class _TagsPickerSheet extends ConsumerWidget {
       create: (_) => TagsPickerBloc(
         hashtagRepository: hashtagRepository,
         initialTags: initialTags,
+        stickerTags: stickerTags,
       ),
       child: _TagsPickerView(scrollController: scrollController),
     );
@@ -288,9 +304,15 @@ class _TagsPickerViewState extends State<_TagsPickerView> {
           ),
         ),
 
-        BlocSelector<TagsPickerBloc, TagsPickerState, Set<String>>(
-          selector: (s) => s.selectedTags,
-          builder: (context, selectedTags) {
+        BlocSelector<
+          TagsPickerBloc,
+          TagsPickerState,
+          (Set<String>, Set<String>)
+        >(
+          selector: (s) => (s.selectedTags, s.stickerTags),
+          builder: (context, tags) {
+            final (selectedTags, stickerTags) = tags;
+            final hasTags = selectedTags.isNotEmpty || stickerTags.isNotEmpty;
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -298,20 +320,27 @@ class _TagsPickerViewState extends State<_TagsPickerView> {
                   duration: const Duration(milliseconds: 200),
                   curve: Curves.easeInOut,
                   alignment: Alignment.topCenter,
-                  child: selectedTags.isNotEmpty
+                  child: hasTags
                       ? ConstrainedBox(
                           constraints: const BoxConstraints(maxHeight: 128),
                           child: SingleChildScrollView(
                             padding: const EdgeInsets.only(bottom: 16),
                             child: _SelectedTagsChipRow(
-                              tags: selectedTags.toList()..sort(),
+                              stickerTags: stickerTags.toList(),
+                              tags:
+                                  selectedTags
+                                      .where(
+                                        (tag) => !stickerTags.contains(tag),
+                                      )
+                                      .toList()
+                                    ..sort(),
                               onRemove: _removeTag,
                             ),
                           ),
                         )
                       : const SizedBox.shrink(),
                 ),
-                if (selectedTags.isNotEmpty)
+                if (hasTags)
                   Divider(
                     height: 1,
                     thickness: 1,
@@ -341,7 +370,7 @@ class _TagsPickerViewState extends State<_TagsPickerView> {
           child: BlocBuilder<TagsPickerBloc, TagsPickerState>(
             builder: (context, state) {
               if (state.query.isEmpty || state.isAtTagLimit) {
-                if (state.selectedTags.isEmpty) {
+                if (state.allTags.isEmpty) {
                   return const _EmptyState();
                 }
                 return const SizedBox.shrink();
@@ -594,8 +623,14 @@ class _EmptyState extends StatelessWidget {
 }
 
 class _SelectedTagsChipRow extends StatelessWidget {
-  const _SelectedTagsChipRow({required this.tags, required this.onRemove});
+  const _SelectedTagsChipRow({
+    required this.stickerTags,
+    required this.tags,
+    required this.onRemove,
+  });
 
+  /// The hashtags of the hashtag stickers, which cannot be removed here.
+  final List<String> stickerTags;
   final List<String> tags;
   final ValueChanged<String> onRemove;
 
@@ -607,6 +642,8 @@ class _SelectedTagsChipRow extends StatelessWidget {
         spacing: 4,
         runSpacing: 4,
         children: [
+          for (final tag in stickerTags)
+            _StickerTagChip(key: ValueKey('sticker-$tag'), label: tag),
           for (final tag in tags)
             _TagChip(
               key: ValueKey(tag),
@@ -614,6 +651,55 @@ class _SelectedTagsChipRow extends StatelessWidget {
               onRemove: () => onRemove(tag),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// A hashtag that comes from a hashtag sticker on the video, marked with a
+/// sticker in place of the remove button: it goes away with its sticker.
+class _StickerTagChip extends StatelessWidget {
+  const _StickerTagChip({required this.label, super.key});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: context.l10n.videoMetadataTagsPickerStickerTag(label),
+      excludeSemantics: true,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: context.vineColors.surfaceContainer,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.only(left: 16, right: 12),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 8,
+            children: [
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    label,
+                    style: VineTheme.titleSmallFont(
+                      color: context.vineColors.onSurface,
+                    ),
+                    maxLines: 1,
+                    overflow: .ellipsis,
+                  ),
+                ),
+              ),
+              DivineIcon(
+                icon: .sticker,
+                size: 16,
+                color: context.vineColors.onSurfaceMuted,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

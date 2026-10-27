@@ -14,6 +14,7 @@ import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_emoji.da
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_format.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_labels.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_view.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/sticker_sheet_controls.dart';
 
 /// A row of the looks the sticker can take, each shown as the sticker in it.
 class InfoStickerStylePicker extends StatelessWidget {
@@ -32,7 +33,7 @@ class InfoStickerStylePicker extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final style = data.kind.styles[index];
-          return _ChoiceTile(
+          return StickerChoiceTile(
             semanticLabel: l10n.infoStickerStyleLabel(style),
             selected: style == data.style,
             dark: true,
@@ -61,10 +62,10 @@ class InfoStickerDateFormatPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     final data = context.select((InfoStickerCubit cubit) => cubit.state.data);
     if (data.dateTime == null) return const SizedBox.shrink();
-    return _ChipRow(
+    return StickerChipRow(
       children: [
         for (final format in InfoStickerDateFormat.values)
-          _ChoiceChip(
+          StickerChoiceChip(
             label: InfoStickerFormat.date(data, format),
             selected: format == data.dateFormat,
             onTap: () =>
@@ -98,15 +99,15 @@ class InfoStickerTimeChoice extends StatelessWidget {
     final recordedAt = state.recordedAt;
     final now = format(DateTime.now());
     final cubit = context.read<InfoStickerCubit>();
-    return _ChipRow(
+    return StickerChipRow(
       children: [
         if (recordedAt != null)
-          _ChoiceChip(
+          StickerChoiceChip(
             label: l10n.videoEditorInfoStickerRecordedValue(format(recordedAt)),
             selected: state.timeSource == InfoStickerTimeSource.recording,
             onTap: cubit.useRecordingTime,
           ),
-        _ChoiceChip(
+        StickerChoiceChip(
           label: isTime
               ? l10n.videoEditorInfoStickerNowValue(now)
               : l10n.videoEditorInfoStickerTodayValue(now),
@@ -170,14 +171,17 @@ class InfoStickerValueField extends StatelessWidget {
       spacing: 8,
       children: [
         if (state.valueStatus == InfoStickerValueStatus.loading)
-          _Note(text: l10n.videoEditorInfoStickerLoading)
+          StickerSheetNote(text: l10n.videoEditorInfoStickerLoading)
         else if (state.valueStatus == InfoStickerValueStatus.failure)
-          _Note(text: l10n.videoEditorInfoStickerLoadFailed, warning: true)
+          StickerSheetNote(
+            text: l10n.videoEditorInfoStickerLoadFailed,
+            warning: true,
+          )
         // The clip was recorded too long ago for its weather.
         else if (isWeather &&
             state.recordedAt != null &&
             state.timeSource == InfoStickerTimeSource.now)
-          _Note(text: l10n.videoEditorInfoStickerWeatherNow),
+          StickerSheetNote(text: l10n.videoEditorInfoStickerWeatherNow),
         Padding(
           padding: const .symmetric(horizontal: 16),
           child: Row(
@@ -201,7 +205,7 @@ class InfoStickerValueField extends StatelessWidget {
                   spacing: 8,
                   children: [
                     for (final second in [false, true])
-                      _ChoiceChip(
+                      StickerChoiceChip(
                         label: switch ((isWeather, second)) {
                           (true, false) => '°C',
                           (true, true) => '°F',
@@ -219,7 +223,7 @@ class InfoStickerValueField extends StatelessWidget {
             ],
           ),
         ),
-        _Note(text: l10n.videoEditorInfoStickerMetAttribution),
+        StickerSheetNote(text: l10n.videoEditorInfoStickerMetAttribution),
       ],
     );
   }
@@ -288,7 +292,7 @@ class InfoStickerSymbolChoice extends StatelessWidget {
         : symbol;
     final cubit = context.read<InfoStickerCubit>();
     final l10n = context.l10n;
-    return _ChipRow(
+    return StickerChipRow(
       children: [
         for (final (option, leading, label) in [
           (
@@ -321,7 +325,7 @@ class InfoStickerSymbolChoice extends StatelessWidget {
             l10n.videoEditorInfoStickerSymbolMap,
           ),
         ])
-          _ChoiceChip(
+          StickerChoiceChip(
             label: label,
             leading: leading,
             selected: shown == option,
@@ -351,7 +355,7 @@ class InfoStickerWeatherChoice extends StatelessWidget {
         : weather;
     final cubit = context.read<InfoStickerCubit>();
     final l10n = context.l10n;
-    return _ChipRow(
+    return StickerChipRow(
       children: [
         for (final (option, optionIsDay, label) in [
           (
@@ -396,7 +400,7 @@ class InfoStickerWeatherChoice extends StatelessWidget {
             l10n.videoEditorInfoStickerWeatherThunderstorm,
           ),
         ])
-          _ChoiceChip(
+          StickerChoiceChip(
             label: label,
             leading: InfoStickerEmojiImage(
               InfoStickerFormat.weatherEmoji(
@@ -434,10 +438,13 @@ class InfoStickerLookupNote extends StatelessWidget {
       spacing: 8,
       children: [
         if (status == InfoStickerValueStatus.loading)
-          _Note(text: l10n.videoEditorInfoStickerLoading)
+          StickerSheetNote(text: l10n.videoEditorInfoStickerLoading)
         else if (status == InfoStickerValueStatus.failure)
-          _Note(text: l10n.videoEditorInfoStickerLoadFailed, warning: true),
-        _Note(text: l10n.videoEditorInfoStickerSunTimeZoneNote),
+          StickerSheetNote(
+            text: l10n.videoEditorInfoStickerLoadFailed,
+            warning: true,
+          ),
+        StickerSheetNote(text: l10n.videoEditorInfoStickerSunTimeZoneNote),
       ],
     );
   }
@@ -541,166 +548,6 @@ class _NumberFieldState extends State<_NumberField> {
         ),
       ],
       onChanged: (text) => widget.onChanged(int.tryParse(text)),
-    );
-  }
-}
-
-/// A short line of help or status under a control.
-class _Note extends StatelessWidget {
-  const _Note({required this.text, this.warning = false});
-
-  final String text;
-  final bool warning;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const .symmetric(horizontal: 16),
-      child: Text(
-        text,
-        style: VineTheme.bodySmallFont(
-          color: warning
-              ? context.vineColors.accentWarning
-              : context.vineColors.onSurfaceMuted,
-        ),
-      ),
-    );
-  }
-}
-
-/// A bordered tile to pick, marked when [selected].
-class _ChoiceTile extends StatelessWidget {
-  const _ChoiceTile({
-    required this.semanticLabel,
-    required this.selected,
-    required this.onTap,
-    required this.child,
-    this.dark = false,
-  });
-
-  final String semanticLabel;
-  final bool selected;
-  final VoidCallback onTap;
-  final Widget child;
-
-  /// Whether the tile shows a sticker on the dark ground of a video.
-  final bool dark;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: semanticLabel,
-      button: true,
-      selected: selected,
-      onTap: onTap,
-      excludeSemantics: true,
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: .opaque,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: dark
-                ? VineTheme.surfaceBackground
-                : context.vineColors.surfaceContainer,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: selected
-                  ? context.vineColors.accentPositive
-                  : context.vineColors.outlineMuted,
-              width: 2,
-            ),
-          ),
-          child: SizedBox(
-            width: 112,
-            child: Padding(
-              padding: const .all(12),
-              child: Center(child: child),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Chips in one line that scrolls sideways, lined up with the sheet's
-/// margins.
-class _ChipRow extends StatelessWidget {
-  const _ChipRow({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: .horizontal,
-      padding: const .symmetric(horizontal: 16),
-      child: Row(spacing: 8, children: children),
-    );
-  }
-}
-
-/// A small pill with a label, after [leading] when there is one, to pick;
-/// marked when [selected].
-class _ChoiceChip extends StatelessWidget {
-  const _ChoiceChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-    this.leading,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  final Widget? leading;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: label,
-      button: true,
-      selected: selected,
-      onTap: onTap,
-      excludeSemantics: true,
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: .opaque,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: context.vineColors.surfaceContainer,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: selected
-                    ? context.vineColors.accentPositive
-                    : context.vineColors.outlineMuted,
-                width: 2,
-              ),
-            ),
-            child: Padding(
-              padding: const .symmetric(horizontal: 16, vertical: 12),
-              child: Center(
-                widthFactor: 1,
-                child: Row(
-                  mainAxisSize: .min,
-                  spacing: 8,
-                  children: [
-                    ?leading,
-                    Text(
-                      label,
-                      style: VineTheme.bodyMediumFont(
-                        color: context.vineColors.primaryText,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
