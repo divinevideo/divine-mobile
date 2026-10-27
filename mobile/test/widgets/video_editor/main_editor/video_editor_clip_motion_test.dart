@@ -124,6 +124,28 @@ void main() {
       );
     });
 
+    testWidgets('does not transform a seam whose motion is already baked', (
+      tester,
+    ) async {
+      playTime.value = const Duration(seconds: 3);
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: SizedBox(
+            width: 90,
+            height: 160,
+            child: ClipMotionSurface(
+              clips: [still, moving],
+              playTime: playTime,
+              isSeamAt: (_) => true,
+              child: const _Surface(),
+            ),
+          ),
+        ),
+      );
+      expect(shown(tester), Matrix4.identity());
+    });
+
     testWidgets('keeps the surface mounted as the picture starts and stops '
         'moving', (tester) async {
       await pump(tester);
@@ -137,6 +159,25 @@ void main() {
   });
 
   group('clipMotionAtPlayTime', () {
+    test('loop-wrap bodies start after the consumed head frames', () {
+      final clip =
+          _clip(
+            'loop',
+            duration: const Duration(seconds: 4),
+            keyframes: const [
+              SegmentKeyframe(time: Duration.zero),
+              SegmentKeyframe(time: Duration(seconds: 4), scale: 5),
+            ],
+          ).copyWith(
+            transition: const ClipTransition(type: ClipTransitionType.dissolve),
+          );
+      // The 500ms wrap consumes 1s of the head and 1s of the tail.
+      expect(clipMotionAtPlayTime([clip], Duration.zero).scale, 2);
+      expect(
+        clipMotionAtPlayTime([clip], Duration.zero, applyLoopWrap: false).scale,
+        1,
+      );
+    });
     test('reads the clip keyframes at the frame the playhead shows', () {
       final clip = _clip(
         'clip',

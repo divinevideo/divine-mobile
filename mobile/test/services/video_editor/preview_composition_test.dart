@@ -110,7 +110,10 @@ class _GatedSpeedService extends ClipSpeedRenderService {
   bool isRendering(DivineVideoClip clip) => pending.containsKey(clip.id);
 
   @override
-  Future<RenderedSpeedClip?> render(DivineVideoClip clip) {
+  Future<RenderedSpeedClip?> render(
+    DivineVideoClip clip, {
+    bool bakeKeyframes = false,
+  }) {
     // Like the real service: a clip at 1× has nothing to render.
     if (!clip.changesSpeed) return Future.value();
     return pending.putIfAbsent(clip.id, Completer.new).future;
@@ -156,6 +159,54 @@ void main() {
         onSpeedClipRendered: () => speedLandings++,
         seamService: seams,
         speedRenderService: speeds,
+      );
+    });
+
+    group('clip motion editing', () {
+      test(
+        'plays unblended source bodies for gestures and restores baked seams',
+        () {
+          final a = _clip('a', transition: _dissolve);
+          final b = _clip('b');
+          clips = [a, b];
+          seams.cacheSeamForTest(a, b, _dissolve, _seam);
+
+          expect(composition.buildPlayerClips(clips).map((c) => c.uri), [
+            '/tmp/a.mp4',
+            '/tmp/seam.mp4',
+            '/tmp/b.mp4',
+          ]);
+          expect(
+            composition.isSeamAt(const Duration(milliseconds: 2500)),
+            isTrue,
+          );
+          expect(composition.isSeamAt(const Duration(seconds: 1)), isFalse);
+
+          composition.setClipMotionEditing(isEditing: true);
+          expect(composition.buildPlayerClips(clips).map((c) => c.uri), [
+            '/tmp/a.mp4',
+            '/tmp/b.mp4',
+          ]);
+          expect(
+            composition.isSeamAt(const Duration(milliseconds: 2500)),
+            isFalse,
+          );
+          expect(
+            composition.timelineToPlayer(const Duration(seconds: 3)),
+            const Duration(seconds: 3),
+          );
+
+          composition.setClipMotionEditing(isEditing: false);
+          expect(composition.buildPlayerClips(clips).map((c) => c.uri), [
+            '/tmp/a.mp4',
+            '/tmp/seam.mp4',
+            '/tmp/b.mp4',
+          ]);
+          expect(
+            composition.isSeamAt(const Duration(milliseconds: 2500)),
+            isTrue,
+          );
+        },
       );
     });
 

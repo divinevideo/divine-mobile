@@ -147,10 +147,25 @@ class VideoEditorCanvas extends StatelessWidget {
     if (previous.isSplitting && current.isSplitting) return false;
     if (previous.isSplitting && !current.isSplitting) return true;
 
+    // Unlike masks, clip motion is baked independently into both sides of a
+    // transition seam. A committed edit must rebuild those files.
+    if (previous.clips.length == current.clips.length &&
+        (previous.clips.any((clip) => clip.transition != null) ||
+            current.clips.any((clip) => clip.transition != null))) {
+      for (var i = 0; i < current.clips.length; i++) {
+        if (!listEquals(
+          previous.clips[i].keyframes,
+          current.clips[i].keyframes,
+        )) {
+          return true;
+        }
+      }
+    }
+
     // A background thumbnail refresh (e.g. after a split) changes only the
     // clip's poster path, and a shape mask, its background color and clip
-    // motion are drawn over the frame rather than played — the player
-    // composition uses none of them, so skip the redundant reload.
+    // motion without a transition are drawn over the frame rather than
+    // played, so skip the redundant reload.
     if (_onlyNonPlaybackFieldsChanged(previous.clips, current.clips)) {
       return false;
     }
@@ -1702,6 +1717,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                         bodySize: widget.bodySize,
                         renderSize: widget.renderSize,
                         playTime: VideoEditorScope.of(context).playTimeNotifier,
+                        isSeamAt: _composition.isSeamAt,
                         // The mask cover goes over the effects, as the
                         // export draws it over the effected track.
                         frameBuilder: (frame) => VideoEditorClipMaskPreview(
@@ -2855,6 +2871,16 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // Listen for playback control requests from BLoC
     final editor = MultiBlocListener(
       listeners: [
+        BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
+          listenWhen: (previous, current) =>
+              previous.isEditingClipMotion != current.isEditingClipMotion,
+          listener: (context, state) {
+            _composition.setClipMotionEditing(
+              isEditing: state.isEditingClipMotion,
+            );
+            _resyncPlayerClips();
+          },
+        ),
         // A text selected in the timeline keeps the toolbar's wrap hint up.
         BlocListener<TimelineOverlayBloc, TimelineOverlayState>(
           listenWhen: (previous, current) =>
@@ -3222,6 +3248,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
               return;
             }
             // Composition swap back — invalidate in-flight single-clip seeks.
+            _composition.ensureSeamsRendered(state.clips);
             _seekEpoch++;
             _pendingSeekPosition = null;
             final generation = _beginClipLoad();

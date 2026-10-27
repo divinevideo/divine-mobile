@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import 'package:flutter/widgets.dart' show Matrix4, Offset, Size;
 import 'package:openvine/extensions/animation_curve_easing.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 /// Where a timeline clip's keyframes put its picture at one frame: scaled by
@@ -27,18 +28,30 @@ typedef LiveClipKeyframes = ({String clipId, List<SegmentKeyframe> keyframes});
 ///
 /// A position on a boundary belongs to the clip that starts there, and the
 /// last clip holds anything past the end, as [clipAtTimelinePosition] does.
+/// The loop transition removes its consumed head and tail from this display
+/// axis. [applyLoopWrap] is false for the motion tool's unblended audition.
 ({DivineVideoClip clip, Duration sourceTime})? clipFrameAtTimelinePosition(
   List<DivineVideoClip> clips,
-  Duration position,
-) {
+  Duration position, {
+  bool applyLoopWrap = true,
+}) {
+  final wrap = applyLoopWrap
+      ? LoopWrapDisplay.fromClips(clips)
+      : LoopWrapDisplay.none;
   var start = Duration.zero;
   for (var i = 0; i < clips.length; i++) {
     final clip = clips[i];
-    final end = start + clip.playbackDuration;
+    final displayed = wrap.displayDuration(
+      clip,
+      isFirst: i == 0,
+      isLast: i == clips.length - 1,
+    );
+    final end = start + displayed;
     if (position < end || i == clips.length - 1) {
       var offset = position - start;
       if (offset.isNegative) offset = Duration.zero;
-      if (offset > clip.playbackDuration) offset = clip.playbackDuration;
+      if (offset > displayed) offset = displayed;
+      if (i == 0) offset += wrap.consumedPerSide;
       return (clip: clip, sourceTime: clip.sourceTimeAt(offset));
     }
     start = end;

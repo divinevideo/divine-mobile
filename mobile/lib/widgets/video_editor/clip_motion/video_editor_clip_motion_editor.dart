@@ -15,6 +15,7 @@ import 'package:openvine/extensions/clip_keyframes.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/utils/mounted_post_frame.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/animation_picker_components.dart';
@@ -61,9 +62,10 @@ Future<void> editClipMotion(BuildContext context, String clipId) async {
     clipStart += previous.playbackDuration;
   }
   final time = scope.playTimeNotifier.value;
-  if (time < clipStart || time >= clipStart + clip.playbackDuration) {
-    mainBloc.add(VideoEditorSeekRequested(clipStart));
-  }
+  final shownFrame = clipFrameAtTimelinePosition(clips, time);
+  final editingPosition = shownFrame?.clip.id == clipId
+      ? clipStart + clip.playbackOffsetOf(shownFrame!.sourceTime)
+      : clipStart;
 
   final wasPlaying = mainBloc.state.isPlaying;
   if (wasPlaying) {
@@ -73,8 +75,10 @@ Future<void> editClipMotion(BuildContext context, String clipId) async {
   // the panel takes from the start.
   scope.canvasToolPanelHeightNotifier?.value = videoEditorClipMotionPanelHeight;
   mainBloc.add(const VideoEditorClipMotionEditingChanged(isEditing: true));
+  mainBloc.add(VideoEditorSeekRequested(editingPosition));
 
   final live = scope.liveClipKeyframesNotifier;
+  live?.value = (clipId: clipId, keyframes: clip.keyframes);
   final result = await Navigator.of(context).push<List<SegmentKeyframe>>(
     PageRouteBuilder<List<SegmentKeyframe>>(
       opaque: false,
@@ -115,9 +119,19 @@ Future<void> editClipMotion(BuildContext context, String clipId) async {
   // Guarded on the bloc rather than on `context.mounted`, as the mask editor
   // does: the editor giving up the screen is exactly what this restores.
   if (!mainBloc.isClosed) {
+    // The tool audition uses unblended, full clip bodies. The main timeline
+    // omits the loop transition's consumed head; return to its display axis.
+    final wrap = LoopWrapDisplay.fromClips(clips);
+    final displayPosition =
+        mainBloc.state.currentPosition - wrap.consumedPerSide;
     mainBloc
       ..add(const VideoEditorAuditionEnded(owner: _auditionOwner))
-      ..add(const VideoEditorClipMotionEditingChanged(isEditing: false));
+      ..add(const VideoEditorClipMotionEditingChanged(isEditing: false))
+      ..add(
+        VideoEditorSeekRequested(
+          displayPosition.isNegative ? Duration.zero : displayPosition,
+        ),
+      );
     if (wasPlaying) {
       mainBloc.add(const VideoEditorExternalPauseRequested(isPaused: false));
     }

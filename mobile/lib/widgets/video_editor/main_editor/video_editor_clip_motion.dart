@@ -21,6 +21,7 @@ class ClipMotionSurface extends StatelessWidget {
     required this.playTime,
     required this.child,
     this.liveKeyframes,
+    this.isSeamAt,
     super.key,
   });
 
@@ -34,6 +35,9 @@ class ClipMotionSurface extends StatelessWidget {
   /// clip's own.
   final ValueListenable<LiveClipKeyframes?>? liveKeyframes;
 
+  /// Whether the player is showing a seam whose motion is already baked in.
+  final bool Function(Duration)? isSeamAt;
+
   /// The clip surface.
   final Widget child;
 
@@ -46,11 +50,14 @@ class ClipMotionSurface extends StatelessWidget {
       builder: (context, constraints) => ListenableBuilder(
         listenable: Listenable.merge([playTime, ?live]),
         builder: (context, child) {
-          final motion = clipMotionAtPlayTime(
-            clips,
-            playTime.value,
-            live: live?.value,
-          );
+          final motion = isSeamAt?.call(playTime.value) ?? false
+              ? stillClipMotion
+              : clipMotionAtPlayTime(
+                  clips,
+                  playTime.value,
+                  live: live?.value,
+                  applyLoopWrap: live?.value == null,
+                );
           // Fixed media chrome: the export fills the uncovered part black.
           return ColoredBox(
             color: VineTheme.backgroundColor,
@@ -73,8 +80,13 @@ ClipMotion clipMotionAtPlayTime(
   List<DivineVideoClip> clips,
   Duration time, {
   LiveClipKeyframes? live,
+  bool applyLoopWrap = true,
 }) {
-  final frame = clipFrameAtTimelinePosition(clips, time);
+  final frame = clipFrameAtTimelinePosition(
+    clips,
+    time,
+    applyLoopWrap: applyLoopWrap,
+  );
   if (frame == null) return stillClipMotion;
   final keyframes = live != null && live.clipId == frame.clip.id
       ? live.keyframes

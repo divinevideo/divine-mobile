@@ -1226,7 +1226,8 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
     // scrub live instead of waiting on the throttled seek round-trip (which a
     // paused/seeking player can stall). During playback the canvas playhead
     // ticker owns this notifier, so leave it untouched.
-    if (!context.read<VideoEditorMainBloc>().state.isPlaying) {
+    final mainState = context.read<VideoEditorMainBloc>().state;
+    if (!mainState.isPlaying && !mainState.isEditingClipMotion) {
       _scopePlayTimeNotifier?.value = position;
     }
   }
