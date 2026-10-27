@@ -1183,7 +1183,8 @@ class VideoEditorRenderService {
     ];
   }
 
-  /// The overlays [item] renders as, one per frame (see [buildImageLayers]).
+  /// The overlay [item] renders as: one image, or one frame sequence when it
+  /// has several frames (see [buildImageLayers]).
   static List<ImageLayer> _imageLayersFor(
     ExportedLayer item, {
     required Size bodySize,
