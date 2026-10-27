@@ -213,6 +213,37 @@ void main() {
       },
     );
 
+    test(
+      'moves each clip by its keyframes, baked into a re-encoded clip',
+      () async {
+        const keyframes = [
+          SegmentKeyframe(time: Duration(seconds: 1), scale: 1.5),
+        ];
+        final result = await normalize([
+          clipFor('wide', landscape).copyWith(keyframes: keyframes),
+          clipFor('tall', vertical).copyWith(keyframes: keyframes),
+        ]);
+
+        // Moved before the crop, as the concatenation moves the other clip.
+        expect(
+          plugin.renders.single.videoSegments!.single.keyframes,
+          keyframes,
+        );
+        expect(result.segments.first.keyframes, isEmpty);
+        expect(result.segments.last.keyframes, keyframes);
+      },
+    );
+
+    test('moves each clip by its keyframes under one global crop', () async {
+      const keyframes = [SegmentKeyframe(time: Duration.zero, rotation: 0.1)];
+      final result = await normalize([
+        clipFor('a', landscape).copyWith(keyframes: keyframes),
+        clipFor('b', landscape),
+      ]);
+
+      expect(result.segments.map((s) => s.keyframes), [keyframes, isEmpty]);
+    });
+
     test('stops at the next clip when the export is cancelled', () async {
       // Neither clip needs cropping, so this pass renders nothing and its own
       // per-clip check is the only thing that can see the cancel: a user

@@ -7,6 +7,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
+import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_mask_window.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
@@ -30,6 +31,9 @@ class VideoEditorClipMaskPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scope = VideoEditorScope.of(context);
+    final isEditingMotion = context.select(
+      (VideoEditorMainBloc bloc) => bloc.state.isEditingClipMotion,
+    );
     return Stack(
       fit: .expand,
       children: [
@@ -45,7 +49,12 @@ class VideoEditorClipMaskPreview extends StatelessWidget {
                 >(
                   selector: (state) => state.clips,
                   builder: (context, clips) => ClipMaskCover(
-                    clips: clips,
+                    clips: isEditingMotion
+                        ? [
+                            for (final clip in clips)
+                              clip.copyWith(clearTransition: true),
+                          ]
+                        : clips,
                     playTime: scope.playTimeNotifier,
                     liveMask: scope.liveClipMaskNotifier,
                   ),

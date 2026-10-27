@@ -10,6 +10,7 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubit.dart';
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/clip_keyframes.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -24,6 +25,7 @@ import 'package:openvine/screens/video_editor/video_clip_transform_screen.dart';
 import 'package:openvine/services/video_editor/video_editor_split_service.dart';
 import 'package:openvine/utils/image_orientation.dart';
 import 'package:openvine/utils/path_resolver.dart';
+import 'package:openvine/widgets/video_editor/clip_motion/video_editor_clip_motion_editor.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor.dart';
 import 'package:openvine/widgets/video_editor/stop_motion/stop_motion_frame_commands.dart';
@@ -155,6 +157,13 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
           index < state.clips.length &&
           state.clips[index].mask != null;
     });
+    final hasKeyframes = context.select((ClipEditorBloc bloc) {
+      final state = bloc.state;
+      final index = state.currentClipIndex;
+      return index >= 0 &&
+          index < state.clips.length &&
+          state.clips[index].hasKeyframes;
+    });
     final hasCopiedStyle = context.select(
       (StyleClipboardCubit cubit) => cubit.state.clipStyle != null,
     );
@@ -185,6 +194,11 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
         onTransform: () => _transformClip(context),
         onShapeMask: () => _editShapeMask(context),
         hasShapeMask: hasShapeMask,
+        // A held frame can still be panned across or zoomed into.
+        onKeyframes: () => _editMotion(context),
+        hasKeyframes: hasKeyframes,
+        keyframesSemanticLabel:
+            context.l10n.videoEditorClipKeyframesSemanticLabel,
         // No Copy style: a still has no sound, speed or color mask to copy,
         // but it takes a pasted shape mask.
         onPasteStyle: () => _pasteStyle(context),
@@ -218,6 +232,10 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       hasChromaKey: hasChromaKey,
       onShapeMask: () => _editShapeMask(context),
       hasShapeMask: hasShapeMask,
+      onKeyframes: () => _editMotion(context),
+      hasKeyframes: hasKeyframes,
+      keyframesSemanticLabel:
+          context.l10n.videoEditorClipKeyframesSemanticLabel,
       onExtractAudio: () => _requestExtractAudio(context),
       onReversed: () => _reverseClip(context),
       isReverseDisabled: isBoomerang,
@@ -300,6 +318,15 @@ class _TimelineClipControlsState extends State<TimelineClipControls> {
       return;
     }
     await editClipMask(context, state.clips[state.currentClipIndex].id);
+  }
+
+  Future<void> _editMotion(BuildContext context) async {
+    final state = context.read<ClipEditorBloc>().state;
+    if (state.currentClipIndex < 0 ||
+        state.currentClipIndex >= state.clips.length) {
+      return;
+    }
+    await editClipMotion(context, state.clips[state.currentClipIndex].id);
   }
 
   Future<void> _editChromaKey(BuildContext context) async {

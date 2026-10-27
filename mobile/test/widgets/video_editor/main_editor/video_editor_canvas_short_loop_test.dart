@@ -238,6 +238,8 @@ void main() {
     double? playbackSpeed,
     Stream<ClipEditorState>? clipStates,
     void Function(MethodCall)? onPlayerCall,
+    Future<void>? Function(MethodCall)? holdPlayerCall,
+    List<DivineVideoClip>? clips,
   }) async {
     // Built inside the test body so the mocked channel's stream and the
     // bloc's event pipeline schedule on the binding's fake zone, where a
@@ -248,17 +250,19 @@ void main() {
       onMethodCall: (call) async {
         playerCalls.add(call);
         onPlayerCall?.call(call);
+        await holdPlayerCall?.call(call);
         return null;
       },
     );
     mainBloc = VideoEditorMainBloc();
     effectsCubit = VideoEditorEffectsCubit();
     tuneBloc = VideoEditorTuneBloc();
-    final clip = clipOf(duration).copyWith(playbackSpeed: playbackSpeed);
+    final seeded =
+        clips ?? [clipOf(duration).copyWith(playbackSpeed: playbackSpeed)];
     whenListen(
       clipBloc,
       clipStates ?? const Stream<ClipEditorState>.empty(),
-      initialState: ClipEditorState(clips: [clip]),
+      initialState: ClipEditorState(clips: seeded),
     );
     final bodySizeNotifier = ValueNotifier(const Size(360, 640));
     final zoomMatrixNotifier = ValueNotifier(Matrix4.identity());
@@ -276,7 +280,7 @@ void main() {
         overrides: [
           ...getStandardTestOverrides(mockSharedPreferences: prefs),
           clipManagerProvider.overrideWith(
-            () => _SeededClipManagerNotifier([clip]),
+            () => _SeededClipManagerNotifier(seeded),
           ),
         ],
         child: MaterialApp(
@@ -353,6 +357,106 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump();
   }
+
+  group('clip motion editing', () {
+    /// Holds the next player reload until the seek has been sent.
+    Completer<void>? reloadGate;
+
+    setUp(() => reloadGate = null);
+
+    Future<void>? holdReload(MethodCall call) =>
+        call.method == 'setClips' ? reloadGate?.future : null;
+
+    /// Opens the motion editor the way `editClipMotion` does: the editing
+    /// flag first, then the seek onto the frame being edited.
+    Future<List<MethodCall>> openMotionEditorAt(
+      WidgetTester tester,
+      Duration position,
+    ) async {
+      await report(tester, positionMs: 0, durationMs: 3000);
+      playerCalls.clear();
+      final reload = reloadGate = Completer<void>();
+      mainBloc
+        ..add(const VideoEditorClipMotionEditingChanged(isEditing: true))
+        ..add(VideoEditorSeekRequested(position));
+      await tester.pump();
+      await tester.pump();
+      reload.complete();
+      for (var i = 0; i < 5; i++) {
+        await tester.pump();
+      }
+      return [...playerCalls];
+    }
+
+    testWidgets('without a transition, opening leaves the player loaded', (
+      tester,
+    ) async {
+      await pumpCanvas(
+        tester,
+        const Duration(seconds: 3),
+        holdPlayerCall: holdReload,
+      );
+
+      final calls = await openMotionEditorAt(
+        tester,
+        const Duration(milliseconds: 1200),
+      );
+      await unmount(tester);
+
+      expect(calls.map((call) => call.method), isNot(contains('setClips')));
+      expect(
+        calls
+            .where((call) => call.method == 'seekTo')
+            .map(
+              (call) => (call.arguments as Map)['positionMs'],
+            ),
+        [1200],
+      );
+    });
+
+    testWidgets('a seek sent while a transition reloads the player lands', (
+      tester,
+    ) async {
+      final originalPlugin = editor.ProVideoEditor.instance;
+      final originalPaths = PathProviderPlatform.instance;
+      editor.ProVideoEditor.instance = _GatedRenderer();
+      PathProviderPlatform.instance = _OwnedPaths(tempDir.path);
+      addTearDown(() {
+        editor.ProVideoEditor.instance = originalPlugin;
+        PathProviderPlatform.instance = originalPaths;
+      });
+      final first = clipOf(const Duration(milliseconds: 1500));
+      await pumpCanvas(
+        tester,
+        const Duration(milliseconds: 1500),
+        clips: [
+          first.copyWith(
+            transition: const editor.ClipTransition(
+              type: editor.ClipTransitionType.dissolve,
+            ),
+          ),
+          first.copyWith(id: 'second'),
+        ],
+        holdPlayerCall: holdReload,
+      );
+
+      final calls = await openMotionEditorAt(
+        tester,
+        const Duration(milliseconds: 1200),
+      );
+      await unmount(tester);
+
+      final reloadIndex = calls.indexWhere((call) => call.method == 'setClips');
+      expect(reloadIndex, isNonNegative, reason: 'the transitions came off');
+      expect(
+        calls
+            .skip(reloadIndex + 1)
+            .where((call) => call.method == 'seekTo')
+            .map((call) => (call.arguments as Map)['positionMs']),
+        [1200],
+      );
+    });
+  });
 
   group('short loop', () {
     testWidgets('a finished render keeps the uncommitted preview trim', (

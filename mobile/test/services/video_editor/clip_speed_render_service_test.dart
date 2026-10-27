@@ -44,6 +44,7 @@ class _FakeProVideoEditor extends editor.ProVideoEditor {
 
   /// The task id of every render started, in order.
   final renderedTaskIds = <String>[];
+  final renderedKeyframes = <List<editor.SegmentKeyframe>>[];
 
   /// Task ids the service asked to cancel, in order.
   final cancelledTaskIds = <String>[];
@@ -76,6 +77,7 @@ class _FakeProVideoEditor extends editor.ProVideoEditor {
   }) async {
     final renderIndex = renderCount++;
     renderedTaskIds.add(value.id);
+    renderedKeyframes.add(value.videoSegments!.single.keyframes);
     renderStartedAt(renderIndex).complete();
     await allowRenderToFinishAt(renderIndex).future;
     // Synchronous so a render released under `fakeAsync` settles on the
@@ -262,6 +264,35 @@ void main() {
     });
 
     group('render', () {
+      test(
+        'keeps live speed bodies separate from motion-baked seam bodies',
+        () async {
+          final native = _FakeProVideoEditor();
+          editor.ProVideoEditor.instance = native;
+          final service = ClipSpeedRenderService();
+          final c = clip('motion', playbackSpeed: 2).copyWith(
+            keyframes: const [
+              editor.SegmentKeyframe(time: Duration(seconds: 1), scale: 2),
+            ],
+          );
+          final live = service.render(c);
+          await native.renderStartedAt(0).future;
+          native.allowRenderToFinishAt(0).complete();
+          final liveBody = await live;
+          expect(liveBody, isNotNull);
+          expect(native.renderedKeyframes.first, isEmpty);
+
+          final baked = service.render(c, bakeKeyframes: true);
+          await native.renderStartedAt(1).future;
+          native.allowRenderToFinishAt(1).complete();
+          final seamBody = await baked;
+          expect(seamBody, isNotNull);
+          expect(seamBody!.path, isNot(liveBody!.path));
+          expect(native.renderedKeyframes.last, c.keyframes);
+          expect(service.cached(c), same(liveBody));
+          expect(await service.render(c, bakeKeyframes: true), same(seamBody));
+        },
+      );
       test('short-circuits to null for a 1× clip without touching native', () {
         final service = ClipSpeedRenderService();
 

@@ -89,16 +89,19 @@ class VideoEditorBoomerangService {
         VideoRenderData(
           id: renderId,
           videoSegments: [
+            // The motion is baked in: each frame keeps it both ways.
             VideoSegment(
               video: source,
               startTime: windowStart == Duration.zero ? null : windowStart,
               endTime: windowEnd,
+              keyframes: sourceClip.keyframes,
             ),
             VideoSegment(
               video: source,
               startTime: backwardStart == Duration.zero ? null : backwardStart,
               endTime: backwardEnd,
               reverseVideo: true,
+              keyframes: sourceClip.keyframes,
             ),
           ],
         ),

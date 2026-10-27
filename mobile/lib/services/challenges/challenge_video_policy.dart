@@ -42,6 +42,13 @@ class ChallengeVideoPolicy {
     _allowedUntil.remove(event.id);
     _currentIds.remove(_identity(event));
     if (!isVideo(event) || !sourceAllowed(event)) return;
+    final identifiers = event.tags.where(
+      (tag) => tag.length > 1 && tag.first == 'd',
+    );
+    if (event.kind >= 30000 &&
+        (identifiers.length != 1 || identifiers.single[1].isEmpty)) {
+      return;
+    }
     final sdk = Event.fromJson(event.toJson());
     final video = VideoEvent.fromNostrEvent(sdk);
     final relays = client.configuredRelays

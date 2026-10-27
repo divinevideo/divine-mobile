@@ -26,6 +26,7 @@ const exploreListsTabName = 'lists';
 
 /// Internal tab name for the integrated Apps tab.
 const exploreAppsTabName = 'apps';
+const exploreChallengesTabName = 'challenges';
 
 /// Internal tab name for the server-configured featured tab.
 ///
@@ -40,6 +41,7 @@ class ExploreTabsState extends Equatable {
     this.classicsAvailable = false,
     this.forYouAvailable = false,
     this.appsAvailable = false,
+    this.challengesAvailable = challengesTestEnabled,
     this.featuredTab,
   });
 
@@ -51,6 +53,7 @@ class ExploreTabsState extends Equatable {
 
   /// Whether the integrated Apps tab is shown.
   final bool appsAvailable;
+  final bool challengesAvailable;
 
   /// Server-configured featured tab, or `null` when none should render.
   final FeaturedTabConfig? featuredTab;
@@ -69,6 +72,7 @@ class ExploreTabsState extends Equatable {
       if (forYouAvailable) exploreForYouTabName,
       exploreListsTabName,
       if (appsAvailable) exploreAppsTabName,
+      if (challengesAvailable) exploreChallengesTabName,
     ];
     if (featuredTab == null) return names;
     return names..insert(_featuredInsertIndex(names), exploreFeaturedTabName);
@@ -116,6 +120,7 @@ class ExploreTabsState extends Equatable {
     bool? classicsAvailable,
     bool? forYouAvailable,
     bool? appsAvailable,
+    bool? challengesAvailable,
     FeaturedTabConfig? featuredTab,
     bool clearFeaturedTab = false,
   }) {
@@ -123,6 +128,7 @@ class ExploreTabsState extends Equatable {
       classicsAvailable: classicsAvailable ?? this.classicsAvailable,
       forYouAvailable: forYouAvailable ?? this.forYouAvailable,
       appsAvailable: appsAvailable ?? this.appsAvailable,
+      challengesAvailable: challengesAvailable ?? this.challengesAvailable,
       featuredTab: clearFeaturedTab ? null : featuredTab ?? this.featuredTab,
     );
   }
@@ -132,6 +138,7 @@ class ExploreTabsState extends Equatable {
     classicsAvailable,
     forYouAvailable,
     appsAvailable,
+    challengesAvailable,
     featuredTab,
   ];
 }

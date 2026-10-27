@@ -126,7 +126,7 @@ void main() {
       ),
     ).thenAnswer((_) async {});
     when(
-      () => videoEditor.reset(
+      () => videoEditor.resetForRecorderMode(
         keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
       ),
     ).thenAnswer((_) async {});

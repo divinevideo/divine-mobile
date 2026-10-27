@@ -176,6 +176,7 @@ void main() {
     });
 
     testWidgets('delayed double copy does not pop source', (tester) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
       final pending = Completer<String>();
       when(() => mockVideoSharingService.generateShareUrl(any()))
           .thenReturn('https://divine.video/video/synthetic');
@@ -219,9 +220,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byType(ShareActionButton));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Copy'));
+      await tester.tap(find.text(l10n.shareSheetCopy));
       await tester.pump();
-      await tester.tap(find.text('Copy'));
+      await tester.tap(find.text(l10n.shareSheetCopy));
       await tester.pump();
       pending.complete('https://divine.video/l/Abc12345');
       await tester.pumpAndSettle();
@@ -241,6 +242,7 @@ void main() {
     testWidgets('copy completion after dismissal does not pop source', (
       tester,
     ) async {
+      final l10n = lookupAppLocalizations(const Locale('en'));
       final pending = Completer<String>();
       when(() => mockVideoSharingService.generateShareUrl(any()))
           .thenReturn('https://divine.video/video/synthetic');
@@ -284,7 +286,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byType(ShareActionButton));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Copy'));
+      await tester.tap(find.text(l10n.shareSheetCopy));
       await tester.pump();
       router.pop();
       await tester.pump();
@@ -299,7 +301,7 @@ void main() {
       expect(
         sourcePresent,
         isTrue,
-        reason: 'double Copy must only dismiss the share sheet',
+        reason: 'a copy finishing after dismissal must not pop the video',
       );
     });
 
@@ -536,6 +538,7 @@ void main() {
       );
 
       testWidgets('shows standard action items', (tester) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
         final mockAuth = createMockAuthService();
 
         await tester.pumpWidget(
@@ -557,15 +560,16 @@ void main() {
         await tester.tap(find.byType(GestureDetector));
         await tester.pumpAndSettle();
 
-        expect(find.text('Save'), findsOneWidget);
-        expect(find.text('Save Video'), findsOneWidget);
-        expect(find.text('Copy'), findsOneWidget);
-        expect(find.text('Share via'), findsOneWidget);
+        expect(find.text(l10n.shareSheetSave), findsOneWidget);
+        expect(find.text(l10n.shareSheetSaveVideo), findsOneWidget);
+        expect(find.text(l10n.shareSheetCopy), findsOneWidget);
+        expect(find.text(l10n.shareSheetShareVia), findsOneWidget);
       });
 
       testWidgets('copy action responds when tapping the icon-label gap', (
         tester,
       ) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
         final mockAuth = createMockAuthService();
         when(
           () => mockVideoSharingService.generateShareUrl(any()),
@@ -594,7 +598,7 @@ void main() {
           (widget) =>
               widget is DivineIcon && widget.icon == DivineIconName.linkSimple,
         );
-        final copyLabel = find.text('Copy');
+        final copyLabel = find.text(l10n.shareSheetCopy);
         expect(copyIcon, findsOneWidget);
         expect(copyLabel, findsOneWidget);
 
@@ -606,12 +610,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(
-          find.text(
-            lookupAppLocalizations(const Locale('en')).shareCopiedPostLink,
-          ),
-          findsOneWidget,
-        );
+        expect(find.text(l10n.shareCopiedPostLink), findsOneWidget);
       });
 
       testWidgets('shows own-video download actions for owned content', (

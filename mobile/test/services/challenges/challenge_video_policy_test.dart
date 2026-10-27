@@ -18,6 +18,22 @@ class _Moderation extends Mock implements VideoModerationStatusService {}
 void main() {
   group('ChallengeVideoPolicy refresh', () {
     setUpAll(() => registerFallbackValue(<Filter>[]));
+    test('addressable video without d fails closed', () async {
+      final video = NostrEvent.fromJson(SyntheticSigner().sign(kind: 34236));
+      final client = _Client();
+      when(() => client.configuredRelays)
+          .thenReturn(['wss://relay.example.test']);
+      when(() => client.isRelayAllowed(any())).thenReturn(true);
+      final policy = ChallengeVideoPolicy(
+        client: client,
+        moderation: _Moderation(),
+        checkOwner: () async {},
+        sourceAllowed: (_) => true,
+      );
+      await policy.refresh(video);
+      expect(policy.isVisible(video), isFalse);
+      expect(policy.currentVideoId(video), isNull);
+    });
     test(
       'current policy stays separate from pinned and current video revisions',
       () async {

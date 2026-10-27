@@ -36,6 +36,9 @@ abstract final class LoopRepairInputMapper {
               clip.speedRamp == null &&
               clip.transition == null &&
               clip.mask == null &&
+              // Analysis decodes the base file, not the clip's live motion.
+              // Repair the loop before placing clip keyframes.
+              clip.keyframes.isEmpty &&
               clip.chromaKey == null &&
               !clip.hasPendingCaptureChromaKey &&
               (clip.playbackSpeed ?? 1).isFinite &&
@@ -131,6 +134,7 @@ abstract final class LoopRepairInputMapper {
       final removed = window.duration - window.trimEnd - replacement.sourceEnd;
       final speed = clip.playbackSpeed ?? 1;
       if (source == null ||
+          clip.keyframes.isNotEmpty ||
           path == null ||
           path.isEmpty ||
           path == source ||

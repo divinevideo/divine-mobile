@@ -140,7 +140,8 @@ enum SubmissionStatus {
   /// Reviewed snapshots/client metadata exceed the signed-record size limit.
   eventTooLarge,
 
-  /// Consent, current rules, window, or current video revision differs.
+  /// Consent, current rules, window, or current video revision differs, or
+  /// the reviewed sources cannot form a valid action.
   reviewRequired,
 
   /// Current cancellation pauses persisted entry delivery. Keep the signed
@@ -157,7 +158,8 @@ enum SubmissionStatus {
   /// and retry delivery when the read recovers; do not replace its consent.
   readUnavailable,
 
-  /// Signer changed fields or returned invalid signature/protocol semantics.
+  /// A signer response, stored action or observation fails signature or
+  /// protocol validation.
   invalidSignedEvent,
 
   /// Signing failed without producing durable work.

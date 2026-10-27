@@ -7,10 +7,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
+import 'package:openvine/extensions/clip_keyframes.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_clip_motion.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_player.dart';
-import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 
 /// The preview surface for the current clip: a [DivineVideoPlayer] for a normal
 /// clip, or a controlled `StopMotionPlayer` for a frames-only stop-motion clip.
@@ -30,6 +32,7 @@ class VideoEditorClipPreview extends StatelessWidget {
     required this.renderSize,
     required this.playTime,
     this.frameBuilder,
+    this.isSeamAt,
     super.key,
   });
 
@@ -52,8 +55,14 @@ class VideoEditorClipPreview extends StatelessWidget {
   /// See [VideoEditorPlayer.frameBuilder].
   final Widget Function(Widget frame)? frameBuilder;
 
+  /// True for a rendered seam, which already contains each clip's motion.
+  final bool Function(Duration)? isSeamAt;
+
   @override
   Widget build(BuildContext context) {
+    final isEditingMotion = context.select(
+      (VideoEditorMainBloc bloc) => bloc.state.isEditingClipMotion,
+    );
     final clipManagerFrames = clip.stopMotionFrames;
     if (clipManagerFrames == null) {
       // The live clip list, for the same reason as the frames below: a
@@ -69,6 +78,8 @@ class VideoEditorClipPreview extends StatelessWidget {
           clips: liveClips,
           fallbackClip: clip,
           playTime: playTime,
+          isSeamAt: isSeamAt,
+          applyLoopWrap: !isEditingMotion,
           builder: (context, videoAspectRatio) => VideoEditorPlayer(
             controller: controller,
             targetAspectRatio: clip.targetAspectRatio,
@@ -76,6 +87,15 @@ class VideoEditorClipPreview extends StatelessWidget {
             bodySize: bodySize,
             renderSize: renderSize,
             frameBuilder: frameBuilder,
+            surfaceBuilder: (surface) => ClipMotionSurface(
+              clips: liveClips,
+              playTime: playTime,
+              isSeamAt: isSeamAt,
+              liveKeyframes: VideoEditorScope.maybeOf(
+                context,
+              )?.liveClipKeyframesNotifier,
+              child: surface,
+            ),
           ),
         ),
       );
@@ -134,6 +154,8 @@ class _PlayheadVideoAspectRatio extends StatefulWidget {
     required this.fallbackClip,
     required this.playTime,
     required this.builder,
+    this.isSeamAt,
+    this.applyLoopWrap = true,
   });
 
   /// The live timeline clips.
@@ -147,6 +169,9 @@ class _PlayheadVideoAspectRatio extends StatefulWidget {
 
   /// Builds the surface for the resolved ratio.
   final Widget Function(BuildContext context, double videoAspectRatio) builder;
+
+  final bool Function(Duration)? isSeamAt;
+  final bool applyLoopWrap;
 
   @override
   State<_PlayheadVideoAspectRatio> createState() =>
@@ -181,9 +206,15 @@ class _PlayheadVideoAspectRatioState extends State<_PlayheadVideoAspectRatio> {
   }
 
   double _ratioAtPlayhead() =>
-      (clipAtTimelinePosition(widget.clips, widget.playTime.value) ??
-              widget.fallbackClip)
-          .videoAspectRatio;
+      widget.isSeamAt?.call(widget.playTime.value) ?? false
+      ? widget.fallbackClip.targetAspectRatio.value
+      : (clipFrameAtTimelinePosition(
+                  widget.clips,
+                  widget.playTime.value,
+                  applyLoopWrap: widget.applyLoopWrap,
+                )?.clip ??
+                widget.fallbackClip)
+            .videoAspectRatio;
 
   void _onPlayTime() {
     final ratio = _ratioAtPlayhead();
