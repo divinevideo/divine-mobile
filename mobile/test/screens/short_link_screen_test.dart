@@ -200,6 +200,8 @@ void main() {
       );
       await lookup;
       await tester.pumpAndSettle();
+      // This test owns the cubit, so it stays open after `go`. In the app the
+      // route's own BlocProvider closes it, and the late result is dropped.
       expect(cubit.state, isA<ShortLinkReady>());
       expect(find.text('another page'), findsOneWidget);
       expect(find.text('resolved video'), findsNothing);
