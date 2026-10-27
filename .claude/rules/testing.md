@@ -805,18 +805,21 @@ never satisfy the app's delegate.
 
 `scripts/check_l10n_delegates_ceiling.sh` freezes the per-file count of
 `MaterialApp` / `CupertinoApp` / `WidgetsApp` constructions under
-`mobile/test` that do not register `appLocalizationsDelegates` — passing
-any other delegate list, such as `GlobalMaterialLocalizations.delegates`
-or the generated `AppLocalizations.localizationsDelegates`, does not clear
-the count — in `mobile/scripts/baseline/l10n_delegates.txt` — a ceiling
-that may only shrink. It runs in CI (the `guards` job), not the pre-push
-hook.
+`mobile/test` that do not register `appLocalizationsDelegates` alone —
+passing any other delegate list, such as
+`GlobalMaterialLocalizations.delegates` or the generated
+`AppLocalizations.localizationsDelegates`, or naming `AppLocalizations`
+beside the app list, does not clear the count — in
+`mobile/scripts/baseline/l10n_delegates.txt` — a ceiling that may only
+shrink. It runs in CI (the `guards` job), not the pre-push hook.
 
 The generated list is excluded because its app delegate loads each locale
 as a deferred library. Inside a widget test that load runs in fake async,
 and the VM keeps its completer for the rest of the isolate, so the next
 first load of any other locale in the same merged CI shard never
 completes. That is how `l10n_test` timed out shard 6 on `main` (#10517).
+Listing the generated delegate beside the app list does not help:
+`Localizations` uses only the first delegate of each type.
 
 ```bash
 cd mobile && dart run scripts/lib/l10n_delegate_detector.dart test --detail

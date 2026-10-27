@@ -1,5 +1,5 @@
-// ABOUTME: Detector behind check_l10n_delegates_ceiling.sh — finds MaterialApp
-// ABOUTME: constructions in tests that lack appLocalizationsDelegates.
+// ABOUTME: Detector behind check_l10n_delegates_ceiling.sh — finds test app
+// ABOUTME: roots that skip appLocalizationsDelegates or name AppLocalizations.
 //
 // Usage (from mobile/):
 //   dart run scripts/lib/l10n_delegate_detector.dart <scan-dir> [options]
@@ -88,7 +88,8 @@ class DetectorParseException implements Exception {
 /// subtree even when an ancestor was configured correctly.
 const appWidgets = {'MaterialApp', 'CupertinoApp', 'WidgetsApp'};
 
-/// One app-root construction that lacks `appLocalizationsDelegates`.
+/// One app-root construction that skips `appLocalizationsDelegates` or names
+/// `AppLocalizations` in its delegates.
 class DelegatelessSite {
   const DelegatelessSite({
     required this.path,
@@ -188,8 +189,8 @@ class _DelegateReferenceVisitor extends RecursiveAstVisitor<void> {
   }
 }
 
-/// Every app-root construction under [root] that registers no delegates,
-/// sorted by path then line.
+/// Every counted app-root construction under [root], sorted by path then
+/// line.
 List<DelegatelessSite> findDelegatelessSites(
   Directory root, {
   String pathPrefix = '',
