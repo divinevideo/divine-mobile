@@ -234,6 +234,36 @@ void main() {
       expect(layer.blendMode, LayerBlendMode.multiply);
     });
 
+    test('draws a mask with keyframes on every frame of the clip, from '
+        'the layer start on the editor timeline', () {
+      final exportItem = item(_clip(), startTime: const Duration(seconds: 1));
+      exportItem.layer.mask =
+          const LayerMask(
+            shape: LayerMaskShape.ellipse,
+          ).withKeyframes(const [
+            LayerMaskKeyframe(time: Duration.zero, size: Size.zero),
+            LayerMaskKeyframe(time: Duration(seconds: 1), size: Size(1, 1)),
+          ]);
+
+      final layer = buildDetachedClipVideoLayer(
+        item: exportItem,
+        resolvedVideo: EditorVideo.file('/docs/clip-1.mp4'),
+        bodySize: bodySize,
+        videoSize: videoSize,
+        targetAspectRatio: targetAspectRatio,
+        timelineMap: identityMap,
+        speedFlattened: false,
+      );
+
+      final shapeMask = layer.shapeMask!;
+      expect(shapeMask.keyframes.map((k) => k.time), [
+        const Duration(seconds: 1),
+        const Duration(seconds: 2),
+      ]);
+      expect(shapeMask.keyframes.last.size, const Size(1, 1));
+      expect(layer.mask, isNull);
+    });
+
     test('moves a keyframed clip, turned and faded by its keyframes', () {
       final exportItem = item(_clip(), rotation: 0.3);
       exportItem.layer.keyframes = const [

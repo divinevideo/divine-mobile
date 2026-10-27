@@ -4251,6 +4251,8 @@
   "videoEditorShapeMaskCornersLabel": "ማዕዘኖች",
   "videoEditorShapeMaskCornersSquare": "ካሬ",
   "videoEditorShapeMaskCornersRound": "የተጠጋጋ",
+  "videoEditorShapeMaskKeyframesHint": "ቁልፍ ፍሬም ያክሉ፣ የመጫወቻ ቦታውን ያንቀሳቅሱ፣ ከዚያ ቅርጹን ለማንቀሳቀስ፣ መጠኑን ለመቀየር፣ ለማሽከርከር ወይም ለማለስለስ ጭንብሉን እንደገና ይክፈቱ። ቅርጹ ከቁልፍ ፍሬም ወደ ቁልፍ ፍሬም ይንሸራተታል።",
+  "videoEditorShapeMaskKeyframesSemanticLabel": "የቅርጽ ጭንብሉን ቁልፍ ፍሬሞች ማስተካከያ",
   "videoEditorShapeMaskBackgroundLabel": "ዳራ",
   "videoEditorChromaKeyAutoDetect": "በራስ-ሰር ለይ",
   "videoEditorChromaKeyPresetGreen": "አረንጓዴ",

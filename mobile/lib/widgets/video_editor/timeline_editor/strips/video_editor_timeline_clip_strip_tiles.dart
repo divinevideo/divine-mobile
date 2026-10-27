@@ -567,18 +567,59 @@ class _ClipTile extends StatelessWidget {
       ),
     );
 
-    if (selectionState == _ClipSelectionState.none) return tile;
+    // A reorder drag shrinks the tile to a badge, with no room for marks.
+    final marksMask =
+        waveformNotifier != null && (clip.mask?.hasKeyframes ?? false);
+    if (selectionState == _ClipSelectionState.none && !marksMask) return tile;
 
     return Stack(
       fit: StackFit.passthrough,
       children: [
         tile,
-        Positioned.fill(
-          child: _ClipSelectionOverlay(
-            isSelected: selectionState == _ClipSelectionState.selected,
+        if (marksMask)
+          Positioned.fill(child: _ClipMaskKeyframeMarks(clip: clip)),
+        if (selectionState != _ClipSelectionState.none)
+          Positioned.fill(
+            child: _ClipSelectionOverlay(
+              isSelected: selectionState == _ClipSelectionState.selected,
+            ),
           ),
-        ),
       ],
+    );
+  }
+}
+
+/// The keyframes of a clip's shape mask, marked along the top of its tile
+/// where they fall in the clip's playback: just inside the tile, which clips
+/// what reaches past it.
+class _ClipMaskKeyframeMarks extends StatelessWidget {
+  const _ClipMaskKeyframeMarks({required this.clip});
+
+  final DivineVideoClip clip;
+
+  @override
+  Widget build(BuildContext context) {
+    final playbackUs = clip.playbackDuration.inMicroseconds;
+    final keyframes = clip.mask?.keyframes ?? const [];
+    if (playbackUs <= 0 || keyframes.isEmpty) return const SizedBox.shrink();
+    return LayoutBuilder(
+      builder: (context, constraints) => Stack(
+        clipBehavior: Clip.none,
+        children: [
+          for (final keyframe in keyframes)
+            // Keyframes outside the clip still shape its mask but are not
+            // shown.
+            if (!keyframe.time.isNegative &&
+                keyframe.time <= clip.playbackDuration)
+              TimelineKeyframeDot(
+                left:
+                    keyframe.time.inMicroseconds /
+                    playbackUs *
+                    constraints.maxWidth,
+                top: TimelineKeyframeDot.size / 2,
+              ),
+        ],
+      ),
     );
   }
 }

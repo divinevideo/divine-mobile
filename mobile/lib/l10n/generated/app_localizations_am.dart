@@ -9605,6 +9605,14 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'የተጠጋጋ';
 
   @override
+  String get videoEditorShapeMaskKeyframesHint =>
+      'ቁልፍ ፍሬም ያክሉ፣ የመጫወቻ ቦታውን ያንቀሳቅሱ፣ ከዚያ ቅርጹን ለማንቀሳቀስ፣ መጠኑን ለመቀየር፣ ለማሽከርከር ወይም ለማለስለስ ጭንብሉን እንደገና ይክፈቱ። ቅርጹ ከቁልፍ ፍሬም ወደ ቁልፍ ፍሬም ይንሸራተታል።';
+
+  @override
+  String get videoEditorShapeMaskKeyframesSemanticLabel =>
+      'የቅርጽ ጭንብሉን ቁልፍ ፍሬሞች ማስተካከያ';
+
+  @override
   String get videoEditorShapeMaskBackgroundLabel => 'ዳራ';
 
   @override

@@ -15,6 +15,7 @@ import 'package:openvine/extensions/complete_parameters_extensions.dart';
 import 'package:openvine/extensions/layer_animation_storage.dart';
 import 'package:openvine/extensions/layer_blend_mode.dart';
 import 'package:openvine/extensions/layer_keyframes.dart';
+import 'package:openvine/extensions/layer_mask_export.dart';
 import 'package:openvine/extensions/tune_adjustment_matrix_extensions.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -953,7 +954,7 @@ class VideoEditorRenderService {
       shouldOptimizeForNetworkUse: true,
       audioTracks: audioTracks,
       imageLayers: buildImageLayers(
-        capturedLayers: capturedLayers,
+        capturedLayers: await withRecTimerFrames(capturedLayers, timelineMap),
         bodySize: parameters?.bodySize,
         videoSize: videoSize,
         targetAspectRatio: aspectRatio.value,
@@ -963,7 +964,6 @@ class VideoEditorRenderService {
         // fallback instead of filtering again by the kind marker.
         excludeDetachedClips: imageLayerOverride == null,
         audioEnergies: audioEnergies,
-        layerFrames: await recTimerLayerFrames(capturedLayers, timelineMap),
       ),
       blur: parameters?.blur,
       colorFilters: buildColorFilters(
@@ -1162,7 +1162,6 @@ class VideoEditorRenderService {
     required TransitionTimelineMap timelineMap,
     bool excludeDetachedClips = true,
     Float32List? audioEnergies,
-    Map<String, List<ExportedLayerFrame>> layerFrames = const {},
   }) {
     if (capturedLayers.isEmpty || bodySize == null) return null;
     final mapping = ExportLayerMapping(
@@ -1180,7 +1179,6 @@ class VideoEditorRenderService {
             mapping: mapping,
             timelineMap: timelineMap,
             audioEnergies: audioEnergies,
-            frames: layerFrames[item.layer.id],
           ),
     ];
   }
@@ -1192,7 +1190,6 @@ class VideoEditorRenderService {
     required ExportLayerMapping mapping,
     required TransitionTimelineMap timelineMap,
     Float32List? audioEnergies,
-    List<ExportedLayerFrame>? frames,
   }) {
     final layer = item.layer;
     if (AudioVisualizerLayerData.of(layer) case final visualizer?) {
@@ -1247,10 +1244,11 @@ class VideoEditorRenderService {
     final keyframeClock = item.layer.divineKeyframeClockForExport(
       timelineMap: timelineMap,
     );
-    final shown = frames ?? item.frames;
-    final split = shown.length > 1;
-    return recTimerLayers(frames, [
-      for (final (index, frame) in shown.indexed)
+    final shapeMask = item.divineShapeMaskForExport();
+    final frames = item.frames;
+    final split = frames.length > 1;
+    return recTimerLayers(item, [
+      for (final (index, frame) in frames.indexed)
         ImageLayer(
           image: EditorLayerImage.memory(frame.bytes),
           startTime: timelineMap.editorToOutputOrNull(frame.startTime),
@@ -1258,8 +1256,8 @@ class VideoEditorRenderService {
           // inclusive, so a frame ending where the next one starts would draw
           // both on that instant and stack the translucent pill. Every frame
           // but the last ends one tick early.
-          endTime: index < shown.length - 1
-              ? timelineMap.editorToOutput(shown[index + 1].startTime!) -
+          endTime: index < frames.length - 1
+              ? timelineMap.editorToOutput(frames[index + 1].startTime!) -
                     const Duration(microseconds: 1)
               : timelineMap.editorToOutputOrNull(frame.endTime),
           offset: offset,
@@ -1267,6 +1265,7 @@ class VideoEditorRenderService {
           animations: animations,
           keyframes: keyframes,
           keyframeClock: keyframeClock,
+          shapeMask: shapeMask,
           blendMode: item.layer.exportBlendMode,
           // A layer without a start or end begins or ends with the video, so
           // its implicit range is the output's. Left null, the native

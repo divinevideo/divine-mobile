@@ -9785,6 +9785,14 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'Bo tròn';
 
   @override
+  String get videoEditorShapeMaskKeyframesHint =>
+      'Thêm khung hình chính, di chuyển đầu phát, rồi mở lại mặt nạ để di chuyển, đổi kích thước, xoay hoặc làm mềm hình. Hình sẽ lướt từ khung hình chính này sang khung hình chính tiếp theo.';
+
+  @override
+  String get videoEditorShapeMaskKeyframesSemanticLabel =>
+      'Chỉnh sửa khung hình chính của mặt nạ hình dạng';
+
+  @override
   String get videoEditorShapeMaskBackgroundLabel => 'Nền';
 
   @override

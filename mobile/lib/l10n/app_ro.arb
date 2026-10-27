@@ -4164,6 +4164,8 @@
   "videoEditorShapeMaskCornersLabel": "Colțuri",
   "videoEditorShapeMaskCornersSquare": "Drepte",
   "videoEditorShapeMaskCornersRound": "Rotunjite",
+  "videoEditorShapeMaskKeyframesHint": "Adaugă un cadru cheie, mută capul de redare, apoi deschide din nou masca ca să muți, să redimensionezi, să rotești sau să estompezi forma. Forma alunecă de la un cadru cheie la altul.",
+  "videoEditorShapeMaskKeyframesSemanticLabel": "Editează cadrele cheie ale măștii de formă",
   "videoEditorShapeMaskBackgroundLabel": "Fundal",
   "videoEditorChromaKeyAutoDetect": "Detectare automată",
   "videoEditorChromaKeyPresetGreen": "Verde",

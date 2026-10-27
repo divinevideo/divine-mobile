@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import 'package:clock/clock.dart';
+import 'package:openvine/extensions/layer_mask_keyframes.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -41,6 +42,11 @@ class VideoEditorSplitService {
   }) {
     final absoluteSplitPos = sourceClip.trimStart + splitPosition;
     final timestampMs = clock.now().microsecondsSinceEpoch;
+    // A mask's keyframes are timed on the clip's playback, so each half keeps
+    // the ones that change it there, measured from its own start.
+    final splitPlayback = sourceClip.sourceOffsetToPlaybackOffset(
+      splitPosition,
+    );
 
     // Start half: source start → split point. [duration] caps the visible end
     // at the split, and it drops the source's outgoing transition — only the
@@ -53,6 +59,7 @@ class VideoEditorSplitService {
       trimEnd: Duration.zero,
       clearTransition: true,
       speedRamp: sourceClip.speedRampBetween(Duration.zero, splitPosition),
+      mask: sourceClip.mask?.forPart(Duration.zero, splitPlayback),
     );
     // End half: split point → source end. [minTrimStart] pins its left trim
     // handle at the split so it can't be dragged back into the start half's
@@ -64,6 +71,10 @@ class VideoEditorSplitService {
       speedRamp: sourceClip.speedRampBetween(
         splitPosition,
         sourceClip.trimmedDuration,
+      ),
+      mask: sourceClip.mask?.forPart(
+        splitPlayback,
+        sourceClip.playbackDuration,
       ),
     );
     return (startClip, endClip);

@@ -33,9 +33,10 @@ Future<void> editLayerMask(
   if (editor == null) return;
   final mainBloc = context.read<VideoEditorMainBloc>();
 
-  final time = scope.playTimeNotifier.value;
+  var time = scope.playTimeNotifier.value;
   if (time < item.startTime || time > item.endTime) {
-    mainBloc.add(VideoEditorSeekRequested(item.startTime));
+    time = item.startTime;
+    mainBloc.add(VideoEditorSeekRequested(time));
   }
 
   void show(LayerMask? mask) => _replaceLayer(
@@ -48,6 +49,8 @@ Future<void> editLayerMask(
   final result = await _runMaskEditor(
     context,
     initialMask: layer.mask,
+    // Mask keyframes count from the layer's start, as its own do.
+    keyframeTime: time - layer.keyframeOrigin,
     resolveGeometry: () => _layerGeometry(editor, layer.id),
     onChanged: (result) => show(result.mask),
   );
@@ -82,17 +85,18 @@ Future<void> editClipMask(BuildContext context, String clipId) async {
     clipStart += previous.playbackDuration;
   }
   final clipEnd = clipStart + clip.playbackDuration;
-  final time = scope.playTimeNotifier.value;
+  var time = scope.playTimeNotifier.value;
   if (time < clipStart || time >= clipEnd) {
-    mainBloc.add(
-      VideoEditorSeekRequested(clipStart + clip.playbackDuration ~/ 2),
-    );
+    time = clipStart + clip.playbackDuration ~/ 2;
+    mainBloc.add(VideoEditorSeekRequested(time));
   }
 
   final live = scope.liveClipMaskNotifier;
   final result = await _runMaskEditor(
     context,
     initialMask: clip.mask,
+    // A clip's mask keyframes count from the clip's start on the timeline.
+    keyframeTime: time - clipStart,
     initialBackgroundColor:
         clip.maskBackgroundColor ?? defaultClipMaskBackgroundColor,
     resolveGeometry: () => _boxGeometry(scope.clipFrameTracker?.box),
@@ -147,6 +151,7 @@ Future<void> editClipMask(BuildContext context, String clipId) async {
 Future<MaskEditorResult?> _runMaskEditor(
   BuildContext context, {
   required LayerMask? initialMask,
+  required Duration keyframeTime,
   required MaskTargetGeometry? Function() resolveGeometry,
   required ValueChanged<MaskEditorResult> onChanged,
   Color? initialBackgroundColor,
@@ -184,6 +189,7 @@ Future<MaskEditorResult?> _runMaskEditor(
       reverseTransitionDuration: const Duration(milliseconds: 150),
       pageBuilder: (_, _, _) => VideoEditorMaskEditorView(
         initialMask: initialMask,
+        keyframeTime: keyframeTime,
         initialBackgroundColor: initialBackgroundColor,
         resolveGeometry: resolveGeometry,
         canvasChanges: canvasChanges,

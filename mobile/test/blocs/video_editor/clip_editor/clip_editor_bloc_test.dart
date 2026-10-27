@@ -25,7 +25,7 @@ import 'package:openvine/services/video_editor/video_editor_split_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
-    show ExportedLayer, Layer;
+    show ExportedLayer, Layer, LayerMask, LayerMaskKeyframe, LayerMaskShape;
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 class _MockAudioExtractionService extends Mock
@@ -1555,6 +1555,43 @@ void main() {
                 'trimEnd',
                 const Duration(milliseconds: 300),
               ),
+        ],
+      );
+
+      blocTest<ClipEditorBloc, ClipEditorState>(
+        'keeps a moving mask on the frames it was set on when the start '
+        'is trimmed',
+        build: buildBloc,
+        seed: () => ClipEditorState(
+          clips: [
+            _createClip(id: 'a', duration: const Duration(seconds: 4)).copyWith(
+              playbackSpeed: 2,
+              mask: const LayerMask(shape: LayerMaskShape.ellipse)
+                  .withKeyframes(const [
+                    LayerMaskKeyframe(time: Duration(milliseconds: 1000)),
+                    LayerMaskKeyframe(time: Duration(milliseconds: 1500)),
+                  ]),
+            ),
+          ],
+        ),
+        act: (bloc) => bloc.add(
+          const ClipEditorTrimUpdated(
+            clipId: 'a',
+            isStart: true,
+            // 1 s of source, half a second of playback at double speed.
+            trimStart: Duration(seconds: 1),
+            trimEnd: Duration.zero,
+          ),
+        ),
+        expect: () => [
+          isA<ClipEditorState>().having(
+            (s) => s.clips.single.mask!.keyframes.map((k) => k.time),
+            'mask keyframe times',
+            [
+              const Duration(milliseconds: 500),
+              const Duration(milliseconds: 1000),
+            ],
+          ),
         ],
       );
 

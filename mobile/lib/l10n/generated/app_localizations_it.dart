@@ -9944,6 +9944,14 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'Arrotondati';
 
   @override
+  String get videoEditorShapeMaskKeyframesHint =>
+      'Aggiungi un fotogramma chiave, sposta la testina di riproduzione, poi riapri la maschera per spostare, ridimensionare, ruotare o ammorbidire la forma. Scorre da un fotogramma chiave all\'altro.';
+
+  @override
+  String get videoEditorShapeMaskKeyframesSemanticLabel =>
+      'Modifica i fotogrammi chiave della maschera forma';
+
+  @override
   String get videoEditorShapeMaskBackgroundLabel => 'Sfondo';
 
   @override

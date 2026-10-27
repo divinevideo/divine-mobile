@@ -10094,6 +10094,14 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'గుండ్రని';
 
   @override
+  String get videoEditorShapeMaskKeyframesHint =>
+      'కీఫ్రేమ్‌ను జోడించండి, ప్లేహెడ్‌ను కదిలించండి, ఆపై ఆకారాన్ని కదిలించడానికి, పరిమాణం మార్చడానికి, తిప్పడానికి లేదా మృదువుగా చేయడానికి మాస్క్‌ను మళ్లీ తెరవండి. అది ఒక కీఫ్రేమ్ నుండి తదుపరి కీఫ్రేమ్‌కు సాఫీగా కదులుతుంది.';
+
+  @override
+  String get videoEditorShapeMaskKeyframesSemanticLabel =>
+      'ఆకార మాస్క్ కీఫ్రేమ్‌లను సవరించండి';
+
+  @override
   String get videoEditorShapeMaskBackgroundLabel => 'నేపథ్యం';
 
   @override

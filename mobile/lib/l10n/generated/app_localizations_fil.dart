@@ -9902,6 +9902,14 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'Pabilog';
 
   @override
+  String get videoEditorShapeMaskKeyframesHint =>
+      'Magdagdag ng keyframe, ilipat ang playhead, tapos buksan ulit ang mask para ilipat, i-resize, i-rotate o palambutin ang hugis. Dadausdos ito mula keyframe hanggang keyframe.';
+
+  @override
+  String get videoEditorShapeMaskKeyframesSemanticLabel =>
+      'I-edit ang mga keyframe ng shape mask';
+
+  @override
   String get videoEditorShapeMaskBackgroundLabel => 'Background';
 
   @override

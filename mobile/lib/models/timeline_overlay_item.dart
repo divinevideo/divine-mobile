@@ -124,6 +124,7 @@ class TimelineOverlayItem extends Equatable {
     this.playbackSpeed = 1,
     this.effectType,
     this.keyframeTimes = const [],
+    this.maskKeyframeTimes = const [],
     this.effectOnBeat = false,
   });
 
@@ -212,6 +213,11 @@ class TimelineOverlayItem extends Equatable {
   /// range, which still shape its motion but are not shown.
   final List<Duration> keyframeTimes;
 
+  /// When the keyframes of a layer item's shape mask sit, measured from
+  /// [startTime] and in order, like [keyframeTimes]. Empty for any other item
+  /// and a layer whose mask has none.
+  final List<Duration> maskKeyframeTimes;
+
   /// Whether an effect item fires on the beat of the music, which its tile
   /// says next to the effect's name.
   final bool effectOnBeat;
@@ -247,6 +253,7 @@ class TimelineOverlayItem extends Equatable {
     double? playbackSpeed,
     EditorEffectType? effectType,
     List<Duration>? keyframeTimes,
+    List<Duration>? maskKeyframeTimes,
     bool? effectOnBeat,
   }) {
     return TimelineOverlayItem(
@@ -268,6 +275,7 @@ class TimelineOverlayItem extends Equatable {
       playbackSpeed: playbackSpeed ?? this.playbackSpeed,
       effectType: effectType ?? this.effectType,
       keyframeTimes: keyframeTimes ?? this.keyframeTimes,
+      maskKeyframeTimes: maskKeyframeTimes ?? this.maskKeyframeTimes,
       effectOnBeat: effectOnBeat ?? this.effectOnBeat,
     );
   }
@@ -292,6 +300,7 @@ class TimelineOverlayItem extends Equatable {
     playbackSpeed,
     effectType,
     keyframeTimes,
+    maskKeyframeTimes,
     effectOnBeat,
   ];
 }

@@ -8,6 +8,8 @@ import 'package:openvine/models/video_editor/clip_speed_choice.dart';
 import 'package:openvine/services/video_editor/video_editor_split_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'package:pro_image_editor/pro_image_editor.dart'
+    show LayerMask, LayerMaskKeyframe, LayerMaskShape;
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 class MockPathProviderPlatform extends Fake
@@ -98,6 +100,61 @@ void main() {
   });
 
   group('VideoEditorSplitService', () {
+    group('trimSplit', () {
+      test('gives each half the mask keyframes that change it, timed on its '
+          'own playback', () {
+        // At double speed, 2 s of source play in 1 s: the split falls between
+        // the keyframes at 0.5 s and 1.5 s of the clip's playback.
+        final mask = const LayerMask(shape: LayerMaskShape.ellipse)
+            .withKeyframes([
+              for (final ms in [0, 500, 1500, 2000])
+                LayerMaskKeyframe(
+                  time: Duration(milliseconds: ms),
+                  center: Offset(ms / 2000, 0.5),
+                ),
+            ]);
+        final clip = _clip(
+          duration: const Duration(seconds: 4),
+        ).copyWith(playbackSpeed: 2, mask: mask);
+
+        final (start, end) = VideoEditorSplitService.trimSplit(
+          sourceClip: clip,
+          splitPosition: const Duration(seconds: 2),
+        );
+
+        expect(start.mask!.keyframes.map((k) => k.time.inMilliseconds), [
+          0,
+          500,
+          1500,
+        ]);
+        expect(end.mask!.keyframes.map((k) => k.time.inMilliseconds), [
+          -500,
+          500,
+          1000,
+        ]);
+        // The halves change their mask exactly as the whole clip did.
+        expect(
+          end.mask!.at(const Duration(milliseconds: 250)).center.dx,
+          closeTo(mask.at(const Duration(milliseconds: 1250)).center.dx, 1e-9),
+        );
+      });
+
+      test('leaves a mask without keyframes on both halves', () {
+        const mask = LayerMask(shape: LayerMaskShape.star);
+        final clip = _clip(
+          duration: const Duration(seconds: 4),
+        ).copyWith(mask: mask);
+
+        final (start, end) = VideoEditorSplitService.trimSplit(
+          sourceClip: clip,
+          splitPosition: const Duration(seconds: 2),
+        );
+
+        expect(start.mask, mask);
+        expect(end.mask, mask);
+      });
+    });
+
     group('isValidSplitPosition', () {
       test('returns true for valid split position', () {
         final clip = DivineVideoClip(

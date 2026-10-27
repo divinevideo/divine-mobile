@@ -4164,6 +4164,8 @@
   "videoEditorShapeMaskCornersLabel": "Sudut",
   "videoEditorShapeMaskCornersSquare": "Siku",
   "videoEditorShapeMaskCornersRound": "Bulat",
+  "videoEditorShapeMaskKeyframesHint": "Tambahkan keyframe, geser playhead, lalu buka masking lagi untuk memindahkan, mengubah ukuran, memutar, atau melembutkan bentuk. Bentuk akan meluncur dari keyframe ke keyframe.",
+  "videoEditorShapeMaskKeyframesSemanticLabel": "Edit keyframe masking bentuk",
   "videoEditorShapeMaskBackgroundLabel": "Latar",
   "videoEditorChromaKeyAutoDetect": "Deteksi otomatis",
   "videoEditorChromaKeyPresetGreen": "Hijau",

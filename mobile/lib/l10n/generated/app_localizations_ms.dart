@@ -9833,6 +9833,14 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => 'Bulat';
 
   @override
+  String get videoEditorShapeMaskKeyframesHint =>
+      'Tambah bingkai kunci, alihkan kepala main, kemudian buka semula topeng untuk mengalihkan, mengubah saiz, memutar atau melembutkan bentuk. Bentuk meluncur dari bingkai kunci ke bingkai kunci.';
+
+  @override
+  String get videoEditorShapeMaskKeyframesSemanticLabel =>
+      'Edit bingkai kunci topeng bentuk';
+
+  @override
   String get videoEditorShapeMaskBackgroundLabel => 'Latar belakang';
 
   @override

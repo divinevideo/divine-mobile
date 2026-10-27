@@ -58,6 +58,8 @@ bool canMaskLayer(Layer? layer) =>
 /// Moves a timeline mask from the cropped export frame into the full box of
 /// a detached clip. Keeping the same normalized coordinates would stretch a
 /// circle when the source and project have different aspect ratios.
+///
+/// Its keyframes move with it, each the same way.
 LayerMask? maskForDetachedClip(
   LayerMask? mask, {
   required Size boxSize,
@@ -65,17 +67,32 @@ LayerMask? maskForDetachedClip(
 }) {
   if (mask == null || boxSize.isEmpty) return mask;
   final frame = ExportLayerMapping.keptRect(boxSize, targetAspectRatio);
-  return mask.copyWith(
+  LayerMask moved(LayerMask still) => still.copyWith(
     center: Offset(
-      (frame.left + mask.center.dx * frame.width) / boxSize.width,
-      (frame.top + mask.center.dy * frame.height) / boxSize.height,
+      (frame.left + still.center.dx * frame.width) / boxSize.width,
+      (frame.top + still.center.dy * frame.height) / boxSize.height,
     ),
     size: Size(
-      mask.size.width * frame.width / boxSize.width,
-      mask.size.height * frame.height / boxSize.height,
+      still.size.width * frame.width / boxSize.width,
+      still.size.height * frame.height / boxSize.height,
     ),
-    feather: mask.feather * frame.shortestSide / boxSize.shortestSide,
+    feather: still.feather * frame.shortestSide / boxSize.shortestSide,
   );
+  return _withEachKeyframe(mask, moved);
+}
+
+/// [mask] with [change] made to its own values and, the same way, to the
+/// geometry of each of its keyframes.
+LayerMask _withEachKeyframe(
+  LayerMask mask,
+  LayerMask Function(LayerMask still) change,
+) {
+  final rest = change(mask.still);
+  if (!mask.hasKeyframes) return rest;
+  return rest.withKeyframes([
+    for (final keyframe in mask.keyframes)
+      keyframe.withGeometryOf(change(mask.at(keyframe.time))),
+  ]);
 }
 
 /// [mask], shaped on an item whose box is [from], moved onto an item whose
@@ -85,7 +102,8 @@ LayerMask? maskForDetachedClip(
 /// circle on a square sticker would turn into an oval on a wide text. The
 /// shape keeps its proportions on screen instead and takes the same share of
 /// the shorter side, and is then kept on the new item ([fitEditorMask]).
-/// Without both boxes it carries over as it is.
+/// Without both boxes it carries over as it is. Its keyframes move with it,
+/// each the same way.
 LayerMask transferEditorMask(
   LayerMask mask, {
   required Size? from,
@@ -93,15 +111,18 @@ LayerMask transferEditorMask(
 }) {
   if (from == null || to == null || from.isEmpty || to.isEmpty) return mask;
   final scale = to.shortestSide / from.shortestSide;
-  final transferred = mask.copyWith(
-    size: clampEditorMaskSize(
-      Size(
-        mask.size.width * from.width * scale / to.width,
-        mask.size.height * from.height * scale / to.height,
+  LayerMask transferred(LayerMask still) => fitEditorMask(
+    still.copyWith(
+      size: clampEditorMaskSize(
+        Size(
+          still.size.width * from.width * scale / to.width,
+          still.size.height * from.height * scale / to.height,
+        ),
       ),
     ),
+    to,
   );
-  return fitEditorMask(transferred, to);
+  return _withEachKeyframe(mask, transferred);
 }
 
 /// A mask of [shape] for an item whose box is [boxSize].

@@ -9,9 +9,12 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/editor_mask.dart';
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor_view.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/animation_picker_components.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/keyframes/layer_keyframes_sheet.dart';
 import 'package:openvine/widgets/video_editor/video_editor_color_row.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
-    show LayerMask, LayerMaskShape;
+    show AnimationCurve, LayerMask, LayerMaskKeyframe, LayerMaskShape;
+import 'package:pro_video_editor/pro_video_editor.dart' as pve;
 
 import '../../../helpers/test_provider_overrides.dart';
 
@@ -40,16 +43,20 @@ void main() {
       colors.add(result.backgroundColor);
     }
 
-    Widget buildEditor({LayerMask? initialMask, Color? backgroundColor}) =>
-        testMaterialApp(
-          home: VideoEditorMaskEditorView(
-            initialMask: initialMask,
-            initialBackgroundColor: backgroundColor,
-            resolveGeometry: () => geometry,
-            canvasChanges: ValueNotifier<int>(0),
-            onChanged: record,
-          ),
-        );
+    Widget buildEditor({
+      LayerMask? initialMask,
+      Duration keyframeTime = Duration.zero,
+      Color? backgroundColor,
+    }) => testMaterialApp(
+      home: VideoEditorMaskEditorView(
+        initialMask: initialMask,
+        keyframeTime: keyframeTime,
+        initialBackgroundColor: backgroundColor,
+        resolveGeometry: () => geometry,
+        canvasChanges: ValueNotifier<int>(0),
+        onChanged: record,
+      ),
+    );
 
     final pinkTile = find.byWidgetPredicate(
       (widget) =>
@@ -275,6 +282,159 @@ void main() {
 
         expect(changes, [circle]);
         expect(colors, [pink]);
+      });
+    });
+
+    group('keyframes', () {
+      const circle = LayerMask(shape: LayerMaskShape.ellipse);
+      const second = Duration(seconds: 1);
+      final moving = circle.withKeyframes(const [
+        LayerMaskKeyframe(time: Duration.zero, center: Offset(0.3, 0.5)),
+        LayerMaskKeyframe(
+          time: Duration(seconds: 2),
+          center: Offset(0.7, 0.5),
+        ),
+      ]);
+
+      Finder keyframeButton(WidgetTester tester) => find.bySemanticsLabel(
+        l10nOf(tester).videoEditorShapeMaskKeyframesSemanticLabel,
+      );
+
+      testWidgets('offers the keyframes only for a mask', (tester) async {
+        await tester.pumpWidget(buildEditor());
+        await tester.pump();
+
+        expect(keyframeButton(tester), findsNothing);
+
+        // A new editor, rather than the same one handed another mask.
+        await tester.pumpWidget(const SizedBox());
+        await tester.pumpWidget(buildEditor(initialMask: circle));
+        await tester.pump();
+
+        expect(keyframeButton(tester), findsOneWidget);
+      });
+
+      testWidgets('adds a keyframe at the playhead from the sheet, holding '
+          'the shape there', (tester) async {
+        await tester.pumpWidget(
+          buildEditor(initialMask: circle, keyframeTime: second),
+        );
+        await tester.pump();
+
+        await tester.tap(keyframeButton(tester));
+        await tester.pumpAndSettle();
+        expect(find.byType(LayerKeyframesSheet), findsOneWidget);
+        expect(
+          find.text(l10nOf(tester).videoEditorShapeMaskKeyframesHint),
+          findsOneWidget,
+        );
+        await tester.tap(find.text(l10nOf(tester).videoEditorKeyframeAdd));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(LayerKeyframesSheet), findsNothing);
+        expect(changes.single!.keyframes, [
+          LayerMaskKeyframe.fromMask(circle, time: second),
+        ]);
+      });
+
+      testWidgets('moves the shape in a keyframe at the playhead once the '
+          'mask has keyframes', (tester) async {
+        await tester.pumpWidget(
+          buildEditor(initialMask: moving, keyframeTime: second),
+        );
+        await tester.pump();
+
+        // From where the shape shows at 1 s, halfway between its keyframes,
+        // 20 px right on the 200 px wide box.
+        await tester.dragFrom(
+          const Offset(200, 300),
+          const Offset(20, 0),
+          touchSlopX: 0,
+          touchSlopY: 0,
+        );
+        await tester.pump();
+
+        final keyframes = changes.last!.keyframes;
+        expect(keyframes.map((k) => k.time), [
+          Duration.zero,
+          second,
+          const Duration(seconds: 2),
+        ]);
+        expect(keyframes[1].center.dx, closeTo(0.6, 0.001));
+        expect(keyframes.first, moving.keyframes.first);
+        expect(keyframes.last, moving.keyframes.last);
+      });
+
+      testWidgets('inverts the whole mask without adding a keyframe', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildEditor(initialMask: moving, keyframeTime: second),
+        );
+        await tester.pump();
+
+        await tester.tap(
+          find.bySemanticsLabel(l10nOf(tester).videoEditorShapeMaskInvert),
+        );
+        await tester.pump();
+
+        expect(changes.single!.invert, isTrue);
+        expect(changes.single!.keyframes, moving.keyframes);
+      });
+
+      testWidgets('switches the shape and keeps the keyframes', (tester) async {
+        await tester.pumpWidget(
+          buildEditor(initialMask: moving, keyframeTime: second),
+        );
+        await tester.pump();
+
+        await tester.tap(
+          find.bySemanticsLabel(l10nOf(tester).videoEditorShapeMaskHeart),
+        );
+        await tester.pump();
+
+        expect(changes.single!.shape, LayerMaskShape.heart);
+        expect(changes.single!.keyframes, moving.keyframes);
+      });
+
+      testWidgets('eases the change the playhead is in along the picked '
+          'curve', (tester) async {
+        await tester.pumpWidget(
+          buildEditor(initialMask: moving, keyframeTime: second),
+        );
+        await tester.pump();
+
+        await tester.tap(keyframeButton(tester));
+        await tester.pumpAndSettle();
+        tester
+            .widget<CurvePickerRow>(find.byType(CurvePickerRow))
+            .onChanged(pve.AnimationCurve.easeInOut);
+        await tester.pump();
+
+        expect(
+          changes.single!.keyframes.first.curve,
+          AnimationCurve.easeInOut,
+        );
+        expect(changes.single!.keyframes, hasLength(2));
+      });
+
+      testWidgets('removes the keyframe at the playhead, leaving the shape '
+          'as it showed', (tester) async {
+        final single = circle.withKeyframes(const [
+          LayerMaskKeyframe(time: second, center: Offset(0.7, 0.5)),
+        ]);
+        await tester.pumpWidget(
+          buildEditor(initialMask: single, keyframeTime: second),
+        );
+        await tester.pump();
+
+        await tester.tap(keyframeButton(tester));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10nOf(tester).videoEditorKeyframeRemove));
+        await tester.pumpAndSettle();
+
+        expect(changes.single!.hasKeyframes, isFalse);
+        expect(changes.single!.center, const Offset(0.7, 0.5));
       });
     });
 

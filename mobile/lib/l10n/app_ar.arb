@@ -4164,6 +4164,8 @@
   "videoEditorShapeMaskCornersLabel": "الزوايا",
   "videoEditorShapeMaskCornersSquare": "مربعة",
   "videoEditorShapeMaskCornersRound": "مستديرة",
+  "videoEditorShapeMaskKeyframesHint": "إضافة إطار رئيسي، ثم تحريك رأس التشغيل، ثم فتح القناع مرة أخرى لتحريك الشكل أو تغيير حجمه أو تدويره أو تنعيم حافته. ينتقل الشكل بسلاسة من إطار رئيسي إلى آخر.",
+  "videoEditorShapeMaskKeyframesSemanticLabel": "تعديل الإطارات الرئيسية لقناع الشكل",
   "videoEditorShapeMaskBackgroundLabel": "الخلفية",
   "videoEditorChromaKeyAutoDetect": "كشف تلقائي",
   "videoEditorChromaKeyPresetGreen": "أخضر",

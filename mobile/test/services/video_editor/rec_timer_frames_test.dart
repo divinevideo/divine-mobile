@@ -46,6 +46,19 @@ WidgetLayer _timer({Duration? startTime, Duration? endTime}) {
   );
 }
 
+/// The editor timeline of one clip lasting [duration].
+TransitionTimelineMap _timeline(Duration duration) =>
+    TransitionTimelineMap.fromClips([
+      DivineVideoClip(
+        id: 'clip',
+        video: EditorVideo.file('/clip.mp4'),
+        duration: duration,
+        recordedAt: DateTime(2026),
+        targetAspectRatio: .vertical,
+        originalAspectRatio: 9 / 16,
+      ),
+    ]);
+
 void main() {
   group('recTimerWindows', () {
     test('gives every frame of a timer without start or end a window', () {
@@ -142,19 +155,10 @@ void main() {
           const ui.Size(10, 10),
         );
 
-        final frames = await recTimerLayerFrames(
-          [timer, other],
-          TransitionTimelineMap.fromClips([
-            DivineVideoClip(
-              id: 'clip',
-              video: EditorVideo.file('/clip.mp4'),
-              duration: const Duration(milliseconds: 90),
-              recordedAt: DateTime(2026),
-              targetAspectRatio: .vertical,
-              originalAspectRatio: 9 / 16,
-            ),
-          ]),
-        );
+        final frames = await recTimerLayerFrames([
+          timer,
+          other,
+        ], _timeline(const Duration(milliseconds: 90)));
 
         expect(frames.keys, equals(['timer']));
         final timerFrames = frames['timer']!;
@@ -167,5 +171,26 @@ void main() {
         expect(timerFrames[0].bytes, isNot(equals(timerFrames[1].bytes)));
       },
     );
+
+    test('swaps only the timer for one that brings its frames', () async {
+      final timer = await _captured(
+        _timer(),
+        ui.Size(230, 230 / recTimerDesignSize.aspectRatio),
+      );
+      final other = await _captured(
+        WidgetLayer(id: 'sticker', widget: const SizedBox()),
+        const ui.Size(10, 10),
+      );
+
+      final layers = await withRecTimerFrames([
+        timer,
+        other,
+      ], _timeline(const Duration(milliseconds: 90)));
+
+      expect(layers.first, isA<RecTimerExportedLayer>());
+      expect(layers.first.layer, same(timer.layer));
+      expect(layers.first.frames, hasLength(3));
+      expect(layers.last, same(other));
+    });
   });
 }

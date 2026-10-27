@@ -12,6 +12,7 @@ import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bl
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
 import 'package:openvine/extensions/layer_keyframes.dart';
+import 'package:openvine/extensions/layer_mask_keyframes.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/extensions/video_editor_history_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -886,6 +887,14 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
                   layer.hasKeyframes &&
                   layer.keepsMotionOnStartTrim
               ? layer.keyframesFrom(startTime)
+              : null,
+          // So is the motion of its mask.
+          mask:
+              isStart &&
+                  layer != null &&
+                  (layer.mask?.hasKeyframes ?? false) &&
+                  layer.keepsMotionOnStartTrim
+              ? layer.maskFrom(startTime)
               : null,
           skipUpdateHistory: true,
         );

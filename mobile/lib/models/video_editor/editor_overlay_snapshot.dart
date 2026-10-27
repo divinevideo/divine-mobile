@@ -3,6 +3,7 @@
 
 import 'dart:ui';
 
+import 'package:openvine/extensions/layer_mask_keyframes.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
@@ -100,6 +101,7 @@ class EditorOverlaySnapshot {
               layer: _windowedLayer(item.layer, w, windowStart: start),
               bytes: item.bytes,
               logicalSize: item.logicalSize,
+              boxSize: item.boxSize,
               highlightBytes: item.highlightBytes,
               revealBytes: item.revealBytes,
             ),
@@ -191,6 +193,8 @@ class EditorOverlaySnapshot {
         for (final keyframe in layer.keyframes)
           keyframe.copyWith(time: keyframe.time - startShift),
       ],
+      // So do the keyframes of its mask.
+      mask: layer.mask?.shiftedBy(-startShift),
     );
     // copyWith can't null a Duration field (it null-coalesces to the old
     // value), so clear the legacy fade convenience on the fresh copy directly.

@@ -67,12 +67,49 @@ Future<Map<String, List<ExportedLayerFrame>>> recTimerLayerFrames(
   return frames;
 }
 
-/// [layers] as they are, or, when [frames] holds a REC timer's frames, as
-/// the one layer [recTimerSequence] plays them from.
-List<ImageLayer> recTimerLayers(
-  List<ExportedLayerFrame>? frames,
-  List<ImageLayer> layers,
-) => frames == null ? layers : [recTimerSequence(layers)];
+/// [layers] with every REC timer among them swapped for a
+/// [RecTimerExportedLayer] that brings the frames it exports as; see
+/// [recTimerLayerFrames]. A timer without an end stops counting where
+/// [timelineMap]'s editor timeline ends.
+Future<List<ExportedLayer>> withRecTimerFrames(
+  List<ExportedLayer> layers,
+  TransitionTimelineMap timelineMap,
+) async {
+  final frames = await recTimerLayerFrames(layers, timelineMap);
+  return [
+    for (final item in layers)
+      if (frames[item.layer.id] case final timerFrames?)
+        RecTimerExportedLayer(item, timerFrames)
+      else
+        item,
+  ];
+}
+
+/// A captured REC timer that exports as [timerFrames], painted for every
+/// frame it shows, instead of the one still the capture took.
+class RecTimerExportedLayer extends ExportedLayer {
+  /// [captured] exporting as [timerFrames].
+  RecTimerExportedLayer(ExportedLayer captured, this.timerFrames)
+    : super(
+        layer: captured.layer,
+        bytes: captured.bytes,
+        logicalSize: captured.logicalSize,
+        boxSize: captured.boxSize,
+        highlightBytes: captured.highlightBytes,
+        revealBytes: captured.revealBytes,
+      );
+
+  /// The frames the timer exports as, one after the other.
+  final List<ExportedLayerFrame> timerFrames;
+
+  @override
+  List<ExportedLayerFrame> get frames => timerFrames;
+}
+
+/// The image layers made from [item]: as they are, or for a REC timer as the
+/// one layer [recTimerSequence] plays its frames from.
+List<ImageLayer> recTimerLayers(ExportedLayer item, List<ImageLayer> layers) =>
+    item is RecTimerExportedLayer ? [recTimerSequence(layers)] : layers;
 
 /// The image layers of one REC timer — a layer for each frame, timed one
 /// after the other — as one layer that plays them as a frame sequence.
@@ -109,6 +146,7 @@ ImageLayer recTimerSequence(List<ImageLayer> parts) {
     keyframes: first.keyframes,
     keyframeClock: first.keyframeClock,
     blendMode: first.blendMode,
+    shapeMask: first.shapeMask,
   );
 }
 

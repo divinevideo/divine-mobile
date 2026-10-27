@@ -16697,6 +16697,18 @@ abstract class AppLocalizations {
   /// **'Round'**
   String get videoEditorShapeMaskCornersRound;
 
+  /// Line at the top of the keyframe sheet opened from the shape mask screen: how keyframes animate a shape mask over time.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a keyframe, move the playhead, then open the mask again to move, resize, turn or soften the shape. It glides from keyframe to keyframe.'**
+  String get videoEditorShapeMaskKeyframesHint;
+
+  /// Accessibility label of the diamond button in the top bar of the shape mask screen that opens the mask's keyframe sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit shape mask keyframes'**
+  String get videoEditorShapeMaskKeyframesSemanticLabel;
+
   /// Name of the row of colors on the shape mask screen of a timeline clip: the color that fills the frame around the shape, where the clip is hidden. Shown beside the colors, at most about 112dp wide.
   ///
   /// In en, this message translates to:

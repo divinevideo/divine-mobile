@@ -180,7 +180,10 @@ class DetachedClipRenderPass {
       endTime: maxOutputDuration,
       composition: VideoComposition(canvasSize: videoSize, layers: layers),
       imageLayers: VideoEditorRenderService.buildImageLayers(
-        capturedLayers: partitioned.above,
+        capturedLayers: await withRecTimerFrames(
+          partitioned.above,
+          timelineMap,
+        ),
         bodySize: bodySize,
         videoSize: videoSize,
         targetAspectRatio: aspectRatio.value,
@@ -190,7 +193,6 @@ class DetachedClipRenderPass {
         // raster fallback for unreadable media and must stay visible.
         excludeDetachedClips: false,
         audioEnergies: audioEnergies,
-        layerFrames: await recTimerLayerFrames(partitioned.above, timelineMap),
       ),
       imageBytesWithCropping: true,
       qualityConfig: VideoQualityConfig.custom(
@@ -280,7 +282,8 @@ class DetachedClipRenderPass {
   }
 
   /// The shape mask of [item] as an alpha matte of [size], or `null` when the
-  /// layer has none.
+  /// layer has none, or one whose keyframes change it, which the composition
+  /// draws on every frame instead (see [buildDetachedClipVideoLayer]).
   ///
   /// Rendered by the same painter the canvas masks the layer with, at the size
   /// the clip is placed at, so the soft edge is as wide in the file as on the
@@ -290,7 +293,7 @@ class DetachedClipRenderPass {
     Size size,
   ) async {
     final mask = item.layer.mask;
-    if (mask == null || size.isEmpty) return null;
+    if (mask == null || mask.hasKeyframes || size.isEmpty) return null;
     final image = await mask.toImage(size);
     try {
       final data = await image.toByteData(format: ui.ImageByteFormat.png);

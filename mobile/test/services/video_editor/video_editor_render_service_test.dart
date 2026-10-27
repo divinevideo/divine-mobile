@@ -5,6 +5,7 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' show BlendMode, Color, Offset, Size;
 
@@ -24,6 +25,7 @@ import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
+import 'package:openvine/services/video_editor/rec_timer_frames.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
@@ -43,6 +45,7 @@ import 'package:pro_video_editor/pro_video_editor.dart'
         KeyframeClockPoint,
         LayerAnimationType,
         LayerBlendMode,
+        LayerShapeMaskShape,
         NativeFailureDetails,
         ProVideoEditor,
         ProgressModel,
@@ -115,7 +118,7 @@ void main() {
       );
     });
 
-    test('plays the frames a layer brings from one layer', () {
+    test('plays the frames a REC timer brings from one layer', () {
       final frames = [
         pie.ExportedLayerFrame(
           bytes: Uint8List.fromList(const [1]),
@@ -129,7 +132,7 @@ void main() {
         ),
       ];
 
-      final timer = layer();
+      final timer = RecTimerExportedLayer(layer(), frames);
 
       final exported = VideoEditorRenderService.buildImageLayers(
         capturedLayers: [timer],
@@ -137,7 +140,6 @@ void main() {
         videoSize: const Size(300, 600),
         targetAspectRatio: vertical,
         timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
-        layerFrames: {timer.layer.id: frames},
       )!;
 
       final sequence = exported.single;
@@ -231,6 +233,80 @@ void main() {
         expect(exported.keyframes.last.opacity, 0.5);
       },
     );
+
+    group('a layer whose mask has keyframes', () {
+      final moving =
+          const pie.LayerMask(
+            shape: pie.LayerMaskShape.heart,
+            center: Offset(0.3, 0.4),
+          ).withKeyframes(const [
+            pie.LayerMaskKeyframe(time: Duration.zero),
+            pie.LayerMaskKeyframe(
+              time: Duration(seconds: 2),
+              center: Offset(0.7, 0.6),
+            ),
+          ]);
+
+      ImageLayer exportedWith(pie.Layer layer, {Size? boxSize}) =>
+          VideoEditorRenderService.buildImageLayers(
+            capturedLayers: [
+              pie.ExportedLayer(
+                layer: layer,
+                bytes: Uint8List.fromList(const [1, 2, 3]),
+                logicalSize: const Size(10, 20),
+                boxSize: boxSize,
+              ),
+            ],
+            bodySize: const Size(100, 200),
+            videoSize: const Size(300, 600),
+            targetAspectRatio: vertical,
+            timelineMap: TransitionTimelineMap.fromClips(overlapClips),
+          )!.single;
+
+      test('draws the mask on every frame, its keyframes on the editor '
+          'timeline from the layer start', () {
+        final exported = exportedWith(
+          pie.Layer(startTime: const Duration(seconds: 1), mask: moving),
+        );
+
+        final shapeMask = exported.shapeMask!;
+        expect(shapeMask.shape, LayerShapeMaskShape.heart);
+        expect(shapeMask.keyframes.map((k) => k.time), [
+          const Duration(seconds: 1),
+          const Duration(seconds: 3),
+        ]);
+        // Read on the clock, though the layer itself has no keyframes.
+        expect(exported.keyframes, isEmpty);
+        expect(exported.keyframeClock, isNotEmpty);
+      });
+
+      test('places the mask in the image the capture turned the layer '
+          'into', () {
+        // A quarter turn lays the 20 x 10 box on its side in the 10 x 20
+        // image.
+        final exported = exportedWith(
+          pie.Layer(rotation: math.pi / 2, mask: moving),
+          boxSize: const Size(20, 10),
+        );
+
+        final last = exported.shapeMask!.keyframes.last;
+        // At (0.7, 0.6) of the box, 4 px right of its centre and 1 px below,
+        // turned a quarter clockwise: 1 px left of the image's centre and
+        // 4 px below it.
+        expect(last.center.dx, closeTo(0.4, 1e-9));
+        expect(last.center.dy, closeTo(0.7, 1e-9));
+        expect(last.rotation, closeTo(math.pi / 2, 1e-9));
+      });
+
+      test('bakes a mask without keyframes into the image instead', () {
+        final exported = exportedWith(
+          pie.Layer(mask: const pie.LayerMask(shape: pie.LayerMaskShape.star)),
+        );
+
+        expect(exported.shapeMask, isNull);
+        expect(exported.keyframeClock, isEmpty);
+      });
+    });
 
     /// The time [output] is at on [exported]'s keyframe clock, the way both
     /// renderers read it: linear between two points, and as fast as the

@@ -9269,6 +9269,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorShapeMaskCornersRound => '圆角';
 
   @override
+  String get videoEditorShapeMaskKeyframesHint =>
+      '添加关键帧，移动播放头，然后再次打开蒙版来移动、缩放、旋转形状或柔化边缘。形状会在关键帧之间平滑移动。';
+
+  @override
+  String get videoEditorShapeMaskKeyframesSemanticLabel => '编辑形状蒙版关键帧';
+
+  @override
   String get videoEditorShapeMaskBackgroundLabel => '背景';
 
   @override
