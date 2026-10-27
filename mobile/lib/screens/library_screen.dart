@@ -2,6 +2,7 @@
 // ABOUTME: Shows tabs for clips and drafts with preview, delete, and import options
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:drift/drift.dart' show TableUpdateQuery;
 import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -20,6 +21,7 @@ import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/video_publish/video_publish_state.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/router/route_paths.dart';
@@ -184,6 +186,12 @@ class LibraryScreen extends ConsumerWidget {
           key: ValueKey((draftStorageService, includeAutosaveDraft)),
           create: (_) => DraftsLibraryBloc(
             draftStorageService: draftStorageService,
+            changes: ref
+                .read(databaseProvider)
+                .tableUpdates(
+                  TableUpdateQuery.onTable(ref.read(databaseProvider).drafts),
+                )
+                .map((_) {}),
             includeAutosaveDraft: includeAutosaveDraft,
           )..add(const DraftsLibraryLoadRequested()),
         ),

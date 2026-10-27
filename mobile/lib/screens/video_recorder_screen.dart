@@ -102,10 +102,14 @@ class VideoRecorderRoute extends ConsumerWidget {
       ),
     );
     final recordingId = challengeRecordingId;
-    if (recordingId != null) {
+    {
       recorder = ChallengeRecordingGate(
-        key: ValueKey(recordingId),
+        key: ValueKey(recordingId ?? 'unrelated-recording'),
         prepare: () async {
+          if (recordingId == null) {
+            ref.read(videoEditorProvider.notifier).clearChallengeContext();
+            return;
+          }
           final session = await ref.read(challengeAppSessionProvider.future);
           final context = await session?.recording(recordingId);
           if (!ref.context.mounted || context == null) {

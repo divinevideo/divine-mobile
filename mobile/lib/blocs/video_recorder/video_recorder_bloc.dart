@@ -1880,7 +1880,7 @@ class VideoRecorderBloc
       await _readClipManager().clearAll(
         keepAutosavedDraft: keepAutosavedDraft,
       );
-      await _readVideoEditor().reset(
+      await _readVideoEditor().resetForRecorderMode(
         keepAutosavedDraft: keepAutosavedDraft,
       );
     }
