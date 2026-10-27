@@ -1188,11 +1188,22 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       // await — matching the epoch-guarded [_isSeeking] release below. Without
       // this a stale swap would write its old composite position over the one a
       // newer swap (e.g. a trim-start) already set.
-      if (mounted && _seekEpoch == ownerEpoch) {
-        _lastReportedPosition = timelineStartPosition;
-        _pendingSeekTarget = timelineStartPosition;
-        _setLayerPlayTime(timelineStartPosition);
+      if (!mounted || _seekEpoch != ownerEpoch) return;
+      // A seek requested during the reload is newer than the restored
+      // position; [_onSeekRequested] queued it and already set its play time.
+      if (_pendingSeekPosition != null) {
+        while (_pendingSeekPosition != null &&
+            mounted &&
+            _seekEpoch == ownerEpoch) {
+          final pending = _pendingSeekPosition!;
+          _pendingSeekPosition = null;
+          await _videoPlayer?.seekTo(_composition.timelineToPlayer(pending));
+        }
+        return;
       }
+      _lastReportedPosition = timelineStartPosition;
+      _pendingSeekTarget = timelineStartPosition;
+      _setLayerPlayTime(timelineStartPosition);
     } finally {
       if (_seekEpoch == ownerEpoch) _isSeeking = false;
     }
@@ -2878,7 +2889,12 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             _composition.setClipMotionEditing(
               isEditing: state.isEditingClipMotion,
             );
-            _resyncPlayerClips();
+            // Only transitions differ between the two compositions; without
+            // one, a reload would just drop the editor's own seek.
+            final clips = context.read<ClipEditorBloc>().state.clips;
+            if (clips.any((clip) => clip.transition != null)) {
+              _resyncPlayerClips();
+            }
           },
         ),
         // A text selected in the timeline keeps the toolbar's wrap hint up.
