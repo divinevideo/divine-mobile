@@ -863,10 +863,9 @@ class NIP17MessageService {
         // A wrapped kind-5 is a DELETION of something, and which noun it takes
         // depends on what it deletes — a reaction removal and a message
         // delete-for-everyone both arrive here as kind 5. NIP-09's `k` tag
-        // names the deleted kind, and both builders set it
-        // (`DmReactionsRepository._durablyDeleteReaction` writes 7,
-        // `DmRepository._driveDeleteForEveryone` writes the row's message
-        // kind), so read it rather than guessing. Without this a reaction
+        // names the deleted kind, and [buildDeletionRumor] sets it for both
+        // (7 for a reaction removal, the row's message kind for a delete for
+        // everyone), so read it rather than guessing. Without this a reaction
         // removal logs as "message" and sends field debugging to the wrong
         // send path.
         final deletesReaction =

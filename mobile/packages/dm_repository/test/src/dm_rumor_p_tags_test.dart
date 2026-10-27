@@ -385,4 +385,151 @@ void main() {
       );
     });
   });
+
+  group('DmRepository deleting a message for everyone (#9774)', () {
+    late AppDatabase db;
+    late ConversationsDao conversationsDao;
+    late DirectMessagesDao messagesDao;
+    late _MockNostrClient nostrClient;
+    late _WireRecordingMessageService messageService;
+    late DmRepository repository;
+
+    void openFreshDatabase() {
+      db = AppDatabase.test(NativeDatabase.memory());
+      conversationsDao = ConversationsDao(db);
+      messagesDao = DirectMessagesDao(db);
+      nostrClient = _MockNostrClient();
+      when(() => nostrClient.connectedRelayCount).thenReturn(1);
+      when(() => nostrClient.configuredRelayCount).thenReturn(1);
+      when(
+        () => nostrClient.queryEventsDetailed(
+          any(),
+          subscriptionId: any(named: 'subscriptionId'),
+          useCache: any(named: 'useCache'),
+          tempRelays: any(named: 'tempRelays'),
+          requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+          acceptRelayClosedWhenOthersAnswered: any(
+            named: 'acceptRelayClosedWhenOthersAnswered',
+          ),
+          timeout: any(named: 'timeout'),
+        ),
+      ).thenAnswer(
+        (_) async => (
+          events: const <Event>[],
+          timedOut: false,
+          noRelays: false,
+        ),
+      );
+      messageService = _WireRecordingMessageService(nostrClient);
+      repository = DmRepository(
+        nostrClient: nostrClient,
+        directMessagesDao: messagesDao,
+        conversationsDao: conversationsDao,
+        processedGiftWrapsDao: ProcessedGiftWrapsDao(db),
+        removedConversationsDao: db.removedConversationsDao,
+        removedMessageIdsDao: db.removedMessageIdsDao,
+        userPubkey: _owner,
+        signer: LocalNostrSigner(_ownerSecret),
+        messageService: messageService,
+      );
+    }
+
+    setUp(openFreshDatabase);
+
+    tearDown(() => db.close());
+
+    /// Stores your own message of [kind] in a three-person room and returns
+    /// its id.
+    Future<String> seedOwnMessage({
+      int kind = EventKind.privateDirectMessage,
+    }) async {
+      final participants = [_owner, _alice, _bob];
+      final room = DmRepository.computeConversationId(participants);
+      await conversationsDao.upsertConversation(
+        id: room,
+        participantPubkeys: jsonEncode(participants),
+        isGroup: true,
+        createdAt: _messageCreatedAt,
+        ownerPubkey: _owner,
+      );
+      final message = 'a' * 64;
+      await messagesDao.insertMessage(
+        id: message,
+        conversationId: room,
+        senderPubkey: _owner,
+        content: 'take this back',
+        createdAt: _messageCreatedAt,
+        giftWrapId: '0' * 64,
+        messageKind: kind,
+        ownerPubkey: _owner,
+      );
+      return message;
+    }
+
+    group('deleteMessageForEveryone', () {
+      test('sends a deletion that names no one', () async {
+        final message = await seedOwnMessage();
+
+        await repository.deleteMessageForEveryone(message);
+        await pumpEventQueue();
+
+        final deletion = messageService.sentRumor(EventKind.eventDeletion);
+        expect(_tagValues(deletion, 'p'), isEmpty);
+        expect(_tagValues(deletion, 'e'), equals([message]));
+        expect(
+          _tagValues(deletion, 'k'),
+          equals(['${EventKind.privateDirectMessage}']),
+        );
+        expect(
+          messageService.recipientsOf(EventKind.eventDeletion),
+          equals({_alice, _bob}),
+        );
+      });
+
+      test('tags a deleted file message with its kind', () async {
+        final message = await seedOwnMessage(kind: EventKind.fileMessage);
+
+        await repository.deleteMessageForEveryone(message);
+        await pumpEventQueue();
+
+        final deletion = messageService.sentRumor(EventKind.eventDeletion);
+        expect(_tagValues(deletion, 'k'), equals(['${EventKind.fileMessage}']));
+      });
+    });
+
+    group('retryMessageDeletion', () {
+      test(
+        'mints a deletion that names no one and carries the row kind for a '
+        'row blocked before its rumor was kept (#8232)',
+        () async {
+          final message = await seedOwnMessage(kind: EventKind.fileMessage);
+          await messagesDao.markMessageDeletionBlocked(
+            message,
+            restoreToThread: true,
+            ownerPubkey: _owner,
+          );
+          final blocked = await messagesDao.getMessageById(
+            message,
+            ownerPubkey: _owner,
+          );
+          expect(blocked?.deletionRumorJson, isNull, reason: 'nothing stored');
+
+          await repository.retryMessageDeletion(rumorId: message);
+          await pumpEventQueue();
+
+          final deletion = messageService.sentRumor(EventKind.eventDeletion);
+          expect(_tagValues(deletion, 'p'), isEmpty);
+          expect(_tagValues(deletion, 'e'), equals([message]));
+          expect(
+            _tagValues(deletion, 'k'),
+            equals(['${EventKind.fileMessage}']),
+          );
+          expect(
+            messageService.recipientsOf(EventKind.eventDeletion),
+            equals({_alice, _bob}),
+          );
+        },
+      );
+    });
+  });
 }

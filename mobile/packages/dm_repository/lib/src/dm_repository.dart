@@ -3671,8 +3671,8 @@ class DmRepository {
   ///
   ///  * NIP-09 makes `k` a SHOULD (`09.md:9`), so a conforming foreign client
   ///    may omit it entirely (#7329).
-  ///  * Our own sender hardcodes `['k','14']` even when deleting a kind-15
-  ///    file message, so the tag is already wrong on our own wire.
+  ///  * Our own sender hardcoded `['k','14']` even when deleting a kind-15
+  ///    file message, and deletions sent or queued then still carry it.
   ///  * Before this, *every* wrapped kind-5 went to the reactions handler,
   ///    which answered `processed` for anything not tagged `['k','7']`. That
   ///    recorded the wrap terminally and lost message deletions for good
@@ -9661,14 +9661,9 @@ class DmRepository {
     // `k` names the kind of the event being deleted (NIP-09 09.md:9), so it
     // reads the row rather than assuming 14 — a kind-15 file message was
     // previously mislabelled on the wire.
-    final deletion = _messageService!.buildRumor(
-      recipientPubkey: recipients.first,
-      content: '',
-      eventKind: EventKind.eventDeletion,
-      additionalTags: [
-        ['e', rumorId],
-        ['k', row.messageKind.toString()],
-      ],
+    final deletion = _messageService!.buildDeletionRumor(
+      targetEventId: rumorId,
+      targetKind: row.messageKind,
     );
 
     // Durability boundary. One write hides the bubble AND stores the rumor,
@@ -9908,14 +9903,9 @@ class DmRepository {
     final mintedFresh = replayable == null;
     final deletion =
         replayable ??
-        _messageService!.buildRumor(
-          recipientPubkey: recipients.first,
-          content: '',
-          eventKind: EventKind.eventDeletion,
-          additionalTags: [
-            ['e', rumorId],
-            ['k', row.messageKind.toString()],
-          ],
+        _messageService!.buildDeletionRumor(
+          targetEventId: rumorId,
+          targetKind: row.messageKind,
         );
 
     // A user-driven retry moves a blocked row back through pending so the
