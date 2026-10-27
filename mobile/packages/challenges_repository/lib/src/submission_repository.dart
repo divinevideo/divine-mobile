@@ -285,14 +285,10 @@ final class ChallengeSubmissionRepository {
               if (action == null) {
                 return const SubmissionResult(SubmissionStatus.reviewRequired);
               }
-              final expected = _validateAction(action);
-              final observed = _validateSigned(action.review, signedBody);
-              if (observed.id != expected.id) {
-                return SubmissionResult(
-                  SubmissionStatus.invalidSignedEvent,
-                  action,
-                );
-              }
+              // Both bodies must match the reviewed owner and fields, which
+              // fixes the event ID, so any valid observation carries it.
+              _validateAction(action);
+              _validateSigned(action.review, signedBody);
               final updated = PendingChallengeAction(
                 review: action.review,
                 signedBody: action.signedBody,

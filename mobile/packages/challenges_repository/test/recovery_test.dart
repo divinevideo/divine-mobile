@@ -444,6 +444,20 @@ void main() {
         expect(h.store.actions.values.single.submitted, isFalse);
       },
     );
+    test('reconciliation refuses a tampered stored body', () async {
+      final h = Harness();
+      final review = await h.prepare();
+      final original = (await h.repository.submit(review)).action!;
+      final tampered = await _storeTamperedBody(h, original);
+      final result = await h.repository.reconcile(
+        review.id,
+        original.signedBody,
+        relay: h.relay,
+      );
+      expect(result.status, SubmissionStatus.invalidSignedEvent);
+      expect(result.action!.signedBody, tampered);
+      expect(h.store.actions.values.single.submitted, isFalse);
+    });
     for (final operation in ['retry', 'reconcile']) {
       test('$operation storage failure is explicit', () async {
         final h = Harness();
