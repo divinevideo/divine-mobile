@@ -4226,7 +4226,7 @@
   "inboxConversationOptionsLabel": "ఎంపికలు",
   "inboxConversationViewProfileButton": "ప్రొఫైల్‌ని వీక్షించండి",
   "inboxMessageRequestsEmpty": "సందేశ అభ్యర్థనలు లేవు",
-  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{సందేశ అభ్యర్థనలు} =1{సందేశ అభ్యర్థనలు, {count} చదవనిది} other{సందేశ అభ్యర్థనలు, {count} చదవనివి}}",
+  "inboxMessageRequestsUnreadSemanticLabel": "{count, plural, =0{సందేశ అభ్యర్థనలు} =1{సందేశ అభ్యర్థనలు, {count} చదవని అభ్యర్థన} other{సందేశ అభ్యర్థనలు, {count} చదవని అభ్యర్థనలు}}",
   "@inboxMessageRequestsUnreadSemanticLabel": {
     "placeholders": {
       "count": {

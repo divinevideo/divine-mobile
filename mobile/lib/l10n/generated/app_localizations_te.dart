@@ -7508,8 +7508,8 @@ class AppLocalizationsTe extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'సందేశ అభ్యర్థనలు, $count చదవనివి',
-      one: 'సందేశ అభ్యర్థనలు, $count చదవనిది',
+      other: 'సందేశ అభ్యర్థనలు, $count చదవని అభ్యర్థనలు',
+      one: 'సందేశ అభ్యర్థనలు, $count చదవని అభ్యర్థన',
       zero: 'సందేశ అభ్యర్థనలు',
     );
     return '$_temp0';
