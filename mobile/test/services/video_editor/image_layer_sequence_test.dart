@@ -69,5 +69,17 @@ void main() {
       expect(sequence.keyframeClock, hasLength(1));
       expect(sequence.shapeMask?.shape, LayerShapeMaskShape.ellipse);
     });
+
+    test('skips a part that starts together with the next one', () {
+      final sequence = imageLayerSequence([
+        part(1, const Duration(seconds: 1), const Duration(milliseconds: 1200)),
+        part(2, const Duration(seconds: 1), const Duration(seconds: 2)),
+        part(3, const Duration(seconds: 2), const Duration(seconds: 3)),
+      ]);
+
+      expect(sequence.frames.map((f) => f.image.byteArray!.single), [2, 3]);
+      expect(sequence.frames.first.duration, const Duration(seconds: 1));
+      expect(sequence.startTime, const Duration(seconds: 1));
+    });
   });
 }
