@@ -445,6 +445,15 @@ class DeepLinkCoordinator {
                 category: LogCategory.ui,
               );
             }
+          case DeepLinkType.challenge:
+            final targetPath = deepLinkRouterPath(deepLink);
+            if (targetPath != null) {
+              _navigateToListRoute(
+                currentLocation: currentLocation,
+                targetPath: targetPath,
+                familyPrefix: '/challenges/',
+              );
+            }
           case DeepLinkType.peopleList:
             final targetPath = peopleListDeepLinkToRouterPath(deepLink);
             if (targetPath != null) {

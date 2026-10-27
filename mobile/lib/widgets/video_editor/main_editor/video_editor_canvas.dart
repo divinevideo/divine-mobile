@@ -147,10 +147,25 @@ class VideoEditorCanvas extends StatelessWidget {
     if (previous.isSplitting && current.isSplitting) return false;
     if (previous.isSplitting && !current.isSplitting) return true;
 
+    // Unlike masks, clip motion is baked independently into both sides of a
+    // transition seam. A committed edit must rebuild those files.
+    if (previous.clips.length == current.clips.length &&
+        (previous.clips.any((clip) => clip.transition != null) ||
+            current.clips.any((clip) => clip.transition != null))) {
+      for (var i = 0; i < current.clips.length; i++) {
+        if (!listEquals(
+          previous.clips[i].keyframes,
+          current.clips[i].keyframes,
+        )) {
+          return true;
+        }
+      }
+    }
+
     // A background thumbnail refresh (e.g. after a split) changes only the
-    // clip's poster path, and a shape mask is drawn over the frame rather
-    // than played — the player composition uses neither, so skip the
-    // redundant reload.
+    // clip's poster path, and a shape mask, its background color and clip
+    // motion without a transition are drawn over the frame rather than
+    // played, so skip the redundant reload.
     if (_onlyNonPlaybackFieldsChanged(previous.clips, current.clips)) {
       return false;
     }
@@ -231,8 +246,9 @@ class VideoEditorCanvas extends StatelessWidget {
       detachResult is ClipDetachSuccess ||
       DetachedClipLayerData.historyContainsDetachedClip(editorStateHistory);
 
-  /// Whether [current] differs from [previous] *only* in clip thumbnail paths
-  /// and shape masks, neither of which the player plays.
+  /// Whether [current] differs from [previous] *only* in clip thumbnail paths,
+  /// shape masks, mask background colors and keyframes, none of which the
+  /// player plays.
   ///
   /// Conservative: any difference in a composition-relevant field (video,
   /// trims, duration, volume, speed, transition, …) returns `false`, so the
@@ -263,7 +279,10 @@ class VideoEditorCanvas extends StatelessWidget {
           a.transition != b.transition) {
         return false;
       }
-      if (a.thumbnailPath != b.thumbnailPath || a.mask != b.mask) {
+      if (a.thumbnailPath != b.thumbnailPath ||
+          a.mask != b.mask ||
+          a.maskBackgroundColor != b.maskBackgroundColor ||
+          !listEquals(a.keyframes, b.keyframes)) {
         anyDiff = true;
       }
     }
@@ -556,11 +575,15 @@ class VideoEditorCanvas extends StatelessWidget {
           a.speedRamp != b.speedRamp ||
           a.transition != b.transition ||
           a.mask != b.mask ||
+          a.maskBackgroundColor != b.maskBackgroundColor ||
           // Frame edits (hold changes, delete, reorder) are the whole edit
           // surface of a stop-motion clip — without this the clip manager
           // (publish render, autosave, metadata preview) and undo/redo never
           // see them.
-          !listEquals(a.stopMotionFrames, b.stopMotionFrames)) {
+          !listEquals(a.stopMotionFrames, b.stopMotionFrames) ||
+          // Without this, motion set in the clip keyframe editor never
+          // reaches the clip manager, so the export renders the clip still.
+          !listEquals(a.keyframes, b.keyframes)) {
         return true;
       }
     }
@@ -1165,11 +1188,22 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       // await — matching the epoch-guarded [_isSeeking] release below. Without
       // this a stale swap would write its old composite position over the one a
       // newer swap (e.g. a trim-start) already set.
-      if (mounted && _seekEpoch == ownerEpoch) {
-        _lastReportedPosition = timelineStartPosition;
-        _pendingSeekTarget = timelineStartPosition;
-        _setLayerPlayTime(timelineStartPosition);
+      if (!mounted || _seekEpoch != ownerEpoch) return;
+      // A seek requested during the reload is newer than the restored
+      // position; [_onSeekRequested] queued it and already set its play time.
+      if (_pendingSeekPosition != null) {
+        while (_pendingSeekPosition != null &&
+            mounted &&
+            _seekEpoch == ownerEpoch) {
+          final pending = _pendingSeekPosition!;
+          _pendingSeekPosition = null;
+          await _videoPlayer?.seekTo(_composition.timelineToPlayer(pending));
+        }
+        return;
       }
+      _lastReportedPosition = timelineStartPosition;
+      _pendingSeekTarget = timelineStartPosition;
+      _setLayerPlayTime(timelineStartPosition);
     } finally {
       if (_seekEpoch == ownerEpoch) _isSeeking = false;
     }
@@ -1694,6 +1728,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                         bodySize: widget.bodySize,
                         renderSize: widget.renderSize,
                         playTime: VideoEditorScope.of(context).playTimeNotifier,
+                        isSeamAt: _composition.isSeamAt,
                         // The mask cover goes over the effects, as the
                         // export draws it over the effected track.
                         frameBuilder: (frame) => VideoEditorClipMaskPreview(
@@ -2847,6 +2882,21 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     // Listen for playback control requests from BLoC
     final editor = MultiBlocListener(
       listeners: [
+        BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
+          listenWhen: (previous, current) =>
+              previous.isEditingClipMotion != current.isEditingClipMotion,
+          listener: (context, state) {
+            _composition.setClipMotionEditing(
+              isEditing: state.isEditingClipMotion,
+            );
+            // Only transitions differ between the two compositions; without
+            // one, a reload would just drop the editor's own seek.
+            final clips = context.read<ClipEditorBloc>().state.clips;
+            if (clips.any((clip) => clip.transition != null)) {
+              _resyncPlayerClips();
+            }
+          },
+        ),
         // A text selected in the timeline keeps the toolbar's wrap hint up.
         BlocListener<TimelineOverlayBloc, TimelineOverlayState>(
           listenWhen: (previous, current) =>
@@ -3214,6 +3264,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
               return;
             }
             // Composition swap back — invalidate in-flight single-clip seeks.
+            _composition.ensureSeamsRendered(state.clips);
             _seekEpoch++;
             _pendingSeekPosition = null;
             final generation = _beginClipLoad();

@@ -3,9 +3,12 @@
 
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
+import 'package:divine_ui/divine_ui.dart' show VineTheme;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/extensions/aspect_ratio_extensions.dart';
+import 'package:openvine/extensions/clip_keyframes.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
@@ -106,7 +109,7 @@ class FreezeFrameRenderService {
     required Duration framePosition,
     String? taskId,
   }) async {
-    final bytes = await _extractFrame(source, framePosition);
+    var bytes = await _extractFrame(source, framePosition);
     if (bytes == null || bytes.isEmpty) {
       Log.error(
         'Could not read the frame at ${framePosition.inMilliseconds}ms of '
@@ -117,12 +120,23 @@ class FreezeFrameRenderService {
       return null;
     }
 
+    // Hold the picture the editor shows, not the raw frame behind its motion.
+    // Move the whole source before cropping; moving an already-cropped still
+    // would lose the off-center detail a pan or zoom selected.
+    if (source.hasKeyframes) {
+      bytes = await _moveFrame(
+        bytes,
+        source.motionAt(framePosition),
+        source.targetAspectRatio.value,
+      );
+    }
+
     // Beside the clip files rather than in the cache directory: the renderer
     // opens the still while it encodes, and the clip keeps it as its poster.
     final stamp = DateTime.now().microsecondsSinceEpoch;
     final imagePath = p.join(
       await getDocumentsPath(),
-      'freeze_frame_$stamp.jpg',
+      'freeze_frame_$stamp.${source.hasKeyframes ? 'png' : 'jpg'}',
     );
     await File(imagePath).writeAsBytes(bytes, flush: true);
 
@@ -227,6 +241,63 @@ class FreezeFrameRenderService {
         category: LogCategory.video,
       );
       return null;
+    }
+  }
+
+  static Future<Uint8List> _moveFrame(
+    Uint8List bytes,
+    ClipMotion motion,
+    double targetRatio,
+  ) async {
+    final codec = await ui.instantiateImageCodec(bytes);
+    try {
+      final frame = await codec.getNextFrame();
+      final image = frame.image;
+      try {
+        final surface = ui.Size(
+          image.width.toDouble(),
+          image.height.toDouble(),
+        );
+        final wide = surface.aspectRatio > targetRatio;
+        final width = wide
+            ? (surface.height * targetRatio).round()
+            : image.width;
+        final height = wide
+            ? image.height
+            : (surface.width / targetRatio).round();
+        final recorder = ui.PictureRecorder();
+        ui.Canvas(recorder)
+          ..drawColor(VineTheme.backgroundColor, ui.BlendMode.src)
+          ..translate(
+            (width - surface.width) / 2,
+            (height - surface.height) / 2,
+          )
+          ..transform(clipMotionMatrix(motion, surface).storage)
+          ..drawImage(image, ui.Offset.zero, ui.Paint());
+        // Keep the recorder's picture owned until its raster has completed.
+        final picture = recorder.endRecording();
+        try {
+          final moved = await picture.toImage(width, height);
+          try {
+            final data = await moved.toByteData(format: ui.ImageByteFormat.png);
+            if (data == null) {
+              throw StateError('Could not encode the held frame');
+            }
+            return data.buffer.asUint8List(
+              data.offsetInBytes,
+              data.lengthInBytes,
+            );
+          } finally {
+            moved.dispose();
+          }
+        } finally {
+          picture.dispose();
+        }
+      } finally {
+        image.dispose();
+      }
+    } finally {
+      codec.dispose();
     }
   }
 

@@ -37,6 +37,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/filter.dart' as nostr_filter;
+import 'package:nostr_sdk/nip04/nip04.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_batch_unwrap.dart';
@@ -5128,6 +5129,7 @@ class DmRepository {
     Event nip04Event, {
     _LiveCatchUp? deferWireTo,
   }) async {
+    final gen = _resetGeneration;
     final ownerPubkey = _userPubkey;
     try {
       // Dedup: use event ID as giftWrapId for the unique index. The
@@ -5176,6 +5178,13 @@ class DmRepository {
         return;
       }
 
+      // After an account switch during the probe above, the signer below holds
+      // the next account's key. The event comes back in this account's next
+      // session, as a gift wrap does.
+      if (_disposed || _resetGeneration != gen || _userPubkey != ownerPubkey) {
+        return;
+      }
+
       // A kind-4's `created_at` is signed, but by its own author — nothing
       // binds it to real time. Bound it once here, before any store sees it,
       // the same way the NIP-17 rumor path does (#7343): the conversation
@@ -5211,22 +5220,83 @@ class DmRepository {
       // the processed ledger would not avoid cryptographic work on replay.
       if (recipientPubkey == null) return;
 
+      // Content that is not a NIP-04 payload, `<ciphertext>?iv=<iv>` with its
+      // base64 read as leniently as common decoders read it, is dropped for
+      // good instead of handed to a signer (#8712). An injected decryptor
+      // replaces NIP-04 decryption and judges its own input.
+      if (_nip04Decryptor == null &&
+          !NIP04.isWellFormedPayload(nip04Event.content)) {
+        await _recordProcessedWrap(nip04Event.id, ownerPubkey: ownerPubkey);
+        Log.debug(
+          'Dropped NIP-04 event ${nip04Event.id} from '
+          '${pubkeyForLogs(nip04Event.pubkey)}: content is not a NIP-04 '
+          'payload',
+          category: LogCategory.system,
+        );
+        return;
+      }
+
       // Determine sender and the other party's pubkey for decryption
       final senderPubkey = nip04Event.pubkey;
-      final isSentByMe = senderPubkey == _userPubkey;
+      final isSentByMe = senderPubkey == ownerPubkey;
       final peerPubkey = isSentByMe ? recipientPubkey : senderPubkey;
 
-      // Decrypt using injected decryptor or signer fallback
+      // Decrypt with the injected decryptor, else with the account's key when
+      // it is on this device, else through the signer.
       final signer = _signer;
       // Keep missing-decryptor events retryable: signer availability can
       // change without the relay event changing.
       if (signer == null && _nip04Decryptor == null) return;
-      final decryptor =
-          _nip04Decryptor ??
-          (String pubkey, String ciphertext) =>
-              signer!.decrypt(pubkey, ciphertext);
-      final plaintext = await decryptor(peerPubkey, nip04Event.content);
-      if (plaintext == null) {
+      final String? decrypted;
+      if (_nip04Decryptor == null &&
+          signer is IsolateDecryptSigner &&
+          signer.canDecryptInIsolate) {
+        try {
+          decrypted = signer.withPrivateKeyHex(
+            (privateKeyHex) => NIP04.decrypt(
+              nip04Event.content,
+              NIP04.getAgreement(privateKeyHex),
+              peerPubkey,
+            ),
+          );
+        } on FormatException {
+          // Every account on this device skips an id in the ledger, so the
+          // failure is final only when no other account could be the one the
+          // event was encrypted to.
+          final namesOneRecipient = nip04Event.tags.every(
+            (tag) =>
+                tag.length < 2 || tag[0] != 'p' || tag[1] == recipientPubkey,
+          );
+          if (!namesOneRecipient ||
+              (!isSentByMe && recipientPubkey != ownerPubkey)) {
+            Log.debug(
+              'Skipped NIP-04 event ${nip04Event.id} from '
+              '${pubkeyForLogs(nip04Event.pubkey)}: it does not decrypt under '
+              "this account's key and names another recipient",
+              category: LogCategory.system,
+            );
+            return;
+          }
+          // The key is on this device, so a retry would fail the same way.
+          // Remote signers stay retryable below: their failure can be an
+          // outage (#8712).
+          await _recordProcessedWrap(nip04Event.id, ownerPubkey: ownerPubkey);
+          Log.debug(
+            'Dropped NIP-04 event ${nip04Event.id} from '
+            '${pubkeyForLogs(nip04Event.pubkey)}: it does not decrypt under '
+            "this account's key",
+            category: LogCategory.system,
+          );
+          return;
+        }
+      } else {
+        final decryptor =
+            _nip04Decryptor ??
+            (String pubkey, String ciphertext) =>
+                signer!.decrypt(pubkey, ciphertext);
+        decrypted = await decryptor(peerPubkey, nip04Event.content);
+      }
+      if (decrypted == null) {
         // Keep failed decryptions retryable; a later attempt may succeed.
         Log.debug(
           'Failed to decrypt NIP-04 event ${nip04Event.id}',
@@ -5234,6 +5304,7 @@ class DmRepository {
         );
         return;
       }
+      final plaintext = decrypted;
 
       // Build participants and conversation ID
       final participants = [senderPubkey, recipientPubkey]..sort();
@@ -5410,9 +5481,9 @@ class DmRepository {
       // kinds [1059, 4, 5] with one filter, so the wire boundary has to track
       // whichever kind carried the newest wire stamp. See #8209.
       // Scoped to the delivering account, not whichever is current after the
-      // decrypt and transaction return: this handler has no generation guard
-      // to abandon on, and a switch inside that window would import this
-      // stamp into the next account's maximum, narrowing its `since:`.
+      // decrypt and transaction return: nothing re-checks the session inside
+      // that window, and a switch there would import this stamp into the next
+      // account's maximum, narrowing its `since:`.
       await _recordSeen(ownerPubkey, persistedCreatedAt, deferTo: deferWireTo);
       await _recordWireSeen(
         ownerPubkey,

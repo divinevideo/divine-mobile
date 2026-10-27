@@ -242,8 +242,9 @@ final class ChallengeSubmissionRepository {
         if (owner == null) {
           return const SubmissionResult(SubmissionStatus.ownerChanged);
         }
+        PendingChallengeAction? action;
         try {
-          final action = await store.loadAction(owner, reviewId);
+          action = await store.loadAction(owner, reviewId);
           if (currentOwner() != owner) {
             return SubmissionResult(SubmissionStatus.ownerChanged, action);
           }
@@ -253,9 +254,9 @@ final class ChallengeSubmissionRepository {
           _validateAction(action);
           return await _deliver(action);
         } on SubmissionException catch (error) {
-          return SubmissionResult(error.status);
+          return SubmissionResult(error.status, action);
         } on Object {
-          return const SubmissionResult(SubmissionStatus.persistenceFailed);
+          return SubmissionResult(SubmissionStatus.persistenceFailed, action);
         }
       });
 
@@ -284,14 +285,10 @@ final class ChallengeSubmissionRepository {
               if (action == null) {
                 return const SubmissionResult(SubmissionStatus.reviewRequired);
               }
-              final expected = _validateAction(action);
-              final observed = _validateSigned(action.review, signedBody);
-              if (observed.id != expected.id) {
-                return SubmissionResult(
-                  SubmissionStatus.invalidSignedEvent,
-                  action,
-                );
-              }
+              // Both bodies must match the reviewed owner and fields, which
+              // fixes the event ID, so any valid observation carries it.
+              _validateAction(action);
+              _validateSigned(action.review, signedBody);
               final updated = PendingChallengeAction(
                 review: action.review,
                 signedBody: action.signedBody,

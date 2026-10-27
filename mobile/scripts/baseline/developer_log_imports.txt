@@ -11,7 +11,6 @@ packages/nostr_client/lib/src/relay_manager.dart # nostr_client: legacy direct l
 packages/nostr_sdk/lib/event_sign_checker.dart # nostr_sdk: publishable package cannot depend on publish_to:none unified_logger; migrate through an injected diagnostics port
 packages/nostr_sdk/lib/nip02/contact_list.dart # nostr_sdk: publishable package cannot depend on publish_to:none unified_logger; migrate through an injected diagnostics port
 packages/nostr_sdk/lib/nip02/nip02.dart # nostr_sdk: publishable package cannot depend on publish_to:none unified_logger; migrate through an injected diagnostics port
-packages/nostr_sdk/lib/nip04/nip04.dart # nostr_sdk: publishable package cannot depend on publish_to:none unified_logger; migrate through an injected diagnostics port
 packages/nostr_sdk/lib/nip05/nip05_validor.dart # nostr_sdk: publishable package cannot depend on publish_to:none unified_logger; migrate through an injected diagnostics port
 packages/nostr_sdk/lib/nip19/nip19.dart # nostr_sdk: publishable package cannot depend on publish_to:none unified_logger; migrate through an injected diagnostics port
 packages/nostr_sdk/lib/nip19/nip19_tlv.dart # nostr_sdk: publishable package cannot depend on publish_to:none unified_logger; migrate through an injected diagnostics port

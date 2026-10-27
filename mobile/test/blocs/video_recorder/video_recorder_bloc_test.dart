@@ -270,7 +270,7 @@ void main() {
 
     when(() => videoEditor.state).thenReturn(VideoEditorProviderState());
     when(
-      () => videoEditor.reset(
+      () => videoEditor.resetForRecorderMode(
         keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
       ),
     ).thenAnswer((_) async {});
@@ -3600,7 +3600,7 @@ void main() {
             ),
           ).called(1);
           verify(
-            () => videoEditor.reset(
+            () => videoEditor.resetForRecorderMode(
               keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
             ),
           ).called(1);
@@ -3620,7 +3620,7 @@ void main() {
             ),
           );
           verifyNever(
-            () => videoEditor.reset(
+            () => videoEditor.resetForRecorderMode(
               keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
             ),
           );
@@ -3647,7 +3647,7 @@ void main() {
             ),
           );
           verifyNever(
-            () => videoEditor.reset(
+            () => videoEditor.resetForRecorderMode(
               keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
             ),
           );
@@ -3674,7 +3674,7 @@ void main() {
             ),
           ).called(1);
           verify(
-            () => videoEditor.reset(
+            () => videoEditor.resetForRecorderMode(
               keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
             ),
           ).called(1);
@@ -4271,7 +4271,7 @@ void main() {
             ),
           );
           verifyNever(
-            () => videoEditor.reset(
+            () => videoEditor.resetForRecorderMode(
               keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
             ),
           );
@@ -4329,7 +4329,7 @@ void main() {
             ),
           ).called(1);
           verify(
-            () => videoEditor.reset(
+            () => videoEditor.resetForRecorderMode(
               keepAutosavedDraft: any(named: 'keepAutosavedDraft'),
             ),
           ).called(1);

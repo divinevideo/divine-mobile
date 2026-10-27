@@ -62,6 +62,7 @@ class DivineVideoClip {
     this.transition,
     this.mask,
     this.maskBackgroundColor,
+    this.keyframes = const [],
     this.chromaKey,
     this.chromaKeySourcePath,
     this.captureChromaKey,
@@ -275,6 +276,17 @@ class DivineVideoClip {
   ///
   /// Goes with the mask: taking the mask off takes it off too.
   final Color? maskBackgroundColor;
+
+  /// Where the clip's picture is panned, zoomed and turned to over time,
+  /// sorted by time; empty keeps it still.
+  ///
+  /// Each keyframe belongs to a frame of [video]: its time is that frame's
+  /// timestamp in the file and its offset a share of the file's frame (see
+  /// [SegmentKeyframe]). That keeps the motion on its frames through trims,
+  /// splits that share the file, and speed changes, and both the preview and
+  /// the export move every frame by the keyframes around its own timestamp.
+  /// Never baked into [video].
+  final List<SegmentKeyframe> keyframes;
 
   /// Green-screen settings the clip's file was last baked with, or `null` when
   /// it carries no key.
@@ -781,6 +793,7 @@ class DivineVideoClip {
     bool clearMask = false,
     Color? maskBackgroundColor,
     bool clearMaskBackgroundColor = false,
+    List<SegmentKeyframe>? keyframes,
     ClipChromaKey? chromaKey,
     String? chromaKeySourcePath,
     bool clearChromaKey = false,
@@ -866,6 +879,8 @@ class DivineVideoClip {
       maskBackgroundColor: clearMask || clearMaskBackgroundColor
           ? null
           : (maskBackgroundColor ?? this.maskBackgroundColor),
+      // Kept by a split or duplicate too: they share the frames it is set on.
+      keyframes: keyframes ?? this.keyframes,
       chromaKey: isNewLogicalClip || clearChromaKey
           ? null
           : (chromaKey ?? this.chromaKey),
@@ -950,6 +965,8 @@ class DivineVideoClip {
       if (mask case final mask?) 'mask': mask.toMap(),
       if (maskBackgroundColor case final color?)
         'maskBackgroundColor': color.toARGB32(),
+      if (keyframes.isNotEmpty)
+        'keyframes': [for (final keyframe in keyframes) keyframe.toMap()],
       if (chromaKey != null) 'chromaKey': chromaKey!.toJson(),
       if (chromaKeySourcePath != null)
         'chromaKeySourcePath': p.basename(chromaKeySourcePath!),
@@ -1113,6 +1130,7 @@ class DivineVideoClip {
         final int argb => colorFromArgb32(argb),
         _ => null,
       },
+      keyframes: _keyframesFromJson(json['keyframes']),
       chromaKey: _chromaKeyFromJson(
         json['chromaKey'],
         documentsPath,
@@ -1222,6 +1240,27 @@ class DivineVideoClip {
         stackTrace: stackTrace,
       );
       return null;
+    }
+  }
+
+  /// The keyframes stored under `keyframes`, sorted by time. One that does
+  /// not parse is dropped with the rest, leaving the clip still: half a
+  /// motion would move it somewhere nobody set.
+  static List<SegmentKeyframe> _keyframesFromJson(Object? raw) {
+    if (raw is! List) return const [];
+    try {
+      return [
+        for (final keyframe in raw)
+          SegmentKeyframe.fromMap((keyframe as Map).cast<String, dynamic>()),
+      ]..sort((a, b) => a.time.compareTo(b.time));
+    } catch (error, stackTrace) {
+      Log.error(
+        'Dropping unparseable clip keyframes; keeping the clip still',
+        name: 'DivineVideoClip',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return const [];
     }
   }
 

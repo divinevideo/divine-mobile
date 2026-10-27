@@ -89,6 +89,20 @@ class PreviewComposition {
   /// Set by [suspendRenders] until [resumeRenders].
   bool _suspended = false;
 
+  bool _isEditingClipMotion = false;
+
+  /// Live gestures need the unblended source picture, not a seam with the
+  /// previous placements baked in. Restore the cached blends on close.
+  void setClipMotionEditing({required bool isEditing}) {
+    _isEditingClipMotion = isEditing;
+    _cachedSeamTimeline = null;
+  }
+
+  List<DivineVideoClip> _previewClips(List<DivineVideoClip> clips) =>
+      _isEditingClipMotion
+      ? [for (final clip in clips) clip.copyWith(clearTransition: true)]
+      : clips;
+
   /// Seam renders this composition started and that have not finished yet,
   /// keyed by [TransitionSeamRenderService.seamKey]. The value identifies the
   /// attempt, so a cancelled attempt finishing late cannot clear the entry of
@@ -304,9 +318,10 @@ class PreviewComposition {
   /// composition that was actually loaded — including a speed body that landed
   /// while playing whose swap was deferred to the next pause.
   List<VideoClip> buildPlayerClips(List<DivineVideoClip> clips) {
+    final previewClips = _previewClips(clips);
     final owners = <String?>[];
     final playerClips = buildSeamAwarePlayerClips(
-      clips,
+      previewClips,
       _seamService,
       speedRenders: _speedRenderService,
       owners: owners,
@@ -369,7 +384,7 @@ class PreviewComposition {
 
   SeamTimeline _refreshSeamTimeline(List<DivineVideoClip> clips) {
     final timeline = SeamTimeline(
-      clips,
+      _previewClips(clips),
       _seamService,
       speedRenders: _speedRenderService,
     );
@@ -388,6 +403,11 @@ class PreviewComposition {
   /// Converts an editor-timeline position into player (composite) space.
   Duration timelineToPlayer(Duration timelinePosition) =>
       _seamTimeline.timelineToComposite(timelinePosition);
+
+  /// The seam picture is already moved independently on both sides of its
+  /// blend. A Flutter transform would move that blended texture a second time.
+  bool isSeamAt(Duration timelinePosition) =>
+      _seamTimeline.isSeamAt(timelinePosition);
 
   /// Drops both render caches and stops reporting renders that land later.
   void dispose() {

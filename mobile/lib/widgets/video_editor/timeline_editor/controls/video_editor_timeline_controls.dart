@@ -67,6 +67,7 @@ class VideoEditorTimelineControls extends StatelessWidget {
     this.onMultiSelect,
     this.multiSelectSemanticLabel,
     this.transformSemanticLabel,
+    this.keyframesSemanticLabel,
     this.extraControls = const [],
     super.key,
   });
@@ -145,13 +146,17 @@ class VideoEditorTimelineControls extends StatelessWidget {
   /// Opens the layer enter/leave animation picker. Layer overlays only.
   final VoidCallback? onAnimate;
 
-  /// Opens the keyframe sheet of the selected layer. Layer overlays that
-  /// keyframes can move only.
+  /// Opens the keyframe sheet of the selected layer, or the motion editor of
+  /// the selected clip. Items that keyframes can move only.
   final VoidCallback? onKeyframes;
 
-  /// Whether the layer already has keyframes, which highlights the action the
+  /// Whether the item already has keyframes, which highlights the action the
   /// way [hasChromaKey] does.
   final bool hasKeyframes;
+
+  /// The keyframe action's semantic label, when it is not a layer's: a clip's
+  /// keyframes pan, zoom and turn its picture.
+  final String? keyframesSemanticLabel;
 
   /// Whether the playhead is on one of the layer's keyframes, which fills the
   /// action's diamond in, as the keyframe's own diamond on the timeline is.
@@ -394,7 +399,9 @@ class VideoEditorTimelineControls extends StatelessWidget {
           TimelineActionButton(
             icon: isOnKeyframe ? .diamondFill : .diamond,
             label: context.l10n.videoEditorKeyframesLabel,
-            semanticLabel: context.l10n.videoEditorKeyframesButtonSemanticLabel,
+            semanticLabel:
+                keyframesSemanticLabel ??
+                context.l10n.videoEditorKeyframesButtonSemanticLabel,
             onPressed: onKeyframes,
             type: hasKeyframes ? .primary : .secondary,
           ),

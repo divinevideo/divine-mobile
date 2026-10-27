@@ -92,6 +92,22 @@ void main() {
   );
 
   group('buildSeamAwarePlayerClips', () {
+    test('keyframe edits invalidate the baked transition seam', () {
+      final service = TransitionSeamRenderService();
+      final a = clip('a', transition: dissolve);
+      final b = clip('b');
+      final moved = a.copyWith(
+        keyframes: const [
+          editor.SegmentKeyframe(time: Duration.zero, scale: 2),
+        ],
+      );
+
+      expect(
+        service.seamKey(a, b, dissolve),
+        isNot(service.seamKey(moved, b, dissolve)),
+      );
+    });
+
     test('plays plain clips when no transition is set', () {
       final clips = [clip('a'), clip('b')];
       final result = buildSeamAwarePlayerClips(

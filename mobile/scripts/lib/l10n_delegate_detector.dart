@@ -1,5 +1,5 @@
-// ABOUTME: Detector behind check_l10n_delegates_ceiling.sh — finds MaterialApp
-// ABOUTME: constructions in tests that register no AppLocalizations delegate.
+// ABOUTME: Detector behind check_l10n_delegates_ceiling.sh — finds test app
+// ABOUTME: roots that skip appLocalizationsDelegates or name AppLocalizations.
 //
 // Usage (from mobile/):
 //   dart run scripts/lib/l10n_delegate_detector.dart <scan-dir> [options]
@@ -26,12 +26,12 @@
 //
 // So a site counts when, and only when, it is an actual `MaterialApp(...)` or
 // `MaterialApp.router(...)` construction whose argument list has no
-// `localizationsDelegates:` value that references `AppLocalizations` — or
-// `appLocalizationsDelegates`, the app's own aggregate, which spreads that
-// generated list and adds material_ui's `Global*` delegates on top (#8916).
-// Anything that merely *contains* the identifier — `testMaterialApp`,
-// `MyMaterialAppWrapper`, a doc comment, a string literal — is not a
-// construction and is never counted.
+// `localizationsDelegates:` value that references `appLocalizationsDelegates`,
+// the app's own list (lib/l10n/l10n.dart), without also naming
+// `AppLocalizations`; the generated `AppLocalizations.localizationsDelegates`
+// does not clear a site (see `_appDelegates` below). Anything that merely
+// *contains* `MaterialApp` — `testMaterialApp`, `MyMaterialAppWrapper`, a doc
+// comment, a string literal — is not a construction and is never counted.
 //
 // Why this matters: `context.l10n` is `AppLocalizations.of(context)`, which is
 // `Localizations.of<AppLocalizations>(context, AppLocalizations)!`. With no
@@ -52,13 +52,22 @@ import 'package:analyzer/source/line_info.dart';
 
 const _delegatesArg = 'localizationsDelegates';
 
-/// Identifiers that prove a delegates list registers `AppLocalizations`.
+/// The only identifier that clears a site: `appLocalizationsDelegates`
+/// (lib/l10n/l10n.dart), the app's own list.
 ///
-/// `appLocalizationsDelegates` (lib/l10n/l10n.dart) is the app's own list; it
-/// spreads `AppLocalizations.localizationsDelegates` and appends material_ui's
-/// `GlobalMaterialLocalizations.delegates`, so a site using it is registered
-/// exactly like one naming the generated list directly.
-const _delegateSources = {'AppLocalizations', 'appLocalizationsDelegates'};
+/// The generated `AppLocalizations.localizationsDelegates` and
+/// `AppLocalizations.delegate` do not count. That delegate loads each locale
+/// as a deferred library; in a widget test the load runs inside fake async,
+/// and the VM keeps its completer for the rest of the isolate, so the first
+/// load of any other locale later in the same merged CI shard never completes
+/// (#10517). The generated list also lacks material_ui's
+/// `MaterialLocalizations` (#8916).
+///
+/// A list that names `AppLocalizations` beside it still counts: `Localizations`
+/// loads only the first delegate of each type, so the generated one wins when
+/// listed first and is redundant when listed after.
+const _appDelegates = 'appLocalizationsDelegates';
+const _generatedDelegateOwner = 'AppLocalizations';
 
 /// Thrown when a scanned file cannot be parsed.
 ///
@@ -79,7 +88,8 @@ class DetectorParseException implements Exception {
 /// subtree even when an ancestor was configured correctly.
 const appWidgets = {'MaterialApp', 'CupertinoApp', 'WidgetsApp'};
 
-/// One app-root construction that registers no `AppLocalizations` delegate.
+/// One app-root construction that skips `appLocalizationsDelegates` or names
+/// `AppLocalizations` in its delegates.
 class DelegatelessSite {
   const DelegatelessSite({
     required this.path,
@@ -136,7 +146,7 @@ class _Visitor extends RecursiveAstVisitor<void> {
     // never counted — that substring collision is what made #3613 report 39
     // offenders when 31 of them were already correct.
     if (!appWidgets.contains(name)) return;
-    if (_hasAppLocalizationsDelegate(args)) return;
+    if (_registersAppDelegates(args)) return;
     sites.add(
       DelegatelessSite(
         path: _path,
@@ -146,19 +156,15 @@ class _Visitor extends RecursiveAstVisitor<void> {
     );
   }
 
-  bool _hasAppLocalizationsDelegate(ArgumentList args) {
+  bool _registersAppDelegates(ArgumentList args) {
     for (final argument in args.arguments) {
       if (argument is! NamedExpression) continue;
       if (argument.name.label.name != _delegatesArg) continue;
-      return _referencesAppLocalizations(argument.expression);
+      final visitor = _DelegateReferenceVisitor();
+      argument.expression.accept(visitor);
+      return visitor.namesAppDelegates && !visitor.namesGeneratedDelegate;
     }
     return false;
-  }
-
-  bool _referencesAppLocalizations(Expression expression) {
-    final visitor = _AppLocalizationsReferenceVisitor();
-    expression.accept(visitor);
-    return visitor.found;
   }
 }
 
@@ -171,18 +177,20 @@ String? _lastIdentifierName(Expression? expression) {
   };
 }
 
-class _AppLocalizationsReferenceVisitor extends RecursiveAstVisitor<void> {
-  bool found = false;
+class _DelegateReferenceVisitor extends RecursiveAstVisitor<void> {
+  bool namesAppDelegates = false;
+  bool namesGeneratedDelegate = false;
 
   @override
   void visitSimpleIdentifier(SimpleIdentifier node) {
-    if (_delegateSources.contains(node.name)) found = true;
+    if (node.name == _appDelegates) namesAppDelegates = true;
+    if (node.name == _generatedDelegateOwner) namesGeneratedDelegate = true;
     super.visitSimpleIdentifier(node);
   }
 }
 
-/// Every app-root construction under [root] that registers no delegates,
-/// sorted by path then line.
+/// Every counted app-root construction under [root], sorted by path then
+/// line.
 List<DelegatelessSite> findDelegatelessSites(
   Directory root, {
   String pathPrefix = '',

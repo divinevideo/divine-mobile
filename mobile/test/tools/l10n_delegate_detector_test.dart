@@ -67,7 +67,9 @@ void main() {
       expect(sites.single.line, 2);
     });
 
-    test('does not count a MaterialApp that registers the delegates', () {
+    test('counts a MaterialApp using the generated delegate list', () {
+      // Its deferred locale load, started inside a widget test, hangs later
+      // loads in the merged CI shard (#10517).
       final sites = scan('''
 void main() {
   pumpWidget(
@@ -80,7 +82,27 @@ void main() {
 }
 ''');
 
-      expect(sites, isEmpty);
+      expect(sites, hasLength(1));
+      expect(sites.single.line, 3);
+    });
+
+    test('counts a hand-built list around the generated delegate', () {
+      final sites = scan('''
+void main() {
+  pumpWidget(
+    MaterialApp(
+      localizationsDelegates: [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+      ],
+      home: Foo(),
+    ),
+  );
+}
+''');
+
+      expect(sites, hasLength(1));
+      expect(sites.single.line, 3);
     });
 
     test('does not count a MaterialApp using appLocalizationsDelegates', () {
@@ -99,7 +121,86 @@ void main() {
       expect(sites, isEmpty);
     });
 
-    test('counts a MaterialApp with delegates that omit AppLocalizations', () {
+    test('does not count a list that spreads appLocalizationsDelegates', () {
+      final sites = scan('''
+void main() {
+  pumpWidget(
+    MaterialApp(
+      localizationsDelegates: [...extraDelegates, ...appLocalizationsDelegates],
+      home: Foo(),
+    ),
+  );
+}
+''');
+
+      expect(sites, isEmpty);
+    });
+
+    test('counts the generated delegate listed ahead of the app list', () {
+      // Localizations loads the first delegate of each type, so the generated
+      // deferred loader runs and appLocalizationsDelegates' own is ignored.
+      final sites = scan('''
+void main() {
+  pumpWidget(
+    MaterialApp(
+      localizationsDelegates: [
+        AppLocalizations.delegate,
+        ...appLocalizationsDelegates,
+      ],
+      home: Foo(),
+    ),
+  );
+}
+''');
+
+      expect(sites, hasLength(1));
+      expect(sites.single.line, 3);
+    });
+
+    test('counts an import-prefixed generated list beside the app list', () {
+      final sites = scan('''
+import 'package:openvine/l10n/l10n.dart' as l10n;
+
+void main() {
+  pumpWidget(
+    MaterialApp(
+      localizationsDelegates: [
+        ...l10n.AppLocalizations.localizationsDelegates,
+        ...l10n.appLocalizationsDelegates,
+      ],
+      home: Foo(),
+    ),
+  );
+}
+''');
+
+      expect(sites, hasLength(1));
+      expect(sites.single.line, 5);
+    });
+
+    test('counts the generated delegate listed after the app list too', () {
+      // Never loaded there, since the app list's loader comes first, but
+      // counted anyway: the rule is that a test app names AppLocalizations
+      // nowhere in its delegates.
+      final sites = scan('''
+void main() {
+  pumpWidget(
+    MaterialApp(
+      localizationsDelegates: [
+        ...appLocalizationsDelegates,
+        AppLocalizations.delegate,
+      ],
+      home: Foo(),
+    ),
+  );
+}
+''');
+
+      expect(sites, hasLength(1));
+      expect(sites.single.line, 3);
+    });
+
+    test('counts a delegate list without appLocalizationsDelegates', () {
       final sites = scan('''
 void main() {
   pumpWidget(
@@ -160,7 +261,7 @@ void main() {
 void main() {
   pumpWidget(
     MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       home: Foo(),
     ),
   );
@@ -239,12 +340,12 @@ void main() {
       expect(sites.single.line, 4);
     });
 
-    test('does not count MaterialApp.router that registers delegates', () {
+    test('does not count MaterialApp.router using the app list', () {
       final sites = scan('''
 void main() {
   pumpWidget(
     MaterialApp.router(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       routerConfig: router,
     ),
   );
@@ -259,7 +360,7 @@ void main() {
 void main() {
   pumpWidget(
     MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appLocalizationsDelegates,
       home: MaterialApp(home: Foo()),
     ),
   );

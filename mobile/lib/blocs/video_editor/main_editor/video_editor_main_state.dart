@@ -39,6 +39,7 @@ class VideoEditorMainState extends Equatable {
     this.isMarkerMode = false,
     this.isPlacingSlidePoint = false,
     this.isEditingMask = false,
+    this.isEditingClipMotion = false,
     this.isMarkingTrackRegion = false,
     this.detachedClipOpacityPreview,
     this.audition,
@@ -128,6 +129,12 @@ class VideoEditorMainState extends Equatable {
   /// [isPlacingSlidePoint]; the mask editor brings its own controls.
   final bool isEditingMask;
 
+  /// Whether the motion editor of a timeline clip is open over the canvas.
+  ///
+  /// While it is, the timeline and the editor's own actions step aside as for
+  /// [isEditingMask]; the motion editor brings its own controls.
+  final bool isEditingClipMotion;
+
   /// Whether the object a layer is tracked to is being framed on the canvas.
   ///
   /// While it is, the timeline and the editor's own actions step aside as for
@@ -165,11 +172,12 @@ class VideoEditorMainState extends Equatable {
 
   /// Whether the timeline and the editor's own actions step aside so the video
   /// fills the screen: while a slide point is being placed, a shape mask
-  /// shaped or a tracked object framed, and while the voice-over recorder
-  /// shows the preview behind its own controls.
+  /// shaped, a clip's motion set or a tracked object framed, and while the
+  /// voice-over recorder shows the preview behind its own controls.
   bool get isCanvasFullscreen =>
       isPlacingSlidePoint ||
       isEditingMask ||
+      isEditingClipMotion ||
       isMarkingTrackRegion ||
       isVoiceOverPreview;
 
@@ -202,6 +210,7 @@ class VideoEditorMainState extends Equatable {
     bool? isMarkerMode,
     bool? isPlacingSlidePoint,
     bool? isEditingMask,
+    bool? isEditingClipMotion,
     bool? isMarkingTrackRegion,
     DetachedClipOpacityPreview? detachedClipOpacityPreview,
     bool clearDetachedClipOpacityPreview = false,
@@ -241,6 +250,7 @@ class VideoEditorMainState extends Equatable {
       isMarkerMode: isMarkerMode ?? this.isMarkerMode,
       isPlacingSlidePoint: isPlacingSlidePoint ?? this.isPlacingSlidePoint,
       isEditingMask: isEditingMask ?? this.isEditingMask,
+      isEditingClipMotion: isEditingClipMotion ?? this.isEditingClipMotion,
       isMarkingTrackRegion: isMarkingTrackRegion ?? this.isMarkingTrackRegion,
       detachedClipOpacityPreview: clearDetachedClipOpacityPreview
           ? null
@@ -280,6 +290,7 @@ class VideoEditorMainState extends Equatable {
     isMarkerMode,
     isPlacingSlidePoint,
     isEditingMask,
+    isEditingClipMotion,
     isMarkingTrackRegion,
     detachedClipOpacityPreview,
     audition,

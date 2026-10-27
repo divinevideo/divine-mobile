@@ -17825,6 +17825,24 @@ abstract class AppLocalizations {
   /// **'Add a keyframe, move the playhead, then move, resize or turn the layer. It glides from keyframe to keyframe.'**
   String get videoEditorKeyframesHint;
 
+  /// Hint at the top of the motion editor of a timeline clip in the video editor. Keyframes pin where the clip's picture is panned to, how far it is zoomed and how far it is turned at points in time; the picture moves between them while the video plays. Translate keyframe as the standard term video editors use.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a keyframe, move the playhead, then drag, pinch or turn the video. It glides from keyframe to keyframe.'**
+  String get videoEditorClipKeyframesHint;
+
+  /// Accessibility label for the Keyframes button in the bottom bar of a selected timeline clip in the video editor, which opens the editor that pans, zooms and turns the clip's picture over time.
+  ///
+  /// In en, this message translates to:
+  /// **'Pan, zoom and turn the clip'**
+  String get videoEditorClipKeyframesSemanticLabel;
+
+  /// Accessibility label for the slider in a timeline clip's motion editor in the video editor that moves the playhead within that clip.
+  ///
+  /// In en, this message translates to:
+  /// **'Playhead in the clip'**
+  String get videoEditorClipKeyframesScrubberSemanticLabel;
+
   /// Action in the bar of a selected layer (text, sticker, drawing) in the video editor timeline: pins the layer to a moving object so it follows it. Short, shown under an icon.
   ///
   /// In en, this message translates to:
@@ -24230,6 +24248,294 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This announcement is no longer available.'**
   String get announcementUnavailable;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Challenges'**
+  String get challengeTitle;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Test build. Some challenges and entries may be missing.'**
+  String get challengeTestNotice;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Open a challenge link'**
+  String get challengeOpenLink;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Challenge naddr or Divine link'**
+  String get challengeLinkLabel;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'This challenge is unavailable. Refresh to check its current rules.'**
+  String get challengeUnavailable;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to view and enter a challenge.'**
+  String get challengeSignIn;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Record a video'**
+  String get challengeRecord;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose one of your videos'**
+  String get challengeChoose;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Review your entry'**
+  String get challengeReview;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Agree and submit'**
+  String get challengeAgree;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Withdraw entry'**
+  String get challengeWithdraw;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Review withdrawal'**
+  String get challengeWithdrawReview;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm withdrawal'**
+  String get challengeWithdrawConfirm;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'This withdraws this entry. Your video stays published.'**
+  String get challengeWithdrawExplanation;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'No visible entries on the relays checked.'**
+  String get challengeEmpty;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'No published videos found for your account.'**
+  String get challengeNoVideos;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Current rules'**
+  String get challengeRules;
+
+  /// Challenge deadline, explicitly in UTC; deadline is formatted in the app locale.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline (UTC): {deadline}'**
+  String challengeDeadline(String deadline);
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing account'**
+  String get challengeOwner;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Video revision'**
+  String get challengeVideoRevision;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Rules revision'**
+  String get challengeRulesRevision;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry delivery'**
+  String get challengeRetry;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery pending'**
+  String get challengePending;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitted to a challenge relay'**
+  String get challengeSubmitted;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Indexing not yet confirmed'**
+  String get challengeIndexing;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Indexing confirmed'**
+  String get challengeIndexed;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Withdrawal submitted'**
+  String get challengeWithdrawn;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Review your published video'**
+  String get challengeRecover;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Entries'**
+  String get challengeEntries;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Results'**
+  String get challengeResults;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected entry unavailable'**
+  String get challengeWinnerUnavailable;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Play video'**
+  String get challengePlay;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Open for entries'**
+  String get challengeOpen;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Not open yet'**
+  String get challengeScheduled;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Entries closed'**
+  String get challengeClosed;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Challenge cancelled'**
+  String get challengeCancelled;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Results published'**
+  String get challengeResult;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Rules changed — review the current rules again.'**
+  String get challengeChanged;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery paused. Your signed entry is saved.'**
+  String get challengePaused;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'This action is unavailable under current account or content rules.'**
+  String get challengeBlocked;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'The signing account changed. Return with the original account.'**
+  String get challengeOwnerChanged;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not complete the action. Your published video is unchanged.'**
+  String get challengeFailed;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'This video or rules snapshot is too large for an entry.'**
+  String get challengeTooLarge;
+
+  /// Native challenge participation test-build flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Review the current rules and exact video before submitting.'**
+  String get challengeReviewRequired;
+
+  /// Challenge entry review challengeYourAccount
+  ///
+  /// In en, this message translates to:
+  /// **'Your current account'**
+  String get challengeYourAccount;
+
+  /// Challenge entry review challengePreviewUnavailable
+  ///
+  /// In en, this message translates to:
+  /// **'This video cannot be previewed right now. Try again before submitting.'**
+  String get challengePreviewUnavailable;
+
+  /// Challenge entry review challengePublicConsent
+  ///
+  /// In en, this message translates to:
+  /// **'Your entry will be public and linked to this video and these rules.'**
+  String get challengePublicConsent;
+
+  /// Challenge entry review challengeDetails
+  ///
+  /// In en, this message translates to:
+  /// **'Technical details'**
+  String get challengeDetails;
 }
 
 class _AppLocalizationsDelegate

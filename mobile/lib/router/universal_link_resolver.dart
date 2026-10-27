@@ -1,6 +1,7 @@
 // ABOUTME: Pure resolvers from universal-link and divine:// URIs to GoRouter paths
 // ABOUTME: Shared source of truth used by the router redirect and tests
 
+import 'package:openvine/features/challenges/challenge_test_build.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/curated_list_feed_screen.dart';
@@ -32,6 +33,11 @@ String? divineUrlToPushRoute(Uri uri) {
 /// mapping, so a link reaches one location whichever of them delivers it.
 String? deepLinkRouterPath(DeepLink deepLink) {
   switch (deepLink.type) {
+    case DeepLinkType.challenge:
+      final naddr = deepLink.challengeNaddr;
+      return !challengesTestEnabled || naddr == null
+          ? null
+          : RoutePaths.challengeFor(naddr);
     case DeepLinkType.shortLink:
       final code = deepLink.shortCode;
       return code == null ? null : RoutePaths.shortLinkForCode(code);
@@ -124,6 +130,9 @@ String? customSchemeToRouterPath(Uri uri) {
   final mapped = deepLinkRouterPath(
     DeepLinkService.parseDeepLink(canonical.toString()),
   );
+  // Challenge routes require a fully validated naddr even in test builds.
+  // Do not send malformed or unrelated addressable kinds to the raw fallback.
+  if (segments.first == 'challenges') return mapped;
   if (mapped != null) return mapped;
   return canonical.hasQuery
       ? '${canonical.path}?${canonical.query}'
@@ -134,8 +143,10 @@ String? customSchemeToRouterPath(Uri uri) {
 ///
 /// Mirrors the universal-link claims in the served apple-app-site-association
 /// files, so the custom scheme reaches exactly what a web page can already
-/// reach over https — and nothing more.
+/// reach over https. Challenge links are an explicit test-build exception;
+/// their hosting/browser fallback and OS delivery are not yet shipped.
 const _customSchemeRoutablePrefixes = <String>{
+  if (challengesTestEnabled) 'challenges',
   'video',
   'profile',
   'hashtag',
@@ -180,6 +191,7 @@ String? universalLinkToRouterPath(Uri uri) {
     case DeepLinkType.signerCallback:
     case DeepLinkType.unknown:
       return _invalidPeopleListRoute(uri, deepLink);
+    case DeepLinkType.challenge:
     case DeepLinkType.profile:
     case DeepLinkType.hashtag:
     case DeepLinkType.search:

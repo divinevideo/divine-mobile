@@ -27,6 +27,7 @@ import 'package:openvine/blocs/video_editor/voice_over/voice_over_cubit.dart';
 import 'package:openvine/blocs/video_editor/voice_over/voice_over_take_placement.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/di/loop_alignment_dependencies.dart';
+import 'package:openvine/extensions/clip_keyframes.dart';
 import 'package:openvine/extensions/media_query_extensions.dart';
 import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/extensions/video_editor_history_extensions.dart';
@@ -197,9 +198,10 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
 
   /// The timeline clip mask being changed, which the canvas previews.
   final _liveClipMaskNotifier = ValueNotifier<LiveClipMask?>(null);
+  final _liveClipKeyframesNotifier = ValueNotifier<LiveClipKeyframes?>(null);
 
   /// How tall the mask editor's panel is, which the canvas makes room for.
-  final _maskPanelHeightNotifier = ValueNotifier<double>(0);
+  final _canvasToolPanelHeightNotifier = ValueNotifier<double>(0);
 
   /// The box the preview frame fills, which a clip mask is measured in.
   final _clipFrameTracker = VideoEditorFrameTracker();
@@ -434,7 +436,8 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     _liveVolumeNotifier.dispose();
     _liveEqualizerNotifier.dispose();
     _liveClipMaskNotifier.dispose();
-    _maskPanelHeightNotifier.dispose();
+    _liveClipKeyframesNotifier.dispose();
+    _canvasToolPanelHeightNotifier.dispose();
     _previewReleasedNotifier.dispose();
     super.dispose();
   }
@@ -1353,7 +1356,8 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
               cancelLiveVolumePreview: _cancelLiveVolumePreview,
               liveEqualizerNotifier: _liveEqualizerNotifier,
               liveClipMaskNotifier: _liveClipMaskNotifier,
-              maskPanelHeightNotifier: _maskPanelHeightNotifier,
+              liveClipKeyframesNotifier: _liveClipKeyframesNotifier,
+              canvasToolPanelHeightNotifier: _canvasToolPanelHeightNotifier,
               clipFrameTracker: _clipFrameTracker,
               previewReleasedNotifier: _previewReleasedNotifier,
               fromLibrary: widget.fromLibrary,

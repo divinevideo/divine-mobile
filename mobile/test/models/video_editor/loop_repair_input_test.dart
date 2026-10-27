@@ -4,7 +4,8 @@ import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_stabilization.dart';
 import 'package:openvine/models/video_editor/loop_repair_input.dart';
-import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+import 'package:pro_video_editor/pro_video_editor.dart'
+    show EditorVideo, SegmentKeyframe;
 
 DivineVideoClip _clip(String id) => DivineVideoClip(
   id: id,
@@ -60,6 +61,37 @@ LoopRepairResult _trimResult(List<DivineVideoClip> clips, int rawTrimMs) =>
     );
 void main() {
   group('Loop repair input mapping', () {
+    test('does not analyze keyframed footage as if it were still', () {
+      final clip = _clip('moving').copyWith(
+        trimStart: const Duration(seconds: 1),
+        keyframes: const [
+          SegmentKeyframe(time: Duration(milliseconds: 1500), scale: 2),
+        ],
+      );
+      final input = LoopRepairInputMapper.fromComposition([
+        clip,
+      ], composition: const {});
+      expect(input.capability, LoopRepairCapability.unsupported);
+    });
+
+    test('refuses a replacement that would retime clip keyframes', () {
+      final clip = _clip('moving').copyWith(
+        trimStart: const Duration(seconds: 1),
+        keyframes: const [
+          SegmentKeyframe(time: Duration(milliseconds: 1500), scale: 2),
+        ],
+      );
+      expect(
+        () => LoopRepairInputMapper.applyResult(
+          [clip],
+          _trimResult([clip], 0),
+          operationId: 'moving-window',
+        ),
+        throwsStateError,
+      );
+      expect(clip.keyframes.single.time, const Duration(milliseconds: 1500));
+    });
+
     test('retains rendered and restoration sources after later edits', () {
       final clip = _clip('stabilized').copyWith(
         stabilization: const ClipStabilization(

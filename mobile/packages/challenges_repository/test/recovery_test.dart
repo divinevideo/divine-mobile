@@ -385,6 +385,7 @@ void main() {
         final result = await h.repository.submit(review);
         expect(result.status, SubmissionStatus.persistenceFailed);
         expect(h.transport.bodies.single, result.action!.signedBody);
+        expect(result.action!.outcomes, isEmpty);
         h.store.onSave = null;
         expect(
           (await h.createRepository().retry(review.id)).action!.signedBody,
@@ -443,6 +444,20 @@ void main() {
         expect(h.store.actions.values.single.submitted, isFalse);
       },
     );
+    test('reconciliation refuses a tampered stored body', () async {
+      final h = Harness();
+      final review = await h.prepare();
+      final original = (await h.repository.submit(review)).action!;
+      final tampered = await _storeTamperedBody(h, original);
+      final result = await h.repository.reconcile(
+        review.id,
+        original.signedBody,
+        relay: h.relay,
+      );
+      expect(result.status, SubmissionStatus.invalidSignedEvent);
+      expect(result.action!.signedBody, tampered);
+      expect(h.store.actions.values.single.submitted, isFalse);
+    });
     for (final operation in ['retry', 'reconcile']) {
       test('$operation storage failure is explicit', () async {
         final h = Harness();
@@ -507,25 +522,48 @@ void main() {
       );
       expect(h.signatures, 0);
     });
+    test('forged out-of-window review time never reaches the signer', () async {
+      final h = Harness();
+      final forged = _outOfWindow(await h.prepare());
+      expect(
+        (await h.repository.submit(forged)).status,
+        SubmissionStatus.reviewRequired,
+      );
+      expect(h.signatures, 0);
+    });
+    test('a stored review outside its window restores as review', () async {
+      final h = Harness();
+      final forged = _outOfWindow(await h.prepare());
+      await h.store.saveReview(forged.owner, forged);
+      await expectLater(
+        h.createRepository().restoreReview(forged.id),
+        throwsA(
+          isA<SubmissionException>().having(
+            (e) => e.status,
+            'status',
+            SubmissionStatus.reviewRequired,
+          ),
+        ),
+      );
+    });
     test('unknown persisted malformed signature never republishes', () async {
       final h = Harness();
       final review = await h.prepare();
       final original = (await h.repository.submit(review)).action!;
-      final wire = jsonDecode(original.signedBody) as Map<String, Object?>;
-      wire['content'] = 'Forged';
-      await h.store.saveAction(
-        review.owner,
-        PendingChallengeAction(
-          review: review,
-          signedBody: jsonEncode(wire),
-          challengeRelays: original.challengeRelays,
-          targets: original.targets,
-        ),
-      );
-      expect(
-        (await h.createRepository().retry(review.id)).status,
-        SubmissionStatus.invalidSignedEvent,
-      );
+      final tampered = await _storeTamperedBody(h, original);
+      final retried = await h.createRepository().retry(review.id);
+      expect(retried.status, SubmissionStatus.invalidSignedEvent);
+      expect(retried.action!.signedBody, tampered);
+      expect(h.transport.bodies, hasLength(1));
+    });
+    test('a later submit refuses tampered stored work', () async {
+      final h = Harness();
+      final review = await h.prepare();
+      final original = (await h.repository.submit(review)).action!;
+      final tampered = await _storeTamperedBody(h, original);
+      final result = await h.repository.submit(review);
+      expect(result.status, SubmissionStatus.invalidSignedEvent);
+      expect(result.action!.signedBody, tampered);
       expect(h.transport.bodies, hasLength(1));
     });
     test(
@@ -562,4 +600,35 @@ void main() {
       },
     );
   });
+}
+
+SubmissionReview _outOfWindow(SubmissionReview review) => SubmissionReview(
+  owner: review.owner,
+  definition: review.definition,
+  video: review.video,
+  fields: UnsignedChallengeAction(
+    kind: review.fields.kind,
+    createdAt: 99,
+    content: review.fields.content,
+    tags: review.fields.tags,
+  ),
+);
+
+Future<String> _storeTamperedBody(
+  Harness h,
+  PendingChallengeAction original,
+) async {
+  final wire = jsonDecode(original.signedBody) as Map<String, Object?>;
+  wire['content'] = 'Forged';
+  final tampered = jsonEncode(wire);
+  await h.store.saveAction(
+    original.review.owner,
+    PendingChallengeAction(
+      review: original.review,
+      signedBody: tampered,
+      challengeRelays: original.challengeRelays,
+      targets: original.targets,
+    ),
+  );
+  return tampered;
 }

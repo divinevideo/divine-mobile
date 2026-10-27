@@ -164,7 +164,7 @@ Future<MaskEditorResult?> _runMaskEditor(
   }
   // Set before the editor makes room for the panel, so it makes as much as
   // the panel takes from the start.
-  final panelHeight = scope.maskPanelHeightNotifier;
+  final panelHeight = scope.canvasToolPanelHeightNotifier;
   final withBackground = initialBackgroundColor != null;
   panelHeight?.value = videoEditorMaskPanelHeight(
     initialMask,
