@@ -2792,10 +2792,11 @@ class ProfileRepository implements ProfileReader {
 
   /// Applies the follow-graph boost within the server's order without moving a
   /// followed account above an exact account match: each run of profiles
-  /// between two exact matches lists its followed ones first. Exact matches
-  /// keep their places, so three followed partial matches cannot push an exact
-  /// account out of the three-row preview (#8578), while the server still
-  /// decides where that exact match stands against unfollowed profiles.
+  /// between two exact matches lists its followed ones first, and a followed
+  /// exact match leads the run before it. No exact match passes another, so
+  /// three followed partial matches cannot push an exact account out of the
+  /// three-row preview (#8578), while the server still decides where an
+  /// unfollowed exact match stands against unfollowed profiles.
   List<UserProfile> _boostBelowExactMatches(
     String query,
     List<UserProfile> profiles,
@@ -2809,9 +2810,16 @@ class ProfileRepository implements ProfileReader {
     for (final profile in profiles) {
       final relevance = _searchRelevance(profile, normalizedQuery, queryHex);
       if (relevance == _exactMatchRelevance) {
-        ordered
-          ..addAll(_boostProfiles(run, boostPubkeys))
-          ..add(profile);
+        final boostedRun = _boostProfiles(run, boostPubkeys);
+        if (boostPubkeys.contains(profile.pubkey)) {
+          ordered
+            ..add(profile)
+            ..addAll(boostedRun);
+        } else {
+          ordered
+            ..addAll(boostedRun)
+            ..add(profile);
+        }
         run = [];
       } else {
         run.add(profile);

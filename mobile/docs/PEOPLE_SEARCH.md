@@ -88,9 +88,10 @@ response says which row the server pinned.
 The follow boost and the bloc's promotion of people you follow or have messaged
 move such an account up within the server's order, but never past an exact
 match: each run of profiles between two exact matches lists its known ones
-first. So three followed partial matches cannot push an exact account out of
-the three-row preview (#8578), while the server still decides where that exact
-match stands against unknown profiles.
+first, and a known exact match leads the run before it. No exact match passes
+another, so three followed partial matches cannot push an exact account out of
+the three-row preview (#8578), while the server still decides where an unknown
+exact match stands against unknown profiles.
 
 With a ranking loader the bloc keeps rows already shown in place until
 Funnelcake answers, then moves the whole list into the repository's order. The

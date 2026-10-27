@@ -4940,6 +4940,34 @@ void main() {
       );
 
       test(
+        'a relevance search moves a followed exact match ahead of the run '
+        'before it, but not past another exact match',
+        () async {
+          stubRestResults([
+            restProfile(pk4Videos, 'laurence'),
+            restProfile(pk1Video, 'lauren'),
+            restProfile(pkCachedVine, 'lauren b'),
+            restProfile(pk18Videos, 'lauren'),
+          ]);
+
+          final result = await repoWithFunnelcake
+              .searchUsersProgressive(
+                query: 'lauren',
+                sortBy: profileSearchSortRelevance,
+                boostPubkeys: {pk18Videos},
+              )
+              .last;
+
+          expect(result.profiles.map((p) => p.pubkey), [
+            pk4Videos,
+            pk1Video,
+            pk18Videos,
+            pkCachedVine,
+          ]);
+        },
+      );
+
+      test(
         'a relevance search for an @-handle keeps profiles named as the bare '
         'username',
         () async {

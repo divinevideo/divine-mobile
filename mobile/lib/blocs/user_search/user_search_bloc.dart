@@ -206,10 +206,11 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
 
   /// Moves known accounts up within the server's order without moving one
   /// above an exact match: each run of profiles between two exact matches
-  /// lists its known ones first, as the repository does with followed ones.
-  /// Exact matches keep their places, so known partial matches cannot bury an
-  /// exact account (#8578), while the server still decides where that exact
-  /// match stands against unknown profiles.
+  /// lists its known ones first, and a known exact match leads the run before
+  /// it, as the repository does with followed ones. No exact match passes
+  /// another, so known partial matches cannot bury an exact account (#8578),
+  /// while the server still decides where an unknown exact match stands
+  /// against unknown profiles.
   static List<UserProfile> _promoteKnownBelowExactMatches(
     List<UserProfile> profiles,
     Map<String, UserRankingSignals> signals,
@@ -233,8 +234,14 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
 
     for (final profile in profiles) {
       if (ProfileRepository.isExactSearchMatch(profile, query)) {
-        promoteRun();
-        ordered.add(profile);
+        final signal = signals[profile.pubkey];
+        if (signal != null && isKnown(signal)) {
+          ordered.add(profile);
+          promoteRun();
+        } else {
+          promoteRun();
+          ordered.add(profile);
+        }
       } else {
         run.add(profile.pubkey);
       }

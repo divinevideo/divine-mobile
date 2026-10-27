@@ -482,6 +482,44 @@ void main() {
         expect(bloc.state.results, [viewer, profiles[0]]);
       });
 
+      test(
+        'a known exact match leads the run before it, but not past another '
+        'exact match',
+        () async {
+          final exact = createTestProfile('e' * 64, 'Alice');
+          final knownExact = createTestProfile('d' * 64, 'Alice');
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer(
+            (_) => progressive([profiles[0], exact, profiles[2], knownExact]),
+          );
+          when(() => loader.load(any())).thenAnswer(
+            (invocation) async => {
+              for (final key
+                  in invocation.positionalArguments.single as Iterable<String>)
+                key: UserRankingSignals(
+                  pubkey: key,
+                  youFollow: key == knownExact.pubkey,
+                ),
+            },
+          );
+          final bloc = createBloc(rankingSignalsLoader: loader);
+          addTearDown(bloc.close);
+          await search(bloc);
+          expect(bloc.state.results, [
+            profiles[0],
+            exact,
+            knownExact,
+            profiles[2],
+          ]);
+        },
+      );
+
       test('an exact match leads its page ahead of known accounts', () async {
         final exact = createTestProfile('e' * 64, 'Alice');
         when(
