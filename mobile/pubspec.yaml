@@ -55,6 +55,7 @@ workspace:
   - packages/divine_status_client
   - packages/dm_repository
   - packages/challenge_protocol
+  - packages/challenges_repository
   - packages/concord_protocol
   - packages/concord_repository
   - packages/divine_video_player

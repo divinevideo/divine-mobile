@@ -1,0 +1,51 @@
+# ABOUTME: Verify bounded challenge reads and durable participant delivery.
+# ABOUTME: Preserve the real workspace lockfile and measured package coverage.
+name: Challenges Repository CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/packages/challenges_repository/**"
+      - "mobile/packages/challenge_protocol/**"
+      - "mobile/pubspec.yaml"
+      - "mobile/pubspec.lock"
+      - ".github/workflows/challenges_repository.yaml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "mobile/packages/challenges_repository/**"
+      - "mobile/packages/challenge_protocol/**"
+      - "mobile/pubspec.yaml"
+      - "mobile/pubspec.lock"
+      - ".github/workflows/challenges_repository.yaml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: VeryGoodOpenSource/very_good_workflows/.github/workflows/flutter_package.yml@v1
+    with:
+      working_directory: "mobile/packages/challenges_repository"
+      flutter_version: "3.47.2"
+      min_coverage: 95
+
+  workspace:
+    name: Workspace lockfile resolution
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.2"
+          channel: stable
+          cache: true
+      - name: Resolve the real workspace
+        working-directory: mobile
+        run: flutter pub get --enforce-lockfile
