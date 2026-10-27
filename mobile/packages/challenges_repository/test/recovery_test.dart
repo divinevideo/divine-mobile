@@ -524,23 +524,27 @@ void main() {
     });
     test('forged out-of-window review time never reaches the signer', () async {
       final h = Harness();
-      final review = await h.prepare();
-      final forged = SubmissionReview(
-        owner: review.owner,
-        definition: review.definition,
-        video: review.video,
-        fields: UnsignedChallengeAction(
-          kind: review.fields.kind,
-          createdAt: 99,
-          content: review.fields.content,
-          tags: review.fields.tags,
-        ),
-      );
+      final forged = _outOfWindow(await h.prepare());
       expect(
         (await h.repository.submit(forged)).status,
         SubmissionStatus.reviewRequired,
       );
       expect(h.signatures, 0);
+    });
+    test('a stored review outside its window restores as review', () async {
+      final h = Harness();
+      final forged = _outOfWindow(await h.prepare());
+      await h.store.saveReview(forged.owner, forged);
+      await expectLater(
+        h.createRepository().restoreReview(forged.id),
+        throwsA(
+          isA<SubmissionException>().having(
+            (e) => e.status,
+            'status',
+            SubmissionStatus.reviewRequired,
+          ),
+        ),
+      );
     });
     test('unknown persisted malformed signature never republishes', () async {
       final h = Harness();
@@ -597,6 +601,18 @@ void main() {
     );
   });
 }
+
+SubmissionReview _outOfWindow(SubmissionReview review) => SubmissionReview(
+  owner: review.owner,
+  definition: review.definition,
+  video: review.video,
+  fields: UnsignedChallengeAction(
+    kind: review.fields.kind,
+    createdAt: 99,
+    content: review.fields.content,
+    tags: review.fields.tags,
+  ),
+);
 
 Future<String> _storeTamperedBody(
   Harness h,
