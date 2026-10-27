@@ -31,6 +31,7 @@ class _ChallengePlaybackState extends State<ChallengePlayback>
     useTexture: true,
   );
   Timer? _policy;
+  Future<void>? _initializing;
   StreamSubscription<DivineVideoPlayerState>? _playerState;
   bool _reportedReady = false;
   bool _ready = false;
@@ -54,7 +55,8 @@ class _ChallengePlaybackState extends State<ChallengePlayback>
       );
       final url = video.videoUrl;
       if (url == null) return _retire();
-      await _controller.initialize();
+      _initializing = _controller.initialize();
+      await _initializing;
       if (_retired || !mounted || !widget.allowed(widget.video)) {
         return _retire();
       }
@@ -88,13 +90,24 @@ class _ChallengePlaybackState extends State<ChallengePlayback>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) widget.onAvailabilityChanged?.call(false);
     });
-    unawaited(_controller.dispose());
+    unawaited(_disposeController());
     if (mounted) {
       setState(() {
         _failed = true;
         _ready = false;
       });
     }
+  }
+
+  Future<void> _disposeController() async {
+    // Native creation can finish after this screen retires. The controller
+    // only releases its native player once initialization has completed.
+    try {
+      await _initializing;
+    } on Object {
+      // Failed creation still needs the controller's stream cleanup.
+    }
+    await _controller.dispose();
   }
 
   @override
@@ -108,7 +121,7 @@ class _ChallengePlaybackState extends State<ChallengePlayback>
     _policy?.cancel();
     if (!_retired) {
       _retired = true;
-      unawaited(_controller.dispose());
+      unawaited(_disposeController());
     }
     unawaited(_playerState?.cancel());
     super.dispose();
