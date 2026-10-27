@@ -70,6 +70,8 @@ const _unreadableId =
     'd4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4';
 const _sharedId =
     'e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5';
+const _sentId =
+    'f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6';
 
 void main() {
   group('a kind 4 the local key cannot decrypt', () {
@@ -86,20 +88,24 @@ void main() {
     late _HeldProcessedGiftWrapsDao ledger;
     late DmRepository repository;
 
-    Event kind4(String id, String content, {List<List<String>>? tags}) =>
-        Event.fromJson({
-          'id': id,
-          'pubkey': peerPubkey,
-          'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000 - 60,
-          'kind': EventKind.directMessage,
-          'tags':
-              tags ??
-              [
-                ['p', ownerPubkey],
-              ],
-          'content': content,
-          'sig': '',
-        });
+    Event kind4(
+      String id,
+      String content, {
+      String? author,
+      List<List<String>>? tags,
+    }) => Event.fromJson({
+      'id': id,
+      'pubkey': author ?? peerPubkey,
+      'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000 - 60,
+      'kind': EventKind.directMessage,
+      'tags':
+          tags ??
+          [
+            ['p', ownerPubkey],
+          ],
+      'content': content,
+      'sig': '',
+    });
 
     String readablePayload() => NIP04.encrypt(
       'hello from the peer',
@@ -180,6 +186,32 @@ void main() {
         expect(
           (await messages()).map((row) => row.content),
           equals(['hello from the peer']),
+        );
+      },
+    );
+
+    test(
+      'leaves a kind 4 this account sent to be stored with its text',
+      () async {
+        relay.add(
+          kind4(
+            _sentId,
+            NIP04.encrypt(
+              'hello from this account',
+              NIP04.getAgreement(_ownerPrivateKey),
+              peerPubkey,
+            ),
+            author: ownerPubkey,
+            tags: [
+              ['p', peerPubkey],
+            ],
+          ),
+        );
+        await handled(_sentId);
+
+        expect(
+          (await messages()).map((row) => row.content),
+          equals(['hello from this account']),
         );
       },
     );
