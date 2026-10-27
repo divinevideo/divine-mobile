@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:developer';
 
 import 'count_response.dart';
@@ -368,6 +369,9 @@ class Nostr {
   /// deadline had already passed, which never reaches the pool.
   ///
   /// Throws [ArgumentError] when [filters] is empty.
+  /// Optional collection budgets bound retained network events, including
+  /// relays ignoring REQ limits. Excess events mark the result possibly capped.
+  /// These budgets do not change socket frame decoding or normal callers.
   Future<QueryResult> readEvents(
     List<Map<String, dynamic>> filters, {
     String? id,
@@ -377,6 +381,8 @@ class Nostr {
     Duration timeout = const Duration(seconds: 5),
     DateTime? deadline,
     bool requireAllRelaysSettled = false,
+    int? maxCollectedEvents,
+    int? maxCollectedBytes,
   }) async {
     final read = await _read(
       filters,
@@ -386,6 +392,8 @@ class Nostr {
       sendAfterAuth: sendAfterAuth,
       deadline: deadline ?? DateTime.now().add(timeout),
       requireAllRelaysSettled: requireAllRelaysSettled,
+      maxCollectedEvents: maxCollectedEvents,
+      maxCollectedBytes: maxCollectedBytes,
     );
     return read.result;
   }
@@ -646,6 +654,8 @@ class Nostr {
     required bool sendAfterAuth,
     required DateTime deadline,
     required bool requireAllRelaysSettled,
+    int? maxCollectedEvents,
+    int? maxCollectedBytes,
   }) async {
     // [RelayPool.query] rejects an empty filter list, and the deadline branch
     // below returns before it is ever called. Validate here so a read is
@@ -694,7 +704,14 @@ class Nostr {
       );
     }
 
+    if ((maxCollectedEvents != null && maxCollectedEvents < 1) ||
+        (maxCollectedBytes != null && maxCollectedBytes < 1)) {
+      throw ArgumentError('Read collection budgets must be positive');
+    }
     final eventBox = EventMemBox(sortAfterAdd: false);
+    var collectedEvents = 0;
+    var collectedBytes = 0;
+    var collectionLimited = false;
     final ended = Completer<QueryOutcome>();
     var endedAtDeadline = false;
 
@@ -721,6 +738,19 @@ class Nostr {
       final fanout = _pool.query(
         filters,
         (event) {
+          if (collectionLimited) return;
+          final bytes = maxCollectedBytes == null
+              ? 0
+              : utf8.encode(jsonEncode(event.toJson())).length;
+          if ((maxCollectedEvents != null &&
+                  collectedEvents >= maxCollectedEvents) ||
+              (maxCollectedBytes != null &&
+                  collectedBytes + bytes > maxCollectedBytes)) {
+            collectionLimited = true;
+            return;
+          }
+          collectedEvents++;
+          collectedBytes += bytes;
           eventBox.add(event);
         },
         id: subscriptionId,
@@ -752,8 +782,9 @@ class Nostr {
           unansweredRelayCount: outcome.unansweredRelayCount,
           rateLimitedRelayCount: outcome.rateLimitedRelayCount,
           closedRelayReasons: outcome.closedRelayReasons,
-          possiblyCapped: outcome.possiblyCapped,
-          confirmedExhaustive: outcome.confirmedExhaustive,
+          possiblyCapped: collectionLimited || outcome.possiblyCapped,
+          confirmedExhaustive:
+              !collectionLimited && outcome.confirmedExhaustive,
         ),
         endedAtDeadline: endedAtDeadline,
         relays: outcome.relays,

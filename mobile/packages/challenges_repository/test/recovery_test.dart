@@ -4,7 +4,7 @@ import 'package:challenge_protocol/challenge_protocol.dart';
 import 'package:challenges_repository/challenges_repository.dart';
 import 'package:test/test.dart';
 
-import 'submission_test.dart' show Harness;
+import 'harness.dart' show Harness;
 
 void main() {
   group('durable recovery boundaries', () {

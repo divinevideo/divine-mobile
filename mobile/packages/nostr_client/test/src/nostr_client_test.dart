@@ -78,6 +78,8 @@ class _MockNostr extends Mock implements Nostr {
     Duration timeout = const Duration(seconds: 5),
     DateTime? deadline,
     bool requireAllRelaysSettled = false,
+    int? maxCollectedEvents,
+    int? maxCollectedBytes,
   }) async {
     final read = await queryEventsDetailed(
       filters,

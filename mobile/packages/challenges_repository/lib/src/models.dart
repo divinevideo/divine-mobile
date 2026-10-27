@@ -7,7 +7,8 @@ final class ChallengeRead {
 
   /// Only a complete indexed set without unresolved dependencies has a count.
   int? get completeEntryCount =>
-      observation.source == ReadSource.indexedApi &&
+      !observation.retentionLimited &&
+          observation.source == ReadSource.indexedApi &&
           observation.completeness == ReadCompleteness.complete &&
           view.state != 'unavailable' &&
           view.pending.isEmpty

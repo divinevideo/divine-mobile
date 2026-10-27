@@ -118,6 +118,9 @@ class QueryResult {
   /// of them. Only the category is kept, never the relay's own text.
   final Map<String, String> closedRelayReasons;
 
+  /// Also true when an opt-in client collection budget discarded events.
+  /// A budget never establishes exhaustive coverage.
+  ///
   /// `true` when a relay may have withheld matching events because the read
   /// reached that relay's own result-size limit, rather than the relay
   /// having no more events to send.

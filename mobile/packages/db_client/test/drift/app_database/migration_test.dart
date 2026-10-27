@@ -306,8 +306,8 @@ void main() {
       });
     }
 
-    test('current schema version is 29', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 29);
+    test('current schema version is 30', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 30);
     });
 
     test(
