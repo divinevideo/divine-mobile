@@ -4939,6 +4939,57 @@ void main() {
         },
       );
 
+      test(
+        'a relevance search for an @-handle keeps profiles named as the bare '
+        'username',
+        () async {
+          stubRestResults([
+            restProfile(pk1Video, 'lauren', followerCount: 500),
+            ProfileSearchResult(
+              pubkey: pk4Videos,
+              name: 'someone',
+              nip05: '_@lauren.divine.video',
+              createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+            ),
+          ]);
+
+          final result = await repoWithFunnelcake
+              .searchUsersProgressive(
+                query: '@lauren',
+                sortBy: profileSearchSortRelevance,
+              )
+              .last;
+
+          expect(result.profiles.map((p) => p.pubkey), [pk1Video, pk4Videos]);
+        },
+      );
+
+      test(
+        'a relevance search keeps a followed partial match below a root '
+        'NIP-05 that names the query',
+        () async {
+          stubRestResults([
+            ProfileSearchResult(
+              pubkey: pk1Video,
+              name: 'someone',
+              nip05: '_@lauren.divine.video',
+              createdAt: DateTime.fromMillisecondsSinceEpoch(1700000000000),
+            ),
+            restProfile(pk4Videos, 'lauren b'),
+          ]);
+
+          final result = await repoWithFunnelcake
+              .searchUsersProgressive(
+                query: 'lauren',
+                sortBy: profileSearchSortRelevance,
+                boostPubkeys: {pk4Videos},
+              )
+              .last;
+
+          expect(result.profiles.map((p) => p.pubkey), [pk1Video, pk4Videos]);
+        },
+      );
+
       test('searchUsersProgressive ranks by video count when a followers sort '
           'is a no-op', () async {
         stubRestResults(resultsInServerOrder());
@@ -5465,6 +5516,33 @@ void main() {
 
       test('does not match a prefix', () {
         expect(ProfileRepository.isExactSearchMatch(profile, 'ali'), isFalse);
+      });
+
+      test('matches a Divine username form as the bare username', () {
+        for (final query in [
+          '@alice',
+          'alice@divine.video',
+          'Alice.divine.video',
+        ]) {
+          expect(
+            ProfileRepository.isExactSearchMatch(profile, query),
+            isTrue,
+            reason: query,
+          );
+        }
+      });
+
+      test('matches the name a root NIP-05 stands for', () {
+        final rootClaim = profile.copyWith(
+          name: 'someone',
+          nip05: '_@alice.divine.video',
+        );
+
+        expect(
+          ProfileRepository.isExactSearchMatch(rootClaim, 'alice'),
+          isTrue,
+        );
+        expect(ProfileRepository.isExactSearchMatch(rootClaim, '_'), isFalse);
       });
     });
 

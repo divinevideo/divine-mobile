@@ -56,12 +56,15 @@ NostrClient.queryUsers                      mobile/packages/nostr_client/
 
 The app uses progressive people search with server sorting (`sortBy` is set).
 That path matches visible identity: name, display name, NIP-05, and the whole
-public key (including a decoded npub query). Bio-only matches from
-REST or NIP-50 are excluded even when they are the only server results. This
-keeps broader server search from filling people results with accounts whose
-visible identity does not match. Other callers of `SearchUtils.matchProfile`
-can still use that helper's broader bio matching. Callers without `sortBy`
-retain their configured filter, or the display-name fallback when none is set.
+public key (including a decoded npub query). A query in a Divine username form
+(`@alice`, `alice@divine.video`, `alice.divine.video`) is compared as the bare
+username, and a root NIP-05 (`_@alice.divine.video`) names `alice`, as
+Funnelcake reads both. Bio-only matches from REST or NIP-50 are excluded even
+when they are the only server results. This keeps broader server search from
+filling people results with accounts whose visible identity does not match.
+Other callers of `SearchUtils.matchProfile` can still use that helper's broader
+bio matching. Callers without `sortBy` retain their configured filter, or the
+display-name fallback when none is set.
 
 ### Order of results
 
@@ -71,10 +74,16 @@ how literally a profile matches plus its activity (followers, videos, loops, a
 profile picture and recent posts). A better match outweighs a small difference
 in activity, but a much more active near match can lead an exact match with
 nothing behind it. Funnelcake also puts the owner of a Divine username searched
-for first. The repository keeps that server order for the profiles the REST
-page returned; profiles only the local cache or NIP-50 found come after them,
-ordered by the app's relevance tiers (exact > prefix > word > substring), as
-does everything before Funnelcake answers.
+for first. The repository keeps that server order for the REST rows that pass
+the matching above; profiles only the local cache or NIP-50 found come after
+them, ordered by the app's relevance tiers (exact > prefix > word > substring),
+as does everything before Funnelcake answers.
+
+That matching is narrower than Funnelcake's in two places. Funnelcake's
+letter-swap matches (a search for `alcie` finding `alice`) are dropped. And when
+the app's own name-server lookup fails, an owner whose name, display name and
+NIP-05 do not contain the username is dropped too, because nothing in the REST
+response says which row the server pinned.
 
 The follow boost and the bloc's promotion of people you follow or have messaged
 move such an account up within the server's order, but never past an exact

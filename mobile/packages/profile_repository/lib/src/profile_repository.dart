@@ -2752,12 +2752,13 @@ class ProfileRepository implements ProfileReader {
   }
 
   /// Whether [profile] exactly matches the people-search [query]: its full
-  /// pubkey or npub, name, display name, NIP-05, or NIP-05 name.
+  /// pubkey or npub, name, display name, NIP-05, or NIP-05 name. A query in a
+  /// Divine username form is compared as the bare username.
   ///
   /// Search keeps exact matches ahead of every boost, so a caller that
   /// reorders results applies the same rule.
   static bool isExactSearchMatch(UserProfile profile, String query) {
-    final normalizedQuery = query.trim().toLowerCase();
+    final normalizedQuery = _matchQuery(query);
     return _searchRelevance(
           profile,
           normalizedQuery,
@@ -2775,7 +2776,7 @@ class ProfileRepository implements ProfileReader {
     List<UserProfile> profiles,
     Set<String>? boostPubkeys,
   ) {
-    final normalizedQuery = query.trim().toLowerCase();
+    final normalizedQuery = _matchQuery(query);
     final queryHex = _npubQueryToHex(normalizedQuery);
     final exact = <UserProfile>[];
     final rest = <UserProfile>[];
@@ -2801,7 +2802,7 @@ class ProfileRepository implements ProfileReader {
     Set<String>? boostPubkeys,
   ) {
     if (boostPubkeys == null || boostPubkeys.isEmpty) return profiles;
-    final normalizedQuery = query.trim().toLowerCase();
+    final normalizedQuery = _matchQuery(query);
     final queryHex = _npubQueryToHex(normalizedQuery);
     final ordered = <UserProfile>[];
     var run = <UserProfile>[];
@@ -2822,23 +2823,24 @@ class ProfileRepository implements ProfileReader {
   /// Orders people search results.
   ///
   /// A [profileSearchSortRelevance] search keeps Funnelcake's order for the
-  /// profiles it returned: the server already weighs match strength against
-  /// creator activity, so an active near match can lead an empty exact one.
-  /// Profiles only a local source found follow, by textual relevance, as does
-  /// everything before the server answers. A follower sort orders by textual
-  /// relevance before the REST counts, so an exact account match is never
-  /// buried beneath popular substring matches.
+  /// matching profiles it returned: the server already weighs match strength
+  /// against creator activity, so an active near match can lead an empty
+  /// exact one. Profiles only a local source found follow, by textual
+  /// relevance, as does everything before the server answers. A follower
+  /// sort orders by textual relevance before the REST counts, so an exact
+  /// account match is never buried beneath popular substring matches.
   static List<UserProfile> _rankSearchResults(
     String query,
     List<UserProfile> profiles,
     String? sortBy,
     Map<String, int> serverPositions,
   ) {
-    final normalizedQuery = query.trim().toLowerCase();
+    final normalizedQuery = _matchQuery(query);
     final queryHex = _npubQueryToHex(normalizedQuery);
     // The search endpoint can return accounts whose visible identity does not
-    // match the query. Keeping them lets a later REST page bury good cached
-    // matches under unrelated, more popular accounts.
+    // match the query, such as a bio or letter-swap match. Keeping them lets a
+    // later REST page bury good cached matches under unrelated, more popular
+    // accounts.
     final matching = profiles
         .where((p) => _searchRelevance(p, normalizedQuery, queryHex) > 0)
         .toList();
@@ -2870,10 +2872,27 @@ class ProfileRepository implements ProfileReader {
     });
   }
 
-  /// Relevance tier of [profile] for an already lowercased, trimmed
-  /// [normalizedQuery]. [queryHex] is the decoded form when the query is an
-  /// npub, so an exact account match never depends on encoding every
-  /// candidate's pubkey.
+  /// The form of a people-search [query] profiles are matched against: the
+  /// bare username for a Divine username form, as Funnelcake compares it, so
+  /// `@alice` and `alice.divine.video` match `alice` exactly; otherwise the
+  /// lowercased, trimmed query.
+  static String _matchQuery(String query) =>
+      _divineUsernameInQuery(query) ?? query.trim().toLowerCase();
+
+  /// The name a lowercased [nip05] stands for: the local part, or the first
+  /// label of the domain for a `_@` root identifier, as Funnelcake reads it,
+  /// so `_@alice.divine.video` and `alice@divine.video` both name `alice`.
+  static String _nip05Name(String nip05) {
+    final at = nip05.indexOf('@');
+    if (at < 0) return nip05;
+    final local = nip05.substring(0, at);
+    if (local != '_') return local;
+    return nip05.substring(at + 1).split('.').first;
+  }
+
+  /// Relevance tier of [profile] for a [normalizedQuery] from [_matchQuery].
+  /// [queryHex] is the decoded form when the query is an npub, so an exact
+  /// account match never depends on encoding every candidate's pubkey.
   static int _searchRelevance(
     UserProfile profile,
     String normalizedQuery,
@@ -2883,7 +2902,7 @@ class ProfileRepository implements ProfileReader {
     final name = profile.name?.trim().toLowerCase() ?? '';
     final displayName = profile.displayName?.trim().toLowerCase() ?? '';
     final nip05 = profile.nip05?.trim().toLowerCase() ?? '';
-    final nip05Name = nip05.split('@').first;
+    final nip05Name = _nip05Name(nip05);
 
     if (pubkey == queryHex ||
         {pubkey, name, displayName, nip05, nip05Name}.contains(
