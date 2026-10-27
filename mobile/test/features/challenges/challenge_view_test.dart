@@ -57,6 +57,7 @@ void main() {
         );
         expect(find.text(h.video.id), findsNothing);
         await tester.scrollUntilVisible(find.text('Agree and submit'), 150);
+        await tester.pump();
         final agree = find.ancestor(
           of: find.text('Agree and submit'),
           matching: find.byType(DivineButton),
