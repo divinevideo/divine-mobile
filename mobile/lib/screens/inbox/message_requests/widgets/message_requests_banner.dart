@@ -28,10 +28,8 @@ class MessageRequestsBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The label already carries the title and the count, so the visible text
-    // is excluded to keep screen readers from announcing it a second time.
-    // Excluding the subtree also drops the GestureDetector's tap action, so
-    // the action is re-declared here.
+    // Excluding the children stops the title and badge being read twice, but
+    // also drops the GestureDetector's tap action, hence onTap here.
     return Semantics(
       button: true,
       excludeSemantics: true,
