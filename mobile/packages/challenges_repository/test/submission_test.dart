@@ -29,6 +29,51 @@ void main() {
       );
       expect(h.signatures, 1);
     });
+    for (final setup in [
+      'unopened rules',
+      'closed rules',
+      'cancelled rules',
+      'unsupported video',
+      'unverifiable video',
+    ]) {
+      test('preparation with $setup requires review', () async {
+        final h = Harness();
+        var definition = h.definition;
+        var video = h.video;
+        switch (setup) {
+          case 'unopened rules':
+            h.now = 99;
+          case 'closed rules':
+            h.now = 200;
+          case 'cancelled rules':
+            definition = NostrEvent.fromJson(
+              h.organizer.definition(status: 'cancelled'),
+            );
+          case 'unsupported video':
+            video = NostrEvent.fromJson(h.creator.sign(kind: 1));
+          case 'unverifiable video':
+            video = NostrEvent(
+              id: h.video.id,
+              pubkey: h.video.pubkey,
+              sig: '0' * 128,
+              createdAt: h.video.createdAt,
+              kind: h.video.kind,
+              content: h.video.content,
+              tags: h.video.tags,
+            );
+        }
+        await expectLater(
+          h.repository.prepareEntry(definition: definition, video: video),
+          throwsA(
+            isA<SubmissionException>().having(
+              (e) => e.status,
+              'status',
+              SubmissionStatus.reviewRequired,
+            ),
+          ),
+        );
+      });
+    }
     test('closed and cancelled revisions require review', () async {
       for (final replacement in ['closed', 'cancelled']) {
         final h = Harness();
@@ -176,6 +221,17 @@ void main() {
         },
       );
     }
+    test('account switch during publication returns saved outcomes', () async {
+      final h = Harness();
+      final review = await h.prepare();
+      h.transport
+        ..outcomes = {h.relay: RelayOutcome.accepted}
+        ..onPublish = () => h.owner = h.organizer.pubkey;
+      final result = await h.repository.submit(review);
+      expect(result.status, SubmissionStatus.ownerChanged);
+      expect(result.action!.submitted, isTrue);
+      expect(result.action!.outcomes, h.store.actions.values.single.outcomes);
+    });
     test(
       'account switch during handoff persistence invalidates preparation',
       () async {
@@ -389,6 +445,16 @@ void main() {
         results.map((r) => r.status),
         everyElement(SubmissionStatus.retryable),
       );
+      expect(h.signatures, 1);
+      expect(h.transport.bodies, hasLength(1));
+    });
+    test('a later submit of stored work signs and publishes nothing', () async {
+      final h = Harness();
+      final review = await h.prepare();
+      final first = await h.repository.submit(review);
+      final later = await h.repository.submit(review);
+      expect(later.status, SubmissionStatus.retryable);
+      expect(later.action!.signedBody, first.action!.signedBody);
       expect(h.signatures, 1);
       expect(h.transport.bodies, hasLength(1));
     });
