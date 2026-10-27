@@ -534,6 +534,7 @@ void main() {
         required DivineVideoClip clip,
         required Duration position,
         required bool isShortLoop,
+        bool isEditingClipMotion = false,
       }) async {
         final states = StreamController<VideoEditorMainState>.broadcast();
         addTearDown(states.close);
@@ -546,15 +547,26 @@ void main() {
           buildWidget(clipState: ClipEditorState(clips: [clip])),
         );
 
+        final playTime = VideoEditorScope.of(
+          tester.element(find.byType(VideoEditorTimelineScaffold)),
+        ).playTimeNotifier;
+        if (isEditingClipMotion) {
+          playTime.value = position;
+        }
+
         states.add(
           VideoEditorMainState(
             currentPosition: position,
             isShortLoop: isShortLoop,
+            isEditingClipMotion: isEditingClipMotion,
           ),
         );
         await tester.pump();
         final onArrival = scrollOffset(tester);
         await tester.pump(const Duration(milliseconds: 300));
+        if (isEditingClipMotion) {
+          expect(playTime.value, position);
+        }
         return (onArrival, scrollOffset(tester));
       }
 
@@ -584,6 +596,41 @@ void main() {
         expect(settled, greaterThan(0));
         expect(onArrival, settled);
       });
+
+      testWidgets('jumps while the clip motion editor hides it', (
+        tester,
+      ) async {
+        // Its scroll drives the paused play time, and the motion editor's
+        // own scrubber already put the play time on the position.
+        final (onArrival, settled) = await followTo(
+          tester,
+          clip: _createTestClip(id: 'a', seconds: 6),
+          position: const Duration(seconds: 2),
+          isShortLoop: false,
+          isEditingClipMotion: true,
+        );
+
+        expect(settled, greaterThan(0));
+        expect(onArrival, settled);
+      });
+
+      testWidgets(
+        'a hidden wrapped timeline cannot overwrite the tool source time',
+        (tester) async {
+          await followTo(
+            tester,
+            clip: _createTestClip(id: 'wrapped', seconds: 4).copyWith(
+              transition: const ClipTransition(
+                type: ClipTransitionType.dissolve,
+              ),
+            ),
+            position: const Duration(milliseconds: 3800),
+            isShortLoop: false,
+            isEditingClipMotion: true,
+          );
+          expect(tester.takeException(), isNull);
+        },
+      );
 
       testWidgets('jumps when a seam makes the player loop short', (
         tester,

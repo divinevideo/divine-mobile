@@ -10404,6 +10404,18 @@ class AppLocalizationsId extends AppLocalizations {
       'Tambahkan keyframe, geser playhead, lalu pindahkan, ubah ukuran, atau putar lapisan. Lapisan akan meluncur dari keyframe ke keyframe.';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      'Tambahkan keyframe, geser playhead, lalu seret, perbesar, atau putar video. Video akan meluncur dari keyframe ke keyframe.';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel =>
+      'Geser, perbesar, dan putar klip';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel =>
+      'Playhead di dalam klip';
+
+  @override
   String get videoEditorTrackLabel => 'Lacak';
 
   @override

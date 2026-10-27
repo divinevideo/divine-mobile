@@ -10715,6 +10715,18 @@ class AppLocalizationsRo extends AppLocalizations {
       'Adaugă un cadru cheie, mută capul de redare, apoi mută, redimensionează sau rotește stratul. Stratul alunecă de la un cadru cheie la altul.';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      'Adaugă un cadru cheie, mută capul de redare, apoi trage, apropie sau rotește videoclipul. Alunecă de la un cadru cheie la altul.';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel =>
+      'Mută, apropie și rotește clipul';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel =>
+      'Capul de redare în clip';
+
+  @override
   String get videoEditorTrackLabel => 'Urmărește';
 
   @override

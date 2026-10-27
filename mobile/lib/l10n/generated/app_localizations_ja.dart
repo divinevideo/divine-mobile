@@ -9977,6 +9977,16 @@ class AppLocalizationsJa extends AppLocalizations {
       'キーフレームを追加し、再生ヘッドを動かしてから、レイヤーを移動・拡大縮小・回転します。レイヤーはキーフレームからキーフレームへなめらかに動きます。';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      'キーフレームを追加し、再生ヘッドを動かしてから、動画をドラッグ・ピンチ・回転します。動画はキーフレームからキーフレームへなめらかに動きます。';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel => 'クリップをパン・ズーム・回転';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel => 'クリップ内の再生ヘッド';
+
+  @override
   String get videoEditorTrackLabel => 'トラッキング';
 
   @override

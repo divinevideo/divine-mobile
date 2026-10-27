@@ -10493,6 +10493,18 @@ class AppLocalizationsSv extends AppLocalizations {
       'Lägg till en nyckelbildruta, flytta uppspelningshuvudet och flytta, skala eller vrid sedan lagret. Det glider från nyckelbildruta till nyckelbildruta.';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      'Lägg till en nyckelbildruta, flytta uppspelningshuvudet och dra, zooma eller vrid sedan videon. Den glider från nyckelbildruta till nyckelbildruta.';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel =>
+      'Panorera, zooma och vrid klippet';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel =>
+      'Uppspelningshuvud i klippet';
+
+  @override
   String get videoEditorTrackLabel => 'Följ';
 
   @override

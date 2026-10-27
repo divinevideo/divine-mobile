@@ -3,7 +3,7 @@ import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/clip_boomerang.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show EditorVideo, VideoSpeedRamp, VideoSpeedRampPoint;
+    show EditorVideo, SegmentKeyframe, VideoSpeedRamp, VideoSpeedRampPoint;
 
 void main() {
   group(ClipBoomerang, () {
@@ -46,6 +46,23 @@ void main() {
             ],
           ),
         );
+      });
+
+      test('keeps the keyframes the clip had before the bounce', () {
+        const keyframes = [
+          SegmentKeyframe(time: Duration(seconds: 3), scale: 1.5),
+        ];
+        final moving = clip.copyWith(
+          boomerang: ClipBoomerang(
+            sourcePath: record.sourcePath,
+            sourceDuration: record.sourceDuration,
+            sourceKeyframes: keyframes,
+          ),
+        );
+
+        final restored = DivineVideoClip.fromJson(moving.toJson(), '/new');
+
+        expect(restored.boomerang?.sourceKeyframes, keyframes);
       });
 
       test('reads as absent without the footage it was made from', () {

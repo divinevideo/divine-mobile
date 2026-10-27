@@ -95,15 +95,30 @@ class ClipSpeedRenderService {
 
   /// Renders (or returns the cached / in-flight) normal-rate body for [clip].
   /// Returns `null` when the clip plays at 1× (nothing to render) or on failure.
-  Future<RenderedSpeedClip?> render(DivineVideoClip clip) {
+  /// [bakeKeyframes] makes a separate body for transition seams: their two
+  /// pictures must move independently before blending. Normal preview bodies
+  /// stay unmoved so live gestures can place them without another encode.
+  Future<RenderedSpeedClip?> render(
+    DivineVideoClip clip, {
+    bool bakeKeyframes = false,
+  }) {
     if (!_needsRender(clip)) return Future<RenderedSpeedClip?>.value();
-    final key = _key(clip);
+    final key =
+        _key(clip) +
+        (bakeKeyframes && clip.keyframes.isNotEmpty
+            ? ':motion:${jsonEncode(clip.keyframes.map((k) => k.toMap()).toList())}'
+            : '');
     final cached = _cachedLive(key);
     if (cached != null) return Future<RenderedSpeedClip?>.value(cached);
     final inFlight = _inFlight[key];
     if (inFlight != null) return inFlight;
     late final Future<RenderedSpeedClip?> render;
-    render = _renderAndClear(clip, key, () => render);
+    render = _renderAndClear(
+      clip,
+      key,
+      () => render,
+      bakeKeyframes: bakeKeyframes,
+    );
     _inFlight[key] = render;
     return render;
   }
@@ -111,10 +126,11 @@ class ClipSpeedRenderService {
   Future<RenderedSpeedClip?> _renderAndClear(
     DivineVideoClip clip,
     String key,
-    Future<RenderedSpeedClip?> Function() currentRender,
-  ) async {
+    Future<RenderedSpeedClip?> Function() currentRender, {
+    required bool bakeKeyframes,
+  }) async {
     try {
-      return await _render(clip, key);
+      return await _render(clip, key, bakeKeyframes: bakeKeyframes);
     } finally {
       if (identical(_inFlight[key], currentRender())) {
         final _ = _inFlight.remove(key);
@@ -128,7 +144,11 @@ class ClipSpeedRenderService {
         clip.video?.file != null;
   }
 
-  Future<RenderedSpeedClip?> _render(DivineVideoClip clip, String key) async {
+  Future<RenderedSpeedClip?> _render(
+    DivineVideoClip clip,
+    String key, {
+    required bool bakeKeyframes,
+  }) async {
     // Reachable only via [render], which gates on [_needsRender] (video
     // non-null). Re-checked here so the type is provably non-null below.
     final video = clip.video;
@@ -197,6 +217,7 @@ class ClipSpeedRenderService {
                   endTime: clip.trimStart + clip.trimmedDuration,
                   playbackSpeed: clip.playbackSpeed,
                   speedRamp: clip.speedRamp,
+                  keyframes: bakeKeyframes ? clip.keyframes : const [],
                 ),
               ],
               shouldOptimizeForNetworkUse: true,

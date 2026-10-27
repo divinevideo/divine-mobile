@@ -10574,6 +10574,18 @@ class AppLocalizationsFil extends AppLocalizations {
       'Magdagdag ng keyframe, ilipat ang playhead, tapos ilipat, i-resize o i-rotate ang layer. Dadausdos ito mula keyframe hanggang keyframe.';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      'Magdagdag ng keyframe, ilipat ang playhead, tapos i-drag, i-zoom o i-rotate ang video. Dadausdos ito mula keyframe hanggang keyframe.';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel =>
+      'I-pan, i-zoom at i-rotate ang clip';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel =>
+      'Playhead sa loob ng clip';
+
+  @override
   String get videoEditorTrackLabel => 'Track';
 
   @override

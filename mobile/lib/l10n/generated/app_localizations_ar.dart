@@ -10477,6 +10477,18 @@ class AppLocalizationsAr extends AppLocalizations {
       'إضافة إطار رئيسي، ثم تحريك رأس التشغيل، ثم تحريك الطبقة أو تغيير حجمها أو تدويرها. تنتقل الطبقة بسلاسة من إطار رئيسي إلى آخر.';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      'أضف إطارًا رئيسيًا، ثم حرّك رأس التشغيل، ثم اسحب الفيديو أو قرّبه أو دوّره. ينتقل بسلاسة من إطار رئيسي إلى آخر.';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel =>
+      'تحريك المقطع وتكبيره وتدويره';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel =>
+      'رأس التشغيل داخل المقطع';
+
+  @override
   String get videoEditorTrackLabel => 'التتبع';
 
   @override

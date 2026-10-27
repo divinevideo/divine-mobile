@@ -10448,6 +10448,18 @@ class AppLocalizationsVi extends AppLocalizations {
       'Thêm khung hình chính, di chuyển đầu phát, rồi di chuyển, đổi kích thước hoặc xoay lớp. Lớp sẽ lướt từ khung hình chính này sang khung hình chính tiếp theo.';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      'Thêm khung hình chính, di chuyển đầu phát, rồi kéo, phóng to hoặc xoay video. Video sẽ lướt từ khung hình chính này sang khung hình chính tiếp theo.';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel =>
+      'Di chuyển, phóng to và xoay clip';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel =>
+      'Đầu phát trong clip';
+
+  @override
   String get videoEditorTrackLabel => 'Theo dõi';
 
   @override

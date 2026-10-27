@@ -10495,6 +10495,17 @@ class AppLocalizationsUr extends AppLocalizations {
       'کی فریم شامل کریں، پلے ہیڈ کو آگے پیچھے کریں، پھر لیئر کو ہلائیں، اس کا سائز بدلیں یا گھمائیں۔ لیئر ایک کی فریم سے اگلے تک سرکتی ہے۔';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      'کی فریم شامل کریں، پلے ہیڈ کو آگے پیچھے کریں، پھر ویڈیو کو گھسیٹیں، زوم کریں یا گھمائیں۔ ویڈیو ایک کی فریم سے اگلے تک سرکتی ہے۔';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel =>
+      'کلپ کو ہلائیں، زوم کریں اور گھمائیں';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel => 'کلپ میں پلے ہیڈ';
+
+  @override
   String get videoEditorTrackLabel => 'ٹریک';
 
   @override

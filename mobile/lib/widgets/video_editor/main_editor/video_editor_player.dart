@@ -25,6 +25,7 @@ class VideoEditorPlayer extends StatelessWidget {
     this.stopMotionFrames,
     this.stopMotionPosition,
     this.frameBuilder,
+    this.surfaceBuilder,
     super.key,
   });
 
@@ -55,6 +56,11 @@ class VideoEditorPlayer extends StatelessWidget {
   /// preview, has to wrap this rather than the whole player to see the frame
   /// the export renders.
   final Widget Function(Widget frame)? frameBuilder;
+
+  /// Wraps the video surface, laid out at the size of the clip's whole frame,
+  /// before the box clips it to the target rect, e.g. to move it by the
+  /// clip's keyframes.
+  final Widget Function(Widget surface)? surfaceBuilder;
 
   @override
   Widget build(BuildContext context) {
@@ -91,15 +97,19 @@ class VideoEditorPlayer extends StatelessWidget {
                                 MediaQuery.devicePixelRatioOf(context))
                             .round(),
                   )
-                : DivineVideoPlayer(
-                    controller: controller,
-                    placeholder: VideoEditorThumbnail(contentSize: renderSize),
-                    // The editor swaps an external thumbnail spinner straight
-                    // to the player once the frame is decoded, so the first
-                    // frame is already rendered when this mounts. Cross-fade
-                    // the thumbnail out instead of hard-cutting (which read as
-                    // a flicker).
-                    crossFadePlaceholder: true,
+                : (surfaceBuilder ?? _unwrapped)(
+                    DivineVideoPlayer(
+                      controller: controller,
+                      placeholder: VideoEditorThumbnail(
+                        contentSize: renderSize,
+                      ),
+                      // The editor swaps an external thumbnail spinner
+                      // straight to the player once the frame is decoded, so
+                      // the first frame is already rendered when this mounts.
+                      // Cross-fade the thumbnail out instead of hard-cutting
+                      // (which read as a flicker).
+                      crossFadePlaceholder: true,
+                    ),
                   ),
           );
           final frameBuilder = this.frameBuilder;
@@ -121,6 +131,8 @@ class VideoEditorPlayer extends StatelessWidget {
     );
   }
 }
+
+Widget _unwrapped(Widget surface) => surface;
 
 class _RoundedRectClipper extends CustomClipper<Path> {
   const _RoundedRectClipper({

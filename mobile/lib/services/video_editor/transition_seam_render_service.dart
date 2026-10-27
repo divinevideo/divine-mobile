@@ -234,10 +234,10 @@ class TransitionSeamRenderService {
       // Before taking a render slot: a body render needs one of its own.
       final bodyA = clipA.speedRamp == null
           ? null
-          : await speedRenders?.render(clipA);
+          : await speedRenders?.render(clipA, bakeKeyframes: true);
       final bodyB = clipB.speedRamp == null
           ? null
-          : await speedRenders?.render(clipB);
+          : await speedRenders?.render(clipB, bakeKeyframes: true);
       if (attempt.cancelled) return null;
 
       final tailClip = _tailClip(
@@ -528,6 +528,9 @@ class TransitionSeamRenderService {
       clearPlaybackSpeed: true,
       clearSpeedRamp: true,
       clearMask: true,
+      // The seam's ramp body was rendered with motion at source timestamps.
+      // Its new playback-time file already carries it.
+      keyframes: const [],
     );
   }
 
@@ -554,7 +557,9 @@ class TransitionSeamRenderService {
   /// v9: pro_video_editor 2.38.0 keeps the outgoing clip through an overlap
   /// blend on iOS/macOS when its file runs past its last video frame, where
   /// an earlier seam lost it partway through.
-  static const _seamCacheVersion = 9;
+  /// v10: seams carry per-source clip motion; the preview no longer moves
+  /// their blended texture again, and ramp bodies bake it before retiming.
+  static const _seamCacheVersion = 10;
 
   String _key(
     DivineVideoClip clipA,
@@ -578,7 +583,8 @@ class TransitionSeamRenderService {
         '${c.equalizer.gains.join(',')}:${c.targetAspectRatio.name}'
         // Only a ramped clip adds its points, so every other seam keeps the
         // key it was persisted under.
-        '${c.speedRamp == null ? '' : ':${c.speedRamp!.toMap()}'}';
+        '${c.speedRamp == null ? '' : ':${c.speedRamp!.toMap()}'}'
+        ':motion:${c.keyframes.map((k) => k.toMap()).toList()}';
     final t =
         '${transition.type.name}:${transition.duration.inMicroseconds}:'
         '${transition.curve.name}:${transition.direction.name}';
@@ -802,6 +808,7 @@ class SeamTimeline {
             composite + outgoing.duration,
             editorStart,
             editorEnd,
+            isSeam: true,
           ),
         );
         composite += outgoing.duration;
@@ -823,6 +830,7 @@ class SeamTimeline {
           composite + wrapSeam.duration,
           editorStart,
           editorStart + wrapDisplay.seamDuration,
+          isSeam: true,
         ),
       );
     }
@@ -842,6 +850,15 @@ class SeamTimeline {
   /// Editor timeline position → composite (player) position.
   Duration timelineToComposite(Duration timeline) =>
       _map(timeline, fromComposite: false);
+
+  /// Whether the picture at [timeline] is a rendered transition. Its motion
+  /// is already baked per source clip, before the pictures are blended.
+  bool isSeamAt(Duration timeline) => _segments.any(
+    (segment) =>
+        segment.isSeam &&
+        timeline >= segment.editorStart &&
+        timeline < segment.editorEnd,
+  );
 
   Duration _map(Duration value, {required bool fromComposite}) {
     if (_segments.isEmpty) return value;
@@ -880,13 +897,15 @@ class _Segment {
     this.compositeStart,
     this.compositeEnd,
     this.editorStart,
-    this.editorEnd,
-  );
+    this.editorEnd, {
+    this.isSeam = false,
+  });
 
   final Duration compositeStart;
   final Duration compositeEnd;
   final Duration editorStart;
   final Duration editorEnd;
+  final bool isSeam;
 
   Duration get compositeDuration => compositeEnd - compositeStart;
   Duration get editorDuration => editorEnd - editorStart;

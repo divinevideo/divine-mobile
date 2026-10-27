@@ -10253,6 +10253,18 @@ class AppLocalizationsAm extends AppLocalizations {
       'ቁልፍ ፍሬም ያክሉ፣ የመጫወቻ ቦታውን ያንቀሳቅሱ፣ ከዚያ ንብርብሩን ያንቀሳቅሱ፣ መጠኑን ይቀይሩ ወይም ያሽከርክሩ። ንብርብሩ ከቁልፍ ፍሬም ወደ ቁልፍ ፍሬም ይንሸራተታል።';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      'ቁልፍ ፍሬም ያክሉ፣ የመጫወቻ ቦታውን ያንቀሳቅሱ፣ ከዚያ ቪዲዮውን ይጎትቱ፣ ያጉሉ ወይም ያሽከርክሩ። ከቁልፍ ፍሬም ወደ ቁልፍ ፍሬም ይንሸራተታል።';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel =>
+      'ክሊፑን ያንቀሳቅሱ፣ ያጉሉ እና ያሽከርክሩ';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel =>
+      'በክሊፑ ውስጥ ያለው የመጫወቻ ቦታ';
+
+  @override
   String get videoEditorTrackLabel => 'መከታተል';
 
   @override

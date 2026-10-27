@@ -9,6 +9,7 @@ import 'package:loop_alignment_repository/loop_alignment_repository.dart';
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
+import 'package:openvine/extensions/clip_keyframes.dart';
 import 'package:openvine/extensions/layer_mask_keyframes.dart';
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/divine_video_clip.dart';
@@ -1884,6 +1885,8 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         trimEnd: clip.trimStart,
         // Mirrored with the footage, so the slow motion stays on its moment.
         speedRamp: clip.speedRamp?.reversed,
+        // The cache holds the whole file reversed; each frame keeps its motion.
+        keyframes: clip.keyframesReversed(Duration.zero, clip.duration),
         reversed: false,
         // A different file is now the clip's video, so a recorded chroma-key
         // source no longer describes it. The key stays baked in; only
@@ -1913,6 +1916,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         trimStart: clip.trimEnd,
         trimEnd: clip.trimStart,
         speedRamp: clip.speedRamp?.reversed,
+        keyframes: clip.keyframesReversed(Duration.zero, clip.duration),
         reversed: true,
         // See the forward branch above.
         clearChromaKey: true,
@@ -2009,6 +2013,11 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         minTrimStart: Duration.zero,
         sourceStartOffset: Duration.zero,
         speedRamp: currentClip.speedRamp?.reversed,
+        // The render reverses only the visible window.
+        keyframes: currentClip.keyframesReversed(
+          clip.trimStart,
+          clip.trimStart + clip.trimmedDuration,
+        ),
         reversed: !clip.reversed,
         forwardVideoPath: forwardVideoPath,
         reversedVideoPath: reversedVideoPath,
@@ -2235,6 +2244,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       speedRamp: ramp == null || forwardShare <= 0 || forwardShare >= 1
           ? ramp
           : ramp.cropped(0, forwardShare),
+      keyframes: record.sourceKeyframes,
       clearBoomerang: true,
       derivedFrom: record.sourceDerivedFrom,
       clearDerivedFrom: record.sourceDerivedFrom == null,
@@ -2427,7 +2437,10 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         sourceMinTrimStart: clip.minTrimStart,
         sourceStartOffset: clip.sourceStartOffset,
         sourceDerivedFrom: clip.derivedFrom,
+        sourceKeyframes: clip.keyframes,
       ),
+      // The render bakes the motion in, forward and back.
+      keyframes: const [],
       // The caches hold the footage before the bounce.
       clearForwardVideoPath: true,
       clearReversedVideoPath: true,
@@ -2653,6 +2666,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       trimEnd: _atLeastZero(clip.trimEnd - (clip.duration - window.end)),
       minTrimStart: Duration.zero,
       sourceStartOffset: clip.sourceStartOffset + window.start,
+      keyframes: clip.keyframesFrom(window.start),
       stabilization: ClipStabilization(
         rawSourcePath: render.rawSourcePath,
         windowStart: window.start,
@@ -2707,6 +2721,7 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
           clip.trimEnd,
       minTrimStart: record.sourceMinTrimStart,
       sourceStartOffset: record.sourceStartOffset,
+      keyframes: clip.keyframesFrom(-record.windowStart),
       clearStabilization: true,
       clearForwardVideoPath: true,
       clearReversedVideoPath: true,
@@ -2967,7 +2982,9 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
         clearDetachingClipId: true,
         lastDetachResult: ClipDetachSuccess(
           previousClips: currentClips,
-          detachedClip: clip,
+          // A layer is moved by keyframes of its own, on the canvas; the
+          // clip's motion stays with the timeline.
+          detachedClip: clip.copyWith(keyframes: const []),
           placeholder: placeholder,
         ),
       ),
@@ -4057,6 +4074,12 @@ class ClipEditorBloc extends Bloc<ClipEditorEvent, ClipEditorState> {
       final updatedClip = currentClip.copyWith(
         video: transformedVideo,
         videoAspectRatio: videoAspectRatio,
+        // The motion keeps its direction on the turned or mirrored frame.
+        keyframes: currentClip.keyframes.turnedAndFlipped(
+          rotateTurns: event.transform.rotateTurns,
+          flipX: event.transform.flipX,
+          flipY: event.transform.flipY,
+        ),
         clearForwardVideoPath: true,
         clearReversedVideoPath: true,
         // The transform re-renders the clip's geometry, so a recorded

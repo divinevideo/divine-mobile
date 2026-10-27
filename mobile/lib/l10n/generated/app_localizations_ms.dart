@@ -10502,6 +10502,18 @@ class AppLocalizationsMs extends AppLocalizations {
       'Tambah bingkai kunci, alihkan kepala main, kemudian alihkan, ubah saiz atau putar lapisan. Lapisan meluncur dari bingkai kunci ke bingkai kunci.';
 
   @override
+  String get videoEditorClipKeyframesHint =>
+      'Tambah bingkai kunci, alihkan kepala main, kemudian seret, zum atau putar video. Video meluncur dari bingkai kunci ke bingkai kunci.';
+
+  @override
+  String get videoEditorClipKeyframesSemanticLabel =>
+      'Gerakkan, zum dan putar klip';
+
+  @override
+  String get videoEditorClipKeyframesScrubberSemanticLabel =>
+      'Kepala main dalam klip';
+
+  @override
   String get videoEditorTrackLabel => 'Jejak';
 
   @override
