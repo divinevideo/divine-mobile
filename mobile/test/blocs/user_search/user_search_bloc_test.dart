@@ -581,6 +581,81 @@ void main() {
       );
 
       test(
+        'the username owner stays ahead of a known account in its run',
+        () async {
+          final owner = createTestProfile('f' * 64, 'AC555');
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer(
+            (_) => Stream.value(
+              ProgressiveSearchResult(
+                profiles: [owner, profiles[0], profiles[1]],
+                sources: const {},
+                isComplete: true,
+                usernameOwnerPubkey: owner.pubkey,
+              ),
+            ),
+          );
+          final bloc = createBloc(rankingSignalsLoader: loader);
+          addTearDown(bloc.close);
+          await search(bloc);
+          expect(bloc.state.results, [owner, profiles[1], profiles[0]]);
+        },
+      );
+
+      test(
+        'shown rows take the server order as soon as Funnelcake answers',
+        () async {
+          final stream = StreamController<ProgressiveSearchResult>();
+          addTearDown(stream.close);
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer((_) => stream.stream);
+          final bloc = createBloc(rankingSignalsLoader: loader);
+          addTearDown(bloc.close);
+          bloc.add(const UserSearchQueryChanged('alice'));
+          final cached = bloc.stream.firstWhere((s) => s.results.isNotEmpty);
+          stream.add(
+            ProgressiveSearchResult(
+              profiles: [profiles[0], profiles[2]],
+              sources: const {},
+              isComplete: false,
+            ),
+          );
+          await cached;
+          expect(bloc.state.results, [profiles[0], profiles[2]]);
+          final answered = bloc.stream.firstWhere(
+            (s) => s.results.length == 3,
+          );
+          stream.add(
+            ProgressiveSearchResult(
+              profiles: [profiles[3], profiles[2], profiles[0]],
+              sources: const {
+                SearchSource.funnelcakeApi: SearchSourceSuccess(
+                  resultCount: 3,
+                  latencyMs: 1,
+                ),
+              },
+              isComplete: false,
+            ),
+          );
+          await answered;
+          expect(bloc.state.status, isNot(UserSearchStatus.success));
+          expect(bloc.state.results, [profiles[3], profiles[2], profiles[0]]);
+        },
+      );
+
+      test(
         'resuming the same query retains the inherited progressive prefix',
         () async {
           final prefix = profiles.take(2).toList();
