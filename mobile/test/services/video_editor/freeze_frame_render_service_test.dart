@@ -187,6 +187,62 @@ void main() {
         expect(freeze.budgetDuration, FreezeFrameRenderService.defaultDuration);
       });
 
+      testWidgets('holds clip motion before cropping the extracted frame', (
+        tester,
+      ) async {
+        await tester.runAsync(() async {
+          final recorder = PictureRecorder();
+          Canvas(recorder)
+            ..drawRect(
+              const Rect.fromLTWH(0, 0, 80, 90),
+              Paint()..color = const Color(0xFF0000FF),
+            )
+            ..drawRect(
+              const Rect.fromLTWH(80, 0, 80, 90),
+              Paint()..color = const Color(0xFFFF0000),
+            );
+          final picture = recorder.endRecording();
+          final image = await picture.toImage(160, 90);
+          final png = await image.toByteData(format: ImageByteFormat.png);
+          image.dispose();
+          picture.dispose();
+          ProVideoEditor.instance = _FakeProVideoEditor(
+            frame: png!.buffer.asUint8List(),
+            probedDuration: FreezeFrameRenderService.reserveDuration,
+          );
+          final freeze = await FreezeFrameRenderService.render(
+            source: _clip(originalAspectRatio: 160 / 90).copyWith(
+              keyframes: const [
+                SegmentKeyframe(time: Duration.zero, offset: Offset(0.25, 0)),
+              ],
+            ),
+            framePosition: const Duration(seconds: 1),
+          );
+          expect(freeze, isNotNull);
+          final codec = await instantiateImageCodec(
+            File(freeze!.thumbnailPath!).readAsBytesSync(),
+          );
+          final held = (await codec.getNextFrame()).image;
+          final pixels = await held.toByteData();
+          // The pan selects source x=40, outside the central portrait crop.
+          // Moving after cropping would leave black here instead of blue.
+          final center =
+              ((held.height ~/ 2) * held.width + held.width ~/ 2) * 4;
+          expect(pixels!.buffer.asUint8List().sublist(center, center + 4), [
+            0,
+            0,
+            255,
+            255,
+          ]);
+          expect(
+            freeze.keyframes,
+            isEmpty,
+          ); // The held image already carries it.
+          held.dispose();
+          codec.dispose();
+        });
+      });
+
       test('holds the frame read at the requested position', () async {
         final editor = _FakeProVideoEditor(
           frame: Uint8List.fromList([7, 7, 7]),
