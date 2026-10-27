@@ -20,7 +20,8 @@ void main() {
           ),
         );
 
-        expect(find.text('Message requests'), findsOneWidget);
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.inboxMessageRequestsTitle), findsOneWidget);
       });
 
       testWidgets('renders count badge with number', (tester) async {
@@ -44,7 +45,8 @@ void main() {
           ),
         );
 
-        expect(find.text('Message requests'), findsOneWidget);
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.inboxMessageRequestsTitle), findsOneWidget);
         expect(find.text('0'), findsNothing);
       });
 
