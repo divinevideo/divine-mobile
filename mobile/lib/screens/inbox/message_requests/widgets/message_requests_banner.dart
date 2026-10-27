@@ -1,6 +1,6 @@
 // ABOUTME: Banner widget for message requests shown at top of inbox.
 // ABOUTME: Shows "Message requests" label with unread badge and chevron.
-// ABOUTME: Rendered whenever a request exists, live or dismissed.
+// ABOUTME: InboxView decides when it shows; a zero count hides the badge.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
