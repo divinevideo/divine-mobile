@@ -448,5 +448,15 @@ void main() {
       expect(h.signatures, 1);
       expect(h.transport.bodies, hasLength(1));
     });
+    test('a later submit of stored work signs and publishes nothing', () async {
+      final h = Harness();
+      final review = await h.prepare();
+      final first = await h.repository.submit(review);
+      final later = await h.repository.submit(review);
+      expect(later.status, SubmissionStatus.retryable);
+      expect(later.action!.signedBody, first.action!.signedBody);
+      expect(h.signatures, 1);
+      expect(h.transport.bodies, hasLength(1));
+    });
   });
 }

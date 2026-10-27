@@ -522,6 +522,26 @@ void main() {
       );
       expect(h.signatures, 0);
     });
+    test('forged out-of-window review time never reaches the signer', () async {
+      final h = Harness();
+      final review = await h.prepare();
+      final forged = SubmissionReview(
+        owner: review.owner,
+        definition: review.definition,
+        video: review.video,
+        fields: UnsignedChallengeAction(
+          kind: review.fields.kind,
+          createdAt: 99,
+          content: review.fields.content,
+          tags: review.fields.tags,
+        ),
+      );
+      expect(
+        (await h.repository.submit(forged)).status,
+        SubmissionStatus.reviewRequired,
+      );
+      expect(h.signatures, 0);
+    });
     test('unknown persisted malformed signature never republishes', () async {
       final h = Harness();
       final review = await h.prepare();
@@ -530,6 +550,16 @@ void main() {
       final retried = await h.createRepository().retry(review.id);
       expect(retried.status, SubmissionStatus.invalidSignedEvent);
       expect(retried.action!.signedBody, tampered);
+      expect(h.transport.bodies, hasLength(1));
+    });
+    test('a later submit refuses tampered stored work', () async {
+      final h = Harness();
+      final review = await h.prepare();
+      final original = (await h.repository.submit(review)).action!;
+      final tampered = await _storeTamperedBody(h, original);
+      final result = await h.repository.submit(review);
+      expect(result.status, SubmissionStatus.invalidSignedEvent);
+      expect(result.action!.signedBody, tampered);
       expect(h.transport.bodies, hasLength(1));
     });
     test(
