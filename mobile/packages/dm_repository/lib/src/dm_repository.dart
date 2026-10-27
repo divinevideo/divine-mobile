@@ -37,6 +37,7 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
 import 'package:nostr_sdk/filter.dart' as nostr_filter;
+import 'package:nostr_sdk/nip04/nip04.dart';
 import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:nostr_sdk/nip19/pubkeys_equal.dart';
 import 'package:nostr_sdk/nip59/gift_wrap_batch_unwrap.dart';
@@ -5210,6 +5211,21 @@ class DmRepository {
       // A missing recipient is rejected before decryption, so recording it in
       // the processed ledger would not avoid cryptographic work on replay.
       if (recipientPubkey == null) return;
+
+      // Content that is not `<ciphertext>?iv=<iv>` cannot decrypt under any
+      // key or signer: drop it for good instead of asking one (#8712). An
+      // injected decryptor replaces NIP-04 decryption and judges its own input.
+      if (_nip04Decryptor == null &&
+          !NIP04.isWellFormedPayload(nip04Event.content)) {
+        await _recordProcessedWrap(nip04Event.id, ownerPubkey: ownerPubkey);
+        Log.debug(
+          'Dropped NIP-04 event ${nip04Event.id} from '
+          '${pubkeyForLogs(nip04Event.pubkey)}: content is not a NIP-04 '
+          'payload',
+          category: LogCategory.system,
+        );
+        return;
+      }
 
       // Determine sender and the other party's pubkey for decryption
       final senderPubkey = nip04Event.pubkey;
