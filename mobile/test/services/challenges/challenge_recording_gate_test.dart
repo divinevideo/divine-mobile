@@ -14,7 +14,7 @@ void main() {
       const recorder = Key('recorder');
       await tester.pumpWidget(
         MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
           home: ChallengeRecordingGate(
             prepare: () => ready.future,
