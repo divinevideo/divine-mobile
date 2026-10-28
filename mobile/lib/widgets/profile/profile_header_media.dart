@@ -784,26 +784,47 @@ class _ProfileActionLabel extends StatelessWidget {
   }
 }
 
-/// The Divine mascot at the size of a pending-action icon. Decorative: the
-/// label beside it carries the meaning.
+/// The Divine mascot on a pending-action pill. Decorative: the label beside it
+/// carries the meaning.
+///
+/// The drawing fills only ~73% of its square raster, so the image is drawn
+/// larger than its slot: the visible mascot then matches the label's line
+/// height while the slot, and so the pill, keeps the height of the others.
 class _ProfileActionMascot extends StatelessWidget {
   const _ProfileActionMascot();
 
   /// The mascot's raster, declared with the rest of `assets/icon/`.
   static const asset = 'assets/icon/MascotCropped=yes.png';
-  static const _size = 16.0;
+
+  /// The label's line height (`titleSmall`: 14px at 20/14).
+  static const _slotHeight = 20.0;
+  static const _drawnSize = 27.0;
+
+  /// The drawing sits above the raster's centre; this re-centres it.
+  static const _drawingOffset = Offset(0, 1);
 
   @override
   Widget build(BuildContext context) {
     // Decode at the drawn size rather than the 769px source.
-    final cacheSize = (_size * MediaQuery.devicePixelRatioOf(context)).round();
+    final cacheSize = (_drawnSize * MediaQuery.devicePixelRatioOf(context))
+        .round();
     return ExcludeSemantics(
-      child: Image.asset(
-        asset,
-        width: _size,
-        height: _size,
-        cacheWidth: cacheSize,
-        cacheHeight: cacheSize,
+      child: SizedBox(
+        width: _drawnSize,
+        height: _slotHeight,
+        child: OverflowBox(
+          maxHeight: _drawnSize,
+          child: Transform.translate(
+            offset: _drawingOffset,
+            child: Image.asset(
+              asset,
+              width: _drawnSize,
+              height: _drawnSize,
+              cacheWidth: cacheSize,
+              cacheHeight: cacheSize,
+            ),
+          ),
+        ),
       ),
     );
   }
