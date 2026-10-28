@@ -29,70 +29,77 @@ class _Auth extends Fake implements AuthService {
 }
 
 void main() {
-  test(
-    'shares room sessions and closes old sessions on account/access changes',
-    () async {
-      final database = AppDatabase.test(NativeDatabase.memory());
-      addTearDown(database.close);
-      final account = StateProvider((ref) => '01' * 32);
-      final enabled = StateProvider((ref) => true);
-      final container = ProviderContainer(
-        overrides: [
-          authServiceProvider.overrideWith((ref) => _Auth(ref.watch(account))),
-          databaseProvider.overrideWithValue(database),
-          isFeatureEnabledProvider(FeatureFlag.concordChat)
-              .overrideWith((ref) => ref.watch(enabled)),
-          isDmRestrictedProvider.overrideWithValue(false),
-        ],
-      );
-      addTearDown(container.dispose);
-      final subscription = container.listen<RoomActivityRepository?>(
-        roomActivityRepositoryProvider,
-        (_, _) {},
-      );
-      addTearDown(subscription.close);
-      final first = container.read(roomActivityRepositoryProvider)!;
-      expect(
-        identical(first, container.read(roomActivityRepositoryProvider)),
-        isTrue,
-      );
-      expect(first.summaries, hasLength(2));
-      // A queued send must fail closed even before provider invalidation.
-      final auth = container.read(authServiceProvider) as _Auth;
-      auth.currentPublicKeyHex = '03' * 32;
-      await expectLater(
-        first.repositoryFor(first.summaries.keys.first).sealedTransport!.signer(
-          {
-            'kind': 20013,
-            'tags': <List<String>>[],
-            'content': '',
-            'created_at': 1,
-          },
-        ),
-        throwsA(
-          isA<StateError>().having(
-            (error) => error.message,
-            'message',
-            'chat session is no longer active',
+  group('roomActivityRepositoryProvider', () {
+    test(
+      'shares room sessions and closes old sessions on account/access changes',
+      () async {
+        final database = AppDatabase.test(NativeDatabase.memory());
+        addTearDown(database.close);
+        final account = StateProvider((ref) => '01' * 32);
+        final enabled = StateProvider((ref) => true);
+        final container = ProviderContainer(
+          overrides: [
+            authServiceProvider.overrideWith(
+              (ref) => _Auth(ref.watch(account)),
+            ),
+            databaseProvider.overrideWithValue(database),
+            isFeatureEnabledProvider(FeatureFlag.concordChat)
+                .overrideWith((ref) => ref.watch(enabled)),
+            isDmRestrictedProvider.overrideWithValue(false),
+          ],
+        );
+        addTearDown(container.dispose);
+        final subscription = container.listen<RoomActivityRepository?>(
+          roomActivityRepositoryProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        final first = container.read(roomActivityRepositoryProvider)!;
+        expect(
+          identical(first, container.read(roomActivityRepositoryProvider)),
+          isTrue,
+        );
+        expect(first.summaries, hasLength(2));
+        // A queued send must fail closed even before provider invalidation.
+        final auth = container.read(authServiceProvider) as _Auth;
+        auth.currentPublicKeyHex = '03' * 32;
+        await expectLater(
+          first
+              .repositoryFor(first.summaries.keys.first)
+              .sealedTransport!
+              .signer(
+                {
+                  'kind': 20013,
+                  'tags': <List<String>>[],
+                  'content': '',
+                  'created_at': 1,
+                },
+              ),
+          throwsA(
+            isA<StateError>().having(
+              (error) => error.message,
+              'message',
+              'chat session is no longer active',
+            ),
           ),
-        ),
-      );
-      auth.currentPublicKeyHex = '01' * 32;
-      container.read(account.notifier).state = '02' * 32;
-      await container.pump();
-      final second = container.read(roomActivityRepositoryProvider)!;
-      expect(identical(first, second), isFalse);
-      await expectLater(
-        first.ensureStarted(first.summaries.keys.first),
-        throwsStateError,
-      );
-      container.read(enabled.notifier).state = false;
-      await container.pump();
-      expect(container.read(roomActivityRepositoryProvider), isNull);
-      await expectLater(
-        second.ensureStarted(second.summaries.keys.first),
-        throwsStateError,
-      );
-    },
-  );
+        );
+        auth.currentPublicKeyHex = '01' * 32;
+        container.read(account.notifier).state = '02' * 32;
+        await container.pump();
+        final second = container.read(roomActivityRepositoryProvider)!;
+        expect(identical(first, second), isFalse);
+        await expectLater(
+          first.ensureStarted(first.summaries.keys.first),
+          throwsStateError,
+        );
+        container.read(enabled.notifier).state = false;
+        await container.pump();
+        expect(container.read(roomActivityRepositoryProvider), isNull);
+        await expectLater(
+          second.ensureStarted(second.summaries.keys.first),
+          throwsStateError,
+        );
+      },
+    );
+  });
 }
