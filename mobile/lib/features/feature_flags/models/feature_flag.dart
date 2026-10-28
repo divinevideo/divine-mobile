@@ -7,7 +7,8 @@ enum FeatureFlag {
   shortLinksSharing(
     'Short Links',
     'Use permanent short URLs for external video and profile sharing. '
-        'Internal canary only; off preserves full URLs.',
+        'On by default in native builds; off preserves full URLs. '
+        'Overrides are internal only.',
     audience: FeatureFlagAudience.internal,
   ),
   publishingIdeas(
