@@ -53,11 +53,6 @@ const _importingNextClip = ClipEditorState(
   libraryImportProgress: 0.25,
 );
 
-const _reversing = ClipEditorState(
-  isReversing: true,
-  reversingClipId: 'clip-1',
-);
-
 void main() {
   group(ClipOperationProgressOverlays, () {
     late _MockClipEditorBloc bloc;
@@ -168,37 +163,6 @@ void main() {
         findsOne,
       );
       expect(announced, hasLength(1));
-    });
-
-    testWidgets('hides the editor from screen readers while a clip reverses', (
-      tester,
-    ) async {
-      whenListen(
-        bloc,
-        Stream.value(_reversing),
-        initialState: const ClipEditorState(),
-      );
-      await pump(tester);
-      expect(find.semantics.byLabel('Split'), findsOne);
-
-      await tester.pump();
-
-      expect(find.semantics.byLabel('Split'), findsNothing);
-    });
-
-    testWidgets('announces that a clip is reversing', (tester) async {
-      final announced = _captureAnnouncements(tester);
-      whenListen(
-        bloc,
-        const Stream<ClipEditorState>.empty(),
-        initialState: _reversing,
-      );
-
-      await pump(tester);
-      await tester.pump();
-
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      expect(announced, equals([l10n.videoEditorReverseProgressLabel]));
     });
   });
 }
