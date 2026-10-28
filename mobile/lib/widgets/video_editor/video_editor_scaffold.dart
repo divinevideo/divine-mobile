@@ -2,13 +2,9 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/effects_editor/video_editor_effects_cubit.dart';
-import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
-import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
-import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/branded_loading_scaffold.dart';
 import 'package:openvine/widgets/video_editor/clip_editor_result_listeners.dart';
 import 'package:openvine/widgets/video_editor/clip_operation_progress_overlays.dart';
@@ -21,7 +17,6 @@ import 'package:openvine/widgets/video_editor/filter_editor/video_editor_filter_
 import 'package:openvine/widgets/video_editor/filter_editor/video_editor_filter_overlay_controls.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_caption_preview_overlay.dart';
-import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_actions_sheet.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_overlay_actions.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor_view.dart';
@@ -54,7 +49,12 @@ class VideoEditorScaffold extends StatelessWidget {
         child: Stack(
           fit: .expand,
           children: [
-            _EditorScaffold(
+            // No bottom bar: the Edit button overlays the timeline in the slot
+            // of its context controls (see TimelineControlsBar), so showing or
+            // hiding it never resizes the canvas.
+            Scaffold(
+              backgroundColor: context.vineColors.surfaceContainerHigh,
+              resizeToAvoidBottomInset: false,
               body: LayerTrackingResultListener(
                 child: ClipEditorResultListeners(
                   child: _ScaffoldBody(isLoading: isLoading),
@@ -71,9 +71,9 @@ class VideoEditorScaffold extends StatelessWidget {
 
 /// The progress overlays of long editor operations, above the whole scaffold.
 ///
-/// The editing-tools bar is the scaffold's bottom bar and stays up during a
-/// library import; from inside the body, the overlays could neither absorb
-/// its taps nor hide it from screen readers.
+/// Covering the scaffold rather than one part of it keeps every editor
+/// control, the Edit button on the timeline included, from taking taps or
+/// screen-reader focus mid-operation.
 class _OperationProgressOverlays extends StatelessWidget {
   const _OperationProgressOverlays();
 
@@ -400,74 +400,6 @@ class _BottomActions extends StatelessWidget {
         // rendered for draw/filter/tune/effects, but handle gracefully.
         _ => const SizedBox.shrink(),
       },
-    );
-  }
-}
-
-/// Keeps the scaffold's bottom-bar slot empty when editor controls own the inset.
-class _EditorScaffold extends StatelessWidget {
-  const _EditorScaffold({required this.body});
-
-  final Widget body;
-
-  @override
-  Widget build(BuildContext context) {
-    final shouldHide = context.select(
-      (VideoEditorMainBloc b) =>
-          b.state.isSubEditorOpen ||
-          b.state.isCanvasFullscreen ||
-          b.state.isTimelineHiddenByUser ||
-          b.state.isMarkerMode,
-    );
-    final isOverlayInteracting = context.select(
-      (TimelineOverlayBloc b) =>
-          b.state.selectedItemId != null || b.state.isLayerMultiSelectMode,
-    );
-    final isClipInteracting = context.select(
-      (ClipEditorBloc b) => b.state.isEditing || b.state.isMultiSelectMode,
-    );
-    // Anything added now would be saved with the previewed loop trim.
-    final hasLoopSuggestion = context.select(
-      (LoopSuggestionCubit c) =>
-          c.state.status == LoopSuggestionStatus.searching,
-    );
-
-    final hideTools =
-        shouldHide ||
-        isOverlayInteracting ||
-        isClipInteracting ||
-        hasLoopSuggestion;
-
-    return Scaffold(
-      backgroundColor: context.vineColors.surfaceContainerHigh,
-      resizeToAvoidBottomInset: false,
-      // A non-null slot strips the body's bottom padding even at zero height.
-      // Hidden tools must leave that inset available to the editing controls.
-      bottomNavigationBar: hideTools ? null : const _EditingToolsBarContent(),
-      body: body,
-    );
-  }
-}
-
-class _EditingToolsBarContent extends StatelessWidget {
-  const _EditingToolsBarContent();
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-        child: DivineButton(
-          label: context.l10n.videoActionEdit,
-          leadingIcon: .slidersHorizontal,
-          trailingIcon: .caretUp,
-          type: .quiet,
-          expanded: true,
-          maxLines: 2,
-          onPressed: () => VideoEditorMainActionsSheet.show(context),
-        ),
-      ),
     );
   }
 }
