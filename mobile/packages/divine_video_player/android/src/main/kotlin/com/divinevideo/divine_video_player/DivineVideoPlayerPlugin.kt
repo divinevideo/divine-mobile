@@ -164,8 +164,11 @@ class DivineVideoPlayerPlugin : FlutterPlugin, MethodChannel.MethodCallHandler, 
                     val textureId = instance.enableTextureOutput(
                         binding.textureRegistry,
                         useLegacySurface = useLegacySurface,
+                        upscale = VideoUpscale.Mode.fromWire(call.argument<String>("upscale")),
                     )
-                    result.success(mapOf("textureId" to textureId))
+                    result.success(
+                        mapOf("textureId" to textureId, "upscales" to instance.upscalesFrames),
+                    )
                 } else {
                     result.success(null)
                 }

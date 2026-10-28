@@ -1286,6 +1286,106 @@ void main() {
         expect(globalCalls, isEmpty);
       });
     });
+
+    group('upscaling', () {
+      /// Initializes a texture controller whose native side answers
+      /// `create` with [upscales].
+      Future<DivineVideoPlayerController> initTextureController({
+        required bool upscales,
+      }) async {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+              const MethodChannel('divine_video_player'),
+              (call) async {
+                globalCalls.add(call);
+                if (call.method != 'create') return null;
+                final id = (call.arguments as Map)['id'] as int;
+                TestDefaultBinaryMessengerBinding
+                    .instance
+                    .defaultBinaryMessenger
+                    .setMockMethodCallHandler(
+                      MethodChannel('divine_video_player/player_$id'),
+                      (call) async {
+                        playerCalls.add(call);
+                        return null;
+                      },
+                    );
+                TestDefaultBinaryMessengerBinding
+                    .instance
+                    .defaultBinaryMessenger
+                    .setMockStreamHandler(
+                      EventChannel('divine_video_player/player_$id/events'),
+                      _TestStreamHandler(eventController),
+                    );
+                return <Object?, Object?>{
+                  'textureId': 7,
+                  'upscales': upscales,
+                };
+              },
+            );
+        final textureController = DivineVideoPlayerController(
+          useTexture: true,
+        );
+        await textureController.initialize();
+        return textureController;
+      }
+
+      test('defaults to off', () {
+        expect(DivineVideoPlayerController.upscaling, VideoUpscaling.off);
+      });
+
+      test('asks create for the upscaling set at the time', () async {
+        DivineVideoPlayerController.upscaling = VideoUpscaling.lanczos;
+        addTearDown(
+          () => DivineVideoPlayerController.upscaling = VideoUpscaling.off,
+        );
+
+        await initTextureController(upscales: true);
+
+        final create = globalCalls.singleWhere((c) => c.method == 'create');
+        expect((create.arguments as Map)['upscale'], equals('lanczos'));
+      });
+
+      test('upscalesFrames follows what the native side settled on', () async {
+        final upscaling = await initTextureController(upscales: true);
+        final plain = await initTextureController(upscales: false);
+
+        expect(upscaling.upscalesFrames, isTrue);
+        expect(plain.upscalesFrames, isFalse);
+      });
+
+      test('setUpscaleTarget sends the size when upscaling', () async {
+        final upscaling = await initTextureController(upscales: true);
+
+        await upscaling.setUpscaleTarget(width: 1316, height: 2340);
+
+        final call = playerCalls.singleWhere(
+          (c) => c.method == 'setUpscaleTarget',
+        );
+        expect(
+          call.arguments,
+          equals(<String, Object?>{'width': 1316, 'height': 2340}),
+        );
+      });
+
+      test('setUpscaleTarget sends nothing when not upscaling', () async {
+        final plain = await initTextureController(upscales: false);
+
+        await plain.setUpscaleTarget(width: 1316, height: 2340);
+
+        expect(
+          playerCalls.where((c) => c.method == 'setUpscaleTarget'),
+          isEmpty,
+        );
+      });
+
+      test('setUpscaleTarget throws before initialize', () {
+        expect(
+          () => controller.setUpscaleTarget(width: 1, height: 1),
+          throwsStateError,
+        );
+      });
+    });
   });
 }
 

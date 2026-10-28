@@ -6,6 +6,7 @@ import 'package:divine_video_player/src/linux/linux_video_player_backend.dart';
 import 'package:divine_video_player/src/video_buffer_profile.dart';
 import 'package:divine_video_player/src/video_clip.dart';
 import 'package:divine_video_player/src/video_player_state.dart';
+import 'package:divine_video_player/src/video_upscaling.dart';
 import 'package:divine_video_player/src/web/web_video_player_backend.dart';
 import 'package:divine_video_player/src/web/web_video_player_backend_factory.dart';
 import 'package:flutter/foundation.dart';
@@ -324,6 +325,12 @@ class DivineVideoPlayerController {
     });
   }
 
+  /// How texture players created from now on scale their frames up to the
+  /// size they are shown at. A player keeps the value it was created with.
+  ///
+  /// Defaults to [VideoUpscaling.off]. See [VideoUpscaling].
+  static VideoUpscaling upscaling = VideoUpscaling.off;
+
   /// Pre-loads video metadata, and on Android the initial buffer of an
   /// HTTP(S) source into the disk cache, without creating a player instance.
   ///
@@ -370,6 +377,14 @@ class DivineVideoPlayerController {
   /// Only non-null after [initialize] completes when [useTexture] is
   /// `true`.
   int? get textureId => _textureId;
+
+  var _upscalesFrames = false;
+
+  /// Whether the native player scales this texture's frames up itself, as
+  /// settled at [initialize] from [upscaling] and what the device allows.
+  /// The video widget then reports the texture's on-screen size through
+  /// [setUpscaleTarget].
+  bool get upscalesFrames => _upscalesFrames;
 
   /// Whether this controller instance is backed by the Linux Dart backend.
   bool get usesLinuxBackend => _isLinuxBackend;
@@ -441,10 +456,12 @@ class DivineVideoPlayerController {
           'useLegacySurface': useLegacySurface,
           'bufferProfile': bufferProfile.wireValue,
           'debugLabel': debugLabel,
+          'upscale': upscaling.wireValue,
         },
       );
       if (useTexture && result != null) {
         _textureId = result['textureId'] as int?;
+        _upscalesFrames = result['upscales'] == true;
       }
 
       _eventSubscription = _eventChannel.receiveBroadcastStream().listen(
@@ -644,6 +661,21 @@ class DivineVideoPlayerController {
     if (_isWebBackend) return _webBackend!.setLooping(looping: looping);
     if (_isLinuxBackend) return _linuxBackend!.setLooping(looping: looping);
     await _methodChannel.invokeMethod<void>('setLooping', {'looping': looping});
+  }
+
+  /// Tells the native player the size its texture is shown at, in physical
+  /// pixels, so it can scale frames up to exactly that size. A no-op unless
+  /// [upscalesFrames].
+  Future<void> setUpscaleTarget({
+    required int width,
+    required int height,
+  }) async {
+    _ensureInitialized();
+    if (!_upscalesFrames) return;
+    await _methodChannel.invokeMethod<void>('setUpscaleTarget', {
+      'width': width,
+      'height': height,
+    });
   }
 
   /// Jumps playback to the start of the clip at [index].

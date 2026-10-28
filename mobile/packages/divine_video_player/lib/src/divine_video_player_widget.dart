@@ -166,7 +166,7 @@ class _RotatingTexture extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final texture = Texture(textureId: controller.textureId!);
-    return StreamBuilder<int>(
+    final rotating = StreamBuilder<int>(
       stream: controller.stateStream.map((s) => s.rotationDegrees).distinct(),
       initialData: controller.state.rotationDegrees,
       builder: (context, snapshot) {
@@ -175,7 +175,104 @@ class _RotatingTexture extends StatelessWidget {
         return RotatedBox(quarterTurns: rotation ~/ 90, child: texture);
       },
     );
+    if (!controller.upscalesFrames) return rotating;
+    return _UpscaleTargetReporter(controller: controller, child: rotating);
   }
+}
+
+/// How often [_UpscaleTargetReporter] measures the texture again.
+@visibleForTesting
+const upscaleTargetSampleInterval = Duration(milliseconds: 400);
+
+/// Measures the size the texture ends up at on screen, after every
+/// enclosing transform such as a [FittedBox], and reports it to the player
+/// so its upscale stage draws frames at exactly that size.
+///
+/// A texture off screen reports a zero size, so the player keeps its frames
+/// at their own size: a feed preloads the videos around the current one,
+/// and screen-sized buffers for all three cost about 240 MB of graphics
+/// memory on a Galaxy S26, against about 80 MB for the one on screen.
+///
+/// The first measurement, and any move on or off screen, goes out at once,
+/// so a feed video is sharp from its first frames. A new size while on
+/// screen goes out only once two samples in a row agree, so a hero flight
+/// does not resize the player's surface on every tick. Polls rather than
+/// listening to layout, because a parent transform can change without this
+/// subtree laying out again.
+class _UpscaleTargetReporter extends StatefulWidget {
+  const _UpscaleTargetReporter({required this.controller, required this.child});
+
+  final DivineVideoPlayerController controller;
+  final Widget child;
+
+  @override
+  State<_UpscaleTargetReporter> createState() => _UpscaleTargetReporterState();
+}
+
+class _UpscaleTargetReporterState extends State<_UpscaleTargetReporter> {
+  late final Timer _timer;
+  Size? _lastSample;
+  Size? _sent;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(
+      upscaleTargetSampleInterval,
+      (_) => _sample(immediate: false),
+    );
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _sample(immediate: true),
+    );
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  /// The timer stops in [dispose] and the post-frame callback runs at the
+  /// end of the frame that mounted this widget, so it is mounted here.
+  void _sample({required bool immediate}) {
+    final box = context.findRenderObject();
+    // A subtree its parent never laid out has no size to report yet.
+    if (box is! RenderBox || !box.hasSize) return;
+    final rect = MatrixUtils.transformRect(
+      box.getTransformTo(null),
+      Offset.zero & box.size,
+    );
+    final view = View.of(context);
+    final dpr = view.devicePixelRatio;
+    final shown = Size(
+      (rect.width * dpr).roundToDouble(),
+      (rect.height * dpr).roundToDouble(),
+    );
+    // A FittedBox squeezed to nothing scales by infinity, which gives a
+    // NaN size rather than an empty one.
+    if (!shown.isFinite) return;
+    final onScreen = rect.overlaps(Offset.zero & view.physicalSize / dpr);
+    final sample = onScreen ? shown : Size.zero;
+    final sent = _sent ?? Size.zero;
+    final settled =
+        immediate || sample == _lastSample || sample.isEmpty || sent.isEmpty;
+    _lastSample = sample;
+    if (!settled || sample == sent) return;
+    _sent = sample;
+    unawaited(
+      widget.controller
+          .setUpscaleTarget(
+            width: sample.width.toInt(),
+            height: sample.height.toInt(),
+          )
+          .catchError((Object _) {
+            // A player disposed mid-call has nothing left to size.
+          }),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// Shows the [placeholder] over the video surface and fades it out once

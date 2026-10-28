@@ -203,6 +203,26 @@ internal class DivineVideoPlayerInstance(
     private var strideGlCopy = false
 
     /**
+     * How this player scales its frames up in the GL stage; see
+     * [VideoUpscale]. Decided when the texture is created; frame effects
+     * take the stage over while they are on.
+     */
+    private var upscaleMode = VideoUpscale.Mode.OFF
+
+    /** Whether this player's texture goes through the upscale stage. */
+    val upscalesFrames: Boolean
+        get() = upscaleMode != VideoUpscale.Mode.OFF
+
+    /** The on-screen size Dart reports for the upscale stage. */
+    private val upscaleTarget = VideoUpscale.Target()
+
+    /** The upright frame size the upscale stage receives, before scaling. */
+    private var upscaleSourceSize: Size? = null
+
+    private val upscales: Boolean
+        get() = upscaleMode != VideoUpscale.Mode.OFF && frameEffectsState == null && !strideGlCopy
+
+    /**
      * Whether the selected tracks gave the GL copy its output size. A stream
      * whose tracks carry no dimensions, such as an HLS playlist without
      * RESOLUTION, is sized from the decoder's input format instead.
@@ -224,11 +244,20 @@ internal class DivineVideoPlayerInstance(
      * and at [frameEffectOutputSize] instead of the decoder's size.
      */
     private val routesThroughGl: Boolean
-        get() = frameEffectsState != null || strideGlCopy
+        get() = frameEffectsState != null || strideGlCopy || upscales
 
-    /** The size reported to Dart while a GL stage draws the frames. */
+    /**
+     * The size reported to Dart while a GL stage draws the frames. The
+     * upscale stage reports its source size: Dart lays the texture out by
+     * that ratio and measures the result as the next target, and the
+     * rounded target's ratio fed back would make the two chase each other.
+     */
     private val frameEffectReportedSize: Size?
-        get() = if (routesThroughGl) frameEffectOutputSize else null
+        get() = when {
+            upscales -> upscaleSourceSize
+            routesThroughGl -> frameEffectOutputSize
+            else -> null
+        }
 
     /** The buffer size the output surface was set to for frame effects. */
     private var frameEffectSurfaceSize: Size? = null
@@ -484,11 +513,21 @@ internal class DivineVideoPlayerInstance(
      * own cross-player contamination case. Opt a screen in only when the
      * ghost is observed there; under Impeller the legacy surface also
      * costs a per-frame trampoline in the engine.
+     *
+     * [upscale] is the GL upscale Dart asks for; see [VideoUpscale]. The
+     * device may turn it down, and [upscalesFrames] says what it settled on.
+     * A device that already needs the GL copy keeps that stage instead.
      */
     fun enableTextureOutput(
         registry: TextureRegistry,
         useLegacySurface: Boolean = false,
+        upscale: VideoUpscale.Mode = VideoUpscale.Mode.OFF,
     ): Long {
+        upscaleMode = if (MaliStrideWorkaround.applies()) {
+            VideoUpscale.Mode.OFF
+        } else {
+            VideoUpscale.resolveMode(upscale, context)
+        }
         if (useLegacySurface) {
             val entry = registry.createSurfaceTexture()
             legacyEntry = entry
@@ -517,9 +556,17 @@ internal class DivineVideoPlayerInstance(
                 player = newPlayer
                 strideGlCopy = MaliStrideWorkaround.applies()
                 val effects = frameEffectsState?.let { listOf(FrameEffectsGlEffect(it)) }
-                    ?: if (strideGlCopy) listOf(StrideCopyGlEffect) else null
+                    ?: if (strideGlCopy) listOf(StrideCopyGlEffect)
+                    else if (upscales) listOf(VideoUpscale.effect(upscaleMode, upscaleTarget))
+                    else null
                 effects?.let { newPlayer.setVideoEffects(it) }
-                if (strideGlCopy) newPlayer.addAnalyticsListener(strideCopySizeListener)
+                if (strideGlCopy || upscales) newPlayer.addAnalyticsListener(strideCopySizeListener)
+                if (upscales) {
+                    DivineVideoPlayerLog.info(
+                        "$logTarget scales frames up in the GL stage ($upscaleMode)",
+                        name = "DivineVideoPlayer.Upscale",
+                    )
+                }
                 if (strideGlCopy && frameEffectsState == null) {
                     DivineVideoPlayerLog.info(
                         "$logTarget routes frames through the GL copy",
@@ -679,6 +726,7 @@ internal class DivineVideoPlayerInstance(
             "setAudioTrackVolume" -> handleSetAudioTrackVolume(call, result)
             "setAudioTrackEqualizer" -> handleSetAudioTrackEqualizer(call, result)
             "setFrameEffects" -> handleSetFrameEffects(call, result)
+            "setUpscaleTarget" -> handleSetUpscaleTarget(call, result)
             else -> result.notImplemented()
         }
     }
@@ -1854,13 +1902,47 @@ internal class DivineVideoPlayerInstance(
      * that size. Returns whether any of them had dimensions.
      */
     private fun applyStrideCopyOutputSize(formats: List<Format>): Boolean {
-        if (!strideGlCopy || frameEffectsState != null) return false
-        val size = MaliStrideWorkaround.largestOutputSize(formats) ?: return false
-        if (size == frameEffectOutputSize) return true
+        if (!(strideGlCopy || upscales) || frameEffectsState != null) return false
+        val source = MaliStrideWorkaround.largestOutputSize(formats) ?: return false
+        val size = if (upscales) VideoUpscale.outputSize(source, upscaleTarget.size) else source
+        val sourceChanged = upscales && source != upscaleSourceSize
+        if (upscales) upscaleSourceSize = source
+        if (size == frameEffectOutputSize && !sourceChanged) return true
         frameEffectOutputSize = size
         sendFrameEffectOutputResolution()
         sendStateUpdate()
         return true
+    }
+
+    /**
+     * Takes the on-screen size Dart measured for the texture; zero means
+     * the texture is off screen and frames go back to their own size. The
+     * stage reads the target with the next frame and resizes its own
+     * output; this side only resizes the surface it draws into, and redraws
+     * a paused frame, which no next frame would otherwise bring.
+     */
+    private fun handleSetUpscaleTarget(call: MethodCall, result: MethodChannel.Result) {
+        val width = call.argument<Int>("width") ?: 0
+        val height = call.argument<Int>("height") ?: 0
+        if (!upscales) {
+            result.success(null)
+            return
+        }
+        val target = if (width > 0 && height > 0) Size(width, height) else null
+        upscaleTarget.size = target
+        val source = upscaleSourceSize
+        val size = source?.let { VideoUpscale.outputSize(it, target) }
+        if (size != null && size != frameEffectOutputSize) {
+            frameEffectOutputSize = size
+            sendFrameEffectOutputResolution()
+            player?.let { if (!it.playWhenReady) redrawPausedFrame(it.currentMediaItemIndex, it.currentPosition) }
+            DivineVideoPlayerLog.info(
+                "$logTarget draws ${source.width}x${source.height} at ${size.width}x${size.height} " +
+                    "for a ${width}x$height texture",
+                name = "DivineVideoPlayer.Upscale",
+            )
+        }
+        result.success(null)
     }
 
     /**
@@ -2701,7 +2783,7 @@ internal class DivineVideoPlayerInstance(
             // so it takes the size from the selected track.
             // An adaptive stream selects several renditions at once, so the
             // largest of them sizes the output; a smaller one is scaled up.
-            if (!strideGlCopy || frameEffectsState != null) return
+            if (!(strideGlCopy || upscales) || frameEffectsState != null) return
             val group = tracks.groups
                 .firstOrNull { it.type == C.TRACK_TYPE_VIDEO && it.isSelected } ?: return
             val formats = (0 until group.length)
@@ -2902,6 +2984,20 @@ internal class DivineVideoPlayerInstance(
         // detaching surface, triggering native crashes on some OEMs (#3416).
         playerBoost.release()
         player?.let {
+            // The upscale stage's cost shows as dropped frames, if anywhere,
+            // so a player that ran it reports them for the rollout.
+            if (upscales) {
+                it.videoDecoderCounters?.let { counters ->
+                    counters.ensureUpdated()
+                    DivineVideoPlayerLog.info(
+                        "$logTarget upscaled to ${frameEffectSurfaceSize?.let { s -> "${s.width}x${s.height}" }}: " +
+                            "rendered ${counters.renderedOutputBufferCount}, " +
+                            "dropped ${counters.droppedBufferCount}, " +
+                            "max consecutive dropped ${counters.maxConsecutiveDroppedBufferCount}",
+                        name = "DivineVideoPlayer.Upscale",
+                    )
+                }
+            }
             it.removeListener(playerListener)
             it.stop()
             it.clearVideoSurface()

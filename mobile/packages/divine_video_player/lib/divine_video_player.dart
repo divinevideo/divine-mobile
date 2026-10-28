@@ -8,3 +8,4 @@ export 'src/player_error_code.dart';
 export 'src/video_buffer_profile.dart';
 export 'src/video_clip.dart';
 export 'src/video_player_state.dart';
+export 'src/video_upscaling.dart';

@@ -3,6 +3,7 @@ import 'package:divine_video_player/src/linux/linux_video_player_backend.dart';
 import 'package:divine_video_player/src/web/web_video_player_backend.dart';
 import 'package:divine_video_player/src/web/web_video_player_backend_factory.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -548,6 +549,251 @@ void main() {
       expect(find.text('Loading...'), findsOneWidget);
     });
   });
+
+  group('upscale target', () {
+    late List<MethodCall> targetCalls;
+
+    /// A texture controller whose native side answers `create` with
+    /// [upscales] and records every `setUpscaleTarget` call.
+    Future<DivineVideoPlayerController> initUpscalingController({
+      bool upscales = true,
+      bool failTargetCalls = false,
+    }) async {
+      targetCalls = <MethodCall>[];
+      final nextId = DivineVideoPlayerController.nextId;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('divine_video_player'),
+            (call) async {
+              if (call.method != 'create') return null;
+              TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+                  .setMockMethodCallHandler(
+                    MethodChannel('divine_video_player/player_$nextId'),
+                    (call) async {
+                      if (call.method != 'setUpscaleTarget') return null;
+                      targetCalls.add(call);
+                      if (failTargetCalls) {
+                        throw PlatformException(code: 'disposed');
+                      }
+                      return null;
+                    },
+                  );
+              TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+                  .setMockStreamHandler(
+                    EventChannel('divine_video_player/player_$nextId/events'),
+                    _FirstFrameStreamHandler(),
+                  );
+              return <Object?, Object?>{'textureId': 5, 'upscales': upscales};
+            },
+          );
+      final textureController = DivineVideoPlayerController(useTexture: true);
+      await textureController.initialize();
+      return textureController;
+    }
+
+    /// The player laid out at [layoutSize] and scaled by a [FittedBox] to
+    /// fill [boxSize], the way the feed and the post preview show it.
+    Widget fitted(
+      DivineVideoPlayerController controller, {
+      required Size boxSize,
+      Size layoutSize = const Size(56.25, 100),
+      Offset offset = Offset.zero,
+    }) {
+      return Directionality(
+        textDirection: TextDirection.ltr,
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: Transform.translate(
+            offset: offset,
+            child: SizedBox.fromSize(
+              size: boxSize,
+              child: FittedBox(
+                child: SizedBox.fromSize(
+                  size: layoutSize,
+                  child: DivineVideoPlayer(controller: controller),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    List<Map<Object?, Object?>> sentSizes() =>
+        targetCalls.map((c) => c.arguments as Map<Object?, Object?>).toList();
+
+    /// Far below the test view, where a feed keeps its next video.
+    const offScreen = Offset(0, 5000);
+
+    testWidgets('reports nothing for a texture that starts off screen', (
+      tester,
+    ) async {
+      final upscaling = await initUpscalingController();
+      await tester.pumpWidget(
+        fitted(upscaling, boxSize: const Size(360, 640), offset: offScreen),
+      );
+
+      await tester.pump(upscaleTargetSampleInterval * 3);
+
+      expect(targetCalls, isEmpty);
+    });
+
+    testWidgets('reports zero when the texture leaves the screen, and its '
+        'size again when it comes back', (tester) async {
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final upscaling = await initUpscalingController();
+      await tester.pumpWidget(fitted(upscaling, boxSize: const Size(360, 640)));
+
+      await tester.pumpWidget(
+        fitted(upscaling, boxSize: const Size(360, 640), offset: offScreen),
+      );
+      await tester.pump(upscaleTargetSampleInterval);
+      await tester.pumpWidget(fitted(upscaling, boxSize: const Size(360, 640)));
+      await tester.pump(upscaleTargetSampleInterval);
+
+      expect(sentSizes(), [
+        {'width': 720, 'height': 1280},
+        {'width': 0, 'height': 0},
+        {'width': 720, 'height': 1280},
+      ]);
+    });
+
+    testWidgets(
+      'reports the on-screen size in physical pixels after the first frame',
+      (tester) async {
+        tester.view.devicePixelRatio = 2;
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final upscaling = await initUpscalingController();
+
+        await tester.pumpWidget(
+          fitted(upscaling, boxSize: const Size(360, 640)),
+        );
+
+        expect(sentSizes(), [
+          {'width': 720, 'height': 1280},
+        ]);
+      },
+    );
+
+    testWidgets('reports a new size once two samples agree', (tester) async {
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final upscaling = await initUpscalingController();
+      await tester.pumpWidget(fitted(upscaling, boxSize: const Size(360, 640)));
+
+      await tester.pumpWidget(fitted(upscaling, boxSize: const Size(450, 800)));
+      await tester.pump(upscaleTargetSampleInterval);
+      final afterOneSample = sentSizes().length;
+      await tester.pump(upscaleTargetSampleInterval);
+
+      expect(afterOneSample, equals(1));
+      expect(sentSizes(), [
+        {'width': 720, 'height': 1280},
+        {'width': 900, 'height': 1600},
+      ]);
+    });
+
+    testWidgets('does not report an unchanged size again', (tester) async {
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final upscaling = await initUpscalingController();
+      await tester.pumpWidget(fitted(upscaling, boxSize: const Size(360, 640)));
+
+      for (var i = 0; i < 4; i++) {
+        await tester.pump(upscaleTargetSampleInterval);
+      }
+
+      expect(sentSizes(), hasLength(1));
+    });
+
+    testWidgets('reports nothing for a player that does not upscale', (
+      tester,
+    ) async {
+      final plain = await initUpscalingController(upscales: false);
+      await tester.pumpWidget(fitted(plain, boxSize: const Size(360, 640)));
+
+      await tester.pump(upscaleTargetSampleInterval * 3);
+
+      expect(targetCalls, isEmpty);
+    });
+
+    testWidgets('reports nothing for an empty texture', (tester) async {
+      final upscaling = await initUpscalingController();
+      await tester.pumpWidget(fitted(upscaling, boxSize: Size.zero));
+
+      await tester.pump(upscaleTargetSampleInterval * 3);
+
+      expect(targetCalls, isEmpty);
+    });
+
+    testWidgets('reports nothing until the texture is laid out', (
+      tester,
+    ) async {
+      final upscaling = await initUpscalingController();
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: _SkipsChildLayout(
+            child: DivineVideoPlayer(controller: upscaling),
+          ),
+        ),
+      );
+
+      await tester.pump(upscaleTargetSampleInterval * 3);
+
+      expect(targetCalls, isEmpty);
+    });
+
+    testWidgets('survives a target call the player rejects', (tester) async {
+      final upscaling = await initUpscalingController(failTargetCalls: true);
+
+      await tester.pumpWidget(fitted(upscaling, boxSize: const Size(360, 640)));
+      await tester.pump();
+
+      expect(targetCalls, hasLength(1));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('stops sampling once removed', (tester) async {
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final upscaling = await initUpscalingController();
+      await tester.pumpWidget(fitted(upscaling, boxSize: const Size(360, 640)));
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(upscaleTargetSampleInterval * 3);
+
+      // A timer left running would sample a defunct element and throw here,
+      // and flutter_test fails a test that ends with a timer still pending.
+      expect(tester.takeException(), isNull);
+      expect(sentSizes(), hasLength(1));
+    });
+  });
+}
+
+/// Lays itself out at the incoming size without ever laying out its child,
+/// like a parent that keeps a subtree mounted but out of layout.
+class _SkipsChildLayout extends SingleChildRenderObjectWidget {
+  const _SkipsChildLayout({required super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderSkipsChildLayout();
+}
+
+class _RenderSkipsChildLayout extends RenderProxyBox {
+  @override
+  void performLayout() {
+    size = constraints.biggest;
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) {}
+
+  // Semantics would visit the child it never laid out.
+  @override
+  void visitChildrenForSemantics(RenderObjectVisitor visitor) {}
 }
 
 class _FakeLinuxBackend implements LinuxVideoPlayerBackend {
