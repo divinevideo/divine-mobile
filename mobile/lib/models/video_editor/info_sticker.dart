@@ -428,6 +428,7 @@ class InfoStickerData extends Equatable {
     InfoStickerPlaceSymbol? placeSymbol,
     InfoStickerGlobe? globe,
     int? dayNumber,
+    bool clearDayNumber = false,
     int? dayTotal,
     bool clearDayTotal = false,
     DateTime? sunrise,
@@ -435,8 +436,10 @@ class InfoStickerData extends Equatable {
     InfoStickerWeather? weather,
     bool? isDay,
     double? temperatureCelsius,
+    bool clearTemperatureCelsius = false,
     bool? useFahrenheit,
     double? altitudeMeters,
+    bool clearAltitudeMeters = false,
     bool? useFeet,
     int? batteryLevel,
   }) => InfoStickerData(
@@ -450,15 +453,19 @@ class InfoStickerData extends Equatable {
     countryCode: countryCode ?? this.countryCode,
     placeSymbol: placeSymbol ?? this.placeSymbol,
     globe: globe ?? this.globe,
-    dayNumber: dayNumber ?? this.dayNumber,
+    dayNumber: clearDayNumber ? null : dayNumber ?? this.dayNumber,
     dayTotal: clearDayTotal ? null : dayTotal ?? this.dayTotal,
     sunrise: sunrise ?? this.sunrise,
     sunset: sunset ?? this.sunset,
     weather: weather ?? this.weather,
     isDay: isDay ?? this.isDay,
-    temperatureCelsius: temperatureCelsius ?? this.temperatureCelsius,
+    temperatureCelsius: clearTemperatureCelsius
+        ? null
+        : temperatureCelsius ?? this.temperatureCelsius,
     useFahrenheit: useFahrenheit ?? this.useFahrenheit,
-    altitudeMeters: altitudeMeters ?? this.altitudeMeters,
+    altitudeMeters: clearAltitudeMeters
+        ? null
+        : altitudeMeters ?? this.altitudeMeters,
     useFeet: useFeet ?? this.useFeet,
     batteryLevel: batteryLevel ?? this.batteryLevel,
   );

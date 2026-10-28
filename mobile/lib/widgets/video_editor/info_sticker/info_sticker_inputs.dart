@@ -254,7 +254,6 @@ class InfoStickerDayCountFields extends StatelessWidget {
               label: l10n.videoEditorInfoStickerDayTotalLabel,
               signed: false,
               onChanged: cubit.dayTotalEntered,
-              onCleared: () => cubit.dayTotalEntered(null),
             ),
           ),
         ],
@@ -385,22 +384,17 @@ class _NumberField extends StatefulWidget {
     required this.onChanged,
     this.signed = true,
     this.textInputAction = TextInputAction.done,
-    this.onCleared,
   });
 
   final int? value;
   final String label;
-  final ValueChanged<int> onChanged;
+  final ValueChanged<int?> onChanged;
 
   /// Whether the number may be negative.
   final bool signed;
 
   /// [TextInputAction.next] for a field with another one after it.
   final TextInputAction textInputAction;
-
-  /// Called when the creator empties the field, for a value that may be
-  /// left out.
-  final VoidCallback? onCleared;
 
   @override
   State<_NumberField> createState() => _NumberFieldState();
@@ -442,11 +436,7 @@ class _NumberFieldState extends State<_NumberField> {
           widget.signed ? RegExp(r'^-?\d*') : RegExp(r'^\d*'),
         ),
       ],
-      onChanged: (text) {
-        if (text.isEmpty) widget.onCleared?.call();
-        final value = int.tryParse(text);
-        if (value != null) widget.onChanged(value);
-      },
+      onChanged: (text) => widget.onChanged(int.tryParse(text)),
     );
   }
 }

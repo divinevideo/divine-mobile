@@ -41,6 +41,9 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
   final InfoStickerRepository _repository;
   final DivineVideoClip? _clip;
 
+  // Clearing the field is an edit too; a pending lookup must not refill it.
+  bool _placeValueEdited = false;
+
   static const _logName = 'InfoStickerCubit';
 
   /// Fills in what a new sticker starts with: the time its clip was recorded
@@ -183,27 +186,44 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
   void useFeetChanged(bool useFeet) =>
       emit(state.copyWith(data: state.data.copyWith(useFeet: useFeet)));
 
-  /// A temperature the creator typed, in the unit the sticker shows.
-  void temperatureEntered(int value) => emit(
+  /// A temperature in the displayed unit, or `null` for an empty field.
+  void temperatureEntered(int? value) {
+    _placeValueEdited = true;
+    emit(
+      state.copyWith(
+        data: state.data.copyWith(
+          temperatureCelsius: value == null
+              ? null
+              : state.data.celsiusFromDisplay(value),
+          clearTemperatureCelsius: value == null,
+        ),
+      ),
+    );
+  }
+
+  /// An altitude in the displayed unit, or `null` for an empty field.
+  void altitudeEntered(int? value) {
+    _placeValueEdited = true;
+    emit(
+      state.copyWith(
+        data: state.data.copyWith(
+          altitudeMeters: value == null
+              ? null
+              : state.data.metersFromDisplay(value),
+          clearAltitudeMeters: value == null,
+        ),
+      ),
+    );
+  }
+
+  /// The day a counter shows; an empty or nonpositive field is incomplete.
+  void dayNumberEntered(int? day) => emit(
     state.copyWith(
       data: state.data.copyWith(
-        temperatureCelsius: state.data.celsiusFromDisplay(value),
+        dayNumber: day,
+        clearDayNumber: day == null || day < 1,
       ),
     ),
-  );
-
-  /// An altitude the creator typed, in the unit the sticker shows.
-  void altitudeEntered(int value) => emit(
-    state.copyWith(
-      data: state.data.copyWith(
-        altitudeMeters: state.data.metersFromDisplay(value),
-      ),
-    ),
-  );
-
-  /// The day a day counter shows, at least the first.
-  void dayNumberEntered(int day) => emit(
-    state.copyWith(data: state.data.copyWith(dayNumber: day < 1 ? 1 : day)),
   );
 
   /// How many days a day counter counts to; `null` or less than one for no
@@ -233,6 +253,7 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
   /// Puts [place] on the sticker and moves on to its look; for a weather,
   /// sun or altitude sticker it also looks up the value there.
   Future<void> placeSelected(InfoStickerPlace place) async {
+    _placeValueEdited = false;
     final kind = state.data.kind;
     final data = state.data.withoutPlaceValues();
     emit(
@@ -265,9 +286,7 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
   /// Looks up the weather, sun times or altitude at [place], unless another
   /// place was picked meanwhile.
   ///
-  /// Picking the place cleared its values, so a temperature or an altitude
-  /// that is set when the answer comes was typed while it was on its way, and
-  /// the creator's value wins.
+  /// A manual edit, including clearing the field, wins over a pending lookup.
   Future<void> _lookUpPlaceValues(InfoStickerPlace place) async {
     try {
       switch (state.data.kind) {
@@ -280,8 +299,9 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
           emitIfOpen(
             state.copyWith(
               data: state.data.copyWith(
-                temperatureCelsius:
-                    state.data.temperatureCelsius ?? reading.temperatureCelsius,
+                temperatureCelsius: _placeValueEdited
+                    ? state.data.temperatureCelsius
+                    : reading.temperatureCelsius,
                 weather: reading.weather,
                 isDay: reading.isDay,
               ),
@@ -309,7 +329,9 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
           emitIfOpen(
             state.copyWith(
               data: state.data.copyWith(
-                altitudeMeters: state.data.altitudeMeters ?? meters,
+                altitudeMeters: _placeValueEdited
+                    ? state.data.altitudeMeters
+                    : meters,
               ),
               valueStatus: .success,
             ),

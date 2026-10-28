@@ -597,6 +597,46 @@ void main() {
     });
 
     group('typed values', () {
+      for (final kind in [InfoStickerKind.weather, InfoStickerKind.altitude]) {
+        test(
+          'keeps a ${kind.name} field cleared when its lookup answers',
+          () async {
+            final weather = Completer<InfoStickerWeatherReading>();
+            final altitude = Completer<double>();
+            when(() => repository.weatherAt(_bern, any())).thenAnswer(
+              (_) => weather.future,
+            );
+            when(() => repository.elevationAt(_bern)).thenAnswer(
+              (_) => altitude.future,
+            );
+            final cubit = InfoStickerCubit(
+              repository: repository,
+              initial: _sticker(kind).copyWith(dateTime: DateTime(2026)),
+            );
+            addTearDown(cubit.close);
+            final lookup = cubit.placeSelected(_bern);
+            if (kind == InfoStickerKind.weather) {
+              cubit.temperatureEntered(35);
+              cubit.temperatureEntered(null);
+              weather.complete(
+                const InfoStickerWeatherReading(
+                  temperatureCelsius: 8,
+                  isDay: true,
+                ),
+              );
+            } else {
+              cubit.altitudeEntered(1500);
+              cubit.altitudeEntered(null);
+              altitude.complete(100);
+            }
+            await lookup;
+
+            expect(cubit.state.data.isComplete, isFalse);
+            expect(cubit.state.valueStatus, InfoStickerValueStatus.success);
+          },
+        );
+      }
+
       blocTest<InfoStickerCubit, InfoStickerState>(
         'reads a typed temperature in the unit the sticker shows',
         build: () => InfoStickerCubit(

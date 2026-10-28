@@ -80,6 +80,60 @@ void main() {
     }
 
     group('interactions', () {
+      for (final initial in [
+        const InfoStickerData(
+          kind: InfoStickerKind.weather,
+          localeName: 'en',
+          temperatureCelsius: 21,
+        ),
+        const InfoStickerData(
+          kind: InfoStickerKind.altitude,
+          localeName: 'en',
+          altitudeMeters: 540,
+        ),
+        const InfoStickerData(
+          kind: InfoStickerKind.dayCount,
+          localeName: 'en',
+          dayNumber: 3,
+        ),
+      ]) {
+        testWidgets('${initial.kind.name} requires a number after clearing', (
+          tester,
+        ) async {
+          final results = await pumpSheet(tester, initial: initial);
+          final field = find.byType(TextField).first;
+          await tester.enterText(field, '');
+          await tester.pumpAndSettle();
+
+          expect(
+            tester.widget<DivineButton>(find.byType(DivineButton)).onPressed,
+            isNull,
+          );
+
+          final isDay = initial.kind == InfoStickerKind.dayCount;
+          await tester.enterText(field, isDay ? '0' : '-');
+          await tester.pumpAndSettle();
+          expect(
+            tester.widget<DivineButton>(find.byType(DivineButton)).onPressed,
+            isNull,
+          );
+
+          await tester.enterText(field, isDay ? '12' : '-12');
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.videoEditorInfoStickerAdd));
+          await tester.pumpAndSettle();
+          final data = results.single!;
+          expect(
+            switch (data.kind) {
+              InfoStickerKind.weather => data.displayTemperature,
+              InfoStickerKind.altitude => data.displayAltitude,
+              _ => data.dayNumber,
+            },
+            equals(isDay ? 12 : -12),
+          );
+        });
+      }
+
       testWidgets('adds a location sticker picked from the suggestions', (
         tester,
       ) async {
