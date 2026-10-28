@@ -13,8 +13,8 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
-import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 import 'package:openvine/widgets/profile/profile_liked_grid.dart';
+import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 
 import '../../helpers/go_router.dart';
 import '../../helpers/test_provider_overrides.dart';
@@ -245,11 +245,15 @@ void main() {
         );
 
         await tester.pumpWidget(buildSubject());
-        await tester.drag(
-          find.byType(CustomScrollView),
-          const Offset(0, -5000),
-        );
-        await tester.pumpAndSettle();
+        // The masonry sliver only estimates its extent until the tail is laid
+        // out, so the first fling stops short of the real end.
+        for (var i = 0; i < 2; i++) {
+          await tester.drag(
+            find.byType(CustomScrollView),
+            const Offset(0, -5000),
+          );
+          await tester.pumpAndSettle();
+        }
 
         final lastRowBottom = tester
             .getBottomLeft(

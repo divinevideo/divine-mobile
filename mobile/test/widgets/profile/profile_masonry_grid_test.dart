@@ -88,13 +88,13 @@ void main() {
               width: 308,
               height: 600,
               child: CustomScrollView(
-              slivers: [
-                ProfileMasonryGrid(
-                  childCount: ratios.length,
-                  aspectRatioOf: (index) => ratios[index],
-                  itemBuilder: (context, index) =>
-                      ColoredBox(key: ValueKey(index), color: Colors.black),
-                ),
+                slivers: [
+                  ProfileMasonryGrid(
+                    childCount: ratios.length,
+                    aspectRatioOf: (index) => ratios[index],
+                    itemBuilder: (context, index) =>
+                        ColoredBox(key: ValueKey(index), color: Colors.black),
+                  ),
                 ],
               ),
             ),
@@ -103,8 +103,14 @@ void main() {
       );
 
       // (308 - 2 gaps of 4) / 3 columns = 100 wide.
-      expect(tester.getSize(find.byKey(const ValueKey(0))), const Size(100, 150));
-      expect(tester.getSize(find.byKey(const ValueKey(1))), const Size(100, 100));
+      expect(
+        tester.getSize(find.byKey(const ValueKey(0))),
+        const Size(100, 150),
+      );
+      expect(
+        tester.getSize(find.byKey(const ValueKey(1))),
+        const Size(100, 100),
+      );
       expect(
         tester.getTopLeft(find.byKey(const ValueKey(2))).dx,
         equals(208),

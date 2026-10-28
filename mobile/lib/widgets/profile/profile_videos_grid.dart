@@ -27,8 +27,8 @@ import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart'
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/video_identity.dart';
 import 'package:openvine/widgets/owner_video_actions_sheet.dart';
-import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 import 'package:openvine/widgets/profile/pending_collaborator_invite_banner_cubit.dart';
+import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 import 'package:openvine/widgets/profile/profile_tab_empty_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_loading_more_sliver.dart';
 import 'package:openvine/widgets/profile/profile_tab_thumbnail.dart';
@@ -438,9 +438,10 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
             aspectRatioOf: (index) => switch (allVideos[index]) {
               // A draft still uploading has no published dimensions yet.
               _GridUploadingVideoEntry() => profileVerticalTileAspectRatio,
-              final _GridVideoEventEntry entry => profileTileAspectRatioForVideo(
-                entry.videoEvent,
-              ),
+              final _GridVideoEventEntry entry =>
+                profileTileAspectRatioForVideo(
+                  entry.videoEvent,
+                ),
             },
             itemBuilder: (context, index) {
               final videoEntry = allVideos[index];
