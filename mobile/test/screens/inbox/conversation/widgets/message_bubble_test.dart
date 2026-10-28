@@ -31,6 +31,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 import '../../../../helpers/contrast.dart';
+import '../../../../helpers/decoded_images.dart';
 import '../../../../helpers/test_provider_overrides.dart';
 
 class _MockVideosRepository extends Mock implements VideosRepository {}
@@ -2588,6 +2589,133 @@ void main() {
           // A non-failed bubble keeps the inner tap-to-open recognizer.
           expect(find.text('video:${testVideo.id}'), findsOneWidget);
         });
+      });
+
+      group('screen reader', () {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        final playVideo = RegExp(RegExp.escape(l10n.videoPlayerPlayVideo));
+        // A thumbnail only reaches assistive tech once it decodes, so these
+        // tests serve a real image for it.
+        final sharedVideo = testVideo.copyWith(
+          thumbnailUrl: 'https://example.com/thumb.png',
+        );
+
+        Future<void> pumpShare(
+          WidgetTester tester, {
+          required DmDeliveryStatus deliveryStatus,
+          VoidCallback? onTap,
+        }) async {
+          when(
+            () => mockVideosRepository.fetchVideoWithStatsForRouteId(
+              'abc123',
+              fallbackRouteIds: any(named: 'fallbackRouteIds'),
+            ),
+          ).thenAnswer((_) async => sharedVideo);
+          final router = GoRouter(
+            routes: [
+              GoRoute(
+                path: '/',
+                builder: (context, state) => Scaffold(
+                  body: MessageBubble(
+                    message: 'https://divine.video/video/abc123',
+                    timestamp: '2:30 PM',
+                    isSent: true,
+                    deliveryStatus: deliveryStatus,
+                    onTap: onTap,
+                  ),
+                ),
+              ),
+              GoRoute(
+                path: '/video/:id',
+                builder: (context, state) => Scaffold(
+                  body: Text('video:${state.pathParameters['id']}'),
+                ),
+              ),
+            ],
+          );
+          addTearDown(router.dispose);
+          await pumpWithDecodedImages(
+            tester,
+            _routerTestApp(
+              router,
+              mockNostrService: mockNostrClient,
+              additionalOverrides: [
+                videosRepositoryProvider.overrideWithValue(
+                  mockVideosRepository,
+                ),
+              ],
+            ),
+            images: find.descendant(
+              of: find.byType(VideoThumbnailWidget),
+              matching: find.byType(Image),
+            ),
+          );
+        }
+
+        testWidgets(
+          'announces a shared video as a button that plays it, not an image',
+          (tester) async {
+            final semantics = tester.ensureSemantics();
+            try {
+              await pumpShare(
+                tester,
+                deliveryStatus: DmDeliveryStatus.delivered,
+              );
+
+              final card = tester
+                  .getSemantics(find.bySemanticsLabel(playVideo))
+                  .getSemanticsData();
+              expect(card.flagsCollection.isButton, isTrue);
+              expect(card.flagsCollection.isImage, isFalse);
+              expect(card.label, contains(sharedVideo.title));
+
+              tester.semantics.tap(find.semantics.byLabel(playVideo));
+              await tester.pumpAndSettle();
+
+              expect(find.text('video:${sharedVideo.id}'), findsOneWidget);
+            } finally {
+              semantics.dispose();
+            }
+          },
+        );
+
+        testWidgets(
+          'leaves a failed share with the resend action, not a play button',
+          (tester) async {
+            var resendTaps = 0;
+            final semantics = tester.ensureSemantics();
+            try {
+              await pumpShare(
+                tester,
+                deliveryStatus: DmDeliveryStatus.failed,
+                onTap: () => resendTaps++,
+              );
+
+              expect(find.bySemanticsLabel(playVideo), findsNothing);
+              // No second button that does nothing when activated.
+              expect(
+                find.semantics.byPredicate(
+                  (node) =>
+                      node.getSemanticsData().flagsCollection.isButton &&
+                      !node.getSemanticsData().hasAction(SemanticsAction.tap),
+                ),
+                findsNothing,
+              );
+
+              tester.semantics.tap(
+                find.semantics.byLabel(
+                  RegExp(RegExp.escape(sharedVideo.title!)),
+                ),
+              );
+              await tester.pumpAndSettle();
+
+              expect(resendTaps, equals(1));
+              expect(find.text('video:${sharedVideo.id}'), findsNothing);
+            } finally {
+              semantics.dispose();
+            }
+          },
+        );
       });
     });
 

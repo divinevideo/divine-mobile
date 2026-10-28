@@ -13,6 +13,8 @@ import 'package:openvine/notifications/widgets/notification_video_thumbnail.dart
 import 'package:openvine/notifications/widgets/video_notification_row.dart';
 import 'package:openvine/widgets/notification_type_icon.dart';
 
+import '../../helpers/decoded_images.dart';
+
 const _alice = ActorInfo(
   pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
   displayName: 'Alice',
@@ -70,6 +72,7 @@ Future<void> _pump(
   VoidCallback? onThumbnailTap,
   Locale? locale,
   double textScaleFactor = 1,
+  bool decodeImages = false,
 }) async {
   // Pin a tall, deterministic surface: the 2× stacked layout needs the
   // vertical room production's scrollable list gives it, and pinning makes
@@ -77,25 +80,35 @@ Future<void> _pump(
   // (`very_good test --optimization`). Reset after each test. See #4719.
   await tester.binding.setSurfaceSize(const Size(420, 1200));
   addTearDown(() => tester.binding.setSurfaceSize(null));
-  await tester.pumpWidget(
-    MaterialApp(
-      locale: locale,
-      localizationsDelegates: appLocalizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(
-        body: MediaQuery(
-          data: MediaQueryData(textScaler: TextScaler.linear(textScaleFactor)),
-          child: SizedBox(
-            width: 320,
-            child: VideoNotificationRow(
-              notification: notification,
-              onTap: onTap ?? () {},
-              onProfileTap: onProfileTap ?? () {},
-              onThumbnailTap: onThumbnailTap ?? () {},
-            ),
+  final app = MaterialApp(
+    locale: locale,
+    localizationsDelegates: appLocalizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: Scaffold(
+      body: MediaQuery(
+        data: MediaQueryData(textScaler: TextScaler.linear(textScaleFactor)),
+        child: SizedBox(
+          width: 320,
+          child: VideoNotificationRow(
+            notification: notification,
+            onTap: onTap ?? () {},
+            onProfileTap: onProfileTap ?? () {},
+            onThumbnailTap: onThumbnailTap ?? () {},
           ),
         ),
       ),
+    ),
+  );
+  if (!decodeImages) {
+    await tester.pumpWidget(app);
+    return;
+  }
+  await pumpWithDecodedImages(
+    tester,
+    app,
+    images: find.descendant(
+      of: find.byType(NotificationVideoThumbnail),
+      matching: find.byType(Image),
     ),
   );
 }
@@ -407,6 +420,37 @@ void main() {
         );
         expect(thumbnail.dy, greaterThan(message.dy));
       });
+
+      testWidgets(
+        'announces the thumbnail as a button, not an image, once it loads',
+        (tester) async {
+          final semantics = tester.ensureSemantics();
+          try {
+            await _pump(
+              tester,
+              notification: _video(
+                videoThumbnailUrl: 'https://example.com/n.png',
+                videoTitle: 'Sunset',
+              ),
+              decodeImages: true,
+            );
+
+            final thumbnail = tester
+                .getSemantics(
+                  find.bySemanticsLabel(
+                    lookupAppLocalizations(
+                      const Locale('en'),
+                    ).notificationsVideoThumbnailFor('Sunset'),
+                  ),
+                )
+                .getSemanticsData();
+            expect(thumbnail.flagsCollection.isButton, isTrue);
+            expect(thumbnail.flagsCollection.isImage, isFalse);
+          } finally {
+            semantics.dispose();
+          }
+        },
+      );
     });
 
     group('interactions', () {
