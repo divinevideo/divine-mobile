@@ -14,6 +14,11 @@ class ShorebirdPatchSourceTest(unittest.TestCase):
         self.addCleanup(self.temp_dir.cleanup)
         self.root = Path(self.temp_dir.name)
         subprocess.run(["git", "init", "-q"], cwd=self.root, check=True)
+        # A commit starts a detached `git maintenance run --auto` that can still be
+        # writing into .git/objects when the temporary directory is removed.
+        subprocess.run(
+            ["git", "config", "maintenance.auto", "false"], cwd=self.root, check=True
+        )
         subprocess.run(
             ["git", "config", "user.email", "shorebird-test@example.invalid"],
             cwd=self.root,

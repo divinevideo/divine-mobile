@@ -15,6 +15,9 @@ class InventoryTest(unittest.TestCase):
             def git(*args):
                 return subprocess.check_output(['git', '-C', directory, *args], text=True, env=env).strip()
             git('init', '-q')
+            # A commit starts a detached `git maintenance run --auto` that can still
+            # be writing into .git/objects when the temporary directory is removed.
+            git('config', 'maintenance.auto', 'false')
             git('config', 'user.name', 'Test')
             git('config', 'user.email', 'test@example.invalid')
             git('commit', '--allow-empty', '-qm', 'feat: old feature')

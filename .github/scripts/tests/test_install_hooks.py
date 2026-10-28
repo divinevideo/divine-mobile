@@ -64,6 +64,11 @@ class InstallHooksTest(unittest.TestCase):
         env["PATH"] = f"{self.bin}{os.pathsep}{env['PATH']}"
         env["GIT_CONFIG_GLOBAL"] = os.devnull
         env["GIT_CONFIG_NOSYSTEM"] = "1"
+        # A commit starts a detached `git maintenance run --auto` that can still be
+        # writing into .git/objects when the temporary directory is removed.
+        env["GIT_CONFIG_COUNT"] = "1"
+        env["GIT_CONFIG_KEY_0"] = "maintenance.auto"
+        env["GIT_CONFIG_VALUE_0"] = "false"
         self.env = env
 
         self.git("init", "-q", "-b", "main")
