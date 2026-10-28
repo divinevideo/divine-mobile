@@ -64,13 +64,34 @@ class ChatMentionRepository implements LocalNotificationSource {
   Future<void> _initialize() async {
     final raw = await store.get('mention-state');
     if (_closed) return;
-    if (raw != null) {
-      final data = jsonDecode(raw) as Map<String, dynamic>;
-      _rooms.addAll((data['rooms'] as Map).cast<String, int>());
-      _seen.addAll((data['seen'] as Map).cast<String, String>());
+    final state = raw == null ? null : _decodeState(raw);
+    if (raw != null && state == null) {
+      // An unreadable record must not disable alerts; the next write replaces it.
+      Log.warning(
+        'Discarding unreadable chat mention state',
+        name: 'ChatMentions',
+      );
     }
-    await Future.wait([for (final channel in _rooms.keys) _observe(channel)]);
+    if (state != null) {
+      _rooms.addAll(state.rooms);
+      _seen.addAll(state.seen);
+    }
+    await Future.wait([
+      for (final channel in List<String>.of(_rooms.keys))
+        _observeOrDefer(channel),
+    ]);
   }
+
+  /// Starts [channel]; a failure leaves it unobserved for [refresh] to retry.
+  Future<void> _observeOrDefer(String channel) =>
+      _observe(channel).catchError((Object error, StackTrace stack) {
+        Log.warning(
+          'Chat mention room failed to start; refresh retries it',
+          name: 'ChatMentions',
+          error: error,
+          stackTrace: stack,
+        );
+      });
 
   /// Opening a room enrolls it, without generating alerts for its old history.
   Future<void> enroll(String channel) async {
@@ -254,6 +275,12 @@ class ChatMentionRepository implements LocalNotificationSource {
           _seen[item.id] = order;
         }
       }
+      // Mark-all runs on every inbox open; writing an unchanged (possibly
+      // not-yet-loaded) state could replace the saved rooms with nothing.
+      if (_seen.length == before.length &&
+          _seen.entries.every((entry) => before[entry.key] == entry.value)) {
+        return;
+      }
       try {
         await _persist();
       } on Object {
@@ -293,4 +320,30 @@ class ChatMentionRepository implements LocalNotificationSource {
     _messages.clear();
     await _snapshots.close();
   }
+}
+
+/// Reads the persisted room enrollments and read markers, or null when the
+/// record is not the shape this repository writes.
+({Map<String, int> rooms, Map<String, String> seen})? _decodeState(
+  String raw,
+) {
+  final Object? data;
+  try {
+    data = jsonDecode(raw);
+  } on FormatException {
+    return null;
+  }
+  if (data
+      case {
+        'rooms': final Map<String, Object?> rooms,
+        'seen': final Map<String, Object?> seen,
+      }
+      when rooms.values.every((value) => value is int) &&
+          seen.values.every((value) => value is String)) {
+    return (
+      rooms: Map<String, int>.from(rooms),
+      seen: Map<String, String>.from(seen),
+    );
+  }
+  return null;
 }

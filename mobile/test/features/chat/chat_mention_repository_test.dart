@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
@@ -17,6 +18,24 @@ class _FailingStore extends InMemoryConcordStore {
       fail = false;
       throw StateError('write refused');
     }
+    await super.put(key, value);
+  }
+}
+
+/// Holds every read until [gate] completes and counts writes.
+class _GatedStore extends InMemoryConcordStore {
+  _GatedStore(super.pubkey);
+  final gate = Completer<void>();
+  int puts = 0;
+  @override
+  Future<String?> get(String key) async {
+    await gate.future;
+    return super.get(key);
+  }
+
+  @override
+  Future<void> put(String key, String value) async {
+    puts++;
     await super.put(key, value);
   }
 }
@@ -106,6 +125,67 @@ void main() {
         expect(await store.get('mention-state'), isNot(contains('hello')));
       },
     );
+
+    for (final unreadable in [
+      'not json',
+      '{"rooms":{"general":"soon"},"seen":{}}',
+      '{"rooms":{}}',
+    ]) {
+      test('an unreadable record starts empty and the next write replaces it: '
+          '$unreadable', () async {
+        final store = InMemoryConcordStore(me);
+        await store.put('mention-state', unreadable);
+        final repo = ChatMentionRepository(
+          owner: me,
+          store: store,
+          now: () => 1000,
+          canNotify: (_) => true,
+        );
+        addTearDown(repo.close);
+        await repo.initialize();
+        await repo.enroll('general');
+        repo.updateRoom('general', [message(friend, 1001)]);
+        expect(repo.items, hasLength(1));
+        expect(
+          jsonDecode((await store.get('mention-state'))!),
+          {
+            'rooms': {'general': 1000},
+            'seen': <String, String>{},
+          },
+        );
+      });
+    }
+
+    test('a room that fails to start leaves the rest of the state loaded '
+        'and refresh retries it', () async {
+      final store = InMemoryConcordStore(me);
+      await store.put(
+        'mention-state',
+        '{"rooms":{"general":900},"seen":{}}',
+      );
+      final room = _Room();
+      when(room.close).thenAnswer((_) async {});
+      when(() => room.changes).thenAnswer((_) => const Stream.empty());
+      when(() => room.timeline(now: 1000)).thenReturn(FoldedThread([], {}));
+      var starts = 0;
+      final repo = ChatMentionRepository(
+        owner: me,
+        store: store,
+        now: () => 1000,
+        canNotify: (_) => true,
+        createRoom: (_) => room,
+        startRoom: (_, _) async {
+          if (++starts == 1) throw StateError('offline');
+        },
+      );
+      addTearDown(repo.close);
+      await repo.initialize();
+      expect(starts, 1);
+      repo.updateRoom('general', [message(friend, 1001)]);
+      expect(repo.items, hasLength(1));
+      await repo.refresh();
+      expect(starts, 2);
+    });
   });
   group('enroll', () {
     test('failed enrollment and observer start can retry', () async {
@@ -171,6 +251,28 @@ void main() {
     );
   });
   group('markSeen', () {
+    test(
+      'a mark-all before state loads does not overwrite saved rooms',
+      () async {
+        final store = _GatedStore(me);
+        await store.put('mention-state', '{"rooms":{"general":900},"seen":{}}');
+        store.puts = 0;
+        final repo = ChatMentionRepository(
+          owner: me,
+          store: store,
+          now: () => 1000,
+          canNotify: (_) => true,
+        );
+        addTearDown(repo.close);
+        final loading = repo.initialize();
+        await repo.markSeen([for (final item in repo.items) item.id]);
+        expect(store.puts, 0);
+        store.gate.complete();
+        await loading;
+        expect(await store.get('mention-state'), contains('general'));
+      },
+    );
+
     test(
       'failed concurrent read does not roll back a later acknowledged read',
       () async {
