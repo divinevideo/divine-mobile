@@ -10510,6 +10510,21 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorTransitionStretch => 'Разтягане';
 
   @override
+  String get videoEditorTransitionLightLeak => 'Светлинен отблясък';
+
+  @override
+  String get videoEditorTransitionClockWipe => 'Избърсване като часовник';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => 'Диагонално избърсване';
+
+  @override
+  String get videoEditorTransitionFlip => 'Обръщане';
+
+  @override
+  String get videoEditorTransitionCube => 'Куб';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       'На по-малко от секунда от друга светкавица, затова тук се показва като преливане. Прекаленото мигане може да навреди на чувствителни хора.';
 
@@ -10548,6 +10563,18 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => 'Надолу';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => 'Нагоре и наляво';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'Нагоре и надясно';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'Надолу и наляво';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'Надолу и надясно';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {

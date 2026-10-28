@@ -10520,6 +10520,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorTransitionStretch => 'Stretch';
 
   @override
+  String get videoEditorTransitionLightLeak => 'Light leak';
+
+  @override
+  String get videoEditorTransitionClockWipe => 'Clock wipe';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => 'Diagonal wipe';
+
+  @override
+  String get videoEditorTransitionFlip => 'Flip';
+
+  @override
+  String get videoEditorTransitionCube => 'Cube';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       'Within a second of another flash, so it plays as a dissolve here. Too much flashing can hurt people who are sensitive to it.';
 
@@ -10557,6 +10572,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => 'Down';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => 'Up and left';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'Up and right';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'Down and left';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'Down and right';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {

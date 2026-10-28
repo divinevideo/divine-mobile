@@ -10421,6 +10421,21 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorTransitionStretch => 'کھنچاؤ';
 
   @override
+  String get videoEditorTransitionLightLeak => 'روشنی کا رساؤ';
+
+  @override
+  String get videoEditorTransitionClockWipe => 'گھڑی وائپ';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => 'ترچھا وائپ';
+
+  @override
+  String get videoEditorTransitionFlip => 'پلٹنا';
+
+  @override
+  String get videoEditorTransitionCube => 'مکعب';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       'دوسرے فلیش سے ایک سیکنڈ سے کم فاصلے پر ہے، اس لیے یہاں ڈیزالو کے طور پر چلے گا۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے۔';
 
@@ -10459,6 +10474,18 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => 'نیچے';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => 'اوپر بائیں';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'اوپر دائیں';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'نیچے بائیں';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'نیچے دائیں';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {

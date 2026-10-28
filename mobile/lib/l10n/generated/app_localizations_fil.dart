@@ -10500,6 +10500,21 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorTransitionStretch => 'Pag-unat';
 
   @override
+  String get videoEditorTransitionLightLeak => 'Light Leak';
+
+  @override
+  String get videoEditorTransitionClockWipe => 'Pagpunas na parang orasan';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => 'Pahilis na pagpunas';
+
+  @override
+  String get videoEditorTransitionFlip => 'Pagbaligtad';
+
+  @override
+  String get videoEditorTransitionCube => 'Cube';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       'Wala pang isang segundo mula sa isa pang flash, kaya dissolve ang lalabas dito. Puwedeng makasama ang sobrang pagkislap sa mga taong sensitibo rito.';
 
@@ -10538,6 +10553,18 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => 'Pababa';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => 'Pataas pakaliwa';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'Pataas pakanan';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'Pababa pakaliwa';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'Pababa pakanan';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {

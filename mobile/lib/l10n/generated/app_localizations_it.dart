@@ -10544,6 +10544,21 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoEditorTransitionStretch => 'Allungamento';
 
   @override
+  String get videoEditorTransitionLightLeak => 'Fuga di luce';
+
+  @override
+  String get videoEditorTransitionClockWipe => 'Tendina a orologio';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => 'Tendina diagonale';
+
+  @override
+  String get videoEditorTransitionFlip => 'Capovolgimento';
+
+  @override
+  String get videoEditorTransitionCube => 'Cubo';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       'A meno di un secondo da un altro lampo, quindi qui diventa una dissolvenza incrociata. Troppi lampeggiamenti possono fare male alle persone sensibili.';
 
@@ -10581,6 +10596,18 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => 'Giù';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => 'In alto a sinistra';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'In alto a destra';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'In basso a sinistra';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'In basso a destra';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {

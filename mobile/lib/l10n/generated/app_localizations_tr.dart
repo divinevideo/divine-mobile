@@ -10336,6 +10336,21 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorTransitionStretch => 'Esneme';
 
   @override
+  String get videoEditorTransitionLightLeak => 'Işık Sızıntısı';
+
+  @override
+  String get videoEditorTransitionClockWipe => 'Saat yönünde silme';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => 'Çapraz silme';
+
+  @override
+  String get videoEditorTransitionFlip => 'Çevirme';
+
+  @override
+  String get videoEditorTransitionCube => 'Küp';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       'Başka bir flaşa bir saniyeden yakın, bu yüzden burada erime olarak oynatılır. Fazla yanıp sönme hassas kişilere zarar verebilir.';
 
@@ -10373,6 +10388,18 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => 'Aşağı';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => 'Sol yukarı';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'Sağ yukarı';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'Sol aşağı';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'Sağ aşağı';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {

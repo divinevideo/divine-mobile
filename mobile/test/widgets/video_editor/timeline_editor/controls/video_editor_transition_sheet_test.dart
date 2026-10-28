@@ -404,7 +404,7 @@ void main() {
     group('moving, blurring and flashing transitions', () {
       // Wide enough that every tile is built without scrolling the row.
       Future<void> widen(WidgetTester tester) async {
-        await tester.binding.setSurfaceSize(const Size(1600, 900));
+        await tester.binding.setSurfaceSize(const Size(2200, 900));
         addTearDown(() => tester.binding.setSurfaceSize(null));
       }
 
@@ -548,6 +548,181 @@ void main() {
         expect(
           find.text(l10n.videoEditorTransitionFlashTooClose),
           findsNothing,
+        );
+      });
+    });
+
+    group('light leak, wipes, flip and cube', () {
+      Future<void> widen(WidgetTester tester) async {
+        await tester.binding.setSurfaceSize(const Size(2200, 900));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+      }
+
+      Future<void> pick(WidgetTester tester, String label) async {
+        await tester.tap(find.text(label));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+      }
+
+      final labels = [
+        l10n.videoEditorTransitionLightLeak,
+        l10n.videoEditorTransitionClockWipe,
+        l10n.videoEditorTransitionDiagonalWipe,
+        l10n.videoEditorTransitionFlip,
+        l10n.videoEditorTransitionCube,
+      ];
+
+      testWidgets('offers each one and plays its preview through a loop', (
+        tester,
+      ) async {
+        await widen(tester);
+        await openPicker(tester);
+
+        for (final label in labels) {
+          expect(find.text(label), findsOneWidget, reason: label);
+        }
+        for (var step = 0; step < 30; step++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('offers directions for the diagonal wipe, flip and cube', (
+        tester,
+      ) async {
+        await widen(tester);
+        await openPicker(tester);
+
+        await pick(tester, l10n.videoEditorTransitionLightLeak);
+        expect(find.text(l10n.videoEditorTransitionDirection), findsNothing);
+        await pick(tester, l10n.videoEditorTransitionClockWipe);
+        expect(find.text(l10n.videoEditorTransitionDirection), findsNothing);
+
+        for (final label in [
+          l10n.videoEditorTransitionDiagonalWipe,
+          l10n.videoEditorTransitionFlip,
+          l10n.videoEditorTransitionCube,
+        ]) {
+          await pick(tester, label);
+          expect(
+            find.text(l10n.videoEditorTransitionDirection),
+            findsOneWidget,
+            reason: label,
+          );
+        }
+      });
+
+      testWidgets('names the diagonal wipe directions by their corners', (
+        tester,
+      ) async {
+        await widen(tester);
+        await openPicker(tester);
+
+        await pick(tester, l10n.videoEditorTransitionDiagonalWipe);
+
+        for (final (label, icon) in [
+          (
+            l10n.videoEditorTransitionDirectionUpLeft,
+            DivineIconName.arrowUpLeft,
+          ),
+          (
+            l10n.videoEditorTransitionDirectionDownRight,
+            DivineIconName.arrowDownRight,
+          ),
+          (
+            l10n.videoEditorTransitionDirectionUpRight,
+            DivineIconName.arrowUpRight,
+          ),
+          (
+            l10n.videoEditorTransitionDirectionDownLeft,
+            DivineIconName.arrowDownLeft,
+          ),
+        ]) {
+          expect(
+            find.byWidgetPredicate(
+              (w) =>
+                  w is Semantics &&
+                  w.properties.label == label &&
+                  w.properties.button == true,
+            ),
+            findsOneWidget,
+            reason: label,
+          );
+          expect(
+            find.byWidgetPredicate((w) => w is DivineIcon && w.icon == icon),
+            findsOneWidget,
+            reason: label,
+          );
+        }
+        expect(
+          find.byWidgetPredicate(
+            (w) => w is DivineIcon && w.icon == DivineIconName.arrowUp,
+          ),
+          findsNothing,
+        );
+      });
+
+      testWidgets('returns a diagonal wipe toward the top right as up', (
+        tester,
+      ) async {
+        await widen(tester);
+        await openPicker(tester);
+
+        await pick(tester, l10n.videoEditorTransitionDiagonalWipe);
+        await tester.tap(
+          find.byWidgetPredicate(
+            (w) => w is DivineIcon && w.icon == DivineIconName.arrowUpRight,
+          ),
+        );
+        await tester.pump();
+        await tester.tap(find.text(l10n.videoEditorDoneLabel));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        expect(
+          result?.transition?.type,
+          editor.ClipTransitionType.diagonalWipe,
+        );
+        expect(
+          result?.transition?.direction,
+          editor.ClipTransitionDirection.up,
+        );
+      });
+
+      testWidgets('shows the flip card on a tile frozen halfway', (
+        tester,
+      ) async {
+        await widen(tester);
+        await openPicker(tester, disableAnimations: true);
+
+        // Natively the card stands edge-on at one half; the tile keeps it
+        // turned short of that, so the still tile shows a picture.
+        final tile = find
+            .ancestor(
+              of: find.text(l10n.videoEditorTransitionFlip),
+              matching: find.byType(Column),
+            )
+            .first;
+        expect(
+          find.descendant(of: tile, matching: find.byType(ColorFiltered)),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('explains a light leak that plays as a dissolve', (
+        tester,
+      ) async {
+        await widen(tester);
+        await openPicker(
+          tester,
+          flashSuppressed: (transition) => transition.type.flashes,
+        );
+
+        await pick(tester, l10n.videoEditorTransitionLightLeak);
+
+        expect(
+          find.text(l10n.videoEditorTransitionFlashTooClose),
+          findsOneWidget,
         );
       });
     });

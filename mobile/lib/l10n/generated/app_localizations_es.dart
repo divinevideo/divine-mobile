@@ -10523,6 +10523,21 @@ class AppLocalizationsEs extends AppLocalizations {
   String get videoEditorTransitionStretch => 'Estirar';
 
   @override
+  String get videoEditorTransitionLightLeak => 'Fuga de luz';
+
+  @override
+  String get videoEditorTransitionClockWipe => 'Barrido de reloj';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => 'Barrido diagonal';
+
+  @override
+  String get videoEditorTransitionFlip => 'Voltear';
+
+  @override
+  String get videoEditorTransitionCube => 'Cubo';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       'Está a menos de un segundo de otro destello, así que acá se ve como disolvencia. Demasiado parpadeo puede hacer daño a las personas sensibles.';
 
@@ -10560,6 +10575,18 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => 'Abajo';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => 'Arriba a la izquierda';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'Arriba a la derecha';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'Abajo a la izquierda';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'Abajo a la derecha';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {

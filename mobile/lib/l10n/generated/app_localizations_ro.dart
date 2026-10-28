@@ -10642,6 +10642,21 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorTransitionStretch => 'Întindere';
 
   @override
+  String get videoEditorTransitionLightLeak => 'Scurgere de lumină';
+
+  @override
+  String get videoEditorTransitionClockWipe => 'Ștergere tip ceas';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => 'Ștergere diagonală';
+
+  @override
+  String get videoEditorTransitionFlip => 'Întoarcere';
+
+  @override
+  String get videoEditorTransitionCube => 'Cub';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       'La mai puțin de o secundă de alt bliț, așa că aici apare ca disolvare. Prea multe clipiri pot face rău persoanelor sensibile.';
 
@@ -10679,6 +10694,18 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => 'Jos';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => 'Sus stânga';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'Sus dreapta';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'Jos stânga';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'Jos dreapta';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {

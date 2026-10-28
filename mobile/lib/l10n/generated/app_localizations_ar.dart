@@ -10404,6 +10404,21 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorTransitionStretch => 'تمدد';
 
   @override
+  String get videoEditorTransitionLightLeak => 'تسرّب الضوء';
+
+  @override
+  String get videoEditorTransitionClockWipe => 'مسح كعقارب الساعة';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => 'مسح قطري';
+
+  @override
+  String get videoEditorTransitionFlip => 'قلب';
+
+  @override
+  String get videoEditorTransitionCube => 'مكعب';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       'يقع على بُعد أقل من ثانية من وميض آخر، لذا يُعرض هنا كإذابة. الوميض الكثير قد يؤذي الأشخاص الحساسين له.';
 
@@ -10441,6 +10456,18 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => 'أسفل';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => 'أعلى اليسار';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'أعلى اليمين';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'أسفل اليسار';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'أسفل اليمين';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {

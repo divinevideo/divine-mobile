@@ -10506,6 +10506,21 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorTransitionStretch => 'Esticar';
 
   @override
+  String get videoEditorTransitionLightLeak => 'Vazamento de luz';
+
+  @override
+  String get videoEditorTransitionClockWipe => 'Varredura de relógio';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => 'Varredura diagonal';
+
+  @override
+  String get videoEditorTransitionFlip => 'Virar';
+
+  @override
+  String get videoEditorTransitionCube => 'Cubo';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       'Fica a menos de um segundo de outro clarão, então aqui vira uma dissolução. Piscar demais pode fazer mal a pessoas sensíveis.';
 
@@ -10543,6 +10558,18 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => 'Baixo';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => 'Cima à esquerda';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'Cima à direita';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'Baixo à esquerda';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'Baixo à direita';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {

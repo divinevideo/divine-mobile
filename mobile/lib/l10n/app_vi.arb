@@ -5260,6 +5260,11 @@
   "videoEditorTransitionFlash": "Lóe sáng",
   "videoEditorTransitionIris": "Vòng tròn",
   "videoEditorTransitionStretch": "Kéo giãn",
+  "videoEditorTransitionLightLeak": "Rò sáng",
+  "videoEditorTransitionClockWipe": "Quét đồng hồ",
+  "videoEditorTransitionDiagonalWipe": "Quét chéo",
+  "videoEditorTransitionFlip": "Lật",
+  "videoEditorTransitionCube": "Khối lập phương",
   "videoEditorTransitionFlashTooClose": "Cách một lần lóe sáng khác chưa đến một giây, nên ở đây sẽ phát dạng hòa tan. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm.",
   "@videoEditorTransitionWipe": {
     "description": "Transition option where the next clip is progressively revealed over the current one."
@@ -5305,6 +5310,10 @@
     "description": "Accessibility label for the up direction option of a slide/push/wipe transition."
   },
   "videoEditorTransitionDirectionDown": "Xuống",
+  "videoEditorTransitionDirectionUpLeft": "Lên trái",
+  "videoEditorTransitionDirectionUpRight": "Lên phải",
+  "videoEditorTransitionDirectionDownLeft": "Xuống trái",
+  "videoEditorTransitionDirectionDownRight": "Xuống phải",
   "@videoEditorTransitionDirectionDown": {
     "description": "Accessibility label for the down direction option of a slide/push/wipe transition."
   },

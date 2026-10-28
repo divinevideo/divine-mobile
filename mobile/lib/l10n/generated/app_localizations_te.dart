@@ -10702,6 +10702,21 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorTransitionStretch => 'సాగదీయు';
 
   @override
+  String get videoEditorTransitionLightLeak => 'కాంతి లీక్';
+
+  @override
+  String get videoEditorTransitionClockWipe => 'గడియారం తుడవడం';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => 'వికర్ణ తుడవడం';
+
+  @override
+  String get videoEditorTransitionFlip => 'తిరగేయు';
+
+  @override
+  String get videoEditorTransitionCube => 'క్యూబ్';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       'మరో ఫ్లాష్‌కు ఒక సెకను లోపే ఉంది, కాబట్టి ఇక్కడ ఇది రద్దుగా ప్లే అవుతుంది. ఎక్కువ మెరుపులు సున్నితమైన వారికి హాని చేయవచ్చు.';
 
@@ -10739,6 +10754,18 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => 'డౌన్';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => 'పైకి ఎడమ';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'పైకి కుడి';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'క్రిందికి ఎడమ';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'క్రిందికి కుడి';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' as model;
@@ -950,6 +951,66 @@ void main() {
           final earlier = share * step / 1000;
           expect(curve.ease(earlier), lessThan(progress), reason: curve.name);
         }
+      }
+    });
+
+    test('counts a light leak as a flash from where its light reaches a '
+        'quarter of its peak', () {
+      // The renderers light it by sin²(πp): a linear 300 ms blend from 0.9 s
+      // reaches a quarter a sixth of the way in.
+      final clips = [
+        clip(
+          'a',
+          ms(1200),
+          transition: const ClipTransition(
+            type: ClipTransitionType.lightLeak,
+            duration: Duration(milliseconds: 300),
+          ),
+        ),
+        clip('b', ms(1200)),
+      ];
+
+      expect(TransitionTimelineMap.fromClips(clips).flashes, [us(950000)]);
+    });
+
+    test('spaces a light leak and a flash like two flashes', () {
+      // The light leak starts at 1.03 s, the flash at 1.87 s.
+      final clips = [
+        clip(
+          'a',
+          ms(1200),
+          transition: flash.copyWith(type: ClipTransitionType.lightLeak),
+        ),
+        clip('b', ms(1000), transition: flash),
+        clip('c', ms(1200)),
+      ];
+
+      final clamped = clampTransitions(clips);
+
+      expect(clamped['a']?.type, ClipTransitionType.lightLeak);
+      expect(clamped['b']?.type, ClipTransitionType.dissolve);
+    });
+
+    test('locates the first light leak onset on every native easing curve', () {
+      for (final curve in AnimationCurve.values) {
+        final leak = flash.copyWith(
+          type: ClipTransitionType.lightLeak,
+          curve: curve,
+        );
+        final map = TransitionTimelineMap.fromClips([
+          clip('a', ms(3000), transition: leak),
+          clip('b', ms(3000)),
+        ]);
+        final share =
+            (map.flashes.single - ms(2800)).inMicroseconds /
+            leak.duration.inMicroseconds;
+        final light = math.sin(math.pi * curve.ease(share));
+
+        expect(
+          light * light,
+          closeTo(flashOnsetStrength, 0.001),
+          reason: curve.name,
+        );
       }
     });
 

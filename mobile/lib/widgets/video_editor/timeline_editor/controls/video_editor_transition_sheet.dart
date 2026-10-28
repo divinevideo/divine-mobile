@@ -3,6 +3,7 @@
 
 import 'dart:io';
 import 'dart:math' as math;
+import 'dart:ui' as ui show FragmentProgram, FragmentShader;
 import 'dart:ui' show ImageFilter;
 
 import 'package:divine_ui/divine_ui.dart';
@@ -15,14 +16,17 @@ import 'package:openvine/extensions/video_editor_extensions.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/animation_picker_components.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/transition_preview_geometry.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show
         AnimationCurve,
         ClipTransition,
         ClipTransitionDirection,
         ClipTransitionType;
+import 'package:unified_logger/unified_logger.dart';
 
 /// Inclusive bounds (and snap step) for the duration slider, in milliseconds.
 /// Steps in 0.01s (10ms) for fine control. The applied transition is
@@ -56,6 +60,21 @@ const _boxToSigma = 3.4641;
 /// The preview's flash stops short of white, so a tile frozen at its peak
 /// under reduced motion still shows a picture.
 const _previewFlashPeak = 0.85;
+
+/// The light leak's light at mid-transition, as a multiple of its colors, and
+/// the progress window in which it changes clip under the light
+/// (`ClipTransitionEffects.leakGain`, `leakSwapStart` and `leakSwapEnd`).
+const _leakGain = 2.2;
+const _leakSwapStart = 0.35;
+const _leakSwapEnd = 0.65;
+
+/// The preview's light leak stops short of its full strength, so a tile
+/// frozen at its peak under reduced motion still shows a picture.
+const _previewLeakPeak = 0.6;
+
+/// The preview's flip turns its card at most this far, so a tile frozen
+/// halfway under reduced motion shows the card rather than its edge.
+const double _previewFlipMaxTurn = 70 * math.pi / 180;
 
 /// Slices the glitch preview moves, and how often its pattern changes over
 /// one transition.
@@ -522,9 +541,18 @@ class _TransitionPickerViewState extends State<TransitionPickerView>
                           AnimationPickerChip(
                             selected: direction == _direction,
                             onTap: () => setState(() => _direction = direction),
-                            semanticLabel: _directionLabel(l10n, direction),
+                            semanticLabel: _directionLabel(
+                              l10n,
+                              direction,
+                              diagonal:
+                                  _type == ClipTransitionType.diagonalWipe,
+                            ),
                             child: DivineIcon(
-                              icon: _directionIcon(direction),
+                              icon: _directionIcon(
+                                direction,
+                                diagonal:
+                                    _type == ClipTransitionType.diagonalWipe,
+                              ),
                               size: 18,
                               color: direction == _direction
                                   ? context.vineColors.accentBrand
@@ -818,6 +846,52 @@ class _TransitionEffect extends StatelessWidget {
           from: from,
           to: to,
         ),
+        ClipTransitionType.lightLeak => _LightLeakPreview(
+          progress: clamped,
+          child: Stack(
+            fit: .expand,
+            children: [
+              from,
+              Opacity(
+                opacity: _smoothstep(_leakSwapStart, _leakSwapEnd, clamped),
+                child: to,
+              ),
+            ],
+          ),
+        ),
+        ClipTransitionType.clockWipe => Stack(
+          fit: .expand,
+          children: [
+            from,
+            ClipPath(
+              clipper: _PathClipper(
+                (size) => clockWipePath(size, clamped),
+                key: (clamped, null),
+              ),
+              child: to,
+            ),
+          ],
+        ),
+        ClipTransitionType.diagonalWipe => Stack(
+          fit: .expand,
+          children: [
+            from,
+            ClipPath(
+              clipper: _PathClipper(
+                (size) => diagonalWipePath(size, clamped, direction),
+                key: (clamped, direction),
+              ),
+              child: to,
+            ),
+          ],
+        ),
+        ClipTransitionType.flip || ClipTransitionType.cube => _TurnedPreview(
+          type: type!,
+          direction: direction,
+          progress: progress,
+          from: from,
+          to: to,
+        ),
       },
     );
   }
@@ -877,6 +951,138 @@ class _TransitionEffect extends StatelessWidget {
     clipper: _WipeClipper(progress: p, direction: direction),
     child: SizedBox(width: _previewWidth, height: _previewHeight, child: to),
   );
+}
+
+/// Clips to the path [build] makes for the clip's size; reclips when [key]
+/// changes.
+class _PathClipper extends CustomClipper<Path> {
+  const _PathClipper(this.build, {required this.key});
+
+  final Path Function(Size size) build;
+  final Object key;
+
+  @override
+  Path getClip(Size size) => build(size);
+
+  @override
+  bool shouldReclip(_PathClipper oldClipper) => oldClipper.key != key;
+}
+
+/// A flip or cube: the faces [turnedPreviewFaces] places, each frame
+/// darkened by its shade and drawn onto its corners over black.
+class _TurnedPreview extends StatelessWidget {
+  const _TurnedPreview({
+    required this.type,
+    required this.direction,
+    required this.progress,
+    required this.from,
+    required this.to,
+  });
+
+  final ClipTransitionType type;
+  final ClipTransitionDirection direction;
+  final double progress;
+  final Widget from;
+  final Widget to;
+
+  @override
+  Widget build(BuildContext context) {
+    const size = Size(_previewWidth, _previewHeight);
+    final faces = turnedPreviewFaces(
+      type: type,
+      direction: direction,
+      size: size,
+      progress: progress,
+      maxFlipTurn: _previewFlipMaxTurn,
+    );
+    // Names the rendered black around the turning picture, not a surface,
+    // like the fade to black.
+    return ColoredBox(
+      color: VineTheme.backgroundColor,
+      child: Stack(
+        children: [
+          for (final face in faces)
+            Transform(
+              transform: quadTransform(size, face.corners),
+              child: ColorFiltered(
+                colorFilter: ColorFilter.matrix([
+                  face.shade, 0, 0, 0, 0, //
+                  0, face.shade, 0, 0, 0, //
+                  0, 0, face.shade, 0, 0, //
+                  0, 0, 0, 1, 0,
+                ]),
+                child: SizedBox.fromSize(
+                  size: size,
+                  child: face.outgoing ? from : to,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// [child] lit by the light leak at clamped [progress], through the shader
+/// `light_leak_transition.frag` that mirrors the native light.
+///
+/// Shows [child] unlit where the backend has no shader image filter (Skia),
+/// as the effect tiles do.
+class _LightLeakPreview extends StatefulWidget {
+  const _LightLeakPreview({required this.progress, required this.child});
+
+  final double progress;
+  final Widget child;
+
+  @override
+  State<_LightLeakPreview> createState() => _LightLeakPreviewState();
+}
+
+class _LightLeakPreviewState extends State<_LightLeakPreview> {
+  static const _asset = 'shaders/light_leak_transition.frag';
+
+  /// Read once, whichever tiles show it.
+  static Future<ui.FragmentProgram>? _program;
+
+  ui.FragmentShader? _shader;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!ImageFilter.isShaderFilterSupported) return;
+    runDetached(
+      (_program ??= ui.FragmentProgram.fromAsset(_asset)).then((program) {
+        if (!mounted) return;
+        setState(() => _shader = program.fragmentShader());
+      }),
+      'load the light leak transition tile shader',
+      logName: 'VideoEditorTransitionSheet',
+      category: LogCategory.video,
+    );
+  }
+
+  @override
+  void dispose() {
+    _shader?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shader = _shader;
+    if (shader == null) return widget.child;
+    final strength = math.sin(math.pi * widget.progress);
+    // Uniforms 0 and 1 are the bound texture's size, which the engine sets.
+    // A filter made after the uniforms change compares unequal, so the tile
+    // repaints with them.
+    shader
+      ..setFloat(2, widget.progress)
+      ..setFloat(3, _leakGain * strength * strength * _previewLeakPeak);
+    return ImageFiltered(
+      imageFilter: ImageFilter.shader(shader),
+      child: widget.child,
+    );
+  }
 }
 
 /// Reveals the incoming frame over a rectangle that grows with [progress],
@@ -1181,23 +1387,44 @@ double _holdProgress(double value, int durationMs) {
   return (value - start) / (end - start);
 }
 
+/// The label of [direction]; a [diagonal] wipe's edge travels toward the
+/// corner an eighth of a turn clockwise from it.
 String _directionLabel(
   AppLocalizations l10n,
-  ClipTransitionDirection direction,
-) => switch (direction) {
-  ClipTransitionDirection.left => l10n.videoEditorTransitionDirectionLeft,
-  ClipTransitionDirection.right => l10n.videoEditorTransitionDirectionRight,
-  ClipTransitionDirection.up => l10n.videoEditorTransitionDirectionUp,
-  ClipTransitionDirection.down => l10n.videoEditorTransitionDirectionDown,
+  ClipTransitionDirection direction, {
+  required bool diagonal,
+}) => switch ((direction, diagonal)) {
+  (ClipTransitionDirection.left, false) =>
+    l10n.videoEditorTransitionDirectionLeft,
+  (ClipTransitionDirection.right, false) =>
+    l10n.videoEditorTransitionDirectionRight,
+  (ClipTransitionDirection.up, false) => l10n.videoEditorTransitionDirectionUp,
+  (ClipTransitionDirection.down, false) =>
+    l10n.videoEditorTransitionDirectionDown,
+  (ClipTransitionDirection.left, true) =>
+    l10n.videoEditorTransitionDirectionUpLeft,
+  (ClipTransitionDirection.up, true) =>
+    l10n.videoEditorTransitionDirectionUpRight,
+  (ClipTransitionDirection.right, true) =>
+    l10n.videoEditorTransitionDirectionDownRight,
+  (ClipTransitionDirection.down, true) =>
+    l10n.videoEditorTransitionDirectionDownLeft,
 };
 
-DivineIconName _directionIcon(ClipTransitionDirection direction) =>
-    switch (direction) {
-      ClipTransitionDirection.left => DivineIconName.arrowLeft,
-      ClipTransitionDirection.right => DivineIconName.arrowRight,
-      ClipTransitionDirection.up => DivineIconName.arrowUp,
-      ClipTransitionDirection.down => DivineIconName.arrowDown,
-    };
+/// The icon of [direction], turned toward its corner for a [diagonal] wipe.
+DivineIconName _directionIcon(
+  ClipTransitionDirection direction, {
+  required bool diagonal,
+}) => switch ((direction, diagonal)) {
+  (ClipTransitionDirection.left, false) => DivineIconName.arrowLeft,
+  (ClipTransitionDirection.right, false) => DivineIconName.arrowRight,
+  (ClipTransitionDirection.up, false) => DivineIconName.arrowUp,
+  (ClipTransitionDirection.down, false) => DivineIconName.arrowDown,
+  (ClipTransitionDirection.left, true) => DivineIconName.arrowUpLeft,
+  (ClipTransitionDirection.up, true) => DivineIconName.arrowUpRight,
+  (ClipTransitionDirection.right, true) => DivineIconName.arrowDownRight,
+  (ClipTransitionDirection.down, true) => DivineIconName.arrowDownLeft,
+};
 
 String _durationLabel(Duration duration) =>
     '${(duration.inMilliseconds / 1000).toStringAsFixed(2)}s';
@@ -1220,4 +1447,9 @@ String _typeLabel(AppLocalizations l10n, ClipTransitionType? type) =>
       ClipTransitionType.flash => l10n.videoEditorTransitionFlash,
       ClipTransitionType.iris => l10n.videoEditorTransitionIris,
       ClipTransitionType.stretch => l10n.videoEditorTransitionStretch,
+      ClipTransitionType.lightLeak => l10n.videoEditorTransitionLightLeak,
+      ClipTransitionType.clockWipe => l10n.videoEditorTransitionClockWipe,
+      ClipTransitionType.diagonalWipe => l10n.videoEditorTransitionDiagonalWipe,
+      ClipTransitionType.flip => l10n.videoEditorTransitionFlip,
+      ClipTransitionType.cube => l10n.videoEditorTransitionCube,
     };

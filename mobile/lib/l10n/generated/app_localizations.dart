@@ -17699,7 +17699,37 @@ abstract class AppLocalizations {
   /// **'Stretch'**
   String get videoEditorTransitionStretch;
 
-  /// Hint under the transition options when the 'Flash' transition is picked but is less than a second from another flash transition, so the video shows a plain dissolve there instead. Keep the second sentence consistent with videoEditorEffectsFlashingNotDuplicated.
+  /// Transition option: warm light, like a film burn, washes over the picture and hides the cut to the next clip. Use the same term as videoEditorEffectLightLeak.
+  ///
+  /// In en, this message translates to:
+  /// **'Light leak'**
+  String get videoEditorTransitionLightLeak;
+
+  /// Transition option: the next clip is revealed behind a hand sweeping around the middle of the picture, like a clock.
+  ///
+  /// In en, this message translates to:
+  /// **'Clock wipe'**
+  String get videoEditorTransitionClockWipe;
+
+  /// Transition option: the next clip is revealed by an edge moving diagonally across the picture, from one corner to the opposite one.
+  ///
+  /// In en, this message translates to:
+  /// **'Diagonal wipe'**
+  String get videoEditorTransitionDiagonalWipe;
+
+  /// Transition option: the picture turns over in 3D like a card, with the next clip on its back.
+  ///
+  /// In en, this message translates to:
+  /// **'Flip'**
+  String get videoEditorTransitionFlip;
+
+  /// Transition option: the picture turns in 3D like the side of a cube, bringing the next clip in as the next side.
+  ///
+  /// In en, this message translates to:
+  /// **'Cube'**
+  String get videoEditorTransitionCube;
+
+  /// Hint under the transition options when the 'Flash' or 'Light leak' transition is picked but is less than a second from another such transition, so the video shows a plain dissolve there instead. Keep the second sentence consistent with videoEditorEffectsFlashingNotDuplicated.
   ///
   /// In en, this message translates to:
   /// **'Within a second of another flash, so it plays as a dissolve here. Too much flashing can hurt people who are sensitive to it.'**
@@ -17770,6 +17800,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Down'**
   String get videoEditorTransitionDirectionDown;
+
+  /// Accessibility label for the direction option of a diagonal wipe transition whose edge moves toward the top left corner.
+  ///
+  /// In en, this message translates to:
+  /// **'Up and left'**
+  String get videoEditorTransitionDirectionUpLeft;
+
+  /// Accessibility label for the direction option of a diagonal wipe transition whose edge moves toward the top right corner.
+  ///
+  /// In en, this message translates to:
+  /// **'Up and right'**
+  String get videoEditorTransitionDirectionUpRight;
+
+  /// Accessibility label for the direction option of a diagonal wipe transition whose edge moves toward the bottom left corner.
+  ///
+  /// In en, this message translates to:
+  /// **'Down and left'**
+  String get videoEditorTransitionDirectionDownLeft;
+
+  /// Accessibility label for the direction option of a diagonal wipe transition whose edge moves toward the bottom right corner.
+  ///
+  /// In en, this message translates to:
+  /// **'Down and right'**
+  String get videoEditorTransitionDirectionDownRight;
 
   /// Accessibility label for an easing-curve option in the transition picker, identified by its position. The curve shape is shown visually as a glyph; screen readers announce the option number instead.
   ///

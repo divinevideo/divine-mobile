@@ -10579,6 +10579,21 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorTransitionStretch => 'Étirement';
 
   @override
+  String get videoEditorTransitionLightLeak => 'Fuite de lumière';
+
+  @override
+  String get videoEditorTransitionClockWipe => 'Balayage d\'horloge';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => 'Balayage diagonal';
+
+  @override
+  String get videoEditorTransitionFlip => 'Retournement';
+
+  @override
+  String get videoEditorTransitionCube => 'Cube';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       'À moins d\'une seconde d\'un autre flash, il s\'affiche donc ici en fondu enchaîné. Trop de clignotements peuvent faire du mal aux personnes sensibles.';
 
@@ -10617,6 +10632,18 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => 'Bas';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => 'En haut à gauche';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'En haut à droite';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'En bas à gauche';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'En bas à droite';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {

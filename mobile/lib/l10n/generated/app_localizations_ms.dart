@@ -10429,6 +10429,21 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorTransitionStretch => 'Regangkan';
 
   @override
+  String get videoEditorTransitionLightLeak => 'Kebocoran Cahaya';
+
+  @override
+  String get videoEditorTransitionClockWipe => 'Sapu jam';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => 'Sapu pepenjuru';
+
+  @override
+  String get videoEditorTransitionFlip => 'Balik';
+
+  @override
+  String get videoEditorTransitionCube => 'Kiub';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       'Kurang daripada sesaat dari kilat lain, jadi di sini ia dimainkan sebagai larut. Kelipan berlebihan boleh memudaratkan orang yang sensitif.';
 
@@ -10466,6 +10481,18 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => 'Bawah';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => 'Kiri atas';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'Kanan atas';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'Kiri bawah';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'Kanan bawah';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {
