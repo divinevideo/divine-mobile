@@ -204,4 +204,5 @@ it before posting.
 | "Auto Mode says to minimize interruptions" | This skill's 10-20 rule is explicit and wins. |
 | "Every recommendation was taken, so I'm done" | Done only once the ledger holds 10 answered. |
 | "Probably unrelated" about an error in the run | Unproven. It is an adjacent finding until traced. |
+| "I'll hand the device run to a subagent" | Delegates run host-only commands, never device or local-stack work (`flutter-lens.md` §0). Run it yourself. |
 | "The app threw, so the bug reproduced" | Run `taint` first. A probe that wrote mid-frame makes errors no user can reach; #10439 was filed from one. |
