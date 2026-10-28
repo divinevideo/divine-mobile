@@ -178,6 +178,30 @@ String? videoAddressableTarget(String? referencedAddress) {
   return NIP71VideoKinds.isVideoKind(parsed.kind) ? referencedAddress : null;
 }
 
+/// The video a push payload points at.
+///
+/// A usable signed coordinate ([videoAddressableTarget]) wins and suppresses
+/// the event-id walk. Otherwise the target is [referencedEventId] (the event
+/// acted upon), falling back to [eventId] (the source event) for follows and
+/// mentions; the caller walks it to a root video. At most one field is
+/// non-null.
+({String? videoCoordinate, String? targetEventId}) pushVideoTarget({
+  required String? referencedAddress,
+  required String? referencedEventId,
+  required String? eventId,
+}) {
+  final videoCoordinate = videoAddressableTarget(referencedAddress);
+  if (videoCoordinate != null) {
+    return (videoCoordinate: videoCoordinate, targetEventId: null);
+  }
+  return (
+    videoCoordinate: null,
+    targetEventId: (referencedEventId != null && referencedEventId.isNotEmpty)
+        ? referencedEventId
+        : eventId,
+  );
+}
+
 /// Decides where a notification tap should go.
 ///
 /// [hasVideoTarget] is supplied by the caller: `true` when it holds a video

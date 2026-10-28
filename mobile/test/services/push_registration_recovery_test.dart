@@ -166,6 +166,7 @@ void main() {
             );
           });
           final service = PushNotificationService(
+            timeZoneIdentifier: () async => null,
             authService: auth,
             nostrClient: client,
             notificationService: _Notifications(),

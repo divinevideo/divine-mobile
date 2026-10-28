@@ -6,7 +6,14 @@ import 'package:flutter_test/flutter_test.dart';
 /// Sets up the test environment with necessary platform channel mocks.
 void setUpTestEnvironment() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  _setupPathProviderMock();
+  setUp(_setupPathProviderMock);
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('plugins.flutter.io/path_provider'),
+          null,
+        );
+  });
 }
 
 /// Creates a temporary directory for testing and returns its path.

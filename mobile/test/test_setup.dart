@@ -4,8 +4,10 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:media_cache/media_cache.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/profile_editor/profile_editor_bloc.dart';
+import 'package:openvine/utils/open_vine_image_cache.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -45,6 +47,11 @@ final Map<String, SharedChannelHandler> canonicalSharedHandlers =
 /// Set up test environment with necessary mocks and platform channel handlers
 void setupTestEnvironment() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  // Keep app widget tests independent of native SQLite plugin registration.
+  // The media_cache package exercises the native shared-index implementation.
+  debugImageCacheRepositoryFactory = (key) =>
+      SafeCacheInfoRepository(databaseName: key);
 
   // Disable Google Fonts runtime fetching to prevent network calls in tests
   GoogleFonts.config.allowRuntimeFetching = false;

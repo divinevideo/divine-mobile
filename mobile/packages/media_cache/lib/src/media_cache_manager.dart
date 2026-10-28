@@ -326,7 +326,7 @@ class MediaCacheManager extends CacheManager {
   MediaCacheManager({
     required MediaCacheConfig config,
     @visibleForTesting DirectoryProvider? tempDirectoryProvider,
-    @visibleForTesting CacheInfoRepository? repoOverride,
+    CacheInfoRepository? repoOverride,
     @visibleForTesting CancellableDownloader? downloaderOverride,
     @visibleForTesting IOClient? fileServiceClientOverride,
     @visibleForTesting Duration? sweepThrottleOverride,

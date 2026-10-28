@@ -5,6 +5,7 @@ import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openvine/models/notification_preferences.dart';
 import 'package:openvine/notifications/services/notification_refresh_coordinator.dart';
@@ -14,10 +15,15 @@ import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/environment_provider.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
 import 'package:openvine/providers/provider_detached_future.dart';
+import 'package:openvine/providers/repository_providers.dart';
+import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/services/app_badge_service.dart';
+import 'package:openvine/services/notification_background_preloader.dart';
+import 'package:openvine/services/notification_content_preloader.dart';
 import 'package:openvine/services/notification_helpers.dart';
 import 'package:openvine/services/notification_preferences_service.dart';
 import 'package:openvine/services/notification_service.dart';
+import 'package:openvine/services/notification_target_resolver.dart';
 import 'package:openvine/services/push_notification_service.dart';
 import 'package:openvine/services/push_notification_session_coordinator.dart';
 import 'package:openvine/utils/platform_support.dart';
@@ -25,6 +31,27 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 part 'notifications_providers.g.dart';
+
+final notificationContentPreloaderProvider =
+    Provider<NotificationContentPreloader>((ref) {
+      final preloader = NotificationContentPreloader(
+        loadVideo: (id) => ref
+            .read(videosRepositoryProvider)
+            .fetchVideoWithStatsForRouteId(id),
+        resolveVideoTarget: (id) => NotificationTargetResolver(
+          videoEventService: ref.read(videoEventServiceProvider),
+          nostrService: ref.read(nostrServiceProvider),
+        ).resolveVideoEventIdFromNotificationTarget(id),
+        loadProfile: (pubkey) async {
+          await ref
+              .read(profileRepositoryProvider)
+              ?.fetchFreshProfile(pubkey: pubkey);
+        },
+        cacheThumbnail: cacheNotificationThumbnail,
+      );
+      ref.onDispose(preloader.dispose);
+      return preloader;
+    });
 
 final firebaseMessagingProvider = Provider<FirebaseMessaging>(
   (ref) => FirebaseMessaging.instance,
@@ -305,10 +332,21 @@ PushNotificationSessionCoordinator? pushNotificationSync(Ref ref) {
     coordinator.handleReadiness(next);
   });
 
+  final lifecycle = AppLifecycleListener(
+    onResume: () => runProviderDetached(
+      coordinator.handleAppResumed(),
+      'refresh the push timezone after resume',
+      logName: 'PushNotificationSync',
+    ),
+  );
+
   // Set up foreground message handler
   final onMessageSubscription = ref.read(firebaseOnMessageProvider).listen((
     message,
   ) {
+    unawaited(
+      ref.read(notificationContentPreloaderProvider).preload(message.data),
+    );
     final pushService = ref.read(pushNotificationServiceProvider);
     if (pushService != null) {
       unawaited(
@@ -321,6 +359,7 @@ PushNotificationSessionCoordinator? pushNotificationSync(Ref ref) {
   });
 
   ref.onDispose(() {
+    lifecycle.dispose();
     coordinator.dispose();
     unregisterBeforeSessionTeardown();
     runProviderDetached(

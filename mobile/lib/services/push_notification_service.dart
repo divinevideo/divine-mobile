@@ -6,6 +6,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/nostr_sdk.dart';
@@ -71,6 +73,7 @@ class PushNotificationService {
     required Future<String?> Function() getToken,
     FutureOr<bool> Function()? isCurrent,
     int Function()? timeZoneOffsetMinutes,
+    Future<String?> Function()? timeZoneIdentifier,
   }) : _authService = authService,
        _nostrClient = nostrClient,
        _notificationService = notificationService,
@@ -78,7 +81,8 @@ class PushNotificationService {
        _getToken = getToken,
        _isCurrent = isCurrent,
        _timeZoneOffsetMinutes =
-           timeZoneOffsetMinutes ?? _deviceTimeZoneOffsetMinutes;
+           timeZoneOffsetMinutes ?? _deviceTimeZoneOffsetMinutes,
+       _timeZoneIdentifier = timeZoneIdentifier ?? _deviceTimeZoneIdentifier;
 
   final AuthService _authService;
   final NostrClient _nostrClient;
@@ -87,6 +91,40 @@ class PushNotificationService {
   final Future<String?> Function() _getToken;
   final FutureOr<bool> Function()? _isCurrent;
   final int Function() _timeZoneOffsetMinutes;
+  final Future<String?> Function() _timeZoneIdentifier;
+  ({int offset, String? name})? _registeredTimezone;
+
+  static Future<String?> _deviceTimeZoneIdentifier() async =>
+      (await FlutterTimezone.getLocalTimezone()).identifier;
+
+  Future<({int offset, String? name})> _readTimezone() async {
+    final offset = _timeZoneOffsetMinutes();
+    String? name;
+    try {
+      name = await _timeZoneIdentifier().timeout(const Duration(seconds: 1));
+    } on MissingPluginException {
+      // Older native builds still register using their current UTC offset.
+    } on PlatformException {
+      // A platform lookup failure must not prevent push registration.
+    } on TimeoutException {
+      // Keep registration bounded when a platform channel does not answer.
+    } on Object catch (error) {
+      // The plugin uses ArgumentError for an absent native response.
+      if (error is! ArgumentError) rethrow;
+    }
+    return (offset: offset, name: name);
+  }
+
+  /// Called on resume to update travel/DST changes without signing on every
+  /// lifecycle transition. Initial registration owns its existing retry loop.
+  Future<bool> registrationTimezoneChanged() async {
+    final registered = _registeredTimezone;
+    if (registered == null) return false;
+    final current = await _readTimezone();
+    return current.offset != registered.offset ||
+        (current.name != null && current.name != registered.name);
+  }
+
   bool _acceptsRegistration = true;
 
   static int _deviceTimeZoneOffsetMinutes() =>
@@ -401,9 +439,15 @@ class PushNotificationService {
     );
     if (beforeEncryption != null) return beforeEncryption;
 
+    final timezone = await _readTimezone();
+    if (await _registrationIdentityFailure(identity, isCurrent)
+        case final failure?) {
+      return failure;
+    }
     final plaintext = jsonEncode({
       'token': token,
-      'timezoneOffsetMinutes': _timeZoneOffsetMinutes(),
+      'timezoneOffsetMinutes': timezone.offset,
+      if (timezone.name != null) 'timezone': timezone.name,
     });
 
     String? encrypted;
@@ -467,7 +511,10 @@ class PushNotificationService {
     }
 
     final outcome = await _publishPushControlEvent(event, 'registration');
-    if (outcome.confirmed) return PushRegistrationResult.published;
+    if (outcome.confirmed) {
+      _registeredTimezone = timezone;
+      return PushRegistrationResult.published;
+    }
     if (outcome.rejectedBy.isNotEmpty) {
       return PushRegistrationResult.terminalFailure;
     }
