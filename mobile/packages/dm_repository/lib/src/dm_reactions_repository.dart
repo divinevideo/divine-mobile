@@ -7,6 +7,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
+import 'package:dm_repository/src/dm_held_pool_wraps.dart';
 import 'package:dm_repository/src/dm_reactions_repository_reportable_sites.dart';
 import 'package:dm_repository/src/dm_repository.dart';
 import 'package:dm_repository/src/group_conversation_recovery.dart';
@@ -709,6 +710,11 @@ class DmReactionsRepository {
         recipients: recipients,
         inboxByRecipient: inboxByRecipient,
         awaitRecipientOk: true,
+        recordHeldWrap: _heldWrapRecorder(
+          _reactionsDao.recordHeldReactionWrap,
+          id: rumorId,
+          ownerPubkey: ownerPubkey,
+        ),
       );
       try {
         switch (fanOut.result) {
@@ -818,6 +824,10 @@ class DmReactionsRepository {
   /// 4. When an attempt for this rumor is already running — the original
   ///    [publish] of a group reaction, or an earlier retry — nothing is sent
   ///    again: the call joins that attempt and returns its outcome.
+  /// 5. A recipient whose earlier wrap the fallback pool accepted on an
+  ///    unreadable inbox is sent nothing more while it stays unreadable, is
+  ///    settled on that wrap once they advertise no inbox, and is wrapped
+  ///    again only once their inbox is found (#10012).
   Future<DmReactionPublishResult> retry({
     required String rumorId,
     required String targetMessageAuthor,
@@ -885,6 +895,12 @@ class DmReactionsRepository {
         rumor: rumor,
         recipients: recipients,
         awaitRecipientOk: true,
+        heldWraps: decodeHeldPoolWraps(row.heldReactionWraps),
+        recordHeldWrap: _heldWrapRecorder(
+          _reactionsDao.recordHeldReactionWrap,
+          id: rumorId,
+          ownerPubkey: ownerPubkey,
+        ),
       );
       try {
         switch (fanOut.result) {
@@ -1177,7 +1193,9 @@ class DmReactionsRepository {
   /// Marks the row `deletion_sent` on a confirmed publish and
   /// `deletion_refused` when send policy blocks it — off the sweep's
   /// worklist, rumor retained for a user-driven retry; leaves its status
-  /// unchanged otherwise, so the sweep tries again.
+  /// unchanged otherwise, so the sweep tries again. A recipient the fallback
+  /// pool holds an earlier wrap for is handled as [retry] handles one
+  /// (#10012).
   Future<DmReactionDeletionOutcome> retryDeletion({
     required String rumorId,
     required String targetMessageAuthor,
@@ -1260,6 +1278,12 @@ class DmReactionsRepository {
         rumor: deletion,
         recipients: recipients,
         awaitRecipientOk: true,
+        heldWraps: decodeHeldPoolWraps(row.heldRemovalWraps),
+        recordHeldWrap: _heldWrapRecorder(
+          _reactionsDao.recordHeldRemovalWrap,
+          id: rumorId,
+          ownerPubkey: ownerPubkey,
+        ),
       );
       try {
         switch (fanOut.result) {
@@ -1319,6 +1343,11 @@ class DmReactionsRepository {
         recipients: recipients,
         inboxByRecipient: inboxByRecipient,
         awaitRecipientOk: true,
+        recordHeldWrap: _heldWrapRecorder(
+          _reactionsDao.recordHeldRemovalWrap,
+          id: rumorId,
+          ownerPubkey: ownerPubkey,
+        ),
       );
       try {
         switch (fanOut.result) {
@@ -2029,6 +2058,17 @@ class DmReactionsRepository {
   /// unrecoverable. A recipient with no lookup at all (no resolver wired)
   /// keeps the pre-#7321 contract, where a pool `OK` is delivery.
   ///
+  /// The wrap the pool held is handed to [recordHeldWrap], and a later
+  /// attempt passes the row's record back as [heldWraps], keyed by
+  /// recipient: while that recipient's inbox stays unreadable nothing more is
+  /// sent to them, once they advertise no inbox the held wrap is their
+  /// delivery, and only once their inbox is found are they wrapped again
+  /// (#10012), as a held message is. An attempt in which any recipient's
+  /// inbox is unreadable is held whatever the others come to, so it
+  /// publishes no own copy either, even for a lost `OK` the default
+  /// `selfWrapOnSoftUnconfirmed` would cover: the copy shows the reaction as
+  /// sent on the sender's other devices.
+  ///
   /// An empty [recipients] is a hard failure with nothing sent;
   /// [_recipientsOrHold] relies on that to hold a row.
   ///
@@ -2045,6 +2085,9 @@ class DmReactionsRepository {
     required String ownerPubkey,
     required Event rumor,
     required List<String> recipients,
+    required Future<void> Function(String recipientPubkey, String wrapEventId)
+    recordHeldWrap,
+    Map<String, String> heldWraps = const {},
     Map<String, DmInboxLookup>? inboxByRecipient,
     bool awaitRecipientOk = false,
   }) async {
@@ -2055,9 +2098,13 @@ class DmReactionsRepository {
       );
     }
     final inboxes = inboxByRecipient ?? await _resolveInboxes(recipients);
+    final held = recipients.any(
+      (recipient) => inboxes[recipient]?.state == DmInboxResolution.unreadable,
+    );
     NIP17SendSuccess? lastSuccess;
     final failures = <NIP17SendFailure>[];
     var ownCopyDue = false;
+    var withheldOwnCopy = false;
     var returned = false;
     Event? prebuiltOwnCopy;
     Future<void> publishOwnCopy() => _publishOwnCopy(
@@ -2067,6 +2114,18 @@ class DmReactionsRepository {
       ownerPubkey: ownerPubkey,
     );
     void onOwnCopyDue(Event? prebuiltSelfWrap) {
+      if (held) {
+        if (!withheldOwnCopy) {
+          withheldOwnCopy = true;
+          Log.info(
+            'Withholding the own copy of rumor ${rumor.id}: a recipient '
+            'inbox is unreadable, so this attempt is held, not delivered '
+            '(#10012)',
+            category: LogCategory.system,
+          );
+        }
+        return;
+      }
       prebuiltOwnCopy ??= prebuiltSelfWrap;
       if (ownCopyDue) return;
       ownCopyDue = true;
@@ -2078,17 +2137,33 @@ class DmReactionsRepository {
 
     for (final recipient in recipients) {
       final inbox = inboxes[recipient];
-      final published = await _sendRumorWithTimeout(
+      final NIP17SendResult result;
+      final unsent = await resolveHeldPoolWrap(
         messageService: messageService,
         rumor: rumor,
         recipientPubkey: recipient,
-        targetRelays: inbox?.relays,
-        awaitRecipientOk: awaitRecipientOk,
-        onSelfWrapDue: onOwnCopyDue,
+        heldWrapId: heldWraps[recipient],
+        inboxState: inbox?.state,
       );
-      final result = inbox == null
-          ? published
-          : downgradeFallbackPoolDelivery(published, inbox.state);
+      if (unsent != null) {
+        result = unsent;
+        // Settled on the held wrap: no send ran to hand the own copy over.
+        if (unsent.success) onOwnCopyDue(null);
+      } else {
+        final published = await _sendRumorWithTimeout(
+          messageService: messageService,
+          rumor: rumor,
+          recipientPubkey: recipient,
+          targetRelays: inbox?.relays,
+          awaitRecipientOk: awaitRecipientOk,
+          onSelfWrapDue: onOwnCopyDue,
+        );
+        result = inbox == null
+            ? published
+            : downgradeFallbackPoolDelivery(published, inbox.state);
+        final heldWrapId = heldPoolWrapOf(published, result);
+        if (heldWrapId != null) await recordHeldWrap(recipient, heldWrapId);
+      }
       switch (result) {
         case NIP17SendSuccess():
           lastSuccess = result;
@@ -2130,6 +2205,45 @@ class DmReactionsRepository {
     // Intentional no-op: no recipient's send reached the point where the
     // sender's own copy is due.
   }
+
+  /// Records on row [id], through [record], a `DmReactionsDao` method, each
+  /// wrap the fallback pool holds for a recipient whose inbox could not be
+  /// read (#10012). Never throws: without the record the next attempt wraps
+  /// the rumor again, as every attempt did before, so a failure is reported
+  /// and left at that.
+  Future<void> Function(String recipientPubkey, String wrapEventId)
+  _heldWrapRecorder(
+    Future<bool> Function({
+      required String id,
+      required String ownerPubkey,
+      required String recipientPubkey,
+      required String wrapEventId,
+    })
+    record, {
+    required String id,
+    required String ownerPubkey,
+  }) => (recipientPubkey, wrapEventId) async {
+    try {
+      await record(
+        id: id,
+        ownerPubkey: ownerPubkey,
+        recipientPubkey: recipientPubkey,
+        wrapEventId: wrapEventId,
+      );
+    } on Object catch (e, st) {
+      Log.warning(
+        'DM reaction $id: wrap $wrapEventId the fallback pool holds for '
+        '${pubkeyForLogs(recipientPubkey)} was not recorded '
+        '(${e.runtimeType}), so the next attempt wraps the rumor again',
+        category: LogCategory.system,
+      );
+      _errorReporter?.call(
+        e,
+        st,
+        site: DmReactionsRepositoryReportableSites.recordHeldPoolWrap,
+      );
+    }
+  };
 
   /// Publish the sender's own copy of [rumor] for [_fanOutRumor], to
   /// [ownerPubkey]'s own copy targets. Never throws: a copy that fails,

@@ -225,6 +225,35 @@ class NIP17MessageService {
     return null;
   }
 
+  /// What a retry returns before it keeps or settles on a wrap that a relay
+  /// already holds for [recipientPubkey], instead of sending them another
+  /// (#10012): [preSendRefusal]'s refusal, a failure when the send policy
+  /// throws, as [sendRumor] reports one, or, with no relay connected, the
+  /// outcome of an attempt that reached none (#8516). `null` when it may go
+  /// on.
+  Future<NIP17SendResult?> heldRetryRefusal(String recipientPubkey) async {
+    final NIP17SendResult? refusal;
+    try {
+      refusal = await preSendRefusal(recipientPubkey);
+    } on Object catch (e, stackTrace) {
+      Log.error(
+        'Send policy check failed for ${pubkeyForLogs(recipientPubkey)}: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return NIP17SendResult.failure('Failed to send message: $e');
+    }
+    if (refusal != null) return refusal;
+    if (_nostrService.connectedRelayCount == 0) {
+      return const NIP17SendResult.failure(
+        'Not sent: no relay connected',
+        reachedNoRelay: true,
+      );
+    }
+    return null;
+  }
+
   /// Builds a single NIP-17 gift wrap for [receiverPublicKey] from
   /// [rumorEvent].
   ///
