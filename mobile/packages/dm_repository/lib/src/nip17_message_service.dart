@@ -153,6 +153,76 @@ class NIP17MessageService {
   Future<bool> canSendTo(String recipientPubkey) async =>
       await _sendPolicy(recipientPubkey) == DmSendPolicyDecision.allowed;
 
+  /// What [sendRumor] returns before it builds or publishes anything for
+  /// [recipientPubkey], or `null` when it would go on to send: a refusal by
+  /// the send policy (#176), or the offline fail-fast (#6046). A caller that
+  /// settles a send without [sendRumor] makes the same checks through this.
+  Future<NIP17SendResult?> preSendRefusal(String recipientPubkey) async {
+    // Send gate (#176): the lowest recipient-delivering primitive, so every
+    // publisher — direct send, group fan-out, drain replay, reactions,
+    // file — is covered at one seam. The injected policy decides which
+    // recipients are refused. Checked before any wrap build or publish, so a
+    // blocked send leaks no metadata to relays and performs no signing work.
+    // Bounded: the resolver behind this has its own Dio connect/receive
+    // bound, but nothing here enforced it, so a wedged resolver spent the
+    // publish backstop instead (#7091). Fail CLOSED to temporarily-blocked:
+    // this is a safety gate, and a retryable refusal is the safe reading of
+    // "we could not determine whether this recipient is permitted".
+    DmSendPolicyDecision policyDecision;
+    try {
+      policyDecision = await _sendPolicy(
+        recipientPubkey,
+      ).timeout(DmSendBudget.sendPolicyCheck);
+    } on TimeoutException {
+      Log.warning(
+        'NIP-17 send policy check exceeded '
+        '${DmSendBudget.sendPolicyCheck.inSeconds}s; treating as '
+        'temporarily blocked',
+        category: LogCategory.system,
+      );
+      policyDecision = DmSendPolicyDecision.temporarilyBlocked;
+    }
+    if (policyDecision != DmSendPolicyDecision.allowed) {
+      Log.info(
+        'NIP-17 send blocked by policy for recipient',
+        category: LogCategory.system,
+      );
+      if (policyDecision == DmSendPolicyDecision.temporarilyBlocked) {
+        return const NIP17SendResult.failure(
+          'temporarily blocked: protected-minor status unresolved',
+        );
+      }
+      return NIP17SendResult.blocked(
+        'blocked: recipient not permitted by send policy',
+        disposition:
+            policyDecision == DmSendPolicyDecision.terminallyBlockedRetain
+            ? NIP17BlockedSendDisposition.retain
+            : NIP17BlockedSendDisposition.discard,
+      );
+    }
+
+    // Fail fast when the device has no connectivity. A publish while offline
+    // only buffers the frame to a relay socket still stale-`connected`
+    // (airplane mode is not detected synchronously — the WebSocket flips to
+    // disconnected only on an async OS close or the heartbeat idle timeout),
+    // so the OK-confirm path below would misread it as a soft "frame written,
+    // OK lost" send and keep the bubble looking sent. With no connectivity
+    // the send definitively did not happen: return a hard failure so the
+    // durable queue marks the row failed (red bubble) and the reconnect sweep
+    // re-drives it. See #6046.
+    if (await _isOfflineSafely()) {
+      Log.info(
+        'NIP-17 send skipped: device reports no connectivity',
+        category: LogCategory.system,
+      );
+      return const NIP17SendResult.failure(
+        'Message not sent: device offline',
+        reachedNoRelay: true,
+      );
+    }
+    return null;
+  }
+
   /// Builds a single NIP-17 gift wrap for [receiverPublicKey] from
   /// [rumorEvent].
   ///
@@ -647,68 +717,9 @@ class NIP17MessageService {
     final recipientWrapBound = recipientWrapBuildTimeout;
     final selfWrapBound = selfWrapBuildTimeout;
     try {
-      // Send gate (#176): the lowest recipient-delivering primitive, so every
-      // publisher — direct send, group fan-out, drain replay, reactions,
-      // file — is covered at one seam. The injected policy decides which
-      // recipients are refused. Checked before any wrap build or publish, so a
-      // blocked send leaks no metadata to relays and performs no signing work.
-      // Bounded: the resolver behind this has its own Dio connect/receive
-      // bound, but nothing here enforced it, so a wedged resolver spent the
-      // publish backstop instead (#7091). Fail CLOSED to temporarily-blocked:
-      // this is a safety gate, and a retryable refusal is the safe reading of
-      // "we could not determine whether this recipient is permitted".
-      DmSendPolicyDecision policyDecision;
-      try {
-        policyDecision = await _sendPolicy(
-          recipientPubkey,
-        ).timeout(DmSendBudget.sendPolicyCheck);
-      } on TimeoutException {
-        Log.warning(
-          'NIP-17 send policy check exceeded '
-          '${DmSendBudget.sendPolicyCheck.inSeconds}s; treating as '
-          'temporarily blocked',
-          category: LogCategory.system,
-        );
-        policyDecision = DmSendPolicyDecision.temporarilyBlocked;
-      }
-      if (policyDecision != DmSendPolicyDecision.allowed) {
-        Log.info(
-          'NIP-17 send blocked by policy for recipient',
-          category: LogCategory.system,
-        );
-        if (policyDecision == DmSendPolicyDecision.temporarilyBlocked) {
-          return const NIP17SendResult.failure(
-            'temporarily blocked: protected-minor status unresolved',
-          );
-        }
-        return NIP17SendResult.blocked(
-          'blocked: recipient not permitted by send policy',
-          disposition:
-              policyDecision == DmSendPolicyDecision.terminallyBlockedRetain
-              ? NIP17BlockedSendDisposition.retain
-              : NIP17BlockedSendDisposition.discard,
-        );
-      }
-
-      // Fail fast when the device has no connectivity. A publish while offline
-      // only buffers the frame to a relay socket still stale-`connected`
-      // (airplane mode is not detected synchronously — the WebSocket flips to
-      // disconnected only on an async OS close or the heartbeat idle timeout),
-      // so the OK-confirm path below would misread it as a soft "frame written,
-      // OK lost" send and keep the bubble looking sent. With no connectivity
-      // the send definitively did not happen: return a hard failure so the
-      // durable queue marks the row failed (red bubble) and the reconnect sweep
-      // re-drives it. See #6046.
-      if (await _isOfflineSafely()) {
-        Log.info(
-          'NIP-17 send skipped: device reports no connectivity',
-          category: LogCategory.system,
-        );
-        return const NIP17SendResult.failure(
-          'Message not sent: device offline',
-          reachedNoRelay: true,
-        );
-      }
+      // Send gate (#176) and offline fail-fast: see [preSendRefusal].
+      final refusal = await preSendRefusal(recipientPubkey);
+      if (refusal != null) return refusal;
 
       Log.info(
         'Sending NIP-17 encrypted message to recipient',

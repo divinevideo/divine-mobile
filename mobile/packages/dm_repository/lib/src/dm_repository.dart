@@ -7652,7 +7652,10 @@ class DmRepository {
   /// While the inbox stays unreadable the attempt publishes nothing and is
   /// charged as a soft one. Once it reads absent, the pool is where the
   /// recipient reads: the held wrap counts as delivered, and only the sender's
-  /// withheld copy is published.
+  /// withheld copy is published. Either way the attempt first makes
+  /// [NIP17MessageService.preSendRefusal]'s checks, so a recipient the send
+  /// policy now refuses, or an offline device, ends it as it would end a
+  /// publish.
   ///
   /// Every failed attempt this runs is charged to the row's retry budget
   /// here, once — a soft-unconfirmed one too — except one that reached no
@@ -7840,8 +7843,17 @@ class DmRepository {
     // an inbox we still cannot read. Only a found inbox gets a new wrap
     // (#10012).
     final poolWrapId = _heldPoolWrapId(row);
+    // A retry that keeps or settles on that wrap skips sendRumor, so it makes
+    // sendRumor's pre-send checks here: the send policy (#176) and the offline
+    // fail-fast.
+    final refusal = poolWrapId == null
+        ? null
+        : await _heldRetryRefusal(rumor, row);
     final NIP17SendResult result;
-    if (poolWrapId != null && inbox.state == DmInboxResolution.unreadable) {
+    if (refusal != null) {
+      result = refusal;
+    } else if (poolWrapId != null &&
+        inbox.state == DmInboxResolution.unreadable) {
       Log.info(
         'Not republishing rumor ${rumor.id} to '
         '${pubkeyForLogs(row.recipientPubkey)}: the fallback pool already '
@@ -8866,6 +8878,27 @@ class DmRepository {
         OutgoingWrapStatus.failed => row.recipientWrapEventId,
         _ => null,
       };
+
+  /// [NIP17MessageService.preSendRefusal] for a retry of held row [row] that
+  /// does not go through [NIP17MessageService.sendRumor] (#10012). A send
+  /// policy that throws fails the attempt, as it does inside sendRumor.
+  Future<NIP17SendResult?> _heldRetryRefusal(
+    Event rumor,
+    OutgoingDm row,
+  ) async {
+    try {
+      return await _messageService!.preSendRefusal(row.recipientPubkey);
+    } on Object catch (e, stackTrace) {
+      Log.error(
+        'Send policy check failed for held rumor ${rumor.id} to '
+        '${pubkeyForLogs(row.recipientPubkey)}: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return NIP17SendResult.failure('Failed to send message: $e');
+    }
+  }
 
   /// Settles a held row whose recipient now advertises no inbox: the pool is
   /// where they read, so [poolWrapId] is the delivery and no other recipient

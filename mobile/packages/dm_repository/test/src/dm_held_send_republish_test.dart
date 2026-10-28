@@ -86,6 +86,9 @@ void main() {
     late List<Event> published;
     late Map<String, List<String>?> recipientWrapTargets;
     late bool confirmRecipientWraps;
+    late DmSendPolicyDecision policyDecision;
+    late bool policyThrows;
+    late bool deviceOffline;
     late DmRepository repository;
 
     /// Every gift wrap this device published addressed to [pubkey].
@@ -110,6 +113,11 @@ void main() {
           signer: signer,
           senderPublicKey: owner,
           nostrService: nostrClient,
+          sendPolicy: (_) async {
+            if (policyThrows) throw StateError('policy unavailable');
+            return policyDecision;
+          },
+          isOffline: () async => deviceOffline,
         ),
         directMessagesDao: DirectMessagesDao(db),
         conversationsDao: ConversationsDao(db),
@@ -161,6 +169,9 @@ void main() {
       published = [];
       recipientWrapTargets = {};
       confirmRecipientWraps = true;
+      policyDecision = DmSendPolicyDecision.allowed;
+      policyThrows = false;
+      deviceOffline = false;
 
       when(() => nostrClient.connectedRelayCount).thenReturn(1);
       when(() => nostrClient.configuredRelayCount).thenReturn(1);
@@ -376,6 +387,77 @@ void main() {
         expect(message!.giftWrapId, equals(inboxWrap.id));
         expect(await outgoingDao.getById(rowId), isNull);
       });
+    });
+
+    group('recoverFullSend makes the checks a publish makes first', () {
+      test('discards a held row the send policy now blocks, without '
+          'settling on the pool wrap', () async {
+        final (:rowId, poolWrap: _) = await heldSend();
+        inboxes[peerB] = _Inbox.absent;
+        policyDecision = DmSendPolicyDecision.terminallyBlockedDiscard;
+
+        final retried = await repository.recoverFullSend(rumorId: rowId);
+
+        expect(retried.blocked, isTrue);
+        expect(wrapsTo(peerB), hasLength(1));
+        expect(wrapsTo(owner), isEmpty, reason: 'nothing was settled');
+        expect(
+          await DirectMessagesDao(
+            db,
+          ).getMessageById(rowId, ownerPubkey: owner),
+          isNull,
+        );
+        expect(await outgoingDao.getById(rowId), isNull);
+      });
+
+      test('charges a held retry the send policy cannot decide yet as a '
+          'failed one', () async {
+        final (:rowId, :poolWrap) = await heldSend();
+        policyDecision = DmSendPolicyDecision.temporarilyBlocked;
+
+        final retried = await repository.recoverFullSend(rumorId: rowId);
+
+        expect(retried.success, isFalse);
+        expect(retried.blocked, isFalse);
+        expect(retried.retryablePending, isFalse);
+        expect(wrapsTo(peerB), hasLength(1));
+        final row = await outgoingDao.getById(rowId);
+        expect(row!.recipientWrapStatus, OutgoingWrapStatus.failed);
+        expect(row.recipientWrapEventId, equals(poolWrap.id));
+        expect(row.retryCount, equals(2));
+      });
+
+      test('fails a held retry whose send policy throws, as a publish '
+          'would', () async {
+        final (:rowId, :poolWrap) = await heldSend();
+        policyThrows = true;
+
+        final retried = await repository.recoverFullSend(rumorId: rowId);
+
+        expect(retried.success, isFalse);
+        expect(retried.retryablePending, isFalse);
+        expect(wrapsTo(peerB), hasLength(1));
+        final row = await outgoingDao.getById(rowId);
+        expect(row!.recipientWrapStatus, OutgoingWrapStatus.failed);
+        expect(row.recipientWrapEventId, equals(poolWrap.id));
+        expect(row.retryCount, equals(2));
+      });
+
+      test(
+        'leaves a held retry uncharged while the device is offline',
+        () async {
+          final (:rowId, :poolWrap) = await heldSend();
+          deviceOffline = true;
+
+          final retried = await repository.recoverFullSend(rumorId: rowId);
+
+          expect(retried.reachedNoRelay, isTrue);
+          expect(wrapsTo(peerB), hasLength(1));
+          final row = await outgoingDao.getById(rowId);
+          expect(row!.recipientWrapEventId, equals(poolWrap.id));
+          expect(row.retryCount, equals(1), reason: 'an outage is not charged');
+        },
+      );
     });
 
     group('a send held for another reason', () {
