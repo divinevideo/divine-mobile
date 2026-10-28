@@ -39,11 +39,9 @@ extension RoomActivityTotals on Iterable<RoomActivitySummary> {
   int get totalUnread =>
       fold(0, (total, summary) => total + summary.unreadCount);
 
-  /// Whether [totalUnread] may be a lower bound. Only rooms that show an
-  /// unread count contribute, so the total agrees with the per-room badges.
-  bool get totalUnreadLimited => any(
-    (summary) => summary.unreadCount > 0 && summary.historyLimited,
-  );
+  /// Whether [totalUnread] may be a lower bound. A limited room can have
+  /// evicted unread messages even after all its retained messages are read.
+  bool get totalUnreadLimited => any((summary) => summary.historyLimited);
 }
 
 /// One owned channel session and the store scoped to its account and relay.

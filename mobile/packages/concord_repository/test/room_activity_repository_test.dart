@@ -407,6 +407,38 @@ void main() {
     );
 
     test(
+      'aggregate stays a lower bound after reading only retained messages',
+      () async {
+        final capped = _Room('12' * 32, historyLimit: 2);
+        final other = _Room('13' * 32);
+        final activity = RoomActivityRepository(
+          ownPubkey: _third,
+          channels: [capped.source, other.source],
+          now: () => _now,
+        );
+        addTearDown(activity.close);
+        await activity.start();
+        for (var index = 0; index < 3; index++) {
+          await capped.ingest(kind: 9, body: 'Capped message $index');
+          await other.ingest(kind: 9, body: 'Other message $index');
+        }
+
+        final retained = capped.repository.timeline(now: _now).messages;
+        expect(retained, hasLength(2));
+        expect(activity.summaries[capped.channelId]!.unreadCount, 2);
+        await activity.markRead(capped.channelId, retained);
+
+        // The evicted third message was never included in a read snapshot.
+        expect(activity.summaries[capped.channelId]!.unreadCount, 0);
+        expect(activity.summaries[capped.channelId]!.historyLimited, isTrue);
+        expect(activity.summaries[other.channelId]!.unreadCount, 3);
+        expect(activity.summaries[other.channelId]!.historyLimited, isFalse);
+        expect(activity.summaries.values.totalUnread, 3);
+        expect(activity.summaries.values.totalUnreadLimited, isTrue);
+      },
+    );
+
+    test(
       'one storage failure leaves healthy rooms usable and can retry',
       () async {
         final failed = _Room('12' * 32)..store.failRead = true;
@@ -567,13 +599,13 @@ void main() {
       expect([summary('a', 2), summary('b', 3)].totalUnread, 5);
     });
 
-    test('totalUnreadLimited ignores a limited room with nothing unread', () {
+    test('totalUnreadLimited includes rooms with no retained unread', () {
       expect(
         [
           summary('a', 0, historyLimited: true),
           summary('b', 3),
         ].totalUnreadLimited,
-        isFalse,
+        isTrue,
       );
     });
 
