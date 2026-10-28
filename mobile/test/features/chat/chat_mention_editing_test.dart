@@ -52,5 +52,15 @@ void main() {
         expect(edited.map((m) => m.pubkey), [second.pubkey]);
       },
     );
+    test('a letter typed against the @ drops that binding', () {
+      final kept = updateChatMentionBindings(
+        before: '@Alice @Alice ',
+        after: 'x@Alice @Alice ',
+        cursor: 1,
+        mentions: [first, second],
+      );
+      expect(kept.map((m) => m.pubkey), [second.pubkey]);
+      expect(kept.single.start, 8);
+    });
   });
 }

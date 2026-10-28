@@ -3,7 +3,7 @@ import 'package:openvine/mentions/mention_text_editing.dart';
 import 'package:openvine/models/caption_mention.dart';
 
 /// Shifts bindings outside the edited span and drops any token the edit
-/// touched.
+/// touched or joined to a neighboring word.
 ///
 /// [cursor] is the caret after the edit; it picks which of two identical
 /// neighboring tokens a deletion removed.
@@ -49,6 +49,7 @@ List<CaptionMention> updateChatMentionBindings({
     if (nextStart < 0 ||
         nextEnd > after.length ||
         after.substring(nextStart, nextEnd) != '@${mention.display}' ||
+        (nextStart > 0 && !isMentionTokenBoundary(after, nextStart - 1)) ||
         !isMentionTokenBoundary(after, nextEnd)) {
       continue;
     }
