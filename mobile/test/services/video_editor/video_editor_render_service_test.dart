@@ -777,13 +777,7 @@ void main() {
         },
       );
 
-      // Both renderers treat an overlay's window as closed, so each frame but
-      // the last ends one tick before the next begins: a video frame landing
-      // exactly on a word change would otherwise draw two captions at once.
-      Duration justBefore(int ms) =>
-          Duration(milliseconds: ms) - const Duration(microseconds: 1);
-
-      test('become one overlay per lit word at the same place', () {
+      test('play the lit words one after the other from one layer', () {
         final layers = VideoEditorRenderService.buildImageLayers(
           capturedLayers: [karaoke()],
           bodySize: const Size(100, 200),
@@ -792,28 +786,84 @@ void main() {
           timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
         )!;
 
-        expect(
-          layers.map(
-            (l) => (
-              l.image.byteArray!.single,
-              l.startTime,
-              l.endTime,
-            ),
-          ),
-          [
-            (0, const Duration(seconds: 1), justBefore(1500)),
-            (1, const Duration(milliseconds: 1500), justBefore(2000)),
-            (2, const Duration(seconds: 2), const Duration(seconds: 3)),
-          ],
-        );
-        expect(layers.map((l) => l.offset).toSet(), hasLength(1));
-        expect(layers.map((l) => l.size).toSet(), hasLength(1));
+        final sequence = layers.single;
+        expect(sequence.frames.map((f) => f.image.byteArray!.single), [
+          0,
+          1,
+          2,
+        ]);
+        // Each word lasts until the next one lights up; the last one holds
+        // until the layer ends.
+        expect(sequence.frames.map((f) => f.duration).take(2), [
+          const Duration(milliseconds: 500),
+          const Duration(milliseconds: 500),
+        ]);
+        expect(sequence.loop, isFalse);
+        expect(sequence.startTime, const Duration(seconds: 1));
+        expect(sequence.endTime, const Duration(seconds: 3));
       });
 
-      // Each frame carries every animation and counts it from the layer's own
-      // range, so a fade or a wiggle runs on across the words instead of being
-      // cut off at the first frame or restarting at each one.
-      test('play every animation over the whole layer on every frame', () {
+      test('type a text out from one layer on the output timeline', () {
+        final map = TransitionTimelineMap.fromClips(overlapClips);
+        final typewriter = pie.ExportedLayer(
+          layer: pie.TextLayer(
+            text: 'Hello world',
+            startTime: const Duration(seconds: 1),
+            endTime: const Duration(seconds: 3),
+            animations: const [
+              pie.LayerAnimation(
+                type: pie.LayerAnimationType.typewriter,
+                phase: pie.AnimationPhase.animateIn,
+                duration: Duration(seconds: 1),
+              ),
+            ],
+          ),
+          bytes: Uint8List.fromList(const [11]),
+          logicalSize: const Size(10, 20),
+          revealBytes: {
+            for (var length = 0; length < 11; length++)
+              pie.ExportedTextState(revealedLength: length): Uint8List.fromList(
+                [length],
+              ),
+          },
+        );
+        final steps = typewriter.frames;
+        expect(steps, hasLength(11));
+
+        final layers = VideoEditorRenderService.buildImageLayers(
+          capturedLayers: [typewriter],
+          bodySize: const Size(100, 200),
+          videoSize: const Size(300, 600),
+          targetAspectRatio: vertical,
+          timelineMap: map,
+        )!;
+
+        // Every step of the reveal is a frame of one layer, not a layer of
+        // its own, which Android drew as a pass over the whole picture each.
+        final sequence = layers.single;
+        expect(sequence.frames.map((f) => f.image.byteArray), [
+          for (final step in steps) step.bytes,
+        ]);
+        // A step lasts until the next one starts on the output timeline,
+        // which the dissolve shortens past 1.6 s; the whole text holds until
+        // the layer ends.
+        expect(sequence.frames.map((f) => f.duration).take(steps.length - 1), [
+          for (var i = 0; i < steps.length - 1; i++)
+            map.editorToOutput(steps[i + 1].startTime!) -
+                map.editorToOutput(steps[i].startTime!),
+        ]);
+        expect(sequence.loop, isFalse);
+        expect(sequence.startTime, const Duration(seconds: 1));
+        expect(
+          sequence.endTime,
+          map.editorToOutput(const Duration(seconds: 3)),
+        );
+      });
+
+      // The sequence carries every animation and counts it from the layer's
+      // own range, so a fade or a wiggle runs on across the words instead of
+      // restarting at each one.
+      test('play every animation over the whole layer', () {
         final layers = VideoEditorRenderService.buildImageLayers(
           capturedLayers: [karaoke()],
           bodySize: const Size(100, 200),
@@ -822,15 +872,13 @@ void main() {
           timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
         )!;
 
-        expect(layers, hasLength(3));
-        for (final layer in layers) {
-          expect(layer.animations.map((a) => a.phase.name), [
-            'animateIn',
-            'animateOut',
-          ]);
-          expect(layer.animationStartTime, const Duration(seconds: 1));
-          expect(layer.animationEndTime, const Duration(seconds: 3));
-        }
+        final sequence = layers.single;
+        expect(sequence.animations.map((a) => a.phase.name), [
+          'animateIn',
+          'animateOut',
+        ]);
+        expect(sequence.animationStartTime, const Duration(seconds: 1));
+        expect(sequence.animationEndTime, const Duration(seconds: 3));
       });
 
       test('leave the range unset on a layer that is not split', () {
@@ -852,6 +900,7 @@ void main() {
           timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
         )!;
 
+        expect(layers.single.frames, isEmpty);
         expect(layers.single.animationStartTime, isNull);
         expect(layers.single.animationEndTime, isNull);
       });
@@ -885,14 +934,12 @@ void main() {
           timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
         )!;
 
-        // The reveal becomes one overlay per step, and a null layer start
-        // means "begins with the video": every step counts its animations
-        // from the output origin, not from its own start, or a fade or a
-        // loop would restart at each step.
-        expect(layers.length, greaterThan(1));
-        for (final layer in layers) {
-          expect(layer.animationStartTime, Duration.zero);
-        }
+        // A null layer start means "begins with the video": the reveal
+        // counts its animations from the output origin.
+        final sequence = layers.single;
+        expect(sequence.frames.length, greaterThan(1));
+        expect(sequence.startTime, isNull);
+        expect(sequence.animationStartTime, Duration.zero);
       });
 
       test('anchor a leave to the output end when the layer has none', () {
@@ -929,13 +976,12 @@ void main() {
           timelineMap: timelineMap,
         )!;
 
-        // A null layer end means "lasts until the video ends": every step
-        // anchors its leave to the output end, never to its own end, which
-        // would play the leave at the end of each reveal step.
-        expect(layers.length, greaterThan(1));
-        for (final layer in layers) {
-          expect(layer.animationEndTime, timelineMap.outputDuration);
-        }
+        // A null layer end means "lasts until the video ends": the reveal
+        // anchors its leave to the output end.
+        final sequence = layers.single;
+        expect(sequence.frames.length, greaterThan(1));
+        expect(sequence.endTime, isNull);
+        expect(sequence.animationEndTime, timelineMap.outputDuration);
       });
     });
   });

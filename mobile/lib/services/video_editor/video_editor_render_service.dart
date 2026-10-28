@@ -31,6 +31,7 @@ import 'package:openvine/services/video_editor/clip_normalization_models.dart';
 import 'package:openvine/services/video_editor/clip_normalization_render.dart';
 import 'package:openvine/services/video_editor/detached_clip_composite.dart';
 import 'package:openvine/services/video_editor/detached_clip_render_pass.dart';
+import 'package:openvine/services/video_editor/image_layer_sequence.dart';
 import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/native_render_task_registry.dart';
 import 'package:openvine/services/video_editor/render_audio_fetcher.dart';
@@ -1137,9 +1138,9 @@ class VideoEditorRenderService {
   /// file.
   ///
   /// A text layer with word highlights (karaoke captions) or a text reveal
-  /// (typewriter, word by word) becomes one overlay per [ExportedLayer.frames]
-  /// entry: the renderer draws a fixed image per overlay, so each lit word
-  /// and each reveal step needs its own. Every frame carries all of the
+  /// (typewriter, word by word) becomes one frame sequence of its
+  /// [ExportedLayer.frames], see [imageLayerSequence]: each lit word and each
+  /// reveal step is an image of its own. The sequence carries all of the
   /// layer's animations together with the layer's own time range as
   /// `ImageLayer.animationStartTime` / `animationEndTime`, so they play as
   /// they would on the unsplit layer: a fade in carries on across the first
@@ -1182,7 +1183,8 @@ class VideoEditorRenderService {
     ];
   }
 
-  /// The overlays [item] renders as, one per frame (see [buildImageLayers]).
+  /// The overlay [item] renders as: one image, or one frame sequence when it
+  /// has several frames (see [buildImageLayers]).
   static List<ImageLayer> _imageLayersFor(
     ExportedLayer item, {
     required Size bodySize,
@@ -1246,19 +1248,12 @@ class VideoEditorRenderService {
     final shapeMask = item.divineShapeMaskForExport();
     final frames = item.frames;
     final split = frames.length > 1;
-    return [
-      for (final (index, frame) in frames.indexed)
+    final parts = [
+      for (final frame in frames)
         ImageLayer(
           image: EditorLayerImage.memory(frame.bytes),
           startTime: timelineMap.editorToOutputOrNull(frame.startTime),
-          // Both renderers show an overlay from its start to its end
-          // inclusive, so a frame ending where the next one starts would draw
-          // both on that instant and stack the translucent pill. Every frame
-          // but the last ends one tick early.
-          endTime: index < frames.length - 1
-              ? timelineMap.editorToOutput(frames[index + 1].startTime!) -
-                    const Duration(microseconds: 1)
-              : timelineMap.editorToOutputOrNull(frame.endTime),
+          endTime: timelineMap.editorToOutputOrNull(frame.endTime),
           offset: offset,
           size: size,
           animations: animations,
@@ -1267,10 +1262,7 @@ class VideoEditorRenderService {
           shapeMask: shapeMask,
           blendMode: item.layer.exportBlendMode,
           // A layer without a start or end begins or ends with the video, so
-          // its implicit range is the output's. Left null, the native
-          // renderer falls back to each split frame's own start or end: an
-          // enter or a loop restarts at every reveal step, and a leave plays
-          // at the end of each one.
+          // the sequence counts its animations over the output's range.
           animationStartTime: split
               ? timelineMap.editorToOutput(
                   item.layer.startTime ?? Duration.zero,
@@ -1282,6 +1274,7 @@ class VideoEditorRenderService {
               : null,
         ),
     ];
+    return split ? [imageLayerSequence(parts)] : parts;
   }
 
   /// Builds the [ColorFilter]s applied to the exported video from the tune
