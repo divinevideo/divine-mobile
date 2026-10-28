@@ -699,8 +699,9 @@ class _ProfileActionLabel extends StatelessWidget {
         DivineIconName.pencilSimple,
         context.l10n.profileCompleteYourProfile,
       ),
+      // The supporter invitation carries the mascot instead of an icon.
       ProfileActionType.becomeSupporter => (
-        DivineIconName.heart,
+        null,
         context.l10n.supporterJoinLabel,
       ),
     };
@@ -717,10 +718,6 @@ class _ProfileActionLabel extends StatelessWidget {
         onContainer: VineTheme.onPrimary,
       ),
     };
-    // The supporter heart is white on the brand green by design.
-    final iconColor = action == ProfileActionType.becomeSupporter
-        ? VineTheme.whiteText
-        : chip.onContainer;
     final maxWidth = MediaQuery.sizeOf(context).width - 32;
 
     return Stack(
@@ -749,7 +746,10 @@ class _ProfileActionLabel extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             spacing: 8,
             children: [
-              DivineIcon(icon: icon, size: 16, color: iconColor),
+              if (icon == null)
+                const _ProfileActionMascot()
+              else
+                DivineIcon(icon: icon, size: 16, color: chip.onContainer),
               Flexible(
                 child: Text(
                   label,
@@ -780,6 +780,31 @@ class _ProfileActionLabel extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// The Divine mascot at the size of a pending-action icon. Decorative: the
+/// label beside it carries the meaning.
+class _ProfileActionMascot extends StatelessWidget {
+  const _ProfileActionMascot();
+
+  /// The mascot's raster, declared with the rest of `assets/icon/`.
+  static const asset = 'assets/icon/MascotCropped=yes.png';
+  static const _size = 16.0;
+
+  @override
+  Widget build(BuildContext context) {
+    // Decode at the drawn size rather than the 769px source.
+    final cacheSize = (_size * MediaQuery.devicePixelRatioOf(context)).round();
+    return ExcludeSemantics(
+      child: Image.asset(
+        asset,
+        width: _size,
+        height: _size,
+        cacheWidth: cacheSize,
+        cacheHeight: cacheSize,
+      ),
     );
   }
 }

@@ -897,30 +897,44 @@ void main() {
       }
 
       group('become a supporter action', () {
-        testWidgets('shows the green pill to a confirmed non-supporter', (
-          tester,
-        ) async {
-          final repository = await membership(tester, isSupporter: false);
-
-          await pumpHeader(
+        testWidgets(
+          'shows the green mascot pill to a confirmed non-supporter',
+          (
             tester,
-            isOwnProfile: true,
-            ownMembership: repository,
-          );
+          ) async {
+            final repository = await membership(tester, isSupporter: false);
 
-          final pill = find.text(l10n.supporterJoinLabel);
-          expect(pill, findsOneWidget);
-          final heart = tester.widget<DivineIcon>(
-            find.descendant(
-              of: find.ancestor(of: pill, matching: find.byType(Row)).first,
-              matching: find.byType(DivineIcon),
-            ),
-          );
-          expect(heart.icon, DivineIconName.heart);
-          expect(heart.color, VineTheme.whiteText);
-          final label = tester.widget<Text>(pill);
-          expect(label.style?.color, VineTheme.onPrimary);
-        });
+            await pumpHeader(
+              tester,
+              isOwnProfile: true,
+              ownMembership: repository,
+            );
+
+            final pill = find.text(l10n.supporterJoinLabel);
+            expect(pill, findsOneWidget);
+            final row = find
+                .ancestor(of: pill, matching: find.byType(Row))
+                .first;
+            expect(
+              find.descendant(of: row, matching: find.byType(DivineIcon)),
+              findsNothing,
+            );
+            final mascot = find.descendant(
+              of: row,
+              matching: find.byWidgetPredicate(
+                (widget) =>
+                    widget is Image &&
+                    widget.image is ResizeImage &&
+                    (widget.image as ResizeImage).imageProvider ==
+                        const AssetImage('assets/icon/MascotCropped=yes.png'),
+              ),
+            );
+            expect(mascot, findsOneWidget);
+            expect(tester.getSize(mascot), const Size.square(16));
+            final label = tester.widget<Text>(pill);
+            expect(label.style?.color, VineTheme.onPrimary);
+          },
+        );
 
         testWidgets('is not offered to a supporter', (tester) async {
           final repository = await membership(tester, isSupporter: true);
