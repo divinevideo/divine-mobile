@@ -10769,6 +10769,220 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorStickerSearchHint => 'Stickers zoeken...';
 
   @override
+  String get videoEditorInfoStickersTitle => 'Info';
+
+  @override
+  String get videoEditorInfoStickerTime => 'Tijd';
+
+  @override
+  String get videoEditorInfoStickerDate => 'Datum';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'Locatie';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'Weer';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'Hoogte';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'Batterij';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'Licht';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'Donker';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'Groen';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'Omlijning';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'Digitaal';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'Analoog';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'Glas';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'Geel';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'Neon';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'Simpel';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'Plek wijzigen';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Plaatsen zoeken is niet beschikbaar op dit apparaat.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'Opname · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'Nu · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'Vandaag · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'Dagteller';
+
+  @override
+  String get videoEditorInfoStickerSun => 'Zon';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'Maan';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC-timer';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'Film';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'Camcorder';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'Dag $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'Dag $day van $total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'Dag';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'Aantal dagen (optioneel)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'Speld';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'Vlag';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Wereldbol';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Kaart';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'Nieuwe maan';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'Wassende sikkel';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'Eerste kwartier';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'Wassende maan';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'Volle maan';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'Afnemende maan';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'Laatste kwartier';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'Afnemende sikkel';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint => 'Zoek een stad of plek';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'Geen plekken gevonden';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'Plekken zoeken lukte niet. Probeer het opnieuw.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'Alleen de naam van de plek komt in je video, nooit je exacte locatie.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'Laden…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed =>
+      'Laden lukte niet. Probeer het opnieuw.';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => 'Gegevens van MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'Voor oudere video\'s is er geen weer, dus dit is het weer van nu.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Zonnig';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Heldere nacht';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'Half bewolkt';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Bewolkt';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Mist';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Regen';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Buien';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Sneeuw';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'Onweer';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'De tijden staan in de tijdzone van je telefoon.';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'Temperatuur';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'Eenheid';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'Batterijniveau';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'Sticker toevoegen';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => 'Lettertype selecteren';
 
   @override

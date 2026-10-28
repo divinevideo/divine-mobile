@@ -10808,6 +10808,222 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorStickerSearchHint => 'Buscar stickers...';
 
   @override
+  String get videoEditorInfoStickersTitle => 'Info';
+
+  @override
+  String get videoEditorInfoStickerTime => 'Hora';
+
+  @override
+  String get videoEditorInfoStickerDate => 'Data';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'Local';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'Clima';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'Altitude';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'Bateria';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'Claro';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'Escuro';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'Verde';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'Contorno';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'Digital';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'Analógico';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'Vidro';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'Amarelo';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'Neon';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'Simples';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'Trocar local';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'A busca de lugares não está disponível neste aparelho.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'Gravação · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'Agora · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'Hoje · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'Contador de dias';
+
+  @override
+  String get videoEditorInfoStickerSun => 'Sol';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'Lua';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'Timer REC';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'Filme';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'Filmadora';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'Dia $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'Dia $day de $total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'Dia';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'Total de dias (opcional)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'Alfinete';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'Bandeira';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Globo';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Mapa';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'Lua nova';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'Lua crescente';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'Quarto crescente';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'Crescente gibosa';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'Lua cheia';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'Minguante gibosa';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'Quarto minguante';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'Lua minguante';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint =>
+      'Pesquise uma cidade ou um lugar';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'Nenhum lugar encontrado';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'Não foi possível pesquisar lugares. Tente de novo.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'Só o nome do lugar vai para o seu vídeo, nunca a sua localização exata.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'Carregando…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed =>
+      'Não foi possível carregar. Tente de novo.';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => 'Dados do MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'Não há clima para vídeos mais antigos, então este é o clima de agora.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Ensolarado';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Noite limpa';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy =>
+      'Parcialmente nublado';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Nublado';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Neblina';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Chuva';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Pancadas de chuva';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Neve';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'Tempestade';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'Os horários estão no fuso horário do seu celular.';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'Temperatura';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'Unidade';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'Nível da bateria';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'Adicionar sticker';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => 'Selecionar fonte';
 
   @override

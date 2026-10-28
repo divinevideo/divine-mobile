@@ -20,6 +20,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/app/divine_app.dart';
 import 'package:openvine/bootstrap/editor_font_licenses.dart';
+import 'package:openvine/bootstrap/fluent_emoji_licenses.dart';
 import 'package:openvine/bootstrap/font_licenses.dart';
 import 'package:openvine/bootstrap/shorebird_licenses.dart';
 import 'package:openvine/config/screenshot_mode.dart';
@@ -192,6 +193,10 @@ Future<void> startOpenVineApp({
   // Flutter's generated NOTICES asset. Register its licenses explicitly so
   // they appear on the in-app Open Source Licenses page. See #7206.
   registerShorebirdLicenses();
+
+  // The info stickers' emoji images are app assets, outside the generated
+  // NOTICES too.
+  registerFluentEmojiLicenses();
 
   // Keep the native splash visible until startup auth reaches a terminal
   // state. The release watcher is installed after the ProviderContainer exists

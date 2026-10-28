@@ -18,6 +18,7 @@ import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
+import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/sticker_group.dart';
 import 'package:openvine/services/video_editor/captured_chroma_key_baker.dart';
 import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
@@ -29,6 +30,7 @@ import 'package:openvine/utils/editor_text_layer_bounds.dart';
 import 'package:openvine/utils/open_vine_image_cache.dart';
 import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_layer_view.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_view.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -230,6 +232,14 @@ class DraftRenderParametersService {
                 case final visualizer?) {
               return AudioVisualizerLayerView(data: visualizer);
             }
+            // An info sticker is drawn from its meta alone; its fonts are
+            // loaded before the capture, see [_prepareLayerContent].
+            if (InfoStickerData.isInfoStickerMeta(meta)) {
+              final info = InfoStickerData.fromMeta(meta);
+              return info == null
+                  ? const SizedBox.shrink()
+                  : InfoStickerView(data: info);
+            }
             if (StickerGroupData.isStickerGroupMeta(meta)) {
               stickers.addAll(StickerGroupData.fromMeta(meta)?.stickers ?? []);
               return videoEditorStickerWidgetLoader(id, meta: meta);
@@ -402,9 +412,10 @@ class DraftRenderParametersService {
 
   /// Resolves everything the mounted layers need before they are captured.
   ///
-  /// Runs while the layers are mounted but before the capture frame, so both
-  /// halves land in the first build the rasterizer measures: the fonts the
-  /// text layers name, images for stickers.
+  /// Runs while the layers are mounted but before the capture frame, so all
+  /// of it lands in the first build the rasterizer measures: the fonts the
+  /// text layers name, images for stickers, and the fonts and emoji info
+  /// stickers draw with.
   Future<void> _prepareLayerContent(
     List<Layer> layers,
     List<StickerData> stickers,
@@ -416,6 +427,7 @@ class DraftRenderParametersService {
           .nonNulls,
     ),
     _precacheStickers(stickers),
+    preloadInfoStickerContent(layers.map(InfoStickerData.of).nonNulls),
   ]);
 
   /// Loads every sticker's image into the cache the sticker widget reads from.

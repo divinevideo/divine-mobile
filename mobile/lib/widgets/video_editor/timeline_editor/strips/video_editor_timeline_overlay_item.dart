@@ -12,11 +12,13 @@ import 'package:openvine/models/video_editor/audio_fade.dart';
 import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
+import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/sticker_group.dart';
 import 'package:openvine/widgets/stereo_waveform_painter.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_strip_thumbnails.dart';
 import 'package:openvine/widgets/video_editor/draw_editor/video_editor_draw_censor_tools.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_bottom_bar.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_labels.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 /// Multi-select visual state for an overlay tile while the timeline is in
@@ -60,6 +62,10 @@ String timelineOverlayItemLabel(
   }
   if (_isAudioVisualizer(layer)) {
     return context.l10n.videoEditorAudioVisualizerLabel;
+  }
+  final info = layer == null ? null : InfoStickerData.of(layer);
+  if (info != null) {
+    return context.l10n.infoStickerKindLabel(info.kind);
   }
   return item.label;
 }
@@ -455,7 +461,15 @@ class _StickerPreview extends StatelessWidget {
       child: Row(
         mainAxisSize: .min,
         children: [
-          if (layer != null) layer.widget,
+          // An info sticker lays out at its own size; the bar is far smaller
+          // than that, so it is scaled down with room around it.
+          if (layer != null && InfoStickerData.isInfoStickerLayer(layer))
+            Padding(
+              padding: const .fromLTRB(2, 4, 8, 4),
+              child: FittedBox(child: layer.widget),
+            )
+          else if (layer != null)
+            layer.widget,
           Text(
             label,
             style: VineTheme.labelMediumFont(

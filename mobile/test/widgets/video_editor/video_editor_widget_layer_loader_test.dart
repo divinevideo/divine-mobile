@@ -1,6 +1,6 @@
-// ABOUTME: Round-trip coverage for the editor's widget-layer loader: a
-// ABOUTME: detached clip and a sticker share one meta channel and must not be
-// ABOUTME: rebuilt as each other after an export/reopen.
+// ABOUTME: Round-trip coverage for the editor's widget-layer loader: detached
+// ABOUTME: clips, visualizers, info stickers and stickers share one meta
+// ABOUTME: channel and must not be rebuilt as each other after a reopen.
 
 import 'dart:convert';
 
@@ -12,10 +12,13 @@ import 'package:models/models.dart'
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/sticker_group.dart';
 import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_layer_actions.dart';
 import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_layer_view.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_layer_actions.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_view.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker_group.dart';
 import 'package:openvine/widgets/video_editor/video_editor_widget_layer_loader.dart';
@@ -103,6 +106,26 @@ void main() {
 
       expect(restored.widget, isA<AudioVisualizerLayerView>());
       expect((restored.widget as AudioVisualizerLayerView).data, data);
+    });
+
+    test('rebuilds an info sticker with what it shows', () {
+      final data = InfoStickerData(
+        kind: InfoStickerKind.time,
+        localeName: 'en',
+        style: InfoStickerStyle.digital,
+        dateTime: DateTime(2026, 10, 26, 15, 7),
+      );
+      final layer = infoStickerWidgetLayer(data, width: 120);
+      // A draft stores the history as JSON.
+      final stored = jsonDecode(
+        jsonEncode(_exportedHistory(layer)),
+      ) as Map<String, dynamic>;
+
+      final restored = _reopen(stored).single! as WidgetLayer;
+
+      // Read as an image sticker, its meta does not parse at all.
+      expect(restored.widget, isA<InfoStickerView>());
+      expect((restored.widget as InfoStickerView).data, equals(data));
     });
 
     test('still rebuilds a sticker as a sticker', () {

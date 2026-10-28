@@ -13,6 +13,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/detached_clip_composite.dart';
+import 'package:openvine/services/video_editor/rec_timer_frames.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
 import 'package:openvine/utils/path_resolver.dart';
@@ -179,7 +180,10 @@ class DetachedClipRenderPass {
       endTime: maxOutputDuration,
       composition: VideoComposition(canvasSize: videoSize, layers: layers),
       imageLayers: VideoEditorRenderService.buildImageLayers(
-        capturedLayers: partitioned.above,
+        capturedLayers: await withRecTimerFrames(
+          partitioned.above,
+          timelineMap,
+        ),
         bodySize: bodySize,
         videoSize: videoSize,
         targetAspectRatio: aspectRatio.value,

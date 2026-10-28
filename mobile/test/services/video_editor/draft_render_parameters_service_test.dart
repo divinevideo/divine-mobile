@@ -13,10 +13,13 @@ import 'package:openvine/extensions/aspect_ratio_extensions.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
+import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/sticker_group.dart';
 import 'package:openvine/services/video_editor/draft_render_parameters_service.dart';
 import 'package:openvine/services/video_editor/layer_capture_resolution.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_layer_actions.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_view.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker_group.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
@@ -484,6 +487,39 @@ void main() {
       // draft could not be published at all.
       final restored = stub.capturedLayers!.single as WidgetLayer;
       expect(restored.widget, isA<VideoEditorStickerGroup>());
+    });
+
+    test('rebuilds an info sticker as its view', () async {
+      final stub = _StubLayerRasterizer();
+      addTearDown(stub.dispose);
+      const data = InfoStickerData(
+        kind: InfoStickerKind.battery,
+        localeName: 'en',
+        batteryLevel: 3,
+      );
+      final layer = infoStickerWidgetLayer(data, width: 120);
+
+      await DraftRenderParametersService(rasterizer: stub).buildForDraft(
+        _draft(
+          editorEditingParameters: _persistedParameters(
+            bodySize: const Size(300, 500),
+          ),
+          editorStateHistory: {
+            'position': 0,
+            'history': [
+              {
+                'layers': [layer.toMap()],
+              },
+            ],
+          },
+        ),
+      );
+
+      // Read as an image sticker, its meta does not parse and the draft could
+      // not be published at all.
+      final restored = stub.capturedLayers!.single as WidgetLayer;
+      expect(restored.widget, isA<InfoStickerView>());
+      expect((restored.widget as InfoStickerView).data, equals(data));
     });
 
     test('wraps text layers inside the bounds the editor canvas used', () async {

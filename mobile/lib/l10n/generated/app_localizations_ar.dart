@@ -10702,6 +10702,220 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorStickerSearchHint => 'البحث في الملصقات...';
 
   @override
+  String get videoEditorInfoStickersTitle => 'معلومات';
+
+  @override
+  String get videoEditorInfoStickerTime => 'الوقت';
+
+  @override
+  String get videoEditorInfoStickerDate => 'التاريخ';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'الموقع';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'الطقس';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'الارتفاع';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'البطارية';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'فاتح';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'داكن';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'أخضر';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'إطار';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'رقمي';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'تناظري';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'زجاجي';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'أصفر';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'نيون';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'بسيط';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'تغيير المكان';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'البحث عن الأماكن غير متاح على هذا الجهاز.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'وقت التسجيل · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'الآن · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'اليوم · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'عدّاد الأيام';
+
+  @override
+  String get videoEditorInfoStickerSun => 'الشمس';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'القمر';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'مؤقّت REC';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'فيلم';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'كاميرا فيديو';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'اليوم $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'اليوم $day من $total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'اليوم';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'إجمالي الأيام (اختياري)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'دبوس';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'علم';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => 'كرة أرضية';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'خريطة';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'محاق';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'هلال متزايد';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'تربيع أول';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'أحدب متزايد';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'بدر';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'أحدب متناقص';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'تربيع ثانٍ';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'هلال متناقص';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint => 'البحث عن مدينة أو مكان';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'لم يتم العثور على أماكن';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'تعذّر البحث عن الأماكن. حاول مرة أخرى.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'يظهر في الفيديو اسم المكان فقط، ولا يظهر موقعك الدقيق أبدًا.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'جارٍ التحميل…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed =>
+      'تعذّر التحميل. حاول مرة أخرى.';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => 'البيانات من MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'لا تتوفر بيانات الطقس للفيديوهات الأقدم، لذا هذا هو الطقس الآن.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'مشمس';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'ليلة صافية';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'غائم جزئيًا';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'غائم';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'ضباب';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'مطر';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'زخات مطر';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'ثلج';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'عاصفة رعدية';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'الأوقات حسب المنطقة الزمنية للهاتف.';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'درجة الحرارة';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'الوحدة';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'مستوى البطارية';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'إضافة الملصق';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => 'اختيار خط';
 
   @override

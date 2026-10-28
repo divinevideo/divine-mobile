@@ -10193,6 +10193,218 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorStickerSearchHint => 'ステッカーを検索...';
 
   @override
+  String get videoEditorInfoStickersTitle => '情報';
+
+  @override
+  String get videoEditorInfoStickerTime => '時刻';
+
+  @override
+  String get videoEditorInfoStickerDate => '日付';
+
+  @override
+  String get videoEditorInfoStickerLocation => '場所';
+
+  @override
+  String get videoEditorInfoStickerWeather => '天気';
+
+  @override
+  String get videoEditorInfoStickerAltitude => '標高';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'バッテリー';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'ライト';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'ダーク';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'グリーン';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'アウトライン';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'デジタル';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'アナログ';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'ガラス';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'イエロー';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'ネオン';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'シンプル';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => '場所を変更';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'この端末では場所の検索を利用できません。';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return '撮影時 · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return '現在 · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return '今日 · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => '日数カウンター';
+
+  @override
+  String get videoEditorInfoStickerSun => '太陽';
+
+  @override
+  String get videoEditorInfoStickerMoon => '月';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'RECタイマー';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'フィルム';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'ビデオカメラ';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return '$day日目';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return '$day日目 / $total日';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => '日';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => '全日数（任意）';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'ピン';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => '国旗';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => '地球儀';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => '地図';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => '新月';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => '三日月';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => '上弦の月';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => '十三夜月';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => '満月';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => '寝待月';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => '下弦の月';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => '有明月';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint => '都市や場所を検索';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => '場所が見つかりません';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      '場所を検索できませんでした。もう一度お試しください。';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      '動画に入るのは場所の名前だけで、正確な位置は入りません。';
+
+  @override
+  String get videoEditorInfoStickerLoading => '読み込み中…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed => '読み込めませんでした。もう一度お試しください。';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => 'データ: MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow => '古い動画の天気はないため、現在の天気を表示しています。';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => '晴れ';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => '晴れた夜';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => '晴れ時々曇り';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => '曇り';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => '霧';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => '雨';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'にわか雨';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => '雪';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => '雷雨';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      '時刻はスマートフォンのタイムゾーンで表示されます。';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => '気温';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => '単位';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'バッテリー残量';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'ステッカーを追加';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => 'フォントを選択';
 
   @override

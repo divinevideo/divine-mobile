@@ -10476,6 +10476,218 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorStickerSearchHint => 'ተለጣፊዎችን ፈልግ...';
 
   @override
+  String get videoEditorInfoStickersTitle => 'መረጃ';
+
+  @override
+  String get videoEditorInfoStickerTime => 'ሰዓት';
+
+  @override
+  String get videoEditorInfoStickerDate => 'ቀን';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'ቦታ';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'የአየር ሁኔታ';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'ከፍታ';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'ባትሪ';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'ፈዛዛ';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'ጨለማ';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'አረንጓዴ';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'ዝርዝር መስመር';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'ዲጂታል';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'አናሎግ';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'መስታወት';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'ቢጫ';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'ኒዮን';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'ቀላል';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'ቦታ ይቀይሩ';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'በዚህ መሣሪያ ላይ የቦታ ፍለጋ አይገኝም።';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'የተቀረጸበት · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'አሁን · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'ዛሬ · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'የቀን ቆጣሪ';
+
+  @override
+  String get videoEditorInfoStickerSun => 'ፀሐይ';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'ጨረቃ';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC ሰዓት ቆጣሪ';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'ፊልም';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'ካምኮርደር';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'ቀን $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'ቀን $day ከ$total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'ቀን';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'ጠቅላላ ቀናት (አማራጭ)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'ፒን';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'ባንዲራ';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => 'ሉል';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'ካርታ';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'አዲስ ጨረቃ';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'እያደገ ያለ ቀጭን ጨረቃ';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'የመጀመሪያ ሩብ';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'እያደገ ያለ ጨረቃ';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'ሙሉ ጨረቃ';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'እየቀነሰ ያለ ጨረቃ';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'የመጨረሻ ሩብ';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'እየቀነሰ ያለ ቀጭን ጨረቃ';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint => 'ከተማ ወይም ቦታ ይፈልጉ';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'ምንም ቦታ አልተገኘም';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'ቦታዎችን መፈለግ አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'በቪዲዮዎ ውስጥ የሚገባው የቦታው ስም ብቻ ነው፤ ትክክለኛው አካባቢዎ በጭራሽ አይገባም።';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'በመጫን ላይ…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed => 'መጫን አልተቻለም። እንደገና ይሞክሩ።';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => 'መረጃ ከ MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'ለቆዩ ቪዲዮዎች የአየር ሁኔታ መረጃ የለም፤ ይህ የአሁኑ የአየር ሁኔታ ነው።';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'ፀሐያማ';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'ጥርት ያለ ሌሊት';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'በከፊል ደመናማ';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'ደመናማ';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'ጭጋግ';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'ዝናብ';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'ካፊያ';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'በረዶ';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'ነጎድጓድ';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote => 'ሰዓቶቹ በስልክዎ የሰዓት ሰቅ ናቸው።';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'የሙቀት መጠን';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'መለኪያ';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'የባትሪ መጠን';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'ተለጣፊ ያክሉ';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => 'ቅርጸ-ቁምፊ ይምረጡ';
 
   @override

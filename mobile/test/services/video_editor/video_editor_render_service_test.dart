@@ -25,6 +25,7 @@ import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
+import 'package:openvine/services/video_editor/rec_timer_frames.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
 import 'package:openvine/services/video_editor/stop_motion_render_service.dart';
 import 'package:openvine/services/video_editor/video_editor_render_service.dart';
@@ -115,6 +116,48 @@ void main() {
         ),
         isNull,
       );
+    });
+
+    test('plays the frames a REC timer brings from one layer', () {
+      final frames = [
+        pie.ExportedLayerFrame(
+          bytes: Uint8List.fromList(const [1]),
+          startTime: Duration.zero,
+          endTime: const Duration(seconds: 1),
+        ),
+        pie.ExportedLayerFrame(
+          bytes: Uint8List.fromList(const [2]),
+          startTime: const Duration(seconds: 1),
+          endTime: null,
+        ),
+      ];
+
+      final timer = RecTimerExportedLayer(layer(), frames);
+
+      final exported = VideoEditorRenderService.buildImageLayers(
+        capturedLayers: [timer],
+        bodySize: const Size(100, 200),
+        videoSize: const Size(300, 600),
+        targetAspectRatio: vertical,
+        timelineMap: TransitionTimelineMap.fromClips(noTransitionClips),
+      )!;
+
+      final sequence = exported.single;
+      expect(
+        sequence.frames.map((f) => f.image.byteArray),
+        equals([
+          [1],
+          [2],
+        ]),
+      );
+      // Each frame lasts until the next one starts; the last one holds.
+      expect(
+        sequence.frames.first.duration,
+        equals(const Duration(seconds: 1)),
+      );
+      expect(sequence.loop, isFalse);
+      expect(sequence.startTime, equals(Duration.zero));
+      expect(sequence.endTime, isNull);
     });
 
     test('draws each layer in the blend mode the canvas shows it in', () {

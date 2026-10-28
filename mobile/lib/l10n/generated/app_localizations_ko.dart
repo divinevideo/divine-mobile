@@ -10213,6 +10213,218 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorStickerSearchHint => '스티커 검색...';
 
   @override
+  String get videoEditorInfoStickersTitle => '정보';
+
+  @override
+  String get videoEditorInfoStickerTime => '시간';
+
+  @override
+  String get videoEditorInfoStickerDate => '날짜';
+
+  @override
+  String get videoEditorInfoStickerLocation => '위치';
+
+  @override
+  String get videoEditorInfoStickerWeather => '날씨';
+
+  @override
+  String get videoEditorInfoStickerAltitude => '고도';
+
+  @override
+  String get videoEditorInfoStickerBattery => '배터리';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => '라이트';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => '다크';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => '그린';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => '윤곽선';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => '디지털';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => '아날로그';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => '글래스';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => '옐로';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => '네온';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => '심플';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => '장소 변경';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      '이 기기에서는 장소 검색을 사용할 수 없어요.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return '촬영 시각 · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return '지금 · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return '오늘 · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => '일수 카운터';
+
+  @override
+  String get videoEditorInfoStickerSun => '태양';
+
+  @override
+  String get videoEditorInfoStickerMoon => '달';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC 타이머';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => '필름';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => '캠코더';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return '$day일째';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return '$total일 중 $day일째';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => '일차';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => '전체 일수(선택)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => '핀';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => '국기';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => '지구본';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => '지도';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => '삭';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => '초승달';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => '상현달';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => '차가는 달';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => '보름달';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => '기우는 달';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => '하현달';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => '그믐달';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint => '도시나 장소를 검색해요';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => '장소를 찾지 못했어요';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      '장소를 검색하지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      '영상에는 장소 이름만 들어가고, 정확한 위치는 절대 들어가지 않아요.';
+
+  @override
+  String get videoEditorInfoStickerLoading => '불러오는 중…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed => '불러오지 못했어요. 다시 시도해 주세요.';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => '데이터 제공: MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      '오래된 동영상의 날씨는 없어서 지금 날씨를 보여 줘요.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => '맑음';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => '맑은 밤';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => '구름 조금';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => '흐림';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => '안개';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => '비';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => '소나기';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => '눈';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => '뇌우';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote => '시간은 휴대폰의 시간대로 표시돼요.';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => '기온';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => '단위';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => '배터리 잔량';
+
+  @override
+  String get videoEditorInfoStickerAdd => '스티커 추가';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => '폰트 선택';
 
   @override
