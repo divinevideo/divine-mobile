@@ -1,11 +1,11 @@
 # divine_camera
 
 Status: Current
-Validated against: `pubspec.yaml` on 2026-03-19.
+Validated against: `pubspec.yaml` and the native sources on 2026-10-28.
 
-Purpose: Flutter camera plugin used by Divine for recording video on supported platforms.
+Purpose: Flutter camera plugin used by Divine for recording video on Android, iOS and macOS.
 
-Used by: recording and capture flows in the mobile app.
+Used by: the video recorder, through the app's `CameraMobileService`. How the recorder sits on top of this plugin is in [`CAMERA_ARCHITECTURE.md`](../../docs/CAMERA_ARCHITECTURE.md).
 
 Test locally:
 
