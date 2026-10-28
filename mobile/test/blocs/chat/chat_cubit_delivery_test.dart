@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 
 class _Repo extends Mock implements ConcordRepository {}
 
@@ -97,6 +98,62 @@ void main() {
         cubit.refresh(now: 1700000001);
         expect(cubit.state.pendingIds, isEmpty);
         expect(cubit.state.sendFailed, isFalse);
+      },
+    );
+    test(
+      'tags each referenced account once and skips a malformed reference',
+      () async {
+        final alice = '0a' * 32;
+        final bob = '0b' * 32;
+        final repo = _Repo();
+        when(() => repo.sealedTransport).thenReturn(_Transport());
+        when(() => repo.pendingIds).thenReturn([]);
+        when(
+          () => repo.timeline(now: any(named: 'now')),
+        ).thenReturn(FoldedThread([], {}));
+        when(
+          () => repo.sendSealedMessage(
+            channelId: any(named: 'channelId'),
+            author: any(named: 'author'),
+            body: any(named: 'body'),
+            mentionedPubkeys: any(named: 'mentionedPubkeys'),
+            createdAt: any(named: 'createdAt'),
+            ms: any(named: 'ms'),
+            streamSeedHex: any(named: 'streamSeedHex'),
+            streamPubkey: any(named: 'streamPubkey'),
+          ),
+        ).thenAnswer((_) async => <String, dynamic>{});
+        final cubit = ChatCubit(
+          repo,
+          sealedAuthor: '01' * 32,
+          pocStreamForChannel: (_) => GroupKey('02' * 32, '03' * 32),
+          channelIdFor: (_) => '04' * 32,
+        );
+        addTearDown(cubit.close);
+        final aliceRef = 'nostr:${NostrKeyUtils.encodePubKey(alice)}';
+        final bobRef = 'nostr:${NostrKeyUtils.encodePubKey(bob)}';
+        await cubit.send(
+          communityId: 'community-test',
+          channelId: 'general',
+          author: '',
+          body: 'hi $aliceRef and $aliceRef, not nostr:npub1bogus, $bobRef',
+          nowMilliseconds: 1700000315123,
+        );
+        final tagged =
+            verify(
+                  () => repo.sendSealedMessage(
+                    channelId: any(named: 'channelId'),
+                    author: any(named: 'author'),
+                    body: any(named: 'body'),
+                    mentionedPubkeys: captureAny(named: 'mentionedPubkeys'),
+                    createdAt: any(named: 'createdAt'),
+                    ms: any(named: 'ms'),
+                    streamSeedHex: any(named: 'streamSeedHex'),
+                    streamPubkey: any(named: 'streamPubkey'),
+                  ),
+                ).captured.single
+                as Iterable<String>;
+        expect(tagged, unorderedEquals([alice, bob]));
       },
     );
     test(
