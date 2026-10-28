@@ -41,9 +41,12 @@ void main() {
     },
   );
 
-  for (final laterAdvantage in [0.0, 1e-11]) {
+  for (final (laterAdvantage, expectedTarget, expectedZoom) in [
+    (0.0, .96, 1.0183299389002036),
+    (1e-11, 1.43999999999, 1.018329938900074),
+  ]) {
     test(
-      'keeps the earliest trusted reference for crop near-tie $laterAdvantage',
+      'selects the strict minimum crop with later advantage $laterAdvantage',
       () {
         final fixture = _Fixture(
           times: [for (var ms = 0; ms <= 2000; ms += 40) ms],
@@ -53,16 +56,42 @@ void main() {
         );
         final plan = fixture.plan();
         expect(plan, isNotNull);
-        // Anchors at 800 and 1200 ms have the same crop within the tiny
-        // numerical tie tolerance. The earlier target is .96, with
-        // worst correction 1.44 pixels, so zoom is 80 / (80 - 1.44).
-        expect(plan!.zoom, closeTo(1.0183299389002036, 1e-12));
+        // Exact ties retain the earlier .96 target. With a later advantage,
+        // 80 / (80 - 1.43999999999) is strictly smaller than 80 / (80 - 1.44).
+        expect(plan!.zoom, closeTo(expectedZoom, 1e-15));
         for (final frame in fixture.frames) {
-          expect(fixture.displayedAt(plan, frame).tx, closeTo(.96, 1e-9));
+          expect(
+            fixture.displayedAt(plan, frame).tx,
+            closeTo(expectedTarget, 1e-9),
+          );
         }
       },
     );
   }
+
+  test(
+    'accepts the lower crop when only the later reference meets the ceiling',
+    () {
+      final fixture = _Fixture(
+        times: [for (var ms = 0; ms <= 2000; ms += 40) ms],
+        poseAt: (ms) =>
+            LoopPose.components(x: 2.4 * ms / 2000 - (ms == 1200 ? 1e-11 : 0)),
+      );
+      // Put the configured ceiling between the hand-derived costs above:
+      // earlier reference 1.0183299389002036, later 1.018329938900074.
+      const ceiling = 1.01832993890015;
+      final plan = fixture.plan(
+        limits: const LoopAlignmentLimits(maximumZoom: ceiling),
+      );
+      expect(plan, isNotNull);
+      expect(plan!.zoom, closeTo(1.018329938900074, 1e-15));
+      expect(plan.zoom, lessThanOrEqualTo(ceiling));
+      expect(
+        fixture.displayedAt(plan, fixture.frames.first).tx,
+        closeTo(1.43999999999, 1e-9),
+      );
+    },
+  );
 
   for (final (width, height) in [(160, 96), (96, 160)]) {
     test(
@@ -227,14 +256,16 @@ final class _Fixture {
   final poses = <LoopFrame, LoopPose>{};
   late final LoopRepairInput input;
 
-  LoopAlignmentPlan? plan({Duration? unreliableTime}) =>
-      const LoopAlignmentPlanner().plan(
-        input: input,
-        firstFrames: frames,
-        lastFrames: frames,
-        matcher: SceneMatcher(poses, unreliableTime: unreliableTime),
-        limits: const LoopAlignmentLimits(),
-      );
+  LoopAlignmentPlan? plan({
+    Duration? unreliableTime,
+    LoopAlignmentLimits limits = const LoopAlignmentLimits(),
+  }) => const LoopAlignmentPlanner().plan(
+    input: input,
+    firstFrames: frames,
+    lastFrames: frames,
+    matcher: SceneMatcher(poses, unreliableTime: unreliableTime),
+    limits: limits,
+  );
 
   LoopPose displayedAt(LoopAlignmentPlan plan, LoopFrame frame) =>
       poses[frame]!.then(plan.clips.single.correctionAt(frame.time));

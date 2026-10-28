@@ -188,11 +188,9 @@ final class LoopAlignmentPlanner {
         frames.first.height,
         frames.map((frame) => frame.time),
       );
-      // Treat roundoff-sized differences as ties; chronological iteration keeps
-      // the earliest trusted reference rather than picking by floating error.
-      const cropTieTolerance = 1e-12;
-      if (zoom.isFinite &&
-          (best == null || zoom < bestZoom - cropTieTolerance)) {
+      // Keep the strict minimum crop; chronological iteration retains the
+      // earliest trusted reference only when coverage costs are exactly equal.
+      if (zoom.isFinite && zoom < bestZoom) {
         best = candidate;
         bestZoom = zoom;
       }
