@@ -82,12 +82,18 @@ final chatMentionRepositoryProvider = Provider<ChatMentionRepository?>((ref) {
   final followChanges = follows.followingStream.listen(
     (_) => source.reevaluate(),
   );
+  // Per-pubkey changes and whole-state reloads (an account switch) each
+  // reach only one of these streams.
   final blockChanges = blocklist.changes.listen((_) => source.reevaluate());
+  final blockStates = blocklist.stateStream.listen(
+    (_) => source.reevaluate(),
+  );
   final close = ref.read(accountStateWriteBarrierProvider).register(
     owner,
     () async {
       await followChanges.cancel();
       await blockChanges.cancel();
+      await blockStates.cancel();
       await source.close();
     },
   );

@@ -59,6 +59,7 @@ void main() {
     late StreamController<void> roomChanges;
     late StreamController<List<String>> following;
     late StreamController<BlocklistChange> blockChanges;
+    late StreamController<ContentPolicyState> blockStates;
     late Set<String> followed;
     late Set<String> blocked;
     late List<ChatMessage> messages;
@@ -69,6 +70,7 @@ void main() {
       roomChanges = StreamController<void>.broadcast();
       following = StreamController<List<String>>.broadcast();
       blockChanges = StreamController<BlocklistChange>.broadcast();
+      blockStates = StreamController<ContentPolicyState>.broadcast();
       followed = {_friend, _mutedFriend};
       blocked = {};
       messages = [];
@@ -91,6 +93,7 @@ void main() {
       await roomChanges.close();
       await following.close();
       await blockChanges.close();
+      await blockStates.close();
       await database.close();
     });
 
@@ -106,6 +109,7 @@ void main() {
       when(() => follows.followingStream).thenAnswer((_) => following.stream);
       final blocks = _Blocks();
       when(() => blocks.changes).thenAnswer((_) => blockChanges.stream);
+      when(() => blocks.stateStream).thenAnswer((_) => blockStates.stream);
       when(() => blocks.currentState).thenAnswer(
         (_) => ContentPolicyState(
           currentUserPubkey: _me,
@@ -202,6 +206,15 @@ void main() {
         blockChanges.add(
           BlocklistChange(pubkey: _friend, op: BlocklistOp.blocked),
         );
+        await pumpEventQueue();
+        expect(repository.items, isEmpty);
+      });
+
+      test('an account reload that blocks a sender removes its row', () async {
+        final repository = await openedRoom(container());
+        expect(repository.items, hasLength(1));
+        blocked = {_friend};
+        blockStates.add(ContentPolicyState.empty());
         await pumpEventQueue();
         expect(repository.items, isEmpty);
       });
