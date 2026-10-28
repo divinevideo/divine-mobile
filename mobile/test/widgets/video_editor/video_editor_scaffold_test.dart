@@ -91,9 +91,23 @@ void main() {
       await filterBloc.close();
     });
 
+    // The timeline, and the Edit button on it, render once a clip exists.
+    ClipEditorBloc clipBlocWithClip() {
+      final bloc = _MockClipEditorBloc();
+      final state = ClipEditorState(clips: [_detachedClip()]);
+      when(() => bloc.state).thenReturn(state);
+      whenListen(
+        bloc,
+        const Stream<ClipEditorState>.empty(),
+        initialState: state,
+      );
+      return bloc;
+    }
+
     Widget buildWidget({
       required bool isLoading,
       VideoEditorMainBloc? mainBlocOverride,
+      TimelineOverlayBloc? overlayBlocOverride,
       ClipEditorBloc? clipBlocOverride,
       ProImageEditorState? editorOverride,
       VideoEditorEffectsCubit? effectsCubit,
@@ -130,7 +144,9 @@ void main() {
               BlocProvider<VideoEditorMainBloc>.value(
                 value: mainBlocOverride ?? mainBloc,
               ),
-              BlocProvider<TimelineOverlayBloc>.value(value: overlayBloc),
+              BlocProvider<TimelineOverlayBloc>.value(
+                value: overlayBlocOverride ?? overlayBloc,
+              ),
               BlocProvider<ClipEditorBloc>.value(
                 value: clipBlocOverride ?? clipBloc,
               ),
@@ -168,12 +184,15 @@ void main() {
     testWidgets('shows loading scaffold when isLoading is true', (
       tester,
     ) async {
-      await tester.pumpWidget(buildWidget(isLoading: true));
+      await tester.pumpWidget(
+        buildWidget(isLoading: true, clipBlocOverride: clipBlocWithClip()),
+      );
 
       expect(find.byType(BrandedLoadingScaffold), findsOneWidget);
       expect(find.text(l10n.videoActionEdit), findsOneWidget);
+      // The Edit button overlays the timeline instead of taking a bar slot.
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
-      expect(scaffold.bottomNavigationBar, isNotNull);
+      expect(scaffold.bottomNavigationBar, isNull);
       expect(scaffold.floatingActionButton, isNull);
       expect(
         find.bySemanticsLabel(l10n.videoActionEdit),
@@ -185,7 +204,11 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        buildWidget(isLoading: true, theme: VineTheme.lightTheme),
+        buildWidget(
+          isLoading: true,
+          clipBlocOverride: clipBlocWithClip(),
+          theme: VineTheme.lightTheme,
+        ),
       );
       // Not pumpAndSettle: the loading scaffold animates forever. A fresh
       // tree resolves its theme on the first frame anyway.
@@ -210,7 +233,11 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        buildWidget(isLoading: true, theme: VineTheme.theme),
+        buildWidget(
+          isLoading: true,
+          clipBlocOverride: clipBlocWithClip(),
+          theme: VineTheme.theme,
+        ),
       );
       await tester.pump();
 
@@ -233,7 +260,9 @@ void main() {
     ) async {
       mainBloc.add(const VideoEditorMainOpenSubEditor(SubEditorType.text));
 
-      await tester.pumpWidget(buildWidget(isLoading: true));
+      await tester.pumpWidget(
+        buildWidget(isLoading: true, clipBlocOverride: clipBlocWithClip()),
+      );
       await tester.pump();
 
       expect(
@@ -242,36 +271,42 @@ void main() {
       );
     });
 
-    testWidgets('restores the body safe area when editing tools hide', (
-      tester,
-    ) async {
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetDevicePixelRatio);
-      tester.view.padding = const FakeViewPadding(bottom: 34);
-      tester.view.viewPadding = const FakeViewPadding(bottom: 34);
-      addTearDown(tester.view.resetPadding);
-      addTearDown(tester.view.resetViewPadding);
-      final mainBloc = VideoEditorMainBloc();
-      addTearDown(mainBloc.close);
+    testWidgets(
+      'keeps the canvas size when a selection hides the Edit button',
+      (tester) async {
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetDevicePixelRatio);
+        tester.view.padding = const FakeViewPadding(bottom: 34);
+        tester.view.viewPadding = const FakeViewPadding(bottom: 34);
+        addTearDown(tester.view.resetPadding);
+        addTearDown(tester.view.resetViewPadding);
+        // Created inside the test, as in the voice-over test below.
+        final overlayBloc = TimelineOverlayBloc();
+        addTearDown(overlayBloc.close);
 
-      await tester.pumpWidget(
-        buildWidget(isLoading: true, mainBlocOverride: mainBloc),
-      );
-      final timelineContext = tester.element(
-        find.byType(VideoEditorTimelineScaffold),
-      );
-      // The visible tools bar owns the inset instead of the body.
-      expect(MediaQuery.paddingOf(timelineContext).bottom, 0);
-      expect(find.text(l10n.videoActionEdit), findsOneWidget);
+        await tester.pumpWidget(
+          buildWidget(
+            isLoading: true,
+            overlayBlocOverride: overlayBloc,
+            clipBlocOverride: clipBlocWithClip(),
+          ),
+        );
+        final canvas = tester.getRect(find.byType(BrandedLoadingScaffold));
+        final timelineContext = tester.element(
+          find.byType(VideoEditorTimelineScaffold),
+        );
+        expect(find.text(l10n.videoActionEdit), findsOneWidget);
+        // The button lifts itself above the inset like the context bars do.
+        expect(MediaQuery.paddingOf(timelineContext).bottom, 34);
 
-      mainBloc.add(const VideoEditorMainOpenSubEditor(SubEditorType.text));
-      await tester.pump();
+        overlayBloc.add(const TimelineOverlayItemSelected('overlay-1'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.text(l10n.videoActionEdit), findsNothing);
-      // Hidden tools must leave the inset available to editor controls.
-      expect(MediaQuery.paddingOf(timelineContext).bottom, 34);
-      expect(MediaQuery.viewPaddingOf(timelineContext).bottom, 34);
-    });
+        expect(find.text(l10n.videoActionEdit), findsNothing);
+        expect(tester.getRect(find.byType(BrandedLoadingScaffold)), canvas);
+      },
+    );
 
     testWidgets(
       'collapses the timeline and its own controls under the voice-over '
@@ -413,7 +448,11 @@ void main() {
       );
 
       await tester.pumpWidget(
-        buildWidget(isLoading: true, loopSuggestionCubit: loopSuggestionCubit),
+        buildWidget(
+          isLoading: true,
+          clipBlocOverride: clipBlocWithClip(),
+          loopSuggestionCubit: loopSuggestionCubit,
+        ),
       );
       await tester.pump();
 
@@ -429,7 +468,9 @@ void main() {
     ) async {
       overlayBloc.add(const TimelineOverlayItemSelected('overlay-1'));
 
-      await tester.pumpWidget(buildWidget(isLoading: true));
+      await tester.pumpWidget(
+        buildWidget(isLoading: true, clipBlocOverride: clipBlocWithClip()),
+      );
       await tester.pump();
 
       expect(
@@ -443,7 +484,9 @@ void main() {
     ) async {
       overlayBloc.add(const TimelineOverlayLayerMultiSelectStarted('draw-1'));
 
-      await tester.pumpWidget(buildWidget(isLoading: true));
+      await tester.pumpWidget(
+        buildWidget(isLoading: true, clipBlocOverride: clipBlocWithClip()),
+      );
       await tester.pump();
 
       expect(
@@ -482,16 +525,18 @@ void main() {
       'hides the editing tools from screen readers while clips import',
       (tester) async {
         final clipBloc = _MockClipEditorBloc();
+        final clips = [_detachedClip()];
         whenListen(
           clipBloc,
           Stream.value(
-            const ClipEditorState(
+            ClipEditorState(
+              clips: clips,
               isImportingLibraryClips: true,
               libraryImportRenderId: 'library_import',
               libraryImportProgress: 0.5,
             ),
           ),
-          initialState: const ClipEditorState(),
+          initialState: ClipEditorState(clips: clips),
         );
 
         await tester.pumpWidget(
@@ -508,7 +553,9 @@ void main() {
     testWidgets('lets taps reach the editing tools while nothing runs', (
       tester,
     ) async {
-      await tester.pumpWidget(buildWidget(isLoading: true));
+      await tester.pumpWidget(
+        buildWidget(isLoading: true, clipBlocOverride: clipBlocWithClip()),
+      );
       await tester.pump();
 
       expect(find.text(l10n.videoActionEdit).hitTestable(), findsOne);
@@ -518,7 +565,8 @@ void main() {
       tester,
     ) async {
       final clipBloc = _MockClipEditorBloc();
-      const importing = ClipEditorState(
+      final importing = ClipEditorState(
+        clips: [_detachedClip()],
         isImportingLibraryClips: true,
         libraryImportRenderId: 'library_import',
         libraryImportProgress: 0.5,

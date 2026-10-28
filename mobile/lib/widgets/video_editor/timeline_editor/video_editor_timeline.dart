@@ -232,6 +232,17 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
       (LoopSuggestionCubit cubit) =>
           cubit.state.status == LoopSuggestionStatus.searching,
     );
+    final isCanvasToolOpen = context.select(
+      (VideoEditorMainBloc b) =>
+          b.state.isSubEditorOpen || b.state.isCanvasFullscreen,
+    );
+    // Anything added during a loop suggestion would be saved with the
+    // previewed trim.
+    final showEditingTools =
+        !isCanvasToolOpen &&
+        !isTimelineHiddenByUser &&
+        !hasSelectedOverlay &&
+        !hasLoopSuggestion;
     // Sync layers from main editor to timeline overlay bloc, and
     // sync scroll to playback position while not user-scrolling.
     final Widget body = MultiBlocListener(
@@ -328,9 +339,9 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
         ),
         // Marker mode owns the bottom controls bar exclusively, so entering it
         // clears any clip edit / overlay selection / volume mode. Reordering
-        // needs no clearing here even though it isn't in the FAB's hide
-        // condition: it's an active single-pointer drag holding the touch that
-        // would otherwise tap the FAB, so entry can't race an ongoing reorder.
+        // needs no clearing here even though it doesn't hide the Edit button:
+        // it's an active single-pointer drag holding the touch that would
+        // otherwise tap the button, so entry can't race an ongoing reorder.
         BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
           listenWhen: (prev, curr) => !prev.isMarkerMode && curr.isMarkerMode,
           listener: (context, state) {
@@ -457,6 +468,7 @@ class _VideoEditorTimelineState extends State<VideoEditorTimelineScaffold> {
             TimelineControlsBar(
               isEditing: isEditing,
               isMarkerMode: isMarkerMode,
+              showEditingTools: showEditingTools,
               playheadPosition: _playheadPosition,
             ),
           ],
