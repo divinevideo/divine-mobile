@@ -479,6 +479,66 @@ void main() {
     );
 
     testWidgets(
+      'hides the editing tools from screen readers while clips import',
+      (tester) async {
+        final clipBloc = _MockClipEditorBloc();
+        whenListen(
+          clipBloc,
+          Stream.value(
+            const ClipEditorState(
+              isImportingLibraryClips: true,
+              libraryImportRenderId: 'library_import',
+              libraryImportProgress: 0.5,
+            ),
+          ),
+          initialState: const ClipEditorState(),
+        );
+
+        await tester.pumpWidget(
+          buildWidget(isLoading: true, clipBlocOverride: clipBloc),
+        );
+        expect(find.semantics.byLabel(l10n.videoActionEdit), findsOne);
+
+        await tester.pump();
+
+        expect(find.semantics.byLabel(l10n.videoActionEdit), findsNothing);
+      },
+    );
+
+    testWidgets('lets taps reach the editing tools while nothing runs', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildWidget(isLoading: true));
+      await tester.pump();
+
+      expect(find.text(l10n.videoActionEdit).hitTestable(), findsOne);
+    });
+
+    testWidgets('keeps taps off the editing tools while clips import', (
+      tester,
+    ) async {
+      final clipBloc = _MockClipEditorBloc();
+      const importing = ClipEditorState(
+        isImportingLibraryClips: true,
+        libraryImportRenderId: 'library_import',
+        libraryImportProgress: 0.5,
+      );
+      whenListen(
+        clipBloc,
+        const Stream<ClipEditorState>.empty(),
+        initialState: importing,
+      );
+
+      await tester.pumpWidget(
+        buildWidget(isLoading: true, clipBlocOverride: clipBloc),
+      );
+      await tester.pump();
+
+      expect(find.text(l10n.videoActionEdit), findsOne);
+      expect(find.text(l10n.videoActionEdit).hitTestable(), findsNothing);
+    });
+
+    testWidgets(
       'writes history on extraction success even when handled above clip controls',
       (tester) async {
         final clipBloc = _MockClipEditorBloc();

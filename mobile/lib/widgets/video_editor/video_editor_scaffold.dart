@@ -51,13 +51,45 @@ class VideoEditorScaffold extends StatelessWidget {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: VideoEditorConstants.uiOverlayStyleFor(context.vineColors),
       child: LoopRepairResultListener(
-        child: _EditorScaffold(
-          body: LayerTrackingResultListener(
-            child: ClipEditorResultListeners(
-              child: _ScaffoldBody(isLoading: isLoading),
+        child: Stack(
+          fit: .expand,
+          children: [
+            _EditorScaffold(
+              body: LayerTrackingResultListener(
+                child: ClipEditorResultListeners(
+                  child: _ScaffoldBody(isLoading: isLoading),
+                ),
+              ),
             ),
-          ),
+            const _OperationProgressOverlays(),
+          ],
         ),
+      ),
+    );
+  }
+}
+
+/// The progress overlays of long editor operations, above the whole scaffold.
+///
+/// The editing-tools bar is the scaffold's bottom bar and stays up during a
+/// library import; from inside the body, the overlays could neither absorb
+/// its taps nor hide it from screen readers.
+class _OperationProgressOverlays extends StatelessWidget {
+  const _OperationProgressOverlays();
+
+  @override
+  Widget build(BuildContext context) {
+    // Outside the scaffold nothing else gives the overlays' text a style.
+    return const Material(
+      type: .transparency,
+      child: Stack(
+        fit: .expand,
+        clipBehavior: .none,
+        children: [
+          ClipOperationProgressOverlays(),
+          LayerTrackingProgressOverlay(),
+          LoopRepairProgressOverlay(),
+        ],
       ),
     );
   }
@@ -70,37 +102,26 @@ class _ScaffoldBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      fit: .expand,
-      clipBehavior: .none,
+    return Column(
       children: [
-        Column(
-          children: [
-            Expanded(
-              child: Stack(
-                fit: .expand,
-                clipBehavior: .none,
-                children: [
-                  if (isLoading)
-                    const BrandedLoadingScaffold()
-                  else
-                    const VideoEditorCanvas(),
+        Expanded(
+          child: Stack(
+            fit: .expand,
+            clipBehavior: .none,
+            children: [
+              if (isLoading)
+                const BrandedLoadingScaffold()
+              else
+                const VideoEditorCanvas(),
 
-                  const VideoEditorCaptionPreviewOverlay(),
+              const VideoEditorCaptionPreviewOverlay(),
 
-                  const _OverlayControls(),
-                ],
-              ),
-            ),
-            const _TimelineSection(),
-            const _MaskEditorPanelSpace(),
-          ],
+              const _OverlayControls(),
+            ],
+          ),
         ),
-
-        const ClipOperationProgressOverlays(),
-
-        const LayerTrackingProgressOverlay(),
-        const LoopRepairProgressOverlay(),
+        const _TimelineSection(),
+        const _MaskEditorPanelSpace(),
       ],
     );
   }

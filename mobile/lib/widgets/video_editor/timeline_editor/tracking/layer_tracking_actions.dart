@@ -15,6 +15,7 @@ import 'package:openvine/models/video_editor/track_frame_mapping.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/keyframes/layer_keyframe_actions.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/tracking/layer_track_region_picker.dart';
+import 'package:openvine/widgets/video_editor/video_editor_blocking_overlay.dart';
 import 'package:pro_image_editor/pro_image_editor.dart' show Layer;
 import 'package:pro_video_editor/pro_video_editor.dart' show VideoObjectTrack;
 
@@ -107,8 +108,8 @@ class LayerTrackingProgressOverlay extends StatelessWidget {
       (LayerTrackingCubit cubit) => cubit.state.isTracking,
     );
     if (!tracking) return const SizedBox.shrink();
-    return ColoredBox(
-      color: context.vineColors.background.withAlpha(210),
+    return VideoEditorBlockingOverlay(
+      announcement: context.l10n.videoEditorTrackProgressLabel,
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,

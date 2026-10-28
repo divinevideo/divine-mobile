@@ -19,6 +19,7 @@ import 'package:openvine/models/video_editor/composition_duration.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/video_editor_timeline_geometry.dart';
+import 'package:openvine/widgets/video_editor/video_editor_blocking_overlay.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Starts whole-composition loop alignment from the editing-tools drawer.
@@ -66,8 +67,8 @@ class LoopRepairProgressOverlay extends StatelessWidget {
       BlocBuilder<LoopSuggestionCubit, LoopSuggestionState>(
         builder: (context, state) {
           if (!state.isSearching) return const SizedBox.shrink();
-          return ColoredBox(
-            color: context.vineColors.background.withAlpha(210),
+          return VideoEditorBlockingOverlay(
+            announcement: context.l10n.videoEditorLoopRepairProgress,
             child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
