@@ -66,7 +66,11 @@ class ChatComposerCubit extends Cubit<ChatComposerState> {
       ChatComposerState(
         text: state.text,
         mentions: List.unmodifiable([
-          ...state.mentions,
+          ...state.mentions.where(
+            (mention) =>
+                mention.end! <= insertion.start ||
+                mention.start! >= insertion.end,
+          ),
           CaptionMention(
             display: display,
             pubkey: pubkey,

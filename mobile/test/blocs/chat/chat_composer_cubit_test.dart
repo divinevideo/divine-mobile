@@ -72,6 +72,24 @@ void main() {
         },
       );
 
+      test('repicking the same label replaces the account binding', () async {
+        final first = 'a' * 64;
+        final second = 'b' * 64;
+        final bodies = <String>[];
+        final cubit = ChatComposerCubit(
+          send: (body) async {
+            bodies.add(body);
+            return true;
+          },
+        );
+        addTearDown(cubit.close);
+        cubit.updateDraft('@Al', 3);
+        cubit.selectMention(cursor: 3, pubkey: first, display: 'Alice');
+        cubit.selectMention(cursor: 6, pubkey: second, display: 'Alice');
+        await cubit.submit();
+        expect(bodies, ['nostr:${NostrKeyUtils.encodePubKey(second)}']);
+      });
+
       test('closing during a send does not emit into a closed Cubit', () async {
         final pending = Completer<bool>();
         final cubit = ChatComposerCubit(send: (_) => pending.future);
