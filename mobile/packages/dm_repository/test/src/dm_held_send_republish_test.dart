@@ -88,6 +88,7 @@ void main() {
     late bool confirmRecipientWraps;
     late DmSendPolicyDecision policyDecision;
     late bool policyThrows;
+    late int policyChecks;
     late bool deviceOffline;
     late int connectedRelays;
     late bool selfCopiesPublish;
@@ -116,6 +117,7 @@ void main() {
           senderPublicKey: owner,
           nostrService: nostrClient,
           sendPolicy: (_) async {
+            policyChecks++;
             if (policyThrows) throw StateError('policy unavailable');
             return policyDecision;
           },
@@ -173,6 +175,7 @@ void main() {
       confirmRecipientWraps = true;
       policyDecision = DmSendPolicyDecision.allowed;
       policyThrows = false;
+      policyChecks = 0;
       deviceOffline = false;
       connectedRelays = 1;
       selfCopiesPublish = true;
@@ -415,6 +418,17 @@ void main() {
     });
 
     group('recoverFullSend once the inbox is found', () {
+      test('asks the send policy once, through sendRumor', () async {
+        final (:rowId, poolWrap: _) = await heldSend();
+        inboxes[peerB] = _Inbox.found;
+        policyChecks = 0;
+
+        final retried = await repository.recoverFullSend(rumorId: rowId);
+
+        expect(retried.success, isTrue);
+        expect(policyChecks, equals(1));
+      });
+
       test('publishes one new recipient wrap to the inbox and the '
           'self-copy', () async {
         final (:rowId, :poolWrap) = await heldSend();

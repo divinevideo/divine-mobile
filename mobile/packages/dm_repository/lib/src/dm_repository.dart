@@ -7847,9 +7847,11 @@ class DmRepository {
     // A retry that keeps or settles on that wrap skips sendRumor, so it makes
     // sendRumor's pre-send checks here: the send policy (#176) and the offline
     // fail-fast.
-    final refusal = poolWrapId == null
-        ? null
-        : await _heldRetryRefusal(rumor, row);
+    final keepsOrSettles =
+        poolWrapId != null &&
+        (inbox.state == DmInboxResolution.unreadable ||
+            inbox.state == DmInboxResolution.absent);
+    final refusal = keepsOrSettles ? await _heldRetryRefusal(rumor, row) : null;
     final NIP17SendResult result;
     if (refusal != null) {
       result = refusal;
