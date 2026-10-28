@@ -76,8 +76,10 @@ class OutgoingDmRetryConfig {
 /// 1. `recipient: sent / self: failed` → [DmRepository.recoverSelfWrap]
 ///    (the canonical partial-delivery recovery from #4124).
 /// 2. `recipient: failed` → [DmRepository.recoverFullSend] (replays both
-///    wraps; rumor.id is stable across retries so NIP-17 receiver dedup
-///    drops the duplicate copy if the original publish actually landed).
+///    wraps, or for a row held on an unreadable inbox only what that inbox
+///    now allows (#10012); rumor.id is stable across retries so NIP-17
+///    receiver dedup drops the duplicate copy if the original publish
+///    actually landed).
 /// 3. Either wrap still `pending` and the row queuedAt is older than the
 ///    interrupted-send threshold → [DmRepository.recoverFullSend]. This
 ///    catches both app-killed mid-send rows (epic #3912's "outgoing DM

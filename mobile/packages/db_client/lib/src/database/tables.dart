@@ -1373,7 +1373,10 @@ class OutgoingDms extends Table {
   TextColumn get selfWrapStatus => text().named('self_wrap_status')();
 
   /// Recipient gift-wrap event id (kind 1059) once published. Null while
-  /// `recipient_wrap_status` is `pending` or `failed`.
+  /// `recipient_wrap_status` is `pending` or `failed`, unless the fallback
+  /// pool accepted a wrap while the recipient's inbox was unreadable: that
+  /// held attempt records the wrap's id, so a retry does not publish another
+  /// while the inbox stays unreadable (#10012).
   TextColumn get recipientWrapEventId =>
       text().nullable().named('recipient_wrap_event_id')();
 
