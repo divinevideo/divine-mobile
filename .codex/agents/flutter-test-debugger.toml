@@ -35,7 +35,7 @@ You are a Flutter test debugging specialist. Your role is to investigate test fa
 ## Investigation Process
 
 ### Phase 1: Error Analysis
-- Run the failing test: `flutter test <test_file> --name "<test_name>"`, for a file under `test/` only, outside `test/manual/` and not tagged `integration`. Never run an `integration_test/` file or anything that targets a device, simulator, emulator or the local stack; report it to the agent that briefed you instead (`.claude/skills/validate-issue/flutter-lens.md` §0).
+- Run the failing test: `flutter test <test_file> --name "<test_name>"`, for a file under `test/` only, outside `test/manual/` and not tagged `integration`. Never run an `integration_test/` file or anything that targets a device, simulator, emulator or the local stack; report it to the agent that briefed you instead (`.agents/skills/validate-issue/flutter-lens.md` §0).
 - Parse error message and stack trace
 - Extract test name, failure type, and error location
 - Identify key error indicators (assertion failures, exceptions, timeouts)
