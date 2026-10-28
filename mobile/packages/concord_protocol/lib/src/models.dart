@@ -18,6 +18,9 @@ class ChatMessage {
     this.editedBody,
     Iterable<String> mentionedPubkeys = const [],
   }) : mentionedPubkeys = List.unmodifiable(mentionedPubkeys.toSet());
+
+  /// Hex keys from the rumor's p tags, once each; an edit keeps the original
+  /// set.
   final List<String> mentionedPubkeys;
   final String id;
   final String channelId;

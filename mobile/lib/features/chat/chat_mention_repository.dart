@@ -24,6 +24,8 @@ abstract final class ChatMentionLimits {
   static const maxRows = 50;
 }
 
+/// Turns trusted mentions of [owner] in rooms the owner has opened into
+/// in-app notification rows, with read state kept in [store].
 class ChatMentionRepository implements LocalNotificationSource {
   ChatMentionRepository({
     required this.owner,
@@ -68,6 +70,11 @@ class ChatMentionRepository implements LocalNotificationSource {
   @override
   Stream<List<NotificationItem>> watchSnapshot() => _snapshots.stream;
 
+  /// Loads the saved enrollments and read markers and starts their rooms.
+  ///
+  /// Completes once state is loaded; a room that fails to start is left for
+  /// [refresh]. Throws only when the store cannot be read, and a later call
+  /// retries.
   Future<void> initialize() {
     if (_closed) return Future.value();
     return _initializing ??= _initialize().catchError((
@@ -111,7 +118,9 @@ class ChatMentionRepository implements LocalNotificationSource {
         );
       });
 
-  /// Opening a room enrolls it, without generating alerts for its old history.
+  /// Starts alerting on [channel]; messages sent before enrollment never
+  /// alert. Rethrows a refused write, leaving [channel] unenrolled, and a
+  /// failed room start.
   Future<void> enroll(String channel) async {
     await initialize();
     if (_closed) return;
@@ -180,6 +189,7 @@ class ChatMentionRepository implements LocalNotificationSource {
     reevaluate();
   }
 
+  /// Replaces [channel]'s buffered messages with [messages] and rebuilds rows.
   void updateRoom(String channel, List<ChatMessage> messages) {
     if (_closed || !_rooms.containsKey(channel)) return;
     _messages[channel] = List.of(messages);
@@ -219,7 +229,8 @@ class ChatMentionRepository implements LocalNotificationSource {
     }
   }
 
-  /// Reapply live follow/block/mute policy, including already visible rows.
+  /// Rebuilds rows from buffered messages, reapplying [canNotify] to rows
+  /// already shown.
   void reevaluate() {
     if (_closed) return;
     final groups = <String, ({String channel, ChatMessage message})>{};

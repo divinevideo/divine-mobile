@@ -2,8 +2,11 @@
 import 'package:openvine/mentions/mention_text_editing.dart';
 import 'package:openvine/models/caption_mention.dart';
 
-/// Shifts unaffected bindings and drops any token touched by an edit.
-/// The caret disambiguates deletion of identical neighboring display names.
+/// Shifts bindings outside the edited span and drops any token the edit
+/// touched.
+///
+/// [cursor] is the caret after the edit; it picks which of two identical
+/// neighboring tokens a deletion removed.
 List<CaptionMention> updateChatMentionBindings({
   required String before,
   required String after,

@@ -568,7 +568,8 @@ class NotificationRepository {
   /// Never part of social cursors.
   final AnnouncementsRepository? announcementsRepository;
 
-  /// Optional account-bound client source, owned and disposed by its caller.
+  /// Optional client-only source; [close] leaves it open because its creator
+  /// owns it.
   final LocalNotificationSource? localNotifications;
 
   final Map<NotificationKind?, _NotificationFeed> _feeds = {};
@@ -1842,7 +1843,8 @@ class NotificationRepository {
   /// sign + POST + DAO halves serialize behind other read mutations. On
   /// failure, only the rows this call flipped are restored, under the same
   /// applied-generation rule as [markAsRead]. Throws [StateError] when the
-  /// repository is already closed.
+  /// repository is already closed, and rethrows a local source's failed
+  /// write.
   Future<void> markAllAsRead() async {
     _throwIfClosed();
     // The existing server API offers no arrival watermark. A failed bare

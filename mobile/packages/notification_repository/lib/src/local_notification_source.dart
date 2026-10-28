@@ -1,7 +1,11 @@
-import 'package:models/notification_item.dart';
+import 'package:models/models.dart';
 
-/// Account-bound notifications whose source is available only on the client.
-/// IDs must use the `chat:` namespace; reads never go to the social API.
+/// Client-only notification rows, merged into the unfiltered and mentions
+/// feeds.
+///
+/// Every row must be a [NotificationKind.mention] whose id starts with
+/// `chat:`: `NotificationRepository.markAsRead` routes reads by that prefix and
+/// sends any other id to the social read API.
 abstract interface class LocalNotificationSource {
   /// Current rows, with account-local read state.
   List<NotificationItem> get items;
