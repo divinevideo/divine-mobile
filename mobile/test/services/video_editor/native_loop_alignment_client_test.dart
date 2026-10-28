@@ -251,6 +251,119 @@ void main() {
       },
     );
 
+    group('the native clock exception keeps the other timing checks', () {
+      const length = Duration(milliseconds: 6300);
+      List<Duration> clock(double fps, {Duration offset = Duration.zero}) => [
+        for (var i = 0; i < 189; i++)
+          Duration(microseconds: 50000000 + (i * 1000000 / fps).round()) +
+              offset,
+      ];
+      Future<bool> covered({
+        required double sourceFps,
+        required double outputFps,
+        required List<Duration> times,
+        required List<Duration> outputTimes,
+      }) async {
+        final backend = FakeBackend()
+          ..texture = true
+          ..outputDuration = length
+          ..sourceFrameRate = sourceFps
+          ..outputFrameRate = outputFps
+          ..times = times
+          ..outputTimes = outputTimes;
+        final request = input(duration: length);
+        final plan = repairPlan(duration: length);
+        final client = NativeLoopAlignmentClient(backend: backend);
+        await client.analyze(request, const LoopAlignmentLimits(), 'c', (_) {});
+        final output = await client.render(request, plan, 'c', (_) {});
+        final proof = await client.inspect(request, plan, output, 'c');
+        await client.discard(output);
+        await client.finish('c');
+        return proof.covered;
+      }
+
+      test('rejects a 3ms same-rate gap that stays near both clocks', () async {
+        final times = clock(30);
+        final outputTimes = clock(30);
+        times[90] -= const Duration(microseconds: 1500);
+        outputTimes[90] += const Duration(microseconds: 1500);
+        expect(
+          await covered(
+            sourceFps: 30,
+            outputFps: 30,
+            times: times,
+            outputTimes: outputTimes,
+          ),
+          isFalse,
+        );
+      });
+
+      test('rejects drift toward an output clock iOS does not use', () async {
+        expect(
+          await covered(
+            sourceFps: 30,
+            outputFps: 30000 / 1001,
+            times: clock(30),
+            outputTimes: clock(30000 / 1001),
+          ),
+          isFalse,
+        );
+      });
+
+      test('rejects a source picture off its own clock', () async {
+        final times = clock(30000 / 1001);
+        times[90] += const Duration(milliseconds: 10);
+        expect(
+          await covered(
+            sourceFps: 30000 / 1001,
+            outputFps: 30,
+            times: times,
+            outputTimes: clock(30),
+          ),
+          isFalse,
+        );
+      });
+
+      test('falls back to the strict check for a non-finite rate', () async {
+        expect(
+          await covered(
+            sourceFps: double.nan,
+            outputFps: 30,
+            times: clock(30000 / 1001),
+            outputTimes: clock(30),
+          ),
+          isFalse,
+        );
+      });
+
+      test('rejects an output one picture short', () async {
+        expect(
+          await covered(
+            sourceFps: 30000 / 1001,
+            outputFps: 30,
+            times: clock(30000 / 1001),
+            outputTimes: clock(30).take(188).toList(),
+          ),
+          isFalse,
+        );
+      });
+
+      test('keeps the first picture within 2ms of the cut', () async {
+        expect(
+          await covered(
+            sourceFps: 30000 / 1001,
+            outputFps: 30,
+            times: clock(
+              30000 / 1001,
+              offset: const Duration(milliseconds: 10),
+            ),
+            outputTimes: clock(30),
+          ),
+          isFalse,
+        );
+      });
+    });
+
     test('same-rate middle-frame jitter is still rejected', () async {
       final backend = FakeBackend()
         ..texture = true
