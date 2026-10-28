@@ -9597,12 +9597,13 @@ class DmRepository {
   /// Delete a sent message for everyone via NIP-09 kind 5.
   ///
   /// The kind-5 travels as a **NIP-17 rumor inside a kind-1059 gift wrap**
-  /// addressed to each participant (`17.md:87`), not as a bare event on the
-  /// public pool. The bare form named the counterparty in a plaintext `p` tag
-  /// alongside a real timestamp and the rumor kind, which defeats NIP-17's
-  /// first stated benefit (`17.md:97`) — and NIP-09 tells relays to keep
-  /// deletion requests indefinitely (`09.md:33`), so each one was a permanent
-  /// public record that these two pubkeys had a conversation (#7341).
+  /// (`17.md:87`), which Divine sends to each participant, not as a bare
+  /// event on the public pool. The bare form named the counterparty in a
+  /// plaintext `p` tag alongside a real timestamp and the rumor kind, which
+  /// defeats NIP-17's first stated benefit (`17.md:97`) — and NIP-09 tells
+  /// relays to keep deletion requests indefinitely (`09.md:33`), so each one
+  /// was a permanent public record that these two pubkeys had a conversation
+  /// (#7341).
   ///
   /// Returns once the deletion is **durable**, not once it is delivered. The
   /// row is soft-deleted and the rumor stored in one write; delivery is
