@@ -206,6 +206,30 @@ void main() {
         );
       });
 
+      testWidgets('a room mention names its room under the message', (
+        tester,
+      ) async {
+        await _pump(
+          tester,
+          notification: ActorNotification(
+            id: 'chat:introductions:${'b' * 64}',
+            type: NotificationKind.mention,
+            actor: _alice,
+            timestamp: DateTime.utc(2026, 5, 4, 12),
+            chatTarget: const ChatNotificationTarget(
+              communityId: 'community-test',
+              channelId: 'introductions',
+            ),
+          ),
+        );
+
+        expect(
+          find.textContaining(_l10n.notificationMentionedYou('Alice')),
+          findsOneWidget,
+        );
+        expect(find.textContaining('#introductions'), findsOneWidget);
+      });
+
       testWidgets('system message for system kind', (tester) async {
         await _pump(
           tester,

@@ -1111,7 +1111,6 @@ void main() {
           type: NotificationKind.mention,
           actor: ActorInfo(pubkey: 'b' * 64, displayName: 'Friend'),
           timestamp: DateTime(2026),
-          commentText: '#introductions',
           chatTarget: const ChatNotificationTarget(
             communityId: 'community-test',
             channelId: 'introductions',

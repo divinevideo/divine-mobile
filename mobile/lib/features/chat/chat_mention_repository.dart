@@ -298,7 +298,6 @@ class ChatMentionRepository implements LocalNotificationSource {
               ) >=
               0,
           sourceEventIds: [entry.value.message.id],
-          commentText: '#${entry.value.channel}',
           chatTarget: ChatNotificationTarget(
             communityId: communityId,
             channelId: entry.value.channel,

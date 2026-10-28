@@ -89,6 +89,7 @@ void main() {
           ]);
           expect(repo.items, hasLength(1));
           expect(repo.items.single.isRead, isFalse);
+          expect((repo.items.single as ActorNotification).commentText, isNull);
           await repo.markSeen([repo.items.single.id]);
           expect(repo.items.single.isRead, isTrue);
           repo.updateRoom('general', [

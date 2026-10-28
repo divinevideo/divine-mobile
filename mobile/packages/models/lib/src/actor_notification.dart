@@ -14,8 +14,8 @@ class ActorNotification extends NotificationItem {
   /// UTF-16.
   ///
   /// [commentText] is the source event's body — relay text the row renders as
-  /// a quote. See [VideoNotification] for the boundary rationale. For a room
-  /// mention ([chatTarget] set) it is the room name, never message text.
+  /// a quote. See [VideoNotification] for the boundary rationale. Room
+  /// mentions ([chatTarget] set) carry none: message text stays encrypted.
   ActorNotification({
     required super.id,
     required super.type,
