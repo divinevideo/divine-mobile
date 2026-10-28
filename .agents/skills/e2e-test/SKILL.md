@@ -34,10 +34,13 @@ prints the native test XML path + failure excerpts when the APK
 fails to install. **For e2e targets, never call `patrol test` or
 `flutter test` directly** — you'll lose the timeline and the diagnostics.
 
-`profile.sh` installs on `ANDROID_SERIAL` if it is set, else on the first
-`emulator-*`, else on the first device `adb devices` lists. With a phone
-attached and no emulator running, that is the phone, so export
-`ANDROID_SERIAL=<serial>` first unless the phone is yours to use.
+`profile.sh` picks `ANDROID_SERIAL` if it is set, else the first
+`emulator-*`, else the first device `adb devices` lists, then clears that
+device's logcat, reinstalls the app and grants it permissions. With a phone
+attached and no emulator running, that device is the phone, so start the
+emulator first unless the phone is yours to use, and pin it with
+`ANDROID_SERIAL=<emulator serial>`. A delegated agent runs none of this; see
+`validate-issue/flutter-lens.md` §0.
 
 Not every suite is a patrol suite. `profile.sh` recursively greps the
 target for `patrolTest` and dispatches: patrol suites go to
