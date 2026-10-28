@@ -18,6 +18,7 @@ import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as models;
 import 'package:nostr_client/nostr_client.dart';
+import 'package:openvine/features/chat/chat_mention_providers.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/notifications/providers/announcement_providers.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
@@ -170,6 +171,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          chatMentionRepositoryProvider.overrideWithValue(null),
           if (writeBarrier != null)
             accountStateWriteBarrierProvider.overrideWithValue(writeBarrier),
           sharedPreferencesProvider.overrideWithValue(preferences),

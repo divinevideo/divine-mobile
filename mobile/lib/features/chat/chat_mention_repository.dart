@@ -1,0 +1,296 @@
+// ABOUTME: Account-scoped trusted chat mentions and durable local read metadata.
+// ABOUTME: Keeps decrypted message text in memory, never in the metadata store.
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:concord_protocol/concord_protocol.dart';
+import 'package:concord_repository/concord_repository.dart';
+import 'package:models/models.dart';
+import 'package:notification_repository/notification_repository.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:rxdart/rxdart.dart' hide NotificationKind;
+import 'package:unified_logger/unified_logger.dart';
+
+class ChatMentionRepository implements LocalNotificationSource {
+  ChatMentionRepository({
+    required this.owner,
+    required this.store,
+    required this.canNotify,
+    required this.now,
+    this.loadActors,
+    this.createRoom,
+    this.startRoom,
+  });
+
+  final String owner;
+  final AccountScopedStore store;
+  final bool Function(String author) canNotify;
+  final int Function() now;
+  final Future<List<ActorInfo>> Function(Set<String> authors)? loadActors;
+  final _actors = <String, ActorInfo>{};
+  final _loadingActors = <String>{};
+  final ConcordRepository Function(String channel)? createRoom;
+  final Future<void> Function(String channel, ConcordRepository repository)?
+  startRoom;
+  final _rooms = <String, int>{};
+  final _seen = <String, String>{};
+  final _messages = <String, List<ChatMessage>>{};
+  final _repositories = <String, ConcordRepository>{};
+  final _subscriptions = <String, StreamSubscription<void>>{};
+  final _failedRooms = <String>{};
+  Future<void>? _refreshing;
+  final _snapshots = BehaviorSubject<List<NotificationItem>>.seeded(const []);
+  Future<void>? _initializing;
+  Future<void> _writes = Future.value();
+  Future<void> _mutations = Future.value();
+  bool _closed = false;
+
+  @override
+  List<NotificationItem> get items => _snapshots.value;
+  @override
+  Stream<List<NotificationItem>> watchSnapshot() => _snapshots.stream;
+
+  Future<void> initialize() {
+    if (_closed) return Future.value();
+    return _initializing ??= _initialize().catchError((
+      Object error,
+      StackTrace stack,
+    ) {
+      _initializing = null;
+      Error.throwWithStackTrace(error, stack);
+    });
+  }
+
+  Future<void> _initialize() async {
+    final raw = await store.get('mention-state');
+    if (_closed) return;
+    if (raw != null) {
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      _rooms.addAll((data['rooms'] as Map).cast<String, int>());
+      _seen.addAll((data['seen'] as Map).cast<String, String>());
+    }
+    await Future.wait([for (final channel in _rooms.keys) _observe(channel)]);
+  }
+
+  /// Opening a room enrolls it, without generating alerts for its old history.
+  Future<void> enroll(String channel) async {
+    await initialize();
+    if (_closed) return;
+    if (!_rooms.containsKey(channel)) {
+      _rooms[channel] = now();
+      try {
+        await _persist();
+      } on Object {
+        _rooms.remove(channel);
+        rethrow;
+      }
+    }
+    if (!_closed) await _observe(channel);
+  }
+
+  Future<void> _observe(String channel) async {
+    if (createRoom == null || _closed || _repositories.containsKey(channel)) {
+      return;
+    }
+    final repository = createRoom!(channel);
+    _repositories[channel] = repository;
+    try {
+      await startRoom!(channel, repository);
+      if (_closed) return;
+      void refresh() =>
+          updateRoom(channel, repository.timeline(now: now()).messages);
+      _subscriptions[channel] = repository.changes.listen(
+        (_) => refresh(),
+        onError: (Object error, StackTrace stack) {
+          // A relay outage keeps the last verified snapshot; the relay reconnects.
+          Log.warning(
+            'Chat mention relay unavailable (${error.runtimeType})',
+            name: 'ChatMentions',
+          );
+          _failedRooms.add(channel);
+        },
+      );
+      refresh();
+    } on Object {
+      _repositories.remove(channel);
+      await repository.close();
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> refresh() =>
+      _refreshing ??= _refresh().whenComplete(() => _refreshing = null);
+
+  Future<void> _refresh() async {
+    await initialize();
+    if (_closed) return;
+    for (final channel in List<String>.of(_failedRooms)) {
+      await _subscriptions.remove(channel)?.cancel();
+      await _repositories.remove(channel)?.close();
+      _failedRooms.remove(channel);
+    }
+    for (final channel in _rooms.keys) {
+      if (_closed) return;
+      await _observe(channel);
+    }
+    reevaluate();
+  }
+
+  void updateRoom(String channel, List<ChatMessage> messages) {
+    if (_closed || !_rooms.containsKey(channel)) return;
+    _messages[channel] = List.of(messages);
+    reevaluate();
+    final missing = messages
+        .map((m) => m.author)
+        .where(
+          (author) =>
+              canNotify(author) &&
+              !_actors.containsKey(author) &&
+              !_loadingActors.contains(author),
+        )
+        .toSet();
+    if (missing.isNotEmpty && loadActors != null) {
+      _loadingActors.addAll(missing);
+      unawaited(_resolveActors(missing));
+    }
+  }
+
+  Future<void> _resolveActors(Set<String> authors) async {
+    try {
+      final actors = await loadActors!(authors);
+      if (_closed) return;
+      for (final actor in actors) {
+        _actors[actor.pubkey] = actor;
+      }
+      reevaluate();
+    } on Exception {
+      // Stable generated identities remain available offline.
+    } finally {
+      _loadingActors.removeAll(authors);
+    }
+  }
+
+  /// Reapply live follow/block/mute policy, including already visible rows.
+  void reevaluate() {
+    if (_closed) return;
+    final groups = <String, ({String channel, ChatMessage message})>{};
+    for (final entry in _messages.entries) {
+      for (final message in entry.value) {
+        if (message.author == owner ||
+            !message.mentionedPubkeys.contains(owner) ||
+            (message.editedBody != null &&
+                !message.effectiveBody.contains(
+                  'nostr:${NostrKeyUtils.encodePubKey(owner)}',
+                )) ||
+            !canNotify(message.author) ||
+            message.createdAt < _rooms[entry.key]! ||
+            message.createdAt < now() - 7 * 24 * 3600 ||
+            message.createdAt > now() + 300 ||
+            message.isExpiredAt(now())) {
+          continue;
+        }
+        final id = 'chat:${entry.key}:${message.author}';
+        final previous = groups[id]?.message;
+        if (previous == null ||
+            message.createdAt > previous.createdAt ||
+            (message.createdAt == previous.createdAt &&
+                (message.ms > previous.ms ||
+                    (message.ms == previous.ms &&
+                        message.id.compareTo(previous.id) > 0)))) {
+          groups[id] = (channel: entry.key, message: message);
+        }
+      }
+    }
+    final rows = [
+      for (final entry in groups.entries)
+        ActorNotification(
+          id: entry.key,
+          type: NotificationKind.mention,
+          actor:
+              _actors[entry.value.message.author] ??
+              ActorInfo(
+                pubkey: entry.value.message.author,
+                displayName: UserProfile.defaultDisplayNameFor(
+                  entry.value.message.author,
+                ),
+              ),
+          timestamp: DateTime.fromMillisecondsSinceEpoch(
+            entry.value.message.createdAt * 1000 + entry.value.message.ms,
+          ),
+          isRead:
+              (_seen[entry.key] ?? '').compareTo(
+                _readOrder(
+                  entry.value.message.createdAt * 1000 + entry.value.message.ms,
+                  entry.value.message.id,
+                ),
+              ) >=
+              0,
+          sourceEventIds: [entry.value.message.id],
+          commentText: '#${entry.value.channel}',
+          chatTarget: ChatNotificationTarget(
+            communityId: 'community-test',
+            channelId: entry.value.channel,
+          ),
+        ),
+    ]..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    _snapshots.add(List.unmodifiable(rows.take(50)));
+  }
+
+  @override
+  Future<void> markSeen(List<String> ids) {
+    final captured = [
+      for (final item in items.where((item) => ids.contains(item.id))) item,
+    ];
+    final mutation = _mutations.then((_) async {
+      if (_closed) return;
+      final before = Map<String, String>.of(_seen);
+      for (final item in captured) {
+        final order = _readOrder(
+          item.timestamp.millisecondsSinceEpoch,
+          item.sourceEventIds.single,
+        );
+        if (order.compareTo(_seen[item.id] ?? '') > 0) {
+          _seen[item.id] = order;
+        }
+      }
+      try {
+        await _persist();
+      } on Object {
+        _seen
+          ..clear()
+          ..addAll(before);
+        rethrow;
+      }
+      reevaluate();
+    });
+    _mutations = mutation.catchError((Object _) {});
+    return mutation;
+  }
+
+  String _readOrder(int milliseconds, String id) =>
+      '${milliseconds.toString().padLeft(16, '0')}:$id';
+
+  Future<void> _persist() {
+    final value = jsonEncode({'rooms': _rooms, 'seen': _seen});
+    final write = _writes.then((_) => store.put('mention-state', value));
+    _writes = write.catchError((Object _) {});
+    return write;
+  }
+
+  @override
+  Future<void> close() async {
+    if (_closed) return;
+    _closed = true;
+    await Future.wait([
+      for (final subscription in _subscriptions.values) subscription.cancel(),
+    ]);
+    await Future.wait([
+      for (final repository in _repositories.values) repository.close(),
+    ]);
+    await _mutations;
+    await _writes;
+    _messages.clear();
+    await _snapshots.close();
+  }
+}

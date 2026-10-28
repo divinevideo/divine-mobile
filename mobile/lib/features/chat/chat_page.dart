@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
+import 'package:openvine/features/chat/chat_mention_providers.dart';
 import 'package:openvine/features/chat/chat_screen.dart';
 import 'package:openvine/features/chat/concord_session.dart';
 import 'package:openvine/features/chat/concord_store.dart';
@@ -17,6 +18,7 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
+import 'package:openvine/providers/provider_detached_future.dart';
 import 'package:openvine/router/route_error_screen.dart';
 
 /// Selects only channels present in the current POC catalog.
@@ -85,6 +87,15 @@ class ChatPage extends ConsumerWidget {
     }
     final effectiveChannel = pocChannelIdFor(channel);
     final database = shared == null ? ref.watch(databaseProvider) : null;
+    final mentions = ref.watch(chatMentionRepositoryProvider);
+    if (mentions != null &&
+        const {'general', 'introductions'}.contains(channelId ?? 'general')) {
+      runProviderDetached(
+        mentions.enroll(channelId ?? 'general'),
+        'observe room mentions',
+        logName: 'ChatPage',
+      );
+    }
     return BlocProvider(
       key: ValueKey((pubkey, signer, communityId, channelId, shared)),
       create: (_) => ChatCubit(

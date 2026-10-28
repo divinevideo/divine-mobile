@@ -5,6 +5,7 @@ import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 
 class ChatCommunity {
   const ChatCommunity(this.id, this.name, this.channels);
@@ -219,6 +220,11 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
           channelId: channelIdFor?.call(channelId) ?? channelId,
           author: effectiveAuthor,
           body: body,
+          mentionedPubkeys: RegExp(r'nostr:(npub1[0-9a-z]+)\b')
+              .allMatches(body)
+              .map((match) => NostrKeyUtils.decode(match[1]!))
+              .where(NostrKeyUtils.isValidKey)
+              .toSet(),
           createdAt: now,
           ms: nowMilliseconds % 1000,
           streamSeedHex: stream.seedHex,

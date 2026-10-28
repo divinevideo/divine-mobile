@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
+import 'package:openvine/features/chat/chat_mention_providers.dart';
 import 'package:openvine/features/chat/chat_page.dart';
 import 'package:openvine/features/chat/chat_screen.dart';
 import 'package:openvine/features/chat/concord_session.dart';
@@ -189,6 +190,7 @@ void main() {
       final restricted = StateProvider((ref) => false);
       final container = ProviderContainer(
         overrides: [
+          chatMentionRepositoryProvider.overrideWithValue(null),
           authServiceProvider.overrideWithValue(_Auth('a' * 64)),
           databaseProvider.overrideWithValue(database),
           isFeatureEnabledProvider(FeatureFlag.concordChat).overrideWith(

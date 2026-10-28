@@ -7,35 +7,55 @@ import 'package:concord_protocol/concord_protocol.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/caption_mentions/caption_mentions_cubit.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
+import 'package:openvine/features/chat/chat_mention_editing.dart';
 import 'package:openvine/features/chat/chat_message_tile.dart';
 import 'package:openvine/features/chat/public_room_notice.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/mentions/mention_text_editing.dart';
+import 'package:openvine/models/caption_mention.dart';
+import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/message_input_bar.dart';
+import 'package:openvine/services/mention_resolution_service.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/mentions/mention_overlay.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// Native conversation for the Concord POC selected from Messages.
-class ChatScreen extends StatefulWidget {
+class ChatScreen extends ConsumerStatefulWidget {
   const ChatScreen({super.key});
   static const String path = RoutePaths.chat;
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
+class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObserver {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   bool _readScheduled = false;
   List<ChatMessage> _readSnapshot = const [];
+  bool _resolving = false;
+  String _previousText = '';
+  final _selectedMentions = <CaptionMention>[];
+  late final CaptionMentionsCubit _mentions;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _scrollController.addListener(_scheduleCurrentRead);
+    _mentions = CaptionMentionsCubit(
+      profileRepositoryOf: () => ref.read(profileRepositoryProvider),
+      candidatePubkeys: () => {
+        ...context.read<ChatCubit>().state.messages.map((m) => m.author),
+        ...ref.read(followRepositoryProvider).followingPubkeys,
+      },
+    );
+    _controller.addListener(_searchMentions);
   }
 
   @override
@@ -77,12 +97,58 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   void didChangeDependencies() {
     super.didChangeDependencies();
     _scheduleCurrentRead();
+
+  }
+
+  void _searchMentions() {
+    final kept = updateChatMentionBindings(
+      before: _previousText,
+      after: _controller.text,
+      cursor: _controller.selection.baseOffset,
+      mentions: _selectedMentions,
+    );
+    _previousText = _controller.text;
+    _selectedMentions
+      ..clear()
+      ..addAll(kept);
+    runDetached(
+      _mentions.search(
+        activeMentionQuery(_controller.text, _controller.selection.baseOffset),
+      ),
+      'search room mentions',
+      logName: 'ChatScreen',
+      category: LogCategory.ui,
+    );
+  }
+
+  void _selectMention(String pubkey, String display) {
+    final insertion = applyMentionSelection(
+      text: _controller.text,
+      cursor: _controller.selection.baseOffset,
+      display: display,
+    );
+    if (insertion == null) return;
+    _controller.value = TextEditingValue(
+      text: insertion.text,
+      selection: TextSelection.collapsed(offset: insertion.selection),
+    );
+    _selectedMentions.add(
+      CaptionMention(
+        display: display,
+        pubkey: pubkey,
+        start: insertion.start,
+        end: insertion.end,
+      ),
+    );
+    _mentions.clear();
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
+    _controller.removeListener(_searchMentions);
+    unawaited(_mentions.close());
     _controller.dispose();
     super.dispose();
   }
@@ -91,11 +157,30 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     final submittedDraft = _controller.text;
     final cubit = context.read<ChatCubit>();
     final state = cubit.state;
+    final profiles = text.contains('@')
+        ? ref.read(profileRepositoryProvider)
+        : null;
+    final resolution = profiles == null
+        ? null
+        : await MentionResolutionService(profileRepository: profiles)
+              .resolveTextMentions(
+                rawText: text,
+                selectedMentions: [
+                  for (final mention in _selectedMentions)
+                    MentionBinding(
+                      display: mention.display,
+                      pubkey: mention.pubkey,
+                      start: mention.start,
+                      end: mention.end,
+                    ),
+                ],
+              );
+    if (!mounted) return;
     final accepted = await cubit.send(
       communityId: state.selectedCommunityId,
       channelId: state.selectedChannelId,
       author: '',
-      body: text,
+      body: (resolution?.canonicalText ?? text).trim(),
       nowMilliseconds: DateTime.now().millisecondsSinceEpoch,
     );
     if (mounted && accepted && _controller.text == submittedDraft) {
@@ -105,11 +190,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   void _submit(String text) {
     final state = context.read<ChatCubit>().state;
-    if (state.sending || state.loading || state.loadFailed) return;
+    if (_resolving || state.sending || state.loading || state.loadFailed) {
+      return;
+    }
     final body = text.trim();
     if (body.isEmpty) return;
+    _resolving = true;
     runDetached(
-      _send(body),
+      _send(text).whenComplete(() => _resolving = false),
       'send room message',
       logName: 'ChatScreen',
       category: LogCategory.ui,
@@ -220,6 +308,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                             );
                           },
                         ),
+                ),
+                BlocBuilder<CaptionMentionsCubit, CaptionMentionsState>(
+                  bloc: _mentions,
+                  builder: (context, mentions) => MentionOverlay(
+                    suggestions: mentions.suggestions,
+                    onSelect: _selectMention,
+                  ),
                 ),
                 Focus(
                   canRequestFocus: false,

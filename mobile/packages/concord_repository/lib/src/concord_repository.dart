@@ -378,6 +378,10 @@ class ConcordRepository {
           id: id,
           channelId: _channelId!,
           author: rumor['pubkey'] as String,
+          mentionedPubkeys: (rumor['tags'] as List)
+              .whereType<List<dynamic>>()
+              .where((tag) => tag.length >= 2 && tag[0] == 'p')
+              .map((tag) => tag[1] as String),
           body: rumor['content'] as String,
           createdAt: rumor['created_at'] as int,
           ms: int.tryParse(_tag(rumor, 'ms') ?? '0') ?? 0,
@@ -580,6 +584,7 @@ class ConcordRepository {
     required int ms,
     required String streamSeedHex,
     required String streamPubkey,
+    Iterable<String> mentionedPubkeys = const [],
     int epoch = 0,
     int? expiresAt,
   }) async {
@@ -594,6 +599,7 @@ class ConcordRepository {
       ['channel', channelId],
       ['epoch', '$epoch'],
       ['ms', '$ms'],
+      for (final pubkey in mentionedPubkeys.toSet()) ['p', pubkey],
       if (expiresAt != null) ['expiration', '$expiresAt'],
     ];
     final id = computeEventId(
@@ -625,6 +631,7 @@ class ConcordRepository {
         body: body,
         createdAt: createdAt,
         ms: ms,
+        mentionedPubkeys: mentionedPubkeys,
         expiresAt: expiresAt,
       ),
     );

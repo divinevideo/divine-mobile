@@ -196,6 +196,20 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
     // the in-app, push, and local tap paths share one target-selection policy.
     // The executors (here vs main.dart) still keep their own navigation
     // mechanics after that decision is made.
+    if (notification case ActorNotification(chatTarget: final target?)) {
+      _pushRoute(
+        context.push<void>(
+          Uri(
+            path: '/chat',
+            queryParameters: {
+              'community': target.communityId,
+              'channel': target.channelId,
+            },
+          ).toString(),
+        ),
+      );
+      return;
+    }
     switch (notification) {
       case AnnouncementNotification(:final announcementId):
         _pushRoute(

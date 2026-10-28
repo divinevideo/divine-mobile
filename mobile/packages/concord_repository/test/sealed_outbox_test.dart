@@ -519,11 +519,15 @@ void main() {
           channelId: '03' * 32,
           author: schnorr.getPublicKey('01' * 32),
           body: 'history',
+          mentionedPubkeys: ['04' * 32, '04' * 32],
           createdAt: 10,
           ms: 125,
           streamSeedHex: stream.seedHex,
           streamPubkey: stream.pubkey,
         );
+        expect(original.timeline(now: 11).messages.single.mentionedPubkeys, [
+          '04' * 32,
+        ]);
         await original.close();
         final restarted = make();
         await restarted.startChannel(
@@ -534,6 +538,9 @@ void main() {
           now: () => 11,
         );
         expect(restarted.timeline(now: 11).messages.single.body, 'history');
+        expect(restarted.timeline(now: 11).messages.single.mentionedPubkeys, [
+          '04' * 32,
+        ]);
         expect(restarted.pendingIds, isEmpty);
         expect(relay.events.hasListener, isTrue);
         await restarted.close();

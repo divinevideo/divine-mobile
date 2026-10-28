@@ -86,6 +86,7 @@ void main() {
           ['channel', channelId],
           ['epoch', '0'],
           ['ms', '5'],
+          ['p', bob['pubkey'] as String],
         ];
         final rumor = <String, dynamic>{
           'id': computeEventId(
@@ -121,6 +122,11 @@ void main() {
           expectedEpoch: 0,
           streamSeedHex: stream.seedHex,
           streamPubkey: stream.pubkey,
+        );
+        expect(opened['tags'], contains(equals(['p', bob['pubkey']])));
+        expect(
+          relay.published.single['tags'],
+          isNot(contains(equals(['p', bob['pubkey']]))),
         );
         expect(opened['content'], 'live sealed hello');
         expect(opened['author'], alice['pubkey']);

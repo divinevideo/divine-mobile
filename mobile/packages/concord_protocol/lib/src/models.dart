@@ -16,7 +16,9 @@ class ChatMessage {
     this.threadRootId,
     this.expiresAt,
     this.editedBody,
-  });
+    Iterable<String> mentionedPubkeys = const [],
+  }) : mentionedPubkeys = List.unmodifiable(mentionedPubkeys.toSet());
+  final List<String> mentionedPubkeys;
   final String id;
   final String channelId;
   final String author;
@@ -35,6 +37,7 @@ class ChatMessage {
     'body': effectiveBody,
     'createdAt': createdAt,
     'ms': ms,
+    if (mentionedPubkeys.isNotEmpty) 'mentionedPubkeys': mentionedPubkeys,
     if (threadRootId != null) 'threadRootId': threadRootId,
     if (expiresAt != null) 'expiresAt': expiresAt,
   };
