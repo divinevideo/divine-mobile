@@ -24,10 +24,10 @@ Header transport differs per platform and is unit-tested only where it can be:
   its own requests. That loader skips `.m3u8`, so it does not cover HLS.
 
 The Dart source-failover chain (resolved source → HLS → original event URL →
-raw, with HLS moved to the front after a fresh derivative failure; the same
-header set on every attempt) is covered by `source_loader_test.dart`
-(CI-gated). A 401 stops the chain as `authRequired` instead of trying the next
-source.
+raw, with HLS moved to the front after a fresh derivative failure) is covered
+by `playback_sources_test.dart`, and trying each source in turn with the same
+header set by `source_loader_test.dart` (both CI-gated). A 401 stops the chain
+as `authRequired` instead of trying the next source.
 
 ## Checklist (run per platform: Android, iOS, macOS)
 
@@ -39,8 +39,10 @@ Prereqs:
   media cache and the loaded videos).
 - An **age-verified** account whose **Content Filters** have no adult category
   set to hide. A verified viewer with a hidden adult category is blocked, not
-  played; with every adult category on show the video plays on its own, and
-  with a mix it waits for a tap.
+  played; with any other setting playback is authorized without a prompt
+  (only thumbnails need every adult category on show).
+
+Then:
 
 - [ ] Signed in as that viewer, open the gated video — it plays.
 - [ ] Force/observe the **HLS fallback** (`…/<hash>/hls/master.m3u8`). Playback

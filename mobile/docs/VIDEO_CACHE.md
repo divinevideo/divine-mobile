@@ -2,9 +2,17 @@
 
 Status: Current
 Validated against: `mobile/lib/services/openvine_media_cache.dart`,
+`mobile/packages/media_cache/lib/src/media_cache_manager.dart`,
 `mobile/packages/infinite_video_feed/lib/src/widgets/infinite_video_feed.dart`,
+`mobile/packages/infinite_video_feed/lib/src/models/feed_first_frame_metric.dart`,
 `mobile/packages/divine_video_player/android/src/main/kotlin/com/divinevideo/divine_video_player/VideoCache.kt`,
-and `mobile/lib/services/storage_management_service.dart` on 2026-10-28.
+`mobile/packages/divine_video_player/darwin/divine_video_player/Sources/divine_video_player/CachingAssetLoader.swift`,
+`mobile/packages/divine_video_player/darwin/divine_video_player/Sources/divine_video_player/DivineVideoPlayerInstance.swift`,
+`mobile/lib/services/storage_management_service.dart`,
+`mobile/lib/services/watermark_download_service.dart`,
+`mobile/lib/observability/feed_playback_performance.dart`,
+`mobile/lib/services/performance_monitoring_service.dart`, and
+`mobile/lib/startup/app_bootstrap.dart` on 2026-10-28.
 
 Two caches can hold video bytes on disk. They serve different paths and only
 one of them is meant to hold a given video. (On iOS and macOS a player also
@@ -12,12 +20,11 @@ keeps a temporary copy of a looping clip while it plays; see below.)
 
 | Cache | Owner | Where | Budget | Holds |
 |---|---|---|---|---|
-| Media cache | Dart, `openVineMediaCache` (`media_cache`) | `<temp>/openvine_video_cache` | User setting, Settings → Storage (2 GB default), and at most 1000 files, none older than 30 days | Whole files the feed prefetched ahead of the viewer, plus files other features fetch through it: sound requests (keyed by the video id, so they can turn into feed hits), clip import, subtitle timeline thumbnails, and grid prefetch where the feed is unsupported |
+| Media cache | Dart, `openVineMediaCache` (`media_cache`) | `<temp>/openvine_video_cache` | User setting, Settings → Storage (2 GB default) | Whole files the feed prefetched ahead of the viewer, plus files other features fetch through it: sound requests and the watermark download (both keyed by the video id, so they can turn into feed hits), clip import, subtitle timeline thumbnails, and grid prefetch where the feed is unsupported |
 | Player cache | Android only, ExoPlayer `SimpleCache` (`VideoCache.kt`) | `<cacheDir>/divine_video_cache` | 500 MB, `configureCache()` at startup | Byte ranges ExoPlayer streamed from an HTTP(S) URL, from the feed and from any other surface that plays `VideoClip.network`, such as video comments and challenges |
 
-The media cache trims to its byte budget at startup and then every 25
-downloads, at most once a minute. With a large budget the 1000-file cap can
-bind first.
+The media cache trims to its byte budget at startup, every 25 downloads, and
+as soon as it crosses the budget, at most once a minute.
 
 Settings → Storage counts both and "Clear cache" empties both
 (`StorageManagementService`, categories `video` and `player`).
@@ -37,7 +44,7 @@ entry and when the viewer moves faster than that queue drains.
 The player cache therefore only adds value on the **miss** path, and on a
 scroll back to a video that was a miss the first time — the prefetcher only
 looks forward, so the media cache fetches such a video only once the viewer
-is two or more places behind it again.
+is between two and `prefetchCount` places behind it again.
 
 With `FeatureFlag.b2PlaybackCanary` on, a video served from the B2 original is
 cached nowhere: the feed skips the media-cache lookup and the prefetch for it,
@@ -65,11 +72,15 @@ holds:
 There is no player cache. AVFoundation loads media through its own stack and
 does not consult `URLCache`, so `configureCache()` is a no-op on Apple
 platforms. One path does put video on disk for a while: a single streamed clip
-that loops whole (the feed's case — one clip, `trimToCommonTrackEnd`, not HLS)
-loads through the plugin's `CachingAssetLoader`, which downloads it once, up to
-16 MB, into a temporary `divine-loop-<uuid>.mp4` so its audio can be decoded
-without a second fetch. The file is deleted when the player cancels or is
-disposed, so it is not a cache that survives the player.
+that loops whole (the feed's case — one clip, `trimToCommonTrackEnd`, no
+`.m3u8` extension) loads through the plugin's `CachingAssetLoader`. When the
+file is at most 16 MB the loader downloads it once into a temporary
+`divine-loop-<uuid>.mp4` so its audio can be decoded without a second fetch; a
+larger file, or one with no length, is fetched range by range instead. The
+loader sends the clip's request headers itself, so a viewer-authenticated clip
+is written there too. The file is deleted when the player moves to other clips,
+stops or is disposed, so no player reads it again; but nothing removes one left
+behind by an app that was killed.
 
 A build before #8029 replaced `URLCache.shared` with a 500 MB cache whose
 disk-path component was `divine_video_cache`, even though the player never
@@ -86,19 +97,20 @@ When a feed video shows its first frame while it is still the current video,
 swiped past before its first frame, or one that fails, records nothing, so the
 rate leaves out the slowest starts.
 
-In release builds each sample goes to Firebase Performance as the
+In distributed release builds (store, TestFlight and Zapstore installs, not a
+local `flutter run --release`), each sample goes to Firebase Performance as the
 `video_first_frame` trace, with a `cache` attribute (`hit` or `miss`), a
 `position` attribute (`initial` or `subsequent`) and the time to first frame in
 `ttff_ms` (`lib/observability/feed_playback_performance.dart`). That is the
 place to read the field hit rate.
 
-On a device, a debug build also prints each sample to the console, once the
-`video` log category is on (by default the console shows only `system` and
-`auth`). The line carries `cache=hit` or `cache=miss` but not the
-`FeedFirstFrame` logger name, so filter on the cache field:
+On a device, a debug build also prints each sample to the console: unless
+`LOG_LEVEL` is set, debug builds turn on the `video` log category. The line
+carries `cache=hit` or `cache=miss` but not the `FeedFirstFrame` logger name,
+so filter on the cache field:
 
 ```bash
-flutter run --dart-define=LOG_CATEGORIES=video
+flutter run
 adb logcat -c
 adb logcat -v time | grep --line-buffered -E 'cache=(hit|miss)' > /tmp/feed.log
 # scroll the fullscreen feed, then
@@ -132,8 +144,9 @@ entry — the first video plays as a progressive stream and a second play of it
 comes from disk — and whatever the miss rate is on a slow cellular link, which
 this run did not measure. It also saves a second download on that path: the
 looping-audio decode of a remote, anonymous clip waits until the player has
-buffered the whole clip and then reads it from the player cache. That is a bounded 500 MB budget that Settings →
-Storage now counts and "Clear cache" reclaims, so it is kept rather than
-removed. Two things would reopen the question: a cellular measurement showing
-the miss path is as rare there as on Wi-Fi, or a prefetcher that also fetches
+buffered the whole clip and then reads it from the player cache. The player
+cache is a bounded 500 MB budget that Settings → Storage now counts and
+"Clear cache" reclaims, so it is kept rather than removed. Two things would
+reopen the question: a cellular measurement showing the miss path is as rare
+there as on Wi-Fi, or a prefetcher that also fetches
 the active index on entry, which would leave the player cache nothing to add.

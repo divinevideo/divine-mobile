@@ -7,13 +7,13 @@ Seamless multi-clip video player using native platform APIs.
 - Seamless playback across multiple video clips with no delay
 - Continuous timeline with global position tracking
 - Native implementations: Media3/ExoPlayer (Android), AVFoundation (iOS/macOS); Dart backends on media_kit/mpv (Linux) and an `HTMLVideoElement` (web), each with fewer features (see the backend notes below)
-- Preloading and buffering handled natively
+- Buffering handled natively, plus a best-effort `preload` of upcoming clips (see below)
 - Looping, clip jumping, and playback speed control
 - Multi-track audio overlays synced to the video timeline, each at its own playback speed with unchanged pitch (`AudioTrack.playbackSpeed`; Android, iOS and macOS)
 - An equalizer per clip and per overlay track (`AudioEqualizer`): shelf and peak bands, the same filters `pro_video_editor` exports with
 - Optional texture rendering for Flutter widget compositing (e.g. `ColorFiltered`)
 - Placeholder widget support to hide black frames before first frame renders
-- Native video caching
+- Native video caching (Android)
 - App lifecycle handling (auto-pause on background, resume on foreground; Android, iOS and macOS)
 
 ## Usage
@@ -142,7 +142,7 @@ await controller.dispose();
 
 ### Preloading & caching
 
-Pre-buffer upcoming videos so playback starts instantly:
+Configure the Android disk cache and warm upcoming videos before they play:
 
 ```dart
 // Configure the Android player's disk cache (call once at app startup)
@@ -157,8 +157,9 @@ await DivineVideoPlayerController.preload([
 ```
 
 `preload` needs a native backend: on Android it prepares the clips in a
-temporary ExoPlayer and releases it once they are ready, and on iOS and
-macOS it only makes a best-effort metadata request. It does not send a
+temporary ExoPlayer and releases it as soon as that player is first ready,
+idle or failed, and on iOS and macOS it only makes a best-effort metadata
+request. It does not send a
 clip's `httpHeaders`, so it cannot warm an authenticated source. Linux and
 web register no platform channel, and `preload` does not check for them, so
 a call there throws a `MissingPluginException`.
@@ -181,14 +182,20 @@ served from disk the next time. Three kinds of source deliberately bypass it:
 
 On iOS and macOS there is no disk cache to configure: AVFoundation loads
 media through its own stack and does not consult `URLCache`, so
-`configureCache` is a no-op there. One exception keeps bytes on disk for
-a while: a single remote clip that plays whole, at full volume and normal
-speed, with `trimToCommonTrackEnd` set and not over HLS, loads through the
-plugin's own `CachingAssetLoader`. It downloads the file once (up to
-16 MB) into a temporary `divine-loop-*.mp4`, so the looping audio can be
-decoded without fetching the clip a second time, sends the clip's
-`httpHeaders` itself, and deletes the file when the player is done with
-it.
+`configureCache` is a no-op there. Two things do keep bytes on disk for a
+while. A single remote clip that starts at its beginning, at full volume and
+normal speed, with `trimToCommonTrackEnd` set and no `.m3u8` extension, loads
+through the plugin's own `CachingAssetLoader`, which sends the clip's
+`httpHeaders` itself. When the file is at most 16 MB it downloads it once
+into a temporary `divine-loop-*.mp4`, so the looping audio can be decoded
+without fetching the clip a second time; a larger file, or one with no
+length, is fetched range by range instead. Because the loader sends the
+headers itself, this includes a viewer-authenticated clip. The file is
+deleted when the player moves to other clips, stops or is disposed; nothing
+removes one left behind by an app that was killed. And an equalized overlay
+track plays from `divine_eq_*` files in the temporary directory: a download
+of a remote track (up to 50 MB) and the rendered copy. Those left by an
+earlier run are deleted when the next run creates its first player.
 
 ### Controller options
 
@@ -204,7 +211,8 @@ DivineVideoPlayerController(
 
 - `bufferProfile`: `VideoBufferProfile.feed` bounds how much each player
   buffers into memory, for surfaces with many players such as the feed;
-  `full` keeps the platform defaults. Only Android acts on it.
+  `full` keeps the platform defaults, and is what a clip's equalizer and the
+  decoder-error retry need. Only Android acts on it.
 - `exclusivePlayback`: starting one exclusive player pauses the others.
   Pass `false` only for a companion player that is part of another
   player's picture, such as a chroma-key backdrop.
@@ -213,10 +221,10 @@ DivineVideoPlayerController(
   volume cheaply enough to follow a slider, and `setFrameEffects` draws
   effects the app registered natively over a window of the timeline (both
   Android, iOS and macOS).
-- Errors arrive in `DivineVideoPlayerState.errorCode` as a
-  `NativePlayerErrorCode`, normalised across platforms, with
+- On Android, iOS and macOS, errors arrive in
+  `DivineVideoPlayerState.errorCode` as a `NativePlayerErrorCode`, with
   `shouldFailover` and `isTransient` to decide whether to try another
-  source or retry.
+  source or retry. The Linux and web backends leave `errorCode` unset.
 
 ### Texture rendering
 
@@ -271,6 +279,8 @@ app goes to the background.
 
 Web uses a Dart backend on an `HTMLVideoElement`. It plays one clip: when
 the controller passes more than one, only the first is played, and overlay
-audio calls do nothing. Like Linux, it skips `setClipVolumes`,
-`setClipEqualizers`, `setAudioTrackEqualizer` and `setFrameEffects`, has no
-disk cache, no `preload` and no lifecycle pause.
+audio calls do nothing. Like Linux, it ignores a clip's `httpHeaders`,
+`equalizer` and `trimToCommonTrackEnd`, so a source that needs request
+headers cannot play on web. It also skips `setClipVolumes`,
+`setClipEqualizers`, `setAudioTrackEqualizer` and `setFrameEffects`, and has
+no disk cache, no `preload` and no lifecycle pause.
