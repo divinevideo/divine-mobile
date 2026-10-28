@@ -24,6 +24,7 @@ import 'package:openvine/notifications/widgets/notification_empty_state.dart';
 import 'package:openvine/notifications/widgets/notification_list_item.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/curated_list_by_author_screen.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/screens/other_profile_screen.dart';
@@ -70,6 +71,7 @@ typedef _RoutedViewResult = ({
   engagementRoutes,
   List<String> profileNpubs,
   List<({String pubkey, String listId})> listRoutes,
+  List<Map<String, String>> chatRoutes,
 });
 
 /// Pumps [NotificationsView] with routes that capture video/profile navigation.
@@ -87,6 +89,7 @@ Future<_RoutedViewResult> _pumpRoutedViewFull(
       <({String routeName, String eventId, String? addressableId})>[];
   final capturedProfileNpubs = <String>[];
   final capturedListRoutes = <({String pubkey, String listId})>[];
+  final capturedChatRoutes = <Map<String, String>>[];
   final router = GoRouter(
     initialLocation: '/',
     routes: [
@@ -152,6 +155,13 @@ Future<_RoutedViewResult> _pumpRoutedViewFull(
           return const Scaffold(body: SizedBox.shrink());
         },
       ),
+      GoRoute(
+        path: RoutePaths.chat,
+        builder: (context, state) {
+          capturedChatRoutes.add(state.uri.queryParameters);
+          return const Scaffold(body: SizedBox.shrink());
+        },
+      ),
     ],
   );
   addTearDown(router.dispose);
@@ -182,6 +192,7 @@ Future<_RoutedViewResult> _pumpRoutedViewFull(
     engagementRoutes: capturedEngagementRoutes,
     profileNpubs: capturedProfileNpubs,
     listRoutes: capturedListRoutes,
+    chatRoutes: capturedChatRoutes,
   );
 }
 
@@ -1090,6 +1101,48 @@ void main() {
           expect(result.videoDetailRoutes.single.extra, isNull);
         },
       );
+    });
+
+    group('tap routing — room mention', () {
+      testWidgets('opens the room the mention came from', (tester) async {
+        final nostrClient = _MockNostrClient();
+        final mention = ActorNotification(
+          id: 'chat:introductions:${'b' * 64}',
+          type: NotificationKind.mention,
+          actor: ActorInfo(pubkey: 'b' * 64, displayName: 'Friend'),
+          timestamp: DateTime(2026),
+          commentText: '#introductions',
+          chatTarget: const ChatNotificationTarget(
+            communityId: 'community-test',
+            channelId: 'introductions',
+          ),
+        );
+        when(() => mockBloc.state).thenReturn(
+          NotificationFeedState(
+            status: NotificationFeedStatus.loaded,
+            notifications: [mention],
+          ),
+        );
+
+        final result = await _pumpRoutedViewFull(
+          tester,
+          mockBloc,
+          videoEventService: _MockVideoEventService(),
+          nostrClient: nostrClient,
+          videosRepository: _MockVideosRepository(),
+        );
+
+        await tester.tap(find.byType(NotificationListItem).first);
+        await tester.pumpAndSettle();
+
+        expect(result.chatRoutes, [
+          {'community': 'community-test', 'channel': 'introductions'},
+        ]);
+        expect(result.profileNpubs, isEmpty);
+        verify(() => mockBloc.add(NotificationFeedItemTapped(mention.id)))
+            .called(1);
+        verifyNever(() => nostrClient.fetchEventById(any()));
+      });
     });
 
     group('tap routing — list add', () {
