@@ -5,7 +5,9 @@ import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 class ChatCommunity {
   const ChatCommunity(this.id, this.name, this.channels);
@@ -94,8 +96,13 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     this.ownsRepository = false,
     this.initialize,
     this.onRead,
+    this.onRoomOpened,
   }) : super(ChatState(loading: ownsRepository));
   final ConcordRepository _repo;
+
+  /// Starts mention alerts for the room [start] opens. A failure is logged and
+  /// never blocks the room.
+  final Future<void> Function(String channel)? onRoomOpened;
   final String Function(String channel)? channelIdFor;
   final bool ownsRepository;
 
@@ -108,6 +115,14 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
   Future<void> start() async {
     if (_starting || isClosed) return;
     _starting = true;
+    if (onRoomOpened case final enroll?) {
+      runDetached(
+        enroll(state.selectedChannelId),
+        'enroll room mentions',
+        logName: 'ChatCubit',
+        category: LogCategory.storage,
+      );
+    }
     emitIfOpen(state.copyWith(loading: true, loadFailed: false));
     _updates ??= _repo.changes.listen(
       (_) {

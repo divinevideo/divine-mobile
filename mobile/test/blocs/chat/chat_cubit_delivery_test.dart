@@ -264,6 +264,43 @@ void main() {
     }
   });
 
+  group('start', () {
+    ChatCubit cubitOpening(
+      _Relay relay,
+      Future<void> Function(String channel) onRoomOpened,
+    ) => ChatCubit(
+      _roomOn(relay),
+      sealedAuthor: '01' * 32,
+      pocStreamForChannel: (_) => GroupKey('02' * 32, '03' * 32),
+      channelIdFor: (_) => '04' * 32,
+      ownsRepository: true,
+      onRoomOpened: onRoomOpened,
+    );
+
+    test('opens mention alerts for the room it starts', () async {
+      final opened = <String>[];
+      final cubit = cubitOpening(_Relay(), (channel) async {
+        opened.add(channel);
+      });
+      addTearDown(cubit.close);
+      cubit.selectChannel('community-test', 'introductions');
+      await cubit.start();
+      expect(opened, ['introductions']);
+    });
+
+    test('a failed enrollment leaves the room open', () async {
+      final cubit = cubitOpening(
+        _Relay(),
+        (_) async => throw Exception('store refused'),
+      );
+      addTearDown(cubit.close);
+      await cubit.start();
+      await pumpEventQueue();
+      expect(cubit.state.loading, isFalse);
+      expect(cubit.state.loadFailed, isFalse);
+    });
+  });
+
   group('close', () {
     test('stops listening to the relay for a room the cubit owns', () async {
       final relay = _Relay();

@@ -8,7 +8,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
 import 'package:openvine/features/chat/chat_mention_providers.dart';
-import 'package:openvine/features/chat/chat_mention_repository.dart';
 import 'package:openvine/features/chat/chat_screen.dart';
 import 'package:openvine/features/chat/concord_session.dart';
 import 'package:openvine/features/chat/concord_store.dart';
@@ -20,8 +19,6 @@ import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/router/route_error_screen.dart';
-import 'package:openvine/utils/detached_future.dart';
-import 'package:unified_logger/unified_logger.dart';
 
 /// Selects only channels present in the current POC catalog.
 /// A missing pair opens the default; an incomplete or unknown pair is rejected.
@@ -89,7 +86,6 @@ class ChatPage extends ConsumerWidget {
     }
     final effectiveChannel = pocChannelIdFor(channel);
     final database = shared == null ? ref.watch(databaseProvider) : null;
-    final mentions = ref.watch(chatMentionRepositoryProvider);
     return BlocProvider(
       key: ValueKey((pubkey, signer, communityId, channelId, shared)),
       create: (_) => ChatCubit(
@@ -113,21 +109,21 @@ class ChatPage extends ConsumerWidget {
         onRead: shared == null
             ? null
             : (messages) => shared.markRead(effectiveChannel, messages),
+        // Read when the room opens, not captured: the source is rebuilt
+        // without the room being reopened.
+        onRoomOpened: (channel) async {
+          await ref.read(chatMentionRepositoryProvider)?.enroll(channel);
+        },
       ),
-      child: _ChatSelection(
-        communityId: communityId,
-        channelId: channelId,
-        mentions: mentions,
-      ),
+      child: _ChatSelection(communityId: communityId, channelId: channelId),
     );
   }
 }
 
 class _ChatSelection extends StatefulWidget {
-  const _ChatSelection({this.communityId, this.channelId, this.mentions});
+  const _ChatSelection({this.communityId, this.channelId});
   final String? communityId;
   final String? channelId;
-  final ChatMentionRepository? mentions;
 
   @override
   State<_ChatSelection> createState() => _ChatSelectionState();
@@ -144,29 +140,7 @@ class _ChatSelectionState extends State<_ChatSelection> {
       communityId: widget.communityId,
       channelId: widget.channelId,
     );
-    if (_valid) {
-      unawaited(context.read<ChatCubit>().start());
-      _enroll(widget.mentions);
-    }
-  }
-
-  @override
-  void didUpdateWidget(_ChatSelection oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (_valid && widget.mentions != oldWidget.mentions) {
-      _enroll(widget.mentions);
-    }
-  }
-
-  /// Opening a room the route accepted starts its mention alerts.
-  void _enroll(ChatMentionRepository? mentions) {
-    if (mentions == null) return;
-    runDetached(
-      mentions.enroll(context.read<ChatCubit>().state.selectedChannelId),
-      'observe room mentions',
-      logName: 'ChatPage',
-      category: LogCategory.ui,
-    );
+    if (_valid) unawaited(context.read<ChatCubit>().start());
   }
 
   @override
