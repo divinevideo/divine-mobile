@@ -49,11 +49,13 @@ void main() {
           ),
         ),
       );
+      // A separately built target, not a canonicalized const, so equality
+      // has to come from the props.
       expect(
         room,
-        const ChatNotificationTarget(
-          communityId: 'community-test',
-          channelId: 'general',
+        ChatNotificationTarget(
+          communityId: room.communityId,
+          channelId: room.channelId,
         ),
       );
     });

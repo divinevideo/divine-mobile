@@ -13,6 +13,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/features/chat/chat_mention_providers.dart';
 import 'package:openvine/features/chat/chat_mention_repository.dart';
+import 'package:openvine/features/chat/concord_session.dart';
+import 'package:openvine/features/chat/concord_store.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
@@ -230,6 +232,31 @@ void main() {
           expect(repository.items, isEmpty);
         },
       );
+    });
+
+    group('saved rooms', () {
+      test('starts only rooms that are still in the catalog', () async {
+        await DriftConcordStore(
+          dao: database.concordStoreDao,
+          account: _me,
+          scope: '$concordRelayUrl/mentions',
+        ).put(
+          'mention-state',
+          '{"rooms":{"general":900,"retired-room":900},"seen":{}}',
+        );
+        final repository = container().read(chatMentionRepositoryProvider)!;
+        await repository.initialize();
+        await pumpEventQueue();
+        final started = verify(
+          () => room.startChannel(
+            channelId: captureAny(named: 'channelId'),
+            epoch: any(named: 'epoch'),
+            streamSeedHex: any(named: 'streamSeedHex'),
+            streamPubkey: any(named: 'streamPubkey'),
+          ),
+        ).captured;
+        expect(started, [pocChannelIdFor('general')]);
+      });
     });
 
     group('lifecycle', () {
