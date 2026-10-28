@@ -54,6 +54,41 @@ void main() {
         expect(restored.dateTime!.minute, equals(5));
       });
 
+      test('keeps the moon phase of a draft reopened in another time zone', () {
+        // Noon on 24 October 2026 in Auckland was 23:00 UTC the day before,
+        // still a waxing gibbous moon; noon west of UTC+5 is a full moon.
+        final meta = InfoStickerData(
+          kind: InfoStickerKind.moon,
+          localeName: 'en',
+          dateTime: DateTime.utc(2026, 10, 23, 23),
+        ).toMeta()..['dateTime'] = '2026-10-24T12:00:00.000';
+
+        expect(
+          meta['moonPhase'],
+          equals(InfoStickerMoonPhase.waxingGibbous.name),
+        );
+        expect(
+          InfoStickerData.fromMeta(meta)!.moonPhase,
+          equals(InfoStickerMoonPhase.waxingGibbous),
+        );
+      });
+
+      test('shows the phase of a date picked after the draft reopened', () {
+        final meta = InfoStickerData(
+          kind: InfoStickerKind.moon,
+          localeName: 'en',
+          dateTime: DateTime.utc(2024, 1, 25, 18),
+        ).toMeta();
+        final reopened = InfoStickerData.fromMeta(meta)!;
+        expect(reopened.moonPhase, equals(InfoStickerMoonPhase.fullMoon));
+
+        final changed = reopened.copyWith(
+          dateTime: DateTime.utc(2024, 1, 11, 12),
+        );
+
+        expect(changed.moonPhase, equals(InfoStickerMoonPhase.newMoon));
+      });
+
       test('reads no sticker from a kind this version does not know', () {
         final meta = const InfoStickerData(
           kind: InfoStickerKind.battery,

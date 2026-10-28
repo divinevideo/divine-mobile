@@ -244,7 +244,8 @@ class InfoStickerData extends Equatable {
     this.altitudeMeters,
     this.useFeet = false,
     this.batteryLevel,
-  });
+    InfoStickerMoonPhase? moonPhase,
+  }) : _moonPhase = moonPhase;
 
   /// A new sticker of [kind] as the sheet opens it: in the first style its
   /// kind takes, in [locale]'s language written the way the region
@@ -348,6 +349,20 @@ class InfoStickerData extends Equatable {
   /// The battery level a battery sticker shows, from 0 to 100.
   final int? batteryLevel;
 
+  /// The phase a reopened draft saved, or `null` until the sticker is saved
+  /// and after its date changes.
+  final InfoStickerMoonPhase? _moonPhase;
+
+  /// The phase a moon sticker shows. [dateTime] alone cannot keep it: a draft
+  /// keeps its wall-clock time, which is another moment in another time zone,
+  /// so the phase is saved with the sticker.
+  InfoStickerMoonPhase? get moonPhase {
+    if (kind != InfoStickerKind.moon) return null;
+    if (_moonPhase case final phase?) return phase;
+    final time = dateTime;
+    return time == null ? null : InfoStickerMoonPhase.at(time);
+  }
+
   /// Whether the sticker has everything it needs to be placed.
   bool get isComplete => switch (kind) {
     InfoStickerKind.time ||
@@ -419,9 +434,11 @@ class InfoStickerData extends Equatable {
     'altitudeMeters': ?altitudeMeters,
     'useFeet': useFeet,
     'batteryLevel': ?batteryLevel,
+    'moonPhase': ?moonPhase?.name,
   };
 
-  /// This sticker with what is given changed.
+  /// This sticker with what is given changed. A new [dateTime] drops a saved
+  /// moon phase, so the phase follows the new date.
   InfoStickerData copyWith({
     InfoStickerStyle? style,
     DateTime? dateTime,
@@ -471,6 +488,7 @@ class InfoStickerData extends Equatable {
         : altitudeMeters ?? this.altitudeMeters,
     useFeet: useFeet ?? this.useFeet,
     batteryLevel: batteryLevel ?? this.batteryLevel,
+    moonPhase: dateTime == null ? _moonPhase : null,
   );
 
   /// This sticker without what a place gave it: the place name, country and
@@ -491,6 +509,7 @@ class InfoStickerData extends Equatable {
     useFahrenheit: useFahrenheit,
     useFeet: useFeet,
     batteryLevel: batteryLevel,
+    moonPhase: _moonPhase,
   );
 
   /// Whether [meta] describes an info sticker.
@@ -551,6 +570,7 @@ class InfoStickerData extends Equatable {
       batteryLevel: battery is int && battery >= 0 && battery <= 100
           ? battery
           : null,
+      moonPhase: _byName(InfoStickerMoonPhase.values, meta['moonPhase']),
     );
   }
 
@@ -601,5 +621,6 @@ class InfoStickerData extends Equatable {
     altitudeMeters,
     useFeet,
     batteryLevel,
+    moonPhase,
   ];
 }

@@ -77,7 +77,7 @@ abstract final class InfoStickerFormat {
       InfoStickerPlaceSymbol.map => InfoStickerEmoji.map,
     },
     InfoStickerKind.altitude => InfoStickerEmoji.mountain,
-    InfoStickerKind.moon => switch (_phase(data)) {
+    InfoStickerKind.moon => switch (data.moonPhase) {
       null => null,
       InfoStickerMoonPhase.newMoon => InfoStickerEmoji.moonNew,
       InfoStickerMoonPhase.waxingCrescent =>
@@ -180,13 +180,8 @@ abstract final class InfoStickerFormat {
     if (data.sunset case final sunset?) '🌇 ${_clock(data, sunset)}',
   ].join('  ');
 
-  static InfoStickerMoonPhase? _phase(InfoStickerData data) {
-    final dateTime = data.dateTime;
-    return dateTime == null ? null : InfoStickerMoonPhase.at(dateTime);
-  }
-
   static String _moon(InfoStickerData data) {
-    final phase = _phase(data);
+    final phase = data.moonPhase;
     if (phase == null) return '';
     final l10n = _l10n(data);
     return switch (phase) {
