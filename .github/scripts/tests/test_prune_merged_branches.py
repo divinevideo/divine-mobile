@@ -63,8 +63,9 @@ class PruneMergedBranchesTest(unittest.TestCase):
         origin = root / "origin.git"
         origin.mkdir()
         git(origin, "init", "-q", "--bare", "-b", "main")
-        # A commit starts a detached `git maintenance run --auto` that can still be
-        # writing into .git/objects when the temporary directory is removed.
+        # A commit, a fetch, or a push into this bare repository starts a detached
+        # `git maintenance run --auto` that can still be writing into .git/objects
+        # when the temporary directory is removed.
         git(origin, "config", "maintenance.auto", "false")
 
         self.repo = root / "repo"
