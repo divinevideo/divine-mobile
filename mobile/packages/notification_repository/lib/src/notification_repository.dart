@@ -1523,11 +1523,15 @@ class NotificationRepository {
     if (_closed) return;
     final local = localNotifications;
     if (local != null) {
+      // Client-side sources must never fail a social refresh, but their
+      // failures are local state and logic errors, so keep the cause.
       unawaited(
-        local.refresh().catchError((Object error) {
+        local.refresh().catchError((Object error, StackTrace stackTrace) {
           Log.warning(
-            'Local notification refresh unavailable',
+            'Local notification refresh failed',
             name: 'NotificationRepository',
+            error: error,
+            stackTrace: stackTrace,
           );
         }),
       );

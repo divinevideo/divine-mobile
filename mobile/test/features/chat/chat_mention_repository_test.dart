@@ -249,6 +249,50 @@ void main() {
         expect(repo.items, hasLength(1));
       },
     );
+
+    test('one failing room neither stops the others nor breaks on a room '
+        'enrolled mid-refresh', () async {
+      final store = InMemoryConcordStore(me);
+      await store.put(
+        'mention-state',
+        '{"rooms":{"general":900,"introductions":900},"seen":{}}',
+      );
+      final starts = <String, int>{};
+      final held = Completer<void>();
+      ConcordRepository room() {
+        final room = _Room();
+        when(room.close).thenAnswer((_) async {});
+        when(() => room.changes).thenAnswer((_) => const Stream.empty());
+        when(() => room.timeline(now: 1000)).thenReturn(FoldedThread([], {}));
+        return room;
+      }
+
+      final repo = ChatMentionRepository(
+        owner: me,
+        store: store,
+        now: () => 1000,
+        canNotify: (_) => true,
+        createRoom: (_) => room(),
+        startRoom: (channel, _) async {
+          final attempt = starts[channel] = (starts[channel] ?? 0) + 1;
+          if (channel == 'general') {
+            if (attempt == 2) await held.future;
+            throw StateError('offline');
+          }
+          if (channel == 'introductions' && attempt == 1) {
+            throw StateError('offline');
+          }
+        },
+      );
+      addTearDown(repo.close);
+      await repo.initialize();
+      final refreshing = repo.refresh();
+      await pumpEventQueue();
+      await repo.enroll('third');
+      held.complete();
+      await refreshing;
+      expect(starts, {'general': 2, 'introductions': 2, 'third': 1});
+    });
   });
   group('markSeen', () {
     test(
