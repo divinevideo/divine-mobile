@@ -204,24 +204,26 @@ class ChatMentionRepository implements LocalNotificationSource {
     if (_closed || !_rooms.containsKey(channel)) return;
     _messages[channel] = List.of(messages);
     reevaluate();
-    final missing = messages
-        .map((m) => m.author)
-        .where(
-          (author) =>
-              canNotify(author) &&
-              !_actors.containsKey(author) &&
-              !_loadingActors.contains(author),
-        )
-        .toSet();
-    if (missing.isNotEmpty && loadActors != null) {
-      _loadingActors.addAll(missing);
-      runDetached(
-        _resolveActors(missing),
-        'load chat mention senders',
-        logName: 'ChatMentions',
-        category: LogCategory.storage,
-      );
-    }
+  }
+
+  /// Requests the profiles of senders whose rows still show a generated name.
+  /// A row can appear after its message did, once the sender is followed or
+  /// unblocked, so this runs on every rebuild rather than only on arrival.
+  void _loadMissingActors(Iterable<String> authors) {
+    if (loadActors == null) return;
+    final missing = {
+      for (final author in authors)
+        if (!_actors.containsKey(author) && !_loadingActors.contains(author))
+          author,
+    };
+    if (missing.isEmpty) return;
+    _loadingActors.addAll(missing);
+    runDetached(
+      _resolveActors(missing),
+      'load chat mention senders',
+      logName: 'ChatMentions',
+      category: LogCategory.storage,
+    );
   }
 
   /// Rows keep the generated fallback name until a load succeeds; the next
@@ -304,7 +306,9 @@ class ChatMentionRepository implements LocalNotificationSource {
           ),
         ),
     ]..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-    _snapshots.add(List.unmodifiable(rows.take(ChatMentionLimits.maxRows)));
+    final shown = rows.take(ChatMentionLimits.maxRows).toList();
+    _snapshots.add(List.unmodifiable(shown));
+    _loadMissingActors(shown.map((row) => row.actor.pubkey));
   }
 
   @override

@@ -281,6 +281,40 @@ void main() {
       );
 
       test(
+        'a sender trusted after their mention arrived gets a name',
+        () async {
+          var trusted = false;
+          final requested = <Set<String>>[];
+          final repo = ChatMentionRepository(
+            owner: me,
+            communityId: 'community-test',
+            store: InMemoryConcordStore(me),
+            now: () => 1000,
+            canNotify: (_) => trusted,
+            loadActors: (authors) async {
+              requested.add(authors);
+              return [ActorInfo(pubkey: friend, displayName: 'Friend')];
+            },
+          );
+          addTearDown(repo.close);
+          await repo.enroll('general');
+          repo.updateRoom('general', [message(friend, 1001)]);
+          await pumpEventQueue();
+          expect(repo.items, isEmpty);
+          trusted = true;
+          repo.reevaluate();
+          await pumpEventQueue();
+          expect(requested, [
+            {friend},
+          ]);
+          expect(
+            (repo.items.single as ActorNotification).actor.displayName,
+            'Friend',
+          );
+        },
+      );
+
+      test(
         'a failed load keeps the fallback name and the next update retries',
         () async {
           var attempts = 0;
