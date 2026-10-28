@@ -5,7 +5,9 @@ import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:openvine/features/chat/chat_mention_repository.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 
 class _Room extends Mock implements ConcordRepository {}
 
@@ -99,6 +101,129 @@ void main() {
       },
     );
   });
+  group('reevaluate rules', () {
+    late int clock;
+    late ChatMentionRepository repo;
+
+    setUp(() async {
+      clock = 1000;
+      repo = ChatMentionRepository(
+        owner: me,
+        communityId: 'community-test',
+        store: InMemoryConcordStore(me),
+        now: () => clock,
+        canNotify: (_) => true,
+      );
+      addTearDown(repo.close);
+      await repo.enroll('general');
+    });
+
+    ChatMessage sent(
+      String author,
+      int time, {
+      int ms = 0,
+      String? id,
+      int? expiresAt,
+      String? editedBody,
+    }) => ChatMessage(
+      id: id ?? '$author$time$ms'.padLeft(64, '0').substring(0, 64),
+      channelId: 'general',
+      author: author,
+      body: 'hello nostr:${NostrKeyUtils.encodePubKey(me)}',
+      createdAt: time,
+      ms: ms,
+      expiresAt: expiresAt,
+      editedBody: editedBody,
+      mentionedPubkeys: [me],
+    );
+
+    test('the newest mention from a sender decides its row', () {
+      final newest = sent(friend, 1003, ms: 7, id: '7' * 64);
+      repo.updateRoom('general', [
+        sent(friend, 1001),
+        newest,
+        sent(friend, 1003, ms: 5, id: 'f' * 64),
+        sent(friend, 1002),
+      ]);
+      expect(repo.items.single.sourceEventIds, [newest.id]);
+    });
+
+    test('a timestamp tie goes to the higher event id', () {
+      repo.updateRoom('general', [
+        sent(friend, 1003, ms: 7, id: 'e' * 64),
+        sent(friend, 1003, ms: 7, id: 'a' * 64),
+      ]);
+      expect(repo.items.single.sourceEventIds, ['e' * 64]);
+    });
+
+    test(
+      'a later mention from a sender is unread again after a read',
+      () async {
+        repo.updateRoom('general', [sent(friend, 1001)]);
+        await repo.markSeen([repo.items.single.id]);
+        repo.updateRoom('general', [sent(friend, 1001), sent(friend, 1002)]);
+        expect(repo.items.single.isRead, isFalse);
+      },
+    );
+
+    test('a self mention never alerts, even when the owner is trusted', () {
+      repo.updateRoom('general', [sent(me, 1001)]);
+      expect(repo.items, isEmpty);
+    });
+
+    test('a mention older than the age window is history', () {
+      clock = 1000 + ChatMentionLimits.maxAgeSeconds + 100;
+      repo.updateRoom('general', [
+        sent(friend, 1001),
+        sent(stranger, clock - 5),
+      ]);
+      expect(
+        repo.items.map((item) => (item as ActorNotification).actor.pubkey),
+        [stranger],
+      );
+    });
+
+    test('an expired message does not alert', () {
+      clock = 1010;
+      repo.updateRoom('general', [
+        sent(friend, 1001, expiresAt: 1005),
+        sent(stranger, 1001, expiresAt: 1020),
+      ]);
+      expect(
+        repo.items.map((item) => (item as ActorNotification).actor.pubkey),
+        [stranger],
+      );
+    });
+
+    test('an edit that removes the mention withdraws its row', () {
+      final kept = 'still nostr:${NostrKeyUtils.encodePubKey(me)}';
+      repo.updateRoom('general', [
+        sent(friend, 1001, editedBody: 'hello again'),
+        sent(stranger, 1001, editedBody: kept),
+      ]);
+      expect(
+        repo.items.map((item) => (item as ActorNotification).actor.pubkey),
+        [stranger],
+      );
+    });
+
+    test('keeps the newest rows up to the cap, newest first', () {
+      final senders = [
+        for (var i = 0; i <= ChatMentionLimits.maxRows; i++)
+          i.toRadixString(16).padLeft(64, '0'),
+      ];
+      repo.updateRoom('general', [
+        for (final (i, sender) in senders.indexed) sent(sender, 1001 + i),
+      ]);
+      final shown = [
+        for (final item in repo.items) (item as ActorNotification).actor.pubkey,
+      ];
+      expect(shown, hasLength(ChatMentionLimits.maxRows));
+      expect(shown.first, senders.last);
+      expect(shown, isNot(contains(senders.first)));
+    });
+  });
+
   group('initialize', () {
     test(
       'enrollment and read state survive restart without plaintext copies',
