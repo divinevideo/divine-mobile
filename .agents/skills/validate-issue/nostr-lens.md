@@ -22,11 +22,11 @@ comment or PR that says so before "fixing" it.
 SHOULD is not MUST. A relay that ignores a SHOULD is conformant, so a client
 that breaks on it is the one with the bug.
 
-Where other implementations keep the code. The Quartz row's three directories
-were opened in `vitorpamplona/quartz` at `c63c35c` on 2026-10-27 (Quartz no
-longer lives in the `amethyst` repo), and the welshman row's files at
-`7d72fa0`. The other rows come from a web read on 2026-10-10 and their paths
-were not opened. Confirm a path before citing it, and pin a commit SHA
+The table says where other implementations keep the code. The Quartz row's
+three directories (in `vitorpamplona/quartz` at `c63c35c`; Quartz no longer
+lives in the `amethyst` repo) and the welshman row's files (at `7d72fa0`) were
+last opened on 2026-10-28. The other rows come from a web read on 2026-10-10
+and their paths were not opened. Confirm a path before citing it, and pin a commit SHA
 whenever you cite one of these.
 
 | Project | DM wrapping (NIP-17 / 59) | Video (NIP-71) |
