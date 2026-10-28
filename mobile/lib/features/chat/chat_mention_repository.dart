@@ -124,16 +124,26 @@ class ChatMentionRepository implements LocalNotificationSource {
   Future<void> enroll(String channel) async {
     await initialize();
     if (_closed) return;
-    if (!_rooms.containsKey(channel)) {
+    await _mutate(() async {
+      if (_closed || _rooms.containsKey(channel)) return;
       _rooms[channel] = now();
       try {
         await _persist();
       } on Object {
         _rooms.remove(channel);
+        _messages.remove(channel);
         rethrow;
       }
-    }
+    });
     if (!_closed) await _observe(channel);
+  }
+
+  /// Runs [change] after every earlier state change, so a failed write's
+  /// rollback lands before the next write snapshots the state.
+  Future<void> _mutate(Future<void> Function() change) {
+    final mutation = _mutations.then((_) => change());
+    _mutations = mutation.catchError((Object _) {});
+    return mutation;
   }
 
   Future<void> _observe(String channel) async {
@@ -303,7 +313,7 @@ class ChatMentionRepository implements LocalNotificationSource {
     final captured = [
       for (final item in items.where((item) => ids.contains(item.id))) item,
     ];
-    final mutation = _mutations.then((_) async {
+    return _mutate(() async {
       if (_closed) return;
       final before = Map<String, String>.of(_seen);
       for (final item in captured) {
@@ -331,8 +341,6 @@ class ChatMentionRepository implements LocalNotificationSource {
       }
       reevaluate();
     });
-    _mutations = mutation.catchError((Object _) {});
-    return mutation;
   }
 
   String _readOrder(int milliseconds, String id) =>

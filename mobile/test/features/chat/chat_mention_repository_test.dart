@@ -518,6 +518,50 @@ void main() {
         expect(starts, {'general': 2, 'introductions': 2, 'third': 1});
       });
     });
+    group('enroll and markSeen together', () {
+      test(
+        'a failed write never reaches disk through a concurrent one',
+        () async {
+          final store = _FailingStore(me);
+          final repo = ChatMentionRepository(
+            owner: me,
+            communityId: 'community-test',
+            store: store,
+            now: () => 1000,
+            canNotify: (_) => true,
+          );
+          addTearDown(repo.close);
+          await repo.enroll('general');
+          repo.updateRoom('general', [message(friend, 1001)]);
+          final id = repo.items.single.id;
+          store.fail = true;
+          Future<bool> succeeded(Future<void> write) =>
+              write.then((_) => true, onError: (Object _) => false);
+          final enrolled = succeeded(repo.enroll('introductions'));
+          final marked = succeeded(repo.markSeen([id]));
+          final (enrollWorked, markWorked) = (await enrolled, await marked);
+          expect(
+            enrollWorked != markWorked,
+            isTrue,
+            reason: 'one write failed',
+          );
+          final saved = jsonDecode(
+            (await store.get('mention-state'))!,
+          ) as Map<String, dynamic>;
+          expect(
+            (saved['rooms'] as Map).keys,
+            enrollWorked
+                ? contains('introductions')
+                : isNot(contains('introductions')),
+          );
+          expect(
+            (saved['seen'] as Map).keys,
+            markWorked ? contains(id) : isNot(contains(id)),
+          );
+        },
+      );
+    });
+
     group('markSeen', () {
       test(
         'a mark-all before state loads does not overwrite saved rooms',
