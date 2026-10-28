@@ -153,7 +153,11 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
   Future<
     ({List<UserProfile> profiles, Map<String, UserRankingSignals> signals})
   >
-  _rankPage(List<UserProfile> profiles, Emitter<UserSearchState> emit) async {
+  _rankPage(
+    List<UserProfile> profiles,
+    String query,
+    Emitter<UserSearchState> emit,
+  ) async {
     final loader = _rankingSignalsLoader;
     if (loader == null || profiles.isEmpty) {
       return (
@@ -187,44 +191,75 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
             _isViewer(viewerPubkey, profile.pubkey))
           profile.pubkey: profile,
     };
-    final ranked = promoteKnown(
-      byPubkey.keys.toList(),
+    final ranked = _promoteKnownBelowExactMatches(
+      byPubkey.values.toList(),
       signals,
-      now: DateTime.now(),
-      nameOf: (pubkey) => byPubkey[pubkey]!.bestDisplayName,
+      query,
     );
     return (
-      profiles: ranked.map((pubkey) => byPubkey[pubkey]!).toList(),
-      signals: {for (final pubkey in ranked) pubkey: ?signals[pubkey]},
+      profiles: ranked,
+      signals: {
+        for (final profile in ranked) profile.pubkey: ?signals[profile.pubkey],
+      },
     );
   }
 
-  /// Keeps exact matches ahead of known and earlier-shown rows, as the
-  /// repository keeps them ahead of followed ones (#8578). A promoted
-  /// partial match, or one shown by an earlier source, must not bury them.
-  ///
-  /// The owner of the username searched for leads them all, including
-  /// earlier-shown profiles that claim its handle.
-  static List<UserProfile> _exactMatchesFirst(
+  /// Moves known accounts up within the server's order without moving one
+  /// above an exact match: each run of profiles between two exact matches
+  /// lists its known ones first, and a known exact match leads the run before
+  /// it, as the repository does with followed ones. No exact match passes
+  /// another, so known partial matches cannot bury an exact account (#8578),
+  /// while the server still decides where an unknown exact match stands
+  /// against unknown profiles.
+  static List<UserProfile> _promoteKnownBelowExactMatches(
     List<UserProfile> profiles,
-    String query, {
+    Map<String, UserRankingSignals> signals,
+    String query,
+  ) {
+    final byPubkey = {for (final profile in profiles) profile.pubkey: profile};
+    final now = DateTime.now();
+    final ordered = <UserProfile>[];
+    var run = <String>[];
+    void promoteRun() {
+      ordered.addAll(
+        promoteKnown(
+          run,
+          signals,
+          now: now,
+          nameOf: (pubkey) => byPubkey[pubkey]!.bestDisplayName,
+        ).map((pubkey) => byPubkey[pubkey]!),
+      );
+      run = [];
+    }
+
+    for (final profile in profiles) {
+      if (ProfileRepository.isExactSearchMatch(profile, query)) {
+        final signal = signals[profile.pubkey];
+        if (signal != null && isKnown(signal)) {
+          ordered.add(profile);
+          promoteRun();
+        } else {
+          promoteRun();
+          ordered.add(profile);
+        }
+      } else {
+        run.add(profile.pubkey);
+      }
+    }
+    promoteRun();
+    return ordered;
+  }
+
+  /// Puts the owner of the username searched for first, including when an
+  /// earlier source showed other profiles that claim its handle.
+  static List<UserProfile> _ownerFirst(
+    List<UserProfile> profiles,
     String? ownerPubkey,
-  }) {
-    final exact = {
-      for (final profile in profiles)
-        if (ProfileRepository.isExactSearchMatch(profile, query))
-          profile.pubkey,
-    };
-    if (exact.isEmpty && ownerPubkey == null) return profiles;
-    int tier(UserProfile profile) => profile.pubkey == ownerPubkey
-        ? 0
-        : exact.contains(profile.pubkey)
-        ? 1
-        : 2;
+  ) {
+    if (ownerPubkey == null) return profiles;
     return [
-      for (final rank in const [0, 1, 2])
-        for (final profile in profiles)
-          if (tier(profile) == rank) profile,
+      ...profiles.where((profile) => profile.pubkey == ownerPubkey),
+      ...profiles.where((profile) => profile.pubkey != ownerPubkey),
     ];
   }
 
@@ -308,7 +343,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
           _searchRunner?.call(
             query: query,
             limit: _pageSize,
-            sortBy: profileSearchSortFollowers,
+            sortBy: profileSearchSortRelevance,
             hasVideos: hasVideos,
             boostPubkeys: followedPubkeys,
             cancellationToken: cancellationToken,
@@ -316,7 +351,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
           repository!.searchUsersProgressive(
             query: query,
             limit: _pageSize,
-            sortBy: profileSearchSortFollowers,
+            sortBy: profileSearchSortRelevance,
             hasVideos: hasVideos,
             boostPubkeys: followedPubkeys,
             cancellationToken: cancellationToken,
@@ -340,12 +375,14 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
           };
           return (
             result: result,
+            visible: visible,
             page: await _rankPage(
               _rankingSignalsLoader == null
                   ? visible
                   : visible
                         .where((profile) => !shown.contains(profile.pubkey))
                         .toList(),
+              query,
               emit,
             ),
           );
@@ -361,24 +398,56 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
             publishedProfiles = page.profiles;
             publishedSignals = page.signals;
           } else {
-            final updates = {
-              for (final profile in result.profiles) profile.pubkey: profile,
-            };
-            publishedProfiles = [
-              for (final profile in publishedProfiles)
-                if ((updates.containsKey(profile.pubkey) ||
-                        (!result.isComplete &&
-                            inheritedPubkeys.contains(profile.pubkey))) &&
-                    _isListed(profile.pubkey))
-                  updates[profile.pubkey] ?? profile,
-              ...page.profiles.where((profile) => _isListed(profile.pubkey)),
-            ];
-            publishedProfiles = _exactMatchesFirst(
-              publishedProfiles,
-              query,
-              ownerPubkey: result.usernameOwnerPubkey,
-            );
             final signals = {...publishedSignals, ...page.signals};
+            // Until the server answers, rows an earlier source showed keep
+            // their places and new ones join below them. Once it has answered,
+            // or the search is complete, the whole list takes the repository's
+            // order, which follows the server's, so earlier rows move once.
+            final serverOrdered =
+                result.isComplete ||
+                result.sources[SearchSource.funnelcakeApi]
+                    is SearchSourceSuccess;
+            final List<UserProfile> listed;
+            if (serverOrdered) {
+              // Rows the ranking dropped stay out: only those shown before
+              // or ranked in this page are listed.
+              final ranked = {
+                for (final profile in publishedProfiles) profile.pubkey,
+                for (final profile in page.profiles) profile.pubkey,
+              };
+              final returned = {
+                for (final profile in result.profiles) profile.pubkey,
+              };
+              listed = _promoteKnownBelowExactMatches(
+                [
+                  for (final profile in rankedResult.visible)
+                    if (ranked.contains(profile.pubkey) &&
+                        _isListed(profile.pubkey))
+                      profile,
+                  for (final profile in publishedProfiles)
+                    if (!returned.contains(profile.pubkey) &&
+                        !result.isComplete &&
+                        inheritedPubkeys.contains(profile.pubkey) &&
+                        _isListed(profile.pubkey))
+                      profile,
+                ],
+                signals,
+                query,
+              );
+            } else {
+              final updates = {
+                for (final profile in result.profiles) profile.pubkey: profile,
+              };
+              listed = [
+                for (final profile in publishedProfiles)
+                  if ((updates.containsKey(profile.pubkey) ||
+                          inheritedPubkeys.contains(profile.pubkey)) &&
+                      _isListed(profile.pubkey))
+                    updates[profile.pubkey] ?? profile,
+                ...page.profiles.where((profile) => _isListed(profile.pubkey)),
+              ];
+            }
+            publishedProfiles = _ownerFirst(listed, result.usernameOwnerPubkey);
             publishedSignals = {
               for (final profile in publishedProfiles)
                 if (signals.containsKey(profile.pubkey))
@@ -520,7 +589,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
             query: state.query,
             limit: _pageSize,
             offset: state.offset,
-            sortBy: profileSearchSortFollowers,
+            sortBy: profileSearchSortRelevance,
             hasVideos: hasVideos,
           )
           .last; // Stream always emits at least once for non-empty queries.
@@ -546,6 +615,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
         _visibleProfiles(result.profiles)
             .where((profile) => !shownPubkeys.contains(profile.pubkey))
             .toList(),
+        query,
         emit,
       );
       if (emit.isDone ||
@@ -556,7 +626,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState>
       }
       final allResults = [
         ...previousResults,
-        ..._exactMatchesFirst(page.profiles, query),
+        ...page.profiles,
       ].where((profile) => _isListed(profile.pubkey)).toList();
       final signals = {...state.rankingSignals, ...page.signals};
 

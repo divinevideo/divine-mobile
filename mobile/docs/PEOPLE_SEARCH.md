@@ -23,10 +23,11 @@ UserSearchBloc                              mobile/lib/blocs/user_search/
   • on Exception → Reportable wrap + `failure` state
   • per-yield: forward each newly-terminal source to
     FeedPerformanceTracker.trackSearchSource
-  • with a ranking loader: rows already shown keep their relative order,
-    each new source or page puts people you follow or have messaged first,
-    and exact matches lead the first page, even when a later source delivers
-    them (#8578), as well as their own load-more page
+  • with a ranking loader: until Funnelcake answers, rows already shown keep
+    their places and new ones join below them; once it answers, or the
+    search completes, the whole list takes the repository's order once.
+    People you follow or have messaged move up, but never past an exact
+    match (#8578); the username owner leads
   • the loader drops accounts hidden from feeds (blocked or muted by you,
     or blocking or muting you); the viewer stays listed on the Search page
         ↓
@@ -40,10 +41,12 @@ ProfileRepository.searchUsersProgressive    mobile/packages/profile_repository/
   Phase 2:             funnelcake.searchProfiles REST, no explicit timeout
   Phase 3 (offset==0): nostrClient.queryUsers    NIP-50 WS, 4.5s relay budget + 5s guard
   Each phase records a SearchSourceStatus in the result envelope.
-  Final yield: _enrichFromCache + _applyFilter (exact > prefix > word >
-               substring relevance, followers/videos as tie-breaker, block
-               filter, follow boost behind exact matches); envelope carries
-               nextRestOffset/restHasMore
+  Final yield: _enrichFromCache + _applyFilter (sortBy=relevance: the
+               REST page in Funnelcake's order, then local-only matches by
+               exact > prefix > word > substring; follow boost up to the
+               next exact match. sortBy=followers: relevance tiers, then
+               followers/videos, follow boost behind exact matches; block
+               filter either way); envelope carries nextRestOffset/restHasMore
         ↓
 NostrClient.queryUsers                      mobile/packages/nostr_client/
   • tempRelays = [relay.nostr.band, search.nos.today, nostr.wine]
@@ -53,12 +56,52 @@ NostrClient.queryUsers                      mobile/packages/nostr_client/
 
 The app uses progressive people search with server sorting (`sortBy` is set).
 That path matches visible identity: name, display name, NIP-05, and the whole
-public key (including a decoded npub query). Bio-only matches from
-REST or NIP-50 are excluded even when they are the only server results. This
-keeps broader server search from filling people results with accounts whose
-visible identity does not match. Other callers of `SearchUtils.matchProfile`
-can still use that helper's broader bio matching. Callers without `sortBy`
-retain their configured filter, or the display-name fallback when none is set.
+public key (including a decoded npub query). A query in a Divine username form
+(`@alice`, `alice@divine.video`, `alice.divine.video`) is compared as the bare
+username, and a root NIP-05 (`_@alice.divine.video`) names `alice`, as
+Funnelcake reads both. Bio-only matches from REST or NIP-50 are excluded even
+when they are the only server results. This keeps broader server search from
+filling people results with accounts whose visible identity does not match.
+Other callers of `SearchUtils.matchProfile` can still use that helper's broader
+bio matching. Callers without `sortBy` retain their configured filter, or the
+display-name fallback when none is set.
+
+### Order of results
+
+The search screen and people pickers (`UserSearchBloc`) ask Funnelcake for
+`sort_by=relevance`. Funnelcake orders those results by one score: points for
+how literally a profile matches plus its activity (followers, videos, loops, a
+profile picture and recent posts). A better match outweighs a small difference
+in activity, but a much more active near match can lead an exact match with
+nothing behind it. Funnelcake also puts the owner of a Divine username searched
+for first. The repository keeps that server order for the REST rows that pass
+the matching above; profiles only the local cache or NIP-50 found come after
+them, ordered by the app's relevance tiers (exact > prefix > word > substring),
+as does everything before Funnelcake answers.
+
+That matching is narrower than Funnelcake's in two places. Funnelcake's
+letter-swap matches (a search for `alcie` finding `alice`) are dropped. And when
+the app's own name-server lookup fails, an owner whose name, display name and
+NIP-05 do not contain the username is dropped too, because nothing in the REST
+response says which row the server pinned.
+
+The follow boost and the bloc's promotion of people you follow or have messaged
+move such an account up within the server's order, but never past an exact
+match: each run of profiles between two exact matches lists its known ones
+first, and a known exact match leads the run before it. No exact match passes
+another, so three followed partial matches cannot push an exact account out of
+the three-row preview (#8578), while the server still decides where an unknown
+exact match stands against unknown profiles.
+
+With a ranking loader the bloc keeps rows already shown in place until
+Funnelcake answers, then moves the whole list into the repository's order. The
+profiles Funnelcake returned move once and then keep their places; a row only
+the local cache found can move again when NIP-50 adds a better match ahead of
+it.
+
+A `sort_by=followers` search, which other callers still use, keeps the app's
+relevance tiers first and orders each tier by the REST follower and video
+counts, with the follow boost behind exact matches.
 
 ### Username owner
 
@@ -82,8 +125,8 @@ Funnelcake there is no lookup at all.
 
 A pinned owner joins the REST yield and leads every yield from there, even when
 its visible name does not match the query, and the envelope reports it as
-`usernameOwnerPubkey`. The bloc keeps it ahead of exact matches that an earlier
-yield already showed. Blocked owners stay dropped. A free name, a failed or
+`usernameOwnerPubkey`. The bloc keeps it first, including ahead of rows an
+earlier yield already showed. Blocked owners stay dropped. A free name, a failed or
 cancelled lookup, either step taking longer than 3 seconds, or an owner search
 does not list leaves the results as they were. Video-only searches and later
 pages skip the lookup.
