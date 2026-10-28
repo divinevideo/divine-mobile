@@ -197,8 +197,8 @@ Path clockWipePath(Size size, double progress) {
     ..close();
 }
 
-/// The part of a [size] frame a diagonal wipe toward the corner a quarter
-/// turn clockwise from [direction] has revealed at clamped [progress]: the
+/// The part of a [size] frame a diagonal wipe toward the corner an eighth of
+/// a turn clockwise from [direction] has revealed at clamped [progress]: the
 /// frame on the near side of an edge parallel to its other diagonal.
 Path diagonalWipePath(
   Size size,

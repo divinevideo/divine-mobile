@@ -131,7 +131,7 @@ void main() {
   group('diagonalWipePath', () {
     const size = Size(64, 84);
 
-    test('travels toward the corner a quarter turn clockwise', () {
+    test('travels toward the corner an eighth of a turn clockwise', () {
       for (final (direction, start, target) in [
         (
           ClipTransitionDirection.left,

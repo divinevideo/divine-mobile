@@ -1388,7 +1388,7 @@ double _holdProgress(double value, int durationMs) {
 }
 
 /// The label of [direction]; a [diagonal] wipe's edge travels toward the
-/// corner a quarter turn clockwise from it.
+/// corner an eighth of a turn clockwise from it.
 String _directionLabel(
   AppLocalizations l10n,
   ClipTransitionDirection direction, {
