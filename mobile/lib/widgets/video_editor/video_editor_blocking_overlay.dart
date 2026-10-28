@@ -12,6 +12,10 @@ import 'package:openvine/utils/semantics_announcement.dart';
 /// which could then start a competing edit mid-operation. The control that had
 /// screen-reader focus goes away with them, so the overlay announces
 /// [announcement] once when it appears.
+///
+/// Fade it in with `alwaysIncludeSemantics: true` on the [FadeTransition]:
+/// at zero opacity a default fade drops it from the semantics tree, and the
+/// editor stays readable for the frame it announces in.
 class VideoEditorBlockingOverlay extends StatefulWidget {
   const VideoEditorBlockingOverlay({
     required this.announcement,
