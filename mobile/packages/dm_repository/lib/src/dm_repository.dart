@@ -3673,8 +3673,8 @@ class DmRepository {
   ///
   ///  * NIP-09 makes `k` a SHOULD (`09.md:9`), so a conforming foreign client
   ///    may omit it entirely (#7329).
-  ///  * Our own sender hardcodes `['k','14']` even when deleting a kind-15
-  ///    file message, so the tag is already wrong on our own wire.
+  ///  * Our own sender hardcoded `['k','14']` even when deleting a kind-15
+  ///    file message, and deletions sent or queued then still carry it.
   ///  * Before this, *every* wrapped kind-5 went to the reactions handler,
   ///    which answered `processed` for anything not tagged `['k','7']`. That
   ///    recorded the wrap terminally and lost message deletions for good
@@ -9811,12 +9811,13 @@ class DmRepository {
   /// Delete a sent message for everyone via NIP-09 kind 5.
   ///
   /// The kind-5 travels as a **NIP-17 rumor inside a kind-1059 gift wrap**
-  /// addressed to each participant (`17.md:87`), not as a bare event on the
-  /// public pool. The bare form named the counterparty in a plaintext `p` tag
-  /// alongside a real timestamp and the rumor kind, which defeats NIP-17's
-  /// first stated benefit (`17.md:97`) — and NIP-09 tells relays to keep
-  /// deletion requests indefinitely (`09.md:33`), so each one was a permanent
-  /// public record that these two pubkeys had a conversation (#7341).
+  /// (`17.md:87`), which Divine sends to each participant, not as a bare
+  /// event on the public pool. The bare form named the counterparty in a
+  /// plaintext `p` tag alongside a real timestamp and the rumor kind, which
+  /// defeats NIP-17's first stated benefit (`17.md:97`) — and NIP-09 tells
+  /// relays to keep deletion requests indefinitely (`09.md:33`), so each one
+  /// was a permanent public record that these two pubkeys had a conversation
+  /// (#7341).
   ///
   /// Returns once the deletion is **durable**, not once it is delivered. The
   /// row is soft-deleted and the rumor stored in one write; delivery is
@@ -9875,14 +9876,9 @@ class DmRepository {
     // `k` names the kind of the event being deleted (NIP-09 09.md:9), so it
     // reads the row rather than assuming 14 — a kind-15 file message was
     // previously mislabelled on the wire.
-    final deletion = _messageService!.buildRumor(
-      recipientPubkey: recipients.first,
-      content: '',
-      eventKind: EventKind.eventDeletion,
-      additionalTags: [
-        ['e', rumorId],
-        ['k', row.messageKind.toString()],
-      ],
+    final deletion = _messageService!.buildDeletionRumor(
+      targetEventId: rumorId,
+      targetKind: row.messageKind,
     );
 
     // Durability boundary. One write hides the bubble AND stores the rumor,
@@ -10122,14 +10118,9 @@ class DmRepository {
     final mintedFresh = replayable == null;
     final deletion =
         replayable ??
-        _messageService!.buildRumor(
-          recipientPubkey: recipients.first,
-          content: '',
-          eventKind: EventKind.eventDeletion,
-          additionalTags: [
-            ['e', rumorId],
-            ['k', row.messageKind.toString()],
-          ],
+        _messageService!.buildDeletionRumor(
+          targetEventId: rumorId,
+          targetKind: row.messageKind,
         );
 
     // A user-driven retry moves a blocked row back through pending so the

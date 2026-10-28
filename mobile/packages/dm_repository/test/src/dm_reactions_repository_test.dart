@@ -471,11 +471,9 @@ void main() {
           ),
         ).thenAnswer((_) async => <String>[priorReactionId]);
         when(
-          () => mockMessageService.buildRumor(
-            recipientPubkey: any(named: 'recipientPubkey'),
-            content: '',
-            eventKind: EventKind.eventDeletion,
-            additionalTags: any(named: 'additionalTags'),
+          () => mockMessageService.buildDeletionRumor(
+            targetEventId: any(named: 'targetEventId'),
+            targetKind: EventKind.reaction,
           ),
         ).thenReturn(deletionRumor);
         when(
@@ -600,11 +598,9 @@ void main() {
           ),
         ).thenAnswer((_) async => <String>[priorReactionId]);
         when(
-          () => mockMessageService.buildRumor(
-            recipientPubkey: any(named: 'recipientPubkey'),
-            content: '',
-            eventKind: EventKind.eventDeletion,
-            additionalTags: any(named: 'additionalTags'),
+          () => mockMessageService.buildDeletionRumor(
+            targetEventId: any(named: 'targetEventId'),
+            targetKind: EventKind.reaction,
           ),
         ).thenReturn(deletionRumor);
         when(
@@ -783,9 +779,12 @@ void main() {
           await pumpEventQueue();
 
           expect(result.success, isTrue);
+          // The same unreadable row costs the new reaction its `k` (#9774) and
+          // the old one's removal its recipients; each is reported once.
           expect(
             reporterSites,
             equals([
+              DmReactionsRepositoryReportableSites.publishTargetKindRead,
               DmReactionsRepositoryReportableSites
                   .wrapRecipientsTargetMessageRead,
             ]),
@@ -1794,11 +1793,9 @@ void main() {
           );
         });
         when(
-          () => mockMessageService.buildRumor(
-            recipientPubkey: _otherPubkey,
-            content: '',
-            eventKind: EventKind.eventDeletion,
-            additionalTags: any(named: 'additionalTags'),
+          () => mockMessageService.buildDeletionRumor(
+            targetEventId: any(named: 'targetEventId'),
+            targetKind: EventKind.reaction,
           ),
         ).thenReturn(deletionRumor);
         when(
@@ -2169,11 +2166,9 @@ void main() {
           ),
         ).thenAnswer((_) async {});
         when(
-          () => mockMessageService.buildRumor(
-            recipientPubkey: _otherPubkey,
-            content: '',
-            eventKind: EventKind.eventDeletion,
-            additionalTags: any(named: 'additionalTags'),
+          () => mockMessageService.buildDeletionRumor(
+            targetEventId: any(named: 'targetEventId'),
+            targetKind: EventKind.reaction,
           ),
         ).thenReturn(deletionRumor);
         // Publish fails (e.g. offline) — the durable row stays pending for the
@@ -2235,11 +2230,9 @@ void main() {
         final failure = Exception('disk I/O error');
         stubQueuedRow(publishStatus: 'sent');
         when(
-          () => mockMessageService.buildRumor(
-            recipientPubkey: _otherPubkey,
-            content: '',
-            eventKind: EventKind.eventDeletion,
-            additionalTags: any(named: 'additionalTags'),
+          () => mockMessageService.buildDeletionRumor(
+            targetEventId: any(named: 'targetEventId'),
+            targetKind: EventKind.reaction,
           ),
         ).thenReturn(deletionRumor);
         when(
@@ -2293,11 +2286,9 @@ void main() {
         ),
       ).thenAnswer((_) async {});
       when(
-        () => mockMessageService.buildRumor(
-          recipientPubkey: _otherPubkey,
-          content: '',
-          eventKind: EventKind.eventDeletion,
-          additionalTags: any(named: 'additionalTags'),
+        () => mockMessageService.buildDeletionRumor(
+          targetEventId: any(named: 'targetEventId'),
+          targetKind: EventKind.reaction,
         ),
       ).thenReturn(deletionRumor);
       when(
@@ -2371,11 +2362,9 @@ void main() {
           ),
         ).thenAnswer((_) async {});
         when(
-          () => mockMessageService.buildRumor(
-            recipientPubkey: _otherPubkey,
-            content: '',
-            eventKind: EventKind.eventDeletion,
-            additionalTags: any(named: 'additionalTags'),
+          () => mockMessageService.buildDeletionRumor(
+            targetEventId: any(named: 'targetEventId'),
+            targetKind: EventKind.reaction,
           ),
         ).thenReturn(deletionRumor);
         when(
@@ -3420,9 +3409,12 @@ void main() {
 
           expect(result.success, isFalse);
           expect(result.optimisticInsertSucceeded, isTrue);
+          // The unreadable row costs the reaction both its `k` (#9774) and
+          // its recipients; each is reported once.
           expect(
             reporterSites,
             equals([
+              DmReactionsRepositoryReportableSites.publishTargetKindRead,
               DmReactionsRepositoryReportableSites
                   .wrapRecipientsTargetMessageRead,
             ]),
@@ -3866,11 +3858,9 @@ void main() {
           ),
         ).thenAnswer((_) async {});
         when(
-          () => mockMessageService.buildRumor(
-            recipientPubkey: _otherPubkey,
-            content: '',
-            eventKind: EventKind.eventDeletion,
-            additionalTags: any(named: 'additionalTags'),
+          () => mockMessageService.buildDeletionRumor(
+            targetEventId: any(named: 'targetEventId'),
+            targetKind: EventKind.reaction,
           ),
         ).thenReturn(deletionRumor);
         when(
@@ -3924,11 +3914,9 @@ void main() {
             ),
           ).thenAnswer((_) async {});
           when(
-            () => mockMessageService.buildRumor(
-              recipientPubkey: _otherPubkey,
-              content: '',
-              eventKind: EventKind.eventDeletion,
-              additionalTags: any(named: 'additionalTags'),
+            () => mockMessageService.buildDeletionRumor(
+              targetEventId: any(named: 'targetEventId'),
+              targetKind: EventKind.reaction,
             ),
           ).thenReturn(deletionRumor);
           // _driveDeletion writes this on a confirmed kind-5. Unstubbed it
@@ -3973,11 +3961,9 @@ void main() {
           );
           stubPublishPath(superseded: const [_reactionRumorId]);
           when(
-            () => mockMessageService.buildRumor(
-              recipientPubkey: _otherPubkey,
-              content: '',
-              eventKind: EventKind.eventDeletion,
-              additionalTags: any(named: 'additionalTags'),
+            () => mockMessageService.buildDeletionRumor(
+              targetEventId: any(named: 'targetEventId'),
+              targetKind: EventKind.reaction,
             ),
           ).thenReturn(deletionRumor);
           when(
@@ -4192,11 +4178,9 @@ void main() {
             ),
           ).thenAnswer((_) async {});
           when(
-            () => mockMessageService.buildRumor(
-              recipientPubkey: _otherPubkey,
-              content: '',
-              eventKind: EventKind.eventDeletion,
-              additionalTags: any(named: 'additionalTags'),
+            () => mockMessageService.buildDeletionRumor(
+              targetEventId: any(named: 'targetEventId'),
+              targetKind: EventKind.reaction,
             ),
           ).thenReturn(deletion);
           stubSendRumorConfirmed(deletion);
@@ -4727,11 +4711,9 @@ void main() {
           ),
         ).thenAnswer((_) async {});
         when(
-          () => mockMessageService.buildRumor(
-            recipientPubkey: _otherPubkey,
-            content: '',
-            eventKind: EventKind.eventDeletion,
-            additionalTags: any(named: 'additionalTags'),
+          () => mockMessageService.buildDeletionRumor(
+            targetEventId: any(named: 'targetEventId'),
+            targetKind: EventKind.reaction,
           ),
         ).thenReturn(deletionRumor);
         when(

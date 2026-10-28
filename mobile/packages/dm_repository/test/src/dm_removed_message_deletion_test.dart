@@ -202,7 +202,8 @@ void main() {
           'sig': '',
         });
 
-    /// The sender's retraction: one `p` tag even for a group message.
+    /// A retraction in the shape Divine sent before #9774, which older Divine
+    /// builds still send: one `p` tag even for a group message.
     Event retraction({
       required String id,
       required List<String> targets,
@@ -394,9 +395,9 @@ void main() {
       test(
         'applies to a group message when only the sender 1:1 was removed',
         () async {
-          // A sender builds one retraction with a single `p` tag even for a
-          // group message, so resolving its conversation from the tags lands
-          // on the 1:1 with the same sender.
+          // A retraction can carry a single `p` tag even for a group message
+          // (Divine's own did before #9774), so resolving its conversation
+          // from the tags lands on the 1:1 with the same sender.
           final participants = [_owner, _peer, _peer2]..sort();
           await conversationsDao.upsertConversation(
             id: DmRepository.computeConversationId(participants),

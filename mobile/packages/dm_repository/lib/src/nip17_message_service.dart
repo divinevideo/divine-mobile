@@ -612,6 +612,30 @@ class NIP17MessageService {
     );
   }
 
+  /// Build the unsigned NIP-09 kind-5 rumor that retracts [targetEventId], a
+  /// rumor of [targetKind] this account sent. NIP-17 lets a client send it
+  /// gift-wrapped to the recipient as part of the conversation (`17.md:87`);
+  /// Divine wraps it to every member.
+  ///
+  /// It carries the deleted event and its kind (`09.md:9`) and no `p` tag:
+  /// NIP-09 asks for none, and naming one member would make the rumor read,
+  /// by its `pubkey` + `p` tags, as the one-to-one of the sender and that
+  /// member rather than the room it was sent to (#9774).
+  Event buildDeletionRumor({
+    required String targetEventId,
+    required int targetKind,
+  }) {
+    return Event(
+      _senderPublicKey,
+      EventKind.eventDeletion,
+      <List<String>>[
+        ['e', targetEventId],
+        ['k', '$targetKind'],
+      ],
+      '',
+    );
+  }
+
   /// OK-confirmation window for the recipient wrap when [sendRumor] runs
   /// with `awaitRecipientOk: true` (reaction sends and message sends). Kept
   /// well under the caller's outer publish cap so the confirmation resolves
@@ -853,10 +877,9 @@ class NIP17MessageService {
         // A wrapped kind-5 is a DELETION of something, and which noun it takes
         // depends on what it deletes — a reaction removal and a message
         // delete-for-everyone both arrive here as kind 5. NIP-09's `k` tag
-        // names the deleted kind, and both builders set it
-        // (`DmReactionsRepository._durablyDeleteReaction` writes 7,
-        // `DmRepository._driveDeleteForEveryone` writes the row's message
-        // kind), so read it rather than guessing. Without this a reaction
+        // names the deleted kind, and [buildDeletionRumor] sets it for both
+        // (7 for a reaction removal, the row's message kind for a delete for
+        // everyone), so read it rather than guessing. Without this a reaction
         // removal logs as "message" and sends field debugging to the wrong
         // send path.
         final deletesReaction =

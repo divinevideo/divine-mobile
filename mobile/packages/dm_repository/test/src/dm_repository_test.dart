@@ -328,6 +328,26 @@ class _SinceEnforcingRelay {
 
 class _MockNIP17MessageService extends Mock implements NIP17MessageService {}
 
+/// Mirrors NIP17MessageService.buildDeletionRumor, which is pure construction.
+void _stubBuildDeletionRumor(_MockNIP17MessageService service) {
+  when(
+    () => service.buildDeletionRumor(
+      targetEventId: any(named: 'targetEventId'),
+      targetKind: any(named: 'targetKind'),
+    ),
+  ).thenAnswer(
+    (invocation) => Event(
+      _validPubkeyA,
+      EventKind.eventDeletion,
+      [
+        ['e', invocation.namedArguments[#targetEventId] as String],
+        ['k', '${invocation.namedArguments[#targetKind]}'],
+      ],
+      '',
+    ),
+  );
+}
+
 class _MockDirectMessagesDao extends Mock implements DirectMessagesDao {}
 
 class _MockConversationsDao extends Mock implements ConversationsDao {}
@@ -19114,6 +19134,8 @@ void main() {
     // -----------------------------------------------------------------
 
     group('deleteMessageForEveryone', () {
+      setUp(() => _stubBuildDeletionRumor(mockMessageService));
+
       final conversationId = DmRepository.computeConversationId(
         [_validPubkeyA, _validPubkeyB],
       );
@@ -19288,31 +19310,26 @@ void main() {
           // `p` tag on a relay that retains deletion requests indefinitely.
           verifyNever(() => mockNostrClient.publishEvent(any()));
 
-          final captured =
-              verify(
-                    () => mockMessageService.sendRumor(
-                      rumorEvent: captureAny(named: 'rumorEvent'),
-                      recipientPubkey: any(named: 'recipientPubkey'),
-                      targetRelays: any(named: 'targetRelays'),
-                      awaitRecipientOk: any(named: 'awaitRecipientOk'),
-                      selfWrapOnSoftUnconfirmed: any(
-                        named: 'selfWrapOnSoftUnconfirmed',
-                      ),
-                      onSelfWrapDue: any(named: 'onSelfWrapDue'),
-                    ),
-                  ).captured.single
-                  as Event;
-          expect(captured.kind, equals(EventKind.eventDeletion));
-          // `p` now names the wrap recipient rather than advertising the
-          // counterparty publicly — same tag, opposite meaning.
-          expect(
-            captured.tags,
-            containsAll([
-              ['e', _rumorEventId],
-              ['k', '14'],
-              ['p', _validPubkeyB],
-            ]),
-          );
+          verify(
+            () => mockMessageService.sendRumor(
+              rumorEvent: any(named: 'rumorEvent'),
+              recipientPubkey: any(named: 'recipientPubkey'),
+              targetRelays: any(named: 'targetRelays'),
+              awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              selfWrapOnSoftUnconfirmed: any(
+                named: 'selfWrapOnSoftUnconfirmed',
+              ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
+            ),
+          ).called(1);
+          // The rumor names the deleted message and its kind, and no one
+          // (#9774); buildDeletionRumor's own tests pin that shape.
+          verify(
+            () => mockMessageService.buildDeletionRumor(
+              targetEventId: _rumorEventId,
+              targetKind: EventKind.privateDirectMessage,
+            ),
+          ).called(1);
 
           // Durable first, delivered second.
           verify(
@@ -19679,13 +19696,8 @@ void main() {
             participants: [_validPubkeyA.toUpperCase(), _validPubkeyB],
           );
           final recipients = <String>[];
-          final addressedTo = <String>[];
           stubSendRumor((rumorEvent, recipientPubkey) {
             recipients.add(recipientPubkey);
-            addressedTo.addAll([
-              for (final tag in rumorEvent.tags)
-                if (tag.length >= 2 && tag[0] == 'p') tag[1],
-            ]);
             return NIP17SendResult.success(
               rumorEventId: rumorEvent.id,
               messageEventId: _giftWrapEventId,
@@ -19698,7 +19710,6 @@ void main() {
           await pumpEventQueue();
 
           expect(recipients, equals([_validPubkeyB]));
-          expect(addressedTo, equals([_validPubkeyB]));
         },
       );
 
@@ -19949,30 +19960,18 @@ void main() {
         await repo.deleteMessageForEveryone(_rumorEventId);
         await Future<void>.delayed(Duration.zero);
 
-        final captured =
-            verify(
-                  () => mockMessageService.sendRumor(
-                    rumorEvent: captureAny(named: 'rumorEvent'),
-                    recipientPubkey: any(named: 'recipientPubkey'),
-                    targetRelays: any(named: 'targetRelays'),
-                    awaitRecipientOk: any(named: 'awaitRecipientOk'),
-                    selfWrapOnSoftUnconfirmed: any(
-                      named: 'selfWrapOnSoftUnconfirmed',
-                    ),
-                    onSelfWrapDue: any(named: 'onSelfWrapDue'),
-                  ),
-                ).captured.single
-                as Event;
-        expect(
-          captured.tags,
-          containsAll([
-            ['k', EventKind.fileMessage.toString()],
-          ]),
-        );
+        verify(
+          () => mockMessageService.buildDeletionRumor(
+            targetEventId: _rumorEventId,
+            targetKind: EventKind.fileMessage,
+          ),
+        ).called(1);
       });
     });
 
     group('retryMessageDeletion', () {
+      setUp(() => _stubBuildDeletionRumor(mockMessageService));
+
       final conversationId = DmRepository.computeConversationId(
         [_validPubkeyA, _validPubkeyB],
       );
@@ -24574,6 +24573,8 @@ void main() {
     });
 
     group('_refreshConversationPreview', () {
+      setUp(() => _stubBuildDeletionRumor(mockMessageService));
+
       final participants = [_validPubkeyA, _validPubkeyB]..sort();
       final convId = DmRepository.computeConversationId(participants);
 
