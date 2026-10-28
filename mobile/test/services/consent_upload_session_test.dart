@@ -9,6 +9,17 @@ import 'package:openvine/observability/reportable_error.dart';
 import 'package:openvine/services/consent_upload.dart';
 import 'package:openvine/services/consent_upload_session.dart';
 
+class _FailingCleanupUpload implements ConsentUpload {
+  @override
+  Future<void> dispose() async => throw StateError('cleanup failed');
+
+  @override
+  String get payloadHash => throw UnimplementedError();
+
+  @override
+  http.BaseRequest get request => throw UnimplementedError();
+}
+
 void main() {
   group('ConsentUploadSession', () {
     test('expected session invalidation is not crash-reportable', () {
@@ -87,6 +98,37 @@ void main() {
         },
       );
     }
+
+    test('accepted upload survives a non-Exception cleanup failure', () async {
+      final session = ConsentUploadSession();
+      addTearDown(session.dispose);
+      final upload = _FailingCleanupUpload();
+      final response = await session.send(
+        prepare: () async => upload,
+        transmit: (_) async => http.Response('', 201),
+      );
+      expect(response.statusCode, 201);
+    });
+
+    test('accepted upload survives snapshot cleanup failure', () async {
+      final session = ConsentUploadSession();
+      addTearDown(session.dispose);
+      final upload = await ConsentUpload.prepare(
+        http.MultipartRequest('POST', Uri.parse('https://api.test')),
+      );
+      var sends = 0;
+      Future<http.Response> send() => session.send(
+        prepare: () async => upload,
+        transmit: (_) async {
+          sends++;
+          await upload.dispose();
+          return http.Response('', 201);
+        },
+      );
+      expect((await send()).statusCode, 201);
+      expect((await send()).statusCode, 201);
+      expect(sends, 1);
+    });
 
     for (final statusCode in [202, 503]) {
       test('unaccepted $statusCode keeps the snapshot retryable', () async {

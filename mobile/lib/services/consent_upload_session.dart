@@ -2,6 +2,7 @@
 // ABOUTME: its screen closes, after any outstanding transport has finished.
 import 'package:http/http.dart' as http;
 import 'package:openvine/services/consent_upload.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Expected lifecycle or retry-input rejection, rather than an app invariant.
 class ConsentUploadInvalidatedException implements Exception {
@@ -86,6 +87,16 @@ class ConsentUploadSession {
   Future<void> _discard() async {
     final upload = _upload;
     _upload = null;
-    if (upload != null) await upload.dispose();
+    if (upload == null) return;
+    try {
+      await upload.dispose();
+    } catch (_) {
+      // Local cleanup must never replace an accepted server response or the
+      // original transport error. Avoid logging private snapshot paths.
+      Log.warning(
+        'Could not remove parent consent upload snapshot',
+        name: 'ConsentUploadSession',
+      );
+    }
   }
 }

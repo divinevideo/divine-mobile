@@ -119,6 +119,7 @@ Override _authState(AuthState state) =>
 
 List<Override> _recordingEnabledOverrides({
   bool enabled = true,
+  MinorReviewCaseState? caseState,
   AuthState authState = AuthState.authenticated,
 }) => [
   _authState(authState),
@@ -126,7 +127,15 @@ List<Override> _recordingEnabledOverrides({
     FeatureFlag.minorConsentInAppRecording,
   ).overrideWithValue(enabled),
   currentMinorAccountReviewStatusProvider.overrideWith(
-    (ref) async => _statusWithCase(),
+    (ref) async {
+      final status = _statusWithCase();
+      return caseState == null
+          ? status
+          : MinorAccountReviewStatus(
+              restrictionStatus: status.restrictionStatus,
+              currentCase: status.currentCase!.copyWith(state: caseState),
+            );
+    },
   ),
   minorAccountReviewRepositoryProvider.overrideWithValue(
     _FakeRepository(),
@@ -135,6 +144,45 @@ List<Override> _recordingEnabledOverrides({
 
 void main() {
   group('MinorAccountReviewParentConsentScreen', () {
+    for (final state in MinorReviewCaseState.values) {
+      testWidgets('recording action matches server state $state', (
+        tester,
+      ) async {
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: _recordingEnabledOverrides(caseState: state),
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: MinorAccountReviewParentConsentScreen(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await scrollUntilTappable(
+          tester,
+          find.text(l10n.minorAccountReviewParentConsentEmailCta),
+          200,
+          scrollable: find.byType(Scrollable),
+        );
+        expect(
+          find.widgetWithText(
+            DivineButton,
+            l10n.minorAccountReviewParentConsentRecordCta,
+          ),
+          {
+                MinorReviewCaseState.openReported,
+                MinorReviewCaseState.restrictedPendingUserResponse,
+                MinorReviewCaseState.restrictedPendingParentalConsent,
+                MinorReviewCaseState.restrictedPendingSupportEmail,
+              }.contains(state)
+              ? findsOneWidget
+              : findsNothing,
+        );
+      });
+    }
+
     testWidgets(
       'a family can opt into recording from the consent explanation',
       (tester) async {
@@ -145,6 +193,9 @@ void main() {
             overrides: [
               sharedPreferencesProvider.overrideWithValue(prefs),
               _authState(AuthState.authenticated),
+              currentMinorAccountReviewStatusProvider.overrideWith(
+                (ref) async => MinorAccountReviewStatus.active(),
+              ),
             ],
             child: const MaterialApp(
               locale: Locale('es'),

@@ -151,6 +151,8 @@ class _FakePermissions implements PermissionsService {
   PermissionStatus microphoneStatus;
   bool throwOnCameraCheck;
   int settingsOpened = 0;
+  int cameraRequests = 0;
+  Completer<PermissionStatus>? firstCameraRequest;
 
   @override
   Future<PermissionStatus> checkCameraStatus() async {
@@ -161,7 +163,13 @@ class _FakePermissions implements PermissionsService {
   }
 
   @override
-  Future<PermissionStatus> requestCameraPermission() async => cameraStatus;
+  Future<PermissionStatus> requestCameraPermission() async {
+    cameraRequests++;
+    if (cameraRequests == 1 && firstCameraRequest != null) {
+      return firstCameraRequest!.future;
+    }
+    return cameraStatus;
+  }
 
   @override
   Future<PermissionStatus> checkMicrophoneStatus() async => microphoneStatus;
@@ -274,6 +282,63 @@ void main() {
         ]),
       );
     });
+
+    for (final interrupted in [false, true]) {
+      for (final resume in [false, true]) {
+        testWidgets(
+          'retries a ${interrupted ? 'stuck' : 'denied'} permission request ${resume ? 'after resume' : 'in place'}',
+          (tester) async {
+            final l10n = lookupAppLocalizations(const Locale('en'));
+            final recorder = _FakeRecorder();
+            final permissions = _FakePermissions(
+              cameraStatus: PermissionStatus.canRequest,
+            );
+            if (interrupted) {
+              permissions.firstCameraRequest = Completer<PermissionStatus>();
+            }
+            await _pumpRecordConsentScreen(
+              tester,
+              recorder: recorder,
+              permissions: permissions,
+            );
+            expect(permissions.cameraRequests, 1);
+            expect(recorder.initialized, isFalse);
+            expect(
+              find.text(l10n.minorAccountReviewRecordConsentTryAgainCta),
+              findsOneWidget,
+            );
+            if (resume) {
+              tester.binding.handleAppLifecycleStateChanged(
+                AppLifecycleState.paused,
+              );
+              tester.binding.handleAppLifecycleStateChanged(
+                AppLifecycleState.resumed,
+              );
+              await _pumpFrames(tester);
+            }
+            expect(permissions.cameraRequests, 1);
+            await tester.tap(
+              find.text(l10n.minorAccountReviewRecordConsentTryAgainCta),
+            );
+            await tester.runAsync(pumpEventQueue);
+            await _pumpFrames(tester);
+            expect(permissions.cameraRequests, 2);
+            expect(recorder.initialized, isFalse);
+            permissions.cameraStatus = PermissionStatus.granted;
+            await tester.tap(
+              find.text(l10n.minorAccountReviewRecordConsentTryAgainCta),
+            );
+            await _pumpFrames(tester);
+            expect(permissions.cameraRequests, 3);
+            expect(recorder.initialized, isTrue);
+            expect(
+              find.text(l10n.minorAccountReviewRecordConsentDeniedTitle),
+              findsNothing,
+            );
+          },
+        );
+      }
+    }
 
     testWidgets('permissions can be restored in Settings', (tester) async {
       final l10n = lookupAppLocalizations(const Locale('en'));
@@ -412,6 +477,9 @@ void main() {
               ),
               currentAuthStateProvider.overrideWithValue(
                 AuthState.authenticated,
+              ),
+              currentMinorAccountReviewStatusProvider.overrideWith(
+                (ref) async => MinorAccountReviewStatus.active(),
               ),
               isFeatureEnabledProvider(
                 FeatureFlag.minorConsentInAppRecording,

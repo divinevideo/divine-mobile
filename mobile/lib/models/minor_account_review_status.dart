@@ -288,6 +288,18 @@ class MinorReviewCase {
       allowedResolution == MinorReviewResolutionType.parentVideoOrEmail &&
       !isUnder13Path;
 
+  /// The status endpoint returns openReported only for voluntary applications.
+  /// Follow-up cases must be advanced by a moderator before another upload.
+  bool get canSubmitParentConsent =>
+      allowsParentVideoOrEmail &&
+      switch (state) {
+        MinorReviewCaseState.openReported ||
+        MinorReviewCaseState.restrictedPendingUserResponse ||
+        MinorReviewCaseState.restrictedPendingParentalConsent ||
+        MinorReviewCaseState.restrictedPendingSupportEmail => true,
+        _ => false,
+      };
+
   bool get isAwaitingModeratorDecision =>
       state == MinorReviewCaseState.underModeratorReview ||
       state == MinorReviewCaseState.submittedForReview;

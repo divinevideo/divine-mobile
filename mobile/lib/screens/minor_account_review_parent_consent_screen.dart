@@ -36,6 +36,13 @@ class MinorAccountReviewParentConsentScreen extends ConsumerWidget {
         ref.watch(
           isFeatureEnabledProvider(FeatureFlag.minorConsentInAppRecording),
         );
+    final status = canRecordInApp
+        ? ref.watch(currentMinorAccountReviewStatusProvider)
+        : null;
+    final canSubmitRecording =
+        canRecordInApp &&
+        status?.hasValue == true &&
+        (status!.value!.currentCase?.canSubmitParentConsent ?? true);
     return Scaffold(
       appBar: DiVineAppBar(
         title: context.l10n.minorAccountReviewTitle,
@@ -112,7 +119,7 @@ class MinorAccountReviewParentConsentScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                 ],
-                if (canRecordInApp) ...[
+                if (canSubmitRecording) ...[
                   DivineButton(
                     label:
                         context.l10n.minorAccountReviewParentConsentRecordCta,
