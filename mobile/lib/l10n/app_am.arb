@@ -678,8 +678,6 @@
       }
     }
   },
-  "explorePeopleLists": "የሰዎች ዝርዝሮች",
-  "exploreVideoLists": "የቪዲዮ ዝርዝሮች",
   "exploreErrorLoadingLists": "ዝርዝሮችን መጫን ላይ ስህተት። እባክህ እንደገና ሞክር።",
   "exploreNewVideosCount": "{count, plural, =1{{count} አዲስ ቪዲዮ} other{{count} አዳዲስ ቪዲዮዎች}}",
   "@exploreNewVideosCount": {
@@ -2230,6 +2228,9 @@
   "listDone": "ተከናውኗል",
   "listErrorLoading": "ዝርዝሮችን መጫን ላይ ስህተት",
   "listCreateNewList": "አዲስ ዝርዝር ይፍጠሩ",
+  "listTypeSheetTitle": "አዲስ ዝርዝር",
+  "listTypeVideoList": "የቪዲዮ ዝርዝር",
+  "listTypePeopleList": "የሰዎች ዝርዝር",
   "listNewPeopleList": "አዲስ ሰዎች ዝርዝር",
   "listNameLabel": "የዝርዝር ስም",
   "listDescriptionLabel": "መግለጫ (አማራጭ)",

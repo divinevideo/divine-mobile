@@ -1401,12 +1401,6 @@ class AppLocalizationsVi extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Không có video nào';
 
   @override
-  String get explorePeopleLists => 'Danh sách người';
-
-  @override
-  String get exploreVideoLists => 'Danh sách video';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Lỗi khi tải danh sách. Vui lòng thử lại.';
 
@@ -5263,6 +5257,15 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get listCreateNewList => 'Tạo danh sách mới';
+
+  @override
+  String get listTypeSheetTitle => 'Danh sách mới';
+
+  @override
+  String get listTypeVideoList => 'Danh sách video';
+
+  @override
+  String get listTypePeopleList => 'Danh sách người';
 
   @override
   String get listNewPeopleList => 'Danh sách người mới';

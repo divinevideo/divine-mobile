@@ -678,8 +678,6 @@
   "featuredTabLoadFailed": "یہ مجموعہ لوڈ نہیں ہو سکا۔",
   "featuredTabRetry": "دوبارہ کوشش کریں",
   "exploreNoVideosAvailable": "کوئی ویڈیو دستیاب نہیں",
-  "explorePeopleLists": "لوگوں کی فہرستیں",
-  "exploreVideoLists": "ویڈیو فہرستیں",
   "exploreErrorLoadingLists": "فہرستیں لوڈ کرنے میں خرابی۔ براہ کرم دوبارہ کوشش کریں۔",
   "exploreNewVideosCount": "{count, plural, =1{1 نئی ویڈیو} other{{count} نئی ویڈیوز}}",
   "@exploreNewVideosCount": {
@@ -2546,6 +2544,9 @@
   "listDone": "ہو گیا",
   "listErrorLoading": "فہرستیں لوڈ کرنے میں خرابی",
   "listCreateNewList": "نئی فہرست بنائیں",
+  "listTypeSheetTitle": "نئی فہرست",
+  "listTypeVideoList": "ویڈیو فہرست",
+  "listTypePeopleList": "لوگوں کی فہرست",
   "listNewPeopleList": "لوگوں کی نئی فہرست",
   "listNameLabel": "فہرست کا نام",
   "listDescriptionLabel": "تفصیل (اختیاری)",

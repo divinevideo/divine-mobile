@@ -1,5 +1,5 @@
-// ABOUTME: Own-profile list management with independent people and video sections.
-// ABOUTME: Retains bookmarks and explicit creation choices during loading and failures.
+// ABOUTME: Own-profile Lists tab: one create button over a two-column gallery
+// ABOUTME: that mixes video and people lists, newest first.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -13,13 +13,15 @@ import 'package:openvine/providers/list_providers.dart';
 import 'package:openvine/router/routes/lists_routes.dart';
 import 'package:openvine/router/routes/route_extras.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/curated_list_initialization_failure.dart';
 import 'package:openvine/widgets/curated_list_recovery_read_only_notice.dart';
 import 'package:openvine/widgets/divine_list_thumbnail.dart';
 import 'package:openvine/widgets/list_info_sheet/list_info_sheet.dart';
+import 'package:openvine/widgets/profile/profile_list_entries.dart';
 
-/// Independently loaded people and video lists owned by the profile viewer.
+/// The profile viewer's own video and people lists in one gallery.
 class ProfileListsGrid extends StatelessWidget {
   const ProfileListsGrid({super.key});
 
@@ -27,155 +29,158 @@ class ProfileListsGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       physics: const ClampingScrollPhysics(),
-      padding: const EdgeInsets.only(top: 16, bottom: 32),
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: BlocSelector<PeopleListsBloc, PeopleListsState, bool>(
-            selector: (state) => state.activeOwnerPubkey != null,
-            builder: (_, showPeople) => _ListSections(showPeople: showPeople),
-          ),
-        ),
-      ],
+      padding: const EdgeInsets.only(bottom: 32),
+      children: const [_CreateListHeader(), _ListsGallery()],
     );
   }
 }
 
-/// Keep creation controls full width on compact screens. Wider surfaces can
-/// present the independent sections side by side without clipping their labels.
-class _ListSections extends StatelessWidget {
-  const _ListSections({required this.showPeople});
+enum _NewListType { video, people }
 
-  final bool showPeople;
+class _CreateListHeader extends ConsumerWidget {
+  const _CreateListHeader();
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      if (!showPeople) return const _VideoListsSection();
-      if (constraints.maxWidth < 600 ||
-          MediaQuery.textScalerOf(context).scale(16) > 16) {
-        return const Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          spacing: 16,
-          children: [_VideoListsSection(), _PeopleListsSection()],
-        );
-      }
-      return const Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: 16,
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watched so the read-only notice follows the service after a reload.
+    ref.watch(curatedListsStateProvider);
+    final service = ref.read(curatedListsStateProvider.notifier).service;
+    final videoReadOnly = service?.recoveryNeedsRepair ?? false;
+    final peopleAvailable = context.select(
+      (PeopleListsBloc bloc) => bloc.state.activeOwnerPubkey != null,
+    );
+    final types = [
+      if (!videoReadOnly) _NewListType.video,
+      if (peopleAvailable) _NewListType.people,
+    ];
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(child: _VideoListsSection()),
-          Expanded(child: _PeopleListsSection()),
-        ],
-      );
-    },
-  );
-}
-
-class _PeopleListsSection extends StatelessWidget {
-  const _PeopleListsSection();
-
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<PeopleListsBloc, PeopleListsState>(
-      builder: (context, state) {
-        if (state.activeOwnerPubkey == null) {
-          return const SizedBox.shrink();
-        }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _SectionHeading(title: context.l10n.explorePeopleLists),
-            DivineButton(
-              label: context.l10n.listNewPeopleList,
-              leadingIcon: DivineIconName.plus,
-              expanded: true,
-              onPressed: () =>
-                  const CreatePeopleListRouteData().push<void>(context),
-            ),
-            for (final list in state.lists)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 20),
-                child: DivineListThumbnail.people(
-                  key: ValueKey(list.id),
-                  userList: list,
-                  onTap: () => runDetached(
-                    PeopleListRouteData(listId: list.id).push<void>(context),
-                    'open owned people list',
+          if (videoReadOnly) const CuratedListRecoveryReadOnlyNotice(),
+          DivineButton(
+            label: context.l10n.listCreateNewList,
+            leadingIcon: DivineIconName.plus,
+            type: DivineButtonType.secondary,
+            expanded: true,
+            onPressed: types.isEmpty
+                ? null
+                : () => runDetached(
+                    _createList(context, types),
+                    'open list creation',
                     logName: 'ProfileListsGrid',
                     category: LogCategory.ui,
                   ),
-                ),
-              ),
-            if (state.ownerReadStatus == PeopleListsOwnerReadStatus.failed)
-              _ListReadFailure(
-                onRetry: () => context.read<PeopleListsBloc>().add(
-                  const PeopleListsOwnerSyncRequested(),
-                ),
-              )
-            else if (!state.listsKnown)
-              const _ListLoading()
-            else if (state.lists.isEmpty)
-              _ListMessage(text: context.l10n.peopleListsEmptySubtitle),
-            const SizedBox(height: 16),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
     );
+  }
+
+  Future<void> _createList(
+    BuildContext context,
+    List<_NewListType> types,
+  ) async {
+    final type = types.length == 1 ? types.single : await _pickType(context);
+    if (type == null || !context.mounted) return;
+    switch (type) {
+      case _NewListType.video:
+        await showListInfoSheet(context);
+      case _NewListType.people:
+        await const CreatePeopleListRouteData().push<void>(context);
+    }
+  }
+
+  Future<_NewListType?> _pickType(BuildContext context) async {
+    final l10n = context.l10n;
+    final picked = await context.showVideoPausingSelectionMenu(
+      title: Text(l10n.listTypeSheetTitle),
+      options: [
+        VineBottomSheetSelectionOptionData(
+          label: l10n.listTypeVideoList,
+          value: _NewListType.video.name,
+          leadingIcon: DivineIconName.play,
+        ),
+        VineBottomSheetSelectionOptionData(
+          label: l10n.listTypePeopleList,
+          value: _NewListType.people.name,
+          leadingIcon: DivineIconName.users,
+        ),
+      ],
+    );
+    return _NewListType.values.asNameMap()[picked];
   }
 }
 
-class _VideoListsSection extends ConsumerWidget {
-  const _VideoListsSection();
+enum _SourceStatus { loading, ready, failed }
+
+/// Cards from whichever source has loaded, with each source's own loading
+/// and failure state below them.
+class _ListsGallery extends ConsumerWidget {
+  const _ListsGallery();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final listsAsync = ref.watch(curatedListsStateProvider);
     final service = ref.read(curatedListsStateProvider.notifier).service;
-    final recoveryReadOnly = service?.recoveryNeedsRepair ?? false;
+    final videoStatus = listsAsync.when(
+      data: (_) => _SourceStatus.ready,
+      loading: () => _SourceStatus.loading,
+      error: (_, _) => _SourceStatus.failed,
+    );
+    final ownLists = videoStatus == _SourceStatus.ready
+        ? service?.myLists ?? const <CuratedList>[]
+        : const <CuratedList>[];
+    var thumbnailsPending = false;
+    var videoLists = ownLists;
+    if (ownLists.isNotEmpty) {
+      // Retained previews belong to a prior account/policy until the
+      // current hydration has completed successfully.
+      final hydration = ref.watch(myListsWithThumbnailsProvider);
+      final hydrated = switch (hydration) {
+        AsyncData(isLoading: false, :final value) => value,
+        _ => null,
+      };
+      videoLists = _withResolvedThumbnails(ownLists, hydrated);
+      thumbnailsPending = hydration.isLoading;
+    }
+
+    final people = context.watch<PeopleListsBloc>().state;
+    final peopleAvailable = people.activeOwnerPubkey != null;
+    final peopleFailed =
+        peopleAvailable &&
+        people.ownerReadStatus == PeopleListsOwnerReadStatus.failed;
+    final peopleLoading =
+        peopleAvailable && !peopleFailed && !people.listsKnown;
+    final peopleLists = peopleAvailable ? people.lists : const <UserList>[];
+
+    final entries = mergeProfileLists(
+      videoLists: videoLists,
+      peopleLists: peopleLists,
+    );
+    final videoFailed = videoStatus == _SourceStatus.failed;
+    final loading = videoStatus == _SourceStatus.loading || peopleLoading;
+    final isEmpty =
+        entries.isEmpty && !loading && !videoFailed && !peopleFailed;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _SectionHeading(title: context.l10n.exploreVideoLists),
-        if (recoveryReadOnly) const CuratedListRecoveryReadOnlyNotice(),
-        DivineButton(
-          label: context.l10n.listNewVideoList,
-          leadingIcon: DivineIconName.plus,
-          type: DivineButtonType.secondary,
-          expanded: true,
-          onPressed: recoveryReadOnly
-              ? null
-              : () => runDetached(
-                  showListInfoSheet(context),
-                  'open list creation sheet',
-                  logName: 'ProfileListsGrid',
-                  category: LogCategory.ui,
-                ),
-        ),
-        const _BookmarksEntry(),
-        listsAsync.when(
-          data: (_) {
-            final ownLists = service?.myLists ?? const <CuratedList>[];
-            if (ownLists.isEmpty) {
-              return _ListMessage(text: context.l10n.profileListsEmpty);
-            }
-            // Retained previews belong to a prior account/policy until the
-            // current hydration has completed successfully.
-            final hydration = ref.watch(myListsWithThumbnailsProvider);
-            final hydrated = switch (hydration) {
-              AsyncData(isLoading: false, :final value) => value,
-              _ => null,
-            };
-            return _VideoListsColumn(
-              lists: _withResolvedThumbnails(ownLists, hydrated),
-              thumbnailsPending: hydration.isLoading,
-            );
-          },
-          loading: () => const _ListLoading(),
-          error: (_, _) => CuratedListInitializationFailure(
+        if (entries.isNotEmpty)
+          _ListsGrid(entries: entries, thumbnailsPending: thumbnailsPending),
+        if (loading) const _ListLoading(),
+        if (videoFailed)
+          CuratedListInitializationFailure(
             onRetry: () => ref.invalidate(curatedListsStateProvider),
           ),
-        ),
+        if (peopleFailed)
+          _ListReadFailure(
+            onRetry: () => context.read<PeopleListsBloc>().add(
+              const PeopleListsOwnerSyncRequested(),
+            ),
+          ),
+        if (isEmpty) _ListMessage(text: context.l10n.profileListsEmpty),
       ],
     );
   }
@@ -204,55 +209,86 @@ List<CuratedList> _withResolvedThumbnails(
   ];
 }
 
-class _VideoListsColumn extends StatelessWidget {
-  const _VideoListsColumn({
-    required this.lists,
-    required this.thumbnailsPending,
-  });
+/// Two columns, filled row by row; cards in a row align to the top because
+/// a description can make one card taller than its neighbour.
+class _ListsGrid extends StatelessWidget {
+  const _ListsGrid({required this.entries, required this.thumbnailsPending});
 
-  final List<CuratedList> lists;
+  final List<ProfileListEntry> entries;
   final bool thumbnailsPending;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      spacing: 20,
-      children: [
-        for (final list in lists)
-          DivineListThumbnail.videos(
-            // Lists are created, deleted and re-hydrated in place, so cards
-            // shift slots; the key keeps each card's image state with its list.
-            key: ValueKey(list.authorScopedId),
-            curatedList: list,
-            thumbnailsPending: thumbnailsPending,
-            onTap: () => runDetached(
-              CuratedListFeedRouteData(
-                listId: list.id,
-                $extra: CuratedListRouteExtra(listName: list.name),
-              ).push<void>(context),
-              'open owned list',
-              logName: 'ProfileListsGrid',
-              category: LogCategory.ui,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        spacing: 20,
+        children: [
+          for (var i = 0; i < entries.length; i += 2)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 16,
+              children: [
+                Expanded(
+                  child: _ListCard(
+                    entry: entries[i],
+                    thumbnailsPending: thumbnailsPending,
+                  ),
+                ),
+                Expanded(
+                  child: i + 1 < entries.length
+                      ? _ListCard(
+                          entry: entries[i + 1],
+                          thumbnailsPending: thumbnailsPending,
+                        )
+                      : const SizedBox.shrink(),
+                ),
+              ],
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-class _SectionHeading extends StatelessWidget {
-  const _SectionHeading({required this.title});
-  final String title;
+class _ListCard extends StatelessWidget {
+  const _ListCard({required this.entry, required this.thumbnailsPending});
+
+  final ProfileListEntry entry;
+  final bool thumbnailsPending;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 8, bottom: 12),
-    child: Text(
-      title,
-      style: VineTheme.titleMediumFont(color: context.vineColors.primaryText),
-    ),
-  );
+  Widget build(BuildContext context) {
+    return switch (entry) {
+      ProfileVideoListEntry(:final list) => DivineListThumbnail.videos(
+        // Lists are created, deleted and re-hydrated in place, so cards
+        // shift slots; the key keeps each card's image state with its list.
+        key: ValueKey(list.authorScopedId),
+        curatedList: list,
+        thumbnailsPending: thumbnailsPending,
+        onTap: () => runDetached(
+          CuratedListFeedRouteData(
+            listId: list.id,
+            $extra: CuratedListRouteExtra(listName: list.name),
+          ).push<void>(context),
+          'open owned list',
+          logName: 'ProfileListsGrid',
+          category: LogCategory.ui,
+        ),
+      ),
+      ProfilePeopleListEntry(:final list) => DivineListThumbnail.people(
+        key: ValueKey(list.id),
+        userList: list,
+        onTap: () => runDetached(
+          PeopleListRouteData(listId: list.id).push<void>(context),
+          'open owned people list',
+          logName: 'ProfileListsGrid',
+          category: LogCategory.ui,
+        ),
+      ),
+    };
+  }
 }
 
 class _ListLoading extends StatelessWidget {
@@ -294,45 +330,4 @@ class _ListReadFailure extends StatelessWidget {
       ),
     ],
   );
-}
-
-/// Entry point to the viewer's bookmarks.
-///
-/// Bookmarks are a NIP-51 kind 10003 list rather than a kind 30005 one, so
-/// they can't come through a curated-list thumbnail — but they are still one of the
-/// viewer's lists, which is why they sit here rather than in a tab of their
-/// own. Without this the share sheet's Save action would be write-only.
-class _BookmarksEntry extends StatelessWidget {
-  const _BookmarksEntry();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.vineColors;
-    return Semantics(
-      button: true,
-      label: context.l10n.shareMenuBookmarks,
-      child: InkWell(
-        onTap: () => const SavedVideosRouteData().push<void>(context),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            spacing: 12,
-            children: [
-              // Coloured for the same reason the label is: the asset is a
-              // hardcoded white fill, and DivineIcon applies no filter when
-              // color is null, so it disappears on the light palette.
-              DivineIcon(icon: .bookmarkSimple, color: colors.primaryText),
-              Expanded(
-                child: Text(
-                  context.l10n.shareMenuBookmarks,
-                  style: VineTheme.titleSmallFont(color: colors.primaryText),
-                ),
-              ),
-              DivineIcon(icon: .caretRight, color: colors.secondaryText),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

@@ -582,8 +582,6 @@
   "featuredTabLoadFailed": "Nu am putut încărca această colecție.",
   "featuredTabRetry": "Încearcă din nou",
   "exploreNoVideosAvailable": "Niciun videoclip disponibil",
-  "explorePeopleLists": "Liste de oameni",
-  "exploreVideoLists": "Liste de videoclipuri",
   "exploreErrorLoadingLists": "Eroare la încărcarea listelor. Încearcă din nou.",
   "exploreNewVideosCount": "{count, plural, =1{1 videoclip nou} other{{count} videoclipuri noi}}",
   "@exploreNewVideosCount": {
@@ -1795,6 +1793,9 @@
   "listDone": "Gata",
   "listErrorLoading": "Eroare la încărcarea listelor",
   "listCreateNewList": "Creează o listă nouă",
+  "listTypeSheetTitle": "Listă nouă",
+  "listTypeVideoList": "Listă de videoclipuri",
+  "listTypePeopleList": "Listă de persoane",
   "listNewPeopleList": "Listă nouă de persoane",
   "listNameLabel": "Numele listei",
   "listDescriptionLabel": "Descriere (opțional)",

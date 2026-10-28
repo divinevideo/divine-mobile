@@ -582,8 +582,6 @@
   "featuredTabLoadFailed": "Impossible de charger cette collection.",
   "featuredTabRetry": "Réessayer",
   "exploreNoVideosAvailable": "Aucune vidéo disponible",
-  "explorePeopleLists": "Listes de personnes",
-  "exploreVideoLists": "Listes de vidéos",
   "exploreErrorLoadingLists": "Erreur de chargement des listes. Réessaie.",
   "exploreNewVideosCount": "{count, plural, one{{count} nouvelle vidéo} other{{count} nouvelles vidéos}}",
   "@exploreNewVideosCount": {
@@ -1795,6 +1793,9 @@
   "listDone": "Terminé",
   "listErrorLoading": "Erreur de chargement des listes",
   "listCreateNewList": "Créer une nouvelle liste",
+  "listTypeSheetTitle": "Nouvelle liste",
+  "listTypeVideoList": "Liste de vidéos",
+  "listTypePeopleList": "Liste de personnes",
   "listNewPeopleList": "Nouvelle liste de personnes",
   "listNameLabel": "Nom de la liste",
   "listDescriptionLabel": "Description (facultatif)",

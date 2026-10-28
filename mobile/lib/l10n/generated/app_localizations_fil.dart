@@ -1419,12 +1419,6 @@ class AppLocalizationsFil extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Walang available na video';
 
   @override
-  String get explorePeopleLists => 'Mga People List';
-
-  @override
-  String get exploreVideoLists => 'Mga Video List';
-
-  @override
   String get exploreErrorLoadingLists =>
       'May error sa pag-load ng mga list. Subukan ulit.';
 
@@ -5337,6 +5331,15 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get listCreateNewList => 'Gumawa ng Bagong Listahan';
+
+  @override
+  String get listTypeSheetTitle => 'Bagong listahan';
+
+  @override
+  String get listTypeVideoList => 'Listahan ng video';
+
+  @override
+  String get listTypePeopleList => 'People list';
 
   @override
   String get listNewPeopleList => 'Bagong people list';

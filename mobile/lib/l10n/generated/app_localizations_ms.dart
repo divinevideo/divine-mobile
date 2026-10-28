@@ -1404,12 +1404,6 @@ class AppLocalizationsMs extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Tiada video tersedia';
 
   @override
-  String get explorePeopleLists => 'Senarai Orang';
-
-  @override
-  String get exploreVideoLists => 'Senarai Video';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Ralat memuatkan senarai. Sila cuba lagi.';
 
@@ -5301,6 +5295,15 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String get listCreateNewList => 'Cipta Senarai Baharu';
+
+  @override
+  String get listTypeSheetTitle => 'Senarai baharu';
+
+  @override
+  String get listTypeVideoList => 'Senarai video';
+
+  @override
+  String get listTypePeopleList => 'Senarai orang';
 
   @override
   String get listNewPeopleList => 'Senarai orang baharu';

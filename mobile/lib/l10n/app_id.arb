@@ -582,8 +582,6 @@
   "featuredTabLoadFailed": "Koleksi ini gagal dimuat.",
   "featuredTabRetry": "Coba lagi",
   "exploreNoVideosAvailable": "Tidak ada video tersedia",
-  "explorePeopleLists": "Daftar Orang",
-  "exploreVideoLists": "Daftar Video",
   "exploreErrorLoadingLists": "Gagal memuat daftar. Silakan coba lagi.",
   "exploreNewVideosCount": "{count, plural, other{{count} video baru}}",
   "@exploreNewVideosCount": {
@@ -1792,6 +1790,9 @@
   "listDone": "Selesai",
   "listErrorLoading": "Kesalahan memuat daftar",
   "listCreateNewList": "Buat Daftar Baru",
+  "listTypeSheetTitle": "Daftar baru",
+  "listTypeVideoList": "Daftar video",
+  "listTypePeopleList": "Daftar orang",
   "listNewPeopleList": "Daftar orang baru",
   "listNameLabel": "Nama Daftar",
   "listDescriptionLabel": "Deskripsi (opsional)",

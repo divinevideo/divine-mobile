@@ -582,8 +582,6 @@
   "featuredTabLoadFailed": "Bu koleksiyon yüklenemedi.",
   "featuredTabRetry": "Tekrar dene",
   "exploreNoVideosAvailable": "Hiç video yok",
-  "explorePeopleLists": "Kişi Listeleri",
-  "exploreVideoLists": "Video Listeleri",
   "exploreErrorLoadingLists": "Listeler yüklenirken hata. Lütfen tekrar dene.",
   "exploreNewVideosCount": "{count, plural, one{1 yeni video} other{{count} yeni video}}",
   "@exploreNewVideosCount": {
@@ -1792,6 +1790,9 @@
   "listDone": "Bitti",
   "listErrorLoading": "Listeler yüklenirken hata",
   "listCreateNewList": "Yeni Liste Oluştur",
+  "listTypeSheetTitle": "Yeni liste",
+  "listTypeVideoList": "Video listesi",
+  "listTypePeopleList": "Kişi listesi",
   "listNewPeopleList": "Yeni kişi listesi",
   "listNameLabel": "Liste Adı",
   "listDescriptionLabel": "Açıklama (opsiyonel)",

@@ -1421,12 +1421,6 @@ class AppLocalizationsSv extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Inga videor tillgängliga';
 
   @override
-  String get explorePeopleLists => 'Personlistor';
-
-  @override
-  String get exploreVideoLists => 'Videolistor';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Fel vid inläsning av listor. Försök igen.';
 
@@ -5297,6 +5291,15 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get listCreateNewList => 'Skapa ny lista';
+
+  @override
+  String get listTypeSheetTitle => 'Ny lista';
+
+  @override
+  String get listTypeVideoList => 'Videolista';
+
+  @override
+  String get listTypePeopleList => 'Personlista';
 
   @override
   String get listNewPeopleList => 'Ny personlista';

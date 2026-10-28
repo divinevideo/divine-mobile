@@ -582,8 +582,6 @@
   "featuredTabLoadFailed": "Kunde inte läsa in den här samlingen.",
   "featuredTabRetry": "Försök igen",
   "exploreNoVideosAvailable": "Inga videor tillgängliga",
-  "explorePeopleLists": "Personlistor",
-  "exploreVideoLists": "Videolistor",
   "exploreErrorLoadingLists": "Fel vid inläsning av listor. Försök igen.",
   "exploreNewVideosCount": "{count, plural, one{1 ny video} other{{count} nya videor}}",
   "@exploreNewVideosCount": {
@@ -1795,6 +1793,9 @@
   "listDone": "Klar",
   "listErrorLoading": "Fel vid inläsning av listor",
   "listCreateNewList": "Skapa ny lista",
+  "listTypeSheetTitle": "Ny lista",
+  "listTypeVideoList": "Videolista",
+  "listTypePeopleList": "Personlista",
   "listNewPeopleList": "Ny personlista",
   "listNameLabel": "Listnamn",
   "listDescriptionLabel": "Beskrivning (valfritt)",

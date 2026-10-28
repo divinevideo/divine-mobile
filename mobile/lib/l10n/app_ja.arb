@@ -582,8 +582,6 @@
   "featuredTabLoadFailed": "このコレクションを読み込めませんでした。",
   "featuredTabRetry": "もう一度試す",
   "exploreNoVideosAvailable": "動画がないよ",
-  "explorePeopleLists": "ピープルリスト",
-  "exploreVideoLists": "ビデオリスト",
   "exploreErrorLoadingLists": "リストの読み込みに失敗。もう一回試してみて。",
   "exploreNewVideosCount": "{count, plural, other{{count}本の新着動画}}",
   "@exploreNewVideosCount": {
@@ -1785,6 +1783,9 @@
   "listDone": "完了",
   "listErrorLoading": "リストの読み込みに失敗",
   "listCreateNewList": "新しいリストを作る",
+  "listTypeSheetTitle": "新しいリスト",
+  "listTypeVideoList": "動画リスト",
+  "listTypePeopleList": "人リスト",
   "listNewPeopleList": "新しい人リスト",
   "listNameLabel": "リスト名",
   "listDescriptionLabel": "説明 (任意)",

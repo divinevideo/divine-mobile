@@ -582,8 +582,6 @@
   "featuredTabLoadFailed": "Deze collectie kon niet worden geladen.",
   "featuredTabRetry": "Probeer opnieuw",
   "exploreNoVideosAvailable": "Geen video's beschikbaar",
-  "explorePeopleLists": "Personenlijsten",
-  "exploreVideoLists": "Videolijsten",
   "exploreErrorLoadingLists": "Fout bij laden van lijsten. Probeer het opnieuw.",
   "exploreNewVideosCount": "{count, plural, one{1 nieuwe video} other{{count} nieuwe video''s}}",
   "@exploreNewVideosCount": {
@@ -1795,6 +1793,9 @@
   "listDone": "Klaar",
   "listErrorLoading": "Fout bij laden van lijsten",
   "listCreateNewList": "Nieuwe lijst maken",
+  "listTypeSheetTitle": "Nieuwe lijst",
+  "listTypeVideoList": "Videolijst",
+  "listTypePeopleList": "Personenlijst",
   "listNewPeopleList": "Nieuwe personenlijst",
   "listNameLabel": "Lijstnaam",
   "listDescriptionLabel": "Beschrijving (optioneel)",

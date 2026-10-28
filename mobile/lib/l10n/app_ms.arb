@@ -678,8 +678,6 @@
   "featuredTabLoadFailed": "Koleksi ini tidak dapat dimuatkan.",
   "featuredTabRetry": "Cuba lagi",
   "exploreNoVideosAvailable": "Tiada video tersedia",
-  "explorePeopleLists": "Senarai Orang",
-  "exploreVideoLists": "Senarai Video",
   "exploreErrorLoadingLists": "Ralat memuatkan senarai. Sila cuba lagi.",
   "exploreNewVideosCount": "{count, plural, =1{1 video baharu} other{{count} video baharu}}",
   "@exploreNewVideosCount": {
@@ -2546,6 +2544,9 @@
   "listDone": "Siap",
   "listErrorLoading": "Ralat memuatkan senarai",
   "listCreateNewList": "Cipta Senarai Baharu",
+  "listTypeSheetTitle": "Senarai baharu",
+  "listTypeVideoList": "Senarai video",
+  "listTypePeopleList": "Senarai orang",
   "listNewPeopleList": "Senarai orang baharu",
   "listNameLabel": "Nama Senarai",
   "listDescriptionLabel": "Keterangan (pilihan)",

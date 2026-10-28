@@ -1437,12 +1437,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get exploreNoVideosAvailable => 'کوئی ویڈیو دستیاب نہیں';
 
   @override
-  String get explorePeopleLists => 'لوگوں کی فہرستیں';
-
-  @override
-  String get exploreVideoLists => 'ویڈیو فہرستیں';
-
-  @override
   String get exploreErrorLoadingLists =>
       'فہرستیں لوڈ کرنے میں خرابی۔ براہ کرم دوبارہ کوشش کریں۔';
 
@@ -5309,6 +5303,15 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get listCreateNewList => 'نئی فہرست بنائیں';
+
+  @override
+  String get listTypeSheetTitle => 'نئی فہرست';
+
+  @override
+  String get listTypeVideoList => 'ویڈیو فہرست';
+
+  @override
+  String get listTypePeopleList => 'لوگوں کی فہرست';
 
   @override
   String get listNewPeopleList => 'لوگوں کی نئی فہرست';

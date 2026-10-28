@@ -1373,12 +1373,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Hiç video yok';
 
   @override
-  String get explorePeopleLists => 'Kişi Listeleri';
-
-  @override
-  String get exploreVideoLists => 'Video Listeleri';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Listeler yüklenirken hata. Lütfen tekrar dene.';
 
@@ -5244,6 +5238,15 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get listCreateNewList => 'Yeni Liste Oluştur';
+
+  @override
+  String get listTypeSheetTitle => 'Yeni liste';
+
+  @override
+  String get listTypeVideoList => 'Video listesi';
+
+  @override
+  String get listTypePeopleList => 'Kişi listesi';
 
   @override
   String get listNewPeopleList => 'Yeni kişi listesi';

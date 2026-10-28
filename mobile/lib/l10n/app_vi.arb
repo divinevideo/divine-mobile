@@ -678,8 +678,6 @@
   "featuredTabLoadFailed": "Không tải được bộ sưu tập này.",
   "featuredTabRetry": "Thử lại",
   "exploreNoVideosAvailable": "Không có video nào",
-  "explorePeopleLists": "Danh sách người",
-  "exploreVideoLists": "Danh sách video",
   "exploreErrorLoadingLists": "Lỗi khi tải danh sách. Vui lòng thử lại.",
   "exploreNewVideosCount": "{count, plural, =1{1 video mới} other{{count} video mới}}",
   "@exploreNewVideosCount": {
@@ -2546,6 +2544,9 @@
   "listDone": "Xong",
   "listErrorLoading": "Lỗi khi tải danh sách",
   "listCreateNewList": "Tạo danh sách mới",
+  "listTypeSheetTitle": "Danh sách mới",
+  "listTypeVideoList": "Danh sách video",
+  "listTypePeopleList": "Danh sách người",
   "listNewPeopleList": "Danh sách người mới",
   "listNameLabel": "Tên danh sách",
   "listDescriptionLabel": "Mô tả (không bắt buộc)",

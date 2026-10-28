@@ -620,8 +620,6 @@
   "featuredTabLoadFailed": "Тази колекция не можа да се зареди.",
   "featuredTabRetry": "Опитай пак",
   "exploreNoVideosAvailable": "Няма налични видеа",
-  "explorePeopleLists": "Списъци с хора",
-  "exploreVideoLists": "Видео списъци",
   "exploreErrorLoadingLists": "Грешка при зареждане на списъците. Опитай пак.",
   "exploreNewVideosCount": "{count, plural, =1{1 ново видео} other{{count} нови видеа}}",
   "@exploreNewVideosCount": {
@@ -1987,6 +1985,9 @@
   "listDone": "Готово",
   "listErrorLoading": "Грешка при зареждане на списъците",
   "listCreateNewList": "Създаване на нов списък",
+  "listTypeSheetTitle": "Нов списък",
+  "listTypeVideoList": "Списък с видеа",
+  "listTypePeopleList": "Списък с хора",
   "listNewPeopleList": "Нов списък с хора",
   "listNameLabel": "Име на списък",
   "listDescriptionLabel": "Описание (по избор)",

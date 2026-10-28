@@ -1449,12 +1449,6 @@ class AppLocalizationsBg extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Няма налични видеа';
 
   @override
-  String get explorePeopleLists => 'Списъци с хора';
-
-  @override
-  String get exploreVideoLists => 'Видео списъци';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Грешка при зареждане на списъците. Опитай пак.';
 
@@ -5360,6 +5354,15 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get listCreateNewList => 'Създаване на нов списък';
+
+  @override
+  String get listTypeSheetTitle => 'Нов списък';
+
+  @override
+  String get listTypeVideoList => 'Списък с видеа';
+
+  @override
+  String get listTypePeopleList => 'Списък с хора';
 
   @override
   String get listNewPeopleList => 'Нов списък с хора';

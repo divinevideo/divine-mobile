@@ -1374,12 +1374,6 @@ class AppLocalizationsId extends AppLocalizations {
   String get exploreNoVideosAvailable => 'Tidak ada video tersedia';
 
   @override
-  String get explorePeopleLists => 'Daftar Orang';
-
-  @override
-  String get exploreVideoLists => 'Daftar Video';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Gagal memuat daftar. Silakan coba lagi.';
 
@@ -5226,6 +5220,15 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get listCreateNewList => 'Buat Daftar Baru';
+
+  @override
+  String get listTypeSheetTitle => 'Daftar baru';
+
+  @override
+  String get listTypeVideoList => 'Daftar video';
+
+  @override
+  String get listTypePeopleList => 'Daftar orang';
 
   @override
   String get listNewPeopleList => 'Daftar orang baru';

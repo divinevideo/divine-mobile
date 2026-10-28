@@ -1422,12 +1422,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get exploreNoVideosAvailable => 'لا توجد فيديوهات متاحة';
 
   @override
-  String get explorePeopleLists => 'قوائم الأشخاص';
-
-  @override
-  String get exploreVideoLists => 'قوائم الفيديو';
-
-  @override
   String get exploreErrorLoadingLists =>
       'خطأ في تحميل القوائم. يرجى المحاولة مرّة أخرى.';
 
@@ -5295,6 +5289,15 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get listCreateNewList => 'إنشاء قائمة جديدة';
+
+  @override
+  String get listTypeSheetTitle => 'قائمة جديدة';
+
+  @override
+  String get listTypeVideoList => 'قائمة فيديوهات';
+
+  @override
+  String get listTypePeopleList => 'قائمة أشخاص';
 
   @override
   String get listNewPeopleList => 'قائمة أشخاص جديدة';

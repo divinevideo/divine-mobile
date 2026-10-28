@@ -1448,12 +1448,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get exploreNoVideosAvailable => 'No hay videos disponibles';
 
   @override
-  String get explorePeopleLists => 'Listas de personas';
-
-  @override
-  String get exploreVideoLists => 'Listas de videos';
-
-  @override
   String get exploreErrorLoadingLists =>
       'Error al cargar las listas. Probá de nuevo.';
 
@@ -5360,6 +5354,15 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get listCreateNewList => 'Crear lista nueva';
+
+  @override
+  String get listTypeSheetTitle => 'Lista nueva';
+
+  @override
+  String get listTypeVideoList => 'Lista de videos';
+
+  @override
+  String get listTypePeopleList => 'Lista de personas';
 
   @override
   String get listNewPeopleList => 'Nueva lista de personas';

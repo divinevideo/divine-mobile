@@ -2455,18 +2455,6 @@ abstract class AppLocalizations {
   /// **'No videos available'**
   String get exploreNoVideosAvailable;
 
-  /// No description provided for @explorePeopleLists.
-  ///
-  /// In en, this message translates to:
-  /// **'People Lists'**
-  String get explorePeopleLists;
-
-  /// No description provided for @exploreVideoLists.
-  ///
-  /// In en, this message translates to:
-  /// **'Video Lists'**
-  String get exploreVideoLists;
-
   /// No description provided for @exploreErrorLoadingLists.
   ///
   /// In en, this message translates to:
@@ -8940,6 +8928,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create New List'**
   String get listCreateNewList;
+
+  /// Title of the sheet that asks which kind of list to create from the profile Lists tab.
+  ///
+  /// In en, this message translates to:
+  /// **'New list'**
+  String get listTypeSheetTitle;
+
+  /// Option in the new-list sheet that creates a list of videos.
+  ///
+  /// In en, this message translates to:
+  /// **'Video list'**
+  String get listTypeVideoList;
+
+  /// Option in the new-list sheet that creates a list of people.
+  ///
+  /// In en, this message translates to:
+  /// **'People list'**
+  String get listTypePeopleList;
 
   /// No description provided for @listNewPeopleList.
   ///

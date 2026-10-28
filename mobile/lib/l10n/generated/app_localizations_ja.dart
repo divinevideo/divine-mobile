@@ -1308,12 +1308,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get exploreNoVideosAvailable => '動画がないよ';
 
   @override
-  String get explorePeopleLists => 'ピープルリスト';
-
-  @override
-  String get exploreVideoLists => 'ビデオリスト';
-
-  @override
   String get exploreErrorLoadingLists => 'リストの読み込みに失敗。もう一回試してみて。';
 
   @override
@@ -4986,6 +4980,15 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get listCreateNewList => '新しいリストを作る';
+
+  @override
+  String get listTypeSheetTitle => '新しいリスト';
+
+  @override
+  String get listTypeVideoList => '動画リスト';
+
+  @override
+  String get listTypePeopleList => '人リスト';
 
   @override
   String get listNewPeopleList => '新しい人リスト';

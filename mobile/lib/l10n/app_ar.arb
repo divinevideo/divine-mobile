@@ -582,8 +582,6 @@
   "featuredTabLoadFailed": "تعذّر تحميل هذه المجموعة.",
   "featuredTabRetry": "حاول مرة أخرى",
   "exploreNoVideosAvailable": "لا توجد فيديوهات متاحة",
-  "explorePeopleLists": "قوائم الأشخاص",
-  "exploreVideoLists": "قوائم الفيديو",
   "exploreErrorLoadingLists": "خطأ في تحميل القوائم. يرجى المحاولة مرّة أخرى.",
   "exploreNewVideosCount": "{count, plural, zero{لا توجد فيديوهات جديدة} one{فيديو جديد واحد} two{فيديوان جديدان} few{{count} فيديوهات جديدة} many{{count} فيديو جديد} other{{count} فيديو جديد}}",
   "@exploreNewVideosCount": {
@@ -1785,6 +1783,9 @@
   "listDone": "تم",
   "listErrorLoading": "تعذر تحميل القوائم",
   "listCreateNewList": "إنشاء قائمة جديدة",
+  "listTypeSheetTitle": "قائمة جديدة",
+  "listTypeVideoList": "قائمة فيديوهات",
+  "listTypePeopleList": "قائمة أشخاص",
   "listNewPeopleList": "قائمة أشخاص جديدة",
   "listNameLabel": "اسم القائمة",
   "listDescriptionLabel": "الوصف (اختياري)",

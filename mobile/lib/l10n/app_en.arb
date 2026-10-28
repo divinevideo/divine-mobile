@@ -913,8 +913,6 @@
     "description": "Retry button on the featured Explore tab's failure state."
   },
   "exploreNoVideosAvailable": "No videos available",
-  "explorePeopleLists": "People Lists",
-  "exploreVideoLists": "Video Lists",
   "exploreErrorLoadingLists": "Error loading lists. Please try again.",
   "exploreNewVideosCount": "{count, plural, =1{1 new video} other{{count} new videos}}",
   "@exploreNewVideosCount": {
@@ -3627,6 +3625,18 @@
   "listDone": "Done",
   "listErrorLoading": "Error loading lists",
   "listCreateNewList": "Create New List",
+  "listTypeSheetTitle": "New list",
+  "@listTypeSheetTitle": {
+    "description": "Title of the sheet that asks which kind of list to create from the profile Lists tab."
+  },
+  "listTypeVideoList": "Video list",
+  "@listTypeVideoList": {
+    "description": "Option in the new-list sheet that creates a list of videos."
+  },
+  "listTypePeopleList": "People list",
+  "@listTypePeopleList": {
+    "description": "Option in the new-list sheet that creates a list of people."
+  },
   "listNewPeopleList": "New people list",
   "listNameLabel": "List Name",
   "listDescriptionLabel": "Description (optional)",
