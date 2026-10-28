@@ -3,6 +3,8 @@
 // ABOUTME: inbox stays unreadable, settle on the held wrap once it reads
 // ABOUTME: absent, and republish to the inbox once it is found.
 
+import 'dart:async';
+
 import 'package:db_client/db_client.dart';
 import 'package:dm_repository/dm_repository.dart';
 import 'package:drift/native.dart';
@@ -34,6 +36,29 @@ class _RecordFailingOutgoingDmsDao extends OutgoingDmsDao {
     if (eventId != null && status != OutgoingWrapStatus.sent) {
       throw StateError('database is locked');
     }
+    return super.markRecipientWrapStatus(
+      id: id,
+      status: status,
+      eventId: eventId,
+      lastError: lastError,
+    );
+  }
+}
+
+/// The real queue, except that recording a held wrap first runs [onRecord].
+class _RecordHookOutgoingDmsDao extends OutgoingDmsDao {
+  _RecordHookOutgoingDmsDao(super.attachedDatabase, this.onRecord);
+
+  final void Function() onRecord;
+
+  @override
+  Future<bool> markRecipientWrapStatus({
+    required String id,
+    required OutgoingWrapStatus status,
+    String? eventId,
+    String? lastError,
+  }) {
+    if (eventId != null && status != OutgoingWrapStatus.sent) onRecord();
     return super.markRecipientWrapStatus(
       id: id,
       status: status,
@@ -261,6 +286,27 @@ void main() {
     }
 
     group('sendMessage', () {
+      test('charges nothing when the repository stops while the hold is '
+          'recorded', () async {
+        inboxes[peerB] = _Inbox.unreadable;
+        late final DmRepository stopping;
+        stopping = buildRepository(
+          queue: _RecordHookOutgoingDmsDao(
+            db,
+            () => unawaited(stopping.stopListening()),
+          ),
+        );
+
+        final held = await stopping.sendMessage(
+          recipientPubkey: peerB,
+          content: 'stopped while the hold was recorded',
+        );
+
+        final row = await outgoingDao.getById(held.queuedRumorId!);
+        expect(row!.recipientWrapEventId, equals(wrapsTo(peerB).single.id));
+        expect(row.retryCount, equals(0), reason: 'left to the next session');
+      });
+
       test('records the wrap the pool accepted on the pending row', () async {
         final (:rowId, :poolWrap) = await heldSend();
 
@@ -523,6 +569,30 @@ void main() {
     });
 
     group('a send held for another reason', () {
+      test('records the wrap on a failed row without reviving it as '
+          'pending', () async {
+        inboxes[peerB] = _Inbox.unreadable;
+        confirmRecipientWraps = false;
+        final held = await repository.sendMessage(
+          recipientPubkey: peerB,
+          content: 'no OK came back, then the row failed',
+        );
+        final rowId = held.queuedRumorId!;
+        await outgoingDao.markRecipientWrapStatus(
+          id: rowId,
+          status: OutgoingWrapStatus.failed,
+          lastError: 'relay timed out',
+        );
+        confirmRecipientWraps = true;
+
+        final retried = await repository.recoverFullSend(rumorId: rowId);
+
+        expect(retried.retryablePending, isTrue, reason: 'held, recorded');
+        final row = await outgoingDao.getById(rowId);
+        expect(row!.recipientWrapStatus, OutgoingWrapStatus.failed);
+        expect(row.recipientWrapEventId, equals(wrapsTo(peerB).last.id));
+      });
+
       test('records no wrap when the recipient OK never arrived, so the '
           'retry republishes', () async {
         inboxes[peerB] = _Inbox.unreadable;
