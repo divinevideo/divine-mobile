@@ -33,6 +33,19 @@ class RoomActivitySummary {
   final bool loadFailed;
 }
 
+/// Unread totals for an indicator that covers several rooms.
+extension RoomActivityTotals on Iterable<RoomActivitySummary> {
+  /// Unread messages across every room.
+  int get totalUnread =>
+      fold(0, (total, summary) => total + summary.unreadCount);
+
+  /// Whether [totalUnread] may be a lower bound. Only rooms that show an
+  /// unread count contribute, so the total agrees with the per-room badges.
+  bool get totalUnreadLimited => any(
+    (summary) => summary.unreadCount > 0 && summary.historyLimited,
+  );
+}
+
 /// One owned channel session and the store scoped to its account and relay.
 class RoomActivityChannel {
   const RoomActivityChannel({

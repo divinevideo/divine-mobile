@@ -96,13 +96,8 @@ class _MessagesContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MessagesHomeView(
     direct: direct,
-    roomsUnreadCount: summaries.values.fold(
-      0,
-      (total, summary) => total + summary.unreadCount,
-    ),
-    roomsUnreadLimited: summaries.values.any(
-      (summary) => summary.historyLimited,
-    ),
+    roomsUnreadCount: summaries.values.totalUnread,
+    roomsUnreadLimited: summaries.values.totalUnreadLimited,
     // The backend currently exposes a fixed POC catalog in ChatState.
     // The public-test disclosure remains until real membership data exists.
     rooms: RoomsView(

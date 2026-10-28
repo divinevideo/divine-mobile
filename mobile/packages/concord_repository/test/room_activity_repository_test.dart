@@ -550,4 +550,41 @@ void main() {
       },
     );
   });
+
+  group('RoomActivityTotals', () {
+    RoomActivitySummary summary(
+      String channelId,
+      int unreadCount, {
+      bool historyLimited = false,
+    }) => RoomActivitySummary(
+      channelId: channelId,
+      unreadCount: unreadCount,
+      historyLimited: historyLimited,
+      loading: false,
+    );
+
+    test('totalUnread sums unread messages across rooms', () {
+      expect([summary('a', 2), summary('b', 3)].totalUnread, 5);
+    });
+
+    test('totalUnreadLimited ignores a limited room with nothing unread', () {
+      expect(
+        [
+          summary('a', 0, historyLimited: true),
+          summary('b', 3),
+        ].totalUnreadLimited,
+        isFalse,
+      );
+    });
+
+    test('totalUnreadLimited follows a limited room with unread messages', () {
+      expect(
+        [
+          summary('a', 2, historyLimited: true),
+          summary('b', 3),
+        ].totalUnreadLimited,
+        isTrue,
+      );
+    });
+  });
 }
