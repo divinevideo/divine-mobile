@@ -26,6 +26,7 @@ class _Follows extends Mock implements FollowRepository {}
 
 final String _alice = 'a' * 64;
 final String _other = 'b' * 64;
+final String _self = 'f' * 64;
 
 /// Pumps a composer whose followed accounts all share the display name Alice.
 Future<_Chat> _pumpComposer(WidgetTester tester) async {
@@ -38,6 +39,7 @@ Future<_Chat> _pumpComposer(WidgetTester tester) async {
   final follows = _Follows();
   final chat = _Chat();
   when(() => chat.state).thenReturn(const ChatState());
+  when(() => chat.sealedAuthor).thenReturn(_self);
   when(chat.visibleMessages).thenReturn([]);
   whenListen(chat, const Stream<ChatState>.empty());
   when(() => follows.followingPubkeys).thenReturn(keys);
@@ -147,6 +149,33 @@ void main() {
           },
         );
       }
+
+      testWidgets("typing the sender's own name does not tag the sender", (
+        tester,
+      ) async {
+        final chat = await _pumpComposer(tester);
+        when(
+          () => _profilesOf(tester).searchCachedProfilesByIdentity(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            UserProfile(
+              pubkey: _self,
+              displayName: 'Me',
+              rawData: const {},
+              createdAt: DateTime.utc(2026),
+              eventId: 'c' * 64,
+            ),
+          ],
+        );
+        await tester.enterText(find.byType(TextField), 'hi @Me');
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        _verifySent(chat, 'hi @Me');
+      });
 
       testWidgets('a second Enter while a typed mention resolves sends once', (
         tester,

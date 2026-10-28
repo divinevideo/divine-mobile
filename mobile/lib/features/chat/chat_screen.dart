@@ -166,6 +166,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
         : await MentionResolutionService(profileRepository: profiles)
               .resolveTextMentions(
                 rawText: submittedDraft,
+                currentUserPubkey: cubit.sealedAuthor,
                 selectedMentions: [
                   for (final mention in _selectedMentions)
                     MentionBinding(
