@@ -85,8 +85,10 @@ await controller.setVolume(0.5);              // video audio
 await controller.setAudioTrackVolume(0, 0.8); // overlay track at index
 
 // Equalizer bands, applied in order and changeable while playing (Android,
-// iOS and macOS; on Android a clip's equalizer needs a player created with
-// VideoBufferProfile.full, an overlay track's does not). On iOS and macOS an
+// iOS and macOS). On Android a clip's equalizer needs a player created with
+// VideoBufferProfile.full, except for a single looping clip whose audio plays
+// from a decoded loop, which applies it on any profile; an overlay track's
+// needs no particular profile. On iOS and macOS an
 // overlay track plays an equalized copy of the stretch of its file it plays
 // (at most 300 s when neither its video end nor its track end bounds it),
 // rendered once a change has rested for 500 ms; a remote track is downloaded
@@ -159,10 +161,10 @@ await DivineVideoPlayerController.preload([
 `preload` needs a native backend: on Android it prepares the clips in a
 temporary ExoPlayer and releases it as soon as that player is first ready,
 idle or failed, and on iOS and macOS it only makes a best-effort metadata
-request. It does not send a
-clip's `httpHeaders`, so it cannot warm an authenticated source. Linux and
-web register no platform channel, and `preload` does not check for them, so
-a call there throws a `MissingPluginException`.
+request. It does not send a clip's `httpHeaders`, so it cannot warm an
+authenticated source. Linux and web register no platform channel, and
+`preload` does not check for them, so a call there throws a
+`MissingPluginException`.
 
 The disk cache exists on Android only. ExoPlayer streams HTTP(S) sources
 through a write-through `SimpleCache` at `<cacheDir>/divine_video_cache`

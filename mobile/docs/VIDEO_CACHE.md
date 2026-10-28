@@ -148,5 +148,5 @@ buffered the whole clip and then reads it from the player cache. The player
 cache is a bounded 500 MB budget that Settings → Storage now counts and
 "Clear cache" reclaims, so it is kept rather than removed. Two things would
 reopen the question: a cellular measurement showing the miss path is as rare
-there as on Wi-Fi, or a prefetcher that also fetches
-the active index on entry, which would leave the player cache nothing to add.
+there as on Wi-Fi, or a prefetcher that also fetches the active index on
+entry, which would leave the player cache nothing to add.

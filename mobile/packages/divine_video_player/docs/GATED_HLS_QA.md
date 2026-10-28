@@ -21,7 +21,9 @@ Header transport differs per platform and is unit-tested only where it can be:
   target — it is verified by the manual checklist below instead. A single
   progressive clip that loops whole (the feed's case) takes a different path:
   it loads through the plugin's `CachingAssetLoader`, which sets the headers on
-  its own requests. That loader skips `.m3u8`, so it does not cover HLS.
+  its own requests. That loader skips `.m3u8`, so it does not cover HLS. It
+  also keeps the clip, gated or not, in a temporary `divine-loop-*.mp4` while
+  it plays (see `mobile/docs/VIDEO_CACHE.md`).
 
 The Dart source-failover chain (resolved source → HLS → original event URL →
 raw, with HLS moved to the front after a fresh derivative failure) is covered
