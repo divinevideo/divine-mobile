@@ -63,10 +63,14 @@ class PruneMergedBranchesTest(unittest.TestCase):
         origin = root / "origin.git"
         origin.mkdir()
         git(origin, "init", "-q", "--bare", "-b", "main")
+        # A commit starts a detached `git maintenance run --auto` that can still be
+        # writing into .git/objects when the temporary directory is removed.
+        git(origin, "config", "maintenance.auto", "false")
 
         self.repo = root / "repo"
         self.repo.mkdir()
         git(self.repo, "init", "-q", "-b", "main")
+        git(self.repo, "config", "maintenance.auto", "false")
         git(self.repo, "config", "user.email", "t@example.com")
         git(self.repo, "config", "user.name", "T")
         git(self.repo, "remote", "add", "origin", str(origin))

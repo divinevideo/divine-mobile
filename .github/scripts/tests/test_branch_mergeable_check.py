@@ -41,6 +41,9 @@ class CheckBranchMergeableTest(unittest.TestCase):
         self.repo = Path(self._tmp.name) / "repo"
         self.repo.mkdir()
         git(self.repo, "init", "-q", "-b", "main")
+        # A commit starts a detached `git maintenance run --auto` that can still be
+        # writing into .git/objects when the temporary directory is removed.
+        git(self.repo, "config", "maintenance.auto", "false")
         git(self.repo, "config", "user.email", "t@example.com")
         git(self.repo, "config", "user.name", "T")
         commit(self.repo, "shared.txt", "base\n")
@@ -218,6 +221,7 @@ class CheckBranchMergeableTest(unittest.TestCase):
         )
         git(shallow, "config", "user.email", "t@example.com")
         git(shallow, "config", "user.name", "T")
+        git(shallow, "config", "maintenance.auto", "false")
         git(shallow, "checkout", "-q", "--orphan", "detached-history")
         git(shallow, "rm", "-q", "-rf", ".")
         commit(shallow, "other.txt", "unrelated root\n")
