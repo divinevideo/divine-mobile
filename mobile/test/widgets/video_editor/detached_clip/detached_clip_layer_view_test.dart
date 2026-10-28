@@ -98,6 +98,7 @@ _FakeDetachedClipPlayer _fakePlayer() {
   when(() => controller.usesLinuxBackend).thenReturn(false);
   when(() => controller.useTexture).thenReturn(true);
   when(() => controller.textureId).thenReturn(1);
+  when(() => controller.upscalesFrames).thenReturn(false);
   when(() => controller.state).thenReturn(const DivineVideoPlayerState());
   when(
     () => controller.stateStream,
