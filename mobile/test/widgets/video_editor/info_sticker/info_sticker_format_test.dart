@@ -4,6 +4,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_emoji.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_format.dart';
 
 void main() {
@@ -159,7 +160,7 @@ void main() {
         );
 
         expect(InfoStickerFormat.text(data), equals('Full moon'));
-        expect(InfoStickerFormat.emoji(data), equals('🌕'));
+        expect(InfoStickerFormat.emoji(data), InfoStickerEmoji.moonFull);
       });
 
       test('shows sunrise and sunset', () {
@@ -172,6 +173,17 @@ void main() {
         );
 
         expect(InfoStickerFormat.text(data), equals('🌅 06:47  🌇 20:11'));
+        expect(
+          InfoStickerFormat.sunTimes(data),
+          equals([
+            (InfoStickerEmoji.sunrise, '06:47'),
+            (InfoStickerEmoji.sunset, '20:11'),
+          ]),
+        );
+        expect(
+          InfoStickerFormat.emojis(data),
+          equals({InfoStickerEmoji.sunrise, InfoStickerEmoji.sunset}),
+        );
       });
     });
 
@@ -195,7 +207,13 @@ void main() {
             for (final symbol in InfoStickerPlaceSymbol.values)
               InfoStickerFormat.emoji(data.copyWith(placeSymbol: symbol)),
           ],
-          equals(['📍', '🇨🇭', '🌍', '🗺️']),
+          // The flag is the phone's own emoji, drawn as text.
+          equals([
+            InfoStickerEmoji.pin,
+            null,
+            InfoStickerEmoji.globeEuropeAfrica,
+            InfoStickerEmoji.map,
+          ]),
         );
       });
 
@@ -207,14 +225,14 @@ void main() {
           placeSymbol: InfoStickerPlaceSymbol.flag,
         );
 
-        expect(InfoStickerFormat.emoji(data), equals('📍'));
+        expect(InfoStickerFormat.emoji(data), InfoStickerEmoji.pin);
       });
 
       test('shows a globe with meridians for an unknown side', () {
-        expect(InfoStickerFormat.globe(null), equals('🌐'));
+        expect(InfoStickerFormat.globe(null), InfoStickerEmoji.globeMeridians);
         expect(
           InfoStickerFormat.globe(InfoStickerGlobe.americas),
-          equals('🌎'),
+          InfoStickerEmoji.globeAmericas,
         );
       });
     });
@@ -228,7 +246,7 @@ void main() {
           isDay: false,
         );
 
-        expect(InfoStickerFormat.emoji(data), equals('🌙'));
+        expect(InfoStickerFormat.emoji(data), InfoStickerEmoji.crescentMoon);
       });
 
       test('shows none for a time sticker', () {

@@ -17,23 +17,20 @@ class _MockInfoStickerRepository extends Mock
 const _bern = InfoStickerPlace(
   name: 'Bern',
   detail: 'Switzerland',
-  latitude: 46.95,
-  longitude: 7.45,
+  address: 'Bern, Switzerland',
 );
 
 const _bernWithCountry = InfoStickerPlace(
   name: 'Bern',
   detail: 'Switzerland',
-  latitude: 46.95,
-  longitude: 7.45,
+  address: 'Bern, Switzerland',
   countryCode: 'CH',
 );
 
 const _thun = InfoStickerPlace(
   name: 'Thun',
   detail: 'Switzerland',
-  latitude: 46.76,
-  longitude: 7.63,
+  address: 'Thun, Switzerland',
 );
 
 void main() {
@@ -41,16 +38,26 @@ void main() {
     final l10n = lookupAppLocalizations(const Locale('en'));
     late _MockInfoStickerRepository repository;
 
+    setUpAll(() => registerFallbackValue(_bern));
+
     setUp(() {
       repository = _MockInfoStickerRepository();
     });
 
-    /// Opens the sheet from a button and records what it resolves with.
+    /// Opens the sheet from a button and records what it resolves with, on a
+    /// phone that has a place search when [hasPlaceSearch] says so.
     Future<List<InfoStickerData?>> pumpSheet(
       WidgetTester tester, {
       required InfoStickerData initial,
       bool isNew = true,
+      bool hasPlaceSearch = true,
     }) async {
+      when(
+        repository.isPlaceSearchAvailable,
+      ).thenAnswer((_) async => hasPlaceSearch);
+      when(
+        () => repository.locate(any()),
+      ).thenAnswer((_) async => (latitude: 46.95, longitude: 7.45));
       final results = <InfoStickerData?>[];
       await tester.pumpWidget(
         MaterialApp(
@@ -162,6 +169,22 @@ void main() {
         expect(results.single?.placeName, equals('Bern'));
       });
 
+      testWidgets('tells a phone without a place search', (tester) async {
+        await pumpSheet(
+          tester,
+          initial: const InfoStickerData(
+            kind: InfoStickerKind.location,
+            localeName: 'en',
+          ),
+          hasPlaceSearch: false,
+        );
+
+        expect(
+          find.text(l10n.videoEditorInfoStickerPlaceSearchUnavailable),
+          findsOneWidget,
+        );
+      });
+
       testWidgets("empties the altitude when another place's lookup fails", (
         tester,
       ) async {
@@ -217,13 +240,9 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.widgetWithText(DivineSelectableRow, 'Bern'));
         await tester.pumpAndSettle();
-        final pin = find.bySemanticsLabel(
-          '📍 ${l10n.videoEditorInfoStickerSymbolPin}',
-        );
+        final pin = find.bySemanticsLabel(l10n.videoEditorInfoStickerSymbolPin);
         await tester.tap(
-          find.bySemanticsLabel(
-            '🇨🇭 ${l10n.videoEditorInfoStickerSymbolFlag}',
-          ),
+          find.bySemanticsLabel(l10n.videoEditorInfoStickerSymbolFlag),
         );
         await tester.pumpAndSettle();
         expect(tester.getSemantics(pin), isSemantics(isSelected: false));
@@ -234,6 +253,27 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(tester.getSemantics(pin), isSemantics(isSelected: true));
+      });
+
+      testWidgets('adds the weather the creator picked', (tester) async {
+        final results = await pumpSheet(
+          tester,
+          initial: const InfoStickerData(
+            kind: InfoStickerKind.weather,
+            localeName: 'en',
+            temperatureCelsius: 21,
+          ),
+        );
+
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorInfoStickerWeatherClearNight),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.videoEditorInfoStickerAdd));
+        await tester.pumpAndSettle();
+
+        expect(results.single?.weather, InfoStickerWeather.clear);
+        expect(results.single?.isDay, isFalse);
       });
 
       testWidgets('moves on from the day to the total days', (tester) async {

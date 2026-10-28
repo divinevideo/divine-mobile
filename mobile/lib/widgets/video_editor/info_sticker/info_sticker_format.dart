@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/utils/rec_timer_paint.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_emoji.dart';
 
 /// The text of an info sticker.
 ///
@@ -64,39 +65,70 @@ abstract final class InfoStickerFormat {
     };
   }
 
-  /// The emoji in front of the sticker's text, or `null` for none; a
-  /// battery sticker draws its own battery instead.
-  static String? emoji(InfoStickerData data) => switch (data.kind) {
+  /// The emoji in front of the sticker's text, or `null` for none. A battery
+  /// sticker draws its own battery instead, and a location sticker its
+  /// country's [flag] when it shows one, which stays the phone's own emoji.
+  static InfoStickerEmoji? emoji(InfoStickerData data) => switch (data.kind) {
     InfoStickerKind.location => switch (data.placeSymbol) {
-      InfoStickerPlaceSymbol.pin => '📍',
-      InfoStickerPlaceSymbol.flag => flag(data.countryCode) ?? '📍',
+      InfoStickerPlaceSymbol.pin => InfoStickerEmoji.pin,
+      InfoStickerPlaceSymbol.flag =>
+        flag(data.countryCode) == null ? InfoStickerEmoji.pin : null,
       InfoStickerPlaceSymbol.globe => globe(data.globe),
-      InfoStickerPlaceSymbol.map => '🗺️',
+      InfoStickerPlaceSymbol.map => InfoStickerEmoji.map,
     },
-    InfoStickerKind.altitude => '🏔️',
+    InfoStickerKind.altitude => InfoStickerEmoji.mountain,
     InfoStickerKind.moon => switch (_phase(data)) {
       null => null,
-      InfoStickerMoonPhase.newMoon => '🌑',
-      InfoStickerMoonPhase.waxingCrescent => '🌒',
-      InfoStickerMoonPhase.firstQuarter => '🌓',
-      InfoStickerMoonPhase.waxingGibbous => '🌔',
-      InfoStickerMoonPhase.fullMoon => '🌕',
-      InfoStickerMoonPhase.waningGibbous => '🌖',
-      InfoStickerMoonPhase.lastQuarter => '🌗',
-      InfoStickerMoonPhase.waningCrescent => '🌘',
+      InfoStickerMoonPhase.newMoon => InfoStickerEmoji.moonNew,
+      InfoStickerMoonPhase.waxingCrescent =>
+        InfoStickerEmoji.moonWaxingCrescent,
+      InfoStickerMoonPhase.firstQuarter => InfoStickerEmoji.moonFirstQuarter,
+      InfoStickerMoonPhase.waxingGibbous => InfoStickerEmoji.moonWaxingGibbous,
+      InfoStickerMoonPhase.fullMoon => InfoStickerEmoji.moonFull,
+      InfoStickerMoonPhase.waningGibbous => InfoStickerEmoji.moonWaningGibbous,
+      InfoStickerMoonPhase.lastQuarter => InfoStickerEmoji.moonLastQuarter,
+      InfoStickerMoonPhase.waningCrescent =>
+        InfoStickerEmoji.moonWaningCrescent,
     },
     InfoStickerKind.weather => switch (data.weather) {
       null => null,
-      InfoStickerWeather.clear => data.isDay ? '☀️' : '🌙',
-      InfoStickerWeather.partlyCloudy => data.isDay ? '⛅' : '☁️',
-      InfoStickerWeather.cloudy => '☁️',
-      InfoStickerWeather.fog => '🌫️',
-      InfoStickerWeather.drizzle || InfoStickerWeather.rain => '🌧️',
-      InfoStickerWeather.snow => '🌨️',
-      InfoStickerWeather.showers => data.isDay ? '🌦️' : '🌧️',
-      InfoStickerWeather.thunderstorm => '⛈️',
+      final weather => weatherEmoji(weather, isDay: data.isDay),
     },
     _ => null,
+  };
+
+  /// The emoji of [weather], by day or by night.
+  static InfoStickerEmoji weatherEmoji(
+    InfoStickerWeather weather, {
+    required bool isDay,
+  }) => switch (weather) {
+    InfoStickerWeather.clear =>
+      isDay ? InfoStickerEmoji.sun : InfoStickerEmoji.crescentMoon,
+    InfoStickerWeather.partlyCloudy =>
+      isDay ? InfoStickerEmoji.sunBehindCloud : InfoStickerEmoji.cloud,
+    InfoStickerWeather.cloudy => InfoStickerEmoji.cloud,
+    InfoStickerWeather.fog => InfoStickerEmoji.fog,
+    InfoStickerWeather.drizzle ||
+    InfoStickerWeather.rain => InfoStickerEmoji.rain,
+    InfoStickerWeather.snow => InfoStickerEmoji.snow,
+    InfoStickerWeather.showers =>
+      isDay ? InfoStickerEmoji.sunBehindRainCloud : InfoStickerEmoji.rain,
+    InfoStickerWeather.thunderstorm => InfoStickerEmoji.thunderstorm,
+  };
+
+  /// A sun sticker's times, each with the emoji of its event.
+  static List<(InfoStickerEmoji, String)> sunTimes(InfoStickerData data) => [
+    if (data.sunrise case final sunrise?)
+      (InfoStickerEmoji.sunrise, _clock(data, sunrise)),
+    if (data.sunset case final sunset?)
+      (InfoStickerEmoji.sunset, _clock(data, sunset)),
+  ];
+
+  /// Every emoji the sticker draws.
+  static Set<InfoStickerEmoji> emojis(InfoStickerData data) => {
+    ?emoji(data),
+    if (data.kind == InfoStickerKind.sun)
+      for (final (emoji, _) in sunTimes(data)) emoji,
   };
 
   /// The flag of the country with the ISO 3166 [countryCode], or `null` for
@@ -112,11 +144,11 @@ abstract final class InfoStickerFormat {
 
   /// A globe turned to [side] of the world, or one with meridians for a
   /// place whose side is not known.
-  static String globe(InfoStickerGlobe? side) => switch (side) {
-    null => '🌐',
-    InfoStickerGlobe.americas => '🌎',
-    InfoStickerGlobe.europeAfrica => '🌍',
-    InfoStickerGlobe.asiaPacific => '🌏',
+  static InfoStickerEmoji globe(InfoStickerGlobe? side) => switch (side) {
+    null => InfoStickerEmoji.globeMeridians,
+    InfoStickerGlobe.americas => InfoStickerEmoji.globeAmericas,
+    InfoStickerGlobe.europeAfrica => InfoStickerEmoji.globeEuropeAfrica,
+    InfoStickerGlobe.asiaPacific => InfoStickerEmoji.globeAsiaAustralia,
   };
 
   /// What a screen reader says for the sticker.

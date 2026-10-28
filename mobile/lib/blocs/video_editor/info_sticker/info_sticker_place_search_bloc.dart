@@ -20,6 +20,7 @@ class InfoStickerPlaceSearchBloc
   }) : _repository = repository,
        _languageCode = languageCode,
        super(const InfoStickerPlaceSearchState()) {
+    on<InfoStickerPlaceSearchStarted>(_onStarted);
     // Debounced, and a newer query cancels the older search's answer.
     on<InfoStickerPlaceQueryChanged>(
       _onQueryChanged,
@@ -30,10 +31,19 @@ class InfoStickerPlaceSearchBloc
   final InfoStickerRepository _repository;
   final String _languageCode;
 
+  Future<void> _onStarted(
+    InfoStickerPlaceSearchStarted event,
+    Emitter<InfoStickerPlaceSearchState> emit,
+  ) async {
+    if (await _repository.isPlaceSearchAvailable()) return;
+    emit(state.copyWith(status: .unavailable));
+  }
+
   Future<void> _onQueryChanged(
     InfoStickerPlaceQueryChanged event,
     Emitter<InfoStickerPlaceSearchState> emit,
   ) async {
+    if (state.status == InfoStickerPlaceSearchStatus.unavailable) return;
     final query = event.query.trim();
     if (query.length < minSearchQueryLength) {
       emit(InfoStickerPlaceSearchState(query: query));

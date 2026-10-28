@@ -1,61 +1,49 @@
-// ABOUTME: Looks up what info stickers show: places, weather and altitude
-// ABOUTME: from Open-Meteo, the battery level and when a clip was recorded.
+// ABOUTME: Looks up what info stickers show: places from the phone's geocoder,
+// ABOUTME: weather and altitude from MET Norway, sun times, battery and time.
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' show Locale;
 
 import 'package:battery_plus/battery_plus.dart';
 import 'package:clock/clock.dart';
+import 'package:daylight/daylight.dart';
 import 'package:equatable/equatable.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
-import 'package:openvine/repositories/info_sticker_time_zones.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show ProVideoEditor;
-import 'package:timezone/timezone.dart' as tz;
 
 /// A place the place search found.
 class InfoStickerPlace extends Equatable {
   const InfoStickerPlace({
     required this.name,
-    required this.latitude,
-    required this.longitude,
+    required this.address,
     this.detail,
-    this.elevation,
     this.countryCode,
-    this.timeZone,
   });
 
   /// What the place is called: a town, a district or a mountain.
   final String name;
 
-  /// Where it is, such as "Kanton Bern, Schweiz", or `null` when [name] says
-  /// it all.
+  /// Where it is, such as "Bern, Schweiz", or `null` when [name] says it all.
   final String? detail;
 
-  final double latitude;
-  final double longitude;
-
-  /// Its altitude above sea level in metres, when the search knew it.
-  final double? elevation;
+  /// What the geocoder is asked to find the place again, [name] with
+  /// everything that tells it apart, such as "Zermatt, Wallis, Schweiz". The
+  /// search names places without their coordinates.
+  final String address;
 
   /// The ISO 3166 code of its country, such as `CH`.
   final String? countryCode;
 
-  /// Its IANA time zone, such as `Europe/Zurich`.
-  final String? timeZone;
-
   @override
-  List<Object?> get props => [
-    name,
-    detail,
-    latitude,
-    longitude,
-    elevation,
-    countryCode,
-    timeZone,
-  ];
+  List<Object?> get props => [name, detail, address, countryCode];
 }
+
+/// Where a place is, in degrees.
+typedef InfoStickerCoordinates = ({double latitude, double longitude});
 
 /// The weather at a place and time.
 class InfoStickerWeatherReading extends Equatable {
@@ -68,7 +56,7 @@ class InfoStickerWeatherReading extends Equatable {
   final double temperatureCelsius;
   final bool isDay;
 
-  /// The kind of weather, or `null` for a code the WMO table does not define.
+  /// The kind of weather, or `null` for a symbol MET Norway has no group for.
   final InfoStickerWeather? weather;
 
   @override
@@ -76,7 +64,8 @@ class InfoStickerWeatherReading extends Equatable {
 }
 
 /// When the sun rose and set at a place on a day, as wall-clock times of the
-/// place. Either is `null` on a day it does not happen, near the poles.
+/// phone: the search tells no place's time zone. Either is `null` on a day it
+/// does not happen, near the poles.
 typedef InfoStickerSunTimes = ({DateTime? sunrise, DateTime? sunset});
 
 /// A lookup for an info sticker failed: the service could not be reached,
@@ -90,83 +79,112 @@ class InfoStickerLookupException implements Exception {
   String toString() => 'InfoStickerLookupException: $message';
 }
 
+/// The weather was asked for an hour too long ago: MET Norway only tells the
+/// weather from the current hour on.
+class InfoStickerWeatherTooOldException extends InfoStickerLookupException {
+  const InfoStickerWeatherTooOldException()
+    : super('No weather for an hour that long ago');
+}
+
 /// Settings of [InfoStickerRepository].
 abstract final class InfoStickerRepositoryConfig {
-  /// How long a lookup may take.
+  /// How long a lookup may take. Android's geocoder never answers a request
+  /// that fails, so the place search needs this to end at all.
   static const Duration requestTimeout = Duration(seconds: 10);
 
-  /// How many places a search lists at most.
-  static const int maxPlaces = 8;
+  /// How many places a search lists at most: as many as Android's geocoder
+  /// finds.
+  static const int maxPlaces = 5;
 
-  /// The shortest query the search answers; Open-Meteo returns nothing for a
-  /// single character.
-  static const int minQueryLength = 2;
+  /// How long before the current hour a recording may be for its weather:
+  /// the current hour's then stands in for it. MET Norway keeps no hour
+  /// that has passed.
+  static const Duration weatherHistory = Duration(hours: 1);
 
-  /// The newest data the Open-Meteo forecast API keeps hourly values for,
-  /// counted back from now. Older hours come from its archive.
-  static const Duration forecastHistory = Duration(days: 60);
+  static const String metHost = 'api.met.no';
+  static const String forecastPath = '/weatherapi/locationforecast/2.0/compact';
 
-  static const String forecastHost = 'api.open-meteo.com';
-  static const String archiveHost = 'archive-api.open-meteo.com';
-  static const String geocodingHost = 'geocoding-api.open-meteo.com';
+  /// How the app introduces itself to MET Norway, whose terms ask every
+  /// request to name the app and a way to reach its makers.
+  static const String userAgent = 'DivineMobile/1.0 (+https://divine.video)';
 }
 
 /// Looks up what info stickers show.
 ///
-/// A place is searched by name, so the app never asks for the device's
-/// position, and the search names towns and landmarks rather than addresses.
-/// Its coordinates are only used to ask for the weather or the altitude
-/// there, and are never kept on a sticker. Open-Meteo receives what the
-/// creator types and the coordinates, never who is asking.
+/// A place is searched by name with the phone's own geocoder, so the app
+/// never asks for the device's position, and a street address is shown by
+/// its town only. Its coordinates are only used to ask MET Norway for the
+/// weather or the altitude there and to work out the sun times, and are never
+/// kept on a sticker. MET Norway receives the coordinates, never who is
+/// asking.
 class InfoStickerRepository {
   InfoStickerRepository({
     http.Client? client,
+    Geocoding? geocoding,
     Battery? battery,
     ProVideoEditor? videoEditor,
   }) : _client = client ?? http.Client(),
+       _geocodingOverride = geocoding,
        _batteryOverride = battery,
        _videoEditor = videoEditor ?? ProVideoEditor.instance;
 
   final http.Client _client;
+  final Geocoding? _geocodingOverride;
   final Battery? _batteryOverride;
   final ProVideoEditor _videoEditor;
+  final _coordinates = <String, InfoStickerCoordinates>{};
+  final _forecasts = <String, Future<Map<String, dynamic>>>{};
 
-  // Created on first use: it reaches a platform plugin when it is built.
+  // Created on first use: both reach a platform plugin when they are built.
+  // The web has no geocoder plugin at all.
+  late final Geocoding? _geocoder =
+      _geocodingOverride ??
+      (GeocodingPlatformFactory.instance == null ? null : Geocoding());
   late final Battery _battery = _batteryOverride ?? Battery();
 
   /// Closes the HTTP client. Lookups still running then fail with an
   /// [InfoStickerLookupException].
   void close() => _client.close();
 
+  /// Whether the phone has a place search at all. Android phones without
+  /// Google's services have none, and neither has the web.
+  Future<bool> isPlaceSearchAvailable() async {
+    final geocoder = _geocoder;
+    if (geocoder == null) return false;
+    try {
+      return await geocoder.isPresent();
+    } on Exception {
+      return false;
+    }
+  }
+
   /// The places [query] finds, named in [languageCode], at most
-  /// [InfoStickerRepositoryConfig.maxPlaces] and none twice. A query shorter
-  /// than [InfoStickerRepositoryConfig.minQueryLength] finds nothing.
+  /// [InfoStickerRepositoryConfig.maxPlaces] and none twice.
   ///
-  /// Throws an [InfoStickerLookupException] when the search cannot be reached
-  /// or answers with something unreadable.
+  /// Throws an [InfoStickerLookupException] when the phone has no geocoder or
+  /// it does not answer in time.
   Future<List<InfoStickerPlace>> searchPlaces(
     String query, {
     required String languageCode,
   }) async {
     final trimmed = query.trim();
-    if (trimmed.length < InfoStickerRepositoryConfig.minQueryLength) {
+    if (trimmed.isEmpty) return const [];
+    final List<Placemark> placemarks;
+    try {
+      placemarks = await _requireGeocoder()
+          .placemarkFromAddress(trimmed, locale: Locale(languageCode))
+          .timeout(InfoStickerRepositoryConfig.requestTimeout);
+    } on TimeoutException {
+      throw const InfoStickerLookupException('The place search timed out');
+    } on InfoStickerLookupException {
+      rethrow;
+    } on Exception {
+      // Both geocoders report a search that found nothing as an error.
       return const [];
     }
-    final body = await _getJson(
-      Uri.https(InfoStickerRepositoryConfig.geocodingHost, '/v1/search', {
-        'name': trimmed,
-        // Asks for more than it lists: the same town comes back once per
-        // feature (the town, its airport), and those collapse into one.
-        'count': '${InfoStickerRepositoryConfig.maxPlaces * 2}',
-        'language': languageCode,
-        'format': 'json',
-      }),
-    );
-    final results = body['results'];
-    if (results is! List) return const [];
     final places = <String, InfoStickerPlace>{};
-    for (final result in results) {
-      final place = result is Map<String, dynamic> ? _placeOf(result) : null;
+    for (final placemark in placemarks) {
+      final place = _placeOf(placemark);
       if (place == null) continue;
       places.putIfAbsent('${place.name}|${place.detail}', () => place);
       if (places.length == InfoStickerRepositoryConfig.maxPlaces) break;
@@ -174,122 +192,111 @@ class InfoStickerRepository {
     return places.values.toList();
   }
 
+  /// Where [place] is.
+  ///
+  /// Throws an [InfoStickerLookupException] when the geocoder cannot find it
+  /// again or does not answer in time.
+  Future<InfoStickerCoordinates> locate(InfoStickerPlace place) async {
+    final known = _coordinates[place.address];
+    if (known != null) return known;
+    final List<Location> locations;
+    try {
+      locations = await _requireGeocoder()
+          .locationFromAddress(place.address)
+          .timeout(InfoStickerRepositoryConfig.requestTimeout);
+    } on TimeoutException {
+      throw const InfoStickerLookupException('Locating the place timed out');
+    } on InfoStickerLookupException {
+      rethrow;
+    } on Exception catch (error) {
+      throw InfoStickerLookupException('Place not found: $error');
+    }
+    if (locations.isEmpty) {
+      throw const InfoStickerLookupException('Place not found');
+    }
+    final location = locations.first;
+    return _coordinates[place.address] = (
+      latitude: location.latitude,
+      longitude: location.longitude,
+    );
+  }
+
   /// The weather at [place] at [time].
   ///
-  /// Throws an [InfoStickerLookupException] when Open-Meteo cannot be reached
-  /// or has no value for that hour.
+  /// Throws an [InfoStickerWeatherTooOldException] when [time] lies more than
+  /// [InfoStickerRepositoryConfig.weatherHistory] before the current hour,
+  /// and an [InfoStickerLookupException] when the place cannot be found or
+  /// MET Norway cannot be reached or has no value for that hour.
   Future<InfoStickerWeatherReading> weatherAt(
     InfoStickerPlace place,
     DateTime time,
   ) async {
-    final hour = time.toUtc();
-    final isRecent =
-        clock.now().toUtc().difference(hour) <=
-        InfoStickerRepositoryConfig.forecastHistory;
-    final hosts = [
-      if (isRecent) InfoStickerRepositoryConfig.forecastHost,
-      InfoStickerRepositoryConfig.archiveHost,
-    ];
-    for (final host in hosts) {
-      final reading = await _hourlyWeather(host, place, hour);
-      if (reading != null) return reading;
+    final hour = _hourOf(time.toUtc());
+    if (_hourOf(clock.now().toUtc()).difference(hour) >
+        InfoStickerRepositoryConfig.weatherHistory) {
+      throw const InfoStickerWeatherTooOldException();
     }
-    throw const InfoStickerLookupException('No weather for that hour');
+    final coordinates = await locate(place);
+    final forecast = await _forecast(coordinates);
+    final properties = forecast['properties'];
+    final series = properties is Map ? properties['timeseries'] : null;
+    final entry = series is List ? _entryAt(series, hour) : null;
+    final data = entry?['data'];
+    final instant = data is Map ? data['instant'] : null;
+    final details = instant is Map ? instant['details'] : null;
+    final temperature = details is Map ? details['air_temperature'] : null;
+    if (data is! Map || temperature is! num) {
+      throw const InfoStickerLookupException('No weather for that hour');
+    }
+    final symbol = _symbolOf(data);
+    return InfoStickerWeatherReading(
+      temperatureCelsius: temperature.toDouble(),
+      isDay: switch (symbol?.split('_').last) {
+        'day' => true,
+        'night' || 'polartwilight' => false,
+        _ => _isSunUp(coordinates, hour),
+      },
+      weather: symbol == null ? null : InfoStickerWeather.fromMetSymbol(symbol),
+    );
   }
 
-  /// When the sun rose and set at [place] on the day of [day].
+  /// When the sun rose and set at [place] on the day of [day], as wall-clock
+  /// times of the phone.
   ///
-  /// Open-Meteo is asked for UTC: its own local times use the place's offset
-  /// of today for every day, an hour off across a change to or from summer
-  /// time. The times are turned into the place's time zone here instead, or
-  /// the phone's when the search named none.
-  ///
-  /// Throws an [InfoStickerLookupException] when Open-Meteo cannot be reached,
-  /// has no times for that day, or the sun neither rose nor set there.
+  /// Throws an [InfoStickerLookupException] when the place cannot be found or
+  /// the sun neither rose nor set there that day.
   Future<InfoStickerSunTimes> sunTimesAt(
     InfoStickerPlace place,
     DateTime day,
   ) async {
-    final date = [
-      day.year.toString().padLeft(4, '0'),
-      day.month.toString().padLeft(2, '0'),
-      day.day.toString().padLeft(2, '0'),
-    ].join('-');
-    final isRecent =
-        clock.now().difference(day).abs() <=
-        InfoStickerRepositoryConfig.forecastHistory;
-    for (final host in [
-      if (isRecent) InfoStickerRepositoryConfig.forecastHost,
-      InfoStickerRepositoryConfig.archiveHost,
-    ]) {
-      final Map<String, dynamic> body;
-      try {
-        body = await _getJson(
-          Uri.https(
-            host,
-            host == InfoStickerRepositoryConfig.archiveHost
-                ? '/v1/archive'
-                : '/v1/forecast',
-            {
-              'latitude': '${place.latitude}',
-              'longitude': '${place.longitude}',
-              'daily': 'sunrise,sunset',
-              'timezone': 'GMT',
-              'start_date': date,
-              'end_date': date,
-            },
-          ),
-        );
-      } on InfoStickerLookupException {
-        // The other host may still have the day.
-        continue;
-      }
-      final daily = body['daily'];
-      if (daily is! Map) continue;
-      final sunrise = _firstUtcTime(daily['sunrise']);
-      final sunset = _firstUtcTime(daily['sunset']);
-      if (sunrise == null && sunset == null) continue;
-      if (_isPolarDay(sunrise, sunset)) {
-        throw const InfoStickerLookupException(
-          'The sun neither rose nor set there that day',
-        );
-      }
-      if (place.timeZone != null) await _loadTimeZones();
-      return (
-        sunrise: _placeTime(sunrise, place.timeZone),
-        sunset: _placeTime(sunset, place.timeZone),
+    final coordinates = await locate(place);
+    final times = _daylightAt(
+      coordinates,
+    ).calculateForDay(DateTime.utc(day.year, day.month, day.day));
+    if (times.sunrise == null && times.sunset == null) {
+      throw const InfoStickerLookupException(
+        'The sun neither rose nor set there that day',
       );
     }
-    throw const InfoStickerLookupException('No sun times for that day');
-  }
-
-  /// Whether Open-Meteo's [sunrise] and [sunset] stand for a day the sun
-  /// stays up or down: it answers with midnight for both, the same one in a
-  /// polar night and the next day's in a midnight sun.
-  static bool _isPolarDay(DateTime? sunrise, DateTime? sunset) {
-    if (sunrise == null || sunset == null) return false;
-    final span = sunset.difference(sunrise);
-    return span == Duration.zero || span == const Duration(days: 1);
-  }
-
-  /// The altitude of [place] above sea level, in metres: the one the search
-  /// found it with, or else Open-Meteo's for its coordinates.
-  ///
-  /// Throws an [InfoStickerLookupException] when Open-Meteo cannot be reached.
-  Future<double> elevationAt(InfoStickerPlace place) async {
-    final known = place.elevation;
-    if (known != null) return known;
-    final body = await _getJson(
-      Uri.https(InfoStickerRepositoryConfig.forecastHost, '/v1/elevation', {
-        'latitude': '${place.latitude}',
-        'longitude': '${place.longitude}',
-      }),
+    return (
+      sunrise: _phoneTime(times.sunrise),
+      sunset: _phoneTime(times.sunset),
     );
-    final elevation = body['elevation'];
-    if (elevation is List && elevation.isNotEmpty && elevation.first is num) {
-      return (elevation.first as num).toDouble();
+  }
+
+  /// The altitude of [place] above sea level, in metres, from MET Norway's
+  /// terrain model.
+  ///
+  /// Throws an [InfoStickerLookupException] when the place cannot be found or
+  /// MET Norway cannot be reached.
+  Future<double> elevationAt(InfoStickerPlace place) async {
+    final forecast = await _forecast(await locate(place));
+    final geometry = forecast['geometry'];
+    final point = geometry is Map ? geometry['coordinates'] : null;
+    if (point is List && point.length > 2 && point[2] is num) {
+      return (point[2] as num).toDouble();
     }
-    throw const InfoStickerLookupException('No elevation in the answer');
+    throw const InfoStickerLookupException('No altitude in the answer');
   }
 
   /// The battery level, from 0 to 100.
@@ -332,53 +339,48 @@ class InfoStickerRepository {
     return clip.recordedAt;
   }
 
-  /// The weather [host] has for [hour], or `null` when it has none.
-  Future<InfoStickerWeatherReading?> _hourlyWeather(
-    String host,
-    InfoStickerPlace place,
-    DateTime hour,
-  ) async {
-    final stamp =
-        '${hour.toIso8601String().substring(0, 13)}:00'; // yyyy-MM-ddTHH:00
-    final path = host == InfoStickerRepositoryConfig.archiveHost
-        ? '/v1/archive'
-        : '/v1/forecast';
-    final Map<String, dynamic> body;
-    try {
-      body = await _getJson(
-        Uri.https(host, path, {
-          'latitude': '${place.latitude}',
-          'longitude': '${place.longitude}',
-          'hourly': 'temperature_2m,weather_code,is_day',
-          'timezone': 'GMT',
-          'start_hour': stamp,
-          'end_hour': stamp,
-        }),
-      );
-    } on InfoStickerLookupException {
-      // The other host may still have the hour; the caller throws when none
-      // does.
-      return null;
-    }
-    final hourly = body['hourly'];
-    if (hourly is! Map) return null;
-    final temperature = _first(hourly['temperature_2m']);
-    if (temperature == null) return null;
-    final code = _first(hourly['weather_code']);
-    return InfoStickerWeatherReading(
-      temperatureCelsius: temperature.toDouble(),
-      isDay: _first(hourly['is_day']) != 0,
-      weather: code == null
-          ? null
-          : InfoStickerWeather.fromWmoCode(code.toInt()),
+  Geocoding _requireGeocoder() =>
+      _geocoder ??
+      (throw const InfoStickerLookupException('This platform has no geocoder'));
+
+  /// MET Norway's forecast for [coordinates], asked for once per place.
+  ///
+  /// Its terms ask for at most four decimals, which also keeps nearby
+  /// places on one answer.
+  Future<Map<String, dynamic>> _forecast(InfoStickerCoordinates coordinates) {
+    final latitude = coordinates.latitude.toStringAsFixed(4);
+    final longitude = coordinates.longitude.toStringAsFixed(4);
+    final key = '$latitude,$longitude';
+    final asked = _forecasts[key];
+    if (asked != null) return asked;
+    final request = _getJson(
+      Uri.https(
+        InfoStickerRepositoryConfig.metHost,
+        InfoStickerRepositoryConfig.forecastPath,
+        {'lat': latitude, 'lon': longitude},
+      ),
     );
+    _forecasts[key] = request;
+    // A failed answer is not kept, so asking again can succeed.
+    unawaited(
+      request.then<void>(
+        (_) {},
+        onError: (Object _) => _forecasts.remove(key)?.ignore(),
+      ),
+    );
+    return request;
   }
 
   Future<Map<String, dynamic>> _getJson(Uri uri) async {
     final http.Response response;
     try {
       response = await _client
-          .get(uri)
+          .get(
+            uri,
+            headers: const {
+              'User-Agent': InfoStickerRepositoryConfig.userAgent,
+            },
+          )
           .timeout(InfoStickerRepositoryConfig.requestTimeout);
     } on TimeoutException {
       throw InfoStickerLookupException('${uri.host} timed out');
@@ -401,16 +403,69 @@ class InfoStickerRepository {
     throw InfoStickerLookupException('${uri.host} sent no JSON object');
   }
 
-  /// The first time in [values], read as UTC.
-  static DateTime? _firstUtcTime(Object? values) {
-    final raw = values is List && values.isNotEmpty ? values.first : null;
-    return raw is String ? DateTime.tryParse('${raw}Z') : null;
+  static DateTime _hourOf(DateTime utc) =>
+      DateTime.utc(utc.year, utc.month, utc.day, utc.hour);
+
+  /// The forecast step [hour] falls in, or the first when [hour] lies before
+  /// them all. The steps are an hour long at first and six hours later on.
+  static Map<dynamic, dynamic>? _entryAt(List<dynamic> series, DateTime hour) {
+    Map<dynamic, dynamic>? found;
+    for (final entry in series) {
+      if (entry is! Map) continue;
+      final start = DateTime.tryParse('${entry['time']}');
+      if (start == null) continue;
+      if (start.isAfter(hour)) return found ?? entry;
+      found = entry;
+    }
+    final lastStart = DateTime.tryParse('${found?['time']}');
+    return lastStart != null &&
+            hour.difference(lastStart) < const Duration(hours: 6)
+        ? found
+        : null;
   }
 
-  /// [utc] as a wall-clock time in [timeZone].
-  static DateTime? _placeTime(DateTime? utc, String? timeZone) {
+  /// The symbol of the next hour, or of the next six or twelve when a later
+  /// step has no hourly one.
+  static String? _symbolOf(Map<dynamic, dynamic> data) {
+    for (final period in const [
+      'next_1_hours',
+      'next_6_hours',
+      'next_12_hours',
+    ]) {
+      final next = data[period];
+      final summary = next is Map ? next['summary'] : null;
+      final symbol = summary is Map ? summary['symbol_code'] : null;
+      if (symbol is String && symbol.isNotEmpty) return symbol;
+    }
+    return null;
+  }
+
+  static DaylightCalculator _daylightAt(InfoStickerCoordinates coordinates) =>
+      DaylightCalculator(
+        DaylightLocation(coordinates.latitude, coordinates.longitude),
+      );
+
+  /// Whether the sun is up at [coordinates] at the UTC [time]. The day it
+  /// belongs to there may start or end on the UTC day before or after.
+  static bool _isSunUp(InfoStickerCoordinates coordinates, DateTime time) {
+    final calculator = _daylightAt(coordinates);
+    for (final offset in const [-1, 0, 1]) {
+      final day = DateTime.utc(time.year, time.month, time.day + offset);
+      final times = calculator.calculateForDay(day);
+      final (sunrise, sunset) = (times.sunrise, times.sunset);
+      if (sunrise == null || sunset == null) {
+        if (offset == 0) return times.type == DayType.allDay;
+        continue;
+      }
+      if (!time.isBefore(sunrise) && time.isBefore(sunset)) return true;
+    }
+    return false;
+  }
+
+  /// [utc] as a wall-clock time of the phone, to the minute.
+  static DateTime? _phoneTime(DateTime? utc) {
     if (utc == null) return null;
-    final local = _inTimeZone(utc, timeZone);
+    final local = utc.toLocal();
     return DateTime(
       local.year,
       local.month,
@@ -420,65 +475,39 @@ class InfoStickerRepository {
     );
   }
 
-  /// [utc] in [timeZone], once [_loadTimeZones] has run.
-  static DateTime _inTimeZone(DateTime utc, String? timeZone) {
-    if (timeZone == null) return utc.toLocal();
-    try {
-      return tz.TZDateTime.from(utc, tz.getLocation(timeZone));
-    } on tz.LocationNotFoundException {
-      return utc.toLocal();
+  /// The place one geocoder result describes, or `null` when it has no name.
+  /// A street address is shown by its town, so a creator who types their
+  /// home address does not put it on a video.
+  static InfoStickerPlace? _placeOf(Placemark placemark) {
+    final town =
+        _nonEmpty(placemark.locality) ??
+        _nonEmpty(placemark.subAdministrativeArea);
+    final region = _nonEmpty(placemark.administrativeArea);
+    final country = _nonEmpty(placemark.country);
+    final street = _nonEmpty(placemark.thoroughfare);
+    final number = _nonEmpty(placemark.subThoroughfare);
+    var name = _nonEmpty(placemark.name);
+    if (name == null ||
+        (number != null && name.contains(number)) ||
+        (street != null && name.contains(street))) {
+      name = town ?? region ?? country;
     }
-  }
-
-  /// Loads the time zone database once. It holds each zone's whole history,
-  /// so an older day gets the summer or winter time it had then; on the web
-  /// it is a library of its own, fetched when a sun sticker first needs it.
-  ///
-  /// Throws an [InfoStickerLookupException] when it cannot be fetched.
-  static Future<void> _loadTimeZones() async {
-    if (_timeZonesLoaded) return;
-    try {
-      await loadTimeZoneDatabase();
-    } on Exception catch (error) {
-      throw InfoStickerLookupException('No time zone data: $error');
-    }
-    _timeZonesLoaded = true;
-  }
-
-  static bool _timeZonesLoaded = false;
-
-  static num? _first(Object? values) =>
-      values is List && values.isNotEmpty && values.first is num
-      ? values.first as num
-      : null;
-
-  /// The place one Open-Meteo search result describes, or `null` when it
-  /// has no name or coordinates.
-  static InfoStickerPlace? _placeOf(Map<String, dynamic> result) {
-    final name = _nonEmpty(result['name']);
-    final latitude = result['latitude'];
-    final longitude = result['longitude'];
-    if (name == null || latitude is! num || longitude is! num) return null;
-    final region = _nonEmpty(result['admin1']);
-    final country = _nonEmpty(result['country']);
-    final detail = [
-      if (region != null && region != name) region,
-      if (country != null && country != name) country,
-    ].join(', ');
-    final elevation = result['elevation'];
+    if (name == null) return null;
+    final around = <String>{
+      ?town,
+      ?region,
+      ?country,
+    }.where((part) => part != name).toList();
     return InfoStickerPlace(
       name: name,
-      detail: detail.isEmpty ? null : detail,
-      latitude: latitude.toDouble(),
-      longitude: longitude.toDouble(),
-      elevation: elevation is num ? elevation.toDouble() : null,
-      countryCode: _nonEmpty(result['country_code']),
-      timeZone: _nonEmpty(result['timezone']),
+      detail: around.isEmpty ? null : around.join(', '),
+      address: [name, ...around].join(', '),
+      countryCode: _nonEmpty(placemark.isoCountryCode)?.toUpperCase(),
     );
   }
 
-  static String? _nonEmpty(Object? value) {
-    final trimmed = value is String ? value.trim() : null;
+  static String? _nonEmpty(String? value) {
+    final trimmed = value?.trim();
     return trimmed == null || trimmed.isEmpty ? null : trimmed;
   }
 }

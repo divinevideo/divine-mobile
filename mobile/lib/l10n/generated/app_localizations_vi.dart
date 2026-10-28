@@ -10703,8 +10703,8 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorInfoStickerChangePlace => 'Đổi địa điểm';
 
   @override
-  String get videoEditorInfoStickerPlaceAttribution =>
-      'Dữ liệu địa điểm từ GeoNames qua Open-Meteo.com.';
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Tìm kiếm địa điểm không khả dụng trên thiết bị này.';
 
   @override
   String videoEditorInfoStickerRecordedValue(String value) {
@@ -10819,8 +10819,42 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorInfoStickerLoadFailed => 'Không tải được. Thử lại nhé.';
 
   @override
-  String get videoEditorInfoStickerWeatherAttribution =>
-      'Dữ liệu thời tiết từ Open-Meteo.com';
+  String get videoEditorInfoStickerMetAttribution => 'Dữ liệu từ MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'Không có thời tiết cho video cũ hơn, nên đây là thời tiết hiện tại.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Nắng';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Đêm quang';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'Ít mây';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Nhiều mây';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Sương mù';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Mưa';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Mưa rào';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Tuyết';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'Dông';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'Thời gian theo múi giờ trên điện thoại của bạn.';
 
   @override
   String get videoEditorInfoStickerTemperatureLabel => 'Nhiệt độ';

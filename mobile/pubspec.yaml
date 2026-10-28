@@ -430,7 +430,8 @@ dependencies:
   volume_controller: ^3.4.4
   meta: ^1.18.0
   battery_plus: ^7.1.2
-  timezone: ^0.11.0
+  daylight: ^3.1.0
+  geocoding: ^5.0.0
   flutter_timezone: ^5.1.1
 
 dependency_overrides:
@@ -529,6 +530,7 @@ flutter:
     - assets/licenses/
     - assets/icon/
     - assets/illustrations/
+    - assets/info_stickers/
     - assets/loading-brand-sprite.png
     - assets/seed_data/seed_events.json
     - assets/seed_data/classic_viner_profiles.json

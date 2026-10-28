@@ -61,7 +61,7 @@ Future<InfoStickerData?> showInfoStickerSheet(
             create: (_) => InfoStickerPlaceSearchBloc(
               repository: lookups,
               languageCode: initial.locale.languageCode,
-            ),
+            )..add(const InfoStickerPlaceSearchStarted()),
           ),
         ],
         child: InfoStickerSheet(isNew: isNew),
@@ -153,7 +153,10 @@ class _DesignStep extends StatelessWidget {
                   InfoStickerKind.location => const [
                     InfoStickerSymbolChoice(),
                   ],
-                  InfoStickerKind.weather ||
+                  InfoStickerKind.weather => const [
+                    InfoStickerWeatherChoice(),
+                    InfoStickerValueField(),
+                  ],
                   InfoStickerKind.altitude => const [InfoStickerValueField()],
                   InfoStickerKind.sun => const [InfoStickerLookupNote()],
                   InfoStickerKind.battery => const [InfoStickerBatterySlider()],

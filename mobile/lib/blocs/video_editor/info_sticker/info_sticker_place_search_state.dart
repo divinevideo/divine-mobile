@@ -1,7 +1,16 @@
 part of 'info_sticker_place_search_bloc.dart';
 
 /// Where a place search is.
-enum InfoStickerPlaceSearchStatus { idle, loading, success, failure }
+enum InfoStickerPlaceSearchStatus {
+  idle,
+  loading,
+  success,
+  failure,
+
+  /// The phone has no place search, such as an Android phone without
+  /// Google's services.
+  unavailable,
+}
 
 /// The places found for what the creator typed.
 class InfoStickerPlaceSearchState extends Equatable {

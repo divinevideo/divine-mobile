@@ -11,7 +11,7 @@ import 'package:openvine/repositories/info_sticker_repository.dart';
 class _MockInfoStickerRepository extends Mock
     implements InfoStickerRepository {}
 
-const _bern = InfoStickerPlace(name: 'Bern', latitude: 46.95, longitude: 7.45);
+const _bern = InfoStickerPlace(name: 'Bern', address: 'Bern');
 
 void main() {
   group(InfoStickerPlaceSearchBloc, () {
@@ -25,6 +25,33 @@ void main() {
       repository: repository,
       languageCode: 'de',
     );
+
+    group(InfoStickerPlaceSearchStarted, () {
+      blocTest<InfoStickerPlaceSearchBloc, InfoStickerPlaceSearchState>(
+        'reports a phone without a place search and searches nothing',
+        setUp: () => when(
+          repository.isPlaceSearchAvailable,
+        ).thenAnswer((_) async => false),
+        build: build,
+        act: (bloc) async {
+          bloc.add(const InfoStickerPlaceSearchStarted());
+          await pumpEventQueue();
+          bloc.add(const InfoStickerPlaceQueryChanged('Bern'));
+        },
+        wait: searchDebounceDuration * 2,
+        expect: () => const [
+          InfoStickerPlaceSearchState(
+            status: InfoStickerPlaceSearchStatus.unavailable,
+          ),
+        ],
+        verify: (_) => verifyNever(
+          () => repository.searchPlaces(
+            any(),
+            languageCode: any(named: 'languageCode'),
+          ),
+        ),
+      );
+    });
 
     group(InfoStickerPlaceQueryChanged, () {
       blocTest<InfoStickerPlaceSearchBloc, InfoStickerPlaceSearchState>(

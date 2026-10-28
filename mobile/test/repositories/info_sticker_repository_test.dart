@@ -1,15 +1,17 @@
-// ABOUTME: Tests the info sticker lookups: place search, weather and altitude
-// ABOUTME: from Open-Meteo, the battery level and the recording time.
+// ABOUTME: Tests the info sticker lookups: places from the phone's geocoder,
+// ABOUTME: weather and altitude from MET Norway, sun times, battery and time.
 
+import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show HandshakeException;
-import 'dart:ui' show Size;
+import 'dart:ui' show Locale, Size;
 
 import 'package:battery_plus/battery_plus.dart';
 import 'package:clock/clock.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/services.dart'
     show MissingPluginException, PlatformException;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
@@ -21,43 +23,59 @@ import 'package:pro_video_editor/pro_video_editor.dart'
 
 class _MockBattery extends Mock implements Battery {}
 
+class _MockGeocoding extends Mock implements Geocoding {}
+
 class _MockProVideoEditor extends Mock implements ProVideoEditor {}
 
 const _bern = InfoStickerPlace(
   name: 'Bern',
-  detail: 'Kanton Bern, Schweiz',
-  latitude: 46.95,
-  longitude: 7.45,
-  elevation: 540,
+  detail: 'Schweiz',
+  address: 'Bern, Schweiz',
   countryCode: 'CH',
-  timeZone: 'Europe/Zurich',
 );
 
-Map<String, Object?> _result(
-  String name, {
-  String? admin1,
-  String? country,
-  double? elevation,
-}) => {
-  'name': name,
-  'latitude': 46.95,
-  'longitude': 7.45,
-  'elevation': ?elevation,
-  'admin1': ?admin1,
-  'country': ?country,
-};
+/// The minute the weather tests run at.
+final _now = DateTime.utc(2026, 10, 28, 10, 29);
 
-http.Response _hourly(Object? temperature, {int code = 0, int isDay = 1}) =>
-    http.Response(
-      jsonEncode({
-        'hourly': {
-          'temperature_2m': [temperature],
-          'weather_code': [code],
-          'is_day': [isDay],
-        },
-      }),
-      200,
-    );
+/// A geocoder that finds [_bern], or wherever [at] says, again.
+_MockGeocoding _geocoder({
+  double latitude = 46.95,
+  double longitude = 7.45,
+}) {
+  final geocoder = _MockGeocoding();
+  when(() => geocoder.locationFromAddress(any())).thenAnswer(
+    (_) async => [Location(latitude: latitude, longitude: longitude)],
+  );
+  return geocoder;
+}
+
+/// MET Norway's forecast at an altitude of 540 m, one step per entry of
+/// [steps]: its start, temperature and symbol.
+http.Response _forecast(List<(DateTime, num, String)> steps) => http.Response(
+  jsonEncode({
+    'geometry': {
+      'type': 'Point',
+      'coordinates': [7.45, 46.95, 540],
+    },
+    'properties': {
+      'timeseries': [
+        for (final (start, temperature, symbol) in steps)
+          {
+            'time': start.toIso8601String(),
+            'data': {
+              'instant': {
+                'details': {'air_temperature': temperature},
+              },
+              'next_1_hours': {
+                'summary': {'symbol_code': symbol},
+              },
+            },
+          },
+      ],
+    },
+  }),
+  200,
+);
 
 VideoMetadata _metadata(DateTime? date) => VideoMetadata(
   duration: const Duration(seconds: 4),
@@ -71,301 +89,364 @@ VideoMetadata _metadata(DateTime? date) => VideoMetadata(
 
 InfoStickerRepository _repository({
   http.Client? client,
+  Geocoding? geocoding,
   Battery? battery,
   ProVideoEditor? videoEditor,
 }) => InfoStickerRepository(
   client: client ?? MockClient((_) async => http.Response('{}', 404)),
+  geocoding: geocoding,
   battery: battery,
   videoEditor: videoEditor,
 );
 
 void main() {
+  setUpAll(() => registerFallbackValue(const Locale('en')));
+
   group(InfoStickerRepository, () {
-    group('searchPlaces', () {
-      test('names each place and where it is, in the asked language', () async {
-        Uri? asked;
-        final client = MockClient((request) async {
-          asked = request.url;
-          return http.Response(
-            jsonEncode({
-              'results': [
-                {
-                  ..._result(
-                    'Bern',
-                    admin1: 'Kanton Bern',
-                    country: 'Schweiz',
-                    elevation: 540,
-                  ),
-                  'country_code': 'CH',
-                  'timezone': 'Europe/Zurich',
-                },
-              ],
-            }),
-            200,
-          );
-        });
-
-        final places = await _repository(
-          client: client,
-        ).searchPlaces(' Bern ', languageCode: 'de');
-
-        expect(places, equals([_bern]));
-        expect(asked!.queryParameters['name'], equals('Bern'));
-        expect(asked!.queryParameters['language'], equals('de'));
+    group('isPlaceSearchAvailable', () {
+      test('is false where no geocoder plugin is registered', () async {
+        expect(await _repository().isPlaceSearchAvailable(), isFalse);
       });
 
-      test('lists a town found as several features once', () async {
-        final client = MockClient(
-          (_) async => http.Response(
-            jsonEncode({
-              'results': [
-                _result('Zermatt', admin1: 'Kanton Wallis', country: 'CH'),
-                _result('Zermatt', admin1: 'Kanton Wallis', country: 'CH'),
-              ],
-            }),
-            200,
-          ),
+      test('is false where the phone has no geocoder service', () async {
+        final geocoder = _MockGeocoding();
+        when(geocoder.isPresent).thenAnswer((_) async => false);
+
+        expect(
+          await _repository(geocoding: geocoder).isPlaceSearchAvailable(),
+          isFalse,
         );
+      });
+    });
+
+    group('searchPlaces', () {
+      void answer(_MockGeocoding geocoder, List<Placemark> placemarks) => when(
+        () => geocoder.placemarkFromAddress(
+          any(),
+          locale: any(named: 'locale'),
+        ),
+      ).thenAnswer((_) async => placemarks);
+
+      test('names each place and where it is, in the asked language', () async {
+        final geocoder = _MockGeocoding();
+        answer(geocoder, [
+          const Placemark(
+            name: 'Zermatt',
+            locality: 'Zermatt',
+            administrativeArea: 'Wallis',
+            country: 'Schweiz',
+            isoCountryCode: 'ch',
+          ),
+        ]);
 
         final places = await _repository(
-          client: client,
-        ).searchPlaces('Zermatt', languageCode: 'de');
+          geocoding: geocoder,
+        ).searchPlaces(' Zermatt ', languageCode: 'de');
+
+        expect(
+          places,
+          equals(const [
+            InfoStickerPlace(
+              name: 'Zermatt',
+              detail: 'Wallis, Schweiz',
+              address: 'Zermatt, Wallis, Schweiz',
+              countryCode: 'CH',
+            ),
+          ]),
+        );
+        verify(
+          () => geocoder.placemarkFromAddress(
+            'Zermatt',
+            locale: const Locale('de'),
+          ),
+        ).called(1);
+      });
+
+      test('shows a street address by its town', () async {
+        final geocoder = _MockGeocoding();
+        answer(geocoder, [
+          const Placemark(
+            name: 'Bahnhofstrasse 12',
+            thoroughfare: 'Bahnhofstrasse',
+            subThoroughfare: '12',
+            locality: 'Bern',
+            administrativeArea: 'Bern',
+            country: 'Schweiz',
+            isoCountryCode: 'CH',
+          ),
+        ]);
+
+        final places = await _repository(
+          geocoding: geocoder,
+        ).searchPlaces('Bahnhofstrasse 12 Bern', languageCode: 'de');
+
+        expect(places, equals(const [_bern]));
+      });
+
+      test('lists a place found twice once', () async {
+        final geocoder = _MockGeocoding();
+        const bern = Placemark(name: 'Bern', country: 'Schweiz');
+        answer(geocoder, [bern, bern]);
+
+        final places = await _repository(
+          geocoding: geocoder,
+        ).searchPlaces('Bern', languageCode: 'de');
 
         expect(places, hasLength(1));
       });
 
-      test('finds nothing without asking for a single character', () async {
-        var asked = false;
-        final client = MockClient((_) async {
-          asked = true;
-          return http.Response('{}', 200);
+      test('finds nothing when the geocoder reports no result', () async {
+        final geocoder = _MockGeocoding();
+        when(
+          () => geocoder.placemarkFromAddress(
+            any(),
+            locale: any(named: 'locale'),
+          ),
+        ).thenThrow(PlatformException(code: 'NOT_FOUND'));
+
+        final places = await _repository(
+          geocoding: geocoder,
+        ).searchPlaces('Xyzzy', languageCode: 'de');
+
+        expect(places, isEmpty);
+      });
+
+      test('fails when the geocoder never answers', () {
+        fakeAsync((async) {
+          final geocoder = _MockGeocoding();
+          when(
+            () => geocoder.placemarkFromAddress(
+              any(),
+              locale: any(named: 'locale'),
+            ),
+          ).thenAnswer((_) => Completer<List<Placemark>>().future);
+          Object? failure;
+          unawaited(
+            _repository(geocoding: geocoder)
+                .searchPlaces('Bern', languageCode: 'de')
+                .then<void>((_) {}, onError: (Object error) => failure = error),
+          );
+
+          async.elapse(InfoStickerRepositoryConfig.requestTimeout);
+
+          expect(failure, isA<InfoStickerLookupException>());
         });
-
-        final places = await _repository(
-          client: client,
-        ).searchPlaces('B', languageCode: 'de');
-
-        expect(places, isEmpty);
-        expect(asked, isFalse);
       });
 
-      test('finds nothing when the answer lists no results', () async {
-        final client = MockClient(
-          (_) async => http.Response('{"generationtime_ms":0.1}', 200),
-        );
-
-        final places = await _repository(
-          client: client,
-        ).searchPlaces('xqzv', languageCode: 'de');
-
-        expect(places, isEmpty);
-      });
-
-      test('fails when the search cannot be reached', () async {
-        final client = MockClient((_) async => http.Response('oops', 503));
-
+      test('fails where no geocoder plugin is registered', () async {
         await expectLater(
-          _repository(client: client).searchPlaces('Bern', languageCode: 'de'),
+          _repository().searchPlaces('Bern', languageCode: 'de'),
           throwsA(isA<InfoStickerLookupException>()),
         );
       });
+    });
 
-      test('fails as a lookup when the TLS handshake fails', () async {
-        final client = MockClient(
-          (_) async => throw const HandshakeException('captive portal'),
-        );
+    group('locate', () {
+      test('finds the place again by its address, once', () async {
+        final geocoder = _geocoder();
+        final repository = _repository(geocoding: geocoder);
+
+        await repository.locate(_bern);
+        final coordinates = await repository.locate(_bern);
+
+        expect(coordinates, equals((latitude: 46.95, longitude: 7.45)));
+        verify(() => geocoder.locationFromAddress('Bern, Schweiz')).called(1);
+      });
+
+      test('fails when the geocoder cannot find the place again', () async {
+        final geocoder = _MockGeocoding();
+        when(
+          () => geocoder.locationFromAddress(any()),
+        ).thenAnswer((_) async => []);
 
         await expectLater(
-          _repository(client: client).searchPlaces('Bern', languageCode: 'de'),
+          _repository(geocoding: geocoder).locate(_bern),
           throwsA(isA<InfoStickerLookupException>()),
         );
       });
     });
 
     group('weatherAt', () {
-      test('reads a recent hour from the forecast', () async {
-        final hosts = <String>[];
+      test('reads the forecast step of the hour from MET Norway', () async {
+        http.Request? asked;
         final client = MockClient((request) async {
-          hosts.add(request.url.host);
-          return _hourly(21.4, code: 2, isDay: 0);
+          asked = request;
+          return _forecast([
+            (DateTime.utc(2026, 10, 28, 10), 10.6, 'partlycloudy_day'),
+            (DateTime.utc(2026, 10, 28, 11), 12, 'rain'),
+          ]);
         });
 
         final reading = await withClock(
-          Clock.fixed(DateTime.utc(2026, 10, 26, 16)),
+          Clock.fixed(_now),
           () => _repository(
             client: client,
-          ).weatherAt(_bern, DateTime.utc(2026, 10, 26, 14, 30)),
+            geocoding: _geocoder(latitude: 46.948123, longitude: 7.447456),
+          ).weatherAt(_bern, DateTime.utc(2026, 10, 28, 10, 15)),
         );
 
         expect(
           reading,
           equals(
             const InfoStickerWeatherReading(
-              temperatureCelsius: 21.4,
-              isDay: false,
+              temperatureCelsius: 10.6,
+              isDay: true,
               weather: InfoStickerWeather.partlyCloudy,
             ),
           ),
         );
-        expect(hosts, equals([InfoStickerRepositoryConfig.forecastHost]));
+        expect(asked!.url.host, equals(InfoStickerRepositoryConfig.metHost));
+        expect(
+          asked!.url.queryParameters,
+          equals({'lat': '46.9481', 'lon': '7.4475'}),
+        );
+        expect(
+          asked!.headers['User-Agent'],
+          equals(InfoStickerRepositoryConfig.userAgent),
+        );
       });
 
       test(
-        'falls back to the archive when the forecast has no value',
+        'takes the current hour for a recording in the hour before',
         () async {
-          final client = MockClient((request) async {
-            return request.url.host == InfoStickerRepositoryConfig.forecastHost
-                ? _hourly(null)
-                : _hourly(12.8, code: 51);
-          });
-
-          final reading = await withClock(
-            Clock.fixed(DateTime.utc(2026, 10, 26, 16)),
-            () => _repository(
-              client: client,
-            ).weatherAt(_bern, DateTime.utc(2026, 10, 25, 14)),
+          final client = MockClient(
+            (_) async => _forecast([
+              (DateTime.utc(2026, 10, 28, 10), 10.6, 'cloudy'),
+            ]),
           );
 
-          expect(reading.temperatureCelsius, equals(12.8));
-          expect(reading.weather, equals(InfoStickerWeather.drizzle));
+          final reading = await withClock(
+            Clock.fixed(_now),
+            () => _repository(
+              client: client,
+              geocoding: _geocoder(),
+            ).weatherAt(_bern, DateTime.utc(2026, 10, 28, 9, 40)),
+          );
+
+          expect(reading.temperatureCelsius, equals(10.6));
         },
       );
 
-      test('asks only the archive for an old hour', () async {
-        final hosts = <String>[];
-        final client = MockClient((request) async {
-          hosts.add(request.url.host);
-          return _hourly(23.5);
-        });
-
-        await withClock(
-          Clock.fixed(DateTime.utc(2026, 10, 26)),
-          () => _repository(
-            client: client,
-          ).weatherAt(_bern, DateTime.utc(2026, 5, 1, 14)),
+      test('works out day or night where the symbol does not say', () async {
+        final client = MockClient(
+          (_) async => _forecast([
+            (DateTime.utc(2026, 10, 28, 10), 10.6, 'cloudy'),
+            (DateTime.utc(2026, 10, 28, 22), 6, 'cloudy'),
+          ]),
+        );
+        final repository = _repository(
+          client: client,
+          geocoding: _geocoder(),
         );
 
-        expect(hosts, equals([InfoStickerRepositoryConfig.archiveHost]));
+        final (day, night) = await withClock(
+          Clock.fixed(_now),
+          () async => (
+            await repository.weatherAt(_bern, DateTime.utc(2026, 10, 28, 10)),
+            await repository.weatherAt(_bern, DateTime.utc(2026, 10, 28, 22)),
+          ),
+        );
+
+        expect(day.isDay, isTrue);
+        expect(night.isDay, isFalse);
       });
 
-      test('fails when no service has the hour', () async {
-        final client = MockClient((_) async => http.Response('oops', 500));
+      test('reports an hour too long ago without asking anyone', () async {
+        var asked = false;
+        final client = MockClient((_) async {
+          asked = true;
+          return _forecast([]);
+        });
+        final geocoder = _geocoder();
 
         await expectLater(
-          _repository(client: client).weatherAt(_bern, DateTime.utc(2026)),
-          throwsA(isA<InfoStickerLookupException>()),
+          withClock(
+            Clock.fixed(_now),
+            () => _repository(
+              client: client,
+              geocoding: geocoder,
+            ).weatherAt(_bern, DateTime.utc(2026, 10, 28, 8, 59)),
+          ),
+          throwsA(isA<InfoStickerWeatherTooOldException>()),
+        );
+        expect(asked, isFalse);
+        verifyNever(() => geocoder.locationFromAddress(any()));
+      });
+
+      test('fails when MET Norway cannot be reached', () async {
+        final client = MockClient((_) async => http.Response('', 503));
+
+        await expectLater(
+          withClock(
+            Clock.fixed(_now),
+            () => _repository(
+              client: client,
+              geocoding: _geocoder(),
+            ).weatherAt(_bern, _now),
+          ),
+          throwsA(
+            isA<InfoStickerLookupException>().having(
+              (error) => error,
+              'error',
+              isNot(isA<InfoStickerWeatherTooOldException>()),
+            ),
+          ),
         );
       });
     });
 
     group('sunTimesAt', () {
-      test("reads the times in the place's summer time", () async {
-        Uri? asked;
-        final client = MockClient((request) async {
-          asked = request.url;
-          return http.Response(
-            jsonEncode({
-              'daily': {
-                'sunrise': ['2026-08-30T04:47'],
-                'sunset': ['2026-08-30T18:11'],
-              },
-            }),
-            200,
-          );
-        });
-        const zermatt = InfoStickerPlace(
-          name: 'Zermatt',
-          latitude: 46.02,
-          longitude: 7.75,
-          timeZone: 'Europe/Zurich',
+      /// [utc] as the repository reports it: the phone's wall clock.
+      DateTime phone(DateTime utc) {
+        final local = utc.toLocal();
+        return DateTime(
+          local.year,
+          local.month,
+          local.day,
+          local.hour,
+          local.minute,
+        );
+      }
+
+      Future<InfoStickerSunTimes> sunTimes(
+        DateTime day, {
+        required double latitude,
+        required double longitude,
+      }) => _repository(
+        geocoding: _geocoder(latitude: latitude, longitude: longitude),
+      ).sunTimesAt(_bern, day);
+
+      test('works out the times on the day', () async {
+        final times = await sunTimes(
+          DateTime(2026, 6, 21),
+          latitude: 46.95,
+          longitude: 7.45,
         );
 
-        final times = await withClock(
-          Clock.fixed(DateTime(2026, 9)),
-          () => _repository(
-            client: client,
-          ).sunTimesAt(zermatt, DateTime(2026, 8, 30, 15)),
-        );
-
-        // Open-Meteo is asked in UTC; Zurich is two hours ahead in summer.
-        expect(asked!.queryParameters['timezone'], equals('GMT'));
-        expect(times.sunrise, equals(DateTime(2026, 8, 30, 6, 47)));
-        expect(times.sunset, equals(DateTime(2026, 8, 30, 20, 11)));
+        // 05:34 and 21:28 in Bern's summer time.
+        expect(times.sunrise, equals(phone(DateTime.utc(2026, 6, 21, 3, 34))));
+        expect(times.sunset, equals(phone(DateTime.utc(2026, 6, 21, 19, 28))));
       });
 
-      test('reads the times in the winter time of an older year', () async {
-        final client = MockClient(
-          (_) async => http.Response(
-            jsonEncode({
-              'daily': {
-                'sunrise': ['2019-12-15T07:06'],
-                'sunset': ['2019-12-15T15:35'],
-              },
-            }),
-            200,
-          ),
+      test('takes the day of the place far east of Greenwich', () async {
+        final times = await sunTimes(
+          DateTime(2026, 6, 21),
+          latitude: 35.68,
+          longitude: 139.69,
         );
 
-        final times = await withClock(
-          Clock.fixed(DateTime(2026, 10, 27)),
-          () => _repository(
-            client: client,
-          ).sunTimesAt(_bern, DateTime(2019, 12, 15, 12)),
-        );
-
-        // Zurich is one hour ahead of UTC in winter, in 2019 as now.
-        expect(times.sunrise, equals(DateTime(2019, 12, 15, 8, 6)));
-        expect(times.sunset, equals(DateTime(2019, 12, 15, 16, 35)));
+        // 04:25 and 19:00 on that day in Tokyo.
+        expect(times.sunrise, equals(phone(DateTime.utc(2026, 6, 20, 19, 25))));
+        expect(times.sunset, equals(phone(DateTime.utc(2026, 6, 21, 9, 59))));
       });
 
-      test('fails when no service has the day', () async {
-        final client = MockClient((_) async => http.Response('oops', 500));
-
-        await expectLater(
-          _repository(client: client).sunTimesAt(_bern, DateTime(2026)),
-          throwsA(isA<InfoStickerLookupException>()),
-        );
-      });
-
-      // Open-Meteo's archive for Tromsø (69.65 N), read 2026-10-27.
-      for (final (label, day, sunrise, sunset) in [
-        (
-          'midnight sun',
-          DateTime(2025, 6, 21),
-          '2025-06-21T00:00',
-          '2025-06-22T00:00',
-        ),
-        (
-          'polar night',
-          DateTime(2025, 12, 21),
-          '2025-12-21T00:00',
-          '2025-12-21T00:00',
-        ),
+      for (final (label, day) in [
+        ('midnight sun', DateTime(2026, 6, 21)),
+        ('polar night', DateTime(2026, 12, 21)),
       ]) {
         test('reads no times on a day of $label', () async {
-          final client = MockClient(
-            (_) async => http.Response(
-              jsonEncode({
-                'daily': {
-                  'sunrise': [sunrise],
-                  'sunset': [sunset],
-                },
-              }),
-              200,
-            ),
-          );
-          const tromso = InfoStickerPlace(
-            name: 'Tromsø',
-            latitude: 69.65,
-            longitude: 18.96,
-            timeZone: 'Europe/Oslo',
-          );
-
           await expectLater(
-            withClock(
-              Clock.fixed(DateTime(2026, 10, 27)),
-              () => _repository(client: client).sunTimesAt(tromso, day),
-            ),
+            sunTimes(day, latitude: 69.65, longitude: 18.96),
             throwsA(isA<InfoStickerLookupException>()),
           );
         });
@@ -373,32 +454,34 @@ void main() {
     });
 
     group('elevationAt', () {
-      test('takes the elevation the search found the place with', () async {
-        var asked = false;
-        final client = MockClient((_) async {
-          asked = true;
-          return http.Response('{}', 200);
-        });
+      test("reads the altitude of MET Norway's terrain model", () async {
+        final client = MockClient((_) async => _forecast([]));
 
-        final meters = await _repository(client: client).elevationAt(_bern);
+        final meters = await _repository(
+          client: client,
+          geocoding: _geocoder(),
+        ).elevationAt(_bern);
 
         expect(meters, equals(540));
-        expect(asked, isFalse);
       });
 
-      test('asks for the elevation of a place found without one', () async {
-        final client = MockClient(
-          (_) async => http.Response('{"elevation":[1608.0]}', 200),
-        );
-        const zermatt = InfoStickerPlace(
-          name: 'Zermatt',
-          latitude: 46.02,
-          longitude: 7.75,
+      test('asks MET Norway once for weather and altitude', () async {
+        var requests = 0;
+        final client = MockClient((_) async {
+          requests++;
+          return _forecast([(DateTime.utc(2026, 10, 28, 10), 10.6, 'fog')]);
+        });
+        final repository = _repository(
+          client: client,
+          geocoding: _geocoder(),
         );
 
-        final meters = await _repository(client: client).elevationAt(zermatt);
+        await withClock(Clock.fixed(_now), () async {
+          await repository.weatherAt(_bern, _now);
+          await repository.elevationAt(_bern);
+        });
 
-        expect(meters, equals(1608));
+        expect(requests, equals(1));
       });
     });
 

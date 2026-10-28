@@ -10662,8 +10662,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorInfoStickerChangePlace => 'Yeri değiştir';
 
   @override
-  String get videoEditorInfoStickerPlaceAttribution =>
-      'Yer verileri Open-Meteo.com üzerinden GeoNames\'ten.';
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Bu cihazda yer arama kullanılamıyor.';
 
   @override
   String videoEditorInfoStickerRecordedValue(String value) {
@@ -10771,8 +10771,43 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorInfoStickerLoadFailed => 'Yüklenemedi. Tekrar dene.';
 
   @override
-  String get videoEditorInfoStickerWeatherAttribution =>
-      'Hava durumu verileri: Open-Meteo.com';
+  String get videoEditorInfoStickerMetAttribution => 'Veriler: MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'Eski videolar için hava durumu yok, bu yüzden şu anki hava durumu gösteriliyor.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Güneşli';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Açık gece';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'Parçalı bulutlu';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Bulutlu';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Sis';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Yağmur';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Sağanak';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Kar';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm =>
+      'Gök gürültülü fırtına';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'Saatler telefonunun saat diliminde.';
 
   @override
   String get videoEditorInfoStickerTemperatureLabel => 'Sıcaklık';

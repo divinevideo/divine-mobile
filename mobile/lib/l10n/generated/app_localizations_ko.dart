@@ -10240,8 +10240,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorInfoStickerChangePlace => '장소 변경';
 
   @override
-  String get videoEditorInfoStickerPlaceAttribution =>
-      '장소 데이터 제공: GeoNames(Open-Meteo.com 경유).';
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      '이 기기에서는 장소 검색을 사용할 수 없어요.';
 
   @override
   String videoEditorInfoStickerRecordedValue(String value) {
@@ -10349,8 +10349,41 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorInfoStickerLoadFailed => '불러오지 못했어요. 다시 시도해 주세요.';
 
   @override
-  String get videoEditorInfoStickerWeatherAttribution =>
-      '날씨 데이터 제공: Open-Meteo.com';
+  String get videoEditorInfoStickerMetAttribution => '데이터 제공: MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      '오래된 동영상의 날씨는 없어서 지금 날씨를 보여 줘요.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => '맑음';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => '맑은 밤';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => '구름 조금';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => '흐림';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => '안개';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => '비';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => '소나기';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => '눈';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => '뇌우';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote => '시간은 휴대폰의 시간대로 표시돼요.';
 
   @override
   String get videoEditorInfoStickerTemperatureLabel => '기온';

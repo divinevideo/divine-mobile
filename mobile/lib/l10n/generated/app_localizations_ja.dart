@@ -10220,8 +10220,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorInfoStickerChangePlace => '場所を変更';
 
   @override
-  String get videoEditorInfoStickerPlaceAttribution =>
-      '場所データ: GeoNames（Open-Meteo.com 経由）。';
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'この端末では場所の検索を利用できません。';
 
   @override
   String videoEditorInfoStickerRecordedValue(String value) {
@@ -10329,8 +10329,41 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorInfoStickerLoadFailed => '読み込めませんでした。もう一度お試しください。';
 
   @override
-  String get videoEditorInfoStickerWeatherAttribution =>
-      '天気データ: Open-Meteo.com';
+  String get videoEditorInfoStickerMetAttribution => 'データ: MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow => '古い動画の天気はないため、現在の天気を表示しています。';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => '晴れ';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => '晴れた夜';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => '晴れ時々曇り';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => '曇り';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => '霧';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => '雨';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'にわか雨';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => '雪';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => '雷雨';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      '時刻はスマートフォンのタイムゾーンで表示されます。';
 
   @override
   String get videoEditorInfoStickerTemperatureLabel => '気温';

@@ -10755,8 +10755,8 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorInfoStickerChangePlace => 'Tukar tempat';
 
   @override
-  String get videoEditorInfoStickerPlaceAttribution =>
-      'Data tempat daripada GeoNames melalui Open-Meteo.com.';
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Carian tempat tidak tersedia pada peranti ini.';
 
   @override
   String videoEditorInfoStickerRecordedValue(String value) {
@@ -10865,8 +10865,42 @@ class AppLocalizationsMs extends AppLocalizations {
       'Tidak dapat dimuatkan. Cuba lagi.';
 
   @override
-  String get videoEditorInfoStickerWeatherAttribution =>
-      'Data cuaca oleh Open-Meteo.com';
+  String get videoEditorInfoStickerMetAttribution => 'Data daripada MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'Tiada data cuaca untuk video lama, jadi ini cuaca sekarang.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Cerah';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Malam cerah';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'Separa mendung';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Mendung';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Kabus';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Hujan';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Hujan berselang';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Salji';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'Ribut petir';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'Masa dipaparkan dalam zon waktu telefon anda.';
 
   @override
   String get videoEditorInfoStickerTemperatureLabel => 'Suhu';

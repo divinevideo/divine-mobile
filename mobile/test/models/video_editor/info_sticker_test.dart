@@ -233,22 +233,38 @@ void main() {
   });
 
   group(InfoStickerWeather, () {
-    test('groups WMO codes', () {
-      expect(InfoStickerWeather.fromWmoCode(0), InfoStickerWeather.clear);
+    test("groups MET Norway's symbols, with or without the time of day", () {
       expect(
-        InfoStickerWeather.fromWmoCode(2),
-        InfoStickerWeather.partlyCloudy,
-      );
-      expect(InfoStickerWeather.fromWmoCode(63), InfoStickerWeather.rain);
-      expect(InfoStickerWeather.fromWmoCode(86), InfoStickerWeather.snow);
-      expect(
-        InfoStickerWeather.fromWmoCode(99),
-        InfoStickerWeather.thunderstorm,
+        {
+          for (final symbol in [
+            'clearsky_night',
+            'fair_day',
+            'cloudy',
+            'fog',
+            'lightrain',
+            'heavysleet',
+            'rainshowers_polartwilight',
+            'lightsnowshowers_day',
+            'heavyrainandthunder',
+          ])
+            symbol: InfoStickerWeather.fromMetSymbol(symbol),
+        },
+        equals({
+          'clearsky_night': InfoStickerWeather.clear,
+          'fair_day': InfoStickerWeather.partlyCloudy,
+          'cloudy': InfoStickerWeather.cloudy,
+          'fog': InfoStickerWeather.fog,
+          'lightrain': InfoStickerWeather.drizzle,
+          'heavysleet': InfoStickerWeather.rain,
+          'rainshowers_polartwilight': InfoStickerWeather.showers,
+          'lightsnowshowers_day': InfoStickerWeather.snow,
+          'heavyrainandthunder': InfoStickerWeather.thunderstorm,
+        }),
       );
     });
 
-    test('knows no code outside the WMO table', () {
-      expect(InfoStickerWeather.fromWmoCode(4), isNull);
+    test('knows no symbol MET Norway does not use', () {
+      expect(InfoStickerWeather.fromMetSymbol('sandstorm'), isNull);
     });
   });
 }

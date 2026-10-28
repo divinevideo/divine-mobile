@@ -10749,8 +10749,8 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorInfoStickerChangePlace => 'جگہ تبدیل کریں';
 
   @override
-  String get videoEditorInfoStickerPlaceAttribution =>
-      'جگہوں کا ڈیٹا GeoNames سے، Open-Meteo.com کے ذریعے۔';
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'اس ڈیوائس پر جگہ کی تلاش دستیاب نہیں ہے۔';
 
   @override
   String videoEditorInfoStickerRecordedValue(String value) {
@@ -10859,8 +10859,43 @@ class AppLocalizationsUr extends AppLocalizations {
       'لوڈ نہیں ہو سکا۔ دوبارہ کوشش کریں۔';
 
   @override
-  String get videoEditorInfoStickerWeatherAttribution =>
-      'موسم کا ڈیٹا Open-Meteo.com سے';
+  String get videoEditorInfoStickerMetAttribution => 'ڈیٹا: MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'پرانی ویڈیوز کے لیے موسم دستیاب نہیں، اس لیے یہ ابھی کا موسم ہے۔';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'دھوپ';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'صاف رات';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'جزوی ابر آلود';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'ابر آلود';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'دھند';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'بارش';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'بوچھاڑ';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'برف';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm =>
+      'گرج چمک کے ساتھ طوفان';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'اوقات آپ کے فون کے ٹائم زون میں ہیں۔';
 
   @override
   String get videoEditorInfoStickerTemperatureLabel => 'درجہ حرارت';

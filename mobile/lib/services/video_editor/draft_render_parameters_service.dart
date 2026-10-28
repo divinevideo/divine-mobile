@@ -414,8 +414,8 @@ class DraftRenderParametersService {
   ///
   /// Runs while the layers are mounted but before the capture frame, so all
   /// of it lands in the first build the rasterizer measures: the fonts the
-  /// text layers name, images for stickers, and the fonts info stickers draw
-  /// with.
+  /// text layers name, images for stickers, and the fonts and emoji info
+  /// stickers draw with.
   Future<void> _prepareLayerContent(
     List<Layer> layers,
     List<StickerData> stickers,
@@ -427,8 +427,7 @@ class DraftRenderParametersService {
           .nonNulls,
     ),
     _precacheStickers(stickers),
-    if (layers.any(InfoStickerData.isInfoStickerLayer))
-      preloadInfoStickerFonts(),
+    preloadInfoStickerContent(layers.map(InfoStickerData.of).nonNulls),
   ]);
 
   /// Loads every sticker's image into the cache the sticker widget reads from.

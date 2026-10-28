@@ -10503,8 +10503,8 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorInfoStickerChangePlace => 'ቦታ ይቀይሩ';
 
   @override
-  String get videoEditorInfoStickerPlaceAttribution =>
-      'የቦታ መረጃ ከ GeoNames በ Open-Meteo.com በኩል።';
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'በዚህ መሣሪያ ላይ የቦታ ፍለጋ አይገኝም።';
 
   @override
   String videoEditorInfoStickerRecordedValue(String value) {
@@ -10612,8 +10612,41 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorInfoStickerLoadFailed => 'መጫን አልተቻለም። እንደገና ይሞክሩ።';
 
   @override
-  String get videoEditorInfoStickerWeatherAttribution =>
-      'የአየር ሁኔታ መረጃ ከ Open-Meteo.com';
+  String get videoEditorInfoStickerMetAttribution => 'መረጃ ከ MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'ለቆዩ ቪዲዮዎች የአየር ሁኔታ መረጃ የለም፤ ይህ የአሁኑ የአየር ሁኔታ ነው።';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'ፀሐያማ';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'ጥርት ያለ ሌሊት';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'በከፊል ደመናማ';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'ደመናማ';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'ጭጋግ';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'ዝናብ';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'ካፊያ';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'በረዶ';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'ነጎድጓድ';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote => 'ሰዓቶቹ በስልክዎ የሰዓት ሰቅ ናቸው።';
 
   @override
   String get videoEditorInfoStickerTemperatureLabel => 'የሙቀት መጠን';

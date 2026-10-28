@@ -44,6 +44,9 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
   // Clearing the field is an edit too; a pending lookup must not refill it.
   bool _placeValueEdited = false;
 
+  // A weather the creator picked; a pending lookup must not replace it.
+  bool _weatherPicked = false;
+
   static const _logName = 'InfoStickerCubit';
 
   /// Fills in what a new sticker starts with: the time its clip was recorded
@@ -179,6 +182,17 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
     return DateTime(now.year, now.month, now.day, now.hour, now.minute);
   }
 
+  /// The weather the creator picked, and for a clear sky whether it is day.
+  /// Like a typed value, it wins over a lookup still running.
+  void weatherChanged(InfoStickerWeather weather, {bool? isDay}) {
+    _weatherPicked = true;
+    emit(
+      state.copyWith(
+        data: state.data.copyWith(weather: weather, isDay: isDay),
+      ),
+    );
+  }
+
   void useFahrenheitChanged(bool useFahrenheit) => emit(
     state.copyWith(data: state.data.copyWith(useFahrenheit: useFahrenheit)),
   );
@@ -254,6 +268,7 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
   /// sun or altitude sticker it also looks up the value there.
   Future<void> placeSelected(InfoStickerPlace place) async {
     _placeValueEdited = false;
+    _weatherPicked = false;
     final kind = state.data.kind;
     final data = state.data.withoutPlaceValues();
     emit(
@@ -264,15 +279,34 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
             ? data.copyWith(
                 placeName: place.name,
                 countryCode: place.countryCode,
-                globe: InfoStickerGlobe.at(place.longitude),
               )
             : data,
         valueStatus: kind == InfoStickerKind.location ? .success : .loading,
       ),
     );
+    if (kind == InfoStickerKind.location) return _lookUpGlobe(place);
     // Read at the wrong time otherwise: load() looks them up once it knows.
     if (_awaitsRecordingTime) return;
     await _lookUpPlaceValues(place);
+  }
+
+  /// Turns a location sticker's globe to the side of the world [place] is on.
+  /// The globe is decoration: a place that cannot be located keeps the
+  /// plain one.
+  Future<void> _lookUpGlobe(InfoStickerPlace place) async {
+    try {
+      final coordinates = await _repository.locate(place);
+      if (state.place != place) return;
+      emitIfOpen(
+        state.copyWith(
+          data: state.data.copyWith(
+            globe: InfoStickerGlobe.at(coordinates.longitude),
+          ),
+        ),
+      );
+    } on InfoStickerLookupException catch (error) {
+      Log.warning('$error', name: _logName, category: LogCategory.video);
+    }
   }
 
   /// Whether the sticker reads the weather or the sun at the time its clip
@@ -291,10 +325,7 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
     try {
       switch (state.data.kind) {
         case InfoStickerKind.weather:
-          final reading = await _repository.weatherAt(
-            place,
-            state.data.dateTime ?? clock.now(),
-          );
+          final (reading, isNow) = await _weatherAt(place);
           if (state.place != place) return;
           emitIfOpen(
             state.copyWith(
@@ -302,9 +333,11 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
                 temperatureCelsius: _placeValueEdited
                     ? state.data.temperatureCelsius
                     : reading.temperatureCelsius,
-                weather: reading.weather,
-                isDay: reading.isDay,
+                weather: _weatherPicked ? state.data.weather : reading.weather,
+                isDay: _weatherPicked ? state.data.isDay : reading.isDay,
+                dateTime: isNow ? _now() : null,
               ),
+              timeSource: isNow ? InfoStickerTimeSource.now : null,
               valueStatus: .success,
             ),
           );
@@ -343,6 +376,21 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
       Log.warning('$error', name: _logName, category: LogCategory.video);
       if (state.place != place) return;
       emitIfOpen(state.copyWith(valueStatus: .failure));
+    }
+  }
+
+  /// The weather at [place] when the sticker's clip was recorded, or now
+  /// when that is too long ago for MET Norway, which keeps no past hours;
+  /// the sheet then says so. The second value tells which.
+  Future<(InfoStickerWeatherReading, bool)> _weatherAt(
+    InfoStickerPlace place,
+  ) async {
+    try {
+      final time = state.data.dateTime ?? clock.now();
+      return (await _repository.weatherAt(place, time), false);
+    } on InfoStickerWeatherTooOldException catch (error) {
+      Log.info('$error', name: _logName, category: LogCategory.video);
+      return (await _repository.weatherAt(place, clock.now()), true);
     }
   }
 }

@@ -10753,8 +10753,8 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorInfoStickerChangePlace => 'Byt plats';
 
   @override
-  String get videoEditorInfoStickerPlaceAttribution =>
-      'Platsdata från GeoNames via Open-Meteo.com.';
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Platssökning är inte tillgänglig på den här enheten.';
 
   @override
   String videoEditorInfoStickerRecordedValue(String value) {
@@ -10864,8 +10864,42 @@ class AppLocalizationsSv extends AppLocalizations {
       'Det gick inte att ladda. Försök igen.';
 
   @override
-  String get videoEditorInfoStickerWeatherAttribution =>
-      'Väderdata från Open-Meteo.com';
+  String get videoEditorInfoStickerMetAttribution => 'Data från MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'Det finns inget väder för äldre videor, så det här är vädret just nu.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Soligt';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Klar natt';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'Halvklart';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Mulet';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Dimma';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Regn';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Skurar';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Snö';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'Åska';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'Tiderna visas i mobilens tidszon.';
 
   @override
   String get videoEditorInfoStickerTemperatureLabel => 'Temperatur';

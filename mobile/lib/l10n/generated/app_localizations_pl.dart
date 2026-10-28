@@ -10961,8 +10961,8 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorInfoStickerChangePlace => 'Zmień miejsce';
 
   @override
-  String get videoEditorInfoStickerPlaceAttribution =>
-      'Dane miejsc z GeoNames przez Open-Meteo.com.';
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Wyszukiwanie miejsc nie jest dostępne na tym urządzeniu.';
 
   @override
   String videoEditorInfoStickerRecordedValue(String value) {
@@ -11072,8 +11072,43 @@ class AppLocalizationsPl extends AppLocalizations {
       'Nie udało się wczytać. Spróbuj ponownie.';
 
   @override
-  String get videoEditorInfoStickerWeatherAttribution =>
-      'Dane pogodowe: Open-Meteo.com';
+  String get videoEditorInfoStickerMetAttribution => 'Dane: MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'Dla starszych filmów nie ma danych o pogodzie, więc to pogoda w tej chwili.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Słonecznie';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Bezchmurna noc';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy =>
+      'Częściowe zachmurzenie';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Pochmurno';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Mgła';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Deszcz';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Przelotne opady';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Śnieg';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'Burza';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'Godziny są w strefie czasowej twojego telefonu.';
 
   @override
   String get videoEditorInfoStickerTemperatureLabel => 'Temperatura';

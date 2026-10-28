@@ -18299,11 +18299,11 @@ abstract class AppLocalizations {
   /// **'Change place'**
   String get videoEditorInfoStickerChangePlace;
 
-  /// Credit for the place search data, required by its licence. Keep the names GeoNames and Open-Meteo.com as they are.
+  /// Shown in the place search of an info sticker when the phone has no geocoder, such as an Android phone without Google services.
   ///
   /// In en, this message translates to:
-  /// **'Place data from GeoNames via Open-Meteo.com.'**
-  String get videoEditorInfoStickerPlaceAttribution;
+  /// **'Place search isn\'t available on this device.'**
+  String get videoEditorInfoStickerPlaceSearchUnavailable;
 
   /// Chip in the time and date sticker sheet that picks the time the clip was recorded; value is that time or date.
   ///
@@ -18491,11 +18491,77 @@ abstract class AppLocalizations {
   /// **'Couldn\'t load this. Try again.'**
   String get videoEditorInfoStickerLoadFailed;
 
-  /// Credit for the weather service, required by its licence. Keep the name Open-Meteo.com as it is.
+  /// Credit for the weather and altitude data, required by its licence. Keep the name MET Norway as it is.
   ///
   /// In en, this message translates to:
-  /// **'Weather data by Open-Meteo.com'**
-  String get videoEditorInfoStickerWeatherAttribution;
+  /// **'Data from MET Norway'**
+  String get videoEditorInfoStickerMetAttribution;
+
+  /// Shown under the temperature field of a weather sticker whose video was recorded more than about an hour ago: the weather service keeps no past hours, so the sticker shows the current weather instead.
+  ///
+  /// In en, this message translates to:
+  /// **'There\'s no weather for older videos, so this is the weather right now.'**
+  String get videoEditorInfoStickerWeatherNow;
+
+  /// Name of a weather a creator can pick for a weather sticker, shown next to its emoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunny'**
+  String get videoEditorInfoStickerWeatherSunny;
+
+  /// Name of the weather pick for a clear sky at night, shown next to a moon emoji on a weather sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear night'**
+  String get videoEditorInfoStickerWeatherClearNight;
+
+  /// Name of a weather a creator can pick for a weather sticker, shown next to its emoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Partly cloudy'**
+  String get videoEditorInfoStickerWeatherPartlyCloudy;
+
+  /// Name of a weather a creator can pick for a weather sticker, shown next to its emoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloudy'**
+  String get videoEditorInfoStickerWeatherCloudy;
+
+  /// Name of a weather a creator can pick for a weather sticker, shown next to its emoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Fog'**
+  String get videoEditorInfoStickerWeatherFog;
+
+  /// Name of a weather a creator can pick for a weather sticker, shown next to its emoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Rain'**
+  String get videoEditorInfoStickerWeatherRain;
+
+  /// Name of a weather a creator can pick for a weather sticker, shown next to its emoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Showers'**
+  String get videoEditorInfoStickerWeatherShowers;
+
+  /// Name of a weather a creator can pick for a weather sticker, shown next to its emoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Snow'**
+  String get videoEditorInfoStickerWeatherSnow;
+
+  /// Name of a weather a creator can pick for a weather sticker, shown next to its emoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Thunderstorm'**
+  String get videoEditorInfoStickerWeatherThunderstorm;
+
+  /// Shown under a sunrise and sunset sticker: the times are given in the phone's time zone, not the place's.
+  ///
+  /// In en, this message translates to:
+  /// **'Times are in your phone\'s time zone.'**
+  String get videoEditorInfoStickerSunTimeZoneNote;
 
   /// Label of the field where the creator can change the temperature a weather sticker shows.
   ///

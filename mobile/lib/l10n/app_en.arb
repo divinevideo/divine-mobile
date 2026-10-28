@@ -7957,9 +7957,9 @@
   "@videoEditorInfoStickerChangePlace": {
     "description": "Row in the info sticker sheet that goes back to the place search to pick another place."
   },
-  "videoEditorInfoStickerPlaceAttribution": "Place data from GeoNames via Open-Meteo.com.",
-  "@videoEditorInfoStickerPlaceAttribution": {
-    "description": "Credit for the place search data, required by its licence. Keep the names GeoNames and Open-Meteo.com as they are."
+  "videoEditorInfoStickerPlaceSearchUnavailable": "Place search isn't available on this device.",
+  "@videoEditorInfoStickerPlaceSearchUnavailable": {
+    "description": "Shown in the place search of an info sticker when the phone has no geocoder, such as an Android phone without Google services."
   },
   "videoEditorInfoStickerRecordedValue": "Recorded · {value}",
   "@videoEditorInfoStickerRecordedValue": {
@@ -8113,9 +8113,53 @@
   "@videoEditorInfoStickerLoadFailed": {
     "description": "Shown when an info sticker cannot load the weather or the altitude."
   },
-  "videoEditorInfoStickerWeatherAttribution": "Weather data by Open-Meteo.com",
-  "@videoEditorInfoStickerWeatherAttribution": {
-    "description": "Credit for the weather service, required by its licence. Keep the name Open-Meteo.com as it is."
+  "videoEditorInfoStickerMetAttribution": "Data from MET Norway",
+  "@videoEditorInfoStickerMetAttribution": {
+    "description": "Credit for the weather and altitude data, required by its licence. Keep the name MET Norway as it is."
+  },
+  "videoEditorInfoStickerWeatherNow": "There's no weather for older videos, so this is the weather right now.",
+  "@videoEditorInfoStickerWeatherNow": {
+    "description": "Shown under the temperature field of a weather sticker whose video was recorded more than about an hour ago: the weather service keeps no past hours, so the sticker shows the current weather instead."
+  },
+  "videoEditorInfoStickerWeatherSunny": "Sunny",
+  "@videoEditorInfoStickerWeatherSunny": {
+    "description": "Name of a weather a creator can pick for a weather sticker, shown next to its emoji."
+  },
+  "videoEditorInfoStickerWeatherClearNight": "Clear night",
+  "@videoEditorInfoStickerWeatherClearNight": {
+    "description": "Name of the weather pick for a clear sky at night, shown next to a moon emoji on a weather sticker."
+  },
+  "videoEditorInfoStickerWeatherPartlyCloudy": "Partly cloudy",
+  "@videoEditorInfoStickerWeatherPartlyCloudy": {
+    "description": "Name of a weather a creator can pick for a weather sticker, shown next to its emoji."
+  },
+  "videoEditorInfoStickerWeatherCloudy": "Cloudy",
+  "@videoEditorInfoStickerWeatherCloudy": {
+    "description": "Name of a weather a creator can pick for a weather sticker, shown next to its emoji."
+  },
+  "videoEditorInfoStickerWeatherFog": "Fog",
+  "@videoEditorInfoStickerWeatherFog": {
+    "description": "Name of a weather a creator can pick for a weather sticker, shown next to its emoji."
+  },
+  "videoEditorInfoStickerWeatherRain": "Rain",
+  "@videoEditorInfoStickerWeatherRain": {
+    "description": "Name of a weather a creator can pick for a weather sticker, shown next to its emoji."
+  },
+  "videoEditorInfoStickerWeatherShowers": "Showers",
+  "@videoEditorInfoStickerWeatherShowers": {
+    "description": "Name of a weather a creator can pick for a weather sticker, shown next to its emoji."
+  },
+  "videoEditorInfoStickerWeatherSnow": "Snow",
+  "@videoEditorInfoStickerWeatherSnow": {
+    "description": "Name of a weather a creator can pick for a weather sticker, shown next to its emoji."
+  },
+  "videoEditorInfoStickerWeatherThunderstorm": "Thunderstorm",
+  "@videoEditorInfoStickerWeatherThunderstorm": {
+    "description": "Name of a weather a creator can pick for a weather sticker, shown next to its emoji."
+  },
+  "videoEditorInfoStickerSunTimeZoneNote": "Times are in your phone's time zone.",
+  "@videoEditorInfoStickerSunTimeZoneNote": {
+    "description": "Shown under a sunrise and sunset sticker: the times are given in the phone's time zone, not the place's."
   },
   "videoEditorInfoStickerTemperatureLabel": "Temperature",
   "@videoEditorInfoStickerTemperatureLabel": {

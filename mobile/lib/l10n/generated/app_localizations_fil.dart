@@ -10828,8 +10828,8 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorInfoStickerChangePlace => 'Palitan ang lugar';
 
   @override
-  String get videoEditorInfoStickerPlaceAttribution =>
-      'Place data mula sa GeoNames sa pamamagitan ng Open-Meteo.com.';
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Hindi available ang place search sa device na ito.';
 
   @override
   String videoEditorInfoStickerRecordedValue(String value) {
@@ -10938,8 +10938,42 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorInfoStickerLoadFailed => 'Hindi ma-load. Subukan ulit.';
 
   @override
-  String get videoEditorInfoStickerWeatherAttribution =>
-      'Weather data mula sa Open-Meteo.com';
+  String get videoEditorInfoStickerMetAttribution => 'Data mula sa MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'Walang weather para sa mas lumang video, kaya ito ang weather ngayon.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Maaraw';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Maaliwalas na gabi';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'Bahagyang maulap';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Maulap';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Hamog';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Ulan';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Pabugso-bugsong ulan';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Niyebe';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'Kulog at kidlat';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'Ang mga oras ay nasa time zone ng phone mo.';
 
   @override
   String get videoEditorInfoStickerTemperatureLabel => 'Temperatura';

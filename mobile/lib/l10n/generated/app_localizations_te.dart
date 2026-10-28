@@ -11036,8 +11036,8 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorInfoStickerChangePlace => 'స్థలం మార్చండి';
 
   @override
-  String get videoEditorInfoStickerPlaceAttribution =>
-      'స్థల డేటా: GeoNames, Open-Meteo.com ద్వారా.';
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'ఈ పరికరంలో స్థల శోధన అందుబాటులో లేదు.';
 
   @override
   String videoEditorInfoStickerRecordedValue(String value) {
@@ -11147,8 +11147,42 @@ class AppLocalizationsTe extends AppLocalizations {
       'లోడ్ చేయడం సాధ్యం కాలేదు. మళ్లీ ప్రయత్నించండి.';
 
   @override
-  String get videoEditorInfoStickerWeatherAttribution =>
-      'వాతావరణ డేటా: Open-Meteo.com';
+  String get videoEditorInfoStickerMetAttribution => 'డేటా: MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'పాత వీడియోలకు వాతావరణ సమాచారం లేదు, కాబట్టి ఇది ఇప్పటి వాతావరణం.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'ఎండ';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'స్పష్టమైన రాత్రి';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'పాక్షికంగా మేఘావృతం';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'మేఘావృతం';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'పొగమంచు';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'వర్షం';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'జల్లులు';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'మంచు';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'ఉరుములతో వర్షం';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'సమయాలు మీ ఫోన్ టైమ్ జోన్‌లో ఉన్నాయి.';
 
   @override
   String get videoEditorInfoStickerTemperatureLabel => 'ఉష్ణోగ్రత';

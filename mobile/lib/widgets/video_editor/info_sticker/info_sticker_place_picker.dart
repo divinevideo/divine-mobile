@@ -70,6 +70,7 @@ class _InfoStickerPlacePickerState extends State<InfoStickerPlacePicker> {
                 focusNode: _focusNode,
                 hintText: l10n.videoEditorInfoStickerPlaceSearchHint,
                 isLoading: status == InfoStickerPlaceSearchStatus.loading,
+                readOnly: status == InfoStickerPlaceSearchStatus.unavailable,
                 onChanged: (query) => context
                     .read<InfoStickerPlaceSearchBloc>()
                     .add(InfoStickerPlaceQueryChanged(query)),
@@ -87,8 +88,7 @@ class _InfoStickerPlacePickerState extends State<InfoStickerPlacePicker> {
                         : MediaQuery.viewPaddingOf(context).bottom),
               ),
               child: Text(
-                '${l10n.videoEditorInfoStickerPlacePrivacyNote} '
-                '${l10n.videoEditorInfoStickerPlaceAttribution}',
+                l10n.videoEditorInfoStickerPlacePrivacyNote,
                 style: VineTheme.bodySmallFont(
                   color: context.vineColors.onSurfaceMuted,
                 ),
@@ -115,6 +115,8 @@ class _Suggestions extends StatelessWidget {
       (InfoStickerCubit cubit) => cubit.state.place,
     );
     final message = switch (search.status) {
+      InfoStickerPlaceSearchStatus.unavailable =>
+        l10n.videoEditorInfoStickerPlaceSearchUnavailable,
       InfoStickerPlaceSearchStatus.failure =>
         l10n.videoEditorInfoStickerPlaceSearchFailed,
       InfoStickerPlaceSearchStatus.success when search.places.isEmpty =>

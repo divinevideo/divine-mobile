@@ -1,6 +1,7 @@
 // ABOUTME: Draws an info sticker in its style: a pill (solid, see-through,
 // ABOUTME: glowing or outlined), a digital clock or an analog clock face.
 
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:divine_ui/divine_ui.dart';
@@ -8,6 +9,7 @@ import 'package:flutter/widgets.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_emoji.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_format.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/rec_timer_painter.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
@@ -54,12 +56,24 @@ class InfoStickerView extends StatelessWidget {
   }
 }
 
-/// Loads the fonts info stickers draw with, so the headless draft rasterizer
-/// does not capture them in a fallback face.
+/// Loads the fonts and the emoji [stickers] draw with, so the headless draft
+/// rasterizer does not capture them in a fallback face or without their
+/// emoji.
 ///
 /// Times out like the text layer fonts do; a font that did not load costs
-/// its look, not the publish.
-Future<void> preloadInfoStickerFonts() async {
+/// its look, not the publish, and an emoji that did not load costs itself.
+Future<void> preloadInfoStickerContent(Iterable<InfoStickerData> stickers) {
+  if (stickers.isEmpty) return Future.value();
+  return Future.wait([
+    _preloadFonts(),
+    for (final emoji in {
+      for (final data in stickers) ...InfoStickerFormat.emojis(data),
+    })
+      _precacheEmoji(emoji),
+  ]);
+}
+
+Future<void> _preloadFonts() async {
   // Each call registers its face with google_fonts; the color only fills the
   // style these calls return and throw away.
   VineTheme.titleLargeFont(color: VineTheme.whiteText);
@@ -70,6 +84,25 @@ Future<void> preloadInfoStickerFonts() async {
         onTimeout: () => const [],
       )
       .catchError((_) => const <void>[]);
+}
+
+/// Puts [emoji] into the image cache, so a sticker mounted afterwards draws
+/// it in its first frame. Completes on an error too.
+Future<void> _precacheEmoji(InfoStickerEmoji emoji) {
+  final completer = Completer<void>();
+  final stream = AssetImage(emoji.assetPath).resolve(ImageConfiguration.empty);
+  late final ImageStreamListener listener;
+  void finish() {
+    stream.removeListener(listener);
+    if (!completer.isCompleted) completer.complete();
+  }
+
+  listener = ImageStreamListener(
+    (_, _) => finish(),
+    onError: (_, _) => finish(),
+  );
+  stream.addListener(listener);
+  return completer.future;
 }
 
 /// The colors of a pill style.
@@ -136,7 +169,7 @@ class _Palette {
   };
 }
 
-/// A pill holding one line: an emoji or a battery, then the text.
+/// A pill holding one line: an emoji, a flag or a battery, then the text.
 class _Card extends StatelessWidget {
   const _Card({required this.data, required this.palette});
 
@@ -160,25 +193,55 @@ class _Card extends StatelessWidget {
   }
 }
 
-/// One line: an emoji or a battery, then the text.
+/// One line: an emoji, a flag or a battery, then the text; or, for the sun,
+/// each time after its emoji.
 class _LineContent extends StatelessWidget {
   const _LineContent({required this.data, required this.palette});
 
   final InfoStickerData data;
   final _Palette palette;
 
+  /// How large an emoji is next to the text, as large as an emoji glyph of
+  /// the text's size.
+  static const double _emojiSize = 56;
+
   @override
   Widget build(BuildContext context) {
     final style = VineTheme.titleLargeFont(
       color: palette.ink,
     ).copyWith(fontSize: 48, height: 1.15, shadows: palette.shadows);
+    if (data.kind == InfoStickerKind.sun) {
+      return Row(
+        mainAxisSize: .min,
+        spacing: 28,
+        children: [
+          for (final (emoji, time) in InfoStickerFormat.sunTimes(data))
+            Row(
+              mainAxisSize: .min,
+              spacing: 14,
+              children: [
+                InfoStickerEmojiImage(emoji, size: _emojiSize),
+                Text(time, style: style, maxLines: 1),
+              ],
+            ),
+        ],
+      );
+    }
+    final flag =
+        data.kind == InfoStickerKind.location &&
+            data.placeSymbol == InfoStickerPlaceSymbol.flag
+        ? InfoStickerFormat.flag(data.countryCode)
+        : null;
     final emoji = InfoStickerFormat.emoji(data);
     final battery = data.batteryLevel;
     return Row(
       mainAxisSize: .min,
       spacing: 14,
       children: [
-        if (emoji != null) Text(emoji, style: style),
+        if (flag != null)
+          Text(flag, style: style)
+        else if (emoji != null)
+          InfoStickerEmojiImage(emoji, size: _emojiSize),
         if (data.kind == InfoStickerKind.battery && battery != null)
           _BatteryGlyph(level: battery, color: palette.ink),
         ConstrainedBox(

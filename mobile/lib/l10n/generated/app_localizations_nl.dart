@@ -10796,8 +10796,8 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorInfoStickerChangePlace => 'Plek wijzigen';
 
   @override
-  String get videoEditorInfoStickerPlaceAttribution =>
-      'Plaatsgegevens van GeoNames via Open-Meteo.com.';
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Plaatsen zoeken is niet beschikbaar op dit apparaat.';
 
   @override
   String videoEditorInfoStickerRecordedValue(String value) {
@@ -10906,8 +10906,42 @@ class AppLocalizationsNl extends AppLocalizations {
       'Laden lukte niet. Probeer het opnieuw.';
 
   @override
-  String get videoEditorInfoStickerWeatherAttribution =>
-      'Weergegevens van Open-Meteo.com';
+  String get videoEditorInfoStickerMetAttribution => 'Gegevens van MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'Voor oudere video\'s is er geen weer, dus dit is het weer van nu.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Zonnig';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Heldere nacht';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'Half bewolkt';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Bewolkt';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Mist';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Regen';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Buien';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Sneeuw';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'Onweer';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'De tijden staan in de tijdzone van je telefoon.';
 
   @override
   String get videoEditorInfoStickerTemperatureLabel => 'Temperatuur';

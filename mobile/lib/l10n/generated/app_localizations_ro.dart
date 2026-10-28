@@ -10975,8 +10975,8 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorInfoStickerChangePlace => 'Schimbă locul';
 
   @override
-  String get videoEditorInfoStickerPlaceAttribution =>
-      'Date despre locuri de la GeoNames prin Open-Meteo.com.';
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Căutarea locurilor nu este disponibilă pe acest dispozitiv.';
 
   @override
   String videoEditorInfoStickerRecordedValue(String value) {
@@ -11089,8 +11089,42 @@ class AppLocalizationsRo extends AppLocalizations {
       'Nu am putut încărca. Încearcă din nou.';
 
   @override
-  String get videoEditorInfoStickerWeatherAttribution =>
-      'Date meteo de la Open-Meteo.com';
+  String get videoEditorInfoStickerMetAttribution => 'Date de la MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'Pentru videoclipurile mai vechi nu există vremea, așa că aceasta este vremea de acum.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Însorit';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Noapte senină';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'Parțial noros';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Înnorat';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Ceață';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Ploaie';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Averse';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Ninsoare';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'Furtună';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'Orele sunt în fusul orar al telefonului tău.';
 
   @override
   String get videoEditorInfoStickerTemperatureLabel => 'Temperatură';

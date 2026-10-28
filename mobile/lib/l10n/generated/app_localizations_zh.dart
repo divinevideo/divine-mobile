@@ -10117,8 +10117,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorInfoStickerChangePlace => '更换地点';
 
   @override
-  String get videoEditorInfoStickerPlaceAttribution =>
-      '地点数据来自 GeoNames（经由 Open-Meteo.com）。';
+  String get videoEditorInfoStickerPlaceSearchUnavailable => '此设备不支持地点搜索。';
 
   @override
   String videoEditorInfoStickerRecordedValue(String value) {
@@ -10225,8 +10224,40 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorInfoStickerLoadFailed => '无法加载。请再试一次。';
 
   @override
-  String get videoEditorInfoStickerWeatherAttribution =>
-      '天气数据来自 Open-Meteo.com';
+  String get videoEditorInfoStickerMetAttribution => '数据来自 MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow => '较早的视频没有天气数据，这里显示的是现在的天气。';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => '晴';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => '晴朗的夜晚';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => '晴间多云';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => '多云';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => '雾';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => '雨';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => '阵雨';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => '雪';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => '雷雨';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote => '时间按你手机的时区显示。';
 
   @override
   String get videoEditorInfoStickerTemperatureLabel => '温度';

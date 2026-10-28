@@ -10847,8 +10847,8 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorInfoStickerChangePlace => 'Смени мястото';
 
   @override
-  String get videoEditorInfoStickerPlaceAttribution =>
-      'Данни за места от GeoNames чрез Open-Meteo.com.';
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Търсенето на места не е налично на това устройство.';
 
   @override
   String videoEditorInfoStickerRecordedValue(String value) {
@@ -10957,8 +10957,42 @@ class AppLocalizationsBg extends AppLocalizations {
       'Не успяхме да заредим. Опитай пак.';
 
   @override
-  String get videoEditorInfoStickerWeatherAttribution =>
-      'Данни за времето от Open-Meteo.com';
+  String get videoEditorInfoStickerMetAttribution => 'Данни от MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'За по-стари видеа няма данни за времето, затова това е времето в момента.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Слънчево';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Ясна нощ';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'Частична облачност';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Облачно';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Мъгла';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Дъжд';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Превалявания';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Сняг';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'Гръмотевична буря';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'Часовете са в часовата зона на телефона ти.';
 
   @override
   String get videoEditorInfoStickerTemperatureLabel => 'Температура';

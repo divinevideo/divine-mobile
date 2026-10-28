@@ -183,7 +183,7 @@ enum InfoStickerMoonPhase {
   }
 }
 
-/// The weather a weather sticker shows, grouped from WMO weather codes.
+/// The weather a weather sticker shows, grouped from MET Norway's symbols.
 enum InfoStickerWeather {
   clear,
   partlyCloudy,
@@ -195,20 +195,23 @@ enum InfoStickerWeather {
   showers,
   thunderstorm;
 
-  /// The group of the WMO weather interpretation [code], or `null` for a code
-  /// the WMO table does not define.
-  static InfoStickerWeather? fromWmoCode(int code) => switch (code) {
-    0 => clear,
-    1 || 2 => partlyCloudy,
-    3 => cloudy,
-    45 || 48 => fog,
-    51 || 53 || 55 || 56 || 57 => drizzle,
-    61 || 63 || 65 || 66 || 67 => rain,
-    71 || 73 || 75 || 77 || 85 || 86 => snow,
-    80 || 81 || 82 => showers,
-    95 || 96 || 99 => thunderstorm,
-    _ => null,
-  };
+  /// The group of a MET Norway weather [symbol] such as `rainshowers_day`, or
+  /// `null` for a symbol it does not know. Sleet counts as rain.
+  static InfoStickerWeather? fromMetSymbol(String symbol) {
+    final weather = symbol.split('_').first;
+    if (weather.contains('thunder')) return thunderstorm;
+    if (weather.contains('snow')) return snow;
+    if (weather.contains('showers')) return showers;
+    return switch (weather) {
+      'clearsky' => clear,
+      'fair' || 'partlycloudy' => partlyCloudy,
+      'cloudy' => cloudy,
+      'fog' => fog,
+      'lightrain' => drizzle,
+      'rain' || 'heavyrain' || 'lightsleet' || 'sleet' || 'heavysleet' => rain,
+      _ => null,
+    };
+  }
 }
 
 /// What an info sticker layer shows and how it looks.

@@ -10,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/info_sticker/info_sticker_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_emoji.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_format.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_labels.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_view.dart';
@@ -171,7 +172,12 @@ class InfoStickerValueField extends StatelessWidget {
         if (state.valueStatus == InfoStickerValueStatus.loading)
           _Note(text: l10n.videoEditorInfoStickerLoading)
         else if (state.valueStatus == InfoStickerValueStatus.failure)
-          _Note(text: l10n.videoEditorInfoStickerLoadFailed, warning: true),
+          _Note(text: l10n.videoEditorInfoStickerLoadFailed, warning: true)
+        // The clip was recorded too long ago for its weather.
+        else if (isWeather &&
+            state.recordedAt != null &&
+            state.timeSource == InfoStickerTimeSource.now)
+          _Note(text: l10n.videoEditorInfoStickerWeatherNow),
         Padding(
           padding: const .symmetric(horizontal: 16),
           child: Row(
@@ -213,8 +219,7 @@ class InfoStickerValueField extends StatelessWidget {
             ],
           ),
         ),
-        if (isWeather)
-          _Note(text: l10n.videoEditorInfoStickerWeatherAttribution),
+        _Note(text: l10n.videoEditorInfoStickerMetAttribution),
       ],
     );
   }
@@ -285,28 +290,40 @@ class InfoStickerSymbolChoice extends StatelessWidget {
     final l10n = context.l10n;
     return _ChipRow(
       children: [
-        for (final (option, label) in [
+        for (final (option, leading, label) in [
           (
             InfoStickerPlaceSymbol.pin,
-            '📍 ${l10n.videoEditorInfoStickerSymbolPin}',
+            const InfoStickerEmojiImage(.pin, size: _chipEmojiSize),
+            l10n.videoEditorInfoStickerSymbolPin,
           ),
           if (flag != null)
             (
               InfoStickerPlaceSymbol.flag,
-              '$flag ${l10n.videoEditorInfoStickerSymbolFlag}',
+              Text(
+                flag,
+                style: VineTheme.titleLargeFont(
+                  color: context.vineColors.primaryText,
+                ),
+              ),
+              l10n.videoEditorInfoStickerSymbolFlag,
             ),
           (
             InfoStickerPlaceSymbol.globe,
-            '${InfoStickerFormat.globe(globe)} '
-                '${l10n.videoEditorInfoStickerSymbolGlobe}',
+            InfoStickerEmojiImage(
+              InfoStickerFormat.globe(globe),
+              size: _chipEmojiSize,
+            ),
+            l10n.videoEditorInfoStickerSymbolGlobe,
           ),
           (
             InfoStickerPlaceSymbol.map,
-            '🗺️ ${l10n.videoEditorInfoStickerSymbolMap}',
+            const InfoStickerEmojiImage(.map, size: _chipEmojiSize),
+            l10n.videoEditorInfoStickerSymbolMap,
           ),
         ])
           _ChoiceChip(
             label: label,
+            leading: leading,
             selected: shown == option,
             onTap: () => cubit.placeSymbolChanged(option),
           ),
@@ -315,8 +332,94 @@ class InfoStickerSymbolChoice extends StatelessWidget {
   }
 }
 
-/// How the lookup of a value that cannot be typed, such as the sun times,
-/// is going.
+/// Picks the weather a weather sticker shows; a clear sky by day or by
+/// night.
+class InfoStickerWeatherChoice extends StatelessWidget {
+  const InfoStickerWeatherChoice({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final (weather, isDay) = context.select(
+      (InfoStickerCubit cubit) => (
+        cubit.state.data.weather,
+        cubit.state.data.isDay,
+      ),
+    );
+    // Drizzle has no choice of its own: it shows as rain.
+    final shown = weather == InfoStickerWeather.drizzle
+        ? InfoStickerWeather.rain
+        : weather;
+    final cubit = context.read<InfoStickerCubit>();
+    final l10n = context.l10n;
+    return _ChipRow(
+      children: [
+        for (final (option, optionIsDay, label) in [
+          (
+            InfoStickerWeather.clear,
+            true,
+            l10n.videoEditorInfoStickerWeatherSunny,
+          ),
+          (
+            InfoStickerWeather.clear,
+            false,
+            l10n.videoEditorInfoStickerWeatherClearNight,
+          ),
+          (
+            InfoStickerWeather.partlyCloudy,
+            null,
+            l10n.videoEditorInfoStickerWeatherPartlyCloudy,
+          ),
+          (
+            InfoStickerWeather.cloudy,
+            null,
+            l10n.videoEditorInfoStickerWeatherCloudy,
+          ),
+          (InfoStickerWeather.fog, null, l10n.videoEditorInfoStickerWeatherFog),
+          (
+            InfoStickerWeather.rain,
+            null,
+            l10n.videoEditorInfoStickerWeatherRain,
+          ),
+          (
+            InfoStickerWeather.showers,
+            null,
+            l10n.videoEditorInfoStickerWeatherShowers,
+          ),
+          (
+            InfoStickerWeather.snow,
+            null,
+            l10n.videoEditorInfoStickerWeatherSnow,
+          ),
+          (
+            InfoStickerWeather.thunderstorm,
+            null,
+            l10n.videoEditorInfoStickerWeatherThunderstorm,
+          ),
+        ])
+          _ChoiceChip(
+            label: label,
+            leading: InfoStickerEmojiImage(
+              InfoStickerFormat.weatherEmoji(
+                option,
+                isDay: optionIsDay ?? isDay,
+              ),
+              size: _chipEmojiSize,
+            ),
+            selected:
+                shown == option &&
+                (optionIsDay == null || optionIsDay == isDay),
+            onTap: () => cubit.weatherChanged(option, isDay: optionIsDay),
+          ),
+      ],
+    );
+  }
+}
+
+/// How large an emoji is in front of a chip's label.
+const double _chipEmojiSize = 24;
+
+/// How the lookup of the sun times, which cannot be typed, is going, and the
+/// time zone they are in.
 class InfoStickerLookupNote extends StatelessWidget {
   const InfoStickerLookupNote({super.key});
 
@@ -326,16 +429,17 @@ class InfoStickerLookupNote extends StatelessWidget {
       (InfoStickerCubit cubit) => cubit.state.valueStatus,
     );
     final l10n = context.l10n;
-    return switch (status) {
-      InfoStickerValueStatus.loading => _Note(
-        text: l10n.videoEditorInfoStickerLoading,
-      ),
-      InfoStickerValueStatus.failure => _Note(
-        text: l10n.videoEditorInfoStickerLoadFailed,
-        warning: true,
-      ),
-      _ => const SizedBox.shrink(),
-    };
+    return Column(
+      crossAxisAlignment: .stretch,
+      spacing: 8,
+      children: [
+        if (status == InfoStickerValueStatus.loading)
+          _Note(text: l10n.videoEditorInfoStickerLoading)
+        else if (status == InfoStickerValueStatus.failure)
+          _Note(text: l10n.videoEditorInfoStickerLoadFailed, warning: true),
+        _Note(text: l10n.videoEditorInfoStickerSunTimeZoneNote),
+      ],
+    );
   }
 }
 
@@ -536,17 +640,20 @@ class _ChipRow extends StatelessWidget {
   }
 }
 
-/// A small pill with a label to pick, marked when [selected].
+/// A small pill with a label, after [leading] when there is one, to pick;
+/// marked when [selected].
 class _ChoiceChip extends StatelessWidget {
   const _ChoiceChip({
     required this.label,
     required this.selected,
     required this.onTap,
+    this.leading,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -576,11 +683,18 @@ class _ChoiceChip extends StatelessWidget {
               padding: const .symmetric(horizontal: 16, vertical: 12),
               child: Center(
                 widthFactor: 1,
-                child: Text(
-                  label,
-                  style: VineTheme.bodyMediumFont(
-                    color: context.vineColors.primaryText,
-                  ),
+                child: Row(
+                  mainAxisSize: .min,
+                  spacing: 8,
+                  children: [
+                    ?leading,
+                    Text(
+                      label,
+                      style: VineTheme.bodyMediumFont(
+                        color: context.vineColors.primaryText,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
