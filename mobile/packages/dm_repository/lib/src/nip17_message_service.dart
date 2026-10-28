@@ -207,11 +207,11 @@ class NIP17MessageService {
     // only buffers the frame to a relay socket still stale-`connected`
     // (airplane mode is not detected synchronously — the WebSocket flips to
     // disconnected only on an async OS close or the heartbeat idle timeout),
-    // so the OK-confirm path below would misread it as a soft "frame written,
-    // OK lost" send and keep the bubble looking sent. With no connectivity
-    // the send definitively did not happen: return a hard failure so the
-    // durable queue marks the row failed (red bubble) and the reconnect sweep
-    // re-drives it. See #6046.
+    // so the OK-confirm path in [sendRumor] would misread it as a soft "frame
+    // written, OK lost" send and keep the bubble looking sent. With no
+    // connectivity the send definitively did not happen: return a hard
+    // failure so the durable queue marks the row failed (red bubble) and the
+    // reconnect sweep re-drives it. See #6046.
     if (await _isOfflineSafely()) {
       Log.info(
         'NIP-17 send skipped: device reports no connectivity',
