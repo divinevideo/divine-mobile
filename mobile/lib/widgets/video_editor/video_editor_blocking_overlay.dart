@@ -9,7 +9,7 @@ import 'package:openvine/utils/semantics_announcement.dart';
 ///
 /// The scrim absorbs touches, but semantics travel their own path: without
 /// [BlockSemantics] the controls underneath stay reachable to a screen reader,
-/// which could then start a competing edit mid-render. The control that had
+/// which could then start a competing edit mid-operation. The control that had
 /// screen-reader focus goes away with them, so the overlay announces
 /// [announcement] once when it appears.
 class VideoEditorBlockingOverlay extends StatefulWidget {
