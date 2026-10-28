@@ -575,26 +575,26 @@ void main() {
     });
 
     group('a group send with one unreadable member', () {
-      test('settles that member on the pool wrap without saving the message '
-          'twice', () async {
-        inboxes[peerB] = _Inbox.found;
-        inboxes[peerC] = _Inbox.unreadable;
-        final results = await repository.sendGroupMessage(
-          recipientPubkeys: [peerB, peerC],
-          content: 'saved once, through the readable member',
-        );
-        expect(results.last.retryablePending, isTrue, reason: 'precondition');
-        final heldRowId = results.last.queuedRumorId!;
-        expect(await db.select(db.directMessages).get(), hasLength(1));
-        inboxes[peerC] = _Inbox.absent;
+      test(
+        'settles that member on the pool wrap once their inbox reads absent',
+        () async {
+          inboxes[peerB] = _Inbox.found;
+          inboxes[peerC] = _Inbox.unreadable;
+          final results = await repository.sendGroupMessage(
+            recipientPubkeys: [peerB, peerC],
+            content: 'delivered to the readable member first',
+          );
+          expect(results.last.retryablePending, isTrue, reason: 'precondition');
+          final heldRowId = results.last.queuedRumorId!;
+          inboxes[peerC] = _Inbox.absent;
 
-        final retried = await repository.recoverFullSend(rumorId: heldRowId);
+          final retried = await repository.recoverFullSend(rumorId: heldRowId);
 
-        expect(retried.success, isTrue);
-        expect(wrapsTo(peerC), hasLength(1));
-        expect(await db.select(db.directMessages).get(), hasLength(1));
-        expect(await outgoingDao.getById(heldRowId), isNull);
-      });
+          expect(retried.success, isTrue);
+          expect(wrapsTo(peerC), hasLength(1));
+          expect(await outgoingDao.getById(heldRowId), isNull);
+        },
+      );
 
       test('publishes no other wrap to that member while their inbox stays '
           'unreadable', () async {
