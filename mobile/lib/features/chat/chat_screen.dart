@@ -10,17 +10,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/caption_mentions/caption_mentions_cubit.dart';
+import 'package:openvine/blocs/chat/chat_composer_cubit.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
-import 'package:openvine/features/chat/chat_mention_editing.dart';
 import 'package:openvine/features/chat/chat_message_tile.dart';
 import 'package:openvine/features/chat/public_room_notice.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mentions/mention_text_editing.dart';
-import 'package:openvine/models/caption_mention.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/inbox/conversation/widgets/message_input_bar.dart';
-import 'package:openvine/services/mention_resolution_service.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/mentions/mention_overlay.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -38,9 +36,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
   final _scrollController = ScrollController();
   bool _readScheduled = false;
   List<ChatMessage> _readSnapshot = const [];
-  bool _resolving = false;
-  String _previousText = '';
-  final _selectedMentions = <CaptionMention>[];
+  late final ChatComposerCubit _composer;
   late final CaptionMentionsCubit _mentions;
 
   @override
@@ -48,6 +44,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _scrollController.addListener(_scheduleCurrentRead);
+    final chat = context.read<ChatCubit>();
+    _composer = ChatComposerCubit(
+      send: (body) => chat.send(
+        communityId: chat.state.selectedCommunityId,
+        channelId: chat.state.selectedChannelId,
+        author: '',
+        body: body,
+        nowMilliseconds: DateTime.now().millisecondsSinceEpoch,
+      ),
+    );
     _mentions = CaptionMentionsCubit(
       profileRepositoryOf: () => ref.read(profileRepositoryProvider),
       candidatePubkeys: () => {
@@ -97,20 +103,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
   void didChangeDependencies() {
     super.didChangeDependencies();
     _scheduleCurrentRead();
-
   }
 
   void _searchMentions() {
-    final kept = updateChatMentionBindings(
-      before: _previousText,
-      after: _controller.text,
-      cursor: _controller.selection.baseOffset,
-      mentions: _selectedMentions,
-    );
-    _previousText = _controller.text;
-    _selectedMentions
-      ..clear()
-      ..addAll(kept);
+    _composer.updateDraft(_controller.text, _controller.selection.baseOffset);
     runDetached(
       _mentions.search(
         activeMentionQuery(_controller.text, _controller.selection.baseOffset),
@@ -122,23 +118,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
   }
 
   void _selectMention(String pubkey, String display) {
-    final insertion = applyMentionSelection(
-      text: _controller.text,
+    final insertion = _composer.selectMention(
       cursor: _controller.selection.baseOffset,
+      pubkey: pubkey,
       display: display,
     );
     if (insertion == null) return;
     _controller.value = TextEditingValue(
       text: insertion.text,
       selection: TextSelection.collapsed(offset: insertion.selection),
-    );
-    _selectedMentions.add(
-      CaptionMention(
-        display: display,
-        pubkey: pubkey,
-        start: insertion.start,
-        end: insertion.end,
-      ),
     );
     _mentions.clear();
   }
@@ -149,57 +137,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     _scrollController.dispose();
     _controller.removeListener(_searchMentions);
     unawaited(_mentions.close());
+    unawaited(_composer.close());
     _controller.dispose();
     super.dispose();
   }
 
   Future<void> _send() async {
-    // Picked offsets index the untrimmed draft; the send button trims it.
-    final submittedDraft = _controller.text;
-    final cubit = context.read<ChatCubit>();
-    final state = cubit.state;
-    final profiles = submittedDraft.contains('@')
-        ? ref.read(profileRepositoryProvider)
-        : null;
-    final resolution = profiles == null
-        ? null
-        : await MentionResolutionService(profileRepository: profiles)
-              .resolveTextMentions(
-                rawText: submittedDraft,
-                currentUserPubkey: cubit.sealedAuthor,
-                selectedMentions: [
-                  for (final mention in _selectedMentions)
-                    MentionBinding(
-                      display: mention.display,
-                      pubkey: mention.pubkey,
-                      start: mention.start,
-                      end: mention.end,
-                    ),
-                ],
-              );
-    if (!mounted) return;
-    final accepted = await cubit.send(
-      communityId: state.selectedCommunityId,
-      channelId: state.selectedChannelId,
-      author: '',
-      body: (resolution?.canonicalText ?? submittedDraft).trim(),
-      nowMilliseconds: DateTime.now().millisecondsSinceEpoch,
-    );
-    if (mounted && accepted && _controller.text == submittedDraft) {
-      _controller.clear();
-    }
+    final clear = await _composer.submit();
+    if (mounted && clear) _controller.clear();
   }
 
   void _submit(String text) {
     final state = context.read<ChatCubit>().state;
-    if (_resolving || state.sending || state.loading || state.loadFailed) {
-      return;
-    }
-    final body = text.trim();
-    if (body.isEmpty) return;
-    _resolving = true;
+    if (state.sending || state.loading || state.loadFailed) return;
     runDetached(
-      _send().whenComplete(() => _resolving = false),
+      _send(),
       'send room message',
       logName: 'ChatScreen',
       category: LogCategory.ui,
@@ -282,7 +234,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
                     type: DivineButtonType.link,
                   ),
                 ],
-                if (state.sendFailed) Text(context.l10n.dmSendFailedMessage),
+                BlocBuilder<ChatComposerCubit, ChatComposerState>(
+                  bloc: _composer,
+                  builder: (context, composer) =>
+                      state.sendFailed || composer.sendFailed
+                      ? Text(context.l10n.dmSendFailedMessage)
+                      : const SizedBox.shrink(),
+                ),
                 Expanded(
                   child: Stack(
                     fit: StackFit.expand,

@@ -29,7 +29,10 @@ final String _other = 'b' * 64;
 final String _self = 'f' * 64;
 
 /// Pumps a composer whose followed accounts all share the display name Alice.
-Future<_Chat> _pumpComposer(WidgetTester tester) async {
+Future<_Chat> _pumpComposer(
+  WidgetTester tester, {
+  bool profilesReady = true,
+}) async {
   tester.view.physicalSize = const Size(390, 667);
   tester.view.devicePixelRatio = 1;
   tester.view.viewInsets = const FakeViewPadding(bottom: 300);
@@ -76,7 +79,9 @@ Future<_Chat> _pumpComposer(WidgetTester tester) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        profileRepositoryProvider.overrideWithValue(profiles),
+        profileRepositoryProvider.overrideWithValue(
+          profilesReady ? profiles : null,
+        ),
         followRepositoryProvider.overrideWithValue(follows),
       ],
       child: MaterialApp(
@@ -150,6 +155,42 @@ void main() {
         );
       }
 
+      testWidgets('an unpicked display name stays plain text', (tester) async {
+        final chat = await _pumpComposer(tester);
+        when(
+          () => _profilesOf(tester).searchCachedProfilesByIdentity(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            UserProfile(
+              pubkey: _alice,
+              displayName: 'Alice',
+              rawData: const {},
+              createdAt: DateTime.utc(2026),
+              eventId: 'c' * 64,
+            ),
+          ],
+        );
+        await tester.enterText(find.byType(TextField), 'hi @Alice');
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        _verifySent(chat, 'hi @Alice');
+      });
+
+      testWidgets(
+        'picked accounts work before the profile repository is ready',
+        (tester) async {
+          final chat = await _pumpComposer(tester, profilesReady: false);
+          await _pick(tester, '@Al', _alice);
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+          await tester.pumpAndSettle();
+          _verifySent(chat, aliceRef);
+        },
+      );
+
       testWidgets("typing the sender's own name does not tag the sender", (
         tester,
       ) async {
@@ -177,15 +218,16 @@ void main() {
         _verifySent(chat, 'hi @Me');
       });
 
-      testWidgets('a second Enter while a typed mention resolves sends once', (
-        tester,
-      ) async {
+      testWidgets('a second Enter while sending sends once', (tester) async {
         final chat = await _pumpComposer(tester);
-        final held = Completer<List<UserProfile>>();
+        final held = Completer<bool>();
         when(
-          () => _profilesOf(tester).searchCachedProfilesByIdentity(
-            query: any(named: 'query'),
-            limit: any(named: 'limit'),
+          () => chat.send(
+            communityId: any(named: 'communityId'),
+            channelId: any(named: 'channelId'),
+            author: any(named: 'author'),
+            body: any(named: 'body'),
+            nowMilliseconds: any(named: 'nowMilliseconds'),
           ),
         ).thenAnswer((_) => held.future);
         await tester.enterText(find.byType(TextField), 'hi @Bob');
@@ -194,7 +236,7 @@ void main() {
         await tester.pump();
         await tester.sendKeyEvent(LogicalKeyboardKey.enter);
         await tester.pump();
-        held.complete([]);
+        held.complete(true);
         await tester.pumpAndSettle();
         _verifySent(chat, 'hi @Bob');
       });
