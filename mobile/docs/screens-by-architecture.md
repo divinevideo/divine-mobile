@@ -60,10 +60,12 @@ These routes are NOT wrapped in the ShellRoute and display without the AppShell 
 
 | Route | Screen |
 |-------|--------|
-| `/camera` | `UniversalCameraScreenPure` |
-| `/clip-manager` | `ClipManagerScreen` |
-| `/edit-video` | `VideoEditorScreen` |
-| `/drafts`, `/clips` | `ClipLibraryScreen` |
+| `/video-recorder` | `VideoRecorderRoute` |
+| `/video-editor`, `/video-editor/:draftId` | `VideoEditorScreen` |
+| `/video-metadata` | `VideoMetadataScreen` |
+| `/video-edit/:videoId` | `VideoMetadataEditScreen` |
+| `/subtitle-edit/:videoId` | `SubtitleEditorScreen` |
+| `/drafts`, `/clips`, `/clips-only` | `LibraryScreen` |
 
 ### Social
 
