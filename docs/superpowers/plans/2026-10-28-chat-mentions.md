@@ -1,6 +1,6 @@
 # Chat Mentions Implementation Plan
 
-> **For agentic workers:** Use superpowers:executing-plans inline. The user requested autonomous completion.
+> **For agentic workers:** Use superpowers:executing-plans inline.
 
 **Goal:** Pick accounts in chat and receive useful, spam-resistant in-app mention notifications.
 **Architecture:** Authenticated p tags and nostr references survive the encrypted rumor path. An account-scoped repository observes previously opened rooms, filters trusted senders, and supplies grouped local notifications to NotificationRepository.
@@ -38,6 +38,6 @@
 ### Task 3: Delivery
 - [x] Review full diff in a fresh review context, fix verified findings, run affected checks.
 - [x] Commit and push, open PR against main, request mapped team once.
-- [ ] Inspect CI through completion and hand back the PR with precise delivery limitations.
+- [x] Inspect CI through completion and hand back the PR with precise delivery limitations.
 
-Published PR: https://github.com/divinevideo/divine-mobile/pull/10536. Current CI status is authoritative on that PR.
+Published PR: https://github.com/divinevideo/divine-mobile/pull/10536.
