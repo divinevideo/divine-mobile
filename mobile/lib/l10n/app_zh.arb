@@ -5260,6 +5260,11 @@
   "videoEditorTransitionFlash": "闪光",
   "videoEditorTransitionIris": "圆形展开",
   "videoEditorTransitionStretch": "拉伸",
+  "videoEditorTransitionLightLeak": "漏光",
+  "videoEditorTransitionClockWipe": "时钟擦除",
+  "videoEditorTransitionDiagonalWipe": "斜向擦除",
+  "videoEditorTransitionFlip": "翻转",
+  "videoEditorTransitionCube": "立方体",
   "videoEditorTransitionFlashTooClose": "与另一个闪光相隔不到一秒，所以这里会以叠化播放。闪烁太多可能会伤害对闪光敏感的人。",
   "@videoEditorTransitionWipe": {
     "description": "Transition option where the next clip is progressively revealed over the current one."
@@ -5305,6 +5310,10 @@
     "description": "Accessibility label for the up direction option of a slide/push/wipe transition."
   },
   "videoEditorTransitionDirectionDown": "向下",
+  "videoEditorTransitionDirectionUpLeft": "向左上",
+  "videoEditorTransitionDirectionUpRight": "向右上",
+  "videoEditorTransitionDirectionDownLeft": "向左下",
+  "videoEditorTransitionDirectionDownRight": "向右下",
   "@videoEditorTransitionDirectionDown": {
     "description": "Accessibility label for the down direction option of a slide/push/wipe transition."
   },

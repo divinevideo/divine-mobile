@@ -7605,9 +7605,29 @@
   "@videoEditorTransitionStretch": {
     "description": "Transition option: the next clip stretches in from one edge while the current clip is squeezed away toward the other."
   },
+  "videoEditorTransitionLightLeak": "Light leak",
+  "@videoEditorTransitionLightLeak": {
+    "description": "Transition option: warm light, like a film burn, washes over the picture and hides the cut to the next clip. Use the same term as videoEditorEffectLightLeak."
+  },
+  "videoEditorTransitionClockWipe": "Clock wipe",
+  "@videoEditorTransitionClockWipe": {
+    "description": "Transition option: the next clip is revealed behind a hand sweeping around the middle of the picture, like a clock."
+  },
+  "videoEditorTransitionDiagonalWipe": "Diagonal wipe",
+  "@videoEditorTransitionDiagonalWipe": {
+    "description": "Transition option: the next clip is revealed by an edge moving diagonally across the picture, from one corner to the opposite one."
+  },
+  "videoEditorTransitionFlip": "Flip",
+  "@videoEditorTransitionFlip": {
+    "description": "Transition option: the picture turns over in 3D like a card, with the next clip on its back."
+  },
+  "videoEditorTransitionCube": "Cube",
+  "@videoEditorTransitionCube": {
+    "description": "Transition option: the picture turns in 3D like the side of a cube, bringing the next clip in as the next side."
+  },
   "videoEditorTransitionFlashTooClose": "Within a second of another flash, so it plays as a dissolve here. Too much flashing can hurt people who are sensitive to it.",
   "@videoEditorTransitionFlashTooClose": {
-    "description": "Hint under the transition options when the 'Flash' transition is picked but is less than a second from another flash transition, so the video shows a plain dissolve there instead. Keep the second sentence consistent with videoEditorEffectsFlashingNotDuplicated."
+    "description": "Hint under the transition options when the 'Flash' or 'Light leak' transition is picked but is less than a second from another such transition, so the video shows a plain dissolve there instead. Keep the second sentence consistent with videoEditorEffectsFlashingNotDuplicated."
   },
   "videoEditorTransitionButtonSemanticLabel": "Edit transition",
   "@videoEditorTransitionButtonSemanticLabel": {
@@ -7652,6 +7672,22 @@
   "videoEditorTransitionDirectionDown": "Down",
   "@videoEditorTransitionDirectionDown": {
     "description": "Accessibility label for the down direction option of a slide/push/wipe transition."
+  },
+  "videoEditorTransitionDirectionUpLeft": "Up and left",
+  "@videoEditorTransitionDirectionUpLeft": {
+    "description": "Accessibility label for the direction option of a diagonal wipe transition whose edge moves toward the top left corner."
+  },
+  "videoEditorTransitionDirectionUpRight": "Up and right",
+  "@videoEditorTransitionDirectionUpRight": {
+    "description": "Accessibility label for the direction option of a diagonal wipe transition whose edge moves toward the top right corner."
+  },
+  "videoEditorTransitionDirectionDownLeft": "Down and left",
+  "@videoEditorTransitionDirectionDownLeft": {
+    "description": "Accessibility label for the direction option of a diagonal wipe transition whose edge moves toward the bottom left corner."
+  },
+  "videoEditorTransitionDirectionDownRight": "Down and right",
+  "@videoEditorTransitionDirectionDownRight": {
+    "description": "Accessibility label for the direction option of a diagonal wipe transition whose edge moves toward the bottom right corner."
   },
   "videoEditorTransitionCurveOptionSemanticLabel": "Easing curve {number}",
   "@videoEditorTransitionCurveOptionSemanticLabel": {

@@ -10550,6 +10550,21 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorTransitionStretch => 'Strecken';
 
   @override
+  String get videoEditorTransitionLightLeak => 'Lichteinfall';
+
+  @override
+  String get videoEditorTransitionClockWipe => 'Uhrblende';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => 'Diagonales Wischen';
+
+  @override
+  String get videoEditorTransitionFlip => 'Wenden';
+
+  @override
+  String get videoEditorTransitionCube => 'Würfel';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       'Keine Sekunde von einem anderen Blitz entfernt, darum wird hier überblendet. Zu viel Blinken kann empfindlichen Menschen schaden.';
 
@@ -10587,6 +10602,18 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => 'Unten';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => 'Oben links';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'Oben rechts';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'Unten links';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'Unten rechts';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {

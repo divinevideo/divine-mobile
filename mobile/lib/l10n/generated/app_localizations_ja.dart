@@ -9907,6 +9907,21 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorTransitionStretch => 'ストレッチ';
 
   @override
+  String get videoEditorTransitionLightLeak => '光漏れ';
+
+  @override
+  String get videoEditorTransitionClockWipe => 'クロックワイプ';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => '斜めワイプ';
+
+  @override
+  String get videoEditorTransitionFlip => 'フリップ';
+
+  @override
+  String get videoEditorTransitionCube => 'キューブ';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       '別のフラッシュから1秒以内なので、ここではディゾルブになります。点滅が多すぎると、敏感な人の体に負担がかかることがあります。';
 
@@ -9943,6 +9958,18 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => '下';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => '左上';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => '右上';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => '左下';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => '右下';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {

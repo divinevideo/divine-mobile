@@ -10182,6 +10182,21 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorTransitionStretch => 'መለጠጥ';
 
   @override
+  String get videoEditorTransitionLightLeak => 'የብርሃን ፍሰት';
+
+  @override
+  String get videoEditorTransitionClockWipe => 'የሰዓት ማበስ';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => 'ሰያፍ ማበስ';
+
+  @override
+  String get videoEditorTransitionFlip => 'መገልበጥ';
+
+  @override
+  String get videoEditorTransitionCube => 'ኩብ';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       'ከሌላ ብልጭታ አንድ ሰከንድ ውስጥ ስለሆነ እዚህ እንደ መሟሟት ይጫወታል። ብዙ ብልጭታ ለሚነኩ ሰዎች ሊጎዳ ይችላል።';
 
@@ -10218,6 +10233,18 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => 'ታች';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => 'ላይ ግራ';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'ላይ ቀኝ';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'ታች ግራ';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'ታች ቀኝ';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {

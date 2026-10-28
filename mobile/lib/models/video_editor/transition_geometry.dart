@@ -91,9 +91,10 @@ Duration transitionDurationForConsumed(
 /// transitions — and, on a single clip that is both first and last, so its head
 /// and tail together leave a middle body.
 ///
-/// A flash transition within [minimumFlashTransitionGap] of an earlier one on
-/// the exported video, or of the first one as the video loops, becomes a
-/// dissolve of the same length, so the timeline stays as it is.
+/// A flash transition (a flash or a light leak) within
+/// [minimumFlashTransitionGap] of an earlier one on the exported video, or of
+/// the first one as the video loops, becomes a dissolve of the same length, so
+/// the timeline stays as it is.
 ///
 /// Returns `null` for any boundary (internal or wrap) with no room. Keyed by
 /// clip id rather than index so it stays correct even if the render pipeline
@@ -219,22 +220,35 @@ typedef _FlashMoment = ({String clipId, Duration at});
 
 /// How strongly a frame has turned white where a flash starts, for a flashing
 /// video effect and a flash transition alike, so the flashes of both are
-/// counted from the same moment.
+/// counted from the same moment. A light leak transition is counted from where
+/// its light reaches this share of its peak.
 const flashOnsetStrength = 0.25;
 
 /// How far into its blend [transition]'s flash starts: where its curve has
 /// eased the progress far enough for the flash to reach [flashOnsetStrength].
 ///
 /// The renderers brighten a flash by `(1 - |2p - 1|)^4` of eased progress
-/// `p`, so it peaks where the curve reaches one half, the midpoint only on a
-/// curve symmetric about it, and starts a little before that.
+/// `p`, and a light leak's light by `sin²(πp)`, so both peak where the curve
+/// reaches one half, the midpoint only on a curve symmetric about it, and
+/// start before that.
 Duration _flashAt(ClipTransition transition) =>
-    transition.duration * _flashOnsetShares[transition.curve]!;
+    transition.duration *
+    _flashOnsetShares[(transition.type, transition.curve)]!;
 
-/// Where each curve's flash starts, as a share of the blend.
-final Map<AnimationCurve, double> _flashOnsetShares = {
-  for (final curve in AnimationCurve.values)
-    curve: _firstShareReaching(curve, math.pow(flashOnsetStrength, 1 / 4) / 2),
+/// The eased progress at which a flashing transition of [type] reaches
+/// [flashOnsetStrength].
+double _flashOnsetProgress(ClipTransitionType type) => switch (type) {
+  ClipTransitionType.lightLeak =>
+    math.asin(math.sqrt(flashOnsetStrength)) / math.pi,
+  _ => math.pow(flashOnsetStrength, 1 / 4) / 2,
+};
+
+/// Where each flashing type's flash starts on each curve, as a share of the
+/// blend.
+final Map<(ClipTransitionType, AnimationCurve), double> _flashOnsetShares = {
+  for (final type in ClipTransitionType.values.where((type) => type.flashes))
+    for (final curve in AnimationCurve.values)
+      (type, curve): _firstShareReaching(curve, _flashOnsetProgress(type)),
 };
 
 /// The first share of a transition at which [curve] has eased its progress to

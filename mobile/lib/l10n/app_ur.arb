@@ -5260,6 +5260,11 @@
   "videoEditorTransitionFlash": "فلیش",
   "videoEditorTransitionIris": "آئرس",
   "videoEditorTransitionStretch": "کھنچاؤ",
+  "videoEditorTransitionLightLeak": "روشنی کا رساؤ",
+  "videoEditorTransitionClockWipe": "گھڑی وائپ",
+  "videoEditorTransitionDiagonalWipe": "ترچھا وائپ",
+  "videoEditorTransitionFlip": "پلٹنا",
+  "videoEditorTransitionCube": "مکعب",
   "videoEditorTransitionFlashTooClose": "دوسرے فلیش سے ایک سیکنڈ سے کم فاصلے پر ہے، اس لیے یہاں ڈیزالو کے طور پر چلے گا۔ زیادہ ٹمٹماہٹ حساس لوگوں کو نقصان پہنچا سکتی ہے۔",
   "@videoEditorTransitionWipe": {
     "description": "Transition option where the next clip is progressively revealed over the current one."
@@ -5305,6 +5310,10 @@
     "description": "Accessibility label for the up direction option of a slide/push/wipe transition."
   },
   "videoEditorTransitionDirectionDown": "نیچے",
+  "videoEditorTransitionDirectionUpLeft": "اوپر بائیں",
+  "videoEditorTransitionDirectionUpRight": "اوپر دائیں",
+  "videoEditorTransitionDirectionDownLeft": "نیچے بائیں",
+  "videoEditorTransitionDirectionDownRight": "نیچے دائیں",
   "@videoEditorTransitionDirectionDown": {
     "description": "Accessibility label for the down direction option of a slide/push/wipe transition."
   },

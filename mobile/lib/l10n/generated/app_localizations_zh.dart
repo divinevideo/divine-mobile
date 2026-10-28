@@ -9808,6 +9808,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorTransitionStretch => '拉伸';
 
   @override
+  String get videoEditorTransitionLightLeak => '漏光';
+
+  @override
+  String get videoEditorTransitionClockWipe => '时钟擦除';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => '斜向擦除';
+
+  @override
+  String get videoEditorTransitionFlip => '翻转';
+
+  @override
+  String get videoEditorTransitionCube => '立方体';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       '与另一个闪光相隔不到一秒，所以这里会以叠化播放。闪烁太多可能会伤害对闪光敏感的人。';
 
@@ -9843,6 +9858,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => '向下';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => '向左上';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => '向右上';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => '向左下';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => '向右下';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {

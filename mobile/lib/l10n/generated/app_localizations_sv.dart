@@ -10420,6 +10420,21 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorTransitionStretch => 'Sträcka';
 
   @override
+  String get videoEditorTransitionLightLeak => 'Ljusläcka';
+
+  @override
+  String get videoEditorTransitionClockWipe => 'Klocksvep';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => 'Diagonalt svep';
+
+  @override
+  String get videoEditorTransitionFlip => 'Vänd';
+
+  @override
+  String get videoEditorTransitionCube => 'Kub';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       'Mindre än en sekund från en annan blixt, så här blir det en övertoning. För mycket blinkande kan skada känsliga personer.';
 
@@ -10457,6 +10472,18 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => 'Ned';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => 'Upp till vänster';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'Upp till höger';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'Ned till vänster';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'Ned till höger';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {

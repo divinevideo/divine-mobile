@@ -10467,6 +10467,21 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorTransitionStretch => 'Uitrekken';
 
   @override
+  String get videoEditorTransitionLightLeak => 'Lichtlek';
+
+  @override
+  String get videoEditorTransitionClockWipe => 'Klokvegen';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => 'Diagonaal vegen';
+
+  @override
+  String get videoEditorTransitionFlip => 'Omslaan';
+
+  @override
+  String get videoEditorTransitionCube => 'Kubus';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       'Minder dan een seconde van een andere flits, dus hier vervloeit het beeld. Te veel knipperen kan schadelijk zijn voor mensen die er gevoelig voor zijn.';
 
@@ -10504,6 +10519,18 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => 'Omlaag';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => 'Linksboven';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'Rechtsboven';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'Linksonder';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'Rechtsonder';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {

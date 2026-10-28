@@ -5260,6 +5260,11 @@
   "videoEditorTransitionFlash": "Kilat",
   "videoEditorTransitionIris": "Bulatan",
   "videoEditorTransitionStretch": "Regangkan",
+  "videoEditorTransitionLightLeak": "Kebocoran Cahaya",
+  "videoEditorTransitionClockWipe": "Sapu jam",
+  "videoEditorTransitionDiagonalWipe": "Sapu pepenjuru",
+  "videoEditorTransitionFlip": "Balik",
+  "videoEditorTransitionCube": "Kiub",
   "videoEditorTransitionFlashTooClose": "Kurang daripada sesaat dari kilat lain, jadi di sini ia dimainkan sebagai larut. Kelipan berlebihan boleh memudaratkan orang yang sensitif.",
   "@videoEditorTransitionWipe": {
     "description": "Transition option where the next clip is progressively revealed over the current one."
@@ -5305,6 +5310,10 @@
     "description": "Accessibility label for the up direction option of a slide/push/wipe transition."
   },
   "videoEditorTransitionDirectionDown": "Bawah",
+  "videoEditorTransitionDirectionUpLeft": "Kiri atas",
+  "videoEditorTransitionDirectionUpRight": "Kanan atas",
+  "videoEditorTransitionDirectionDownLeft": "Kiri bawah",
+  "videoEditorTransitionDirectionDownRight": "Kanan bawah",
   "@videoEditorTransitionDirectionDown": {
     "description": "Accessibility label for the down direction option of a slide/push/wipe transition."
   },

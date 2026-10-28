@@ -10631,6 +10631,21 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorTransitionStretch => 'Rozciąganie';
 
   @override
+  String get videoEditorTransitionLightLeak => 'Wyciek światła';
+
+  @override
+  String get videoEditorTransitionClockWipe => 'Wycieranie zegarowe';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => 'Wycieranie po przekątnej';
+
+  @override
+  String get videoEditorTransitionFlip => 'Odwrócenie';
+
+  @override
+  String get videoEditorTransitionCube => 'Sześcian';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       'Mniej niż sekundę od innego błysku, więc tutaj będzie przenikaniem. Zbyt dużo migania może szkodzić osobom wrażliwym.';
 
@@ -10668,6 +10683,18 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => 'Dół';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => 'W górę i w lewo';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'W górę i w prawo';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'W dół i w lewo';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'W dół i w prawo';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {

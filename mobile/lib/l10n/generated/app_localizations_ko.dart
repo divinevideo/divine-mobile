@@ -9927,6 +9927,21 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorTransitionStretch => '늘이기';
 
   @override
+  String get videoEditorTransitionLightLeak => '빛 번짐';
+
+  @override
+  String get videoEditorTransitionClockWipe => '시계 와이프';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => '대각선 와이프';
+
+  @override
+  String get videoEditorTransitionFlip => '뒤집기';
+
+  @override
+  String get videoEditorTransitionCube => '큐브';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       '다른 플래시와 1초 이내라서 여기서는 디졸브로 재생돼요. 깜빡임이 너무 많으면 민감한 사람에게 해로울 수 있어요.';
 
@@ -9963,6 +9978,18 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => '아래';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => '왼쪽 위';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => '오른쪽 위';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => '왼쪽 아래';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => '오른쪽 아래';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {

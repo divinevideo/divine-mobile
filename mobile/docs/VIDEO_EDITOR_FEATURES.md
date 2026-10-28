@@ -59,11 +59,11 @@ Clip actions ([`video_editor_timeline_clip_controls.dart`](../lib/widgets/video_
 
 Transitions between clips ([`video_editor_transition_sheet.dart`](../lib/widgets/video_editor/timeline_editor/controls/video_editor_transition_sheet.dart)):
 
-- Dissolve, fade to black, fade to white, slide, push, wipe, zoom in, zoom out, spin, whip pan, blur, glitch, flash, iris, stretch. Slide, push, wipe, whip pan and stretch take a direction (left, right, up, down).
+- Dissolve, fade to black, fade to white, slide, push, wipe, zoom in, zoom out, spin, whip pan, blur, glitch, flash, iris, stretch, light leak, clock wipe, diagonal wipe, flip, cube. Slide, push, wipe, whip pan, stretch, flip and cube take a direction (left, right, up, down); a diagonal wipe takes the corner it travels toward (up and left, up and right, down and left, down and right).
 - Duration 10–2000 ms in 10 ms steps, further limited by how long the neighbouring clips are.
 - 13 easing curves.
 - A transition from the last clip back into the first, for the loop.
-- A flash less than a second from another flash on the looping video plays as a dissolve, and the picker says so. Flashing effects on the beat skip the beats next to a flash, so the video never flashes more than three times a second.
+- A flash or light leak less than a second from another one on the looping video plays as a dissolve, and the picker says so. Flashing effects on the beat skip the beats next to a flash, so the video never flashes more than three times a second.
 - Across every transition but the fades to black and white the two clips' sounds cross-fade, each at its own volume and EQ.
 
 Detach (picture-in-picture):

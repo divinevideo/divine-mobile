@@ -10376,6 +10376,21 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorTransitionStretch => 'Kéo giãn';
 
   @override
+  String get videoEditorTransitionLightLeak => 'Rò sáng';
+
+  @override
+  String get videoEditorTransitionClockWipe => 'Quét đồng hồ';
+
+  @override
+  String get videoEditorTransitionDiagonalWipe => 'Quét chéo';
+
+  @override
+  String get videoEditorTransitionFlip => 'Lật';
+
+  @override
+  String get videoEditorTransitionCube => 'Khối lập phương';
+
+  @override
   String get videoEditorTransitionFlashTooClose =>
       'Cách một lần lóe sáng khác chưa đến một giây, nên ở đây sẽ phát dạng hòa tan. Nhấp nháy quá nhiều có thể gây hại cho người nhạy cảm.';
 
@@ -10413,6 +10428,18 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorTransitionDirectionDown => 'Xuống';
+
+  @override
+  String get videoEditorTransitionDirectionUpLeft => 'Lên trái';
+
+  @override
+  String get videoEditorTransitionDirectionUpRight => 'Lên phải';
+
+  @override
+  String get videoEditorTransitionDirectionDownLeft => 'Xuống trái';
+
+  @override
+  String get videoEditorTransitionDirectionDownRight => 'Xuống phải';
 
   @override
   String videoEditorTransitionCurveOptionSemanticLabel(int number) {
