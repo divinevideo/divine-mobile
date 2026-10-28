@@ -54,22 +54,17 @@ void main() {
             ),
           ),
         );
-        expect(find.text('Cancel'), findsOneWidget);
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.commonCancel), findsOneWidget);
         expect(
-          find.text(
-            lookupAppLocalizations(const Locale('en'))
-                .videoEditorLoopRepairProgress,
-          ),
+          find.text(l10n.videoEditorLoopRepairProgress),
           findsOneWidget,
         );
-        await tester.tap(find.text('Cancel'));
+        await tester.tap(find.text(l10n.commonCancel));
         await tester.pump();
         expect(cubit.state.status, LoopSuggestionStatus.idle);
         expect(
-          find.text(
-            lookupAppLocalizations(const Locale('en'))
-                .videoEditorLoopRepairProgress,
-          ),
+          find.text(l10n.videoEditorLoopRepairProgress),
           findsNothing,
         );
         gate.complete(const LoopRepairResult(status: .noMatch));
