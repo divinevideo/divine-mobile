@@ -245,6 +245,8 @@ class ChatMentionRepository implements LocalNotificationSource {
   /// already shown.
   void reevaluate() {
     if (_closed) return;
+    final ownerReference = 'nostr:${NostrKeyUtils.encodePubKey(owner)}';
+    final current = now();
     final groups = <String, ({String channel, ChatMessage message})>{};
     for (final entry in _messages.entries) {
       for (final message in entry.value) {
@@ -252,15 +254,13 @@ class ChatMentionRepository implements LocalNotificationSource {
             !message.mentionedPubkeys.contains(owner) ||
             // A p tag alone is not a mention: NIP-22 replies tag the parent's
             // author. The owner's key must also show in the effective body.
-            !message.effectiveBody.contains(
-              'nostr:${NostrKeyUtils.encodePubKey(owner)}',
-            ) ||
+            !message.effectiveBody.contains(ownerReference) ||
             !canNotify(message.author) ||
             message.createdAt < _rooms[entry.key]! ||
-            message.createdAt < now() - ChatMentionLimits.maxAgeSeconds ||
+            message.createdAt < current - ChatMentionLimits.maxAgeSeconds ||
             message.createdAt >
-                now() + ChatMentionLimits.maxFutureSkewSeconds ||
-            message.isExpiredAt(now())) {
+                current + ChatMentionLimits.maxFutureSkewSeconds ||
+            message.isExpiredAt(current)) {
           continue;
         }
         final id = 'chat:${entry.key}:${message.author}';
