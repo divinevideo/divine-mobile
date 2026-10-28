@@ -7,6 +7,7 @@ import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
 import 'package:models/models.dart';
 import 'package:notification_repository/notification_repository.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:rxdart/rxdart.dart' hide NotificationKind;
 import 'package:unified_logger/unified_logger.dart';
@@ -140,10 +141,13 @@ class ChatMentionRepository implements LocalNotificationSource {
       _subscriptions[channel] = repository.changes.listen(
         (_) => refresh(),
         onError: (Object error, StackTrace stack) {
-          // A relay outage keeps the last verified snapshot; the relay reconnects.
+          // The relay gave up or a write failed: keep the last snapshot until
+          // refresh() rebuilds this room.
           Log.warning(
-            'Chat mention relay unavailable (${error.runtimeType})',
+            'Chat mention room stopped',
             name: 'ChatMentions',
+            error: error,
+            stackTrace: stack,
           );
           _failedRooms.add(channel);
         },
@@ -191,10 +195,17 @@ class ChatMentionRepository implements LocalNotificationSource {
         .toSet();
     if (missing.isNotEmpty && loadActors != null) {
       _loadingActors.addAll(missing);
-      unawaited(_resolveActors(missing));
+      runDetached(
+        _resolveActors(missing),
+        'load chat mention senders',
+        logName: 'ChatMentions',
+        category: LogCategory.storage,
+      );
     }
   }
 
+  /// Rows keep the generated fallback name until a load succeeds; the next
+  /// [updateRoom] retries any sender still missing.
   Future<void> _resolveActors(Set<String> authors) async {
     try {
       final actors = await loadActors!(authors);
@@ -203,8 +214,6 @@ class ChatMentionRepository implements LocalNotificationSource {
         _actors[actor.pubkey] = actor;
       }
       reevaluate();
-    } on Exception {
-      // Stable generated identities remain available offline.
     } finally {
       _loadingActors.removeAll(authors);
     }

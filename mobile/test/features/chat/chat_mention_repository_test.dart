@@ -224,6 +224,70 @@ void main() {
     });
   });
 
+  group('sender names', () {
+    test('rows show a loaded sender name, only for trusted senders', () async {
+      final requested = <Set<String>>[];
+      final repo = ChatMentionRepository(
+        owner: me,
+        communityId: 'community-test',
+        store: InMemoryConcordStore(me),
+        now: () => 1000,
+        canNotify: (author) => author == friend,
+        loadActors: (authors) async {
+          requested.add(authors);
+          return [ActorInfo(pubkey: friend, displayName: 'Friend')];
+        },
+      );
+      addTearDown(repo.close);
+      await repo.enroll('general');
+      repo.updateRoom('general', [
+        message(friend, 1001),
+        message(stranger, 1001),
+      ]);
+      await pumpEventQueue();
+      expect(requested, [
+        {friend},
+      ]);
+      expect(
+        (repo.items.single as ActorNotification).actor.displayName,
+        'Friend',
+      );
+    });
+
+    test(
+      'a failed load keeps the fallback name and the next update retries',
+      () async {
+        var attempts = 0;
+        final repo = ChatMentionRepository(
+          owner: me,
+          communityId: 'community-test',
+          store: InMemoryConcordStore(me),
+          now: () => 1000,
+          canNotify: (_) => true,
+          loadActors: (authors) async {
+            if (++attempts == 1) throw Exception('cache unavailable');
+            return [ActorInfo(pubkey: friend, displayName: 'Friend')];
+          },
+        );
+        addTearDown(repo.close);
+        await repo.enroll('general');
+        repo.updateRoom('general', [message(friend, 1001)]);
+        await pumpEventQueue();
+        expect(
+          (repo.items.single as ActorNotification).actor.displayName,
+          UserProfile.defaultDisplayNameFor(friend),
+        );
+        repo.updateRoom('general', [message(friend, 1001)]);
+        await pumpEventQueue();
+        expect(attempts, 2);
+        expect(
+          (repo.items.single as ActorNotification).actor.displayName,
+          'Friend',
+        );
+      },
+    );
+  });
+
   group('initialize', () {
     test(
       'enrollment and read state survive restart without plaintext copies',
