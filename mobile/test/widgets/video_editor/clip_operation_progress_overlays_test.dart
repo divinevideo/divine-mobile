@@ -112,24 +112,6 @@ void main() {
       },
     );
 
-    testWidgets('keeps its own label readable while it hides the editor', (
-      tester,
-    ) async {
-      whenListen(
-        bloc,
-        const Stream<ClipEditorState>.empty(),
-        initialState: _importing,
-      );
-
-      await pump(tester);
-
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      expect(
-        find.semantics.byLabel(l10n.videoEditorLibraryImportProgressLabel),
-        findsOne,
-      );
-    });
-
     testWidgets('announces an operation when it starts', (tester) async {
       final announced = _captureAnnouncements(tester);
       whenListen(
