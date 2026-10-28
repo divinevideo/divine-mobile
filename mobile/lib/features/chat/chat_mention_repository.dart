@@ -238,10 +238,11 @@ class ChatMentionRepository implements LocalNotificationSource {
       for (final message in entry.value) {
         if (message.author == owner ||
             !message.mentionedPubkeys.contains(owner) ||
-            (message.editedBody != null &&
-                !message.effectiveBody.contains(
-                  'nostr:${NostrKeyUtils.encodePubKey(owner)}',
-                )) ||
+            // A p tag alone is not a mention: NIP-22 replies tag the parent's
+            // author. The owner's key must also show in the effective body.
+            !message.effectiveBody.contains(
+              'nostr:${NostrKeyUtils.encodePubKey(owner)}',
+            ) ||
             !canNotify(message.author) ||
             message.createdAt < _rooms[entry.key]! ||
             message.createdAt < now() - ChatMentionLimits.maxAgeSeconds ||

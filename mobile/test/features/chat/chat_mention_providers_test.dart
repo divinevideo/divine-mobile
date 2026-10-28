@@ -22,6 +22,7 @@ import 'package:openvine/providers/protected_minor_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 
 class _Room extends Mock implements ConcordRepository {}
 
@@ -141,7 +142,7 @@ void main() {
         id: author,
         channelId: 'general',
         author: author,
-        body: 'hello',
+        body: 'hello nostr:${NostrKeyUtils.encodePubKey(_me)}',
         createdAt: now + 10,
         mentionedPubkeys: [_me],
       );

@@ -55,7 +55,7 @@ void main() {
     id: id ?? '$time'.padLeft(64, '0'),
     channelId: 'general',
     author: author,
-    body: 'hello',
+    body: tagged ? 'hello nostr:${NostrKeyUtils.encodePubKey(me)}' : 'hello',
     createdAt: time,
     mentionedPubkeys: tagged ? [me] : [],
   );
@@ -189,6 +189,26 @@ void main() {
         repo.updateRoom('general', [
           sent(friend, 1001, expiresAt: 1005),
           sent(stranger, 1001, expiresAt: 1020),
+        ]);
+        expect(
+          repo.items.map((item) => (item as ActorNotification).actor.pubkey),
+          [stranger],
+        );
+      });
+
+      test('a tagged message that shows no mention does not alert', () {
+        // NIP-22 replies carry a p tag for the parent's author.
+        repo.updateRoom('general', [
+          ChatMessage(
+            id: 'e' * 64,
+            channelId: 'general',
+            author: friend,
+            body: 'agreed',
+            createdAt: 1001,
+            threadRootId: 'f' * 64,
+            mentionedPubkeys: [me],
+          ),
+          sent(stranger, 1001),
         ]);
         expect(
           repo.items.map((item) => (item as ActorNotification).actor.pubkey),
