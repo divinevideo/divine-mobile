@@ -36,6 +36,8 @@
 - [x] Run affected notification tests and Flutter analyze.
 
 ### Task 3: Delivery
-- [ ] Review full diff in a fresh review context, fix verified findings, run affected checks.
-- [ ] Commit and push, open PR against main, request mapped team once.
+- [x] Review full diff in a fresh review context, fix verified findings, run affected checks.
+- [x] Commit and push, open PR against main, request mapped team once.
 - [ ] Inspect CI through completion and hand back the PR with precise delivery limitations.
+
+Published PR: https://github.com/divinevideo/divine-mobile/pull/10536. Current CI status is authoritative on that PR.
