@@ -628,7 +628,7 @@ extension _AccountSignOut on AuthService {
       'deleteKeys=$deleteKeys, '
       'abortOnKeyDeletionFailure=$abortOnKeyDeletionFailure, '
       'deleteLocalUserData=$deleteLocalUserData, '
-      'currentPubkey=${_currentKeyContainer?.publicKeyHex ?? "null"}',
+      'currentPubkey=${pubkeyForLogs(_currentKeyContainer?.publicKeyHex, whenNull: "null")}',
       name: 'AuthService',
       category: LogCategory.auth,
     );

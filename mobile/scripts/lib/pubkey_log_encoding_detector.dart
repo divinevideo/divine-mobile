@@ -24,8 +24,11 @@
 //
 // Naming decides what is a pubkey, matched on the LAST camelCase segment, so
 // `userPubkey`, `authorPubkey`, `account.pubkeyHex` and `lastUsedNpub` are all
-// reached without enumerating them. Plurals are excluded: `pubkeys` is a
-// collection, and a collection needs `.map(pubkeyForLogs)` rather than a call.
+// reached without enumerating them. The `publicKey` spelling the key containers
+// use (`keyContainer.publicKeyHex`) counts too, and so does any name ending in a
+// multi-word spelling (`senderPubkeyHex`, `userPublicKey`), whose last segment
+// is only `hex` or `key`. Plurals are excluded: `pubkeys` is a collection, and a
+// collection needs `.map(pubkeyForLogs)` rather than a call.
 //
 // Only a plain value counts — an identifier, a property chain, or a call. An
 // expression that has already reduced the pubkey to something else has no
@@ -85,7 +88,19 @@ const kFormatter = 'pubkeyForLogs';
 /// Singular only. `pubkeys` / `npubs` name a collection, which the formatter
 /// cannot take, so flagging them would demand a rewrite the guard has no
 /// opinion about.
-const _pubkeyNames = {'pubkey', 'pubkeyhex', 'hexpubkey', 'npub'};
+const _pubkeyNames = {
+  'pubkey',
+  'pubkeyhex',
+  'hexpubkey',
+  'npub',
+  'publickey',
+  'publickeyhex',
+};
+
+/// Spellings whose last camelCase segment is `hex` or `key`, so the segment
+/// rule cannot reach them behind a prefix: `senderPubkeyHex`, `userPublicKey`.
+/// Matched as a suffix of the whole lowercased name.
+const _pubkeySuffixes = {'pubkeyhex', 'publickey', 'publickeyhex'};
 
 /// `Log.<level>` members that write to the unified logger.
 const _unifiedLogLevels = {
@@ -436,8 +451,10 @@ class _BarePubkeyFinder extends RecursiveAstVisitor<void> {
     final name = _trailingName(expression);
     if (name == null) return false;
     final bare = name.startsWith('_') ? name.substring(1) : name;
-    return _pubkeyNames.contains(bare.toLowerCase()) ||
-        _pubkeyNames.contains(_lastSegment(name));
+    final lower = bare.toLowerCase();
+    return _pubkeyNames.contains(lower) ||
+        _pubkeyNames.contains(_lastSegment(name)) ||
+        _pubkeySuffixes.any(lower.endsWith);
   }
 }
 

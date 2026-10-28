@@ -115,6 +115,39 @@ void report(String pubkey) {
         expect(sites.single.line, 3);
       });
 
+      test('a shortened publicKeyHex, the spelling the key containers use', () {
+        final sites = scan(r'''
+void report(KeyContainer keyContainer) {
+  Log.info('created ${keyContainer.publicKeyHex.substring(0, 8)}');
+}
+''');
+
+        expect(sites.single.identifier, 'publicKeyHex');
+      });
+
+      test(
+        'a shortened name ending in pubkeyHex, whose last segment is hex',
+        () {
+          final sites = scan(r'''
+void report(String senderPubkeyHex) {
+  Log.info('from ${senderPubkeyHex.substring(0, 8)}');
+}
+''');
+
+          expect(sites.single.identifier, 'senderPubkeyHex');
+        },
+      );
+
+      test('a shortened name ending in publicKey', () {
+        final sites = scan(r'''
+void report(String userPublicKey) {
+  Log.info('for ${userPublicKey.substring(0, 8)}');
+}
+''');
+
+        expect(sites.single.identifier, 'userPublicKey');
+      });
+
       test('every reference to that local, not just the first', () {
         final sites = scan(r'''
 void report(String pubkey) {
@@ -317,6 +350,17 @@ void report(Event event) {
           scan(r'''
 void report(String eventId) {
   Log.info('found $eventId');
+}
+'''),
+          isEmpty,
+        );
+      });
+
+      test('an ellipsis after a count named for public keys', () {
+        expect(
+          scan(r'''
+void report(int publicKeyCount) {
+  Log.info('checked $publicKeyCount... done');
 }
 '''),
           isEmpty,
