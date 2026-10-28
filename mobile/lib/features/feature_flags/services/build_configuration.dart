@@ -10,7 +10,10 @@ class BuildConfiguration {
   bool getDefault(FeatureFlag flag) {
     switch (flag) {
       case FeatureFlag.shortLinksSharing:
-        return const bool.fromEnvironment('FF_SHORT_LINKS_SHARING');
+        return const bool.fromEnvironment(
+          'FF_SHORT_LINKS_SHARING',
+          defaultValue: true,
+        );
       case FeatureFlag.publishingIdeas:
         return const bool.fromEnvironment('FF_PUBLISHING_IDEAS');
       case FeatureFlag.enhancedAnalytics:

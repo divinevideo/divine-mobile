@@ -1,6 +1,6 @@
 # External short-link sharing
 
-Short-link sending is an internal opt-in: FeatureFlag.shortLinksSharing defaults false, with compile-time FF_SHORT_LINKS_SHARING available for controlled builds. Signed-out users and disabled clients keep their existing full URLs without signing or creation requests. The authenticated gateway also defaults creation off independently.
+Short-link sending is enabled by default: FeatureFlag.shortLinksSharing defaults true. Set compile-time FF_SHORT_LINKS_SHARING=false to retain full URLs. Signed-out users and disabled clients keep their existing full URLs without signing or creation requests. The authenticated gateway enables creation independently.
 
 Only external video Copy/Share via and profile Share try shortening. Nostr events and DM messages retain the original canonical URL. Verified username subdomains keep their existing URL because they are outside the shortener destination grammar. First-party video IDs, full hex pubkeys and valid full npubs are preserved without truncation.
 
@@ -8,4 +8,4 @@ ShortLinkClient signs the exact POST body for https://gateway.divine.video/api/l
 
 Repeated Copy/Share via events are dropped while the same action is pending. Action results from a dismissed modal cannot pop the source page or trigger a late platform share. No new UI state or translations are introduced.
 
-Receiving is already merged separately. Android association changes require a native store release. iOS /l association expansion, older-installed-app behavior and physical iOS/Android checks remain release gates. Do not enable broad sending before daily backup automation, restore checks, monitoring and a limited internal canary pass. Disabling creation/sending must preserve existing public redirects.
+Receiving is already merged separately. These client defaults take effect in the next app build; Android association changes also require a native store release. Public links redirect to canonical web URLs for clients without short-link handling. Disabling creation/sending preserves existing public redirects.

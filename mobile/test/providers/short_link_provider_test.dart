@@ -22,14 +22,16 @@ void main() {
   const target = 'https://divine.video/video/synthetic-provider-check';
   const shortened = 'https://divine.video/l/Abc12345';
   group('shortLinkClientProvider', () {
+    test('short-link sharing is enabled by default', () {
+      expect(
+        const BuildConfiguration().getDefault(FeatureFlag.shortLinksSharing),
+        isTrue,
+      );
+    });
+
     test(
-      'is internal and off by default without constructing auth or HTTP',
+      'disabled sharing does not construct auth or HTTP',
       () {
-        expect(FeatureFlag.shortLinksSharing.isInternal, isTrue);
-        expect(
-          const BuildConfiguration().getDefault(FeatureFlag.shortLinksSharing),
-          isFalse,
-        );
         final container = ProviderContainer(
           overrides: [
             isFeatureEnabledProvider(FeatureFlag.shortLinksSharing)
