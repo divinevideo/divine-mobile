@@ -459,30 +459,21 @@ final class NativeLoopAlignmentClient implements LoopAlignmentClient {
         m.frameRate,
       );
       for (var j = 0; j < math.min(frames.length, expected.length); j++) {
-        // Only verified fixed-clock conversion can exceed 2ms. Stay within
-        // half of both intervals, retaining count and pixel-progression checks.
-        final sourceInterval = expected.length < 2
-            ? Duration.zero
-            : j == 0
-            ? expected[1] - expected[0]
-            : expected[j] - expected[j - 1];
-        final renderedInterval = frames.length < 2
-            ? Duration.zero
-            : j == 0
-            ? frames[1].time - frames[0].time
-            : frames[j].time - frames[j - 1].time;
-        final timingTolerance = Duration(
-          microseconds: math.max(
-            2000,
-            nativeClockRounding && j > 0
-                ? math.min(
-                        sourceInterval.inMicroseconds,
-                        renderedInterval.inMicroseconds,
+        // Only verified fixed-clock conversion can exceed 2ms, and never on the
+        // first picture. Stay within half of both intervals, retaining count
+        // and pixel-progression checks.
+        final timingTolerance = nativeClockRounding && j > 0
+            ? Duration(
+                microseconds: math.max(
+                  2000,
+                  math.min(
+                        (expected[j] - expected[j - 1]).inMicroseconds,
+                        (frames[j].time - frames[j - 1].time).inMicroseconds,
                       ) ~/
-                      2
-                : 2000,
-          ),
-        );
+                      2,
+                ),
+              )
+            : const Duration(milliseconds: 2);
         if ((frames[j].time - (expected[j] - cp.sourceStart)).abs() >
             timingTolerance) {
           covered = false;
