@@ -1318,12 +1318,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get exploreNoVideosAvailable => '暂无视频';
 
   @override
-  String get explorePeopleLists => '人物列表';
-
-  @override
-  String get exploreVideoLists => '视频列表';
-
-  @override
   String get exploreErrorLoadingLists => '加载列表出错，请重试。';
 
   @override
@@ -4921,6 +4915,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get listCreateNewList => '创建新列表';
+
+  @override
+  String get listTypeSheetTitle => '新列表';
+
+  @override
+  String get listTypeVideoList => '视频列表';
+
+  @override
+  String get listTypePeopleList => '人物列表';
 
   @override
   String get listNewPeopleList => '新人物列表';
