@@ -96,6 +96,19 @@ void main() {
         snapshots.add([row.copyWith(isRead: true)]);
         return expectation;
       });
+
+      test('rows sharing a timestamp keep a stable id order', () async {
+        final rows = [
+          for (var i = 39; i >= 0; i--)
+            row.copyWith(id: 'chat:general:${i.toString().padLeft(64, '0')}'),
+        ];
+        snapshots.add(rows);
+        final merged = (await repository.watchSnapshot().first).items;
+        expect(
+          merged.map((item) => item.id),
+          [for (final item in rows.reversed) item.id],
+        );
+      });
     });
 
     group('markAsRead', () {

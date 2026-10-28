@@ -683,7 +683,10 @@ class NotificationRepository {
       local.watchSnapshot(),
       (page, additions) {
         final items = [...page.items, ...additions]
-          ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+          ..sort((a, b) {
+            final order = b.timestamp.compareTo(a.timestamp);
+            return order != 0 ? order : a.id.compareTo(b.id);
+          });
         return page.copyWith(
           items: items,
           unreadCount: items.where((item) => !item.isRead).length,
