@@ -121,72 +121,75 @@ void main() {
   final aliceRef = 'nostr:${NostrKeyUtils.encodePubKey(_alice)}';
   final otherRef = 'nostr:${NostrKeyUtils.encodePubKey(_other)}';
 
-  group('interactions', () {
-    for (final removeSecond in [false, true]) {
+  group(ChatScreen, () {
+    group('interactions', () {
+      for (final removeSecond in [false, true]) {
+        testWidgets(
+          'small screen with keyboard preserves identities; remove second: $removeSecond',
+          (tester) async {
+            final chat = await _pumpComposer(tester);
+            await tester.enterText(find.byType(TextField), '@Al');
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), isNull);
+            expect(
+              tester.getBottomLeft(find.byType(MentionOverlay)).dy,
+              lessThanOrEqualTo(tester.getTopLeft(find.byType(TextField)).dy),
+            );
+            await _pick(tester, '@Al', _alice);
+            await _pick(tester, '@Alice @Al', _other);
+            if (removeSecond) {
+              await tester.enterText(find.byType(TextField), '@Alice ');
+              await tester.pump();
+            }
+            await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+            await tester.pumpAndSettle();
+            _verifySent(chat, removeSecond ? aliceRef : '$aliceRef $otherRef');
+          },
+        );
+      }
+
+      testWidgets('a second Enter while a typed mention resolves sends once', (
+        tester,
+      ) async {
+        final chat = await _pumpComposer(tester);
+        final held = Completer<List<UserProfile>>();
+        when(
+          () => _profilesOf(tester).searchCachedProfilesByIdentity(
+            query: any(named: 'query'),
+            limit: any(named: 'limit'),
+          ),
+        ).thenAnswer((_) => held.future);
+        await tester.enterText(find.byType(TextField), 'hi @Bob');
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pump();
+        held.complete([]);
+        await tester.pumpAndSettle();
+        _verifySent(chat, 'hi @Bob');
+      });
+
       testWidgets(
-        'small screen with keyboard preserves identities; remove second: $removeSecond',
+        'send button keeps each identity on its own token after a leading space',
         (tester) async {
           final chat = await _pumpComposer(tester);
-          await tester.enterText(find.byType(TextField), '@Al');
-          await tester.pumpAndSettle();
-          expect(tester.takeException(), isNull);
-          expect(
-            tester.getBottomLeft(find.byType(MentionOverlay)).dy,
-            lessThanOrEqualTo(tester.getTopLeft(find.byType(TextField)).dy),
+          await _pick(tester, ' @Al', _alice);
+          await _pick(tester, ' @Alice @Al', _other);
+          await tester.tap(
+            find.ancestor(
+              of: find.byWidgetPredicate(
+                (widget) =>
+                    widget is DivineIcon &&
+                    widget.icon == DivineIconName.arrowUp,
+              ),
+              matching: find.byType(IconButton),
+            ),
           );
-          await _pick(tester, '@Al', _alice);
-          await _pick(tester, '@Alice @Al', _other);
-          if (removeSecond) {
-            await tester.enterText(find.byType(TextField), '@Alice ');
-            await tester.pump();
-          }
-          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
           await tester.pumpAndSettle();
-          _verifySent(chat, removeSecond ? aliceRef : '$aliceRef $otherRef');
+          _verifySent(chat, '$aliceRef $otherRef');
         },
       );
-    }
-
-    testWidgets('a second Enter while a typed mention resolves sends once', (
-      tester,
-    ) async {
-      final chat = await _pumpComposer(tester);
-      final held = Completer<List<UserProfile>>();
-      when(
-        () => _profilesOf(tester).searchCachedProfilesByIdentity(
-          query: any(named: 'query'),
-          limit: any(named: 'limit'),
-        ),
-      ).thenAnswer((_) => held.future);
-      await tester.enterText(find.byType(TextField), 'hi @Bob');
-      await tester.pump();
-      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-      await tester.pump();
-      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-      await tester.pump();
-      held.complete([]);
-      await tester.pumpAndSettle();
-      _verifySent(chat, 'hi @Bob');
     });
-
-    testWidgets(
-      'send button keeps each identity on its own token after a leading space',
-      (tester) async {
-        final chat = await _pumpComposer(tester);
-        await _pick(tester, ' @Al', _alice);
-        await _pick(tester, ' @Alice @Al', _other);
-        await tester.tap(
-          find.ancestor(
-            of: find.byWidgetPredicate(
-              (widget) =>
-                  widget is DivineIcon && widget.icon == DivineIconName.arrowUp,
-            ),
-            matching: find.byType(IconButton),
-          ),
-        );
-        await tester.pumpAndSettle();
-        _verifySent(chat, '$aliceRef $otherRef');
-      },
-    );
   });
 }
