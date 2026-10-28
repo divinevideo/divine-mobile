@@ -1,5 +1,6 @@
 // ABOUTME: Tests for the caption layer <-> cue mapping helpers.
-// ABOUTME: Covers cue-id extraction and transform preservation on re-edit.
+// ABOUTME: Covers cue-id extraction, rebuilding cues from layers, and
+// ABOUTME: transform preservation on re-edit.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
@@ -30,6 +31,50 @@ void main() {
 
     test('returns null for a non-caption layer', () {
       expect(captionCueIdOf(TextLayer(text: 'plain')), isNull);
+    });
+  });
+
+  group('captionCuesFromLayers', () {
+    TextLayer cueLayer(
+      String id, {
+      required Duration start,
+      Map<String, dynamic>? meta,
+    }) => TextLayer(
+      id: id,
+      text: 'text $id',
+      startTime: start,
+      endTime: start + const Duration(seconds: 1),
+      meta:
+          meta ??
+          {
+            VideoEditorConstants.captionCueMetaKey: true,
+            VideoEditorConstants.captionCueIdMetaKey: 'cue-$id',
+          },
+    );
+
+    test('rebuilds only the caption cues, in playback order', () {
+      final cues = captionCuesFromLayers([
+        cueLayer('late', start: const Duration(seconds: 4)),
+        TextLayer(id: 'title', text: 'My title'),
+        cueLayer('early', start: const Duration(seconds: 1)),
+      ]);
+
+      expect(cues.map((cue) => cue.id), ['cue-early', 'cue-late']);
+      expect(cues.first.text, 'text early');
+      expect(cues.first.start, const Duration(seconds: 1));
+      expect(cues.first.end, const Duration(seconds: 2));
+    });
+
+    test('keeps a caption whose cue id was lost under its layer id', () {
+      final cues = captionCuesFromLayers([
+        cueLayer(
+          'layer-7',
+          start: Duration.zero,
+          meta: {VideoEditorConstants.captionCueMetaKey: true},
+        ),
+      ]);
+
+      expect(cues.single.id, 'layer-7');
     });
   });
 
