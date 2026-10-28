@@ -103,6 +103,15 @@ enum FeatureFlag {
         'Messages are signed with your key into a stream anyone can read. '
         'Stays off outside reviewer builds (#10094).',
     audience: FeatureFlagAudience.internal,
+  ),
+  videoUpscaling(
+    'Sharper Video Upscaling',
+    'Android: scale videos up to the screen with a Lanczos filter on the '
+        'GPU before they are drawn, so 720p playback stays sharp. Costs GPU '
+        'time and about 70-110 MB of graphics memory per player; phones '
+        'with less than 6 GB keep normal scaling. Applies to videos opened '
+        'after turning it on (#10529).',
+    audience: FeatureFlagAudience.internal,
   );
 
   const FeatureFlag(

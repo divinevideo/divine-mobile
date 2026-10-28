@@ -22,6 +22,7 @@ import 'package:openvine/providers/scheduled_posts_providers.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
+import 'package:openvine/providers/video_upscaling_provider.dart';
 import 'package:openvine/router/providers/page_context_provider.dart';
 import 'package:openvine/router/providers/route_normalization_provider.dart';
 import 'package:openvine/router/providers/support_route_trail_provider.dart';
@@ -112,6 +113,7 @@ void main() {
     ),
     // Root tier, stubbed: neither reaches the identity mirrors under test.
     routeNormalizationProvider.overrideWithValue(null),
+    videoUpscalingSyncProvider.overrideWithValue(null),
     supportRouteTrailProvider.overrideWith(_EmptySupportRouteTrail.new),
     connectivityRelayReconnectProvider.overrideWithValue(
       const Stream<ConnectivityTransition>.empty(),

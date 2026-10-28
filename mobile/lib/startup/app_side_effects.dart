@@ -17,6 +17,7 @@ import 'package:openvine/providers/scheduled_posts_providers.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
+import 'package:openvine/providers/video_upscaling_provider.dart';
 import 'package:openvine/router/providers/route_normalization_provider.dart';
 import 'package:openvine/router/providers/support_route_trail_provider.dart';
 
@@ -48,6 +49,11 @@ class AppRootSideEffects extends ConsumerWidget {
 
     // Observe the existing first-frame bus before any feed mounts.
     ref.watch(feedPlaybackPerformanceProvider);
+
+    // Players read the upscaling setting when they are created, so it has
+    // to be in place before any feed mounts. Reading the flag costs a
+    // SharedPreferences lookup.
+    ref.watch(videoUpscalingSyncProvider);
 
     // Retains parameter-free route context for support diagnostics. It must be
     // active before the user enters Settings or the Support Center.

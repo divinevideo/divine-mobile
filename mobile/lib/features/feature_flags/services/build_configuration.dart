@@ -74,6 +74,10 @@ class BuildConfiguration {
         // Default OFF: the POC signs with the account's real key into a
         // stream anyone can read, so only reviewer builds opt in (#10094).
         return const bool.fromEnvironment('FF_CONCORD_CHAT');
+      case FeatureFlag.videoUpscaling:
+        // Default OFF until the GPU and memory cost is measured across
+        // devices in the field (#10529).
+        return const bool.fromEnvironment('FF_VIDEO_UPSCALING');
     }
   }
 
@@ -124,6 +128,8 @@ class BuildConfiguration {
         return 'FF_B2_PLAYBACK_CANARY';
       case FeatureFlag.concordChat:
         return 'FF_CONCORD_CHAT';
+      case FeatureFlag.videoUpscaling:
+        return 'FF_VIDEO_UPSCALING';
     }
   }
 }
