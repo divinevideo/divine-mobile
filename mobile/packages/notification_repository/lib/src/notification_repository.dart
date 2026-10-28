@@ -746,7 +746,6 @@ class NotificationRepository {
     _readRetryTimer?.cancel();
     _readRetryTimer = null;
     await announcementsRepository?.close();
-
     // Drop the queue tail. Every later mutation throws on [_closed] before it
     // can enqueue, so this releases the old chain rather than gating new work
     // — it keeps a mutation hung in the signer from retaining this instance.
