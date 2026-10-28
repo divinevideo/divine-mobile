@@ -34,6 +34,11 @@ prints the native test XML path + failure excerpts when the APK
 fails to install. **For e2e targets, never call `patrol test` or
 `flutter test` directly** — you'll lose the timeline and the diagnostics.
 
+`profile.sh` installs on `ANDROID_SERIAL` if it is set, else on the first
+`emulator-*`, else on the first device `adb devices` lists. With a phone
+attached and no emulator running, that is the phone, so export
+`ANDROID_SERIAL=<serial>` first unless the phone is yours to use.
+
 Not every suite is a patrol suite. `profile.sh` recursively greps the
 target for `patrolTest` and dispatches: patrol suites go to
 `patrol test`, plain `integration_test` suites go to
