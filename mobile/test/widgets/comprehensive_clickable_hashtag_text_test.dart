@@ -37,9 +37,8 @@ Future<GoRouter> _pumpRoutedText(
       ),
       GoRoute(
         path: HashtagScreenRouter.path,
-        builder: (_, state) => Scaffold(
-          body: Text('hashtag:${state.pathParameters['tag']}'),
-        ),
+        builder: (_, state) =>
+            Scaffold(body: Text('hashtag:${state.pathParameters['tag']}')),
       ),
     ],
   );
@@ -204,30 +203,37 @@ void main() {
         expect(hashtagSpan.style, hashtagStyle);
       });
 
-      testWidgets('uses default hashtag style when none provided', (
-        tester,
-      ) async {
-        await tester.pumpWidget(
-          const MaterialApp(
-            localizationsDelegates: appLocalizationsDelegates,
-            supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: LinkifiedText(text: 'Text with #hashtag'),
-            ),
-          ),
-        );
+      for (final (name, theme, colors) in [
+        ('dark', VineTheme.theme, VineTheme.darkColors),
+        ('light', VineTheme.lightTheme, VineTheme.lightColors),
+      ]) {
+        testWidgets(
+          'uses the $name palette link color when no style is provided',
+          (tester) async {
+            await tester.pumpWidget(
+              MaterialApp(
+                theme: theme,
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: const Scaffold(
+                  body: LinkifiedText(text: 'Text with #hashtag'),
+                ),
+              ),
+            );
 
-        final text = tester.widget<Text>(find.byType(Text));
-        final textSpan = text.textSpan! as TextSpan;
-        final spans = textSpan.children!.cast<TextSpan>();
-        final hashtagSpan = spans.firstWhere(
-          (span) => span.text!.startsWith('#'),
-        );
+            final text = tester.widget<Text>(find.byType(Text));
+            final textSpan = text.textSpan! as TextSpan;
+            final spans = textSpan.children!.cast<TextSpan>();
+            final hashtagSpan = spans.firstWhere(
+              (span) => span.text!.startsWith('#'),
+            );
 
-        expect(hashtagSpan.style?.color, equals(VineTheme.info));
-        expect(hashtagSpan.style?.fontSize, equals(14));
-        expect(hashtagSpan.style?.fontWeight, equals(FontWeight.w500));
-      });
+            expect(hashtagSpan.style?.color, equals(colors.link));
+            expect(hashtagSpan.style?.fontSize, equals(14));
+            expect(hashtagSpan.style?.fontWeight, equals(FontWeight.w500));
+          },
+        );
+      }
 
       testWidgets('respects maxLines property', (tester) async {
         const longText =
@@ -272,10 +278,7 @@ void main() {
       testWidgets('navigates to hashtag feed when hashtag is tapped', (
         tester,
       ) async {
-        await _pumpRoutedText(
-          tester,
-          text: 'Check out #test',
-        );
+        await _pumpRoutedText(tester, text: 'Check out #test');
 
         _hashtagRecognizer(tester, 'test').onTap!();
         await tester.pumpAndSettle();
@@ -362,9 +365,7 @@ void main() {
           const MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: LinkifiedText(text: '#first#second hashtags'),
-            ),
+            home: Scaffold(body: LinkifiedText(text: '#first#second hashtags')),
           ),
         );
 
@@ -401,9 +402,7 @@ void main() {
           const MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(
-              body: LinkifiedText(text: 'Just a # character'),
-            ),
+            home: Scaffold(body: LinkifiedText(text: 'Just a # character')),
           ),
         );
 
@@ -435,10 +434,7 @@ void main() {
             .where((span) => span.recognizer != null)
             .toList();
 
-        expect(clickableSpans.map((span) => span.text), [
-          '#test',
-          '#hashtags',
-        ]);
+        expect(clickableSpans.map((span) => span.text), ['#test', '#hashtags']);
       });
     });
   });

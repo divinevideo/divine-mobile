@@ -53,17 +53,21 @@ class NotificationVideoThumbnail extends StatelessWidget {
       button: true,
       child: GestureDetector(
         onTap: onTap,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: SizedBox(
-            width: _thumbnailSize,
-            height: _thumbnailSize,
-            child: imageUrl != null
-                ? VineCachedImage(
-                    imageUrl: imageUrl!,
-                    memCacheWidth: _thumbnailMemCacheWidth,
-                  )
-                : ColoredBox(color: context.vineColors.card),
+        // The label above names the thumbnail; the unlabeled image would only
+        // turn the button into an image for assistive tech.
+        child: ExcludeSemantics(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: _thumbnailSize,
+              height: _thumbnailSize,
+              child: imageUrl != null
+                  ? VineCachedImage(
+                      imageUrl: imageUrl!,
+                      memCacheWidth: _thumbnailMemCacheWidth,
+                    )
+                  : ColoredBox(color: context.vineColors.card),
+            ),
           ),
         ),
       ),

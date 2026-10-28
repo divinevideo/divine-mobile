@@ -159,7 +159,7 @@ class _ExternalLink extends StatelessWidget {
         child: Text(
           label,
           style: VineTheme.bodySmallFont(
-            color: VineTheme.vineGreen,
+            color: context.vineColors.link,
           ).copyWith(decoration: TextDecoration.underline),
         ),
       ),
@@ -644,7 +644,7 @@ class _AddRelaySheetState extends State<_AddRelaySheet> {
               child: Text(
                 context.l10n.relaySettingsBrowsePublicRelays,
                 style: VineTheme.bodySmallFont(
-                  color: VineTheme.vineGreen,
+                  color: context.vineColors.link,
                 ).copyWith(decoration: TextDecoration.underline),
               ),
             ),

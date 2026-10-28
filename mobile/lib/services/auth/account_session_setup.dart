@@ -80,7 +80,7 @@ extension _AccountSessionSetup on AuthService {
         : null;
     Log.info(
       '_setupUserSession: starting — '
-      'pubkey=${keyContainer.publicKeyHex}, source=${source.name}',
+      'pubkey=${pubkeyForLogs(keyContainer.publicKeyHex)}, source=${source.name}',
       name: 'AuthService',
       category: LogCategory.auth,
     );

@@ -102,6 +102,93 @@ void main() {
       );
     });
 
+    test(
+      'resume refreshes a changed timezone only for the active session',
+      () async {
+        readiness = NostrSessionReadiness.nostrReady(
+          pubkey: 'a' * 64,
+          client: client,
+        );
+        coordinator.handleReadiness(readiness);
+        await pumpEventQueue(times: 2);
+        clearInteractions(pushService);
+        when(pushService.registrationTimezoneChanged)
+            .thenAnswer((_) async => false);
+        await coordinator.handleAppResumed();
+        verifyNever(
+          () => pushService.register(any(), isCurrent: any(named: 'isCurrent')),
+        );
+        when(pushService.registrationTimezoneChanged)
+            .thenAnswer((_) async => true);
+        await coordinator.handleAppResumed();
+        await pumpEventQueue(times: 2);
+        verify(
+          () => pushService.register(
+            'a' * 64,
+            isCurrent: any(named: 'isCurrent'),
+          ),
+        ).called(1);
+      },
+    );
+
+    test('disposed coordinator ignores an in-flight timezone result', () async {
+      readiness = NostrSessionReadiness.nostrReady(
+        pubkey: 'a' * 64,
+        client: client,
+      );
+      coordinator.handleReadiness(readiness);
+      await pumpEventQueue(times: 2);
+      clearInteractions(pushService);
+      final lookup = Completer<bool>();
+      when(pushService.registrationTimezoneChanged)
+          .thenAnswer((_) => lookup.future);
+      final refresh = coordinator.handleAppResumed();
+      coordinator.dispose();
+      lookup.complete(true);
+      await refresh;
+      verifyNever(
+        () => pushService.register(any(), isCurrent: any(named: 'isCurrent')),
+      );
+    });
+
+    test(
+      'a stale timezone result cannot register a replacement session',
+      () async {
+        readiness = NostrSessionReadiness.nostrReady(
+          pubkey: 'a' * 64,
+          client: client,
+        );
+        coordinator.handleReadiness(readiness);
+        await pumpEventQueue(times: 2);
+        clearInteractions(pushService);
+        final lookup = Completer<bool>();
+        when(pushService.registrationTimezoneChanged)
+            .thenAnswer((_) => lookup.future);
+        final refresh = coordinator.handleAppResumed();
+
+        final replacement = _MockNostrClient();
+        when(() => replacement.hasKeys).thenReturn(true);
+        when(() => replacement.publicKey).thenReturn('b' * 64);
+        when(() => authService.currentIdentity).thenReturn(
+          KeycastNostrIdentity(
+            pubkey: 'b' * 64,
+            rpcSigner: _MockNostrSigner(),
+          ),
+        );
+        readiness = NostrSessionReadiness.nostrReady(
+          pubkey: 'b' * 64,
+          client: replacement,
+        );
+        lookup.complete(true);
+        await refresh;
+        await pumpEventQueue(times: 2);
+
+        verifyNever(
+          () => pushService.register(any(), isCurrent: any(named: 'isCurrent')),
+        );
+      },
+    );
+
     test('registers once the matching signer-backed client is ready', () async {
       readiness = NostrSessionReadiness.nostrReady(
         pubkey: 'a' * 64,

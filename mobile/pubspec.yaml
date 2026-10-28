@@ -431,6 +431,7 @@ dependencies:
   meta: ^1.18.0
   battery_plus: ^7.1.2
   timezone: ^0.11.0
+  flutter_timezone: ^5.1.1
 
 dependency_overrides:
   # TODO(#3638): Keep device_info_plus on 10.x until the app is ready for the

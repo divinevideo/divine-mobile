@@ -198,6 +198,7 @@ PublishOutcome _acceptedOutcome(Event event, String relayUrl) => PublishOutcome(
 );
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late SharedPreferences sharedPreferences;
   late _MockFirebaseMessaging messaging;
   late _MockAuthService authService;
@@ -237,6 +238,11 @@ void main() {
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
     sharedPreferences = await SharedPreferences.getInstance();
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('flutter_timezone'),
+          (_) async => 'Etc/UTC',
+        );
     messaging = _MockFirebaseMessaging();
     authService = _MockAuthService();
     pushService = _MockPushNotificationService();
@@ -323,6 +329,11 @@ void main() {
   });
 
   tearDown(() async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('flutter_timezone'),
+          null,
+        );
     await authStateController.close();
     await defaultTokenRefreshController.close();
   });

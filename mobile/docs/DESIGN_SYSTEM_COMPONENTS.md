@@ -155,6 +155,15 @@ Text.rich(
 )
 ```
 
+Links inside content — URLs, hashtags and mentions in captions, comments,
+bios and messages — are colored with `context.vineColors.link`. It is the
+primary button green in dark mode and a darker green in light mode, where the
+brand green is too faint for body text. Never color a link with
+`VineTheme.info`: that blue is for status badges.
+Underline these inline links in the same link color so people can distinguish
+them from neighboring text without relying on color or a subtle weight change.
+Explicit over-video styles remain white and follow the fixed media treatment.
+
 ### DivineCheckbox
 ```dart
 DivineRowCheckbox(

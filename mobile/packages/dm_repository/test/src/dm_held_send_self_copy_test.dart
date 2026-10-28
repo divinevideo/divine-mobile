@@ -274,8 +274,10 @@ void main() {
         expect(selfCopies(), isEmpty);
         expect(
           published,
-          hasLength(2),
-          reason: 'one recipient wrap per attempt',
+          hasLength(1),
+          reason:
+              'the pool already holds the first recipient wrap, so the retry '
+              'publishes no other while the inbox stays unreadable (#10012)',
         );
         final row = await outgoingDao.getById(rumorId);
         expect(row!.recipientWrapStatus, OutgoingWrapStatus.pending);

@@ -915,7 +915,7 @@ class _MessageTextState extends ConsumerState<_MessageText> {
     // bubble it would sit green-on-green, so links there stay white.
     final linkColor = widget.isSent
         ? VineTheme.whiteText
-        : context.vineColors.accentPositive;
+        : context.vineColors.link;
     final referenceStyle = defaultStyle.copyWith(
       color: linkColor,
       decoration: TextDecoration.underline,
@@ -1559,9 +1559,10 @@ class _VideoCard extends ConsumerWidget {
 
   final VideoEvent video;
 
-  /// When false (a failed own send) the card registers no tap recognizer, so
-  /// the outer bubble's resend/delete tap wins the gesture arena and assistive
-  /// tech stops announcing a dead "open video" action.
+  /// When false (a failed own send) the card registers no tap recognizer and
+  /// no button semantics, so the outer bubble's resend/delete tap wins the
+  /// gesture arena and assistive tech stops announcing a dead "open video"
+  /// action.
   final bool enableTap;
   final DmReplyContext? dmReplyContext;
 
@@ -1582,107 +1583,113 @@ class _VideoCard extends ConsumerWidget {
       AsyncLoading() => null,
     };
     final hasAuthor = authorName != null && authorName.isNotEmpty;
-    return GestureDetector(
-      onTap: enableTap
-          ? () => context.push(
-              VideoDetailScreen.pathForId(video.id),
-              extra: VideoDetailRouteExtra(
-                initialVideo: video,
-                dmReplyContext: dmReplyContext,
-              ),
-            )
-          : null,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(_videoCardRadius),
-        child: SizedBox(
-          width: _videoCardWidth,
-          height: _videoCardHeight,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              VideoThumbnailWidget(video: video),
-              if (hasAuthor || hasTitle || hasLoops)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: DecoratedBox(
-                    // Soft bottom-of-thumbnail fade matching the home
-                    // feed video overlay: transparent → 50 %
-                    // VineTheme.backgroundColor. Top padding is
-                    // intentionally large so the gradient has room to
-                    // ease in over the thumbnail before reaching the
-                    // text — without it the fade would only span the
-                    // single line of label height and look abrupt.
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          VineTheme.backgroundColor.withValues(alpha: 0),
-                          VineTheme.backgroundColor.withValues(alpha: 0.5),
-                        ],
+    return Semantics(
+      button: enableTap,
+      label: enableTap ? context.l10n.videoPlayerPlayVideo : null,
+      child: GestureDetector(
+        onTap: enableTap
+            ? () => context.push(
+                VideoDetailScreen.pathForId(video.id),
+                extra: VideoDetailRouteExtra(
+                  initialVideo: video,
+                  dmReplyContext: dmReplyContext,
+                ),
+              )
+            : null,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(_videoCardRadius),
+          child: SizedBox(
+            width: _videoCardWidth,
+            height: _videoCardHeight,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // Unlabeled, so it would only turn the button into an image
+                // for assistive tech (#9621).
+                ExcludeSemantics(child: VideoThumbnailWidget(video: video)),
+                if (hasAuthor || hasTitle || hasLoops)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: DecoratedBox(
+                      // Soft bottom-of-thumbnail fade matching the home
+                      // feed video overlay: transparent → 50 %
+                      // VineTheme.backgroundColor. Top padding is
+                      // intentionally large so the gradient has room to
+                      // ease in over the thumbnail before reaching the
+                      // text — without it the fade would only span the
+                      // single line of label height and look abrupt.
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            VineTheme.backgroundColor.withValues(alpha: 0),
+                            VineTheme.backgroundColor.withValues(alpha: 0.5),
+                          ],
+                        ),
                       ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 48, 12, 12),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (hasAuthor)
-                            Text(
-                              authorName,
-                              // Mirrors the Explore > New grid creator
-                              // style: titleTinyFont (Bricolage Grotesque
-                              // 12 px / w800) with a subtle legibility
-                              // shadow, no underline.
-                              style:
-                                  VineTheme.titleTinyFont(
-                                    color: VineTheme.whiteText,
-                                  ).copyWith(
-                                    decoration: TextDecoration.none,
-                                    shadows: const [
-                                      Shadow(
-                                        offset: Offset(0, 1),
-                                        blurRadius: 2,
-                                        color: VineTheme.scrim15,
-                                      ),
-                                    ],
-                                  ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          if (hasTitle) ...[
-                            if (hasAuthor) const SizedBox(height: 4),
-                            Text(
-                              title,
-                              style: VineTheme.labelMediumFont(
-                                color: VineTheme.whiteText,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 48, 12, 12),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (hasAuthor)
+                              Text(
+                                authorName,
+                                // Mirrors the Explore > New grid creator
+                                // style: titleTinyFont (Bricolage Grotesque
+                                // 12 px / w800) with a subtle legibility
+                                // shadow, no underline.
+                                style:
+                                    VineTheme.titleTinyFont(
+                                      color: VineTheme.whiteText,
+                                    ).copyWith(
+                                      decoration: TextDecoration.none,
+                                      shadows: const [
+                                        Shadow(
+                                          offset: Offset(0, 1),
+                                          blurRadius: 2,
+                                          color: VineTheme.scrim15,
+                                        ),
+                                      ],
+                                    ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            if (hasTitle) ...[
+                              if (hasAuthor) const SizedBox(height: 4),
+                              Text(
+                                title,
+                                style: VineTheme.labelMediumFont(
+                                  color: VineTheme.whiteText,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                            if (hasLoops) ...[
+                              if (hasAuthor || hasTitle)
+                                const SizedBox(height: 4),
+                              Text(
+                                context.l10n.videoFeedLoopCountLine(
+                                  StringUtils.formatCompactNumber(loops),
+                                  loops,
+                                ),
+                                style: VineTheme.bodySmallFont(
+                                  color: VineTheme.whiteText,
+                                ),
+                              ),
+                            ],
                           ],
-                          if (hasLoops) ...[
-                            if (hasAuthor || hasTitle)
-                              const SizedBox(height: 4),
-                            Text(
-                              context.l10n.videoFeedLoopCountLine(
-                                StringUtils.formatCompactNumber(loops),
-                                loops,
-                              ),
-                              style: VineTheme.bodySmallFont(
-                                color: VineTheme.whiteText,
-                              ),
-                            ),
-                          ],
-                        ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

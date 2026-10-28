@@ -497,10 +497,12 @@ class _VideoItem extends StatelessWidget {
                       color: VineTheme.vineGreen.withValues(alpha: 0.9),
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    child: DivineIcon(
-                      icon: DivineIconName.images,
-                      size: 14,
-                      color: context.vineColors.primaryText,
+                    child: ExcludeSemantics(
+                      child: DivineIcon(
+                        icon: DivineIconName.images,
+                        size: 14,
+                        color: context.vineColors.primaryText,
+                      ),
                     ),
                   ),
                 ),
@@ -659,9 +661,13 @@ class _VideoThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
-      color: context.vineColors.card,
-      child: VideoThumbnailWidget(video: video),
+    // Unlabeled, so it would only turn the tile's button into an image for
+    // assistive tech; the tile's own label already names the video.
+    return ExcludeSemantics(
+      child: ColoredBox(
+        color: context.vineColors.card,
+        child: VideoThumbnailWidget(video: video),
+      ),
     );
   }
 }

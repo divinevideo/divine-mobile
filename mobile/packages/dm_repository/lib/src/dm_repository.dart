@@ -433,7 +433,9 @@ typedef DmVisibleActivity = ({
 /// [DmInboxResolution.unreadable] is a fact about our own read — the wrap may
 /// be sitting on relays the recipient never queries, so it is reported
 /// soft-unconfirmed and the durable row is kept for the sweep to re-resolve
-/// (#7317). Shared by every gift-wrap publisher that also reports delivery —
+/// (#7317). A message's row also records the accepted wrap, so its retries
+/// publish another recipient wrap only once the inbox is found (#10012).
+/// Shared by every gift-wrap publisher that also reports delivery —
 /// the 1:1 send, its retry, the reaction fan-out (#8443), the deletion
 /// fan-out (#8515), and the group send (#8434) — so no sweep can undo what a
 /// send path preserved. A fan-out applies it per recipient: NIP-17 states the
@@ -6998,7 +7000,9 @@ class DmRepository {
     // Reuses the soft-unconfirmed contract verbatim: row stays `pending`,
     // `incrementRetry` charges the budget, and `recoverFullSend` re-resolves on
     // the next sweep. The bubble is unchanged — `pending` and `delivered`
-    // render identically — so this buys durability, not a new indicator.
+    // render identically — so this buys durability, not a new indicator. The
+    // row also records the wrap the pool accepted, so the sweep does not
+    // publish another while the inbox stays unreadable (#10012).
     //
     // Only when the queue is wired: with no row to preserve there is nothing to
     // gain, and downgrading would skip the local persist and drop the message
@@ -7008,7 +7012,16 @@ class DmRepository {
     }
     final result = outgoingDao == null
         ? publishResult
-        : downgradeFallbackPoolDelivery(publishResult, inbox.state);
+        : await _holdFallbackPoolDelivery(
+            outgoingDao: outgoingDao,
+            rowId: rumor.id,
+            rowStatus: OutgoingWrapStatus.pending,
+            published: publishResult,
+            inboxState: inbox.state,
+          );
+    if (_disposed || _resetGeneration != generation) {
+      return _queuedForDelivery(rumor.id);
+    }
 
     if (result.success) {
       // Persist our own sent message locally so it appears immediately
@@ -7159,9 +7172,10 @@ class DmRepository {
         result: result,
       );
     } else if (result.retryablePending && outgoingDao != null) {
-      // Soft retry: either the recipient frame was written but no NIP-20 OK
-      // arrived, or the pre-publish wrap build timed out while a human-gated
-      // signer approval may still be pending. Keep the row pending — it renders
+      // Soft retry: the recipient frame was written but no NIP-20 OK arrived,
+      // the pool confirmed it on an unreadable inbox (held above), or the
+      // pre-publish wrap build timed out while a human-gated signer approval
+      // may still be pending. Keep the row pending — it renders
       // as a plain optimistic bubble, never a red failure — and let the retry
       // sweep re-drive it.
       await _finalizeAfterRecipientUnconfirmed(
@@ -7632,6 +7646,18 @@ class DmRepository {
   /// - Recipient failure: re-mark both wraps `failed` so the row
   ///   stays retryable.
   ///
+  /// A row an earlier attempt held on a fallback-pool `OK`, because the
+  /// recipient's inbox was unreadable, carries that wrap's id, and its retry
+  /// publishes a new recipient wrap only once the inbox is found (#10012).
+  /// While the inbox stays unreadable the attempt publishes nothing and is
+  /// charged as a soft one, or, with no relay connected, marked failed but
+  /// left uncharged as an outage (#8516). Once it reads absent, the pool is
+  /// where the recipient reads: the held wrap counts as delivered, and only
+  /// the sender's withheld copy is published. Every such attempt first makes
+  /// [NIP17MessageService.preSendRefusal]'s checks, as sendRumor does, so a
+  /// recipient the send policy now refuses, or an offline device, ends it as
+  /// it would end a publish.
+  ///
   /// Every failed attempt this runs is charged to the row's retry budget
   /// here, once — a soft-unconfirmed one too — except one that reached no
   /// relay (#8516). Callers never charge the returned outcome, so the budget
@@ -7813,25 +7839,63 @@ class DmRepository {
       return const NIP17SendResult.failure('group send cancelled by Leave');
     }
 
-    final publishResult = await _sendRumorWithTimeout(
-      rumor: rumor,
-      recipientPubkey: row.recipientPubkey,
-      targetRelays: inbox.relays,
-      selfWrapTargetRelays: selfWrapRelays,
-      awaitRecipientOk: true,
-      // Held by the downgrade below, so no self-copy yet (#10012).
-      withholdSelfWrap: inbox.state == DmInboxResolution.unreadable,
-    );
+    // A wrap the pool accepted on an earlier held attempt is already where an
+    // inbox-less recipient reads, and another one is not more likely to reach
+    // an inbox we still cannot read. Only a found inbox gets a new wrap
+    // (#10012).
+    final poolWrapId = _heldPoolWrapId(row);
+    // A retry that keeps or settles on that wrap skips sendRumor, so it makes
+    // sendRumor's pre-send checks here: the send policy (#176) and the offline
+    // fail-fast.
+    final keepsOrSettles =
+        poolWrapId != null &&
+        (inbox.state == DmInboxResolution.unreadable ||
+            inbox.state == DmInboxResolution.absent);
+    final refusal = keepsOrSettles ? await _heldRetryRefusal(rumor, row) : null;
+    final NIP17SendResult result;
+    if (refusal != null) {
+      result = refusal;
+    } else if (poolWrapId != null &&
+        inbox.state == DmInboxResolution.unreadable) {
+      result = _keepHeldPoolWrap(
+        rumor: rumor,
+        row: row,
+        poolWrapId: poolWrapId,
+      );
+    } else if (poolWrapId != null && inbox.state == DmInboxResolution.absent) {
+      result = await _settleHeldPoolWrap(
+        rumor: rumor,
+        row: row,
+        poolWrapId: poolWrapId,
+        selfWrapRelays: selfWrapRelays,
+      );
+    } else {
+      final publishResult = await _sendRumorWithTimeout(
+        rumor: rumor,
+        recipientPubkey: row.recipientPubkey,
+        targetRelays: inbox.relays,
+        selfWrapTargetRelays: selfWrapRelays,
+        awaitRecipientOk: true,
+        // Held by the downgrade below, so no self-copy yet (#10012).
+        withholdSelfWrap: inbox.state == DmInboxResolution.unreadable,
+      );
 
-    // Same rule as the initial send: a default-pool `OK` is not delivery when
-    // the recipient's inbox stayed unreadable. Without this the sweep undoes
-    // the send path's fix — it re-resolves to null, republishes to the pool,
-    // scores the OK as success and deletes the row, converging on the old
-    // false-`delivered` outcome one sweep later (#7317).
-    //
-    // `dao` is non-null here (guarded above), so unlike `sendMessage` there is
-    // always a row to preserve.
-    final result = downgradeFallbackPoolDelivery(publishResult, inbox.state);
+      // Same rule as the initial send: a default-pool `OK` is not delivery
+      // when the recipient's inbox stayed unreadable. Without this the sweep
+      // undoes the send path's fix — it re-resolves to null, republishes to
+      // the pool, scores the OK as success and deletes the row, converging on
+      // the old false-`delivered` outcome one sweep later (#7317).
+      //
+      // `dao` is non-null here (guarded above), so unlike `sendMessage` there
+      // is always a row to preserve.
+      result = await _holdFallbackPoolDelivery(
+        outgoingDao: dao,
+        rowId: rumorId,
+        rowStatus: row.recipientWrapStatus,
+        published: publishResult,
+        inboxState: inbox.state,
+      );
+    }
 
     if (result.success) {
       // Mirror sendMessage's happy-path transaction: persist
@@ -8066,11 +8130,12 @@ class DmRepository {
         result: result,
       );
     } else if (result.retryablePending) {
-      // Soft retry: frame written with no OK yet, or a pre-publish wrap build
+      // Soft retry: frame written with no OK yet, an attempt held on an
+      // unreadable inbox (published or not), or a pre-publish wrap build
       // timeout while a human-gated signer approval may still be pending. Keep
-      // the row pending (plain optimistic bubble, not a red failure) and let
-      // the next sweep re-drive it; only bump the retry count so it eventually
-      // exhausts.
+      // the row's status (a pending row stays a plain optimistic bubble, not a
+      // red failure) and let the next sweep re-drive it; only bump the retry
+      // count so it eventually exhausts.
       await _finalizeAfterRecipientUnconfirmed(
         outgoingDao: dao,
         rumorId: rumorId,
@@ -8718,10 +8783,11 @@ class DmRepository {
 
   /// Apply the queue-row transition for a soft, retryable-pending failure: an
   /// inconclusive recipient publish (frame written, no NIP-20 `OK`, no explicit
-  /// rejection) or a bounded pre-publish wrap build timeout where a human-gated
-  /// signer approval may still be pending. The row stays `pending` (rendering
-  /// as a plain optimistic bubble, never a red failure) and the retry sweep
-  /// re-drives it.
+  /// rejection), a fallback-pool `OK` held on an unreadable inbox, a retry of
+  /// that held wrap that published nothing (#10012), or a bounded pre-publish
+  /// wrap build timeout where a human-gated signer approval may still be
+  /// pending. The row keeps its status (a `pending` one renders as a plain
+  /// optimistic bubble, never a red failure) and the retry sweep re-drives it.
   ///
   /// Only `incrementRetry` runs: it records the attempt timestamp so the
   /// next sweep applies backoff, and counts this attempt toward the retry
@@ -8756,6 +8822,145 @@ class DmRepository {
       // soft-unconfirmed send converges without a foreground flip.
       _notifyRetryableWork();
     }
+  }
+
+  /// Applies [downgradeFallbackPoolDelivery] to an attempt that queue row
+  /// [rowId] tracks.
+  ///
+  /// A held attempt records on the row, under its current [rowStatus], the
+  /// wrap the pool accepted, so a retry while the inbox stays unreadable does
+  /// not publish another (#10012). Recorded while the attempt still holds the
+  /// row's recovery key, so a sweep that recovers the row next sees it.
+  /// Non-rethrowing: without the record the next retry republishes, as before.
+  Future<NIP17SendResult> _holdFallbackPoolDelivery({
+    required OutgoingDmsDao outgoingDao,
+    required String rowId,
+    required OutgoingWrapStatus rowStatus,
+    required NIP17SendResult published,
+    required DmInboxResolution inboxState,
+  }) async {
+    final result = downgradeFallbackPoolDelivery(published, inboxState);
+    final poolWrapId = published.success && !result.success
+        ? published.messageEventId
+        : null;
+    if (poolWrapId == null) return result;
+    try {
+      await outgoingDao.markRecipientWrapStatus(
+        id: rowId,
+        status: rowStatus,
+        eventId: poolWrapId,
+      );
+    } on Object catch (e, stackTrace) {
+      Log.error(
+        'Failed to record held pool wrap $poolWrapId on outgoing_dms row '
+        '$rowId: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      _errorReporter?.call(
+        e,
+        stackTrace,
+        site: DmRepositoryReportableSites.recordHeldPoolWrap,
+      );
+    }
+    return result;
+  }
+
+  /// The recipient wrap the fallback pool accepted on a held attempt of
+  /// [row] (#10012), or `null` when no attempt was held that way.
+  static String? _heldPoolWrapId(OutgoingDm row) =>
+      switch (row.recipientWrapStatus) {
+        OutgoingWrapStatus.pending ||
+        OutgoingWrapStatus.failed => row.recipientWrapEventId,
+        _ => null,
+      };
+
+  /// [NIP17MessageService.preSendRefusal] for a retry of held row [row] that
+  /// does not go through [NIP17MessageService.sendRumor] (#10012). A send
+  /// policy that throws fails the attempt, as it does inside sendRumor.
+  Future<NIP17SendResult?> _heldRetryRefusal(
+    Event rumor,
+    OutgoingDm row,
+  ) async {
+    try {
+      return await _messageService!.preSendRefusal(row.recipientPubkey);
+    } on Object catch (e, stackTrace) {
+      Log.error(
+        'Send policy check failed for held rumor ${rumor.id} to '
+        '${pubkeyForLogs(row.recipientPubkey)}: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return NIP17SendResult.failure('Failed to send message: $e');
+    }
+  }
+
+  /// A retry of held row [row] while the recipient's inbox stays unreadable:
+  /// nothing is published, since the fallback pool holds [poolWrapId]
+  /// (#10012). With no relay connected the inbox could not be read at all, an
+  /// outage on our side, so the attempt ends as a publish that reached no
+  /// relay does (#8516): the row is marked failed but not charged, and waits
+  /// for a relay to connect. Otherwise it is charged as a soft one.
+  NIP17SendResult _keepHeldPoolWrap({
+    required Event rumor,
+    required OutgoingDm row,
+    required String poolWrapId,
+  }) {
+    if (_nostrClient.connectedRelayCount == 0) {
+      Log.info(
+        'Not republishing rumor ${rumor.id} to '
+        '${pubkeyForLogs(row.recipientPubkey)}: no relay is connected to '
+        're-check their inbox, so the attempt waits for one; the fallback '
+        'pool holds wrap $poolWrapId (#10012)',
+        category: LogCategory.system,
+      );
+      return const NIP17SendResult.failure(
+        'No relay connected to re-check the recipient DM inbox',
+        reachedNoRelay: true,
+      );
+    }
+    Log.info(
+      'Not republishing rumor ${rumor.id} to '
+      '${pubkeyForLogs(row.recipientPubkey)}: the fallback pool already '
+      'accepted wrap $poolWrapId and their inbox is still unreadable, so '
+      'the row stays held (#10012)',
+      category: LogCategory.system,
+    );
+    return const NIP17SendResult.failure(
+      'Recipient DM inbox still unreadable; the fallback pool holds the wrap',
+      retryablePending: true,
+    );
+  }
+
+  /// Settles a held row whose recipient now advertises no inbox: the pool is
+  /// where they read, so [poolWrapId] is the delivery and no other recipient
+  /// wrap is published (#10012). Publishes only the sender's withheld copy
+  /// and reports the held wrap, for the caller's usual success handling.
+  Future<NIP17SendResult> _settleHeldPoolWrap({
+    required Event rumor,
+    required OutgoingDm row,
+    required String poolWrapId,
+    required List<String>? selfWrapRelays,
+  }) async {
+    Log.info(
+      'Not republishing rumor ${rumor.id} to '
+      '${pubkeyForLogs(row.recipientPubkey)}: they advertise no DM inbox, so '
+      'wrap $poolWrapId the fallback pool accepted is delivery; publishing '
+      'only the withheld self-copy (#10012)',
+      category: LogCategory.system,
+    );
+    final selfCopy = await _messageService!.publishSelfWrap(
+      rumorEvent: rumor,
+      targetRelays: selfWrapRelays,
+    );
+    return NIP17SendResult.success(
+      rumorEventId: rumor.id,
+      messageEventId: poolWrapId,
+      recipientPubkey: row.recipientPubkey,
+      selfWrapPublished: selfCopy.success,
+    );
   }
 
   /// Charge one failed [recoverFullSend] / [recoverSelfWrap] attempt to the
@@ -9350,9 +9555,18 @@ class DmRepository {
           // to preserve there is nothing to gain, and downgrading every
           // sibling would leave `results.any(success)` false, skipping the
           // local persist that puts the message in the sender's own thread.
-          return outgoingDao == null || inbox == null
-              ? published
-              : downgradeFallbackPoolDelivery(published, inbox.state);
+          //
+          // The held sibling's row records the pool's wrap here rather than in
+          // the finalize pass below, which runs after every sibling has
+          // published and outside this key (#10012).
+          if (outgoingDao == null || inbox == null) return published;
+          return _holdFallbackPoolDelivery(
+            outgoingDao: outgoingDao,
+            rowId: queueIds[i],
+            rowStatus: OutgoingWrapStatus.pending,
+            published: published,
+            inboxState: inbox.state,
+          );
         });
       } on Object catch (e) {
         result = NIP17SendResult.failure(

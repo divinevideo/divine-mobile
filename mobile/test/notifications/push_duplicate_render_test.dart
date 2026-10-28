@@ -76,6 +76,51 @@ void main() {
   });
 
   group('handleFirebaseMessagingBackgroundMessage', () {
+    test('an iOS alert preloads without rendering a second banner', () async {
+      var warmed = 0;
+      var rendered = 0;
+      await app.handleFirebaseMessagingBackgroundMessage(
+        const RemoteMessage(
+          notification: RemoteNotification(title: 'New like', body: 'A like'),
+          data: {'type': 'like'},
+        ),
+        initializeFirebase: () async {},
+        preloadContent: (_) async {
+          warmed++;
+        },
+        renderLocalPush:
+            ({
+              required id,
+              required title,
+              required body,
+              required data,
+            }) async {
+              rendered++;
+            },
+      );
+      expect(warmed, 1);
+      expect(rendered, 0);
+    });
+
+    test('preload failure does not prevent a data-only alert', () async {
+      var rendered = 0;
+      await app.handleFirebaseMessagingBackgroundMessage(
+        const RemoteMessage(data: {'title': 'New like', 'body': 'A like'}),
+        initializeFirebase: () async {},
+        preloadContent: (_) async => throw StateError('offline'),
+        renderLocalPush:
+            ({
+              required id,
+              required title,
+              required body,
+              required data,
+            }) async {
+              rendered++;
+            },
+      );
+      expect(rendered, 1);
+    });
+
     test('still renders a data-only local notification when Firebase init '
         'fails', () async {
       const message = RemoteMessage(
@@ -87,6 +132,7 @@ void main() {
       await app.handleFirebaseMessagingBackgroundMessage(
         message,
         initializeFirebase: () async => throw StateError('init failed'),
+        preloadContent: (_) async {},
         renderLocalPush:
             ({
               required int id,

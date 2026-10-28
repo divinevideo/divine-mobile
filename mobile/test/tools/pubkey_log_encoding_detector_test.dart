@@ -113,6 +113,39 @@ void report(String lastUsedNpub) {
         expect(sites.single.expression, 'lastUsedNpub');
       });
 
+      test('the publicKeyHex spelling the auth flows log', () {
+        final sites = scan(r'''
+void report(KeyContainer keyContainer) {
+  Log.info('created ${keyContainer.publicKeyHex}');
+}
+''');
+
+        expect(sites.single.expression, 'keyContainer.publicKeyHex');
+      });
+
+      test(
+        'a prefixed name ending in pubkeyHex, whose last segment is hex',
+        () {
+          final sites = scan(r'''
+void report(String senderPubkeyHex) {
+  Log.info('from $senderPubkeyHex');
+}
+''');
+
+          expect(sites.single.expression, 'senderPubkeyHex');
+        },
+      );
+
+      test('a prefixed name ending in publicKey', () {
+        final sites = scan(r'''
+void report(String userPublicKey) {
+  Log.info('for $userPublicKey');
+}
+''');
+
+        expect(sites.single.expression, 'userPublicKey');
+      });
+
       test('a value laundered through a null-coalescing fallback', () {
         final sites = scan(r'''
 void report(String? sessionPubkey) {
@@ -179,6 +212,16 @@ void report(List<String> pubkeys) {
         final sites = scan(r'''
 void report(List<String> followingPubkeys) {
   Log.info('following $followingPubkeys');
+}
+''');
+
+        expect(sites, isEmpty);
+      });
+
+      test('a collection of public keys, which the suffix rule leaves out', () {
+        final sites = scan(r'''
+void report(List<String> teamPublicKeys) {
+  Log.info('team $teamPublicKeys');
 }
 ''');
 

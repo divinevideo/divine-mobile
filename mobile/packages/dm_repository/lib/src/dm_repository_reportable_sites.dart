@@ -49,6 +49,11 @@ abstract class DmRepositoryReportableSites {
   static const String finalizeAfterRecipientUnconfirmed =
       'finalizeAfterRecipientUnconfirmed';
 
+  /// `_holdFallbackPoolDelivery`: recording on a held row the recipient wrap
+  /// the fallback pool accepted threw. Caller still gets the retryable-pending
+  /// result; the next retry republishes, as it did before #10012.
+  static const String recordHeldPoolWrap = 'recordHeldPoolWrap';
+
   /// `_chargeFailedReplay`: bumping the retry count for a failed
   /// `recoverFullSend` / `recoverSelfWrap` attempt threw. The caller already
   /// has the failure result; a missed bump only means one extra retry.

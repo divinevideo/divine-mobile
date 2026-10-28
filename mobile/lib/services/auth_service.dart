@@ -564,7 +564,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
           // stale local key into its per-identity slot so the user
           // can switch back to it via the welcome screen.
           Log.warning(
-            'initialize: local key ${localKey.publicKeyHex} is stale — '
+            'initialize: local key ${pubkeyForLogs(localKey.publicKeyHex)} is stale — '
             'last-used=${pubkeyForLogs(lastUsedNpub)} matches session '
             'userPubkey=${pubkeyForLogs(sessionPubkey)}. Forcing slow path with '
             'session; archiving stale local key to ${pubkeyForLogs(localNpub)}.',
@@ -587,7 +587,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
             'initialize: global OAuth session pubkey='
             '${pubkeyForLogs(sessionPubkey, whenNull: "null (legacy)")} is stale — '
             'last-used=${pubkeyForLogs(lastUsedNpub)} matches local key '
-            '${localKey.publicKeyHex}. Clearing stale session.',
+            '${pubkeyForLogs(localKey.publicKeyHex)}. Clearing stale session.',
             name: 'AuthService',
             category: LogCategory.auth,
           );
@@ -600,7 +600,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
           Log.warning(
             'initialize: divergence with ambiguous last-used npub — '
             'session=${pubkeyForLogs(sessionPubkey, whenNull: "null")}, '
-            'local=${localKey.publicKeyHex}, last-used=${pubkeyForLogs(lastUsedNpub)}. '
+            'local=${pubkeyForLogs(localKey.publicKeyHex)}, last-used=${pubkeyForLogs(lastUsedNpub)}. '
             'Clearing global session (safe default).',
             name: 'AuthService',
             category: LogCategory.auth,
@@ -1447,7 +1447,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
 
     Log.info(
       'createAnonymousAccount: identity created and terms accepted — '
-      'pubkey=${result.keyContainer?.publicKeyHex}',
+      'pubkey=${pubkeyForLogs(result.keyContainer?.publicKeyHex, whenNull: "null")}',
       name: 'AuthService',
       category: LogCategory.auth,
     );
@@ -1902,7 +1902,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         if (container != null) {
           Log.info(
             'signInForAccount: identity keys found — '
-            'pubkey=${container.publicKeyHex}',
+            'pubkey=${pubkeyForLogs(container.publicKeyHex)}',
             name: 'AuthService',
             category: LogCategory.auth,
           );
@@ -1959,7 +1959,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
           } else {
             Log.warning(
               'signInForAccount: no restorable local keys for ${pubkeyForLogs(pubkeyHex)} '
-              '(primaryPubkey=${primary?.publicKeyHex})',
+              '(primaryPubkey=${pubkeyForLogs(primary?.publicKeyHex, whenNull: "null")})',
               name: 'AuthService',
               category: LogCategory.auth,
             );
@@ -2226,7 +2226,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       ensureAttempt();
       Log.debug(
         'connectWithAmber: amberPubkey=${pubkeyForLogs(pubkey)}, '
-        'existingStoredPubkey=${existingContainer?.publicKeyHex ?? "null"}',
+        'existingStoredPubkey=${pubkeyForLogs(existingContainer?.publicKeyHex, whenNull: "null")}',
         name: 'AuthService',
         category: LogCategory.auth,
       );
@@ -3074,7 +3074,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         keyContainer = localKey;
         Log.info(
           'signInWithDivineOAuth: using local nsec for fast signing '
-          '(pubkey=$publicKeyHex)',
+          '(pubkey=${pubkeyForLogs(publicKeyHex)})',
           name: 'AuthService',
           category: LogCategory.auth,
         );
@@ -3083,14 +3083,14 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         if (_keycastSigner != null) {
           Log.info(
             'signInWithDivineOAuth: no matching local nsec — '
-            'signing via RPC (pubkey=$publicKeyHex)',
+            'signing via RPC (pubkey=${pubkeyForLogs(publicKeyHex)})',
             name: 'AuthService',
             category: LogCategory.auth,
           );
         } else {
           Log.info(
             'signInWithDivineOAuth: no matching local nsec and RPC is not '
-            'ready — restored pubkey-only identity (pubkey=$publicKeyHex)',
+            'ready — restored pubkey-only identity (pubkey=${pubkeyForLogs(publicKeyHex)})',
             name: 'AuthService',
             category: LogCategory.auth,
           );
@@ -3111,7 +3111,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
       );
 
       Log.info(
-        '✅ Divine oauth session successfully integrated for $publicKeyHex',
+        '✅ Divine oauth session successfully integrated for ${pubkeyForLogs(publicKeyHex)}',
         name: 'AuthService',
         category: LogCategory.auth,
       );
@@ -3605,7 +3605,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
           Log.info(
             '_restoreLastUsedAccountOrFallback: '
             'reused already-loaded primary identity — '
-            'pubkey=${cachedPrimaryIdentity.publicKeyHex}',
+            'pubkey=${pubkeyForLogs(cachedPrimaryIdentity.publicKeyHex)}',
             name: 'AuthService',
             category: LogCategory.auth,
           );
@@ -3627,7 +3627,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
         if (container != null) {
           Log.info(
             '_restoreLastUsedAccountOrFallback: '
-            'identity key found — pubkey=${container.publicKeyHex}',
+            'identity key found — pubkey=${pubkeyForLogs(container.publicKeyHex)}',
             name: 'AuthService',
             category: LogCategory.auth,
           );
@@ -3881,7 +3881,7 @@ class AuthService implements BackgroundAwareService, BlockListSigner {
           if (keyContainer != null) {
             Log.info(
               '_checkExistingAuth: loading identity '
-              'pubkey=${keyContainer.publicKeyHex}',
+              'pubkey=${pubkeyForLogs(keyContainer.publicKeyHex)}',
               name: 'AuthService',
               category: LogCategory.auth,
             );

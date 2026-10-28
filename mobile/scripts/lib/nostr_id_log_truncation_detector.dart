@@ -93,10 +93,11 @@ import 'package:analyzer/source/line_info.dart';
 ///
 /// Matched against the whole identifier lowercased AND against its last
 /// camelCase segment, so `eventId`, `giftWrapId` and `targetEventId` all reach
-/// `id` without being enumerated. Grounded in the protocol vocabulary:
-/// NIP-01 gives `id` / `pubkey` / `sig`, NIP-19 gives the bech32 prefixes,
-/// NIP-42 gives the AUTH `challenge`, and the Blossom `x` tag carries
-/// `sha256Hash`.
+/// `id` without being enumerated. [_pubkeySuffixes] covers the pubkey
+/// spellings the segment rule cannot reach behind a prefix. Grounded in the
+/// protocol vocabulary: NIP-01 gives `id` / `pubkey` / `sig`, NIP-19 gives the
+/// bech32 prefixes, NIP-42 gives the AUTH `challenge`, and the Blossom `x` tag
+/// carries `sha256Hash`.
 ///
 /// `hash` alone is intentionally absent: a blurhash is not an identifier, and
 /// widening this set to catch one Blossom variable would flag it.
@@ -109,6 +110,7 @@ const _identifierLexicon = {
   'pubkeyhex',
   'hexpubkey',
   'publickey',
+  'publickeyhex',
   'npub',
   'note',
   'nevent',
@@ -123,6 +125,11 @@ const _identifierLexicon = {
   'sha256hash',
   'blobhash',
 };
+
+/// Pubkey spellings whose last camelCase segment is `hex` or `key`, so the
+/// segment rule cannot reach them behind a prefix: `senderPubkeyHex`,
+/// `userPublicKey`. Matched as a suffix of the whole lowercased name.
+const _pubkeySuffixes = {'pubkeyhex', 'publickey', 'publickeyhex'};
 
 /// Credential names that must never reach a diagnostic sink.
 const _secretLexicon = {
@@ -439,12 +446,15 @@ bool _startsWithEllipsis(String text) => _ellipsisMarkers.any(text.startsWith);
 
 /// True when [name] reads as a Nostr identifier.
 ///
-/// Matches the whole name lowercased, or its last camelCase segment, so
-/// `eventId` / `giftWrapId` / `targetEventId` all reach `id`.
+/// Matches the whole name lowercased, a [_pubkeySuffixes] ending, or its last
+/// camelCase segment, so `eventId` / `giftWrapId` / `targetEventId` all reach
+/// `id` and `senderPubkeyHex` reaches `pubkeyhex`.
 bool isIdentifierName(String name) {
   final bare = name.startsWith('_') ? name.substring(1) : name;
   if (bare.isEmpty) return false;
-  if (_identifierLexicon.contains(bare.toLowerCase())) return true;
+  final lower = bare.toLowerCase();
+  if (_identifierLexicon.contains(lower)) return true;
+  if (_pubkeySuffixes.any(lower.endsWith)) return true;
   // Last camelCase segment: index of the final uppercase run start. This is
   // what reaches `eventId` and `giftWrapId` without enumerating them.
   var cut = -1;
