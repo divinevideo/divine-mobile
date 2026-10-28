@@ -11,25 +11,36 @@ import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_edi
 
 class _Repository extends Mock implements LoopAlignmentRepository {}
 
+/// A cubit whose repairs stay in flight until [gate] completes.
+({
+  LoopSuggestionCubit cubit,
+  LoopRepairInput input,
+  Completer<LoopRepairResult> gate,
+})
+_cubitWithPendingRepair() {
+  final repository = _Repository();
+  final input = LoopRepairInput(clips: const [], revision: 'one');
+  registerFallbackValue(input);
+  final gate = Completer<LoopRepairResult>();
+  when(
+    () => repository.repair(
+      any(),
+      taskId: any(named: 'taskId'),
+      onProgress: any(named: 'onProgress'),
+    ),
+  ).thenAnswer((_) => gate.future);
+  when(() => repository.cancel(any())).thenAnswer((_) async {});
+  final cubit = LoopSuggestionCubit(repository: repository);
+  addTearDown(cubit.close);
+  return (cubit: cubit, input: input, gate: gate);
+}
+
 void main() {
   group('LoopRepairProgressOverlay interactions', () {
     testWidgets(
       'busy repair exposes accessible progress and cancels immediately',
       (tester) async {
-        final repository = _Repository();
-        final input = LoopRepairInput(clips: const [], revision: 'one');
-        registerFallbackValue(input);
-        final gate = Completer<LoopRepairResult>();
-        when(
-          () => repository.repair(
-            any(),
-            taskId: any(named: 'taskId'),
-            onProgress: any(named: 'onProgress'),
-          ),
-        ).thenAnswer((_) => gate.future);
-        when(() => repository.cancel(any())).thenAnswer((_) async {});
-        final cubit = LoopSuggestionCubit(repository: repository);
-        addTearDown(cubit.close);
+        final (:cubit, :input, :gate) = _cubitWithPendingRepair();
         final operation = cubit.fix(input);
         await tester.pumpWidget(
           MaterialApp(
@@ -61,6 +72,48 @@ void main() {
           ),
           findsNothing,
         );
+        gate.complete(const LoopRepairResult(status: .noMatch));
+        await operation;
+      },
+    );
+
+    testWidgets(
+      'hides the editor from screen readers but keeps Cancel usable',
+      (tester) async {
+        final (:cubit, :input, :gate) = _cubitWithPendingRepair();
+        await tester.pumpWidget(
+          MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: BlocProvider.value(
+                value: cubit,
+                child: Stack(
+                  children: [
+                    Center(
+                      child: TextButton(
+                        onPressed: () {},
+                        child: const Text('open'),
+                      ),
+                    ),
+                    const LoopRepairProgressOverlay(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        expect(find.semantics.byLabel('open'), findsOne);
+
+        final operation = cubit.fix(input);
+        await tester.pump();
+        expect(find.semantics.byLabel('open'), findsNothing);
+
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        tester.semantics.tap(find.semantics.byLabel(l10n.commonCancel));
+        await tester.pump();
+
+        expect(cubit.state.status, LoopSuggestionStatus.idle);
         gate.complete(const LoopRepairResult(status: .noMatch));
         await operation;
       },
