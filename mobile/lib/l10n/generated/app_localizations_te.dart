@@ -1538,6 +1538,24 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'శీర్షికలు ఆఫ్';
 
   @override
+  String get videoSettingsReactionsOn => 'ప్రతిస్పందనలు ఆన్‌లో ఉన్నాయి';
+
+  @override
+  String get videoSettingsReactionsOff => 'ప్రతిస్పందనలు ఆఫ్';
+
+  @override
+  String get videoSettingsReactionsEnable => 'ప్రతిస్పందనలను చూపించు';
+
+  @override
+  String get videoSettingsReactionsDisable => 'ప్రతిస్పందనలను దాచు';
+
+  @override
+  String get feedReactionDismiss => 'ప్రతిస్పందనను దాచు';
+
+  @override
+  String get feedReactionOpenComment => 'వ్యాఖ్యలలో తెరవండి';
+
+  @override
   String get contentWarningLabel => 'కంటెంట్ హెచ్చరిక';
 
   @override

@@ -54,6 +54,7 @@ enum DivineIconName {
   caretUp('caret_up'),
   chat('chat'),
   chatCircle('chat_circle'),
+  chatCircleFill('chat_circle_fill'),
   chatDuo('chat_duo'),
   chatTeardrop('chat_teardrop'),
   chats('chats'),

@@ -1385,6 +1385,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoSettingsCaptionsOff => '字幕已关闭';
 
   @override
+  String get videoSettingsReactionsOn => '反应已开启';
+
+  @override
+  String get videoSettingsReactionsOff => '反应已关闭';
+
+  @override
+  String get videoSettingsReactionsEnable => '显示反应';
+
+  @override
+  String get videoSettingsReactionsDisable => '隐藏反应';
+
+  @override
+  String get feedReactionDismiss => '隐藏此反应';
+
+  @override
+  String get feedReactionOpenComment => '在评论中打开';
+
+  @override
   String get contentWarningLabel => '内容警告';
 
   @override

@@ -1436,6 +1436,24 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Altyazı kapalı';
 
   @override
+  String get videoSettingsReactionsOn => 'Tepkiler açık';
+
+  @override
+  String get videoSettingsReactionsOff => 'Tepkiler kapalı';
+
+  @override
+  String get videoSettingsReactionsEnable => 'Tepkileri göster';
+
+  @override
+  String get videoSettingsReactionsDisable => 'Tepkileri gizle';
+
+  @override
+  String get feedReactionDismiss => 'Tepkiyi gizle';
+
+  @override
+  String get feedReactionOpenComment => 'Yorumlarda aç';
+
+  @override
   String get contentWarningLabel => 'İçerik Uyarısı';
 
   @override

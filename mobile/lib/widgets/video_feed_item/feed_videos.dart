@@ -11,6 +11,7 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/codec_heavy_surface/codec_heavy_surface_cubit.dart';
 import 'package:openvine/blocs/feed_loading_moderation/feed_loading_moderation_cubit.dart';
 import 'package:openvine/blocs/feed_loading_moderation/feed_loading_moderation_state.dart';
+import 'package:openvine/blocs/feed_reactions/feed_reactions_cubit.dart';
 import 'package:openvine/blocs/video_interactions/video_interactions_bloc.dart';
 import 'package:openvine/blocs/video_loops/video_loops_cubit.dart';
 import 'package:openvine/blocs/video_playback_status/video_playback_status_cubit.dart';
@@ -46,6 +47,7 @@ import 'package:openvine/widgets/video_feed_item/content_warning_helpers.dart';
 import 'package:openvine/widgets/video_feed_item/double_tap_heart_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/double_tap_like_helpers.dart';
 import 'package:openvine/widgets/video_feed_item/feed_immersive_chrome.dart';
+import 'package:openvine/widgets/video_feed_item/feed_reactions_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/moderated_content_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/paused_video_overlay.dart';
 import 'package:openvine/widgets/video_feed_item/player_gesture_surface.dart';
@@ -146,6 +148,10 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
       context.read<FeedAutoAdvanceCubit>();
   final _feedKey = GlobalKey<InfiniteVideoFeedState>();
   bool _routeAllowsPlayback = true;
+
+  /// Feed index of each completed loop of the active video, for the
+  /// reactions overlay that appears after a video's first loop.
+  final _loopCompletions = StreamController<int>.broadcast();
 
   /// Last error type reported per video.id to
   /// [VideoPlaybackStatusCubit]. Used to dedupe at the call site so
@@ -309,6 +315,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
   @override
   void dispose() {
     routeObserver.unsubscribe(this);
+    unawaited(_loopCompletions.close());
     super.dispose();
   }
 
@@ -328,7 +335,12 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
 
   void _resumeAutoAdvanceAfterSwipe() => _autoAdvanceCubit.resumeAfterSwipe();
 
-  void _handleAutoAdvanceCompleted(int currentIndex) {
+  void _handleVideoLoopCompleted(int currentIndex) {
+    _loopCompletions.add(currentIndex);
+    // Reactions mode keeps the viewer on the video whose top comment is up.
+    final reactionsEnabled =
+        context.read<FeedReactionsCubit?>()?.state ?? false;
+    if (reactionsEnabled) return;
     handleFeedAutoAdvanceCompleted(
       cubit: _autoAdvanceCubit,
       snapshot: FeedAutoAdvanceSnapshot(
@@ -456,7 +468,7 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
         // loop point stays in the platform player and the join stays seamless
         // (#5544, #6421).
         maxPlaybackDuration: AppConstants.maxFeedPlaybackDuration,
-        onVideoLoopCompleted: _handleAutoAdvanceCompleted,
+        onVideoLoopCompleted: _handleVideoLoopCompleted,
         shouldPortraitExpand: widget.shouldPortraitExpand,
         canAutoPlay: _canAutoPlayVideo,
         videoBuilder: (context, child, index, controller) {
@@ -603,6 +615,9 @@ class FeedVideosState extends ConsumerState<FeedVideos> with RouteAware {
                       ),
                   onContentWarningRevealed: () =>
                       _revealContentWarning(video.id),
+                  loopCompletions: _loopCompletions.stream
+                      .where((loopedIndex) => loopedIndex == index)
+                      .map((_) {}),
                   onSuppressAutoAdvance: _suppressAutoAdvance,
                   onResumeAutoAdvance: _resumeAutoAdvanceAfterSwipe,
                   onSkipToNextVideo: () => _skipPooledVideoAt(index),
@@ -632,6 +647,7 @@ class _Overlay extends ConsumerStatefulWidget {
     required this.onSkipToNextVideo,
     required this.onAutomaticSkipToNextVideo,
     required this.shouldPortraitExpand,
+    required this.loopCompletions,
     this.onSuppressAutoAdvance,
     this.onResumeAutoAdvance,
   });
@@ -663,6 +679,9 @@ class _Overlay extends ConsumerStatefulWidget {
 
   final VoidCallback onSkipToNextVideo;
   final VoidCallback onAutomaticSkipToNextVideo;
+
+  /// Fires each time this item's video finishes a loop.
+  final Stream<void> loopCompletions;
 
   final VoidCallback? onSuppressAutoAdvance;
 
@@ -1133,9 +1152,17 @@ class __OverlayState extends ConsumerState<_Overlay> {
       (FeedAutoAdvanceCubit cubit) => cubit.state.isEffectivelyActive,
     );
 
+    // Reactions mode holds the viewer on each video, so it also keeps Auto
+    // from moving past one. Nullable: surfaces without the app-wide cubit
+    // (tests, isolated previews) simply have reactions off.
+    final reactionsEnabled = context.select<FeedReactionsCubit?, bool>(
+      (cubit) => cubit?.state ?? false,
+    );
+
     // Gate the runtime on the user's reduced-motion preference. When Auto is
     // unavailable, force it "off" at the view layer regardless of cubit state.
-    final autoAdvanceAvailable = !MediaQuery.disableAnimationsOf(context);
+    final autoAdvanceAvailable =
+        !MediaQuery.disableAnimationsOf(context) && !reactionsEnabled;
 
     // Watch the kill-switch so the blur re-evaluates on a flip, and start
     // prefetching if it flips on for an already-mounted overlay (initState's
@@ -1382,6 +1409,17 @@ class __OverlayState extends ConsumerState<_Overlay> {
                             // button behind the sheet just reads as broken.
                             isVisible: widget.isActive && widget.isFeedActive,
                             pausedForHold: _pausedForHold,
+                          ),
+                        ),
+                      if (reactionsEnabled && widget.isActive)
+                        // Below the action chrome, so the rail, creator info
+                        // and captions stay undimmed above the reaction.
+                        Positioned.fill(
+                          child: FeedImmersiveChrome(
+                            child: FeedReactionsLayer(
+                              video: video,
+                              loopCompletions: widget.loopCompletions,
+                            ),
                           ),
                         ),
                       FeedImmersiveChrome(

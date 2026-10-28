@@ -2557,6 +2557,42 @@ abstract class AppLocalizations {
   /// **'Captions off'**
   String get videoSettingsCaptionsOff;
 
+  /// Snackbar confirming that reactions mode was just turned on from the playback-settings pill. In reactions mode the feed shows a video's top comment after its first loop.
+  ///
+  /// In en, this message translates to:
+  /// **'Reactions on'**
+  String get videoSettingsReactionsOn;
+
+  /// Snackbar confirming that reactions mode was just turned off from the playback-settings pill.
+  ///
+  /// In en, this message translates to:
+  /// **'Reactions off'**
+  String get videoSettingsReactionsOff;
+
+  /// Semantic label for the reactions toggle in the playback-settings popover when reactions mode is currently off.
+  ///
+  /// In en, this message translates to:
+  /// **'Show reactions'**
+  String get videoSettingsReactionsEnable;
+
+  /// Semantic label for the reactions toggle in the playback-settings popover when reactions mode is currently on.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide reactions'**
+  String get videoSettingsReactionsDisable;
+
+  /// Semantic label for the dimmed area around a video's top comment in reactions mode; activating it hides the comment.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide reaction'**
+  String get feedReactionDismiss;
+
+  /// Semantic hint for a video's top comment in reactions mode; activating it opens the comments sheet at that comment.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in comments'**
+  String get feedReactionOpenComment;
+
   /// No description provided for @contentWarningLabel.
   ///
   /// In en, this message translates to:

@@ -1470,6 +1470,24 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'መግለጫ ጽሑፎች ጠፍተዋል';
 
   @override
+  String get videoSettingsReactionsOn => 'ምላሾች በርተዋል';
+
+  @override
+  String get videoSettingsReactionsOff => 'ምላሾች ጠፍተዋል';
+
+  @override
+  String get videoSettingsReactionsEnable => 'ምላሾችን አሳይ';
+
+  @override
+  String get videoSettingsReactionsDisable => 'ምላሾችን ደብቅ';
+
+  @override
+  String get feedReactionDismiss => 'ምላሹን ደብቅ';
+
+  @override
+  String get feedReactionOpenComment => 'በአስተያየቶች ውስጥ ክፈት';
+
+  @override
   String get contentWarningLabel => 'የይዘት ማስጠንቀቂያ';
 
   @override

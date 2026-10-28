@@ -718,6 +718,12 @@
   "videoSettingsAutoAdvanceOff": "خودکار آگے بڑھنا آف",
   "videoSettingsCaptionsOn": "کیپشن آن",
   "videoSettingsCaptionsOff": "کیپشن آف",
+  "videoSettingsReactionsOn": "ردعمل آن",
+  "videoSettingsReactionsOff": "ردعمل آف",
+  "videoSettingsReactionsEnable": "ردعمل دکھائیں",
+  "videoSettingsReactionsDisable": "ردعمل چھپائیں",
+  "feedReactionDismiss": "یہ ردعمل چھپائیں",
+  "feedReactionOpenComment": "تبصروں میں کھولیں",
   "@videoSettingsCaptionsDisable": {
     "description": "Semantic label for the closed-captions toggle in the playback-settings popover when captions are currently on."
   },

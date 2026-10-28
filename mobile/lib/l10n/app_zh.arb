@@ -718,6 +718,12 @@
   "videoSettingsAutoAdvanceOff": "自动连播已关闭",
   "videoSettingsCaptionsOn": "字幕已开启",
   "videoSettingsCaptionsOff": "字幕已关闭",
+  "videoSettingsReactionsOn": "反应已开启",
+  "videoSettingsReactionsOff": "反应已关闭",
+  "videoSettingsReactionsEnable": "显示反应",
+  "videoSettingsReactionsDisable": "隐藏反应",
+  "feedReactionDismiss": "隐藏此反应",
+  "feedReactionOpenComment": "在评论中打开",
   "@videoSettingsCaptionsDisable": {
     "description": "Semantic label for the closed-captions toggle in the playback-settings popover when captions are currently on."
   },

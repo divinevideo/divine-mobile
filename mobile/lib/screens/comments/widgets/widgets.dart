@@ -6,6 +6,7 @@ export 'package:openvine/widgets/mentions/mention_overlay.dart';
 export 'comment_input.dart';
 export 'comment_item.dart';
 export 'comment_options_modal.dart';
+export 'comment_reply_indicator.dart';
 export 'comment_skeleton_loader.dart';
 export 'comments_empty_state.dart';
 export 'comments_list.dart';

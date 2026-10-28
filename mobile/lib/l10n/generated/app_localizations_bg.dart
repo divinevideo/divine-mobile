@@ -1520,6 +1520,24 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Субтитрите са изключени';
 
   @override
+  String get videoSettingsReactionsOn => 'Реакциите са включени';
+
+  @override
+  String get videoSettingsReactionsOff => 'Реакциите са изключени';
+
+  @override
+  String get videoSettingsReactionsEnable => 'Показване на реакциите';
+
+  @override
+  String get videoSettingsReactionsDisable => 'Скриване на реакциите';
+
+  @override
+  String get feedReactionDismiss => 'Скриване на реакцията';
+
+  @override
+  String get feedReactionOpenComment => 'Отвори в коментарите';
+
+  @override
   String get contentWarningLabel => 'Предупреждение за съдържание';
 
   @override

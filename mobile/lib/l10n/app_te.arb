@@ -943,6 +943,12 @@
   "@videoSettingsCaptionsOff": {
     "description": "Snackbar confirming that captions were just turned off from the playback-settings pill."
   },
+  "videoSettingsReactionsOn": "ప్రతిస్పందనలు ఆన్‌లో ఉన్నాయి",
+  "videoSettingsReactionsOff": "ప్రతిస్పందనలు ఆఫ్",
+  "videoSettingsReactionsEnable": "ప్రతిస్పందనలను చూపించు",
+  "videoSettingsReactionsDisable": "ప్రతిస్పందనలను దాచు",
+  "feedReactionDismiss": "ప్రతిస్పందనను దాచు",
+  "feedReactionOpenComment": "వ్యాఖ్యలలో తెరవండి",
   "contentWarningLabel": "కంటెంట్ హెచ్చరిక",
   "contentWarningNudity": "నగ్నత్వం",
   "contentWarningSexualContent": "లైంగిక కంటెంట్",

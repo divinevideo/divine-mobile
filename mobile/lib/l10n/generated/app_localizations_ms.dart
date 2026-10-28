@@ -1473,6 +1473,24 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Sarikata dimatikan';
 
   @override
+  String get videoSettingsReactionsOn => 'Reaksi dihidupkan';
+
+  @override
+  String get videoSettingsReactionsOff => 'Reaksi dimatikan';
+
+  @override
+  String get videoSettingsReactionsEnable => 'Tunjukkan reaksi';
+
+  @override
+  String get videoSettingsReactionsDisable => 'Sembunyikan reaksi';
+
+  @override
+  String get feedReactionDismiss => 'Sembunyikan reaksi ini';
+
+  @override
+  String get feedReactionOpenComment => 'Buka dalam komen';
+
+  @override
   String get contentWarningLabel => 'Amaran Kandungan';
 
   @override

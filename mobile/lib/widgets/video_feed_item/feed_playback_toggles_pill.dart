@@ -1,13 +1,14 @@
-// ABOUTME: Scrim-30 capsule with three playback toggles
-// ABOUTME: (compilations / mute / closed-captions). Rendered both as
-// ABOUTME: the body of the top-bar settings popover and above the play
-// ABOUTME: affordance in the paused-video overlay. Compilations and
-// ABOUTME: captions confirm their new state in a snackbar.
+// ABOUTME: Scrim-30 capsule with four playback toggles
+// ABOUTME: (compilations / mute / closed-captions / reactions). Rendered both
+// ABOUTME: as the body of the top-bar settings popover and above the play
+// ABOUTME: affordance in the paused-video overlay. Compilations, captions
+// ABOUTME: and reactions confirm their new state in a snackbar.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/feed_reactions/feed_reactions_cubit.dart';
 import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/subtitle_providers.dart';
@@ -17,10 +18,10 @@ import 'package:openvine/utils/semantics_announcement.dart';
 import 'package:openvine/widgets/media_chrome_backdrop.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Scrim-30 backdrop-blurred capsule housing the three playback toggles:
-/// auto-advance ("compilations"), audio mute, and closed-captions.
+/// Scrim-30 backdrop-blurred capsule housing the playback toggles:
+/// auto-advance ("compilations"), audio mute, closed-captions, and reactions.
 ///
-/// All three are feed-wide controls; captions persist the global Settings
+/// All four are feed-wide controls; captions and reactions persist a global
 /// preference.
 class FeedPlaybackTogglesPill extends StatelessWidget {
   const FeedPlaybackTogglesPill({super.key, this.onAutoAdvanceToggled});
@@ -51,6 +52,7 @@ class FeedPlaybackTogglesPill extends StatelessWidget {
             ),
             _AudioToggle(foregroundColor: chromeForeground),
             _CaptionsToggle(foregroundColor: chromeForeground),
+            _ReactionsToggle(foregroundColor: chromeForeground),
           ],
         ),
       ),
@@ -197,6 +199,54 @@ class _CaptionsToggle extends ConsumerWidget {
   }
 }
 
+/// "Show reactions" toggle. Active state means the feed shows each video's
+/// top comment after its first loop. Confirms its new state in a snackbar.
+/// Hidden when no [FeedReactionsCubit] is provided, like the auto-advance
+/// toggle without its cubit.
+class _ReactionsToggle extends StatelessWidget {
+  const _ReactionsToggle({required this.foregroundColor});
+
+  final Color foregroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final cubit = context.read<FeedReactionsCubit?>();
+    if (cubit == null) return const SizedBox.shrink();
+
+    return BlocBuilder<FeedReactionsCubit, bool>(
+      bloc: cubit,
+      builder: (context, enabled) {
+        return _PopoverToggle(
+          isOn: enabled,
+          semanticLabel: enabled
+              ? context.l10n.videoSettingsReactionsDisable
+              : context.l10n.videoSettingsReactionsEnable,
+          onTap: () {
+            runDetached(
+              cubit.toggle(),
+              'persist feed reactions preference',
+              logName: 'FeedPlaybackTogglesPill',
+              category: LogCategory.ui,
+            );
+            _showToggleFeedback(
+              context,
+              enabled
+                  ? context.l10n.videoSettingsReactionsOff
+                  : context.l10n.videoSettingsReactionsOn,
+            );
+          },
+          child: DivineIcon(
+            icon: enabled
+                ? DivineIconName.chatCircleFill
+                : DivineIconName.chatCircle,
+            color: foregroundColor,
+          ),
+        );
+      },
+    );
+  }
+}
+
 /// 48 px touch target wrapping a 12 px-padded scrim button (40 px
 /// visible at 20 px radius). Background flips between scrim-15 (off)
 /// and scrim-50 (on).
@@ -245,11 +295,11 @@ FeedAutoAdvanceCubit? _maybeReadFeedAutoAdvanceCubit(BuildContext context) =>
 
 /// Confirms a toggle's new state in a snackbar.
 ///
-/// The icons alone don't say what auto-advance and captions actually do, and
-/// unlike mute neither has an immediately perceivable effect, so the banner
-/// names the state the tap just produced. Any banner still on screen is
-/// replaced rather than queued, so rapid toggling always shows the current
-/// state.
+/// The icons alone don't say what auto-advance, captions and reactions
+/// actually do, and unlike mute none has an immediately perceivable effect,
+/// so the banner names the state the tap just produced. Any banner still on
+/// screen is replaced rather than queued, so rapid toggling always shows the
+/// current state.
 ///
 /// Uses `removeCurrentSnackBar` rather than `hideCurrentSnackBar`: hiding only
 /// *starts* the exit animation, and the entry leaves `ScaffoldMessenger`'s

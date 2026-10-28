@@ -1547,6 +1547,24 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Subtitrări dezactivate';
 
   @override
+  String get videoSettingsReactionsOn => 'Reacții activate';
+
+  @override
+  String get videoSettingsReactionsOff => 'Reacții dezactivate';
+
+  @override
+  String get videoSettingsReactionsEnable => 'Afișează reacțiile';
+
+  @override
+  String get videoSettingsReactionsDisable => 'Ascunde reacțiile';
+
+  @override
+  String get feedReactionDismiss => 'Ascunde reacția';
+
+  @override
+  String get feedReactionOpenComment => 'Deschide în comentarii';
+
+  @override
   String get contentWarningLabel => 'Atenționare de conținut';
 
   @override

@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/feed_reactions/feed_reactions_cubit.dart';
 import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
@@ -82,7 +83,7 @@ void main() {
       );
     }
 
-    testWidgets('renders all three toggles when cubits are in scope', (
+    testWidgets('renders the playback toggles when cubits are in scope', (
       tester,
     ) async {
       await tester.pumpWidget(buildSubject());
@@ -440,6 +441,100 @@ Next caption
             .map((i) => i.color),
         everyElement(equals(VineTheme.onSurface)),
       );
+    });
+
+    group('reactions toggle', () {
+      late SharedPreferences prefs;
+      late FeedReactionsCubit reactionsCubit;
+
+      setUp(() async {
+        SharedPreferences.setMockInitialValues({});
+        prefs = await SharedPreferences.getInstance();
+        reactionsCubit = FeedReactionsCubit(sharedPreferences: prefs);
+      });
+
+      tearDown(() => reactionsCubit.close());
+
+      Widget buildWithReactions() => ProviderScope(
+        overrides: [sharedPreferencesProvider.overrideWithValue(mockPrefs)],
+        child: MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: MultiBlocProvider(
+            providers: [
+              BlocProvider<VideoVolumeCubit>.value(value: volumeCubit),
+              BlocProvider<FeedReactionsCubit>.value(value: reactionsCubit),
+            ],
+            child: const Scaffold(body: FeedPlaybackTogglesPill()),
+          ),
+        ),
+      );
+
+      testWidgets('is hidden without a $FeedReactionsCubit in scope', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildSubject());
+
+        expect(
+          find.bySemanticsLabel(l10n.videoSettingsReactionsEnable),
+          findsNothing,
+        );
+        expect(find.bySemanticsLabel(l10n.videoPlayerMute), findsOneWidget);
+      });
+
+      testWidgets('starts off with the outline chat icon', (tester) async {
+        await tester.pumpWidget(buildWithReactions());
+
+        expect(
+          find.bySemanticsLabel(l10n.videoSettingsReactionsEnable),
+          findsOneWidget,
+        );
+        expect(
+          find.byWidgetPredicate(
+            (w) => w is DivineIcon && w.icon == DivineIconName.chatCircle,
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('turns reactions on, persists it and confirms it', (
+        tester,
+      ) async {
+        await tester.pumpWidget(buildWithReactions());
+
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoSettingsReactionsEnable),
+        );
+        await tester.pump();
+
+        expect(reactionsCubit.state, isTrue);
+        expect(prefs.getBool(FeedReactionsCubit.prefsKey), isTrue);
+        expect(find.text(l10n.videoSettingsReactionsOn), findsOneWidget);
+        expect(
+          find.bySemanticsLabel(l10n.videoSettingsReactionsDisable),
+          findsOneWidget,
+        );
+        expect(
+          find.byWidgetPredicate(
+            (w) => w is DivineIcon && w.icon == DivineIconName.chatCircleFill,
+          ),
+          findsOneWidget,
+        );
+      });
+
+      testWidgets('turns reactions off and confirms it', (tester) async {
+        await reactionsCubit.setEnabled(enabled: true);
+        await tester.pumpWidget(buildWithReactions());
+
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoSettingsReactionsDisable),
+        );
+        await tester.pump();
+
+        expect(reactionsCubit.state, isFalse);
+        expect(prefs.getBool(FeedReactionsCubit.prefsKey), isFalse);
+        expect(find.text(l10n.videoSettingsReactionsOff), findsOneWidget);
+      });
     });
   });
 }

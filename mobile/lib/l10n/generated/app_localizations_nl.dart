@@ -1508,6 +1508,24 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Ondertiteling uit';
 
   @override
+  String get videoSettingsReactionsOn => 'Reacties aan';
+
+  @override
+  String get videoSettingsReactionsOff => 'Reacties uit';
+
+  @override
+  String get videoSettingsReactionsEnable => 'Reacties tonen';
+
+  @override
+  String get videoSettingsReactionsDisable => 'Reacties verbergen';
+
+  @override
+  String get feedReactionDismiss => 'Reactie verbergen';
+
+  @override
+  String get feedReactionOpenComment => 'Openen in reacties';
+
+  @override
   String get contentWarningLabel => 'Inhoudswaarschuwing';
 
   @override

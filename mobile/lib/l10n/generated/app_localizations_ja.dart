@@ -1368,6 +1368,24 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoSettingsCaptionsOff => '字幕オフ';
 
   @override
+  String get videoSettingsReactionsOn => 'リアクションオン';
+
+  @override
+  String get videoSettingsReactionsOff => 'リアクションオフ';
+
+  @override
+  String get videoSettingsReactionsEnable => 'リアクションを表示';
+
+  @override
+  String get videoSettingsReactionsDisable => 'リアクションを非表示';
+
+  @override
+  String get feedReactionDismiss => 'このリアクションを非表示';
+
+  @override
+  String get feedReactionOpenComment => 'コメントで開く';
+
+  @override
   String get contentWarningLabel => 'コンテンツ警告';
 
   @override

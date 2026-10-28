@@ -1508,6 +1508,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Captions off';
 
   @override
+  String get videoSettingsReactionsOn => 'Reactions on';
+
+  @override
+  String get videoSettingsReactionsOff => 'Reactions off';
+
+  @override
+  String get videoSettingsReactionsEnable => 'Show reactions';
+
+  @override
+  String get videoSettingsReactionsDisable => 'Hide reactions';
+
+  @override
+  String get feedReactionDismiss => 'Hide reaction';
+
+  @override
+  String get feedReactionOpenComment => 'Open in comments';
+
+  @override
   String get contentWarningLabel => 'Content Warning';
 
   @override

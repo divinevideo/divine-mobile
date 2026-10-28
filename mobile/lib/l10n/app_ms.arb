@@ -718,6 +718,12 @@
   "videoSettingsAutoAdvanceOff": "Maju automatik dimatikan",
   "videoSettingsCaptionsOn": "Sarikata dihidupkan",
   "videoSettingsCaptionsOff": "Sarikata dimatikan",
+  "videoSettingsReactionsOn": "Reaksi dihidupkan",
+  "videoSettingsReactionsOff": "Reaksi dimatikan",
+  "videoSettingsReactionsEnable": "Tunjukkan reaksi",
+  "videoSettingsReactionsDisable": "Sembunyikan reaksi",
+  "feedReactionDismiss": "Sembunyikan reaksi ini",
+  "feedReactionOpenComment": "Buka dalam komen",
   "@videoSettingsCaptionsDisable": {
     "description": "Semantic label for the closed-captions toggle in the playback-settings popover when captions are currently on."
   },

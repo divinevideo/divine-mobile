@@ -1499,6 +1499,24 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'الترجمة متوقفة';
 
   @override
+  String get videoSettingsReactionsOn => 'التفاعلات مفعّلة';
+
+  @override
+  String get videoSettingsReactionsOff => 'التفاعلات متوقفة';
+
+  @override
+  String get videoSettingsReactionsEnable => 'إظهار التفاعلات';
+
+  @override
+  String get videoSettingsReactionsDisable => 'إخفاء التفاعلات';
+
+  @override
+  String get feedReactionDismiss => 'إخفاء التفاعل';
+
+  @override
+  String get feedReactionOpenComment => 'فتح في التعليقات';
+
+  @override
   String get contentWarningLabel => 'تحذير محتوى';
 
   @override

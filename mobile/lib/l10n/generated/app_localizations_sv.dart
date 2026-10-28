@@ -1490,6 +1490,24 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoSettingsCaptionsOff => 'Textning av';
 
   @override
+  String get videoSettingsReactionsOn => 'Reaktioner på';
+
+  @override
+  String get videoSettingsReactionsOff => 'Reaktioner av';
+
+  @override
+  String get videoSettingsReactionsEnable => 'Visa reaktioner';
+
+  @override
+  String get videoSettingsReactionsDisable => 'Dölj reaktioner';
+
+  @override
+  String get feedReactionDismiss => 'Dölj reaktion';
+
+  @override
+  String get feedReactionOpenComment => 'Öppna i kommentarer';
+
+  @override
   String get contentWarningLabel => 'Innehållsvarning';
 
   @override
