@@ -1,6 +1,7 @@
 // ABOUTME: Keeps room mention observation scoped to the active eligible account.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/chat/chat_cubit.dart';
 import 'package:openvine/features/chat/chat_mention_repository.dart';
 import 'package:openvine/features/chat/concord_session.dart';
 import 'package:openvine/features/chat/concord_store.dart';
@@ -43,6 +44,7 @@ final chatMentionRepositoryProvider = Provider<ChatMentionRepository?>((ref) {
         ),
     ],
     owner: owner,
+    communityId: pocChatCommunityId,
     store: DriftConcordStore(
       dao: dao,
       account: owner,
@@ -61,7 +63,7 @@ final chatMentionRepositoryProvider = Provider<ChatMentionRepository?>((ref) {
     ),
     startRoom: (channel, repository) async {
       // Persisted metadata is local but validate it against the current catalog.
-      if (!const {'general', 'introductions'}.contains(channel)) return;
+      if (!pocChatChannels.contains(channel)) return;
       final stream = pocStreamKeyFor(channel);
       await repository.startChannel(
         channelId: pocChannelIdFor(channel),

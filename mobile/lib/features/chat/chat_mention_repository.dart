@@ -11,9 +11,22 @@ import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:rxdart/rxdart.dart' hide NotificationKind;
 import 'package:unified_logger/unified_logger.dart';
 
+/// Which room mentions can alert, and how many rows the inbox keeps.
+abstract final class ChatMentionLimits {
+  /// Older mentions are history, not news.
+  static const int maxAgeSeconds = 7 * 24 * 3600;
+
+  /// Tolerated sender clock skew; a later timestamp is implausible.
+  static const maxFutureSkewSeconds = 300;
+
+  /// Rows kept, newest first: one per sender and room.
+  static const maxRows = 50;
+}
+
 class ChatMentionRepository implements LocalNotificationSource {
   ChatMentionRepository({
     required this.owner,
+    required this.communityId,
     required this.store,
     required this.canNotify,
     required this.now,
@@ -23,6 +36,9 @@ class ChatMentionRepository implements LocalNotificationSource {
   });
 
   final String owner;
+
+  /// The community every observed room belongs to; rows open rooms in it.
+  final String communityId;
   final AccountScopedStore store;
   final bool Function(String author) canNotify;
   final int Function() now;
@@ -32,6 +48,7 @@ class ChatMentionRepository implements LocalNotificationSource {
   final ConcordRepository Function(String channel)? createRoom;
   final Future<void> Function(String channel, ConcordRepository repository)?
   startRoom;
+  static const _stateKey = 'mention-state';
   final _rooms = <String, int>{};
   final _seen = <String, String>{};
   final _messages = <String, List<ChatMessage>>{};
@@ -62,7 +79,7 @@ class ChatMentionRepository implements LocalNotificationSource {
   }
 
   Future<void> _initialize() async {
-    final raw = await store.get('mention-state');
+    final raw = await store.get(_stateKey);
     if (_closed) return;
     final state = raw == null ? null : _decodeState(raw);
     if (raw != null && state == null) {
@@ -207,8 +224,9 @@ class ChatMentionRepository implements LocalNotificationSource {
                 )) ||
             !canNotify(message.author) ||
             message.createdAt < _rooms[entry.key]! ||
-            message.createdAt < now() - 7 * 24 * 3600 ||
-            message.createdAt > now() + 300 ||
+            message.createdAt < now() - ChatMentionLimits.maxAgeSeconds ||
+            message.createdAt >
+                now() + ChatMentionLimits.maxFutureSkewSeconds ||
             message.isExpiredAt(now())) {
           continue;
         }
@@ -251,12 +269,12 @@ class ChatMentionRepository implements LocalNotificationSource {
           sourceEventIds: [entry.value.message.id],
           commentText: '#${entry.value.channel}',
           chatTarget: ChatNotificationTarget(
-            communityId: 'community-test',
+            communityId: communityId,
             channelId: entry.value.channel,
           ),
         ),
     ]..sort((a, b) => b.timestamp.compareTo(a.timestamp));
-    _snapshots.add(List.unmodifiable(rows.take(50)));
+    _snapshots.add(List.unmodifiable(rows.take(ChatMentionLimits.maxRows)));
   }
 
   @override
@@ -301,7 +319,7 @@ class ChatMentionRepository implements LocalNotificationSource {
 
   Future<void> _persist() {
     final value = jsonEncode({'rooms': _rooms, 'seen': _seen});
-    final write = _writes.then((_) => store.put('mention-state', value));
+    final write = _writes.then((_) => store.put(_stateKey, value));
     _writes = write.catchError((Object _) {});
     return write;
   }

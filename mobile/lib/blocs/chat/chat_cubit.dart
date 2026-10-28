@@ -14,18 +14,29 @@ class ChatCommunity {
   final List<String> channels;
 }
 
+/// The proof-of-concept community the chat serves; the one room catalog that
+/// routing, mention enrollment and mention notifications all read.
+const pocChatCommunityId = 'community-test';
+
+/// The room a chat link without a channel opens.
+const pocChatDefaultChannel = 'general';
+
+/// Every room in [pocChatCommunityId].
+const List<String> pocChatChannels = [pocChatDefaultChannel, 'introductions'];
+
 class ChatState {
   const ChatState({
     this.messages = const [],
     this.reactions = const {},
     this.communities = const [
-      ChatCommunity('community-test', 'Divine test community', [
-        'general',
-        'introductions',
-      ]),
+      ChatCommunity(
+        pocChatCommunityId,
+        'Divine test community',
+        pocChatChannels,
+      ),
     ],
-    this.selectedCommunityId = 'community-test',
-    this.selectedChannelId = 'general',
+    this.selectedCommunityId = pocChatCommunityId,
+    this.selectedChannelId = pocChatDefaultChannel,
     this.threadRootId,
     this.sending = false,
     this.loading = false,

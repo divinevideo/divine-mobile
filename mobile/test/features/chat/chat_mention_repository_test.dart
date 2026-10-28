@@ -64,6 +64,7 @@ void main() {
         var blocked = false;
         final repo = ChatMentionRepository(
           owner: me,
+          communityId: 'community-test',
           store: InMemoryConcordStore(me),
           now: () => 1000,
           canNotify: (author) => author == friend && !blocked,
@@ -105,6 +106,7 @@ void main() {
         final store = InMemoryConcordStore(me);
         ChatMentionRepository make() => ChatMentionRepository(
           owner: me,
+          communityId: 'community-test',
           store: store,
           now: () => 1000,
           canNotify: (_) => true,
@@ -137,6 +139,7 @@ void main() {
         await store.put('mention-state', unreadable);
         final repo = ChatMentionRepository(
           owner: me,
+          communityId: 'community-test',
           store: store,
           now: () => 1000,
           canNotify: (_) => true,
@@ -170,6 +173,7 @@ void main() {
       var starts = 0;
       final repo = ChatMentionRepository(
         owner: me,
+        communityId: 'community-test',
         store: store,
         now: () => 1000,
         canNotify: (_) => true,
@@ -197,6 +201,7 @@ void main() {
       var starts = 0;
       final repo = ChatMentionRepository(
         owner: me,
+        communityId: 'community-test',
         store: store,
         now: () => 1000,
         canNotify: (_) => true,
@@ -227,6 +232,7 @@ void main() {
         var starts = 0;
         final repo = ChatMentionRepository(
           owner: me,
+          communityId: 'community-test',
           store: InMemoryConcordStore(me),
           now: () => 1000,
           canNotify: (_) => true,
@@ -269,6 +275,7 @@ void main() {
 
       final repo = ChatMentionRepository(
         owner: me,
+        communityId: 'community-test',
         store: store,
         now: () => 1000,
         canNotify: (_) => true,
@@ -303,6 +310,7 @@ void main() {
         store.puts = 0;
         final repo = ChatMentionRepository(
           owner: me,
+          communityId: 'community-test',
           store: store,
           now: () => 1000,
           canNotify: (_) => true,
@@ -323,6 +331,7 @@ void main() {
         final store = _FailingStore(me);
         final repo = ChatMentionRepository(
           owner: me,
+          communityId: 'community-test',
           store: store,
           now: () => 1000,
           canNotify: (_) => true,
