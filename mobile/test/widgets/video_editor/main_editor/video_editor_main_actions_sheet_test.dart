@@ -2,6 +2,7 @@
 // ABOUTME: Verifies action rendering and callback behavior.
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -152,6 +153,48 @@ void main() {
         },
       );
     }
+
+    testWidgets(
+      'keeps a two-line de label inside its row when the grid widens columns',
+      (tester) async {
+        // A Galaxy S26 at its default display size: 411 dp wide, so the grid
+        // hands each of its four columns 76.86 dp, past the 72 dp tile.
+        tester.view.physicalSize = const Size(1080, 2340);
+        tester.view.devicePixelRatio = 420 / 160;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final de = lookupAppLocalizations(const Locale('de'));
+        await tester.pumpWidget(
+          _buildShowHost(
+            mainBloc: mainBloc,
+            clipBloc: clipBloc,
+            timelineOverlayBloc: timelineOverlayBloc,
+            tuneBloc: tuneBloc,
+            drawBloc: drawBloc,
+            locale: const Locale('de'),
+          ),
+        );
+        await tester.tap(find.byKey(const Key('open-sheet')));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        final loopTile = find.ancestor(
+          of: find.byWidgetPredicate(
+            (widget) =>
+                widget is DivineIcon && widget.icon == DivineIconName.repeat,
+          ),
+          matching: find.byType(AspectRatio),
+        );
+        expect(tester.getSize(loopTile), equals(const Size.square(72)));
+        final loopLabel = tester.renderObject<RenderParagraph>(
+          find.descendant(
+            of: find.text(de.videoEditorLoopLabel),
+            matching: find.byType(RichText),
+          ),
+        );
+        expect(loopLabel.didExceedMaxLines, isFalse);
+      },
+    );
 
     testWidgets(
       'offers Align loop with the other editing tools for long clips',
