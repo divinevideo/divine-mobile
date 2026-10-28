@@ -153,18 +153,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     super.dispose();
   }
 
-  Future<void> _send(String text) async {
+  Future<void> _send() async {
+    // Picked offsets index the untrimmed draft; the send button trims it.
     final submittedDraft = _controller.text;
     final cubit = context.read<ChatCubit>();
     final state = cubit.state;
-    final profiles = text.contains('@')
+    final profiles = submittedDraft.contains('@')
         ? ref.read(profileRepositoryProvider)
         : null;
     final resolution = profiles == null
         ? null
         : await MentionResolutionService(profileRepository: profiles)
               .resolveTextMentions(
-                rawText: text,
+                rawText: submittedDraft,
                 selectedMentions: [
                   for (final mention in _selectedMentions)
                     MentionBinding(
@@ -180,7 +181,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
       communityId: state.selectedCommunityId,
       channelId: state.selectedChannelId,
       author: '',
-      body: (resolution?.canonicalText ?? text).trim(),
+      body: (resolution?.canonicalText ?? submittedDraft).trim(),
       nowMilliseconds: DateTime.now().millisecondsSinceEpoch,
     );
     if (mounted && accepted && _controller.text == submittedDraft) {
@@ -197,7 +198,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     if (body.isEmpty) return;
     _resolving = true;
     runDetached(
-      _send(text).whenComplete(() => _resolving = false),
+      _send().whenComplete(() => _resolving = false),
       'send room message',
       logName: 'ChatScreen',
       category: LogCategory.ui,
