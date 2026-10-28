@@ -193,6 +193,11 @@ void main() {
         },
       );
 
+      test('a mentions-tab refresh retries the local source', () async {
+        await repository.refreshFeed(NotificationKind.mention);
+        verify(local.refresh).called(1);
+      });
+
       test('a filtered refresh leaves the local source alone', () async {
         await repository.refreshFeed(NotificationKind.like);
         verifyNever(local.refresh);

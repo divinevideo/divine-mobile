@@ -1524,6 +1524,24 @@ class NotificationRepository {
       };
 
   void _refreshClientSources() {
+    _refreshLocalSource();
+    if (_closed) return;
+    final announcements = announcementsRepository;
+    if (announcements == null) return;
+    // Public catalog failures must never fail a social refresh.
+    unawaited(
+      announcements.refresh().catchError((Object error) {
+        Log.warning(
+          'Announcement refresh unavailable',
+          name: 'NotificationRepository',
+        );
+      }),
+    );
+  }
+
+  /// Retries the local source, whose rows show on the unfiltered and
+  /// mentions feeds.
+  void _refreshLocalSource() {
     if (_closed) return;
     final local = localNotifications;
     if (local != null) {
@@ -1540,18 +1558,6 @@ class NotificationRepository {
         }),
       );
     }
-    if (_closed) return;
-    final announcements = announcementsRepository;
-    if (announcements == null) return;
-    // Public catalog failures must never fail a social refresh.
-    unawaited(
-      announcements.refresh().catchError((Object error) {
-        Log.warning(
-          'Announcement refresh unavailable',
-          name: 'NotificationRepository',
-        );
-      }),
-    );
   }
 
   static final math.Random _jitter = math.Random();
@@ -1649,7 +1655,11 @@ class NotificationRepository {
 
   /// Refreshes one filtered notification feed from the beginning.
   Future<NotificationPage> refreshFeed(NotificationKind? filter) {
-    if (filter == null) _refreshClientSources();
+    if (filter == null) {
+      _refreshClientSources();
+    } else if (filter == NotificationKind.mention) {
+      _refreshLocalSource();
+    }
     return _refreshResultFor(filter).then((result) => result.page);
   }
 
