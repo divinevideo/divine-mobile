@@ -249,6 +249,7 @@ typedef _MinorReviewRoutingSignature = ({
   String? moderationConversationPubkey,
   String? moderationConversationId,
   bool allowsParentVideoOrEmail,
+  bool canSubmitParentConsent,
 });
 
 _MinorReviewRoutingSignature _minorReviewRoutingSignature(
@@ -266,6 +267,7 @@ _MinorReviewRoutingSignature _minorReviewRoutingSignature(
     moderationConversationPubkey: reviewCase?.moderationConversationPubkey,
     moderationConversationId: reviewCase?.moderationConversationId,
     allowsParentVideoOrEmail: reviewCase?.allowsParentVideoOrEmail ?? false,
+    canSubmitParentConsent: reviewCase?.canSubmitParentConsent ?? false,
   );
 }
 
@@ -541,7 +543,8 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
 
   if (authState == AuthState.authenticated &&
       reviewStatus?.isRestricted != true &&
-      (isReviewRoute || isParentContactRoute || isUnder13SupportRoute)) {
+      (isReviewRoute || isParentContactRoute || isUnder13SupportRoute) &&
+      !(isReviewRoute && reviewStatus?.currentCase != null)) {
     return VideoFeedPage.pathForIndex(0);
   }
 
@@ -553,6 +556,9 @@ String? appRouterRedirect(Ref ref, GoRouterState state) {
       return reviewCase.isUnder13Path
           ? MinorAccountReviewUnder13SupportScreen.path
           : SupportCenterScreen.path;
+    }
+    if (reviewCase != null && !reviewCase.canSubmitParentConsent) {
+      return MinorAccountReviewScreen.path;
     }
     if (!ref.read(
       isFeatureEnabledProvider(FeatureFlag.minorConsentInAppRecording),

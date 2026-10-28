@@ -663,6 +663,128 @@ void main() {
       },
     );
 
+    testWidgets('redirects voluntary submitted case to its waiting status', (
+      tester,
+    ) async {
+      final container = ProviderContainer(
+        overrides: [
+          ...routerOverrides(),
+          nostrSessionProvider.overrideWith(_NotReadyNostrSession.new),
+          currentMinorAccountReviewStatusProvider.overrideWith(
+            (ref) async => MinorAccountReviewStatus(
+              restrictionStatus: AccountRestrictionStatus.active,
+              currentCase: restrictedStatus(
+                state: MinorReviewCaseState.submittedForReview,
+              ).currentCase,
+            ),
+          ),
+          minorConsentWakelockProvider.overrideWithValue((_) async {}),
+          minorConsentRecorderProvider.overrideWithValue(_PendingRecorder()),
+          permissionsServiceProvider.overrideWithValue(_GrantedPermissions()),
+          minorAccountReviewRepositoryProvider.overrideWithValue(
+            _StubRepository(),
+          ),
+          isFeatureEnabledProvider(
+            FeatureFlag.minorConsentInAppRecording,
+          ).overrideWithValue(true),
+        ],
+      );
+      registerContainerTearDown(tester, container);
+      await container.read(currentMinorAccountReviewStatusProvider.future);
+      await pumpRouter(tester, container, activateRouteNormalizer: true);
+
+      final router = container.read(goRouterProvider);
+      router.go(MinorAccountReviewRecordConsentScreen.path);
+      await tester.pump();
+
+      expect(
+        router.routeInformationProvider.value.uri.toString(),
+        MinorAccountReviewScreen.path,
+      );
+    });
+
+    testWidgets('allows voluntary open reported case from status endpoint', (
+      tester,
+    ) async {
+      final container = ProviderContainer(
+        overrides: [
+          ...routerOverrides(),
+          nostrSessionProvider.overrideWith(_NotReadyNostrSession.new),
+          currentMinorAccountReviewStatusProvider.overrideWith(
+            (ref) async => MinorAccountReviewStatus(
+              restrictionStatus: AccountRestrictionStatus.active,
+              currentCase: restrictedStatus(
+                state: MinorReviewCaseState.openReported,
+              ).currentCase,
+            ),
+          ),
+          minorConsentWakelockProvider.overrideWithValue((_) async {}),
+          minorConsentRecorderProvider.overrideWithValue(_PendingRecorder()),
+          permissionsServiceProvider.overrideWithValue(_GrantedPermissions()),
+          minorAccountReviewRepositoryProvider.overrideWithValue(
+            _StubRepository(),
+          ),
+          isFeatureEnabledProvider(
+            FeatureFlag.minorConsentInAppRecording,
+          ).overrideWithValue(true),
+        ],
+      );
+      registerContainerTearDown(tester, container);
+      await container.read(currentMinorAccountReviewStatusProvider.future);
+      await pumpRouter(tester, container, activateRouteNormalizer: true);
+
+      final router = container.read(goRouterProvider);
+      router.go(MinorAccountReviewRecordConsentScreen.path);
+      await tester.pump();
+
+      expect(
+        router.routeInformationProvider.value.uri.toString(),
+        MinorAccountReviewRecordConsentScreen.path,
+      );
+    });
+
+    for (final state in MinorReviewCaseState.values) {
+      testWidgets('consent recording admission matches server state $state', (
+        tester,
+      ) async {
+        final canSubmit = {
+          MinorReviewCaseState.openReported,
+          MinorReviewCaseState.restrictedPendingUserResponse,
+          MinorReviewCaseState.restrictedPendingParentalConsent,
+          MinorReviewCaseState.restrictedPendingSupportEmail,
+        }.contains(state);
+        final container = ProviderContainer(
+          overrides: [
+            ...routerOverrides(),
+            nostrSessionProvider.overrideWith(_NotReadyNostrSession.new),
+            currentMinorAccountReviewStatusProvider.overrideWith(
+              (ref) async => restrictedStatus(state: state),
+            ),
+            minorConsentWakelockProvider.overrideWithValue((_) async {}),
+            minorConsentRecorderProvider.overrideWithValue(_PendingRecorder()),
+            permissionsServiceProvider.overrideWithValue(_GrantedPermissions()),
+            minorAccountReviewRepositoryProvider.overrideWithValue(
+              _StubRepository(),
+            ),
+            isFeatureEnabledProvider(FeatureFlag.minorConsentInAppRecording)
+                .overrideWithValue(true),
+          ],
+        );
+        registerContainerTearDown(tester, container);
+        await container.read(currentMinorAccountReviewStatusProvider.future);
+        await pumpRouter(tester, container, activateRouteNormalizer: true);
+        final router = container.read(goRouterProvider);
+        router.go(MinorAccountReviewRecordConsentScreen.path);
+        await tester.pump();
+        expect(
+          router.routeInformationProvider.value.uri.toString(),
+          canSubmit
+              ? MinorAccountReviewRecordConsentScreen.path
+              : MinorAccountReviewScreen.path,
+        );
+      });
+    }
+
     testWidgets('allows record consent route while restricted', (tester) async {
       final container = ProviderContainer(
         overrides: [

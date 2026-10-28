@@ -82,6 +82,7 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView>
   bool _accessDenied = false;
   bool _requiresSettings = false;
   bool _autoRequested = false;
+  bool _requestAfterRefresh = false;
   bool _wasInBackground = false;
   bool _initializingCamera = false;
   String? _pendingVideoPath;
@@ -131,9 +132,15 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView>
   }
 
   void _onPermissionState(CameraPermissionState state) {
-    if (state is CameraPermissionError) {
+    if (state is CameraPermissionLoading) {
+      // A dismissed native dialog can leave its request unresolved. Keep an
+      // explicit recovery action available once the parent returns.
+      setState(() => _accessDenied = true);
+    } else if (state is CameraPermissionError) {
       setState(() => _accessDenied = true);
     } else if (state is CameraPermissionLoaded) {
+      final requestAfterRefresh = _requestAfterRefresh;
+      _requestAfterRefresh = false;
       switch (state.status) {
         case CameraPermissionStatus.authorized:
           setState(() {
@@ -142,7 +149,8 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView>
           });
           unawaited(_initializeCamera());
         case CameraPermissionStatus.canRequest:
-          if (!_autoRequested) {
+          setState(() => _requiresSettings = false);
+          if (!_autoRequested || requestAfterRefresh) {
             _autoRequested = true;
             context.read<CameraPermissionBloc>().add(
               const CameraPermissionRequest(),
@@ -171,6 +179,20 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView>
       setState(() => _accessDenied = true);
     } finally {
       _initializingCamera = false;
+    }
+  }
+
+  void _retryPermissions() {
+    // Refresh first: Request is accepted only from Loaded(canRequest), and a
+    // Back-dismissed Android request may still be stuck in Loading.
+    final permissions = context.read<CameraPermissionBloc>();
+    final state = permissions.state;
+    if (state is CameraPermissionLoaded &&
+        state.status == CameraPermissionStatus.canRequest) {
+      permissions.add(const CameraPermissionRequest());
+    } else {
+      _requestAfterRefresh = true;
+      permissions.add(const CameraPermissionRefresh());
     }
   }
 
@@ -306,6 +328,9 @@ class _RecordConsentViewState extends ConsumerState<_RecordConsentView>
                                       ? _DeniedPane(
                                           onUseEmailFallback:
                                               _onUseEmailFallback,
+                                          onRetry: _requiresSettings
+                                              ? null
+                                              : _retryPermissions,
                                           onOpenSettings: _requiresSettings
                                               ? _openSettings
                                               : null,
@@ -676,10 +701,15 @@ class _ReviewPane extends StatelessWidget {
 
 /// Camera unavailable or refused: explain and route to the email fallback.
 class _DeniedPane extends StatelessWidget {
-  const _DeniedPane({required this.onUseEmailFallback, this.onOpenSettings});
+  const _DeniedPane({
+    required this.onUseEmailFallback,
+    this.onOpenSettings,
+    this.onRetry,
+  });
 
   final VoidCallback onUseEmailFallback;
   final VoidCallback? onOpenSettings;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -690,6 +720,14 @@ class _DeniedPane extends StatelessWidget {
           body: context.l10n.minorAccountReviewRecordConsentDeniedBody,
         ),
         const SizedBox(height: 24),
+        if (onRetry != null) ...[
+          DivineButton(
+            label: context.l10n.minorAccountReviewRecordConsentTryAgainCta,
+            expanded: true,
+            onPressed: onRetry,
+          ),
+          const SizedBox(height: 12),
+        ],
         if (onOpenSettings != null) ...[
           DivineButton(
             label: context.l10n.cameraPermissionGoToSettings,
