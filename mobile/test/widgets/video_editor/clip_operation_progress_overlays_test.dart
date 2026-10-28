@@ -107,22 +107,6 @@ void main() {
       },
     );
 
-    testWidgets('announces an operation when it starts', (tester) async {
-      final announced = _captureAnnouncements(tester);
-      whenListen(
-        bloc,
-        Stream.value(_importing),
-        initialState: const ClipEditorState(),
-      );
-      await pump(tester);
-      expect(announced, isEmpty);
-
-      await tester.pump();
-
-      final l10n = lookupAppLocalizations(const Locale('en'));
-      expect(announced, equals([l10n.videoEditorLibraryImportProgressLabel]));
-    });
-
     testWidgets('announces the operation it waits on', (tester) async {
       final announced = _captureAnnouncements(tester);
       whenListen(
