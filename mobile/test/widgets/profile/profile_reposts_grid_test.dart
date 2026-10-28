@@ -9,6 +9,7 @@ import 'package:models/models.dart';
 import 'package:openvine/blocs/profile_reposted_videos/profile_reposted_videos_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 import 'package:openvine/widgets/profile/profile_reposts_grid.dart';
 
 import '../../helpers/go_router.dart';
@@ -223,7 +224,7 @@ void main() {
 
         await tester.pumpWidget(buildSubject());
 
-        expect(find.byType(SliverGrid), findsOneWidget);
+        expect(find.byType(ProfileMasonryGrid), findsOneWidget);
       });
 
       testWidgets('ends with the bottom safe area', (tester) async {
@@ -366,7 +367,7 @@ void main() {
           );
 
           expect(find.byType(ProfileRepostsGrid), findsOneWidget);
-          expect(find.byType(SliverGrid), findsOneWidget);
+          expect(find.byType(ProfileMasonryGrid), findsOneWidget);
 
           final customScrollView = tester.widget<CustomScrollView>(
             find.byType(CustomScrollView).last,

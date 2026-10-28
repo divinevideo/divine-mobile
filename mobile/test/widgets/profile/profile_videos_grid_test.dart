@@ -27,6 +27,7 @@ import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart'
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
+import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 import 'package:openvine/widgets/profile/profile_videos_grid.dart';
 import 'package:openvine/widgets/profile/profile_videos_grid_skeleton.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -236,7 +237,7 @@ void main() {
           buildSubject(userIdHex: _otherPubkey, videos: videos),
         );
 
-        expect(find.byType(SliverGrid), findsOneWidget);
+        expect(find.byType(ProfileMasonryGrid), findsOneWidget);
       });
 
       testWidgets(
@@ -1449,7 +1450,7 @@ void main() {
           buildSubject(userIdHex: _ownPubkey, videos: videos),
         );
 
-        expect(find.byType(SliverGrid), findsOneWidget);
+        expect(find.byType(ProfileMasonryGrid), findsOneWidget);
         expect(find.byType(PartialCircleSpinner), findsOneWidget);
       });
 
@@ -1474,7 +1475,7 @@ void main() {
           buildSubject(userIdHex: _otherPubkey, videos: videos),
         );
 
-        expect(find.byType(SliverGrid), findsOneWidget);
+        expect(find.byType(ProfileMasonryGrid), findsOneWidget);
         expect(find.byType(PartialCircleSpinner), findsNothing);
       });
 
@@ -1859,7 +1860,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 250));
 
         // Shape changed (a new upload appeared) → grid must rebuild
-        // so the new tile is added to the SliverGrid.
+        // so the new tile is added to the ProfileMasonryGrid.
         expect(
           debugProfileVideosGridBuildCount,
           greaterThan(baselineBuildCount),
@@ -1903,7 +1904,7 @@ void main() {
           );
 
           expect(find.byType(ProfileVideosGrid), findsOneWidget);
-          expect(find.byType(SliverGrid), findsOneWidget);
+          expect(find.byType(ProfileMasonryGrid), findsOneWidget);
 
           final customScrollView = tester.widget<CustomScrollView>(
             find.byType(CustomScrollView).last,

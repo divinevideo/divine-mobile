@@ -27,6 +27,7 @@ import 'package:openvine/screens/video_metadata/video_metadata_edit_screen.dart'
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/video_identity.dart';
 import 'package:openvine/widgets/owner_video_actions_sheet.dart';
+import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 import 'package:openvine/widgets/profile/pending_collaborator_invite_banner_cubit.dart';
 import 'package:openvine/widgets/profile/profile_tab_empty_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_loading_more_sliver.dart';
@@ -432,13 +433,16 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
           padding: EdgeInsets.only(
             bottom: MediaQuery.viewPaddingOf(context).bottom,
           ),
-          sliver: SliverGrid(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 4,
-              mainAxisSpacing: 4,
-            ),
-            delegate: SliverChildBuilderDelegate((context, index) {
+          sliver: ProfileMasonryGrid(
+            childCount: allVideos.length,
+            aspectRatioOf: (index) => switch (allVideos[index]) {
+              // A draft still uploading has no published dimensions yet.
+              _GridUploadingVideoEntry() => profileVerticalTileAspectRatio,
+              final _GridVideoEventEntry entry => profileTileAspectRatioForVideo(
+                entry.videoEvent,
+              ),
+            },
+            itemBuilder: (context, index) {
               final videoEntry = allVideos[index];
               return switch (videoEntry) {
                 final _GridUploadingVideoEntry uploadEntry =>
@@ -470,7 +474,7 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
                   },
                 ),
               };
-            }, childCount: allVideos.length),
+            },
           ),
         ),
         if (isLoadingMore) const ProfileTabLoadingMoreSliver(),

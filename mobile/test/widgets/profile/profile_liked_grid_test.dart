@@ -13,6 +13,7 @@ import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/screens/feed/pooled_fullscreen_video_feed_screen.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
+import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 import 'package:openvine/widgets/profile/profile_liked_grid.dart';
 
 import '../../helpers/go_router.dart';
@@ -208,7 +209,7 @@ void main() {
 
         await tester.pumpWidget(buildSubject());
 
-        expect(find.byType(SliverGrid), findsOneWidget);
+        expect(find.byType(ProfileMasonryGrid), findsOneWidget);
       });
 
       testWidgets('bottom loading indicator when loading more', (
@@ -281,7 +282,7 @@ void main() {
         // The grid stays on screen during the background revalidation. The
         // progress bar itself lives in the pinned tab bar header
         // (profile_grid.dart), not in the grid body.
-        expect(find.byType(SliverGrid), findsOneWidget);
+        expect(find.byType(ProfileMasonryGrid), findsOneWidget);
       });
     });
 
@@ -459,7 +460,7 @@ void main() {
 
           // The grid should render without errors inside a NestedScrollView
           expect(find.byType(ProfileLikedGrid), findsOneWidget);
-          expect(find.byType(SliverGrid), findsOneWidget);
+          expect(find.byType(ProfileMasonryGrid), findsOneWidget);
 
           // Verify the CustomScrollView does NOT have its own controller
           // (it uses the PrimaryScrollController from NestedScrollView)
