@@ -524,6 +524,11 @@ void main() {
         final confirmed = await repository.recoverFullSend(rumorId: rowId);
         expect(confirmed.retryablePending, isTrue, reason: 'held, recorded');
         final poolWrap = wrapsTo(peerB).last;
+        expect(
+          wrapsTo(owner),
+          isEmpty,
+          reason: "a held retry the pool confirms withholds the sender's copy",
+        );
 
         final again = await repository.recoverFullSend(rumorId: rowId);
 
