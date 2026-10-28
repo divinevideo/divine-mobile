@@ -310,6 +310,9 @@ class _RenderProgressContent extends StatelessWidget {
               if (progress case final progress?)
                 PartialCircleSpinner(progress: progress)
               else
+                // Transient render progress is read straight from the plugin
+                // stream (no service indirection) since it is purely ephemeral
+                // UI feedback that never outlives this overlay.
                 StreamBuilder<ProgressModel>(
                   stream: ProVideoEditor.instance.progressStreamById(renderId),
                   builder: (context, snapshot) {
