@@ -9,6 +9,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
+import 'package:openvine/widgets/video_editor/video_editor_blocking_overlay.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 
 /// The blocking progress overlays for [ClipEditorBloc]'s render operations.
@@ -53,49 +54,17 @@ class _ReverseProgressOverlay extends StatelessWidget {
       ClipEditorState,
       ({bool isReversing, String? renderId})
     >(
-      selector: (state) => (
-        isReversing: state.isReversing,
-        renderId: state.reversingClipId,
-      ),
+      selector: (state) =>
+          (isReversing: state.isReversing, renderId: state.reversingClipId),
       builder: (context, reverseState) {
-        if (!reverseState.isReversing || reverseState.renderId == null) {
-          return const SizedBox.shrink();
-        }
+        final renderId = reverseState.isReversing
+            ? reverseState.renderId
+            : null;
+        if (renderId == null) return const SizedBox.shrink();
 
-        return ColoredBox(
-          color: context.vineColors.background.withAlpha(210),
-          child: Center(
-            child: RepaintBoundary(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                spacing: 24,
-                children: [
-                  // Transient render progress is read straight from the
-                  // plugin stream (no service indirection) since it is purely
-                  // ephemeral UI feedback that never outlives this overlay.
-                  StreamBuilder<ProgressModel>(
-                    stream: ProVideoEditor.instance.progressStreamById(
-                      reverseState.renderId!,
-                    ),
-                    builder: (context, snapshot) {
-                      final progress = snapshot.data?.progress ?? 0;
-                      return PartialCircleSpinner(progress: progress);
-                    },
-                  ),
-                  ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 240),
-                    child: Text(
-                      context.l10n.videoEditorReverseProgressLabel,
-                      textAlign: TextAlign.center,
-                      style: VineTheme.bodyMediumFont(
-                        color: context.vineColors.primaryText,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+        return _RenderProgressContent(
+          renderId: renderId,
+          label: context.l10n.videoEditorReverseProgressLabel,
         );
       },
     );
@@ -289,8 +258,8 @@ class _TransformProgressOverlay extends StatelessWidget {
   }
 }
 
-/// A render's progress, over the whole editor, absorbing input for the
-/// duration so nothing underneath can start a competing edit.
+/// A render's progress, over the whole editor, blocking touch and screen
+/// readers for the duration so nothing underneath can start a competing edit.
 class _RenderProgressContent extends StatelessWidget {
   const _RenderProgressContent({
     required this.renderId,
@@ -315,53 +284,49 @@ class _RenderProgressContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AbsorbPointer(
-      child: ColoredBox(
-        color: context.vineColors.background.withAlpha(210),
-        child: Center(
-          child: RepaintBoundary(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              spacing: 24,
-              children: [
-                if (progress case final progress?)
-                  PartialCircleSpinner(progress: progress)
-                else
-                  StreamBuilder<ProgressModel>(
-                    stream: ProVideoEditor.instance.progressStreamById(
-                      renderId,
+    return VideoEditorBlockingOverlay(
+      announcement: label,
+      child: Center(
+        child: RepaintBoundary(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            spacing: 24,
+            children: [
+              if (progress case final progress?)
+                PartialCircleSpinner(progress: progress)
+              else
+                StreamBuilder<ProgressModel>(
+                  stream: ProVideoEditor.instance.progressStreamById(renderId),
+                  builder: (context, snapshot) {
+                    final progress = snapshot.data?.progress ?? 0;
+                    return PartialCircleSpinner(progress: progress);
+                  },
+                ),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 240),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  spacing: 8,
+                  children: [
+                    Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      style: VineTheme.bodyMediumFont(
+                        color: context.vineColors.primaryText,
+                      ),
                     ),
-                    builder: (context, snapshot) {
-                      final progress = snapshot.data?.progress ?? 0;
-                      return PartialCircleSpinner(progress: progress);
-                    },
-                  ),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 240),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    spacing: 8,
-                    children: [
+                    if (hint case final hint?)
                       Text(
-                        label,
+                        hint,
                         textAlign: TextAlign.center,
-                        style: VineTheme.bodyMediumFont(
-                          color: context.vineColors.primaryText,
+                        style: VineTheme.bodySmallFont(
+                          color: context.vineColors.secondaryText,
                         ),
                       ),
-                      if (hint case final hint?)
-                        Text(
-                          hint,
-                          textAlign: TextAlign.center,
-                          style: VineTheme.bodySmallFont(
-                            color: context.vineColors.secondaryText,
-                          ),
-                        ),
-                    ],
-                  ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -383,10 +348,8 @@ class _MergeProgressOverlay extends StatelessWidget {
       ClipEditorState,
       ({bool isMerging, String? renderId})
     >(
-      selector: (state) => (
-        isMerging: state.isMerging,
-        renderId: state.mergingRenderId,
-      ),
+      selector: (state) =>
+          (isMerging: state.isMerging, renderId: state.mergingRenderId),
       builder: (context, mergeState) {
         final renderId = mergeState.isMerging ? mergeState.renderId : null;
         return AnimatedSwitcher(

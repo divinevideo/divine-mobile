@@ -285,6 +285,24 @@ void main() {
         await tester.pump();
         expect(cancelled, ['layer_track']);
       });
+
+      testWidgets(
+        'hides the editor from screen readers but keeps Cancel usable',
+        (tester) async {
+          await pump(tester);
+          expect(find.semantics.byLabel('open'), findsOne);
+
+          unawaited(startTracking());
+          await tester.pump();
+          expect(find.semantics.byLabel('open'), findsNothing);
+
+          tester.semantics.tap(
+            find.semantics.byLabel(l10n(tester).commonCancel),
+          );
+          await tester.pump();
+          expect(cancelled, ['layer_track']);
+        },
+      );
     });
 
     group('LayerTrackingResultListener', () {
