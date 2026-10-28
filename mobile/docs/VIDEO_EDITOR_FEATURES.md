@@ -98,10 +98,10 @@ Layout (split screen), from the editing tools (not for stop motion):
 - Each cell is filled from the library or the camera, which show the cell's crop while picking. Inside its cell a clip can be dragged to pick the part that shows and zoomed in up to 4×. A gap between the cells and a border color are optional.
 - Done renders the layout into one clip on the timeline, right after the clip under the playhead, or at the seam when the playhead is on one. A cell shorter than the longest holds its last frame until the layout ends. As one clip, the layout trims, splits, reorders and takes transitions like any other; it cannot be rearranged cell by cell afterwards.
 
-Align loop, from the editing tools (Android, iOS and macOS):
+Align loop, from the editing tools (loop repair supports Android, iOS and macOS):
 
 - Measures the jump between the video's last frame and its first, and when it finds a clear mismatch, corrects the framing so the loop joins smoothly, zooming in at most 1.08×; only where that cannot help does it trim instead, by up to 200 ms. It then plays the join and offers Undo; a scene it is not sure about stays unchanged.
-- It is not offered while a clip has a transition, a speed curve, a shape mask, keyframes or a color mask, or is a freeze frame or stop motion, or while a keyframed or detached layer is on the canvas.
+- The Loop button remains visible for unsupported compositions and platforms; tapping it leaves the video unchanged and says "Couldn't improve this loop". Repair declines clips with a transition, a speed curve, a shape mask, keyframes, an applied or pending color mask, a freeze frame, stop-motion frames, a color or photo slot, or less than the minimum trim duration of playable footage. It also declines a composition with a keyframed or detached layer on the canvas.
 
 Timeline:
 
