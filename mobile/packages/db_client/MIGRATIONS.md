@@ -4,7 +4,7 @@ This document describes how to manage database migrations for the `db_client` pa
 
 ## Current Schema Version
 
-**Version: 28** (see `app_database.dart`).
+**Version: 31** (see `app_database.dart`).
 
 Version 2 is the legacy-normalization baseline. Earlier releases kept Drift's
 user-version at 1 while startup repair SQL added tables, columns, indexes, and
@@ -276,6 +276,30 @@ it, or recreates the table when it is missing. Canonical v1–v27 snapshots rema
 unchanged; v27 retains the follower table. The v28 step also accepts the earlier
 group-preview v27 shape, creating its missing follower table while preserving
 existing removal and rejoin markers.
+
+Version 31 adds three nullable JSON columns (#10012):
+`dm_message_reactions.held_reaction_wraps` and `held_removal_wraps`, and
+`direct_messages.held_deletion_wraps`. Each maps a recipient's hex pubkey to
+the gift wrap that a fallback-pool relay accepted for a reaction, its kind-5
+removal, or an own delete-for-everyone while that recipient's kind-10050 inbox
+could not be read. A retry sends that recipient nothing while the inbox stays
+unreadable, counts the held wrap as delivered once they advertise no inbox, and
+wraps the rumor again only once their inbox is found, which is what a held DM
+message already did through `outgoing_dms.recipient_wrap_event_id`. A
+reaction row carries two because it holds two rumors in turn. Each record lives
+as long as the rumor it was taken for and goes with it. Existing rows stay
+NULL, so an attempt held before v31 is wrapped again once, as before. The
+columns ride their rows' existing account cleanup and salvage handling, so
+neither list in `connection_native.dart` changes.
+
+The step adds the columns through `_addColumnIfMissing` and checks `to` as well
+as `from`. The v12 rebuild lists `held_deletion_wraps` in `newColumns`, and the
+legacy normalization creates `dm_message_reactions` with both reaction
+columns, for the schema-parity test. Both build the current shape, so an
+upgrade, or a guarded recovery, that stops below v31 drops the three columns
+again; only a migration test opens a database at an earlier version. Per the
+rule below, the guarded `beforeOpen` recovery and its repair probe are not
+extended for the new columns.
 
 Going forward, schema changes must be versioned Drift migrations. Do not add new
 tables, columns, indexes, or schema backfills to `beforeOpen`; that hook is only

@@ -1088,6 +1088,124 @@ void main() {
           expect(row.deletionRumorJson, isNotNull);
         });
       });
+
+      group('held deletion wraps (#10012)', () {
+        const recipient = 'pubkey_bob';
+        const otherRecipient = 'pubkey_carol';
+
+        Future<bool> recordWrap({
+          String to = recipient,
+          String wrap = 'gw_held',
+          String ownerPubkey = 'pubkey_alice',
+        }) => dao.recordHeldDeletionWrap(
+          'msg_del',
+          recipientPubkey: to,
+          wrapEventId: wrap,
+          ownerPubkey: ownerPubkey,
+        );
+
+        Future<void> markPending({String rumor = '{"kind":5}'}) =>
+            dao.markMessageDeletionPending(
+              'msg_del',
+              deletionRumorJson: rumor,
+              ownerPubkey: 'pubkey_alice',
+            );
+
+        Future<Map<String, dynamic>?> heldWraps() async {
+          final row = await dao.getMessageById(
+            'msg_del',
+            ownerPubkey: 'pubkey_alice',
+          );
+          final json = row!.heldDeletionWraps;
+          return json == null ? null : jsonDecode(json) as Map<String, dynamic>;
+        }
+
+        test('records the wrap held for each recipient', () async {
+          await insertOwnMessage();
+          await markPending();
+
+          expect(await recordWrap(), isTrue);
+          expect(await recordWrap(to: otherRecipient, wrap: 'gw_c'), isTrue);
+
+          expect(await heldWraps(), {
+            recipient: 'gw_held',
+            otherRecipient: 'gw_c',
+          });
+        });
+
+        test(
+          'records nothing on a message with no pending retraction',
+          () async {
+            await insertOwnMessage();
+
+            expect(await recordWrap(), isFalse);
+
+            expect(await heldWraps(), isNull);
+          },
+        );
+
+        test("records nothing on another account's message", () async {
+          await insertOwnMessage();
+          await markPending();
+
+          expect(await recordWrap(ownerPubkey: 'pubkey_bob'), isFalse);
+
+          expect(await heldWraps(), isNull);
+        });
+
+        test('go when the retraction is confirmed', () async {
+          await insertOwnMessage();
+          await markPending();
+          await recordWrap();
+
+          await dao.markMessageDeletionSent(
+            'msg_del',
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(await heldWraps(), isNull);
+          expect(await recordWrap(), isFalse);
+        });
+
+        test('stay, with the kind-5, when the retraction is blocked', () async {
+          await insertOwnMessage();
+          await markPending();
+          await recordWrap();
+
+          await dao.markMessageDeletionBlocked(
+            'msg_del',
+            restoreToThread: true,
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(await heldWraps(), {recipient: 'gw_held'});
+        });
+
+        test('stay when a retry records the same kind-5 again', () async {
+          await insertOwnMessage();
+          await markPending();
+          await recordWrap();
+          await dao.markMessageDeletionBlocked(
+            'msg_del',
+            restoreToThread: true,
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          await markPending();
+
+          expect(await heldWraps(), {recipient: 'gw_held'});
+        });
+
+        test('go when a different kind-5 replaces it', () async {
+          await insertOwnMessage();
+          await markPending();
+          await recordWrap();
+
+          await markPending(rumor: '{"kind":5,"created_at":2}');
+
+          expect(await heldWraps(), isNull);
+        });
+      });
     });
 
     group('isRetracted', () {

@@ -3,6 +3,7 @@
 // ABOUTME: supersede or NIP-09, and reactive watch for chip rendering.
 
 import 'package:db_client/db_client.dart';
+import 'package:db_client/src/database/daos/held_pool_wraps.dart';
 import 'package:drift/drift.dart';
 
 part 'dm_reactions_dao.g.dart';
@@ -162,6 +163,10 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
                   recipientPubkeys: recipientPubkeys == null
                       ? const Value.absent()
                       : Value(recipientPubkeys),
+                  // Nothing a relay holds for the row's earlier rumors is a
+                  // wrap of this attempt.
+                  heldReactionWraps: const Value(null),
+                  heldRemovalWraps: const Value(null),
                 ),
               );
       if (resurrected > 0) {
@@ -190,8 +195,8 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// Swap the placeholder id for the real rumor event id once publish
-  /// landed. Clears `rumorEventJson` (no longer needed for retry) and
-  /// marks `publishStatus = 'sent'`.
+  /// landed. Clears `rumorEventJson` (no longer needed for retry) with the
+  /// wraps held for it, and marks `publishStatus = 'sent'`.
   Future<void> swapPlaceholderId({
     required String placeholderId,
     required String realRumorId,
@@ -207,6 +212,7 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
             giftWrapId: Value(giftWrapId),
             rumorEventJson: const Value(null),
             publishStatus: const Value('sent'),
+            heldReactionWraps: const Value(null),
           ),
         );
   }
@@ -262,9 +268,10 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// Mark an outgoing row terminally `'blocked'` — the send policy refused the
-  /// recipient (#176). Clears `rumorEventJson` so the row can never be selected
-  /// by [getRetryableOwnReactions] (which requires a stored rumor), making the
-  /// block terminal on both the status and the rumor-presence predicate.
+  /// recipient (#176). Clears `rumorEventJson`, and the wraps held for it, so
+  /// the row can never be selected by [getRetryableOwnReactions] (which
+  /// requires a stored rumor), making the block terminal on both the status
+  /// and the rumor-presence predicate.
   Future<void> markBlocked({
     required String id,
     required String ownerPubkey,
@@ -275,8 +282,84 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
       const DmMessageReactionsCompanion(
         publishStatus: Value(_blockedStatus),
         rumorEventJson: Value(null),
+        heldReactionWraps: Value(null),
       ),
     );
+  }
+
+  /// Record that a fallback-pool relay accepted [wrapEventId], a gift wrap of
+  /// the reaction [id], for [recipientPubkey] while their inbox could not be
+  /// read (#10012), in [DmMessageReactions.heldReactionWraps].
+  ///
+  /// Recorded only while the row still holds the reaction rumor that wrap
+  /// carries — live, with its rumor, not confirmed or blocked — so an attempt
+  /// that ends after the reaction was removed records nothing. Returns whether
+  /// it was recorded.
+  Future<bool> recordHeldReactionWrap({
+    required String id,
+    required String ownerPubkey,
+    required String recipientPubkey,
+    required String wrapEventId,
+  }) {
+    return transaction(() async {
+      final row = await getById(id: id, ownerPubkey: ownerPubkey);
+      if (row == null ||
+          row.isDeleted ||
+          row.rumorEventJson == null ||
+          !_retryableReactionStatuses.contains(row.publishStatus)) {
+        return false;
+      }
+      await (update(dmMessageReactions)..where(
+            (t) => t.id.equals(id) & t.ownerPubkey.equals(ownerPubkey),
+          ))
+          .write(
+            DmMessageReactionsCompanion(
+              heldReactionWraps: Value(
+                withHeldPoolWrap(
+                  row.heldReactionWraps,
+                  recipientPubkey: recipientPubkey,
+                  wrapEventId: wrapEventId,
+                ),
+              ),
+            ),
+          );
+      return true;
+    });
+  }
+
+  /// [recordHeldReactionWrap] for a wrap of the kind-5 that removes the
+  /// reaction [id], in [DmMessageReactions.heldRemovalWraps]. Recorded only
+  /// while that removal is still outstanding with its stored kind-5.
+  Future<bool> recordHeldRemovalWrap({
+    required String id,
+    required String ownerPubkey,
+    required String recipientPubkey,
+    required String wrapEventId,
+  }) {
+    return transaction(() async {
+      final row = await getById(id: id, ownerPubkey: ownerPubkey);
+      if (row == null ||
+          !row.isDeleted ||
+          row.rumorEventJson == null ||
+          !_outstandingDeletionStatuses.contains(row.publishStatus)) {
+        return false;
+      }
+      await (update(dmMessageReactions)..where(
+            (t) => t.id.equals(id) & t.ownerPubkey.equals(ownerPubkey),
+          ))
+          .write(
+            DmMessageReactionsCompanion(
+              heldRemovalWraps: Value(
+                withHeldPoolWrap(
+                  row.heldRemovalWraps,
+                  recipientPubkey: recipientPubkey,
+                  wrapEventId: wrapEventId,
+                ),
+              ),
+            ),
+          );
+      return true;
+    });
   }
 
   /// Soft-delete a row (NIP-09 kind 5 deletion received, or own-reaction
@@ -466,26 +549,41 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
   /// kind-5 until a relay confirms it — closing the gap where a removal made
   /// offline (or on a flaky relay) was silently dropped. Overloads the
   /// existing `rumor_event_json` column with the deletion rumor: the prior
-  /// add-reaction rumor is no longer needed once the reaction is removed.
+  /// add-reaction rumor is no longer needed once the reaction is removed, and
+  /// neither are the wraps held for it. Wraps held for an earlier kind-5 are
+  /// kept only when [deletionRumorJson] is that same kind-5.
   Future<void> markOwnDeletionPending({
     required String id,
     required String ownerPubkey,
     required String deletionRumorJson,
-  }) async {
-    await (update(
-      dmMessageReactions,
-    )..where((t) => t.id.equals(id) & t.ownerPubkey.equals(ownerPubkey))).write(
-      DmMessageReactionsCompanion(
-        isDeleted: const Value(true),
-        publishStatus: const Value(_deletionPendingStatus),
-        rumorEventJson: Value(deletionRumorJson),
-      ),
-    );
+  }) {
+    return transaction(() async {
+      final row = await getById(id: id, ownerPubkey: ownerPubkey);
+      final sameRemoval =
+          row != null &&
+          row.isDeleted &&
+          row.rumorEventJson == deletionRumorJson;
+      await (update(dmMessageReactions)..where(
+            (t) => t.id.equals(id) & t.ownerPubkey.equals(ownerPubkey),
+          ))
+          .write(
+            DmMessageReactionsCompanion(
+              isDeleted: const Value(true),
+              publishStatus: const Value(_deletionPendingStatus),
+              rumorEventJson: Value(deletionRumorJson),
+              heldReactionWraps: const Value(null),
+              heldRemovalWraps: sameRemoval
+                  ? const Value.absent()
+                  : const Value(null),
+            ),
+          );
+    });
   }
 
   /// Mark a pending own-reaction deletion as delivered: clears the stored
-  /// deletion rumor and moves the row to the terminal `'deletion_sent'` status
-  /// so the sweep stops re-driving it. The row stays `is_deleted = 1`.
+  /// deletion rumor, with the wraps held for it, and moves the row to the
+  /// terminal `'deletion_sent'` status so the sweep stops re-driving it. The
+  /// row stays `is_deleted = 1`.
   Future<void> markDeletionSent({
     required String id,
     required String ownerPubkey,
@@ -496,6 +594,7 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
       const DmMessageReactionsCompanion(
         publishStatus: Value(_deletionSentStatus),
         rumorEventJson: Value(null),
+        heldRemovalWraps: Value(null),
       ),
     );
   }

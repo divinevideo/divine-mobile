@@ -4,6 +4,7 @@
 // ABOUTME: All queries are scoped by ownerPubkey for multi-account isolation.
 
 import 'package:db_client/db_client.dart';
+import 'package:db_client/src/database/daos/held_pool_wraps.dart';
 import 'package:drift/drift.dart';
 
 part 'direct_messages_dao.g.dart';
@@ -368,25 +369,75 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
   /// worklist until every recipient confirms the wrap. Mirrors
   /// `DmReactionsDao.markOwnDeletionPending`.
   ///
+  /// The wraps held for an earlier kind-5 (#10012) are kept only when
+  /// [deletionRumorJson] is that same kind-5, as when a blocked retraction is
+  /// tried again.
+  ///
   /// Returns `true` if the row was updated, `false` if [rumorId] was not
   /// found.
   Future<bool> markMessageDeletionPending(
     String rumorId, {
     required String deletionRumorJson,
     String? ownerPubkey,
-  }) async {
-    final rows =
-        await (update(directMessages)..where(
-              (t) => t.id.equals(rumorId) & _visibleToOwner(t, ownerPubkey),
-            ))
-            .write(
-              DirectMessagesCompanion(
-                isDeleted: const Value(true),
-                deletionRumorJson: Value(deletionRumorJson),
-                deletionPublishStatus: const Value(deletionPending),
-              ),
-            );
-    return rows > 0;
+  }) {
+    return transaction(() async {
+      final row = await _firstVisible(rumorId, ownerPubkey);
+      final sameRetraction = row?.deletionRumorJson == deletionRumorJson;
+      final rows =
+          await (update(directMessages)..where(
+                (t) => t.id.equals(rumorId) & _visibleToOwner(t, ownerPubkey),
+              ))
+              .write(
+                DirectMessagesCompanion(
+                  isDeleted: const Value(true),
+                  deletionRumorJson: Value(deletionRumorJson),
+                  deletionPublishStatus: const Value(deletionPending),
+                  heldDeletionWraps: sameRetraction
+                      ? const Value.absent()
+                      : const Value(null),
+                ),
+              );
+      return rows > 0;
+    });
+  }
+
+  /// Record that a fallback-pool relay accepted [wrapEventId], a gift wrap of
+  /// the kind-5 retracting [rumorId], for [recipientPubkey] while their inbox
+  /// could not be read (#10012), in [DirectMessages.heldDeletionWraps].
+  ///
+  /// Recorded only while the retraction is still pending with its stored
+  /// kind-5, so an attempt that ends after another one settled the row
+  /// records nothing. Returns whether it was recorded.
+  Future<bool> recordHeldDeletionWrap(
+    String rumorId, {
+    required String recipientPubkey,
+    required String wrapEventId,
+    String? ownerPubkey,
+  }) {
+    return transaction(() async {
+      final row = await _firstVisible(rumorId, ownerPubkey);
+      if (row == null ||
+          row.deletionRumorJson == null ||
+          row.deletionPublishStatus != deletionPending) {
+        return false;
+      }
+      final rows =
+          await (update(directMessages)..where(
+                (t) => t.id.equals(rumorId) & _visibleToOwner(t, ownerPubkey),
+              ))
+              .write(
+                DirectMessagesCompanion(
+                  heldDeletionWraps: Value(
+                    withHeldPoolWrap(
+                      row.heldDeletionWraps,
+                      recipientPubkey: recipientPubkey,
+                      wrapEventId: wrapEventId,
+                    ),
+                  ),
+                ),
+              );
+      return rows > 0;
+    });
   }
 
   /// A relay confirmed the deletion wrap: drop the stored rumor and move the
@@ -440,7 +491,8 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
   /// [retainRumor] and [restoreToThread] are required rather than defaulted:
   /// whether the payload survives, and whether the message comes back, are the
   /// whole difference between the two terminal states, so a future third
-  /// caller has to decide both deliberately.
+  /// caller has to decide both deliberately. The wraps held for the rumor
+  /// (#10012) go or stay with it.
   ///
   /// `is_deleted` is written in both directions rather than left absent: a
   /// restored blocked row is visible AND still holds a rumor, so a later
@@ -460,6 +512,9 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
             .write(
               DirectMessagesCompanion(
                 deletionRumorJson: retainRumor
+                    ? const Value.absent()
+                    : const Value(null),
+                heldDeletionWraps: retainRumor
                     ? const Value.absent()
                     : const Value(null),
                 isDeleted: Value(!restoreToThread),
@@ -488,6 +543,16 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
           )
           ..orderBy([(t) => OrderingTerm(expression: t.createdAt)]))
         .get();
+  }
+
+  /// The row an update of [rumorId] for [ownerPubkey] reads first. Unlike
+  /// [getMessageById] it never throws when, with no owner given, several
+  /// accounts hold the id.
+  Future<DirectMessageRow?> _firstVisible(String rumorId, String? ownerPubkey) {
+    return (select(directMessages)
+          ..where((t) => t.id.equals(rumorId) & _visibleToOwner(t, ownerPubkey))
+          ..limit(1))
+        .getSingleOrNull();
   }
 
   /// Look up a message by rumor event ID.

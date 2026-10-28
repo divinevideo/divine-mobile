@@ -56,6 +56,15 @@ const legacyV1NormalizationRepairIndexes = <String>[
   'idx_clip_category_owner_pubkey',
 ];
 
+/// The columns v31 adds (#10012): the wraps a fallback-pool relay accepted for
+/// a DM reaction, its removal, or a delete-for-everyone while a recipient's
+/// inbox could not be read.
+const _v31HeldWrapColumns = <(String, String)>[
+  ('dm_message_reactions', 'held_reaction_wraps'),
+  ('dm_message_reactions', 'held_removal_wraps'),
+  ('direct_messages', 'held_deletion_wraps'),
+];
+
 /// Main application database using Drift
 ///
 /// This database uses SQLite (divine_db.db) to store all Nostr events,
@@ -155,7 +164,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.test(super.e);
 
   @override
-  int get schemaVersion => 30;
+  int get schemaVersion => 31;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -399,6 +408,10 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(notificationReads);
         await m.createTable(notificationReadMembers);
       }
+      if (from < 31 && to >= 31) {
+        await _repairSchemaV31();
+      }
+      await _withholdV31Columns(to);
     },
     beforeOpen: (details) async {
       // Salvage may preserve only one of these local-only tables. A missing
@@ -435,6 +448,7 @@ class AppDatabase extends _$AppDatabase {
         await _repairSchemaV20();
         await _repairConversationDismissals();
         await _repairSchemaV28();
+        await _withholdV31Columns(details.versionNow);
       }
 
       // Run cleanup of expired data on every app startup
@@ -502,7 +516,16 @@ class AppDatabase extends _$AppDatabase {
       'WHERE owner_pubkey IS NULL',
     );
 
-    await m.alterTable(TableMigration(directMessages));
+    final messageColumns = await _columnNames('direct_messages');
+    await m.alterTable(
+      TableMigration(
+        directMessages,
+        newColumns: [
+          if (!messageColumns.contains('held_deletion_wraps'))
+            directMessages.heldDeletionWraps,
+        ],
+      ),
+    );
     final conversationColumns = await _columnNames('conversations');
     await m.alterTable(
       TableMigration(
@@ -648,6 +671,31 @@ class AppDatabase extends _$AppDatabase {
       'recipient_pubkeys',
       'TEXT NULL',
     );
+  }
+
+  /// Adds the record of the wraps a fallback-pool relay holds for a DM
+  /// reaction, its removal, or a delete-for-everyone (#10012).
+  ///
+  /// Existing rows stay NULL: an attempt held before v31 recorded no wrap, so
+  /// its next retry wraps the rumor again, as every retry did before. A
+  /// versioned step only, outside the guarded `beforeOpen` recovery: that
+  /// path is not extended for new columns (MIGRATIONS.md).
+  Future<void> _repairSchemaV31() async {
+    for (final (table, column) in _v31HeldWrapColumns) {
+      await _addColumnIfMissing(table, column, 'TEXT NULL');
+    }
+  }
+
+  /// Drops the v31 columns again from a database opened at an earlier
+  /// [version], which only a migration test does: the v12 rebuild and the
+  /// legacy normalization create both tables from their current shape.
+  Future<void> _withholdV31Columns(int version) async {
+    if (version >= 31) return;
+    for (final (table, column) in _v31HeldWrapColumns) {
+      if ((await _columnNames(table)).contains(column)) {
+        await customStatement('ALTER TABLE $table DROP COLUMN $column');
+      }
+    }
   }
 
   Future<void> _repairSchemaV3() async {
@@ -1389,6 +1437,8 @@ class AppDatabase extends _$AppDatabase {
           rumor_event_json TEXT,
           publish_status TEXT,
           recipient_pubkeys TEXT,
+          held_reaction_wraps TEXT,
+          held_removal_wraps TEXT,
           PRIMARY KEY (id, owner_pubkey)
         )
       ''');

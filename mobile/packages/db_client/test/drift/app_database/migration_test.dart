@@ -306,9 +306,110 @@ void main() {
       });
     }
 
-    test('current schema version is 30', () {
-      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 30);
+    test('current schema version is 31', () {
+      expect(AppDatabase(NativeDatabase.memory()).schemaVersion, 31);
     });
+
+    test(
+      'v31 gives queued DM reactions and retractions a held-wrap record, '
+      'keeping the rows they belong to',
+      () async {
+        final schema = await verifier.schemaAt(30);
+        final owner = 'a' * 64;
+        final reactionId = 'b' * 64;
+        final messageId = 'c' * 64;
+        schema.rawDatabase
+          ..execute(
+            'INSERT INTO dm_message_reactions (id, conversation_id, '
+            'target_message_id, target_message_author, reactor_pubkey, emoji, '
+            'created_at, owner_pubkey, rumor_event_json, publish_status, '
+            'recipient_pubkeys) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+            [
+              reactionId,
+              'd' * 64,
+              messageId,
+              'e' * 64,
+              owner,
+              '🔥',
+              1700000000,
+              owner,
+              '{"kind":7}',
+              'pending',
+              '["${'e' * 64}"]',
+            ],
+          )
+          ..execute(
+            'INSERT INTO direct_messages (id, conversation_id, sender_pubkey, '
+            'content, created_at, gift_wrap_id, owner_pubkey, is_deleted, '
+            'deletion_rumor_json, deletion_publish_status) '
+            'VALUES (?,?,?,?,?,?,?,?,?,?)',
+            [
+              messageId,
+              'd' * 64,
+              owner,
+              'retracted',
+              1700000000,
+              'f' * 64,
+              owner,
+              1,
+              '{"kind":5}',
+              'deletion_pending',
+            ],
+          );
+        final db = AppDatabase(schema.newConnection());
+        addTearDown(db.close);
+
+        await verifier.migrateAndValidate(db, 31);
+
+        final reaction = await db.dmReactionsDao.getById(
+          id: reactionId,
+          ownerPubkey: owner,
+        );
+        expect(reaction!.rumorEventJson, '{"kind":7}');
+        expect(reaction.heldReactionWraps, isNull);
+        expect(reaction.heldRemovalWraps, isNull);
+        final message = await db.directMessagesDao.getMessageById(
+          messageId,
+          ownerPubkey: owner,
+        );
+        expect(message!.deletionRumorJson, '{"kind":5}');
+        expect(message.heldDeletionWraps, isNull);
+        // A read cannot tell a missing nullable column from an empty one; a
+        // write names the column, so it throws unless the upgrade added it.
+        expect(
+          await db.dmReactionsDao.recordHeldReactionWrap(
+            id: reactionId,
+            ownerPubkey: owner,
+            recipientPubkey: 'e' * 64,
+            wrapEventId: '1' * 64,
+          ),
+          isTrue,
+        );
+        expect(
+          await db.directMessagesDao.recordHeldDeletionWrap(
+            messageId,
+            recipientPubkey: 'e' * 64,
+            wrapEventId: '2' * 64,
+            ownerPubkey: owner,
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    for (final version in [1, 11]) {
+      test(
+        'v$version schema migrates directly to the current version, through '
+        'the v12 rebuild of direct_messages',
+        () async {
+          final schema = await verifier.schemaAt(version);
+          final db = AppDatabase(schema.newConnection());
+          addTearDown(db.close);
+
+          await verifier.migrateAndValidate(db, db.schemaVersion);
+        },
+      );
+    }
 
     test(
       'a v26 conversation reopened since its removal counts as rejoined '
