@@ -1,3 +1,8 @@
+Status: Historical
+
+> Historical note
+> Analyses the `Future.delayed` calls in `vine_recording_controller.dart`, which the recorder rewrite in #859 removed. The start/stop race it describes is now handled by `VideoRecorderBloc`, which queues recording start and stop with `sequential()` and holds a stop that arrives mid-start in `pendingStopAfterStart`; see [CAMERA_ARCHITECTURE.md](CAMERA_ARCHITECTURE.md). Start with docs/README.md and docs/archive/README.md for current guidance.
+
 # Camera Timing Analysis - Future.delayed Context
 
 ## Context from Journal Entries

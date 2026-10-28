@@ -1,254 +1,145 @@
-# Camera Architecture Documentation
+# Camera Architecture
 
 Status: Current
-Validated against: current camera architecture notes on 2026-03-19.
+Validated against: recorder code on `main` on 2026-10-28.
 
-## Overview
+How the video recorder is put together, from the route to the native camera. What each recorder mode offers the creator is in [`VIDEO_EDITOR_FEATURES.md`](VIDEO_EDITOR_FEATURES.md#getting-into-the-editor); the native microphone lifecycle and diagnostics are in the [`divine_camera` README](../packages/divine_camera/README.md).
 
-Divine uses **4 different camera interface implementations** to handle platform-specific requirements and capabilities. This multi-interface approach allows for platform-specific optimizations while maintaining a consistent API.
+## Layers
 
-## Shutter Gesture Invariant
+One code path serves every platform that can record. Platform differences live in the native code of the `divine_camera` plugin, not in the app.
 
-Recorder shutter surfaces that combine tap-to-toggle and long-press recording
-must route those gestures through
-`mobile/lib/widgets/video_recorder/shutter_gesture_detector.dart`.
+| Layer | Code | Role |
+|---|---|---|
+| Route | [`VideoRecorderRoute`](../lib/screens/video_recorder_screen.dart), registered in [`video_routes.dart`](../lib/router/routes/video_routes.dart) | Reads the query parameters, wraps the recorder in `CameraPermissionGate` |
+| UI | `VideoRecorderView` and the per-mode stacks under [`lib/widgets/video_recorder/modes/`](../lib/widgets/video_recorder/modes) | Renders state, dispatches events, owns navigation |
+| State | [`VideoRecorderBloc`](../lib/blocs/video_recorder/video_recorder_bloc.dart) | Recorder state, recording start/stop, modes, zoom, focus, countdown, stop motion, chroma key |
+| Camera API | [`CameraService`](../lib/services/video_recorder/camera/camera_base_service.dart) | The app's camera interface; `CameraService.create()` picks the implementation |
+| Plugin | [`divine_camera`](../packages/divine_camera) (`DivineCamera.instance`) | Method channel to the native camera, preview texture |
+| Native | CameraX on Android; `AVCaptureSession` with `AVAssetWriter` on iOS and macOS | Capture, encoding, audio session |
 
-This preserves a recorder-specific invariant introduced after issue `#4409`:
-- A tap-started recording must not be stopped by an incidental long-press
-  release on the same shutter target.
-- New shutter surfaces should reuse the shared widget instead of wiring
-  `GestureDetector` callbacks manually.
+Recorded clips leave the bloc for `ClipManagerNotifier` in [`clip_manager_provider.dart`](../lib/providers/clip_manager_provider.dart), a Riverpod notifier. The bloc reaches it, the video editor notifier and `SharedPreferences` through injected accessors, so it imports no Riverpod itself. `_VideoRecorderBlocScope` builds the bloc and keys its `BlocProvider` on those dependencies, so a dependency rebuilt at runtime gives a fresh bloc (see `state_management.md`).
 
-## Camera Interface Implementations
+## Platforms
 
-### 1. MobileCameraInterface (Basic)
-- **Location**: `lib/services/vine_recording_controller.dart` (line 66)
-- **Used on**:
-  - iOS (always - primary)
-  - Android (fallback only if enhanced camera fails)
-- **Reason for iOS**: iOS devices experience performance issues with the enhanced camera implementation (dark/slow preview)
-- **Features**: Basic video recording with camera switching
-- **Permission handling**: Relies on Flutter `camera` package's native code
+| Platform | `CameraService` | Native side |
+|---|---|---|
+| Android | `CameraMobileService` | `divine_camera`, CameraX `VideoCapture<Recorder>` |
+| iOS | `CameraMobileService` | `divine_camera`, Swift under `darwin/` |
+| macOS | `CameraMobileService` | The same Swift as iOS. The Mac has no lens array, zoom, stabilization or flash |
+| Linux | `CameraLinuxService` | None. A stub that reports `CameraInitializationError.unsupportedPlatform`; see [`LINUX_SUPPORT.md`](LINUX_SUPPORT.md) |
+| Web | — | Recording is not supported. `CameraPermissionGate` shows the "not supported on web" screen instead of the recorder |
 
-**Key characteristics**:
-- Simple, reliable camera controller
-- Minimal configuration (ResolutionPreset.high, enableAudio: true)
-- Calls `prepareForVideoRecording()` for iOS compatibility
-- No explicit permission requests - handled by camera package
+## Opening the recorder
 
-### 2. EnhancedMobileCameraInterface
-- **Location**: `lib/services/camera/enhanced_mobile_camera_interface.dart`
-- **Used on**: Android (primary, with fallback to basic if initialization fails)
-- **Features**:
-  - Pinch-to-zoom gesture control
-  - Tap-to-focus with visual indicator
-  - Flash mode toggling (off → auto → torch → off)
-  - Zoom level indicator overlay
-- **Permission handling**: No explicit requests - relies on camera package
-- **Error handling**: Provides detailed error messages for permission issues
+The recorder lives at `/video-recorder` (`RoutePaths.videoRecorder`). Its query parameters are `entry_point` (analytics), `auto_record=true` (the bottom-nav hold shortcut: capture mode, recording starts once the camera is ready) and `challenge_recording`; a preselected sound rides in `extra`. Details are in [`DEEP_LINK_URL_REFERENCE.md`](DEEP_LINK_URL_REFERENCE.md).
 
-**Android-specific benefits**:
-- Better camera controls for Android devices
-- Graceful fallback to basic camera if enhanced features fail
-- Zoom range: device-dependent (typically 1.0x to 8.0x+)
+There are two ways in:
 
-### 3. MacOSCameraInterface
-- **Location**: `lib/services/vine_recording_controller.dart` (line 336)
-- **Used on**: macOS only
-- **Implementation**: Native Swift plugin (`macos/NativeCameraPlugin.swift`)
-- **Permission handling**: **Explicit permission requests via AVFoundation**
+- **Standalone.** In-app camera buttons (camera FAB, bottom nav, empty library) call `pushToCameraWithPermission` from [`camera_permission_check.dart`](../lib/utils/camera_permission_check.dart), which asks for permission on the current page and only navigates once the answer is final. Direct navigation (quick actions, deep links) reaches the route unasked, and `CameraPermissionGate` fires the dialog itself.
+- **From the video editor.** The editor pushes `VideoRecorderScreen(fromEditor: true)` to add a clip. There is no permission gate and no bottom bar, the persisted mode is not restored, and `cropGuideAspectRatio` draws a split-screen cell's shape over the viewfinder.
 
-**Native permission flow** (NativeCameraPlugin.swift lines 85-115):
-```swift
-let authStatus = AVCaptureDevice.authorizationStatus(for: .video)
+On its first frame the view marks a page as open through `OverlayVisibility` (pausing the feed's players), dispatches `VideoRecorderInitializeRequested`, shows the one-time "why six seconds?" sheet and offers an autosaved session back.
 
-switch authStatus {
-case .authorized:
-    setupCaptureSession(result: result)
-case .notDetermined:
-    AVCaptureDevice.requestAccess(for: .video) { granted in
-        if granted {
-            setupCaptureSession(result: result)
-        } else {
-            result(FlutterError(code: "PERMISSION_DENIED", ...))
-        }
-    }
-case .denied, .restricted:
-    result(FlutterError(code: "PERMISSION_DENIED", ...))
-}
-```
+## Permissions
 
-**Why separate implementation**:
-- macOS uses `AVCaptureSession` directly (not Flutter camera package)
-- Native plugin provides better macOS integration
-- Proper TCC (Transparency, Consent, and Control) permission handling
+`CameraPermissionBloc` is created once in `app_composition_root.dart` and asks [`PermissionsService`](../packages/permissions_service) for camera and microphone access.
 
-### 4. WebCameraInterface
-- **Location**: `lib/services/vine_recording_controller.dart` (line 585)
-- **Used on**: Web/Chrome browsers
-- **Permission handling**: Browser-based permission prompts
-- **Features**: Basic recording using browser MediaStream API
+| Platform | Backed by |
+|---|---|
+| iOS, Android | `permission_handler` |
+| macOS | The `openvine/native_camera` channel to [`macos/NativeCameraPlugin.swift`](../macos/NativeCameraPlugin.swift), which calls `AVCaptureDevice.authorizationStatus` / `requestAccess` and opens System Settings. The plugin does nothing else; recording runs through `divine_camera` |
+| Linux | No check. The bloc reports `authorized` |
 
-## Platform Selection Logic
+There is no in-app priming screen: the OS dialog always follows the user's camera tap. A permission the OS will no longer ask for (`requiresSettings`) shows the gate's settings prompt. `CameraPermissionRequest` uses `restartable()` because the Android dialog dismissed with the back button can leave `permission_handler`'s request hanging forever; the next tap supersedes it.
 
-**Decision tree** (vine_recording_controller.dart lines 845-874):
+The usage descriptions are `NSCameraUsageDescription` and `NSMicrophoneUsageDescription` in `ios/Runner/Info.plist` and `macos/Runner/Info.plist`, and `CAMERA` plus `RECORD_AUDIO` in `android/app/src/main/AndroidManifest.xml`.
 
-```dart
-if (Platform.isMacOS) {
-  // Use native macOS plugin
-  _cameraInterface = MacOSCameraInterface();
+## Camera startup
 
-} else if (Platform.isIOS || Platform.isAndroid) {
+`VideoRecorderInitializeRequested` restores the last-used mode, lens (default: back) and stabilization (default: `standard`, since `auto` resolves on iOS to a look-ahead mode that delays every stop by about 1.6 s). They are stored in `SharedPreferences` under `camera_last_used_recorder_mode`, `camera_last_used_lens` and `camera_last_used_stabilization`.
 
-  if (Platform.isIOS) {
-    // Always use basic camera for iOS (performance optimization)
-    _cameraInterface = MobileCameraInterface();
+`CameraService.initialize` then receives everything that is fixed for the life of the capture session:
 
-  } else {
-    // Android: Try enhanced camera first, fallback to basic
-    try {
-      _cameraInterface = EnhancedMobileCameraInterface();
-      await _cameraInterface!.initialize();
-      Log.info('Using enhanced mobile camera with zoom and focus features');
-    } catch (enhancedError) {
-      Log.warning('Enhanced camera failed, falling back to basic camera');
-      _cameraInterface?.dispose();
-      _cameraInterface = MobileCameraInterface();
-      await _cameraInterface!.initialize();
-    }
-  }
+- quality `VideoEditorConstants.quality` (1080p) and automatic lens switching on zoom
+- `preferUnprocessedAudio` from `MusicModePreferenceService`, which records the microphone without speech noise suppression
+- `mirrorFrontCameraOutput` from `FrontCameraMirrorPreferenceService`
+- the stabilization mode, applied with the first bind so Android does not rebind the camera twice
 
-} else if (kIsWeb) {
-  // Use web camera interface
-  _cameraInterface = WebCameraInterface();
-}
-```
+A change to the music mode or mirror setting therefore applies the next time the recorder opens.
 
-## Permission Handling by Platform
+Startup is measured by the `camera_startup` performance trace, tagged with lens, quality and outcome. A failed start sets `initializationError` to a `CameraInitializationError` code rather than a message; `VideoRecorderCameraPreview` localizes it and shows it in `VideoRecorderCameraPlaceholder`. Once the camera runs, the bloc enables remote record control so the volume buttons and Bluetooth clickers start and stop recording.
 
-### iOS
-- **Info.plist keys** (ios/Runner/Info.plist):
-  - `NSCameraUsageDescription`: "Divine needs access to your camera to record short videos."
-  - `NSMicrophoneUsageDescription`: "Divine needs access to your microphone to record audio with videos."
-- **Permission request timing**: When `CameraController.initialize()` is first called
-- **Handled by**: Flutter `camera` package native iOS code
-- **No explicit Dart code needed** - permissions requested automatically
+## Recording a take
 
-### Android
-- **Manifest permissions** (android/app/src/main/AndroidManifest.xml):
-  - `android.permission.CAMERA`
-  - `android.permission.RECORD_AUDIO`
-- **Permission request timing**: When `CameraController.initialize()` is first called
-- **Handled by**: Flutter `camera` package native Android code
-- **Runtime permissions**: Automatically requested on Android 6.0+
+### Shutter gestures
 
-### macOS
-- **Info.plist keys** (macos/Runner/Info.plist):
-  - `NSCameraUsageDescription`: "Divine needs access to your camera to record short videos."
-  - `NSMicrophoneUsageDescription`: "Divine needs access to your microphone to record audio with videos."
-- **Permission request timing**: When `NativeCameraPlugin.initializeCamera()` is called
-- **Handled by**: Custom Swift code using `AVCaptureDevice.requestAccess(for: .video)`
-- **TCC database**: macOS tracks permissions in TCC (Transparency, Consent, and Control) database
-- **Bundle ID**: `com.openvine.divine` (must match for permission persistence)
+Shutter surfaces that combine tap-to-toggle and long-press-to-record must route through [`ShutterGestureDetector`](../lib/widgets/video_recorder/shutter_gesture_detector.dart) instead of wiring `GestureDetector` callbacks by hand. It keeps the guard added for issue #4409:
 
-### Web
-- **Browser permissions**: Handled by browser's MediaStream API
-- **User prompt**: Shown when accessing camera for first time
-- **Persistence**: Browser-dependent (usually per-origin)
+- A tap-started recording is never stopped by an incidental long-press release on the same target.
+- In press-down mode, a press on a recording started by anything else (volume key, Bluetooth remote, a dropped release) still stops it, so the button is never a dead control.
 
-## Common Permission Issues
+`RecordButton` (`video_recorder_record_button.dart`) and the Classic preview (`VideoRecorderClassicStack`) use it today.
 
-### macOS Debug Builds Losing Permissions
-**Problem**: Debug builds get new code signatures each time, causing macOS to treat them as "different apps"
+### Start
 
-**Symptoms**:
-- Permission works once, then breaks on next debug build
-- `tccutil reset Camera com.openvine.divine` reports "No such bundle identifier"
-- Permission dialog appears inside app window instead of as system dialog
+A shutter tap dispatches `VideoRecorderRecordingToggleRequested`, which becomes `VideoRecorderRecordingStartRequested` or `VideoRecorderRecordingStopRequested`. Both run with `sequential()`, so each is a FIFO queue. In stop motion the toggle captures a still instead (see [Modes](#modes)).
 
-**Solutions**:
-1. Use release builds for testing (consistent signature)
-2. Reset entire TCC database: `sudo tccutil reset Camera`
-3. Reboot Mac to clear TCC state
+A toggle is ignored while the camera is switching. A start is ignored while navigation has locked recording, while another take is starting or stopping, and in Classic once less than 30 ms of the recording limit is left.
 
-### iOS Permissions Not Persisting
-**Problem**: App loses camera permissions after reinstall or update
+When the mode supports it and a timer is set, a countdown runs first. The microphone is closed for the beeps (`suspendAudioCapture`) and the volume buttons are released, because on iOS a mic left open while the speaker plays takes seconds to recover its input level, and the clip would start quiet and grow louder (#4539).
 
-**Symptoms**:
-- Permission prompt appears every time
-- Settings app shows no permission entry
+Then the bloc starts the selected sound, calls `CameraService.startRecording` and keeps the screen awake with `WakelockPlus`. Only Classic passes a `maxDuration`: what is left of `VideoEditorConstants.maxDuration` (6.3 s across all clips). The native side stops at that limit on its own and reports it through `onAutoStopped`. A stop that arrives while the native start is still running is held in `pendingStopAfterStart` and sent once the recording has begun, so a short hold still produces a clip.
 
-**Solutions**:
-1. Check bundle identifier matches between builds: `co.openvine.app`
-2. Ensure Info.plist usage descriptions are present
-3. Clean build and reinstall: `flutter clean && flutter build ios`
+### Stop
 
-## Testing Camera Permissions
+The clip timer freezes at the tap, not when the native stop returns. `stopRecording()` hands back the file, and `ClipManagerNotifier.addClip` turns it into a `DivineVideoClip`. In Classic a take longer than the remaining time is trimmed in the background. The clip is saved to the clip library right away. Then, detached from the stop handler so a slow pass never delays the next stop:
 
-### Recommended Test Sequence
-1. **Fresh install**: Uninstall app completely, then install fresh build
-2. **Grant permission**: Launch app, grant camera permission when prompted
-3. **Verify persistence**: Close and relaunch app - should not re-prompt
-4. **Deny permission**: Revoke permission in Settings, verify app shows appropriate error
-5. **Re-grant permission**: Grant permission in Settings, verify app resumes working
+1. The real duration (`commonTrackEnd`, see [`VIDEO_TRACK_END_MISMATCH.md`](VIDEO_TRACK_END_MISMATCH.md)), the thumbnail and the ghost frame are read from a copy of the file, and the clip is saved again.
+2. A chroma-key take is keyed into the composite the viewfinder showed.
 
-### Platform-Specific Testing
+In parallel the clip manager signs the take with ProofMode / C2PA (`NativeProofModeService.proofFile`). Once signing settles, `RecordingGalleryBackupService` copies it to the device gallery when the user has turned that on in Settings (off by default).
 
-**iOS**:
-- Settings → Privacy & Security → Camera → Divine (toggle off/on)
-- Test both front and back cameras
-- Test camera switching during recording
+A second stop result for a file that was already stopped is dropped, so one take never becomes two clips (#10194).
 
-**Android**:
-- Settings → Apps → Divine → Permissions → Camera (toggle off/on)
-- Test enhanced camera features (zoom, focus, flash)
-- Verify fallback to basic camera if enhanced fails
+## Modes
 
-**macOS**:
-- System Settings → Privacy & Security → Camera (toggle off/on)
-- Test with both debug and release builds
-- Verify permission persists across app launches (release builds only)
+`VideoRecorderMode` lists the modes in mode-wheel order: Capture, Stop Motion, Lip Sync, Chroma Key, Classic, Upload. Its getters (`hasRecordingLimit`, `hasVideoEditor`, `capturesStills`, `needsLiveChromaKey`, `supportsCountdownTimer`, `supportsVideoStabilization`, `supportsGhostFrame`, `supportGridLines`, `defaultAspectRatio`) decide what the recorder offers; the per-mode UI is in `lib/widgets/video_recorder/modes/`.
 
-## Architecture Rationale
+- **Stop Motion** captures stills with `CameraService.capturePhoto`. [`StopMotionSessionStore`](../lib/services/video_recorder/stop_motion_session_store.dart) mirrors each still into the clip library as it is shot and hands the session to the clip manager on assemble.
+- **Lip Sync** shows the sound picker until a sound is picked, with remote record control paused meanwhile. Its clips are muted before the editor opens.
+- **Chroma Key** is offered only where `ChromaKeyShader.isBackendSupported`, because the keyed viewfinder is the mode.
+- **Classic** has the recording limit and no editor (see [Leaving the recorder](#leaving-the-recorder)).
+- **Upload** records nothing: the view pauses the camera while it shows and resumes it on leaving.
 
-### Why Multiple Interfaces?
+Switching between two recording modes discards the session's clips, which stay in the clip library; a visit to Upload and back keeps them.
 
-1. **Platform-specific optimizations**: iOS needs basic camera for performance, Android benefits from enhanced features
-2. **Native integration**: macOS uses native AVFoundation for better system integration
-3. **Progressive enhancement**: Enhanced features on Android, basic functionality on iOS
-4. **Graceful fallback**: Android can fall back to basic camera if enhanced features fail
+## Leaving the recorder
 
-### Why Not One Universal Interface?
+`openVideoEditorFromRecorder` in [`video_recorder_navigation.dart`](../lib/widgets/video_recorder/video_recorder_navigation.dart):
 
-- **Performance**: iOS has documented issues with advanced camera features in Flutter
-- **Capabilities**: Different platforms support different camera features
-- **Permission models**: iOS/Android use runtime permissions, macOS uses TCC database
-- **Native APIs**: macOS benefits from direct AVFoundation usage
+1. Locks recording (`VideoRecorderRecordingLockedForNavigation`) so a volume or Bluetooth trigger racing the transition cannot leave a recording nobody can stop.
+2. Pushes the video editor, or in Classic the metadata screen while the video renders in the background.
+3. Disposes the camera once the push transition has covered the preview (`VideoRecorderCameraPausedForNavigation`).
+4. Re-initializes the camera when the pushed route pops.
 
-## Future Improvements
+`openRecorderLibrary` follows the same pattern. Closing the recorder (`closeVideoRecorder`, or a pop) calls `discardRecorderSession`: the clips stay in the clip library, and only the session and its autosave draft go.
 
-### Potential Enhancements
-1. **Unified permission API**: Abstract platform-specific permission handling
-2. **Enhanced iOS camera**: Investigate performance issues and potentially enable zoom/focus
-3. **Feature detection**: Runtime detection of supported camera features
-4. **Permission state management**: Centralized permission state tracking
+## App lifecycle
 
-### Known Issues
-1. **iOS enhanced camera performance**: Dark/slow preview on iOS devices (documented in code)
-2. **macOS debug build permissions**: TCC database treats each debug build as new app
-3. **Permission dialog inside app**: Indicates TCC database corruption (macOS)
+`VideoRecorderView` forwards `didChangeAppLifecycleState` to the bloc, which passes it to `DivineCamera.handleAppLifecycleState`:
 
-## Related Files
+| State | Camera |
+|---|---|
+| `inactive` (Control Center, notification shade, app switcher) | Preview paused, microphone kept |
+| `paused`, `hidden`, `detached` | Preview paused, microphone released (on iOS, so a locked phone shows no recording indicator) |
+| `resumed` | Preview resumed |
 
-- `lib/services/vine_recording_controller.dart` - Main recording controller with platform selection
-- `lib/services/camera/enhanced_mobile_camera_interface.dart` - Enhanced Android camera
-- `macos/NativeCameraPlugin.swift` - macOS native camera implementation
-- `ios/Runner/Info.plist` - iOS permission descriptions
-- `macos/Runner/Info.plist` - macOS permission descriptions
-- `android/app/src/main/AndroidManifest.xml` - Android permission declarations
+A resume while Upload is showing is ignored. A camera that fails to resume shows the initialization error instead of a black preview.
 
-## See Also
+## Testing
 
-- [Flutter Camera Plugin Documentation](https://pub.dev/packages/camera)
-- [Apple TCC Documentation](https://developer.apple.com/documentation/avfoundation/cameras_and_media_capture/requesting_authorization_for_media_capture_on_ios)
-- [Android Camera Permissions](https://developer.android.com/training/permissions/requesting)
+- Unit and widget tests: `test/blocs/video_recorder/`, `test/services/video_recorder/camera/`, `test/blocs/camera_permission/`, `test/widgets/camera_permission_gate_test.dart`, `test/widgets/video_recorder/`, and `mobile/packages/divine_camera/test/`.
+- End to end: the Maestro recorder flows in [`e2e/maestro/README.md`](../e2e/maestro/README.md). They need a real camera: the iOS Simulator has none, an Android emulator's virtual camera is enough.
+- Permissions by hand: install fresh, grant both permissions, relaunch (no second prompt), revoke in system settings (the gate's settings prompt appears), grant again.
+- macOS debug builds sign ad hoc so the permission prompts appear; see [`MACOS_DEBUG_SIGNING.md`](MACOS_DEBUG_SIGNING.md). To ask again from scratch: `tccutil reset Camera co.openvine.app`.

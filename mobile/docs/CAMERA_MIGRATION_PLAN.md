@@ -1,3 +1,8 @@
+Status: Historical
+
+> Historical note
+> Plans a migration between two camera screens, `UniversalCameraScreenPure` and `TestCameraScreen`, that no longer exist. The recorder was rebuilt around `VideoRecorderBloc` and the `divine_camera` plugin; see [CAMERA_ARCHITECTURE.md](CAMERA_ARCHITECTURE.md) for how it works today. Start with docs/README.md and docs/archive/README.md for current guidance.
+
 # Camera Screen Migration Plan
 ## Migrating Features from UniversalCameraScreenPure to TestCameraScreen
 
