@@ -42,7 +42,6 @@ Future<_Chat> _pumpComposer(
   final follows = _Follows();
   final chat = _Chat();
   when(() => chat.state).thenReturn(const ChatState());
-  when(() => chat.sealedAuthor).thenReturn(_self);
   when(chat.visibleMessages).thenReturn([]);
   whenListen(chat, const Stream<ChatState>.empty());
   when(() => follows.followingPubkeys).thenReturn(keys);
