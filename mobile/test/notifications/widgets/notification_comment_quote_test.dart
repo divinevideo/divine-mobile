@@ -146,6 +146,8 @@ void main() {
       );
       expect(profileSpan, isNotNull);
       expect(profileSpan!.recognizer, isA<TapGestureRecognizer>());
+      expect(profileSpan.style?.decoration, TextDecoration.underline);
+      expect(profileSpan.style?.decorationColor, VineTheme.darkColors.link);
     });
 
     testWidgets('renders an undecodable npub as raw text (#6346 mode)', (

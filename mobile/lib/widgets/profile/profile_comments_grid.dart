@@ -261,12 +261,16 @@ class _ProfileCommentCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: baseStyle,
                       linkStyle: baseStyle.copyWith(
-                        color: VineTheme.info,
+                        color: context.vineColors.link,
                         fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
+                        decorationColor: context.vineColors.link,
                       ),
                       mentionStyle: baseStyle.copyWith(
-                        color: VineTheme.info,
+                        color: context.vineColors.link,
                         fontWeight: FontWeight.w600,
+                        decoration: TextDecoration.underline,
+                        decorationColor: context.vineColors.link,
                       ),
                     ),
                     const SizedBox(height: 4),

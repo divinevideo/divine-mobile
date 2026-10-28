@@ -52,10 +52,12 @@ class _SelectableLinkifiedTextState
         TextStyle(color: context.vineColors.onSurfaceVariant, fontSize: 14);
     final linkStyle =
         widget.linkStyle ??
-        const TextStyle(
-          color: VineTheme.info,
+        TextStyle(
+          color: context.vineColors.link,
           fontSize: 14,
           fontWeight: FontWeight.w500,
+          decoration: TextDecoration.underline,
+          decorationColor: context.vineColors.link,
         );
     final mentionStyle =
         widget.mentionStyle ?? linkStyle.copyWith(fontWeight: FontWeight.w600);

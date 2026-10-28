@@ -924,9 +924,9 @@ class _SourceLink extends StatelessWidget {
       button: true,
       child: DivineTextLink(
         text: label,
-        style: VineTheme.bodySmallFont(color: VineTheme.vineGreen).copyWith(
+        style: VineTheme.bodySmallFont(color: context.vineColors.link).copyWith(
           decoration: TextDecoration.underline,
-          decorationColor: VineTheme.vineGreen,
+          decorationColor: context.vineColors.link,
         ),
         onTap: () async {
           final uri = Uri.parse(sourceUrl);
