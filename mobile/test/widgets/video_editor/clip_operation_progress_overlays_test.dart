@@ -1,6 +1,8 @@
 // ABOUTME: Tests for ClipOperationProgressOverlays: a running clip operation
 // ABOUTME: hides the editor from screen readers and announces what it waits on.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
@@ -42,6 +44,13 @@ const _importing = ClipEditorState(
   isImportingLibraryClips: true,
   libraryImportRenderId: 'library_import',
   libraryImportProgress: 0.5,
+);
+
+// The next picked clip, under its own render id.
+const _importingNextClip = ClipEditorState(
+  isImportingLibraryClips: true,
+  libraryImportRenderId: 'library_import_2',
+  libraryImportProgress: 0.25,
 );
 
 const _reversing = ClipEditorState(
@@ -132,6 +141,33 @@ void main() {
 
       final l10n = lookupAppLocalizations(const Locale('en'));
       expect(announced, equals([l10n.videoEditorLibraryImportProgressLabel]));
+    });
+
+    testWidgets('announces an import once, not once per clip', (
+      tester,
+    ) async {
+      final announced = _captureAnnouncements(tester);
+      final states = StreamController<ClipEditorState>();
+      addTearDown(states.close);
+      whenListen(bloc, states.stream, initialState: const ClipEditorState());
+      await pump(tester);
+
+      states.add(_importing);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(announced, hasLength(1));
+
+      states.add(_importingNextClip);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(
+        find.byWidgetPredicate(
+          (widget) => widget is PartialCircleSpinner && widget.progress == 0.25,
+        ),
+        findsOne,
+      );
+      expect(announced, hasLength(1));
     });
 
     testWidgets('hides the editor from screen readers while a clip reverses', (
