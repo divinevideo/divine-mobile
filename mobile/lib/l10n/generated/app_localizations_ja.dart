@@ -13548,6 +13548,68 @@ class AppLocalizationsJa extends AppLocalizations {
   String get ideasDescriptionSix => 'ここに置いておきます。';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ルーム、未読メッセージ$displayCount件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(String displayCount) {
+    return '新着$displayCount件';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '未読メッセージ$displayCount件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount人',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'メッセージ$displayCount件',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => '過去24時間';
+
+  @override
+  String get messagesRoomLoading => 'アクティビティを確認中…';
+
+  @override
+  String get messagesRoomLoadFailed => 'アクティビティを読み込めませんでした。';
+
+  @override
+  String get messagesRoomEmpty => '最近のメッセージはありません。あいさつしてみましょう。';
+
+  @override
   String get messagesDirect => 'ダイレクト';
 
   @override

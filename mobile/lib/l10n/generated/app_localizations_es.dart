@@ -14417,6 +14417,76 @@ class AppLocalizationsEs extends AppLocalizations {
   String get ideasDescriptionSix => 'Lo dejo por aquí.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Salas, $displayCount mensajes sin leer',
+      many: 'Salas, $displayCount mensajes sin leer',
+      one: 'Salas, $displayCount mensaje sin leer',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(String displayCount) {
+    return '$displayCount sin leer';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount mensajes sin leer',
+      many: '$displayCount mensajes sin leer',
+      one: '$displayCount mensaje sin leer',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount personas',
+      many: '$displayCount personas',
+      one: '$displayCount persona',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount mensajes',
+      many: '$displayCount mensajes',
+      one: '$displayCount mensaje',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'Últimas 24 h';
+
+  @override
+  String get messagesRoomLoading => 'Buscando actividad…';
+
+  @override
+  String get messagesRoomLoadFailed => 'No se pudo cargar la actividad.';
+
+  @override
+  String get messagesRoomEmpty => 'No hay mensajes recientes. Saludá.';
+
+  @override
   String get messagesDirect => 'Directos';
 
   @override

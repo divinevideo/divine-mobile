@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/features/chat/room_activity_provider.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -42,6 +43,7 @@ void main() {
     }) async {
       final container = ProviderContainer(
         overrides: [
+          roomActivityRepositoryProvider.overrideWithValue(null),
           authServiceProvider.overrideWithValue(_Auth(account)),
           sharedPreferencesProvider.overrideWithValue(prefs),
           featureFlagStateProvider.overrideWithValue({
@@ -89,6 +91,7 @@ void main() {
       Map<String, String>? opened;
       final container = ProviderContainer(
         overrides: [
+          roomActivityRepositoryProvider.overrideWithValue(null),
           authServiceProvider.overrideWithValue(_Auth('a' * 64)),
           sharedPreferencesProvider.overrideWithValue(prefs),
           featureFlagStateProvider.overrideWithValue({
@@ -146,6 +149,7 @@ void main() {
       await tester.tap(find.text(l10n.messagesRooms));
       await tester.pump();
       container.updateOverrides([
+        roomActivityRepositoryProvider.overrideWithValue(null),
         authServiceProvider.overrideWithValue(
           _Auth('a' * 64, isAuthenticated: false),
         ),
@@ -169,6 +173,7 @@ void main() {
       await tester.pump();
       expect(find.text(l10n.messagesPublicTestRooms), findsOneWidget);
       container.updateOverrides([
+        roomActivityRepositoryProvider.overrideWithValue(null),
         authServiceProvider.overrideWithValue(_Auth('b' * 64)),
         sharedPreferencesProvider.overrideWithValue(prefs),
         featureFlagStateProvider.overrideWithValue({

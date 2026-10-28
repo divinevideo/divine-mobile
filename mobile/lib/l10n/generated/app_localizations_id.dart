@@ -14147,6 +14147,69 @@ class AppLocalizationsId extends AppLocalizations {
   String get ideasDescriptionSix => 'Kutinggalkan ini di sini.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ruang, $displayCount pesan belum dibaca',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(String displayCount) {
+    return '$displayCount baru';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount pesan belum dibaca',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount orang',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount pesan',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => '24 jam terakhir';
+
+  @override
+  String get messagesRoomLoading => 'Memeriksa aktivitas…';
+
+  @override
+  String get messagesRoomLoadFailed => 'Aktivitas tidak bisa dimuat.';
+
+  @override
+  String get messagesRoomEmpty =>
+      'Belakangan ini belum ada pesan. Yuk, sapa yang lain.';
+
+  @override
   String get messagesDirect => 'Langsung';
 
   @override

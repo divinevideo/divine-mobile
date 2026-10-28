@@ -14605,6 +14605,73 @@ class AppLocalizationsTe extends AppLocalizations {
   String get ideasDescriptionSix => 'దీన్ని ఇక్కడ వదిలేస్తున్నాను.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'గదులు, $displayCount చదవని సందేశాలు',
+      one: 'గదులు, $displayCount చదవని సందేశం',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(String displayCount) {
+    return 'కొత్తవి: $displayCount';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount చదవని సందేశాలు',
+      one: '$displayCount చదవని సందేశం',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount మంది',
+      one: '$displayCount వ్యక్తి',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount సందేశాలు',
+      one: '$displayCount సందేశం',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'గత 24 గంటల్లో';
+
+  @override
+  String get messagesRoomLoading => 'చాట్‌లో చురుకుదనాన్ని చూస్తున్నాం…';
+
+  @override
+  String get messagesRoomLoadFailed =>
+      'చాట్‌లో చురుకుదనాన్ని లోడ్ చేయలేకపోయాం.';
+
+  @override
+  String get messagesRoomEmpty => 'ఇటీవల సందేశాలు లేవు. పలకరించండి.';
+
+  @override
   String get messagesDirect => 'నేరుగా';
 
   @override

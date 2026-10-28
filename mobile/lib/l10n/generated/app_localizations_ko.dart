@@ -13564,6 +13564,68 @@ class AppLocalizationsKo extends AppLocalizations {
   String get ideasDescriptionSix => '여기에 남겨 둘게요.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '채팅방, 읽지 않은 메시지 $displayCount개',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(String displayCount) {
+    return '새 메시지 $displayCount개';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '읽지 않은 메시지 $displayCount개',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount명',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '메시지 $displayCount개',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => '최근 24시간';
+
+  @override
+  String get messagesRoomLoading => '활동을 확인하고 있어요…';
+
+  @override
+  String get messagesRoomLoadFailed => '활동을 불러오지 못했어요.';
+
+  @override
+  String get messagesRoomEmpty => '최근 메시지가 없어요. 인사를 건네 보세요.';
+
+  @override
   String get messagesDirect => '다이렉트';
 
   @override

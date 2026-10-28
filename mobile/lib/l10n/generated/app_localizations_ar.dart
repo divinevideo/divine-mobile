@@ -14254,6 +14254,88 @@ class AppLocalizationsAr extends AppLocalizations {
   String get ideasDescriptionSix => 'أترك هذا هنا.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'الغرف، $displayCount رسالة غير مقروءة',
+      many: 'الغرف، $displayCount رسالة غير مقروءة',
+      few: 'الغرف، $displayCount رسائل غير مقروءة',
+      two: 'الغرف، الرسائل غير المقروءة: $displayCount',
+      one: 'الغرف، $displayCount رسالة غير مقروءة',
+      zero: 'الغرف، رسائل غير مقروءة: $displayCount',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(String displayCount) {
+    return 'الجديد: $displayCount';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount رسالة غير مقروءة',
+      many: '$displayCount رسالة غير مقروءة',
+      few: '$displayCount رسائل غير مقروءة',
+      two: 'الرسائل غير المقروءة: $displayCount',
+      one: '$displayCount رسالة غير مقروءة',
+      zero: 'رسائل غير مقروءة: $displayCount',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount شخص',
+      many: '$displayCount شخصًا',
+      few: '$displayCount أشخاص',
+      two: 'الأشخاص: $displayCount',
+      one: '$displayCount شخص',
+      zero: 'أشخاص: $displayCount',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount رسالة',
+      many: '$displayCount رسالة',
+      few: '$displayCount رسائل',
+      two: 'الرسائل: $displayCount',
+      one: '$displayCount رسالة',
+      zero: 'رسائل: $displayCount',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'آخر 24 ساعة';
+
+  @override
+  String get messagesRoomLoading => 'جارٍ التحقق من النشاط…';
+
+  @override
+  String get messagesRoomLoadFailed => 'تعذّر تحميل النشاط.';
+
+  @override
+  String get messagesRoomEmpty => 'لا توجد رسائل حديثة. ما رأيك بإلقاء التحية؟';
+
+  @override
   String get messagesDirect => 'مباشرة';
 
   @override

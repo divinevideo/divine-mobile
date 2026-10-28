@@ -14373,6 +14373,72 @@ class AppLocalizationsFil extends AppLocalizations {
   String get ideasDescriptionSix => 'Iiwan ko ito rito.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Mga silid, $displayCount mensaheng hindi pa nababasa',
+      one: 'Mga silid, $displayCount mensaheng hindi pa nababasa',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(String displayCount) {
+    return 'Bago: $displayCount';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount mensaheng hindi pa nababasa',
+      one: '$displayCount mensaheng hindi pa nababasa',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount tao',
+      one: '$displayCount tao',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount mensahe',
+      one: '$displayCount mensahe',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'Nakaraang 24 oras';
+
+  @override
+  String get messagesRoomLoading => 'Tinitingnan ang aktibidad…';
+
+  @override
+  String get messagesRoomLoadFailed => 'Hindi ma-load ang aktibidad.';
+
+  @override
+  String get messagesRoomEmpty => 'Walang kamakailang mensahe. Mag-hello ka.';
+
+  @override
   String get messagesDirect => 'Direkta';
 
   @override

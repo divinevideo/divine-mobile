@@ -5846,6 +5846,91 @@
   "ideasDescriptionFive": "ማጋራት ብቻ ፈለግሁ።",
   "ideasTitleSix": "ከዛሬ ትንሽ",
   "ideasDescriptionSix": "ይህን እዚህ እተዋለሁ።",
+  "messagesRoomsUnreadLabel": "{count, plural, one{ክፍሎች፣ {displayCount} ያልተነበበ መልእክት} other{ክፍሎች፣ {displayCount} ያልተነበቡ መልእክቶች}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "አዲስ፦ {displayCount}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. displayCount can include + when retained history is incomplete.",
+    "placeholders": {
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, one{{displayCount} ያልተነበበ መልእክት} other{{displayCount} ያልተነበቡ መልእክቶች}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, one{{displayCount} ሰው} other{{displayCount} ሰዎች}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, one{{displayCount} መልእክት} other{{displayCount} መልእክቶች}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "ባለፉት 24 ሰዓታት",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "እንቅስቃሴ በመፈተሽ ላይ…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "እንቅስቃሴውን መጫን አልተቻለም።",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "የቅርብ ጊዜ መልእክቶች የሉም። ሰላም ይበሉ።",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "ቀጥታ",
   "messagesRooms": "ክፍሎች",
   "messagesPublicTestRooms": "ይፋዊ የሙከራ ክፍሎች",

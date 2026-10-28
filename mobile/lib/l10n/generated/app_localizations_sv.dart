@@ -14261,6 +14261,72 @@ class AppLocalizationsSv extends AppLocalizations {
   String get ideasDescriptionSix => 'Lämnar det här.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Rum, $displayCount olästa meddelanden',
+      one: 'Rum, $displayCount oläst meddelande',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(String displayCount) {
+    return 'Olästa: $displayCount';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount olästa meddelanden',
+      one: '$displayCount oläst meddelande',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount personer',
+      one: '$displayCount person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount meddelanden',
+      one: '$displayCount meddelande',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'Senaste 24 timmarna';
+
+  @override
+  String get messagesRoomLoading => 'Kollar aktiviteten…';
+
+  @override
+  String get messagesRoomLoadFailed => 'Det gick inte att läsa in aktiviteten.';
+
+  @override
+  String get messagesRoomEmpty => 'Inga meddelanden på sistone. Säg hej.';
+
+  @override
   String get messagesDirect => 'Direkt';
 
   @override

@@ -14551,6 +14551,81 @@ class AppLocalizationsPl extends AppLocalizations {
   String get ideasDescriptionSix => 'Zostawiam to tutaj.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Pokoje, $displayCount nieprzeczytanej wiadomości',
+      many: 'Pokoje, $displayCount nieprzeczytanych wiadomości',
+      few: 'Pokoje, $displayCount nieprzeczytane wiadomości',
+      one: 'Pokoje, $displayCount nieprzeczytana wiadomość',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(String displayCount) {
+    return 'Nieprzeczytane: $displayCount';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount nieprzeczytanej wiadomości',
+      many: '$displayCount nieprzeczytanych wiadomości',
+      few: '$displayCount nieprzeczytane wiadomości',
+      one: '$displayCount nieprzeczytana wiadomość',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount osoby',
+      many: '$displayCount osób',
+      few: '$displayCount osoby',
+      one: '$displayCount osoba',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount wiadomości',
+      many: '$displayCount wiadomości',
+      few: '$displayCount wiadomości',
+      one: '$displayCount wiadomość',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'Ostatnie 24 godz.';
+
+  @override
+  String get messagesRoomLoading => 'Sprawdzanie aktywności…';
+
+  @override
+  String get messagesRoomLoadFailed => 'Nie udało się wczytać aktywności.';
+
+  @override
+  String get messagesRoomEmpty =>
+      'Ostatnio nie było wiadomości. Przywitaj się.';
+
+  @override
   String get messagesDirect => 'Bezpośrednie';
 
   @override
