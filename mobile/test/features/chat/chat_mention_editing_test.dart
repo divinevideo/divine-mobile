@@ -64,6 +64,28 @@ void main() {
         expect(edited.map((m) => m.pubkey), [second.pubkey]);
       },
     );
+    for (final mark in ['.', ',', '-', '!', '?', ')']) {
+      test('keeps a pick that "$mark" follows', () {
+        final kept = updateChatMentionBindings(
+          before: '@Alice ',
+          after: '@Alice$mark',
+          cursor: 7,
+          mentions: [first],
+        );
+        expect(kept.map((m) => m.pubkey), [first.pubkey]);
+      });
+    }
+    for (final glued in ['x', '7', '_']) {
+      test('drops a pick that "$glued" runs into', () {
+        final kept = updateChatMentionBindings(
+          before: '@Alice ',
+          after: '@Alice$glued',
+          cursor: 7,
+          mentions: [first],
+        );
+        expect(kept, isEmpty);
+      });
+    }
     test('a letter typed against the @ drops that binding', () {
       final kept = updateChatMentionBindings(
         before: '@Alice @Alice ',

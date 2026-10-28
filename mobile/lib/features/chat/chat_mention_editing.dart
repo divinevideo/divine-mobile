@@ -1,5 +1,4 @@
 // ABOUTME: Keeps each picked chat account attached to its own edited text range.
-import 'package:openvine/mentions/mention_text_editing.dart';
 import 'package:openvine/models/caption_mention.dart';
 
 /// Shifts bindings outside the edited span and drops any token the edit
@@ -80,8 +79,8 @@ List<CaptionMention> updateChatMentionBindings({
     if (nextStart < 0 ||
         nextEnd > after.length ||
         after.substring(nextStart, nextEnd) != '@${mention.display}' ||
-        (nextStart > 0 && !isMentionTokenBoundary(after, nextStart - 1)) ||
-        !isMentionTokenBoundary(after, nextEnd)) {
+        (nextStart > 0 && !_separatesPick(after, nextStart - 1)) ||
+        !_separatesPick(after, nextEnd)) {
       continue;
     }
     kept.add(
@@ -95,3 +94,9 @@ List<CaptionMention> updateChatMentionBindings({
   }
   return kept;
 }
+
+/// Whether the character at [offset] keeps a picked token apart from its
+/// neighbor. Sentence punctuation may touch a pick; a word character would run
+/// into the `nostr:` reference it is sent as.
+bool _separatesPick(String text, int offset) =>
+    offset >= text.length || !RegExp(r'\w').hasMatch(text[offset]);
