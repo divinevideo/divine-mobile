@@ -5805,10 +5805,13 @@
       }
     }
   },
-  "messagesRoomNewCount": "Nieprzeczytane: {displayCount}",
+  "messagesRoomNewCount": "{count, plural, one{Nieprzeczytane: {displayCount}} few{Nieprzeczytane: {displayCount}} many{Nieprzeczytane: {displayCount}} other{Nieprzeczytane: {displayCount}}}",
   "@messagesRoomNewCount": {
-    "description": "Compact new-message badge on a public room. displayCount can include + when retained history is incomplete.",
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
     "placeholders": {
+      "count": {
+        "type": "int"
+      },
       "displayCount": {
         "type": "String"
       }

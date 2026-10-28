@@ -14269,8 +14269,18 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String messagesRoomNewCount(String displayCount) {
-    return 'الجديد: $displayCount';
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'الجديد: $displayCount',
+      many: 'الجديد: $displayCount',
+      few: 'الجديد: $displayCount',
+      two: 'الجديد: $displayCount',
+      one: 'الجديد: $displayCount',
+      zero: 'الجديد: $displayCount',
+    );
+    return '$_temp0';
   }
 
   @override

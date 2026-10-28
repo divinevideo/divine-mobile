@@ -14429,8 +14429,15 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String messagesRoomNewCount(String displayCount) {
-    return '$displayCount sin leer';
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount sin leer',
+      many: '$displayCount sin leer',
+      one: '$displayCount sin leer',
+    );
+    return '$_temp0';
   }
 
   @override

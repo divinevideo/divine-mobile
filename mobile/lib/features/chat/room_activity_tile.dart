@@ -177,7 +177,10 @@ class _RoomUnreadBadge extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
-          context.l10n.messagesRoomNewCount(count > 99 ? '99+' : fullCount),
+          context.l10n.messagesRoomNewCount(
+            count,
+            count > 99 ? '99+' : fullCount,
+          ),
           style: VineTheme.bodySmallFont(
             color: context.vineColors.accentPositive,
           ).copyWith(fontWeight: FontWeight.w700),

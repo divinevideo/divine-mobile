@@ -13398,8 +13398,13 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String messagesRoomNewCount(String displayCount) {
-    return '$displayCount 条新消息';
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount 条新消息',
+    );
+    return '$_temp0';
   }
 
   @override

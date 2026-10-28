@@ -14616,8 +14616,14 @@ class AppLocalizationsTe extends AppLocalizations {
   }
 
   @override
-  String messagesRoomNewCount(String displayCount) {
-    return 'కొత్తవి: $displayCount';
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'కొత్తవి: $displayCount',
+      one: 'కొత్తది: $displayCount',
+    );
+    return '$_temp0';
   }
 
   @override

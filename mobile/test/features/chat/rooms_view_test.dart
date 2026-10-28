@@ -30,6 +30,7 @@ void main() {
     ThemeData? theme,
     double textScale = 1,
     bool vanished = false,
+    Locale locale = const Locale('en'),
   }) => ProviderScope(
     overrides: [
       for (final pubkey in [author, secondAuthor]) ...[
@@ -51,6 +52,7 @@ void main() {
     ],
     child: MaterialApp(
       theme: theme,
+      locale: locale,
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) => MediaQuery(
@@ -102,7 +104,7 @@ void main() {
         );
         await tester.pump();
         expect(find.text(l10n.listVisibilityPublic), findsOneWidget);
-        expect(find.text(l10n.messagesRoomNewCount('12')), findsOneWidget);
+        expect(find.text(l10n.messagesRoomNewCount(12, '12')), findsOneWidget);
         expect(
           find.text(l10n.messagesRoomLatestMessage('River', 'Hello everyone')),
           findsOneWidget,
@@ -124,6 +126,38 @@ void main() {
       },
     );
 
+    testWidgets(
+      'chooses badge grammar from unread count while preserving lower bounds',
+      (tester) async {
+        const locale = Locale('sv');
+        final localized = lookupAppLocalizations(locale);
+        for (final count in [1, 2]) {
+          await tester.pumpWidget(
+            subject(
+              locale: locale,
+              activity: {
+                'general': activeSummary(
+                  unreadCount: count,
+                  historyLimited: true,
+                ),
+              },
+            ),
+          );
+          await tester.pump();
+          expect(
+            find.text(localized.messagesRoomNewCount(count, '$count+')),
+            findsOneWidget,
+          );
+          expect(
+            find.text(
+              localized.messagesRoomNewCount(count == 1 ? 2 : 1, '$count+'),
+            ),
+            findsNothing,
+          );
+        }
+      },
+    );
+
     testWidgets('caps visual badges while announcing the full unread count', (
       tester,
     ) async {
@@ -136,7 +170,7 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(find.text(l10n.messagesRoomNewCount('99+')), findsOneWidget);
+      expect(find.text(l10n.messagesRoomNewCount(124, '99+')), findsOneWidget);
       expect(
         find.bySemanticsLabel(
           RegExp(RegExp.escape(l10n.messagesRoomUnreadLabel(124, '124'))),
@@ -163,7 +197,7 @@ void main() {
         );
         await tester.pump();
         expect(find.text(l10n.messagesRoomLoading), findsOneWidget);
-        expect(find.text(l10n.messagesRoomNewCount('12')), findsOneWidget);
+        expect(find.text(l10n.messagesRoomNewCount(12, '12')), findsOneWidget);
       },
     );
 
@@ -187,7 +221,7 @@ void main() {
           ),
         );
         expect(find.text(l10n.messagesRoomEmpty), findsOneWidget);
-        expect(find.text(l10n.messagesRoomNewCount('0')), findsNothing);
+        expect(find.text(l10n.messagesRoomNewCount(0, '0')), findsNothing);
         await tester.pumpWidget(
           subject(
             activity: const {
@@ -218,7 +252,7 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(find.text(l10n.messagesRoomNewCount('0')), findsNothing);
+      expect(find.text(l10n.messagesRoomNewCount(0, '0')), findsNothing);
       expect(find.text(l10n.messagesRoomContributors(2, '2+')), findsOneWidget);
       expect(
         find.text(l10n.messagesRoomRecentMessages(24, '24+')),
@@ -265,7 +299,10 @@ void main() {
             ),
           );
           await tester.pump();
-          expect(find.text(l10n.messagesRoomNewCount('12')), findsOneWidget);
+          expect(
+            find.text(l10n.messagesRoomNewCount(12, '12')),
+            findsOneWidget,
+          );
           expect(tester.takeException(), isNull);
         },
       );

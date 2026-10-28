@@ -23775,11 +23775,11 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{Rooms, {displayCount} unread message} other{Rooms, {displayCount} unread messages}}'**
   String messagesRoomsUnreadLabel(int count, String displayCount);
 
-  /// Compact new-message badge on a public room. displayCount can include + when retained history is incomplete.
+  /// Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.
   ///
   /// In en, this message translates to:
-  /// **'{displayCount} new'**
-  String messagesRoomNewCount(String displayCount);
+  /// **'{count, plural, one{{displayCount} new} other{{displayCount} new}}'**
+  String messagesRoomNewCount(int count, String displayCount);
 
   /// Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.
   ///

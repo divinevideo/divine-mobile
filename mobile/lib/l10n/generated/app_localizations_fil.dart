@@ -14384,8 +14384,14 @@ class AppLocalizationsFil extends AppLocalizations {
   }
 
   @override
-  String messagesRoomNewCount(String displayCount) {
-    return 'Bago: $displayCount';
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Bago: $displayCount',
+      one: 'Bago: $displayCount',
+    );
+    return '$_temp0';
   }
 
   @override
