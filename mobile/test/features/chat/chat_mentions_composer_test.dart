@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
@@ -88,6 +90,13 @@ Future<_Chat> _pumpComposer(WidgetTester tester) async {
   return chat;
 }
 
+/// The profiles the pumped composer resolves typed mentions against.
+_Profiles _profilesOf(WidgetTester tester) =>
+    ProviderScope.containerOf(
+          tester.element(find.byType(ChatScreen)),
+        ).read(profileRepositoryProvider)!
+        as _Profiles;
+
 /// Types [draft] and picks [pubkey] for the `@Al` token at its end.
 Future<void> _pick(WidgetTester tester, String draft, String pubkey) async {
   await tester.enterText(find.byType(TextField), draft);
@@ -137,6 +146,28 @@ void main() {
         },
       );
     }
+
+    testWidgets('a second Enter while a typed mention resolves sends once', (
+      tester,
+    ) async {
+      final chat = await _pumpComposer(tester);
+      final held = Completer<List<UserProfile>>();
+      when(
+        () => _profilesOf(tester).searchCachedProfilesByIdentity(
+          query: any(named: 'query'),
+          limit: any(named: 'limit'),
+        ),
+      ).thenAnswer((_) => held.future);
+      await tester.enterText(find.byType(TextField), 'hi @Bob');
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      held.complete([]);
+      await tester.pumpAndSettle();
+      _verifySent(chat, 'hi @Bob');
+    });
 
     testWidgets(
       'send button keeps each identity on its own token after a leading space',
