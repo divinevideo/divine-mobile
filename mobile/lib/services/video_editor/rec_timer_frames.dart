@@ -267,7 +267,8 @@ Future<double> _capturedPixelRatio(ExportedLayer item) async {
 }
 
 /// The timer at [elapsed], painted at [box] pixels and finished the way the
-/// layer capture finishes a still: masked, then turned, flipped and faded.
+/// layer capture finishes a still: masked by a mask that does not change,
+/// then turned, flipped and faded.
 Future<Uint8List> _paintFrame(
   Layer layer,
   InfoStickerStyle style,
@@ -287,7 +288,10 @@ Future<Uint8List> _paintFrame(
   var image = await picture.toImage(width, height);
   picture.dispose();
 
-  if (layer.mask case final mask?) {
+  // A mask that changes over time is drawn by the renderer on every frame
+  // (`ExportedLayer.divineShapeMaskForExport`); baked in, its first shape
+  // would cut away what a later one shows.
+  if (layer.mask case final mask? when !mask.hasKeyframes) {
     final masked = await mask.applyTo(image);
     image.dispose();
     image = masked;

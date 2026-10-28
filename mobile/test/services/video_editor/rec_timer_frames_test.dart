@@ -30,7 +30,7 @@ Future<ExportedLayer> _captured(Layer layer, ui.Size size) async {
   );
 }
 
-WidgetLayer _timer({Duration? startTime, Duration? endTime}) {
+WidgetLayer _timer({Duration? startTime, Duration? endTime, LayerMask? mask}) {
   final meta = const InfoStickerData(
     kind: InfoStickerKind.recTimer,
     localeName: 'en',
@@ -41,6 +41,7 @@ WidgetLayer _timer({Duration? startTime, Duration? endTime}) {
     widget: const SizedBox(),
     startTime: startTime,
     endTime: endTime,
+    mask: mask,
     meta: meta,
     exportConfigs: WidgetLayerExportConfigs(id: 'timer', meta: meta),
   );
@@ -171,6 +172,35 @@ void main() {
         expect(timerFrames[0].bytes, isNot(equals(timerFrames[1].bytes)));
       },
     );
+
+    group('mask', () {
+      const halfBox = LayerMask(shape: LayerMaskShape.rectangle);
+      final size = ui.Size(230, 230 / recTimerDesignSize.aspectRatio);
+      final timeline = _timeline(const Duration(milliseconds: 30));
+
+      Future<List<int>> firstFrame(LayerMask? mask) async {
+        final timer = await _captured(_timer(mask: mask), size);
+        final frames = await recTimerLayerFrames([timer], timeline);
+        return frames['timer']!.first.bytes;
+      }
+
+      test('bakes a mask that does not change into every frame', () async {
+        expect(
+          await firstFrame(halfBox),
+          isNot(equals(await firstFrame(null))),
+        );
+      });
+
+      test('leaves a mask with keyframes to the renderer', () async {
+        // Baked in, the half-size start would cut away what the full-size
+        // keyframe shows.
+        final growing = halfBox.withKeyframes(const [
+          LayerMaskKeyframe(time: Duration.zero, size: ui.Size(1, 1)),
+        ]);
+
+        expect(await firstFrame(growing), equals(await firstFrame(null)));
+      });
+    });
 
     test('swaps only the timer for one that brings its frames', () async {
       final timer = await _captured(
