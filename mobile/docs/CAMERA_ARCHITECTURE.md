@@ -28,7 +28,7 @@ Recorded clips leave the bloc for `ClipManagerNotifier` in [`clip_manager_provid
 | iOS | `CameraMobileService` | `divine_camera`, Swift under `darwin/` |
 | macOS | `CameraMobileService` | The same Swift as iOS. The Mac has no lens array, zoom, stabilization or flash |
 | Linux | `CameraLinuxService` | None. A stub that reports `CameraInitializationError.unsupportedPlatform`; see [`LINUX_SUPPORT.md`](LINUX_SUPPORT.md) |
-| Web | — | Recording is not supported. `CameraPermissionGate` shows the "not supported on web" screen instead of the recorder |
+| Web | `CameraMobileService` | No web plugin backend, so recording is not supported. On the standalone route, `CameraPermissionGate` shows the "not supported on web" screen instead of the recorder; the editor's embedded recorder has no permission gate |
 
 ## Opening the recorder
 
