@@ -87,6 +87,7 @@ class _BoomerangProgressOverlay extends StatelessWidget {
       builder: (context, renderId) {
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
+          transitionBuilder: _blockingFadeTransition,
           child: renderId == null
               ? const SizedBox.shrink()
               : _RenderProgressContent(
@@ -150,6 +151,7 @@ class _DetachProgressOverlay extends StatelessWidget {
       builder: (context, renderId) {
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
+          transitionBuilder: _blockingFadeTransition,
           child: renderId == null
               ? const SizedBox.shrink()
               : _RenderProgressContent(
@@ -180,6 +182,7 @@ class _BackdropProgressOverlay extends StatelessWidget {
       builder: (context, renderId) {
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
+          transitionBuilder: _blockingFadeTransition,
           child: renderId == null
               ? const SizedBox.shrink()
               : _RenderProgressContent(
@@ -209,6 +212,7 @@ class _FreezeFrameProgressOverlay extends StatelessWidget {
       builder: (context, renderId) {
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
+          transitionBuilder: _blockingFadeTransition,
           child: renderId == null
               ? const SizedBox.shrink()
               : _RenderProgressContent(
@@ -246,6 +250,7 @@ class _TransformProgressOverlay extends StatelessWidget {
             : null;
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
+          transitionBuilder: _blockingFadeTransition,
           child: renderId == null
               ? const SizedBox.shrink()
               : _RenderProgressContent(
@@ -257,6 +262,16 @@ class _TransformProgressOverlay extends StatelessWidget {
     );
   }
 }
+
+/// Fades an overlay in without dropping it from the semantics tree while it is
+/// still transparent, so the editor is hidden from screen readers from the
+/// first frame, before the overlay announces itself.
+Widget _blockingFadeTransition(Widget child, Animation<double> animation) =>
+    FadeTransition(
+      opacity: animation,
+      alwaysIncludeSemantics: true,
+      child: child,
+    );
 
 /// A render's progress, over the whole editor, blocking touch and screen
 /// readers for the duration so nothing underneath can start a competing edit.
@@ -354,6 +369,7 @@ class _MergeProgressOverlay extends StatelessWidget {
         final renderId = mergeState.isMerging ? mergeState.renderId : null;
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
+          transitionBuilder: _blockingFadeTransition,
           child: renderId == null
               ? const SizedBox.shrink()
               : _RenderProgressContent(
@@ -399,6 +415,7 @@ class _LibraryImportProgressOverlay extends StatelessWidget {
         final renderId = import.renderId;
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
+          transitionBuilder: _blockingFadeTransition,
           child: renderId == null
               ? const SizedBox.shrink()
               : _RenderProgressContent(
@@ -433,6 +450,7 @@ class _CapturedChromaKeyProgressOverlay extends StatelessWidget {
       builder: (context, renderId) {
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
+          transitionBuilder: _blockingFadeTransition,
           child: renderId == null
               ? const SizedBox.shrink()
               : _RenderProgressContent(
@@ -462,6 +480,7 @@ class _ClipStylePasteProgressOverlay extends StatelessWidget {
       builder: (context, renderId) {
         return AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
+          transitionBuilder: _blockingFadeTransition,
           child: renderId == null
               ? const SizedBox.shrink()
               : _RenderProgressContent(

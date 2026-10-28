@@ -80,7 +80,8 @@ void main() {
     }
 
     testWidgets(
-      'hides the editor from screen readers while an operation runs',
+      'hides the editor from screen readers from the first frame of an '
+      'operation',
       (tester) async {
         whenListen(
           bloc,
@@ -90,13 +91,28 @@ void main() {
         await pump(tester);
         expect(find.semantics.byLabel('Split'), findsOne);
 
+        // The overlay is still fully transparent in this frame.
         await tester.pump();
-        // Past the fade-in: at zero opacity the overlay drops its semantics.
-        await tester.pump(const Duration(milliseconds: 200));
 
         expect(find.semantics.byLabel('Split'), findsNothing);
       },
     );
+
+    testWidgets('announces an operation when it starts', (tester) async {
+      final announced = _captureAnnouncements(tester);
+      whenListen(
+        bloc,
+        Stream.value(_importing),
+        initialState: const ClipEditorState(),
+      );
+      await pump(tester);
+      expect(announced, isEmpty);
+
+      await tester.pump();
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(announced, equals([l10n.videoEditorLibraryImportProgressLabel]));
+    });
 
     testWidgets('announces the operation it waits on', (tester) async {
       final announced = _captureAnnouncements(tester);
