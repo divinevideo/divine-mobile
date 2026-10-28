@@ -157,12 +157,14 @@ class NIP17MessageService {
   /// [recipientPubkey], or `null` when it would go on to send: a refusal by
   /// the send policy (#176), or the offline fail-fast (#6046). A caller that
   /// settles a send without [sendRumor] makes the same checks through this.
+  /// A send policy that throws, other than by timing out, propagates.
   Future<NIP17SendResult?> preSendRefusal(String recipientPubkey) async {
-    // Send gate (#176): the lowest recipient-delivering primitive, so every
-    // publisher — direct send, group fan-out, drain replay, reactions,
-    // file — is covered at one seam. The injected policy decides which
-    // recipients are refused. Checked before any wrap build or publish, so a
-    // blocked send leaks no metadata to relays and performs no signing work.
+    // Send gate (#176): sendRumor, the lowest recipient-delivering primitive,
+    // calls this, so every publisher — direct send, group fan-out, drain
+    // replay, reactions, file — is covered at one seam. The injected policy
+    // decides which recipients are refused. Checked before any wrap build or
+    // publish, so a blocked send leaks no metadata to relays and performs no
+    // signing work.
     // Bounded: the resolver behind this has its own Dio connect/receive
     // bound, but nothing here enforced it, so a wedged resolver spent the
     // publish backstop instead (#7091). Fail CLOSED to temporarily-blocked:

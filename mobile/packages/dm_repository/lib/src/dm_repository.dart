@@ -7650,10 +7650,10 @@ class DmRepository {
   /// recipient's inbox was unreadable, carries that wrap's id, and its retry
   /// publishes a new recipient wrap only once the inbox is found (#10012).
   /// While the inbox stays unreadable the attempt publishes nothing and is
-  /// charged as a soft one, or, with no relay connected, left uncharged as an
-  /// outage (#8516). Once it reads absent, the pool is where the recipient
-  /// reads: the held wrap counts as delivered, and only the sender's withheld
-  /// copy is published. Every such attempt first makes
+  /// charged as a soft one, or, with no relay connected, marked failed but
+  /// left uncharged as an outage (#8516). Once it reads absent, the pool is
+  /// where the recipient reads: the held wrap counts as delivered, and only
+  /// the sender's withheld copy is published. Every such attempt first makes
   /// [NIP17MessageService.preSendRefusal]'s checks, as sendRumor does, so a
   /// recipient the send policy now refuses, or an offline device, ends it as
   /// it would end a publish.
@@ -8900,8 +8900,9 @@ class DmRepository {
   /// A retry of held row [row] while the recipient's inbox stays unreadable:
   /// nothing is published, since the fallback pool holds [poolWrapId]
   /// (#10012). With no relay connected the inbox could not be read at all, an
-  /// outage on our side, so the attempt is left uncharged as a publish that
-  /// reached no relay is (#8516); otherwise it is charged as a soft one.
+  /// outage on our side, so the attempt ends as a publish that reached no
+  /// relay does (#8516): the row is marked failed but not charged, and waits
+  /// for a relay to connect. Otherwise it is charged as a soft one.
   NIP17SendResult _keepHeldPoolWrap({
     required Event rumor,
     required OutgoingDm row,
