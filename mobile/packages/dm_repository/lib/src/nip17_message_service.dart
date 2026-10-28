@@ -541,8 +541,8 @@ class NIP17MessageService {
   }
 
   /// Build the unsigned NIP-09 kind-5 rumor that retracts [targetEventId], a
-  /// rumor of [targetKind] this account sent, for wrapping to every member of
-  /// its conversation (`17.md:87`).
+  /// rumor of [targetKind] this account sent. NIP-17 sends it gift-wrapped as
+  /// part of the conversation (`17.md:87`); Divine wraps it to every member.
   ///
   /// It carries the deleted event and its kind (`09.md:9`) and no `p` tag:
   /// NIP-09 asks for none, and naming one member would make the rumor read,
