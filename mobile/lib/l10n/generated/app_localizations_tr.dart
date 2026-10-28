@@ -13138,6 +13138,14 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get verifySignInAgain => 'Sign in again';
+
+  @override
+  String verifySignInAgainSemanticLabel(String platform, String identity) {
+    return 'Sign in again to $platform account $identity';
+  }
+
+  @override
   String verifyUnlinkConfirmTitle(String platform) {
     return '$platform bağlantısı kaldırılsın mı?';
   }

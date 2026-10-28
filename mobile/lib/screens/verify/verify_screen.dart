@@ -5,8 +5,10 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/verify/verify_connect_cubit.dart';
 import 'package:openvine/blocs/verify/verify_cubit.dart';
 import 'package:openvine/extensions/safe_pop_extension.dart';
+import 'package:openvine/features/oauth/app_oauth_support.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
@@ -40,6 +42,9 @@ class VerifyPage extends ConsumerWidget {
     // across rebuilds that do not change it.
     ref.watch(currentAuthStateProvider);
     final pubkey = ref.watch(authServiceProvider).currentPublicKeyHex;
+    // As on the connect screen: iOS below 17.4 can report a completed sign-in
+    // as a cancel, so no sign-in is offered there.
+    final oauthUsable = ref.watch(appOAuthSupportProvider).value ?? false;
 
     if (pubkey == null || pubkey.isEmpty) {
       return const _VerifyScaffold(body: _VerifySignedOut());
@@ -59,7 +64,7 @@ class VerifyPage extends ConsumerWidget {
         );
         return cubit;
       },
-      child: const VerifyView(),
+      child: VerifyView(oauthUsable: oauthUsable),
     );
   }
 }
@@ -68,7 +73,10 @@ class VerifyPage extends ConsumerWidget {
 class VerifyView extends StatelessWidget {
   /// Creates a [VerifyView].
   @visibleForTesting
-  const VerifyView({super.key});
+  const VerifyView({this.oauthUsable = false, super.key});
+
+  /// Whether this device can run a platform sign-in.
+  final bool oauthUsable;
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +84,7 @@ class VerifyView extends StatelessWidget {
       listenWhen: (previous, current) =>
           previous.errorAttempt != current.errorAttempt,
       listener: _onError,
-      child: const _VerifyScaffold(body: _VerifyBody()),
+      child: _VerifyScaffold(body: _VerifyBody(oauthUsable: oauthUsable)),
     );
   }
 
@@ -134,7 +142,9 @@ class _VerifySignedOut extends StatelessWidget {
 }
 
 class _VerifyBody extends StatelessWidget {
-  const _VerifyBody();
+  const _VerifyBody({required this.oauthUsable});
+
+  final bool oauthUsable;
 
   @override
   Widget build(BuildContext context) {
@@ -144,7 +154,7 @@ class _VerifyBody extends StatelessWidget {
       VerifyStatus.initial ||
       VerifyStatus.loading => const Center(child: BrandedLoadingIndicator()),
       VerifyStatus.failure => const _VerifyLoadFailure(),
-      VerifyStatus.ready => const _VerifyContent(),
+      VerifyStatus.ready => _VerifyContent(oauthUsable: oauthUsable),
     };
   }
 }
@@ -187,7 +197,9 @@ class _VerifyLoadFailure extends StatelessWidget {
 }
 
 class _VerifyContent extends StatelessWidget {
-  const _VerifyContent();
+  const _VerifyContent({required this.oauthUsable});
+
+  final bool oauthUsable;
 
   @override
   Widget build(BuildContext context) {
@@ -204,6 +216,9 @@ class _VerifyContent extends StatelessWidget {
     );
     final linkable = context.select(
       (VerifyCubit cubit) => cubit.state.linkablePlatforms,
+    );
+    final canSignInAgain = context.select(
+      (VerifyCubit cubit) => cubit.state.canSignInAgain,
     );
 
     return ListView(
@@ -234,6 +249,10 @@ class _VerifyContent extends StatelessWidget {
               verifiedKeys: verifiedKeys,
               removingKey: removingKey,
               onRemove: () => _confirmRemove(context, claim),
+              onSignInAgain: oauthUsable && canSignInAgain(claim)
+                  ? () =>
+                        _openConnect(context, claim.platform, replacing: claim)
+                  : null,
             ),
           const SizedBox(height: 24),
         ],
@@ -247,7 +266,7 @@ class _VerifyContent extends StatelessWidget {
           for (final platform in linkable)
             VerifyPlatformRow(
               platform: platform,
-              onTap: () => _openConnect(context, platform),
+              onTap: () => _openConnect(context, platform.key),
             ),
       ],
     );
@@ -258,6 +277,7 @@ class _VerifyContent extends StatelessWidget {
     required Set<String> verifiedKeys,
     required String? removingKey,
     required VoidCallback onRemove,
+    required VoidCallback? onSignInAgain,
   }) {
     final key = VerifyState.keyOf(claim);
     return VerifyClaimRow(
@@ -265,6 +285,8 @@ class _VerifyContent extends StatelessWidget {
       isVerified: verifiedKeys.contains(key),
       isRemoving: removingKey == key,
       onRemove: removingKey != null ? null : onRemove,
+      // Renewing publishes over the same links an unlink is rewriting.
+      onSignInAgain: removingKey != null ? null : onSignInAgain,
     );
   }
 
@@ -294,17 +316,28 @@ class _VerifyContent extends StatelessWidget {
     await cubit.removeClaim(claim);
   }
 
+  /// Opens the connect flow for [platformKey]. With [replacing], the flow
+  /// renews that sign-in link, and a sign-in under another handle takes the
+  /// link's place.
   Future<void> _openConnect(
     BuildContext context,
-    VerifierPlatform platform,
-  ) async {
+    String platformKey, {
+    IdentityClaim? replacing,
+  }) async {
     final cubit = context.read<VerifyCubit>();
-    final linked = await VerifyConnectRouteData(
-      platform: platform.key,
-    ).push<IdentityClaim>(context);
-    if (linked == null || !context.mounted) return;
+    final result = await VerifyConnectRouteData(
+      platform: platformKey,
+      replacing: replacing?.identity,
+    ).push<VerifyConnectResult>(context);
+    if (result == null || !context.mounted) return;
+    final linked = result.linked;
 
-    cubit.claimLinked(linked);
+    // Only the link the flow actually replaced loses its row: a proof post
+    // linked from here, or a renewal under the same handle, leaves it.
+    cubit.claimLinked(
+      linked,
+      replacing: result.replacedIdentity == null ? null : replacing,
+    );
     final message = context.l10n.verifyLinkedConfirmation(
       verifyPlatformLabel(linked.platform),
     );

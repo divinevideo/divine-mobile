@@ -171,6 +171,33 @@ void main() {
         );
       });
 
+      testWidgets('connect passes the link it renews through', (tester) async {
+        await captureContext(tester);
+        const route = VerifyConnectRouteData(
+          platform: 'twitter',
+          replacing: 'jack',
+        );
+
+        final screen = build(
+          VerifyConnectPage.routeName,
+          route.location,
+          pathParameters: const {'platform': 'twitter'},
+        );
+
+        expect(
+          route.location,
+          equals('/verify/connect/twitter?replacing=jack'),
+        );
+        expect(
+          screen,
+          isA<VerifyConnectPage>().having(
+            (s) => s.replacingIdentity,
+            'replacingIdentity',
+            'jack',
+          ),
+        );
+      });
+
       testWidgets('edit profile opens the editor for an existing user', (
         tester,
       ) async {

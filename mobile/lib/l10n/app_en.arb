@@ -9860,6 +9860,24 @@
       }
     }
   },
+  "verifySignInAgain": "Sign in again",
+  "@verifySignInAgain": {
+    "description": "Button on a linked account that no longer verifies. Opens the platform's sign-in so the person can renew the link without unlinking it first."
+  },
+  "verifySignInAgainSemanticLabel": "Sign in again to {platform} account {identity}",
+  "@verifySignInAgainSemanticLabel": {
+    "description": "Screen reader label for the button that renews a linked account by signing in to it again.",
+    "placeholders": {
+      "platform": {
+        "type": "String",
+        "example": "Twitter / X"
+      },
+      "identity": {
+        "type": "String",
+        "example": "jack"
+      }
+    }
+  },
   "verifyUnlinkConfirmTitle": "Unlink {platform}?",
   "@verifyUnlinkConfirmTitle": {
     "description": "Title of the sheet confirming an account unlink. {platform} is the platform's display name.",

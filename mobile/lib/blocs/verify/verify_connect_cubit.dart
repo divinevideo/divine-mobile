@@ -18,6 +18,13 @@ import 'package:unified_logger/unified_logger.dart';
 
 part 'verify_connect_state.dart';
 
+/// What a finished connect flow hands back: the claim it published and, when
+/// it renewed a sign-in link under another handle, that handle.
+typedef VerifyConnectResult = ({
+  IdentityClaim linked,
+  String? replacedIdentity,
+});
+
 /// Opens an OAuth authorization URL and returns its HTTPS callback.
 ///
 /// A `null` callback means the user closed or cancelled the browser session.
@@ -31,6 +38,10 @@ typedef VerifyOAuthLauncher = Future<Uri?> Function(Uri authorizationUrl);
 class VerifyConnectCubit extends Cubit<VerifyConnectState>
     with CloseGuardedEmit<VerifyConnectState> {
   /// Creates a [VerifyConnectCubit] for [platform].
+  ///
+  /// [replacingIdentity] is the handle of a sign-in link being renewed: the
+  /// form starts with it, and a sign-in that returns another handle on the
+  /// same platform replaces that link rather than sitting beside it.
   VerifyConnectCubit({
     required IdentityClaimsRepository repository,
     required String pubkey,
@@ -38,6 +49,7 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
     required VerifyOAuthLauncher launchOAuth,
     required String oauthReturnUrl,
     required AnalyticsEventSink analytics,
+    String? replacingIdentity,
     Random? random,
     Future<void> Function(Duration)? wait,
   }) : _repository = repository,
@@ -45,15 +57,22 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
        _pubkey = pubkey,
        _launchOAuth = launchOAuth,
        _oauthReturnUrl = oauthReturnUrl,
+       _replacingIdentity = replacingIdentity,
        _random = random ?? Random.secure(),
        _wait = wait,
-       super(VerifyConnectState(platform: platform));
+       super(
+         VerifyConnectState(
+           platform: platform,
+           identity: replacingIdentity ?? '',
+         ),
+       );
 
   final IdentityClaimsRepository _repository;
   final String _pubkey;
   final VerifyOAuthLauncher _launchOAuth;
   final AnalyticsEventSink _analytics;
   final String _oauthReturnUrl;
+  final String? _replacingIdentity;
   final Random _random;
   // Tests pass their own; otherwise the wait is [_async]'s, so closing the
   // cubit ends it.
@@ -346,6 +365,10 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
           pending.code,
           pending.startCheck,
         ),
+        replacingIdentity: _replacedBy(pending.claim),
+        // The handle came in on a route anyone can open, so only a sign-in
+        // link under it is replaced, never a proof-post link.
+        replaceOnlySignIn: _replacingIdentity != null,
       );
       if (_superseded(pending)) return;
       if (!pending.confirmed) {
@@ -407,6 +430,10 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
         status: VerifyConnectStatus.linked,
         identity: pending.claim.identity,
         linkedClaim: pending.claim,
+        // Named only when the published event dropped that link.
+        replacedIdentity: pending.signed?.replacedKey == null
+            ? null
+            : _replacingIdentity,
         clearSignedInAccount: true,
       ),
     );
@@ -479,6 +506,17 @@ class VerifyConnectCubit extends Cubit<VerifyConnectState>
     for (var i = 0; i < bytes; i++)
       _random.nextInt(256).toRadixString(16).padLeft(2, '0'),
   ].join();
+
+  // The renewed link's handle when [claim] is another handle; null when it is
+  // the same one, whose tag the signed event replaces anyway. Naming it as
+  // replaced too would count the new link as removed.
+  String? _replacedBy(IdentityClaim claim) {
+    final replacing = _replacingIdentity;
+    if (replacing == null) return null;
+    return replacing.toLowerCase() == claim.identity.toLowerCase()
+        ? null
+        : replacing;
+  }
 
   static String _bareHandle(String typed) =>
       typed.trim().replaceFirst(RegExp('^@'), '').trim();

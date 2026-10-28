@@ -73,14 +73,18 @@ class VerifyCubit extends Cubit<VerifyState> {
   /// staring at a list that does not contain what they just linked. It is
   /// shown as verified because the connect flow only publishes claims the
   /// verifier had already confirmed. The next [load] reconciles.
-  void claimLinked(IdentityClaim claim) {
+  ///
+  /// [replacing] is the link a sign-in again renewed: the connect flow
+  /// published the new claim in its place, so its row goes too.
+  void claimLinked(IdentityClaim claim, {IdentityClaim? replacing}) {
     final key = VerifyState.keyOf(claim);
+    final dropped = {key, if (replacing != null) VerifyState.keyOf(replacing)};
     emit(
       state.copyWith(
         status: VerifyStatus.ready,
         claims: [
           for (final existing in state.claims)
-            if (VerifyState.keyOf(existing) != key) existing,
+            if (!dropped.contains(VerifyState.keyOf(existing))) existing,
           claim,
         ],
         verifiedKeys: {...state.verifiedKeys, key},

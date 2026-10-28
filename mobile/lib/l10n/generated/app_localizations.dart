@@ -22149,6 +22149,18 @@ abstract class AppLocalizations {
   /// **'Unlink {platform} account {identity}'**
   String verifyUnlinkSemanticLabel(String platform, String identity);
 
+  /// Button on a linked account that no longer verifies. Opens the platform's sign-in so the person can renew the link without unlinking it first.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in again'**
+  String get verifySignInAgain;
+
+  /// Screen reader label for the button that renews a linked account by signing in to it again.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in again to {platform} account {identity}'**
+  String verifySignInAgainSemanticLabel(String platform, String identity);
+
   /// Title of the sheet confirming an account unlink. {platform} is the platform's display name.
   ///
   /// In en, this message translates to:

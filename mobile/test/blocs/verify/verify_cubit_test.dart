@@ -351,6 +351,29 @@ void main() {
           expect(cubit.state.linkablePlatforms, isEmpty);
         },
       );
+
+      blocTest<VerifyCubit, VerifyState>(
+        'drops the account a sign-in again replaced under another handle',
+        build: build,
+        act: (cubit) async {
+          await cubit.load();
+          cubit.claimLinked(
+            const IdentityClaim(
+              pubkey: _pubkey,
+              platform: 'twitter',
+              identity: 'jack_renamed',
+              proof: IdentityClaim.oauthProof,
+            ),
+            replacing: _twitter,
+          );
+        },
+        verify: (cubit) {
+          expect(
+            cubit.state.claims.map(VerifyState.keyOf),
+            equals(['github:octocat', 'twitter:jack_renamed']),
+          );
+        },
+      );
     });
 
     group('removeClaim', () {
@@ -468,6 +491,77 @@ void main() {
 
       expect(cubit.state.verifierReachable, isFalse);
       expect(cubit.state.isVerified(_github), isFalse);
+    });
+  });
+
+  group(VerifyState, () {
+    group('canSignInAgain', () {
+      VerifyState state({
+        Set<String> verifiedKeys = const {'github:octocat'},
+        List<VerifierPlatform> platforms = _platforms,
+        bool verifierReachable = true,
+      }) => VerifyState(
+        status: VerifyStatus.ready,
+        claims: const [_github, _twitter],
+        verifiedKeys: verifiedKeys,
+        platforms: platforms,
+        verifierReachable: verifierReachable,
+      );
+
+      test('offers it on a sign-in link that no longer verifies', () {
+        expect(state().canSignInAgain(_twitter), isTrue);
+      });
+
+      test('does not offer it on a link that verifies', () {
+        expect(
+          state(
+            verifiedKeys: const {'github:octocat', 'twitter:jack'},
+          ).canSignInAgain(_twitter),
+          isFalse,
+        );
+      });
+
+      test('does not offer it on a proof-post link', () {
+        // On a platform with sign-in on, so only the proof tells it apart.
+        const proofPost = IdentityClaim(
+          pubkey: _pubkey,
+          platform: 'twitter',
+          identity: 'jack',
+          proof: '1234567890',
+        );
+        expect(state().canSignInAgain(proofPost), isFalse);
+      });
+
+      test('does not offer it where the verifier has sign-in off', () {
+        expect(
+          state(
+            platforms: const [
+              VerifierPlatform(
+                key: 'twitter',
+                label: 'Twitter / X',
+                supported: true,
+                oauth: false,
+              ),
+            ],
+          ).canSignInAgain(_twitter),
+          isFalse,
+        );
+      });
+
+      test('does not offer it on a platform the verifier no longer lists', () {
+        expect(
+          state(platforms: const []).canSignInAgain(_twitter),
+          isFalse,
+        );
+      });
+
+      test('does not offer it while the verdicts are unknown', () {
+        // The verifier could not check the link, so it may still be good.
+        expect(
+          state(verifierReachable: false).canSignInAgain(_twitter),
+          isFalse,
+        );
+      });
     });
   });
 }

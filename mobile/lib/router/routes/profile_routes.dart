@@ -36,16 +36,20 @@ class VerifyRouteData extends GoRouteData with $VerifyRouteData {
   Widget build(BuildContext context, GoRouterState state) => const VerifyPage();
 }
 
-/// Links one NIP-39 platform; pops with the linked claim, if any.
+/// Links one NIP-39 platform; pops with a [VerifyConnectResult] once linked,
+/// if any.
 class VerifyConnectRouteData extends GoRouteData with $VerifyConnectRouteData {
-  const VerifyConnectRouteData({required this.platform});
+  const VerifyConnectRouteData({required this.platform, this.replacing});
 
   /// The platform key, as `VerifierPlatform.key`.
   final String platform;
 
+  /// Handle of the sign-in link being renewed, when the flow replaces one.
+  final String? replacing;
+
   @override
   Widget build(BuildContext context, GoRouterState state) =>
-      VerifyConnectPage(platformKey: platform);
+      VerifyConnectPage(platformKey: platform, replacingIdentity: replacing);
 }
 
 @TypedGoRoute<EditProfileRouteData>(

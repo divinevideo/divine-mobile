@@ -613,6 +613,9 @@ void main() {
 // Keys intentionally allowed to fall back to English until a translation pass.
 // Keep this list small and reviewable so new translation gaps stay visible.
 const _knownUntranslatedDebt = <String>{
+  // Verify: renewing a sign-in link in place; translation debt.
+  'verifySignInAgain',
+  'verifySignInAgainSemanticLabel',
   // Native challenge participation test-build copy; translation debt.
   'challengeYourAccount',
   'challengePreviewUnavailable',

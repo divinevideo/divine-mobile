@@ -574,6 +574,11 @@ class IdentityClaimsRepository {
   /// value, for a sign-in the verifier confirms before it is published
   /// (#10119). [replacingIdentity] is as for [publishClaim].
   ///
+  /// With [replaceOnlySignIn], [replacingIdentity] is replaced only when its
+  /// tag on the event is a sign-in link: renewing a sign-in must not drop a
+  /// proof-post link it was pointed at. Otherwise the claim is added beside
+  /// it, and [SignedIdentityClaim.replacedKey] is null.
+  ///
   /// Throws:
   ///
   /// * [StateError] if the repository was built without write dependencies.
@@ -584,10 +589,11 @@ class IdentityClaimsRepository {
     IdentityClaim claim, {
     String? confirmBinding,
     String? replacingIdentity,
+    bool replaceOnlySignIn = false,
   }) async {
     final base = await _currentIdentityEventBase(claim.pubkey, forWrite: true);
     final key = _identityKeyOf(claim);
-    final replacedKey = replacingIdentity == null
+    final namedKey = replacingIdentity == null
         ? null
         : _identityKeyOf(
             IdentityClaim(
@@ -597,6 +603,11 @@ class IdentityClaimsRepository {
               proof: claim.proof,
             ),
           );
+    final replacedKey =
+        namedKey != null &&
+            (!replaceOnlySignIn || _hasSignInTag(base.tags, namedKey))
+        ? namedKey
+        : null;
     final droppedKeys = {key, ?replacedKey};
     final tags = [
       for (final tag in base.tags)
@@ -622,6 +633,12 @@ class IdentityClaimsRepository {
       replacedKey: replacedKey,
     );
   }
+
+  // Whether [tags] link the account under [key] by signing in, not by a post.
+  static bool _hasSignInTag(List<List<String>> tags, String key) => tags.any(
+    (tag) =>
+        _tagIdentityKeyOrNull(tag) == key && tag[2] == IdentityClaim.oauthProof,
+  );
 
   /// Publishes an identity event [signClaim] signed, and returns its `i` tags.
   ///
@@ -1510,8 +1527,10 @@ class SignedIdentityClaim {
   /// The `platform:identity` key of the claim it adds.
   final String claimKey;
 
-  /// The key of a claim saved under the form sent to the verifier, which the
-  /// event drops; counted as removed once the event is published.
+  /// The key of another claim the event drops in this claim's place: the form
+  /// sent to the verifier, or the renewed sign-in link. Null when none was
+  /// named or, with `replaceOnlySignIn`, when no sign-in tag under it was
+  /// dropped. Counted as removed once the event is published.
   final String? replacedKey;
 
   /// The event as the verifier receives it.

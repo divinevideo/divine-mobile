@@ -24,7 +24,11 @@ import 'package:unified_logger/unified_logger.dart';
 /// Route host for linking a single platform.
 class VerifyConnectPage extends ConsumerWidget {
   /// Creates a [VerifyConnectPage] for [platformKey].
-  const VerifyConnectPage({required this.platformKey, super.key});
+  const VerifyConnectPage({
+    required this.platformKey,
+    this.replacingIdentity,
+    super.key,
+  });
 
   /// Route name used by GoRouter.
   static const routeName = 'verify-connect';
@@ -34,6 +38,9 @@ class VerifyConnectPage extends ConsumerWidget {
 
   /// NIP-39 platform key being linked.
   final String platformKey;
+
+  /// Handle of the sign-in link this flow renews, if it renews one.
+  final String? replacingIdentity;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -65,7 +72,7 @@ class VerifyConnectPage extends ConsumerWidget {
     }
 
     return BlocProvider(
-      key: ValueKey((repository, pubkey, platformKey)),
+      key: ValueKey((repository, pubkey, platformKey, replacingIdentity)),
       create: (_) {
         // Starts from the answer the platform list was drawn from, so this
         // screen offers the sign-in the list did. While that answer is being
@@ -74,6 +81,7 @@ class VerifyConnectPage extends ConsumerWidget {
           repository: repository,
           pubkey: pubkey,
           platform: repository.startingPlatform(platformKey),
+          replacingIdentity: replacingIdentity,
           launchOAuth: launchAppOAuth,
           oauthReturnUrl: appOAuthCallbackUrl,
           // A plain Provider whose identity never changes, so it is read
@@ -144,7 +152,12 @@ class VerifyConnectView extends StatelessWidget {
     if (state.status == VerifyConnectStatus.linked) {
       // Hand the claim back rather than a bare flag, so the dashboard can draw
       // the new row from what was published instead of waiting on relays.
-      context.pop(state.linkedClaim);
+      final linked = state.linkedClaim;
+      context.pop<VerifyConnectResult>(
+        linked == null
+            ? null
+            : (linked: linked, replacedIdentity: state.replacedIdentity),
+      );
       return;
     }
     final error = state.error;
@@ -385,7 +398,7 @@ class _ConnectForm extends StatelessWidget {
   }
 }
 
-class _IdentityField extends StatelessWidget {
+class _IdentityField extends StatefulWidget {
   const _IdentityField({
     required this.state,
     required this.enabled,
@@ -396,12 +409,29 @@ class _IdentityField extends StatelessWidget {
   final bool enabled;
 
   @override
+  State<_IdentityField> createState() => _IdentityFieldState();
+}
+
+class _IdentityFieldState extends State<_IdentityField> {
+  // Starts from the handle the flow opened with, which is the linked one when
+  // a sign-in is renewed. From then on the typing feeds the cubit.
+  late final _controller = TextEditingController(text: widget.state.identity);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final platformKey = widget.state.platform.key;
     return DivineTextField(
-      labelText: verifyIdentityFieldLabel(context.l10n, state.platform.key),
-      hintText: verifyIdentityHint(state.platform.key),
+      controller: _controller,
+      labelText: verifyIdentityFieldLabel(context.l10n, platformKey),
+      hintText: verifyIdentityHint(platformKey),
       filled: true,
-      enabled: enabled,
+      enabled: widget.enabled,
       textInputAction: .next,
       textCapitalization: TextCapitalization.none,
       onChanged: context.read<VerifyConnectCubit>().identityChanged,

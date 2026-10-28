@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:analytics/analytics.dart';
+import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -31,6 +32,9 @@ class _MockIdentityClaimsRepository extends Mock
 class _MockAnalyticsEventSink extends Mock implements AnalyticsEventSink {}
 
 class _MockSignedIdentityClaim extends Mock implements SignedIdentityClaim {}
+
+class _MockVerifyConnectCubit extends MockCubit<VerifyConnectState>
+    implements VerifyConnectCubit {}
 
 /// Collects what the screen hands to screen readers.
 List<Object?> _captureAnnouncements(WidgetTester tester) {
@@ -82,6 +86,7 @@ void main() {
       WidgetTester tester, {
       required String platformKey,
       bool deviceSupportsOAuth = true,
+      String? replacingIdentity,
     }) async {
       await tester.pumpWidget(
         ProviderScope(
@@ -107,7 +112,10 @@ void main() {
             localizationsDelegates: appLocalizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             theme: VineTheme.theme,
-            home: VerifyConnectPage(platformKey: platformKey),
+            home: VerifyConnectPage(
+              platformKey: platformKey,
+              replacingIdentity: replacingIdentity,
+            ),
           ),
         ),
       );
@@ -162,6 +170,27 @@ void main() {
       await pump(tester, platformKey: 'bluesky');
 
       expect(signInButton('bluesky'), findsOneWidget);
+    });
+
+    testWidgets('fills in the handle of the link it renews', (tester) async {
+      when(
+        () => repository.startingPlatform('bluesky'),
+      ).thenReturn(blueskyOn);
+      when(
+        () => repository.platform('bluesky'),
+      ).thenAnswer((_) => Completer<VerifierPlatform>().future);
+
+      await pump(
+        tester,
+        platformKey: 'bluesky',
+        replacingIdentity: 'alice.bsky.social',
+      );
+
+      // Shown in the field the sign-in reads it from, not only held behind it.
+      expect(
+        find.widgetWithText(TextField, 'alice.bsky.social'),
+        findsOneWidget,
+      );
     });
 
     testWidgets("keeps sign-in hidden where the device can't finish it", (
@@ -1069,6 +1098,102 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(VerifyConnectView), findsNothing);
+    });
+  });
+
+  group('$VerifyConnectView once linked', () {
+    const linked = IdentityClaim(
+      pubkey: _pubkey,
+      platform: 'twitter',
+      identity: 'jack_renamed',
+      proof: IdentityClaim.oauthProof,
+    );
+    const twitter = VerifierPlatform(
+      key: 'twitter',
+      label: 'Twitter / X',
+      supported: true,
+    );
+
+    // Pushed from a stand-in dashboard that keeps what the flow hands back.
+    Future<VerifyConnectResult?> linkAndReturn(
+      WidgetTester tester,
+      VerifyConnectState linkedState,
+    ) async {
+      final cubit = _MockVerifyConnectCubit();
+      const editing = VerifyConnectState(platform: twitter);
+      whenListen(
+        cubit,
+        Stream.value(linkedState),
+        initialState: editing,
+      );
+      VerifyConnectResult? result;
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, _) => TextButton(
+              onPressed: () async {
+                result = await context.push<VerifyConnectResult>('/connect');
+              },
+              child: const Text('open'),
+            ),
+            routes: [
+              GoRoute(
+                path: 'connect',
+                builder: (_, _) => BlocProvider<VerifyConnectCubit>.value(
+                  value: cubit,
+                  child: const VerifyConnectView(npub: _npub),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        MaterialApp.router(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          theme: VineTheme.theme,
+          routerConfig: router,
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+      return result;
+    }
+
+    testWidgets('hands back the claim and the handle it replaced', (
+      tester,
+    ) async {
+      final result = await linkAndReturn(
+        tester,
+        const VerifyConnectState(
+          platform: twitter,
+          status: VerifyConnectStatus.linked,
+          linkedClaim: linked,
+          replacedIdentity: 'jack',
+        ),
+      );
+
+      expect(result?.linked, equals(linked));
+      expect(result?.replacedIdentity, equals('jack'));
+    });
+
+    testWidgets('hands back no replaced handle when none was replaced', (
+      tester,
+    ) async {
+      final result = await linkAndReturn(
+        tester,
+        const VerifyConnectState(
+          platform: twitter,
+          status: VerifyConnectStatus.linked,
+          linkedClaim: linked,
+        ),
+      );
+
+      expect(result?.linked, equals(linked));
+      expect(result?.replacedIdentity, isNull);
     });
   });
 }

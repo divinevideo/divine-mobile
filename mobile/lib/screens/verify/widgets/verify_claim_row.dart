@@ -1,5 +1,5 @@
-// ABOUTME: One linked account on the verify dashboard — handle, verdict pill
-// ABOUTME: and the unlink affordance.
+// ABOUTME: One linked account on the verify dashboard: handle, verdict pill,
+// ABOUTME: the unlink affordance and, for a lapsed sign-in, signing in again.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
@@ -16,6 +16,7 @@ class VerifyClaimRow extends StatelessWidget {
     required this.isVerified,
     required this.isRemoving,
     required this.onRemove,
+    this.onSignInAgain,
     super.key,
   });
 
@@ -31,6 +32,9 @@ class VerifyClaimRow extends StatelessWidget {
   /// Unlinks the account. Null while another unlink owns the screen.
   final VoidCallback? onRemove;
 
+  /// Renews a sign-in link that no longer verifies. Null hides the action.
+  final VoidCallback? onSignInAgain;
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -43,55 +47,72 @@ class VerifyClaimRow extends StatelessWidget {
         ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-          child: Row(
-            spacing: 12,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: 8,
             children: [
-              // Platform, handle and verdict are one announcement; the unlink
-              // button stays outside the merge so it keeps its own node and
-              // its own action.
-              Expanded(
-                child: MergeSemantics(
-                  child: Row(
-                    spacing: 12,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          spacing: 2,
-                          children: [
-                            Text(
-                              verifyPlatformLabel(claim.platform),
-                              style: VineTheme.labelMediumFont(
-                                color: context.vineColors.mutedText,
-                              ),
+              Row(
+                spacing: 12,
+                children: [
+                  // Platform, handle and verdict are one announcement; the
+                  // unlink button stays outside the merge so it keeps its own
+                  // node and its own action.
+                  Expanded(
+                    child: MergeSemantics(
+                      child: Row(
+                        spacing: 12,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              spacing: 2,
+                              children: [
+                                Text(
+                                  verifyPlatformLabel(claim.platform),
+                                  style: VineTheme.labelMediumFont(
+                                    color: context.vineColors.mutedText,
+                                  ),
+                                ),
+                                Text(
+                                  claim.identity,
+                                  style: VineTheme.bodyMediumFont(
+                                    color: context.vineColors.primaryText,
+                                  ),
+                                ),
+                              ],
                             ),
-                            Text(
-                              claim.identity,
-                              style: VineTheme.bodyMediumFont(
-                                color: context.vineColors.primaryText,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                          _VerdictPill(isVerified: isVerified),
+                        ],
                       ),
-                      _VerdictPill(isVerified: isVerified),
-                    ],
+                    ),
                   ),
-                ),
+                  if (isRemoving)
+                    const SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: Center(child: BrandedLoadingIndicator(size: 32)),
+                    )
+                  else
+                    DivineIconButton(
+                      icon: DivineIconName.trash,
+                      type: .secondary,
+                      size: .small,
+                      onPressed: onRemove,
+                      semanticLabel: l10n.verifyUnlinkSemanticLabel(
+                        verifyPlatformLabel(claim.platform),
+                        claim.identity,
+                      ),
+                    ),
+                ],
               ),
-              if (isRemoving)
-                const SizedBox(
-                  width: 48,
-                  height: 48,
-                  child: Center(child: BrandedLoadingIndicator(size: 32)),
-                )
-              else
-                DivineIconButton(
-                  icon: DivineIconName.trash,
-                  type: .secondary,
-                  size: .small,
-                  onPressed: onRemove,
-                  semanticLabel: l10n.verifyUnlinkSemanticLabel(
+              if (onSignInAgain case final onSignInAgain?)
+                DivineButton(
+                  label: l10n.verifySignInAgain,
+                  type: DivineButtonType.secondary,
+                  size: DivineButtonSize.small,
+                  onPressed: onSignInAgain,
+                  semanticLabel: l10n.verifySignInAgainSemanticLabel(
                     verifyPlatformLabel(claim.platform),
                     claim.identity,
                   ),

@@ -212,10 +212,12 @@ void main() {
       VerifyOAuthLauncher? launchOAuth,
       Random? random,
       Future<void> Function(Duration)? wait,
+      String? replacingIdentity,
     }) => VerifyConnectCubit(
       repository: repository,
       pubkey: _pubkey,
       platform: platform,
+      replacingIdentity: replacingIdentity,
       oauthReturnUrl: _returnUrl,
       analytics: analytics,
       random: random ?? Random(1),
@@ -2332,6 +2334,174 @@ void main() {
 
       expect(cubit.state.identity, equals('octocat'));
       expect(cubit.state.proof, equals('abc'));
+    });
+
+    group('signing in again on a linked account', () {
+      late SignedIdentityClaim signed;
+      // The identity the sign-in returns, which the verifier then confirms.
+      late String answeredIdentity;
+      // Whether the event's tag for the renewed handle is a sign-in link.
+      var replacedTagIsSignIn = true;
+
+      setUp(() {
+        answeredIdentity = 'jack';
+        replacedTagIsSignIn = true;
+        signed = _MockSignedIdentityClaim();
+        when(
+          () => repository.signClaim(
+            any(),
+            confirmBinding: any(named: 'confirmBinding'),
+            replacingIdentity: any(named: 'replacingIdentity'),
+            replaceOnlySignIn: any(named: 'replaceOnlySignIn'),
+          ),
+        ).thenAnswer((invocation) async {
+          // As the repository reports it: a key only when a tag was dropped.
+          final replacing =
+              invocation.namedArguments[#replacingIdentity] as String?;
+          when(() => signed.replacedKey).thenReturn(
+            replacing == null || !replacedTagIsSignIn
+                ? null
+                : 'twitter:$replacing',
+          );
+          return signed;
+        });
+        when(
+          () => repository.confirmSignIn(
+            code: any(named: 'code'),
+            startSecret: any(named: 'startSecret'),
+            signed: any(named: 'signed'),
+          ),
+        ).thenAnswer(
+          (invocation) async => SignInConfirmation(
+            platform: 'twitter',
+            identity: answeredIdentity,
+          ),
+        );
+        when(
+          () => repository.publishSignedClaim(any()),
+        ).thenAnswer((_) async => []);
+      });
+
+      Future<String?> replacedOnApprove(String returned) async {
+        answeredIdentity = returned;
+        answer = (returnUrl) => returnUrl.replace(
+          queryParameters: {
+            ...returnUrl.queryParameters,
+            'platform': 'twitter',
+            'identity': returned,
+            'oauth_confirm': 'C' * 43,
+          },
+        );
+        final cubit = build(_twitter, replacingIdentity: 'jack');
+        addTearDown(cubit.close);
+        await cubit.connectWithOAuth();
+        await cubit.approveSignIn();
+        expect(cubit.state.status, VerifyConnectStatus.linked);
+        return verify(
+              () => repository.signClaim(
+                any(),
+                confirmBinding: any(named: 'confirmBinding'),
+                replacingIdentity: captureAny(named: 'replacingIdentity'),
+                replaceOnlySignIn: true,
+              ),
+            ).captured.single
+            as String?;
+      }
+
+      test('starts with the linked handle filled in', () {
+        final cubit = build(_bluesky, replacingIdentity: 'alice.bsky.social');
+        addTearDown(cubit.close);
+
+        expect(cubit.state.identity, equals('alice.bsky.social'));
+      });
+
+      test('replaces the earlier link when another handle signs in', () async {
+        expect(await replacedOnApprove('jack_renamed'), equals('jack'));
+      });
+
+      test('replaces nothing extra when the same handle signs in', () async {
+        // Signing the same handle already replaces its own tag; naming it as
+        // the one replaced too would count the new link as removed.
+        expect(await replacedOnApprove('Jack'), isNull);
+      });
+
+      test('replaces nothing when opened to add a new link', () async {
+        final cubit = build(_twitter);
+        addTearDown(cubit.close);
+        await cubit.connectWithOAuth();
+        await cubit.approveSignIn();
+
+        final replaced = verify(
+          () => repository.signClaim(
+            any(),
+            confirmBinding: any(named: 'confirmBinding'),
+            replacingIdentity: captureAny(named: 'replacingIdentity'),
+            replaceOnlySignIn: any(named: 'replaceOnlySignIn'),
+          ),
+        ).captured.single;
+        expect(replaced, isNull);
+        expect(cubit.state.replacedIdentity, isNull);
+      });
+
+      test('hands back the handle it replaced once linked', () async {
+        answeredIdentity = 'jack_renamed';
+        answer = (returnUrl) => returnUrl.replace(
+          queryParameters: {
+            ...returnUrl.queryParameters,
+            'platform': 'twitter',
+            'identity': 'jack_renamed',
+            'oauth_confirm': 'C' * 43,
+          },
+        );
+        final cubit = build(_twitter, replacingIdentity: 'jack');
+        addTearDown(cubit.close);
+        await cubit.connectWithOAuth();
+        await cubit.approveSignIn();
+
+        expect(cubit.state.replacedIdentity, equals('jack'));
+      });
+
+      test(
+        'hands back no replaced handle when that link was a proof post',
+        () async {
+          // The event's twitter:jack tag is a proof post, so the repository
+          // added the new link beside it rather than replacing it.
+          replacedTagIsSignIn = false;
+          answeredIdentity = 'jack_renamed';
+          answer = (returnUrl) => returnUrl.replace(
+            queryParameters: {
+              ...returnUrl.queryParameters,
+              'platform': 'twitter',
+              'identity': 'jack_renamed',
+              'oauth_confirm': 'C' * 43,
+            },
+          );
+          final cubit = build(_twitter, replacingIdentity: 'jack');
+          addTearDown(cubit.close);
+          await cubit.connectWithOAuth();
+          await cubit.approveSignIn();
+
+          expect(cubit.state.status, VerifyConnectStatus.linked);
+          expect(cubit.state.replacedIdentity, isNull);
+        },
+      );
+
+      test(
+        'hands back no replaced handle when linked by a proof post',
+        () async {
+          // The proof post publishes without dropping the renewed link, so the
+          // dashboard must keep its row.
+          final cubit = build(_twitter, replacingIdentity: 'jack');
+          addTearDown(cubit.close);
+          cubit
+            ..identityChanged('other')
+            ..proofChanged('https://x.com/other/status/1');
+          await cubit.submitProof();
+
+          expect(cubit.state.status, VerifyConnectStatus.linked);
+          expect(cubit.state.replacedIdentity, isNull);
+        },
+      );
     });
   });
 }

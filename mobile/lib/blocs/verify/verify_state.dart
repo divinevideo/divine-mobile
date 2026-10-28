@@ -112,6 +112,20 @@ class VerifyState extends Equatable {
   /// Whether [claim] is the one currently being unlinked.
   bool isRemoving(IdentityClaim claim) => removingKey == keyOf(claim);
 
+  /// Whether [claim] is a sign-in link that no longer verifies on a platform
+  /// whose sign-in is still on, so it can be renewed without unlinking it.
+  ///
+  /// Not while the verifier could not be reached: the link may still be good.
+  bool canSignInAgain(IdentityClaim claim) {
+    if (claim.proof != IdentityClaim.oauthProof) return false;
+    if (!verifierReachable || isVerified(claim)) return false;
+    final platform = claim.platform.toLowerCase();
+    return platforms.any(
+      (offered) =>
+          offered.key.toLowerCase() == platform && offered.supportsOAuth,
+    );
+  }
+
   /// Platforms that have no link yet: the ones offering a sign-in first,
   /// each side in [verifyPlatformOrder].
   ///

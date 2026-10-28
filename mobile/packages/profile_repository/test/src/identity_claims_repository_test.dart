@@ -2394,6 +2394,67 @@ void main() {
           throwsA(isA<IdentityClaimNotSignedException>()),
         );
       });
+
+      group('signClaim renewing a sign-in link', () {
+        const renewed = IdentityClaim(
+          pubkey: _pubkey,
+          platform: 'twitter',
+          identity: 'jack_renamed',
+          proof: IdentityClaim.oauthProof,
+        );
+
+        Future<SignedIdentityClaim> renew(List<List<String>> tags) {
+          stubIdentityEvents([
+            _event(id: _eventId(10), kind: 10011, tags: tags),
+          ]);
+          return repo.signClaim(
+            renewed,
+            confirmBinding: 'b',
+            replacingIdentity: 'jack',
+            replaceOnlySignIn: true,
+          );
+        }
+
+        test('drops the earlier handle when it is a sign-in link', () async {
+          final signed = await renew([
+            ['i', 'twitter:jack', 'oauth'],
+            ['i', 'github:octocat', 'abc'],
+          ]);
+
+          expect(
+            signedTags,
+            equals([
+              ['i', 'github:octocat', 'abc'],
+              ['i', 'twitter:jack_renamed', 'oauth', 'b'],
+            ]),
+          );
+          expect(signed.replacedKey, equals('twitter:jack'));
+        });
+
+        test('keeps the earlier handle when it is a proof-post link', () async {
+          final signed = await renew([
+            ['i', 'twitter:jack', 'https://x.com/jack/status/1'],
+          ]);
+
+          expect(
+            signedTags!.first,
+            equals(['i', 'twitter:jack', 'https://x.com/jack/status/1']),
+          );
+          expect(signed.replacedKey, isNull);
+        });
+
+        test(
+          'replaces nothing when the earlier handle is not linked',
+          () async {
+            final signed = await renew([
+              ['i', 'github:octocat', 'abc'],
+            ]);
+
+            expect(signedTags, hasLength(2));
+            expect(signed.replacedKey, isNull);
+          },
+        );
+      });
     });
 
     group('publishClaim', () {

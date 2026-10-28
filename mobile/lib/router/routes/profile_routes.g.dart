@@ -53,13 +53,17 @@ mixin $VerifyRouteData on GoRouteData {
 
 mixin $VerifyConnectRouteData on GoRouteData {
   static VerifyConnectRouteData _fromState(GoRouterState state) =>
-      VerifyConnectRouteData(platform: state.pathParameters['platform']!);
+      VerifyConnectRouteData(
+        platform: state.pathParameters['platform']!,
+        replacing: state.uri.queryParameters['replacing'],
+      );
 
   VerifyConnectRouteData get _self => this as VerifyConnectRouteData;
 
   @override
   String get location => GoRouteData.$location(
     '/verify/connect/${Uri.encodeComponent(_self.platform)}',
+    queryParams: {if (_self.replacing != null) 'replacing': _self.replacing},
   );
 
   @override
