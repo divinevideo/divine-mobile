@@ -90,6 +90,7 @@ void main() {
     late bool policyThrows;
     late bool deviceOffline;
     late int connectedRelays;
+    late bool selfCopiesPublish;
     late DmRepository repository;
 
     /// Every gift wrap this device published addressed to [pubkey].
@@ -174,6 +175,7 @@ void main() {
       policyThrows = false;
       deviceOffline = false;
       connectedRelays = 1;
+      selfCopiesPublish = true;
 
       when(
         () => nostrClient.connectedRelayCount,
@@ -230,6 +232,7 @@ void main() {
           targetRelays: any(named: 'targetRelays'),
         ),
       ).thenAnswer((invocation) async {
+        if (!selfCopiesPublish) return const PublishFailed();
         final event = invocation.positionalArguments.first as Event;
         published.add(event);
         return PublishSuccess(event: event);
@@ -370,6 +373,24 @@ void main() {
     });
 
     group('recoverFullSend once the inbox reads absent', () {
+      test(
+        'keeps the row for the self-copy when it fails to publish',
+        () async {
+          final (:rowId, :poolWrap) = await heldSend();
+          inboxes[peerB] = _Inbox.absent;
+          selfCopiesPublish = false;
+
+          final retried = await repository.recoverFullSend(rumorId: rowId);
+
+          expect(retried.success, isTrue);
+          expect(wrapsTo(peerB), hasLength(1));
+          final row = await outgoingDao.getById(rowId);
+          expect(row!.recipientWrapStatus, OutgoingWrapStatus.sent);
+          expect(row.selfWrapStatus, OutgoingWrapStatus.failed);
+          expect(row.recipientWrapEventId, equals(poolWrap.id));
+        },
+      );
+
       test('settles on the held wrap and publishes only the withheld '
           'self-copy', () async {
         final (:rowId, :poolWrap) = await heldSend();
@@ -540,6 +561,27 @@ void main() {
     });
 
     group('a group send with one unreadable member', () {
+      test('settles that member on the pool wrap without saving the message '
+          'twice', () async {
+        inboxes[peerB] = _Inbox.found;
+        inboxes[peerC] = _Inbox.unreadable;
+        final results = await repository.sendGroupMessage(
+          recipientPubkeys: [peerB, peerC],
+          content: 'saved once, through the readable member',
+        );
+        expect(results.last.retryablePending, isTrue, reason: 'precondition');
+        final heldRowId = results.last.queuedRumorId!;
+        expect(await db.select(db.directMessages).get(), hasLength(1));
+        inboxes[peerC] = _Inbox.absent;
+
+        final retried = await repository.recoverFullSend(rumorId: heldRowId);
+
+        expect(retried.success, isTrue);
+        expect(wrapsTo(peerC), hasLength(1));
+        expect(await db.select(db.directMessages).get(), hasLength(1));
+        expect(await outgoingDao.getById(heldRowId), isNull);
+      });
+
       test('publishes no other wrap to that member while their inbox stays '
           'unreadable', () async {
         inboxes[peerB] = _Inbox.found;
