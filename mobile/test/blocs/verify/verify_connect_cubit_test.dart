@@ -1332,6 +1332,70 @@ void main() {
         },
       );
 
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'goes back to editing when the person cancels at the platform',
+        build: () => build(_twitter),
+        setUp: () => answer = (returnUrl) => returnUrl.replace(
+          queryParameters: {
+            ...returnUrl.queryParameters,
+            'oauth_error': 'cancelled or declined at Twitter',
+            'oauth_error_code': 'cancelled',
+          },
+        ),
+        act: (cubit) => cubit.connectWithOAuth(),
+        verify: (cubit) {
+          expect(cubit.state.status, VerifyConnectStatus.editing);
+          expect(cubit.state.error, isNull);
+          expect(cubit.state.signedInAccount, isNull);
+        },
+        errors: () => const [],
+      );
+
+      blocTest<VerifyConnectCubit, VerifyConnectState>(
+        'reads the cancel code only on a return that reports an error',
+        build: () => build(_twitter),
+        setUp: () => answer = (returnUrl) => returnUrl.replace(
+          queryParameters: {
+            ...returnUrl.queryParameters,
+            'platform': 'twitter',
+            'identity': 'jack',
+            'oauth_confirm': 'C' * 43,
+            'oauth_error_code': 'cancelled',
+          },
+        ),
+        act: (cubit) => cubit.connectWithOAuth(),
+        verify: (cubit) {
+          expect(cubit.state.status, VerifyConnectStatus.awaitingApproval);
+          expect(cubit.state.signedInAccount, 'jack');
+          expect(cubit.state.error, isNull);
+        },
+      );
+
+      for (final code in [
+        'provider_error',
+        'failed',
+        'update_required',
+        'a_code_this_build_does_not_know',
+      ]) {
+        blocTest<VerifyConnectCubit, VerifyConnectState>(
+          'treats the reason code "$code" as a failure',
+          build: () => build(_twitter),
+          setUp: () => answer = (returnUrl) => returnUrl.replace(
+            queryParameters: {
+              ...returnUrl.queryParameters,
+              'oauth_error': 'could not be completed at Twitter',
+              'oauth_error_code': code,
+            },
+          ),
+          act: (cubit) => cubit.connectWithOAuth(),
+          verify: (cubit) {
+            expect(cubit.state.error, equals(VerifyConnectError.oauthFailed));
+            expect(cubit.state.signedInAccount, isNull);
+          },
+          errors: () => const [],
+        );
+      }
+
       test(
         'starting again forgets the account the last sign-in named',
         () async {
