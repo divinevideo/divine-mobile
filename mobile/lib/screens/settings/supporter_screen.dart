@@ -27,11 +27,29 @@ class SupporterScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repository = ref.watch(supporterRepositoryProvider);
-    final analytics = ref.watch(analyticsEventSinkProvider);
     final storeBillingAvailable = ref.watch(
       supporterStoreBillingAvailableProvider,
     );
+    return SupporterCubitScope(
+      child: SupporterScreenView(storeBillingAvailable: storeBillingAvailable),
+    );
+  }
+}
+
+/// Provides the [SupporterCubit] that [SupporterContent] reads, recording
+/// supporter events in analytics.
+///
+/// Shared by [SupporterScreen] and the profile's supporter prompt, so both
+/// purchase through the same flow.
+class SupporterCubitScope extends ConsumerWidget {
+  const SupporterCubitScope({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final repository = ref.watch(supporterRepositoryProvider);
+    final analytics = ref.watch(analyticsEventSinkProvider);
     return BlocProvider(
       key: ValueKey((repository, analytics)),
       create: (_) => SupporterCubit(
@@ -39,12 +57,12 @@ class SupporterScreen extends ConsumerWidget {
         trackEvent: (event) =>
             analytics.logEvent(name: event, parameters: const {}),
       ),
-      child: SupporterScreenView(storeBillingAvailable: storeBillingAvailable),
+      child: child,
     );
   }
 }
 
-class SupporterScreenView extends StatefulWidget {
+class SupporterScreenView extends StatelessWidget {
   const SupporterScreenView({this.storeBillingAvailable = true, super.key});
 
   /// Whether a store can bill this build. When false, plans and restore are
@@ -52,10 +70,49 @@ class SupporterScreenView extends StatefulWidget {
   final bool storeBillingAvailable;
 
   @override
-  State<SupporterScreenView> createState() => _SupporterScreenViewState();
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: DiVineAppBar(
+        title: context.l10n.supporterTitle,
+        showBackButton: true,
+        // safePop: this screen has a registered path, so the back stack
+        // can be empty on a cold entry and a raw pop would throw GoError.
+        onBackPressed: () => context.safePop(fallback: SettingsScreen.path),
+      ),
+      backgroundColor: context.vineColors.surface,
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              SupporterContent(storeBillingAvailable: storeBillingAvailable),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-class _SupporterScreenViewState extends State<SupporterScreenView> {
+/// The supporter membership pitch, plans, and purchase controls.
+///
+/// Reads the [SupporterCubit] from a [SupporterCubitScope] above it and starts
+/// the cubit when it mounts. Has no scroll view of its own, so the host
+/// decides how it scrolls.
+class SupporterContent extends StatefulWidget {
+  const SupporterContent({this.storeBillingAvailable = true, super.key});
+
+  /// Whether a store can bill this build. When false, plans and restore are
+  /// replaced by a note, because no checkout can succeed here.
+  final bool storeBillingAvailable;
+
+  @override
+  State<SupporterContent> createState() => _SupporterContentState();
+}
+
+class _SupporterContentState extends State<SupporterContent> {
   @override
   void initState() {
     super.initState();
@@ -72,68 +129,49 @@ class _SupporterScreenViewState extends State<SupporterScreenView> {
             state.status == SupporterStatus.purchasing ||
             state.status == SupporterStatus.pending ||
             state.status == SupporterStatus.confirming;
-        return Scaffold(
-          appBar: DiVineAppBar(
-            title: context.l10n.supporterTitle,
-            showBackButton: true,
-            // safePop: this screen has a registered path, so the back stack
-            // can be empty on a cold entry and a raw pop would throw GoError.
-            onBackPressed: () => context.safePop(fallback: SettingsScreen.path),
-          ),
-          backgroundColor: context.vineColors.surface,
-          body: Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 600),
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  _Hero(state: state),
-                  const SizedBox(height: 24),
-                  if (showPurchaseStatus)
-                    _PurchaseStatusNote(status: state.status),
-                  if (state.isSupporter)
-                    const _ActiveBadge()
-                  else if (!widget.storeBillingAvailable)
-                    const _NonStoreBuildNote()
-                  else if (state.hasTiers)
-                    _TierList(state: state)
-                  else if (!showPurchaseStatus)
-                    _UnavailableNote(loading: state.isBusy),
-                  if (state.isSupporter) ...[
-                    const SizedBox(height: 16),
-                    SwitchListTile.adaptive(
-                      title: Text(context.l10n.supporterPublicRecognition),
-                      subtitle: Text(
-                        context.l10n.supporterPublicRecognitionBody,
-                      ),
-                      value: state.haloVisible,
-                      onChanged:
-                          state.snapshot == null || state.savingRecognition
-                          ? null
-                          : context.read<SupporterCubit>().setPublicRecognition,
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  if (!state.isSupporter && widget.storeBillingAvailable)
-                    _RestoreButton(state: state),
-                  if (!state.isSupporter && state.hasTiers)
-                    const _SubscriptionTerms(),
-                  if (state.failure != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 16),
-                      child: _FailureBanner(
-                        failure: state.failure!,
-                        onDismiss: () =>
-                            context.read<SupporterCubit>().dismissError(),
-                      ),
-                    ),
-                  const SizedBox(height: 32),
-                  _Disclaimer(),
-                ],
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _Hero(state: state),
+            const SizedBox(height: 24),
+            if (showPurchaseStatus) _PurchaseStatusNote(status: state.status),
+            if (state.isSupporter)
+              const _ActiveBadge()
+            else if (!widget.storeBillingAvailable)
+              const _NonStoreBuildNote()
+            else if (state.hasTiers)
+              _TierList(state: state)
+            else if (!showPurchaseStatus)
+              _UnavailableNote(loading: state.isBusy),
+            if (state.isSupporter) ...[
+              const SizedBox(height: 16),
+              SwitchListTile.adaptive(
+                title: Text(context.l10n.supporterPublicRecognition),
+                subtitle: Text(context.l10n.supporterPublicRecognitionBody),
+                value: state.haloVisible,
+                onChanged: state.snapshot == null || state.savingRecognition
+                    ? null
+                    : context.read<SupporterCubit>().setPublicRecognition,
               ),
-            ),
-          ),
+            ],
+            const SizedBox(height: 16),
+            if (!state.isSupporter && widget.storeBillingAvailable)
+              _RestoreButton(state: state),
+            if (!state.isSupporter && state.hasTiers)
+              const _SubscriptionTerms(),
+            if (state.failure != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: _FailureBanner(
+                  failure: state.failure!,
+                  onDismiss: () =>
+                      context.read<SupporterCubit>().dismissError(),
+                ),
+              ),
+            const SizedBox(height: 32),
+            _Disclaimer(),
+          ],
         );
       },
     );

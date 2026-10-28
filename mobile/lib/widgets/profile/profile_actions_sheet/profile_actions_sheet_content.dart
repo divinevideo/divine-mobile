@@ -1,14 +1,17 @@
 // ABOUTME: Multi-state bottom sheet content for pending profile actions.
-// ABOUTME: Animates between "Secure Your Account" and "Complete Your Profile"
-// ABOUTME: prompts using AnimatedSwitcher for cross-fade transitions.
+// ABOUTME: Animates between the pending prompts (account status, secure
+// ABOUTME: account, complete profile, become a supporter) with AnimatedSwitcher.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/auth/secure_account_screen.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
+import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/profile/profile_actions_sheet/profile_action_type.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -18,7 +21,9 @@ import 'package:unified_logger/unified_logger.dart';
 /// Displays a prompt for each pending [ProfileActionType] in order.
 /// When the user taps "Maybe Later", the sheet transitions to the next
 /// action (if any) or dismisses. Tapping the primary button navigates
-/// to the corresponding screen and closes the sheet.
+/// to the corresponding screen and closes the sheet. The supporter prompt
+/// is the exception: it shows the Supporter screen's content in place, so
+/// the user can join without leaving the sheet.
 class ProfileActionsSheetContent extends StatefulWidget {
   /// Creates a [ProfileActionsSheetContent].
   ///
@@ -55,14 +60,7 @@ class _ProfileActionsSheetContentState
     setState(() => _currentIndex = nextIndex);
   }
 
-  void _onPrimaryTap(ProfileActionType action) {
-    final route = switch (action) {
-      ProfileActionType.accountRestricted => AccountStatusScreen.path,
-      ProfileActionType.secureAccount => SecureAccountScreen.path,
-      ProfileActionType.completeProfile =>
-        const SetupProfileRouteData().location,
-    };
-
+  void _openDestination(String route) {
     Navigator.of(context).pop();
     runDetached(
       context.push<void>(route),
@@ -75,6 +73,8 @@ class _ProfileActionsSheetContentState
   @override
   Widget build(BuildContext context) {
     final action = widget.actions[_currentIndex];
+    final l10n = context.l10n;
+    final key = ValueKey(action);
 
     return AnimatedSize(
       duration: const Duration(milliseconds: 300),
@@ -84,12 +84,40 @@ class _ProfileActionsSheetContentState
         duration: const Duration(milliseconds: 400),
         switchInCurve: Curves.easeIn,
         switchOutCurve: Curves.easeOut,
-        child: _ActionPrompt(
-          key: ValueKey(action),
-          action: action,
-          onPrimaryTap: () => _onPrimaryTap(action),
-          onSecondaryTap: _onMaybeLater,
-        ),
+        child: switch (action) {
+          ProfileActionType.accountRestricted => _ActionPrompt(
+            key: key,
+            sticker: DivineStickerName.blocked,
+            title: l10n.profileAccountRestricted,
+            subtitle: l10n.accountStatusRestrictedBody,
+            primaryLabel: l10n.accountStatusTitle,
+            onPrimaryTap: () => _openDestination(AccountStatusScreen.path),
+            onSecondaryTap: _onMaybeLater,
+          ),
+          ProfileActionType.secureAccount => _ActionPrompt(
+            key: key,
+            sticker: DivineStickerName.skeletonKey,
+            title: l10n.profileSecureYourAccount,
+            subtitle: l10n.profileSecureSubtitle,
+            primaryLabel: l10n.profileSecurePrimaryButton,
+            onPrimaryTap: () => _openDestination(SecureAccountScreen.path),
+            onSecondaryTap: _onMaybeLater,
+          ),
+          ProfileActionType.completeProfile => _ActionPrompt(
+            key: key,
+            sticker: DivineStickerName.profile,
+            title: l10n.profileCompleteYourProfile,
+            subtitle: l10n.profileCompleteSubtitle,
+            primaryLabel: l10n.profileCompletePrimaryButton,
+            onPrimaryTap: () =>
+                _openDestination(const SetupProfileRouteData().location),
+            onSecondaryTap: _onMaybeLater,
+          ),
+          ProfileActionType.becomeSupporter => _SupporterPrompt(
+            key: key,
+            onMaybeLater: _onMaybeLater,
+          ),
+        },
       ),
     );
   }
@@ -101,40 +129,24 @@ class _ProfileActionsSheetContentState
 /// action buttons matching the [VineBottomSheetPrompt] layout pattern.
 class _ActionPrompt extends StatelessWidget {
   const _ActionPrompt({
-    required this.action,
+    required this.sticker,
+    required this.title,
+    required this.subtitle,
+    required this.primaryLabel,
     required this.onPrimaryTap,
     required this.onSecondaryTap,
     super.key,
   });
 
-  final ProfileActionType action;
+  final DivineStickerName sticker;
+  final String title;
+  final String subtitle;
+  final String primaryLabel;
   final VoidCallback onPrimaryTap;
   final VoidCallback onSecondaryTap;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final (sticker, title, subtitle, primaryLabel) = switch (action) {
-      ProfileActionType.accountRestricted => (
-        DivineStickerName.blocked,
-        l10n.profileAccountRestricted,
-        l10n.accountStatusRestrictedBody,
-        l10n.accountStatusTitle,
-      ),
-      ProfileActionType.secureAccount => (
-        DivineStickerName.skeletonKey,
-        l10n.profileSecureYourAccount,
-        l10n.profileSecureSubtitle,
-        l10n.profileSecurePrimaryButton,
-      ),
-      ProfileActionType.completeProfile => (
-        DivineStickerName.profile,
-        l10n.profileCompleteYourProfile,
-        l10n.profileCompleteSubtitle,
-        l10n.profileCompletePrimaryButton,
-      ),
-    };
-
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(
         16,
@@ -170,12 +182,51 @@ class _ActionPrompt extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           DivineButton(
-            label: l10n.profileMaybeLaterLabel,
+            label: context.l10n.profileMaybeLaterLabel,
             onPressed: onSecondaryTap,
             type: DivineButtonType.secondary,
             expanded: true,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The Supporter screen's content, so the user can join from the sheet, with
+/// a "Maybe later" that hides the invitation.
+class _SupporterPrompt extends ConsumerWidget {
+  const _SupporterPrompt({required this.onMaybeLater, super.key});
+
+  final VoidCallback onMaybeLater;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final storeBillingAvailable = ref.watch(
+      supporterStoreBillingAvailableProvider,
+    );
+    return SupporterCubitScope(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          16 + MediaQuery.viewPaddingOf(context).bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          spacing: 16,
+          children: [
+            SupporterContent(storeBillingAvailable: storeBillingAvailable),
+            DivineButton(
+              label: context.l10n.profileMaybeLaterLabel,
+              onPressed: onMaybeLater,
+              type: DivineButtonType.secondary,
+              expanded: true,
+            ),
+          ],
+        ),
       ),
     );
   }

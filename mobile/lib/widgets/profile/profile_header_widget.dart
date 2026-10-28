@@ -51,6 +51,7 @@ import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/divine_login_banner_dismissal.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/utils/secure_account_prompt_dismissal.dart';
+import 'package:openvine/utils/supporter_prompt_dismissal.dart';
 import 'package:openvine/utils/user_profile_utils.dart';
 import 'package:openvine/widgets/branded_loading_indicator.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
@@ -324,21 +325,17 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
         !isRpcUpgradeInProgress &&
         !isDivineLoginBannerHidden;
 
-    // Compute pending profile actions for the avatar badge
+    // Inputs to the pending profile actions shown on the avatar. The list
+    // itself is built under the supporter scope, which knows whether the
+    // account can still become a supporter.
     final secureAccountPromptDismissal = SecureAccountPromptDismissalStore(
       prefs: prefs,
       userIdHex: widget.userIdHex,
     );
-    final pendingActions =
-        ProfileActionType.pending(
-          isOwnProfile: widget.isOwnProfile,
-          isAccountEnforced: isAccountEnforced,
-          isAnonymous: isAnonymous,
-          hasAnyProfileInfo: hasAnyProfileInfo,
-        ).where((action) {
-          return action != ProfileActionType.secureAccount ||
-              !secureAccountPromptDismissal.isDismissed();
-        }).toList();
+    final supporterPromptDismissal = SupporterPromptDismissalStore(
+      prefs: prefs,
+      userIdHex: widget.userIdHex,
+    );
 
     // Banner is rendered separately by ProfileBannerLayer in profile_grid.dart
     // so it can be placed behind the safe area. This widget only renders the
@@ -428,23 +425,24 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
                 children: [
                   // Centered avatar with action label pill
                   Center(
-                    child: _ProfileAvatarWithColor(
+                    child: _ProfileAvatarWithPendingActions(
                       imageUrl: profilePictureUrl,
                       userIdHex: widget.userIdHex,
                       showSkeleton: showIdentitySkeleton,
                       profileColor: profileColor,
-                      pendingActions: pendingActions,
                       isOwnProfile: widget.isOwnProfile,
-                      onActionTap: pendingActions.isEmpty
-                          ? null
-                          : pendingActions.first ==
-                                ProfileActionType.accountRestricted
-                          ? () => context.push(RoutePaths.accountStatus)
-                          : () => _showActionsSheet(
-                              context,
-                              pendingActions,
-                              secureAccountPromptDismissal,
-                            ),
+                      isAccountEnforced: isAccountEnforced,
+                      isAnonymous: isAnonymous,
+                      hasAnyProfileInfo: hasAnyProfileInfo,
+                      secureAccountPromptDismissal:
+                          secureAccountPromptDismissal,
+                      supporterPromptDismissal: supporterPromptDismissal,
+                      onShowActions: (actions) => _showActionsSheet(
+                        context,
+                        actions,
+                        secureAccountPromptDismissal,
+                        supporterPromptDismissal,
+                      ),
                     ),
                   ),
 
@@ -595,6 +593,7 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
     BuildContext context,
     List<ProfileActionType> actions,
     SecureAccountPromptDismissalStore secureAccountPromptDismissal,
+    SupporterPromptDismissalStore supporterPromptDismissal,
   ) {
     _runProfileDetached(
       _awaitProfileResult(
@@ -605,13 +604,21 @@ class _ProfileHeaderWidgetState extends ConsumerState<ProfileHeaderWidget> {
           body: ProfileActionsSheetContent(
             actions: actions,
             onMaybeLater: (action) {
-              if (action != ProfileActionType.secureAccount) return;
+              final dismissal = switch (action) {
+                ProfileActionType.secureAccount =>
+                  secureAccountPromptDismissal.dismiss(),
+                ProfileActionType.becomeSupporter =>
+                  supporterPromptDismissal.dismiss(),
+                ProfileActionType.accountRestricted ||
+                ProfileActionType.completeProfile => null,
+              };
+              if (dismissal == null) return;
               // The write lands in the in-memory SharedPreferences cache before
               // the future completes, so an empty setState is enough to drop the
               // action from the next build.
               _runProfileDetached(
-                secureAccountPromptDismissal.dismiss(),
-                'persist secure-account prompt dismissal',
+                dismissal,
+                'persist ${action.name} prompt dismissal',
               );
               if (mounted) setState(() {});
             },

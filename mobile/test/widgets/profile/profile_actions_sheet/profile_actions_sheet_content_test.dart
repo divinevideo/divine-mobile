@@ -4,14 +4,20 @@
 import 'dart:async';
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:iap_repository/iap_repository.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/supporter_providers.dart';
 import 'package:openvine/screens/auth/secure_account_screen.dart';
 import 'package:openvine/screens/profile_setup/profile_setup.dart';
 import 'package:openvine/screens/settings/account_status_screen.dart';
+import 'package:openvine/screens/settings/supporter_screen.dart';
+import 'package:openvine/services/supporter_repository.dart';
 import 'package:openvine/widgets/profile/profile_actions_sheet/profile_actions_sheet.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../helpers/go_router.dart';
 
@@ -242,6 +248,88 @@ void main() {
         // Sheet should be fully dismissed
         expect(find.text('Complete Your Profile'), findsNothing);
         expect(find.text('Secure Your Account'), findsNothing);
+      });
+    });
+
+    group('becomeSupporter', () {
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      late SupporterRepository repository;
+
+      setUp(() async {
+        SharedPreferences.setMockInitialValues({});
+        repository = SupporterRepository(
+          pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          validator: StubEntitlementValidator(),
+          prefs: await SharedPreferences.getInstance(),
+        );
+        addTearDown(repository.dispose);
+      });
+
+      Widget buildSupporterApp({
+        required List<ProfileActionType> actions,
+        void Function(ProfileActionType action)? onMaybeLater,
+      }) => ProviderScope(
+        overrides: [
+          supporterRepositoryProvider.overrideWithValue(repository),
+          supporterStoreBillingAvailableProvider.overrideWithValue(true),
+        ],
+        child: buildApp(actions: actions, onMaybeLater: onMaybeLater),
+      );
+
+      testWidgets('shows the Supporter screen content in the sheet', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildSupporterApp(actions: [ProfileActionType.becomeSupporter]),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SupporterContent), findsOneWidget);
+        expect(find.text(l10n.supporterHeroTitle), findsOneWidget);
+        expect(find.text(l10n.supporterRestorePurchases), findsOneWidget);
+        expect(find.text(l10n.profileMaybeLaterLabel), findsOneWidget);
+      });
+
+      testWidgets('Maybe Later reports the dismissal and closes the sheet', (
+        tester,
+      ) async {
+        final dismissed = <ProfileActionType>[];
+        await tester.pumpWidget(
+          buildSupporterApp(
+            actions: [ProfileActionType.becomeSupporter],
+            onMaybeLater: dismissed.add,
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text(l10n.profileMaybeLaterLabel));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(SupporterContent), findsNothing);
+        expect(dismissed, [ProfileActionType.becomeSupporter]);
+      });
+
+      testWidgets('comes after a pending setup action', (tester) async {
+        await tester.pumpWidget(
+          buildSupporterApp(
+            actions: [
+              ProfileActionType.completeProfile,
+              ProfileActionType.becomeSupporter,
+            ],
+          ),
+        );
+        await tester.tap(find.text('Open'));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.profileCompleteYourProfile), findsOneWidget);
+        expect(find.byType(SupporterContent), findsNothing);
+
+        await tester.tap(find.text(l10n.profileMaybeLaterLabel));
+        await tester.pumpAndSettle();
+
+        expect(find.text(l10n.profileCompleteYourProfile), findsNothing);
+        expect(find.byType(SupporterContent), findsOneWidget);
       });
     });
   });
