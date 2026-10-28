@@ -5,6 +5,13 @@ from `divine_video_player`. It runs on the existing 30-second cadence, at startu
 on Flutter lifecycle changes, and after OS memory-pressure notifications. This
 does not change playback, caching, scheduling, or resource disposal.
 
+Only iOS and macOS answer the request. The sampler asks on every native
+platform, but Android has no `getDiagnostics` handler, so there every sample
+writes `mem_native` with status `unavailable`, `mem_footprint_mb` and
+`mem_footprint_sampled_peak_mb` read `unavailable`, and the after-dispose
+detector below never fires. On Android, `mem_rss_mb` and `mem_peak_mb` are the
+gauges to read.
+
 ## Measurements
 
 - `mem_footprint_mb`: current `TASK_VM_INFO.phys_footprint`. Compare this with
@@ -53,6 +60,12 @@ High memory alone is not reported as a leak. Crashlytics is not a continuous
 memory dashboard: keys/breadcrumbs attach to reports, and OS memory kills may
 not produce one. Use local logs and Instruments too. Existing crash-reporting
 collection policy is unchanged.
+
+Renders are the exception: `InterruptedRenderMonitor` keeps a marker on disk
+while a render runs and, on iOS and macOS, samples the same native footprint
+every 250 ms. A render the process did not live to finish is reported on the
+next launch as an `InterruptedRenderException`, with the footprint trend where
+one was sampled, so a memory kill during an export does leave a report.
 
 ## Reproduce and diagnose
 

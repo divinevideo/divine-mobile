@@ -13,22 +13,36 @@ Header transport differs per platform and is unit-tested only where it can be:
   `httpHeadersForRequest` + `CacheBypassDataSource` (unit-tested in
   `DivineVideoPlayerInstanceTest` / `VideoCacheTest`, CI-gated via the
   `android-unit-tests` job).
-- **iOS / macOS** — headers set under `avURLAssetHTTPHeaderFieldsKey`
-  (`AVURLAssetHTTPHeaderFieldsKey`) on the `AVURLAsset` propagate to every
-  derived request (manifest, segments, AES key). This is established but
-  **undocumented** AVFoundation behavior with no typed symbol, so it cannot be
-  unit-tested in the Flutter-linked SwiftPM target — it is verified by the
-  manual checklist below instead.
+- **iOS / macOS** — HLS relies on headers set under
+  `avURLAssetHTTPHeaderFieldsKey` (`AVURLAssetHTTPHeaderFieldsKey`) on the
+  `AVURLAsset` propagating to every derived request (manifest, segments, AES
+  key). This is established but **undocumented** AVFoundation behavior with no
+  typed symbol, so it cannot be unit-tested in the Flutter-linked SwiftPM
+  target — it is verified by the manual checklist below instead. A single
+  progressive clip that loops whole (the feed's case) takes a different path:
+  it loads through the plugin's `CachingAssetLoader`, which sets the headers on
+  its own requests. That loader skips `.m3u8`, so it does not cover HLS.
 
-The Dart source-failover chain (optimized → HLS → raw, same header set on every
-attempt) is covered by `source_loader_test.dart` (CI-gated).
+The Dart source-failover chain (resolved source → HLS → original event URL →
+raw, with HLS moved to the front after a fresh derivative failure; the same
+header set on every attempt) is covered by `source_loader_test.dart`
+(CI-gated). A 401 stops the chain as `authRequired` instead of trying the next
+source.
 
 ## Checklist (run per platform: Android, iOS, macOS)
 
-Prereqs: an age-restricted video whose progressive variant ExoPlayer/AVFoundation
-will reject so playback falls over to HLS (or temporarily force the HLS source).
+Prereqs:
 
-- [ ] Signed in as an **age-verified** viewer, open the gated video — it plays.
+- An age-restricted video whose progressive variant ExoPlayer/AVFoundation will
+  reject so playback falls over to HLS, or force HLS for every video with
+  **Developer Options → HLS master playlist** (switching the format clears the
+  media cache and the loaded videos).
+- An **age-verified** account whose **Content Filters** have no adult category
+  set to hide. A verified viewer with a hidden adult category is blocked, not
+  played; with every adult category on show the video plays on its own, and
+  with a mix it waits for a tap.
+
+- [ ] Signed in as that viewer, open the gated video — it plays.
 - [ ] Force/observe the **HLS fallback** (`…/<hash>/hls/master.m3u8`). Playback
       continues without a 401.
 - [ ] Inspect network traffic (Charles/Proxyman or device logs): the **master
@@ -39,11 +53,13 @@ will reject so playback falls over to HLS (or temporarily force the HLS source).
 - [ ] **Negative:** as a **signed-out / non-verified** viewer, the same gated
       content is refused (401 → age-gate UX), confirming the gate is real.
 - [ ] **Android cache:** the gated bytes are **not** persisted to the disk cache
-      (served no-store; `CacheBypassDataSource` bypasses `SimpleCache`).
+      (`CacheBypassDataSource` bypasses `SimpleCache` for every request that
+      carries headers).
 
 ## If iOS/macOS segments 401 in QA
 
 The `AVURLAssetHTTPHeaderFieldsKey` propagation broke (or never held for this
-OS version). The fix is an `AVAssetResourceLoaderDelegate` that re-attaches the
-header to each derived request — a larger change; open a follow-up issue rather
-than patching here.
+OS version). `CachingAssetLoader` already shows the way, an
+`AVAssetResourceLoaderDelegate` that sets the headers on its own requests, but
+it deliberately skips HLS. Covering manifests, segments and keys that way is a
+larger change; open a follow-up issue rather than patching here.
