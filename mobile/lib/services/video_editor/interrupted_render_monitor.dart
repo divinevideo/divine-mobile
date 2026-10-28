@@ -536,8 +536,16 @@ Map<String, Object> describeVideoRender(VideoRenderData data) {
   var largestLayer = '';
   var layerPixels = 0;
   var unsizedLayers = 0;
-  for (final layer in layers) {
-    final size = _pngSize(layer.image);
+  // A frame sequence keeps every one of its frames decoded.
+  final images = [
+    for (final layer in layers)
+      if (layer.frames.isEmpty)
+        layer.image
+      else
+        for (final frame in layer.frames) frame.image,
+  ];
+  for (final image in images) {
+    final size = _pngSize(image);
     if (size == null) {
       unsizedLayers++;
       continue;
