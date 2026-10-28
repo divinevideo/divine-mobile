@@ -174,6 +174,56 @@ void main() {
       expect(merged.addressableId, equals('34236:author:video-d-tag'));
     });
 
+    test('fills link urls and sticker regions from the secondary copy', () {
+      final merged = mergeProfileFeedVideos(
+        _video(id: 'rest', createdAt: 2000, vineId: 'video-stickers'),
+        _video(
+          id: 'nostr',
+          createdAt: 1000,
+          vineId: 'video-stickers',
+          nostrEventTags: const [
+            ['r', 'https://divine.video/about', 'link'],
+            ['sticker', 'hashtag', 'divine', '0.5 0.5 0.2 0.1', '0'],
+          ],
+        ),
+      );
+
+      expect(merged.linkUrls, equals(['https://divine.video/about']));
+      expect(
+        merged.stickerRegions.map((region) => region.target),
+        equals(['divine']),
+      );
+    });
+
+    test('keeps link urls and sticker regions from the primary copy', () {
+      final merged = mergeProfileFeedVideos(
+        _video(
+          id: 'primary',
+          createdAt: 2000,
+          vineId: 'video-stickers',
+          nostrEventTags: const [
+            ['r', 'https://divine.video/new', 'link'],
+            ['sticker', 'hashtag', 'new', '0.5 0.5 0.2 0.1', '0'],
+          ],
+        ),
+        _video(
+          id: 'secondary',
+          createdAt: 1000,
+          vineId: 'video-stickers',
+          nostrEventTags: const [
+            ['r', 'https://divine.video/old', 'link'],
+            ['sticker', 'hashtag', 'old', '0.5 0.5 0.2 0.1', '0'],
+          ],
+        ),
+      );
+
+      expect(merged.linkUrls, equals(['https://divine.video/new']));
+      expect(
+        merged.stickerRegions.map((region) => region.target),
+        equals(['new']),
+      );
+    });
+
     test('fills plural text-track refs from the secondary copy', () {
       final merged = mergeProfileFeedVideos(
         _video(
