@@ -12,6 +12,8 @@ with other agent sessions on the same Mac.
 
 - `xcrun devicectl list devices`: the phone is listed and available. A wireless-only iPhone may never attach the VM service; use USB.
 - `pgrep -fl 'flutter_tools|xcodebuild|patrol'` and any other live agent sessions: nobody else is building for it or attached to it. If someone is, ask the user; never kill by pattern.
+- Every device or simulator run names its target with `-d <udid>`. A `flutter test integration_test/...` or `flutter run` with no `-d` builds for whatever is attached, and installing over `co.openvine.app.staging` can wipe its data. On 2026-10-28 a review agent ran one with no `-d` while another session held the USB phone.
+- Delegated agents (reviewers, helpers) never run `integration_test`, `flutter run` or any other device-picking command. Say so in every brief, and run device work yourself.
 - A debug run replaces the installed Divine Staging build, and its data may not survive. That is an ask-the-user item.
 - One simulator per session, named by UDID in every note.
 

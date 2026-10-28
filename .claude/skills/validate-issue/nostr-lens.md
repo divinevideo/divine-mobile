@@ -23,12 +23,15 @@ SHOULD is not MUST. A relay that ignores a SHOULD is conformant, so a client
 that breaks on it is the one with the bug.
 
 Where other implementations keep the code, from a web read on 2026-10-10.
-Confirm a path before citing it; only the Amethyst one was opened in a test
-run.
+Confirm a path before citing it. On 2026-10-27 Quartz's `nip17Dm/` was
+re-read in `vitorpamplona/quartz` at `c63c35c` (it no longer lives in the
+`amethyst` repo), and welshman's paths at `7d72fa0`. The other rows are from the
+2026-10-10 read. Pin a commit SHA whenever you cite one of these.
 
 | Project | DM wrapping (NIP-17 / 59) | Video (NIP-71) |
 |---|---|---|
-| `vitorpamplona/amethyst` (Quartz) | `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip17Dm/`, `nip59Giftwrap/` | `nip71Video/` |
+| `vitorpamplona/quartz` (Amethyst's library, now its own repo) | `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip17Dm/`, `nip59Giftwrap/` | `nip71Video/` |
+| `coracle-social/welshman` (Flotilla's library) | `packages/signer/src/nip59.ts`, `packages/app/src/plugins/wraps.ts`; its reaction and delete writers (`packages/domain/src/kinds/Reaction.ts`, `Delete.ts`) are generic, not NIP-17-specific | not located |
 | `nbd-wtf/nostr-tools` | `nip17.ts`, `nip59.ts`, `nip44.ts` | `kinds.ts` |
 | `nostr-dev-kit/ndk` | `core/src/events/gift-wrapping.ts` | `core/src/events/kinds/video.ts` |
 | `rust-nostr/nostr` | `nostr/src/nips/nip17.rs`, `nip59.rs` | not located |
