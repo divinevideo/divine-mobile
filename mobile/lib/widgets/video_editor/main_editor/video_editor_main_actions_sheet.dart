@@ -82,8 +82,9 @@ class VideoEditorMainActionsSheet extends StatelessWidget {
     final labelScaler = MediaQuery.textScalerOf(context).clamp(
       maxScaleFactor: chipLabelTextScaleLimit,
     );
-    // Reserve two scaled label lines below the largest icon tile. The grid
-    // gives each column a tight height, even when its label wraps.
+    // Reserve two scaled label lines below the largest icon tile, which
+    // [_ItemButton] caps at [_maxItemWidth]. The grid gives each column a
+    // tight height, even when its label wraps.
     final itemHeight =
         (_maxItemWidth +
                 8 +
@@ -326,25 +327,33 @@ class _ItemButton extends StatelessWidget {
           enabled: enabled,
           child: GestureDetector(
             onTap: onTap,
-            child: AspectRatio(
-              aspectRatio: 1,
-              child: DecoratedBox(
-                decoration: ShapeDecoration(
-                  color: context.vineColors.surfaceContainer,
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(
-                      width: 2,
-                      color: context.vineColors.outlineMuted,
+            // The grid can widen a column past its max extent by up to
+            // `crossAxisSpacing / columns`; the row height budgets for a
+            // max-extent tile, so a square at the column width overflows.
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: VideoEditorMainActionsSheet._maxItemWidth,
+              ),
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: DecoratedBox(
+                  decoration: ShapeDecoration(
+                    color: context.vineColors.surfaceContainer,
+                    shape: RoundedRectangleBorder(
+                      side: BorderSide(
+                        width: 2,
+                        color: context.vineColors.outlineMuted,
+                      ),
+                      borderRadius: .circular(24),
                     ),
-                    borderRadius: .circular(24),
                   ),
-                ),
-                child: Center(
-                  child: DivineIcon(
-                    icon: icon,
-                    color: enabled
-                        ? context.vineColors.accentPositive
-                        : context.vineColors.disabled,
+                  child: Center(
+                    child: DivineIcon(
+                      icon: icon,
+                      color: enabled
+                          ? context.vineColors.accentPositive
+                          : context.vineColors.disabled,
+                    ),
                   ),
                 ),
               ),
