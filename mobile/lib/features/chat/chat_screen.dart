@@ -282,38 +282,52 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
                 ],
                 if (state.sendFailed) Text(context.l10n.dmSendFailedMessage),
                 Expanded(
-                  child: messages.isEmpty
-                      ? _EmptyRoom(channel: state.selectedChannelId)
-                      : ListView.builder(
-                          controller: _scrollController,
-                          reverse: true,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          itemCount: messages.length,
-                          itemBuilder: (context, index) {
-                            final message =
-                                messages[messages.length - index - 1];
-                            return ChatMessageTile(
-                              key: ValueKey(message.id),
-                              message: message,
-                              reactions:
-                                  state.reactions[message.id] ?? const {},
-                              pending: state.pendingIds.contains(message.id),
-                              sending: state.sending,
-                              onRetry: () => runDetached(
-                                cubit.retry(message.id),
-                                'retry room message',
-                                logName: 'ChatScreen',
-                                category: LogCategory.ui,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      messages.isEmpty
+                          ? _EmptyRoom(channel: state.selectedChannelId)
+                          : ListView.builder(
+                              controller: _scrollController,
+                              reverse: true,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              itemCount: messages.length,
+                              itemBuilder: (context, index) {
+                                final message =
+                                    messages[messages.length - index - 1];
+                                return ChatMessageTile(
+                                  key: ValueKey(message.id),
+                                  message: message,
+                                  reactions:
+                                      state.reactions[message.id] ?? const {},
+                                  pending: state.pendingIds.contains(
+                                    message.id,
+                                  ),
+                                  sending: state.sending,
+                                  onRetry: () => runDetached(
+                                    cubit.retry(message.id),
+                                    'retry room message',
+                                    logName: 'ChatScreen',
+                                    category: LogCategory.ui,
+                                  ),
+                                );
+                              },
+                            ),
+                      Align(
+                        alignment: Alignment.bottomCenter,
+                        child:
+                            BlocBuilder<
+                              CaptionMentionsCubit,
+                              CaptionMentionsState
+                            >(
+                              bloc: _mentions,
+                              builder: (context, mentions) => MentionOverlay(
+                                suggestions: mentions.suggestions,
+                                onSelect: _selectMention,
                               ),
-                            );
-                          },
-                        ),
-                ),
-                BlocBuilder<CaptionMentionsCubit, CaptionMentionsState>(
-                  bloc: _mentions,
-                  builder: (context, mentions) => MentionOverlay(
-                    suggestions: mentions.suggestions,
-                    onSelect: _selectMention,
+                            ),
+                      ),
+                    ],
                   ),
                 ),
                 Focus(
@@ -342,7 +356,7 @@ class _EmptyRoom extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-    child: Padding(
+    child: SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         mainAxisSize: MainAxisSize.min,

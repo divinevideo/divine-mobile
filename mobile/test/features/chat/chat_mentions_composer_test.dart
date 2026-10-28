@@ -24,93 +24,108 @@ class _Follows extends Mock implements FollowRepository {}
 void main() {
   group('interactions', () {
     for (final removeSecond in [false, true]) {
-      testWidgets('same display identities; remove second: $removeSecond', (
-        tester,
-      ) async {
-        final alice = 'a' * 64;
-        final other = 'b' * 64;
-        final profiles = _Profiles();
-        final follows = _Follows();
-        final chat = _Chat();
-        when(() => chat.state).thenReturn(const ChatState());
-        when(chat.visibleMessages).thenReturn([]);
-        whenListen(chat, const Stream<ChatState>.empty());
-        when(() => follows.followingPubkeys).thenReturn([alice, other]);
-        when(() => profiles.getCachedProfiles(pubkeys: any(named: 'pubkeys')))
-            .thenAnswer(
-              (_) async => [
-                for (final key in [alice, other])
-                  UserProfile(
-                    pubkey: key,
-                    displayName: 'Alice',
-                    rawData: const {},
-                    createdAt: DateTime.utc(2026),
-                    eventId: 'c' * 64,
-                  ),
-              ],
-            );
-        when(
-          () => profiles.searchUsersFromApi(
-            query: any(named: 'query'),
-            limit: any(named: 'limit'),
-            sortBy: any(named: 'sortBy'),
-          ),
-        ).thenAnswer((_) async => []);
-        when(
-          () => chat.send(
-            communityId: any(named: 'communityId'),
-            channelId: any(named: 'channelId'),
-            author: any(named: 'author'),
-            body: any(named: 'body'),
-            nowMilliseconds: any(named: 'nowMilliseconds'),
-          ),
-        ).thenAnswer((_) async => true);
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              profileRepositoryProvider.overrideWithValue(profiles),
-              followRepositoryProvider.overrideWithValue(follows),
+      testWidgets(
+        'small screen with keyboard preserves identities; remove second: $removeSecond',
+        (
+          tester,
+        ) async {
+          tester.view.physicalSize = const Size(390, 667);
+          tester.view.devicePixelRatio = 1;
+          tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+          addTearDown(tester.view.reset);
+          final alice = 'a' * 64;
+          final other = 'b' * 64;
+          final profiles = _Profiles();
+          final follows = _Follows();
+          final chat = _Chat();
+          when(() => chat.state).thenReturn(const ChatState());
+          when(chat.visibleMessages).thenReturn([]);
+          whenListen(chat, const Stream<ChatState>.empty());
+          when(() => follows.followingPubkeys)
+              .thenReturn([alice, other, 'c' * 64, 'd' * 64, 'e' * 64]);
+          when(
+            () => profiles.getCachedProfiles(pubkeys: any(named: 'pubkeys')),
+          ).thenAnswer(
+            (_) async => [
+              for (final key in [alice, other, 'c' * 64, 'd' * 64, 'e' * 64])
+                UserProfile(
+                  pubkey: key,
+                  displayName: 'Alice',
+                  rawData: const {},
+                  createdAt: DateTime.utc(2026),
+                  eventId: 'c' * 64,
+                ),
             ],
-            child: MaterialApp(
-              localizationsDelegates: appLocalizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: BlocProvider<ChatCubit>.value(
-                value: chat,
-                child: const ChatScreen(),
+          );
+          when(
+            () => profiles.searchUsersFromApi(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer((_) async => []);
+          when(
+            () => chat.send(
+              communityId: any(named: 'communityId'),
+              channelId: any(named: 'channelId'),
+              author: any(named: 'author'),
+              body: any(named: 'body'),
+              nowMilliseconds: any(named: 'nowMilliseconds'),
+            ),
+          ).thenAnswer((_) async => true);
+          await tester.pumpWidget(
+            ProviderScope(
+              overrides: [
+                profileRepositoryProvider.overrideWithValue(profiles),
+                followRepositoryProvider.overrideWithValue(follows),
+              ],
+              child: MaterialApp(
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: BlocProvider<ChatCubit>.value(
+                  value: chat,
+                  child: const ChatScreen(),
+                ),
               ),
             ),
-          ),
-        );
-        await tester.enterText(find.byType(TextField), '@Al');
-        await tester.pumpAndSettle();
-        tester
-            .widget<MentionOverlay>(find.byType(MentionOverlay))
-            .onSelect(alice, 'Alice');
-        await tester.pump();
-        await tester.enterText(find.byType(TextField), '@Alice @Al');
-        await tester.pumpAndSettle();
-        tester
-            .widget<MentionOverlay>(find.byType(MentionOverlay))
-            .onSelect(other, 'Alice');
-        await tester.pump();
-        if (removeSecond) {
-          await tester.enterText(find.byType(TextField), '@Alice ');
+          );
+          await tester.enterText(find.byType(TextField), '@Al');
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          expect(
+            tester.getBottomLeft(find.byType(MentionOverlay)).dy,
+            lessThanOrEqualTo(tester.getTopLeft(find.byType(TextField)).dy),
+          );
+
+          tester
+              .widget<MentionOverlay>(find.byType(MentionOverlay))
+              .onSelect(alice, 'Alice');
           await tester.pump();
-        }
-        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-        await tester.pumpAndSettle();
-        verify(
-          () => chat.send(
-            communityId: 'community-test',
-            channelId: 'general',
-            author: '',
-            body: removeSecond
-                ? 'nostr:${NostrKeyUtils.encodePubKey(alice)}'
-                : 'nostr:${NostrKeyUtils.encodePubKey(alice)} nostr:${NostrKeyUtils.encodePubKey(other)}',
-            nowMilliseconds: any(named: 'nowMilliseconds'),
-          ),
-        ).called(1);
-      });
+          await tester.enterText(find.byType(TextField), '@Alice @Al');
+          await tester.pumpAndSettle();
+          tester
+              .widget<MentionOverlay>(find.byType(MentionOverlay))
+              .onSelect(other, 'Alice');
+          await tester.pump();
+          if (removeSecond) {
+            await tester.enterText(find.byType(TextField), '@Alice ');
+            await tester.pump();
+          }
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+          await tester.pumpAndSettle();
+          verify(
+            () => chat.send(
+              communityId: 'community-test',
+              channelId: 'general',
+              author: '',
+              body: removeSecond
+                  ? 'nostr:${NostrKeyUtils.encodePubKey(alice)}'
+                  : 'nostr:${NostrKeyUtils.encodePubKey(alice)} nostr:${NostrKeyUtils.encodePubKey(other)}',
+              nowMilliseconds: any(named: 'nowMilliseconds'),
+            ),
+          ).called(1);
+        },
+      );
     }
   });
 }
