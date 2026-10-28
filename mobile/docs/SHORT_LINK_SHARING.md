@@ -1,6 +1,6 @@
 # External short-link sharing
 
-Short-link sending is enabled by default: FeatureFlag.shortLinksSharing defaults true. Set compile-time FF_SHORT_LINKS_SHARING=false to retain full URLs. Signed-out users and disabled clients keep their existing full URLs without signing or creation requests. The authenticated gateway enables creation independently.
+Short-link sending is enabled by default in native builds: FeatureFlag.shortLinksSharing defaults true. Set compile-time FF_SHORT_LINKS_SHARING=false to retain full URLs. Web builds default off because the gateway does not currently allow the Flutter web deployment's origin; opt-in web builds must have gateway CORS support for their origin. Signed-out users and disabled clients keep their existing full URLs without signing or creation requests. The authenticated gateway controls creation independently.
 
 Only external video Copy/Share via and profile Share try shortening. Nostr events and DM messages retain the original canonical URL. Verified username subdomains keep their existing URL because they are outside the shortener destination grammar. First-party video IDs, full hex pubkeys and valid full npubs are preserved without truncation.
 

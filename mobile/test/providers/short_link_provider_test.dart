@@ -22,10 +22,21 @@ void main() {
   const target = 'https://divine.video/video/synthetic-provider-check';
   const shortened = 'https://divine.video/l/Abc12345';
   group('shortLinkClientProvider', () {
-    test('short-link sharing is enabled by default', () {
+    test('short-link sharing is enabled by default on native builds', () {
       expect(
-        const BuildConfiguration().getDefault(FeatureFlag.shortLinksSharing),
+        const BuildConfiguration(
+          isWeb: false,
+        ).getDefault(FeatureFlag.shortLinksSharing),
         isTrue,
+      );
+    });
+
+    test('web builds retain canonical links by default', () {
+      expect(
+        const BuildConfiguration(
+          isWeb: true,
+        ).getDefault(FeatureFlag.shortLinksSharing),
+        isFalse,
       );
     });
 

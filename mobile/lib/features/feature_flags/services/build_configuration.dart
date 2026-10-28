@@ -1,19 +1,23 @@
 // ABOUTME: Build configuration service providing compile-time feature flag defaults
 // ABOUTME: Maps environment variables to feature flag defaults for build-time configuration
 
+import 'package:flutter/foundation.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 
 class BuildConfiguration {
-  const BuildConfiguration();
+  const BuildConfiguration({this.isWeb = kIsWeb});
+
+  final bool isWeb;
 
   /// Get the default value for a feature flag from environment variables
   bool getDefault(FeatureFlag flag) {
     switch (flag) {
       case FeatureFlag.shortLinksSharing:
-        return const bool.fromEnvironment(
-          'FF_SHORT_LINKS_SHARING',
-          defaultValue: true,
-        );
+        if (const bool.hasEnvironment('FF_SHORT_LINKS_SHARING')) {
+          return const bool.fromEnvironment('FF_SHORT_LINKS_SHARING');
+        }
+        // Browser origins need gateway CORS support before opting in.
+        return !isWeb;
       case FeatureFlag.publishingIdeas:
         return const bool.fromEnvironment('FF_PUBLISHING_IDEAS');
       case FeatureFlag.enhancedAnalytics:
