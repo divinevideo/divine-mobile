@@ -479,6 +479,33 @@ void main() {
     );
 
     testWidgets(
+      'hides the editing tools from screen readers while clips import',
+      (tester) async {
+        final clipBloc = _MockClipEditorBloc();
+        whenListen(
+          clipBloc,
+          Stream.value(
+            const ClipEditorState(
+              isImportingLibraryClips: true,
+              libraryImportRenderId: 'library_import',
+              libraryImportProgress: 0.5,
+            ),
+          ),
+          initialState: const ClipEditorState(),
+        );
+
+        await tester.pumpWidget(
+          buildWidget(isLoading: true, clipBlocOverride: clipBloc),
+        );
+        expect(find.semantics.byLabel(l10n.videoActionEdit), findsOne);
+
+        await tester.pump();
+
+        expect(find.semantics.byLabel(l10n.videoActionEdit), findsNothing);
+      },
+    );
+
+    testWidgets(
       'writes history on extraction success even when handled above clip controls',
       (tester) async {
         final clipBloc = _MockClipEditorBloc();
