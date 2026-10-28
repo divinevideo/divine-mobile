@@ -443,6 +443,55 @@ void main() {
         expect(starts, 2);
       });
     });
+    group('enroll while saved rooms start', () {
+      test(
+        'a saved room still starting does not delay stamping another',
+        () async {
+          final store = InMemoryConcordStore(me);
+          await store.put(
+            'mention-state',
+            '{"rooms":{"general":900},"seen":{}}',
+          );
+          final held = Completer<void>();
+          var clock = 1000;
+          ConcordRepository room() {
+            final room = _Room();
+            when(room.close).thenAnswer((_) async {});
+            when(() => room.changes).thenAnswer((_) => const Stream.empty());
+            when(
+              () => room.timeline(now: any(named: 'now')),
+            ).thenReturn(FoldedThread([], {}));
+            return room;
+          }
+
+          final repo = ChatMentionRepository(
+            owner: me,
+            communityId: 'community-test',
+            store: store,
+            now: () => clock,
+            canNotify: (_) => true,
+            createRoom: (_) => room(),
+            startRoom: (channel, _) async {
+              if (channel == 'general') await held.future;
+            },
+          );
+          addTearDown(() async {
+            if (!held.isCompleted) held.complete();
+            await repo.close();
+          });
+          final enrolling = repo.enroll('introductions');
+          await pumpEventQueue();
+          clock = 1100;
+          held.complete();
+          await enrolling;
+          final saved = jsonDecode(
+            (await store.get('mention-state'))!,
+          ) as Map<String, dynamic>;
+          expect((saved['rooms'] as Map)['introductions'], 1000);
+        },
+      );
+    });
+
     group('enroll', () {
       test('failed enrollment and observer start can retry', () async {
         final store = _FailingStore(me)..fail = true;

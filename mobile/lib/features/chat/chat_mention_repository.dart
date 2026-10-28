@@ -70,11 +70,11 @@ class ChatMentionRepository implements LocalNotificationSource {
   @override
   Stream<List<NotificationItem>> watchSnapshot() => _snapshots.stream;
 
-  /// Loads the saved enrollments and read markers and starts their rooms.
+  /// Loads the saved enrollments and read markers, then starts their rooms.
   ///
-  /// Completes once state is loaded; a room that fails to start is left for
-  /// [refresh]. Throws only when the store cannot be read, and a later call
-  /// retries.
+  /// Completes once state is loaded, without waiting for the rooms to start;
+  /// a room that fails to start is left for [refresh]. Throws only when the
+  /// store cannot be read, and a later call retries.
   Future<void> initialize() {
     if (_closed) return Future.value();
     return _initializing ??= _initialize().catchError((
@@ -101,10 +101,10 @@ class ChatMentionRepository implements LocalNotificationSource {
       _rooms.addAll(state.rooms);
       _seen.addAll(state.seen);
     }
-    await Future.wait([
-      for (final channel in List<String>.of(_rooms.keys))
-        _observeOrDefer(channel),
-    ]);
+    for (final channel in List<String>.of(_rooms.keys)) {
+      // Not awaited: a slow room must not delay stamping a newly opened one.
+      unawaited(_observeOrDefer(channel));
+    }
   }
 
   /// Starts [channel]; a failure leaves it unobserved for [refresh] to retry.
