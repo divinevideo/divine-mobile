@@ -743,6 +743,37 @@ void main() {
         },
       );
 
+      test(
+        'a room mention does not stop empty social page continuation',
+        () async {
+          final bloc = createBloc();
+          addTearDown(bloc.close);
+          bloc.add(NotificationFeedStarted());
+          await pumpEventQueue();
+          clearInteractions(mockNotificationRepo);
+          snapshotController.add(
+            NotificationPage(
+              items: [
+                ActorNotification(
+                  id: 'chat:general:${'b' * 64}',
+                  type: NotificationKind.mention,
+                  actor: ActorInfo(pubkey: 'b' * 64, displayName: 'Friend'),
+                  timestamp: DateTime.utc(2026, 10, 23),
+                  chatTarget: const ChatNotificationTarget(
+                    communityId: 'community-test',
+                    channelId: 'general',
+                  ),
+                ),
+              ],
+              unreadCount: 1,
+              hasMore: true,
+            ),
+          );
+          await pumpEventQueue();
+          verify(() => mockNotificationRepo.loadNextPageFor(null)).called(1);
+        },
+      );
+
       blocTest<NotificationFeedBloc, NotificationFeedState>(
         'continues past an empty page from the bloc',
         build: createBloc,
