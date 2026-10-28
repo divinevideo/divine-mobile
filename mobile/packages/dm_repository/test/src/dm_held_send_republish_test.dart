@@ -89,6 +89,7 @@ void main() {
     late DmSendPolicyDecision policyDecision;
     late bool policyThrows;
     late bool deviceOffline;
+    late int connectedRelays;
     late DmRepository repository;
 
     /// Every gift wrap this device published addressed to [pubkey].
@@ -172,8 +173,11 @@ void main() {
       policyDecision = DmSendPolicyDecision.allowed;
       policyThrows = false;
       deviceOffline = false;
+      connectedRelays = 1;
 
-      when(() => nostrClient.connectedRelayCount).thenReturn(1);
+      when(
+        () => nostrClient.connectedRelayCount,
+      ).thenAnswer((_) => connectedRelays);
       when(() => nostrClient.configuredRelayCount).thenReturn(1);
       when(() => nostrClient.configuredRelays).thenReturn(const [_poolRelay]);
       when(() => nostrClient.isRelayAllowed(any())).thenReturn(true);
@@ -277,6 +281,29 @@ void main() {
     });
 
     group('recoverFullSend while the inbox stays unreadable', () {
+      test('leaves a retry uncharged while no relay is connected, then charges '
+          'it once one is', () async {
+        final (:rowId, :poolWrap) = await heldSend();
+        connectedRelays = 0;
+
+        final outage = await repository.recoverFullSend(rumorId: rowId);
+
+        expect(outage.reachedNoRelay, isTrue);
+        expect(outage.retryablePending, isFalse);
+        final outageRow = await outgoingDao.getById(rowId);
+        expect(outageRow!.retryCount, equals(1), reason: 'not charged');
+        expect(outageRow.recipientWrapEventId, equals(poolWrap.id));
+
+        connectedRelays = 1;
+        final reconnected = await repository.recoverFullSend(rumorId: rowId);
+
+        expect(reconnected.retryablePending, isTrue);
+        final row = await outgoingDao.getById(rowId);
+        expect(row!.retryCount, equals(2));
+        expect(row.recipientWrapEventId, equals(poolWrap.id));
+        expect(wrapsTo(peerB), hasLength(1));
+      });
+
       test('publishes no other recipient wrap and still charges each '
           'attempt', () async {
         final (:rowId, :poolWrap) = await heldSend();

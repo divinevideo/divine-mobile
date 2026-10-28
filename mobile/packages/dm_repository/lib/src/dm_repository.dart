@@ -7650,12 +7650,13 @@ class DmRepository {
   /// recipient's inbox was unreadable, carries that wrap's id, and its retry
   /// publishes a new recipient wrap only once the inbox is found (#10012).
   /// While the inbox stays unreadable the attempt publishes nothing and is
-  /// charged as a soft one. Once it reads absent, the pool is where the
-  /// recipient reads: the held wrap counts as delivered, and only the sender's
-  /// withheld copy is published. Either way the attempt first makes
-  /// [NIP17MessageService.preSendRefusal]'s checks, so a recipient the send
-  /// policy now refuses, or an offline device, ends it as it would end a
-  /// publish.
+  /// charged as a soft one, or, with no relay connected, left uncharged as an
+  /// outage (#8516). Once it reads absent, the pool is where the recipient
+  /// reads: the held wrap counts as delivered, and only the sender's withheld
+  /// copy is published. Every such attempt first makes
+  /// [NIP17MessageService.preSendRefusal]'s checks, as sendRumor does, so a
+  /// recipient the send policy now refuses, or an offline device, ends it as
+  /// it would end a publish.
   ///
   /// Every failed attempt this runs is charged to the row's retry budget
   /// here, once — a soft-unconfirmed one too — except one that reached no
@@ -7854,16 +7855,10 @@ class DmRepository {
       result = refusal;
     } else if (poolWrapId != null &&
         inbox.state == DmInboxResolution.unreadable) {
-      Log.info(
-        'Not republishing rumor ${rumor.id} to '
-        '${pubkeyForLogs(row.recipientPubkey)}: the fallback pool already '
-        'accepted wrap $poolWrapId and their inbox is still unreadable, so '
-        'the row stays held (#10012)',
-        category: LogCategory.system,
-      );
-      result = const NIP17SendResult.failure(
-        'Recipient DM inbox still unreadable; the fallback pool holds the wrap',
-        retryablePending: true,
+      result = _keepHeldPoolWrap(
+        rumor: rumor,
+        row: row,
+        poolWrapId: poolWrapId,
       );
     } else if (poolWrapId != null && inbox.state == DmInboxResolution.absent) {
       result = await _settleHeldPoolWrap(
@@ -8898,6 +8893,42 @@ class DmRepository {
       );
       return NIP17SendResult.failure('Failed to send message: $e');
     }
+  }
+
+  /// A retry of held row [row] while the recipient's inbox stays unreadable:
+  /// nothing is published, since the fallback pool holds [poolWrapId]
+  /// (#10012). With no relay connected the inbox could not be read at all, an
+  /// outage on our side, so the attempt is left uncharged as a publish that
+  /// reached no relay is (#8516); otherwise it is charged as a soft one.
+  NIP17SendResult _keepHeldPoolWrap({
+    required Event rumor,
+    required OutgoingDm row,
+    required String poolWrapId,
+  }) {
+    if (_nostrClient.connectedRelayCount == 0) {
+      Log.info(
+        'Not republishing rumor ${rumor.id} to '
+        '${pubkeyForLogs(row.recipientPubkey)}: no relay is connected to '
+        're-check their inbox, so the attempt waits for one; the fallback '
+        'pool holds wrap $poolWrapId (#10012)',
+        category: LogCategory.system,
+      );
+      return const NIP17SendResult.failure(
+        'No relay connected to re-check the recipient DM inbox',
+        reachedNoRelay: true,
+      );
+    }
+    Log.info(
+      'Not republishing rumor ${rumor.id} to '
+      '${pubkeyForLogs(row.recipientPubkey)}: the fallback pool already '
+      'accepted wrap $poolWrapId and their inbox is still unreadable, so '
+      'the row stays held (#10012)',
+      category: LogCategory.system,
+    );
+    return const NIP17SendResult.failure(
+      'Recipient DM inbox still unreadable; the fallback pool holds the wrap',
+      retryablePending: true,
+    );
   }
 
   /// Settles a held row whose recipient now advertises no inbox: the pool is
