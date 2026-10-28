@@ -39,119 +39,124 @@ class RoomActivityTile extends StatelessWidget {
     final unreadCount = summary?.unreadCount ?? 0;
     final colors = context.vineColors;
     final mutedStyle = VineTheme.bodySmallFont(color: colors.onSurfaceMuted);
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ExcludeSemantics(
-              child: Container(
-                width: 40,
-                height: 40,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: colors.surfaceContainer,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  '#',
-                  style: VineTheme.titleLargeFont(color: colors.accentPositive),
+    return Semantics(
+      button: true,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ExcludeSemantics(
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: colors.surfaceContainer,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    '#',
+                    style: VineTheme.titleLargeFont(
+                      color: colors.accentPositive,
+                    ),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          title,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: VineTheme.titleMediumFont(
-                            color: colors.primaryText,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: VineTheme.titleMediumFont(
+                              color: colors.primaryText,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      ExcludeSemantics(
-                        child: DivineIcon(
-                          icon: DivineIconName.caretRight,
-                          size: 20,
-                          color: colors.accentPositive,
+                        const SizedBox(width: 8),
+                        ExcludeSemantics(
+                          child: DivineIcon(
+                            icon: DivineIconName.caretRight,
+                            size: 20,
+                            color: colors.accentPositive,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(
-                        context.l10n.listVisibilityPublic,
-                        style: mutedStyle,
-                      ),
-                      if (unreadCount > 0)
-                        _RoomUnreadBadge(
-                          count: unreadCount,
-                          historyLimited: summary!.historyLimited,
-                        ),
-                      if (latest != null)
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
                         Text(
-                          LocalizedTimeFormatter.formatConversationTimestamp(
-                            context.l10n,
-                            latest.createdAt,
-                            locale: Localizations.localeOf(context)
-                                .toLanguageTag(),
-                          ),
+                          context.l10n.listVisibilityPublic,
                           style: mutedStyle,
                         ),
-                    ],
-                  ),
-                  if (latest != null) ...[
-                    const SizedBox(height: 8),
-                    _LatestRoomMessage(message: latest),
-                  ],
-                  if (loading || loadFailed || latest == null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Wrap(
-                        spacing: 8,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
+                        if (unreadCount > 0)
+                          _RoomUnreadBadge(
+                            count: unreadCount,
+                            historyLimited: summary!.historyLimited,
+                          ),
+                        if (latest != null)
                           Text(
-                            loadFailed
-                                ? context.l10n.messagesRoomLoadFailed
-                                : loading
-                                ? context.l10n.messagesRoomLoading
-                                : context.l10n.messagesRoomEmpty,
+                            LocalizedTimeFormatter.formatConversationTimestamp(
+                              context.l10n,
+                              latest.createdAt,
+                              locale: Localizations.localeOf(context)
+                                  .toLanguageTag(),
+                            ),
                             style: mutedStyle,
                           ),
-                          if (loadFailed && onRetry != null)
-                            DivineButton(
-                              label: context.l10n.commonRetry,
-                              onPressed: onRetry,
-                              type: DivineButtonType.link,
-                              size: DivineButtonSize.small,
-                            ),
-                        ],
-                      ),
+                      ],
                     ),
-                  if (summary != null && latest != null) ...[
-                    const SizedBox(height: 10),
-                    _RecentRoomActivity(activity: summary),
+                    if (latest != null) ...[
+                      const SizedBox(height: 8),
+                      _LatestRoomMessage(message: latest),
+                    ],
+                    if (loading || loadFailed || latest == null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Wrap(
+                          spacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              loadFailed
+                                  ? context.l10n.messagesRoomLoadFailed
+                                  : loading
+                                  ? context.l10n.messagesRoomLoading
+                                  : context.l10n.messagesRoomEmpty,
+                              style: mutedStyle,
+                            ),
+                            if (loadFailed && onRetry != null)
+                              DivineButton(
+                                label: context.l10n.commonRetry,
+                                onPressed: onRetry,
+                                type: DivineButtonType.link,
+                                size: DivineButtonSize.small,
+                              ),
+                          ],
+                        ),
+                      ),
+                    if (summary != null && latest != null) ...[
+                      const SizedBox(height: 10),
+                      _RecentRoomActivity(activity: summary),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

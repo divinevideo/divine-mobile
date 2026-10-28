@@ -241,6 +241,30 @@ void main() {
       },
     );
 
+    testWidgets('announces the room row as a button apart from its retry', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWidget(
+        subject(
+          activity: const {
+            'general': RoomActivitySummary(
+              channelId: 'general',
+              loading: false,
+              loadFailed: true,
+            ),
+          },
+          onRetry: () {},
+        ),
+      );
+      final row = tester.getSemantics(find.text('general'));
+      final retry = tester.getSemantics(find.text(l10n.commonRetry));
+      expect(row, isSemantics(isButton: true, hasTapAction: true));
+      expect(retry, isSemantics(hasTapAction: true));
+      expect(retry.id, isNot(row.id));
+      semantics.dispose();
+    });
+
     testWidgets('shows retained counts as lower bounds and hides read badges', (
       tester,
     ) async {
