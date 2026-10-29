@@ -263,6 +263,11 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(tab(EditorFilterCategory.warm));
         await tester.pumpAndSettle();
+        // Nothing is picked when the picker opens.
+        expect(
+          tester.getSemantics(find.bySemanticsLabel(warm[1].name)),
+          isSemantics(isSelected: false),
+        );
 
         await tester.tap(tile(warm[1].name));
         await tester.pumpAndSettle();
