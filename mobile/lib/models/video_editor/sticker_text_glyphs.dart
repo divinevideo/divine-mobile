@@ -34,10 +34,12 @@ enum StickerTextGlyphs {
 
   /// The characters of an emoji: the pictographs and what joins, colours and
   /// flags them.
-  static final _emoji = RegExp(
-    r'[\p{Extended_Pictographic}\p{Emoji_Component}]',
-    unicode: true,
-  );
+  static final _emoji = RegExp(_emojiPattern, unicode: true);
+
+  // Not written into the constructor: the `valid_regexps` lint reads these
+  // property escapes as invalid on Linux, where the tests run them.
+  static const _emojiPattern =
+      r'[\p{Extended_Pictographic}\p{Emoji_Component}]';
 
   static bool _inStickerFont(int rune) {
     for (final (first, last) in _stickerFontRanges) {
