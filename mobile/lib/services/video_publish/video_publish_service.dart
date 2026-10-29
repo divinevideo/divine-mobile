@@ -672,9 +672,12 @@ class VideoPublishService {
   SocialStickerCredits _stickerCreditsOf(DivineVideoDraft draft) {
     try {
       return draft.stickerCredits;
-    } catch (error) {
-      throw DraftOverlayRestoreException(
-        'The stickers could not be read from the edit history: $error',
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(
+        DraftOverlayRestoreException(
+          'The stickers could not be read from the edit history: $error',
+        ),
+        stackTrace,
       );
     }
   }
