@@ -566,9 +566,11 @@ void main() {
       /// Members whose kind-10050 cannot be read: a wrap the fallback pool
       /// confirms for them is held, and their row records it.
       late Set<String> unreadable;
+      late Set<String> advertised;
 
       setUp(() {
         unreadable = {};
+        advertised = {};
         when(
           () => nostrClient.queryEventsDetailed(
             any(),
@@ -586,7 +588,18 @@ void main() {
               .cast<nostr_filter.Filter>();
           final authors = filters.first.authors ?? const <String>[];
           return (
-            events: const <Event>[],
+            events: [
+              for (final author in authors.where(advertised.contains))
+                Event(
+                  author,
+                  EventKind.dmRelaysList,
+                  const [
+                    ['relay', 'wss://inbox.example'],
+                  ],
+                  '',
+                  createdAt: 1700000000,
+                ),
+            ],
             timedOut: false,
             noRelays: authors.any(unreadable.contains),
           );
@@ -688,6 +701,51 @@ void main() {
         expect(row?.retryCount, equals(0));
       });
 
+      for (final pending in [false, true]) {
+        test(
+          'keeps Resend after the formerly unreadable inbox is found '
+          'but its publish ${pending ? 'is unconfirmed' : 'fails'}',
+          () async {
+            unreadable.add(_memberB);
+            final sent = await sendToAAndB();
+            final held = await heldRowFor(
+              sent.conversationId,
+              _memberB,
+              spent: false,
+            );
+            unreadable.remove(_memberB);
+            advertised.add(_memberB);
+            expect(
+              (await repository.resolveDmInboxRelaysDetailed(_memberB)).state,
+              DmInboxResolution.found,
+            );
+            messageWrap = (rumor, recipient) async => NIP17SendResult.failure(
+              'inbox relay did not confirm',
+              retryablePending: pending,
+            );
+
+            for (var attempt = held.retryCount; attempt < budget; attempt++) {
+              final result = await repository.recoverFullSend(rumorId: held.id);
+              expect(result.success, isFalse);
+            }
+            final exhausted = (await outgoingDao.getById(held.id))!;
+            expect(exhausted.retryCount, budget);
+            expect(exhausted.recipientWrapEventId, held.recipientWrapEventId);
+            expect(
+              exhausted.recipientWrapStatus,
+              pending ? OutgoingWrapStatus.pending : OutgoingWrapStatus.failed,
+            );
+
+            expect(await stop(held.id), isFalse);
+
+            expect(
+              (await outgoingDao.getById(held.id))?.recipientWrapStatus,
+              exhausted.recipientWrapStatus,
+            );
+          },
+        );
+      }
+
       test('leaves a held member while a recovery of it is running', () async {
         unreadable.add(_memberB);
         final sent = await sendToAAndB();
@@ -725,6 +783,41 @@ void main() {
         );
         lookupGate.complete();
         await recovery;
+      });
+
+      test('rechecks the retry budget after the inbox lookup', () async {
+        unreadable.add(_memberB);
+        final sent = await sendToAAndB();
+        final held = await heldRowFor(sent.conversationId, _memberB);
+        final lookupStarted = Completer<void>();
+        final lookupGate = Completer<void>();
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            tempRelays: any(named: 'tempRelays'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((_) async {
+          if (!lookupStarted.isCompleted) lookupStarted.complete();
+          await lookupGate.future;
+          return (events: const <Event>[], timedOut: false, noRelays: true);
+        });
+
+        final stopping = stop(held.id);
+        await lookupStarted.future;
+        await outgoingDao.resetRetryCount(held.id);
+        lookupGate.complete();
+
+        expect(await stopping, isFalse);
+        final row = (await outgoingDao.getById(held.id))!;
+        expect(row.retryCount, 0);
+        expect(row.recipientWrapStatus, OutgoingWrapStatus.pending);
       });
 
       test('leaves a held 1:1 message as it is', () async {

@@ -8424,10 +8424,11 @@ class DmRepository {
   /// [cancelOutgoingSend] leaves, so the bubble reads "Not sent to everyone"
   /// instead of "Failed to send".
   ///
-  /// Only a held member ([_heldPoolWrapId]) of a group message that is stored
-  /// for the members who have it, whose retries are spent (`retryCount` of at
-  /// least [maxRetries]) and none of which is running, is stopped, and the
-  /// call returns `true`. Anything else is left as it is and returns `false`:
+  /// Only a held member ([_heldPoolWrapId]) whose inbox is still unreadable
+  /// is stopped, for a group message stored for the members who have it.
+  /// Its retries must be spent (`retryCount` of at least [maxRetries]), with
+  /// no recovery running. The call then returns `true`.
+  /// Anything else is left as it is and returns `false`:
   /// a missing row, a delivery already stopped, a member that is not held or
   /// still has retries (as after a Resend) or a recovery running, a 1:1
   /// message, and a group message no member has, which all keep "Failed to
@@ -8447,11 +8448,8 @@ class DmRepository {
         'wire OutgoingDmsDao into DmRepository before calling.',
       );
     }
-    var stopped = false;
-    // One transaction, as in [cancelOutgoingSend].
-    await _conversationsDao.runInTransaction<void>(() async {
-      final row = await dao.getById(rumorId);
-      if (row == null) return;
+    Future<bool> eligible(OutgoingDm? row) async {
+      if (row == null) return false;
       if (row.ownerPubkey != _userPubkey) {
         throw ArgumentError.value(
           rumorId,
@@ -8459,13 +8457,31 @@ class DmRepository {
           'queue row belongs to a different account',
         );
       }
-      if (!_isLiveDelivery(row) || _heldPoolWrapId(row) == null) return;
+      if (!_isLiveDelivery(row) || _heldPoolWrapId(row) == null) return false;
       // Retries left, or one running now: the delivery is still in progress.
       if (row.retryCount < maxRetries ||
           _recoveriesInFlight.containsKey('full:${row.id}')) {
-        return;
+        return false;
       }
-      if (!await _stoppedRowKeepsItsRecord(row)) return;
+      return _stoppedRowKeepsItsRecord(row);
+    }
+
+    final candidate = await dao.getById(rumorId);
+    if (!await eligible(candidate)) return false;
+    // The pool wrap survives a later failed publish to a found inbox. It
+    // proves a past held attempt, not that unreadability still explains this
+    // failure. Keep Resend when the inbox can now be read. Resolve outside
+    // the transaction so network waits never hold a database write lock.
+    final inbox = await resolveDmInboxRelaysDetailed(
+      candidate!.recipientPubkey,
+    );
+    if (inbox.state != DmInboxResolution.unreadable) return false;
+
+    var stopped = false;
+    await _conversationsDao.runInTransaction<void>(() async {
+      final row = await dao.getById(rumorId);
+      // A Resend or cancellation may have changed the row during the lookup.
+      if (!await eligible(row)) return;
       stopped = await dao.markRecipientCancelled(rumorId);
     });
     return stopped;
