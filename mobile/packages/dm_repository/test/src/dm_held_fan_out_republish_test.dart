@@ -1291,8 +1291,8 @@ void main() {
           expect((await worklistEntry()).retriesRanOut, isTrue);
         });
 
-        test('Try again shows progress and sends a held member nothing '
-            'more', () async {
+        test('Try again sends a held member nothing more and keeps the held '
+            'wraps', () async {
           await heldRetraction();
           final heldBefore = (await messageRow()).heldDeletionWraps;
           await repository.markMessageDeletionUnconfirmed(
@@ -1301,36 +1301,54 @@ void main() {
 
           expect(await retryRetraction(), DmMessageDeletionOutcome.unconfirmed);
 
-          final row = await messageRow();
-          expect(row.deletionPublishStatus, DirectMessagesDao.deletionPending);
-          expect(row.heldDeletionWraps, equals(heldBefore));
+          expect((await messageRow()).heldDeletionWraps, equals(heldBefore));
           expect(wrapsTo(peerB), hasLength(1));
           expect(wrapsTo(owner), isEmpty);
         });
 
-        test('wakes the sweep when nothing confirms a Try again, so it shows '
-            'the warning again', () async {
+        test('a Try again that nothing confirms reads failed again as soon '
+            'as it returns', () async {
           await heldRetraction();
-          var nudges = 0;
-          final subscription = repository.retryableOutgoingWork.listen(
-            (_) => nudges++,
-          );
-          addTearDown(subscription.cancel);
-          expect(await retryRetraction(), DmMessageDeletionOutcome.unconfirmed);
-          await pumpEventQueue();
-          expect(
-            nudges,
-            0,
-            reason: 'precondition: the sweep owns a retry it started itself',
-          );
           await repository.markMessageDeletionUnconfirmed(
             rumorId: _retractedMessageId,
           );
 
           expect(await retryRetraction(), DmMessageDeletionOutcome.unconfirmed);
+
+          expect(
+            (await messageRow()).deletionPublishStatus,
+            DirectMessagesDao.deletionUnconfirmed,
+          );
+          expect((await bubble()).retractionStatus, DmRetractionStatus.failed);
+        });
+
+        test('a Try again reads pending while it runs, then failed, with no '
+            'sweep in between', () async {
+          await heldRetraction();
+          await repository.markMessageDeletionUnconfirmed(
+            rumorId: _retractedMessageId,
+          );
+          final seen = <DmRetractionStatus>[];
+          final subscription = repository
+              .watchMessages((await messageRow()).conversationId)
+              .listen((messages) {
+                final status = messages
+                    .singleWhere((m) => m.id == _retractedMessageId)
+                    .retractionStatus;
+                if (seen.isEmpty || seen.last != status) seen.add(status);
+              });
+          addTearDown(subscription.cancel);
+          await pumpEventQueue();
+          expect(seen, [DmRetractionStatus.failed], reason: 'precondition');
+
+          await retryRetraction();
           await pumpEventQueue();
 
-          expect(nudges, 1);
+          expect(seen, [
+            DmRetractionStatus.failed,
+            DmRetractionStatus.pending,
+            DmRetractionStatus.failed,
+          ]);
         });
 
         test('Try again records a member it reaches, so the next retry sends '

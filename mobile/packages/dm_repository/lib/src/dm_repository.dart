@@ -10113,8 +10113,9 @@ class DmRepository {
   /// progress, and it stays on [retryableMessageDeletions] with
   /// [DmMessageDeletionRetryTarget.retriesRanOut] set for a later launch.
   /// Only a pending retraction changes, and not while a retry of it is
-  /// running: that retry, such as the sender's Try again, records its own
-  /// result.
+  /// running: that retry settles the status itself, and one that started
+  /// from a retraction whose retries ran out writes the warning back when
+  /// nothing confirms it.
   ///
   /// Throws whatever the database throws.
   Future<void> markMessageDeletionUnconfirmed({required String rumorId}) async {
@@ -10236,11 +10237,15 @@ class DmRepository {
           ? const {}
           : decodeHeldWraps(row.heldDeletionWraps),
     );
-    // Nothing confirmed it, and it is pending again with its retries spent:
-    // wake the sweep, which shows the warning again rather than leave the
-    // bubble spinning until its next pass (#10012).
+    // It came back to pending with its retries spent and nothing confirmed
+    // it: show the warning again now, rather than a spinner until the
+    // sweep's next pass (#10012). This call holds the in-flight slot, so it
+    // writes through the DAO rather than [markMessageDeletionUnconfirmed].
     if (retriesRanOut && outcome == DmMessageDeletionOutcome.unconfirmed) {
-      _notifyRetryableWork();
+      await _directMessagesDao.markMessageDeletionUnconfirmed(
+        rumorId,
+        ownerPubkey: _ownerPubkey,
+      );
     }
     return outcome;
   }
