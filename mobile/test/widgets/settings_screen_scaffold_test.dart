@@ -63,6 +63,7 @@ void main() {
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             authServiceProvider.overrideWithValue(mockAuthService),
             currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+            registeredKeyConflictProvider.overrideWithValue(null),
           ],
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
@@ -99,6 +100,7 @@ void main() {
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             authServiceProvider.overrideWithValue(mockAuthService),
             currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+            registeredKeyConflictProvider.overrideWithValue(null),
           ],
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,
@@ -133,6 +135,7 @@ void main() {
             sharedPreferencesProvider.overrideWithValue(sharedPreferences),
             authServiceProvider.overrideWithValue(mockAuthService),
             currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+            registeredKeyConflictProvider.overrideWithValue(null),
           ],
           child: MaterialApp(
             localizationsDelegates: appLocalizationsDelegates,

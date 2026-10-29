@@ -182,6 +182,7 @@ void main() {
         authServiceProvider.overrideWithValue(authService),
         hasExpiredOAuthSessionProvider.overrideWithValue(false),
         currentAuthStateProvider.overrideWithValue(AuthState.authenticated),
+        registeredKeyConflictProvider.overrideWithValue(null),
         profileRepositoryProvider.overrideWithValue(null),
         profileReadRepositoryProvider.overrideWithValue(null),
         draftStorageServiceProvider.overrideWithValue(draftStorageService),
