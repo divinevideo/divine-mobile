@@ -6,7 +6,7 @@ import 'package:openvine/models/caption_mention.dart';
 /// touched or joined to a neighboring word.
 ///
 /// [cursor] is the caret after the edit; it picks which of two identical
-/// neighboring tokens a deletion removed.
+/// neighboring tokens an insertion or deletion changed.
 List<CaptionMention> updateChatMentionBindings({
   required String before,
   required String after,
@@ -20,7 +20,18 @@ List<CaptionMention> updateChatMentionBindings({
       before[start] == after[start]) {
     start++;
   }
-  if (cursor >= 0 && cursor <= after.length && cursor < start) start = cursor;
+  final insertedLength = after.length - before.length;
+  final insertionStart = cursor - insertedLength;
+  if (insertedLength > 0 &&
+      insertionStart >= 0 &&
+      cursor <= after.length &&
+      before.substring(0, insertionStart) ==
+          after.substring(0, insertionStart) &&
+      before.substring(insertionStart) == after.substring(cursor)) {
+    start = insertionStart;
+  } else if (cursor >= 0 && cursor <= after.length && cursor < start) {
+    start = cursor;
+  }
   var oldEnd = before.length;
   var newEnd = after.length;
   while (oldEnd > start &&

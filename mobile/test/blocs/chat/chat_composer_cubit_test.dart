@@ -7,6 +7,25 @@ import 'package:openvine/utils/nostr_key_utils.dart';
 void main() {
   group(ChatComposerCubit, () {
     group('submit', () {
+      test('deleting a pick leaves a pasted identical name plain', () async {
+        final bodies = <String>[];
+        final cubit = ChatComposerCubit(
+          send: (body) async {
+            bodies.add(body);
+            return true;
+          },
+        );
+        addTearDown(cubit.close);
+        cubit.updateDraft('@Al', 3);
+        cubit.selectMention(cursor: 3, pubkey: 'a' * 64, display: 'Alice');
+        cubit.updateDraft('@Alice @Alice ', 7);
+        cubit.updateDraft('@Alice ', 7);
+
+        expect(cubit.state.mentions, isEmpty);
+        expect(await cubit.submit(), isTrue);
+        expect(bodies, ['@Alice']);
+      });
+
       test('keeps a changed draft while a send is pending', () async {
         final pending = Completer<bool>();
         final bodies = <String>[];

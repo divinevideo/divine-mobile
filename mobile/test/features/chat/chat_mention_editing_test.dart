@@ -16,6 +16,18 @@ void main() {
     end: 13,
   );
   group('updateChatMentionBindings', () {
+    test('pasting an identical name before a pick shifts the original', () {
+      final kept = updateChatMentionBindings(
+        before: '@Alice ',
+        after: '@Alice @Alice ',
+        cursor: 7,
+        mentions: [first],
+      );
+      expect(kept.single.pubkey, first.pubkey);
+      expect(kept.single.start, 7);
+      expect(kept.single.end, 13);
+    });
+
     test('deleting either identical token removes only its own identity', () {
       final deleteSecond = updateChatMentionBindings(
         before: '@Alice @Alice ',
