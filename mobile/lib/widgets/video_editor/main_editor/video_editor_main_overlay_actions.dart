@@ -57,11 +57,18 @@ class VideoEditorMainOverlayActions extends StatelessWidget {
 
 /// Top row actions: close and done buttons, plus the stop-motion frames chip
 /// or the text wrap hint.
-class _TopActions extends ConsumerWidget {
+class _TopActions extends ConsumerStatefulWidget {
   const _TopActions();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_TopActions> createState() => _TopActionsState();
+}
+
+class _TopActionsState extends ConsumerState<_TopActions> {
+  bool _finishing = false;
+
+  @override
+  Widget build(BuildContext context) {
     final scope = VideoEditorScope.of(context);
     final hasLoopSuggestion = context.select(
       (LoopSuggestionCubit cubit) =>
@@ -130,7 +137,9 @@ class _TopActions extends ConsumerWidget {
                 ),
         ),
         onClose: close,
-        onDone: hasLoopSuggestion ? null : () => _onDonePressed(context, scope),
+        onDone: hasLoopSuggestion || _finishing
+            ? null
+            : () => _onDonePressed(context, scope),
       ),
     );
   }
@@ -140,6 +149,7 @@ class _TopActions extends ConsumerWidget {
   /// that length by silently looping at render, so instead the tap surfaces a
   /// "capture more frames" snackbar and stays in the editor.
   void _onDonePressed(BuildContext context, VideoEditorScope scope) {
+    if (_finishing) return;
     if (context.read<LoopSuggestionCubit>().state.status ==
         LoopSuggestionStatus.searching) {
       return;
@@ -158,6 +168,7 @@ class _TopActions extends ConsumerWidget {
       );
       return;
     }
+    setState(() => _finishing = true);
     runDetached(
       _finishEditing(scope),
       'finish editing',
@@ -170,14 +181,18 @@ class _TopActions extends ConsumerWidget {
   /// when a social sticker has an emoji to draw in it: the export captures the
   /// stickers as they show, and a viewer's copy draws its emoji in that font.
   Future<void> _finishEditing(VideoEditorScope scope) async {
-    final editor = scope.editor;
-    if (editor == null) return;
-    await loadStickerEmojiFontFor([
-      for (final layer in editor.activeLayers)
-        if (SocialStickerData.of(layer) case final sticker?)
-          SocialStickerView.textOf(sticker),
-    ]);
-    if (editor.mounted) editor.doneEditing();
+    try {
+      final editor = scope.editor;
+      if (editor == null) return;
+      await loadStickerEmojiFontFor([
+        for (final layer in editor.activeLayers)
+          if (SocialStickerData.of(layer) case final sticker?)
+            SocialStickerView.textOf(sticker),
+      ]);
+      if (mounted && editor.mounted) editor.doneEditing();
+    } finally {
+      if (mounted) setState(() => _finishing = false);
+    }
   }
 
   void _onClosePressed({

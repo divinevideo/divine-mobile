@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for VideoEditorMainOverlayActions toolbar.
 // ABOUTME: Tests button rendering, music sub-editor hiding, and close/done.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -18,13 +20,16 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_overlay_actions.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
+import 'package:pro_image_editor/pro_image_editor.dart';
 
 import '../../../helpers/go_router.dart';
 import '../../../helpers/video_editor/loop_repair.dart';
@@ -34,6 +39,12 @@ class _MockVideoEditorMainBloc
     implements VideoEditorMainBloc {}
 
 class _MockDivineVideoDraft extends Mock implements DivineVideoDraft {}
+
+class _MockEditor extends Mock implements ProImageEditorState {
+  @override
+  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) =>
+      '_MockEditor';
+}
 
 class _FakeVideoEditorNotifier extends VideoEditorNotifier {
   _FakeVideoEditorNotifier({
@@ -115,6 +126,7 @@ void main() {
       bool hasBeenEdited = false,
       DraftSaveOutcome saveAsDraftResult = DraftSaveOutcome.saved,
       LoopSuggestionCubit? loopCubit,
+      ProImageEditorState? editor,
     }) {
       if (state != null) {
         when(() => mockBloc.state).thenReturn(state);
@@ -145,6 +157,7 @@ void main() {
             home: Scaffold(
               body: VideoEditorScope(
                 editorKey: GlobalKey(),
+                editorOverride: editor,
                 removeAreaKey: GlobalKey(),
                 originalClipAspectRatio: 9 / 16,
                 bodySizeNotifier: ValueNotifier(const Size(400, 600)),
@@ -305,6 +318,43 @@ void main() {
     });
 
     group('interactions', () {
+      testWidgets('finishes once while the emoji font is pending', (
+        tester,
+      ) async {
+        final editor = _MockEditor();
+        final font = Completer<bool>();
+        debugLoadStickerEmojiFont = () => font.future;
+        addTearDown(resetStickerEmojiFontForTesting);
+        final meta = const SocialStickerData(
+          kind: SocialStickerKind.hashtag,
+          hashtag: 'party🎉',
+        ).toMeta();
+        when(() => editor.activeLayers).thenReturn([
+          WidgetLayer(widget: const SizedBox(), meta: meta),
+        ]);
+        when(() => editor.mounted).thenReturn(true);
+        await tester.pumpWidget(buildWidget(editor: editor));
+
+        final toolbar = tester.widget<VideoEditorToolbar>(
+          find.byType(VideoEditorToolbar),
+        );
+        toolbar.onDone!();
+        toolbar.onDone!();
+        await tester.pump();
+        verifyNever(editor.doneEditing);
+        expect(
+          tester
+              .widget<VideoEditorToolbar>(find.byType(VideoEditorToolbar))
+              .onDone,
+          isNull,
+        );
+
+        font.complete(true);
+        await tester.pump();
+
+        verify(editor.doneEditing).called(1);
+      });
+
       testWidgets(
         'tapping Close when no sub-editor is open calls context.pop',
         (tester) async {
