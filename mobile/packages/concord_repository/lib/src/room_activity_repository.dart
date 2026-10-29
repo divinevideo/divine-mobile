@@ -27,7 +27,8 @@ class RoomActivitySummary {
   /// Unique contributors in the last 24 hours, newest contributor first.
   List<String> get recentAuthors => List.unmodifiable(_recentAuthors);
 
-  /// The retained wrap window filled, so counts may be lower bounds.
+  /// Set once the relay's history reply hit its limit or the retained wrap
+  /// window filled; the counts may then be lower bounds.
   final bool historyLimited;
   final bool loading;
   final bool loadFailed;
