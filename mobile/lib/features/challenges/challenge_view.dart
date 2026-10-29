@@ -137,6 +137,11 @@ class _ChallengeViewState extends State<ChallengeView>
         return ChallengeVideoPicker(
           videos: state.candidates,
           busy: state.busy,
+          hasMore: state.candidatesHaveMore,
+          onLoadMore: cubit.moreVideos,
+          error: state.status == null
+              ? null
+              : challengeStatusText(l10n, state.status!),
           onCancel: cubit.cancelReview,
           onContinue: cubit.selectVideo,
           loadPreview: widget.loadCandidatePreview,
@@ -144,7 +149,7 @@ class _ChallengeViewState extends State<ChallengeView>
         );
       }
       if (review == null && !state.picking && definition != null) {
-        return ChallengeDetailView(
+        final detail = ChallengeDetailView(
           state: state,
           organizerName: widget.organizerName,
           organizerAvatarUrl: widget.organizerAvatarUrl,
@@ -171,6 +176,56 @@ class _ChallengeViewState extends State<ChallengeView>
                 ),
               for (final action in state.actions)
                 _ActionCard(action: action, busy: state.busy),
+            ],
+          ),
+        );
+        final video = state.playing;
+        return PopScope(
+          canPop: video == null,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop && video != null) cubit.stopPlaying();
+          },
+          child: Stack(
+            children: [
+              ExcludeFocus(
+                excluding: video != null,
+                child: Offstage(offstage: video != null, child: detail),
+              ),
+              if (video != null)
+                Positioned.fill(
+                  child: Scaffold(
+                    appBar: DiVineAppBar(
+                      title: definition.title,
+                      showBackButton: true,
+                      onBackPressed: cubit.stopPlaying,
+                    ),
+                    body: SafeArea(
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: Center(
+                              child: !_foreground || state.busy
+                                  ? const DivineCircularProgressIndicator()
+                                  : ChallengePlayback(
+                                      key: ValueKey((video.id, state.read)),
+                                      video: video,
+                                      allowed:
+                                          cubit.submissions.reads.isVisible,
+                                    ),
+                            ),
+                          ),
+                          DivineButton(
+                            label: l10n.commonRetry,
+                            type: DivineButtonType.quiet,
+                            onPressed: !_foreground || state.busy
+                                ? null
+                                : cubit.load,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         );

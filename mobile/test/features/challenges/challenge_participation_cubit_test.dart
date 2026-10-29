@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:challenge_protocol/challenge_protocol.dart' as cp;
 import 'package:challenges_repository/challenges_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/features/challenges/challenge_participation_cubit.dart';
+import 'package:openvine/features/challenges/challenge_video_tile.dart';
 import 'package:openvine/observability/reportable_error.dart';
 
 import '../../../packages/challenges_repository/test/harness.dart';
@@ -163,6 +165,103 @@ void main() {
         await cubit.playEntry(entryId);
         expect(cubit.state.playing, isNull);
         expect(cubit.state.status, SubmissionStatus.blocked);
+      },
+    );
+    test(
+      'refresh keeps exact playback and Back prevents late reopening',
+      () async {
+        await cubit.selectVideo(h.video.id);
+        await cubit.confirm();
+        final body = cubit.state.actions.single.signedBody;
+        h.source.records.add(body);
+        final entryId =
+            (jsonDecode(body) as Map<String, dynamic>)['id'] as String;
+        await cubit.playEntry(entryId);
+        await cubit.load();
+        expect(cubit.state.playing?.id, h.video.id);
+        expect(cubit.state.playingEntryId, entryId);
+        final release = Completer<void>();
+        var delay = false;
+        final delayed = ChallengeParticipationCubit(
+          coordinate: cubit.coordinate,
+          submissions: h.repository,
+          refresh: () async {
+            if (delay) await release.future;
+            return cubit.refresh();
+          },
+          loadCandidates: cubit.loadCandidates,
+          exactVideo: cubit.exactVideo,
+          clientTags: cubit.clientTags,
+          prepareRecording: cubit.prepareRecording,
+          handoffs: cubit.handoffs,
+          reviewPublished: cubit.reviewPublished,
+        );
+        addTearDown(delayed.close);
+        await delayed.playEntry(entryId);
+        delay = true;
+        final refreshing = delayed.load();
+        await Future<void>.delayed(Duration.zero);
+        delayed.stopPlaying();
+        release.complete();
+        await refreshing;
+        expect(delayed.state.playing, isNull);
+        h.hidden.add(h.video.id);
+        await cubit.load();
+        expect(cubit.state.playing, isNull);
+      },
+    );
+    test(
+      'candidate pages retain cursor on failure and deduplicate exact IDs',
+      () async {
+        final older = cp.NostrEvent.fromJson(
+          h.creator.sign(
+            kind: 34236,
+            tags: [
+              ['d', 'synthetic:older'],
+            ],
+            content: 'Synthetic older video',
+          ),
+        );
+        var fail = true;
+        final offsets = <int?>[];
+        final picker = ChallengeParticipationCubit(
+          coordinate: cubit.coordinate,
+          submissions: h.repository,
+          refresh: cubit.refresh,
+          loadCandidates: cubit.loadCandidates,
+          loadCandidatePage: (offset) async {
+            offsets.add(offset);
+            if (offset == 20 && fail) throw TimeoutException('Synthetic page');
+            return ChallengeCandidatePage(
+              videos: [
+                challengeVideoModel(h.video)!,
+                if (offset != null) challengeVideoModel(older)!,
+              ],
+              nextOffset: offset == null ? 20 : null,
+            );
+          },
+          exactVideo: (id) async => id == older.id ? older : h.video,
+          clientTags: cubit.clientTags,
+          prepareRecording: cubit.prepareRecording,
+          handoffs: cubit.handoffs,
+          reviewPublished: cubit.reviewPublished,
+        );
+        addTearDown(picker.close);
+        await picker.chooseVideo();
+        expect(picker.state.candidatesHaveMore, isTrue);
+        await picker.moreVideos();
+        expect(picker.state.picking, isTrue);
+        expect(picker.state.candidates, hasLength(1));
+        expect(picker.state.status, SubmissionStatus.readUnavailable);
+        fail = false;
+        await picker.moreVideos();
+        expect(offsets, [null, 20, 20]);
+        expect(picker.state.candidates, hasLength(2));
+        expect(picker.state.candidatesHaveMore, isFalse);
+        h.videoId = older.id;
+        await picker.selectVideo(older.id);
+        expect(picker.state.review?.video.id, older.id);
+        expect(h.signatures, 0);
       },
     );
     test(

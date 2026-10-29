@@ -88,8 +88,8 @@ class _ChallengeVideoTileState extends State<ChallengeVideoTile>
         ((model?.width ?? 3) / (model?.height ?? 4)).clamp(0.5625, 1.778);
     final title =
         widget.label ??
-        (model?.content.isNotEmpty ?? false
-            ? model!.content
+        (visible && model.content.isNotEmpty
+            ? model.content
             : context.l10n.challengePlay);
     return Semantics(
       button: visible && widget.onTap != null,
@@ -129,17 +129,20 @@ class _ChallengeVideoTileState extends State<ChallengeVideoTile>
                         ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Text(
-                  title,
-                  maxLines: widget.label == null ? 2 : null,
-                  overflow: widget.label == null ? TextOverflow.ellipsis : null,
-                  style: VineTheme.bodyMediumFont(
-                    color: context.vineColors.primaryText,
+              if (visible || widget.label != null)
+                Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Text(
+                    title,
+                    maxLines: widget.label == null ? 2 : null,
+                    overflow: widget.label == null
+                        ? TextOverflow.ellipsis
+                        : null,
+                    style: VineTheme.bodyMediumFont(
+                      color: context.vineColors.primaryText,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),

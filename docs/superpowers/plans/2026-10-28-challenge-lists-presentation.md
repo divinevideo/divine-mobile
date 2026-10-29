@@ -8,7 +8,7 @@
 
 **Tech stack:** Flutter 3.47.2, Dart 3.13.2, BLoC, existing material_ui/divine_ui, existing flutter_staggered_grid_view and profile thumbnail components, generated ARB localization, widget/golden tests.
 
-**Spec:** [Merged mobile experience design](https://github.com/divinevideo/divine-challenges/blob/10a035382cf92f17ebfff2af9d8234ad3db5697e/docs/superpowers/specs/2026-10-28-mobile-challenges-design.md). Implements the known-coordinate presentation portion of S2–S6/S9. S7 retains the existing pinned player for this slice; pooled-feed actions/attribution follow the association delivery.
+**Spec:** [Merged mobile experience design](https://github.com/divinevideo/divine-challenges/blob/10a035382cf92f17ebfff2af9d8234ad3db5697e/docs/superpowers/specs/2026-10-28-mobile-challenges-design.md). Implements the known-coordinate presentation portion of S2–S6/S9. S7 presents the existing pinned player in a visible full-screen surface, with Back restoring the grid; pooled-feed actions/attribution follow the association delivery.
 
 ## Global constraints
 
@@ -49,7 +49,7 @@
 - [x] Write failing behavior tests for a selection that requires Continue, entry tiles without raw event IDs, signed winner labels/order with unavailable slots, and policy revocation/backgrounding hiding thumbnails. Include narrow width/2x text scaling and long labels. Test video conversion on all v1 kinds 21/22/34235/34236 without changing event ID/author.
 - [x] Run `flutter test --no-pub test/features/challenges/challenge_presentation_test.dart`; expect missing new presentation behavior.
 - [x] Compose shared thumbnail rendering with the Lists two-column masonry geometry for entries and row-ordered fixed-aspect results. Use a one-column fallback for large text/narrow widths. Preserve unavailable result slots, current policy checks and pinned playback. Keep owned-entry withdrawal reachable and delivery actions outside the selected tab.
-- [x] Implement the full-screen single-selection picker and Continue, with clear Back/cancel behavior, no raw identifier subtitles and no automatic entry. Keep the current repository's exact revision/ownership recheck at review preparation. Do not add fake pagination or claim full author-feed discovery; candidate pagination remains a later data-adapter task.
+- [x] Implement the full-screen single-selection picker and Continue, with clear Back/cancel behavior, no raw identifier subtitles and no automatic entry. Keep the current repository's exact revision/ownership recheck at review preparation. Page the existing author-feed API by its real nextOffset/hasMore envelope, deduplicate exact revisions, and keep selection plus a retryable cursor on a page failure.
 - [x] Run `flutter test --no-pub test/features/challenges test/services/challenges test/blocs/background_publish_bloc/challenge_handoff_test.dart`; expect consent, policy, restart and UI tests to pass. Commit the independently tested presentation.
 
 ## Task 3: Visual, localization and delivery verification
@@ -58,8 +58,8 @@
 
 **Interfaces:** Goldens render the real test-build view and drain GoogleFonts.pendingFonts. Existing dark/light references are generated on the Ubuntu runner, never committed from macOS. Existing locale fallback debt remains explicitly enumerated and generated files are generated, not hand-edited.
 
-- [ ] Add resting/scrolled and picker/results coverage where behavior tests do not establish visual layout, including light/dark and long content. Run mobile/scripts/golden.sh verify to inspect structural failures; macOS pixel differences remain non-authoritative.
-- [ ] Run the repository localization skill checker, `flutter gen-l10n`, exact ARB consistency test, Dart formatting and `flutter analyze --no-pub`. Run the relevant protocol/repository package suites if their production code changed (none is planned).
+- [x] Add resting/scrolled and picker/results coverage where behavior tests do not establish visual layout, including light/dark and long content. Run mobile/scripts/golden.sh verify to inspect structural failures; macOS pixel differences remain non-authoritative.
+- [x] Run the repository localization skill checker, `flutter gen-l10n`, exact ARB consistency test, Dart formatting and `flutter analyze --no-pub`. Run the relevant protocol/repository package suites if their production code changed (none is planned).
 - [ ] Run the app test command per the repository's normal shard workflow and record failures by name, including unrelated failures. Never label a skipped/broken suite green. Use CI as the authoritative Linux pixel check.
 - [ ] Obtain one fresh-context adversarial review of the whole branch, fix verified blockers with regression tests, push and open a focused PR linked to the merged design and Funnelcake #1402. Request the mapped mobile review team once after checks finish. Do not merge or activate the feature.
 
@@ -82,4 +82,4 @@ Native source now includes the Lists header/compact title, verified organizer pr
 
 Figma implementation references: [video-list, 14010:65447](https://www.figma.com/design/rp1DsDEUuCaicW0lk6I2aZ/UI-Design?node-id=14010-65447&m=dev), [video-list-scrolled, 14010:65311](https://www.figma.com/design/rp1DsDEUuCaicW0lk6I2aZ/UI-Design?node-id=14010-65311&m=dev), and [my-video-list-actions, 14091:98092](https://www.figma.com/design/rp1DsDEUuCaicW0lk6I2aZ/UI-Design?node-id=14091-98092&m=dev).
 
-Delivery in progress: Linux golden generation, independent review and the linked mobile PR/CI record are pending. Funnelcake [#1402](https://github.com/divinevideo/divine-funnelcake/pull/1402) remains open at f5fdd9018b158ae1725b94a9296c80c51aaa9fa8 as checked October 30; it does not yet register production challenge read routes. Production discovery, signed-out reads and reverse associations remain the separate dependencies listed above.
+Delivery in progress: the fresh whole-branch review found five Important issues, all fixed in one pass with baseline regression failures and 83/83 focused tests passing. The first Ubuntu run passed all eight test shards and analysis; its sole failure was the direct Material buttons; the shared-control fix now passes that guard locally. Refreshed Linux goldens and the linked mobile PR/CI record remain pending. Funnelcake [#1402](https://github.com/divinevideo/divine-funnelcake/pull/1402) remains open at f5fdd9018b158ae1725b94a9296c80c51aaa9fa8 as checked October 30; it does not yet register production challenge read routes. Production discovery, signed-out reads and reverse associations remain the separate dependencies listed above.

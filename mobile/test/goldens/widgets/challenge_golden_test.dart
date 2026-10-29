@@ -101,6 +101,8 @@ void main() {
                     key: const ValueKey('challenge-golden'),
                     child: ChallengeView(
                       organizerName: 'Synthetic organizer',
+                      loadCandidatePreview: (id) async =>
+                          videos.where((v) => v.id == id).firstOrNull,
                       onRecord: (_, _) async {},
                     ),
                   ),

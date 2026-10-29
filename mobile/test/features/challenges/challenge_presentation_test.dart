@@ -76,6 +76,15 @@ void main() {
         tester,
       ) async {
         final h = Harness();
+        h.video = cp.NostrEvent.fromJson(
+          h.creator.sign(
+            kind: 34236,
+            tags: [
+              ['d', 'synthetic:picker'],
+            ],
+            content: 'Synthetic candidate',
+          ),
+        );
         final candidates = [
           VideoEvent(
             id: h.video.id,
@@ -86,12 +95,17 @@ void main() {
           ),
         ];
         final continued = <String>[];
+        var more = 0;
         var cancelled = false;
         await surface(
           tester,
           ChallengeVideoPicker(
             videos: candidates,
             busy: false,
+            hasMore: true,
+            onLoadMore: () => more++,
+            loadPreview: (_) async => h.video,
+            allowed: (_) => true,
             onCancel: () => cancelled = true,
             onContinue: (id) async => continued.add(id),
           ),
@@ -106,6 +120,9 @@ void main() {
         await tester.pumpAndSettle();
         expect(continued, isEmpty);
         expect(h.signatures, 0);
+        await tester.ensureVisible(find.text('Show more'));
+        await tester.tap(find.text('Show more'));
+        expect(more, 1);
         await tester.tap(find.text('Continue'));
         await tester.pumpAndSettle();
         expect(continued, [h.video.id]);
@@ -126,6 +143,15 @@ void main() {
         tester,
       ) async {
         final h = Harness();
+        h.video = cp.NostrEvent.fromJson(
+          h.creator.sign(
+            kind: 34236,
+            tags: [
+              ['d', 'synthetic:restricted'],
+            ],
+            content: 'Synthetic restricted caption',
+          ),
+        );
         var allowed = true;
         var played = 0;
         await surface(
@@ -142,16 +168,19 @@ void main() {
           ),
         );
         expect(find.byType(ProfileTabThumbnail), findsOneWidget);
+        expect(find.text('Synthetic restricted caption'), findsOneWidget);
         expect(find.text(h.video.id), findsNothing);
         allowed = false;
         await tester.pump(const Duration(seconds: 1));
         expect(find.byType(ProfileTabThumbnail), findsNothing);
+        expect(find.text('Synthetic restricted caption'), findsNothing);
         await tester.tap(find.text('Selected entry unavailable'));
         expect(played, 0);
         allowed = true;
         await tester.pump(const Duration(seconds: 1));
         expect(find.byType(ProfileTabThumbnail), findsOneWidget);
         tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+        tester.binding.scheduleForcedFrame();
         await tester.pump();
         expect(find.byType(ProfileTabThumbnail), findsNothing);
         tester.binding.handleAppLifecycleStateChanged(
@@ -160,6 +189,92 @@ void main() {
         await tester.pumpWidget(const SizedBox());
       },
     );
+
+    testWidgets('picker hides signed captions when preview policy is denied', (
+      tester,
+    ) async {
+      final h = Harness();
+      h.video = cp.NostrEvent.fromJson(
+        h.creator.sign(
+          kind: 34236,
+          tags: [
+            ['d', 'synthetic:picker-private'],
+          ],
+          content: 'Synthetic private candidate',
+        ),
+      );
+      var permitted = true;
+      await surface(
+        tester,
+        ChallengeVideoPicker(
+          videos: [challengeVideoModel(h.video)!],
+          busy: false,
+          onCancel: () {},
+          onContinue: (_) async {},
+          loadPreview: (_) async => h.video,
+          allowed: (_) => permitted,
+        ),
+      );
+      expect(find.text('Synthetic private candidate'), findsOneWidget);
+      permitted = false;
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.text('Synthetic private candidate'), findsNothing);
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('picker renews preview leases and refreshes on resume', (
+      tester,
+    ) async {
+      final h = Harness();
+      h.video = cp.NostrEvent.fromJson(
+        h.creator.sign(
+          kind: 34236,
+          tags: [
+            ['d', 'synthetic:picker-lease'],
+          ],
+          content: 'Synthetic renewable candidate',
+        ),
+      );
+      var expires = tester.binding.clock.now();
+      var previewReads = 0;
+      final continued = <String>[];
+      await surface(
+        tester,
+        ChallengeVideoPicker(
+          videos: [challengeVideoModel(h.video)!],
+          busy: false,
+          onCancel: () {},
+          onContinue: (id) async => continued.add(id),
+          loadPreview: (_) async {
+            previewReads++;
+            expires = tester.binding.clock.now().add(
+              const Duration(seconds: 30),
+            );
+            return h.video;
+          },
+          allowed: (_) => tester.binding.clock.now().isBefore(expires),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 31));
+      await tester.pumpAndSettle();
+      expect(find.byType(ProfileTabThumbnail), findsOneWidget);
+      await tester.tap(find.text('Synthetic renewable candidate'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Continue'));
+      await tester.pumpAndSettle();
+      expect(continued, [h.video.id]);
+      final beforePause = previewReads;
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      tester.binding.scheduleForcedFrame();
+      await tester.pump(const Duration(seconds: 45));
+      expect(previewReads, beforePause);
+      expect(find.text('Synthetic renewable candidate'), findsNothing);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+      expect(find.byType(ProfileTabThumbnail), findsOneWidget);
+      expect(find.text('Synthetic renewable candidate'), findsOneWidget);
+      await tester.pumpWidget(const SizedBox());
+    });
 
     for (final large in [false, true]) {
       testWidgets(

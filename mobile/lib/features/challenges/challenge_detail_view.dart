@@ -4,7 +4,6 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/features/challenges/challenge_deadline.dart';
 import 'package:openvine/features/challenges/challenge_participation_cubit.dart';
-import 'package:openvine/features/challenges/challenge_playback.dart';
 import 'package:openvine/features/challenges/challenge_video_tile.dart';
 import 'package:openvine/features/challenges/challenge_view.dart'
     show challengeLifecycleText;
@@ -137,31 +136,34 @@ class _ChallengeDetailViewState extends State<ChallengeDetailView> {
                           color: context.vineColors.primaryText,
                         ),
                       ),
-                      TextButton(
-                        onPressed: widget.onOrganizerTap,
-                        style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                        child: Row(
-                          spacing: 8,
-                          children: [
-                            ExcludeSemantics(
-                              child: UserAvatar(
-                                imageUrl: widget.organizerAvatarUrl,
-                                size: 32,
-                                name: widget.organizerName,
-                                placeholderSeed: definition.event.pubkey,
-                              ),
-                            ),
-                            Expanded(
-                              child: Text(
-                                widget.organizerName ?? l10n.challengeOrganizer,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: VineTheme.bodyMediumFont(
-                                  color: context.vineColors.primaryText,
+                      InkWell(
+                        onTap: widget.onOrganizerTap,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 48),
+                          child: Row(
+                            spacing: 8,
+                            children: [
+                              ExcludeSemantics(
+                                child: UserAvatar(
+                                  imageUrl: widget.organizerAvatarUrl,
+                                  size: 32,
+                                  name: widget.organizerName,
+                                  placeholderSeed: definition.event.pubkey,
                                 ),
                               ),
-                            ),
-                          ],
+                              Expanded(
+                                child: Text(
+                                  widget.organizerName ??
+                                      l10n.challengeOrganizer,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: VineTheme.bodyMediumFont(
+                                    color: context.vineColors.primaryText,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                       if (open && constrained)
@@ -229,14 +231,13 @@ class _ChallengeDetailViewState extends State<ChallengeDetailView> {
                                 style: style,
                               ),
                               if (overflowing || _expanded)
-                                TextButton(
+                                DivineButton(
+                                  type: DivineButtonType.quiet,
                                   onPressed: () =>
                                       setState(() => _expanded = !_expanded),
-                                  child: Text(
-                                    _expanded
-                                        ? l10n.profileShowLess
-                                        : l10n.challengeAllRules,
-                                  ),
+                                  label: _expanded
+                                      ? l10n.profileShowLess
+                                      : l10n.challengeAllRules,
                                 ),
                             ],
                           );
@@ -253,54 +254,24 @@ class _ChallengeDetailViewState extends State<ChallengeDetailView> {
                   height: 56 * MediaQuery.textScalerOf(context).scale(1),
                   child: Material(
                     color: context.vineColors.nav,
-                    child: Row(
-                      children: [
-                        for (final winners in [false, true])
-                          Expanded(
-                            child: TextButton(
-                              onPressed: () =>
-                                  setState(() => _winners = winners),
-                              child: Semantics(
-                                selected: _winners == winners,
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      winners
-                                          ? l10n.challengeWinners
-                                          : l10n.challengeEntries,
-                                      style: VineTheme.titleMediumFont(
-                                        color: context.vineColors.primaryText,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Container(
-                                      height: 4,
-                                      color: _winners == winners
-                                          ? context.vineColors.accentPositive
-                                          : context.vineColors.nav,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
+                    child: DefaultTabController(
+                      length: 2,
+                      initialIndex: _winners ? 1 : 0,
+                      child: TabBar(
+                        onTap: (index) => setState(() => _winners = index == 1),
+                        labelStyle: VineTheme.titleMediumFont(),
+                        labelColor: context.vineColors.primaryText,
+                        unselectedLabelColor: context.vineColors.primaryText,
+                        indicatorColor: context.vineColors.accentPositive,
+                        tabs: [
+                          Tab(text: l10n.challengeEntries),
+                          Tab(text: l10n.challengeWinners),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-              if (widget.state.playing case final video?)
-                SliverToBoxAdapter(
-                  child: SizedBox(
-                    height: 320,
-                    child: ChallengePlayback(
-                      key: ValueKey(video.id),
-                      video: video,
-                      allowed: widget.allowed,
-                    ),
-                  ),
-                ),
               SliverLayoutBuilder(
                 builder: (context, constraints) {
                   final columns =

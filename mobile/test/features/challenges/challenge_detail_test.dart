@@ -53,6 +53,8 @@ void main() {
           value: cubit,
           child: ChallengeView(
             ownerName: 'Synthetic entrant',
+            loadCandidatePreview: (id) async =>
+                id == h.video.id ? h.video : null,
             onRecord: (_, _) async {},
           ),
         ),

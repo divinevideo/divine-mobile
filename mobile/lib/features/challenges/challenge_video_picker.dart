@@ -1,10 +1,11 @@
+import 'dart:async';
+
 import 'package:challenge_protocol/challenge_protocol.dart' as protocol;
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show VideoEvent;
 import 'package:openvine/features/challenges/challenge_video_tile.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/widgets/profile/profile_tab_thumbnail.dart';
 
 /// Single selection is local; only Continue requests a fresh consent review.
 class ChallengeVideoPicker extends StatefulWidget {
@@ -15,8 +16,14 @@ class ChallengeVideoPicker extends StatefulWidget {
     required this.onContinue,
     this.loadPreview,
     this.allowed,
+    this.hasMore = false,
+    this.onLoadMore,
+    this.error,
     super.key,
   });
+  final bool hasMore;
+  final VoidCallback? onLoadMore;
+  final String? error;
   final List<VideoEvent> videos;
   final bool busy;
   final VoidCallback onCancel;
@@ -65,6 +72,13 @@ class _ChallengeVideoPickerState extends State<ChallengeVideoPicker> {
                     hasScrollBody: false,
                     child: Center(child: Text(l10n.challengeNoVideos)),
                   ),
+                if (widget.error != null)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(widget.error!),
+                    ),
+                  ),
                 SliverPadding(
                   padding: const EdgeInsets.all(16),
                   sliver: SliverList.builder(
@@ -110,6 +124,17 @@ class _ChallengeVideoPickerState extends State<ChallengeVideoPicker> {
                     ),
                   ),
                 ),
+                if (widget.hasMore)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: DivineButton(
+                        label: l10n.profileShowMore,
+                        type: DivineButtonType.quiet,
+                        onPressed: widget.busy ? null : widget.onLoadMore,
+                      ),
+                    ),
+                  ),
               ],
             );
           },
@@ -159,9 +184,70 @@ class _Candidate extends StatefulWidget {
   State<_Candidate> createState() => _CandidateState();
 }
 
-class _CandidateState extends State<_Candidate> {
-  late final Future<protocol.NostrEvent?> _preview =
-      widget.loadPreview?.call(widget.video.id) ?? Future.value();
+class _CandidateState extends State<_Candidate> with WidgetsBindingObserver {
+  Timer? _renewal;
+  protocol.NostrEvent? _video;
+  bool _foreground = true;
+  bool _loading = false;
+  int _generation = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    final lifecycle = WidgetsBinding.instance.lifecycleState;
+    _foreground = lifecycle == null || lifecycle == AppLifecycleState.resumed;
+    unawaited(_renew());
+    _renewal = Timer.periodic(
+      const Duration(seconds: 20),
+      (_) => unawaited(_renew()),
+    );
+  }
+
+  Future<void> _renew() async {
+    if (!_foreground || _loading || widget.loadPreview == null) return;
+    final generation = ++_generation;
+    setState(() {
+      _loading = true;
+      _video = null;
+    });
+    protocol.NostrEvent? video;
+    try {
+      video = await widget.loadPreview!(widget.video.id);
+    } on Object {
+      // A failed exact read must never fall back to owner-feed metadata.
+    }
+    if (!mounted || generation != _generation) return;
+    setState(() {
+      _loading = false;
+      _video =
+          _foreground &&
+              video?.id == widget.video.id &&
+              video?.pubkey == widget.video.pubkey
+          ? video
+          : null;
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _generation++;
+    setState(() {
+      _foreground = state == AppLifecycleState.resumed;
+      _video = null;
+      _loading = false;
+    });
+    if (_foreground) unawaited(_renew());
+  }
+
+  @override
+  void dispose() {
+    _generation++;
+    _renewal?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => Semantics(
     selected: widget.selected,
@@ -175,44 +261,25 @@ class _CandidateState extends State<_Candidate> {
               : context.vineColors.nav,
         ),
       ),
-      child: FutureBuilder<protocol.NostrEvent?>(
-        future: _preview,
-        builder: (context, snapshot) {
-          final video = snapshot.data;
-          final label = widget.video.title ?? widget.video.content;
-          return video != null &&
-                  video.id == widget.video.id &&
-                  video.pubkey == widget.video.pubkey
-              ? ChallengeVideoTile(
-                  video: video,
-                  allowed: widget.allowed ?? (_) => false,
-                  label: label.isEmpty ? context.l10n.challengePlay : label,
-                  aspectRatio: 3 / 4,
-                  onTap: widget.onTap,
-                )
-              : InkWell(
-                  onTap: widget.onTap,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const AspectRatio(
-                        aspectRatio: 3 / 4,
-                        child: ProfileTabThumbnail(thumbnailUrl: null),
+      child: _video != null && _foreground
+          ? ChallengeVideoTile(
+              video: _video,
+              allowed: widget.allowed ?? (_) => false,
+              aspectRatio: 3 / 4,
+              onTap: widget.onTap,
+            )
+          : AspectRatio(
+              aspectRatio: 3 / 4,
+              child: Center(
+                child: _loading
+                    ? const DivineCircularProgressIndicator()
+                    : DivineButton(
+                        label: context.l10n.commonRetry,
+                        type: DivineButtonType.quiet,
+                        onPressed: _foreground ? _renew : null,
                       ),
-                      Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Text(
-                          label.isEmpty ? context.l10n.challengePlay : label,
-                          style: VineTheme.bodyMediumFont(
-                            color: context.vineColors.primaryText,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-        },
-      ),
+              ),
+            ),
     ),
   );
 }

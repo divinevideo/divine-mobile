@@ -66,16 +66,21 @@ class ChallengePage extends ConsumerWidget {
               coordinate: link.coordinate,
               submissions: session.submissions,
               refresh: () => session.refreshForDisplay(link.coordinate),
-              loadCandidates: () async {
+              loadCandidates: () async => [],
+              loadCandidatePage: (offset) async {
                 await session.store.checkLive();
                 final feed = await videos.getAuthorFeed(
                   authorPubkey: session.store.owner,
                   skipCache: true,
+                  offset: offset,
                 );
                 await session.store.checkLive();
-                return feed.videos
-                    .where((v) => v.pubkey == session.store.owner)
-                    .toList();
+                return ChallengeCandidatePage(
+                  videos: feed.videos
+                      .where((v) => v.pubkey == session.store.owner)
+                      .toList(),
+                  nextOffset: feed.hasMore == false ? null : feed.nextOffset,
+                );
               },
               exactVideo: session.adapter.exactEvent,
               clientTags: () async => await Nip89ClientTag.wantsClientTag(1111)
