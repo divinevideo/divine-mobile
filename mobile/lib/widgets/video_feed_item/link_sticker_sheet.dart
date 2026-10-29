@@ -4,8 +4,10 @@
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/external_link_launcher.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// Opens a link the viewer chose in the sheet; replaced in tests.
 typedef LinkStickerLauncher = Future<void> Function(
@@ -104,11 +106,18 @@ class LinkStickerSheetTile extends StatelessWidget {
           color: context.vineColors.onSurfaceVariant,
           size: 20,
         ),
-        onTap: () async {
-          await launch(context, url);
-          if (context.mounted) Navigator.of(context).pop();
-        },
+        onTap: () => runDetached(
+          _launchAndClose(context),
+          'open a link sticker',
+          logName: 'LinkStickerSheetTile',
+          category: LogCategory.ui,
+        ),
       ),
     );
+  }
+
+  Future<void> _launchAndClose(BuildContext context) async {
+    await launch(context, url);
+    if (context.mounted) Navigator.of(context).pop();
   }
 }

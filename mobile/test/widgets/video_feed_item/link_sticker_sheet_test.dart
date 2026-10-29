@@ -16,7 +16,11 @@ void main() {
 
     setUp(() => launched = []);
 
-    Future<void> openSheet(WidgetTester tester, {String url = _url}) async {
+    Future<void> openSheet(
+      WidgetTester tester, {
+      String url = _url,
+      LinkStickerLauncher? launch,
+    }) async {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
@@ -28,7 +32,7 @@ void main() {
                   onPressed: () => showLinkStickerSheet(
                     context,
                     url,
-                    launch: (_, url) async => launched.add(url),
+                    launch: launch ?? ((_, url) async => launched.add(url)),
                   ),
                   child: const Text('open'),
                 ),
@@ -75,6 +79,21 @@ void main() {
     });
 
     group('interactions', () {
+      testWidgets('handles a rejected launch and keeps the sheet open', (
+        tester,
+      ) async {
+        await openSheet(
+          tester,
+          launch: (_, _) async => throw Exception('launch failed'),
+        );
+
+        await tester.tap(find.byType(LinkStickerSheetTile));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(LinkStickerSheetTile), findsOneWidget);
+      });
+
       testWidgets('opens the link and closes on a tap', (tester) async {
         await openSheet(tester);
 
