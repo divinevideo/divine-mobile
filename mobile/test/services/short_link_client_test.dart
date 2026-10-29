@@ -1,4 +1,4 @@
-// ABOUTME: Verifies bounded authenticated shortening, cache ownership and canonical fallback.
+// ABOUTME: Verifies anonymous shortening, bounded requests and canonical fallback.
 import 'dart:async';
 import 'dart:convert';
 
@@ -18,85 +18,60 @@ void main() {
         'url': url,
       });
 
-  group('shorten', () {
-    test(
-      'disabled and unsupported targets do not sign or make requests',
-      () async {
-        var signs = 0;
-        var requests = 0;
-        final httpClient = MockClient((_) async {
-          requests++;
-          return http.Response('{}', 200);
-        });
-        final client = ShortLinkClient(
-          client: httpClient,
-          authorize: (_, _) async {
-            signs++;
-            return 'Nostr synthetic';
-          },
-        );
-        expect(await client.shorten(target), target);
-        final enabled = ShortLinkClient(
-          client: httpClient,
-          enabled: true,
-          authorize: (_, _) async {
-            signs++;
-            return 'Nostr synthetic';
-          },
-        );
-        for (final url in [
-          'https://evil.example/video/a',
-          'https://divine.video/video/a?q=1',
-          'https://divine.video/l/Abc12345',
-          'https://divine.video/profile/short',
-        ]) {
-          expect(await enabled.shorten(url), url);
-        }
-        expect(signs, 0);
-        expect(requests, 0);
-        client.close();
-        enabled.close();
-        httpClient.close();
-      },
-    );
+  test('disabled and unsupported destinations make no requests', () async {
+    var requests = 0;
+    final transport = MockClient((_) async {
+      requests++;
+      return http.Response('{}', 200);
+    });
+    final disabled = ShortLinkClient(client: transport);
+    final enabled = ShortLinkClient(client: transport, enabled: true);
+    expect(await disabled.shorten(target), target);
+    for (final url in [
+      'https://evil.example/video/a',
+      'https://divine.video/video/a?q=1',
+      'https://divine.video/l/Abc12345',
+      'https://divine.video/profile/short',
+    ]) {
+      expect(await enabled.shorten(url), url);
+    }
+    expect(requests, 0);
+    disabled.close();
+    enabled.close();
+    transport.close();
+  });
 
-    test(
-      'binds exact body, deduplicates and caches only validated successes',
-      () async {
-        var requests = 0;
-        final httpClient = MockClient((request) async {
-          requests++;
-          expect(
-            request.url.toString(),
-            'https://gateway.divine.video/api/links',
-          );
-          expect(request.method, 'POST');
-          expect(request.followRedirects, isFalse);
-          expect(request.headers['Authorization'], 'Nostr synthetic');
-          expect(request.body, jsonEncode({'url': target}));
-          return http.Response(mapping(), 201);
-        });
-        final client = ShortLinkClient(
-          client: httpClient,
-          enabled: true,
-          authorize: (endpoint, body) async {
-            expect(endpoint, 'https://gateway.divine.video/api/links');
-            expect(body, jsonEncode({'url': target}));
-            return 'Nostr synthetic';
-          },
-        );
+  test(
+    'creates anonymously, deduplicates and caches validated successes',
+    () async {
+      var requests = 0;
+      final transport = MockClient((request) async {
+        requests++;
         expect(
-          await Future.wait([client.shorten(target), client.shorten(target)]),
-          [short, short],
+          request.url.toString(),
+          'https://gateway.divine.video/api/links',
         );
-        expect(await client.shorten(target), short);
-        expect(requests, 1);
-        client.close();
-        httpClient.close();
-      },
-    );
+        expect(request.method, 'POST');
+        expect(request.followRedirects, isFalse);
+        expect(request.headers.containsKey('Authorization'), isFalse);
+        expect(request.body, jsonEncode({'url': target}));
+        return http.Response(mapping(), 201);
+      });
+      final client = ShortLinkClient(client: transport, enabled: true);
+      expect(
+        await Future.wait([client.shorten(target), client.shorten(target)]),
+        [short, short],
+      );
+      expect(await client.shorten(target), short);
+      expect(requests, 1);
+      client.close();
+      transport.close();
+    },
+  );
 
-    test('quota, unavailable, mismatched and oversized responses preserve the full URL and permit retry', () async {
+  test(
+    'failed and invalid responses preserve the full URL and permit retry',
+    () async {
       for (final bad in [
         http.Response('{}', 401),
         http.Response('{}', 429),
@@ -106,69 +81,49 @@ void main() {
         http.Response(' ' * 4097, 200),
         http.Response('{', 200),
       ]) {
-        var calls = 0;
-        final httpClient = MockClient(
-          (_) async => ++calls == 1 ? bad : http.Response(mapping(), 200),
+        var requests = 0;
+        final transport = MockClient(
+          (_) async => ++requests == 1 ? bad : http.Response(mapping(), 200),
         );
-        final client = ShortLinkClient(
-          client: httpClient,
-          enabled: true,
-          authorize: (_, _) async => 'Nostr synthetic',
-        );
+        final client = ShortLinkClient(client: transport, enabled: true);
         expect(await client.shorten(target), target);
         expect(await client.shorten(target), short);
         client.close();
-        httpClient.close();
+        transport.close();
       }
-    });
+    },
+  );
 
-    test('slow signing exhausts the total budget and cannot send late', () {
+  test(
+    'slow HTTP work exhausts the budget and late responses are not cached',
+    () {
       fakeAsync((async) {
-        final authorization = Completer<String?>();
-        var requests = 0;
-        final httpClient = MockClient((_) async {
-          requests++;
-          return http.Response(mapping(), 200);
-        });
-        final client = ShortLinkClient(
-          client: httpClient,
-          enabled: true,
-          authorize: (_, _) => authorization.future,
-        );
+        final response = Completer<http.Response>();
+        final transport = MockClient((_) => response.future);
+        final client = ShortLinkClient(client: transport, enabled: true);
         String? result;
         unawaited(client.shorten(target).then((value) => result = value));
+        async.flushMicrotasks();
         async.elapse(const Duration(milliseconds: 2001));
         expect(result, target);
-        authorization.complete('Nostr synthetic');
+        response.complete(http.Response(mapping(), 200));
         async.flushMicrotasks();
-        expect(requests, 0);
+        expect(result, target);
         client.close();
-        httpClient.close();
+        transport.close();
       });
-    });
+    },
+  );
 
-    test(
-      'closing during signing drops the request and cached results',
-      () async {
-        final authorization = Completer<String?>();
-        var requests = 0;
-        final httpClient = MockClient((_) async {
-          requests++;
-          return http.Response(mapping(), 200);
-        });
-        final client = ShortLinkClient(
-          client: httpClient,
-          enabled: true,
-          authorize: (_, _) => authorization.future,
-        );
-        final result = client.shorten(target);
-        client.close();
-        authorization.complete('Nostr synthetic');
-        expect(await result, target);
-        expect(await client.shorten(target), target);
-        expect(requests, 0);
-        httpClient.close();
-      },
-    );
+  test('closing drops pending responses and cached results', () async {
+    final response = Completer<http.Response>();
+    final transport = MockClient((_) => response.future);
+    final client = ShortLinkClient(client: transport, enabled: true);
+    final pending = client.shorten(target);
+    client.close();
+    response.complete(http.Response(mapping(), 200));
+    expect(await pending, target);
+    expect(await client.shorten(target), target);
+    transport.close();
   });
 }

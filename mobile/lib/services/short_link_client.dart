@@ -1,4 +1,4 @@
-// ABOUTME: Creates external short links with bounded NIP-98 signing and canonical fallback.
+// ABOUTME: Creates external short links with bounded anonymous HTTP requests and canonical fallback.
 import 'dart:async';
 import 'dart:convert';
 
@@ -8,14 +8,11 @@ import 'package:openvine/utils/short_link_url.dart';
 class ShortLinkClient {
   ShortLinkClient({
     required http.Client client,
-    required Future<String?> Function(String endpoint, String body) authorize,
     this.enabled = false,
-  }) : _client = client,
-       _authorize = authorize;
+  }) : _client = client;
 
   static const endpoint = 'https://gateway.divine.video/api/links';
   final http.Client _client;
-  final Future<String?> Function(String, String) _authorize;
   final bool enabled;
   final _cache = <String, String>{};
   final _pending = <String, Future<String>>{};
@@ -69,8 +66,7 @@ class ShortLinkClient {
 
   Future<String> _create(String target, Completer<void> abort) async {
     final body = jsonEncode({'url': target});
-    final authorization = await _authorize(endpoint, body);
-    if (authorization == null || _closed || abort.isCompleted) return target;
+    if (_closed || abort.isCompleted) return target;
     final request =
         http.AbortableRequest(
             'POST',
@@ -79,7 +75,6 @@ class ShortLinkClient {
           )
           ..followRedirects = false
           ..headers['Content-Type'] = 'application/json'
-          ..headers['Authorization'] = authorization
           ..body = body;
     final response = await _client.send(request);
     final bytes = <int>[];
