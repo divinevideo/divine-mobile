@@ -7,11 +7,44 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/clip_manager_state.dart';
+import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/editor_filter_category.dart';
+import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/widgets/video_editor/filter_editor/video_editor_filter_bottom_bar.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
+import 'package:openvine/widgets/video_editor/video_editor_category_picker.dart';
+import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
+
+class _MockProImageEditorState extends Mock implements ProImageEditorState {
+  @override
+  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) =>
+      '_MockProImageEditorState';
+}
+
+class _MockFilterEditorState extends Mock implements FilterEditorState {
+  @override
+  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) =>
+      '_MockFilterEditorState';
+}
+
+class _MockFilterEditorKey extends Mock
+    implements GlobalKey<FilterEditorState> {}
+
+class _MockStateManager extends Mock implements StateManager {}
+
+class _Clips extends ClipManagerNotifier {
+  _Clips(this._clips);
+
+  final List<DivineVideoClip> _clips;
+
+  @override
+  ClipManagerState build() => ClipManagerState(clips: _clips);
+}
 
 void main() {
   final l10n = lookupAppLocalizations(const Locale('en'));
@@ -19,15 +52,20 @@ void main() {
   group(VideoEditorFilterBottomBar, () {
     late VideoEditorFilterBloc bloc;
 
-    /// [navigationBarHeight] is the system navigation bar the bar reaches
-    /// under.
+    /// [navigationBarHeight] is the height of the system navigation bar the
+    /// bar reaches under.
     ///
     /// The bloc is created here, inside the test's zone: one created in
     /// setUp emits outside it, and the bar never hears of a pick.
-    Widget buildWidget({double navigationBarHeight = 0}) {
+    Widget buildWidget({
+      double navigationBarHeight = 0,
+      ProImageEditorState? editor,
+      List<DivineVideoClip> clips = const [],
+    }) {
       bloc = VideoEditorFilterBloc();
       addTearDown(bloc.close);
       return ProviderScope(
+        overrides: [clipManagerProvider.overrideWith(() => _Clips(clips))],
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -39,6 +77,7 @@ void main() {
                 ),
                 child: VideoEditorScope(
                   editorKey: GlobalKey(),
+                  editorOverride: editor,
                   removeAreaKey: GlobalKey(),
                   onOpenCamera: () {},
                   onAddStickers: () {},
@@ -237,6 +276,76 @@ void main() {
           tester.getSemantics(find.bySemanticsLabel(warm[0].name)),
           isSemantics(isSelected: false),
         );
+      });
+
+      testWidgets('tapping a filter shows it in the editor', (tester) async {
+        usePhoneSize(tester);
+        final filterEditor = _MockFilterEditorState();
+        final filterEditorKey = _MockFilterEditorKey();
+        when(() => filterEditorKey.currentState).thenReturn(filterEditor);
+        final editor = _MockProImageEditorState();
+        when(() => editor.filterEditor).thenReturn(filterEditorKey);
+        when(() => editor.stateManager).thenReturn(_MockStateManager());
+        final natural = EditorFilterCategory.natural.filters;
+        await tester.pumpWidget(buildWidget(editor: editor));
+
+        await tester.tap(tile(natural[1].name));
+        await tester.pump();
+
+        verify(() => filterEditor.setFilter(natural[1])).called(1);
+      });
+    });
+
+    group('previews', () {
+      testWidgets('show nothing until the first clip has a thumbnail', (
+        tester,
+      ) async {
+        usePhoneSize(tester);
+        await tester.pumpWidget(buildWidget());
+
+        expect(find.byType(FilteredWidget), findsNothing);
+      });
+
+      testWidgets("show each tile's filter over the applied tune and blur, "
+          "on the first clip's thumbnail", (tester) async {
+        usePhoneSize(tester);
+        final tune = [
+          TuneAdjustmentMatrix(
+            id: 'brightness',
+            value: 0.2,
+            matrix: ColorFilterAddons.brightness(0.2),
+          ),
+        ];
+        final stateManager = _MockStateManager();
+        when(() => stateManager.activeTuneAdjustments).thenReturn(tune);
+        when(() => stateManager.activeBlur).thenReturn(3);
+        final editor = _MockProImageEditorState();
+        when(() => editor.stateManager).thenReturn(stateManager);
+        final clip = DivineVideoClip(
+          id: 'clip-1',
+          video: EditorVideo.file('/documents/clip-1.mp4'),
+          duration: const Duration(seconds: 2),
+          recordedAt: DateTime(2026),
+          targetAspectRatio: .vertical,
+          originalAspectRatio: 9 / 16,
+          thumbnailPath: '/documents/clip-1.jpg',
+        );
+        final filter = EditorFilterCategory.natural.filters[1];
+        await tester.pumpWidget(buildWidget(editor: editor, clips: [clip]));
+
+        final preview = tester.widget<FilteredWidget>(
+          find.descendant(
+            of: find.ancestor(
+              of: tile(filter.name),
+              matching: find.byType(VideoEditorCategoryPickerTile),
+            ),
+            matching: find.byType(FilteredWidget),
+          ),
+        );
+        expect(preview.filters, same(filter.filters));
+        expect(preview.tuneAdjustments, same(tune));
+        expect(preview.blurFactor, 3);
+        expect(preview.image?.file?.path, clip.thumbnailPath);
       });
     });
   });
