@@ -126,6 +126,36 @@ void main() {
       },
     );
 
+    testWidgets('previews a message whose text is not well-formed UTF-16', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        subject(
+          activity: {
+            'general': RoomActivitySummary(
+              channelId: 'general',
+              latestMessage: ChatMessage(
+                id: 'c' * 64,
+                channelId: 'general',
+                author: author,
+                body: 'before${String.fromCharCode(0xD83D)}after',
+                createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+              ),
+              recentMessageCount: 1,
+              recentAuthors: const [author],
+              loading: false,
+            ),
+          },
+        ),
+      );
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text(l10n.messagesRoomLatestMessage('River', 'before\uFFFDafter')),
+        findsOneWidget,
+      );
+    });
+
     testWidgets(
       'chooses badge grammar from unread count while preserving lower bounds',
       (tester) async {

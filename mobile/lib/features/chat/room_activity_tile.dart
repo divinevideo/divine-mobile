@@ -10,8 +10,10 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/l10n/localized_time_formatter.dart';
 import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/screens/inbox/dm_display_text.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_identity.dart';
 import 'package:openvine/screens/inbox/widgets/dm_peer_name_builder.dart';
+import 'package:openvine/utils/string_utils.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 
 /// Uses the same full-row target as [DivineListTile], with a custom layout
@@ -201,20 +203,27 @@ class _LatestRoomMessage extends StatelessWidget {
   final ChatMessage message;
 
   @override
-  Widget build(BuildContext context) => DmPeerNameBuilder(
-    pubkey: message.author,
-    builder: (context, name) => Text(
-      name.isResolving
-          ? message.effectiveBody
-          : context.l10n.messagesRoomLatestMessage(
-              name.name,
-              message.effectiveBody,
-            ),
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-      style: VineTheme.bodyMediumFont(color: context.vineColors.primaryText),
-    ),
-  );
+  Widget build(BuildContext context) {
+    // Sender-controlled text: bound it, then strip unpaired surrogates that
+    // would crash text layout, as the DM inbox preview does.
+    final body = sliceDmDisplayText(
+      message.effectiveBody,
+      dmPreviewDisplayCodeUnits,
+    ).text;
+    return DmPeerNameBuilder(
+      pubkey: message.author,
+      builder: (context, name) => Text(
+        StringUtils.sanitizeUtf16(
+          name.isResolving
+              ? body
+              : context.l10n.messagesRoomLatestMessage(name.name, body),
+        ),
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: VineTheme.bodyMediumFont(color: context.vineColors.primaryText),
+      ),
+    );
+  }
 }
 
 class _RecentRoomActivity extends StatelessWidget {
