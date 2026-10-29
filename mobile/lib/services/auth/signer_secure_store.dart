@@ -474,8 +474,24 @@ class SignerSecureStore {
         ensureCurrent?.call();
         await clearAmber();
         ensureCurrent?.call();
-        await KeycastSession.clear(storage);
-        ensureCurrent?.call();
+        // Keep the session's ownership evidence until its standalone
+        // credentials are gone; per-account archives remain restorable.
+        for (final key in const [
+          _kKeycastRefreshTokenKey,
+          _kKeycastAuthHandleKey,
+          'keycast_session',
+        ]) {
+          ensureCurrent?.call();
+          await storage.delete(key: key);
+          ensureCurrent?.call();
+          final retained = await storage.read(key: key);
+          ensureCurrent?.call();
+          if (retained != null) {
+            throw const AccountStorageException(
+              'Restored local account retained OAuth credentials',
+            );
+          }
+        }
         Log.debug(
           'restoreActiveKeys: local key-based auth — cleared stale signer keys',
           name: 'SignerSecureStore',
