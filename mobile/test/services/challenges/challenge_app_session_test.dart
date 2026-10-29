@@ -254,8 +254,9 @@ void main() {
       'recording and exact successful-video review survive SQLite reopen',
       () async {
         SharedPreferences.setMockInitialValues({});
-        // The tag's enabled state is a process-wide cache that this test turns
-        // off; later suites in the merged run must not inherit it.
+        // This test turns the client tag off, and later suites in the merged
+        // run would inherit it. resetForTest() clears only the cache, so the
+        // persisted preference is wiped too.
         addTearDown(() {
           SharedPreferences.setMockInitialValues({});
           Nip89ClientTag.resetForTest();
