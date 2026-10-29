@@ -53,14 +53,14 @@ void main() {
       // Default state - no filter selected
       when(
         () => mockBloc.state,
-      ).thenReturn(VideoEditorFilterState(filters: presetFiltersList));
+      ).thenReturn(const VideoEditorFilterState());
       when(() => mockBloc.stream).thenAnswer((_) => const Stream.empty());
 
       when(() => mockMainBloc.state).thenReturn(const VideoEditorMainState());
       when(() => mockMainBloc.stream).thenAnswer((_) => const Stream.empty());
     });
 
-    Widget buildWidget() {
+    Widget buildWidget({double height = 600}) {
       return MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -87,10 +87,10 @@ void main() {
                 BlocProvider<VideoEditorFilterBloc>.value(value: mockBloc),
                 BlocProvider<VideoEditorMainBloc>.value(value: mockMainBloc),
               ],
-              child: const SizedBox(
+              child: SizedBox(
                 width: 400,
-                height: 600,
-                child: VideoEditorFilterOverlayControls(),
+                height: height,
+                child: const VideoEditorFilterOverlayControls(),
               ),
             ),
           ),
@@ -109,8 +109,7 @@ void main() {
       testWidgets('is visible when a filter is selected', (tester) async {
         when(() => mockBloc.state).thenReturn(
           VideoEditorFilterState(
-            filters: presetFiltersList,
-            selectedFilter: presetFiltersList[1], // Non-None filter
+            selectedFilter: presetFiltersList[1],
             opacity: 0.8,
           ),
         );
@@ -125,7 +124,6 @@ void main() {
         const testOpacity = 0.65;
         when(() => mockBloc.state).thenReturn(
           VideoEditorFilterState(
-            filters: presetFiltersList,
             selectedFilter: presetFiltersList[1],
             opacity: testOpacity,
           ),
@@ -140,11 +138,28 @@ void main() {
         expect(slider.value, testOpacity);
       });
 
+      testWidgets('stays below the toolbar over a short preview', (
+        tester,
+      ) async {
+        when(() => mockBloc.state).thenReturn(
+          VideoEditorFilterState(selectedFilter: presetFiltersList[1]),
+        );
+        // The preview left above the filter picker on a phone.
+        await tester.pumpWidget(buildWidget(height: 380));
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.getRect(find.byType(VideoEditorVerticalSlider)).top,
+          greaterThanOrEqualTo(
+            tester.getRect(find.bySemanticsLabel(doneLabel)).bottom,
+          ),
+        );
+      });
+
       testWidgets('shows slider during animation', (tester) async {
         // Start with a filter selected
         when(() => mockBloc.state).thenReturn(
           VideoEditorFilterState(
-            filters: presetFiltersList,
             selectedFilter: presetFiltersList[1],
           ),
         );

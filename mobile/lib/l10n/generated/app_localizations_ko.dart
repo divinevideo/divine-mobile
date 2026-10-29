@@ -8510,6 +8510,27 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectCategoryParticles => '파티클';
 
   @override
+  String get videoEditorFilterCategoryNatural => '내추럴';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => '비비드';
+
+  @override
+  String get videoEditorFilterCategoryWarm => '웜';
+
+  @override
+  String get videoEditorFilterCategoryCool => '쿨';
+
+  @override
+  String get videoEditorFilterCategoryVintage => '빈티지';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => '흑백';
+
+  @override
+  String get videoEditorFilterCategoryTints => '틴트';
+
+  @override
   String get videoEditorDropsSettingsTitle => '물방울 조정';
 
   @override

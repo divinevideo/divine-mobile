@@ -8893,6 +8893,27 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectCategoryParticles => 'Hạt';
 
   @override
+  String get videoEditorFilterCategoryNatural => 'Tự nhiên';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'Rực rỡ';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'Ấm';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'Lạnh';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'Cổ điển';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'Đen trắng';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'Tông màu';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Điều chỉnh giọt nước';
 
   @override

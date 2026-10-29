@@ -8995,6 +8995,27 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorEffectCategoryParticles => 'Particles';
 
   @override
+  String get videoEditorFilterCategoryNatural => 'Natural';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'Matingkad';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'Mainit';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'Malamig';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'Vintage';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'Itim at puti';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'Mga kulay';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Isaayos ang drops';
 
   @override

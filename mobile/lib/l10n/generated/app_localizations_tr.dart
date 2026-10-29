@@ -8851,6 +8851,27 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectCategoryParticles => 'Parçacıklar';
 
   @override
+  String get videoEditorFilterCategoryNatural => 'Doğal';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'Canlı';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'Sıcak';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'Soğuk';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'Vintage';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'Siyah beyaz';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'Tonlar';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Damlaları ayarla';
 
   @override

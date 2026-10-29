@@ -8492,6 +8492,27 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectCategoryParticles => 'パーティクル';
 
   @override
+  String get videoEditorFilterCategoryNatural => 'ナチュラル';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'ビビッド';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'ウォーム';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'クール';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'ヴィンテージ';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'モノクロ';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'ティント';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'しずくを調整';
 
   @override

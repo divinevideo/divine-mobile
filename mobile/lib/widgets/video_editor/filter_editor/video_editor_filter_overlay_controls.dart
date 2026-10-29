@@ -14,9 +14,9 @@ import 'package:openvine/widgets/video_editor/video_editor_vertical_slider.dart'
 
 /// Overlay controls for the filter editor.
 ///
-/// Shows a vertical opacity slider on the right side of the video preview
-/// when a filter is selected (not "None"). The slider allows adjusting the
-/// filter intensity from 0% to 100%.
+/// Shows a vertical opacity slider on the right side of the video preview,
+/// below the toolbar, when a filter is selected. The slider allows adjusting
+/// the filter intensity from 0% to 100%.
 class VideoEditorFilterOverlayControls extends StatelessWidget {
   const VideoEditorFilterOverlayControls({super.key});
 
@@ -37,35 +37,47 @@ class VideoEditorFilterOverlayControls extends StatelessWidget {
             ),
           ),
         ),
-        Align(
-          alignment: .centerRight,
-          child:
-              BlocSelector<VideoEditorFilterBloc, VideoEditorFilterState, bool>(
-                selector: (state) => state.hasFilter,
-                builder: (context, hasFilter) {
-                  return AnimatedSwitcher(
-                    transitionBuilder: (child, animation) {
-                      return FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: Tween(
-                            begin: const Offset(1, 0),
-                            end: Offset.zero,
-                          ).animate(animation),
-                          child: child,
-                        ),
-                      );
-                    },
-                    switchInCurve: Curves.easeInOut,
-                    duration: const Duration(milliseconds: 220),
-                    child: hasFilter
-                        ? const _OpacitySlider()
-                        : const SizedBox.shrink(),
-                  );
-                },
+        Column(
+          children: [
+            const _TopBarContent(),
+            // The slider centres under the toolbar: the bar under the
+            // preview is tall, so it may not reach up behind it.
+            Expanded(
+              child: Align(
+                alignment: .centerRight,
+                child:
+                    BlocSelector<
+                      VideoEditorFilterBloc,
+                      VideoEditorFilterState,
+                      bool
+                    >(
+                      selector: (state) => state.hasFilter,
+                      builder: (context, hasFilter) {
+                        return AnimatedSwitcher(
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: Tween(
+                                  begin: const Offset(1, 0),
+                                  end: Offset.zero,
+                                ).animate(animation),
+                                child: child,
+                              ),
+                            );
+                          },
+                          switchInCurve: Curves.easeInOut,
+                          duration: const Duration(milliseconds: 220),
+                          child: hasFilter
+                              ? const _OpacitySlider()
+                              : const SizedBox.shrink(),
+                        );
+                      },
+                    ),
               ),
+            ),
+          ],
         ),
-        const _TopBarContent(),
       ],
     );
   }

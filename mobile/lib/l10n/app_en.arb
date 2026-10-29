@@ -6285,6 +6285,34 @@
   "@videoEditorEffectCategoryParticles": {
     "description": "Name of a group in the video effects picker: effects where snow, confetti, hearts or sparkles fall or float over the picture."
   },
+  "videoEditorFilterCategoryNatural": "Natural",
+  "@videoEditorFilterCategoryNatural": {
+    "description": "Name of a group in the colour filter picker of the video editor: filters that lift the picture subtly and keep its colours true to life."
+  },
+  "videoEditorFilterCategoryVibrant": "Vibrant",
+  "@videoEditorFilterCategoryVibrant": {
+    "description": "Name of a group in the colour filter picker of the video editor: filters that add colour and contrast."
+  },
+  "videoEditorFilterCategoryWarm": "Warm",
+  "@videoEditorFilterCategoryWarm": {
+    "description": "Name of a group in the colour filter picker of the video editor: filters that give the picture a golden, orange or yellow cast. Warm as in colour temperature."
+  },
+  "videoEditorFilterCategoryCool": "Cool",
+  "@videoEditorFilterCategoryCool": {
+    "description": "Name of a group in the colour filter picker of the video editor: filters that give the picture a blue or green cast. Cool as in colour temperature, not as in great."
+  },
+  "videoEditorFilterCategoryVintage": "Vintage",
+  "@videoEditorFilterCategoryVintage": {
+    "description": "Name of a group in the colour filter picker of the video editor: filters that make the picture look faded, washed out or sepia, like an old photo."
+  },
+  "videoEditorFilterCategoryBlackAndWhite": "B&W",
+  "@videoEditorFilterCategoryBlackAndWhite": {
+    "description": "Name of a group in the colour filter picker of the video editor: black-and-white filters. Short, as it labels a tab."
+  },
+  "videoEditorFilterCategoryTints": "Tints",
+  "@videoEditorFilterCategoryTints": {
+    "description": "Name of a group in the colour filter picker of the video editor: filters that lay one strong colour, such as red or blue, over the whole picture."
+  },
   "videoEditorDropsSettingsTitle": "Adjust drops",
   "@videoEditorDropsSettingsTitle": {
     "description": "Header of the expandable card in the video effects editor that holds the settings of the Drops effect."

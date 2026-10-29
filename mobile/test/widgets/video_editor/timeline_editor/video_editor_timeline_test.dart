@@ -132,7 +132,7 @@ void main() {
       ).thenAnswer((_) => const Stream<TimelineOverlayState>.empty());
       when(
         () => mockFilterBloc.state,
-      ).thenReturn(const VideoEditorFilterState(filters: []));
+      ).thenReturn(const VideoEditorFilterState());
       when(
         () => mockFilterBloc.stream,
       ).thenAnswer((_) => const Stream<VideoEditorFilterState>.empty());
