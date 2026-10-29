@@ -181,16 +181,14 @@ strong.
 Over a see-through look (`dark`, `glass`, `neon`, `plain`, `outline`) the
 frames show through the copy, so its text has to come out the same on the
 creator's and the viewer's phone. Divine draws sticker text in its bundled
-font, Bricolage Grotesque. The link and note marks are drawn from vector paths,
-not emoji. Sticker rendering downloads no additional font and Done does not
-wait for a font download.
-
-All looks are redrawn only for text entirely in the bundled font. Emoji and
-other scripts keep their original appearance in the frames, with their
-button. Even a solid background cannot compensate for different fallback
-glyph advances: forcing a new copy into the captured box would stretch its
-text. Keeping those glyphs in the frames preserves the creator's proportions
-without depending on the viewer's platform or network.
+font, Bricolage Grotesque, and emoji in Noto Color Emoji, which it downloads
+from Google Fonts (`fonts.gstatic.com`, about 24 MB, kept on the device) the
+first time a sticker needs it. The link and note marks are drawn from vector
+paths, not emoji. A viewer's copy of a see-through look waits until Noto Color
+Emoji has loaded when its text has an emoji, and is never drawn for text in a
+script the bundled font lacks; until then the sticker shows as it is in the
+frames, with its button. The solid looks (`light`, `brand`, `highlight`) cover
+the frames beneath and are always drawn again.
 
 Some stickers are published without `style`, since a copy would not match the
 frames:
@@ -199,8 +197,9 @@ frames:
   equalizer), as a copy could not keep time with the frames beneath;
 - a sticker drawn see-through, with a blend mode or through a mask, as a copy
   would come back solid;
-- any look whose text has a character the bundled font lacks,
-  including emoji, as a viewer's phone could draw it differently;
+- a see-through look whose text has a character the bundled font lacks,
+  unless every such character is an emoji and the creator's app drew it in
+  Noto Color Emoji, as a viewer's phone could draw it differently;
 - a sticker with another layer over it at the same time, as a copy would hide
   that layer.
 

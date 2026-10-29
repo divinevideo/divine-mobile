@@ -10,10 +10,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/video_editor/audio_visualizer/video_editor_audio_visualizer_cubit.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/sound_credit_paint.dart';
+import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/sticker_pill_palette.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_marks.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 /// A social sticker as it shows on the video.
 ///
@@ -72,19 +75,13 @@ class SocialStickerView extends StatelessWidget {
                   ink: palette.ink,
                   shadows: palette.shadows,
                 ),
-                _Line(
-                  text: textOf(data),
-                  style: palette.textStyle(),
-                ),
+                _Line(text: textOf(data), style: palette.textStyle()),
               ],
             ),
           ),
           _ => StickerPill(
             palette: palette,
-            child: _Line(
-              text: textOf(data),
-              style: palette.textStyle(),
-            ),
+            child: _Line(text: textOf(data), style: palette.textStyle()),
           ),
         },
       ),
@@ -103,24 +100,46 @@ const double _markSize = 48;
 ///
 /// Unscaled by the system font size, like the sound credit's painted text:
 /// the sticker is part of the video, sized by the creator's pinch, and the
-/// player's copy of it has to match the frames at any font size. Fallback
-/// glyphs stay in the video rather than being redrawn by a viewer.
-class _Line extends StatelessWidget {
-  const _Line({
-    required this.text,
-    required this.style,
-  });
+/// player's copy of it has to match the frames at any font size. Its emoji
+/// are drawn in the sticker emoji font, which it loads when it has any.
+class _Line extends StatefulWidget {
+  const _Line({required this.text, required this.style});
 
   final String text;
   final TextStyle style;
+
+  @override
+  State<_Line> createState() => _LineState();
+}
+
+class _LineState extends State<_Line> {
+  @override
+  void initState() {
+    super.initState();
+    _loadEmojiFont();
+  }
+
+  @override
+  void didUpdateWidget(_Line oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text) _loadEmojiFont();
+  }
+
+  // The text is laid out again on its own once the font is in.
+  void _loadEmojiFont() => runDetached(
+    loadStickerEmojiFontFor([widget.text]),
+    'load the sticker emoji font',
+    logName: 'SocialStickerView',
+    category: LogCategory.video,
+  );
 
   @override
   Widget build(BuildContext context) {
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: _maxTextWidth),
       child: Text(
-        text,
-        style: style,
+        widget.text,
+        style: withStickerEmojiFont(widget.style),
         maxLines: 1,
         overflow: .ellipsis,
         textScaler: TextScaler.noScaling,
@@ -153,6 +172,31 @@ class _SoundCreditState extends State<_SoundCredit> {
   /// The energies [_levels] were worked out from.
   Float32List? _levelsFrom;
 
+  /// Whether the sticker emoji font was loaded at the last paint; the painted
+  /// text does not lay itself out again when it comes in.
+  bool _emojiFontLoaded = stickerEmojiFontLoaded;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEmojiFont();
+  }
+
+  void _loadEmojiFont() {
+    if (_emojiFontLoaded) return;
+    runDetached(
+      loadStickerEmojiFontFor([SocialStickerView.textOf(widget.data)]).then((
+        _,
+      ) {
+        if (!mounted || stickerEmojiFontLoaded == _emojiFontLoaded) return;
+        setState(() => _emojiFontLoaded = stickerEmojiFontLoaded);
+      }),
+      'load the sticker emoji font',
+      logName: 'SocialStickerView',
+      category: LogCategory.video,
+    );
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -170,6 +214,7 @@ class _SoundCreditState extends State<_SoundCredit> {
     if (oldWidget.data.listensToSound != widget.data.listensToSound) {
       _onState(_cubit?.state);
     }
+    if (oldWidget.data != widget.data) _loadEmojiFont();
   }
 
   @override
@@ -215,6 +260,7 @@ class _SoundCreditState extends State<_SoundCredit> {
         painter: _SoundCreditPainter(
           data: data,
           overFrames: widget.overFrames,
+          emojiFontLoaded: _emojiFontLoaded,
           playTime: playTime,
           timelineMap: _timelineMap,
           levels: _levels,
@@ -230,6 +276,7 @@ class _SoundCreditPainter extends CustomPainter {
   _SoundCreditPainter({
     required this.data,
     required this.overFrames,
+    required this.emojiFontLoaded,
     required this.playTime,
     required this.timelineMap,
     required this.levels,
@@ -237,6 +284,7 @@ class _SoundCreditPainter extends CustomPainter {
 
   final SocialStickerData data;
   final bool overFrames;
+  final bool emojiFontLoaded;
   final ValueListenable<Duration>? playTime;
   final TransitionTimelineMap? timelineMap;
   final Float32List? levels;
@@ -271,6 +319,7 @@ class _SoundCreditPainter extends CustomPainter {
   bool shouldRepaint(_SoundCreditPainter oldDelegate) =>
       oldDelegate.data != data ||
       oldDelegate.overFrames != overFrames ||
+      oldDelegate.emojiFontLoaded != emojiFontLoaded ||
       !identical(oldDelegate.playTime, playTime) ||
       !identical(oldDelegate.timelineMap, timelineMap) ||
       !identical(oldDelegate.levels, levels);

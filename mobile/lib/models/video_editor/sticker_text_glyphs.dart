@@ -1,16 +1,24 @@
 // ABOUTME: Whether a sticker's text looks the same on every phone: drawn in the
-// ABOUTME: bundled sticker font, or requiring the phone's fallback glyphs.
+// ABOUTME: bundled sticker font, and its emoji in the bundled emoji font.
 
 /// What a sticker's text needs to look the same on every phone.
 enum StickerTextGlyphs {
   /// Only characters the sticker font draws, which the app ships.
   font,
 
-  /// Emoji too, which use the phone's own emoji font.
+  /// Emoji too, which look the same only in the sticker emoji font.
   emoji,
 
-  /// Other fallback characters, which each phone draws its own way.
+  /// A character neither font has, which each phone draws its own way.
   platform;
+
+  /// Whether text needing these glyphs looks the same on every phone, given
+  /// whether the sticker emoji font [emojiFontLoaded].
+  bool isDrawnAlike({required bool emojiFontLoaded}) => switch (this) {
+    font => true,
+    emoji => emojiFontLoaded,
+    platform => false,
+  };
 
   /// The glyphs [text] needs. Line breaks and other control characters draw
   /// nothing and count for nothing.

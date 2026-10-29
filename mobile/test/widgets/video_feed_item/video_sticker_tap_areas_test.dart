@@ -12,6 +12,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 import 'package:openvine/widgets/video_feed_item/link_sticker_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/player_gesture_surface.dart';
@@ -377,8 +378,11 @@ void main() {
       });
 
       testWidgets(
-        'keeps emoji in the frames while retaining their button',
+        'draws a see-through look with an emoji once its font is in',
         (tester) async {
+          final font = Completer<bool>();
+          debugLoadStickerEmojiFont = () => font.future;
+          addTearDown(resetStickerEmojiFontForTesting);
           const party = VideoStickerRegion(
             kind: VideoStickerKind.hashtag,
             target: 'party🎉',
@@ -395,38 +399,18 @@ void main() {
           await tapAt(tester, const Offset(180, 320));
           expect(opened, equals([party]));
 
-          // Playback updates cannot replace the creator's glyphs.
-          states.add(_playing(const Duration(milliseconds: 100)));
-          await tester.pump();
+          font.complete(true);
+          await tester.pumpAndSettle();
 
-          expect(find.byType(SocialStickerView), findsNothing);
+          expect(find.text('#party🎉'), findsOneWidget);
         },
       );
-
-      testWidgets('keeps solid emoji stickers in their original proportions', (
-        tester,
-      ) async {
-        const party = VideoStickerRegion(
-          kind: VideoStickerKind.hashtag,
-          target: 'party🎉',
-          centerX: 0.5,
-          centerY: 0.5,
-          width: 0.4,
-          height: 0.1,
-          style: 'light',
-          label: 'party🎉',
-        );
-        await pump(tester, [party]);
-        await tester.pump();
-
-        expect(find.byType(SocialStickerView), findsNothing);
-        await tapAt(tester, const Offset(180, 320));
-        expect(opened, equals([party]));
-      });
 
       testWidgets('keeps a see-through look in a script it lacks as it is', (
         tester,
       ) async {
+        debugLoadStickerEmojiFont = () async => true;
+        addTearDown(resetStickerEmojiFontForTesting);
         const tokyo = VideoStickerRegion(
           kind: VideoStickerKind.hashtag,
           target: '東京',

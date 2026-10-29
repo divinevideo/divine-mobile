@@ -47,6 +47,7 @@ import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:openvine/services/video_editor/video_render_watchdog.dart';
 import 'package:openvine/services/video_thumbnail_service.dart';
 import 'package:openvine/utils/path_resolver.dart';
+import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -232,6 +233,12 @@ class VideoEditorRenderService {
         VideoRenderFailureReason.emptyClips,
       );
     }
+    // The layers were captured once the emoji font had loaded or failed to,
+    // earlier in this session. Neither changes later in a session: a loaded
+    // font stays loaded and a failed one is not fetched again, so this is the
+    // font the capture drew its emoji in.
+    final emojiFontLoaded = stickerEmojiFontLoaded;
+
     final effectiveTaskId = taskId ?? clips.first.id;
     final renderToken = RenderCancellationRegistry.start(effectiveTaskId);
     // Frames-only stop-motion clips need an assembly pass (stills → base mp4)
@@ -383,6 +390,7 @@ class VideoEditorRenderService {
           bodySize: parameters?.bodySize,
           targetAspectRatio: renderClips.first.targetAspectRatio.value,
           timelineMap: TransitionTimelineMap.fromClips(renderClips),
+          emojiFontLoaded: emojiFontLoaded,
         ),
       );
 
