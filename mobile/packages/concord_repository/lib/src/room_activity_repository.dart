@@ -94,6 +94,13 @@ class RoomActivityRepository {
 
   static int _currentTime() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
+  // How far back a message counts as recent activity, in seconds.
+  static const int _recentWindowSeconds = 24 * 60 * 60;
+
+  // How far past this device's clock a message may be dated and still count
+  // as current, allowing for a sender whose clock runs fast.
+  static const int _maxFutureSkewSeconds = 15 * 60;
+
   Map<String, RoomActivitySummary> get summaries =>
       Map.unmodifiable(_summaries);
   Stream<void> get changes => _changes.stream;
@@ -228,16 +235,20 @@ class RoomActivityRepository {
               !pending.contains(message.id),
         )
         .toList();
-    final recent = messages.where(
-      (message) => message.createdAt >= now - 86400,
-    );
-    final recentMessages = recent.toList();
+    // A sender chooses its own created_at, so a message dated further ahead
+    // than clock drift explains cannot be the latest one or recent activity.
+    final current = messages
+        .where((message) => message.createdAt <= now + _maxFutureSkewSeconds)
+        .toList();
+    final recentMessages = current
+        .where((message) => message.createdAt >= now - _recentWindowSeconds)
+        .toList();
     final authors = <String>{
       for (final message in recentMessages.reversed) message.author,
     };
     _summaries[source.channel.channelId] = RoomActivitySummary(
       channelId: source.channel.channelId,
-      latestMessage: messages.lastOrNull,
+      latestMessage: current.lastOrNull,
       unreadCount: messages
           .where(
             (message) =>

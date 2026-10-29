@@ -308,6 +308,25 @@ void main() {
     );
 
     test(
+      'a message dated beyond clock drift is neither latest nor recent',
+      () async {
+        final room = _Room('12' * 32);
+        final activity = _activity([room]);
+        await activity.start();
+        await room.ingest(kind: 9, body: 'Current', createdAt: _now - 60);
+        await room.ingest(
+          kind: 9,
+          body: 'Slightly ahead',
+          createdAt: _now + 60,
+        );
+        await room.ingest(kind: 9, body: 'Next week', createdAt: _now + 604800);
+        final summary = activity.summaries[room.channelId]!;
+        expect(summary.latestMessage!.effectiveBody, 'Slightly ahead');
+        expect(summary.recentMessageCount, 2);
+      },
+    );
+
+    test(
       'pending messages never inflate activity or the latest preview',
       () async {
         final room = _Room('12' * 32);
