@@ -107,6 +107,16 @@ class VideoStickerRegion extends Equatable {
         (end == null || position < end);
   }
 
+  /// Whether any of the sticker can lie on the frame, measured generously by
+  /// the circle around it, however it is turned.
+  bool get isOnFrame {
+    final reach = width + height;
+    return centerX + reach > 0 &&
+        centerX - reach < 1 &&
+        centerY + reach > 0 &&
+        centerY - reach < 1;
+  }
+
   /// The event tag this region is published in.
   List<String> toTag() {
     final tag = [
@@ -153,19 +163,22 @@ class VideoStickerRegion extends Equatable {
     final style = tag.elementAtOrNull(7)?.trim() ?? '';
     // Drawn as text, which an unpaired surrogate would break.
     final label = sanitizeUtf16(tag.elementAtOrNull(8)?.trim() ?? '');
-    return VideoStickerRegion(
+    final region = VideoStickerRegion(
       kind: kind,
       target: target,
       centerX: centerX,
       centerY: centerY,
       width: width,
       height: height,
-      rotation: degrees * math.pi / 180,
+      // Whole turns dropped first: a huge angle would overflow to infinity.
+      rotation: degrees.remainder(360) * math.pi / 180,
       start: start is Duration ? start : null,
       end: end is Duration ? end : null,
       style: style.isEmpty ? null : style,
       label: label.isEmpty || label.length > maxLabelLength ? null : label,
     );
+    // Off the frame, a huge centre would overflow once laid out.
+    return region.isOnFrame ? region : null;
   }
 
   /// The regions among [tags], in order.

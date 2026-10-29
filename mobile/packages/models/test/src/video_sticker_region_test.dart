@@ -243,8 +243,59 @@ void main() {
             tag('0.5 0.5 0.2 NaN'),
             tag('0.5 0.5 0.2 0.1', ['2000', '1000']),
             tag('0.5 0.5 0.2 0.1', ['-5']),
+            tag('1e308 0.5 0.2 0.1'),
+            tag('0.5 -3 0.2 0.1'),
           ].map(VideoStickerRegion.fromTag),
           everyElement(isNull),
+        );
+      });
+
+      test('reads a huge angle as what it turns past whole turns', () {
+        final region = VideoStickerRegion.fromTag([
+          'sticker',
+          'link',
+          'https://divine.video',
+          '0.5 0.5 0.2 0.1',
+          '1e308',
+        ]);
+
+        expect(region?.rotation.isFinite, isTrue);
+        expect(
+          VideoStickerRegion.fromTag([
+            'sticker',
+            'link',
+            'https://divine.video',
+            '0.5 0.5 0.2 0.1',
+            '-405',
+          ])?.rotation,
+          closeTo(-math.pi / 4, 1e-9),
+        );
+      });
+    });
+
+    group('isOnFrame', () {
+      test('holds while any of the turned sticker can reach the frame', () {
+        expect(_link.isOnFrame, isTrue);
+        expect(
+          [
+            const VideoStickerRegion(
+              kind: VideoStickerKind.hashtag,
+              target: 'summer',
+              centerX: -0.4,
+              centerY: 0.5,
+              width: 0.2,
+              height: 0.1,
+            ),
+            const VideoStickerRegion(
+              kind: VideoStickerKind.hashtag,
+              target: 'summer',
+              centerX: 0.5,
+              centerY: 1.4,
+              width: 0.2,
+              height: 0.1,
+            ),
+          ].map((region) => region.isOnFrame),
+          everyElement(isFalse),
         );
       });
     });

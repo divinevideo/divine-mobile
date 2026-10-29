@@ -73,7 +73,7 @@ VideoStickerRegion? _regionOf(
   final start = region.start;
   final end = region.end;
   if (start != null && end != null && end <= start) return null;
-  return _isOnFrame(region) ? region : null;
+  return region.isOnFrame ? region : null;
 }
 
 /// Whether [layer] is drawn onto the video fully opaque, unblended and
@@ -82,13 +82,3 @@ bool _isDrawnPlainly(Layer layer) =>
     layer.opacity == 1 &&
     layer.blendMode == BlendMode.srcOver &&
     layer.mask == null;
-
-/// Whether any of [region] can lie on the frame, measured generously by the
-/// circle around the turned sticker.
-bool _isOnFrame(VideoStickerRegion region) {
-  final reach = region.width + region.height;
-  return region.centerX + reach > 0 &&
-      region.centerX - reach < 1 &&
-      region.centerY + reach > 0 &&
-      region.centerY - reach < 1;
-}
