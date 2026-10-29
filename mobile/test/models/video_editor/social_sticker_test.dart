@@ -411,25 +411,6 @@ void main() {
       });
     });
 
-    group('fromLayerMaps', () {
-      test('reads the same credits from serialized layers', () {
-        final layers = [hashtag, mention, link, soundCredit];
-        final maps = layers.map((layer) => layer.toMap()).toList();
-
-        expect(
-          SocialStickerCredits.fromLayerMaps(maps),
-          equals(SocialStickerCredits.of(layers)),
-        );
-      });
-
-      test('reads no credits from a draft without layers', () {
-        expect(
-          SocialStickerCredits.fromLayerMaps(null),
-          equals(const SocialStickerCredits()),
-        );
-      });
-    });
-
     group('hashtagsWith', () {
       test("keeps the stickers' hashtags when the post has too many", () {
         final credits = SocialStickerCredits.of([hashtag]);

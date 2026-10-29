@@ -1538,34 +1538,44 @@ void main() {
         );
         const mentioned =
             'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
-        Map<String, dynamic> layer(SocialStickerData sticker) => {
-          'type': 'widget',
-          'exportConfigs': {'meta': sticker.toMeta()},
+        final stickers = {
+          'hashtag': const SocialStickerData(
+            kind: SocialStickerKind.hashtag,
+            hashtag: 'summer',
+          ),
+          'mention': const SocialStickerData(
+            kind: SocialStickerKind.mention,
+            pubkey: mentioned,
+            name: 'alice',
+          ),
+          'link': const SocialStickerData(
+            kind: SocialStickerKind.link,
+            url: 'https://divine.video/',
+          ),
         };
 
         final result = await service.publishVideo(
           draft: _createTestDraft(
-            editorEditingParameters: {
-              'layers': [
-                layer(
-                  const SocialStickerData(
-                    kind: SocialStickerKind.hashtag,
-                    hashtag: 'summer',
-                  ),
-                ),
-                layer(
-                  const SocialStickerData(
-                    kind: SocialStickerKind.mention,
-                    pubkey: mentioned,
-                    name: 'alice',
-                  ),
-                ),
-                layer(
-                  const SocialStickerData(
-                    kind: SocialStickerKind.link,
-                    url: 'https://divine.video/',
-                  ),
-                ),
+            // Stored the way the editor exports its history: each step names
+            // its layers, whose full maps sit in `references`.
+            editorStateHistory: {
+              'version': '6.5.0',
+              'position': 0,
+              'references': {
+                for (final MapEntry(key: id, value: sticker)
+                    in stickers.entries)
+                  id: {
+                    'id': id,
+                    'type': 'widget',
+                    'exportConfigs': {'id': id, 'meta': sticker.toMeta()},
+                  },
+              },
+              'history': [
+                {
+                  'layers': [
+                    for (final id in stickers.keys) {'id': id},
+                  ],
+                },
               ],
             },
           ),

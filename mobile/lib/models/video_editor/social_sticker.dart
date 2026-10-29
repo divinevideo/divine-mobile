@@ -499,29 +499,11 @@ class SocialStickerCredits extends Equatable {
   });
 
   /// The credits of the social stickers among [layers].
-  factory SocialStickerCredits.of(Iterable<Layer> layers) =>
-      SocialStickerCredits._from(layers.map(SocialStickerData.of));
-
-  /// The credits of the social stickers among the serialized [layers] of a
-  /// draft's editing parameters, read without rebuilding the layers.
-  factory SocialStickerCredits.fromLayerMaps(Object? layers) {
-    if (layers is! List) return const SocialStickerCredits();
-    return SocialStickerCredits._from(
-      layers.whereType<Map<Object?, Object?>>().map((layer) {
-        final configs = layer['exportConfigs'];
-        return SocialStickerData.fromMeta(
-              configs is Map ? _stringKeyed(configs['meta']) : null,
-            ) ??
-            SocialStickerData.fromMeta(_stringKeyed(layer['meta']));
-      }),
-    );
-  }
-
-  factory SocialStickerCredits._from(Iterable<SocialStickerData?> stickers) {
+  factory SocialStickerCredits.of(Iterable<Layer> layers) {
     final hashtags = <String>{};
     final mentionPubkeys = <String>{};
     final links = <String>{};
-    for (final sticker in stickers.nonNulls) {
+    for (final sticker in layers.map(SocialStickerData.of).nonNulls) {
       if (!sticker.isComplete) continue;
       switch (sticker.kind) {
         case SocialStickerKind.mention:
@@ -543,9 +525,6 @@ class SocialStickerCredits extends Equatable {
       links: links,
     );
   }
-
-  static Map<String, dynamic>? _stringKeyed(Object? value) =>
-      value is Map ? value.map((key, value) => MapEntry('$key', value)) : null;
 
   /// The hashtags of the hashtag stickers, in the order they were placed.
   final Set<String> hashtags;

@@ -364,9 +364,24 @@ class DivineVideoDraft {
   final Map<String, dynamic> editorEditingParameters;
 
   /// What the social stickers on the video add to the post, read from the
-  /// layers in [editorEditingParameters].
-  SocialStickerCredits get stickerCredits =>
-      SocialStickerCredits.fromLayerMaps(editorEditingParameters['layers']);
+  /// current step of [editorStateHistory]: the layers a draft is rendered
+  /// with. [editorEditingParameters] only changes on Done, so it misses a
+  /// sticker added or deleted after that.
+  SocialStickerCredits get stickerCredits {
+    if (editorStateHistory.isEmpty) return const SocialStickerCredits();
+    final history = ImportStateHistory.fromMap(
+      editorStateHistory,
+      configs: ImportEditorConfigs(
+        // The stickers are read from the layers' meta, never drawn.
+        widgetLoader: (id, {meta}) => const SizedBox(),
+      ),
+    );
+    final position = history.editorPosition;
+    if (position < 0 || position >= history.stateHistory.length) {
+      return const SocialStickerCredits();
+    }
+    return SocialStickerCredits.of(history.stateHistory[position].layers);
+  }
 
   /// The final rendered clip ready for publishing.
   /// Cached to avoid re-rendering when no changes are made.
