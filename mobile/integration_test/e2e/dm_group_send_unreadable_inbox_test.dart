@@ -2,8 +2,8 @@
 // ABOUTME: wrap per recipient, so a recipient whose kind-10050 inbox is
 // ABOUTME: UNREADABLE must not have that recipient's fallback-pool OK scored as
 // ABOUTME: delivery while a readable sibling in the same send still is; and
-// ABOUTME: for #10012, once that member's retries run out the bubble reads
-// ABOUTME: "Not sent to everyone" through the real retry sweep.
+// ABOUTME: for #10012, once that member's retries run out the real retry
+// ABOUTME: sweep stops it rather than failing it.
 // ABOUTME: Drives a real DmRepository + NostrClient over real sockets.
 // ABOUTME: Requires: NO Docker stack — every dependency here is local.
 
@@ -25,7 +25,6 @@ import 'package:nostr_sdk/relay/relay_base.dart';
 import 'package:nostr_sdk/relay/relay_status.dart';
 import 'package:nostr_sdk/relay/web_socket_connection_manager.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
-import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
 import 'package:openvine/services/outgoing_dm_retry_service.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -329,17 +328,13 @@ void main() {
       fail('the retries of ${pubkeyForLogs(member)} never ran out');
     }
 
-    Future<DmDeliveryStatus> statusOf(
-      DmRepository repository,
-      String bubbleId,
-    ) async => ConversationState(
-      messages: await repository.watchMessages(groupConversationId).first,
-      pendingOutgoing: await repository.getOutgoing(groupConversationId),
-    ).statusFor(bubbleId);
-
+    // A stored message with a stopped member reads "Not sent to everyone";
+    // conversation_state_test.dart pins that ("a sibling the sender stopped:
+    // notSentToEveryone", #8180). These arms pin what the sweep owns: which
+    // rows it stops, and that the message stays stored.
     testWidgets(
-      'ARM D: the member held on an unreadable inbox is stopped, so the bubble '
-      'reads not sent to everyone instead of failed',
+      'ARM D: the member held on an unreadable inbox is stopped, not failed, '
+      'and the message stays stored for the member who got it',
       (tester) async {
         final relay = await FakeRelay.start(
           reply: readableInbox(),
@@ -356,18 +351,10 @@ void main() {
         );
         expect(results[0].success, isTrue, reason: 'precondition');
         expect(results[1].retryablePending, isTrue, reason: 'precondition');
-        final bubble =
-            (await stack.repository
-                    .watchMessages(
-                      groupConversationId,
-                    )
-                    .first)
-                .single;
-        expect(
-          await statusOf(stack.repository, bubble.id),
-          DmDeliveryStatus.pending,
-          reason: 'precondition: held, so still in progress',
-        );
+        final stored = await stack.repository
+            .watchMessages(groupConversationId)
+            .first;
+        expect(stored, hasLength(1), reason: 'precondition: stored for one');
 
         final held = await sweepUntilRetriesRunOut(
           stack.repository,
@@ -382,8 +369,11 @@ void main() {
         );
         expect(held?.retryCount, greaterThanOrEqualTo(5));
         expect(
-          await statusOf(stack.repository, bubble.id),
-          DmDeliveryStatus.notSentToEveryone,
+          (await stack.repository.watchMessages(groupConversationId).first).map(
+            (message) => message.id,
+          ),
+          equals([stored.single.id]),
+          reason: 'the bubble the stopped record describes is still there',
         );
       },
       timeout: const Timeout(Duration(minutes: 3)),
@@ -423,8 +413,9 @@ void main() {
           OutgoingWrapStatus.failed,
         );
         expect(
-          await statusOf(stack.repository, held!.rumorId),
-          DmDeliveryStatus.failed,
+          await stack.repository.watchMessages(groupConversationId).first,
+          isEmpty,
+          reason: 'no member has it, so nothing is stored',
         );
       },
       timeout: const Timeout(Duration(minutes: 3)),
