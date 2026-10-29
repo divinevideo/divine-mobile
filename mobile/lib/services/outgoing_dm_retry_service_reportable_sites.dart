@@ -13,4 +13,9 @@ abstract class OutgoingDmRetryServiceReportableSites {
   /// Top-level sweep catch — the sweep loop or DAO call raised an
   /// exception before per-row dispatch completed.
   static const String sweepTopLevel = 'OutgoingDmRetryService.sweepTopLevel';
+
+  /// A delete-for-everyone whose retries ran out could not be recorded as
+  /// unconfirmed (#10012).
+  static const String markMessageDeletionUnconfirmed =
+      'OutgoingDmRetryService.markMessageDeletionUnconfirmed';
 }

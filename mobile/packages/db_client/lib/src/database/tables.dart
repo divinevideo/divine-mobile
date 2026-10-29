@@ -875,9 +875,11 @@ class DirectMessages extends Table {
 
   /// Delivery state of the kind-5 in [deletionRumorJson]; null when the row
   /// carries no own deletion. Values: `deletion_pending` (soft-deleted
-  /// locally, wrap awaiting a confirmed relay `OK`), `deletion_sent`
-  /// (confirmed, terminal), `deletion_blocked` (send policy blocked every
-  /// failed recipient, terminal; other recipients may have succeeded).
+  /// locally, wrap awaiting a confirmed relay `OK`), `deletion_unconfirmed`
+  /// (the automatic retries ran out unconfirmed; retried again by a later
+  /// launch or by the sender, #10012), `deletion_sent` (confirmed, terminal),
+  /// `deletion_blocked` (send policy blocked every failed recipient,
+  /// terminal; other recipients may have succeeded).
   ///
   /// Reaction removals likewise record a distinct `deletion_refused` status
   /// in their publish-status column. A block describes the current attempt,

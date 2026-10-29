@@ -1105,11 +1105,28 @@ void main() {
     });
 
     group('message-deletion sweep', () {
+      /// The rumor ids the repository holds as unconfirmed: their automatic
+      /// retries ran out, as [DmRepository.markMessageDeletionUnconfirmed]
+      /// records (#10012).
+      late Set<String> ranOut;
+
+      setUp(() {
+        ranOut = {};
+        when(
+          () => dmRepository.markMessageDeletionUnconfirmed(
+            rumorId: any(named: 'rumorId'),
+          ),
+        ).thenAnswer((invocation) async {
+          ranOut.add(invocation.namedArguments[#rumorId] as String);
+        });
+      });
+
       DmMessageDeletionRetryTarget target(String rumorId) =>
           DmMessageDeletionRetryTarget(
             rumorId: rumorId,
             conversationId: 'conv_1',
             createdAt: 1700000000,
+            retriesRanOut: ranOut.contains(rumorId),
           );
 
       void stubPending(List<String> rumorIds) {
@@ -1117,6 +1134,153 @@ void main() {
           (_) async => rumorIds.map(target).toList(),
         );
       }
+
+      void stubOutcome(DmMessageDeletionOutcome outcome) {
+        when(
+          () => dmRepository.retryMessageDeletion(
+            rumorId: any(named: 'rumorId'),
+          ),
+        ).thenAnswer((_) async => outcome);
+      }
+
+      group('once a deletion runs out of retries (#10012)', () {
+        test('marks it unconfirmed once, on the last attempt', () async {
+          var clock = DateTime.utc(2026, 5, 10, 12);
+          stubPending(['del1']);
+          stubOutcome(DmMessageDeletionOutcome.unconfirmed);
+          final service = buildService(
+            retryConfig: const OutgoingDmRetryConfig(maxRetries: 2),
+            now: () => clock,
+          );
+
+          await service.sweep();
+          verifyNever(
+            () => dmRepository.markMessageDeletionUnconfirmed(
+              rumorId: any(named: 'rumorId'),
+            ),
+          );
+          clock = clock.add(const Duration(hours: 1));
+          await service.sweep();
+          verify(
+            () => dmRepository.markMessageDeletionUnconfirmed(rumorId: 'del1'),
+          ).called(1);
+          for (var i = 0; i < 3; i++) {
+            clock = clock.add(const Duration(hours: 1));
+            await service.sweep();
+          }
+
+          verify(
+            () => dmRepository.retryMessageDeletion(rumorId: 'del1'),
+          ).called(2);
+          verifyNever(
+            () => dmRepository.markMessageDeletionUnconfirmed(
+              rumorId: any(named: 'rumorId'),
+            ),
+          );
+        });
+
+        test('gives it one more try on a later launch', () async {
+          var clock = DateTime.utc(2026, 5, 10, 12);
+          ranOut.add('del1');
+          stubPending(['del1']);
+          stubOutcome(DmMessageDeletionOutcome.unconfirmed);
+          final service = buildService(now: () => clock);
+
+          for (var i = 0; i < 4; i++) {
+            clock = clock.add(const Duration(hours: 1));
+            await service.sweep();
+          }
+
+          verify(
+            () => dmRepository.retryMessageDeletion(rumorId: 'del1'),
+          ).called(1);
+          verify(
+            () => dmRepository.markMessageDeletionUnconfirmed(rumorId: 'del1'),
+          ).called(1);
+        });
+
+        test('marks it again when a Try again left it pending', () async {
+          var clock = DateTime.utc(2026, 5, 10, 12);
+          stubPending(['del1']);
+          stubOutcome(DmMessageDeletionOutcome.unconfirmed);
+          final service = buildService(
+            retryConfig: const OutgoingDmRetryConfig(maxRetries: 1),
+            now: () => clock,
+          );
+          await service.sweep();
+          verify(
+            () => dmRepository.markMessageDeletionUnconfirmed(rumorId: 'del1'),
+          ).called(1);
+
+          // The sender's Try again moved it back to pending, and no relay
+          // confirmed that attempt either.
+          ranOut.remove('del1');
+          clock = clock.add(const Duration(hours: 1));
+          await service.sweep();
+
+          verify(
+            () => dmRepository.markMessageDeletionUnconfirmed(rumorId: 'del1'),
+          ).called(1);
+          verify(
+            () => dmRepository.retryMessageDeletion(rumorId: 'del1'),
+          ).called(1);
+        });
+
+        test('a mark that throws does not end the pass', () async {
+          final crashReporting = _MockCrashReportingService();
+          when(
+            () => crashReporting.recordError(
+              any<dynamic>(),
+              any<StackTrace?>(),
+              reason: any(named: 'reason'),
+            ),
+          ).thenAnswer((_) async {});
+          stubPending(['del1', 'del2']);
+          stubOutcome(DmMessageDeletionOutcome.unconfirmed);
+          when(
+            () => dmRepository.markMessageDeletionUnconfirmed(rumorId: 'del1'),
+          ).thenThrow(StateError('database is closed'));
+          final service = buildService(
+            retryConfig: const OutgoingDmRetryConfig(maxRetries: 1),
+            crashReporting: crashReporting,
+          );
+
+          await expectLater(service.sweep(), completes);
+
+          verify(
+            () => dmRepository.retryMessageDeletion(rumorId: 'del2'),
+          ).called(1);
+          verify(
+            () => dmRepository.markMessageDeletionUnconfirmed(rumorId: 'del2'),
+          ).called(1);
+          verify(
+            () => crashReporting.recordError(
+              any<dynamic>(),
+              any<StackTrace?>(),
+              reason: OutgoingDmRetryServiceReportableSites
+                  .markMessageDeletionUnconfirmed,
+            ),
+          ).called(1);
+        });
+
+        test('does not mark one a relay confirmed', () async {
+          stubPending(['del1']);
+          stubOutcome(DmMessageDeletionOutcome.sent);
+
+          await buildService(
+            retryConfig: const OutgoingDmRetryConfig(maxRetries: 1),
+          ).sweep();
+
+          verify(
+            () => dmRepository.retryMessageDeletion(rumorId: 'del1'),
+          ).called(1);
+          verifyNever(
+            () => dmRepository.markMessageDeletionUnconfirmed(
+              rumorId: any(named: 'rumorId'),
+            ),
+          );
+        });
+      });
 
       test('re-drives an unconfirmed deletion', () async {
         stubPending(['del1']);

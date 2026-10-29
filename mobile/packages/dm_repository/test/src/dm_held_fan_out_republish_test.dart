@@ -11,6 +11,7 @@ import 'package:dm_repository/dm_repository.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
@@ -1256,6 +1257,107 @@ void main() {
             equals([_advertisedInbox]),
           );
           expect(wrapsTo(owner), hasLength(1));
+        });
+      });
+
+      group('once its automatic retries ran out', () {
+        Future<DmMessage> bubble() async {
+          final row = await messageRow();
+          final messages = await repository
+              .watchMessages(row.conversationId)
+              .first;
+          return messages.singleWhere((m) => m.id == _retractedMessageId);
+        }
+
+        Future<DmMessageDeletionRetryTarget> worklistEntry() async =>
+            (await repository.retryableMessageDeletions()).singleWhere(
+              (t) => t.rumorId == _retractedMessageId,
+            );
+
+        test('shows the warning and stays on the worklist for a later '
+            'launch', () async {
+          await heldRetraction();
+          expect(
+            (await bubble()).retractionStatus,
+            DmRetractionStatus.pending,
+          );
+          expect((await worklistEntry()).retriesRanOut, isFalse);
+
+          await repository.markMessageDeletionUnconfirmed(
+            rumorId: _retractedMessageId,
+          );
+
+          expect((await bubble()).retractionStatus, DmRetractionStatus.failed);
+          expect((await worklistEntry()).retriesRanOut, isTrue);
+        });
+
+        test('Try again shows progress and sends a held member nothing '
+            'more', () async {
+          await heldRetraction();
+          final heldBefore = (await messageRow()).heldDeletionWraps;
+          await repository.markMessageDeletionUnconfirmed(
+            rumorId: _retractedMessageId,
+          );
+
+          expect(await retryRetraction(), DmMessageDeletionOutcome.unconfirmed);
+
+          final row = await messageRow();
+          expect(row.deletionPublishStatus, DirectMessagesDao.deletionPending);
+          expect(row.heldDeletionWraps, equals(heldBefore));
+          expect(wrapsTo(peerB), hasLength(1));
+          expect(wrapsTo(owner), isEmpty);
+        });
+
+        test('wakes the sweep when nothing confirms a Try again, so it shows '
+            'the warning again', () async {
+          await heldRetraction();
+          var nudges = 0;
+          final subscription = repository.retryableOutgoingWork.listen(
+            (_) => nudges++,
+          );
+          addTearDown(subscription.cancel);
+          expect(await retryRetraction(), DmMessageDeletionOutcome.unconfirmed);
+          await pumpEventQueue();
+          expect(
+            nudges,
+            0,
+            reason: 'precondition: the sweep owns a retry it started itself',
+          );
+          await repository.markMessageDeletionUnconfirmed(
+            rumorId: _retractedMessageId,
+          );
+
+          expect(await retryRetraction(), DmMessageDeletionOutcome.unconfirmed);
+          await pumpEventQueue();
+
+          expect(nudges, 1);
+        });
+
+        test('Try again records a member it reaches, so the next retry sends '
+            'them nothing again', () async {
+          await heldRetraction(
+            participants: [owner, peerB, peerC],
+            heldFor: [peerB, peerC],
+          );
+          await repository.markMessageDeletionUnconfirmed(
+            rumorId: _retractedMessageId,
+          );
+          inboxes[peerB] = _Inbox.found;
+
+          expect(await retryRetraction(), DmMessageDeletionOutcome.unconfirmed);
+          final delivery = wrapsTo(peerB).last;
+          expect(heldWraps((await messageRow()).heldDeletionWraps), {
+            peerB: deliveredEntry(delivery.id),
+            peerC: heldEntry(wrapsTo(peerC).single.id),
+          });
+
+          expect(await retryRetraction(), DmMessageDeletionOutcome.unconfirmed);
+
+          expect(
+            wrapsTo(peerB),
+            hasLength(2),
+            reason: 'the pool wrap, then one wrap to the inbox it found',
+          );
         });
       });
 

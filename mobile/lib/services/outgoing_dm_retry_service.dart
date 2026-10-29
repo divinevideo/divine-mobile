@@ -22,12 +22,20 @@ class OutgoingDmRetryConfig {
     this.initialDelay = const Duration(seconds: 2),
     this.maxDelay = const Duration(minutes: 5),
     this.backoffMultiplier = 2.0,
+    this.retriesOnceRanOut = 1,
   });
 
   final int maxRetries;
   final Duration initialDelay;
   final Duration maxDelay;
   final double backoffMultiplier;
+
+  /// Attempts a delete-for-everyone gets in a session once its retries ran
+  /// out, in this session or an earlier one
+  /// ([DmMessageDeletionRetryTarget.retriesRanOut]). Fewer than [maxRetries],
+  /// so one that is never confirmed costs a single attempt per launch rather
+  /// than a full set (#10012). Mirrors `DmReactionRetryConfig`.
+  final int retriesOnceRanOut;
 
   /// Minimum required gap between attempts for a row whose previous
   /// attempt count is [retryCount]. Clamped at [maxDelay].
@@ -219,6 +227,12 @@ class OutgoingDmRetryService {
   /// pass. Session-scoped: entries are pruned each sweep as rows settle.
   final Map<String, int> _deletionAttempts = {};
   final Map<String, DateTime> _deletionLastAttempt = {};
+
+  /// Deletions whose retries have run out, in this session or an earlier one
+  /// ([DmMessageDeletionRetryTarget.retriesRanOut]). They get
+  /// [OutgoingDmRetryConfig.retriesOnceRanOut] for the rest of the session,
+  /// whatever status a Try again leaves them in (#10012).
+  final Set<String> _deletionRanOut = {};
 
   bool get isInitialized => _isInitialized;
 
@@ -643,6 +657,7 @@ class OutgoingDmRetryService {
         'aborted-not-ready=$abortedNotReady '
         'deletions(sent=${deletions.sent} blocked=${deletions.blocked} '
         'unconfirmed=${deletions.unconfirmed} '
+        'ran-out=${deletions.ranOut} '
         'skipped-backoff=${deletions.skippedBackoff} '
         'skipped-exhausted=${deletions.skippedExhausted})',
         name: 'OutgoingDmRetryService',
@@ -733,37 +748,47 @@ class OutgoingDmRetryService {
   ///
   /// Attempt and backoff bookkeeping is in memory rather than on the row: a
   /// `direct_messages` row carries no retry columns, and the sweep only needs
-  /// to avoid hammering within a session — the pending status itself is what
-  /// survives a restart. `DmReactionRetryService` tracks its own deletions
-  /// the same way.
+  /// to avoid hammering within a session. Each session's budget is
+  /// [OutgoingDmRetryConfig.maxRetries]. What survives a restart is the
+  /// row's status: when the budget runs out the row is marked unconfirmed
+  /// ([DmRepository.markMessageDeletionUnconfirmed]), which shows the sender
+  /// a warning with Try again instead of a spinner, and every later session
+  /// gives it [OutgoingDmRetryConfig.retriesOnceRanOut] (#10012).
+  /// `DmReactionRetryService` tracks its own deletions the same way.
   Future<
     ({
       int sent,
       int blocked,
       int unconfirmed,
+      int ranOut,
       int skippedBackoff,
       int skippedExhausted,
     })
   >
   _sweepMessageDeletions() async {
     final targets = await _dmRepository.retryableMessageDeletions();
-    _deletionAttempts.removeWhere(
-      (id, _) => !targets.any((t) => t.rumorId == id),
-    );
-    _deletionLastAttempt.removeWhere(
-      (id, _) => !targets.any((t) => t.rumorId == id),
-    );
+    final liveIds = {for (final t in targets) t.rumorId};
+    _deletionAttempts.removeWhere((id, _) => !liveIds.contains(id));
+    _deletionLastAttempt.removeWhere((id, _) => !liveIds.contains(id));
+    _deletionRanOut.removeWhere((id) => !liveIds.contains(id));
 
     var sent = 0;
     var blocked = 0;
     var unconfirmed = 0;
+    var ranOut = 0;
     var skippedBackoff = 0;
     var skippedExhausted = 0;
 
     for (final target in targets) {
       final attempts = _deletionAttempts[target.rumorId] ?? 0;
-      if (attempts >= _retryConfig.maxRetries) {
+      if (target.retriesRanOut) _deletionRanOut.add(target.rumorId);
+      final allowance = _deletionRanOut.contains(target.rumorId)
+          ? _retryConfig.retriesOnceRanOut
+          : _retryConfig.maxRetries;
+      if (attempts >= allowance) {
         skippedExhausted++;
+        // A Try again moved it back to pending, and nothing confirmed it.
+        if (!target.retriesRanOut) await _markDeletionRanOut(target.rumorId);
         continue;
       }
       final lastAttempt = _deletionLastAttempt[target.rumorId];
@@ -807,6 +832,11 @@ class OutgoingDmRetryService {
           blocked++;
         case DmMessageDeletionOutcome.unconfirmed:
           unconfirmed++;
+          if (attempts + 1 >= allowance) {
+            _deletionRanOut.add(target.rumorId);
+            await _markDeletionRanOut(target.rumorId);
+            ranOut++;
+          }
         case DmMessageDeletionOutcome.unavailable:
           // Nothing was attempted, so refund the budget this row just spent
           // rather than exhausting it on a state the sweep cannot influence.
@@ -818,9 +848,37 @@ class OutgoingDmRetryService {
       sent: sent,
       blocked: blocked,
       unconfirmed: unconfirmed,
+      ranOut: ranOut,
       skippedBackoff: skippedBackoff,
       skippedExhausted: skippedExhausted,
     );
+  }
+
+  /// This session will not attempt the deletion of [rumorId] again. Record
+  /// that, so its bubble shows a warning with Try again instead of a spinner.
+  ///
+  /// Never throws: a throw would end the pass before the deletions after it
+  /// were driven.
+  Future<void> _markDeletionRanOut(String rumorId) async {
+    try {
+      await _dmRepository.markMessageDeletionUnconfirmed(rumorId: rumorId);
+    } on Object catch (e, stackTrace) {
+      Log.error(
+        'could not mark deletion $rumorId unconfirmed: $e',
+        name: 'OutgoingDmRetryService',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      unawaited(
+        _crashReporting.recordError(
+          e,
+          stackTrace,
+          reason: OutgoingDmRetryServiceReportableSites
+              .markMessageDeletionUnconfirmed,
+        ),
+      );
+    }
   }
 
   /// Runs the injected connectivity probe, defaulting to online on any error

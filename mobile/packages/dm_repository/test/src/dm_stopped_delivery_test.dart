@@ -424,6 +424,25 @@ void main() {
         await stopB(sent.rowForB);
       });
 
+      test('keeps a record after a delete for everyone ran out of retries '
+          '(#10012)', () async {
+        final sent = await sendReachingOnlyA();
+        deletionWrap = (rumor, recipient) async => recipient == _memberB
+            ? const NIP17SendResult.failure('no relay confirmed the wrap')
+            : await delivered(rumor, recipient);
+        await repository.deleteMessageForEveryone(sent.messageId);
+        await pumpEventQueue();
+        await repository.markMessageDeletionUnconfirmed(
+          rumorId: sent.messageId,
+        );
+        expect(
+          (await stored(sent.messageId))?.deletionPublishStatus,
+          equals(DirectMessagesDao.deletionUnconfirmed),
+        );
+
+        await stopB(sent.rowForB);
+      });
+
       test('keeps a record after a delete for everyone was refused', () async {
         final sent = await sendReachingOnlyA();
         deletionWrap = (rumor, recipient) async =>

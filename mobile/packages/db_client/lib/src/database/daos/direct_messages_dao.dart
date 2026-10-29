@@ -51,6 +51,20 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
   /// state (#8201).
   static const String deletionBlocked = 'deletion_blocked';
 
+  /// The automatic retries ran out with no relay confirming the wrap for
+  /// every recipient (#10012). Not terminal: the row keeps its kind-5 and
+  /// held wraps, stays on the retry worklist for a later launch, and the
+  /// sender sees a warning with Try again instead of a spinner.
+  static const String deletionUnconfirmed = 'deletion_unconfirmed';
+
+  /// Own retractions whose message the sender still sees in the thread: none
+  /// is confirmed for every recipient yet.
+  static const List<String> retractionsShownToSender = [
+    deletionPending,
+    deletionBlocked,
+    deletionUnconfirmed,
+  ];
+
   /// Build a filter expression that returns rows owned by [ownerPubkey]
   /// **or** legacy rows with no owner.
   ///
@@ -80,9 +94,9 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
 
   /// Rows the sender must still be able to recognize in the conversation.
   ///
-  /// A pending or refused own retraction is deliberately visible even though
-  /// `is_deleted` is already true. The message disappears only after every
-  /// recipient confirms the deletion.
+  /// An own retraction in [retractionsShownToSender] is deliberately visible
+  /// even though `is_deleted` is already true. The message disappears only
+  /// after every recipient confirms the deletion.
   ///
   /// Never NULL, so [isRetracted] can negate it: a status that is NULL makes
   /// `IN` NULL, and NOT NULL is NULL too.
@@ -94,7 +108,7 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
         ? const Constant(false)
         : t.senderPubkey.equals(ownerPubkey) &
               t.deletionPublishStatus.isNotNull() &
-              t.deletionPublishStatus.isIn([deletionPending, deletionBlocked]);
+              t.deletionPublishStatus.isIn(retractionsShownToSender);
     return t.isDeleted.equals(false) | uncertainOwnRetraction;
   }
 
@@ -514,6 +528,32 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
     ownerPubkey: ownerPubkey,
   );
 
+  /// Record that the automatic retries of the pending retraction of [rumorId]
+  /// ran out without every recipient confirming it (#10012).
+  ///
+  /// The row keeps its kind-5, its held wraps and `is_deleted`, so the sender
+  /// sees it with a warning and Try again, and a later launch retries it.
+  /// Only a `deletion_pending` row changes, so a confirmation or a block that
+  /// landed first is never overwritten. Returns whether the row was changed.
+  Future<bool> markMessageDeletionUnconfirmed(
+    String rumorId, {
+    String? ownerPubkey,
+  }) async {
+    final rows =
+        await (update(directMessages)..where(
+              (t) =>
+                  t.id.equals(rumorId) &
+                  _visibleToOwner(t, ownerPubkey) &
+                  t.deletionPublishStatus.equals(deletionPending),
+            ))
+            .write(
+              const DirectMessagesCompanion(
+                deletionPublishStatus: Value(deletionUnconfirmed),
+              ),
+            );
+    return rows > 0;
+  }
+
   /// Move a deletion row to a terminal [status].
   ///
   /// [retainRumor] and [restoreToThread] are required rather than defaulted:
@@ -553,7 +593,8 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
   }
 
   /// Own deletions still awaiting confirmed delivery, oldest first — the
-  /// retry sweep's worklist.
+  /// retry sweep's worklist. A row whose earlier automatic retries ran out
+  /// ([deletionUnconfirmed]) stays on it, so a later launch tries again.
   ///
   /// Scoped to rows this account authored *and* soft-deleted, so a peer's
   /// deletion applied locally is never re-published from this device.
@@ -567,7 +608,10 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
                 t.senderPubkey.equals(ownerPubkey) &
                 t.isDeleted.equals(true) &
                 t.deletionRumorJson.isNotNull() &
-                t.deletionPublishStatus.equals(deletionPending),
+                t.deletionPublishStatus.isIn(const [
+                  deletionPending,
+                  deletionUnconfirmed,
+                ]),
           )
           ..orderBy([(t) => OrderingTerm(expression: t.createdAt)]))
         .get();

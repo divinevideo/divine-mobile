@@ -1089,6 +1089,158 @@ void main() {
         });
       });
 
+      group('markMessageDeletionUnconfirmed (#10012)', () {
+        const rumor = '{"kind":5,"tags":[["e","msg_del"],["k","14"]]}';
+
+        Future<void> markPending() => dao.markMessageDeletionPending(
+          'msg_del',
+          deletionRumorJson: rumor,
+          ownerPubkey: 'pubkey_alice',
+        );
+
+        Future<bool> markUnconfirmed({String ownerPubkey = 'pubkey_alice'}) =>
+            dao.markMessageDeletionUnconfirmed(
+              'msg_del',
+              ownerPubkey: ownerPubkey,
+            );
+
+        Future<DirectMessageRow> row() async => (await dao.getMessageById(
+          'msg_del',
+          ownerPubkey: 'pubkey_alice',
+        ))!;
+
+        test('records a pending retraction whose retries ran out', () async {
+          await insertOwnMessage();
+          await markPending();
+          await dao.recordHeldDeletionWrap(
+            'msg_del',
+            recipientPubkey: 'pubkey_bob',
+            wrapEventId: 'gw_held',
+            ownerPubkey: 'pubkey_alice',
+          );
+          final heldBefore = (await row()).heldDeletionWraps;
+          expect(heldBefore, isNotNull);
+
+          expect(await markUnconfirmed(), isTrue);
+
+          final unconfirmed = await row();
+          expect(
+            unconfirmed.deletionPublishStatus,
+            equals(DirectMessagesDao.deletionUnconfirmed),
+          );
+          expect(unconfirmed.deletionRumorJson, equals(rumor));
+          expect(unconfirmed.heldDeletionWraps, equals(heldBefore));
+          expect(unconfirmed.isDeleted, isTrue);
+        });
+
+        test("keeps the bubble in its sender's thread", () async {
+          await insertOwnMessage();
+          await markPending();
+          await markUnconfirmed();
+
+          final live = await dao.getMessagesForConversation(
+            conversationId1,
+            ownerPubkey: 'pubkey_alice',
+          );
+          final watched = await dao
+              .watchMessagesForConversation(
+                conversationId1,
+                ownerPubkey: 'pubkey_alice',
+              )
+              .first;
+
+          expect(live.map((m) => m.id), equals(['msg_del']));
+          expect(watched.map((m) => m.id), equals(['msg_del']));
+          expect(
+            await dao.isRetracted('msg_del', ownerPubkey: 'pubkey_alice'),
+            isFalse,
+          );
+        });
+
+        test('stays on the retry worklist', () async {
+          await insertOwnMessage();
+          await markPending();
+          await markUnconfirmed();
+
+          final retryable = await dao.getRetryableOwnMessageDeletions(
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(retryable.map((r) => r.id), equals(['msg_del']));
+        });
+
+        test('never overwrites a confirmed retraction', () async {
+          await insertOwnMessage();
+          await markPending();
+          await dao.markMessageDeletionSent(
+            'msg_del',
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(await markUnconfirmed(), isFalse);
+
+          expect(
+            (await row()).deletionPublishStatus,
+            equals('deletion_sent'),
+          );
+        });
+
+        test('never overwrites a blocked retraction', () async {
+          await insertOwnMessage();
+          await markPending();
+          await dao.markMessageDeletionBlocked(
+            'msg_del',
+            restoreToThread: true,
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(await markUnconfirmed(), isFalse);
+
+          expect(
+            (await row()).deletionPublishStatus,
+            equals(DirectMessagesDao.deletionBlocked),
+          );
+        });
+
+        test("leaves another account's retraction untouched", () async {
+          await insertOwnMessage();
+          await markPending();
+
+          expect(await markUnconfirmed(ownerPubkey: 'pubkey_bob'), isFalse);
+
+          expect(
+            (await row()).deletionPublishStatus,
+            equals(DirectMessagesDao.deletionPending),
+          );
+        });
+
+        test(
+          'a retry moving it back to pending keeps its held wraps',
+          () async {
+            await insertOwnMessage();
+            await markPending();
+            await dao.recordHeldDeletionWrap(
+              'msg_del',
+              recipientPubkey: 'pubkey_bob',
+              wrapEventId: 'gw_held',
+              ownerPubkey: 'pubkey_alice',
+            );
+            await markUnconfirmed();
+            final heldBefore = (await row()).heldDeletionWraps;
+            expect(heldBefore, isNotNull);
+
+            await markPending();
+
+            final retried = await row();
+            expect(
+              retried.deletionPublishStatus,
+              equals(DirectMessagesDao.deletionPending),
+            );
+            expect(retried.heldDeletionWraps, equals(heldBefore));
+          },
+        );
+      });
+
       group('held deletion wraps (#10012)', () {
         const recipient = 'pubkey_bob';
         const otherRecipient = 'pubkey_carol';
