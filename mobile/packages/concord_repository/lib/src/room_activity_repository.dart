@@ -20,6 +20,9 @@ class RoomActivitySummary {
 
   final String channelId;
   final ChatMessage? latestMessage;
+
+  /// Retained messages from others not yet read on this device; unlike the
+  /// other counts, not limited to the last 24 hours.
   final int unreadCount;
   final int recentMessageCount;
   final List<String> _recentAuthors;
@@ -106,6 +109,7 @@ class RoomActivityRepository {
       Map.unmodifiable(_summaries);
   Stream<void> get changes => _changes.stream;
 
+  /// Throws [ArgumentError] for a channel outside the catalog.
   ConcordRepository repositoryFor(String channelId) =>
       _source(channelId).channel.repository;
 
@@ -129,6 +133,9 @@ class RoomActivityRepository {
   }
 
   /// Concurrent callers share the same restoration and relay subscription.
+  ///
+  /// Throws [ArgumentError] for an unknown room; the future fails with a
+  /// [StateError] after [close], or with the room's load error.
   Future<void> ensureStarted(String channelId) {
     if (_closed) return Future.error(StateError('Room activity is closed'));
     final source = _source(channelId);
