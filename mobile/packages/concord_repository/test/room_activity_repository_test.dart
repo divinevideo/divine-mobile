@@ -408,6 +408,10 @@ void main() {
       await room.ingest(kind: 5, target: id);
       expect(activity.summaries[room.channelId]!.recentMessageCount, 0);
       await room.ingest(kind: 9, body: 'Expiring', expiresAt: _now + 5);
+      expect(
+        activity.summaries[room.channelId]!.latestMessage!.body,
+        'Expiring',
+      );
       now += 5;
       await room.repository.purgeExpired(now: now);
       await pumpEventQueue();
