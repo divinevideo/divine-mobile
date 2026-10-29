@@ -72,7 +72,6 @@ const double _gridBottomPadding = 8;
 const double _rowSpacing = 12;
 const double _columnSpacing = 8;
 const double _minTileWidth = 64;
-const double _tabsTopPadding = 8;
 
 /// How far the tabs' shadow reaches down over the grid.
 const double _shadowExtent = 16;
@@ -298,6 +297,7 @@ class _EffectsPickerState extends State<_EffectsPicker>
                 child: _CategoryTabs(
                   controller: tabController,
                   tabHeight: _metrics.tabHeight,
+                  highlightHeight: _metrics.highlightHeight,
                   onTap: (index) => _scrollGridTo(
                     EditorEffectCategory.values[index],
                     animate: true,
@@ -321,15 +321,19 @@ class _PickerMetrics {
     double lineOf(TextStyle style) =>
         textScaler.scale(style.fontSize!) * (style.height ?? 1.2);
 
-    // A tab pads its label line by 6 above and below, as a tiny DivineButton
-    // does.
-    final tabHeight =
+    // A tab's highlight pads its label line by 6 above and below, as a tiny
+    // DivineButton does; the tab around it is a full tap target.
+    final highlightHeight =
         lineOf(VineTheme.titleSmallFont(color: colors.accentBrand)) + 12;
     final titleLine = lineOf(
       VineTheme.labelSmallFont(color: colors.onSurfaceMuted),
     );
     return _PickerMetrics._(
-      tabHeight: tabHeight,
+      highlightHeight: highlightHeight,
+      tabHeight: max(
+        kMinInteractiveDimension - _tabIndicatorWeight,
+        highlightHeight,
+      ),
       firstHeaderExtent: titleLine + _firstHeaderPadding.vertical,
       headerExtent: titleLine + _headerPadding.vertical,
       // A tile is its preview, a gap of 4 and one line of its name.
@@ -341,18 +345,23 @@ class _PickerMetrics {
   }
 
   const _PickerMetrics._({
+    required this.highlightHeight,
     required this.tabHeight,
     required this.firstHeaderExtent,
     required this.headerExtent,
     required this.rowExtent,
   });
 
+  final double highlightHeight;
+
+  /// A tab without the padding [TabBar] keeps below it, which makes up the
+  /// rest of its tap target.
   final double tabHeight;
   final double firstHeaderExtent;
   final double headerExtent;
   final double rowExtent;
 
-  double get tabsExtent => _tabsTopPadding + tabHeight + _tabIndicatorWeight;
+  double get tabsExtent => tabHeight + _tabIndicatorWeight;
 
   double headerExtentOf(EditorEffectCategory category) =>
       category == EditorEffectCategory.values.first
@@ -419,16 +428,19 @@ class _CategoryTabs extends StatelessWidget {
   const _CategoryTabs({
     required this.controller,
     required this.tabHeight,
+    required this.highlightHeight,
     required this.onTap,
   });
 
   final TabController controller;
   final double tabHeight;
+  final double highlightHeight;
   final ValueChanged<int> onTap;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.vineColors;
+    final highlightInset = (tabHeight - highlightHeight) / 2;
     return Material(
       type: MaterialType.transparency,
       child: TabBar(
@@ -447,9 +459,12 @@ class _CategoryTabs extends StatelessWidget {
           ),
         ),
         indicatorSize: TabBarIndicatorSize.tab,
-        // The highlight covers the label, not the padding the tab keeps
-        // below it.
-        indicatorPadding: const .only(bottom: _tabIndicatorWeight),
+        // The highlight hugs the label, not the whole tap target nor the
+        // padding the tab keeps below it.
+        indicatorPadding: .only(
+          top: highlightInset,
+          bottom: highlightInset + _tabIndicatorWeight,
+        ),
         dividerHeight: 0,
         overlayColor: const WidgetStatePropertyAll(VineTheme.transparent),
         splashFactory: NoSplash.splashFactory,

@@ -168,6 +168,21 @@ void main() {
       }
     });
 
+    testWidgets('makes every category a full-size tap target', (tester) async {
+      await tester.pumpWidget(buildWidget());
+
+      for (final category in EditorEffectCategory.values) {
+        final target = find
+            .ancestor(of: tab(category), matching: find.byType(InkWell))
+            .first;
+        expect(
+          tester.getSize(target).height,
+          greaterThanOrEqualTo(kMinInteractiveDimension),
+          reason: category.name,
+        );
+      }
+    });
+
     testWidgets('scrolling the grid highlights the section at its top, and '
         'the tabs cast a shadow on the effects under them', (
       tester,
