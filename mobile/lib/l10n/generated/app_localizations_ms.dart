@@ -1996,6 +1996,30 @@ class AppLocalizationsMs extends AppLocalizations {
   String get metadataSoundsLabel => 'Bunyi';
 
   @override
+  String get metadataLinksLabel => 'Pautan';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'Pelekat pautan, membuka $url';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel =>
+      'Pelekat sebutan, membuka profil';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'Pelekat tanda pagar, membuka #$hashtag';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel => 'Pelekat bunyi, membuka bunyi';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Pautan ini dibuka di luar Divine. Semak alamatnya sebelum anda teruskan.';
+
+  @override
   String get metadataOriginalSound => 'Bunyi asal';
 
   @override
@@ -10809,6 +10833,73 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorInfoStickersTitle => 'Info';
 
   @override
+  String get videoEditorSocialStickersTitle => 'Sosial';
+
+  @override
+  String get videoEditorSocialStickerMention => 'Sebutan';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'Bunyi';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'namaanda';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'hashtag';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'Pilih seseorang';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'Mereka disebut dalam siaran anda dan menerima pemberitahuan.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'Taip hashtag';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'Turut ditambah pada hashtag siaran anda.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint => 'Satu baris lirik (pilihan)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'Pautan';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'Alamat web';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'Tajuk (pilihan)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote =>
+      'Alamat ditambah pada siaran anda.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid =>
+      'Itu belum lagi alamat web.';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'Not';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'Piring hitam';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'Kaset';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'Penyama';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'Pemain';
+
+  @override
   String get videoEditorInfoStickerTime => 'Masa';
 
   @override
@@ -12607,6 +12698,11 @@ class AppLocalizationsMs extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Tambah \"#$tag\"';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, daripada pelekat dalam video anda';
   }
 
   @override

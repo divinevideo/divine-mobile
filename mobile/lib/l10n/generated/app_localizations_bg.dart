@@ -2047,6 +2047,30 @@ class AppLocalizationsBg extends AppLocalizations {
   String get metadataSoundsLabel => 'Звуци';
 
   @override
+  String get metadataLinksLabel => 'Линкове';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'Стикер с линк, отваря $url';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel =>
+      'Стикер със споменаване, отваря профила';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'Стикер с хаштаг, отваря #$hashtag';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel => 'Стикер със звук, отваря звука';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Този линк се отваря извън Divine. Провери адреса, преди да продължиш.';
+
+  @override
   String get metadataOriginalSound => 'Оригинален звук';
 
   @override
@@ -10901,6 +10925,73 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorInfoStickersTitle => 'Инфо';
 
   @override
+  String get videoEditorSocialStickersTitle => 'Социални';
+
+  @override
+  String get videoEditorSocialStickerMention => 'Споменаване';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'Хаштаг';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'Звук';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'твоетоиме';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'хаштаг';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'Избери човек';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'Споменат е в публикацията ти и получава известие.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'Въведи хаштаг';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'Добавя се и към хаштаговете на публикацията ти.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint =>
+      'Ред от текста на песента (по избор)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'Линк';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'Уеб адрес';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'Заглавие (по избор)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote =>
+      'Адресът се добавя към публикацията ти.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid => 'Това още не е уеб адрес.';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'Нота';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'Плоча';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'Касета';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'Еквалайзер';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'Плейър';
+
+  @override
   String get videoEditorInfoStickerTime => 'Час';
 
   @override
@@ -12720,6 +12811,11 @@ class AppLocalizationsBg extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Добавяне на „#$tag\"';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, от стикер във видеото ти';
   }
 
   @override

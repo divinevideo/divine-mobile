@@ -1954,6 +1954,30 @@ class AppLocalizationsTr extends AppLocalizations {
   String get metadataSoundsLabel => 'Sesler';
 
   @override
+  String get metadataLinksLabel => 'Bağlantılar';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'Bağlantı çıkartması, $url adresini açar';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel =>
+      'Bahsetme çıkartması, profili açar';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'Hashtag çıkartması, #$hashtag etiketini açar';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel => 'Ses çıkartması, sesi açar';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Bu bağlantı Divine dışında açılır. Devam etmeden önce adresi kontrol et.';
+
+  @override
   String get metadataOriginalSound => 'Orijinal ses';
 
   @override
@@ -10716,6 +10740,73 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorInfoStickersTitle => 'Bilgi';
 
   @override
+  String get videoEditorSocialStickersTitle => 'Sosyal';
+
+  @override
+  String get videoEditorSocialStickerMention => 'Bahsetme';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'Ses';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'adın';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'hashtag';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'Birini seç';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'Gönderinde bu kişiden bahsedilir ve bildirim alır.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'Hashtag yaz';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'Gönderinin hashtag\'lerine de eklenir.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint =>
+      'Şarkı sözünden bir satır (isteğe bağlı)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'Bağlantı';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'Web adresi';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'Başlık (isteğe bağlı)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote => 'Adres gönderine eklenir.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid =>
+      'Bu henüz bir web adresi değil.';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'Nota';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'Plak';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'Kaset';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'Ekolayzer';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'Oynatıcı';
+
+  @override
   String get videoEditorInfoStickerTime => 'Saat';
 
   @override
@@ -12521,6 +12612,11 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '\"#$tag\" ekle';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, videondaki bir çıkartmadan';
   }
 
   @override

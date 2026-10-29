@@ -2075,6 +2075,31 @@ class AppLocalizationsRo extends AppLocalizations {
   String get metadataSoundsLabel => 'Sunete';
 
   @override
+  String get metadataLinksLabel => 'Linkuri';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'Sticker cu link, deschide $url';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel =>
+      'Sticker cu menționare, deschide profilul';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'Sticker cu hashtag, deschide #$hashtag';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel =>
+      'Sticker cu sunet, deschide sunetul';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Acest link se deschide în afara Divine. Verifică adresa înainte să continui.';
+
+  @override
   String get metadataOriginalSound => 'Sunet original';
 
   @override
@@ -11029,6 +11054,73 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorInfoStickersTitle => 'Info';
 
   @override
+  String get videoEditorSocialStickersTitle => 'Social';
+
+  @override
+  String get videoEditorSocialStickerMention => 'Menționare';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'Sunet';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'numeletau';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'hashtag';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'Alege pe cineva';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'Persoana e menționată în postarea ta și primește o notificare.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'Scrie un hashtag';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'Se adaugă și la hashtagurile postării tale.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint =>
+      'Un vers din melodie (opțional)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'Link';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'Adresă web';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'Titlu (opțional)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote =>
+      'Adresa se adaugă la postarea ta.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid => 'Încă nu e o adresă web.';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'Notă';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'Vinil';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'Casetă';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'Egalizator';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'Player';
+
+  @override
   String get videoEditorInfoStickerTime => 'Ora';
 
   @override
@@ -12868,6 +12960,11 @@ class AppLocalizationsRo extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Adaugă „#$tag\"';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, dintr-un sticker din videoclipul tău';
   }
 
   @override

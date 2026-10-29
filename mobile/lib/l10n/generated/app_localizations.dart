@@ -3427,6 +3427,42 @@ abstract class AppLocalizations {
   /// **'Sounds'**
   String get metadataSoundsLabel;
 
+  /// Label of the section in a video's info sheet that lists the web pages its link stickers point to.
+  ///
+  /// In en, this message translates to:
+  /// **'Links'**
+  String get metadataLinksLabel;
+
+  /// Screen reader label for the invisible button over a link sticker on a playing video; tapping it opens the web page.
+  ///
+  /// In en, this message translates to:
+  /// **'Link sticker, opens {url}'**
+  String videoStickerLinkSemanticLabel(String url);
+
+  /// Screen reader label for the invisible button over a mention sticker on a playing video; tapping it opens the mentioned profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Mention sticker, opens the profile'**
+  String get videoStickerMentionSemanticLabel;
+
+  /// Screen reader label for the invisible button over a hashtag sticker on a playing video; tapping it opens the hashtag's feed.
+  ///
+  /// In en, this message translates to:
+  /// **'Hashtag sticker, opens #{hashtag}'**
+  String videoStickerHashtagSemanticLabel(String hashtag);
+
+  /// Screen reader label for the invisible button over a sound sticker on a playing video; tapping it opens the page of the video's sound.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound sticker, opens the sound'**
+  String get videoStickerSoundSemanticLabel;
+
+  /// Note in the sheet a link sticker on a video opens, above the link's full address: the page opens outside the app.
+  ///
+  /// In en, this message translates to:
+  /// **'This link opens outside Divine. Check the address before you go.'**
+  String get videoStickerLinkSheetBody;
+
   /// No description provided for @metadataOriginalSound.
   ///
   /// In en, this message translates to:
@@ -18407,6 +18443,132 @@ abstract class AppLocalizations {
   /// **'Info'**
   String get videoEditorInfoStickersTitle;
 
+  /// Heading above the row of social stickers (mention, hashtag, sound credit) in the video editor's sticker sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Social'**
+  String get videoEditorSocialStickersTitle;
+
+  /// Name of the sticker that mentions a person in the video; the sheet title and timeline label for it.
+  ///
+  /// In en, this message translates to:
+  /// **'Mention'**
+  String get videoEditorSocialStickerMention;
+
+  /// Name of the sticker that shows a hashtag in the video and adds it to the post's hashtags.
+  ///
+  /// In en, this message translates to:
+  /// **'Hashtag'**
+  String get videoEditorSocialStickerHashtag;
+
+  /// Name of the sticker that credits the title and artist of the video's sound.
+  ///
+  /// In en, this message translates to:
+  /// **'Sound'**
+  String get videoEditorSocialStickerSoundCredit;
+
+  /// Made-up handle shown after an @ on the sample mention sticker in the sticker sheet. Lowercase, one word.
+  ///
+  /// In en, this message translates to:
+  /// **'yourname'**
+  String get videoEditorSocialStickerMentionSample;
+
+  /// Made-up hashtag shown after a # on the sample hashtag sticker in the sticker sheet. Lowercase, one word.
+  ///
+  /// In en, this message translates to:
+  /// **'hashtag'**
+  String get videoEditorSocialStickerHashtagSample;
+
+  /// Row in the mention sticker sheet that opens the people search to pick who the sticker mentions.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose someone'**
+  String get videoEditorSocialStickerChoosePerson;
+
+  /// Help line in the mention sticker sheet: placing the sticker mentions the person in the post, which notifies them.
+  ///
+  /// In en, this message translates to:
+  /// **'They\'re mentioned in your post and get a notification.'**
+  String get videoEditorSocialStickerMentionNote;
+
+  /// Label of the field where the creator types the hashtag a hashtag sticker shows.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a hashtag'**
+  String get videoEditorSocialStickerHashtagHint;
+
+  /// Help line in the hashtag sticker sheet: the sticker's hashtag also becomes one of the post's hashtags.
+  ///
+  /// In en, this message translates to:
+  /// **'Also added to your post\'s hashtags.'**
+  String get videoEditorSocialStickerHashtagNote;
+
+  /// Label of the optional field for a line of song lyrics shown under a sound credit sticker.
+  ///
+  /// In en, this message translates to:
+  /// **'Line of lyrics (optional)'**
+  String get videoEditorSocialStickerLyricHint;
+
+  /// Name of the sticker that shows a link to a web page in the video and adds its address to the post.
+  ///
+  /// In en, this message translates to:
+  /// **'Link'**
+  String get videoEditorSocialStickerLink;
+
+  /// Label of the field where the creator types the web address a link sticker points to.
+  ///
+  /// In en, this message translates to:
+  /// **'Web address'**
+  String get videoEditorSocialStickerLinkUrlHint;
+
+  /// Label of the optional field for a short title a link sticker shows instead of the domain.
+  ///
+  /// In en, this message translates to:
+  /// **'Title (optional)'**
+  String get videoEditorSocialStickerLinkTitleHint;
+
+  /// Help line in the link sticker sheet: the address also goes into the published post.
+  ///
+  /// In en, this message translates to:
+  /// **'The address is added to your post.'**
+  String get videoEditorSocialStickerLinkNote;
+
+  /// Warning in the link sticker sheet while the typed text is not a usable web address.
+  ///
+  /// In en, this message translates to:
+  /// **'That\'s not a web address yet.'**
+  String get videoEditorSocialStickerLinkInvalid;
+
+  /// Name of the sound credit design with a music note in front of the title and artist.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get videoEditorSocialStickerSoundNote;
+
+  /// Name of the sound credit design with a vinyl record in front of the title and artist.
+  ///
+  /// In en, this message translates to:
+  /// **'Record'**
+  String get videoEditorSocialStickerSoundVinyl;
+
+  /// Name of the sound credit design with a cassette tape in front of the title and artist.
+  ///
+  /// In en, this message translates to:
+  /// **'Cassette'**
+  String get videoEditorSocialStickerSoundCassette;
+
+  /// Name of the sound credit design with equalizer bars in front of the title and artist.
+  ///
+  /// In en, this message translates to:
+  /// **'Equalizer'**
+  String get videoEditorSocialStickerSoundEqualizer;
+
+  /// Name of the sound credit design that looks like a music player with a progress bar and buttons.
+  ///
+  /// In en, this message translates to:
+  /// **'Player'**
+  String get videoEditorSocialStickerSoundPlayer;
+
   /// Name of the info sticker that shows the time a clip was recorded.
   ///
   /// In en, this message translates to:
@@ -21212,6 +21374,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add \"#{tag}\"'**
   String videoMetadataTagsPickerAddTag(String tag);
+
+  /// Screen reader label of a hashtag in the tags picker that comes from a hashtag sticker in the video and can only be removed with the sticker. {tag} is the hashtag without its #.
+  ///
+  /// In en, this message translates to:
+  /// **'{tag}, from a sticker in your video'**
+  String videoMetadataTagsPickerStickerTag(String tag);
 
   /// Welcome-screen Divine Greenlight label above the sign-in / create-account buttons.
   ///

@@ -12,6 +12,7 @@ import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_mask.dart';
 import 'package:openvine/models/video_editor/layer_slide_point.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:pro_image_editor/pro_image_editor.dart'
     show Layer, LayerMask, TextLayer;
@@ -167,11 +168,14 @@ class LayerStyle extends Equatable {
 }
 
 /// [animations] without the ones [layer] cannot play: typing a text out
-/// letter by letter or word by word means nothing on a sticker or a drawing.
+/// letter by letter or word by word means nothing on a sticker or a drawing,
+/// and a link, mention, hashtag or sound sticker holds still where it is
+/// tapped.
 List<pve.LayerAnimation> _playableOn(
   Layer layer,
   List<pve.LayerAnimation> animations,
 ) {
+  if (SocialStickerData.isTappableLayer(layer)) return const [];
   if (layer is TextLayer) return animations;
   return [
     for (final animation in animations)

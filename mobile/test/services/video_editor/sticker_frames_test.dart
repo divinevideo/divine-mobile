@@ -1,15 +1,18 @@
 // ABOUTME: Tests the REC timer export: one frame per video frame, cut at the
 // ABOUTME: layer's own start and end, painted at the capture size.
 
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart' show SizedBox;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/info_sticker.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
-import 'package:openvine/services/video_editor/rec_timer_frames.dart';
+import 'package:openvine/services/video_editor/sticker_frames.dart';
 import 'package:openvine/utils/rec_timer_paint.dart';
+import 'package:openvine/utils/sound_credit_paint.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
 
@@ -47,6 +50,28 @@ WidgetLayer _timer({Duration? startTime, Duration? endTime, LayerMask? mask}) {
   );
 }
 
+WidgetLayer _soundCredit(SocialStickerSoundDesign design) {
+  final meta = SocialStickerData(
+    kind: SocialStickerKind.soundCredit,
+    soundTitle: 'Song',
+    soundArtist: 'Artist',
+    soundDesign: design,
+  ).toMeta();
+  return WidgetLayer(
+    id: design.name,
+    widget: const SizedBox(),
+    meta: meta,
+    exportConfigs: WidgetLayerExportConfigs(id: design.name, meta: meta),
+  );
+}
+
+/// A capture of the sound credit [design] at its own aspect ratio.
+Future<ExportedLayer> _capturedCredit(SocialStickerSoundDesign design) {
+  final layer = _soundCredit(design);
+  final size = soundCreditSize(SocialStickerData.of(layer)!);
+  return _captured(layer, ui.Size(200, 200 / size.aspectRatio));
+}
+
 /// The editor timeline of one clip lasting [duration].
 TransitionTimelineMap _timeline(Duration duration) =>
     TransitionTimelineMap.fromClips([
@@ -61,9 +86,9 @@ TransitionTimelineMap _timeline(Duration duration) =>
     ]);
 
 void main() {
-  group('recTimerWindows', () {
+  group('stickerFrameWindows', () {
     test('gives every frame of a timer without start or end a window', () {
-      final windows = recTimerWindows(
+      final windows = stickerFrameWindows(
         start: null,
         end: null,
         editorDuration: const Duration(milliseconds: 90),
@@ -83,7 +108,7 @@ void main() {
     });
 
     test('shows a whole second on the frame at that second', () {
-      final windows = recTimerWindows(
+      final windows = stickerFrameWindows(
         start: null,
         end: null,
         editorDuration: const Duration(seconds: 2),
@@ -96,7 +121,7 @@ void main() {
     });
 
     test('cuts the first and last window at the layer start and end', () {
-      final windows = recTimerWindows(
+      final windows = stickerFrameWindows(
         start: const Duration(milliseconds: 1500),
         end: const Duration(milliseconds: 3200),
         editorDuration: const Duration(seconds: 6),
@@ -118,34 +143,34 @@ void main() {
     });
   });
 
-  group('recTimerFramesPerSecondFor', () {
+  group('stickerFramesPerSecondFor', () {
     const span = Duration(milliseconds: 6300);
 
     test('changes a timer of the size it is added at every frame', () {
       expect(
-        recTimerFramesPerSecondFor(frame: const ui.Size(360, 94), span: span),
-        equals(recTimerFramesPerSecond),
+        stickerFramesPerSecondFor(frame: const ui.Size(360, 94), span: span),
+        equals(stickerFramesPerSecond),
       );
     });
 
     test('changes a timer scaled across the video less often', () {
       const frame = ui.Size(2000, 520);
 
-      final framesPerSecond = recTimerFramesPerSecondFor(
+      final framesPerSecond = stickerFramesPerSecondFor(
         frame: frame,
         span: span,
       );
 
-      expect(framesPerSecond, lessThan(recTimerFramesPerSecond));
+      expect(framesPerSecond, lessThan(stickerFramesPerSecond));
       final frames = framesPerSecond * span.inMicroseconds / 1e6;
       expect(
         frames * frame.width * frame.height,
-        lessThanOrEqualTo(recTimerPixelBudget + 1),
+        lessThanOrEqualTo(stickerFramePixelBudget + 1),
       );
     });
   });
 
-  group('recTimerLayerFrames', () {
+  group('stickerLayerFrames', () {
     test(
       'paints a frame per video frame at the size the layer was captured',
       () async {
@@ -156,7 +181,7 @@ void main() {
           const ui.Size(10, 10),
         );
 
-        final frames = await recTimerLayerFrames([
+        final frames = await stickerLayerFrames([
           timer,
           other,
         ], _timeline(const Duration(milliseconds: 90)));
@@ -180,7 +205,7 @@ void main() {
 
       Future<List<int>> firstFrame(LayerMask? mask) async {
         final timer = await _captured(_timer(mask: mask), size);
-        final frames = await recTimerLayerFrames([timer], timeline);
+        final frames = await stickerLayerFrames([timer], timeline);
         return frames['timer']!.first.bytes;
       }
 
@@ -212,15 +237,55 @@ void main() {
         const ui.Size(10, 10),
       );
 
-      final layers = await withRecTimerFrames([
+      final layers = await withStickerFrames([
         timer,
         other,
       ], _timeline(const Duration(milliseconds: 90)));
 
-      expect(layers.first, isA<RecTimerExportedLayer>());
+      expect(layers.first, isA<StickerFramesExportedLayer>());
       expect(layers.first.layer, same(timer.layer));
       expect(layers.first.frames, hasLength(3));
       expect(layers.last, same(other));
+    });
+    group('sound credits', () {
+      test('paint a frame per video frame for a turning record', () async {
+        final record = await _capturedCredit(SocialStickerSoundDesign.vinyl);
+
+        final frames = await stickerLayerFrames([
+          record,
+        ], _timeline(const Duration(milliseconds: 300)));
+
+        final recordFrames = frames['vinyl']!;
+        expect(recordFrames, hasLength(9));
+        expect(recordFrames[0].bytes, isNot(equals(recordFrames[4].bytes)));
+      });
+
+      test('leave a note as the still the capture took', () async {
+        final note = await _capturedCredit(SocialStickerSoundDesign.note);
+
+        final layers = await withStickerFrames([
+          note,
+        ], _timeline(const Duration(milliseconds: 90)));
+
+        expect(layers.single, same(note));
+      });
+
+      test('move an equalizer only with the sound to follow', () async {
+        final equalizer = await _capturedCredit(
+          SocialStickerSoundDesign.equalizer,
+        );
+        final timeline = _timeline(const Duration(milliseconds: 90));
+
+        final withoutSound = await stickerLayerFrames([equalizer], timeline);
+        final withSound = await stickerLayerFrames(
+          [equalizer],
+          timeline,
+          Float32List(6 * 48)..fillRange(0, 6 * 48, 1),
+        );
+
+        expect(withoutSound, isEmpty);
+        expect(withSound['equalizer'], hasLength(3));
+      });
     });
   });
 }

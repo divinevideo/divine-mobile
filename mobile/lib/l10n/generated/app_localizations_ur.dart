@@ -2019,6 +2019,30 @@ class AppLocalizationsUr extends AppLocalizations {
   String get metadataSoundsLabel => 'آوازیں';
 
   @override
+  String get metadataLinksLabel => 'لنکس';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'لنک اسٹیکر، $url کھولتا ہے';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel =>
+      'ذکر اسٹیکر، پروفائل کھولتا ہے';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'ہیش ٹیگ اسٹیکر، #$hashtag کھولتا ہے';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel => 'ساؤنڈ اسٹیکر، ساؤنڈ کھولتا ہے';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'یہ لنک Divine سے باہر کھلتا ہے۔ آگے جانے سے پہلے ایڈریس دیکھ لیں۔';
+
+  @override
   String get metadataOriginalSound => 'اصل آواز';
 
   @override
@@ -10803,6 +10827,74 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorInfoStickersTitle => 'معلومات';
 
   @override
+  String get videoEditorSocialStickersTitle => 'سماجی';
+
+  @override
+  String get videoEditorSocialStickerMention => 'ذکر';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'ہیش ٹیگ';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'آواز';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'آپکانام';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'ہیش_ٹیگ';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'کسی کو منتخب کریں';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'آپ کی پوسٹ میں ان کا ذکر ہوگا اور انہیں اطلاع ملے گی۔';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'ہیش ٹیگ لکھیں';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'آپ کی پوسٹ کے ہیش ٹیگز میں بھی شامل ہو جاتا ہے۔';
+
+  @override
+  String get videoEditorSocialStickerLyricHint =>
+      'گانے کے بولوں کی ایک سطر (اختیاری)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'لنک';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'ویب ایڈریس';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'عنوان (اختیاری)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote =>
+      'ایڈریس آپ کی پوسٹ میں شامل ہو جاتا ہے۔';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid =>
+      'یہ ابھی ویب ایڈریس نہیں ہے۔';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'سُر';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'ریکارڈ';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'کیسٹ';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'ایکولائزر';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'پلیئر';
+
+  @override
   String get videoEditorInfoStickerTime => 'وقت';
 
   @override
@@ -12606,6 +12698,11 @@ class AppLocalizationsUr extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '\"#$tag\" شامل کریں';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag، آپ کی ویڈیو کے ایک اسٹیکر سے';
   }
 
   @override

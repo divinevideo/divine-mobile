@@ -1346,6 +1346,40 @@
   "metadataBadgeNotDivine": "Not Divine",
   "metadataBadgeHumanMade": "Human-Made",
   "metadataSoundsLabel": "Sounds",
+  "metadataLinksLabel": "Links",
+  "@metadataLinksLabel": {
+    "description": "Label of the section in a video's info sheet that lists the web pages its link stickers point to."
+  },
+  "videoStickerLinkSemanticLabel": "Link sticker, opens {url}",
+  "@videoStickerLinkSemanticLabel": {
+    "description": "Screen reader label for the invisible button over a link sticker on a playing video; tapping it opens the web page.",
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "videoStickerMentionSemanticLabel": "Mention sticker, opens the profile",
+  "@videoStickerMentionSemanticLabel": {
+    "description": "Screen reader label for the invisible button over a mention sticker on a playing video; tapping it opens the mentioned profile."
+  },
+  "videoStickerHashtagSemanticLabel": "Hashtag sticker, opens #{hashtag}",
+  "@videoStickerHashtagSemanticLabel": {
+    "description": "Screen reader label for the invisible button over a hashtag sticker on a playing video; tapping it opens the hashtag's feed.",
+    "placeholders": {
+      "hashtag": {
+        "type": "String"
+      }
+    }
+  },
+  "videoStickerSoundSemanticLabel": "Sound sticker, opens the sound",
+  "@videoStickerSoundSemanticLabel": {
+    "description": "Screen reader label for the invisible button over a sound sticker on a playing video; tapping it opens the page of the video's sound."
+  },
+  "videoStickerLinkSheetBody": "This link opens outside Divine. Check the address before you go.",
+  "@videoStickerLinkSheetBody": {
+    "description": "Note in the sheet a link sticker on a video opens, above the link's full address: the page opens outside the app."
+  },
   "metadataOriginalSound": "Original sound",
   "metadataVerificationLabel": "Verification",
   "metadataDeviceAttestation": "Device attestation",
@@ -8029,6 +8063,90 @@
   "@videoEditorInfoStickersTitle": {
     "description": "Heading of the info stickers (time, date, weather and so on) in the video editor's sticker sheet."
   },
+  "videoEditorSocialStickersTitle": "Social",
+  "@videoEditorSocialStickersTitle": {
+    "description": "Heading above the row of social stickers (mention, hashtag, sound credit) in the video editor's sticker sheet."
+  },
+  "videoEditorSocialStickerMention": "Mention",
+  "@videoEditorSocialStickerMention": {
+    "description": "Name of the sticker that mentions a person in the video; the sheet title and timeline label for it."
+  },
+  "videoEditorSocialStickerHashtag": "Hashtag",
+  "@videoEditorSocialStickerHashtag": {
+    "description": "Name of the sticker that shows a hashtag in the video and adds it to the post's hashtags."
+  },
+  "videoEditorSocialStickerSoundCredit": "Sound",
+  "@videoEditorSocialStickerSoundCredit": {
+    "description": "Name of the sticker that credits the title and artist of the video's sound."
+  },
+  "videoEditorSocialStickerMentionSample": "yourname",
+  "@videoEditorSocialStickerMentionSample": {
+    "description": "Made-up handle shown after an @ on the sample mention sticker in the sticker sheet. Lowercase, one word."
+  },
+  "videoEditorSocialStickerHashtagSample": "hashtag",
+  "@videoEditorSocialStickerHashtagSample": {
+    "description": "Made-up hashtag shown after a # on the sample hashtag sticker in the sticker sheet. Lowercase, one word."
+  },
+  "videoEditorSocialStickerChoosePerson": "Choose someone",
+  "@videoEditorSocialStickerChoosePerson": {
+    "description": "Row in the mention sticker sheet that opens the people search to pick who the sticker mentions."
+  },
+  "videoEditorSocialStickerMentionNote": "They're mentioned in your post and get a notification.",
+  "@videoEditorSocialStickerMentionNote": {
+    "description": "Help line in the mention sticker sheet: placing the sticker mentions the person in the post, which notifies them."
+  },
+  "videoEditorSocialStickerHashtagHint": "Type a hashtag",
+  "@videoEditorSocialStickerHashtagHint": {
+    "description": "Label of the field where the creator types the hashtag a hashtag sticker shows."
+  },
+  "videoEditorSocialStickerHashtagNote": "Also added to your post's hashtags.",
+  "@videoEditorSocialStickerHashtagNote": {
+    "description": "Help line in the hashtag sticker sheet: the sticker's hashtag also becomes one of the post's hashtags."
+  },
+  "videoEditorSocialStickerLyricHint": "Line of lyrics (optional)",
+  "@videoEditorSocialStickerLyricHint": {
+    "description": "Label of the optional field for a line of song lyrics shown under a sound credit sticker."
+  },
+  "videoEditorSocialStickerLink": "Link",
+  "@videoEditorSocialStickerLink": {
+    "description": "Name of the sticker that shows a link to a web page in the video and adds its address to the post."
+  },
+  "videoEditorSocialStickerLinkUrlHint": "Web address",
+  "@videoEditorSocialStickerLinkUrlHint": {
+    "description": "Label of the field where the creator types the web address a link sticker points to."
+  },
+  "videoEditorSocialStickerLinkTitleHint": "Title (optional)",
+  "@videoEditorSocialStickerLinkTitleHint": {
+    "description": "Label of the optional field for a short title a link sticker shows instead of the domain."
+  },
+  "videoEditorSocialStickerLinkNote": "The address is added to your post.",
+  "@videoEditorSocialStickerLinkNote": {
+    "description": "Help line in the link sticker sheet: the address also goes into the published post."
+  },
+  "videoEditorSocialStickerLinkInvalid": "That's not a web address yet.",
+  "@videoEditorSocialStickerLinkInvalid": {
+    "description": "Warning in the link sticker sheet while the typed text is not a usable web address."
+  },
+  "videoEditorSocialStickerSoundNote": "Note",
+  "@videoEditorSocialStickerSoundNote": {
+    "description": "Name of the sound credit design with a music note in front of the title and artist."
+  },
+  "videoEditorSocialStickerSoundVinyl": "Record",
+  "@videoEditorSocialStickerSoundVinyl": {
+    "description": "Name of the sound credit design with a vinyl record in front of the title and artist."
+  },
+  "videoEditorSocialStickerSoundCassette": "Cassette",
+  "@videoEditorSocialStickerSoundCassette": {
+    "description": "Name of the sound credit design with a cassette tape in front of the title and artist."
+  },
+  "videoEditorSocialStickerSoundEqualizer": "Equalizer",
+  "@videoEditorSocialStickerSoundEqualizer": {
+    "description": "Name of the sound credit design with equalizer bars in front of the title and artist."
+  },
+  "videoEditorSocialStickerSoundPlayer": "Player",
+  "@videoEditorSocialStickerSoundPlayer": {
+    "description": "Name of the sound credit design that looks like a music player with a progress bar and buttons."
+  },
   "videoEditorInfoStickerTime": "Time",
   "@videoEditorInfoStickerTime": {
     "description": "Name of the info sticker that shows the time a clip was recorded."
@@ -9317,6 +9435,15 @@
   },
   "videoMetadataTagsPickerAddTag": "Add \"#{tag}\"",
   "@videoMetadataTagsPickerAddTag": {
+    "placeholders": {
+      "tag": {
+        "type": "String"
+      }
+    }
+  },
+  "videoMetadataTagsPickerStickerTag": "{tag}, from a sticker in your video",
+  "@videoMetadataTagsPickerStickerTag": {
+    "description": "Screen reader label of a hashtag in the tags picker that comes from a hashtag sticker in the video and can only be removed with the sticker. {tag} is the hashtag without its #.",
     "placeholders": {
       "tag": {
         "type": "String"

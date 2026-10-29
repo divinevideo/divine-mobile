@@ -2075,6 +2075,31 @@ class AppLocalizationsPl extends AppLocalizations {
   String get metadataSoundsLabel => 'Dźwięki';
 
   @override
+  String get metadataLinksLabel => 'Linki';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'Naklejka z linkiem, otwiera $url';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel =>
+      'Naklejka ze wzmianką, otwiera profil';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'Naklejka z hashtagiem, otwiera #$hashtag';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel =>
+      'Naklejka z dźwiękiem, otwiera dźwięk';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'Ten link otwiera się poza Divine. Sprawdź adres, zanim przejdziesz dalej.';
+
+  @override
   String get metadataOriginalSound => 'Oryginalny dźwięk';
 
   @override
@@ -11015,6 +11040,74 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorInfoStickersTitle => 'Info';
 
   @override
+  String get videoEditorSocialStickersTitle => 'Społecznościowe';
+
+  @override
+  String get videoEditorSocialStickerMention => 'Wzmianka';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'Hashtag';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'Dźwięk';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'twojeimie';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'hashtag';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'Wybierz osobę';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'Ta osoba zostanie wspomniana w twoim poście i dostanie powiadomienie.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'Wpisz hashtag';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'Zostanie też dodany do hashtagów twojego posta.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint =>
+      'Wers tekstu piosenki (opcjonalnie)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'Link';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'Adres strony';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'Tytuł (opcjonalnie)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote =>
+      'Adres zostanie dodany do twojego posta.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid =>
+      'To jeszcze nie jest adres strony.';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'Nuta';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'Płyta';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'Kaseta';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'Korektor';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'Odtwarzacz';
+
+  @override
   String get videoEditorInfoStickerTime => 'Godzina';
 
   @override
@@ -12854,6 +12947,11 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return 'Dodaj „#$tag\"';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, z naklejki w twoim filmie';
   }
 
   @override

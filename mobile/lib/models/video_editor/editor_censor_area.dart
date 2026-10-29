@@ -141,6 +141,7 @@ List<ExportedLayer> withCensorLayers(
           layer: item?.layer ?? layer,
           bytes: censorAreaMaskPng,
           logicalSize: _rotatedBox(layer.size, layer.rotation),
+          boxSize: layer.size,
         ),
       );
     } else if (item != null) {

@@ -1,11 +1,13 @@
 // ABOUTME: Pure tag builders for a NIP-71 video event: reply threading, text
-// ABOUTME: tracks, descriptive metadata, and creator credits.
+// ABOUTME: tracks, descriptive metadata, creator credits and linked pages.
 
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:models/models.dart'
     show
         ClipSourceCredit,
         InspiredByInfo,
+        VideoStickerRegion,
+        videoLinkTagMarker,
         videoReplyVisibilityFeedValue,
         videoReplyVisibilityTagName;
 import 'package:nostr_sdk/event_kind.dart';
@@ -224,4 +226,27 @@ void addVideoCreditTags(
         selfPubkey: selfPubkeyHex,
       ),
     );
+}
+
+/// Appends a NIP-24 `r` tag for each web page in [urls], marked
+/// [videoLinkTagMarker].
+///
+/// The marker is what keeps the address a link: a video event's unmarked
+/// `r` tag is read as one of its own media URLs, so a bare one could stand
+/// in for the video it is posted with.
+void addVideoLinkTags(List<List<String>> tags, Iterable<String> urls) {
+  for (final url in urls.toSet()) {
+    tags.add(['r', url, videoLinkTagMarker]);
+  }
+}
+
+/// Adds a `sticker` tag for each sticker a viewer can tap on the video,
+/// where it stands and when it shows (see [VideoStickerRegion]).
+void addVideoStickerTags(
+  List<List<String>> tags,
+  Iterable<VideoStickerRegion> regions,
+) {
+  for (final region in regions) {
+    tags.add(region.toTag());
+  }
 }

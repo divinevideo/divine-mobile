@@ -1,5 +1,5 @@
-// ABOUTME: Bottom sheet for sticker selection in the video editor: a row of
-// ABOUTME: info stickers above a searchable, responsive grid of stickers.
+// ABOUTME: Bottom sheet for sticker selection in the video editor: rows of
+// ABOUTME: info and social stickers above a searchable grid of stickers.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,23 +8,31 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show StickerData;
 import 'package:openvine/blocs/video_editor/sticker/video_editor_sticker_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_kind_row.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_kind_row.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 
-/// A bottom sheet that displays the info stickers and a searchable grid of
-/// stickers.
+/// A bottom sheet that displays the info and social stickers and a
+/// searchable grid of stickers.
 ///
-/// Pops the selected [StickerData] when a sticker is tapped, or the
-/// `InfoStickerKind` when an info sticker is.
+/// Pops the selected [StickerData] when a sticker is tapped, the
+/// `InfoStickerKind` when an info sticker is, or the `SocialStickerKind`
+/// when a social sticker is.
 class VideoEditorStickerSheet extends StatelessWidget {
   const VideoEditorStickerSheet({
     this.enableSearchBar = false,
     super.key,
     this.scrollController,
+    this.soundCredit,
   });
 
   final ScrollController? scrollController;
   final bool enableSearchBar;
+
+  /// The credit for the video's sound, offered as a social sticker; `null`
+  /// when its sound has no title to credit.
+  final SocialStickerData? soundCredit;
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +60,21 @@ class VideoEditorStickerSheet extends StatelessWidget {
             ),
           ),
           const SliverToBoxAdapter(child: InfoStickerKindRow()),
+
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const .fromLTRB(16, 16, 16, 12),
+              child: Text(
+                context.l10n.videoEditorSocialStickersTitle,
+                style: VineTheme.titleSmallFont(
+                  color: context.vineColors.onSurfaceMuted,
+                ),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: SocialStickerKindRow(soundCredit: soundCredit),
+          ),
 
           SliverToBoxAdapter(
             child: Padding(

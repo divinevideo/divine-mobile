@@ -2062,6 +2062,31 @@ class AppLocalizationsTe extends AppLocalizations {
   String get metadataSoundsLabel => 'శబ్దాలు';
 
   @override
+  String get metadataLinksLabel => 'లింక్‌లు';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'లింక్ స్టిక్కర్, $url తెరుస్తుంది';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel =>
+      'ప్రస్తావన స్టిక్కర్, ప్రొఫైల్ తెరుస్తుంది';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'హ్యాష్‌ట్యాగ్ స్టిక్కర్, #$hashtag తెరుస్తుంది';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel =>
+      'సౌండ్ స్టిక్కర్, సౌండ్‌ను తెరుస్తుంది';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'ఈ లింక్ Divine వెలుపల తెరుచుకుంటుంది. వెళ్లే ముందు చిరునామాను తనిఖీ చేయండి.';
+
+  @override
   String get metadataOriginalSound => 'అసలు ధ్వని';
 
   @override
@@ -11090,6 +11115,74 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorInfoStickersTitle => 'సమాచారం';
 
   @override
+  String get videoEditorSocialStickersTitle => 'సామాజిక';
+
+  @override
+  String get videoEditorSocialStickerMention => 'ప్రస్తావన';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'హ్యాష్‌ట్యాగ్';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'ధ్వని';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'మీపేరు';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'హ్యాష్‌ట్యాగ్';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'ఒకరిని ఎంచుకోండి';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'మీ పోస్ట్‌లో వారి ప్రస్తావన ఉంటుంది, వారికి నోటిఫికేషన్ వస్తుంది.';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'హ్యాష్‌ట్యాగ్ టైప్ చేయండి';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote =>
+      'మీ పోస్ట్ హ్యాష్‌ట్యాగ్‌లకు కూడా జోడించబడుతుంది.';
+
+  @override
+  String get videoEditorSocialStickerLyricHint =>
+      'పాట సాహిత్యంలో ఒక లైన్ (ఐచ్ఛికం)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'లింక్';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'వెబ్ చిరునామా';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'శీర్షిక (ఐచ్ఛికం)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote =>
+      'చిరునామా మీ పోస్ట్‌కు జోడించబడుతుంది.';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid =>
+      'ఇది ఇంకా వెబ్ చిరునామా కాదు.';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'స్వరం';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'రికార్డ్';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'క్యాసెట్';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'ఈక్వలైజర్';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'ప్లేయర్';
+
+  @override
   String get videoEditorInfoStickerTime => 'సమయం';
 
   @override
@@ -12922,6 +13015,11 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '\"# జోడించండి$tag\"';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag, మీ వీడియోలోని స్టిక్కర్ నుండి';
   }
 
   @override

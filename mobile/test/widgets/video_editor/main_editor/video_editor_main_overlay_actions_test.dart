@@ -1,6 +1,8 @@
 // ABOUTME: Widget tests for VideoEditorMainOverlayActions toolbar.
 // ABOUTME: Tests button rendering, music sub-editor hiding, and close/done.
 
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -18,13 +20,17 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
 import 'package:openvine/models/video_publish/video_publish_provider_state.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/utils/sticker_emoji_font.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_finish_listener.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_overlay_actions.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
+import 'package:pro_image_editor/pro_image_editor.dart';
 
 import '../../../helpers/go_router.dart';
 import '../../../helpers/video_editor/loop_repair.dart';
@@ -34,6 +40,12 @@ class _MockVideoEditorMainBloc
     implements VideoEditorMainBloc {}
 
 class _MockDivineVideoDraft extends Mock implements DivineVideoDraft {}
+
+class _MockEditor extends Mock implements ProImageEditorState {
+  @override
+  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) =>
+      '_MockEditor';
+}
 
 class _FakeVideoEditorNotifier extends VideoEditorNotifier {
   _FakeVideoEditorNotifier({
@@ -115,6 +127,9 @@ void main() {
       bool hasBeenEdited = false,
       DraftSaveOutcome saveAsDraftResult = DraftSaveOutcome.saved,
       LoopSuggestionCubit? loopCubit,
+      ProImageEditorState? editor,
+      VideoEditorMainBloc? mainBloc,
+      ValueNotifier<bool>? actionsVisible,
     }) {
       if (state != null) {
         when(() => mockBloc.state).thenReturn(state);
@@ -145,6 +160,7 @@ void main() {
             home: Scaffold(
               body: VideoEditorScope(
                 editorKey: GlobalKey(),
+                editorOverride: editor,
                 removeAreaKey: GlobalKey(),
                 originalClipAspectRatio: 9 / 16,
                 bodySizeNotifier: ValueNotifier(const Size(400, 600)),
@@ -162,7 +178,9 @@ void main() {
                 onAddEditTextLayer: ([layer]) async => null,
                 child: MultiBlocProvider(
                   providers: [
-                    BlocProvider<VideoEditorMainBloc>.value(value: mockBloc),
+                    BlocProvider<VideoEditorMainBloc>.value(
+                      value: mainBloc ?? mockBloc,
+                    ),
                     BlocProvider<ClipEditorBloc>.value(value: clipEditorBloc),
                     BlocProvider(create: (_) => TextWrapHintCubit()),
                     if (loopCubit == null)
@@ -174,7 +192,16 @@ void main() {
                     else
                       BlocProvider.value(value: loopCubit),
                   ],
-                  child: const VideoEditorMainOverlayActions(),
+                  child: VideoEditorFinishListener(
+                    child: actionsVisible == null
+                        ? const VideoEditorMainOverlayActions()
+                        : ValueListenableBuilder<bool>(
+                            valueListenable: actionsVisible,
+                            builder: (_, visible, _) => visible
+                                ? const VideoEditorMainOverlayActions()
+                                : const SizedBox.shrink(),
+                          ),
+                  ),
                 ),
               ),
             ),
@@ -305,6 +332,136 @@ void main() {
     });
 
     group('interactions', () {
+      testWidgets('delivers a pending handover while actions are unmounted', (
+        tester,
+      ) async {
+        final editor = _MockEditor();
+        final bloc = VideoEditorMainBloc();
+        addTearDown(bloc.close);
+        final visible = ValueNotifier(true);
+        addTearDown(visible.dispose);
+        final font = Completer<bool>();
+        debugLoadStickerEmojiFont = () => font.future;
+        addTearDown(resetStickerEmojiFontForTesting);
+        final meta = const SocialStickerData(
+          kind: SocialStickerKind.hashtag,
+          hashtag: 'party🎉',
+        ).toMeta();
+        when(() => editor.activeLayers).thenReturn([
+          WidgetLayer(widget: const SizedBox(), meta: meta),
+        ]);
+        when(() => editor.mounted).thenReturn(true);
+        await tester.pumpWidget(
+          buildWidget(editor: editor, mainBloc: bloc, actionsVisible: visible),
+        );
+        tester
+            .widget<VideoEditorToolbar>(find.byType(VideoEditorToolbar))
+            .onDone!();
+        await tester.pump();
+        expect(bloc.state.isFinishing, isTrue);
+
+        visible.value = false;
+        await tester.pump();
+        expect(find.byType(VideoEditorMainOverlayActions), findsNothing);
+        font.complete(true);
+        await tester.pump();
+
+        expect(bloc.state.handOverCounter, 1);
+        verify(editor.doneEditing).called(1);
+      });
+
+      testWidgets('hands the edit over once for two Done calls in one task', (
+        tester,
+      ) async {
+        final editor = _MockEditor();
+        final bloc = VideoEditorMainBloc();
+        addTearDown(bloc.close);
+        final font = Completer<bool>();
+        debugLoadStickerEmojiFont = () => font.future;
+        addTearDown(resetStickerEmojiFontForTesting);
+        final meta = const SocialStickerData(
+          kind: SocialStickerKind.hashtag,
+          hashtag: 'party🎉',
+        ).toMeta();
+        when(() => editor.activeLayers).thenReturn([
+          WidgetLayer(widget: const SizedBox(), meta: meta),
+        ]);
+        when(() => editor.mounted).thenReturn(true);
+        await tester.pumpWidget(buildWidget(editor: editor, mainBloc: bloc));
+
+        final done = tester
+            .widget<VideoEditorToolbar>(
+              find.byType(VideoEditorToolbar),
+            )
+            .onDone!;
+        done();
+        done();
+        await tester.pump();
+        expect(bloc.state.isFinishing, isTrue);
+        verifyNever(editor.doneEditing);
+
+        font.complete(true);
+        await tester.pump();
+
+        verify(editor.doneEditing).called(1);
+        expect(bloc.state.isFinishing, isFalse);
+      });
+
+      testWidgets('Close cancels a pending handover owned by the main bloc', (
+        tester,
+      ) async {
+        final editor = _MockEditor();
+        final bloc = VideoEditorMainBloc();
+        addTearDown(bloc.close);
+        final font = Completer<bool>();
+        debugLoadStickerEmojiFont = () => font.future;
+        addTearDown(resetStickerEmojiFontForTesting);
+        final meta = const SocialStickerData(
+          kind: SocialStickerKind.hashtag,
+          hashtag: 'party🎉',
+        ).toMeta();
+        when(() => editor.activeLayers).thenReturn([
+          WidgetLayer(widget: const SizedBox(), meta: meta),
+        ]);
+        when(() => editor.mounted).thenReturn(true);
+        await tester.pumpWidget(
+          buildWidget(
+            editor: editor,
+            mainBloc: bloc,
+            isAutosavedDraft: true,
+            hasBeenEdited: true,
+          ),
+        );
+        tester
+            .widget<VideoEditorToolbar>(find.byType(VideoEditorToolbar))
+            .onDone!();
+        await tester.pump();
+        await tester.tap(find.bySemanticsLabel(closeLabel));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.videoEditorSaveDraftTitle), findsOneWidget);
+
+        font.complete(true);
+        await tester.pump();
+
+        verifyNever(editor.doneEditing);
+        expect(bloc.state.isFinishing, isFalse);
+      });
+
+      testWidgets('turns Done off while the edit is handed over', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(state: const VideoEditorMainState(isFinishing: true)),
+        );
+
+        expect(
+          tester
+              .widget<VideoEditorToolbar>(find.byType(VideoEditorToolbar))
+              .onDone,
+          isNull,
+        );
+      });
+
       testWidgets(
         'tapping Close when no sub-editor is open calls context.pop',
         (tester) async {

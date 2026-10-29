@@ -1,5 +1,7 @@
 // ABOUTME: Unit tests for the profile/author cross-source merge policy (#3384).
 
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart';
 import 'package:videos_repository/videos_repository.dart';
@@ -61,6 +63,11 @@ VideoEvent _video({
     nostrRepostCount: nostrRepostCount,
   );
 }
+
+/// [video] as the feed's snapshot restores it.
+VideoEvent _snapshotOf(VideoEvent video) => VideoEvent.fromJson(
+  jsonDecode(jsonEncode(video.toJson())) as Map<String, dynamic>,
+);
 
 void main() {
   group('canonicalProfileFeedVideoKey', () {
@@ -172,6 +179,65 @@ void main() {
 
       expect(merged.addressableDTag, equals('video-d-tag'));
       expect(merged.addressableId, equals('34236:author:video-d-tag'));
+    });
+
+    test('fills link urls and sticker regions from a snapshot copy', () {
+      // The feed's snapshot keeps the two fields but not the tags they were
+      // read from, so the merge has to carry them over itself.
+      final snapshot = _snapshotOf(
+        _video(
+          id: 'nostr',
+          createdAt: 1000,
+          vineId: 'video-stickers',
+          nostrEventTags: const [
+            ['r', 'https://divine.video/about', 'link'],
+            ['sticker', 'hashtag', 'divine', '0.5 0.5 0.2 0.1', '0'],
+          ],
+        ),
+      );
+      expect(snapshot.nostrEventTags, isEmpty);
+
+      final merged = mergeProfileFeedVideos(
+        _video(id: 'rest', createdAt: 2000, vineId: 'video-stickers'),
+        snapshot,
+      );
+
+      expect(merged.linkUrls, equals(['https://divine.video/about']));
+      expect(
+        merged.stickerRegions.map((region) => region.target),
+        equals(['divine']),
+      );
+    });
+
+    test('keeps link urls and sticker regions from the primary copy', () {
+      final merged = mergeProfileFeedVideos(
+        _snapshotOf(
+          _video(
+            id: 'primary',
+            createdAt: 2000,
+            vineId: 'video-stickers',
+            nostrEventTags: const [
+              ['r', 'https://divine.video/new', 'link'],
+              ['sticker', 'hashtag', 'new', '0.5 0.5 0.2 0.1', '0'],
+            ],
+          ),
+        ),
+        _video(
+          id: 'secondary',
+          createdAt: 1000,
+          vineId: 'video-stickers',
+          nostrEventTags: const [
+            ['r', 'https://divine.video/old', 'link'],
+            ['sticker', 'hashtag', 'old', '0.5 0.5 0.2 0.1', '0'],
+          ],
+        ),
+      );
+
+      expect(merged.linkUrls, equals(['https://divine.video/new']));
+      expect(
+        merged.stickerRegions.map((region) => region.target),
+        equals(['new']),
+      );
     });
 
     test('fills plural text-track refs from the secondary copy', () {

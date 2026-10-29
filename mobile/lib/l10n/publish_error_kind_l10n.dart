@@ -60,6 +60,8 @@ extension PublishErrorKindL10n on AppLocalizations {
         return publishErrorInterrupted;
       case PublishErrorKind.scheduleRejected:
         return publishErrorScheduleRejected;
+      case PublishErrorKind.overlaysUnavailable:
+        return publishErrorOverlaysUnavailable;
       case PublishErrorKind.accountChanged:
         return publishErrorAccountChanged;
       case PublishErrorKind.generic:

@@ -1974,6 +1974,29 @@ class AppLocalizationsAm extends AppLocalizations {
   String get metadataSoundsLabel => 'ይሰማል።';
 
   @override
+  String get metadataLinksLabel => 'ሊንኮች';
+
+  @override
+  String videoStickerLinkSemanticLabel(String url) {
+    return 'የሊንክ ተለጣፊ፣ $url ይከፍታል';
+  }
+
+  @override
+  String get videoStickerMentionSemanticLabel => 'የመጥቀሻ ተለጣፊ፣ መገለጫውን ይከፍታል';
+
+  @override
+  String videoStickerHashtagSemanticLabel(String hashtag) {
+    return 'የሃሽታግ ተለጣፊ፣ #$hashtag ይከፍታል';
+  }
+
+  @override
+  String get videoStickerSoundSemanticLabel => 'የድምጽ ተለጣፊ፣ ድምጹን ይከፍታል';
+
+  @override
+  String get videoStickerLinkSheetBody =>
+      'ይህ ሊንክ ከDivine ውጭ ይከፈታል። ከመሄድዎ በፊት አድራሻውን ያረጋግጡ።';
+
+  @override
   String get metadataOriginalSound => 'ኦሪጅናል ድምጽ';
 
   @override
@@ -10557,6 +10580,70 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorInfoStickersTitle => 'መረጃ';
 
   @override
+  String get videoEditorSocialStickersTitle => 'ማኅበራዊ';
+
+  @override
+  String get videoEditorSocialStickerMention => 'መጥቀስ';
+
+  @override
+  String get videoEditorSocialStickerHashtag => 'ሃሽታግ';
+
+  @override
+  String get videoEditorSocialStickerSoundCredit => 'ድምፅ';
+
+  @override
+  String get videoEditorSocialStickerMentionSample => 'ስምዎ';
+
+  @override
+  String get videoEditorSocialStickerHashtagSample => 'ሃሽታግ';
+
+  @override
+  String get videoEditorSocialStickerChoosePerson => 'ሰው ይምረጡ';
+
+  @override
+  String get videoEditorSocialStickerMentionNote =>
+      'በልጥፍዎ ውስጥ ይጠቀሳሉ፣ ማሳወቂያም ይደርሳቸዋል።';
+
+  @override
+  String get videoEditorSocialStickerHashtagHint => 'ሃሽታግ ይጻፉ';
+
+  @override
+  String get videoEditorSocialStickerHashtagNote => 'ወደ ልጥፍዎ ሃሽታጎችም ይታከላል።';
+
+  @override
+  String get videoEditorSocialStickerLyricHint => 'የዘፈን ግጥም መስመር (አማራጭ)';
+
+  @override
+  String get videoEditorSocialStickerLink => 'ሊንክ';
+
+  @override
+  String get videoEditorSocialStickerLinkUrlHint => 'የድር አድራሻ';
+
+  @override
+  String get videoEditorSocialStickerLinkTitleHint => 'ርዕስ (አማራጭ)';
+
+  @override
+  String get videoEditorSocialStickerLinkNote => 'አድራሻው ወደ ልጥፍዎ ይታከላል።';
+
+  @override
+  String get videoEditorSocialStickerLinkInvalid => 'ይህ ገና የድር አድራሻ አይደለም።';
+
+  @override
+  String get videoEditorSocialStickerSoundNote => 'ኖታ';
+
+  @override
+  String get videoEditorSocialStickerSoundVinyl => 'የሙዚቃ ሸክላ';
+
+  @override
+  String get videoEditorSocialStickerSoundCassette => 'ካሴት';
+
+  @override
+  String get videoEditorSocialStickerSoundEqualizer => 'ኢኳላይዘር';
+
+  @override
+  String get videoEditorSocialStickerSoundPlayer => 'ማጫወቻ';
+
+  @override
   String get videoEditorInfoStickerTime => 'ሰዓት';
 
   @override
@@ -12299,6 +12386,11 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String videoMetadataTagsPickerAddTag(String tag) {
     return '\"#$tag\" ያክሉ';
+  }
+
+  @override
+  String videoMetadataTagsPickerStickerTag(String tag) {
+    return '$tag፣ በቪዲዮዎ ውስጥ ካለ ስቲከር';
   }
 
   @override

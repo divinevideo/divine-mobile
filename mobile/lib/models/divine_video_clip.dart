@@ -10,7 +10,7 @@ import 'package:divine_camera/divine_camera.dart'
 import 'package:divine_ui/divine_ui.dart' show colorFromArgb32;
 import 'package:models/models.dart'
     as model
-    show AspectRatio, ClipSourceCredit, EqualizerSettings;
+    show AspectRatio, ClipSourceCredit, EqualizerSettings, VideoStickerRegion;
 import 'package:openvine/models/c2pa_edit_source.dart';
 import 'package:openvine/models/clip_gallery_backup.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
@@ -73,6 +73,7 @@ class DivineVideoClip {
     this.derivedFrom,
     this.recordingSha256,
     this.galleryBackup,
+    this.stickerRegions = const [],
     String? sourceAuthorPubkey,
     String? sourceEventId,
     String? sourceAddressableId,
@@ -367,6 +368,11 @@ class DivineVideoClip {
   /// Owned by the library entry: only `ClipLibraryService.setGalleryBackup`
   /// changes it, and a save of an older copy keeps what the entry holds.
   final ClipGalleryBackup? galleryBackup;
+
+  /// Where a viewer can tap the link, mention, hashtag and sound stickers on
+  /// this clip once it is published; set only on a final render, from the
+  /// layers it was rendered with.
+  final List<model.VideoStickerRegion> stickerRegions;
 
   /// The files to name as this clip's sources when an edit of it is signed:
   /// [derivedFrom], or else the clip's own video file.
@@ -812,6 +818,7 @@ class DivineVideoClip {
     bool clearRecordingSha256 = false,
     ClipGalleryBackup? galleryBackup,
     bool clearGalleryBackup = false,
+    List<model.VideoStickerRegion>? stickerRegions,
     // Provenance is copied as a whole list: the scalar source fields are a
     // read-only view of its first entry, so setting one here could only mean
     // "replace the whole list with a single credit" — which silently drops the
@@ -913,6 +920,7 @@ class DivineVideoClip {
       galleryBackup: isNewLogicalClip || clearGalleryBackup
           ? null
           : (galleryBackup ?? this.galleryBackup),
+      stickerRegions: stickerRegions ?? this.stickerRegions,
       sourceCredits: nextSourceCredits,
     );
   }
@@ -981,6 +989,8 @@ class DivineVideoClip {
         'derivedFrom': [for (final source in sources) source.toJson()],
       if (recordingSha256 != null) 'recordingSha256': recordingSha256,
       if (galleryBackup case final backup?) 'galleryBackup': backup.toJson(),
+      if (stickerRegions.isNotEmpty)
+        'stickerRegions': [for (final region in stickerRegions) region.toTag()],
       if (sourceAuthorPubkey != null) 'sourceAuthorPubkey': sourceAuthorPubkey,
       if (sourceEventId != null) 'sourceEventId': sourceEventId,
       if (sourceAddressableId != null)
@@ -1176,6 +1186,12 @@ class DivineVideoClip {
         useOriginalPath: useOriginalPath,
       ),
       recordingSha256: json['recordingSha256'] as String?,
+      stickerRegions: [
+        for (final tag in (json['stickerRegions'] as List<dynamic>?) ?? [])
+          ?model.VideoStickerRegion.fromTag([
+            for (final value in tag as List<dynamic>) '$value',
+          ]),
+      ],
       galleryBackup: ClipGalleryBackup.fromJson(
         json['galleryBackup'],
         documentsPath,
