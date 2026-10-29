@@ -14,8 +14,8 @@ void main() {
         expect(names.toSet(), hasLength(names.length));
       });
 
-      test('lists only filters that change the picture, as Done treats a '
-          'filter without matrices as nothing picked', () {
+      test('lists only filters that carry a matrix, as Done treats a filter '
+          'without matrices as nothing picked', () {
         for (final category in EditorFilterCategory.values) {
           for (final filter in category.filters) {
             expect(filter.filters, isNotEmpty, reason: filter.name);

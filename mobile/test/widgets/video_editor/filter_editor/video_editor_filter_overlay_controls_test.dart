@@ -289,6 +289,23 @@ void main() {
           verifyClosedWithoutCommitting();
         });
 
+        testWidgets('dispatches Cancelled, not Confirmed, when no filter '
+            'editor is mounted', (tester) async {
+          when(() => mockBloc.state).thenReturn(
+            VideoEditorFilterState(selectedFilter: presetFiltersList[1]),
+          );
+          await tester.pumpWidget(buildWidget());
+          await tester.pump();
+
+          await tester.tap(find.bySemanticsLabel(doneLabel));
+          await tester.pump();
+
+          verify(
+            () => mockBloc.add(const VideoEditorFilterCancelled()),
+          ).called(1);
+          verifyNever(() => mockBloc.add(const VideoEditorFilterConfirmed()));
+        });
+
         testWidgets('closes without committing when the editor has nothing '
             'picked, even if the bloc still holds an earlier pick', (
           tester,
