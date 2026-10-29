@@ -309,9 +309,10 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
         currentUserPubkey != null && currentUserPubkey == widget.userIdHex;
 
     // Subscribe to the *shape* of the active upload list (id + title +
-    // thumbnailPath + aspect ratio per upload). Progress is intentionally excluded so that
-    // per-tick progress emissions don't rebuild the grid — each upload
-    // tile subscribes to its own progress in [_VideoGridUploadingTile].
+    // thumbnailPath + aspect ratio per upload). Progress is intentionally
+    // excluded so that per-tick progress emissions don't rebuild the grid —
+    // each upload tile subscribes to its own progress in
+    // [_VideoGridUploadingTile].
     //
     // The selector returns [ActiveUploadsView] (Equatable) rather than a raw
     // [List]: `context.select` compares its result with `==`, and `List`
