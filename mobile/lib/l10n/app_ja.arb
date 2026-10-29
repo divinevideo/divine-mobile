@@ -2951,6 +2951,8 @@
   "videoEditorLayerAnimationPulseTo": "縮小サイズ",
   "videoEditorLayerAnimationWiggleAngle": "傾き",
   "videoEditorLayerAnimationBounceHeight": "高さ",
+  "videoEditorLayerAnimationFlipSideways": "左右",
+  "videoEditorLayerAnimationFlipOver": "上下",
   "videoEditorLayerAnimationCustomPoint": "カスタム",
   "videoEditorLayerAnimationPointEnterHint": "スライドを始める位置を動画でタップしてください",
   "videoEditorLayerAnimationPointLeaveHint": "スライドを終える位置を動画でタップしてください",

@@ -10936,6 +10936,12 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => 'ఎత్తు';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => 'పక్కకు';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'పై నుండి కిందికి';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'అనుకూలం';
 
   @override

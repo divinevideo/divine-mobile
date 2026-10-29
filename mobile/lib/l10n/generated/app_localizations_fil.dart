@@ -10731,6 +10731,12 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => 'Taas';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => 'Patagilid';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'Mula itaas pababa';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'Custom';
 
   @override

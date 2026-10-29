@@ -5392,6 +5392,8 @@
   "videoEditorLayerAnimationPulseTo": "Thu nhỏ đến",
   "videoEditorLayerAnimationWiggleAngle": "Độ nghiêng",
   "videoEditorLayerAnimationBounceHeight": "Độ cao",
+  "videoEditorLayerAnimationFlipSideways": "Sang ngang",
+  "videoEditorLayerAnimationFlipOver": "Từ trên xuống",
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },

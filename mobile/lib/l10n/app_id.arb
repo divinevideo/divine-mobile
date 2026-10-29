@@ -2958,6 +2958,8 @@
   "videoEditorLayerAnimationPulseTo": "Mengecil ke",
   "videoEditorLayerAnimationWiggleAngle": "Kemiringan",
   "videoEditorLayerAnimationBounceHeight": "Tinggi",
+  "videoEditorLayerAnimationFlipSideways": "Ke samping",
+  "videoEditorLayerAnimationFlipOver": "Atas ke bawah",
   "videoEditorLayerAnimationCustomPoint": "Kustom",
   "videoEditorLayerAnimationPointEnterHint": "Ketuk video di tempat geserannya dimulai",
   "videoEditorLayerAnimationPointLeaveHint": "Ketuk video di tempat geserannya berakhir",

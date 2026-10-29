@@ -3039,6 +3039,8 @@
   "videoEditorLayerAnimationPulseTo": "Encoger hasta",
   "videoEditorLayerAnimationWiggleAngle": "Inclinación",
   "videoEditorLayerAnimationBounceHeight": "Altura",
+  "videoEditorLayerAnimationFlipSideways": "De lado",
+  "videoEditorLayerAnimationFlipOver": "De arriba abajo",
   "videoEditorLayerAnimationCustomPoint": "Punto personalizado",
   "videoEditorLayerAnimationPointEnterHint": "Tocá el video donde querés que empiece el deslizamiento",
   "videoEditorLayerAnimationPointLeaveHint": "Tocá el video donde querés que termine el deslizamiento",

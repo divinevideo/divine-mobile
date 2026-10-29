@@ -155,6 +155,20 @@ class VideoEditorConstants {
   static const loopBounceCycle = Duration(milliseconds: 700);
   static const loopPulseCycle = Duration(seconds: 1);
 
+  /// One turn of a looping spin when first picked: about a record's pace.
+  static const loopSpinCycle = Duration(milliseconds: 1800);
+
+  /// How far a flip turns a layer when first picked: a quarter turn, so it
+  /// comes in edge-on and turns to face the viewer, or turns away until it
+  /// is gone.
+  static const defaultFlipTurns = 0.25;
+
+  /// Bounds and snap step of the spin and flip turn sliders, in whole
+  /// degrees: from a quarter turn to three full turns.
+  static const minTurnDegrees = 90;
+  static const maxTurnDegrees = 1080;
+  static const turnStepDegrees = 90;
+
   /// How far a looping pulse shrinks a layer when first picked: to 80 %
   /// rather than to nothing.
   static const loopPulseScaleFrom = 0.8;

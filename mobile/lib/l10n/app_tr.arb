@@ -2958,6 +2958,8 @@
   "videoEditorLayerAnimationPulseTo": "Küçülme boyutu",
   "videoEditorLayerAnimationWiggleAngle": "Eğim",
   "videoEditorLayerAnimationBounceHeight": "Yükseklik",
+  "videoEditorLayerAnimationFlipSideways": "Yana doğru",
+  "videoEditorLayerAnimationFlipOver": "Yukarıdan aşağı",
   "videoEditorLayerAnimationCustomPoint": "Özel nokta",
   "videoEditorLayerAnimationPointEnterHint": "Videoda nereden kayarak gireceğine dokun",
   "videoEditorLayerAnimationPointLeaveHint": "Videoda nereye kayarak çıkacağına dokun",

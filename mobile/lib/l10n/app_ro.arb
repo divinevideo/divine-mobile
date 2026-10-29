@@ -3031,6 +3031,8 @@
   "videoEditorLayerAnimationPulseTo": "Micșorare la",
   "videoEditorLayerAnimationWiggleAngle": "Înclinare",
   "videoEditorLayerAnimationBounceHeight": "Înălțime",
+  "videoEditorLayerAnimationFlipSideways": "Lateral",
+  "videoEditorLayerAnimationFlipOver": "De sus în jos",
   "videoEditorLayerAnimationCustomPoint": "Punct personalizat",
   "videoEditorLayerAnimationPointEnterHint": "Atinge videoclipul acolo de unde trebuie să gliseze",
   "videoEditorLayerAnimationPointLeaveHint": "Atinge videoclipul acolo unde trebuie să gliseze",

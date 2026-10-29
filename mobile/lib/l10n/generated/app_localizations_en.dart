@@ -10748,6 +10748,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => 'Height';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => 'Sideways';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'Top over bottom';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'Custom';
 
   @override

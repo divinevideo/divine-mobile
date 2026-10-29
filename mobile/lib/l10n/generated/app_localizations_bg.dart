@@ -10745,6 +10745,12 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => 'Височина';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => 'Встрани';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'Отгоре надолу';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'По избор';
 
   @override

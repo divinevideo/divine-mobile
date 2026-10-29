@@ -3031,6 +3031,8 @@
   "videoEditorLayerAnimationPulseTo": "Réduire à",
   "videoEditorLayerAnimationWiggleAngle": "Inclinaison",
   "videoEditorLayerAnimationBounceHeight": "Hauteur",
+  "videoEditorLayerAnimationFlipSideways": "Sur le côté",
+  "videoEditorLayerAnimationFlipOver": "De haut en bas",
   "videoEditorLayerAnimationCustomPoint": "Point personnalisé",
   "videoEditorLayerAnimationPointEnterHint": "Touche la vidéo là où le glissement doit commencer",
   "videoEditorLayerAnimationPointLeaveHint": "Touche la vidéo là où le glissement doit finir",

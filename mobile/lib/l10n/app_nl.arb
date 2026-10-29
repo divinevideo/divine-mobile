@@ -3031,6 +3031,8 @@
   "videoEditorLayerAnimationPulseTo": "Krimpen tot",
   "videoEditorLayerAnimationWiggleAngle": "Kanteling",
   "videoEditorLayerAnimationBounceHeight": "Hoogte",
+  "videoEditorLayerAnimationFlipSideways": "Zijwaarts",
+  "videoEditorLayerAnimationFlipOver": "Van boven naar onder",
   "videoEditorLayerAnimationCustomPoint": "Eigen punt",
   "videoEditorLayerAnimationPointEnterHint": "Tik op de video waar dit vandaan moet schuiven",
   "videoEditorLayerAnimationPointLeaveHint": "Tik op de video waar dit naartoe moet schuiven",

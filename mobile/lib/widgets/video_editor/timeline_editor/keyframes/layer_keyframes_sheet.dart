@@ -174,8 +174,8 @@ class _LayerKeyframesSheetState extends State<LayerKeyframesSheet> {
   }
 }
 
-/// The effect a motion plays — none, a wiggle, a hop or a pulse — and how
-/// strongly, as the loop of the layer animation sheet offers them.
+/// The effect a motion plays — none, a wiggle, a hop, a pulse or a spin — and
+/// how strongly, as the loop of the layer animation sheet offers them.
 class _EffectPicker extends StatelessWidget {
   const _EffectPicker({
     required this.effect,
@@ -216,6 +216,7 @@ class _EffectPicker extends StatelessWidget {
                     l10n.videoEditorLayerAnimationWiggle,
                   LayerAnimationType.bounce =>
                     l10n.videoEditorLayerAnimationBounce,
+                  LayerAnimationType.spin => l10n.videoEditorTransitionSpin,
                   _ => l10n.videoEditorLayerAnimationPulse,
                 },
                 selected: effect?.type == type,
@@ -235,7 +236,10 @@ class _EffectPicker extends StatelessWidget {
 }
 
 /// How strongly [effect] plays: how far a wiggle tilts, how high a hop goes,
-/// how small a pulse gets. Same bounds as the layer animation sheet.
+/// how small a pulse gets, how far a spin turns. Same bounds as the layer
+/// animation sheet, except that a spin turns whole turns only: each stretch
+/// fits a whole number of cycles, so whole turns leave the layer upright on
+/// both keyframes.
 class _EffectStrengthSlider extends StatelessWidget {
   const _EffectStrengthSlider({
     required this.effect,
@@ -284,6 +288,16 @@ class _EffectStrengthSlider extends StatelessWidget {
                 VideoEditorConstants.minBouncePercent) ~/
             VideoEditorConstants.bounceStepPercent,
         at: (double percent) => effect.copyWith(bounceHeight: percent / 100),
+      ),
+      LayerAnimationType.spin => (
+        label: l10n.videoEditorTransitionSpin,
+        unit: '°',
+        value: ((effect.turns ?? LayerAnimation.defaultTurns) * 360)
+            .roundToDouble(),
+        min: 360.0,
+        max: VideoEditorConstants.maxTurnDegrees.toDouble(),
+        divisions: VideoEditorConstants.maxTurnDegrees ~/ 360 - 1,
+        at: (double degrees) => effect.copyWith(turns: degrees / 360),
       ),
       _ => (
         label: l10n.videoEditorLayerAnimationPulseTo,

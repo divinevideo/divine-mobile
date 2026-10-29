@@ -3031,6 +3031,8 @@
   "videoEditorLayerAnimationPulseTo": "Riduci a",
   "videoEditorLayerAnimationWiggleAngle": "Inclinazione",
   "videoEditorLayerAnimationBounceHeight": "Altezza",
+  "videoEditorLayerAnimationFlipSideways": "Di lato",
+  "videoEditorLayerAnimationFlipOver": "Dall'alto in basso",
   "videoEditorLayerAnimationCustomPoint": "Punto personalizzato",
   "videoEditorLayerAnimationPointEnterHint": "Tocca il video nel punto da cui deve entrare",
   "videoEditorLayerAnimationPointLeaveHint": "Tocca il video nel punto verso cui deve uscire",

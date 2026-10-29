@@ -10147,6 +10147,12 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => '높이';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => '좌우';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => '상하';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => '사용자 지정';
 
   @override

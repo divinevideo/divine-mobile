@@ -179,12 +179,13 @@ void main() {
     testWidgets(
       'type tiles carry the selected-control ring language in light mode',
       (tester) async {
-        await openPicker(tester, theme: VineTheme.lightTheme);
+        // Wide enough for the type row to build every tile.
+        await openPicker(tester, theme: VineTheme.lightTheme, viewWidth: 1000);
 
         const colors = VineTheme.lightColors;
         // The type tiles are the only width-2 borders in this sheet, so the
         // rings can be asserted by predicate: "None" is selected initially,
-        // while Fade/Slide/Scale/Bounce/Wiggle are not.
+        // while Fade/Slide/Scale/Bounce/Wiggle/Spin/Flip are not.
         Finder tileRings(Color ring) => find.byWidgetPredicate((w) {
           if (w is! DecoratedBox || w.decoration is! BoxDecoration) {
             return false;
@@ -196,7 +197,7 @@ void main() {
         });
 
         expect(tileRings(colors.accentBrand), findsOneWidget);
-        expect(tileRings(colors.controlOutline), findsNWidgets(5));
+        expect(tileRings(colors.controlOutline), findsNWidgets(7));
       },
     );
 
@@ -270,7 +271,7 @@ void main() {
     });
 
     group('loop', () {
-      testWidgets('offers a wiggle, a hop and a pulse', (tester) async {
+      testWidgets('offers a wiggle, a hop, a pulse and a spin', (tester) async {
         await openPicker(tester);
 
         await tester.tap(find.text(l10n.videoEditorLayerAnimationLoop));
@@ -279,8 +280,32 @@ void main() {
         expect(find.text(l10n.videoEditorLayerAnimationWiggle), findsOneWidget);
         expect(find.text(l10n.videoEditorLayerAnimationBounce), findsOneWidget);
         expect(find.text(l10n.videoEditorLayerAnimationPulse), findsOneWidget);
+        expect(find.text(l10n.videoEditorTransitionSpin), findsOneWidget);
         expect(find.text(l10n.videoEditorLayerAnimationFade), findsNothing);
         expect(find.text(l10n.videoEditorTransitionSlide), findsNothing);
+        expect(find.text(l10n.videoEditorTransitionFlip), findsNothing);
+      });
+
+      testWidgets('builds a spin that turns on at an even pace', (
+        tester,
+      ) async {
+        await openPicker(tester);
+
+        await tester.tap(find.text(l10n.videoEditorLayerAnimationLoop));
+        await tester.pump();
+        await tester.tap(find.text(l10n.videoEditorTransitionSpin));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        expect(find.text('360°'), findsOneWidget);
+        await tester.tap(find.text(l10n.videoEditorDoneLabel));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+
+        final spin = result!.loop.single;
+        expect(spin.type, editor.LayerAnimationType.spin);
+        expect(spin.curve, editor.AnimationCurve.linear);
+        expect(spin.duration, const Duration(milliseconds: 1800));
+        expect(spin.turns, 1);
       });
 
       testWidgets('builds a wiggle that swings like a pendulum', (
@@ -411,7 +436,79 @@ void main() {
       });
     });
 
-    testWidgets('shows direction options only for slide', (tester) async {
+    group('spin and flip', () {
+      // Wide enough for every enter tile to be built in the type row.
+      Future<void> openWide(
+        WidgetTester tester, {
+        List<editor.LayerAnimation> initialEnter = const [],
+      }) => openPicker(tester, viewWidth: 1000, initialEnter: initialEnter);
+
+      Future<void> done(WidgetTester tester) async {
+        await tester.tap(find.text(l10n.videoEditorDoneLabel));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 350));
+      }
+
+      testWidgets('spins into place once around', (tester) async {
+        await openWide(tester);
+
+        await tester.tap(find.text(l10n.videoEditorTransitionSpin));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        expect(find.text('360°'), findsOneWidget);
+        await done(tester);
+
+        final spin = result!.enter.single;
+        expect(spin.type, editor.LayerAnimationType.spin);
+        expect(spin.turns, 1);
+        expect(spin.flipAxis, isNull);
+        expect(spin.curve, editor.AnimationCurve.easeOutCubic);
+      });
+
+      testWidgets('flips a quarter turn sideways, or over on request', (
+        tester,
+      ) async {
+        await openWide(tester);
+
+        await tester.tap(find.text(l10n.videoEditorTransitionFlip));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 250));
+        expect(find.text('90°'), findsOneWidget);
+        await tester.tap(
+          find.bySemanticsLabel(l10n.videoEditorLayerAnimationFlipOver),
+        );
+        await tester.pump();
+        await done(tester);
+
+        final flip = result!.enter.single;
+        expect(flip.type, editor.LayerAnimationType.flip);
+        expect(flip.turns, 0.25);
+        expect(flip.flipAxis, editor.FlipAxis.horizontal);
+      });
+
+      testWidgets('keeps the turns and axis it was opened with', (
+        tester,
+      ) async {
+        const flip = editor.LayerAnimation(
+          type: editor.LayerAnimationType.flip,
+          phase: editor.AnimationPhase.animateIn,
+          duration: Duration(milliseconds: 500),
+          curve: editor.AnimationCurve.easeOut,
+          turns: 2,
+          flipAxis: editor.FlipAxis.horizontal,
+        );
+        await openWide(tester, initialEnter: const [flip]);
+
+        expect(find.text('720°'), findsOneWidget);
+        await done(tester);
+
+        expect(result!.enter, [flip]);
+      });
+    });
+
+    testWidgets('shows direction options for a slide, not a fade', (
+      tester,
+    ) async {
       await openPicker(tester);
 
       await tester.tap(find.text(l10n.videoEditorLayerAnimationFade));

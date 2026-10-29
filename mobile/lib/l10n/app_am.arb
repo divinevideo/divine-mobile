@@ -3660,6 +3660,8 @@
   "videoEditorLayerAnimationPulseTo": "አሳንስ እስከ",
   "videoEditorLayerAnimationWiggleAngle": "ዘንበል",
   "videoEditorLayerAnimationBounceHeight": "ቁመት",
+  "videoEditorLayerAnimationFlipSideways": "ወደ ጎን",
+  "videoEditorLayerAnimationFlipOver": "ከላይ ወደ ታች",
   "videoEditorLayerAnimationCustomPoint": "ብጁ",
   "videoEditorLayerAnimationPointEnterHint": "ይህ ከየት እንደሚገባ ቪዲዮው ላይ ይንኩ",
   "videoEditorLayerAnimationPointLeaveHint": "ይህ ወዴት እንደሚወጣ ቪዲዮው ላይ ይንኩ",
