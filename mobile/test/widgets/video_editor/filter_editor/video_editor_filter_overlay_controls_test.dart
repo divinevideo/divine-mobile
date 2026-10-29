@@ -252,10 +252,21 @@ void main() {
           await tester.pump();
         }
 
+        void verifyClosedWithoutCommitting() {
+          verify(
+            () => mockBloc.add(const VideoEditorFilterCancelled()),
+          ).called(1);
+          verifyNever(() => mockBloc.add(const VideoEditorFilterConfirmed()));
+          verify(() => filterEditor.close()).called(1);
+          verifyNever(() => filterEditor.done());
+        }
+
         testWidgets('commits the picked filter', (tester) async {
-          when(() => mockBloc.state).thenReturn(
-            VideoEditorFilterState(selectedFilter: presetFiltersList[1]),
-          );
+          final picked = presetFiltersList[1];
+          when(
+            () => mockBloc.state,
+          ).thenReturn(VideoEditorFilterState(selectedFilter: picked));
+          when(() => filterEditor.selectedFilter).thenReturn(picked);
 
           await tapDone(tester);
 
@@ -269,14 +280,29 @@ void main() {
         testWidgets('with nothing picked closes without committing', (
           tester,
         ) async {
+          when(
+            () => filterEditor.selectedFilter,
+          ).thenReturn(PresetFilters.none);
+
           await tapDone(tester);
 
-          verify(
-            () => mockBloc.add(const VideoEditorFilterCancelled()),
-          ).called(1);
-          verifyNever(() => mockBloc.add(const VideoEditorFilterConfirmed()));
-          verify(() => filterEditor.close()).called(1);
-          verifyNever(() => filterEditor.done());
+          verifyClosedWithoutCommitting();
+        });
+
+        testWidgets('closes without committing when the editor has nothing '
+            'picked, even if the bloc still holds an earlier pick', (
+          tester,
+        ) async {
+          when(() => mockBloc.state).thenReturn(
+            VideoEditorFilterState(selectedFilter: presetFiltersList[1]),
+          );
+          when(
+            () => filterEditor.selectedFilter,
+          ).thenReturn(PresetFilters.none);
+
+          await tapDone(tester);
+
+          verifyClosedWithoutCommitting();
         });
       });
     });

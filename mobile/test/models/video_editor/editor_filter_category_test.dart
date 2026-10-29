@@ -14,6 +14,15 @@ void main() {
         expect(names.toSet(), hasLength(names.length));
       });
 
+      test('lists only filters that change the picture, as Done treats a '
+          'filter without matrices as nothing picked', () {
+        for (final category in EditorFilterCategory.values) {
+          for (final filter in category.filters) {
+            expect(filter.filters, isNotEmpty, reason: filter.name);
+          }
+        }
+      });
+
       test('lists at least one filter in every category, as the picker shows '
           'a tab and a title for each', () {
         for (final category in EditorFilterCategory.values) {

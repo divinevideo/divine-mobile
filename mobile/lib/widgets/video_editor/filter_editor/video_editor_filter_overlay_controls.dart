@@ -147,7 +147,8 @@ class _TopBarContent extends StatelessWidget {
         onDone: () {
           // With nothing picked, the filter editor would still commit its
           // default "No Filter", which shows up as a bar on the timeline.
-          if (!bloc.state.hasFilter) {
+          // Ask the editor, which is what done() commits from.
+          if (scope.filterEditor?.selectedFilter.filters.isEmpty ?? true) {
             bloc.add(const VideoEditorFilterCancelled());
             scope.filterEditor?.close();
             return;
