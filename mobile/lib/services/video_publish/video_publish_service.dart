@@ -283,11 +283,13 @@ class VideoPublishService {
         identifiers: draft.collaboratorPubkeys,
         creatorIdentifier: pubkey,
       );
+      final stickerCredits = draft.stickerCredits;
+      final hashtags = stickerCredits.hashtagsWith(draft.hashtags);
 
       // Use existing upload if available, otherwise start new upload
       final pendingUpload = await timeline.measure(
         PublishPhases.upload,
-        () => _getOrCreateUpload(pubkey, draft),
+        () => _getOrCreateUpload(pubkey, draft, hashtags: hashtags),
       );
       if (pendingUpload == null) {
         Log.error('❌ Upload creation failed', category: .video);
@@ -338,7 +340,7 @@ class VideoPublishService {
             collaboratorPubkeys: collaboratorPubkeys,
           ),
           ..._stickerMentionedPubkeys(
-            draft,
+            stickerCredits,
             currentUserPubkey: pubkey,
             collaboratorPubkeys: collaboratorPubkeys,
           ),
@@ -378,7 +380,7 @@ class VideoPublishService {
           upload: pendingUpload,
           title: draft.title,
           description: draft.description,
-          hashtags: draft.stickerCredits.hashtagsWith(draft.hashtags),
+          hashtags: hashtags,
           // Relative to the moment the post goes live, which for a scheduled
           // post is its publish time rather than now.
           expirationTimestamp: expireTime != null
@@ -389,7 +391,7 @@ class VideoPublishService {
           allowVideoReuse: draft.allowVideoReuse,
           collaboratorPubkeys: collaboratorPubkeys.toList(),
           mentionedPubkeys: mentionedPubkeys,
-          linkUrls: draft.stickerCredits.links.toList(),
+          linkUrls: stickerCredits.links.toList(),
           stickerRegions: _publishedStickerRegions(draft),
           inspiredByAddressableId: draft.inspiredByVideo?.addressableId,
           inspiredByRelayUrl: draft.inspiredByVideo?.relayUrl,
@@ -661,15 +663,15 @@ class VideoPublishService {
   /// `de-CH` -> `de`; text-track lang tags carry the bare language code.
   String _languageCode(String languageTag) => languageTag.split('-').first;
 
-  /// The people the mention stickers name, other than the creator and the
-  /// collaborators, who carry their own `p` tags.
+  /// The people the mention stickers in [credits] name, other than the
+  /// creator and the collaborators, who carry their own `p` tags.
   Iterable<String> _stickerMentionedPubkeys(
-    DivineVideoDraft draft, {
+    SocialStickerCredits credits, {
     required String currentUserPubkey,
     required Set<String> collaboratorPubkeys,
   }) {
     final self = currentUserPubkey.toLowerCase();
-    return draft.stickerCredits.mentionPubkeys.where(
+    return credits.mentionPubkeys.where(
       (pubkey) => pubkey != self && !collaboratorPubkeys.contains(pubkey),
     );
   }
@@ -823,12 +825,13 @@ class VideoPublishService {
   }
 
   /// Gets existing upload from background ID, reuses a matching upload
-  /// found by video path, or creates a new one.
+  /// found by video path, or creates a new one carrying [hashtags].
   /// Returns null if upload creation fails.
   Future<PendingUpload?> _getOrCreateUpload(
     String pubkey,
-    DivineVideoDraft draft,
-  ) async {
+    DivineVideoDraft draft, {
+    required List<String> hashtags,
+  }) async {
     // 1. Check in-memory ID (covers same-session retry)
     if (_backgroundUploadId != null) {
       final existingUpload = uploadManager.getUpload(_backgroundUploadId!);
@@ -857,7 +860,7 @@ class VideoPublishService {
     }
 
     // 3. Nothing reusable — start fresh
-    return _startNewUpload(pubkey, draft);
+    return _startNewUpload(pubkey, draft, hashtags: hashtags);
   }
 
   /// Resolves the video file path from a draft, mirroring the materializer.
@@ -984,8 +987,9 @@ class VideoPublishService {
   /// Returns the upload if successful, null if failed.
   Future<PendingUpload?> _startNewUpload(
     String pubkey,
-    DivineVideoDraft draft,
-  ) async {
+    DivineVideoDraft draft, {
+    required List<String> hashtags,
+  }) async {
     // Ensure upload manager is initialized
     if (!uploadManager.isInitialized) {
       Log.info('📝 Initializing upload manager...', category: .video);
@@ -1005,7 +1009,7 @@ class VideoPublishService {
       nostrPubkey: pubkey,
       title: draft.title,
       description: draft.description,
-      hashtags: draft.stickerCredits.hashtagsWith(draft.hashtags),
+      hashtags: hashtags,
       videoWidth: materialized.videoWidth,
       videoHeight: materialized.videoHeight,
       videoDuration: materialized.videoDuration,

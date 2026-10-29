@@ -367,15 +367,30 @@ class DivineVideoDraft {
   /// current step of [editorStateHistory]: the layers a draft is rendered
   /// with. [editorEditingParameters] only changes on Done, so it misses a
   /// sticker added or deleted after that.
+  ///
+  /// Reads the whole history, so read it once per publish. A history that
+  /// cannot be read credits nothing; the stickers stay in the frames.
   SocialStickerCredits get stickerCredits {
     if (editorStateHistory.isEmpty) return const SocialStickerCredits();
-    final history = ImportStateHistory.fromMap(
-      editorStateHistory,
-      configs: ImportEditorConfigs(
-        // The stickers are read from the layers' meta, never drawn.
-        widgetLoader: (id, {meta}) => const SizedBox(),
-      ),
-    );
+    final ImportStateHistory history;
+    try {
+      history = ImportStateHistory.fromMap(
+        editorStateHistory,
+        configs: ImportEditorConfigs(
+          // The stickers are read from the layers' meta, never drawn.
+          widgetLoader: (id, {meta}) => const SizedBox(),
+        ),
+      );
+    } catch (error, stackTrace) {
+      Log.error(
+        'Could not read the sticker credits of draft $id',
+        name: 'DivineVideoDraft',
+        category: LogCategory.video,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      return const SocialStickerCredits();
+    }
     final position = history.editorPosition;
     if (position < 0 || position >= history.stateHistory.length) {
       return const SocialStickerCredits();
