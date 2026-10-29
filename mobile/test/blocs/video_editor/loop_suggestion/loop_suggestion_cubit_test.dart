@@ -60,16 +60,17 @@ void main() {
               onProgress: any(named: 'onProgress'),
             ),
           ).thenAnswer((_) async => result);
+          const revision = 'rev-0b7d2f';
           final cubit = LoopSuggestionCubit(repository: repository);
           addTearDown(cubit.close);
-          await cubit.fix(_input('one'));
+          await cubit.fix(_input(revision));
           expect(cubit.state.status, entry.value);
           final logs = (await LogCaptureService().getAllLogsAsText()).join(
             '\n',
           );
           expect(logs, contains('status=${entry.key.name}'));
           expect(logs, isNot(contains('/documents/clip.mp4')));
-          expect(logs, isNot(contains('revision')));
+          expect(logs, isNot(contains(revision)));
           cubit.resultHandled();
           expect(cubit.state.status, LoopSuggestionStatus.idle);
         },
