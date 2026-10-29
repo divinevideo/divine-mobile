@@ -1623,7 +1623,8 @@ void main() {
       });
 
       test(
-        'sends a draft whose stickers cannot be read back to the editor',
+        'fails a draft whose stickers cannot be read back as '
+        '${PublishErrorKind.overlaysUnavailable} and publishes nothing',
         () async {
           _setupSuccessfulPublish(
             mockAuthService: mockAuthService,
