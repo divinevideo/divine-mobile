@@ -95,3 +95,8 @@ ios/fastlane/screenshots/**/*.html
 ios/fastlane/README.md
 ios/fastlane/DerivedData/
 ios/fastlane/.venv/
+
+# Loop-alignment native-test media and artifacts. Private recordings replayed
+# through LOOP_ALIGNMENT_INPUT_VIDEO must never be staged.
+integration_test/fixtures/*.mp4
+integration_test/fixtures/native-output/
