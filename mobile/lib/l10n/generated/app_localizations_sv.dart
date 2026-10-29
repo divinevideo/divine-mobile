@@ -8902,6 +8902,39 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectSparkles => 'Gnistor';
 
   @override
+  String get videoEditorEffectRain => 'Regn';
+
+  @override
+  String get videoEditorEffectLeaves => 'Löv';
+
+  @override
+  String get videoEditorEffectBlossoms => 'Kronblad';
+
+  @override
+  String get videoEditorEffectBubbles => 'Bubblor';
+
+  @override
+  String get videoEditorEffectBokeh => 'Bokeh';
+
+  @override
+  String get videoEditorEffectMusicNotes => 'Noter';
+
+  @override
+  String get videoEditorEffectStars => 'Stjärnor';
+
+  @override
+  String get videoEditorEffectFireflies => 'Eldflugor';
+
+  @override
+  String get videoEditorEffectEmbers => 'Eldgnistor';
+
+  @override
+  String get videoEditorEffectMoney => 'Pengar';
+
+  @override
+  String get videoEditorEffectBalloons => 'Ballonger';
+
+  @override
   String get videoEditorEffectTiltShift => 'Tilt-shift';
 
   @override

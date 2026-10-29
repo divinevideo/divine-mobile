@@ -243,6 +243,50 @@ ShaderTile? shaderTileOf(EditorEffectType? type) => switch (type?.customId) {
     asset: 'shaders/particles.frag',
     values: const [1.0, _particlesTileSeconds, 3.0],
   ),
+  rainVideoEffectId => (
+    asset: 'shaders/particles.frag',
+    values: const [1.0, _particlesTileSeconds, 4.0],
+  ),
+  leavesVideoEffectId => (
+    asset: 'shaders/particles.frag',
+    values: const [1.0, _particlesTileSeconds, 5.0],
+  ),
+  blossomsVideoEffectId => (
+    asset: 'shaders/particles.frag',
+    values: const [1.0, _particlesTileSeconds, 6.0],
+  ),
+  bubblesVideoEffectId => (
+    asset: 'shaders/particles.frag',
+    values: const [1.0, _particlesTileSeconds, 7.0],
+  ),
+  bokehVideoEffectId => (
+    asset: 'shaders/particles.frag',
+    values: const [1.0, _particlesTileSeconds, 8.0],
+  ),
+  notesVideoEffectId => (
+    asset: 'shaders/particles.frag',
+    values: const [1.0, _particlesTileSeconds, 9.0],
+  ),
+  starsVideoEffectId => (
+    asset: 'shaders/particles.frag',
+    values: const [1.0, _particlesTileSeconds, 10.0],
+  ),
+  firefliesVideoEffectId => (
+    asset: 'shaders/particles.frag',
+    values: const [1.0, _particlesTileSeconds, 11.0],
+  ),
+  embersVideoEffectId => (
+    asset: 'shaders/particles.frag',
+    values: const [1.0, _particlesTileSeconds, 12.0],
+  ),
+  moneyVideoEffectId => (
+    asset: 'shaders/particles.frag',
+    values: const [1.0, _particlesTileSeconds, 13.0],
+  ),
+  balloonsVideoEffectId => (
+    asset: 'shaders/particles.frag',
+    values: const [1.0, _particlesTileSeconds, 14.0],
+  ),
   tiltShiftVideoEffectId => (
     asset: 'shaders/tilt_shift.frag',
     values: const [1.0],
@@ -370,6 +414,17 @@ String videoEffectLabel(BuildContext context, EditorEffectType? type) {
     confettiVideoEffectId => context.l10n.videoEditorEffectConfetti,
     heartsVideoEffectId => context.l10n.videoEditorEffectHearts,
     sparklesVideoEffectId => context.l10n.videoEditorEffectSparkles,
+    rainVideoEffectId => context.l10n.videoEditorEffectRain,
+    leavesVideoEffectId => context.l10n.videoEditorEffectLeaves,
+    blossomsVideoEffectId => context.l10n.videoEditorEffectBlossoms,
+    bubblesVideoEffectId => context.l10n.videoEditorEffectBubbles,
+    bokehVideoEffectId => context.l10n.videoEditorEffectBokeh,
+    notesVideoEffectId => context.l10n.videoEditorEffectMusicNotes,
+    starsVideoEffectId => context.l10n.videoEditorEffectStars,
+    firefliesVideoEffectId => context.l10n.videoEditorEffectFireflies,
+    embersVideoEffectId => context.l10n.videoEditorEffectEmbers,
+    moneyVideoEffectId => context.l10n.videoEditorEffectMoney,
+    balloonsVideoEffectId => context.l10n.videoEditorEffectBalloons,
     tiltShiftVideoEffectId => context.l10n.videoEditorEffectTiltShift,
     zoomBlurVideoEffectId => context.l10n.videoEditorEffectZoomBlur,
     comicVideoEffectId => context.l10n.videoEditorEffectComic,

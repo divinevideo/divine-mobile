@@ -8986,6 +8986,39 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectSparkles => 'Искри';
 
   @override
+  String get videoEditorEffectRain => 'Дъжд';
+
+  @override
+  String get videoEditorEffectLeaves => 'Листа';
+
+  @override
+  String get videoEditorEffectBlossoms => 'Листенца';
+
+  @override
+  String get videoEditorEffectBubbles => 'Мехурчета';
+
+  @override
+  String get videoEditorEffectBokeh => 'Боке';
+
+  @override
+  String get videoEditorEffectMusicNotes => 'Ноти';
+
+  @override
+  String get videoEditorEffectStars => 'Звезди';
+
+  @override
+  String get videoEditorEffectFireflies => 'Светулки';
+
+  @override
+  String get videoEditorEffectEmbers => 'Жар';
+
+  @override
+  String get videoEditorEffectMoney => 'Пари';
+
+  @override
+  String get videoEditorEffectBalloons => 'Балони';
+
+  @override
   String get videoEditorEffectTiltShift => 'Тилт-шифт';
 
   @override

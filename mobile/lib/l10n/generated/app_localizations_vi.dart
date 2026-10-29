@@ -8866,6 +8866,39 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectSparkles => 'Lấp lánh';
 
   @override
+  String get videoEditorEffectRain => 'Mưa';
+
+  @override
+  String get videoEditorEffectLeaves => 'Lá rơi';
+
+  @override
+  String get videoEditorEffectBlossoms => 'Hoa anh đào';
+
+  @override
+  String get videoEditorEffectBubbles => 'Bong bóng';
+
+  @override
+  String get videoEditorEffectBokeh => 'Bokeh';
+
+  @override
+  String get videoEditorEffectMusicNotes => 'Nốt nhạc';
+
+  @override
+  String get videoEditorEffectStars => 'Ngôi sao';
+
+  @override
+  String get videoEditorEffectFireflies => 'Đom đóm';
+
+  @override
+  String get videoEditorEffectEmbers => 'Than hồng';
+
+  @override
+  String get videoEditorEffectMoney => 'Tiền';
+
+  @override
+  String get videoEditorEffectBalloons => 'Bóng bay';
+
+  @override
   String get videoEditorEffectTiltShift => 'Tilt-shift';
 
   @override

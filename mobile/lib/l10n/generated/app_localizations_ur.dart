@@ -8907,6 +8907,39 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectSparkles => 'چمک';
 
   @override
+  String get videoEditorEffectRain => 'بارش';
+
+  @override
+  String get videoEditorEffectLeaves => 'پتے';
+
+  @override
+  String get videoEditorEffectBlossoms => 'پنکھڑیاں';
+
+  @override
+  String get videoEditorEffectBubbles => 'بلبلے';
+
+  @override
+  String get videoEditorEffectBokeh => 'بوکے';
+
+  @override
+  String get videoEditorEffectMusicNotes => 'سُر';
+
+  @override
+  String get videoEditorEffectStars => 'ستارے';
+
+  @override
+  String get videoEditorEffectFireflies => 'جگنو';
+
+  @override
+  String get videoEditorEffectEmbers => 'انگارے';
+
+  @override
+  String get videoEditorEffectMoney => 'پیسے';
+
+  @override
+  String get videoEditorEffectBalloons => 'غبارے';
+
+  @override
   String get videoEditorEffectTiltShift => 'ٹلٹ شفٹ';
 
   @override

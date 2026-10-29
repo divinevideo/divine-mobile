@@ -15011,6 +15011,72 @@ abstract class AppLocalizations {
   /// **'Sparkles'**
   String get videoEditorEffectSparkles;
 
+  /// Name of a video effect: rain streaks down at a slant over the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Rain'**
+  String get videoEditorEffectRain;
+
+  /// Name of a video effect: autumn leaves in reds, oranges and yellows rock and turn over as they fall over the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaves'**
+  String get videoEditorEffectLeaves;
+
+  /// Name of a video effect: pink cherry blossom petals flutter down over the picture on the wind.
+  ///
+  /// In en, this message translates to:
+  /// **'Blossoms'**
+  String get videoEditorEffectBlossoms;
+
+  /// Name of a video effect: shimmering soap bubbles float up over the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Bubbles'**
+  String get videoEditorEffectBubbles;
+
+  /// Name of a video effect, after the photography term: soft round discs of out-of-focus light drift and glow over the picture. Use the photography term your language uses.
+  ///
+  /// In en, this message translates to:
+  /// **'Bokeh'**
+  String get videoEditorEffectBokeh;
+
+  /// Name of a video effect: music notes (♪, ♫) rock as they rise over the picture. Keep it short — it sits under a small tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Music notes'**
+  String get videoEditorEffectMusicNotes;
+
+  /// Name of a video effect: five-pointed gold and silver stars spin as they fall over the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Stars'**
+  String get videoEditorEffectStars;
+
+  /// Name of a video effect: small yellow-green lights wander about over the picture, glowing up and fading, like fireflies at night.
+  ///
+  /// In en, this message translates to:
+  /// **'Fireflies'**
+  String get videoEditorEffectFireflies;
+
+  /// Name of a video effect: glowing orange sparks rise from below and die away, as over a campfire.
+  ///
+  /// In en, this message translates to:
+  /// **'Embers'**
+  String get videoEditorEffectEmbers;
+
+  /// Name of a video effect: green banknotes tumble down over the picture, as in "make it rain".
+  ///
+  /// In en, this message translates to:
+  /// **'Money'**
+  String get videoEditorEffectMoney;
+
+  /// Name of a video effect: colourful party balloons on strings swing as they rise over the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Balloons'**
+  String get videoEditorEffectBalloons;
+
   /// Name of a video effect: the top and bottom of the picture are blurred, so the scene looks like a miniature model. Tilt-shift is the photography term for this look.
   ///
   /// In en, this message translates to:

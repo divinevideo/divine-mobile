@@ -31,6 +31,17 @@ const snowVideoEffectId = 'divine.snow';
 const confettiVideoEffectId = 'divine.confetti';
 const heartsVideoEffectId = 'divine.hearts';
 const sparklesVideoEffectId = 'divine.sparkles';
+const rainVideoEffectId = 'divine.rain';
+const leavesVideoEffectId = 'divine.leaves';
+const blossomsVideoEffectId = 'divine.blossoms';
+const bubblesVideoEffectId = 'divine.bubbles';
+const bokehVideoEffectId = 'divine.bokeh';
+const notesVideoEffectId = 'divine.notes';
+const starsVideoEffectId = 'divine.stars';
+const firefliesVideoEffectId = 'divine.fireflies';
+const embersVideoEffectId = 'divine.embers';
+const moneyVideoEffectId = 'divine.money';
+const balloonsVideoEffectId = 'divine.balloons';
 
 /// The id Divine's tilt-shift is registered under with pro_video_editor, by
 /// the native `TiltShiftVideoEffect` on Android, iOS and macOS.
@@ -91,6 +102,39 @@ class EditorEffectType {
   /// Sparkles: four-pointed glints twinkle over the picture.
   static const sparkles = EditorEffectType.custom(sparklesVideoEffectId);
 
+  /// Rain: drops streak down at a slant.
+  static const rain = EditorEffectType.custom(rainVideoEffectId);
+
+  /// Leaves: autumn leaves rock and turn over as they fall.
+  static const leaves = EditorEffectType.custom(leavesVideoEffectId);
+
+  /// Blossoms: cherry blossom petals flutter down on the wind.
+  static const blossoms = EditorEffectType.custom(blossomsVideoEffectId);
+
+  /// Bubbles: shimmering soap bubbles float up.
+  static const bubbles = EditorEffectType.custom(bubblesVideoEffectId);
+
+  /// Bokeh: soft discs of out-of-focus light drift and glow.
+  static const bokeh = EditorEffectType.custom(bokehVideoEffectId);
+
+  /// Notes: music notes rock as they rise.
+  static const notes = EditorEffectType.custom(notesVideoEffectId);
+
+  /// Stars: gold and silver stars spin as they fall.
+  static const stars = EditorEffectType.custom(starsVideoEffectId);
+
+  /// Fireflies: small lights wander about, glowing up and fading.
+  static const fireflies = EditorEffectType.custom(firefliesVideoEffectId);
+
+  /// Embers: flickering sparks rise and die away.
+  static const embers = EditorEffectType.custom(embersVideoEffectId);
+
+  /// Money: banknotes tumble down.
+  static const money = EditorEffectType.custom(moneyVideoEffectId);
+
+  /// Balloons: balloons on strings swing as they rise.
+  static const balloons = EditorEffectType.custom(balloonsVideoEffectId);
+
   /// Tilt-shift: the top and bottom of the picture blur, so the scene looks
   /// like a miniature.
   static const tiltShift = EditorEffectType.custom(tiltShiftVideoEffectId);
@@ -110,9 +154,20 @@ class EditorEffectType {
     drops,
     lightLeak,
     snow,
+    rain,
+    leaves,
+    blossoms,
     confetti,
+    money,
+    stars,
+    balloons,
     hearts,
+    bubbles,
+    notes,
     sparkles,
+    bokeh,
+    fireflies,
+    embers,
     tiltShift,
     zoomBlur,
     comic,
