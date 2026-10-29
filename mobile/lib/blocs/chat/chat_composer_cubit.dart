@@ -14,6 +14,8 @@ class ChatComposerState extends Equatable {
     this.mentions = const [],
     this.submitting = false,
     this.sendFailed = false,
+    this.selectionStart,
+    this.selectionEnd,
   });
 
   final String text;
@@ -21,8 +23,20 @@ class ChatComposerState extends Equatable {
   final bool submitting;
   final bool sendFailed;
 
+  /// The draft's selection at the last [ChatComposerCubit.updateDraft], so the
+  /// next edit can tell whether it replaced a selected range.
+  final int? selectionStart;
+  final int? selectionEnd;
+
   @override
-  List<Object> get props => [text, mentions, submitting, sendFailed];
+  List<Object?> get props => [
+    text,
+    mentions,
+    submitting,
+    sendFailed,
+    selectionStart,
+    selectionEnd,
+  ];
 }
 
 class ChatComposerCubit extends Cubit<ChatComposerState> {
@@ -31,15 +45,9 @@ class ChatComposerCubit extends Cubit<ChatComposerState> {
       super(const ChatComposerState());
 
   final Future<bool> Function(String) _send;
-  int? _selectionStart;
-  int? _selectionEnd;
 
   void updateDraft(String text, int cursor, {int? selectionExtent}) {
-    final previousSelectionStart = _selectionStart;
-    final previousSelectionEnd = _selectionEnd;
     final extent = selectionExtent ?? cursor;
-    _selectionStart = cursor < extent ? cursor : extent;
-    _selectionEnd = cursor > extent ? cursor : extent;
     emit(
       ChatComposerState(
         text: text,
@@ -49,12 +57,14 @@ class ChatComposerCubit extends Cubit<ChatComposerState> {
             after: text,
             cursor: cursor,
             mentions: state.mentions,
-            previousSelectionStart: previousSelectionStart,
-            previousSelectionEnd: previousSelectionEnd,
+            previousSelectionStart: state.selectionStart,
+            previousSelectionEnd: state.selectionEnd,
           ),
         ),
         submitting: state.submitting,
         sendFailed: state.sendFailed,
+        selectionStart: cursor < extent ? cursor : extent,
+        selectionEnd: cursor > extent ? cursor : extent,
       ),
     );
   }
@@ -89,6 +99,8 @@ class ChatComposerCubit extends Cubit<ChatComposerState> {
         ]),
         submitting: state.submitting,
         sendFailed: state.sendFailed,
+        selectionStart: state.selectionStart,
+        selectionEnd: state.selectionEnd,
       ),
     );
     return insertion;
@@ -103,6 +115,8 @@ class ChatComposerCubit extends Cubit<ChatComposerState> {
         text: draft.text,
         mentions: draft.mentions,
         submitting: true,
+        selectionStart: draft.selectionStart,
+        selectionEnd: draft.selectionEnd,
       ),
     );
     var accepted = false;
@@ -146,6 +160,8 @@ class ChatComposerCubit extends Cubit<ChatComposerState> {
         text: clear ? '' : state.text,
         mentions: clear ? const [] : state.mentions,
         sendFailed: !accepted,
+        selectionStart: state.selectionStart,
+        selectionEnd: state.selectionEnd,
       ),
     );
     return clear;
