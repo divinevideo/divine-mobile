@@ -108,13 +108,13 @@ class ChatMentionRepository implements LocalNotificationSource {
     }
   }
 
-  /// Detaches [channel]'s observer now and closes it without waiting for
-  /// its relay.
-  void _stopObserving(String channel) {
+  /// Detaches [channel]'s observer now and closes it in the background.
+  /// [close] waits for that close; the returned future lets a caller wait too.
+  Future<void> _stopObserving(String channel) {
     _failedRooms.remove(channel);
     final subscription = _subscriptions.remove(channel);
     final repository = _repositories.remove(channel);
-    if (subscription == null && repository == null) return;
+    if (subscription == null && repository == null) return Future.value();
     late final Future<void> stopping;
     stopping = () async {
       await subscription?.cancel();
@@ -127,6 +127,7 @@ class ChatMentionRepository implements LocalNotificationSource {
       logName: 'ChatMentions',
       category: LogCategory.storage,
     );
+    return stopping;
   }
 
   /// Starts [channel]; a failure leaves it unobserved for [refresh] to retry.
@@ -157,7 +158,7 @@ class ChatMentionRepository implements LocalNotificationSource {
         // A refresh during the write may have observed the room and
         // published its rows.
         reevaluate();
-        _stopObserving(channel);
+        unawaited(_stopObserving(channel));
         rethrow;
       }
     });
@@ -216,9 +217,7 @@ class ChatMentionRepository implements LocalNotificationSource {
     await initialize();
     if (_closed) return;
     for (final channel in List<String>.of(_failedRooms)) {
-      await _subscriptions.remove(channel)?.cancel();
-      await _repositories.remove(channel)?.close();
-      _failedRooms.remove(channel);
+      await _stopObserving(channel);
     }
     // A snapshot: enroll may add or roll back a room while a start below is
     // awaited.

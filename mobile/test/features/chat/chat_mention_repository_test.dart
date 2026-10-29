@@ -507,6 +507,47 @@ void main() {
       );
     });
 
+    group('refresh', () {
+      test('close waits for a failed room a refresh is taking down', () async {
+        final store = InMemoryConcordStore(me);
+        await store.put(
+          'mention-state',
+          '{"rooms":{"general":900},"seen":{}}',
+        );
+        final changes = StreamController<void>.broadcast();
+        addTearDown(changes.close);
+        final closing = Completer<void>();
+        final room = _Room();
+        when(room.close).thenAnswer((_) => closing.future);
+        when(() => room.changes).thenAnswer((_) => changes.stream);
+        when(
+          () => room.timeline(now: any(named: 'now')),
+        ).thenReturn(FoldedThread([], {}));
+        final repo = ChatMentionRepository(
+          owner: me,
+          communityId: 'community-test',
+          store: store,
+          now: () => 1000,
+          canNotify: (_) => true,
+          createRoom: (_) => room,
+          startRoom: (_, _) async {},
+        );
+        await repo.initialize();
+        await pumpEventQueue();
+        changes.addError(StateError('relay gave up'));
+        await pumpEventQueue();
+        unawaited(repo.refresh());
+        await pumpEventQueue();
+        var closed = false;
+        unawaited(repo.close().then((_) => closed = true));
+        await pumpEventQueue();
+        expect(closed, isFalse);
+        closing.complete();
+        await pumpEventQueue();
+        expect(closed, isTrue);
+      });
+    });
+
     group('enroll', () {
       test('a refresh skips a room whose enrollment failed mid-loop', () async {
         final store = _RefusedLaterStore(me);
