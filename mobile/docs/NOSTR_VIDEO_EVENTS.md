@@ -156,6 +156,8 @@ The `sticker` tag's fields:
 
 A reader drops the whole tag when:
 
+- it has fewer than five fields, so `degrees` is required, or names another
+  `kind`;
 - a link has another scheme or no host;
 - a pubkey is not 64 hex characters;
 - a hashtag is empty, longer than 100 characters, or contains whitespace, `#`,

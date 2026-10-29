@@ -98,7 +98,7 @@ bool _isDrawnPlainly(Layer layer) =>
     layer.mask == null;
 
 /// Whether [upper], drawn after [sticker], can show over any of it at the
-/// same time; one that moves is taken to cross it somewhere on its way.
+/// same time; one that moves or animates is taken to cross it somewhere.
 bool _isCoveredBy(ExportedLayer sticker, ExportedLayer upper, Size bodySize) {
   final a = sticker.layer;
   final b = upper.layer;
