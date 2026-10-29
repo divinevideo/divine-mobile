@@ -1038,6 +1038,12 @@ class OutgoingDmRetryService {
     );
     var stopped = 0;
     for (final row in rows) {
+      // A 1:1 message keeps "Failed to send", so it is never offered: the
+      // conversation of a 1:1 row is the pair of its owner and recipient.
+      final pair = [row.ownerPubkey, row.recipientPubkey];
+      if (row.conversationId == DmRepository.computeConversationId(pair)) {
+        continue;
+      }
       final stop = await _stopHeldMember(row.id);
       if (stop == _HeldMemberStop.notReady) {
         return (stopped: stopped, notReady: true);

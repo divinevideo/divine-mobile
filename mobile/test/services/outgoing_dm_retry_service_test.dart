@@ -41,10 +41,11 @@ OutgoingDm _row({
   String ownerPubkey = _ownerPubkey,
   DateTime? queuedAt,
   String? recipientWrapEventId,
+  String? conversationId,
 }) {
   return OutgoingDm(
     id: id,
-    conversationId: 'conv:$id',
+    conversationId: conversationId ?? 'conv:$id',
     recipientPubkey: _recipientPubkey,
     content: 'hello',
     createdAt: 1700000000,
@@ -2977,7 +2978,10 @@ void main() {
       });
 
       group('already failed with its retries spent', () {
-        void stubExhaustedHeld(List<String> ids) {
+        void stubExhaustedHeld(
+          List<String> ids, {
+          Set<String> oneToOne = const {},
+        }) {
           when(
             () => dao.getExhaustedHeldForOwner(
               ownerPubkey: any(named: 'ownerPubkey'),
@@ -2993,10 +2997,42 @@ void main() {
                   self: OutgoingWrapStatus.failed,
                   retryCount: 5,
                   recipientWrapEventId: 'pool-wrap:$id',
+                  conversationId: oneToOne.contains(id)
+                      ? DmRepository.computeConversationId([
+                          _ownerPubkey,
+                          _recipientPubkey,
+                        ])
+                      : null,
                 ),
             ],
           );
         }
+
+        test(
+          'never offers a 1:1 message, which keeps Failed to send',
+          () async {
+            stubExhaustedHeld(
+              ['one-to-one', 'group'],
+              oneToOne: {'one-to-one'},
+            );
+            stubStop(() async => false);
+
+            await buildService().sweep();
+
+            verifyNever(
+              () => dmRepository.stopHeldMemberDelivery(
+                rumorId: 'one-to-one',
+                maxRetries: any(named: 'maxRetries'),
+              ),
+            );
+            verify(
+              () => dmRepository.stopHeldMemberDelivery(
+                rumorId: 'group',
+                maxRetries: any(named: 'maxRetries'),
+              ),
+            ).called(1);
+          },
+        );
 
         test('stops each one', () async {
           stubExhaustedHeld(['spent-1', 'spent-2']);
