@@ -9013,6 +9013,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorEffectComic => 'Comic';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Distort';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Light';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Motion';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Particles';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Adjust drops';
 
   @override

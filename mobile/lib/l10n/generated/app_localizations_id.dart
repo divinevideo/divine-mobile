@@ -8826,6 +8826,24 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorEffectComic => 'Komik';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Distorsi';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Cahaya';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Gerakan';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Partikel';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Sesuaikan tetesan';
 
   @override

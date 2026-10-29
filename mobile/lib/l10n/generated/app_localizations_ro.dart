@@ -9120,6 +9120,24 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectComic => 'Benzi desenate';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Distorsiune';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Lumină';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Mișcare';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Particule';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Ajustează picăturile';
 
   @override

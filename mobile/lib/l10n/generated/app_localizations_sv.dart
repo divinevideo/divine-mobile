@@ -8911,6 +8911,24 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectComic => 'Serie';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Förvrängning';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Ljus';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Rörelse';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Partiklar';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Justera droppar';
 
   @override

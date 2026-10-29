@@ -8715,6 +8715,24 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectComic => 'ኮሚክ';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'ሬትሮ';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'ግሊች';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'ማዛባት';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'ብርሃን';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'እንቅስቃሴ';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'ቅንጣቶች';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'ጠብታዎችን አስተካክል';
 
   @override

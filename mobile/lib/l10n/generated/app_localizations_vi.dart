@@ -8875,6 +8875,24 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectComic => 'Truyện tranh';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Biến dạng';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Ánh sáng';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Chuyển động';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Hạt';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Điều chỉnh giọt nước';
 
   @override

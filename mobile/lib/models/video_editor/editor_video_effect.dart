@@ -44,6 +44,34 @@ const zoomBlurVideoEffectId = 'divine.zoomBlur';
 /// the native `ComicVideoEffect` on Android, iOS and macOS.
 const comicVideoEffectId = 'divine.comic';
 
+/// A group of effects the effects picker lists together, by what they do to
+/// the picture; see [EditorEffectType.category]. In picker order.
+enum EditorEffectCategory {
+  /// Old media: tape, film, old screens, print.
+  retro,
+
+  /// The picture breaks up digitally.
+  glitch,
+
+  /// The picture is bent, mirrored, split or seen through a lens.
+  distort,
+
+  /// Light is added, taken away or flashed.
+  light,
+
+  /// The picture shakes, pulses or leaves a trail.
+  motion,
+
+  /// Things fall or float over the picture.
+  particles;
+
+  /// The types listed under this category, in picker order.
+  List<EditorEffectType> get types => [
+    for (final type in EditorEffectType.values)
+      if (type.category == this) type,
+  ];
+}
+
 /// What an editor effect looks like: one of pro_video_editor's built-in
 /// effects, or one Divine implements natively and registers with it.
 @immutable
@@ -136,6 +164,28 @@ class EditorEffectType {
   bool get supportsOnBeat => builtIn != null
       ? canFireOnBeat(builtIn!)
       : customId == zoomBlurVideoEffectId;
+
+  /// The category the effects picker lists this type under.
+  ///
+  /// A built-in effect without one does not compile. Throws a [StateError]
+  /// for a custom type without one, which the model test listing every type
+  /// in [values] catches.
+  EditorEffectCategory get category => switch (builtIn) {
+    final builtIn? => _builtInVideoEffectCategory(builtIn),
+    null => switch (customId) {
+      comicVideoEffectId => EditorEffectCategory.retro,
+      fisheyeVideoEffectId ||
+      dropsVideoEffectId ||
+      tiltShiftVideoEffectId => EditorEffectCategory.distort,
+      lightLeakVideoEffectId => EditorEffectCategory.light,
+      echoVideoEffectId || zoomBlurVideoEffectId => EditorEffectCategory.motion,
+      snowVideoEffectId ||
+      confettiVideoEffectId ||
+      heartsVideoEffectId ||
+      sparklesVideoEffectId => EditorEffectCategory.particles,
+      _ => throw StateError('$this has no picker category'),
+    },
+  };
 
   @override
   bool operator ==(Object other) =>
@@ -360,6 +410,33 @@ bool canFireOnBeat(VideoEffectType type) => switch (type) {
   VideoEffectType.negativeFlash => true,
   _ => false,
 };
+
+/// The picker category of the built-in effect [type]; exhaustive, so an
+/// effect pro_video_editor adds cannot be left out.
+EditorEffectCategory _builtInVideoEffectCategory(VideoEffectType type) =>
+    switch (type) {
+      VideoEffectType.vhs ||
+      VideoEffectType.tvStatic ||
+      VideoEffectType.oldFilm ||
+      VideoEffectType.filmGrain ||
+      VideoEffectType.signalInterference ||
+      VideoEffectType.crt => EditorEffectCategory.retro,
+      VideoEffectType.glitch ||
+      VideoEffectType.rgbSplit ||
+      VideoEffectType.pixelate ||
+      VideoEffectType.pixelPulse ||
+      VideoEffectType.blockGlitch => EditorEffectCategory.glitch,
+      VideoEffectType.mirror ||
+      VideoEffectType.kaleidoscope ||
+      VideoEffectType.splitScreen ||
+      VideoEffectType.wave => EditorEffectCategory.distort,
+      VideoEffectType.strobe ||
+      VideoEffectType.negativeFlash ||
+      VideoEffectType.vignette ||
+      VideoEffectType.glow => EditorEffectCategory.light,
+      VideoEffectType.shake ||
+      VideoEffectType.zoomPulse => EditorEffectCategory.motion,
+    };
 
 /// [effects] with their windows moved from the editor timeline onto the
 /// exported video, like [videoEffectsOnOutput] for built-in effects.

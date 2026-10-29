@@ -8919,6 +8919,24 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorEffectComic => 'Komik';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Herotan';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Cahaya';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Gerakan';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Zarah';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Laras titisan';
 
   @override
