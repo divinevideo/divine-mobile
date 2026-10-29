@@ -10337,9 +10337,10 @@ class DmRepository {
   ///
   /// Scoring the unreadable case as landed is #8515, and it is not merely a
   /// mislabel: [DirectMessagesDao.markMessageDeletionSent] clears the stored
-  /// rumor, and `getRetryableOwnMessageDeletions` selects on `deletion_pending`
-  /// AND a non-null rumor — so the row leaves the sweep's worklist on two
-  /// counts and the retraction becomes unrecoverable.
+  /// rumor, and `getRetryableOwnMessageDeletions` selects on
+  /// `deletion_pending` or `deletion_unconfirmed` AND a non-null rumor — so
+  /// the row leaves the sweep's worklist on two counts and the retraction
+  /// becomes unrecoverable.
   ///
   /// Unlike `_fanOutRumor`, the aggregate failure does NOT carry
   /// `retryablePending`. Nothing can observe it here: this result is consumed
