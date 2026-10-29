@@ -175,13 +175,21 @@ void main() {
       });
     }
     test('large camera movement remains outside drift correction', () {
+      // Six pixels is 3.3% of the width: only the 3% displacement limit
+      // keeps this otherwise trackable movement out of drift correction.
       final match = PveLoopFrameMatcher().match(
         _frame(180, 320, plainMargins: true),
-        _frame(180, 320, dx: 12, plainMargins: true),
+        _frame(180, 320, dx: 6, plainMargins: true),
+      );
+      expect(match, isNotNull);
+      expect(
+        const LoopAlignmentLimits(
+          maximumDisplacement: 1,
+        ).acceptsMatch(match!, 180, 320),
+        isTrue,
       );
       expect(
-        match != null &&
-            const LoopAlignmentLimits().acceptsMatch(match, 180, 320),
+        const LoopAlignmentLimits().acceptsMatch(match, 180, 320),
         isFalse,
       );
     });
