@@ -2,10 +2,12 @@
 // ABOUTME: link stickers point to are listed and open when tapped.
 
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/widgets/video_feed_item/link_sticker_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_links_section.dart';
 
 VideoEvent _video(List<List<String>> tags) => VideoEvent(
@@ -60,6 +62,32 @@ void main() {
         await tester.pump();
 
         expect(opened, equals(['https://www.divine.video/about']));
+      });
+
+      testWidgets('shows a page outside Divine in the sheet first', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MaterialApp(
+              theme: VineTheme.theme,
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: MetadataLinksSection(
+                  video: _video([
+                    ['r', 'https://example.com/hello', videoLinkTagMarker],
+                  ]),
+                ),
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('example.com/hello'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(LinkStickerSheetTile), findsOneWidget);
       });
     });
   });

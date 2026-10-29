@@ -5,6 +5,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/widgets/video_feed_item/link_sticker_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/metadata/metadata_section.dart';
 
@@ -74,7 +75,12 @@ class _LinkRow extends StatelessWidget {
       excludeSemantics: true,
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
-        onTap: () => launcher(context, url),
+        onTap: () => runDetached(
+          launcher(context, url),
+          'open a video link',
+          logName: 'MetadataLinksSection',
+          category: LogCategory.ui,
+        ),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 48),
           child: Row(
