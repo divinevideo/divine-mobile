@@ -184,6 +184,10 @@ void main() {
           'motionAfter': outputScores.motion,
           'seamDisplacementAnalysisPixels': displacement,
         };
+        // Written before the checks so a failing run keeps its measurements.
+        await File('${directory.path}/$name-report.json').writeAsString(
+          const JsonEncoder.withIndent('  ').convert(report),
+        );
         expect(
           outputScores.difference,
           lessThan(originalScores.difference * .75),
@@ -191,9 +195,6 @@ void main() {
         expect(outputScores.difference, lessThanOrEqualTo(.03));
         expect(outputScores.motion, lessThanOrEqualTo(originalScores.motion));
         expect(displacement, lessThan(.5));
-        await File('${directory.path}/$name-report.json').writeAsString(
-          const JsonEncoder.withIndent('  ').convert(report),
-        );
       }, timeout: const Timeout(Duration(minutes: 3)));
     }
   });
