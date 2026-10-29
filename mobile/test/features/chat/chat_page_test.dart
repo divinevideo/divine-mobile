@@ -20,9 +20,13 @@ import 'package:openvine/features/chat/room_activity_provider.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/moderation_presentation.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
+import 'package:openvine/providers/official_accounts_providers.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
+import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/router/route_error_screen.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
 
@@ -69,6 +73,51 @@ class _Auth extends Fake implements AuthService {
       isAuthenticated ? AuthState.authenticated : AuthState.unauthenticated;
   @override
   Stream<AuthState> get authStateStream => const Stream.empty();
+}
+
+final String _peer = 'b' * 64;
+
+/// Shared activity for the general room, holding [unread] stored messages
+/// from someone else.
+Future<RoomActivityRepository> _generalActivity(
+  _RoomRelay relay, {
+  int unread = 0,
+}) async {
+  final store = InMemoryConcordStore('a' * 64);
+  final channelId = pocChannelIdFor('general');
+  final sentAt = DateTime.now().millisecondsSinceEpoch ~/ 1000 - 60;
+  final ids = [for (var i = 1; i <= unread; i++) '$i'.padLeft(64, '0')];
+  if (ids.isNotEmpty) {
+    await store.writeBatch({
+      'index': ids.join(','),
+      for (final id in ids) ...{
+        'msg:$id': 'Hello from the room',
+        'meta:$id': '$channelId|$_peer|$sentAt|',
+        'sent:$id': '1',
+      },
+    });
+  }
+  final key = pocStreamKeyFor('general');
+  return RoomActivityRepository(
+    ownPubkey: 'a' * 64,
+    channels: [
+      RoomActivityChannel(
+        channelId: channelId,
+        repository: ConcordRepository(
+          relay: relay,
+          store: store,
+          cipher: _Cipher(),
+          sealedTransport: SealedChatTransport(
+            relay: relay,
+            signer: (_) async => throw StateError('unused'),
+          ),
+        ),
+        store: store,
+        streamSeedHex: key.seedHex,
+        streamPubkey: key.pubkey,
+      ),
+    ],
+  );
 }
 
 void main() {
@@ -193,6 +242,84 @@ void main() {
         await tester.runAsync(activity.close);
       },
     );
+
+    testWidgets('opening a room marks the messages it shows read', (
+      tester,
+    ) async {
+      final channelId = pocChannelIdFor('general');
+      // Built in the test zone: the read write chains onto its futures, and
+      // only the test zone's pumps run that work.
+      final activity = await _generalActivity(_RoomRelay(), unread: 2);
+      await activity.start();
+      expect(activity.summaries[channelId]!.unreadCount, 2);
+      final container = ProviderContainer(
+        overrides: [
+          authServiceProvider.overrideWithValue(_Auth('a' * 64)),
+          databaseProvider.overrideWithValue(database),
+          featureFlagStateProvider.overrideWithValue({
+            FeatureFlag.concordChat: true,
+          }),
+          isDmRestrictedProvider.overrideWithValue(false),
+          roomActivityRepositoryProvider.overrideWithValue(activity),
+          fetchUserProfileProvider(_peer).overrideWith((ref) async => null),
+          profileIdentityResolvingProvider(_peer).overrideWithValue(false),
+          profileVanishedProvider(_peer).overrideWith((ref) => false),
+          moderationPresentationProvider(
+            _peer,
+          ).overrideWithValue(ModerationPresentation.ordinary),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ChatPage(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Hello from the room'), findsNWidgets(2));
+      expect(activity.summaries[channelId]!.unreadCount, 0);
+      // close cancels the room timers synchronously; the pump drains the
+      // rest of its work, which nothing flushes after the last pump.
+      unawaited(activity.close());
+      await tester.pump();
+    });
+
+    testWidgets('shows an unknown room link as a route error', (tester) async {
+      late RoomActivityRepository activity;
+      await tester.runAsync(
+        () async => activity = await _generalActivity(_RoomRelay()),
+      );
+      addTearDown(() => tester.runAsync(activity.close));
+      final container = ProviderContainer(
+        overrides: [
+          authServiceProvider.overrideWithValue(_Auth('a' * 64)),
+          databaseProvider.overrideWithValue(database),
+          featureFlagStateProvider.overrideWithValue({
+            FeatureFlag.concordChat: true,
+          }),
+          isDmRestrictedProvider.overrideWithValue(false),
+          roomActivityRepositoryProvider.overrideWithValue(activity),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ChatPage(communityId: 'community-test', channelId: 'unknown'),
+          ),
+        ),
+      );
+      expect(find.byType(RouteErrorScreen), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets('closes a running room when its account loses access', (
       tester,
