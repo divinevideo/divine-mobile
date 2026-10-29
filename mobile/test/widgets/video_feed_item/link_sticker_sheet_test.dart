@@ -1,6 +1,7 @@
 // ABOUTME: Tests the sheet a link sticker opens: the address shown in full
 // ABOUTME: before the link opens, and the sheet closing once it has.
 
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -15,7 +16,7 @@ void main() {
 
     setUp(() => launched = []);
 
-    Future<void> openSheet(WidgetTester tester) async {
+    Future<void> openSheet(WidgetTester tester, {String url = _url}) async {
       await tester.pumpWidget(
         ProviderScope(
           child: MaterialApp(
@@ -26,7 +27,7 @@ void main() {
                 child: TextButton(
                   onPressed: () => showLinkStickerSheet(
                     context,
-                    _url,
+                    url,
                     launch: (_, url) async => launched.add(url),
                   ),
                   child: const Text('open'),
@@ -52,6 +53,17 @@ void main() {
         expect(find.text('example.com'), findsOneWidget);
         expect(find.text(_url), findsOneWidget);
         expect(launched, isEmpty);
+      });
+
+      testWidgets('the whole domain, however long', (tester) async {
+        // Cut at its end, this host would read as divine.video.
+        const host =
+            'divine.video.account-security-check.verify-login-session.example.com';
+        await openSheet(tester, url: 'https://$host/login');
+
+        final domain = tester.renderObject<RenderParagraph>(find.text(host));
+
+        expect(domain.didExceedMaxLines, isFalse);
       });
     });
 

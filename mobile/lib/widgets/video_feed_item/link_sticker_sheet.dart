@@ -1,5 +1,5 @@
 // ABOUTME: The sheet a link sticker on a video opens: where the link goes,
-// ABOUTME: shown in full before the viewer leaves Divine for it.
+// ABOUTME: its whole domain shown before the viewer leaves Divine for it.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:material_ui/material_ui.dart';
@@ -16,8 +16,8 @@ typedef LinkStickerLauncher = Future<void> Function(
 Future<void> _openLink(BuildContext context, String url) =>
     openExternalLink(context, url, requireConfirmationForUntrusted: false);
 
-/// Shows where [url] goes, the domain large and the address in full, and
-/// opens it when the viewer taps it, the way the profile's support sheet
+/// Shows where [url] goes, the whole domain large and the address below it,
+/// and opens it when the viewer taps it, the way the profile's support sheet
 /// opens its links.
 Future<void> showLinkStickerSheet(
   BuildContext context,
@@ -44,7 +44,7 @@ Future<void> showLinkStickerSheet(
   );
 }
 
-/// The link in [showLinkStickerSheet]: its domain, its full address and an
+/// The link in [showLinkStickerSheet]: its whole domain, its address and an
 /// arrow out of the app.
 @visibleForTesting
 class LinkStickerSheetTile extends StatelessWidget {
@@ -73,13 +73,13 @@ class LinkStickerSheetTile extends StatelessWidget {
           icon: DivineIconName.linkSimple,
           color: context.vineColors.accentPositive,
         ),
+        // Never cut short: a long host hides where it really goes at its
+        // end, as in `divine.video.login.example.com`.
         title: Text(
           _domain,
           style: VineTheme.titleMediumFont(
             color: context.vineColors.primaryText,
           ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
           url,
