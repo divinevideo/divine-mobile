@@ -170,8 +170,11 @@ void main() {
         final report = {
           'platform': Platform.operatingSystem,
           'nativeBackend': 'PveLoopNativeBackend',
-          'input': source,
-          'output': artifact,
+          // A replayed recording's path can carry a person's name or ticket.
+          'input': inputVideo.isEmpty
+              ? '$name-drift.mp4'
+              : 'LOOP_ALIGNMENT_INPUT_VIDEO',
+          'output': '$name-aligned.mp4',
           'framesBefore': before.length,
           'framesAfter': after.length,
           'durationUsBefore': metadata.duration.inMicroseconds,
