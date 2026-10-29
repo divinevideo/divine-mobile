@@ -1241,6 +1241,99 @@ void main() {
         );
       });
 
+      group('markUnconfirmedMessageDeletionPending (#10012)', () {
+        const rumor = '{"kind":5,"tags":[["e","msg_del"],["k","14"]]}';
+
+        Future<void> unconfirmedRetraction() async {
+          await insertOwnMessage();
+          await dao.markMessageDeletionPending(
+            'msg_del',
+            deletionRumorJson: rumor,
+            ownerPubkey: 'pubkey_alice',
+          );
+          await dao.recordHeldDeletionWrap(
+            'msg_del',
+            recipientPubkey: 'pubkey_bob',
+            wrapEventId: 'gw_held',
+            ownerPubkey: 'pubkey_alice',
+          );
+          await dao.markMessageDeletionUnconfirmed(
+            'msg_del',
+            ownerPubkey: 'pubkey_alice',
+          );
+        }
+
+        Future<bool> move({String ownerPubkey = 'pubkey_alice'}) =>
+            dao.markUnconfirmedMessageDeletionPending(
+              'msg_del',
+              ownerPubkey: ownerPubkey,
+            );
+
+        Future<DirectMessageRow> row() async => (await dao.getMessageById(
+          'msg_del',
+          ownerPubkey: 'pubkey_alice',
+        ))!;
+
+        test('moves it back to pending, keeping its kind-5 and held '
+            'wraps', () async {
+          await unconfirmedRetraction();
+          final heldBefore = (await row()).heldDeletionWraps;
+          expect(heldBefore, isNotNull);
+
+          expect(await move(), isTrue);
+
+          final moved = await row();
+          expect(
+            moved.deletionPublishStatus,
+            equals(DirectMessagesDao.deletionPending),
+          );
+          expect(moved.deletionRumorJson, equals(rumor));
+          expect(moved.heldDeletionWraps, equals(heldBefore));
+          expect(moved.isDeleted, isTrue);
+        });
+
+        test('leaves a retraction that settled as sent', () async {
+          await unconfirmedRetraction();
+          await dao.markMessageDeletionSent(
+            'msg_del',
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(await move(), isFalse);
+
+          final settled = await row();
+          expect(settled.deletionPublishStatus, equals('deletion_sent'));
+          expect(settled.deletionRumorJson, isNull);
+        });
+
+        test('leaves a retraction that settled as blocked', () async {
+          await unconfirmedRetraction();
+          await dao.markMessageDeletionBlocked(
+            'msg_del',
+            restoreToThread: true,
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(await move(), isFalse);
+
+          expect(
+            (await row()).deletionPublishStatus,
+            equals(DirectMessagesDao.deletionBlocked),
+          );
+        });
+
+        test("leaves another account's retraction", () async {
+          await unconfirmedRetraction();
+
+          expect(await move(ownerPubkey: 'pubkey_bob'), isFalse);
+
+          expect(
+            (await row()).deletionPublishStatus,
+            equals(DirectMessagesDao.deletionUnconfirmed),
+          );
+        });
+      });
+
       group('held deletion wraps (#10012)', () {
         const recipient = 'pubkey_bob';
         const otherRecipient = 'pubkey_carol';

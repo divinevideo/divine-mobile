@@ -80,6 +80,58 @@ class _RecordFailingDirectMessagesDao extends DirectMessagesDao {
   }) async => throw StateError('database is locked');
 }
 
+/// The real message store, observed: counts the moves of a retraction back to
+/// pending and the warnings written back, and runs [nextStep] once at the
+/// next point a retry reads the row or moves it back to pending.
+class _ObservedDirectMessagesDao extends DirectMessagesDao {
+  _ObservedDirectMessagesDao(super.attachedDatabase);
+
+  Future<void> Function()? nextStep;
+  int movesToPending = 0;
+  int warningsWritten = 0;
+
+  Future<void> _step() async {
+    final step = nextStep;
+    nextStep = null;
+    await step?.call();
+  }
+
+  @override
+  Future<DirectMessageRow?> getMessageById(
+    String id, {
+    String? ownerPubkey,
+  }) async {
+    final row = await super.getMessageById(id, ownerPubkey: ownerPubkey);
+    await _step();
+    return row;
+  }
+
+  @override
+  Future<bool> markUnconfirmedMessageDeletionPending(
+    String rumorId, {
+    String? ownerPubkey,
+  }) async {
+    await _step();
+    movesToPending++;
+    return super.markUnconfirmedMessageDeletionPending(
+      rumorId,
+      ownerPubkey: ownerPubkey,
+    );
+  }
+
+  @override
+  Future<bool> markMessageDeletionUnconfirmed(
+    String rumorId, {
+    String? ownerPubkey,
+  }) {
+    warningsWritten++;
+    return super.markMessageDeletionUnconfirmed(
+      rumorId,
+      ownerPubkey: ownerPubkey,
+    );
+  }
+}
+
 // Real curve keys: the real message service encrypts every wrap, so each
 // pubkey has to be a point the NIP-44 key agreement accepts.
 const _ownerKey =
@@ -1386,20 +1438,64 @@ void main() {
                 automatic: true,
               );
 
-          /// The retraction status each change of the thread shows, from now.
-          Future<List<DmRetractionStatus>> watchStatuses() async {
-            final seen = <DmRetractionStatus>[];
+          /// The retraction status each change of the thread shows, from now;
+          /// null once the message has left the thread.
+          Future<List<DmRetractionStatus?>> watchStatuses() async {
+            final seen = <DmRetractionStatus?>[];
             final subscription = repository
                 .watchMessages((await messageRow()).conversationId)
                 .listen((messages) {
-                  final status = messages
-                      .singleWhere((m) => m.id == _retractedMessageId)
-                      .retractionStatus;
+                  final shown = messages.where(
+                    (m) => m.id == _retractedMessageId,
+                  );
+                  final status = shown.isEmpty
+                      ? null
+                      : shown.single.retractionStatus;
                   if (seen.isEmpty || seen.last != status) seen.add(status);
                 });
             addTearDown(subscription.cancel);
             await pumpEventQueue();
             return seen;
+          }
+
+          /// Holds every inbox lookup until [gate] completes.
+          void holdLookups(Completer<void> gate) {
+            when(
+              () => nostrClient.queryEventsDetailed(
+                any(),
+                subscriptionId: any(named: 'subscriptionId'),
+                tempRelays: any(named: 'tempRelays'),
+                relayTypes: any(named: 'relayTypes'),
+                sendAfterAuth: any(named: 'sendAfterAuth'),
+                useCache: any(named: 'useCache'),
+                useQueryPool: any(named: 'useQueryPool'),
+                timeout: any(named: 'timeout'),
+                requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+                acceptRelayClosedWhenOthersAnswered: any(
+                  named: 'acceptRelayClosedWhenOthersAnswered',
+                ),
+              ),
+            ).thenAnswer((invocation) async {
+              await gate.future;
+              return answerLookup(
+                (invocation.positionalArguments.first as List)
+                    .cast<nostr_filter.Filter>(),
+              );
+            });
+          }
+
+          /// A retraction whose retries ran out, on a store this test observes.
+          Future<_ObservedDirectMessagesDao> observedRanOutRetraction() async {
+            final observed = _ObservedDirectMessagesDao(db);
+            buildStack(messagesDao: observed);
+            await heldRetraction();
+            await repository.markMessageDeletionUnconfirmed(
+              rumorId: _retractedMessageId,
+            );
+            observed
+              ..movesToPending = 0
+              ..warningsWritten = 0;
+            return observed;
           }
 
           test('keeps the warning for the whole attempt', () async {
@@ -1474,30 +1570,7 @@ void main() {
               );
               final seen = await watchStatuses();
               final lookupGate = Completer<void>();
-              when(
-                () => nostrClient.queryEventsDetailed(
-                  any(),
-                  subscriptionId: any(named: 'subscriptionId'),
-                  tempRelays: any(named: 'tempRelays'),
-                  relayTypes: any(named: 'relayTypes'),
-                  sendAfterAuth: any(named: 'sendAfterAuth'),
-                  useCache: any(named: 'useCache'),
-                  useQueryPool: any(named: 'useQueryPool'),
-                  timeout: any(named: 'timeout'),
-                  requireAllRelaysSettled: any(
-                    named: 'requireAllRelaysSettled',
-                  ),
-                  acceptRelayClosedWhenOthersAnswered: any(
-                    named: 'acceptRelayClosedWhenOthersAnswered',
-                  ),
-                ),
-              ).thenAnswer((invocation) async {
-                await lookupGate.future;
-                return answerLookup(
-                  (invocation.positionalArguments.first as List)
-                      .cast<nostr_filter.Filter>(),
-                );
-              });
+              holdLookups(lookupGate);
               final automatic = automaticRetry();
               await pumpEventQueue();
 
@@ -1521,6 +1594,48 @@ void main() {
               expect(wrapsTo(peerB), hasLength(1));
             },
           );
+
+          for (final settle in [
+            (
+              as: DmMessageDeletionOutcome.sent,
+              status: 'deletion_sent',
+              arrange: () => inboxes[peerB] = _Inbox.absent,
+            ),
+            (
+              as: DmMessageDeletionOutcome.blocked,
+              status: DirectMessagesDao.deletionBlocked,
+              arrange: () {
+                inboxes[peerB] = _Inbox.absent;
+                policyDecision = DmSendPolicyDecision.terminallyBlockedDiscard;
+              },
+            ),
+          ]) {
+            test('a Try again that joins it after it settled as '
+                '${settle.as.name} leaves it settled', () async {
+              final observed = await observedRanOutRetraction();
+              final seen = await watchStatuses();
+              final lookupGate = Completer<void>();
+              holdLookups(lookupGate);
+              final automatic = automaticRetry();
+              await pumpEventQueue();
+              // The running attempt settles just before the Try again moves
+              // the row back to pending.
+              observed.nextStep = () async {
+                settle.arrange();
+                lookupGate.complete();
+                expect(await automatic, settle.as, reason: 'precondition');
+              };
+
+              expect(await retryRetraction(), settle.as);
+              await pumpEventQueue();
+
+              expect(
+                (await messageRow()).deletionPublishStatus,
+                settle.status,
+              );
+              expect(seen, isNot(contains(DmRetractionStatus.pending)));
+            });
+          }
         });
       });
 

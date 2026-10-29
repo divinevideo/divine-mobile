@@ -556,6 +556,30 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
     return rows > 0;
   }
 
+  /// Move a retraction whose retries ran out ([deletionUnconfirmed]) back to
+  /// pending for the sender's Try again (#10012), keeping its kind-5 and held
+  /// wraps. Compare-and-set: only an unconfirmed row changes, so one that
+  /// settled as sent or blocked in the meantime is never reopened. Returns
+  /// whether the row was changed.
+  Future<bool> markUnconfirmedMessageDeletionPending(
+    String rumorId, {
+    String? ownerPubkey,
+  }) async {
+    final rows =
+        await (update(directMessages)..where(
+              (t) =>
+                  t.id.equals(rumorId) &
+                  _visibleToOwner(t, ownerPubkey) &
+                  t.deletionPublishStatus.equals(deletionUnconfirmed),
+            ))
+            .write(
+              const DirectMessagesCompanion(
+                deletionPublishStatus: Value(deletionPending),
+              ),
+            );
+    return rows > 0;
+  }
+
   /// Move a deletion row to a terminal [status].
   ///
   /// [retainRumor] and [restoreToThread] are required rather than defaulted:

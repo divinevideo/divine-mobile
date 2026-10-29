@@ -10189,25 +10189,17 @@ class DmRepository {
   /// [running]: an automatic one leaves a retraction whose retries ran out
   /// showing the warning, so move it to pending for the spinner before
   /// joining, and write the warning back when nothing confirms it (#10012).
+  /// The move is a compare-and-set, since the running attempt can settle the
+  /// row at any moment, and a settled row must never be reopened.
   Future<DmMessageDeletionOutcome> _tryAgainWhileRetrying({
     required String rumorId,
     required Future<DmMessageDeletionOutcome> running,
   }) async {
-    final row = await _directMessagesDao.getMessageById(
-      rumorId,
-      ownerPubkey: _ownerPubkey,
-    );
-    final storedRumor = row?.deletionRumorJson;
-    final movedToPending =
-        storedRumor != null &&
-        row?.deletionPublishStatus == DirectMessagesDao.deletionUnconfirmed;
-    if (movedToPending) {
-      await _directMessagesDao.markMessageDeletionPending(
-        rumorId,
-        deletionRumorJson: storedRumor,
-        ownerPubkey: _ownerPubkey,
-      );
-    }
+    final movedToPending = await _directMessagesDao
+        .markUnconfirmedMessageDeletionPending(
+          rumorId,
+          ownerPubkey: _ownerPubkey,
+        );
     final outcome = await running;
     if (movedToPending && outcome == DmMessageDeletionOutcome.unconfirmed) {
       await _directMessagesDao.markMessageDeletionUnconfirmed(
@@ -10273,11 +10265,9 @@ class DmRepository {
     // already-pending row need neither.
     final retriesRanOut =
         row.deletionPublishStatus == DirectMessagesDao.deletionUnconfirmed;
-    final backToPending =
-        mintedFresh ||
-        (retriesRanOut && !automatic) ||
-        row.deletionPublishStatus == DirectMessagesDao.deletionBlocked;
-    if (backToPending) {
+    var backToPending = false;
+    if (mintedFresh ||
+        row.deletionPublishStatus == DirectMessagesDao.deletionBlocked) {
       await _directMessagesDao.markMessageDeletionPending(
         rumorId,
         deletionRumorJson: mintedFresh
@@ -10285,7 +10275,15 @@ class DmRepository {
             : storedRumor!,
         ownerPubkey: _ownerPubkey,
       );
+      backToPending = true;
       if (mintedFresh) _notifyRetryableWork();
+    } else if (retriesRanOut && !automatic) {
+      // A compare-and-set, as for a Try again that joins a running attempt.
+      backToPending = await _directMessagesDao
+          .markUnconfirmedMessageDeletionPending(
+            rumorId,
+            ownerPubkey: _ownerPubkey,
+          );
     }
 
     final outcome = await _driveMessageDeletion(

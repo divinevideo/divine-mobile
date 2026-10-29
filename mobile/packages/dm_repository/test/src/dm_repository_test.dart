@@ -20064,6 +20064,13 @@ void main() {
             ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => true);
+        // The row is pending, so a Try again's compare-and-set moves nothing.
+        when(
+          () => mockDirectMessagesDao.markUnconfirmedMessageDeletionPending(
+            _rumorEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer((_) async => false);
         when(
           () => mockDirectMessagesDao.markMessageDeletionBlocked(
             _rumorEventId,
