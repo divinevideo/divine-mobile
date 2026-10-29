@@ -36,6 +36,7 @@ class NotificationActivitySender {
     await _client.recordNotificationActivity(
       update,
       authHeaders: {'Authorization': token.authorizationHeader},
+      isCurrent: current,
     );
   }
 }

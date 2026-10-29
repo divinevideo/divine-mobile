@@ -3,6 +3,7 @@
 
 import 'dart:convert';
 
+import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
@@ -51,6 +52,9 @@ class Nip98HttpClient extends http.BaseClient {
 
   @override
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    if (!_requestIsCurrent(request)) {
+      throw http.ClientException('Request is no longer current', request.url);
+    }
     final started = _elapsed();
     final authorization = request.headers['Authorization'];
     if (request is! http.Request ||
@@ -92,7 +96,12 @@ class Nip98HttpClient extends http.BaseClient {
 
     final owner = _signedOwner(authorization);
     final method = HttpMethod.parse(request.method);
-    final blocked = _retryBlockedReason(owner, method, _elapsed() - started);
+    final blocked = _retryBlockedReason(
+      request,
+      owner,
+      method,
+      _elapsed() - started,
+    );
     if (blocked != null) {
       _logRecovery('retry skipped: $blocked');
       return originalResponse;
@@ -119,6 +128,7 @@ class Nip98HttpClient extends http.BaseClient {
             allowUserInteraction: false,
           );
     final blockedAfterSigning = _retryBlockedReason(
+      request,
       owner,
       method,
       _elapsed() - started,
@@ -145,10 +155,12 @@ class Nip98HttpClient extends http.BaseClient {
   }
 
   String? _retryBlockedReason(
+    http.BaseRequest request,
     String? owner,
     HttpMethod? method,
     Duration elapsed,
   ) {
+    if (!_requestIsCurrent(request)) return 'request is no longer current';
     if (_closed) return 'transport closed';
     if (owner == null) return 'signed owner unavailable';
     if (method == null) return 'unsupported HTTP method';
@@ -160,6 +172,9 @@ class Nip98HttpClient extends http.BaseClient {
     }
     return null;
   }
+
+  bool _requestIsCurrent(http.BaseRequest request) =>
+      request is! GuardedHttpRequest || request.isCurrent();
 
   bool _learnTime(Uri uri, http.StreamedResponse response) {
     final date = response.headers['date'];

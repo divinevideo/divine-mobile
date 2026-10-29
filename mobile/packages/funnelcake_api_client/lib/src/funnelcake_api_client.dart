@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:funnelcake_api_client/src/exceptions.dart';
+import 'package:funnelcake_api_client/src/guarded_http_request.dart';
 import 'package:funnelcake_api_client/src/leaderboard_period.dart';
 import 'package:funnelcake_api_client/src/models/models.dart';
 import 'package:funnelcake_api_client/src/user_agent.dart';
@@ -434,24 +435,28 @@ class FunnelcakeApiClient {
   ///
   /// A 204 acknowledges applied, duplicate, and stale sequences alike.
   /// Callers retry uncertain requests with the same [update] and fresh auth.
+  /// [isCurrent] lets supporting transports reject retired lifecycle retries.
   Future<void> recordNotificationActivity(
     NotificationActivityUpdate update, {
     Map<String, String>? authHeaders,
+    bool Function()? isCurrent,
   }) async {
     if (!isAvailable) throw const FunnelcakeNotConfiguredException();
     final uri = notificationActivityUri;
     try {
+      final request = isCurrent == null
+          ? http.Request('POST', uri)
+          : GuardedHttpRequest('POST', uri, isCurrent: isCurrent);
+      request.headers.addAll({
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        ...buildDivineClientHeaders(appVersion: _appVersion),
+        ...?authHeaders,
+      });
+      request.body = update.body;
       final response = await _httpClient
-          .post(
-            uri,
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-              ...buildDivineClientHeaders(appVersion: _appVersion),
-              ...?authHeaders,
-            },
-            body: update.body,
-          )
+          .send(request)
+          .then(http.Response.fromStream)
           .timeout(_timeout);
       if (response.statusCode != 204) {
         throw FunnelcakeApiException(

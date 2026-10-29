@@ -31,7 +31,9 @@ presence expires after 180 seconds if the app crashes or the OS suspends it.
 The provider waits for the matching signer-backed Nostr session and uses the
 current Flutter lifecycle state at activation. A hidden background launch cannot
 report a foreground visit. Delayed signing rechecks both the owner and current
-update before transmission.
+update before transmission. The request retains this validity check through
+clock-skew recovery, so retirement before or during corrected signing prevents
+the retry from sending an obsolete foreground lease.
 
 Passive activity signing never opens signer approval UI, including a clock-skew
 retry. Local keys and noninteractive Keycast RPC are supported. Amber uses only

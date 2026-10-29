@@ -142,6 +142,26 @@ void main() {
       expect(requests.last.body, update.body);
     });
 
+    test('a retired update cannot be sent after corrected signing', () async {
+      rejectClock = true;
+      final retrySigning = Completer<void>();
+      final releaseRetry = Completer<void>();
+      beforeSignature = () async {
+        if (signatures == 2) {
+          retrySigning.complete();
+          await releaseRetry.future;
+        }
+      };
+      final operation = sender.send(owner, update, () => current);
+      await retrySigning.future;
+      current = false;
+      releaseRetry.complete();
+
+      await expectLater(operation, throwsA(isA<FunnelcakeApiException>()));
+      expect(requests, hasLength(1));
+      expect(signatures, 2);
+    });
+
     test('a different current signing owner is never used', () async {
       await sender.send('b' * 64, update, () => current);
       expect(signatures, 0);
