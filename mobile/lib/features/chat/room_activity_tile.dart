@@ -266,7 +266,7 @@ class _RecentRoomActivity extends StatelessWidget {
               ),
               style: style,
             ),
-            const ExcludeSemantics(child: Text('·')),
+            ExcludeSemantics(child: Text('·', style: style)),
             Text(
               context.l10n.messagesRoomRecentMessages(
                 activity.recentMessageCount,
