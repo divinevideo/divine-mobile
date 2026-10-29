@@ -30,6 +30,8 @@ import 'package:openvine/router/route_error_screen.dart';
 import 'package:openvine/services/auth/nostr_identity.dart';
 import 'package:openvine/services/auth_service.dart';
 
+import '../../helpers/stored_room_messages.dart';
+
 class _Relay extends Mock implements RelayGateway {}
 
 class _Cipher extends Mock implements StreamCipher {}
@@ -85,18 +87,12 @@ Future<RoomActivityRepository> _generalActivity(
 }) async {
   final store = InMemoryConcordStore('a' * 64);
   final channelId = pocChannelIdFor('general');
-  final sentAt = DateTime.now().millisecondsSinceEpoch ~/ 1000 - 60;
-  final ids = [for (var i = 1; i <= unread; i++) '$i'.padLeft(64, '0')];
-  if (ids.isNotEmpty) {
-    await store.writeBatch({
-      'index': ids.join(','),
-      for (final id in ids) ...{
-        'msg:$id': 'Hello from the room',
-        'meta:$id': '$channelId|$_peer|$sentAt|',
-        'sent:$id': '1',
-      },
-    });
-  }
+  await storeRoomMessages(
+    store,
+    channelId: channelId,
+    author: _peer,
+    ids: [for (var i = 1; i <= unread; i++) '$i'.padLeft(64, '0')],
+  );
   final key = pocStreamKeyFor('general');
   return RoomActivityRepository(
     ownPubkey: 'a' * 64,

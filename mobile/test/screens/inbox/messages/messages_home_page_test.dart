@@ -22,6 +22,8 @@ import 'package:openvine/screens/inbox/messages/messages_home_view.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../helpers/stored_room_messages.dart';
+
 class _Auth extends Fake implements AuthService {
   _Auth(this.currentPublicKeyHex, {this.isAuthenticated = true});
   @override
@@ -91,18 +93,12 @@ Future<RoomActivityChannel> _room(
   final roomRelay = relay ?? _RoomRelay();
   final channelId = pocChannelIdFor(channel);
   final key = pocStreamKeyFor(channel);
-  final sentAt = DateTime.now().millisecondsSinceEpoch ~/ 1000 - 60;
-  final ids = [
-    for (var i = 1; i <= unread; i++) '$seed$i'.padLeft(64, '0'),
-  ];
-  await roomStore.writeBatch({
-    'index': ids.join(','),
-    for (final id in ids) ...{
-      'msg:$id': 'Hello from the room',
-      'meta:$id': '$channelId|$_peer|$sentAt|',
-      'sent:$id': '1',
-    },
-  });
+  await storeRoomMessages(
+    roomStore,
+    channelId: channelId,
+    author: _peer,
+    ids: [for (var i = 1; i <= unread; i++) '$seed$i'.padLeft(64, '0')],
+  );
   return RoomActivityChannel(
     channelId: channelId,
     repository: ConcordRepository(
