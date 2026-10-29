@@ -34,6 +34,10 @@ export 'package:openvine/models/video_editor/caption_generation_outcome.dart';
 ///   utterances and stalls on a long merged file, so the fallback must stay
 ///   per-source.
 ///
+/// A track with a voice effect always takes the on-device path, next to the
+/// server's result for the rest, so its recording without the effect never
+/// leaves the phone.
+///
 /// Both paths carry a timeout so a stalled recognizer or network never hangs
 /// the editor. Muted clips and tracks, clips without a local file, and empty
 /// trim windows are excluded; their timeline span is still counted so later
@@ -97,9 +101,10 @@ class CaptionGenerationService {
   /// timeline-mapped caption cues.
   ///
   /// Of [audioTracks], only voice-over takes and sound extracted from a clip
-  /// are transcribed, where they play on the timeline. A take is recognized
-  /// as recorded, before any voice effect, which would only make it harder
-  /// to understand.
+  /// are transcribed, where they play on the timeline. A track is recognized
+  /// from its recording as made, before any voice effect, which would only
+  /// make it harder to understand, and before noise reduction. A track with a
+  /// voice effect is recognized on the device only.
   ///
   /// [localeIdentifier] is the BCP-47 recognition language (the app locale).
   /// Never throws — failures come back as [CaptionsFailed].
@@ -120,14 +125,28 @@ class CaptionGenerationService {
     if (sources.isEmpty) return const CaptionsEmpty();
 
     final remote = _remoteTranscriber;
-    if (remote != null) {
-      final outcome = await _generateViaServerMerge(
+    final serverSources = [
+      for (final source in sources)
+        if (!source.onDeviceOnly) source,
+    ];
+    if (remote != null && serverSources.isNotEmpty) {
+      final serverCues = await _transcribeViaServerMerge(
         remote: remote,
-        sources: sources,
-        totalDuration: totalDuration,
+        sources: serverSources,
         localeIdentifier: localeIdentifier,
       );
-      if (outcome != null) return outcome;
+      if (serverCues != null) {
+        return _outcome(
+          [
+            ...serverCues,
+            ...await _onDeviceOnlyCues(
+              sources: sources,
+              localeIdentifier: localeIdentifier,
+            ),
+          ],
+          totalDuration,
+        );
+      }
       // The merge or the server call failed — fall through to on-device.
     }
     return _generateOnDevicePerSource(
@@ -144,13 +163,20 @@ class CaptionGenerationService {
     required Duration totalDuration,
   }) {
     final sources = <_SpeechSource>[];
+    final audibleClipIds = <String>{};
     var clipStart = Duration.zero;
     for (final clip in clips) {
       final source = _clipSource(clip, timelineStart: clipStart);
-      if (source != null) sources.add(source);
+      if (source != null) {
+        sources.add(source);
+        audibleClipIds.add(clip.id);
+      }
       clipStart += clip.playbackDuration;
     }
     for (final track in audioTracks) {
+      // Sound still anchored to the clip it was extracted from repeats that
+      // clip while the clip plays its own sound; caption it once, there.
+      if (audibleClipIds.contains(track.anchorClipId)) continue;
       final source = _trackSource(track, totalDuration: totalDuration);
       if (source != null) sources.add(source);
     }
@@ -204,6 +230,10 @@ class CaptionGenerationService {
   /// inside the video, or `null` for any other track, a muted one, or one
   /// that plays nothing there.
   ///
+  /// The sound is read from the recording as made, without its voice effect
+  /// or noise reduction. A voice effect can be what keeps a speaker from
+  /// being recognized, so a track with one is recognized on the device only.
+  ///
   /// Takes and extracted sound are always placed with an end; a track
   /// without one is skipped.
   static _SpeechSource? _trackSource(
@@ -240,18 +270,18 @@ class CaptionGenerationService {
       extractedStart: extractedStart,
       extractedEnd:
           extractedStart + track.timelineSpanOf(sourceEnd - track.startOffset),
+      onDeviceOnly: !track.voiceEffect.isNone,
     );
   }
 
   /// Server path: merge the sources into one WAV and transcribe it remotely.
   ///
-  /// Returns the outcome, or `null` when the merge or the remote call failed so
+  /// Returns the cues, or `null` when the merge or the remote call failed so
   /// the caller can fall back to on-device. An empty transcript is a valid
-  /// "no speech" result ([CaptionsEmpty]), not a fallback trigger.
-  Future<CaptionGenerationOutcome?> _generateViaServerMerge({
+  /// "no speech" result, not a fallback trigger.
+  Future<List<CaptionSegment>?> _transcribeViaServerMerge({
     required CaptionRemoteTranscriber remote,
     required List<_SpeechSource> sources,
-    required Duration totalDuration,
     required String localeIdentifier,
   }) async {
     final AudioMergeResult merged;
@@ -290,12 +320,10 @@ class CaptionGenerationService {
       // if it were spoken would stop following the cue when it is trimmed,
       // while an empty list lets the cue spread its words over whatever
       // window it ends up with.
-      final cues = _cuesFrom(
+      return _group(
         _mapMergedToTimeline(words, merged.segments, sources),
-        totalDuration,
         keepWords: false,
       );
-      return cues.isEmpty ? const CaptionsEmpty() : CaptionsGenerated(cues);
     } on Object catch (e) {
       Log.warning(
         '🎬 Server caption transcription failed; falling back to '
@@ -310,13 +338,58 @@ class CaptionGenerationService {
   }
 
   /// On-device path: transcribe each source's audio separately.
+  Future<CaptionGenerationOutcome> _generateOnDevicePerSource({
+    required List<_SpeechSource> sources,
+    required Duration totalDuration,
+    required String localeIdentifier,
+  }) async {
+    final result = await _transcribeOnDevice(
+      sources: sources,
+      localeIdentifier: localeIdentifier,
+    );
+    final failure = result.failure;
+    if (failure != null) return CaptionsFailed(failure);
+    return _outcome(_group(result.words), totalDuration);
+  }
+
+  /// The cues of the [sources] only ever recognized on the device, for a run
+  /// whose other sources the server transcribed.
+  ///
+  /// A failure here leaves those sources without cues rather than discarding
+  /// the server's.
+  Future<List<CaptionSegment>> _onDeviceOnlyCues({
+    required List<_SpeechSource> sources,
+    required String localeIdentifier,
+  }) async {
+    final onDeviceOnly = [
+      for (final source in sources)
+        if (source.onDeviceOnly) source,
+    ];
+    if (onDeviceOnly.isEmpty) return const [];
+    final result = await _transcribeOnDevice(
+      sources: onDeviceOnly,
+      localeIdentifier: localeIdentifier,
+    );
+    if (result.failure != null) {
+      Log.warning(
+        '🎬 On-device captions failed for tracks with a voice effect; '
+        'keeping the server captions: ${result.failure}',
+        name: _logName,
+        category: LogCategory.video,
+      );
+      return const [];
+    }
+    return _group(result.words);
+  }
+
+  /// Transcribes each of [sources] on the device, or stops at the first
+  /// failure.
   ///
   /// The OS recognizer is designed for short utterances, so each source is
   /// extracted and transcribed on its own (with a per-source timeout) and its
   /// words are windowed to the part that plays and shifted onto the timeline.
-  Future<CaptionGenerationOutcome> _generateOnDevicePerSource({
+  Future<_OnDeviceResult> _transcribeOnDevice({
     required List<_SpeechSource> sources,
-    required Duration totalDuration,
     required String localeIdentifier,
   }) async {
     final words = <_LaneWord>[];
@@ -342,7 +415,7 @@ class CaptionGenerationService {
           name: _logName,
           category: LogCategory.video,
         );
-        return const CaptionsFailed(CaptionGenerationFailure.failed);
+        return (words: words, failure: CaptionGenerationFailure.failed);
       }
 
       try {
@@ -358,14 +431,14 @@ class CaptionGenerationService {
           name: _logName,
           category: LogCategory.video,
         );
-        return const CaptionsFailed(CaptionGenerationFailure.failed);
+        return (words: words, failure: CaptionGenerationFailure.failed);
       } on CaptionGenerationException catch (e) {
         Log.warning(
           '🎬 Caption transcription failed for ${source.id}: $e',
           name: _logName,
           category: LogCategory.video,
         );
-        return CaptionsFailed(_mapFailure(e));
+        return (words: words, failure: _mapFailure(e));
       } on Object catch (e) {
         // The OS recognizer can throw untyped errors (missing plugin,
         // malformed native result). Honor the "never throws" contract so the
@@ -376,14 +449,13 @@ class CaptionGenerationService {
           name: _logName,
           category: LogCategory.video,
         );
-        return const CaptionsFailed(CaptionGenerationFailure.failed);
+        return (words: words, failure: CaptionGenerationFailure.failed);
       } finally {
         await _cleanupQuietly(audioPath);
       }
     }
 
-    final cues = _cuesFrom(words, totalDuration);
-    return cues.isEmpty ? const CaptionsEmpty() : CaptionsGenerated(cues);
+    return (words: words, failure: null);
   }
 
   /// Runs on-device recognition for one source. Some on-device recognizers
@@ -431,7 +503,10 @@ class CaptionGenerationService {
   /// moved through its own source. Any other cue belongs to the source it
   /// overlaps most and is clamped to it, so it never spills into a skipped
   /// clip's muted gap or onto a source that plays elsewhere. The full text is
-  /// kept intact; only its timing is bounded.
+  /// kept intact; only its timing is bounded. So when the server returns one
+  /// sentence for the end of a clip and the start of a take merged after it,
+  /// the clip's words show in the take's cue, and that part of the clip gets
+  /// no cue of its own.
   List<_LaneWord> _mapMergedToTimeline(
     List<CaptionSegment> words,
     List<AudioMergeSegmentOffset> offsets,
@@ -580,40 +655,47 @@ class CaptionGenerationService {
     );
   }
 
-  /// Groups [words] into cues lane by lane, so a voice-over talking over a
-  /// clip never shares a cue with it, and orders the cues by start.
-  List<CaptionCue> _cuesFrom(
-    List<_LaneWord> words,
-    Duration totalDuration, {
+  /// Groups [words] into cues lane by lane, so the words of a voice-over and
+  /// of a clip it talks over are never joined into one cue. Each cue keeps
+  /// the recognizer's word timings when [keepWords] is set.
+  static List<CaptionSegment> _group(
+    List<_LaneWord> words, {
     bool keepWords = true,
   }) {
     final lanes = <String, List<CaptionSegment>>{};
     for (final (:lane, :word) in words) {
       (lanes[lane] ??= []).add(word);
     }
-    final grouped = [
-      for (final laneWords in lanes.values) ...groupCaptionSegments(laneWords),
+    return [
+      for (final laneWords in lanes.values)
+        for (final cue in groupCaptionSegments(laneWords))
+          if (keepWords)
+            cue
+          else
+            CaptionSegment(text: cue.text, start: cue.start, end: cue.end),
     ];
-    mergeSort(grouped, compare: (a, b) => a.start.compareTo(b.start));
-    return _buildCues(grouped, totalDuration, keepWords: keepWords);
   }
 
-  /// Turns grouped segments into cues, keeping the recognizer's word timings
-  /// when [keepWords] is set.
-  List<CaptionCue> _buildCues(
-    List<CaptionSegment> grouped,
-    Duration totalDuration, {
-    bool keepWords = true,
-  }) => [
-    for (final (index, segment) in grouped.indexed)
-      CaptionCue(
-        id: 'cue-$index',
-        text: segment.text,
-        start: segment.start,
-        end: segment.end > totalDuration ? totalDuration : segment.end,
-        words: keepWords ? segment.words : const [],
-      ),
-  ];
+  /// Turns grouped [cues] into the outcome, ordered by start and cut off at
+  /// [totalDuration].
+  static CaptionGenerationOutcome _outcome(
+    List<CaptionSegment> cues,
+    Duration totalDuration,
+  ) {
+    if (cues.isEmpty) return const CaptionsEmpty();
+    final ordered = [...cues];
+    mergeSort(ordered, compare: (a, b) => a.start.compareTo(b.start));
+    return CaptionsGenerated([
+      for (final (index, segment) in ordered.indexed)
+        CaptionCue(
+          id: 'cue-$index',
+          text: segment.text,
+          start: segment.start,
+          end: segment.end > totalDuration ? totalDuration : segment.end,
+          words: segment.words,
+        ),
+    ]);
+  }
 
   static Duration _clamp(Duration value, Duration min, Duration max) {
     if (value < min) return min;
@@ -658,6 +740,12 @@ class CaptionGenerationService {
 /// A transcribed word on the timeline, with the lane it is grouped in.
 typedef _LaneWord = ({String lane, CaptionSegment word});
 
+/// The words recognized on the device, or the failure that stopped it.
+typedef _OnDeviceResult = ({
+  List<_LaneWord> words,
+  CaptionGenerationFailure? failure,
+});
+
 /// One stretch of sound to transcribe and where it plays: a clip's own sound,
 /// a voice-over take, or sound extracted from a clip.
 class _SpeechSource {
@@ -673,6 +761,7 @@ class _SpeechSource {
     required this.extractedStart,
     required this.extractedEnd,
     this.toPlayback,
+    this.onDeviceOnly = false,
   });
 
   /// The lane every clip shares. Track ids carry a marker prefix, so none
@@ -714,6 +803,10 @@ class _SpeechSource {
   /// Moves an offset into the transcribed sound to an offset on the
   /// timeline, for a clip under a speed ramp; the two are equal otherwise.
   final Duration Function(Duration offset)? toPlayback;
+
+  /// Whether the sound is only ever recognized on the device, never sent to
+  /// the server.
+  final bool onDeviceOnly;
 
   /// Where [offset] into the part that plays lands on the timeline.
   Duration onTimeline(Duration offset) =>
