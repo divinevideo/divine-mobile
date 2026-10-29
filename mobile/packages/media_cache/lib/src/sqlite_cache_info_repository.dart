@@ -32,15 +32,42 @@ class SqliteCacheInfoRepository implements CacheInfoRepository {
   final Future<void> Function(String) _deleteDatabase;
   Future<String>? _path;
   Future<bool>? _opening;
+  Future<bool>? _closing;
   late CacheInfoRepository _repository;
+
+  /// Callers holding the index open, counting each from its [open] call.
+  ///
+  /// The cache store holds the index for its whole life while each cache sweep
+  /// opens and closes its own connection. The database is shared, so it may
+  /// only close with the last connection: closing it on a sweep's [close] left
+  /// every later lookup failing with `database_closed`.
+  int _connections = 0;
 
   Future<String> get _databasePath => _path ??= () async {
     final directory = await _directoryProvider();
     return path.join(directory.path, '$_databaseName.db');
   }();
 
+  /// Opens one connection to the index, which needs its own [close].
   @override
-  Future<bool> open() => _opening ??= _open();
+  Future<bool> open() async {
+    // Counted before the first await, so a close racing this open cannot
+    // see zero connections and close the database under it.
+    _connections++;
+    try {
+      // A database that is closing cannot serve this connection; reopen it
+      // once the close has finished.
+      for (var closing = _closing; closing != null; closing = _closing) {
+        await closing;
+      }
+      final opened = await (_opening ??= _open());
+      if (!opened) _connections--;
+      return opened;
+    } on Object {
+      _connections--;
+      rethrow;
+    }
+  }
 
   Future<bool> _open() async {
     final filePath = await _databasePath;
@@ -62,12 +89,25 @@ class SqliteCacheInfoRepository implements CacheInfoRepository {
     }
   }
 
+  /// Closes one connection, and the database with the last one.
+  ///
+  /// Returns false while other connections keep the database open.
   @override
   Future<bool> close() async {
-    final opening = _opening;
-    if (opening == null) return true;
+    // Never opened, or every open failed: there is nothing to close.
+    if (_connections == 0) return true;
+    if (--_connections > 0) return false;
+    final closing = _closing = _closeRepository();
     try {
-      await opening;
+      return await closing;
+    } finally {
+      if (identical(_closing, closing)) _closing = null;
+    }
+  }
+
+  Future<bool> _closeRepository() async {
+    try {
+      await _opening;
     } on Object {
       // A failed open owns no usable repository connection to close.
       return true;

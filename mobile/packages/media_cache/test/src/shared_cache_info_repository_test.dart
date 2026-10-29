@@ -78,6 +78,38 @@ void main() {
       });
     }
 
+    test(
+      'keeps serving rows after a cache sweep closes its own connection',
+      () async {
+        debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        final repository = createSharedCacheInfoRepository('images');
+        // The cache store's connection, held for the manager's whole life.
+        await repository.open();
+        addTearDown(repository.close);
+        final cached = CacheObject(
+          'https://example.com/avatar.jpg',
+          key: 'avatar',
+          relativePath: 'avatar.jpg',
+          validTill: DateTime.utc(2030),
+        );
+        await repository.insert(cached);
+        // MediaCacheManager.enforceCacheLimits leases its own connection.
+        await repository.open();
+        expect(await repository.getAllObjects(), hasLength(1));
+        await repository.close();
+        expect((await repository.get('avatar'))?.relativePath, 'avatar.jpg');
+        await repository.insert(
+          CacheObject(
+            'https://example.com/banner.jpg',
+            key: 'banner',
+            relativePath: 'banner.jpg',
+            validTill: DateTime.utc(2030),
+          ),
+        );
+        expect(await repository.getAllObjects(), hasLength(2));
+      },
+    );
+
     test('retains the desktop JSON corruption-recovery repository', () async {
       debugDefaultTargetPlatformOverride = TargetPlatform.linux;
       final repository = createSharedCacheInfoRepository('desktop');

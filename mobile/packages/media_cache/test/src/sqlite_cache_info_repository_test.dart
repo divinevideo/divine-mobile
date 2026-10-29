@@ -120,9 +120,9 @@ void main() {
         final index = repository();
         final first = index.open();
         final second = index.open();
-        expect(identical(first, second), isTrue);
         opening.complete(true);
         expect(await first, isTrue);
+        expect(await second, isTrue);
         verify(delegate.open).called(1);
       });
     });
@@ -131,6 +131,37 @@ void main() {
       test('is harmless before open', () async {
         expect(await repository().close(), isTrue);
         verifyNever(delegate.close);
+      });
+
+      test('keeps the index open until its last connection closes', () async {
+        final index = repository();
+        await index.open();
+        await index.open();
+        expect(await index.close(), isFalse);
+        verifyNever(delegate.close);
+        expect(await index.close(), isTrue);
+        verify(delegate.close).called(1);
+      });
+
+      test('does not count an open the delegate refused', () async {
+        when(delegate.open).thenAnswer((_) async => false);
+        final index = repository();
+        expect(await index.open(), isFalse);
+        expect(await index.close(), isTrue);
+        verifyNever(delegate.close);
+      });
+
+      test('reopens an open that arrives while the index closes', () async {
+        final closing = Completer<bool>();
+        when(delegate.close).thenAnswer((_) => closing.future);
+        final index = repository();
+        await index.open();
+        final closed = index.close();
+        final reopened = index.open();
+        closing.complete(true);
+        expect(await closed, isTrue);
+        expect(await reopened, isTrue);
+        verify(delegate.open).called(2);
       });
 
       test('permits a new open after a successful close', () async {
