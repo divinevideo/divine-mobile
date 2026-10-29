@@ -167,8 +167,9 @@ class EditorEffectType {
 
   /// The category the effects picker lists this type under.
   ///
-  /// A built-in effect without one does not compile; a custom type without
-  /// one throws, which listing every type in [values] shows.
+  /// A built-in effect without one does not compile. Throws a [StateError]
+  /// for a custom type without one, which the model test listing every type
+  /// in [values] catches.
   EditorEffectCategory get category => switch (builtIn) {
     final builtIn? => _builtInVideoEffectCategory(builtIn),
     null => switch (customId) {

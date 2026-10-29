@@ -27,8 +27,8 @@ import 'package:unified_logger/unified_logger.dart';
 /// the effects, one titled section per category.
 ///
 /// Scrolling the grid slides the tab highlight along and a tab scrolls the
-/// grid to its section, as in the font picker. Opened on an effect of the
-/// timeline, the grid starts at that effect's section.
+/// grid to its section, as `VideoEditorFontList` does. Opened on an effect
+/// of the timeline, the grid starts at that effect's section.
 ///
 /// The bar reaches down under the system navigation bar, so the grid scrolls
 /// on behind it; the editor must not pad the bar for it.
@@ -79,6 +79,9 @@ const double _shadowExtent = 16;
 /// The TabBar's default; each tab is padded by it below its label.
 const double _tabIndicatorWeight = 2;
 
+/// Between a tile's preview and its name.
+const double _previewLabelGap = 4;
+
 /// Around a section title; the first sits close under the tabs, every other
 /// one leaves a gap to the section above.
 const EdgeInsets _firstHeaderPadding = EdgeInsets.fromLTRB(16, 5, 16, 8);
@@ -107,9 +110,10 @@ class _EffectsPickerState extends State<_EffectsPicker>
       .selectedType
       ?.category;
 
-  /// Whether scrolling moves the tab highlight. A tab tap stops it until the
-  /// user scrolls again, because the grid passes other sections on its way
-  /// and a jump to one of the last sections is clamped at the end of the grid.
+  /// Whether scrolling moves the tab highlight. A jump to a section, from a
+  /// tab tap or on opening at an edited effect, stops it until the user
+  /// scrolls again, because the grid passes other sections on its way and a
+  /// jump to one of the last sections is clamped at the end of the grid.
   bool _followScroll = true;
 
   /// Whether the grid has scrolled under the tabs, which then cast a shadow
@@ -315,7 +319,7 @@ class _EffectsPickerState extends State<_EffectsPicker>
 /// the grid has not built yet, and grow with the text size.
 class _PickerMetrics {
   /// Measured in the styles the tabs, the section titles and the tile names
-  /// are drawn in, coloured as they are.
+  /// are drawn in; their colours only keep each style complete.
   factory _PickerMetrics(TextScaler textScaler, VineThemeColors colors) {
     double lineOf(TextStyle style) =>
         textScaler.scale(style.fontSize!) * (style.height ?? 1.2);
@@ -335,10 +339,10 @@ class _PickerMetrics {
       ),
       firstHeaderExtent: titleLine + _firstHeaderPadding.vertical,
       headerExtent: titleLine + _headerPadding.vertical,
-      // A tile is its preview, a gap of 4 and one line of its name.
+      // A tile is its preview over one line of its name.
       rowExtent:
           _previewSize +
-          4 +
+          _previewLabelGap +
           lineOf(VineTheme.bodySmallFont(color: colors.onSurface)),
     );
   }
@@ -584,7 +588,7 @@ class _EffectItem extends StatelessWidget {
         onTap: () => context.read<VideoEditorEffectsCubit>().selectType(type),
         child: Column(
           mainAxisAlignment: .end,
-          spacing: 4,
+          spacing: _previewLabelGap,
           children: [
             Container(
               width: _previewSize,
@@ -664,12 +668,12 @@ class _EchoThumbnail extends StatelessWidget {
 
   final String path;
 
-  /// Shift, as a share of the preview's width, and opacity of each copy,
-  /// oldest first.
+  /// Shift, as a share of the thumbnail's width inside the tile's border,
+  /// and opacity of each copy, oldest first.
   static const List<(double, double)> _copies = [
-    (-12 / 52, 0.22),
-    (-8 / 52, 0.35),
-    (-4 / 52, 0.5),
+    (-12 / 48, 0.22),
+    (-8 / 48, 0.35),
+    (-4 / 48, 0.5),
   ];
 
   @override
