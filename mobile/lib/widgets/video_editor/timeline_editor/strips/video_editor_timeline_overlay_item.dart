@@ -20,6 +20,7 @@ import 'package:openvine/widgets/video_editor/draw_editor/video_editor_draw_cens
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_bottom_bar.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_labels.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show VideoSpeedRamp;
 
 /// Multi-select visual state for an overlay tile while the timeline is in
 /// draw-layer multi-select mode.
@@ -183,6 +184,7 @@ class TimelineOverlayItemTile extends StatelessWidget {
                     rightChannel: item.waveformRightChannel,
                     fadeIn: item.fadeIn,
                     playbackSpeed: item.playbackSpeed,
+                    speedRamp: item.speedRamp,
                   )
                 : _isDetachedClip(item.layer)
                 ? _DetachedClipContent(item: item)
@@ -527,6 +529,7 @@ class _FadingOutSoundContent extends StatelessWidget {
       fadeOut: item.fadeOut,
       audibleDuration: end < item.endTime ? end - item.startTime : null,
       playbackSpeed: item.playbackSpeed,
+      speedRamp: item.speedRamp,
     );
   }
 }
@@ -535,7 +538,7 @@ class _FadingOutSoundContent extends StatelessWidget {
 ///
 /// The waveform shows the source samples windowed to
 /// `[startOffset, startOffset + currentDuration * playbackSpeed]`, the stretch
-/// of the sound the item plays. Left-trimming advances
+/// of the sound the item plays, spread along [speedRamp] when it has one. Left-trimming advances
 /// [startOffset], scrolling the trimmed-away head out of view instead of
 /// clipping the tail — so the visible waveform matches what actually plays.
 class _SoundContent extends StatelessWidget {
@@ -551,6 +554,7 @@ class _SoundContent extends StatelessWidget {
     this.fadeOut = Duration.zero,
     this.audibleDuration,
     this.playbackSpeed = 1,
+    this.speedRamp,
   });
 
   final String label;
@@ -578,13 +582,18 @@ class _SoundContent extends StatelessWidget {
   /// How many seconds of the source play per second of [currentDuration].
   final double playbackSpeed;
 
+  /// The curve the item plays along over its whole window, instead of
+  /// [playbackSpeed]; `null` at a constant speed.
+  final VideoSpeedRamp? speedRamp;
+
   @override
   Widget build(BuildContext context) {
     // The painter maps samples against the full-source duration, then windows
     // them to the stretch of the source the item plays. When the source
     // duration is unknown there's no basis to resolve the offset against, so
     // fall back to treating that stretch as the whole source.
-    final playedSource = currentDuration * playbackSpeed;
+    final playedSource =
+        currentDuration * (speedRamp?.averageSpeed ?? playbackSpeed);
     final hasSourceDuration =
         sourceDuration != null && sourceDuration! > Duration.zero;
     final audioDuration = hasSourceDuration ? sourceDuration! : playedSource;
@@ -624,6 +633,7 @@ class _SoundContent extends StatelessWidget {
                   fadeOut: fadeOut,
                   audibleDuration: audibleDuration,
                   playbackSpeed: playbackSpeed,
+                  speedRamp: speedRamp,
                 ),
               ),
             ),

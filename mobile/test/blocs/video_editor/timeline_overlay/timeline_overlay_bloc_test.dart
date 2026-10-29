@@ -11,6 +11,7 @@ import 'package:models/models.dart';
 import 'package:models/models.dart' as model show AspectRatio;
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/timeline_overlay_item.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
@@ -18,7 +19,12 @@ import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show EditorVideo, VideoEffect, VideoEffectType;
+    show
+        EditorVideo,
+        VideoEffect,
+        VideoEffectType,
+        VideoSpeedRamp,
+        VideoSpeedRampPoint;
 
 TimelineOverlayItem _item({
   required String id,
@@ -637,6 +643,45 @@ void main() {
                 2,
               ),
         ],
+      );
+
+      blocTest<TimelineOverlayBloc, TimelineOverlayState>(
+        'a ramped sound carries its ramp and reaches its remaining audio at '
+        "the ramp's average speed",
+        build: TimelineOverlayBloc.new,
+        act: (bloc) => bloc.add(
+          TimelineOverlayItemsUpdate(
+            layers: const <Layer>[],
+            filters: const <FilterState>[],
+            audioTracks: [
+              _audioEvent(
+                    id: 'sound-1',
+                    start: const Duration(seconds: 1),
+                    end: const Duration(seconds: 2),
+                  )
+                  .copyWith(
+                    duration: 8.0,
+                    startOffset: const Duration(seconds: 2),
+                  )
+                  .withSpeedRamp(
+                    const VideoSpeedRamp([
+                      VideoSpeedRampPoint(position: 0, speed: 2),
+                      VideoSpeedRampPoint(position: 0.5, speed: 2),
+                      VideoSpeedRampPoint(position: 0.5 + 1e-9, speed: 0.5),
+                      VideoSpeedRampPoint(position: 1, speed: 0.5),
+                    ]),
+                  ),
+            ],
+            totalVideoDuration: const Duration(seconds: 12),
+          ),
+        ),
+        verify: (bloc) {
+          final item = bloc.state.items.single;
+          expect(item.speedRamp, isNotNull);
+          expect(item.averageSpeed, closeTo(0.8, 1e-6));
+          // (8000ms - 2000ms) / 0.8
+          expect(item.maxDuration!.inMilliseconds, closeTo(7500, 1));
+        },
       );
 
       blocTest<TimelineOverlayBloc, TimelineOverlayState>(

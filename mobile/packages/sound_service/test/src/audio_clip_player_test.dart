@@ -673,6 +673,69 @@ void main() {
       });
     });
 
+    group('setSpeedCurve', () {
+      late StreamController<Duration> positions;
+
+      setUp(() {
+        positions = StreamController<Duration>();
+        when(() => mockAudioPlayer.position).thenReturn(Duration.zero);
+        when(
+          () => mockAudioPlayer.positionStream,
+        ).thenAnswer((_) => positions.stream);
+        when(() => mockAudioPlayer.setSpeed(any())).thenAnswer((_) async {});
+      });
+
+      tearDown(() async {
+        await positions.close();
+      });
+
+      double halfFast(Duration position) =>
+          position < const Duration(seconds: 1) ? 2 : 0.5;
+
+      test('changes the speed as the position passes the curve', () async {
+        await player.setSpeedCurve(halfFast);
+        positions
+          ..add(const Duration(milliseconds: 500))
+          ..add(const Duration(milliseconds: 1200))
+          ..add(const Duration(milliseconds: 1500));
+        await pumpEventQueue();
+
+        // A position within the same stretch of the curve changes nothing.
+        expect(
+          verify(() => mockAudioPlayer.setSpeed(captureAny())).captured,
+          [2, 0.5],
+        );
+      });
+
+      test('stops following once a constant speed is set', () async {
+        await player.setSpeedCurve(halfFast);
+        await player.setSpeed(1);
+        positions.add(const Duration(milliseconds: 1500));
+        await pumpEventQueue();
+
+        verifyNever(() => mockAudioPlayer.setSpeed(0.5));
+        expect(positions.hasListener, isFalse);
+      });
+
+      test('logs a step the player refuses and keeps following', () async {
+        await player.setSpeedCurve(halfFast);
+        when(
+          () => mockAudioPlayer.setSpeed(0.5),
+        ).thenAnswer((_) async => throw Exception('refused'));
+        positions.add(const Duration(milliseconds: 1500));
+        await pumpEventQueue();
+
+        expect(positions.hasListener, isTrue);
+      });
+
+      test('stops following when the player is disposed', () async {
+        await player.setSpeedCurve(halfFast);
+        await player.dispose();
+
+        expect(positions.hasListener, isFalse);
+      });
+    });
+
     group('dispose', () {
       test('disposes the audio player', () async {
         await player.dispose();

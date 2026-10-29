@@ -25,6 +25,7 @@ import 'package:openvine/blocs/video_editor/text_wrap_hint/text_wrap_hint_cubit.
 import 'package:openvine/blocs/video_editor/timeline_overlay/timeline_overlay_bloc.dart';
 import 'package:openvine/blocs/video_editor/tune_editor/video_editor_tune_bloc.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/extensions/audio_volume_curve_mapping.dart';
 import 'package:openvine/extensions/equalizer_settings_mapping.dart';
 import 'package:openvine/extensions/tune_adjustment_matrix_extensions.dart';
@@ -53,6 +54,7 @@ import 'package:openvine/services/haptic_service.dart';
 import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/layer_capture_resolution.dart';
 import 'package:openvine/services/video_editor/preview_composition.dart';
+import 'package:openvine/services/video_editor/sound_speed_ramp_render_service.dart';
 import 'package:openvine/services/video_editor/stop_motion_audio_preview.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_ducking.dart';
 import 'package:openvine/services/video_editor/video_editor_audio_level_resolver.dart';
@@ -768,6 +770,15 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   /// ones the export bakes in.
   final VideoEditorAudioDucking _audioDucking = VideoEditorAudioDucking();
 
+  /// Bakes the window of a sound with a speed ramp into a file the player
+  /// plays at 1×, as the export stretches it.
+  final SoundSpeedRampRenderService _soundRampRenders =
+      SoundSpeedRampRenderService();
+
+  /// Ramp renders the audio resyncs after, so several syncs asking for one
+  /// render resync once.
+  final _pendingSoundRampRenders = <Future<String?>>{};
+
   /// Bumped by every audio sync, so a sync that waited on the voice-over
   /// measurement does not put back tracks a newer sync already replaced.
   int _audioSyncGeneration = 0;
@@ -1122,7 +1133,31 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
     _liveEqualizerNotifier?.removeListener(_onLiveEqualizerChanged);
     _isPlayerReadyNotifier.dispose();
     _composition.dispose();
+    _soundRampRenders.clear();
     super.dispose();
+  }
+
+  /// The file [sound]'s window is baked into along its speed ramp, or `null`
+  /// without a ramp or until the file is rendered; the audio resyncs onto it
+  /// once it lands. Meanwhile the sound plays at the ramp's average speed.
+  String? _rampedSoundFile(AudioEvent sound) {
+    if (sound.speedRamp == null) return null;
+    final rendered = _soundRampRenders.cached(sound);
+    if (rendered != null) return rendered;
+    final render = _soundRampRenders.render(sound);
+    if (_pendingSoundRampRenders.add(render)) {
+      _runDetached(_resyncAudioOnto(render), 'render ramped sound');
+    }
+    return null;
+  }
+
+  Future<void> _resyncAudioOnto(Future<String?> render) async {
+    try {
+      if (await render == null || !mounted) return;
+      await _syncAudioTracks();
+    } finally {
+      _pendingSoundRampRenders.remove(render);
+    }
   }
 
   /// Swaps the composition onto a finished speed render — but only while the
@@ -1985,7 +2020,13 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
       // clip sampled into stills brings its own sound as an extracted track.
       final resolved = sound.resolvedSource;
       if (resolved == null) continue;
+      final rampFile = _rampedSoundFile(sound);
       final source = switch (resolved.kind) {
+        _ when rampFile != null => AudioSourceConfig.file(
+          rampFile,
+          start: Duration.zero,
+          end: item.endTime - item.startTime,
+        ),
         AudioSourceKind.asset => AudioSourceConfig.asset(
           resolved.path,
           start: trackStart,
@@ -2015,7 +2056,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
           windowEnd: item.endTime,
           fadeIn: sound.fadeInDuration,
           fadeOut: sound.fadeOutDuration,
-          speed: sound.playbackSpeed,
+          speed: rampFile != null ? 1 : sound.averageSpeed,
           volumeCurve: duckingCurves[item.id],
         ),
       );
@@ -2189,9 +2230,26 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         outputEnd: outputEnd,
       );
 
+      final rampFile = _rampedSoundFile(sound);
       try {
         final AudioTrack track;
-        if (sound.isBundled && sound.assetPath != null) {
+        if (rampFile != null) {
+          // The ramp is baked in from the window's start.
+          track = AudioTrack.file(
+            rampFile,
+            volume: _previewVolume(
+              sound.volume,
+              isVoiceOverPreview: isVoiceOverPreview,
+            ),
+            videoStartTime: item.startTime,
+            videoEndTime: videoEndTime,
+            fadeInDuration: sound.fadeInDuration,
+            fadeOutDuration: sound.fadeOutDuration,
+            equalizer: sound.equalizer.toPlayerEqualizer(),
+            volumeCurve:
+                duckingCurves[item.id]?.toPlayerVolumeCurve() ?? const [],
+          );
+        } else if (sound.isBundled && sound.assetPath != null) {
           track = await AudioTrack.asset(
             sound.assetPath!,
             volume: _previewVolume(
@@ -2204,7 +2262,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             fadeInDuration: sound.fadeInDuration,
             fadeOutDuration: sound.fadeOutDuration,
             equalizer: sound.equalizer.toPlayerEqualizer(),
-            playbackSpeed: sound.playbackSpeed,
+            playbackSpeed: sound.averageSpeed,
             volumeCurve:
                 duckingCurves[item.id]?.toPlayerVolumeCurve() ?? const [],
           );
@@ -2221,7 +2279,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             fadeInDuration: sound.fadeInDuration,
             fadeOutDuration: sound.fadeOutDuration,
             equalizer: sound.equalizer.toPlayerEqualizer(),
-            playbackSpeed: sound.playbackSpeed,
+            playbackSpeed: sound.averageSpeed,
             volumeCurve:
                 duckingCurves[item.id]?.toPlayerVolumeCurve() ?? const [],
           );
@@ -2238,7 +2296,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
             fadeInDuration: sound.fadeInDuration,
             fadeOutDuration: sound.fadeOutDuration,
             equalizer: sound.equalizer.toPlayerEqualizer(),
-            playbackSpeed: sound.playbackSpeed,
+            playbackSpeed: sound.averageSpeed,
             volumeCurve:
                 duckingCurves[item.id]?.toPlayerVolumeCurve() ?? const [],
           );

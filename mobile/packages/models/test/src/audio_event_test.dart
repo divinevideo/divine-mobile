@@ -1,6 +1,8 @@
 // ABOUTME: Tests for AudioEvent model - Kind 1063 audio file metadata events
 // ABOUTME: Validates parsing from Nostr events, tag generation, and edge cases
 
+import 'dart:convert';
+
 import 'package:models/models.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:test/test.dart';
@@ -1888,32 +1890,106 @@ void main() {
         expect(spedUp.copyWith(playbackSpeed: 2), equals(spedUp));
       });
 
-      test('converts between timeline and sound time', () {
-        expect(
-          spedUp.sourceSpanOf(const Duration(seconds: 3)),
-          const Duration(seconds: 6),
-        );
-        expect(
-          spedUp.timelineSpanOf(const Duration(seconds: 6)),
-          const Duration(seconds: 3),
-        );
-
-        final slowed = spedUp.copyWith(playbackSpeed: 0.5);
-        expect(
-          slowed.sourceSpanOf(const Duration(seconds: 3)),
-          const Duration(milliseconds: 1500),
-        );
-        expect(
-          slowed.timelineSpanOf(const Duration(milliseconds: 1500)),
-          const Duration(seconds: 3),
-        );
-      });
-
       test('is never published in Kind 1063 tags', () {
         final tags = spedUp.toTags().expand((tag) => tag);
 
         expect(
           tags.any((value) => value.toLowerCase().contains('speed')),
+          isFalse,
+        );
+      });
+    });
+
+    group('speedRamp', () {
+      // As pro_video_editor's VideoSpeedRamp.toMap writes it.
+      final rampMap = <String, dynamic>{
+        'points': [
+          {'position': 0.0, 'speed': 2.0},
+          {'position': 1.0, 'speed': 0.5},
+        ],
+      };
+      final ramped = AudioEvent(
+        id: 'ramp-id-123456789012345678901234567890123456789012345678901234',
+        pubkey: testPubkey,
+        createdAt: 1700000000,
+        url: 'https://example.com/audio.aac',
+        speedRampMap: rampMap,
+      );
+
+      test('defaults to none and is left out of the json', () {
+        final plain = ramped.copyWith(playbackSpeed: 1);
+
+        expect(plain.speedRampMap, isNull);
+        expect(plain.toJson(), isNot(contains('speedRamp')));
+      });
+
+      test('survives a toJson/fromJson roundtrip through json text', () {
+        final json =
+            jsonDecode(jsonEncode(ramped.toJson())) as Map<String, dynamic>;
+        final restored = AudioEvent.fromJson(json);
+
+        expect(restored.speedRampMap, rampMap);
+        expect(restored.playbackSpeed, 1.0);
+        expect(restored, equals(ramped));
+        expect(restored.hashCode, ramped.hashCode);
+      });
+
+      test('reads a ramp stored beside a speed as the ramp alone', () {
+        final json = ramped.toJson()..['playbackSpeed'] = 2.0;
+
+        final restored = AudioEvent.fromJson(json);
+
+        expect(restored.speedRampMap, rampMap);
+        expect(restored.playbackSpeed, 1.0);
+      });
+
+      test('replaces the speed, and a speed replaces it', () {
+        final spedUp = ramped.copyWith(playbackSpeed: 2);
+        expect(spedUp.speedRampMap, isNull);
+        expect(spedUp.playbackSpeed, 2.0);
+
+        final rampedAgain = spedUp.copyWith(speedRampMap: rampMap);
+        expect(rampedAgain.playbackSpeed, 1.0);
+        expect(rampedAgain.speedRampMap, rampMap);
+        expect(rampedAgain.copyWith(volume: 0.5).speedRampMap, rampMap);
+      });
+
+      test('is part of equality, so a ramp-only edit is a change', () {
+        final steeper = ramped.copyWith(
+          speedRampMap: {
+            'points': [
+              {'position': 0.0, 'speed': 3.0},
+              {'position': 1.0, 'speed': 0.5},
+            ],
+          },
+        );
+
+        expect(steeper, isNot(ramped));
+        expect(ramped.copyWith(playbackSpeed: 1), isNot(ramped));
+      });
+
+      test('rejects a ramp together with a speed', () {
+        expect(
+          () => AudioEvent(
+            id: 'both',
+            pubkey: testPubkey,
+            createdAt: 1700000000,
+            playbackSpeed: 2,
+            speedRampMap: rampMap,
+          ),
+          throwsA(isA<AssertionError>()),
+        );
+      });
+
+      test('is never published in Kind 1063 tags', () {
+        final tags = ramped.toTags().expand((tag) => tag);
+
+        expect(
+          tags.any(
+            (value) =>
+                value.toLowerCase().contains('ramp') ||
+                value.toLowerCase().contains('speed'),
+          ),
           isFalse,
         );
       });

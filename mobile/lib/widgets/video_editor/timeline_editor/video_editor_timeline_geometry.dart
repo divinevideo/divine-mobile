@@ -4,9 +4,11 @@
 
 import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/constants/video_editor_timeline_constants.dart';
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
+import 'package:pro_video_editor/pro_video_editor.dart' show VideoSpeedRamp;
 
 /// Converts a [sourcePosition] inside one untrimmed clip to the matching
 /// composite playback position on the full timeline.
@@ -71,7 +73,9 @@ Duration? timelinePositionToClipSourcePosition(
 /// offset in step with the timeline start also preserves the anchored-audio
 /// alignment invariant used by [rebaseAnchoredAudioForClipState]. A sound at
 /// a speed other than 1 consumes that much more or less of its source per
-/// moment of the timeline.
+/// moment of the timeline. A ramp spreads over the new window, so a ramped
+/// sound consumes its average speed's worth and keeps ending on the same
+/// moment of the sound, however the drag got there.
 AudioLeftTrimResult audioLeftTrimResult(
   AudioEvent track, {
   required Duration newStartTime,
@@ -244,7 +248,7 @@ List<AudioEvent> rebaseAnchoredAudioForClipState(
     final anchorId = track.anchorClipId;
     final clipStart = anchorId == null ? null : clipStarts[anchorId];
     final clip = anchorId == null ? null : clipsById[anchorId];
-    if (clipStart == null || clip == null || track.playbackSpeed != 1) {
+    if (clipStart == null || clip == null || track.changesSpeed) {
       result.add(track);
       continue;
     }
@@ -327,17 +331,40 @@ AudioEvent audioAtSpeed(
   AudioEvent track,
   double speed, {
   required Duration compositionEnd,
+}) => _audioRetimed(
+  track,
+  track.copyWith(playbackSpeed: speed, clearAnchorClipId: true),
+  compositionEnd: compositionEnd,
+);
+
+/// [track] played along [ramp], its window rescaled so the ramp plays the
+/// same stretch of its sound; see [audioAtSpeed].
+AudioEvent audioAlongSpeedRamp(
+  AudioEvent track,
+  VideoSpeedRamp ramp, {
+  required Duration compositionEnd,
+}) => _audioRetimed(
+  track,
+  track.withSpeedRamp(ramp).copyWith(clearAnchorClipId: true),
+  compositionEnd: compositionEnd,
+);
+
+/// [retimed], the sound of [track] at a new speed, with the window rescaled to
+/// play the stretch of the sound [track] played.
+AudioEvent _audioRetimed(
+  AudioEvent track,
+  AudioEvent retimed, {
+  required Duration compositionEnd,
 }) {
-  final atSpeed = track.copyWith(playbackSpeed: speed, clearAnchorClipId: true);
   final endTime = track.endTime;
-  if (endTime == null || endTime <= track.startTime) return atSpeed;
+  if (endTime == null || endTime <= track.startTime) return retimed;
 
   final stretch = track.sourceSpanOf(endTime - track.startTime);
-  var newEnd = track.startTime + atSpeed.timelineSpanOf(stretch);
+  var newEnd = track.startTime + retimed.timelineSpanOf(stretch);
   if (newEnd > compositionEnd && compositionEnd > track.startTime) {
     newEnd = compositionEnd;
   }
-  return atSpeed.copyWith(endTime: newEnd);
+  return retimed.copyWith(endTime: newEnd);
 }
 
 /// Granularity an audio window survives a history/draft round-trip at.
