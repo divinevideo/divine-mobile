@@ -67,7 +67,7 @@ void main() {
 
     tearDown(() => cubit.close());
 
-    Widget buildWidget() {
+    Widget buildWidget({double height = 600}) {
       return MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -95,10 +95,10 @@ void main() {
                 BlocProvider<VideoEditorEffectsCubit>.value(value: cubit),
                 BlocProvider<VideoEditorMainBloc>.value(value: mainBloc),
               ],
-              child: const SizedBox(
+              child: SizedBox(
                 width: 400,
-                height: 600,
-                child: VideoEditorEffectsOverlayControls(),
+                height: height,
+                child: const VideoEditorEffectsOverlayControls(),
               ),
             ),
           ),
@@ -125,6 +125,22 @@ void main() {
           find.byType(VideoEditorVerticalSlider),
         );
         expect(slider.value, 0.35);
+      });
+
+      testWidgets('stays below the toolbar over a short preview', (
+        tester,
+      ) async {
+        cubit.selectType(const EditorEffectType.builtIn(VideoEffectType.vhs));
+        // The preview left above the effects picker on a phone.
+        await tester.pumpWidget(buildWidget(height: 380));
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.getRect(find.byType(VideoEditorVerticalSlider)).top,
+          greaterThanOrEqualTo(
+            tester.getRect(find.bySemanticsLabel(doneLabel)).bottom,
+          ),
+        );
       });
     });
 

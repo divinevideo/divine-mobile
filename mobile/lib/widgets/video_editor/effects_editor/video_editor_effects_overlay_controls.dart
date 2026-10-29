@@ -48,35 +48,45 @@ class VideoEditorEffectsOverlayControls extends StatelessWidget {
             ),
           ),
         ),
-        Padding(
-          // Centered where the other tools center their sliders.
-          padding: const .only(bottom: VideoEditorConstants.bottomBarHeight),
-          child: Align(
-            alignment: .centerRight,
-            child: AnimatedSwitcher(
-              transitionBuilder: (child, animation) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: Tween(
-                      begin: const Offset(1, 0),
-                      end: Offset.zero,
-                    ).animate(animation),
-                    child: child,
-                  ),
-                );
-              },
-              switchInCurve: Curves.easeInOut,
-              duration: const Duration(milliseconds: 220),
-              child: hasEffect
-                  ? const _IntensitySlider()
-                  : const SizedBox.shrink(),
-            ),
-          ),
-        ),
         const Align(alignment: .bottomCenter, child: _OnBeatSwitch()),
         const Align(alignment: .bottomCenter, child: _DropsSettingsCard()),
-        const _TopBarContent(),
+        Column(
+          children: [
+            const _TopBarContent(),
+            // Centered between the toolbar and the bottom of the preview,
+            // where the on-the-beat switch sits; the bar under the preview is
+            // tall, so the slider must not reach up behind the toolbar.
+            Expanded(
+              child: Padding(
+                padding: const .only(
+                  bottom: VideoEditorConstants.bottomBarHeight,
+                ),
+                child: Align(
+                  alignment: .centerRight,
+                  child: AnimatedSwitcher(
+                    transitionBuilder: (child, animation) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: SlideTransition(
+                          position: Tween(
+                            begin: const Offset(1, 0),
+                            end: Offset.zero,
+                          ).animate(animation),
+                          child: child,
+                        ),
+                      );
+                    },
+                    switchInCurve: Curves.easeInOut,
+                    duration: const Duration(milliseconds: 220),
+                    child: hasEffect
+                        ? const _IntensitySlider()
+                        : const SizedBox.shrink(),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
