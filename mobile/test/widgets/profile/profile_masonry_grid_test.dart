@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show VideoEvent;
+import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 
 VideoEvent _video({String? dimensions, Map<String, String>? rawTags}) {
@@ -82,6 +83,8 @@ void main() {
       ];
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: appLocalizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Align(
             alignment: Alignment.topLeft,
             child: SizedBox(
