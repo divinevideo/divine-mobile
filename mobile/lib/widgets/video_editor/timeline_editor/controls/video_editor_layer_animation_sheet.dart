@@ -707,6 +707,10 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
     LayerAnimationType.bounce => l10n.videoEditorLayerAnimationBounce,
     LayerAnimationType.typewriter => l10n.videoEditorLayerAnimationTypewriter,
     LayerAnimationType.wordByWord => l10n.videoEditorLayerAnimationWordByWord,
+    // TODO(#10397): Not offered yet; that change gives them labels of their
+    // own.
+    LayerAnimationType.spin => l10n.videoEditorTransitionSpin,
+    LayerAnimationType.flip => l10n.videoEditorTransitionFlip,
   };
 }
 
@@ -772,6 +776,10 @@ class _PhaseConfig {
         case LayerAnimationType.fade:
         case LayerAnimationType.typewriter:
         case LayerAnimationType.wordByWord:
+        // TODO(#10397): Not offered yet; that change keeps their turns and
+        // axis.
+        case LayerAnimationType.spin:
+        case LayerAnimationType.flip:
           break;
       }
     }
@@ -1242,6 +1250,9 @@ class _LayerEffect extends StatelessWidget {
               presence: presence,
             ),
           ),
+          // TODO(#10397): Not offered yet; that change previews them.
+          LayerAnimationType.spin ||
+          LayerAnimationType.flip => const Center(child: layer),
         },
       ),
     );

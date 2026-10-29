@@ -197,6 +197,11 @@ class TitleStylePreview extends StatelessWidget {
         case LayerAnimationType.typewriter:
         case LayerAnimationType.wordByWord:
           reveal = math.min(reveal, _revealed(animation.type, progress));
+        // TODO(#10397): No saved style holds a spin or flip until the editor
+        // offers them; that change previews them here.
+        case LayerAnimationType.spin:
+        case LayerAnimationType.flip:
+          break;
       }
     }
 
