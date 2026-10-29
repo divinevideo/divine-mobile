@@ -1,11 +1,12 @@
 // ABOUTME: An area of a published video a viewer can tap: a sticker that
-// ABOUTME: links to a web page, a profile or a hashtag, and its event tag.
+// ABOUTME: opens a web page, a profile, a hashtag or a sound, and its tag.
 
 import 'dart:math' as math;
 
 import 'package:equatable/equatable.dart';
 import 'package:models/src/audio_event.dart';
 import 'package:models/src/nostr_hex_utils.dart';
+import 'package:text_sanitizer/text_sanitizer.dart';
 
 /// What a tappable sticker on a video opens.
 enum VideoStickerKind {
@@ -150,7 +151,8 @@ class VideoStickerRegion extends Equatable {
     if (start is Duration && end is Duration && end <= start) return null;
 
     final style = tag.elementAtOrNull(7)?.trim() ?? '';
-    final label = tag.elementAtOrNull(8)?.trim() ?? '';
+    // Drawn as text, which an unpaired surrogate would break.
+    final label = sanitizeUtf16(tag.elementAtOrNull(8)?.trim() ?? '');
     return VideoStickerRegion(
       kind: kind,
       target: target,
@@ -196,7 +198,7 @@ class VideoStickerRegion extends Equatable {
             hashtag.contains(RegExp(r'[\s#/?]'))) {
           return null;
         }
-        return hashtag.toLowerCase();
+        return sanitizeUtf16(hashtag.toLowerCase());
       case VideoStickerKind.sound:
         // The credited sound's own page, or none for the video's own sound.
         if (RegExp(

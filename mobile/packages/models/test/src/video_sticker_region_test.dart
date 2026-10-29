@@ -144,6 +144,23 @@ void main() {
         expect(region?.style, equals('light'));
       });
 
+      test('mends a broken text so it can be drawn', () {
+        final region = VideoStickerRegion.fromTag([
+          'sticker',
+          'hashtag',
+          'sum\uD800mer',
+          '0.5 0.5 0.2 0.1',
+          '0',
+          '',
+          '',
+          'light',
+          'sum\uD800mer',
+        ]);
+
+        expect(region?.label, equals('sum\uFFFDmer'));
+        expect(region?.target, equals('sum\uFFFDmer'));
+      });
+
       test('reads back what it publishes', () {
         const region = VideoStickerRegion(
           kind: VideoStickerKind.mention,
