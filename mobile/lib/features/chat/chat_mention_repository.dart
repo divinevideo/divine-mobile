@@ -108,6 +108,24 @@ class ChatMentionRepository implements LocalNotificationSource {
   }
 
   /// Starts [channel]; a failure leaves it unobserved for [refresh] to retry.
+  /// Detaches [channel]'s observer now and closes it without waiting for
+  /// its relay.
+  void _stopObserving(String channel) {
+    _failedRooms.remove(channel);
+    final subscription = _subscriptions.remove(channel);
+    final repository = _repositories.remove(channel);
+    if (subscription == null && repository == null) return;
+    runDetached(
+      () async {
+        await subscription?.cancel();
+        await repository?.close();
+      }(),
+      'stop chat mention room',
+      logName: 'ChatMentions',
+      category: LogCategory.storage,
+    );
+  }
+
   Future<void> _observeOrDefer(String channel) =>
       _observe(channel).catchError((Object error, StackTrace stack) {
         Log.warning(
@@ -135,6 +153,7 @@ class ChatMentionRepository implements LocalNotificationSource {
         // A refresh during the write may have observed the room and
         // published its rows.
         reevaluate();
+        _stopObserving(channel);
         rethrow;
       }
     });
