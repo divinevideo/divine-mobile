@@ -435,6 +435,7 @@ class CaptionGenerationService {
     required String localeIdentifier,
   }) async {
     final words = <_LaneWord>[];
+    CaptionGenerationFailure? localOnlyFailure;
 
     // Some on-device recognizers reject an explicit language even when it is
     // the device's own default, so [_recognizeOnDevice] retries without one.
@@ -457,6 +458,10 @@ class CaptionGenerationService {
           name: _logName,
           category: LogCategory.video,
         );
+        if (source.onDeviceOnly) {
+          localOnlyFailure ??= CaptionGenerationFailure.failed;
+          continue;
+        }
         return (words: words, failure: CaptionGenerationFailure.failed);
       }
 
@@ -474,6 +479,10 @@ class CaptionGenerationService {
           name: _logName,
           category: LogCategory.video,
         );
+        if (source.onDeviceOnly) {
+          localOnlyFailure ??= CaptionGenerationFailure.failed;
+          continue;
+        }
         return (words: words, failure: CaptionGenerationFailure.failed);
       } on CaptionGenerationException catch (e) {
         Log.warning(
@@ -481,6 +490,10 @@ class CaptionGenerationService {
           name: _logName,
           category: LogCategory.video,
         );
+        if (source.onDeviceOnly) {
+          localOnlyFailure ??= _mapFailure(e);
+          continue;
+        }
         return (words: words, failure: _mapFailure(e));
       } on Object catch (e) {
         // The OS recognizer can throw untyped errors (missing plugin,
@@ -492,13 +505,17 @@ class CaptionGenerationService {
           name: _logName,
           category: LogCategory.video,
         );
+        if (source.onDeviceOnly) {
+          localOnlyFailure ??= CaptionGenerationFailure.failed;
+          continue;
+        }
         return (words: words, failure: CaptionGenerationFailure.failed);
       } finally {
         await _cleanupQuietly(audioPath);
       }
     }
 
-    return (words: words, failure: null);
+    return (words: words, failure: words.isEmpty ? localOnlyFailure : null);
   }
 
   /// Runs on-device recognition for one source. Some on-device recognizers

@@ -1216,6 +1216,52 @@ void main() {
           );
         });
 
+        for (final serverFails in [false, true]) {
+          test(
+            'keeps other captions when strict local recognition fails '
+            '${serverFails ? "after a server failure" : "without a server"}',
+            () async {
+              stubExtraction();
+              stubGenerator([_word('Clip.', 100, 400)]);
+              when(
+                () => generator.generateCaptions(
+                  audioPath: any(named: 'audioPath'),
+                  localeIdentifier: any(named: 'localeIdentifier'),
+                  requireOnDeviceRecognition: true,
+                ),
+              ).thenThrow(
+                const SpeechRecognizerUnavailableException(
+                  'Unavailable locally',
+                ),
+              );
+              final remote = serverFails ? remoteReturning(const []) : null;
+              if (remote != null) {
+                stubMerge([_offset(0, 6000)]);
+                when(
+                  () => remote.transcribe(
+                    audioPath: any(named: 'audioPath'),
+                    localeIdentifier: any(named: 'localeIdentifier'),
+                  ),
+                ).thenThrow(
+                  const CaptionRemoteTranscriptionException('Unavailable'),
+                );
+              }
+
+              final outcome = await buildService(remote: remote)
+                  .generateForClips(
+                    clips: [_clip('a', duration: const Duration(seconds: 6))],
+                    audioTracks: [robotTake()],
+                    localeIdentifier: 'en-US',
+                  );
+
+              expect(
+                (outcome as CaptionsGenerated).cues.single.text,
+                equals('Clip.'),
+              );
+            },
+          );
+        }
+
         test('one failed take does not discard another take', () async {
           stubMerge([_offset(0, 6000)]);
           stubExtraction();
@@ -1254,6 +1300,33 @@ void main() {
             equals(['Kept.', 'Clip.']),
           );
         });
+
+        test(
+          'reports a failure when the only take cannot be recognized',
+          () async {
+            stubExtraction();
+            when(
+              () => generator.generateCaptions(
+                audioPath: any(named: 'audioPath'),
+                localeIdentifier: any(named: 'localeIdentifier'),
+                requireOnDeviceRecognition: true,
+              ),
+            ).thenThrow(const SpeechNotAuthorizedException());
+
+            final outcome = await buildService().generateForClips(
+              clips: [
+                _clip('a', volume: 0, duration: const Duration(seconds: 6)),
+              ],
+              audioTracks: [robotTake()],
+              localeIdentifier: 'en-US',
+            );
+
+            expect(
+              (outcome as CaptionsFailed).reason,
+              equals(CaptionGenerationFailure.notAuthorized),
+            );
+          },
+        );
 
         test(
           'sends nothing to the server when the take is all there is',
