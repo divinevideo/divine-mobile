@@ -66,11 +66,11 @@ void main() {
       },
     );
 
-    test('tries again after a failed download', () async {
+    test('does not repeat a failed download during the session', () async {
       expect(await load(() => http.Response('', 503)), isFalse);
       expect(await load(() => http.Response('', 503)), isFalse);
 
-      expect(requests, equals(2));
+      expect(requests, equals(1));
     });
   });
 

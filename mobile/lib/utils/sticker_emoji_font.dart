@@ -26,6 +26,7 @@ final Uri _fontUrl = Uri.https('fonts.gstatic.com', '/s/a/$_fontHash.ttf');
 const Duration _downloadTimeout = Duration(seconds: 60);
 
 bool _loaded = false;
+bool _failedThisSession = false;
 Future<bool>? _loading;
 
 /// Stands in for the whole load in widget tests, which must not download;
@@ -39,8 +40,9 @@ bool get stickerEmojiFontLoaded => _loaded;
 
 /// Loads the sticker emoji font, from the device after the first download,
 /// and completes with whether it is loaded. A font that cannot be fetched,
-/// checked or read completes with `false` and is logged; the next call tries
-/// again.
+/// checked or read completes with `false` and is logged. Failed attempts are
+/// not repeated until the next app session, so slow or offline connections
+/// cannot repeatedly transfer and discard this optional font.
 ///
 /// [client], [cacheDirectory] and [register] stand in for the network, the
 /// directory the font is kept in and the engine's font registry in tests.
@@ -50,13 +52,21 @@ Future<bool> loadStickerEmojiFont({
   Future<void> Function(Uint8List bytes)? register,
 }) {
   if (_loaded) return Future.value(true);
+  if (_failedThisSession) return Future.value(false);
   final debugLoad = debugLoadStickerEmojiFont;
-  if (debugLoad != null) return debugLoad().then((loaded) => _loaded = loaded);
-  return _loading ??= _load(
-    client: client,
-    cacheDirectory: cacheDirectory ?? _defaultCacheDirectory,
-    register: register ?? _registerFont,
-  ).whenComplete(() => _loading = null);
+  return _loading ??=
+      (debugLoad != null
+              ? debugLoad()
+              : _load(
+                  client: client,
+                  cacheDirectory: cacheDirectory ?? _defaultCacheDirectory,
+                  register: register ?? _registerFont,
+                ))
+          .then((loaded) {
+            _failedThisSession = !loaded;
+            return _loaded = loaded;
+          })
+          .whenComplete(() => _loading = null);
 }
 
 /// Loads the sticker emoji font when one of [texts] has an emoji to draw in
@@ -76,6 +86,7 @@ TextStyle withStickerEmojiFont(TextStyle style) =>
 @visibleForTesting
 void resetStickerEmojiFontForTesting() {
   _loaded = false;
+  _failedThisSession = false;
   _loading = null;
   debugLoadStickerEmojiFont = null;
 }
