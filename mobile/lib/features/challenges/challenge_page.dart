@@ -95,8 +95,8 @@ class ChallengePage extends ConsumerWidget {
             unawaited(cubit.load());
             return cubit;
           },
-          child: Builder(
-            builder: (context) {
+          child: Consumer(
+            builder: (context, ref, _) {
               final organizer = context.select(
                 (ChallengeParticipationCubit cubit) =>
                     cubit.state.read?.view.definition?.event.pubkey,
@@ -108,6 +108,17 @@ class ChallengePage extends ConsumerWidget {
                         .value
                         ?.bestDisplayName;
               return ChallengeView(
+                loadCandidatePreview: (id) async {
+                  final video = await session.adapter.exactEvent(id);
+                  if (video == null ||
+                      video.id != id ||
+                      video.pubkey != session.store.owner) {
+                    return null;
+                  }
+                  await session.refreshVideo?.call(video);
+                  await session.store.checkLive();
+                  return session.reads.isVisible(video) ? video : null;
+                },
                 organizerName: organizerName,
                 onOrganizerTap: organizer == null
                     ? null

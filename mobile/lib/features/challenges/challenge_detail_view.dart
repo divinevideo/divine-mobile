@@ -1,9 +1,11 @@
 import 'package:challenge_protocol/challenge_protocol.dart' as protocol;
 import 'package:divine_ui/divine_ui.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/features/challenges/challenge_deadline.dart';
 import 'package:openvine/features/challenges/challenge_participation_cubit.dart';
 import 'package:openvine/features/challenges/challenge_playback.dart';
+import 'package:openvine/features/challenges/challenge_video_tile.dart';
 import 'package:openvine/features/challenges/challenge_view.dart'
     show challengeLifecycleText;
 import 'package:openvine/l10n/l10n.dart';
@@ -229,51 +231,123 @@ class _ChallengeDetailViewState extends State<ChallengeDetailView> {
                   ),
                 ),
               ),
-              SliverPadding(
-                padding: const EdgeInsets.all(16),
-                sliver: SliverList.list(
-                  children: [
-                    if (widget.state.playing case final video?)
-                      ChallengePlayback(video: video, allowed: widget.allowed),
-                    if (_winners) ...[
-                      if (view.currentResult == null)
-                        Text(l10n.challengeAwaitingResults),
-                      for (final winner
-                          in view.currentResult?.winners ??
-                              <protocol.ResolvedWinner>[])
-                        ListTile(
-                          title: Text(winner.label),
-                          subtitle: winner.available
-                              ? null
-                              : Text(l10n.challengeWinnerUnavailable),
-                          onTap: !winner.available || widget.state.busy
-                              ? null
-                              : () => widget.onPlay(winner.entryId),
-                        ),
-                    ] else ...[
-                      if (view.entries.isEmpty) Text(l10n.challengeEmpty),
-                      for (final entry in view.entries)
-                        ListTile(
-                          title: Text(
-                            entry.video.content.isEmpty
-                                ? l10n.challengePlay
-                                : entry.video.content,
-                          ),
+              if (widget.state.playing case final video?)
+                SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: 320,
+                    child: ChallengePlayback(
+                      key: ValueKey(video.id),
+                      video: video,
+                      allowed: widget.allowed,
+                    ),
+                  ),
+                ),
+              SliverLayoutBuilder(
+                builder: (context, constraints) {
+                  final columns =
+                      constraints.crossAxisExtent < 360 ||
+                          MediaQuery.textScalerOf(context).scale(16) > 24
+                      ? 1
+                      : 2;
+                  final winners =
+                      view.currentResult?.winners ??
+                      <protocol.ResolvedWinner>[];
+                  Widget tile(int index) {
+                    final winner = _winners ? winners[index] : null;
+                    final entry = _winners
+                        ? winner!.entry
+                        : view.entries[index];
+                    final id = _winners ? winner!.entryId : entry!.event.id;
+                    final radius = BorderRadiusDirectional.only(
+                      topStart: index == 0
+                          ? const Radius.circular(32)
+                          : Radius.zero,
+                      topEnd: index == columns - 1
+                          ? const Radius.circular(32)
+                          : Radius.zero,
+                    );
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        ChallengeVideoTile(
+                          key: ValueKey(id),
+                          video: entry?.video,
+                          allowed: widget.allowed,
+                          label: winner?.label,
+                          aspectRatio: _winners ? 3 / 4 : null,
+                          borderRadius: radius,
                           onTap: widget.state.busy
                               ? null
-                              : () => widget.onPlay(entry.event.id),
-                          trailing: entry.event.pubkey == widget.viewerPubkey
-                              ? DivineButton(
-                                  label: l10n.challengeWithdraw,
-                                  type: DivineButtonType.quiet,
-                                  onPressed: widget.state.busy
-                                      ? null
-                                      : () => widget.onWithdraw(entry.event),
-                                )
-                              : null,
+                              : () => widget.onPlay(id),
                         ),
-                    ],
-                  ],
+                        if (!_winners && entry != null) ...[
+                          if (entry.rulesChanged)
+                            Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Text(l10n.challengeChanged),
+                            ),
+                          if (entry.event.pubkey == widget.viewerPubkey)
+                            DivineButton(
+                              label: l10n.challengeWithdraw,
+                              type: DivineButtonType.quiet,
+                              onPressed: widget.state.busy
+                                  ? null
+                                  : () => widget.onWithdraw(entry.event),
+                            ),
+                        ],
+                      ],
+                    );
+                  }
+
+                  if (_winners) {
+                    if (winners.isEmpty) {
+                      return SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Text(l10n.challengeAwaitingResults),
+                        ),
+                      );
+                    }
+                    // Rows preserve the signed reading order even with long labels.
+                    return SliverList.builder(
+                      itemCount: (winners.length / columns).ceil(),
+                      itemBuilder: (context, row) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          spacing: 4,
+                          children: [
+                            for (var column = 0; column < columns; column++)
+                              Expanded(
+                                child: row * columns + column < winners.length
+                                    ? tile(row * columns + column)
+                                    : const SizedBox.shrink(),
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  if (view.entries.isEmpty) {
+                    return SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(l10n.challengeEmpty),
+                      ),
+                    );
+                  }
+                  return SliverMasonryGrid.count(
+                    crossAxisCount: columns,
+                    mainAxisSpacing: 4,
+                    crossAxisSpacing: 4,
+                    childCount: view.entries.length,
+                    itemBuilder: (context, index) => tile(index),
+                  );
+                },
+              ),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: MediaQuery.paddingOf(context).bottom + 16,
                 ),
               ),
             ],

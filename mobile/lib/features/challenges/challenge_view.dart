@@ -10,6 +10,7 @@ import 'package:openvine/features/challenges/challenge_deadline.dart';
 import 'package:openvine/features/challenges/challenge_detail_view.dart';
 import 'package:openvine/features/challenges/challenge_participation_cubit.dart';
 import 'package:openvine/features/challenges/challenge_playback.dart';
+import 'package:openvine/features/challenges/challenge_video_picker.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/widgets/list_owner_action_tile.dart';
 
@@ -19,8 +20,10 @@ class ChallengeView extends StatefulWidget {
     this.ownerName,
     this.organizerName,
     this.onOrganizerTap,
+    this.loadCandidatePreview,
     super.key,
   });
+  final Future<NostrEvent?> Function(String)? loadCandidatePreview;
   final String? organizerName;
   final VoidCallback? onOrganizerTap;
   final String? ownerName;
@@ -128,6 +131,16 @@ class _ChallengeViewState extends State<ChallengeView>
       final view = state.read?.view;
       final definition = view?.definition;
       final review = state.review;
+      if (review == null && state.picking) {
+        return ChallengeVideoPicker(
+          videos: state.candidates,
+          busy: state.busy,
+          onCancel: cubit.cancelReview,
+          onContinue: cubit.selectVideo,
+          loadPreview: widget.loadCandidatePreview,
+          allowed: cubit.submissions.reads.isVisible,
+        );
+      }
       if (review == null && !state.picking && definition != null) {
         return ChallengeDetailView(
           state: state,
@@ -304,33 +317,6 @@ class _ChallengeViewState extends State<ChallengeView>
                         ? null
                         : cubit.confirm,
                   ),
-                  DivineButton(
-                    type: DivineButtonType.quiet,
-                    onPressed: state.busy ? null : cubit.cancelReview,
-                    label: l10n.commonCancel,
-                  ),
-                ] else if (state.picking) ...[
-                  Text(
-                    l10n.challengeChoose,
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  if (state.candidates.isEmpty) Text(l10n.challengeNoVideos),
-                  for (final video in state.candidates)
-                    ListTile(
-                      title: Text(
-                        video.title ?? video.content,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Text(
-                        video.id,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      onTap: state.busy
-                          ? null
-                          : () => cubit.selectVideo(video.id),
-                    ),
                   DivineButton(
                     type: DivineButtonType.quiet,
                     onPressed: state.busy ? null : cubit.cancelReview,
