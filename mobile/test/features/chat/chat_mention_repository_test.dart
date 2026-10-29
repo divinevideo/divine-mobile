@@ -587,6 +587,8 @@ void main() {
           await repo.refresh();
           write.complete();
           await enrolling;
+          await pumpEventQueue();
+          verify(room.close).called(1);
           var closed = false;
           unawaited(repo.close().then((_) => closed = true));
           await pumpEventQueue();
@@ -807,6 +809,7 @@ void main() {
         await pumpEventQueue();
         unawaited(repo.refresh());
         await pumpEventQueue();
+        verify(room.close).called(1);
         var closed = false;
         unawaited(repo.close().then((_) => closed = true));
         await pumpEventQueue();
