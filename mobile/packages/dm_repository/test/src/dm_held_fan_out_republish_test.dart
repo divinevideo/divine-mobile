@@ -1636,6 +1636,37 @@ void main() {
               expect(seen, isNot(contains(DmRetractionStatus.pending)));
             });
           }
+
+          test('a Try again that joins it shows the warning again when it '
+              'had nothing to send', () async {
+            final observed = await observedRanOutRetraction();
+            final conversationId = (await messageRow()).conversationId;
+            final readGate = Completer<void>();
+            // The running attempt waits after its read of the row.
+            observed.nextStep = () => readGate.future;
+            final automatic = automaticRetry();
+            await pumpEventQueue();
+            final tryAgain = retryRetraction();
+            await pumpEventQueue();
+            expect(
+              (await messageRow()).deletionPublishStatus,
+              DirectMessagesDao.deletionPending,
+              reason: 'precondition: the spinner shows',
+            );
+            // Nobody is left to send it to.
+            await ConversationsDao(
+              db,
+            ).deleteConversation(conversationId, ownerPubkey: owner);
+            readGate.complete();
+
+            expect(await automatic, DmMessageDeletionOutcome.unavailable);
+            expect(await tryAgain, DmMessageDeletionOutcome.unavailable);
+
+            expect(
+              (await messageRow()).deletionPublishStatus,
+              DirectMessagesDao.deletionUnconfirmed,
+            );
+          });
         });
       });
 

@@ -10188,7 +10188,7 @@ class DmRepository {
   /// The sender's Try again of [rumorId] while another attempt of it is
   /// [running]: an automatic one leaves a retraction whose retries ran out
   /// showing the warning, so move it to pending for the spinner before
-  /// joining, and write the warning back when nothing confirms it (#10012).
+  /// joining, and write the warning back unless it settles (#10012).
   /// The move is a compare-and-set, since the running attempt can settle the
   /// row at any moment, and a settled row must never be reopened.
   Future<DmMessageDeletionOutcome> _tryAgainWhileRetrying({
@@ -10201,7 +10201,7 @@ class DmRepository {
           ownerPubkey: _ownerPubkey,
         );
     final outcome = await running;
-    if (movedToPending && outcome == DmMessageDeletionOutcome.unconfirmed) {
+    if (movedToPending && !_settlesDeletion(outcome)) {
       await _directMessagesDao.markMessageDeletionUnconfirmed(
         rumorId,
         ownerPubkey: _ownerPubkey,
@@ -10209,6 +10209,12 @@ class DmRepository {
     }
     return outcome;
   }
+
+  /// Whether [outcome] leaves the retraction settled, as sent or blocked.
+  /// Anything else leaves a row moved back to pending for nobody to settle.
+  static bool _settlesDeletion(DmMessageDeletionOutcome outcome) =>
+      outcome == DmMessageDeletionOutcome.sent ||
+      outcome == DmMessageDeletionOutcome.blocked;
 
   Future<DmMessageDeletionOutcome> _retryMessageDeletion({
     required String rumorId,
@@ -10301,9 +10307,7 @@ class DmRepository {
     // it: show the warning again now, rather than a spinner until the
     // sweep's next pass (#10012). This call holds the in-flight slot, so it
     // writes through the DAO rather than [markMessageDeletionUnconfirmed].
-    if (retriesRanOut &&
-        backToPending &&
-        outcome == DmMessageDeletionOutcome.unconfirmed) {
+    if (retriesRanOut && backToPending && !_settlesDeletion(outcome)) {
       await _directMessagesDao.markMessageDeletionUnconfirmed(
         rumorId,
         ownerPubkey: _ownerPubkey,
