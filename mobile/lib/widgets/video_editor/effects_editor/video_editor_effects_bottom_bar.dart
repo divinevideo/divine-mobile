@@ -41,7 +41,7 @@ class VideoEditorEffectsBottomBar extends ConsumerWidget {
   /// The height the editor reserves for the bar above the system navigation
   /// bar: the tabs over three rows of effects, growing with the text size.
   static double heightOf(BuildContext context) =>
-      _PickerMetrics(_textScalerOf(context)).barExtent;
+      _PickerMetrics(_textScalerOf(context), context.vineColors).barExtent;
 
   /// The text size the bar lays out at, capped so large text cannot crowd out
   /// the preview.
@@ -198,7 +198,10 @@ class _EffectsPickerState extends State<_EffectsPicker>
     final selectedType = context.select(
       (VideoEditorEffectsCubit c) => c.state.selectedType,
     );
-    _metrics = _PickerMetrics(MediaQuery.textScalerOf(context));
+    _metrics = _PickerMetrics(
+      MediaQuery.textScalerOf(context),
+      context.vineColors,
+    );
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
     _layout = _GridLayout(_metrics, width: MediaQuery.sizeOf(context).width);
     return SizedBox(
@@ -312,20 +315,28 @@ class _EffectsPickerState extends State<_EffectsPicker>
 /// Extents of the picker. They are fixed, so a tab can scroll to a section
 /// the grid has not built yet, and grow with the text size.
 class _PickerMetrics {
-  factory _PickerMetrics(TextScaler textScaler) {
+  /// Measured in the styles the tabs, the section titles and the tile names
+  /// are drawn in, coloured as they are.
+  factory _PickerMetrics(TextScaler textScaler, VineThemeColors colors) {
     double lineOf(TextStyle style) =>
         textScaler.scale(style.fontSize!) * (style.height ?? 1.2);
 
     // A tab pads its label line by 6 above and below, as a tiny DivineButton
     // does.
-    final tabHeight = lineOf(VineTheme.titleSmallFont()) + 12;
-    final titleLine = lineOf(VineTheme.labelSmallFont());
+    final tabHeight =
+        lineOf(VineTheme.titleSmallFont(color: colors.accentBrand)) + 12;
+    final titleLine = lineOf(
+      VineTheme.labelSmallFont(color: colors.onSurfaceMuted),
+    );
     return _PickerMetrics._(
       tabHeight: tabHeight,
       firstHeaderExtent: titleLine + _firstHeaderPadding.vertical,
       headerExtent: titleLine + _headerPadding.vertical,
       // A tile is its preview, a gap of 4 and one line of its name.
-      rowExtent: _previewSize + 4 + lineOf(VineTheme.bodySmallFont()),
+      rowExtent:
+          _previewSize +
+          4 +
+          lineOf(VineTheme.bodySmallFont(color: colors.onSurface)),
     );
   }
 
@@ -418,7 +429,6 @@ class _CategoryTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.vineColors;
-    final labelStyle = VineTheme.titleSmallFont();
     return Material(
       type: MaterialType.transparency,
       child: TabBar(
@@ -445,8 +455,10 @@ class _CategoryTabs extends StatelessWidget {
         splashFactory: NoSplash.splashFactory,
         labelColor: colors.accentBrand,
         unselectedLabelColor: colors.onSurfaceVariant,
-        labelStyle: labelStyle,
-        unselectedLabelStyle: labelStyle,
+        labelStyle: VineTheme.titleSmallFont(color: colors.accentBrand),
+        unselectedLabelStyle: VineTheme.titleSmallFont(
+          color: colors.onSurfaceVariant,
+        ),
         onTap: onTap,
         tabs: [
           for (final category in EditorEffectCategory.values)
