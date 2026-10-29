@@ -40,8 +40,9 @@ class VideoEditorFilterOverlayControls extends StatelessWidget {
         Column(
           children: [
             const _TopBarContent(),
-            // The slider centres under the toolbar: the bar under the
-            // preview is tall, so it may not reach up behind it.
+            // Centred below the toolbar: the picker under the preview is
+            // tall, so a slider centred on the whole overlay would reach up
+            // behind the toolbar.
             Expanded(
               child: Align(
                 alignment: .centerRight,

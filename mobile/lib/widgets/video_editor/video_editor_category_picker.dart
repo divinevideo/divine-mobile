@@ -1,5 +1,5 @@
-// ABOUTME: Picker of the video editor's effects and filters: category tabs over
-// ABOUTME: a grid of preview tiles, one titled section per category, synced to scroll.
+// ABOUTME: Picker of the video editor's effects and filters: category tabs
+// ABOUTME: over a grid of preview tiles, one titled section per category.
 
 import 'dart:math';
 
@@ -19,7 +19,7 @@ import 'package:unified_logger/unified_logger.dart';
 /// [initialCategory], the grid starts at that category's section.
 ///
 /// The picker reaches down under the system navigation bar, so the grid
-/// scrolls on behind it; the editor must not pad it for it.
+/// scrolls on behind it; the editor must not pad it for the navigation bar.
 class VideoEditorCategoryPicker<C extends Object, T> extends StatelessWidget {
   const VideoEditorCategoryPicker({
     required this.sections,
@@ -88,7 +88,7 @@ const double _previewLabelGap = 4;
 const EdgeInsets _firstHeaderPadding = EdgeInsets.fromLTRB(16, 5, 16, 8);
 const EdgeInsets _headerPadding = EdgeInsets.fromLTRB(16, 43, 16, 8);
 
-/// The width and height of a tile's preview.
+/// The width and height of a tile's preview frame, border included.
 const double _previewSize = 52;
 
 class _CategoryPicker<C extends Object, T> extends StatefulWidget {
@@ -594,8 +594,9 @@ class _RevealWhenSelectedState extends State<_RevealWhenSelected> {
   Widget build(BuildContext context) => widget.child;
 }
 
-/// A tile of a [VideoEditorCategoryPicker]: [preview] in a rounded frame
-/// over the item's [label], outlined while [isSelected].
+/// A tile of a [VideoEditorCategoryPicker]: [preview] in a rounded, bordered
+/// frame over the item's [label]; the border turns the positive accent while
+/// [isSelected].
 class VideoEditorCategoryPickerTile extends StatelessWidget {
   const VideoEditorCategoryPickerTile({
     required this.label,
@@ -605,11 +606,17 @@ class VideoEditorCategoryPickerTile extends StatelessWidget {
     super.key,
   });
 
-  /// The width and height of the frame [preview] is drawn in.
+  /// The width and height of the frame [preview] is drawn in, border
+  /// included.
   static const double previewSize = _previewSize;
 
+  /// The item's name, shown under the frame and read by screen readers.
   final String label;
+
+  /// Whether this is the picked item.
   final bool isSelected;
+
+  /// Picks the item.
   final VoidCallback onTap;
 
   /// Fills the frame, inside its border.
