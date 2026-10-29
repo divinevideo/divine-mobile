@@ -115,13 +115,12 @@ class SoundSpeedRampRenderService {
       );
       await File(scratch).rename(output);
       if (generation != _generation) {
-        await _deleteQuietly(output);
+        _deleteQuietly(output);
         return null;
       }
       _cache[key] = output;
       while (_cache.length > maxCachedFiles) {
-        final evicted = _cache.remove(_cache.keys.first)!;
-        unawaited(_deleteQuietly(evicted));
+        _deleteQuietly(_cache.remove(_cache.keys.first)!);
       }
       Log.info(
         '🎵 Ramped sound rendered: ${sound.id} → $output',
@@ -137,7 +136,7 @@ class SoundSpeedRampRenderService {
         error: e,
         stackTrace: stackTrace,
       );
-      if (output != null) await _deleteQuietly('$output.tmp.wav');
+      if (output != null) _deleteQuietly('$output.tmp.wav');
       return null;
     }
   }
@@ -160,19 +159,18 @@ class SoundSpeedRampRenderService {
   /// it lands.
   void clear() {
     _generation++;
-    final files = [..._cache.values, ..._fetchedPaths];
+    [..._cache.values, ..._fetchedPaths].forEach(_deleteQuietly);
     _cache.clear();
     _inFlight.clear();
     _fetchedPaths.clear();
-    for (final path in files) {
-      unawaited(_deleteQuietly(path));
-    }
   }
 
-  static Future<void> _deleteQuietly(String path) async {
+  /// Deletes [path] before returning, so a cleared or evicted file is gone
+  /// when the caller moves on; it is a handful of files in the app's cache.
+  static void _deleteQuietly(String path) {
     try {
       final file = File(path);
-      if (file.existsSync()) await file.delete();
+      if (file.existsSync()) file.deleteSync();
     } on FileSystemException {
       // Best-effort cleanup; the OS reaps the temp directory later.
     }

@@ -132,7 +132,6 @@ void main() {
         // Asked for again, so it outlives the files rendered after it.
         expect(service.cached(endingAt(3)), keep);
         await service.render(endingAt(30));
-        await pumpEventQueue();
 
         expect(service.cached(endingAt(2)), isNull);
         expect(File(oldest!).existsSync(), isFalse);
@@ -169,12 +168,12 @@ void main() {
     group('clear', () {
       test('forgets and deletes every rendered window', () async {
         final path = await service.render(rampedSound());
+        expect(File(path!).existsSync(), isTrue);
 
         service.clear();
-        await pumpEventQueue();
 
         expect(service.cached(rampedSound()), isNull);
-        expect(File(path!).existsSync(), isFalse);
+        expect(File(path).existsSync(), isFalse);
       });
 
       test('drops a render that lands after it', () async {
