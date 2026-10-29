@@ -70,4 +70,11 @@ abstract class DmReactionsRepositoryReportableSites {
   /// held, with nothing recorded, and looked at again on its next attempt.
   static const String wrapRecipientsTargetMessageRead =
       'wrapRecipients.targetMessageRead';
+
+  /// Recording on a reaction's row the wrap a fallback-pool relay accepted
+  /// while the recipient's inbox could not be read, or the members an attempt
+  /// that was not delivery reached, threw (#10012). The attempt's outcome
+  /// stands; the next attempt wraps the rumor again for those recipients, as
+  /// every attempt did before.
+  static const String recordHeldPoolWrap = 'heldPoolWrap.record';
 }

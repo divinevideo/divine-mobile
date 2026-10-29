@@ -139,6 +139,43 @@ void main() {
       );
     }
 
+    /// The row records each wrap the fallback pool holds, and the members a
+    /// partly delivered fan-out reached (#10012), so a test whose recipient
+    /// inbox is unreadable, or whose group fan-out is partial, does not run
+    /// the record's error branch against an unstubbed DAO.
+    void stubHeldWrapRecords() {
+      when(
+        () => mockDao.recordHeldReactionWrap(
+          id: any(named: 'id'),
+          ownerPubkey: any(named: 'ownerPubkey'),
+          recipientPubkey: any(named: 'recipientPubkey'),
+          wrapEventId: any(named: 'wrapEventId'),
+        ),
+      ).thenAnswer((_) async => true);
+      when(
+        () => mockDao.recordHeldRemovalWrap(
+          id: any(named: 'id'),
+          ownerPubkey: any(named: 'ownerPubkey'),
+          recipientPubkey: any(named: 'recipientPubkey'),
+          wrapEventId: any(named: 'wrapEventId'),
+        ),
+      ).thenAnswer((_) async => true);
+      when(
+        () => mockDao.recordDeliveredReactionWraps(
+          id: any(named: 'id'),
+          ownerPubkey: any(named: 'ownerPubkey'),
+          wraps: any(named: 'wraps'),
+        ),
+      ).thenAnswer((_) async => true);
+      when(
+        () => mockDao.recordDeliveredRemovalWraps(
+          id: any(named: 'id'),
+          ownerPubkey: any(named: 'ownerPubkey'),
+          wraps: any(named: 'wraps'),
+        ),
+      ).thenAnswer((_) async => true);
+    }
+
     /// Stubs the queue row a retry or removal acts on: an own reaction sent to
     /// the other account.
     void stubQueuedRow({String? rumorEventJson, String? publishStatus}) {
@@ -3168,6 +3205,7 @@ void main() {
               ownerPubkey: _ownerPubkey,
             ),
           ).thenAnswer((_) async {});
+          stubHeldWrapRecords();
 
           final outcome = await createRepository().retryDeletion(
             rumorId: _reactionRumorId,
@@ -3179,6 +3217,16 @@ void main() {
             () => mockDao.markDeletionRefused(
               id: _reactionRumorId,
               ownerPubkey: _ownerPubkey,
+            ),
+          ).called(1);
+          // The refused removal keeps its kind-5, and the row records the
+          // member who has it, so a retry after the refusal lifts sends them
+          // nothing (#10012).
+          verify(
+            () => mockDao.recordDeliveredRemovalWraps(
+              id: _reactionRumorId,
+              ownerPubkey: _ownerPubkey,
+              wraps: {_otherPubkey: _giftWrapId},
             ),
           ).called(1);
         },
@@ -3511,6 +3559,7 @@ void main() {
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
           ).thenAnswer((_) async {});
+          stubHeldWrapRecords();
 
           final repository = createRepository(
             conversationsDao: mockConversationsDao,
@@ -3538,11 +3587,19 @@ void main() {
             ),
           );
           // Hard-failed member → the whole reaction is failed (kept
-          // retryable), so the sweep re-drives the full rumor.
+          // retryable), and the row records the member who has it, so the
+          // sweep re-drives the rumor only to the one it missed (#10012).
           verify(
             () => mockDao.markFailed(
               placeholderId: rumor.id,
               ownerPubkey: _ownerPubkey,
+            ),
+          ).called(1);
+          verify(
+            () => mockDao.recordDeliveredReactionWraps(
+              id: rumor.id,
+              ownerPubkey: _ownerPubkey,
+              wraps: {_otherPubkey: _giftWrapId},
             ),
           ).called(1);
         },
@@ -3802,6 +3859,7 @@ void main() {
         'but an inbox we never read cannot score the OK as delivered',
         () async {
           final rumor = stubPublishPath();
+          stubHeldWrapRecords();
           when(
             () => mockDao.markPending(id: rumor.id, ownerPubkey: _ownerPubkey),
           ).thenAnswer((_) async {});
@@ -3836,6 +3894,16 @@ void main() {
               onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).called(1);
+          // The pool holds that wrap, so the row records it (#10012).
+          verify(
+            () => mockDao.recordHeldReactionWrap(
+              id: rumor.id,
+              ownerPubkey: _ownerPubkey,
+              recipientPubkey: _otherPubkey,
+              wrapEventId: _giftWrapId,
+            ),
+          ).called(1);
+          expect(reporterSites, isEmpty);
         },
       );
 
@@ -4046,6 +4114,7 @@ void main() {
         'not be read, even though the fallback pool confirmed the wrap',
         () async {
           final rumor = stubPublishPath();
+          stubHeldWrapRecords();
           when(
             () => mockDao.markPending(id: rumor.id, ownerPubkey: _ownerPubkey),
           ).thenAnswer((_) async {});
@@ -4085,6 +4154,17 @@ void main() {
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
           );
+          // The row records the wrap the pool holds, so a retry while the
+          // inbox stays unreadable sends no other (#10012).
+          verify(
+            () => mockDao.recordHeldReactionWrap(
+              id: rumor.id,
+              ownerPubkey: _ownerPubkey,
+              recipientPubkey: _otherPubkey,
+              wrapEventId: _giftWrapId,
+            ),
+          ).called(1);
+          expect(reporterSites, isEmpty);
         },
       );
 
@@ -4124,6 +4204,7 @@ void main() {
             () => mockDao.markPending(id: rumor.id, ownerPubkey: _ownerPubkey),
           ).thenAnswer((_) async {});
           stubSendRumorConfirmed(rumor);
+          stubHeldWrapRecords();
           final repository = createRepository()
             ..setDmInboxRelayResolver((_) async => inboxUnreadable);
 
@@ -4161,6 +4242,15 @@ void main() {
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
           );
+          verify(
+            () => mockDao.recordHeldReactionWrap(
+              id: rumor.id,
+              ownerPubkey: _ownerPubkey,
+              recipientPubkey: _otherPubkey,
+              wrapEventId: _giftWrapId,
+            ),
+          ).called(1);
+          expect(reporterSites, isEmpty);
         },
       );
 
@@ -4184,6 +4274,7 @@ void main() {
             ),
           ).thenReturn(deletion);
           stubSendRumorConfirmed(deletion);
+          stubHeldWrapRecords();
           final repository = createRepository()
             ..setDmInboxRelayResolver((_) async => inboxUnreadable);
 
@@ -4213,6 +4304,15 @@ void main() {
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
           );
+          verify(
+            () => mockDao.recordHeldRemovalWrap(
+              id: _reactionRumorId,
+              ownerPubkey: _ownerPubkey,
+              recipientPubkey: _otherPubkey,
+              wrapEventId: _giftWrapId,
+            ),
+          ).called(1);
+          expect(reporterSites, isEmpty);
         },
       );
 
@@ -4235,6 +4335,7 @@ void main() {
             ),
           );
           stubSendRumorConfirmed(deletion);
+          stubHeldWrapRecords();
           final repository = createRepository()
             ..setDmInboxRelayResolver((_) async => inboxUnreadable);
 
@@ -4250,6 +4351,15 @@ void main() {
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
           );
+          verify(
+            () => mockDao.recordHeldRemovalWrap(
+              id: _reactionRumorId,
+              ownerPubkey: _ownerPubkey,
+              recipientPubkey: _otherPubkey,
+              wrapEventId: _giftWrapId,
+            ),
+          ).called(1);
+          expect(reporterSites, isEmpty);
         },
       );
 
@@ -4306,6 +4416,7 @@ void main() {
             () => mockDao.markPending(id: rumor.id, ownerPubkey: _ownerPubkey),
           ).thenAnswer((_) async {});
           stubSendRumorConfirmed(rumor);
+          stubHeldWrapRecords();
           final repository =
               createRepository(conversationsDao: mockConversationsDao)
                 ..setDmInboxRelayResolver(
@@ -4322,8 +4433,8 @@ void main() {
 
           // One row tracks the whole fan-out, so a member whose inbox we
           // could not read holds it — the same all-or-nothing rule as a
-          // partial fan-out failure. The confirmed member's copy dedups on
-          // the rumor id when the sweep re-drives.
+          // partial fan-out failure. The row records the confirmed member as
+          // having it, so the sweep sends them nothing again (#10012).
           expect(result.success, isFalse);
           verify(
             () => mockDao.markPending(id: rumor.id, ownerPubkey: _ownerPubkey),
@@ -4335,6 +4446,31 @@ void main() {
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
           );
+          // Only the member whose inbox we could not read is held (#10012).
+          verify(
+            () => mockDao.recordHeldReactionWrap(
+              id: rumor.id,
+              ownerPubkey: _ownerPubkey,
+              recipientPubkey: thirdPubkey,
+              wrapEventId: _giftWrapId,
+            ),
+          ).called(1);
+          verifyNever(
+            () => mockDao.recordHeldReactionWrap(
+              id: rumor.id,
+              ownerPubkey: _ownerPubkey,
+              recipientPubkey: _otherPubkey,
+              wrapEventId: any(named: 'wrapEventId'),
+            ),
+          );
+          verify(
+            () => mockDao.recordDeliveredReactionWraps(
+              id: rumor.id,
+              ownerPubkey: _ownerPubkey,
+              wraps: {_otherPubkey: _giftWrapId},
+            ),
+          ).called(1);
+          expect(reporterSites, isEmpty);
         },
       );
     });
@@ -4529,6 +4665,7 @@ void main() {
       test('publishes the own copy when only one recipient took the '
           'reaction', () async {
         stubQueuedGroupReaction();
+        stubHeldWrapRecords();
         stubRecipientSend(_otherPubkey);
         for (final recipient in [secondPubkey, thirdPubkey]) {
           stubRecipientSend(

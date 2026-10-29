@@ -20307,6 +20307,13 @@ void main() {
               onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).thenAnswer((_) async => const NIP17SendResult.blocked('blocked'));
+          when(
+            () => mockDirectMessagesDao.recordDeliveredDeletionWraps(
+              any(),
+              wraps: any(named: 'wraps'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => true);
 
           final outcome = await repo.retryMessageDeletion(
             rumorId: _rumorEventId,
@@ -20317,6 +20324,15 @@ void main() {
             () => mockDirectMessagesDao.markMessageDeletionBlocked(
               _rumorEventId,
               restoreToThread: true,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).called(1);
+          // The blocked retraction keeps its kind-5 and the record that B has
+          // it, so a Try again sends B nothing (#10012).
+          verify(
+            () => mockDirectMessagesDao.recordDeliveredDeletionWraps(
+              _rumorEventId,
+              wraps: {_validPubkeyB: _giftWrapEventId},
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
           ).called(1);
@@ -20450,6 +20466,27 @@ void main() {
           ).thenAnswer((_) async => answer);
         }
 
+        /// The retraction records the wrap the fallback pool holds, and the
+        /// members a partly delivered attempt reached (#10012), so these tests
+        /// do not run the record's error branch against an unstubbed DAO.
+        void stubHeldDeletionWrapRecords() {
+          when(
+            () => mockDirectMessagesDao.recordHeldDeletionWrap(
+              any(),
+              recipientPubkey: any(named: 'recipientPubkey'),
+              wrapEventId: any(named: 'wrapEventId'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => true);
+          when(
+            () => mockDirectMessagesDao.recordDeliveredDeletionWraps(
+              any(),
+              wraps: any(named: 'wraps'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => true);
+        }
+
         void stubDeletionWrapConfirmed() {
           when(
             () => mockMessageService.sendRumor(
@@ -20482,6 +20519,7 @@ void main() {
             stubPendingDeletion();
             stubInboxLookup(unansweredList(noRelays: true));
             stubDeletionWrapConfirmed();
+            stubHeldDeletionWrapRecords();
             final repo = createRepository();
 
             final outcome = await repo.retryMessageDeletion(
@@ -20495,6 +20533,16 @@ void main() {
                 ownerPubkey: any(named: 'ownerPubkey'),
               ),
             );
+            // The retraction records the wrap the pool holds, so a retry
+            // while the inbox stays unreadable sends no other (#10012).
+            verify(
+              () => mockDirectMessagesDao.recordHeldDeletionWrap(
+                _rumorEventId,
+                recipientPubkey: _validPubkeyB,
+                wrapEventId: _giftWrapEventId,
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
+            ).called(1);
           },
         );
 
@@ -20505,6 +20553,7 @@ void main() {
             stubPendingDeletion();
             stubInboxLookup(unansweredList(timedOut: true));
             stubDeletionWrapConfirmed();
+            stubHeldDeletionWrapRecords();
             final repo = createRepository();
 
             await repo.retryMessageDeletion(rumorId: _rumorEventId);
@@ -20557,8 +20606,8 @@ void main() {
         );
 
         test(
-          'one unreadable member holds the whole GROUP retraction pending - '
-          'one row cannot record a partial fan-out',
+          'one unreadable member holds the whole GROUP retraction pending, '
+          'and the row records the member it reached',
           () async {
             stubPendingDeletion();
             when(
@@ -20603,6 +20652,7 @@ void main() {
                   : answeredList(const <Event>[]);
             });
             stubDeletionWrapConfirmed();
+            stubHeldDeletionWrapRecords();
             final repo = createRepository();
 
             final outcome = await repo.retryMessageDeletion(
@@ -20616,6 +20666,31 @@ void main() {
                 ownerPubkey: any(named: 'ownerPubkey'),
               ),
             );
+            // Only the member whose inbox we could not read is held (#10012).
+            verify(
+              () => mockDirectMessagesDao.recordHeldDeletionWrap(
+                _rumorEventId,
+                recipientPubkey: _validPubkeyC,
+                wrapEventId: _giftWrapEventId,
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
+            ).called(1);
+            verifyNever(
+              () => mockDirectMessagesDao.recordHeldDeletionWrap(
+                _rumorEventId,
+                recipientPubkey: _validPubkeyB,
+                wrapEventId: any(named: 'wrapEventId'),
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
+            );
+            // B has it, so a retry sends them nothing again (#10012).
+            verify(
+              () => mockDirectMessagesDao.recordDeliveredDeletionWraps(
+                _rumorEventId,
+                wraps: {_validPubkeyB: _giftWrapEventId},
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
+            ).called(1);
           },
         );
       });
