@@ -46,6 +46,31 @@ void main() {
     );
 
     group('open', () {
+      test('retries a refused open without retaining a failed lease', () async {
+        final index = repository();
+        when(delegate.open).thenAnswer((_) async => false);
+        expect(await index.open(), isFalse);
+        when(delegate.open).thenAnswer((_) async => true);
+        expect(await index.open(), isTrue);
+        expect(await index.close(), isTrue);
+        verify(delegate.open).called(2);
+        verify(delegate.close).called(1);
+      });
+
+      test('retries a transient open failure with a fresh provider', () async {
+        final failed = _MockRepository();
+        when(failed.open).thenThrow(_DatabaseFailure(5));
+        var created = 0;
+        final index = repository(
+          create: (_) => created++ == 0 ? failed : delegate,
+        );
+        await expectLater(index.open(), throwsA(isA<DatabaseException>()));
+        expect(await index.open(), isTrue);
+        expect(await index.close(), isTrue);
+        verifyNever(failed.close);
+        verify(delegate.close).called(1);
+      });
+
       for (final code in [11, 26, 11 | (1 << 8)]) {
         test('retries corruption code $code with a fresh provider', () async {
           final failed = _MockRepository();
@@ -128,6 +153,76 @@ void main() {
     });
 
     group('close', () {
+      test(
+        'a close during a failed open does not consume the next lease',
+        () async {
+          final opening = Completer<bool>();
+          final started = Completer<void>();
+          when(delegate.open).thenAnswer((_) {
+            started.complete();
+            return opening.future;
+          });
+          final index = repository();
+          final opened = index.open();
+          final checked = expectLater(opened, throwsStateError);
+          await started.future;
+          final closed = index.close();
+          opening.completeError(StateError('unavailable'));
+          await checked;
+          expect(await closed, isTrue);
+          when(delegate.open).thenAnswer((_) async => true);
+          expect(await index.open(), isTrue);
+          expect(await index.close(), isTrue);
+          verify(delegate.close).called(1);
+        },
+      );
+
+      test('retries a failed close without poisoning later leases', () async {
+        final index = repository();
+        await index.open();
+        when(delegate.close).thenThrow(StateError('temporarily unavailable'));
+        await expectLater(index.close(), throwsStateError);
+        when(delegate.close).thenAnswer((_) async => true);
+        expect(await index.close(), isTrue);
+        expect(await index.open(), isTrue);
+        expect(await index.close(), isTrue);
+        verify(delegate.open).called(2);
+        verify(delegate.close).called(3);
+      });
+
+      test(
+        'extra closes neither underflow nor close the delegate twice',
+        () async {
+          final index = repository();
+          await index.open();
+          expect(await index.close(), isTrue);
+          expect(await index.close(), isTrue);
+          verify(delegate.close).called(1);
+          expect(await index.open(), isTrue);
+          expect(await index.close(), isTrue);
+          verify(delegate.close).called(1);
+        },
+      );
+
+      test('serializes a close and reopen with another close', () async {
+        final closing = Completer<bool>();
+        when(delegate.close).thenAnswer((_) => closing.future);
+        final index = repository();
+        await index.open();
+        final firstClose = index.close();
+        final reopen = index.open();
+        final secondClose = index.close();
+        closing.complete(true);
+        expect(await firstClose, isTrue);
+        expect(await reopen, isTrue);
+        expect(await secondClose, isTrue);
+        verify(delegate.open).called(2);
+        verify(delegate.close).called(2);
+        // A new balanced lease must still close the reopened connection.
+        expect(await index.open(), isTrue);
+        expect(await index.close(), isTrue);
+      });
+
       test('is harmless before open', () async {
         expect(await repository().close(), isTrue);
         verifyNever(delegate.close);

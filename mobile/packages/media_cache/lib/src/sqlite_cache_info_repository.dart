@@ -31,11 +31,11 @@ class SqliteCacheInfoRepository implements CacheInfoRepository {
   final CacheInfoRepository Function(String) _repositoryFactory;
   final Future<void> Function(String) _deleteDatabase;
   Future<String>? _path;
-  Future<bool>? _opening;
-  Future<bool>? _closing;
+  Future<void> _lifecycle = Future<void>.value();
+  bool _isOpen = false;
   late CacheInfoRepository _repository;
 
-  /// Callers holding the index open, counting each from its [open] call.
+  /// Callers holding the index open after a successful [open] call.
   ///
   /// The cache store holds the index for its whole life while each cache sweep
   /// opens and closes its own connection. The database is shared, so it may
@@ -48,25 +48,28 @@ class SqliteCacheInfoRepository implements CacheInfoRepository {
     return path.join(directory.path, '$_databaseName.db');
   }();
 
-  /// Opens one connection to the index, which needs its own [close].
+  /// Acquires one lease on the index, which needs its own [close].
+  ///
+  /// Lifecycle operations run in invocation order. Failed or refused opens
+  /// acquire no lease and a later call can retry with a fresh provider.
   @override
-  Future<bool> open() async {
-    // Counted before the first await, so a close racing this open cannot
-    // see zero connections and close the database under it.
-    _connections++;
-    try {
-      // A database that is closing cannot serve this connection; reopen it
-      // once the close has finished.
-      for (var closing = _closing; closing != null; closing = _closing) {
-        await closing;
-      }
-      final opened = await (_opening ??= _open());
-      if (!opened) _connections--;
-      return opened;
-    } on Object {
-      _connections--;
-      rethrow;
+  Future<bool> open() => _scheduleLifecycle(() async {
+    if (!_isOpen) {
+      _isOpen = await _open();
+      if (!_isOpen) return false;
     }
+    _connections++;
+    return true;
+  });
+
+  Future<bool> _scheduleLifecycle(Future<bool> Function() operation) {
+    final result = _lifecycle.then((_) => operation());
+    // The caller receives the error; subsequent operations must still run.
+    _lifecycle = result.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace _) {},
+    );
+    return result;
   }
 
   Future<bool> _open() async {
@@ -93,29 +96,17 @@ class SqliteCacheInfoRepository implements CacheInfoRepository {
   ///
   /// Returns false while other connections keep the database open.
   @override
-  Future<bool> close() async {
-    // Never opened, or every open failed: there is nothing to close.
-    if (_connections == 0) return true;
-    if (--_connections > 0) return false;
-    final closing = _closing = _closeRepository();
-    try {
-      return await closing;
-    } finally {
-      if (identical(_closing, closing)) _closing = null;
+  Future<bool> close() => _scheduleLifecycle(() async {
+    if (_connections > 0) {
+      _connections--;
+      if (_connections > 0) return false;
     }
-  }
-
-  Future<bool> _closeRepository() async {
-    try {
-      await _opening;
-    } on Object {
-      // A failed open owns no usable repository connection to close.
-      return true;
-    }
+    if (!_isOpen) return true;
+    // Retain the provider if close fails or is refused, allowing a retry.
     final closed = await _repository.close();
-    if (closed) _opening = null;
+    if (closed) _isOpen = false;
     return closed;
-  }
+  });
 
   @override
   Future<bool> exists() async => File(await _databasePath).existsSync();

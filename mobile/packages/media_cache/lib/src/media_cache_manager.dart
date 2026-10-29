@@ -565,10 +565,8 @@ class MediaCacheManager extends CacheManager {
     final repo = _repoOverride ?? config.repo;
     var repoOpened = false;
     try {
-      // Read cache metadata via the Config's CacheInfoRepository
-      // (JsonCacheInfoRepository wrapped by SafeCacheInfoRepository).
-      // In tests a repo override may be injected to pre-populate the manifest
-      // without needing a real JSON file on disk.
+      // Borrow a lease on the configured index while loading the manifest.
+      // CacheStore retains its own lease for the manager's lifetime.
       if (!await repo.open()) {
         _manifestInitialized = true;
         return;
