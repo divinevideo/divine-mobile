@@ -409,7 +409,6 @@ void main() {
     testWidgets('marks the picked effect and the shown category as selected '
         'for screen readers, and titles each section', (tester) async {
       usePhoneSize(tester);
-      final semantics = tester.ensureSemantics();
       // Not in the first section, which the tabs show anyway.
       cubit.selectType(
         const EditorEffectType.builtIn(VideoEffectType.vignette),
@@ -444,7 +443,6 @@ void main() {
             .isHeader,
         isTrue,
       );
-      semantics.dispose();
     });
 
     testWidgets('stops growing with the text past 125%', (tester) async {
