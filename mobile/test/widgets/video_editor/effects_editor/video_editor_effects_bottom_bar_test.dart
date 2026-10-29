@@ -22,7 +22,11 @@ void main() {
     /// [navigationBarHeight] is the system navigation bar the bar reaches
     /// under, set inside the Scaffold, which adjusts the padding it hands its
     /// body.
-    Widget buildWidget({double textScale = 1, double navigationBarHeight = 0}) {
+    Widget buildWidget({
+      double textScale = 1,
+      double navigationBarHeight = 0,
+      bool reduceMotion = false,
+    }) {
       return ProviderScope(
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
@@ -33,6 +37,7 @@ void main() {
                 data: MediaQuery.of(context).copyWith(
                   textScaler: TextScaler.linear(textScale),
                   viewPadding: EdgeInsets.only(bottom: navigationBarHeight),
+                  disableAnimations: reduceMotion,
                 ),
                 child: Align(
                   alignment: .bottomCenter,
@@ -181,6 +186,41 @@ void main() {
           reason: category.name,
         );
       }
+    });
+
+    testWidgets('jumps to a tapped category at once when the system asks '
+        'for reduced motion', (tester) async {
+      usePhoneSize(tester);
+      await tester.pumpWidget(buildWidget(reduceMotion: true));
+      final gridTop = tester.getRect(grid()).top;
+      await tester.ensureVisible(tab(EditorEffectCategory.light));
+      await tester.pumpAndSettle();
+
+      await tester.tap(tab(EditorEffectCategory.light));
+      await tester.pump();
+
+      expect(
+        tester.getRect(header(EditorEffectCategory.light)).top - gridTop,
+        inInclusiveRange(0, 10),
+      );
+    });
+
+    testWidgets('follows the scroll again once the user scrolls after a tap, '
+        'up to the last section at the end', (tester) async {
+      usePhoneSize(tester);
+      await tester.pumpWidget(buildWidget());
+      await tapTab(tester, EditorEffectCategory.glitch);
+
+      await tester.drag(grid(), const Offset(0, -5000));
+      await tester.pumpAndSettle();
+      expect(
+        isTabHighlighted(tester, EditorEffectCategory.values.last),
+        isTrue,
+      );
+
+      await tester.drag(grid(), const Offset(0, 5000));
+      await tester.pumpAndSettle();
+      expect(isTabHighlighted(tester, EditorEffectCategory.retro), isTrue);
     });
 
     testWidgets('scrolling the grid highlights the section at its top, and '
