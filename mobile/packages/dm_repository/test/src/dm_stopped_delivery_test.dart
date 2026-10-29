@@ -642,6 +642,38 @@ void main() {
         },
       );
 
+      test('keeps a record of a held member already failed with its retries '
+          'spent', () async {
+        unreadable.add(_memberB);
+        final sent = await sendToAAndB();
+        final held = await heldRowFor(sent.conversationId, _memberB);
+        // What the sweep did to such a member before held members were
+        // stopped, and still does to one it could not stop.
+        for (final mark in [
+          outgoingDao.markRecipientWrapStatus,
+          outgoingDao.markSelfWrapStatus,
+        ]) {
+          await mark(
+            id: held.id,
+            status: OutgoingWrapStatus.failed,
+            lastError: 'Exhausted retries without recipient confirmation',
+          );
+        }
+        expect(
+          (await outgoingDao.getExhaustedHeldForOwner(
+            ownerPubkey: _owner,
+            maxRetries: budget,
+          )).map((row) => row.id),
+          equals([held.id]),
+          reason: 'precondition: the sweep finds it',
+        );
+
+        expect(await stop(held.id), isTrue);
+
+        final row = await outgoingDao.getById(held.id);
+        expect(row?.recipientWrapStatus, equals(OutgoingWrapStatus.cancelled));
+      });
+
       test('leaves a held member whose retries are not spent', () async {
         unreadable.add(_memberB);
         final sent = await sendToAAndB();

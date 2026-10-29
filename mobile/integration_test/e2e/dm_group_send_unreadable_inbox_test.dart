@@ -420,5 +420,85 @@ void main() {
       },
       timeout: const Timeout(Duration(minutes: 3)),
     );
+
+    testWidgets(
+      'ARM F: a member that failed held is stopped once a Resend delivers '
+      'the message to the other member',
+      (tester) async {
+        // The relay reads this set on every REQ, so taking a member out of it
+        // makes the relay answer for their inbox from then on.
+        final stalledAuthors = {readablePubkey, unreadablePubkey};
+        final relay = await FakeRelay.start(
+          reply: readableInbox(),
+          replyForKinds: const {EventKind.dmRelaysList},
+          stallReqForAuthors: stalledAuthors,
+        );
+        addTearDown(relay.stop);
+        final stack = await buildStack(relay);
+        DmRepository.inboxResolutionBudget = const Duration(milliseconds: 300);
+        final sent = await stack.repository.sendGroupMessage(
+          recipientPubkeys: [readablePubkey, unreadablePubkey],
+          content: 'group message, no member readable yet',
+        );
+        expect(sent.every((r) => r.retryablePending), isTrue);
+        final ranOut = await sweepUntilRetriesRunOut(
+          stack.repository,
+          stack.db,
+          unreadablePubkey,
+        );
+        expect(
+          ranOut?.recipientWrapStatus,
+          OutgoingWrapStatus.failed,
+          reason: 'precondition: nobody had it, so both members failed',
+        );
+        final forReadable = await queueRowFor(stack.db, readablePubkey);
+        expect(
+          forReadable?.recipientWrapStatus,
+          OutgoingWrapStatus.failed,
+          reason: 'precondition',
+        );
+
+        stalledAuthors.remove(readablePubkey);
+        // The stalled lookups still hold the client's query-pool slots until
+        // their own read timeout, so ask until a lookup reaches the relay.
+        final deadline = DateTime.now().add(const Duration(seconds: 30));
+        while ((await stack.repository.resolveDmInboxRelaysDetailed(
+              readablePubkey,
+            )).state !=
+            DmInboxResolution.found) {
+          if (DateTime.now().isAfter(deadline)) {
+            fail('the inbox of ${pubkeyForLogs(readablePubkey)} never read');
+          }
+        }
+        final resent = await stack.repository.recoverFullSend(
+          rumorId: forReadable!.id,
+          resetRetryBudget: true,
+        );
+        expect(resent.success, isTrue, reason: 'precondition: delivered');
+        expect(
+          await stack.repository.watchMessages(groupConversationId).first,
+          hasLength(1),
+          reason: 'precondition: stored for the member who got it',
+        );
+        expect(
+          (await queueRowFor(stack.db, unreadablePubkey))?.recipientWrapStatus,
+          OutgoingWrapStatus.failed,
+          reason: 'precondition: the Resend leaves the other member alone',
+        );
+
+        await OutgoingDmRetryService(
+          dmRepository: stack.repository,
+          outgoingDmsDao: stack.db.outgoingDmsDao,
+          userPubkey: senderPubkey,
+          appForegroundStream: const Stream<bool>.empty(),
+        ).sweep();
+
+        expect(
+          (await queueRowFor(stack.db, unreadablePubkey))?.recipientWrapStatus,
+          OutgoingWrapStatus.cancelled,
+        );
+      },
+      timeout: const Timeout(Duration(minutes: 3)),
+    );
   });
 }
