@@ -27,11 +27,10 @@ class PveLoopFrameMatcher implements LoopFrameMatcher {
     final from = LumaPyramid.fromLuma(reference.luma, w, h);
     final to = LumaPyramid.fromLuma(target.luma, w, h);
     final points = <double>[...detectCorners(from.levels.first)];
-    // Local quality thresholds keep a bright subject from suppressing weaker
-    // background features. These points are tracked independently of the fit.
-    // Measure the bands inside the trackable image. Subtracting the detector's
-    // border from an 8% band left only six pixels on a 180px portrait frame,
-    // making gentle drift lose otherwise reliable opposite-edge support.
+    // Support bands are the outer 8% of the trackable interior: 8% of the full
+    // frame, less the detector's border, is six pixels on a 180px portrait
+    // frame and loses opposite-edge support under gentle drift. Support points
+    // only count agreement with the main fit; neither fit uses them.
     final boundaryPoints = _bandCorners(
       from,
       bandX: _trackingBorder + (w - 2 * _trackingBorder) * .08,
@@ -74,11 +73,10 @@ class PveLoopFrameMatcher implements LoopFrameMatcher {
       );
     }
     // A subpixel compromise between foreground and background can pass a
-    // one-pixel inlier count everywhere. Measure disagreement with an
-    // independent background fit instead of treating that count as proof.
-    // Keep camera identity tied to the original outer edges. The wider support
-    // bands can include a subject beside a plain margin; letting those same
-    // points define the background would mistake subject motion for drift.
+    // one-pixel inlier count everywhere, so fit the background separately on
+    // the narrow outer 8% bands. The wider support bands can reach a subject
+    // beside a plain margin and would read its motion as drift. A subject that
+    // reaches the narrow bands still defeats this check.
     final boundaryMatches = [
       for (final points in _bandCorners(from, bandX: w * .08, bandY: h * .08))
         ..._track(from, to, points),
@@ -210,7 +208,9 @@ class PveLoopFrameMatcher implements LoopFrameMatcher {
     return false;
   }
 
-  /// Corners in the left, right, top and bottom bands, in that order.
+  /// Corners in the left, right, top and bottom bands, in that order. Each
+  /// band has its own quality threshold, so a bright subject cannot suppress
+  /// weaker edge features.
   List<Float32List> _bandCorners(
     LumaPyramid frame, {
     required double bandX,
