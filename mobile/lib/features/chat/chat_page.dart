@@ -45,6 +45,9 @@ class ChatPage extends ConsumerWidget {
 
   final String? communityId;
   final String? channelId;
+
+  /// Test seam: builds an isolated repository the cubit owns, skipping the
+  /// shared room session and read tracking.
   final ConcordRepositoryBuilder? repositoryBuilder;
 
   @override
