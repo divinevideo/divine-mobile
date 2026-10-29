@@ -1055,7 +1055,10 @@ class OutgoingDmRetryService {
   /// status it would have had (#10012).
   Future<_HeldMemberStop> _stopHeldMember(String rowId) async {
     try {
-      return await _dmRepository.stopHeldMemberDelivery(rumorId: rowId)
+      return await _dmRepository.stopHeldMemberDelivery(
+            rumorId: rowId,
+            maxRetries: _retryConfig.maxRetries,
+          )
           ? _HeldMemberStop.stopped
           : _HeldMemberStop.kept;
     } on Object catch (e, stackTrace) {

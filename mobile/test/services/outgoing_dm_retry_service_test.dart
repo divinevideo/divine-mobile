@@ -2734,6 +2734,7 @@ void main() {
         when(
           () => dmRepository.stopHeldMemberDelivery(
             rumorId: any(named: 'rumorId'),
+            maxRetries: any(named: 'maxRetries'),
           ),
         ).thenAnswer((_) => answer());
       }
@@ -2782,10 +2783,33 @@ void main() {
         await buildService(now: () => now).sweep();
 
         verify(
-          () => dmRepository.stopHeldMemberDelivery(rumorId: 'held-1'),
+          () => dmRepository.stopHeldMemberDelivery(
+            rumorId: 'held-1',
+            maxRetries: any(named: 'maxRetries'),
+          ),
         ).called(1);
         verifyNotTerminalized('held-1');
         verifyNever(() => dmRepository.recoverFullSend(rumorId: 'held-1'));
+      });
+
+      test('asks to stop it on its own budget', () async {
+        when(() => dao.getStillPendingForOwner(any())).thenAnswer(
+          (_) async => [heldExhausted('held-1').copyWith(retryCount: 3)],
+        );
+        stubTerminalize();
+        stubStop(() async => true);
+
+        await buildService(
+          now: () => now,
+          retryConfig: const OutgoingDmRetryConfig(maxRetries: 3),
+        ).sweep();
+
+        verify(
+          () => dmRepository.stopHeldMemberDelivery(
+            rumorId: 'held-1',
+            maxRetries: 3,
+          ),
+        ).called(1);
       });
 
       test('fails it as before when the repository keeps it', () async {
@@ -2860,7 +2884,10 @@ void main() {
         test('leaves it pending and ends the arm while the repository is not '
             'ready', () async {
           when(
-            () => dmRepository.stopHeldMemberDelivery(rumorId: 'held-1'),
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'held-1',
+              maxRetries: any(named: 'maxRetries'),
+            ),
           ).thenThrow(StateError('not initialized'));
 
           await buildService(
@@ -2870,7 +2897,10 @@ void main() {
 
           verifyNotTerminalized('held-1');
           verifyNever(
-            () => dmRepository.stopHeldMemberDelivery(rumorId: 'held-2'),
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'held-2',
+              maxRetries: any(named: 'maxRetries'),
+            ),
           );
           verifyNotTerminalized('held-2');
           verifyNever(
@@ -2891,7 +2921,10 @@ void main() {
 
         test('leaves a row that is gone or not ours and goes on', () async {
           when(
-            () => dmRepository.stopHeldMemberDelivery(rumorId: 'held-1'),
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'held-1',
+              maxRetries: any(named: 'maxRetries'),
+            ),
           ).thenThrow(ArgumentError.value('held-1', 'rumorId'));
 
           await buildService(
@@ -2901,7 +2934,10 @@ void main() {
 
           verifyNotTerminalized('held-1');
           verify(
-            () => dmRepository.stopHeldMemberDelivery(rumorId: 'held-2'),
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'held-2',
+              maxRetries: any(named: 'maxRetries'),
+            ),
           ).called(1);
           verifyNever(
             () => crashReporting.recordError(
@@ -2934,6 +2970,7 @@ void main() {
         verifyNever(
           () => dmRepository.stopHeldMemberDelivery(
             rumorId: any(named: 'rumorId'),
+            maxRetries: any(named: 'maxRetries'),
           ),
         );
         verifyTerminalized('not-held');
@@ -2975,10 +3012,16 @@ void main() {
             ),
           ).called(1);
           verify(
-            () => dmRepository.stopHeldMemberDelivery(rumorId: 'spent-1'),
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'spent-1',
+              maxRetries: any(named: 'maxRetries'),
+            ),
           ).called(1);
           verify(
-            () => dmRepository.stopHeldMemberDelivery(rumorId: 'spent-2'),
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'spent-2',
+              maxRetries: any(named: 'maxRetries'),
+            ),
           ).called(1);
         });
 
@@ -2995,7 +3038,10 @@ void main() {
           stubExhaustedHeld(['spent-1', 'spent-2']);
           stubStop(() async => true);
           when(
-            () => dmRepository.stopHeldMemberDelivery(rumorId: 'spent-1'),
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'spent-1',
+              maxRetries: any(named: 'maxRetries'),
+            ),
           ).thenThrow(Exception('drift busy'));
 
           await expectLater(
@@ -3004,7 +3050,10 @@ void main() {
           );
 
           verify(
-            () => dmRepository.stopHeldMemberDelivery(rumorId: 'spent-2'),
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'spent-2',
+              maxRetries: any(named: 'maxRetries'),
+            ),
           ).called(1);
           verify(
             () => crashReporting.recordError(
@@ -3022,28 +3071,56 @@ void main() {
             stubExhaustedHeld(['spent-1', 'spent-2']);
             stubStop(() async => true);
             when(
-              () => dmRepository.stopHeldMemberDelivery(rumorId: 'spent-1'),
+              () => dmRepository.stopHeldMemberDelivery(
+                rumorId: 'spent-1',
+                maxRetries: any(named: 'maxRetries'),
+              ),
             ).thenThrow(StateError('not initialized'));
 
             await buildService().sweep();
 
             verifyNever(
-              () => dmRepository.stopHeldMemberDelivery(rumorId: 'spent-2'),
+              () => dmRepository.stopHeldMemberDelivery(
+                rumorId: 'spent-2',
+                maxRetries: any(named: 'maxRetries'),
+              ),
             );
           },
         );
+
+        test('asks to stop each on its own budget', () async {
+          stubExhaustedHeld(['spent-1']);
+          stubStop(() async => true);
+
+          await buildService(
+            retryConfig: const OutgoingDmRetryConfig(maxRetries: 3),
+          ).sweep();
+
+          verify(
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'spent-1',
+              maxRetries: 3,
+            ),
+          ).called(1);
+        });
 
         test('skips one that is gone or not ours', () async {
           stubExhaustedHeld(['spent-1', 'spent-2']);
           stubStop(() async => true);
           when(
-            () => dmRepository.stopHeldMemberDelivery(rumorId: 'spent-1'),
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'spent-1',
+              maxRetries: any(named: 'maxRetries'),
+            ),
           ).thenThrow(ArgumentError.value('spent-1', 'rumorId'));
 
           await buildService().sweep();
 
           verify(
-            () => dmRepository.stopHeldMemberDelivery(rumorId: 'spent-2'),
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: 'spent-2',
+              maxRetries: any(named: 'maxRetries'),
+            ),
           ).called(1);
         });
 
@@ -3073,6 +3150,7 @@ void main() {
           verifyNever(
             () => dmRepository.stopHeldMemberDelivery(
               rumorId: any(named: 'rumorId'),
+              maxRetries: any(named: 'maxRetries'),
             ),
           );
         });
@@ -3086,6 +3164,7 @@ void main() {
           verifyNever(
             () => dmRepository.stopHeldMemberDelivery(
               rumorId: any(named: 'rumorId'),
+              maxRetries: any(named: 'maxRetries'),
             ),
           );
         });

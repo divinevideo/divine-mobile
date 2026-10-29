@@ -8425,14 +8425,20 @@ class DmRepository {
   /// instead of "Failed to send".
   ///
   /// Only a held member ([_heldPoolWrapId]) of a group message that is stored
-  /// for the members who have it is stopped, and the call returns `true`.
-  /// Anything else is left as it is and returns `false`: a missing row, a
-  /// delivery already stopped, a member that is not held, a 1:1 message, and
-  /// a group message no member has, which all keep "Failed to send".
+  /// for the members who have it, whose retries are spent (`retryCount` of at
+  /// least [maxRetries]) and none of which is running, is stopped, and the
+  /// call returns `true`. Anything else is left as it is and returns `false`:
+  /// a missing row, a delivery already stopped, a member that is not held or
+  /// still has retries (as after a Resend) or a recovery running, a 1:1
+  /// message, and a group message no member has, which all keep "Failed to
+  /// send".
   ///
   /// Throws [StateError] if the queue DAO is not wired in, and
   /// [ArgumentError] if the row belongs to a different account.
-  Future<bool> stopHeldMemberDelivery({required String rumorId}) async {
+  Future<bool> stopHeldMemberDelivery({
+    required String rumorId,
+    required int maxRetries,
+  }) async {
     _assertInitialized();
     final dao = _outgoingDmsDao;
     if (dao == null) {
@@ -8454,6 +8460,11 @@ class DmRepository {
         );
       }
       if (!_isLiveDelivery(row) || _heldPoolWrapId(row) == null) return;
+      // Retries left, or one running now: the delivery is still in progress.
+      if (row.retryCount < maxRetries ||
+          _recoveriesInFlight.containsKey('full:${row.id}')) {
+        return;
+      }
       if (!await _stoppedRowKeepsItsRecord(row)) return;
       stopped = await dao.markRecipientCancelled(rumorId);
     });

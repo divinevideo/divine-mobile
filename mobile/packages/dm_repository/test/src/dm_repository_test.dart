@@ -32362,7 +32362,10 @@ void main() {
         () async {
           final repository = createRepository();
           await expectLater(
-            () => repository.stopHeldMemberDelivery(rumorId: _rumorEventId),
+            () => repository.stopHeldMemberDelivery(
+              rumorId: _rumorEventId,
+              maxRetries: 5,
+            ),
             throwsStateError,
           );
         },
