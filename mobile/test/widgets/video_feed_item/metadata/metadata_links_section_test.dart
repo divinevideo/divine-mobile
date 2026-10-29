@@ -89,6 +89,36 @@ void main() {
 
         expect(find.byType(LinkStickerSheetTile), findsOneWidget);
       });
+
+      testWidgets('keeps a failed launch from escaping the tap', (
+        tester,
+      ) async {
+        var tapped = false;
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: VineTheme.theme,
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: MetadataLinksSection(
+                video: _video([
+                  ['r', 'https://example.com/hello', videoLinkTagMarker],
+                ]),
+                launcher: (_, _) {
+                  tapped = true;
+                  return Future.error(StateError('no browser'));
+                },
+              ),
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('example.com/hello'));
+        await tester.pump();
+
+        expect(tapped, isTrue);
+        expect(tester.takeException(), isNull);
+      });
     });
   });
 }

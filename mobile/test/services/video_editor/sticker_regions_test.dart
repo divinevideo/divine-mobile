@@ -64,6 +64,7 @@ ExportedLayer _other({
   Size box = const Size(40, 40),
   Duration? startTime,
   Duration? endTime,
+  List<LayerAnimation> animations = const [],
 }) => ExportedLayer(
   layer: WidgetLayer(
     id: 'emoji',
@@ -71,6 +72,7 @@ ExportedLayer _other({
     offset: offset,
     startTime: startTime,
     endTime: endTime,
+    animations: animations,
   ),
   bytes: Uint8List(0),
   logicalSize: box,
@@ -205,14 +207,20 @@ void main() {
     });
 
     test('gives a faded, blended or masked sticker no look', () {
+      // Apart, so no sticker lies on another.
       final regions = _regions([
-        _captured(_link, opacity: 0.5),
-        _captured(_link, blendMode: BlendMode.multiply),
+        _captured(_link, opacity: 0.5, offset: const Offset(0, -150)),
+        _captured(
+          _link,
+          blendMode: BlendMode.multiply,
+          offset: const Offset(0, -50),
+        ),
         _captured(
           _link,
           mask: const LayerMask(shape: LayerMaskShape.ellipse),
+          offset: const Offset(0, 50),
         ),
-        _captured(_link),
+        _captured(_link, offset: const Offset(0, 150)),
       ]);
 
       expect(
@@ -231,6 +239,32 @@ void main() {
         styleWith(_other(offset: const Offset(0, -60)), rotation: pi / 2),
         isNull,
       );
+      // Turned an eighth clockwise, the sticker runs down to the right.
+      expect(
+        styleWith(_other(offset: const Offset(50, 50)), rotation: pi / 4),
+        isNull,
+      );
+      expect(
+        styleWith(_other(offset: const Offset(50, 50)), rotation: -pi / 4),
+        equals('light'),
+      );
+      expect(
+        styleWith(
+          _other(
+            offset: const Offset(0, -200),
+            animations: const [
+              LayerAnimation(
+                type: LayerAnimationType.slide,
+                phase: AnimationPhase.animateIn,
+                duration: Duration(milliseconds: 300),
+                slideDirection: SlideDirection.left,
+              ),
+            ],
+          ),
+        ),
+        isNull,
+        reason: 'a moving layer may cross the sticker on its way',
+      );
       expect(
         styleWith(
           _other(
@@ -245,6 +279,13 @@ void main() {
         _regions([
           _captured(_link, endTime: const Duration(seconds: 1)),
           _other(startTime: const Duration(seconds: 1)),
+        ]).single.style,
+        equals('light'),
+      );
+      expect(
+        _regions([
+          _captured(_link, startTime: const Duration(seconds: 1)),
+          _other(endTime: const Duration(seconds: 1)),
         ]).single.style,
         equals('light'),
       );
