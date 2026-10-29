@@ -8,7 +8,6 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/utils/audio_band_energies.dart';
-import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/sticker_pill_palette.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_marks.dart';
 
@@ -315,7 +314,7 @@ class _SoundCreditLayout {
 
   static TextPainter _text(String text, TextStyle style, {int maxLines = 1}) =>
       TextPainter(
-        text: TextSpan(text: text, style: withStickerEmojiFont(style)),
+        text: TextSpan(text: text, style: style),
         textDirection: TextDirection.ltr,
         maxLines: maxLines,
         ellipsis: '…',

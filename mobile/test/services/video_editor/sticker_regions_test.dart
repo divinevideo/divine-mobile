@@ -346,8 +346,11 @@ void main() {
       expect(styleOf('Zoë', InfoStickerStyle.dark), equals('dark'));
       expect(styleOf('Lena 🌸', InfoStickerStyle.dark), isNull);
       expect(styleOf('東京', InfoStickerStyle.dark), isNull);
-      // A solid pill hides whatever the frames show beneath.
-      expect(styleOf('東京', InfoStickerStyle.light), equals('light'));
+      // A solid background cannot fix a fallback font's different advances.
+      for (final style in InfoStickerStyle.pills) {
+        expect(styleOf('東京', style), isNull);
+        expect(styleOf('Lena 🌸', style), isNull);
+      }
     });
 
     test('leaves out a sticker that moves', () {

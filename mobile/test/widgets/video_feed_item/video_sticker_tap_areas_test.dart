@@ -12,7 +12,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 import 'package:openvine/widgets/video_feed_item/link_sticker_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/player_gesture_surface.dart';
@@ -378,14 +377,8 @@ void main() {
       });
 
       testWidgets(
-        'keeps emoji in the frames even if a font loads later',
+        'keeps emoji in the frames while retaining their button',
         (tester) async {
-          var loads = 0;
-          debugLoadStickerEmojiFont = () async {
-            loads++;
-            return true;
-          };
-          addTearDown(resetStickerEmojiFontForTesting);
           const party = VideoStickerRegion(
             kind: VideoStickerKind.hashtag,
             target: 'party🎉',
@@ -399,30 +392,20 @@ void main() {
           await pump(tester, [party]);
 
           expect(find.byType(SocialStickerView), findsNothing);
-          expect(loads, isZero);
           await tapAt(tester, const Offset(180, 320));
           expect(opened, equals([party]));
 
-          // An unrelated editor load cannot attest how these frames were
-          // captured. A later playback update must still keep their glyphs.
-          await loadStickerEmojiFont();
+          // Playback updates cannot replace the creator's glyphs.
           states.add(_playing(const Duration(milliseconds: 100)));
           await tester.pump();
 
           expect(find.byType(SocialStickerView), findsNothing);
-          expect(loads, equals(1));
         },
       );
 
-      testWidgets('does not download fonts for solid emoji copies', (
+      testWidgets('keeps solid emoji stickers in their original proportions', (
         tester,
       ) async {
-        var loads = 0;
-        debugLoadStickerEmojiFont = () async {
-          loads++;
-          return true;
-        };
-        addTearDown(resetStickerEmojiFontForTesting);
         const party = VideoStickerRegion(
           kind: VideoStickerKind.hashtag,
           target: 'party🎉',
@@ -436,15 +419,14 @@ void main() {
         await pump(tester, [party]);
         await tester.pump();
 
-        expect(find.byType(SocialStickerView), findsOneWidget);
-        expect(loads, isZero);
+        expect(find.byType(SocialStickerView), findsNothing);
+        await tapAt(tester, const Offset(180, 320));
+        expect(opened, equals([party]));
       });
 
       testWidgets('keeps a see-through look in a script it lacks as it is', (
         tester,
       ) async {
-        debugLoadStickerEmojiFont = () async => true;
-        addTearDown(resetStickerEmojiFontForTesting);
         const tokyo = VideoStickerRegion(
           kind: VideoStickerKind.hashtag,
           target: '東京',

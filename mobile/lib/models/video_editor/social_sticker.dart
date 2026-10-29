@@ -214,12 +214,10 @@ class SocialStickerData extends Equatable {
   ].nonNulls.join('\n');
 
   /// Whether a sharp copy of the sticker, drawn over the same sticker in a
-  /// video's frames, looks like it on every phone. A solid look hides what is
-  /// beneath; any other needs text in the bundled font. Emoji stay in the
-  /// frames because a later font load is not evidence of what a saved capture
-  /// used when it was drawn.
+  /// video's frames, has the same glyph shapes and advances on every phone.
+  /// Emoji and other fallback glyphs stay in the frames even on solid looks:
+  /// their different advances would stretch a copy to the wrong proportions.
   bool get isRedrawnAlike =>
-      style.coversBakedCopy ||
       StickerTextGlyphs.of(_drawnText) == StickerTextGlyphs.font;
 
   /// Whether the sticker moves with how loud the video's sound is.

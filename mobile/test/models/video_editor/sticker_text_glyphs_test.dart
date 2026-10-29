@@ -1,5 +1,5 @@
 // ABOUTME: Tests which sticker texts look the same on every phone: those in the
-// ABOUTME: bundled sticker font, and emoji once the sticker emoji font loads.
+// ABOUTME: bundled sticker font, or fallback glyphs kept in the video frames.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/models/video_editor/sticker_text_glyphs.dart';
@@ -33,27 +33,6 @@ void main() {
         expect(
           ['東京', 'Привет', 'مرحبا', 'party 🎉 東京'].map(StickerTextGlyphs.of),
           everyElement(StickerTextGlyphs.platform),
-        );
-      });
-    });
-
-    group('isDrawnAlike', () {
-      test('needs the emoji font only for emoji', () {
-        expect(
-          StickerTextGlyphs.font.isDrawnAlike(emojiFontLoaded: false),
-          isTrue,
-        );
-        expect(
-          StickerTextGlyphs.emoji.isDrawnAlike(emojiFontLoaded: false),
-          isFalse,
-        );
-        expect(
-          StickerTextGlyphs.emoji.isDrawnAlike(emojiFontLoaded: true),
-          isTrue,
-        );
-        expect(
-          StickerTextGlyphs.platform.isDrawnAlike(emojiFontLoaded: true),
-          isFalse,
         );
       });
     });
