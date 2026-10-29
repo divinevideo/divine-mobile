@@ -331,6 +331,22 @@ void main() {
     );
 
     test(
+      'a message dated beyond clock drift still counts as unread',
+      () async {
+        final room = _Room('12' * 32);
+        await room.seed([
+          room.message('a', createdAt: _now - 60),
+          room.message('b', createdAt: _now + 604800),
+        ]);
+        final activity = _activity([room]);
+        await activity.start();
+        final summary = activity.summaries[room.channelId]!;
+        expect(summary.latestMessage!.id, 'a' * 64);
+        expect(summary.unreadCount, 2);
+      },
+    );
+
+    test(
       'pending messages never inflate activity or the latest preview',
       () async {
         final room = _Room('12' * 32);
