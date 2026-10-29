@@ -7,6 +7,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
+import 'package:openvine/features/chat/chat_mention_providers.dart';
+import 'package:openvine/features/chat/chat_mention_repository.dart';
 import 'package:openvine/features/chat/chat_screen.dart';
 import 'package:openvine/features/chat/concord_session.dart';
 import 'package:openvine/features/chat/concord_store.dart';
@@ -72,12 +74,12 @@ class ChatPage extends ConsumerWidget {
     if (repositoryBuilder == null && shared == null) {
       return RouteErrorScreen(message: context.l10n.routeInvalidConversationId);
     }
-    final channel = channelId ?? 'general';
+    final channel = channelId ?? pocChatDefaultChannel;
     // Validate before looking up a shared repository so malformed URLs remain
     // ordinary route errors rather than missing-map-entry exceptions.
     if (!const ChatState().communities.any(
           (community) =>
-              community.id == (communityId ?? 'community-test') &&
+              community.id == (communityId ?? pocChatCommunityId) &&
               community.channels.contains(channel),
         ) ||
         (communityId == null) != (channelId == null)) {
@@ -95,7 +97,7 @@ class ChatPage extends ConsumerWidget {
               store: DriftConcordStore(
                 dao: database!.concordStoreDao,
                 account: pubkey,
-                scope: '$concordRelayUrl/${channelId ?? 'general'}',
+                scope: '$concordRelayUrl/${channelId ?? pocChatDefaultChannel}',
               ),
             ),
         pocStreamForChannel: pocStreamKeyFor,
@@ -108,6 +110,18 @@ class ChatPage extends ConsumerWidget {
         onRead: shared == null
             ? null
             : (messages) => shared.markRead(effectiveChannel, messages),
+        // Read when the room opens, not captured, and again after each
+        // enrollment: a source rebuilt meanwhile knows only the rooms it
+        // loaded from storage.
+        onRoomOpened: (channel) async {
+          ChatMentionRepository? enrolled;
+          while (context.mounted) {
+            final mentions = ref.read(chatMentionRepositoryProvider);
+            if (mentions == null || identical(mentions, enrolled)) return;
+            await mentions.enroll(channel);
+            enrolled = mentions;
+          }
+        },
       ),
       child: _ChatSelection(communityId: communityId, channelId: channelId),
     );

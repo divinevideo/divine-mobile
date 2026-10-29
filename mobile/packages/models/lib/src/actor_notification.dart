@@ -14,7 +14,8 @@ class ActorNotification extends NotificationItem {
   /// UTF-16.
   ///
   /// [commentText] is the source event's body — relay text the row renders as
-  /// a quote. See [VideoNotification] for the boundary rationale.
+  /// a quote. See [VideoNotification] for the boundary rationale. Room
+  /// mentions ([chatTarget] set) carry none: message text stays encrypted.
   ActorNotification({
     required super.id,
     required super.type,
@@ -30,6 +31,7 @@ class ActorNotification extends NotificationItem {
     this.isFollowingBack = false,
     this.videoAddressableId,
     this.hasCommentTarget = false,
+    this.chatTarget,
   }) : commentText = sanitizeUtf16OrNull(commentText),
        assert(
          type == NotificationKind.follow ||
@@ -83,6 +85,9 @@ class ActorNotification extends NotificationItem {
   /// auto-open comments after resolving the video.
   final bool hasCommentTarget;
 
+  /// Present only for client-decrypted room mentions.
+  final ChatNotificationTarget? chatTarget;
+
   /// Returns a copy with the given fields replaced.
   ActorNotification copyWith({
     String? id,
@@ -99,6 +104,7 @@ class ActorNotification extends NotificationItem {
     List<String>? notificationIds,
     String? videoAddressableId,
     bool? hasCommentTarget,
+    ChatNotificationTarget? chatTarget,
   }) {
     return ActorNotification(
       id: id ?? this.id,
@@ -115,6 +121,7 @@ class ActorNotification extends NotificationItem {
       notificationIds: notificationIds ?? this.notificationIds,
       videoAddressableId: videoAddressableId ?? this.videoAddressableId,
       hasCommentTarget: hasCommentTarget ?? this.hasCommentTarget,
+      chatTarget: chatTarget ?? this.chatTarget,
     );
   }
 
@@ -134,5 +141,18 @@ class ActorNotification extends NotificationItem {
     notificationIds,
     videoAddressableId,
     hasCommentTarget,
+    chatTarget,
   ];
+}
+
+/// A room destination that cannot be mistaken for a video event.
+class ChatNotificationTarget extends Equatable {
+  const ChatNotificationTarget({
+    required this.communityId,
+    required this.channelId,
+  });
+  final String communityId;
+  final String channelId;
+  @override
+  List<Object?> get props => [communityId, channelId];
 }

@@ -11,6 +11,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
+import 'package:openvine/features/chat/chat_mention_providers.dart';
+import 'package:openvine/features/chat/chat_mention_repository.dart';
 import 'package:openvine/features/chat/chat_page.dart';
 import 'package:openvine/features/chat/chat_screen.dart';
 import 'package:openvine/features/chat/concord_session.dart';
@@ -27,6 +29,17 @@ import 'package:openvine/services/auth_service.dart';
 class _Relay extends Mock implements RelayGateway {}
 
 class _Cipher extends Mock implements StreamCipher {}
+
+class _Mentions extends Mock implements ChatMentionRepository {}
+
+/// A relay with no traffic, for tests that only need a room to open.
+class _SilentRelay implements RelayGateway {
+  @override
+  Stream<Map<String, dynamic>> subscribe(Map<String, dynamic> filter) =>
+      const Stream.empty();
+  @override
+  Future<void> publish(Map<String, dynamic> event) async {}
+}
 
 class _RoomRelay implements RelayGateway {
   _RoomRelay() {
@@ -157,6 +170,7 @@ void main() {
             }),
             isDmRestrictedProvider.overrideWithValue(false),
             roomActivityRepositoryProvider.overrideWithValue(activity),
+            chatMentionRepositoryProvider.overrideWithValue(null),
           ],
         );
         addTearDown(container.dispose);
@@ -189,6 +203,7 @@ void main() {
       final restricted = StateProvider((ref) => false);
       final container = ProviderContainer(
         overrides: [
+          chatMentionRepositoryProvider.overrideWithValue(null),
           authServiceProvider.overrideWithValue(_Auth('a' * 64)),
           databaseProvider.overrideWithValue(database),
           isFeatureEnabledProvider(FeatureFlag.concordChat).overrideWith(
@@ -288,6 +303,111 @@ void main() {
     ) async {
       await pumpPage(tester, auth: _Auth('a' * 64, isAuthenticated: false));
       expect(find.byType(ChatScreen), findsNothing);
+    });
+
+    group('mention enrollment', () {
+      late _Mentions mentions;
+
+      setUp(() {
+        mentions = _Mentions();
+        when(() => mentions.enroll(any())).thenAnswer((_) async {});
+      });
+
+      Future<ProviderContainer> pumpRoom(
+        WidgetTester tester, {
+        String? communityId,
+        String? channelId,
+        ChatMentionRepository? Function()? source,
+      }) async {
+        final container = ProviderContainer(
+          overrides: [
+            ...overrides(auth: _Auth('a' * 64)),
+            if (source != null)
+              chatMentionRepositoryProvider.overrideWith((_) => source())
+            else
+              chatMentionRepositoryProvider.overrideWithValue(mentions),
+          ],
+        );
+        addTearDown(container.dispose);
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: ChatPage(
+                communityId: communityId,
+                channelId: channelId,
+                repositoryBuilder:
+                    ({required pubkey, required signer, required store}) =>
+                        ConcordRepository(
+                          relay: _SilentRelay(),
+                          store: store,
+                          cipher: _Cipher(),
+                        ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        return container;
+      }
+
+      testWidgets('enrolls the room the route opened', (tester) async {
+        await pumpRoom(
+          tester,
+          communityId: 'community-test',
+          channelId: 'introductions',
+        );
+        expect(find.byType(ChatScreen), findsOneWidget);
+        verify(() => mentions.enroll('introductions')).called(1);
+      });
+
+      testWidgets('enrolls the default room when the route names none', (
+        tester,
+      ) async {
+        await pumpRoom(tester);
+        verify(() => mentions.enroll('general')).called(1);
+      });
+
+      testWidgets('does not enroll a room the route rejects', (tester) async {
+        await pumpRoom(tester, communityId: 'unknown', channelId: 'general');
+        expect(find.byType(ChatScreen), findsNothing);
+        verifyNever(() => mentions.enroll(any()));
+      });
+
+      testWidgets('does not enroll again when the page rebuilds', (
+        tester,
+      ) async {
+        await pumpRoom(
+          tester,
+          channelId: 'general',
+          communityId: 'community-test',
+        );
+        tester.element(find.byType(ChatPage)).markNeedsBuild();
+        await tester.pump();
+        verify(() => mentions.enroll('general')).called(1);
+      });
+
+      testWidgets('enrolls the open room with a source rebuilt meanwhile', (
+        tester,
+      ) async {
+        final enrolling = Completer<void>();
+        when(() => mentions.enroll(any())).thenAnswer((_) => enrolling.future);
+        final rebuilt = _Mentions();
+        when(() => rebuilt.enroll(any())).thenAnswer((_) async {});
+        var builds = 0;
+        final container = await pumpRoom(
+          tester,
+          source: () => ++builds == 1 ? mentions : rebuilt,
+        );
+        verify(() => mentions.enroll('general')).called(1);
+        container.invalidate(chatMentionRepositoryProvider);
+        enrolling.complete();
+        await tester.pump();
+        await tester.pump();
+        verify(() => rebuilt.enroll('general')).called(1);
+      });
     });
   });
 }

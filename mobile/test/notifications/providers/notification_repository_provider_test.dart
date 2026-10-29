@@ -18,6 +18,8 @@ import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' as models;
 import 'package:nostr_client/nostr_client.dart';
+import 'package:openvine/features/chat/chat_mention_providers.dart';
+import 'package:openvine/features/chat/chat_mention_repository.dart';
 import 'package:openvine/models/environment_config.dart';
 import 'package:openvine/notifications/providers/announcement_providers.dart';
 import 'package:openvine/notifications/providers/notification_repository_provider.dart';
@@ -35,6 +37,9 @@ import 'package:profile_repository/profile_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
+
+class _MockChatMentionRepository extends Mock
+    implements ChatMentionRepository {}
 
 class _MockCacheDao extends Mock implements CacheDao {}
 
@@ -117,6 +122,7 @@ void main() {
       AccountSyncDao? accountDao,
       AccountStateWriteBarrier? writeBarrier,
       http.Client? announcementClient,
+      ChatMentionRepository? mentions,
     }) {
       final nostrClient = _MockNostrClient();
       when(() => nostrClient.configuredRelays).thenReturn(<String>[]);
@@ -170,6 +176,7 @@ void main() {
 
       final container = ProviderContainer(
         overrides: [
+          chatMentionRepositoryProvider.overrideWithValue(mentions),
           if (writeBarrier != null)
             accountStateWriteBarrierProvider.overrideWithValue(writeBarrier),
           sharedPreferencesProvider.overrideWithValue(preferences),
@@ -198,6 +205,14 @@ void main() {
       addTearDown(container.dispose);
       return container;
     }
+
+    test("serves the active account's room mentions as its local source", () {
+      final mentions = _MockChatMentionRepository();
+      final repository = createContainer(
+        mentions: mentions,
+      ).read(notificationRepositoryProvider)!;
+      expect(repository.localNotifications, same(mentions));
+    });
 
     group('account write barrier', () {
       for (final disposeFirst in [false, true]) {

@@ -818,6 +818,39 @@ void main() {
           expect(b.state.mentionSuggestions.first.displayName, 'AlicePost');
         },
       );
+
+      blocTest<CommentComposerBloc, CommentComposerState>(
+        'MentionSearchRequested backfills an uncached candidate from the API',
+        setUp: () {
+          when(
+            () => mockProfileRepository.searchUsersFromApi(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+              hasVideos: any(named: 'hasVideos'),
+            ),
+          ).thenAnswer(
+            (_) async => [
+              UserProfile(
+                pubkey: validId('author'),
+                name: 'AlicePost',
+                createdAt: DateTime.now(),
+                eventId: 'eid',
+                rawData: const <String, dynamic>{},
+              ),
+            ],
+          );
+        },
+        build: createBloc,
+        act: (b) => b.add(const MentionSearchRequested('alice')),
+        verify: (b) {
+          expect(
+            b.state.mentionSuggestions.map((suggestion) => suggestion.pubkey),
+            [validId('author')],
+          );
+        },
+      );
     });
 
     group('mention conversion on submit', () {

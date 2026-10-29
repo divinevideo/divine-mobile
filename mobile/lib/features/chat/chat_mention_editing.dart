@@ -1,0 +1,102 @@
+// ABOUTME: Keeps each picked chat account attached to its own edited text range.
+import 'package:openvine/models/caption_mention.dart';
+
+/// Shifts bindings outside the edited span and drops any token the edit
+/// touched or joined to a neighboring word.
+///
+/// [cursor] is the caret after the edit; it picks which of two identical
+/// neighboring tokens an insertion or deletion changed. A previous nonempty
+/// selection identifies replacements even when pasted text repeats a token.
+List<CaptionMention> updateChatMentionBindings({
+  required String before,
+  required String after,
+  required int cursor,
+  required List<CaptionMention> mentions,
+  int? previousSelectionStart,
+  int? previousSelectionEnd,
+}) {
+  if (before == after) return List.of(mentions);
+  var start = 0;
+  while (start < before.length &&
+      start < after.length &&
+      before[start] == after[start]) {
+    start++;
+  }
+  final insertedLength = after.length - before.length;
+  final insertionStart = cursor - insertedLength;
+  if (insertedLength > 0 &&
+      insertionStart >= 0 &&
+      cursor <= after.length &&
+      before.substring(0, insertionStart) ==
+          after.substring(0, insertionStart) &&
+      before.substring(insertionStart) == after.substring(cursor)) {
+    start = insertionStart;
+  } else if (cursor >= 0 && cursor <= after.length && cursor < start) {
+    start = cursor;
+  }
+  var oldEnd = before.length;
+  var newEnd = after.length;
+  while (oldEnd > start &&
+      newEnd > start &&
+      before[oldEnd - 1] == after[newEnd - 1]) {
+    oldEnd--;
+    newEnd--;
+  }
+  if (previousSelectionStart != null &&
+      previousSelectionEnd != null &&
+      previousSelectionStart >= 0 &&
+      previousSelectionEnd > previousSelectionStart &&
+      previousSelectionEnd <= before.length) {
+    final replacementEnd = previousSelectionEnd + insertedLength;
+    if (replacementEnd >= previousSelectionStart &&
+        replacementEnd <= after.length &&
+        before.substring(0, previousSelectionStart) ==
+            after.substring(0, previousSelectionStart) &&
+        before.substring(previousSelectionEnd) ==
+            after.substring(replacementEnd)) {
+      start = previousSelectionStart;
+      oldEnd = previousSelectionEnd;
+      newEnd = replacementEnd;
+    }
+  }
+  final delta = newEnd - oldEnd;
+  final kept = <CaptionMention>[];
+  for (final mention in mentions) {
+    final previousStart = mention.start;
+    final previousEnd = mention.end;
+    if (previousStart == null || previousEnd == null) continue;
+    int nextStart;
+    int nextEnd;
+    if (previousEnd <= start) {
+      nextStart = previousStart;
+      nextEnd = previousEnd;
+    } else if (previousStart >= oldEnd) {
+      nextStart = previousStart + delta;
+      nextEnd = previousEnd + delta;
+    } else {
+      continue;
+    }
+    if (nextStart < 0 ||
+        nextEnd > after.length ||
+        after.substring(nextStart, nextEnd) != '@${mention.display}' ||
+        (nextStart > 0 && !_separatesPick(after, nextStart - 1)) ||
+        !_separatesPick(after, nextEnd)) {
+      continue;
+    }
+    kept.add(
+      CaptionMention(
+        display: mention.display,
+        pubkey: mention.pubkey,
+        start: nextStart,
+        end: nextEnd,
+      ),
+    );
+  }
+  return kept;
+}
+
+/// Whether the character at [offset] keeps a picked token apart from its
+/// neighbor. Sentence punctuation may touch a pick; a word character would run
+/// into the `nostr:` reference it is sent as.
+bool _separatesPick(String text, int offset) =>
+    offset >= text.length || !RegExp(r'\w').hasMatch(text[offset]);

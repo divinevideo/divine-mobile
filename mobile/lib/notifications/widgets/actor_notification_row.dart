@@ -97,8 +97,13 @@ class _NotificationContent extends StatelessWidget {
       notification.type == NotificationKind.follow &&
       !notification.isFollowingBack;
 
-  bool get _hasComment =>
-      notification.commentText != null && notification.commentText!.isNotEmpty;
+  /// A room mention shows its room where a comment shows its text.
+  String? get _quote => switch (notification.chatTarget) {
+    final target? => '#${target.channelId}',
+    null => notification.commentText,
+  };
+
+  bool get _hasComment => _quote?.isNotEmpty ?? false;
 
   bool _shouldStackFollowBackButton(BuildContext context) {
     return MediaQuery.textScalerOf(context).scale(1) >
@@ -195,7 +200,7 @@ class _NotificationContent extends StatelessWidget {
         if (_hasComment) ...[
           const SizedBox(height: 4),
           NotificationCommentQuote(
-            text: notification.commentText!,
+            text: _quote!,
             timestamp: relativeTime,
           ),
         ],

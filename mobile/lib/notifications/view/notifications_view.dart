@@ -21,6 +21,7 @@ import 'package:openvine/notifications/view/announcement_detail_screen.dart';
 import 'package:openvine/notifications/widgets/widgets.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/router/routes/lists_routes.dart';
 import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
@@ -192,6 +193,22 @@ class _NotificationsViewState extends ConsumerState<NotificationsView> {
       NotificationFeedItemTapped(notification.id),
     );
 
+    // Room mentions exist only in-app, so no push or local tap path shares
+    // this target.
+    if (notification case ActorNotification(chatTarget: final target?)) {
+      _pushRoute(
+        context.push<void>(
+          Uri(
+            path: RoutePaths.chat,
+            queryParameters: {
+              'community': target.communityId,
+              'channel': target.channelId,
+            },
+          ).toString(),
+        ),
+      );
+      return;
+    }
     // Route the kind -> destination decision through the shared contract so
     // the in-app, push, and local tap paths share one target-selection policy.
     // The executors (here vs main.dart) still keep their own navigation
