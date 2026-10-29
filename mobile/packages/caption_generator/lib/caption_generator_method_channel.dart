@@ -18,6 +18,7 @@ class MethodChannelCaptionGenerator extends CaptionGeneratorPlatform {
     required String audioPath,
     String? localeIdentifier,
     bool preferOnDeviceRecognition = true,
+    bool requireOnDeviceRecognition = false,
   }) async {
     try {
       final raw = await methodChannel.invokeMethod<List<Object?>>(
@@ -28,6 +29,7 @@ class MethodChannelCaptionGenerator extends CaptionGeneratorPlatform {
           // ICU-style underscores from callers and normalize them here.
           'localeIdentifier': localeIdentifier?.replaceAll('_', '-'),
           'preferOnDeviceRecognition': preferOnDeviceRecognition,
+          'requireOnDeviceRecognition': requireOnDeviceRecognition,
         },
       );
       return (raw ?? const <Object?>[])

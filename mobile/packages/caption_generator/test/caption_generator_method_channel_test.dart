@@ -43,6 +43,7 @@ void main() {
         audioPath: '/tmp/audio.wav',
         localeIdentifier: 'en-US',
         preferOnDeviceRecognition: false,
+        requireOnDeviceRecognition: true,
       );
 
       expect(received.method, equals('transcribe'));
@@ -52,6 +53,7 @@ void main() {
           'audioPath': '/tmp/audio.wav',
           'localeIdentifier': 'en-US',
           'preferOnDeviceRecognition': false,
+          'requireOnDeviceRecognition': true,
         }),
       );
       expect(

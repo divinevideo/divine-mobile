@@ -4,6 +4,7 @@
 import 'package:blossom_upload_service/blossom_upload_service.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/caption_style.dart';
@@ -24,6 +25,9 @@ class CaptionsEditorCubit extends Cubit<CaptionsEditorState> {
   /// Creates the cubit. Omitting [generationService] uses the production
   /// pipeline: server-side transcription through [blossomUploadService] when
   /// given, falling back to on-device recognition.
+  ///
+  /// The voice-over takes and extracted clip sound among [audioTracks] are
+  /// transcribed along with the [clips].
   CaptionsEditorCubit({
     required List<DivineVideoClip> clips,
     required Duration totalDuration,
@@ -32,6 +36,7 @@ class CaptionsEditorCubit extends Cubit<CaptionsEditorState> {
     bool burnIn = false,
     CaptionCustomStyle? customStyle,
     List<CaptionCue>? initialCues,
+    List<AudioEvent> audioTracks = const [],
     BlossomUploadService? blossomUploadService,
     CaptionGenerationService? generationService,
   }) : _generationService =
@@ -42,6 +47,7 @@ class CaptionsEditorCubit extends Cubit<CaptionsEditorState> {
                  : null,
            ),
        _clips = clips,
+       _audioTracks = audioTracks,
        _totalDuration = totalDuration,
        super(
          CaptionsEditorState(
@@ -58,6 +64,7 @@ class CaptionsEditorCubit extends Cubit<CaptionsEditorState> {
 
   final CaptionGenerationService _generationService;
   final List<DivineVideoClip> _clips;
+  final List<AudioEvent> _audioTracks;
   final Duration _totalDuration;
 
   /// Default length of a manually added cue.
@@ -73,6 +80,7 @@ class CaptionsEditorCubit extends Cubit<CaptionsEditorState> {
     try {
       outcome = await _generationService.generateForClips(
         clips: _clips,
+        audioTracks: _audioTracks,
         localeIdentifier: state.languageTag,
       );
     } catch (_) {
