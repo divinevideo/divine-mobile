@@ -21,8 +21,8 @@ void main() {
   group(MetadataLinksSection, () {
     final l10n = lookupAppLocalizations(const Locale('en'));
 
-    Future<List<Uri>> pump(WidgetTester tester, VideoEvent video) async {
-      final opened = <Uri>[];
+    Future<List<String>> pump(WidgetTester tester, VideoEvent video) async {
+      final opened = <String>[];
       await tester.pumpWidget(
         MaterialApp(
           theme: VineTheme.theme,
@@ -31,10 +31,7 @@ void main() {
           home: Scaffold(
             body: MetadataLinksSection(
               video: video,
-              launcher: (uri) async {
-                opened.add(uri);
-                return true;
-              },
+              launcher: (_, url) async => opened.add(url),
             ),
           ),
         ),
@@ -62,7 +59,7 @@ void main() {
         await tester.tap(find.text('divine.video/about'));
         await tester.pump();
 
-        expect(opened, equals([Uri.parse('https://www.divine.video/about')]));
+        expect(opened, equals(['https://www.divine.video/about']));
       });
     });
   });

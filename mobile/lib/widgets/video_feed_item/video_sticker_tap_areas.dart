@@ -14,7 +14,6 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
-import 'package:openvine/utils/external_link_launcher.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_navigation.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
@@ -28,9 +27,8 @@ typedef VideoStickerOpener = void Function(
   VideoEvent video,
 );
 
-/// Opens what [region] on [video] points to: a profile, a hashtag's feed, the
-/// video's own sound, or a link, one outside Divine after the viewer has seen
-/// its address in [showLinkStickerSheet].
+/// Opens what [region] on [video] points to: a profile, a hashtag's feed, a
+/// sound, or a link through [openVideoLink].
 void openVideoSticker(
   BuildContext context,
   VideoStickerRegion region,
@@ -38,11 +36,8 @@ void openVideoSticker(
 ) {
   switch (region.kind) {
     case VideoStickerKind.link:
-      final host = Uri.tryParse(region.target)?.host ?? '';
       runDetached(
-        isTrustedExternalLinkHost(host)
-            ? openExternalLink(context, region.target)
-            : showLinkStickerSheet(context, region.target),
+        openVideoLink(context, region.target),
         'open a link sticker',
         logName: 'VideoStickerTapAreas',
         category: LogCategory.ui,
