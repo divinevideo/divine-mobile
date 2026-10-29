@@ -68,9 +68,10 @@ class _CountingDmRepository extends DmRepository {
   @override
   Future<DmMessageDeletionOutcome> retryMessageDeletion({
     required String rumorId,
+    bool automatic = false,
   }) {
     deletionRetries++;
-    return super.retryMessageDeletion(rumorId: rumorId);
+    return super.retryMessageDeletion(rumorId: rumorId, automatic: automatic);
   }
 }
 

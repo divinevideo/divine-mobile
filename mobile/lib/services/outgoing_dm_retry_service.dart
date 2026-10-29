@@ -766,7 +766,8 @@ class OutgoingDmRetryService {
   /// row's status: when the budget runs out the row is marked unconfirmed
   /// ([DmRepository.markMessageDeletionUnconfirmed]), which shows the sender
   /// a warning with Try again instead of a spinner, and every later session
-  /// gives it [OutgoingDmRetryConfig.retriesOnceRanOut] (#10012).
+  /// gives it [OutgoingDmRetryConfig.retriesOnceRanOut], as an automatic
+  /// attempt that keeps the warning (#10012).
   /// `DmReactionRetryService` tracks its own deletions the same way.
   Future<
     ({
@@ -800,7 +801,8 @@ class OutgoingDmRetryService {
           : _retryConfig.maxRetries;
       if (attempts >= allowance) {
         skippedExhausted++;
-        // A Try again moved it back to pending, and nothing confirmed it.
+        // Still pending with this session's budget spent: nothing has
+        // recorded yet that its retries ran out.
         if (!target.retriesRanOut) await _markDeletionRanOut(target.rumorId);
         continue;
       }
@@ -818,6 +820,7 @@ class OutgoingDmRetryService {
       try {
         outcome = await _dmRepository.retryMessageDeletion(
           rumorId: target.rumorId,
+          automatic: true,
         );
       } on Object catch (e, stackTrace) {
         unconfirmed++;
@@ -847,7 +850,10 @@ class OutgoingDmRetryService {
           unconfirmed++;
           if (attempts + 1 >= allowance) {
             _deletionRanOut.add(target.rumorId);
-            await _markDeletionRanOut(target.rumorId);
+            // An automatic attempt leaves one already unconfirmed as it is.
+            if (!target.retriesRanOut) {
+              await _markDeletionRanOut(target.rumorId);
+            }
             ranOut++;
           }
         case DmMessageDeletionOutcome.unavailable:

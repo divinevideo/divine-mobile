@@ -10113,9 +10113,9 @@ class DmRepository {
   /// progress, and it stays on [retryableMessageDeletions] with
   /// [DmMessageDeletionRetryTarget.retriesRanOut] set for a later launch.
   /// Only a pending retraction changes, and not while a retry of it is
-  /// running: that retry settles the status itself, and one that started
-  /// from a retraction whose retries ran out writes the warning back when
-  /// nothing confirms it.
+  /// running: that retry settles the status itself. An automatic retry
+  /// leaves a retraction whose retries ran out unconfirmed throughout, and
+  /// the sender's Try again writes the warning back when nothing confirms it.
   ///
   /// Throws whatever the database throws.
   Future<void> markMessageDeletionUnconfirmed({required String rumorId}) async {
@@ -10147,20 +10147,69 @@ class DmRepository {
   /// unreadable inbox is sent nothing more while it stays unreadable, is
   /// settled on that wrap once they advertise no inbox, and is wrapped again
   /// only once their inbox is found (#10012).
+  ///
+  /// [automatic] is for the retry sweep. A retraction whose retries ran out
+  /// keeps its warning through an automatic attempt, so a launch shows no
+  /// spinner and a kill mid-attempt leaves it on its reduced allowance. The
+  /// default is the sender's Try again, which moves it back to pending for
+  /// the spinner and writes the warning back when nothing confirms it, even
+  /// when it joins an automatic attempt already running (#10012).
   Future<DmMessageDeletionOutcome> retryMessageDeletion({
     required String rumorId,
+    bool automatic = false,
   }) {
     final existing = _messageDeletionRecoveriesInFlight[rumorId];
-    if (existing != null) return existing;
-    final future = _retryMessageDeletion(rumorId: rumorId);
+    if (existing != null) {
+      return automatic
+          ? existing
+          : _tryAgainWhileRetrying(rumorId: rumorId, running: existing);
+    }
+    final future = _retryMessageDeletion(
+      rumorId: rumorId,
+      automatic: automatic,
+    );
     _messageDeletionRecoveriesInFlight[rumorId] = future;
     return future.whenComplete(
       () => _messageDeletionRecoveriesInFlight.remove(rumorId),
     );
   }
 
+  /// The sender's Try again of [rumorId] while another attempt of it is
+  /// [running]: an automatic one leaves a retraction whose retries ran out
+  /// showing the warning, so move it to pending for the spinner before
+  /// joining, and write the warning back when nothing confirms it (#10012).
+  Future<DmMessageDeletionOutcome> _tryAgainWhileRetrying({
+    required String rumorId,
+    required Future<DmMessageDeletionOutcome> running,
+  }) async {
+    final row = await _directMessagesDao.getMessageById(
+      rumorId,
+      ownerPubkey: _ownerPubkey,
+    );
+    final storedRumor = row?.deletionRumorJson;
+    final movedToPending =
+        storedRumor != null &&
+        row?.deletionPublishStatus == DirectMessagesDao.deletionUnconfirmed;
+    if (movedToPending) {
+      await _directMessagesDao.markMessageDeletionPending(
+        rumorId,
+        deletionRumorJson: storedRumor,
+        ownerPubkey: _ownerPubkey,
+      );
+    }
+    final outcome = await running;
+    if (movedToPending && outcome == DmMessageDeletionOutcome.unconfirmed) {
+      await _directMessagesDao.markMessageDeletionUnconfirmed(
+        rumorId,
+        ownerPubkey: _ownerPubkey,
+      );
+    }
+    return outcome;
+  }
+
   Future<DmMessageDeletionOutcome> _retryMessageDeletion({
     required String rumorId,
+    required bool automatic,
   }) async {
     if (_messageService == null || _userPubkey.isEmpty) {
       return DmMessageDeletionOutcome.unavailable;
@@ -10205,17 +10254,19 @@ class DmRepository {
           targetKind: row.messageKind,
         );
 
-    // A retry of a blocked row, or of one whose automatic retries ran out
-    // (#10012), moves it back through pending so the bubble swaps its warning
-    // icon for progress, and so the attempt can record the members it
-    // reaches. A freshly minted rumor must also cross the durability boundary
+    // The sender's retry of a blocked row, or of one whose automatic retries
+    // ran out (#10012), moves it back through pending so the bubble swaps its
+    // warning icon for progress. An automatic retry leaves a ran-out row as
+    // it is. A freshly minted rumor must also cross the durability boundary
     // before the wire, so the sweep can re-drive it. Sweep retries of an
     // already-pending row need neither.
     final retriesRanOut =
         row.deletionPublishStatus == DirectMessagesDao.deletionUnconfirmed;
-    if (mintedFresh ||
-        retriesRanOut ||
-        row.deletionPublishStatus == DirectMessagesDao.deletionBlocked) {
+    final backToPending =
+        mintedFresh ||
+        (retriesRanOut && !automatic) ||
+        row.deletionPublishStatus == DirectMessagesDao.deletionBlocked;
+    if (backToPending) {
       await _directMessagesDao.markMessageDeletionPending(
         rumorId,
         deletionRumorJson: mintedFresh
@@ -10241,7 +10292,9 @@ class DmRepository {
     // it: show the warning again now, rather than a spinner until the
     // sweep's next pass (#10012). This call holds the in-flight slot, so it
     // writes through the DAO rather than [markMessageDeletionUnconfirmed].
-    if (retriesRanOut && outcome == DmMessageDeletionOutcome.unconfirmed) {
+    if (retriesRanOut &&
+        backToPending &&
+        outcome == DmMessageDeletionOutcome.unconfirmed) {
       await _directMessagesDao.markMessageDeletionUnconfirmed(
         rumorId,
         ownerPubkey: _ownerPubkey,

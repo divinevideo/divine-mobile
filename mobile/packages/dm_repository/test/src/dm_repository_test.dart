@@ -20166,7 +20166,10 @@ void main() {
           ),
         ).thenAnswer((_) => publish.future);
 
-        final first = repo.retryMessageDeletion(rumorId: _rumorEventId);
+        final first = repo.retryMessageDeletion(
+          rumorId: _rumorEventId,
+          automatic: true,
+        );
         final second = repo.retryMessageDeletion(rumorId: _rumorEventId);
         await Future<void>.delayed(Duration.zero);
 

@@ -1156,6 +1156,7 @@ void main() {
         when(
           () => dmRepository.retryMessageDeletion(
             rumorId: any(named: 'rumorId'),
+            automatic: any(named: 'automatic'),
           ),
         ).thenAnswer((_) async => outcome);
       }
@@ -1187,7 +1188,10 @@ void main() {
           }
 
           verify(
-            () => dmRepository.retryMessageDeletion(rumorId: 'del1'),
+            () => dmRepository.retryMessageDeletion(
+              rumorId: 'del1',
+              automatic: true,
+            ),
           ).called(2);
           verifyNever(
             () => dmRepository.markMessageDeletionUnconfirmed(
@@ -1196,7 +1200,8 @@ void main() {
           );
         });
 
-        test('gives it one more try on a later launch', () async {
+        test('gives it one more try on a later launch, which leaves its '
+            'warning as it is', () async {
           var clock = DateTime.utc(2026, 5, 10, 12);
           ranOut.add('del1');
           stubPending(['del1']);
@@ -1209,11 +1214,17 @@ void main() {
           }
 
           verify(
-            () => dmRepository.retryMessageDeletion(rumorId: 'del1'),
+            () => dmRepository.retryMessageDeletion(
+              rumorId: 'del1',
+              automatic: true,
+            ),
           ).called(1);
-          verify(
-            () => dmRepository.markMessageDeletionUnconfirmed(rumorId: 'del1'),
-          ).called(1);
+          // An automatic attempt never moves it off unconfirmed.
+          verifyNever(
+            () => dmRepository.markMessageDeletionUnconfirmed(
+              rumorId: any(named: 'rumorId'),
+            ),
+          );
         });
 
         test('marks it again when a Try again left it pending', () async {
@@ -1239,7 +1250,10 @@ void main() {
             () => dmRepository.markMessageDeletionUnconfirmed(rumorId: 'del1'),
           ).called(1);
           verify(
-            () => dmRepository.retryMessageDeletion(rumorId: 'del1'),
+            () => dmRepository.retryMessageDeletion(
+              rumorId: 'del1',
+              automatic: true,
+            ),
           ).called(1);
         });
 
@@ -1265,7 +1279,10 @@ void main() {
           await expectLater(service.sweep(), completes);
 
           verify(
-            () => dmRepository.retryMessageDeletion(rumorId: 'del2'),
+            () => dmRepository.retryMessageDeletion(
+              rumorId: 'del2',
+              automatic: true,
+            ),
           ).called(1);
           verify(
             () => dmRepository.markMessageDeletionUnconfirmed(rumorId: 'del2'),
@@ -1289,7 +1306,10 @@ void main() {
           ).sweep();
 
           verify(
-            () => dmRepository.retryMessageDeletion(rumorId: 'del1'),
+            () => dmRepository.retryMessageDeletion(
+              rumorId: 'del1',
+              automatic: true,
+            ),
           ).called(1);
           verifyNever(
             () => dmRepository.markMessageDeletionUnconfirmed(
@@ -1304,13 +1324,17 @@ void main() {
         when(
           () => dmRepository.retryMessageDeletion(
             rumorId: any(named: 'rumorId'),
+            automatic: any(named: 'automatic'),
           ),
         ).thenAnswer((_) async => DmMessageDeletionOutcome.sent);
 
         await buildService().sweep();
 
         verify(
-          () => dmRepository.retryMessageDeletion(rumorId: 'del1'),
+          () => dmRepository.retryMessageDeletion(
+            rumorId: 'del1',
+            automatic: true,
+          ),
         ).called(1);
       });
 
@@ -1320,6 +1344,7 @@ void main() {
         when(
           () => dmRepository.retryMessageDeletion(
             rumorId: any(named: 'rumorId'),
+            automatic: any(named: 'automatic'),
           ),
         ).thenAnswer((_) async => DmMessageDeletionOutcome.unconfirmed);
         final service = buildService(now: () => now);
@@ -1329,7 +1354,10 @@ void main() {
         await service.sweep();
 
         verify(
-          () => dmRepository.retryMessageDeletion(rumorId: 'del1'),
+          () => dmRepository.retryMessageDeletion(
+            rumorId: 'del1',
+            automatic: true,
+          ),
         ).called(1);
       });
 
@@ -1339,6 +1367,7 @@ void main() {
         when(
           () => dmRepository.retryMessageDeletion(
             rumorId: any(named: 'rumorId'),
+            automatic: any(named: 'automatic'),
           ),
         ).thenAnswer((_) async => DmMessageDeletionOutcome.unconfirmed);
         final service = buildService(
@@ -1353,7 +1382,10 @@ void main() {
         }
 
         verify(
-          () => dmRepository.retryMessageDeletion(rumorId: 'del1'),
+          () => dmRepository.retryMessageDeletion(
+            rumorId: 'del1',
+            automatic: true,
+          ),
         ).called(2);
       });
 
@@ -1365,6 +1397,7 @@ void main() {
         when(
           () => dmRepository.retryMessageDeletion(
             rumorId: any(named: 'rumorId'),
+            automatic: any(named: 'automatic'),
           ),
         ).thenAnswer((_) async => DmMessageDeletionOutcome.unavailable);
         final service = buildService(
@@ -1378,7 +1411,10 @@ void main() {
         }
 
         verify(
-          () => dmRepository.retryMessageDeletion(rumorId: 'del1'),
+          () => dmRepository.retryMessageDeletion(
+            rumorId: 'del1',
+            automatic: true,
+          ),
         ).called(4);
       });
 
@@ -1390,6 +1426,7 @@ void main() {
           when(
             () => dmRepository.retryMessageDeletion(
               rumorId: any(named: 'rumorId'),
+              automatic: any(named: 'automatic'),
             ),
           ).thenAnswer((_) async => DmMessageDeletionOutcome.unconfirmed);
           final service = buildService(
@@ -1409,7 +1446,10 @@ void main() {
           await service.sweep();
 
           verify(
-            () => dmRepository.retryMessageDeletion(rumorId: 'del1'),
+            () => dmRepository.retryMessageDeletion(
+              rumorId: 'del1',
+              automatic: true,
+            ),
           ).called(2);
         },
       );
@@ -1419,6 +1459,7 @@ void main() {
         when(
           () => dmRepository.retryMessageDeletion(
             rumorId: any(named: 'rumorId'),
+            automatic: any(named: 'automatic'),
           ),
         ).thenThrow(StateError('boom'));
 
@@ -1436,6 +1477,7 @@ void main() {
         verifyNever(
           () => dmRepository.retryMessageDeletion(
             rumorId: any(named: 'rumorId'),
+            automatic: any(named: 'automatic'),
           ),
         );
       });

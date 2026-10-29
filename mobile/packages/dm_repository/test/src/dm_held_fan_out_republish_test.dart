@@ -4,6 +4,7 @@
 // ABOUTME: inbox until it reads absent (settle) or is found (wrap again); the
 // ABOUTME: sender's copy waits for delivery.
 
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:db_client/db_client.dart';
@@ -1375,6 +1376,150 @@ void main() {
             wrapsTo(peerB),
             hasLength(2),
             reason: 'the pool wrap, then one wrap to the inbox it found',
+          );
+        });
+
+        group('an automatic retry', () {
+          Future<DmMessageDeletionOutcome> automaticRetry() =>
+              repository.retryMessageDeletion(
+                rumorId: _retractedMessageId,
+                automatic: true,
+              );
+
+          /// The retraction status each change of the thread shows, from now.
+          Future<List<DmRetractionStatus>> watchStatuses() async {
+            final seen = <DmRetractionStatus>[];
+            final subscription = repository
+                .watchMessages((await messageRow()).conversationId)
+                .listen((messages) {
+                  final status = messages
+                      .singleWhere((m) => m.id == _retractedMessageId)
+                      .retractionStatus;
+                  if (seen.isEmpty || seen.last != status) seen.add(status);
+                });
+            addTearDown(subscription.cancel);
+            await pumpEventQueue();
+            return seen;
+          }
+
+          test('keeps the warning for the whole attempt', () async {
+            await heldRetraction();
+            await repository.markMessageDeletionUnconfirmed(
+              rumorId: _retractedMessageId,
+            );
+            final seen = await watchStatuses();
+
+            expect(
+              await automaticRetry(),
+              DmMessageDeletionOutcome.unconfirmed,
+            );
+            await pumpEventQueue();
+
+            expect(seen, [DmRetractionStatus.failed]);
+            expect(
+              (await messageRow()).deletionPublishStatus,
+              DirectMessagesDao.deletionUnconfirmed,
+            );
+          });
+
+          test('records a member it reaches, so the next one sends them '
+              'nothing again', () async {
+            await heldRetraction(
+              participants: [owner, peerB, peerC],
+              heldFor: [peerB, peerC],
+            );
+            await repository.markMessageDeletionUnconfirmed(
+              rumorId: _retractedMessageId,
+            );
+            inboxes[peerB] = _Inbox.found;
+
+            expect(
+              await automaticRetry(),
+              DmMessageDeletionOutcome.unconfirmed,
+            );
+            expect(heldWraps((await messageRow()).heldDeletionWraps), {
+              peerB: deliveredEntry(wrapsTo(peerB).last.id),
+              peerC: heldEntry(wrapsTo(peerC).single.id),
+            });
+            expect(
+              await automaticRetry(),
+              DmMessageDeletionOutcome.unconfirmed,
+            );
+
+            expect(wrapsTo(peerB), hasLength(2));
+            expect(
+              (await messageRow()).deletionPublishStatus,
+              DirectMessagesDao.deletionUnconfirmed,
+            );
+          });
+
+          test('settles a retraction it delivers', () async {
+            await heldRetraction();
+            await repository.markMessageDeletionUnconfirmed(
+              rumorId: _retractedMessageId,
+            );
+            inboxes[peerB] = _Inbox.absent;
+
+            expect(await automaticRetry(), DmMessageDeletionOutcome.sent);
+
+            expect((await messageRow()).deletionPublishStatus, 'deletion_sent');
+          });
+
+          test(
+            'a Try again that joins it shows progress, then the warning',
+            () async {
+              await heldRetraction();
+              await repository.markMessageDeletionUnconfirmed(
+                rumorId: _retractedMessageId,
+              );
+              final seen = await watchStatuses();
+              final lookupGate = Completer<void>();
+              when(
+                () => nostrClient.queryEventsDetailed(
+                  any(),
+                  subscriptionId: any(named: 'subscriptionId'),
+                  tempRelays: any(named: 'tempRelays'),
+                  relayTypes: any(named: 'relayTypes'),
+                  sendAfterAuth: any(named: 'sendAfterAuth'),
+                  useCache: any(named: 'useCache'),
+                  useQueryPool: any(named: 'useQueryPool'),
+                  timeout: any(named: 'timeout'),
+                  requireAllRelaysSettled: any(
+                    named: 'requireAllRelaysSettled',
+                  ),
+                  acceptRelayClosedWhenOthersAnswered: any(
+                    named: 'acceptRelayClosedWhenOthersAnswered',
+                  ),
+                ),
+              ).thenAnswer((invocation) async {
+                await lookupGate.future;
+                return answerLookup(
+                  (invocation.positionalArguments.first as List)
+                      .cast<nostr_filter.Filter>(),
+                );
+              });
+              final automatic = automaticRetry();
+              await pumpEventQueue();
+
+              final tryAgain = retryRetraction();
+              await pumpEventQueue();
+              expect(
+                (await messageRow()).deletionPublishStatus,
+                DirectMessagesDao.deletionPending,
+                reason: 'the spinner shows while the running attempt finishes',
+              );
+              lookupGate.complete();
+
+              expect(await tryAgain, DmMessageDeletionOutcome.unconfirmed);
+              expect(await automatic, DmMessageDeletionOutcome.unconfirmed);
+              await pumpEventQueue();
+              expect(seen, [
+                DmRetractionStatus.failed,
+                DmRetractionStatus.pending,
+                DmRetractionStatus.failed,
+              ]);
+              expect(wrapsTo(peerB), hasLength(1));
+            },
           );
         });
       });

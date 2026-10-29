@@ -419,8 +419,9 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
   /// the kind-5 retracting [rumorId], for [recipientPubkey] while their inbox
   /// could not be read (#10012), in [DirectMessages.heldDeletionWraps].
   ///
-  /// Recorded only while the retraction is still pending with its stored
-  /// kind-5, so an attempt that ends after another one settled the row
+  /// Recorded only while the retraction is still pending, or unconfirmed
+  /// because its retries ran out (an automatic retry leaves it so), with its
+  /// stored kind-5, so an attempt that ends after another one settled the row
   /// records nothing. A recipient already recorded as having the retraction
   /// keeps that. Returns whether it was recorded.
   Future<bool> recordHeldDeletionWrap(
@@ -460,7 +461,8 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
       final row = await _firstVisible(rumorId, ownerPubkey);
       if (row == null ||
           row.deletionRumorJson == null ||
-          row.deletionPublishStatus != deletionPending) {
+          (row.deletionPublishStatus != deletionPending &&
+              row.deletionPublishStatus != deletionUnconfirmed)) {
         return false;
       }
       final rows =

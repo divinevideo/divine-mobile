@@ -1352,6 +1352,24 @@ void main() {
           expect(await heldWraps(), isNull);
         });
 
+        test('records on a retraction whose retries ran out, which an '
+            'automatic retry leaves as it is', () async {
+          await insertOwnMessage();
+          await markPending();
+          await dao.markMessageDeletionUnconfirmed(
+            'msg_del',
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(await recordWrap(), isTrue);
+          expect(await recordDelivered({otherRecipient: 'gw_c'}), isTrue);
+
+          expect(await heldWraps(), {
+            recipient: held('gw_held'),
+            otherRecipient: delivered('gw_c'),
+          });
+        });
+
         test('records nothing on a blocked retraction', () async {
           await insertOwnMessage();
           await markPending();
