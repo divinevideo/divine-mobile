@@ -3840,7 +3840,7 @@ void main() {
         tester,
       ) async {
         final mockGoRouter = MockGoRouter();
-        when(() => mockGoRouter.push(any())).thenAnswer((_) async => null);
+        when(() => mockGoRouter.push<void>(any())).thenAnswer((_) async {});
 
         await tester.pumpWidget(
           buildTestWidget(
@@ -3885,7 +3885,7 @@ void main() {
         await tester.pumpAndSettle();
 
         verify(
-          () => mockGoRouter.push(
+          () => mockGoRouter.push<void>(
             '/welcome/login-options?email=existing%40example.com',
           ),
         ).called(1);
