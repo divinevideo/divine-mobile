@@ -11,6 +11,7 @@ import 'package:models/models.dart'
         VideoStickerKind,
         VideoStickerRegion;
 import 'package:openvine/models/video_editor/info_sticker.dart';
+import 'package:openvine/models/video_editor/sticker_text_glyphs.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 /// The [infoStickerLayerKindKey] value of a social sticker layer.
@@ -201,6 +202,30 @@ class SocialStickerData extends Equatable {
   bool get isAnimated =>
       kind == SocialStickerKind.soundCredit &&
       soundDesign != SocialStickerSoundDesign.note;
+
+  /// The text the sticker draws, its link or note mark aside.
+  String get _drawnText => [
+    name,
+    hashtag,
+    linkTitle ?? linkDomain,
+    soundTitle,
+    soundArtist,
+    lyric,
+  ].nonNulls.join('\n');
+
+  /// Whether the sticker's text has an emoji, which looks the same on every
+  /// phone only in the sticker emoji font.
+  bool get hasEmoji => StickerTextGlyphs.of(_drawnText) == .emoji;
+
+  /// Whether a sharp copy of the sticker, drawn over the same sticker in a
+  /// video's frames, looks like it on every phone. A solid look hides what is
+  /// beneath; any other needs text every phone draws alike, emoji in the
+  /// sticker emoji font, which [emojiFontLoaded] says is loaded.
+  bool isRedrawnAlike({required bool emojiFontLoaded}) =>
+      style.coversBakedCopy ||
+      StickerTextGlyphs.of(
+        _drawnText,
+      ).isDrawnAlike(emojiFontLoaded: emojiFontLoaded);
 
   /// Whether the sticker moves with how loud the video's sound is.
   bool get listensToSound =>

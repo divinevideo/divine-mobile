@@ -15,12 +15,16 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 /// an export of [targetAspectRatio] keeps, and timed on the output through
 /// [timelineMap].
 ///
+/// Whether the sticker emoji font drew the stickers' emoji when they were
+/// captured, [emojiFontLoaded], decides which of them a viewer can redraw.
+///
 /// Empty without a [bodySize], which the layers' offsets are measured in.
 List<VideoStickerRegion> stickerRegionsFor({
   required List<ExportedLayer> capturedLayers,
   required Size? bodySize,
   required double targetAspectRatio,
   required TransitionTimelineMap timelineMap,
+  required bool emojiFontLoaded,
 }) {
   if (bodySize == null || bodySize.isEmpty) return const [];
   final frame = ExportLayerMapping.keptRect(bodySize, targetAspectRatio);
@@ -32,6 +36,7 @@ List<VideoStickerRegion> stickerRegionsFor({
         bodySize: bodySize,
         frame: frame,
         timelineMap: timelineMap,
+        emojiFontLoaded: emojiFontLoaded,
       ),
   ];
 }
@@ -42,6 +47,7 @@ VideoStickerRegion? _regionOf(
   required Size bodySize,
   required Rect frame,
   required TransitionTimelineMap timelineMap,
+  required bool emojiFontLoaded,
 }) {
   final layer = item.layer;
   final sticker = SocialStickerData.of(layer);
@@ -70,10 +76,11 @@ VideoStickerRegion? _regionOf(
     // Only a still sticker drawn as it is, with nothing over it, can be drawn
     // again over the frames: a turning record or an equalizer would not keep
     // time with the video beneath, a faded, blended or masked one would come
-    // back solid, and a copy would hide what lies on it.
+    // back solid, a copy would hide what lies on it, and a see-through one in
+    // glyphs a viewer's phone draws its own way would show both.
     style:
         sticker.isAnimated ||
-            !sticker.style.coversBakedCopy ||
+            !sticker.isRedrawnAlike(emojiFontLoaded: emojiFontLoaded) ||
             !_isDrawnPlainly(layer) ||
             above.any((upper) => _isCoveredBy(item, upper, bodySize))
         ? null

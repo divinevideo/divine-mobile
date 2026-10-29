@@ -12,6 +12,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 import 'package:openvine/widgets/video_feed_item/link_sticker_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/player_gesture_surface.dart';
@@ -350,7 +351,7 @@ void main() {
         );
       });
 
-      testWidgets('keeps a see-through look in the frames with its button', (
+      testWidgets('draws a see-through look without its fill', (
         tester,
       ) async {
         const dark = VideoStickerRegion(
@@ -365,10 +366,67 @@ void main() {
         );
         await pump(tester, [dark]);
 
+        final pill = tester.widget<DecoratedBox>(
+          find.descendant(
+            of: find.byType(SocialStickerView),
+            matching: find.byType(DecoratedBox),
+          ),
+        );
+
+        expect(find.text('#summer'), findsOneWidget);
+        expect((pill.decoration as BoxDecoration).color, isNull);
+      });
+
+      testWidgets(
+        'draws a see-through look with an emoji once its font is in',
+        (tester) async {
+          final font = Completer<bool>();
+          debugLoadStickerEmojiFont = () => font.future;
+          addTearDown(resetStickerEmojiFontForTesting);
+          const party = VideoStickerRegion(
+            kind: VideoStickerKind.hashtag,
+            target: 'party🎉',
+            centerX: 0.5,
+            centerY: 0.5,
+            width: 0.4,
+            height: 0.1,
+            style: 'dark',
+            label: 'party🎉',
+          );
+          await pump(tester, [party]);
+
+          expect(find.byType(SocialStickerView), findsNothing);
+          await tapAt(tester, const Offset(180, 320));
+          expect(opened, equals([party]));
+
+          font.complete(true);
+          await tester.pumpAndSettle();
+
+          expect(find.text('#party🎉'), findsOneWidget);
+        },
+      );
+
+      testWidgets('keeps a see-through look in a script it lacks as it is', (
+        tester,
+      ) async {
+        debugLoadStickerEmojiFont = () async => true;
+        addTearDown(resetStickerEmojiFontForTesting);
+        const tokyo = VideoStickerRegion(
+          kind: VideoStickerKind.hashtag,
+          target: '東京',
+          centerX: 0.5,
+          centerY: 0.5,
+          width: 0.4,
+          height: 0.1,
+          style: 'dark',
+          label: '東京',
+        );
+        await pump(tester, [tokyo]);
+        await tester.pump();
+
         expect(find.byType(SocialStickerView), findsNothing);
-        expect(find.text('#summer'), findsNothing);
         await tapAt(tester, const Offset(180, 320));
-        expect(opened, equals([dark]));
+        expect(opened, equals([tokyo]));
       });
 
       testWidgets('draws only the button for a sticker without its look', (

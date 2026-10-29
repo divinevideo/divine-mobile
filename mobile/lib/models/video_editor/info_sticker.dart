@@ -91,8 +91,8 @@ enum InfoStickerStyle {
   /// A clock face with hands; time only.
   analog;
 
-  /// Whether a redraw covers the baked-in glyphs, including platform font
-  /// fallbacks whose shape or width may differ on the viewer's phone.
+  /// Whether the look's pill is solid, so a redraw covers the glyphs in the
+  /// video beneath, whatever font the viewer's phone draws them in.
   bool get coversBakedCopy => switch (this) {
     light || brand || highlight => true,
     _ => false,

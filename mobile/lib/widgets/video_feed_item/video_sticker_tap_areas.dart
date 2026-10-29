@@ -15,6 +15,7 @@ import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
+import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_navigation.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 import 'package:openvine/widgets/video_feed_item/link_sticker_sheet.dart';
@@ -148,6 +149,7 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
 
   void _subscribe() {
     _subscription = null;
+    _loadEmojiFont();
     _update(widget.controller.state, rebuild: false);
     if (widget.video.stickerRegions.isEmpty) return;
     _subscription = widget.controller.stateStream.listen(_update);
@@ -170,6 +172,25 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
       _aspectRatio = aspectRatio;
       _shown = shown;
     });
+  }
+
+  /// Loads the sticker emoji font when a sticker has an emoji to draw in it,
+  /// and draws the stickers again once it is in; until then a see-through one
+  /// shows only as it is in the frames.
+  void _loadEmojiFont() {
+    if (stickerEmojiFontLoaded) return;
+    final hasEmoji = widget.video.stickerRegions.any(
+      (region) => SocialStickerData.ofRegion(region)?.hasEmoji ?? false,
+    );
+    if (!hasEmoji) return;
+    runDetached(
+      loadStickerEmojiFont().then((loaded) {
+        if (loaded && mounted) setState(() {});
+      }),
+      'load the sticker emoji font',
+      logName: 'VideoStickerTapAreas',
+      category: LogCategory.video,
+    );
   }
 
   /// Whether a tap on [region] has somewhere to go: a sound sticker that
@@ -258,7 +279,8 @@ class _StickerTapArea extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            if (sticker != null && sticker.style.coversBakedCopy)
+            if (sticker != null &&
+                sticker.isRedrawnAlike(emojiFontLoaded: stickerEmojiFontLoaded))
               // Laid over the sticker in the frames at its exact size, in the
               // parts that cover that one; the button below names it, and
               // only the button takes the pointer.
