@@ -107,7 +107,8 @@ void main() {
       test('repairs gentle drift with plain margins at $width x $height', () {
         // A wall at the top and left has no corners. Reliable background
         // texture starts just inside the trackable edge region. Eroding that
-        // region by the tracker border used to discard every repair candidate.
+        // region by the detector's border used to discard every repair
+        // candidate.
         final frames = [
           for (var i = 0; i < 90; i++)
             _frame(

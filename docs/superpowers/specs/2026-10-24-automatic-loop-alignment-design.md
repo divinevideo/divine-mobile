@@ -84,14 +84,14 @@ Initial conservative acceptance limits are:
   35% of the image width and height.
 - Require independent support from opposite boundary strips: left and right,
   or top and bottom. Detect corners locally in the outer 8% of the trackable
-  interior, starting after the tracker's 8-pixel border. Each supporting strip
-  needs at least four forward/backward-consistent matches and 60% agreement
-  within one analysis pixel. A bright moving subject must not monopolize
-  feature selection. The independent background fit uses only the outer 8% of
-  the full image. It stays independent of the subject only while those narrow
-  strips see background; a subject that reaches them can establish camera
-  identity, and its edge inside the wider strips can then supply opposite-edge
-  support.
+  interior, starting after the corner detector's 8-pixel border. Each
+  supporting strip needs at least four forward/backward-consistent matches and
+  60% agreement within one analysis pixel. A bright moving subject must not
+  monopolize feature selection. The independent background fit uses only the
+  outer 8% of the full image, less the same 8-pixel detector border. It stays
+  independent of the subject only while those narrow strips see background; a
+  subject that reaches them can establish camera identity, and its edge inside
+  the wider strips can then supply opposite-edge support.
 - Withhold every third consistent match from a separate fit. Require at
   least five withheld points and median prediction error at most one
   analysis pixel.
