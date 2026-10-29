@@ -1,5 +1,5 @@
-// ABOUTME: A playing video's link, mention and hashtag stickers, drawn sharp
-// ABOUTME: over its frames as buttons that open what each one points to.
+// ABOUTME: A playing video's link, mention, hashtag and sound stickers, drawn
+// ABOUTME: sharp over its frames as buttons that open what each points to.
 
 import 'dart:async';
 import 'dart:math' as math;
@@ -190,19 +190,37 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
           constraints.biggest,
           shouldPortraitExpand: widget.shouldPortraitExpand,
         );
-        return Stack(
-          children: [
-            for (final region in _shown)
-              _StickerTapArea(
-                region: region,
-                frame: frame,
-                onTap: () => widget.onOpen(context, region, widget.video),
-              ),
-          ],
+        // A sticker reaching past a contained video's edge is cut there in
+        // the frames, so its copy and its button are cut there too.
+        return ClipRect(
+          clipper: _FrameClipper(frame),
+          child: Stack(
+            children: [
+              for (final region in _shown)
+                _StickerTapArea(
+                  region: region,
+                  frame: frame,
+                  onTap: () => widget.onOpen(context, region, widget.video),
+                ),
+            ],
+          ),
         );
       },
     );
   }
+}
+
+/// Clips to [frame], where the video shows.
+class _FrameClipper extends CustomClipper<Rect> {
+  const _FrameClipper(this.frame);
+
+  final Rect frame;
+
+  @override
+  Rect getClip(Size size) => frame;
+
+  @override
+  bool shouldReclip(_FrameClipper oldClipper) => oldClipper.frame != frame;
 }
 
 /// One sticker drawn over its area, turned with it, and the button on it,

@@ -262,6 +262,32 @@ void main() {
         expect(opened, equals([ownSound]));
       });
 
+      testWidgets('leaves the bars beside a contained video to the player', (
+        tester,
+      ) async {
+        // A square video fills the middle 360 points of the 640-point box;
+        // the sticker reaches 18 points above it, into the bar.
+        when(
+          () => controller.state,
+        ).thenReturn(_playing(Duration.zero, videoHeight: 1080));
+        const onEdge = VideoStickerRegion(
+          kind: VideoStickerKind.hashtag,
+          target: 'summer',
+          centerX: 0.5,
+          centerY: 0,
+          width: 0.4,
+          height: 0.1,
+        );
+        await pump(tester, [onEdge]);
+
+        await tapAt(tester, const Offset(180, 140 - 10));
+        expect(opened, isEmpty);
+        expect(playerTaps, equals(1));
+
+        await tapAt(tester, const Offset(180, 140 + 10));
+        expect(opened, equals([onEdge]));
+      });
+
       testWidgets('turns its button with the sticker', (tester) async {
         // Upright, the sticker reaches 72 points above and below its centre
         // but only 24 to either side, half the smallest target.
