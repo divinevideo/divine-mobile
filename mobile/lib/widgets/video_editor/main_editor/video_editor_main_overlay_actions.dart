@@ -16,7 +16,6 @@ import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/utils/detached_future.dart';
-import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_text_wrap_hint.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
@@ -94,7 +93,9 @@ class _TopActions extends ConsumerWidget {
     });
 
     void close() {
-      context.read<VideoEditorMainBloc>().cancelFinishing();
+      context.read<VideoEditorMainBloc>().add(
+        const VideoEditorFinishCancelled(),
+      );
       if (isAutosavedDraft) {
         _onClosePressed(
           context: context,
@@ -110,33 +111,41 @@ class _TopActions extends ConsumerWidget {
     // Android's system back lands here and leaves the way the close button
     // does. An open sub-editor takes that back press itself
     // (`VideoEditorCanvas`), so it must not also close the editor.
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        if (context.read<VideoEditorMainBloc>().state.isSubEditorOpen) return;
-        close();
+    return BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
+      listenWhen: (previous, current) =>
+          previous.handOverCounter != current.handOverCounter,
+      listener: (context, _) {
+        final editor = VideoEditorScope.of(context).editor;
+        if (editor != null && editor.mounted) editor.doneEditing();
       },
-      child: VideoEditorToolbar(
-        closeIcon: .caretLeft,
-        doneIcon: .arrowRight,
-        closeSemanticLabel: context.l10n.videoEditorCloseEditorSemanticLabel,
-        doneSemanticLabel:
-            context.l10n.videoEditorContinueToPostDetailsSemanticLabel,
-        // The wrap hint is brief and only follows a text the user is
-        // sizing, so it takes the slot over from the frames chip meanwhile.
-        center: VideoEditorTextWrapHint(
-          fallback: stopMotionData == null
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          if (context.read<VideoEditorMainBloc>().state.isSubEditorOpen) return;
+          close();
+        },
+        child: VideoEditorToolbar(
+          closeIcon: .caretLeft,
+          doneIcon: .arrowRight,
+          closeSemanticLabel: context.l10n.videoEditorCloseEditorSemanticLabel,
+          doneSemanticLabel:
+              context.l10n.videoEditorContinueToPostDetailsSemanticLabel,
+          // The wrap hint is brief and only follows a text the user is
+          // sizing, so it takes the slot over from the frames chip meanwhile.
+          center: VideoEditorTextWrapHint(
+            fallback: stopMotionData == null
+                ? null
+                : _StopMotionFramesChip(
+                    clipId: stopMotionData.clipId,
+                    value: stopMotionData.value,
+                  ),
+          ),
+          onClose: close,
+          onDone: hasLoopSuggestion || isFinishing
               ? null
-              : _StopMotionFramesChip(
-                  clipId: stopMotionData.clipId,
-                  value: stopMotionData.value,
-                ),
+              : () => _onDonePressed(context, scope),
         ),
-        onClose: close,
-        onDone: hasLoopSuggestion || isFinishing
-            ? null
-            : () => _onDonePressed(context, scope),
       ),
     );
   }
@@ -146,8 +155,6 @@ class _TopActions extends ConsumerWidget {
   /// that length by silently looping at render, so instead the tap surfaces a
   /// "capture more frames" snackbar and stays in the editor.
   void _onDonePressed(BuildContext context, VideoEditorScope scope) {
-    final bloc = context.read<VideoEditorMainBloc>();
-    if (bloc.state.isFinishing) return;
     if (context.read<LoopSuggestionCubit>().state.status ==
         LoopSuggestionStatus.searching) {
       return;
@@ -166,38 +173,17 @@ class _TopActions extends ConsumerWidget {
       );
       return;
     }
-    final generation = bloc.claimFinishing();
-    if (generation == null) return;
-    runDetached(
-      _finishEditing(bloc, scope, generation),
-      'finish editing',
-      logName: 'VideoEditorMainOverlayActions',
-      category: LogCategory.video,
+    final editor = scope.editor;
+    if (editor == null) return;
+    context.read<VideoEditorMainBloc>().add(
+      VideoEditorFinishRequested(
+        stickerTexts: [
+          for (final layer in editor.activeLayers)
+            if (SocialStickerData.of(layer) case final sticker?)
+              SocialStickerView.textOf(sticker),
+        ],
+      ),
     );
-  }
-
-  /// Hands the edit over to the export, first loading the sticker emoji font
-  /// when a social sticker has an emoji to draw in it: the export captures the
-  /// stickers as they show, and a viewer's copy draws its emoji in that font.
-  Future<void> _finishEditing(
-    VideoEditorMainBloc bloc,
-    VideoEditorScope scope,
-    int generation,
-  ) async {
-    try {
-      final editor = scope.editor;
-      if (editor == null) return;
-      await loadStickerEmojiFontFor([
-        for (final layer in editor.activeLayers)
-          if (SocialStickerData.of(layer) case final sticker?)
-            SocialStickerView.textOf(sticker),
-      ]);
-      if (bloc.ownsFinishing(generation) && editor.mounted) {
-        editor.doneEditing();
-      }
-    } finally {
-      bloc.releaseFinishing(generation);
-    }
   }
 
   void _onClosePressed({

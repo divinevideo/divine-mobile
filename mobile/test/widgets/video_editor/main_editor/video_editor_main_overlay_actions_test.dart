@@ -321,7 +321,7 @@ void main() {
     });
 
     group('interactions', () {
-      testWidgets('claims Done before the finishing event is processed', (
+      testWidgets('hands the edit over once for two Done calls in one task', (
         tester,
       ) async {
         final editor = _MockEditor();

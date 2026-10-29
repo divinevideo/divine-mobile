@@ -301,12 +301,19 @@ class VideoEditorDetachedClipOpacityPreviewChanged
   List<Object?> get props => [preview];
 }
 
-/// Starts or ends handing the edit over to the export after Done.
-class VideoEditorFinishingChanged extends VideoEditorMainEvent {
-  const VideoEditorFinishingChanged({required this.isFinishing});
+/// Done was tapped: hand the edit over to the export once the fonts its
+/// social stickers draw in, named by their [stickerTexts], are loaded.
+class VideoEditorFinishRequested extends VideoEditorMainEvent {
+  const VideoEditorFinishRequested({this.stickerTexts = const []});
 
-  final bool isFinishing;
+  final List<String> stickerTexts;
 
   @override
-  List<Object?> get props => [isFinishing];
+  List<Object?> get props => [stickerTexts];
+}
+
+/// Drops a hand-over still waiting for its fonts, as when Close or system
+/// back leaves the edit.
+class VideoEditorFinishCancelled extends VideoEditorMainEvent {
+  const VideoEditorFinishCancelled();
 }
