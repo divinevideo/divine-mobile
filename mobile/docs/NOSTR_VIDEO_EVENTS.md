@@ -159,7 +159,9 @@ it. Divine draws it again from `style` and `label` exactly over the one in the
 frames, sharp at the screen's resolution, and makes it the button; without
 both fields it only places the button. A sound sticker whose design moves with
 the video (record, cassette, player, equalizer) is published without `style`,
-since a copy could not keep time with the frames beneath. A sticker that moves
+since a copy could not keep time with the frames beneath. So is a sticker drawn
+see-through, with a blend mode or through a mask, since a copy would come back
+solid. A sticker that moves
 across the video (keyframes, tracking or an animation) is never published with
 an area, which is why the editor offers none of those for these four sticker
 kinds. Before a link

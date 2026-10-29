@@ -62,9 +62,12 @@ VideoStickerRegion? _regionOf(
     rotation: layer.rotation,
     start: timelineMap.editorToOutputOrNull(layer.startTime),
     end: timelineMap.editorToOutputOrNull(layer.endTime),
-    // Only a still sticker can be drawn again over the frames: a turning
-    // record or an equalizer would not keep time with the video beneath.
-    style: sticker.isAnimated ? null : sticker.style.name,
+    // Only a still sticker drawn as it is can be drawn again over the frames:
+    // a turning record or an equalizer would not keep time with the video
+    // beneath, and a faded, blended or masked one would come back solid.
+    style: sticker.isAnimated || !_isDrawnPlainly(layer)
+        ? null
+        : sticker.style.name,
     label: sticker.tapLabel,
   );
   final start = region.start;
@@ -72,6 +75,13 @@ VideoStickerRegion? _regionOf(
   if (start != null && end != null && end <= start) return null;
   return _isOnFrame(region) ? region : null;
 }
+
+/// Whether [layer] is drawn onto the video fully opaque, unblended and
+/// whole, as a redraw of its sticker would be.
+bool _isDrawnPlainly(Layer layer) =>
+    layer.opacity == 1 &&
+    layer.blendMode == BlendMode.srcOver &&
+    layer.mask == null;
 
 /// Whether any of [region] can lie on the frame, measured generously by the
 /// circle around the turned sticker.

@@ -29,6 +29,9 @@ ExportedLayer _captured(
   Duration? startTime,
   Duration? endTime,
   List<LayerAnimation> animations = const [],
+  double opacity = 1,
+  BlendMode blendMode = BlendMode.srcOver,
+  LayerMask? mask,
 }) {
   final meta = data.toMeta();
   return ExportedLayer(
@@ -40,6 +43,9 @@ ExportedLayer _captured(
       startTime: startTime,
       endTime: endTime,
       animations: animations,
+      opacity: opacity,
+      blendMode: blendMode,
+      mask: mask,
       meta: meta,
       exportConfigs: WidgetLayerExportConfigs(id: 'sticker', meta: meta),
     ),
@@ -172,6 +178,23 @@ void main() {
       expect(
         regions.map((region) => region.target),
         equals(['', 'bundled_song']),
+      );
+    });
+
+    test('gives a faded, blended or masked sticker no look', () {
+      final regions = _regions([
+        _captured(_link, opacity: 0.5),
+        _captured(_link, blendMode: BlendMode.multiply),
+        _captured(
+          _link,
+          mask: const LayerMask(shape: LayerMaskShape.ellipse),
+        ),
+        _captured(_link),
+      ]);
+
+      expect(
+        regions.map((region) => region.style),
+        equals([null, null, null, 'light']),
       );
     });
 
