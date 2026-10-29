@@ -12,11 +12,14 @@ import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.d
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/stop_motion/stop_motion_frame_ops.dart';
+import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_text_wrap_hint.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 import 'package:openvine/widgets/video_editor/stop_motion/stop_motion_frame_commands.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar_chip.dart';
@@ -155,7 +158,26 @@ class _TopActions extends ConsumerWidget {
       );
       return;
     }
-    scope.editor?.doneEditing();
+    runDetached(
+      _finishEditing(scope),
+      'finish editing',
+      logName: 'VideoEditorMainOverlayActions',
+      category: LogCategory.video,
+    );
+  }
+
+  /// Hands the edit over to the export, first loading the sticker emoji font
+  /// when a social sticker has an emoji to draw in it: the export captures the
+  /// stickers as they show, and a viewer's copy draws its emoji in that font.
+  Future<void> _finishEditing(VideoEditorScope scope) async {
+    final editor = scope.editor;
+    if (editor == null) return;
+    await loadStickerEmojiFontFor([
+      for (final layer in editor.activeLayers)
+        if (SocialStickerData.of(layer) case final sticker?)
+          SocialStickerView.textOf(sticker),
+    ]);
+    if (editor.mounted) editor.doneEditing();
   }
 
   void _onClosePressed({

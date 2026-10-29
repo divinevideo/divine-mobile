@@ -8,7 +8,9 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/widgets.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/utils/audio_band_energies.dart';
+import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/sticker_pill_palette.dart';
+import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_marks.dart';
 
 /// How many bars the equalizer design has.
 const int soundCreditEqualizerBars = 6;
@@ -97,6 +99,7 @@ const double _symbolGap = 24;
 const double _lineGap = 4;
 const double _lyricGap = 8;
 const double _maxTextWidth = 720;
+const Size _noteSize = Size.square(56);
 const Size _vinylSize = Size.square(112);
 const Size _cassetteSize = Size(156, 104);
 const Size _equalizerSize = Size(104, 96);
@@ -135,9 +138,6 @@ class _SoundCreditLayout {
               detail.copyWith(color: palette.ink.withValues(alpha: 0.8)),
             ),
       lyric: lyric == null ? null : _text(lyric, detail, maxLines: 2),
-      note: data.soundDesign == SocialStickerSoundDesign.note
-          ? _text('🎵', palette.textStyle())
-          : null,
     );
   }
 
@@ -147,7 +147,6 @@ class _SoundCreditLayout {
     required this.title,
     required this.artist,
     required this.lyric,
-    required this.note,
   });
 
   final SocialStickerData data;
@@ -155,13 +154,12 @@ class _SoundCreditLayout {
   final TextPainter title;
   final TextPainter? artist;
   final TextPainter? lyric;
-  final TextPainter? note;
 
   bool get _isPlayer => data.soundDesign == SocialStickerSoundDesign.player;
 
   /// The size of the symbol in front of the text.
   Size get _symbolSize => switch (data.soundDesign) {
-    SocialStickerSoundDesign.note => note!.size,
+    SocialStickerSoundDesign.note => _noteSize,
     SocialStickerSoundDesign.cassette => _cassetteSize,
     SocialStickerSoundDesign.equalizer => _equalizerSize,
     SocialStickerSoundDesign.vinyl ||
@@ -266,7 +264,13 @@ class _SoundCreditLayout {
     final seconds = motion.time.inMicroseconds / Duration.microsecondsPerSecond;
     switch (data.soundDesign) {
       case SocialStickerSoundDesign.note:
-        note!.paint(canvas, symbolRect.topLeft);
+        paintSocialStickerMark(
+          canvas,
+          symbolRect,
+          SocialStickerMark.note,
+          ink: palette.ink,
+          shadows: palette.shadows,
+        );
       case SocialStickerSoundDesign.vinyl || SocialStickerSoundDesign.player:
         _paintVinyl(
           canvas,
@@ -307,12 +311,11 @@ class _SoundCreditLayout {
     title.dispose();
     artist?.dispose();
     lyric?.dispose();
-    note?.dispose();
   }
 
   static TextPainter _text(String text, TextStyle style, {int maxLines = 1}) =>
       TextPainter(
-        text: TextSpan(text: text, style: style),
+        text: TextSpan(text: text, style: withStickerEmojiFont(style)),
         textDirection: TextDirection.ltr,
         maxLines: maxLines,
         ellipsis: '…',

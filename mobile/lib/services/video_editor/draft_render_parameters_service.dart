@@ -29,6 +29,7 @@ import 'package:openvine/services/video_editor/video_editor_render_service.dart'
 import 'package:openvine/utils/editor_text_fonts.dart';
 import 'package:openvine/utils/editor_text_layer_bounds.dart';
 import 'package:openvine/utils/open_vine_image_cache.dart';
+import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_layer_view.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_view.dart';
@@ -423,7 +424,7 @@ class DraftRenderParametersService {
   /// Runs while the layers are mounted but before the capture frame, so all
   /// of it lands in the first build the rasterizer measures: the fonts the
   /// text layers name, images for stickers, the fonts and emoji info stickers
-  /// draw with, and the fonts of social stickers.
+  /// draw with, and the fonts of social stickers, their emoji font included.
   Future<void> _prepareLayerContent(
     List<Layer> layers,
     List<StickerData> stickers,
@@ -438,6 +439,11 @@ class DraftRenderParametersService {
     preloadInfoStickerContent(layers.map(InfoStickerData.of).nonNulls),
     if (layers.any(SocialStickerData.isSocialStickerLayer))
       preloadInfoStickerFonts(),
+    loadStickerEmojiFontFor([
+      for (final layer in layers)
+        if (SocialStickerData.of(layer) case final sticker?)
+          SocialStickerView.textOf(sticker),
+    ]),
   ]);
 
   /// Loads every sticker's image into the cache the sticker widget reads from.
