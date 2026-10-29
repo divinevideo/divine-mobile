@@ -1,6 +1,8 @@
 // ABOUTME: Whether a sticker's text looks the same on every phone: drawn in the
 // ABOUTME: bundled sticker font, and its emoji in the bundled emoji font.
 
+import 'package:openvine/models/video_editor/sticker_emoji_glyphs.dart';
+
 /// What a sticker's text needs to look the same on every phone.
 enum StickerTextGlyphs {
   /// Only characters the sticker font draws, which the app ships.
@@ -25,24 +27,18 @@ enum StickerTextGlyphs {
   static StickerTextGlyphs of(String text) {
     var glyphs = font;
     for (final rune in text.runes) {
-      if (rune < 0x20 || _inStickerFont(rune)) continue;
-      if (!_emoji.hasMatch(String.fromCharCode(rune))) return platform;
+      if (rune < 0x20 || _inRanges(rune, _stickerFontRanges)) continue;
+      // VS16 selects emoji presentation without drawing a glyph of its own.
+      if (rune != 0xFE0F && !_inRanges(rune, stickerEmojiFontRanges)) {
+        return platform;
+      }
       glyphs = emoji;
     }
     return glyphs;
   }
 
-  /// The characters of an emoji: the pictographs and what joins, colours and
-  /// flags them.
-  static final _emoji = RegExp(_emojiPattern, unicode: true);
-
-  // Not written into the constructor: the `valid_regexps` lint reads these
-  // property escapes as invalid on Linux, where the tests run them.
-  static const _emojiPattern =
-      r'[\p{Extended_Pictographic}\p{Emoji_Component}]';
-
-  static bool _inStickerFont(int rune) {
-    for (final (first, last) in _stickerFontRanges) {
+  static bool _inRanges(int rune, List<(int, int)> ranges) {
+    for (final (first, last) in ranges) {
       if (rune < first) return false;
       if (rune <= last) return true;
     }

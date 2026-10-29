@@ -191,6 +191,11 @@ frames, with its button. A solid background cannot correct different glyph
 advances when a copy is fitted to the captured box, so the same readiness and
 coverage checks apply to `light`, `brand` and `highlight` too.
 
+Emoji coverage is taken from the exact pinned font's cmap, not a Unicode
+emoji property. Newer emoji absent from that file keep their appearance in
+the frames and their button instead of being redrawn in a phone's fallback
+font.
+
 Some stickers are published without `style`, since a copy would not match the
 frames:
 

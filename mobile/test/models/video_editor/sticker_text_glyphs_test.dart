@@ -2,6 +2,7 @@
 // ABOUTME: bundled sticker font, and emoji once the sticker emoji font loads.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/models/video_editor/sticker_emoji_glyphs.dart';
 import 'package:openvine/models/video_editor/sticker_text_glyphs.dart';
 
 void main() {
@@ -31,7 +32,18 @@ void main() {
 
       test('reads any other script as drawn by the phone', () {
         expect(
-          ['東京', 'Привет', 'مرحبا', 'party 🎉 東京'].map(StickerTextGlyphs.of),
+          [
+            '東京',
+            'Привет',
+            'مرحبا',
+            'party 🎉 東京',
+            '★Lena★',
+            '♔',
+            '✁',
+            '🀀',
+            'Lena \u{1FAE9}', // Emoji 16 face absent from the pinned font.
+            '\u{1FA89}', // Emoji 16 harp absent from the pinned font.
+          ].map(StickerTextGlyphs.of),
           everyElement(StickerTextGlyphs.platform),
         );
       });
@@ -55,6 +67,18 @@ void main() {
           StickerTextGlyphs.platform.isDrawnAlike(emojiFontLoaded: true),
           isFalse,
         );
+      });
+    });
+
+    group('pinned emoji font coverage', () {
+      test('keeps ranges ordered, nonempty and disjoint', () {
+        expect(stickerEmojiFontRanges, isNotEmpty);
+        var previousEnd = -1;
+        for (final (first, last) in stickerEmojiFontRanges) {
+          expect(first, greaterThan(previousEnd));
+          expect(last, greaterThanOrEqualTo(first));
+          previousEnd = last;
+        }
       });
     });
   });

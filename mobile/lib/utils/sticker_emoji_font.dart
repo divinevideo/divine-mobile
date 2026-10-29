@@ -9,6 +9,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart' show TextStyle;
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:openvine/models/video_editor/sticker_emoji_glyphs.dart';
 import 'package:openvine/models/video_editor/sticker_text_glyphs.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:unified_logger/unified_logger.dart';
@@ -17,9 +18,8 @@ import 'package:unified_logger/unified_logger.dart';
 const String stickerEmojiFontFamily = 'DivineStickerEmoji';
 
 /// Noto Color Emoji as Google Fonts serves it, by its SHA-256.
-const String _fontHash =
-    'a98676580777f4f555d83287fb6e515f7450a7eae58466cbd1f4fed32ee03aaa';
-const int _fontLength = 24015012;
+const String _fontHash = stickerEmojiFontSha256;
+const int _fontLength = stickerEmojiFontLength;
 final Uri _fontUrl = Uri.https('fonts.gstatic.com', '/s/a/$_fontHash.ttf');
 
 /// How long a download may take before it counts as failed.
