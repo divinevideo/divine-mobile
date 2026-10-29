@@ -34,9 +34,10 @@ void main() {
       );
     });
 
-    test('leaves out unmarked tags and other schemes', () {
+    test('leaves out unmarked or otherwise marked tags and other schemes', () {
       final links = video([
         const ['r', 'https://divine.video/clip.mp4'],
+        const ['r', 'https://divine.video/clip.mp4', 'video'],
         const ['r', 'javascript://alert', videoLinkTagMarker],
         const ['r', 'wss://relay.divine.video', videoLinkTagMarker],
       ]).linkUrls;

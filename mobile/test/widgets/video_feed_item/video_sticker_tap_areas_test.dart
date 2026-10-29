@@ -277,8 +277,10 @@ void main() {
         await pump(tester, [upright]);
 
         await tapAt(tester, const Offset(180, 320 - 60));
-        await tapAt(tester, const Offset(180 + 60, 320));
+        expect(opened, equals([upright]));
+        expect(playerTaps, isZero);
 
+        await tapAt(tester, const Offset(180 + 60, 320));
         expect(opened, equals([upright]));
         expect(playerTaps, equals(1));
       });
