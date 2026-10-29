@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:bip340/bip340.dart' as schnorr;
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:test/test.dart';
 
 final String _own = schnorr.getPublicKey('01'.padLeft(64, '0'));
@@ -48,6 +49,7 @@ class _Cipher implements StreamCipher {
 class _Store extends InMemoryConcordStore {
   _Store() : super(_own);
   bool failRead = false;
+  String? failReadKey;
   bool failWrite = false;
   Completer<void>? reading;
   Completer<void>? resumeRead;
@@ -56,7 +58,9 @@ class _Store extends InMemoryConcordStore {
 
   @override
   Future<String?> get(String key) async {
-    if (failRead) throw StateError('storage unavailable');
+    if (failRead || key == failReadKey) {
+      throw StateError('storage unavailable');
+    }
     if (resumeRead != null) {
       if (!reading!.isCompleted) reading!.complete();
       await resumeRead!.future;
@@ -504,6 +508,56 @@ void main() {
         expect(room.relay.subscriptions, 2);
       },
     );
+
+    test(
+      'a relay error during history leaves the room failed and retryable',
+      () async {
+        final relay = _HistoryRelay();
+        final room = _Room('12' * 32, relay: relay);
+        final activity = _activity([room]);
+        final starting = activity.ensureStarted(room.channelId);
+        await pumpEventQueue();
+        relay.events.addError(StateError('connection lost'));
+        await pumpEventQueue();
+        relay.history.complete();
+        await expectLater(starting, throwsStateError);
+        expect(activity.summaries[room.channelId]!.loadFailed, isTrue);
+        await activity.ensureStarted(room.channelId);
+        expect(activity.summaries[room.channelId]!.loadFailed, isFalse);
+      },
+    );
+
+    test('a failed background refresh leaves the room failed', () async {
+      final room = _Room('12' * 32);
+      final activity = _activity([room]);
+      await activity.start();
+      room.store.failReadKey = 'sealed:index';
+      await room.ingest(kind: 9);
+      expect(activity.summaries[room.channelId]!.loadFailed, isTrue);
+    });
+
+    test('the minute refresh ages messages out of the recent activity', () {
+      fakeAsync((async) {
+        var now = _now;
+        final room = _Room('12' * 32);
+        // Not _activity: its tear-down would await a close made in this zone.
+        final activity = RoomActivityRepository(
+          ownPubkey: _own,
+          channels: [room.source],
+          now: () => now,
+        );
+        unawaited(room.seed([room.message('a', createdAt: _now - 60)]));
+        async.flushMicrotasks();
+        unawaited(activity.start());
+        async.flushMicrotasks();
+        expect(activity.summaries[room.channelId]!.recentMessageCount, 1);
+        now += 24 * 60 * 60;
+        async.elapse(const Duration(minutes: 1));
+        expect(activity.summaries[room.channelId]!.recentMessageCount, 0);
+        unawaited(activity.close());
+        async.flushMicrotasks();
+      });
+    });
 
     test(
       'serializes concurrent read snapshots without losing persisted IDs',
