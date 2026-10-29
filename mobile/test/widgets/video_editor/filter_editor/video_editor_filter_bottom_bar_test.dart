@@ -302,14 +302,27 @@ void main() {
     });
 
     group('previews', () {
-      testWidgets('show nothing until the first clip has a thumbnail', (
-        tester,
-      ) async {
-        usePhoneSize(tester);
-        await tester.pumpWidget(buildWidget());
+      for (final thumbnailPath in [null, '']) {
+        testWidgets('show nothing while the first clip has no thumbnail '
+            '(${thumbnailPath == null ? 'null' : 'empty'} path)', (
+          tester,
+        ) async {
+          usePhoneSize(tester);
+          final clip = DivineVideoClip(
+            id: 'clip-1',
+            video: EditorVideo.file('/documents/clip-1.mp4'),
+            duration: const Duration(seconds: 2),
+            recordedAt: DateTime(2026),
+            targetAspectRatio: .vertical,
+            originalAspectRatio: 9 / 16,
+            thumbnailPath: thumbnailPath,
+          );
+          await tester.pumpWidget(buildWidget(clips: [clip]));
 
-        expect(find.byType(FilteredWidget), findsNothing);
-      });
+          expect(find.byType(FilteredWidget), findsNothing);
+          expect(find.byType(VideoEditorCategoryPickerTile), findsWidgets);
+        });
+      }
 
       testWidgets("show each tile's filter over the applied tune and blur, "
           "on the first clip's thumbnail", (tester) async {
