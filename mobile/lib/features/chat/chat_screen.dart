@@ -239,10 +239,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
                     type: DivineButtonType.link,
                   ),
                 ],
-                BlocBuilder<ChatComposerCubit, ChatComposerState>(
+                BlocSelector<ChatComposerCubit, ChatComposerState, bool>(
                   bloc: _composer,
-                  builder: (context, composer) =>
-                      state.sendFailed || composer.sendFailed
+                  selector: (composer) => composer.sendFailed,
+                  builder: (context, composerFailed) =>
+                      state.sendFailed || composerFailed
                       ? Text(context.l10n.dmSendFailedMessage)
                       : const SizedBox.shrink(),
                 ),

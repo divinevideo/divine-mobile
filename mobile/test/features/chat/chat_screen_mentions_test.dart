@@ -241,6 +241,28 @@ void main() {
         _verifySent(chat, 'hi @Me');
       });
 
+      testWidgets('a send the composer reports failed shows the failure line', (
+        tester,
+      ) async {
+        final chat = await _pumpComposer(tester);
+        when(
+          () => chat.send(
+            communityId: any(named: 'communityId'),
+            channelId: any(named: 'channelId'),
+            author: any(named: 'author'),
+            body: any(named: 'body'),
+            nowMilliseconds: any(named: 'nowMilliseconds'),
+          ),
+        ).thenAnswer((_) async => false);
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        await tester.enterText(find.byType(TextField), 'hi');
+        await tester.pump();
+        expect(find.text(l10n.dmSendFailedMessage), findsNothing);
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.dmSendFailedMessage), findsOneWidget);
+      });
+
       testWidgets('a second Enter while sending sends once', (tester) async {
         final chat = await _pumpComposer(tester);
         final held = Completer<bool>();
