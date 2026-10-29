@@ -508,6 +508,55 @@ void main() {
     });
 
     group('enroll', () {
+      test('a refresh skips a room whose enrollment failed mid-loop', () async {
+        final store = _RefusedLaterStore(me);
+        await store.put(
+          'mention-state',
+          '{"rooms":{"general":900},"seen":{}}',
+        );
+        final restarting = Completer<void>();
+        final room = _Room();
+        when(room.close).thenAnswer((_) async {});
+        when(() => room.changes).thenAnswer((_) => const Stream.empty());
+        when(
+          () => room.timeline(now: any(named: 'now')),
+        ).thenReturn(FoldedThread([], {}));
+        final created = <String>[];
+        var generalStarts = 0;
+        final repo = ChatMentionRepository(
+          owner: me,
+          communityId: 'community-test',
+          store: store,
+          now: () => 1000,
+          canNotify: (_) => true,
+          createRoom: (channel) {
+            created.add(channel);
+            return room;
+          },
+          startRoom: (channel, _) async {
+            if (channel != 'general') return;
+            if (++generalStarts == 1) throw StateError('offline');
+            await restarting.future;
+          },
+        );
+        addTearDown(repo.close);
+        await repo.initialize();
+        await pumpEventQueue();
+        final write = store.held = Completer<void>();
+        final enrolling = expectLater(
+          repo.enroll('introductions'),
+          throwsStateError,
+        );
+        await pumpEventQueue();
+        final refreshing = repo.refresh();
+        await pumpEventQueue();
+        write.complete();
+        await enrolling;
+        restarting.complete();
+        await refreshing;
+        expect(created, ['general', 'general']);
+      });
+
       test(
         'close waits for an observer a refused enrollment stopped',
         () async {

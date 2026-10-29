@@ -220,9 +220,11 @@ class ChatMentionRepository implements LocalNotificationSource {
       await _repositories.remove(channel)?.close();
       _failedRooms.remove(channel);
     }
-    // A snapshot: enroll may add a room while a start below is awaited.
+    // A snapshot: enroll may add or roll back a room while a start below is
+    // awaited.
     for (final channel in List<String>.of(_rooms.keys)) {
       if (_closed) return;
+      if (!_rooms.containsKey(channel)) continue;
       await _observeOrDefer(channel);
     }
     reevaluate();
