@@ -143,7 +143,7 @@ void main() {
         int? expiresAt,
         String? editedBody,
       }) => ChatMessage(
-        id: id ?? '$author$time$ms'.padLeft(64, '0').substring(0, 64),
+        id: id ?? '$time$ms$author'.substring(0, 64),
         channelId: 'general',
         author: author,
         body: 'hello nostr:${NostrKeyUtils.encodePubKey(me)}',
