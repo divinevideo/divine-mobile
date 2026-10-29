@@ -102,7 +102,7 @@ void main() {
           },
         );
 
-        expect(() => draft.stickerCredits, throwsA(anything));
+        expect(() => draft.stickerCredits, throwsA(isA<TypeError>()));
       });
     });
   });

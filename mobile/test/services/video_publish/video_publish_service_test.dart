@@ -1623,6 +1623,65 @@ void main() {
       });
 
       test(
+        'sends a draft whose stickers cannot be read back to the editor',
+        () async {
+          _setupSuccessfulPublish(
+            mockAuthService: mockAuthService,
+            mockUploadManager: mockUploadManager,
+            mockDraftService: mockDraftService,
+            mockVideoEventPublisher: mockVideoEventPublisher,
+          );
+
+          final result = await service.publishVideo(
+            draft: _createTestDraft(
+              editorStateHistory: {
+                'version': '6.5.0',
+                'position': 0,
+                'history': 'not a history',
+              },
+            ),
+          );
+
+          expect(
+            result,
+            isA<PublishError>().having(
+              (error) => error.kind,
+              'kind',
+              PublishErrorKind.overlaysUnavailable,
+            ),
+          );
+          verifyNever(
+            () => mockVideoEventPublisher.publishVideoEvent(
+              upload: any(named: 'upload'),
+              title: any(named: 'title'),
+              description: any(named: 'description'),
+              hashtags: any(named: 'hashtags'),
+              expirationTimestamp: any(named: 'expirationTimestamp'),
+              allowAudioReuse: any(named: 'allowAudioReuse'),
+              collaboratorPubkeys: any(named: 'collaboratorPubkeys'),
+              mentionedPubkeys: any(named: 'mentionedPubkeys'),
+              linkUrls: any(named: 'linkUrls'),
+              inspiredByAddressableId: any(named: 'inspiredByAddressableId'),
+              inspiredByRelayUrl: any(named: 'inspiredByRelayUrl'),
+              inspiredByNpubs: any(named: 'inspiredByNpubs'),
+              clipSourceCredits: any(named: 'clipSourceCredits'),
+              selectedAudio: any(named: 'selectedAudio'),
+              selectedAudioEventId: any(named: 'selectedAudioEventId'),
+              selectedAudioRelay: any(named: 'selectedAudioRelay'),
+              language: any(named: 'language'),
+              contentWarning: any(named: 'contentWarning'),
+              thumbnailTimestamp: any(named: 'thumbnailTimestamp'),
+              replyContext: any(named: 'replyContext'),
+              addReplyToFeed: any(named: 'addReplyToFeed'),
+              onEventSigned: any(named: 'onEventSigned'),
+              onPublishedEvent: any(named: 'onPublishedEvent'),
+              onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
+            ),
+          );
+        },
+      );
+
+      test(
         'publishes where the final render shows its tappable stickers',
         () async {
           _setupSuccessfulPublish(

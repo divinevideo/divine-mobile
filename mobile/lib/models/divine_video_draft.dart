@@ -370,8 +370,9 @@ class DivineVideoDraft {
   ///
   /// Reads the whole history, so read it once per publish.
   ///
-  /// Throws when the history cannot be read, so the post fails where it can
-  /// be retried rather than going out without the tags its stickers show.
+  /// Throws whatever [ImportStateHistory.fromMap] throws for a history it
+  /// cannot read, such as a [TypeError]; a post must not go out without the
+  /// tags its stickers show.
   SocialStickerCredits get stickerCredits {
     if (editorStateHistory.isEmpty) return const SocialStickerCredits();
     final history = ImportStateHistory.fromMap(

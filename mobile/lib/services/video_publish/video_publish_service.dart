@@ -30,6 +30,8 @@ import 'package:openvine/services/mention_resolution_service.dart';
 import 'package:openvine/services/performance_monitoring_service.dart';
 import 'package:openvine/services/subtitle_service.dart';
 import 'package:openvine/services/upload_manager.dart';
+import 'package:openvine/services/video_editor/draft_render_parameters_service.dart'
+    show DraftOverlayRestoreException;
 import 'package:openvine/services/video_event_publisher.dart';
 import 'package:openvine/services/video_publish/draft_upload_materializer.dart';
 import 'package:openvine/services/video_publish/publish_error_kind.dart';
@@ -283,7 +285,7 @@ class VideoPublishService {
         identifiers: draft.collaboratorPubkeys,
         creatorIdentifier: pubkey,
       );
-      final stickerCredits = draft.stickerCredits;
+      final stickerCredits = _stickerCreditsOf(draft);
       final hashtags = stickerCredits.hashtagsWith(draft.hashtags);
 
       // Use existing upload if available, otherwise start new upload
@@ -662,6 +664,20 @@ class VideoPublishService {
 
   /// `de-CH` -> `de`; text-track lang tags carry the bare language code.
   String _languageCode(String languageTag) => languageTag.split('-').first;
+
+  /// What [draft]'s stickers add to the post.
+  ///
+  /// Throws a [DraftOverlayRestoreException] when its edit history cannot be
+  /// read: the post would go out without the tags its stickers show.
+  SocialStickerCredits _stickerCreditsOf(DivineVideoDraft draft) {
+    try {
+      return draft.stickerCredits;
+    } catch (error) {
+      throw DraftOverlayRestoreException(
+        'The stickers could not be read from the edit history: $error',
+      );
+    }
+  }
 
   /// The people the mention stickers in [credits] name, other than the
   /// creator and the collaborators, who carry their own `p` tags.
@@ -1181,6 +1197,11 @@ class VideoPublishService {
     }
     if (e is AudioReuseNotPermittedException) {
       return PublishErrorKind.audioReuseNotPermitted;
+    }
+    if (e is DraftOverlayRestoreException) {
+      // The draft has to be opened in the editor; a plain retry reads the
+      // same history again.
+      return PublishErrorKind.overlaysUnavailable;
     }
     if (e is ScheduledSignatureTimestampException) {
       // The media is up and the event is signed for the wrong moment: not a

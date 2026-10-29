@@ -90,6 +90,10 @@ enum PublishErrorKind {
   /// not entitled. The media is up; the user picks another time or posts now.
   scheduleRejected,
 
+  /// The draft's edit history cannot be read, so the post could not carry
+  /// what its stickers show. Opening the draft in the editor rebuilds it.
+  overlaysUnavailable,
+
   /// The draft belongs to a different account than the one signed in now —
   /// the user switched accounts while the upload was in flight. Publishing
   /// would post the video under the wrong identity.
