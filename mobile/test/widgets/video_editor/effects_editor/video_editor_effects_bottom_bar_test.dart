@@ -253,6 +253,36 @@ void main() {
       expect(tabsCastShadow(tester), isFalse);
     });
 
+    testWidgets('scrolling through the grid highlights every category in '
+        'turn, the last ones too short to reach the top included', (
+      tester,
+    ) async {
+      usePhoneSize(tester);
+      await tester.pumpWidget(buildWidget());
+      final position = tester
+          .widget<CustomScrollView>(grid())
+          .controller!
+          .position;
+
+      final highlighted = <EditorEffectCategory>[
+        EditorEffectCategory.values[tester
+            .widget<TabBar>(find.byType(TabBar))
+            .controller!
+            .index],
+      ];
+      while (position.pixels < position.maxScrollExtent) {
+        await scrollGridBy(tester, -20);
+        final current =
+            EditorEffectCategory.values[tester
+                .widget<TabBar>(find.byType(TabBar))
+                .controller!
+                .index];
+        if (current != highlighted.last) highlighted.add(current);
+      }
+
+      expect(highlighted, EditorEffectCategory.values);
+    });
+
     for (final (type, label) in [
       (EditorEffectType.tiltShift, l10n.videoEditorEffectTiltShift),
       (EditorEffectType.sparkles, l10n.videoEditorEffectSparkles),

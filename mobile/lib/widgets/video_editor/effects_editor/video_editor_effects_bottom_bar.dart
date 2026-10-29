@@ -163,10 +163,10 @@ class _EffectsPickerState extends State<_EffectsPicker>
       setState(() => _scrolledUnder = scrolledUnder);
     }
     if (!_followScroll) return;
-    final atEnd = position.pixels >= position.maxScrollExtent - 1;
-    final category = atEnd
-        ? EditorEffectCategory.values.last
-        : _layout.categoryAt(position.pixels);
+    final category = _layout.categoryAt(
+      position.pixels,
+      maxOffset: position.maxScrollExtent,
+    );
     if (tabController.index != category.index) {
       tabController.animateTo(category.index);
     }
@@ -419,11 +419,24 @@ class _GridLayout {
       _titleOffsets[category.index];
 
   /// The section whose title has scrolled to the top of the grid at
-  /// [offset].
-  EditorEffectCategory categoryAt(double offset) {
+  /// [offset], in a grid that scrolls up to [maxOffset].
+  ///
+  /// The last sections are too short for their titles to reach the top. They
+  /// share the scroll left after the last title that does, in order, so every
+  /// tab still gets its turn and the last one is highlighted at the end.
+  EditorEffectCategory categoryAt(double offset, {required double maxOffset}) {
+    final starts = List.of(_titleOffsets);
+    final firstUnreachable = starts.indexWhere((start) => start > maxOffset);
+    if (firstUnreachable > 0) {
+      final from = starts[firstUnreachable - 1];
+      final step = (maxOffset - from) / (starts.length - firstUnreachable);
+      for (var i = firstUnreachable; i < starts.length; i++) {
+        starts[i] = from + (i - firstUnreachable + 1) * step;
+      }
+    }
     var category = EditorEffectCategory.values.first;
     for (final candidate in EditorEffectCategory.values) {
-      if (offsetOf(candidate) <= offset + 1) category = candidate;
+      if (starts[candidate.index] <= offset + 1) category = candidate;
     }
     return category;
   }
