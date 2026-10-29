@@ -113,6 +113,52 @@ void main() {
               .having((s) => s.opacity, 'opacity', 0.8),
         ],
       );
+
+      blocTest<VideoEditorFilterBloc, VideoEditorFilterState>(
+        'discards a pick made in a session that opened with none',
+        build: buildBloc,
+        seed: () => VideoEditorFilterState(
+          selectedFilter: filters[1],
+          appliedFilters: [filters[0], filters[2]],
+          initialAppliedFilters: [filters[0]],
+        ),
+        act: (bloc) => bloc.add(const VideoEditorFilterCancelled()),
+        expect: () => [
+          isA<VideoEditorFilterState>()
+              .having((s) => s.hasFilter, 'hasFilter', isFalse)
+              .having((s) => s.appliedFilters, 'appliedFilters', [
+                filters[0],
+              ]),
+        ],
+      );
+    });
+
+    group('VideoEditorFilterConfirmed', () {
+      blocTest<VideoEditorFilterBloc, VideoEditorFilterState>(
+        'applies the pick and clears the selection',
+        build: buildBloc,
+        seed: () => VideoEditorFilterState(
+          selectedFilter: filters[1],
+          appliedFilters: [filters[0]],
+        ),
+        act: (bloc) => bloc.add(const VideoEditorFilterConfirmed()),
+        expect: () => [
+          isA<VideoEditorFilterState>()
+              .having((s) => s.hasFilter, 'hasFilter', isFalse)
+              .having((s) => s.appliedFilters, 'appliedFilters', [
+                filters[0],
+                filters[1],
+              ]),
+        ],
+      );
+
+      blocTest<VideoEditorFilterBloc, VideoEditorFilterState>(
+        'applies nothing when nothing is picked',
+        build: buildBloc,
+        seed: () => VideoEditorFilterState(appliedFilters: [filters[0]]),
+        act: (bloc) => bloc.add(const VideoEditorFilterConfirmed()),
+        expect: () => <VideoEditorFilterState>[],
+      );
     });
 
     group('VideoEditorFilterEditorInitialized', () {
