@@ -8911,6 +8911,45 @@ class AppLocalizationsSv extends AppLocalizations {
   String get videoEditorEffectComic => 'Serie';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Förvrängning';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Ljus';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Rörelse';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Partiklar';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'Naturlig';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'Färgstark';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'Varm';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'Kall';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'Vintage';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'Svartvitt';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'Toner';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Justera droppar';
 
   @override
@@ -10633,6 +10672,12 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationBounceHeight => 'Höjd';
+
+  @override
+  String get videoEditorLayerAnimationFlipSideways => 'I sidled';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'Uppifrån och ned';
 
   @override
   String get videoEditorLayerAnimationCustomPoint => 'Egen punkt';
@@ -14552,6 +14597,11 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String get messagesRooms => 'Rum';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Rum ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'Offentliga testrum';

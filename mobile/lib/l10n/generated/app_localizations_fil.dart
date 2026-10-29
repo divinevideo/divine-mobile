@@ -8977,6 +8977,45 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorEffectComic => 'Komiks';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Distort';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Liwanag';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Galaw';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Particles';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'Natural';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'Matingkad';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'Mainit';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'Malamig';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'Vintage';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'Itim at puti';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'Mga kulay';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Isaayos ang drops';
 
   @override
@@ -10711,6 +10750,12 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationBounceHeight => 'Taas';
+
+  @override
+  String get videoEditorLayerAnimationFlipSideways => 'Patagilid';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'Mula itaas pababa';
 
   @override
   String get videoEditorLayerAnimationCustomPoint => 'Custom';
@@ -14663,6 +14708,11 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get messagesRooms => 'Mga silid';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Mga silid ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms =>

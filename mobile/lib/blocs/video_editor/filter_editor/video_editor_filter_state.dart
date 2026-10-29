@@ -3,7 +3,6 @@ part of 'video_editor_filter_bloc.dart';
 /// State for the video editor filter selection.
 class VideoEditorFilterState extends Equatable {
   const VideoEditorFilterState({
-    required this.filters,
     this.selectedFilter,
     this.opacity = 1.0,
     this.initialSelectedFilter,
@@ -11,9 +10,6 @@ class VideoEditorFilterState extends Equatable {
     this.appliedFilters = const [],
     this.initialAppliedFilters = const [],
   });
-
-  /// List of available filters.
-  final List<FilterModel> filters;
 
   /// The currently selected filter, or `null` when none is selected.
   final FilterModel? selectedFilter;
@@ -36,24 +32,17 @@ class VideoEditorFilterState extends Equatable {
   /// Used to restore on cancel.
   final List<FilterModel> initialAppliedFilters;
 
-  /// Whether a filter is currently being previewed (not "None").
-  bool get hasFilter =>
-      selectedFilter != null && selectedFilter != PresetFilters.none;
+  /// Whether a filter is currently being previewed.
+  bool get hasFilter => selectedFilter != null;
 
   /// Whether any filters have been committed.
   bool get hasAppliedFilters => appliedFilters.isNotEmpty;
-
-  /// Whether the given filter is the currently selected one.
-  bool isSelected(FilterModel filter) =>
-      selectedFilter?.name == filter.name ||
-      (selectedFilter == null && filter == PresetFilters.none);
 
   /// Creates a copy of this state with optionally updated values.
   ///
   /// Set [clearSelectedFilter] to `true` to explicitly set
   /// [selectedFilter] to `null`.
   VideoEditorFilterState copyWith({
-    List<FilterModel>? filters,
     FilterModel? selectedFilter,
     bool clearSelectedFilter = false,
     double? opacity,
@@ -63,7 +52,6 @@ class VideoEditorFilterState extends Equatable {
     List<FilterModel>? initialAppliedFilters,
   }) {
     return VideoEditorFilterState(
-      filters: filters ?? this.filters,
       selectedFilter: clearSelectedFilter
           ? null
           : (selectedFilter ?? this.selectedFilter),
@@ -79,7 +67,6 @@ class VideoEditorFilterState extends Equatable {
 
   @override
   List<Object?> get props => [
-    filters,
     selectedFilter,
     opacity,
     initialSelectedFilter,

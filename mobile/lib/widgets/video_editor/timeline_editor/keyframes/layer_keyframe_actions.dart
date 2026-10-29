@@ -118,6 +118,7 @@ const keyframeEffectTypes = <LayerAnimationType>[
   LayerAnimationType.wiggle,
   LayerAnimationType.bounce,
   LayerAnimationType.scale,
+  LayerAnimationType.spin,
 ];
 
 /// A loop of [type] with the cycle, curve and strength the layer animation
@@ -136,6 +137,12 @@ LayerAnimation defaultKeyframeEffect(LayerAnimationType type) => switch (type) {
     duration: VideoEditorConstants.loopBounceCycle,
     curve: AnimationCurve.easeIn,
     bounceHeight: LayerAnimation.defaultBounceHeight,
+  ),
+  LayerAnimationType.spin => const LayerAnimation(
+    type: LayerAnimationType.spin,
+    phase: AnimationPhase.loop,
+    duration: VideoEditorConstants.loopSpinCycle,
+    turns: LayerAnimation.defaultTurns,
   ),
   _ => const LayerAnimation(
     type: LayerAnimationType.scale,

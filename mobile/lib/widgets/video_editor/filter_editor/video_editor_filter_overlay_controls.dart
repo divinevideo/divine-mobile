@@ -14,9 +14,9 @@ import 'package:openvine/widgets/video_editor/video_editor_vertical_slider.dart'
 
 /// Overlay controls for the filter editor.
 ///
-/// Shows a vertical opacity slider on the right side of the video preview
-/// when a filter is selected (not "None"). The slider allows adjusting the
-/// filter intensity from 0% to 100%.
+/// Shows a vertical opacity slider on the right side of the video preview,
+/// below the toolbar, when a filter is selected. The slider allows adjusting
+/// the filter intensity from 0% to 100%.
 class VideoEditorFilterOverlayControls extends StatelessWidget {
   const VideoEditorFilterOverlayControls({super.key});
 
@@ -37,35 +37,48 @@ class VideoEditorFilterOverlayControls extends StatelessWidget {
             ),
           ),
         ),
-        Align(
-          alignment: .centerRight,
-          child:
-              BlocSelector<VideoEditorFilterBloc, VideoEditorFilterState, bool>(
-                selector: (state) => state.hasFilter,
-                builder: (context, hasFilter) {
-                  return AnimatedSwitcher(
-                    transitionBuilder: (child, animation) {
-                      return FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: Tween(
-                            begin: const Offset(1, 0),
-                            end: Offset.zero,
-                          ).animate(animation),
-                          child: child,
-                        ),
-                      );
-                    },
-                    switchInCurve: Curves.easeInOut,
-                    duration: const Duration(milliseconds: 220),
-                    child: hasFilter
-                        ? const _OpacitySlider()
-                        : const SizedBox.shrink(),
-                  );
-                },
+        Column(
+          children: [
+            const _TopBarContent(),
+            // Centred below the toolbar: the picker under the preview is
+            // tall, so a slider centred on the whole overlay would reach up
+            // behind the toolbar.
+            Expanded(
+              child: Align(
+                alignment: .centerRight,
+                child:
+                    BlocSelector<
+                      VideoEditorFilterBloc,
+                      VideoEditorFilterState,
+                      bool
+                    >(
+                      selector: (state) => state.hasFilter,
+                      builder: (context, hasFilter) {
+                        return AnimatedSwitcher(
+                          transitionBuilder: (child, animation) {
+                            return FadeTransition(
+                              opacity: animation,
+                              child: SlideTransition(
+                                position: Tween(
+                                  begin: const Offset(1, 0),
+                                  end: Offset.zero,
+                                ).animate(animation),
+                                child: child,
+                              ),
+                            );
+                          },
+                          switchInCurve: Curves.easeInOut,
+                          duration: const Duration(milliseconds: 220),
+                          child: hasFilter
+                              ? const _OpacitySlider()
+                              : const SizedBox.shrink(),
+                        );
+                      },
+                    ),
               ),
+            ),
+          ],
         ),
-        const _TopBarContent(),
       ],
     );
   }
@@ -132,6 +145,14 @@ class _TopBarContent extends StatelessWidget {
           scope.filterEditor?.close();
         },
         onDone: () {
+          // With nothing picked, the filter editor would still commit its
+          // default "No Filter", which shows up as a bar on the timeline.
+          // Ask the editor, which is what done() commits from.
+          if (scope.filterEditor?.selectedFilter.filters.isEmpty ?? true) {
+            bloc.add(const VideoEditorFilterCancelled());
+            scope.filterEditor?.close();
+            return;
+          }
           bloc.add(const VideoEditorFilterConfirmed());
           scope.filterEditor?.done();
         },

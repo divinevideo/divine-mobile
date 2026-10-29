@@ -8995,6 +8995,45 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectComic => 'Комикс';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'Ретро';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Глич';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Изкривяване';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Светлина';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Движение';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Частици';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'Естествени';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'Наситени';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'Топли';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'Студени';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'Винтидж';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'Черно-бели';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'Оттенъци';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Настройка на капките';
 
   @override
@@ -10725,6 +10764,12 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationBounceHeight => 'Височина';
+
+  @override
+  String get videoEditorLayerAnimationFlipSideways => 'Встрани';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'Отгоре надолу';
 
   @override
   String get videoEditorLayerAnimationCustomPoint => 'По избор';
@@ -14678,6 +14723,11 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String get messagesRooms => 'Стаи';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Стаи ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'Публични тестови стаи';

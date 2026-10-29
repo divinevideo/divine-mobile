@@ -8916,6 +8916,45 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectComic => 'کامک';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'ریٹرو';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'گلچ';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'بگاڑ';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'روشنی';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'حرکت';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'ذرات';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'قدرتی';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'شوخ';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'گرم';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'ٹھنڈا';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'ونٹیج';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'سیاہ و سفید';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'رنگ';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'قطرے ایڈجسٹ کریں';
 
   @override
@@ -10633,6 +10672,12 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationBounceHeight => 'اونچائی';
+
+  @override
+  String get videoEditorLayerAnimationFlipSideways => 'پہلو کی طرف';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'اوپر سے نیچے';
 
   @override
   String get videoEditorLayerAnimationCustomPoint => 'اپنی مرضی کا';
@@ -14538,6 +14583,11 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get messagesRooms => 'کمرے';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'کمرے ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'عوامی آزمائشی کمرے';

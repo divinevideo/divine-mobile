@@ -26,6 +26,8 @@ import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/widgets/branded_loading_scaffold.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/open_effects_editor.dart';
+import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_bottom_bar.dart';
+import 'package:openvine/widgets/video_editor/filter_editor/video_editor_filter_bottom_bar.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_overlay_actions.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor_view.dart';
@@ -434,6 +436,114 @@ void main() {
         expect(mainBloc.state.playbackToggleCounter, 2);
       },
     );
+
+    group('effects bar', () {
+      testWidgets(
+        'reaches the bottom of the screen under the navigation bar, and keeps '
+        'the preview still as it starts to close',
+        (tester) async {
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetDevicePixelRatio);
+          tester.view.padding = const FakeViewPadding(bottom: 34);
+          tester.view.viewPadding = const FakeViewPadding(bottom: 34);
+          addTearDown(tester.view.resetPadding);
+          addTearDown(tester.view.resetViewPadding);
+          // Created inside the test, as in the voice-over test above.
+          final mainBloc = VideoEditorMainBloc();
+          addTearDown(mainBloc.close);
+          final effectsCubit = VideoEditorEffectsCubit();
+          addTearDown(effectsCubit.close);
+          await tester.pumpWidget(
+            buildWidget(
+              isLoading: true,
+              mainBlocOverride: mainBloc,
+              effectsCubit: effectsCubit,
+            ),
+          );
+          await tester.pump();
+
+          openEffectsEditor(mainBloc, effectsCubit, reduceMotion: false);
+          // The loading scaffold spins forever, so settle the switch by hand.
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 300));
+
+          final bar = find.byType(VideoEditorEffectsBottomBar);
+          final screen =
+              tester.view.physicalSize / tester.view.devicePixelRatio;
+          expect(tester.getRect(bar).bottom, screen.height);
+          expect(
+            tester.getSize(bar).height,
+            moreOrLessEquals(
+              VideoEditorEffectsBottomBar.heightOf(tester.element(bar)) + 34,
+            ),
+          );
+          final canvas = tester.getRect(find.byType(BrandedLoadingScaffold));
+
+          mainBloc.add(const VideoEditorMainSubEditorClosed());
+          await tester.pump();
+
+          // The bar collapses from its own height rather than snapping to
+          // the shorter bars of the other tools first.
+          expect(find.byType(VideoEditorEffectsBottomBar), findsNothing);
+          expect(
+            tester.getRect(find.byType(BrandedLoadingScaffold)),
+            canvas,
+          );
+        },
+      );
+    });
+
+    group('filter bar', () {
+      testWidgets(
+        'reaches the bottom of the screen under the navigation bar, and keeps '
+        'the preview still as it starts to close',
+        (tester) async {
+          tester.view.devicePixelRatio = 1;
+          addTearDown(tester.view.resetDevicePixelRatio);
+          tester.view.padding = const FakeViewPadding(bottom: 34);
+          tester.view.viewPadding = const FakeViewPadding(bottom: 34);
+          addTearDown(tester.view.resetPadding);
+          addTearDown(tester.view.resetViewPadding);
+          // Created inside the test, as in the voice-over test above.
+          final mainBloc = VideoEditorMainBloc();
+          addTearDown(mainBloc.close);
+          await tester.pumpWidget(
+            buildWidget(isLoading: true, mainBlocOverride: mainBloc),
+          );
+          await tester.pump();
+
+          mainBloc.add(
+            const VideoEditorMainOpenSubEditor(SubEditorType.filter),
+          );
+          // The loading scaffold spins forever, so settle the switch by hand.
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 300));
+
+          final bar = find.byType(VideoEditorFilterBottomBar);
+          final screen =
+              tester.view.physicalSize / tester.view.devicePixelRatio;
+          expect(tester.getRect(bar).bottom, screen.height);
+          expect(
+            tester.getSize(bar).height,
+            moreOrLessEquals(
+              VideoEditorFilterBottomBar.heightOf(tester.element(bar)) + 34,
+            ),
+          );
+          final canvas = tester.getRect(find.byType(BrandedLoadingScaffold));
+
+          mainBloc.add(const VideoEditorMainSubEditorClosed());
+          await tester.pump();
+
+          // The bar collapses from its own height rather than snapping to
+          // the shorter bars of the other tools first.
+          expect(find.byType(VideoEditorFilterBottomBar), findsNothing);
+          expect(
+            tester.getRect(find.byType(BrandedLoadingScaffold)),
+            canvas,
+          );
+        },
+      );
+    });
 
     testWidgets('hides editing tools while a loop repair runs', (
       tester,

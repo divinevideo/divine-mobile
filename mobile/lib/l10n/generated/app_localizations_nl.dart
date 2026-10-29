@@ -8955,6 +8955,45 @@ class AppLocalizationsNl extends AppLocalizations {
   String get videoEditorEffectComic => 'Strip';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Vervorming';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Licht';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Beweging';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Deeltjes';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'Natuurlijk';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'Levendig';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'Warm';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'Koel';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'Vintage';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'Zwart-wit';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'Tinten';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Druppels aanpassen';
 
   @override
@@ -10678,6 +10717,12 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationBounceHeight => 'Hoogte';
+
+  @override
+  String get videoEditorLayerAnimationFlipSideways => 'Zijwaarts';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'Van boven naar onder';
 
   @override
   String get videoEditorLayerAnimationCustomPoint => 'Eigen punt';
@@ -14616,6 +14661,11 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get messagesRooms => 'Kamers';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Kamers ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'Openbare testkamers';

@@ -8401,6 +8401,45 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectComic => '漫画';
 
   @override
+  String get videoEditorEffectCategoryRetro => '复古';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => '故障';
+
+  @override
+  String get videoEditorEffectCategoryDistort => '扭曲';
+
+  @override
+  String get videoEditorEffectCategoryLight => '光影';
+
+  @override
+  String get videoEditorEffectCategoryMotion => '动感';
+
+  @override
+  String get videoEditorEffectCategoryParticles => '粒子';
+
+  @override
+  String get videoEditorFilterCategoryNatural => '自然';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => '鲜艳';
+
+  @override
+  String get videoEditorFilterCategoryWarm => '暖色';
+
+  @override
+  String get videoEditorFilterCategoryCool => '冷色';
+
+  @override
+  String get videoEditorFilterCategoryVintage => '怀旧';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => '黑白';
+
+  @override
+  String get videoEditorFilterCategoryTints => '色调';
+
+  @override
   String get videoEditorDropsSettingsTitle => '调节水滴';
 
   @override
@@ -10007,6 +10046,12 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationBounceHeight => '高度';
+
+  @override
+  String get videoEditorLayerAnimationFlipSideways => '左右';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => '上下';
 
   @override
   String get videoEditorLayerAnimationCustomPoint => '自定义';
@@ -13668,6 +13713,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get messagesRooms => '聊天室';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return '聊天室 ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => '公开测试聊天室';

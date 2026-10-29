@@ -8474,6 +8474,45 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectComic => 'コミック';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'レトロ';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'グリッチ';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'ゆがみ';
+
+  @override
+  String get videoEditorEffectCategoryLight => '光';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'モーション';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'パーティクル';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'ナチュラル';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'ビビッド';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'ウォーム';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'クール';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'ヴィンテージ';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'モノクロ';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'ティント';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'しずくを調整';
 
   @override
@@ -10107,6 +10146,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationBounceHeight => '高さ';
+
+  @override
+  String get videoEditorLayerAnimationFlipSideways => '左右';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => '上下';
 
   @override
   String get videoEditorLayerAnimationCustomPoint => 'カスタム';
@@ -13831,6 +13876,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get messagesRooms => 'ルーム';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'ルーム ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => '公開テストルーム';

@@ -74,18 +74,18 @@ void main() {
         await tester.pumpWidget(subject(roomsUnreadCount: 124));
         final l10n = lookupAppLocalizations(const Locale('en'));
 
-        expect(find.text('${l10n.messagesRooms} (99+)'), findsOneWidget);
+        expect(find.text(l10n.messagesRoomsWithUnread('99+')), findsOneWidget);
         expect(
           find.bySemanticsLabel(l10n.messagesRoomsUnreadLabel(124, '124')),
           findsOneWidget,
         );
-        await tester.tap(find.text('${l10n.messagesRooms} (99+)'));
+        await tester.tap(find.text(l10n.messagesRoomsWithUnread('99+')));
         await tester.pump();
         expect(find.text('rooms-content'), findsOneWidget);
 
         await tester.pumpWidget(subject());
         expect(find.text(l10n.messagesRooms), findsOneWidget);
-        expect(find.text('${l10n.messagesRooms} (0)'), findsNothing);
+        expect(find.text(l10n.messagesRoomsWithUnread('0')), findsNothing);
         semantics.dispose();
       },
     );
@@ -103,7 +103,7 @@ void main() {
           ),
         );
         final l10n = lookupAppLocalizations(const Locale('en'));
-        expect(find.text('${l10n.messagesRooms} (12+)'), findsOneWidget);
+        expect(find.text(l10n.messagesRoomsWithUnread('12+')), findsOneWidget);
         expect(
           find.bySemanticsLabel(l10n.messagesRoomsUnreadLabel(12, '12+')),
           findsOneWidget,
@@ -180,7 +180,7 @@ void main() {
           ),
         );
         final l10n = lookupAppLocalizations(const Locale('en'));
-        await tester.tap(find.text('${l10n.messagesRooms} (99+)'));
+        await tester.tap(find.text(l10n.messagesRoomsWithUnread('99+')));
         await tester.pump();
         expect(find.text('rooms-content'), findsOneWidget);
         expect(tester.takeException(), isNull);

@@ -15029,6 +15029,84 @@ abstract class AppLocalizations {
   /// **'Comic'**
   String get videoEditorEffectComic;
 
+  /// Name of a group in the video effects picker: effects that look like old media, such as VHS tape, old film or an old TV.
+  ///
+  /// In en, this message translates to:
+  /// **'Retro'**
+  String get videoEditorEffectCategoryRetro;
+
+  /// Name of a group in the video effects picker: effects that make the picture break up digitally. Use the same word as the Glitch effect.
+  ///
+  /// In en, this message translates to:
+  /// **'Glitch'**
+  String get videoEditorEffectCategoryGlitch;
+
+  /// Name of a group in the video effects picker: effects that bend, mirror or split the picture, or show it as through a lens.
+  ///
+  /// In en, this message translates to:
+  /// **'Distort'**
+  String get videoEditorEffectCategoryDistort;
+
+  /// Name of a group in the video effects picker: effects that add, take away or flash light, such as glow, vignette or strobe.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get videoEditorEffectCategoryLight;
+
+  /// Name of a group in the video effects picker: effects that make the picture shake, pulse or leave a trail.
+  ///
+  /// In en, this message translates to:
+  /// **'Motion'**
+  String get videoEditorEffectCategoryMotion;
+
+  /// Name of a group in the video effects picker: effects where snow, confetti, hearts or sparkles fall or float over the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Particles'**
+  String get videoEditorEffectCategoryParticles;
+
+  /// Name of a group in the colour filter picker of the video editor: filters that lift the picture subtly and keep its colours true to life.
+  ///
+  /// In en, this message translates to:
+  /// **'Natural'**
+  String get videoEditorFilterCategoryNatural;
+
+  /// Name of a group in the colour filter picker of the video editor: filters that add colour and contrast.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibrant'**
+  String get videoEditorFilterCategoryVibrant;
+
+  /// Name of a group in the colour filter picker of the video editor: filters that give the picture a golden, orange or yellow cast. Warm as in colour temperature.
+  ///
+  /// In en, this message translates to:
+  /// **'Warm'**
+  String get videoEditorFilterCategoryWarm;
+
+  /// Name of a group in the colour filter picker of the video editor: filters that give the picture a blue or green cast. Cool as in colour temperature, not as in great.
+  ///
+  /// In en, this message translates to:
+  /// **'Cool'**
+  String get videoEditorFilterCategoryCool;
+
+  /// Name of a group in the colour filter picker of the video editor: filters that make the picture look faded, washed out or sepia, like an old photo.
+  ///
+  /// In en, this message translates to:
+  /// **'Vintage'**
+  String get videoEditorFilterCategoryVintage;
+
+  /// Name of a group in the colour filter picker of the video editor: black-and-white filters. Short, as it labels a tab.
+  ///
+  /// In en, this message translates to:
+  /// **'B&W'**
+  String get videoEditorFilterCategoryBlackAndWhite;
+
+  /// Name of a group in the colour filter picker of the video editor: filters that lay one strong colour, such as red or blue, over the whole picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Tints'**
+  String get videoEditorFilterCategoryTints;
+
   /// Header of the expandable card in the video effects editor that holds the settings of the Drops effect.
   ///
   /// In en, this message translates to:
@@ -17657,7 +17735,7 @@ abstract class AppLocalizations {
   /// **'Zoom out'**
   String get videoEditorTransitionZoomOut;
 
-  /// Transition option: the picture spins all the way round as it changes from the current clip to the next.
+  /// Transition option: the picture spins all the way round as it changes from the current clip to the next. Also the layer animation that turns a text or sticker around its center into place, away, or on and on in the Loop tab.
   ///
   /// In en, this message translates to:
   /// **'Spin'**
@@ -17717,7 +17795,7 @@ abstract class AppLocalizations {
   /// **'Diagonal wipe'**
   String get videoEditorTransitionDiagonalWipe;
 
-  /// Transition option: the picture turns over in 3D like a card, with the next clip on its back.
+  /// Transition option: the picture turns over in 3D like a card, with the next clip on its back. Also the layer animation that turns a text or sticker over like a card as it appears or disappears.
   ///
   /// In en, this message translates to:
   /// **'Flip'**
@@ -18082,6 +18160,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Height'**
   String get videoEditorLayerAnimationBounceHeight;
+
+  /// Screen reader label of the icon option that makes a flip layer animation turn the layer around its vertical axis like a card, its left and right edges trading places.
+  ///
+  /// In en, this message translates to:
+  /// **'Sideways'**
+  String get videoEditorLayerAnimationFlipSideways;
+
+  /// Screen reader label of the icon option that makes a flip layer animation turn the layer around its horizontal axis, its top and bottom edges trading places.
+  ///
+  /// In en, this message translates to:
+  /// **'Top over bottom'**
+  String get videoEditorLayerAnimationFlipOver;
 
   /// Direction option for a slide animation that starts (or ends) at a point the creator taps on the video, instead of travelling to or from a canvas edge.
   ///
@@ -24219,7 +24309,7 @@ abstract class AppLocalizations {
   /// **'Activity couldn’t load.'**
   String get messagesRoomLoadFailed;
 
-  /// Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages.
+  /// Invitation in a public room row when retained history holds no message to preview; says recent because older messages may have expired, and does not claim the room has never had messages.
   ///
   /// In en, this message translates to:
   /// **'No recent messages. Say hello.'**
@@ -24236,6 +24326,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rooms'**
   String get messagesRooms;
+
+  /// Rooms selector in Messages while rooms have unread messages. badge is the unread count as shown on screen, such as 3, 5+ or 99+.
+  ///
+  /// In en, this message translates to:
+  /// **'Rooms ({badge})'**
+  String messagesRoomsWithUnread(String badge);
 
   /// Heading above the room list in Messages while rooms are an internal public test.
   ///

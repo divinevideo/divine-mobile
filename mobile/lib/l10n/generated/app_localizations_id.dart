@@ -8826,6 +8826,45 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoEditorEffectComic => 'Komik';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Distorsi';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Cahaya';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Gerakan';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Partikel';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'Alami';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'Cerah';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'Hangat';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'Dingin';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'Vintage';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'Hitam putih';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'Rona';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Sesuaikan tetesan';
 
   @override
@@ -10540,6 +10579,12 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationBounceHeight => 'Tinggi';
+
+  @override
+  String get videoEditorLayerAnimationFlipSideways => 'Ke samping';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'Atas ke bawah';
 
   @override
   String get videoEditorLayerAnimationCustomPoint => 'Kustom';
@@ -14432,6 +14477,11 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get messagesRooms => 'Ruang';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Ruang ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'Ruang uji publik';

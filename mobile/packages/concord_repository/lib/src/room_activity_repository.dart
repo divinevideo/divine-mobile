@@ -20,6 +20,9 @@ class RoomActivitySummary {
 
   final String channelId;
   final ChatMessage? latestMessage;
+
+  /// Retained messages from others not yet read on this device; unlike the
+  /// other counts, not limited to the last 24 hours.
   final int unreadCount;
   final int recentMessageCount;
   final List<String> _recentAuthors;
@@ -27,7 +30,8 @@ class RoomActivitySummary {
   /// Unique contributors in the last 24 hours, newest contributor first.
   List<String> get recentAuthors => List.unmodifiable(_recentAuthors);
 
-  /// The retained wrap window filled, so counts may be lower bounds.
+  /// Set once the relay's history reply hit its limit or the retained wrap
+  /// window filled; the counts may then be lower bounds.
   final bool historyLimited;
   final bool loading;
   final bool loadFailed;
@@ -63,7 +67,7 @@ class RoomActivityChannel {
 
 /// Owns room sessions shared by the catalog and the active chat screen.
 ///
-/// Read receipts contain exact message IDs rather than a timestamp watermark:
+/// Read state stores exact message IDs rather than a timestamp watermark:
 /// a late delivery must remain unread even when its timestamp sorts earlier.
 /// Metadata uses a separate key and never rewrites encrypted message records.
 class RoomActivityRepository {
@@ -94,10 +98,22 @@ class RoomActivityRepository {
 
   static int _currentTime() => DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
+  // How far back a message counts as recent activity, in seconds.
+  static const int _recentWindowSeconds = 24 * 60 * 60;
+
+  // How far past this device's clock a message may be dated and still count
+  // as current, allowing for a sender whose clock runs fast.
+  static const int _maxFutureSkewSeconds = 15 * 60;
+
+  // How often summaries are rebuilt, so a quiet room's activity still ages
+  // out of the 24-hour window.
+  static const Duration _activityRefreshInterval = Duration(minutes: 1);
+
   Map<String, RoomActivitySummary> get summaries =>
       Map.unmodifiable(_summaries);
   Stream<void> get changes => _changes.stream;
 
+  /// Throws [ArgumentError] for a channel outside the catalog.
   ConcordRepository repositoryFor(String channelId) =>
       _source(channelId).channel.repository;
 
@@ -121,13 +137,16 @@ class RoomActivityRepository {
   }
 
   /// Concurrent callers share the same restoration and relay subscription.
+  ///
+  /// Throws [ArgumentError] for an unknown room; the future fails with a
+  /// [StateError] after [close], or with the room's load error.
   Future<void> ensureStarted(String channelId) {
     if (_closed) return Future.error(StateError('Room activity is closed'));
     final source = _source(channelId);
     if (source.started) return Future.value();
     final starting = source.starting;
     if (starting != null) return starting;
-    _activityTimer ??= Timer.periodic(const Duration(minutes: 1), (_) {
+    _activityTimer ??= Timer.periodic(_activityRefreshInterval, (_) {
       _sources.values
           .where((source) => source.started)
           .forEach(_refreshInBackground);
@@ -228,16 +247,20 @@ class RoomActivityRepository {
               !pending.contains(message.id),
         )
         .toList();
-    final recent = messages.where(
-      (message) => message.createdAt >= now - 86400,
-    );
-    final recentMessages = recent.toList();
+    // A sender chooses its own created_at, so a message dated further ahead
+    // than clock drift explains cannot be the latest one or recent activity.
+    final current = messages
+        .where((message) => message.createdAt <= now + _maxFutureSkewSeconds)
+        .toList();
+    final recentMessages = current
+        .where((message) => message.createdAt >= now - _recentWindowSeconds)
+        .toList();
     final authors = <String>{
       for (final message in recentMessages.reversed) message.author,
     };
     _summaries[source.channel.channelId] = RoomActivitySummary(
       channelId: source.channel.channelId,
-      latestMessage: messages.lastOrNull,
+      latestMessage: current.lastOrNull,
       unreadCount: messages
           .where(
             (message) =>
@@ -254,7 +277,10 @@ class RoomActivityRepository {
     _notify();
   }
 
-  /// Acknowledges only the rendered message snapshot after durable storage.
+  /// Durably records [messages] from others as read, starting the room first
+  /// if needed; later arrivals stay unread.
+  ///
+  /// Throws the room's load error or the store's write error.
   Future<void> markRead(
     String channelId,
     Iterable<ChatMessage> messages,
@@ -297,7 +323,7 @@ class RoomActivityRepository {
 
   Future<void> _closeSource(_ActivitySource source) async {
     // Stop the encrypted writer and relay listener immediately, even while
-    // an independent read-receipt write is still awaiting persistence.
+    // an independent read-state write is still awaiting persistence.
     final closing = source.channel.repository.close();
     final subscription = source.subscription;
     await Future.wait<void>([

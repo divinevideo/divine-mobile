@@ -24,6 +24,21 @@ class _MockVideoEditorMainBloc
     extends MockBloc<VideoEditorMainEvent, VideoEditorMainState>
     implements VideoEditorMainBloc {}
 
+class _MockProImageEditorState extends Mock implements ProImageEditorState {
+  @override
+  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) =>
+      '_MockProImageEditorState';
+}
+
+class _MockFilterEditorState extends Mock implements FilterEditorState {
+  @override
+  String toString({DiagnosticLevel minLevel = DiagnosticLevel.info}) =>
+      '_MockFilterEditorState';
+}
+
+class _MockFilterEditorKey extends Mock
+    implements GlobalKey<FilterEditorState> {}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -38,6 +53,7 @@ void main() {
   setUpAll(() {
     registerFallbackValue(VideoEditorFilterSelected(presetFiltersList.first));
     registerFallbackValue(const VideoEditorFilterCancelled());
+    registerFallbackValue(const VideoEditorFilterConfirmed());
   });
 
   group('VideoEditorFilterOverlayControls', () {
@@ -53,20 +69,24 @@ void main() {
       // Default state - no filter selected
       when(
         () => mockBloc.state,
-      ).thenReturn(VideoEditorFilterState(filters: presetFiltersList));
+      ).thenReturn(const VideoEditorFilterState());
       when(() => mockBloc.stream).thenAnswer((_) => const Stream.empty());
 
       when(() => mockMainBloc.state).thenReturn(const VideoEditorMainState());
       when(() => mockMainBloc.stream).thenAnswer((_) => const Stream.empty());
     });
 
-    Widget buildWidget() {
+    Widget buildWidget({
+      double height = 600,
+      ProImageEditorState? editorOverride,
+    }) {
       return MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: VideoEditorScope(
             editorKey: editorKey,
+            editorOverride: editorOverride,
             removeAreaKey: GlobalKey(),
             originalClipAspectRatio: 9 / 16,
             bodySizeNotifier: ValueNotifier(const Size(400, 600)),
@@ -87,10 +107,10 @@ void main() {
                 BlocProvider<VideoEditorFilterBloc>.value(value: mockBloc),
                 BlocProvider<VideoEditorMainBloc>.value(value: mockMainBloc),
               ],
-              child: const SizedBox(
+              child: SizedBox(
                 width: 400,
-                height: 600,
-                child: VideoEditorFilterOverlayControls(),
+                height: height,
+                child: const VideoEditorFilterOverlayControls(),
               ),
             ),
           ),
@@ -109,8 +129,7 @@ void main() {
       testWidgets('is visible when a filter is selected', (tester) async {
         when(() => mockBloc.state).thenReturn(
           VideoEditorFilterState(
-            filters: presetFiltersList,
-            selectedFilter: presetFiltersList[1], // Non-None filter
+            selectedFilter: presetFiltersList[1],
             opacity: 0.8,
           ),
         );
@@ -125,7 +144,6 @@ void main() {
         const testOpacity = 0.65;
         when(() => mockBloc.state).thenReturn(
           VideoEditorFilterState(
-            filters: presetFiltersList,
             selectedFilter: presetFiltersList[1],
             opacity: testOpacity,
           ),
@@ -140,11 +158,28 @@ void main() {
         expect(slider.value, testOpacity);
       });
 
+      testWidgets('stays below the toolbar over a short preview', (
+        tester,
+      ) async {
+        when(() => mockBloc.state).thenReturn(
+          VideoEditorFilterState(selectedFilter: presetFiltersList[1]),
+        );
+        // The preview left above the filter picker on a phone.
+        await tester.pumpWidget(buildWidget(height: 380));
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.getRect(find.byType(VideoEditorVerticalSlider)).top,
+          greaterThanOrEqualTo(
+            tester.getRect(find.bySemanticsLabel(doneLabel)).bottom,
+          ),
+        );
+      });
+
       testWidgets('shows slider during animation', (tester) async {
         // Start with a filter selected
         when(() => mockBloc.state).thenReturn(
           VideoEditorFilterState(
-            filters: presetFiltersList,
             selectedFilter: presetFiltersList[1],
           ),
         );
@@ -196,6 +231,79 @@ void main() {
         verify(
           () => mockBloc.add(const VideoEditorFilterCancelled()),
         ).called(1);
+      });
+
+      group('Done', () {
+        late _MockProImageEditorState editor;
+        late _MockFilterEditorState filterEditor;
+
+        setUp(() {
+          editor = _MockProImageEditorState();
+          filterEditor = _MockFilterEditorState();
+          final filterEditorKey = _MockFilterEditorKey();
+          when(() => editor.filterEditor).thenReturn(filterEditorKey);
+          when(() => filterEditorKey.currentState).thenReturn(filterEditor);
+        });
+
+        Future<void> tapDone(WidgetTester tester) async {
+          await tester.pumpWidget(buildWidget(editorOverride: editor));
+          await tester.pump();
+          await tester.tap(find.bySemanticsLabel(doneLabel));
+          await tester.pump();
+        }
+
+        void verifyClosedWithoutCommitting() {
+          verify(
+            () => mockBloc.add(const VideoEditorFilterCancelled()),
+          ).called(1);
+          verifyNever(() => mockBloc.add(const VideoEditorFilterConfirmed()));
+          verify(() => filterEditor.close()).called(1);
+          verifyNever(() => filterEditor.done());
+        }
+
+        testWidgets('commits the picked filter', (tester) async {
+          final picked = presetFiltersList[1];
+          when(
+            () => mockBloc.state,
+          ).thenReturn(VideoEditorFilterState(selectedFilter: picked));
+          when(() => filterEditor.selectedFilter).thenReturn(picked);
+
+          await tapDone(tester);
+
+          verify(
+            () => mockBloc.add(const VideoEditorFilterConfirmed()),
+          ).called(1);
+          verify(() => filterEditor.done()).called(1);
+          verifyNever(() => filterEditor.close());
+        });
+
+        testWidgets('with nothing picked closes without committing', (
+          tester,
+        ) async {
+          when(
+            () => filterEditor.selectedFilter,
+          ).thenReturn(PresetFilters.none);
+
+          await tapDone(tester);
+
+          verifyClosedWithoutCommitting();
+        });
+
+        testWidgets('closes without committing when the editor has nothing '
+            'picked, even if the bloc still holds an earlier pick', (
+          tester,
+        ) async {
+          when(() => mockBloc.state).thenReturn(
+            VideoEditorFilterState(selectedFilter: presetFiltersList[1]),
+          );
+          when(
+            () => filterEditor.selectedFilter,
+          ).thenReturn(PresetFilters.none);
+
+          await tapDone(tester);
+
+          verifyClosedWithoutCommitting();
+        });
       });
     });
   });

@@ -8912,6 +8912,45 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorEffectComic => 'رسوم مصوّرة';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'ريترو';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'تشويش';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'تشويه';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'إضاءة';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'حركة';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'جزيئات';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'طبيعي';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'حيوي';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'دافئ';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'بارد';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'عتيق';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'أبيض وأسود';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'ألوان';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'ضبط القطرات';
 
   @override
@@ -10613,6 +10652,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationBounceHeight => 'الارتفاع';
+
+  @override
+  String get videoEditorLayerAnimationFlipSideways => 'جانبيًا';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'من الأعلى إلى الأسفل';
 
   @override
   String get videoEditorLayerAnimationCustomPoint => 'مخصص';
@@ -14564,6 +14609,11 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get messagesRooms => 'الغرف';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'الغرف ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'غرف اختبار عامة';

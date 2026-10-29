@@ -6261,6 +6261,58 @@
   "@videoEditorEffectComic": {
     "description": "Name of a video effect: the picture looks like a printed comic book, with flat colours, halftone dots and ink outlines."
   },
+  "videoEditorEffectCategoryRetro": "Retro",
+  "@videoEditorEffectCategoryRetro": {
+    "description": "Name of a group in the video effects picker: effects that look like old media, such as VHS tape, old film or an old TV."
+  },
+  "videoEditorEffectCategoryGlitch": "Glitch",
+  "@videoEditorEffectCategoryGlitch": {
+    "description": "Name of a group in the video effects picker: effects that make the picture break up digitally. Use the same word as the Glitch effect."
+  },
+  "videoEditorEffectCategoryDistort": "Distort",
+  "@videoEditorEffectCategoryDistort": {
+    "description": "Name of a group in the video effects picker: effects that bend, mirror or split the picture, or show it as through a lens."
+  },
+  "videoEditorEffectCategoryLight": "Light",
+  "@videoEditorEffectCategoryLight": {
+    "description": "Name of a group in the video effects picker: effects that add, take away or flash light, such as glow, vignette or strobe."
+  },
+  "videoEditorEffectCategoryMotion": "Motion",
+  "@videoEditorEffectCategoryMotion": {
+    "description": "Name of a group in the video effects picker: effects that make the picture shake, pulse or leave a trail."
+  },
+  "videoEditorEffectCategoryParticles": "Particles",
+  "@videoEditorEffectCategoryParticles": {
+    "description": "Name of a group in the video effects picker: effects where snow, confetti, hearts or sparkles fall or float over the picture."
+  },
+  "videoEditorFilterCategoryNatural": "Natural",
+  "@videoEditorFilterCategoryNatural": {
+    "description": "Name of a group in the colour filter picker of the video editor: filters that lift the picture subtly and keep its colours true to life."
+  },
+  "videoEditorFilterCategoryVibrant": "Vibrant",
+  "@videoEditorFilterCategoryVibrant": {
+    "description": "Name of a group in the colour filter picker of the video editor: filters that add colour and contrast."
+  },
+  "videoEditorFilterCategoryWarm": "Warm",
+  "@videoEditorFilterCategoryWarm": {
+    "description": "Name of a group in the colour filter picker of the video editor: filters that give the picture a golden, orange or yellow cast. Warm as in colour temperature."
+  },
+  "videoEditorFilterCategoryCool": "Cool",
+  "@videoEditorFilterCategoryCool": {
+    "description": "Name of a group in the colour filter picker of the video editor: filters that give the picture a blue or green cast. Cool as in colour temperature, not as in great."
+  },
+  "videoEditorFilterCategoryVintage": "Vintage",
+  "@videoEditorFilterCategoryVintage": {
+    "description": "Name of a group in the colour filter picker of the video editor: filters that make the picture look faded, washed out or sepia, like an old photo."
+  },
+  "videoEditorFilterCategoryBlackAndWhite": "B&W",
+  "@videoEditorFilterCategoryBlackAndWhite": {
+    "description": "Name of a group in the colour filter picker of the video editor: black-and-white filters. Short, as it labels a tab."
+  },
+  "videoEditorFilterCategoryTints": "Tints",
+  "@videoEditorFilterCategoryTints": {
+    "description": "Name of a group in the colour filter picker of the video editor: filters that lay one strong colour, such as red or blue, over the whole picture."
+  },
   "videoEditorDropsSettingsTitle": "Adjust drops",
   "@videoEditorDropsSettingsTitle": {
     "description": "Header of the expandable card in the video effects editor that holds the settings of the Drops effect."
@@ -7579,7 +7631,7 @@
   },
   "videoEditorTransitionSpin": "Spin",
   "@videoEditorTransitionSpin": {
-    "description": "Transition option: the picture spins all the way round as it changes from the current clip to the next."
+    "description": "Transition option: the picture spins all the way round as it changes from the current clip to the next. Also the layer animation that turns a text or sticker around its center into place, away, or on and on in the Loop tab."
   },
   "videoEditorTransitionWhipPan": "Whip pan",
   "@videoEditorTransitionWhipPan": {
@@ -7619,7 +7671,7 @@
   },
   "videoEditorTransitionFlip": "Flip",
   "@videoEditorTransitionFlip": {
-    "description": "Transition option: the picture turns over in 3D like a card, with the next clip on its back."
+    "description": "Transition option: the picture turns over in 3D like a card, with the next clip on its back. Also the layer animation that turns a text or sticker over like a card as it appears or disappears."
   },
   "videoEditorTransitionCube": "Cube",
   "@videoEditorTransitionCube": {
@@ -7881,6 +7933,14 @@
   "videoEditorLayerAnimationBounceHeight": "Height",
   "@videoEditorLayerAnimationBounceHeight": {
     "description": "Section label above the slider that sets how high a bouncing layer is lifted, as a percentage of its own height."
+  },
+  "videoEditorLayerAnimationFlipSideways": "Sideways",
+  "@videoEditorLayerAnimationFlipSideways": {
+    "description": "Screen reader label of the icon option that makes a flip layer animation turn the layer around its vertical axis like a card, its left and right edges trading places."
+  },
+  "videoEditorLayerAnimationFlipOver": "Top over bottom",
+  "@videoEditorLayerAnimationFlipOver": {
+    "description": "Screen reader label of the icon option that makes a flip layer animation turn the layer around its horizontal axis, its top and bottom edges trading places."
   },
   "videoEditorLayerAnimationCustomPoint": "Custom",
   "@videoEditorLayerAnimationCustomPoint": {
@@ -11330,10 +11390,20 @@
   },
   "messagesRoomEmpty": "No recent messages. Say hello.",
   "@messagesRoomEmpty": {
-    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+    "description": "Invitation in a public room row when retained history holds no message to preview; says recent because older messages may have expired, and does not claim the room has never had messages."
   },
   "messagesDirect": "Direct",
   "messagesRooms": "Rooms",
+  "messagesRoomsWithUnread": "Rooms ({badge})",
+  "@messagesRoomsWithUnread": {
+    "description": "Rooms selector in Messages while rooms have unread messages. badge is the unread count as shown on screen, such as 3, 5+ or 99+.",
+    "placeholders": {
+      "badge": {
+        "type": "String",
+        "example": "5+"
+      }
+    }
+  },
   "messagesPublicTestRooms": "Public test rooms",
   "messagesPublicTestDisclosure": "These test rooms are public. Anyone with access can read your messages.",
   "messagesNoRooms": "No rooms yet",

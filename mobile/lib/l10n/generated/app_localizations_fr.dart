@@ -9048,6 +9048,45 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoEditorEffectComic => 'BD';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'Rétro';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Distorsion';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Lumière';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Mouvement';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Particules';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'Naturel';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'Éclatant';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'Chaud';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'Froid';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'Vintage';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'N&B';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'Teintes';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Ajuster les gouttes';
 
   @override
@@ -10792,6 +10831,12 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationBounceHeight => 'Hauteur';
+
+  @override
+  String get videoEditorLayerAnimationFlipSideways => 'Sur le côté';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'De haut en bas';
 
   @override
   String get videoEditorLayerAnimationCustomPoint => 'Point personnalisé';
@@ -14774,6 +14819,11 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get messagesRooms => 'Salons';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Salons ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'Salons de test publics';

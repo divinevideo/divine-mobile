@@ -9167,6 +9167,45 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectComic => 'కామిక్';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'రెట్రో';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'గ్లిచ్';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'వక్రీకరణ';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'కాంతి';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'కదలిక';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'కణాలు';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'సహజం';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'ప్రకాశవంతం';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'వెచ్చని';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'చల్లని';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'వింటేజ్';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'నలుపు తెలుపు';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'రంగులు';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'బిందువుల సర్దుబాటు';
 
   @override
@@ -10916,6 +10955,12 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationBounceHeight => 'ఎత్తు';
+
+  @override
+  String get videoEditorLayerAnimationFlipSideways => 'పక్కకు';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'పై నుండి కిందికి';
 
   @override
   String get videoEditorLayerAnimationCustomPoint => 'అనుకూలం';
@@ -14897,6 +14942,11 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get messagesRooms => 'గదులు';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'గదులు ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'బహిరంగ పరీక్ష గదులు';

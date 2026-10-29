@@ -8875,6 +8875,45 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorEffectComic => 'Truyện tranh';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Biến dạng';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Ánh sáng';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Chuyển động';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Hạt';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'Tự nhiên';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'Rực rỡ';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'Ấm';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'Lạnh';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'Cổ điển';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'Đen trắng';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'Tông màu';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Điều chỉnh giọt nước';
 
   @override
@@ -10586,6 +10625,12 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationBounceHeight => 'Độ cao';
+
+  @override
+  String get videoEditorLayerAnimationFlipSideways => 'Sang ngang';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'Từ trên xuống';
 
   @override
   String get videoEditorLayerAnimationCustomPoint => 'Tùy chỉnh';
@@ -14480,6 +14525,11 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get messagesRooms => 'Phòng';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Phòng ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'Phòng thử nghiệm công khai';

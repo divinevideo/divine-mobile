@@ -8715,6 +8715,45 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectComic => 'ኮሚክ';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'ሬትሮ';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'ግሊች';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'ማዛባት';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'ብርሃን';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'እንቅስቃሴ';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'ቅንጣቶች';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'ተፈጥሯዊ';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'ደማቅ';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'ሞቃት';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'ቀዝቃዛ';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'ቪንቴጅ';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'ጥቁር እና ነጭ';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'ቀለሞች';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'ጠብታዎችን አስተካክል';
 
   @override
@@ -10388,6 +10427,12 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationBounceHeight => 'ቁመት';
+
+  @override
+  String get videoEditorLayerAnimationFlipSideways => 'ወደ ጎን';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'ከላይ ወደ ታች';
 
   @override
   String get videoEditorLayerAnimationCustomPoint => 'ብጁ';
@@ -14186,6 +14231,11 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get messagesRooms => 'ክፍሎች';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'ክፍሎች ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'ይፋዊ የሙከራ ክፍሎች';

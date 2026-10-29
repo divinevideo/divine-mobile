@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' hide AspectRatio;
 import 'package:openvine/blocs/chat/chat_cubit.dart';
+import 'package:openvine/features/chat/room_activity_tile.dart';
 import 'package:openvine/features/chat/rooms_view.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/moderation_presentation.dart';
@@ -18,6 +19,10 @@ void main() {
       '3333333333333333333333333333333333333333333333333333333333333333';
   const secondAuthor =
       '4444444444444444444444444444444444444444444444444444444444444444';
+  const thirdAuthor =
+      '5555555555555555555555555555555555555555555555555555555555555555';
+  const fourthAuthor =
+      '6666666666666666666666666666666666666666666666666666666666666666';
   final l10n = lookupAppLocalizations(const Locale('en'));
 
   Widget subject({
@@ -33,7 +38,12 @@ void main() {
     Locale locale = const Locale('en'),
   }) => ProviderScope(
     overrides: [
-      for (final pubkey in [author, secondAuthor]) ...[
+      for (final pubkey in [
+        author,
+        secondAuthor,
+        thirdAuthor,
+        fourthAuthor,
+      ]) ...[
         fetchUserProfileProvider(pubkey).overrideWith(
           (ref) async => UserProfile(
             pubkey: pubkey,
@@ -76,6 +86,7 @@ void main() {
   RoomActivitySummary activeSummary({
     int unreadCount = 12,
     bool historyLimited = false,
+    List<String> recentAuthors = const [author, secondAuthor],
   }) => RoomActivitySummary(
     channelId: 'general',
     latestMessage: ChatMessage(
@@ -88,7 +99,7 @@ void main() {
     ),
     unreadCount: unreadCount,
     recentMessageCount: 24,
-    recentAuthors: const [author, secondAuthor],
+    recentAuthors: recentAuthors,
     historyLimited: historyLimited,
     loading: false,
   );
@@ -125,6 +136,36 @@ void main() {
         expect(tester.takeException(), isNull);
       },
     );
+
+    testWidgets('previews a message whose text is not well-formed UTF-16', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        subject(
+          activity: {
+            'general': RoomActivitySummary(
+              channelId: 'general',
+              latestMessage: ChatMessage(
+                id: 'c' * 64,
+                channelId: 'general',
+                author: author,
+                body: 'before${String.fromCharCode(0xD83D)}after',
+                createdAt: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+              ),
+              recentMessageCount: 1,
+              recentAuthors: const [author],
+              loading: false,
+            ),
+          },
+        ),
+      );
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text(l10n.messagesRoomLatestMessage('River', 'before\uFFFDafter')),
+        findsOneWidget,
+      );
+    });
 
     testWidgets(
       'chooses badge grammar from unread count while preserving lower bounds',
@@ -284,6 +325,26 @@ void main() {
       );
     });
 
+    testWidgets('shows at most three contributor avatars', (tester) async {
+      await tester.pumpWidget(
+        subject(
+          activity: {
+            'general': activeSummary(
+              recentAuthors: const [
+                author,
+                secondAuthor,
+                thirdAuthor,
+                fourthAuthor,
+              ],
+            ),
+          },
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(UserAvatar), findsNWidgets(3));
+      expect(find.text(l10n.messagesRoomContributors(4, '4')), findsOneWidget);
+    });
+
     testWidgets('uses deleted-account identity for a vanished contributor', (
       tester,
     ) async {
@@ -403,7 +464,7 @@ void main() {
         find.text(lookupAppLocalizations(const Locale('en')).messagesNoRooms),
         findsOneWidget,
       );
-      expect(find.byType(ListTile), findsNothing);
+      expect(find.byType(RoomActivityTile), findsNothing);
     });
   });
 }

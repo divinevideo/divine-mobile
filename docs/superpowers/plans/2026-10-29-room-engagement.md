@@ -13,7 +13,7 @@
 - [x] Package: test unread/unique contributors/recent counts/edits/deletion/expiry/dedup/read persistence/loading/errors and resource cleanup; implement source aggregation and read metadata.
 - [x] App: share room sessions behind existing gates, wire RoomsCubit, reuse repositories in ChatPage, record reads with route/app/scroll visibility. Test lifecycle and account isolation.
 - [x] UI: accessible adaptive room rows, latest preview/time, recent contributor avatars/count, unread and aggregate badges, loading/retry/empty states. Localize new copy and run consistency checks. Cover narrow layouts, large text, light/dark and navigation.
-- [ ] Validate package tests, affected app tests, localization guards and flutter analyze. Rebase, review complete diff in fresh context, resolve findings, commit/push/open PR targeting main, request mapped reviewers and inspect CI.
+- [x] Validate package tests, affected app tests, localization guards and flutter analyze. Rebase, review complete diff in fresh context, resolve findings, commit/push/open PR targeting main, request mapped reviewers and inspect CI.
 
 No livestream/LiveKit work. No synthetic activity or online claims. No real account identifiers in committed artifacts.
 
@@ -23,5 +23,5 @@ No livestream/LiveKit work. No synthetic activity or online claims. No real acco
 - Initial relay EOSE and pending verification must finish before a room is known-empty. Raw response limits count discarded and duplicate wraps and remain conservative across reconnects.
 - Read snapshots coalesce only after a rendered frame and request a frame on app resume; covered/background/scrolled-away rooms do not acknowledge new messages.
 - Resolve the current signer for each send, bound to the captured authenticated account, so a recovery upgrade does not pin an unavailable signer.
-- Stop owned channel writers immediately on teardown, before waiting for read metadata persistence. Keep exact read IDs to avoid late deliveries becoming unread after a timestamp watermark.
+- Stop owned channel writers immediately on teardown, before waiting for read metadata persistence. Keep exact read IDs: a timestamp watermark would mark a late delivery read, while exact IDs keep it unread.
 - All ten new labels are translated in every shipped locale; no localization debt was added. Empty copy refers to recent activity, not all-time history.

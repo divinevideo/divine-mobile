@@ -1,10 +1,9 @@
-// ABOUTME: Bottom bar of the video effects editor: "None" and one preview
-// ABOUTME: tile per effect, each showing the effect on the clip thumbnail.
+// ABOUTME: Bottom bar of the video effects editor: a category picker of
+// ABOUTME: preview tiles, each showing its effect on the first clip.
 
 import 'dart:io';
 import 'dart:ui' as ui;
 
-import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,16 +14,24 @@ import 'package:openvine/models/video_editor/drops_effect_settings.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/widgets/video_editor/video_editor_category_picker.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
     show VideoEffect, VideoEffectPreview, VideoEffectType;
 import 'package:unified_logger/unified_logger.dart';
 
-/// Bottom bar listing "None" and every video effect.
+/// Bottom bar of the effects editor: a [VideoEditorCategoryPicker] of the
+/// effects, one section per [EditorEffectCategory]. Opened on an effect of
+/// the timeline, the grid starts at that effect's section.
 ///
 /// Each tile shows its effect on the first clip's thumbnail, at full strength
 /// and at the start of the effect, where the glitch always bursts.
 class VideoEditorEffectsBottomBar extends ConsumerWidget {
   const VideoEditorEffectsBottomBar({super.key});
+
+  /// The height the editor reserves for the bar above the system navigation
+  /// bar.
+  static double heightOf(BuildContext context) =>
+      VideoEditorCategoryPicker.heightOf(context);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -34,43 +41,24 @@ class VideoEditorEffectsBottomBar extends ConsumerWidget {
     final selectedType = context.select(
       (VideoEditorEffectsCubit c) => c.state.selectedType,
     );
-    final textScaler = MediaQuery.textScalerOf(
-      context,
-    ).clamp(maxScaleFactor: 1.25);
-    final types = <EditorEffectType?>[null, ...EditorEffectType.values];
-
-    return MediaQuery(
-      data: MediaQuery.of(context).copyWith(textScaler: textScaler),
-      child: ListView.separated(
-        scrollDirection: .horizontal,
-        padding: const .fromLTRB(16, 0, 16, 4),
-        itemCount: types.length,
-        separatorBuilder: (_, index) {
-          if (index == 0) {
-            return Padding(
-              padding: const .symmetric(horizontal: 8),
-              child: VerticalDivider(
-                color: VineTheme.onSurface.withValues(alpha: 0.3),
-                thickness: 1,
-                indent: 12,
-                endIndent: 12,
-              ),
-            );
-          }
-          return const SizedBox(width: 8);
-        },
-        itemBuilder: (context, index) {
-          final type = types[index];
-          return _EffectItem(
-            type: type,
-            isSelected: type == selectedType,
-            thumbnailPath: thumbnailPath,
-          );
-        },
+    return VideoEditorCategoryPicker<EditorEffectCategory, EditorEffectType>(
+      sections: _sections,
+      categoryLabel: _categoryLabel,
+      initialCategory: selectedType?.category,
+      isSelected: (type) => type == selectedType,
+      tileBuilder: (context, type, isSelected) => _EffectItem(
+        type: type,
+        isSelected: isSelected,
+        thumbnailPath: thumbnailPath,
       ),
     );
   }
 }
+
+/// The effects of each category, in picker order.
+final Map<EditorEffectCategory, List<EditorEffectType>> _sections = {
+  for (final category in EditorEffectCategory.values) category: category.types,
+};
 
 class _EffectItem extends StatelessWidget {
   const _EffectItem({
@@ -82,78 +70,32 @@ class _EffectItem extends StatelessWidget {
   /// A playhead that never moves, so each tile shows a still.
   static final ValueListenable<Duration> _still = ValueNotifier(Duration.zero);
 
-  final EditorEffectType? type;
+  final EditorEffectType type;
   final bool isSelected;
   final String? thumbnailPath;
 
   @override
   Widget build(BuildContext context) {
-    final type = this.type;
-    final label = videoEffectLabel(context, type);
     final path = thumbnailPath;
-    return Semantics(
-      label: label,
-      button: true,
-      selected: isSelected,
-      child: GestureDetector(
-        onTap: () => context.read<VideoEditorEffectsCubit>().selectType(type),
-        child: SizedBox(
-          width: 68,
-          child: Column(
-            mainAxisAlignment: .end,
-            spacing: 4,
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  color: context.vineColors.surfaceContainer,
-                  borderRadius: .circular(20),
-                  border: .all(
-                    color: isSelected
-                        ? context.vineColors.accentPositive
-                        : context.vineColors.outlineMuted,
-                    width: 2,
-                  ),
-                ),
-                child: ClipRRect(
-                  borderRadius: .circular(18),
-                  child: path == null || path.isEmpty
-                      ? const SizedBox.expand()
-                      : type == EditorEffectType.echo
-                      ? _EchoThumbnail(path: path)
-                      : switch (shaderTileOf(type)) {
-                          final tile? => _ShaderThumbnail(
-                            path: path,
-                            tile: tile,
-                          ),
-                          null => VideoEffectPreview(
-                            effects: [
-                              if (type?.builtIn case final builtIn?)
-                                VideoEffect(type: builtIn),
-                            ],
-                            position: _still,
-                            child: _Thumbnail(path: path),
-                          ),
-                        },
-                ),
+    return VideoEditorCategoryPickerTile(
+      label: videoEffectLabel(context, type),
+      isSelected: isSelected,
+      onTap: () => context.read<VideoEditorEffectsCubit>().selectType(type),
+      preview: path == null || path.isEmpty
+          ? const SizedBox.expand()
+          : type == EditorEffectType.echo
+          ? _EchoThumbnail(path: path)
+          : switch (shaderTileOf(type)) {
+              final tile? => _ShaderThumbnail(path: path, tile: tile),
+              null => VideoEffectPreview(
+                effects: [
+                  if (type.builtIn case final builtIn?)
+                    VideoEffect(type: builtIn),
+                ],
+                position: _still,
+                child: _Thumbnail(path: path),
               ),
-              // The tile's Semantics already carries the name.
-              ExcludeSemantics(
-                child: Text(
-                  label,
-                  style: VineTheme.bodySmallFont(
-                    color: context.vineColors.onSurface,
-                  ),
-                  maxLines: 1,
-                  textAlign: .center,
-                  overflow: .ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+            },
     );
   }
 }
@@ -167,8 +109,8 @@ class _Thumbnail extends StatelessWidget {
   Widget build(BuildContext context) {
     return Image.file(
       File(path),
-      width: 52,
-      height: 52,
+      width: double.infinity,
+      height: double.infinity,
       fit: .cover,
       excludeFromSemantics: true,
     );
@@ -182,8 +124,13 @@ class _EchoThumbnail extends StatelessWidget {
 
   final String path;
 
-  /// Shift and opacity of each copy, oldest first.
-  static const _copies = [(-12.0, 0.22), (-8.0, 0.35), (-4.0, 0.5)];
+  /// Shift, as a share of the thumbnail's width inside the tile's border,
+  /// and opacity of each copy, oldest first.
+  static const List<(double, double)> _copies = [
+    (-12 / 48, 0.22),
+    (-8 / 48, 0.35),
+    (-4 / 48, 0.5),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -192,8 +139,8 @@ class _EchoThumbnail extends StatelessWidget {
       children: [
         _Thumbnail(path: path),
         for (final (dx, opacity) in _copies)
-          Transform.translate(
-            offset: Offset(dx, 0),
+          FractionalTranslation(
+            translation: Offset(dx, 0),
             child: Opacity(
               opacity: opacity,
               child: _Thumbnail(path: path),
@@ -220,7 +167,7 @@ const _particlesTileSeconds = 3.0;
 /// each other; the particles' last value is the style the native
 /// `ParticlesVideoEffect` draws.
 @visibleForTesting
-ShaderTile? shaderTileOf(EditorEffectType? type) => switch (type?.customId) {
+ShaderTile? shaderTileOf(EditorEffectType type) => switch (type.customId) {
   fisheyeVideoEffectId => (asset: 'shaders/fisheye.frag', values: const [0.8]),
   dropsVideoEffectId => (asset: 'shaders/drops.frag', values: _dropsTileValues),
   lightLeakVideoEffectId => (
@@ -376,6 +323,20 @@ String videoEffectLabel(BuildContext context, EditorEffectType? type) {
     _ => context.l10n.videoEditorEffectEcho,
   };
 }
+
+/// The localized name of [category].
+String _categoryLabel(
+  BuildContext context,
+  EditorEffectCategory category,
+) => switch (category) {
+  EditorEffectCategory.retro => context.l10n.videoEditorEffectCategoryRetro,
+  EditorEffectCategory.glitch => context.l10n.videoEditorEffectCategoryGlitch,
+  EditorEffectCategory.distort => context.l10n.videoEditorEffectCategoryDistort,
+  EditorEffectCategory.light => context.l10n.videoEditorEffectCategoryLight,
+  EditorEffectCategory.motion => context.l10n.videoEditorEffectCategoryMotion,
+  EditorEffectCategory.particles =>
+    context.l10n.videoEditorEffectCategoryParticles,
+};
 
 /// The localized name of the built-in effect [type].
 String builtInVideoEffectLabel(

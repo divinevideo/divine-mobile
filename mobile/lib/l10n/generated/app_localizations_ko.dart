@@ -8492,6 +8492,45 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectComic => '만화';
 
   @override
+  String get videoEditorEffectCategoryRetro => '레트로';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => '글리치';
+
+  @override
+  String get videoEditorEffectCategoryDistort => '왜곡';
+
+  @override
+  String get videoEditorEffectCategoryLight => '빛';
+
+  @override
+  String get videoEditorEffectCategoryMotion => '모션';
+
+  @override
+  String get videoEditorEffectCategoryParticles => '파티클';
+
+  @override
+  String get videoEditorFilterCategoryNatural => '내추럴';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => '비비드';
+
+  @override
+  String get videoEditorFilterCategoryWarm => '웜';
+
+  @override
+  String get videoEditorFilterCategoryCool => '쿨';
+
+  @override
+  String get videoEditorFilterCategoryVintage => '빈티지';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => '흑백';
+
+  @override
+  String get videoEditorFilterCategoryTints => '틴트';
+
+  @override
   String get videoEditorDropsSettingsTitle => '물방울 조정';
 
   @override
@@ -10127,6 +10166,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationBounceHeight => '높이';
+
+  @override
+  String get videoEditorLayerAnimationFlipSideways => '좌우';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => '상하';
 
   @override
   String get videoEditorLayerAnimationCustomPoint => '사용자 지정';
@@ -13847,6 +13892,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get messagesRooms => '채팅방';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return '채팅방 ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => '공개 테스트 채팅방';

@@ -12,16 +12,16 @@ import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/widgets/video_editor/text_effects_preview_text.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/animation_picker_components.dart';
 import 'package:pro_video_editor/pro_video_editor.dart'
-    show LayerAnimation, LayerAnimationType, SlideDirection;
+    show FlipAxis, LayerAnimation, LayerAnimationType, SlideDirection;
 
 /// Plays [text] through [style]'s enter and leave animations once per loop:
 /// it animates in at the start of the loop, holds, and animates out at the
 /// end, so a row in the saved styles sheet shows the whole treatment.
 ///
-/// Fade, scale, slide, wiggle and bounce are composed the way the export
-/// renderer and the in-editor `LayerTimelineVisibility` combine per-layer
-/// animations, and the style's loop animations run throughout. A slide
-/// travels the width or height of the preview — far enough to leave it —
+/// Fade, scale, slide, wiggle, bounce, spin and flip are composed the way the
+/// export renderer and the in-editor `LayerTimelineVisibility` combine
+/// per-layer animations, and the style's loop animations run throughout. A
+/// slide travels the width or height of the preview — far enough to leave it —
 /// from the edge its direction names, or along the line a custom point makes
 /// with the resting place. A typewriter or word-by-word reveal wipes the text
 /// in from its start, one letter or word at a time; the text itself is not
@@ -108,6 +108,15 @@ class TitleStylePreview extends StatelessWidget {
                           )
                         : child,
                   );
+                  // A flip squeezes the text before anything turns it, as
+                  // the export squeezes the image of the layer.
+                  if (frame.flipX != 1 || frame.flipY != 1) {
+                    sample = Transform.scale(
+                      scaleX: frame.flipX,
+                      scaleY: frame.flipY,
+                      child: sample,
+                    );
+                  }
                   if (frame.rotation != 0) {
                     sample = Transform.rotate(
                       angle: frame.rotation,
@@ -152,12 +161,15 @@ class TitleStylePreview extends StatelessWidget {
   /// in between, and loop animations throughout.
   ///
   /// `reveal` is the share of the text a typewriter or word-by-word reveal
-  /// shows, stepped to whole letters or words.
+  /// shows, stepped to whole letters or words. `flipX` and `flipY` squeeze it
+  /// across its vertical and horizontal axis for a flip.
   ({
     double opacity,
     double scale,
     Offset translation,
     double rotation,
+    double flipX,
+    double flipY,
     double reveal,
   })
   _transform(double local) {
@@ -165,15 +177,22 @@ class TitleStylePreview extends StatelessWidget {
     var scale = 1.0;
     var translation = Offset.zero;
     var rotation = 0.0;
+    var flipX = 1.0;
+    var flipY = 1.0;
     var reveal = 1.0;
 
+    /// Applies [animation] at [progress]. [turn] is how far a spin or a flip
+    /// has the text turned, in full turns; by default it is turning away, as
+    /// a leave animation does.
     void apply(
       LayerAnimation animation,
       double progress, {
       Offset? point,
       double swing = 1,
+      double? turn,
     }) {
       final away = 1 - progress;
+      final turned = turn ?? away * _turnsOf(animation);
       switch (animation.type) {
         case LayerAnimationType.fade:
           opacity *= progress;
@@ -194,26 +213,33 @@ class TitleStylePreview extends StatelessWidget {
                 _fontSize *
                 _lineHeight,
           );
+        case LayerAnimationType.spin:
+          rotation += 2 * math.pi * turned;
+        case LayerAnimationType.flip:
+          final squeeze = math.cos(2 * math.pi * turned);
+          if (animation.flipAxis == FlipAxis.horizontal) {
+            flipY *= squeeze;
+          } else {
+            flipX *= squeeze;
+          }
         case LayerAnimationType.typewriter:
         case LayerAnimationType.wordByWord:
           reveal = math.min(reveal, _revealed(animation.type, progress));
-        // TODO(#10397): No saved style holds a spin or flip until the editor
-        // offers them; that change previews them here.
-        case LayerAnimationType.spin:
-        case LayerAnimationType.flip:
-          break;
       }
     }
 
     for (final animation in style.enter) {
       final frac = _phaseFraction(animation);
       if (frac <= 0) continue;
+      final progress = flutterCurveFor(
+        animation.curve,
+      ).transform((local / frac).clamp(0.0, 1.0));
       apply(
         animation,
-        flutterCurveFor(
-          animation.curve,
-        ).transform((local / frac).clamp(0.0, 1.0)),
+        progress,
         point: style.enterPoint,
+        // Turning into place the way it turns away.
+        turn: -(1 - progress) * _turnsOf(animation),
       );
     }
 
@@ -235,6 +261,19 @@ class TitleStylePreview extends StatelessWidget {
       final durationMs = animation.duration.inMilliseconds;
       if (durationMs <= 0) continue;
       final cycle = (local * loopMs % durationMs) / durationMs;
+      // A spin or a flip turns on by its turns every cycle.
+      if (animation.type == LayerAnimationType.spin ||
+          animation.type == LayerAnimationType.flip) {
+        final turns = _turnsOf(animation);
+        apply(
+          animation,
+          1,
+          turn:
+              local * loopMs ~/ durationMs * turns +
+              turns * flutterCurveFor(animation.curve).transform(cycle),
+        );
+        continue;
+      }
       // A wiggle swings out and back once to each side per cycle.
       final wiggle = animation.type == LayerAnimationType.wiggle;
       final half = wiggle ? (2 * cycle) % 1 : cycle;
@@ -250,9 +289,15 @@ class TitleStylePreview extends StatelessWidget {
       scale: scale,
       translation: translation,
       rotation: rotation,
+      flipX: flipX,
+      flipY: flipY,
       reveal: reveal,
     );
   }
+
+  /// How far a spin or a flip turns, in full turns.
+  static double _turnsOf(LayerAnimation animation) =>
+      animation.turns ?? LayerAnimation.defaultTurns;
 
   /// Line height of the sample relative to its font size, which a bounce
   /// lifts it by multiples of.

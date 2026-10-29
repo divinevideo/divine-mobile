@@ -106,7 +106,8 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
   final String Function(String channel)? channelIdFor;
   final bool ownsRepository;
 
-  /// Shares the inbox's already-running channel instead of restarting it.
+  /// Starts the channel through its shared owner instead of
+  /// [ConcordRepository.startChannel], reusing a session already running.
   final Future<void> Function()? initialize;
   final Future<void> Function(List<ChatMessage> messages)? onRead;
   StreamSubscription<void>? _updates;
@@ -158,13 +159,14 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     }
   }
 
-  /// Acknowledges only the snapshot actually rendered by the foreground view.
+  /// Forwards [messages] to [onRead]; callers pass only what the foreground
+  /// view rendered.
   Future<void> markRead(Iterable<ChatMessage> messages) async {
     if (isClosed || state.loading || state.loadFailed || onRead == null) return;
     try {
       await onRead!(List.unmodifiable(messages));
     } on Object catch (error, stack) {
-      if (!isClosed) addError(error, stack);
+      addError(error, stack);
     }
   }
 

@@ -9013,6 +9013,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorEffectComic => 'Comic';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Distort';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Light';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Motion';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Particles';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'Natural';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'Vibrant';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'Warm';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'Cool';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'Vintage';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'B&W';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'Tints';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Adjust drops';
 
   @override
@@ -10728,6 +10767,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationBounceHeight => 'Height';
+
+  @override
+  String get videoEditorLayerAnimationFlipSideways => 'Sideways';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'Top over bottom';
 
   @override
   String get videoEditorLayerAnimationCustomPoint => 'Custom';
@@ -14635,6 +14680,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get messagesRooms => 'Rooms';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Rooms ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'Public test rooms';

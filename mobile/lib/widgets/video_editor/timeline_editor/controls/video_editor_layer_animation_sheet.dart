@@ -1,6 +1,6 @@
 // ABOUTME: Bottom-sheet picker for a layer's enter/leave/loop animation
-// ABOUTME: (fade, slide, scale, wiggle, bounce, text reveals) — twin of the
-// ABOUTME: clip-transition sheet, shared controls.
+// ABOUTME: (fade, slide, scale, wiggle, bounce, spin, flip, text reveals) —
+// ABOUTME: twin of the clip-transition sheet, shared controls.
 
 import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
@@ -21,6 +21,7 @@ import 'package:pro_video_editor/pro_video_editor.dart'
     show
         AnimationCurve,
         AnimationPhase,
+        FlipAxis,
         LayerAnimation,
         LayerAnimationType,
         SlideDirection;
@@ -29,7 +30,7 @@ import 'package:pro_video_editor/pro_video_editor.dart'
 const _minDurationMs = 10;
 
 /// Shortest cycle a loop can be set to: anything quicker reads as a flicker
-/// rather than a wiggle, hop or pulse.
+/// rather than a wiggle, hop, pulse or spin.
 const _minLoopDurationMs = 200;
 const _maxDurationMs = 2000;
 const _durationStepMs = 10;
@@ -262,21 +263,25 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
   /// Tiles shown in the type row for the active phase. `null` is the "None"
   /// tile (clears the phase).
   ///
-  /// A loop offers only what reads well over and over: a wiggle, a hop and a
-  /// pulse. Fade (a blink) and slide (back and forth across the frame) are
-  /// left out, and so are the text reveals, which only a text layer plays.
+  /// A loop offers only what reads well over and over: a wiggle, a hop, a
+  /// pulse and a spin. Fade (a blink) and slide (back and forth across the
+  /// frame) are left out, and so are the text reveals, which only a text
+  /// layer plays.
   List<LayerAnimationType?> get _typeOptions => [
     null,
     if (_phase == AnimationPhase.loop) ...const [
       LayerAnimationType.wiggle,
       LayerAnimationType.bounce,
       LayerAnimationType.scale,
+      LayerAnimationType.spin,
     ] else ...[
       LayerAnimationType.fade,
       LayerAnimationType.slide,
       LayerAnimationType.scale,
       LayerAnimationType.bounce,
       LayerAnimationType.wiggle,
+      LayerAnimationType.spin,
+      LayerAnimationType.flip,
       if (widget.allowTextReveal) ...const [
         LayerAnimationType.typewriter,
         LayerAnimationType.wordByWord,
@@ -285,13 +290,16 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
   ];
 
   /// Stable order in which selected effects are emitted so composition
-  /// (fade → slide → scale → wiggle → bounce → reveal) is deterministic.
+  /// (fade → slide → scale → wiggle → bounce → spin → flip → reveal) is
+  /// deterministic.
   static const _composableTypes = <LayerAnimationType>[
     LayerAnimationType.fade,
     LayerAnimationType.slide,
     LayerAnimationType.scale,
     LayerAnimationType.wiggle,
     LayerAnimationType.bounce,
+    LayerAnimationType.spin,
+    LayerAnimationType.flip,
     LayerAnimationType.typewriter,
     LayerAnimationType.wordByWord,
   ];
@@ -394,6 +402,12 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
             bounceHeight: type == LayerAnimationType.bounce
                 ? config.bounceHeight
                 : null,
+            turns: switch (type) {
+              LayerAnimationType.spin => config.spinTurns,
+              LayerAnimationType.flip => config.flipTurns,
+              _ => null,
+            },
+            flipAxis: type == LayerAnimationType.flip ? config.flipAxis : null,
           ),
     ];
   }
@@ -447,6 +461,9 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
                           scaleFrom: active.scaleFrom,
                           wiggleAngle: active.wiggleAngle,
                           bounceHeight: active.bounceHeight,
+                          spinTurns: active.spinTurns,
+                          flipTurns: active.flipTurns,
+                          flipAxis: active.flipAxis,
                           curve: active.curve,
                           durationMs: active.duration.inMilliseconds,
                           onTap: () => _updateActive(
@@ -646,6 +663,52 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
                               ),
                             ),
                           ],
+                          if (active.types.contains(
+                            LayerAnimationType.spin,
+                          )) ...[
+                            const SizedBox(height: 16),
+                            _TurnSlider(
+                              label: l10n.videoEditorTransitionSpin,
+                              turns: active.spinTurns,
+                              onChanged: (turns) => _updateActive(
+                                (c) => c.copyWith(spinTurns: turns),
+                              ),
+                            ),
+                          ],
+                          if (active.types.contains(
+                            LayerAnimationType.flip,
+                          )) ...[
+                            const SizedBox(height: 16),
+                            SectionLabel(l10n.videoEditorTransitionDirection),
+                            const SizedBox(height: 8),
+                            Row(
+                              spacing: 8,
+                              children: [
+                                for (final axis in FlipAxis.values)
+                                  _AxisChip(
+                                    axis: axis,
+                                    selected: axis == active.flipAxis,
+                                    label: switch (axis) {
+                                      FlipAxis.vertical =>
+                                        l10n.videoEditorLayerAnimationFlipSideways,
+                                      FlipAxis.horizontal =>
+                                        l10n.videoEditorLayerAnimationFlipOver,
+                                    },
+                                    onTap: () => _updateActive(
+                                      (c) => c.copyWith(flipAxis: axis),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            _TurnSlider(
+                              label: l10n.videoEditorTransitionFlip,
+                              turns: active.flipTurns,
+                              onChanged: (turns) => _updateActive(
+                                (c) => c.copyWith(flipTurns: turns),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -705,12 +768,10 @@ class _LayerAnimationPickerViewState extends State<LayerAnimationPickerView>
     LayerAnimationType.scale => l10n.videoEditorLayerAnimationScale,
     LayerAnimationType.wiggle => l10n.videoEditorLayerAnimationWiggle,
     LayerAnimationType.bounce => l10n.videoEditorLayerAnimationBounce,
-    LayerAnimationType.typewriter => l10n.videoEditorLayerAnimationTypewriter,
-    LayerAnimationType.wordByWord => l10n.videoEditorLayerAnimationWordByWord,
-    // TODO(#10397): Not offered yet; that change gives them labels of their
-    // own.
     LayerAnimationType.spin => l10n.videoEditorTransitionSpin,
     LayerAnimationType.flip => l10n.videoEditorTransitionFlip,
+    LayerAnimationType.typewriter => l10n.videoEditorLayerAnimationTypewriter,
+    LayerAnimationType.wordByWord => l10n.videoEditorLayerAnimationWordByWord,
   };
 }
 
@@ -721,9 +782,9 @@ int _wiggleDegrees(double angle) => (angle * 180 / math.pi).round();
 ///
 /// [types] is the set of effects active for the phase — a phase can combine
 /// several (e.g. fade + slide). [duration] and [curve] are shared by every
-/// effect; [direction], [slideFrom], [scaleFrom], [wiggleAngle] and
-/// [bounceHeight] apply only when slide / scale / wiggle / bounce is in
-/// [types].
+/// effect; [direction], [slideFrom], [scaleFrom], [wiggleAngle],
+/// [bounceHeight], [spinTurns], [flipTurns] and [flipAxis] apply only when
+/// slide / scale / wiggle / bounce / spin / flip is in [types].
 class _PhaseConfig {
   const _PhaseConfig({
     required this.types,
@@ -733,12 +794,16 @@ class _PhaseConfig {
     required this.scaleFrom,
     this.wiggleAngle = LayerAnimation.defaultWiggleAngle,
     this.bounceHeight = LayerAnimation.defaultBounceHeight,
+    this.spinTurns = LayerAnimation.defaultTurns,
+    this.flipTurns = VideoEditorConstants.defaultFlipTurns,
+    this.flipAxis = FlipAxis.vertical,
     this.slideFrom,
   });
 
   /// Rebuilds the config from a phase's existing animations. [duration] and
   /// [curve] come from the first animation; [direction] / [scaleFrom] /
-  /// [wiggleAngle] / [bounceHeight] from the first animation of their type.
+  /// [wiggleAngle] / [bounceHeight] / [spinTurns] / [flipTurns] /
+  /// [flipAxis] from the first animation of their type.
   /// (The picker edits these as shared values, so per-effect differences set
   /// externally collapse on edit.)
   ///
@@ -760,6 +825,9 @@ class _PhaseConfig {
     double? scaleFrom;
     double? wiggleAngle;
     double? bounceHeight;
+    double? spinTurns;
+    double? flipTurns;
+    FlipAxis? flipAxis;
     for (final animation in animations) {
       types.add(animation.type);
       duration ??= animation.duration;
@@ -773,13 +841,14 @@ class _PhaseConfig {
           wiggleAngle ??= animation.wiggleAngle;
         case LayerAnimationType.bounce:
           bounceHeight ??= animation.bounceHeight;
+        case LayerAnimationType.spin:
+          spinTurns ??= animation.turns;
+        case LayerAnimationType.flip:
+          flipTurns ??= animation.turns;
+          flipAxis ??= animation.flipAxis;
         case LayerAnimationType.fade:
         case LayerAnimationType.typewriter:
         case LayerAnimationType.wordByWord:
-        // TODO(#10397): Not offered yet; that change keeps their turns and
-        // axis.
-        case LayerAnimationType.spin:
-        case LayerAnimationType.flip:
           break;
       }
     }
@@ -793,6 +862,9 @@ class _PhaseConfig {
           scaleFrom ?? (loop ? VideoEditorConstants.loopPulseScaleFrom : 0.0),
       wiggleAngle: wiggleAngle ?? LayerAnimation.defaultWiggleAngle,
       bounceHeight: bounceHeight ?? LayerAnimation.defaultBounceHeight,
+      spinTurns: spinTurns ?? LayerAnimation.defaultTurns,
+      flipTurns: flipTurns ?? VideoEditorConstants.defaultFlipTurns,
+      flipAxis: flipAxis ?? FlipAxis.vertical,
       slideFrom: slideFrom,
     );
   }
@@ -808,6 +880,15 @@ class _PhaseConfig {
 
   /// How high a bounce lifts the layer, as a multiple of its height.
   final double bounceHeight;
+
+  /// How far a spin turns the layer, in full turns.
+  final double spinTurns;
+
+  /// How far a flip turns the layer, in full turns.
+  final double flipTurns;
+
+  /// The axis a flip turns the layer around.
+  final FlipAxis flipAxis;
 
   /// Where the slide starts (enter) or ends (leave), as a canvas fraction.
   /// `null` travels to or from the canvas edge [direction] names.
@@ -862,6 +943,11 @@ class _PhaseConfig {
           duration: VideoEditorConstants.loopBounceCycle,
           curve: AnimationCurve.easeIn,
         ),
+        // An even pace, so it turns on without stopping between cycles.
+        LayerAnimationType.spin => (
+          duration: VideoEditorConstants.loopSpinCycle,
+          curve: AnimationCurve.linear,
+        ),
         _ => (
           duration: VideoEditorConstants.loopPulseCycle,
           curve: AnimationCurve.easeInOut,
@@ -876,6 +962,10 @@ class _PhaseConfig {
       LayerAnimationType.wiggle => (
         duration: const Duration(milliseconds: 800),
         curve: AnimationCurve.elasticOut,
+      ),
+      LayerAnimationType.spin => (
+        duration: const Duration(milliseconds: 600),
+        curve: AnimationCurve.easeOutCubic,
       ),
       LayerAnimationType.typewriter || LayerAnimationType.wordByWord => (
         duration: const Duration(seconds: 1),
@@ -896,6 +986,9 @@ class _PhaseConfig {
     scaleFrom: scaleFrom,
     wiggleAngle: wiggleAngle,
     bounceHeight: bounceHeight,
+    spinTurns: spinTurns,
+    flipTurns: flipTurns,
+    flipAxis: flipAxis,
   );
 
   _PhaseConfig copyWith({
@@ -906,6 +999,9 @@ class _PhaseConfig {
     double? scaleFrom,
     double? wiggleAngle,
     double? bounceHeight,
+    double? spinTurns,
+    double? flipTurns,
+    FlipAxis? flipAxis,
   }) => _PhaseConfig(
     types: types ?? this.types,
     duration: duration ?? this.duration,
@@ -914,6 +1010,9 @@ class _PhaseConfig {
     scaleFrom: scaleFrom ?? this.scaleFrom,
     wiggleAngle: wiggleAngle ?? this.wiggleAngle,
     bounceHeight: bounceHeight ?? this.bounceHeight,
+    spinTurns: spinTurns ?? this.spinTurns,
+    flipTurns: flipTurns ?? this.flipTurns,
+    flipAxis: flipAxis ?? this.flipAxis,
     slideFrom: slideFrom,
   );
 }
@@ -1035,6 +1134,93 @@ class _DirectionChip extends StatelessWidget {
   }
 }
 
+/// The slider of how far a spin or a flip turns the layer, in quarter turns
+/// shown as degrees, under [label].
+class _TurnSlider extends StatelessWidget {
+  const _TurnSlider({
+    required this.label,
+    required this.turns,
+    required this.onChanged,
+  });
+
+  final String label;
+
+  /// How far the layer turns, in full turns.
+  final double turns;
+  final ValueChanged<double> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final degrees = (turns * 360).round().clamp(
+      VideoEditorConstants.minTurnDegrees,
+      VideoEditorConstants.maxTurnDegrees,
+    );
+    return Column(
+      crossAxisAlignment: .stretch,
+      children: [
+        Row(
+          mainAxisAlignment: .spaceBetween,
+          children: [
+            SectionLabel(label),
+            Text(
+              '$degrees°',
+              style: VineTheme.labelSmallFont(
+                color: context.vineColors.mutedText,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        DivineSlider(
+          value: degrees.toDouble(),
+          min: VideoEditorConstants.minTurnDegrees.toDouble(),
+          max: VideoEditorConstants.maxTurnDegrees.toDouble(),
+          divisions:
+              (VideoEditorConstants.maxTurnDegrees -
+                  VideoEditorConstants.minTurnDegrees) ~/
+              VideoEditorConstants.turnStepDegrees,
+          onChanged: (value) => onChanged(value / 360),
+        ),
+      ],
+    );
+  }
+}
+
+/// One option in the flip's axis row: turning sideways around the vertical
+/// axis, or top over bottom around the horizontal one.
+class _AxisChip extends StatelessWidget {
+  const _AxisChip({
+    required this.axis,
+    required this.selected,
+    required this.label,
+    required this.onTap,
+  });
+
+  final FlipAxis axis;
+  final bool selected;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.vineColors;
+    return AnimationPickerChip(
+      selected: selected,
+      onTap: onTap,
+      semanticLabel: label,
+      // The mirror icon shows a sideways flip; stood on end, one over the top.
+      child: RotatedBox(
+        quarterTurns: axis == FlipAxis.horizontal ? 1 : 0,
+        child: DivineIcon(
+          icon: .flipHorizontal,
+          size: 18,
+          color: selected ? colors.accentBrand : colors.secondaryText,
+        ),
+      ),
+    );
+  }
+}
+
 /// One layer-animation option: a looped preview of [type] on a placeholder
 /// layer for the active [phase], with a label, highlighted when [selected].
 class _LayerTypeTile extends StatelessWidget {
@@ -1049,6 +1235,9 @@ class _LayerTypeTile extends StatelessWidget {
     required this.scaleFrom,
     required this.wiggleAngle,
     required this.bounceHeight,
+    required this.spinTurns,
+    required this.flipTurns,
+    required this.flipAxis,
     required this.curve,
     required this.durationMs,
     required this.onTap,
@@ -1067,34 +1256,51 @@ class _LayerTypeTile extends StatelessWidget {
   final double scaleFrom;
   final double wiggleAngle;
   final double bounceHeight;
+  final double spinTurns;
+  final double flipTurns;
+  final FlipAxis flipAxis;
   final AnimationCurve curve;
   final int durationMs;
   final VoidCallback onTap;
 
+  /// How far a spin or a flip on this tile turns, in full turns.
+  double get _turns => type == LayerAnimationType.flip ? flipTurns : spinTurns;
+
   /// Where the preview stands at the controller's [value]: how present the
-  /// placeholder is (1 = at rest, 0 = fully away) and the side a wiggle tilts
-  /// to.
+  /// placeholder is (1 = at rest, 0 = fully away), the side a wiggle tilts to
+  /// and how far a spin or a flip has it turned, in full turns.
   ///
   /// Enter and leave play once over [durationMs] of the loop with a hold on
-  /// each end. A loop repeats every [durationMs] for the whole preview loop,
-  /// running out and back like the export: a wiggle swings to one side in the
-  /// first half of each cycle and to the other in the second.
-  ({double presence, double swing}) _state(double value) {
+  /// each end; a spin turns into place and away the same way. A loop repeats
+  /// every [durationMs] for the whole preview loop, running out and back like
+  /// the export: a wiggle swings to one side in the first half of each cycle
+  /// and to the other in the second, a spin turns on.
+  ({double presence, double swing, double turn}) _state(double value) {
     final flutterCurve = flutterCurveFor(curve);
     if (phase != AnimationPhase.loop) {
       final progress = flutterCurve.transform(_holdProgress(value, durationMs));
+      final entering = phase == AnimationPhase.animateIn;
+      final presence = entering ? progress : 1 - progress;
+      final away = (1 - presence) * _turns;
+      return (presence: presence, swing: 1, turn: entering ? -away : away);
+    }
+    if (durationMs <= 0) return (presence: 1, swing: 1, turn: 0);
+    final elapsed = value * _loopMs;
+    final cycle = (elapsed % durationMs) / durationMs;
+    if (type == LayerAnimationType.spin || type == LayerAnimationType.flip) {
+      final done = elapsed ~/ durationMs * _turns;
       return (
-        presence: phase == AnimationPhase.animateIn ? progress : 1 - progress,
+        presence: 1,
         swing: 1,
+        turn: done + _turns * flutterCurve.transform(cycle),
       );
     }
-    if (durationMs <= 0) return (presence: 1, swing: 1);
-    final cycle = (value * _loopMs % durationMs) / durationMs;
     final wiggle = type == LayerAnimationType.wiggle;
     final half = wiggle ? (2 * cycle) % 1 : cycle;
     return (
       presence: flutterCurve.transform((1 - 2 * half).abs()),
       swing: wiggle && cycle >= 0.5 ? -1 : 1,
+      turn: 0,
     );
   }
 
@@ -1145,8 +1351,10 @@ class _LayerTypeTile extends StatelessWidget {
                             scaleFrom: scaleFrom,
                             wiggleAngle: wiggleAngle,
                             bounceHeight: bounceHeight,
+                            flipAxis: flipAxis,
                             presence: state.presence,
                             swing: state.swing,
+                            turn: state.turn,
                           );
                         },
                       ),
@@ -1171,7 +1379,8 @@ class _LayerTypeTile extends StatelessWidget {
 }
 
 /// Renders a placeholder layer with [type] applied at [presence] (1 = at rest,
-/// 0 = fully away). [swing] is the side a wiggle tilts to.
+/// 0 = fully away). [swing] is the side a wiggle tilts to, [turn] how far a
+/// spin or a flip has the layer turned, in full turns.
 class _LayerEffect extends StatelessWidget {
   const _LayerEffect({
     required this.type,
@@ -1180,8 +1389,10 @@ class _LayerEffect extends StatelessWidget {
     required this.scaleFrom,
     required this.wiggleAngle,
     required this.bounceHeight,
+    required this.flipAxis,
     required this.presence,
     required this.swing,
+    required this.turn,
   });
 
   final LayerAnimationType? type;
@@ -1190,8 +1401,10 @@ class _LayerEffect extends StatelessWidget {
   final double scaleFrom;
   final double wiggleAngle;
   final double bounceHeight;
+  final FlipAxis flipAxis;
   final double presence;
   final double swing;
+  final double turn;
 
   @override
   Widget build(BuildContext context) {
@@ -1243,6 +1456,20 @@ class _LayerEffect extends StatelessWidget {
               child: layer,
             ),
           ),
+          LayerAnimationType.spin => Center(
+            child: Transform.rotate(angle: 2 * math.pi * turn, child: layer),
+          ),
+          LayerAnimationType.flip => Center(
+            child: Transform.scale(
+              scaleX: flipAxis == FlipAxis.vertical
+                  ? math.cos(2 * math.pi * turn)
+                  : 1,
+              scaleY: flipAxis == FlipAxis.horizontal
+                  ? math.cos(2 * math.pi * turn)
+                  : 1,
+              child: layer,
+            ),
+          ),
           LayerAnimationType.typewriter ||
           LayerAnimationType.wordByWord => Center(
             child: _RevealPlaceholder(
@@ -1250,9 +1477,6 @@ class _LayerEffect extends StatelessWidget {
               presence: presence,
             ),
           ),
-          // TODO(#10397): Not offered yet; that change previews them.
-          LayerAnimationType.spin ||
-          LayerAnimationType.flip => const Center(child: layer),
         },
       ),
     );

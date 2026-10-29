@@ -9120,6 +9120,45 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectComic => 'Benzi desenate';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Distorsiune';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Lumină';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Mișcare';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Particule';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'Natural';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'Intens';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'Cald';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'Rece';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'Vintage';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'Alb-negru';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'Nuanțe';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Ajustează picăturile';
 
   @override
@@ -10855,6 +10894,12 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationBounceHeight => 'Înălțime';
+
+  @override
+  String get videoEditorLayerAnimationFlipSideways => 'Lateral';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'De sus în jos';
 
   @override
   String get videoEditorLayerAnimationCustomPoint => 'Punct personalizat';
@@ -14843,6 +14888,11 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get messagesRooms => 'Camere';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Camere ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'Camere publice de test';

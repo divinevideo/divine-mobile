@@ -8833,6 +8833,45 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectComic => 'Çizgi Roman';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Bozulma';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Işık';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Hareket';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Parçacıklar';
+
+  @override
+  String get videoEditorFilterCategoryNatural => 'Doğal';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'Canlı';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'Sıcak';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'Soğuk';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'Vintage';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'Siyah beyaz';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'Tonlar';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Damlaları ayarla';
 
   @override
@@ -10546,6 +10585,12 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get videoEditorLayerAnimationBounceHeight => 'Yükseklik';
+
+  @override
+  String get videoEditorLayerAnimationFlipSideways => 'Yana doğru';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'Yukarıdan aşağı';
 
   @override
   String get videoEditorLayerAnimationCustomPoint => 'Özel nokta';
@@ -14467,6 +14512,11 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get messagesRooms => 'Odalar';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Odalar ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'Herkese açık test odaları';
