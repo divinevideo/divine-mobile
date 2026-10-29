@@ -62,6 +62,8 @@ ExportedLayer _captured(
 ExportedLayer _other({
   Offset offset = Offset.zero,
   Size box = const Size(40, 40),
+  Size? captured,
+  double rotation = 0,
   Duration? startTime,
   Duration? endTime,
   List<LayerAnimation> animations = const [],
@@ -70,12 +72,13 @@ ExportedLayer _other({
     id: 'emoji',
     widget: const SizedBox(),
     offset: offset,
+    rotation: rotation,
     startTime: startTime,
     endTime: endTime,
     animations: animations,
   ),
   bytes: Uint8List(0),
-  logicalSize: box,
+  logicalSize: captured ?? box,
   boxSize: box,
 );
 
@@ -291,6 +294,23 @@ void main() {
       );
       expect(
         _regions([_other(), _captured(_link)]).single.style,
+        equals('light'),
+      );
+      // A thin layer turned an eighth, captured as the square around it,
+      // passes the sticker by: only its box before turning counts.
+      expect(
+        _regions([
+          _captured(
+            _link,
+            box: const Size(20, 20),
+            offset: const Offset(50, -50),
+          ),
+          _other(
+            box: const Size(200, 10),
+            captured: const Size(148.5, 148.5),
+            rotation: pi / 4,
+          ),
+        ]).single.style,
         equals('light'),
       );
     });
