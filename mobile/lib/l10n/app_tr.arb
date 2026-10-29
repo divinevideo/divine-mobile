@@ -5949,6 +5949,7 @@
   },
   "messagesDirect": "Doğrudan",
   "messagesRooms": "Odalar",
+  "messagesRoomsWithUnread": "Odalar ({badge})",
   "messagesPublicTestRooms": "Herkese açık test odaları",
   "messagesPublicTestDisclosure": "Bu test odaları herkese açıktır. Erişimi olan herkes mesajlarını okuyabilir.",
   "messagesNoRooms": "Henüz oda yok",

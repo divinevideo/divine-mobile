@@ -5949,6 +5949,7 @@
   },
   "messagesDirect": "Direkt",
   "messagesRooms": "Räume",
+  "messagesRoomsWithUnread": "Räume ({badge})",
   "messagesPublicTestRooms": "Öffentliche Testräume",
   "messagesPublicTestDisclosure": "Diese Testräume sind öffentlich. Alle mit Zugang können deine Nachrichten lesen.",
   "messagesNoRooms": "Noch keine Räume",

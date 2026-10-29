@@ -24237,6 +24237,12 @@ abstract class AppLocalizations {
   /// **'Rooms'**
   String get messagesRooms;
 
+  /// Rooms selector in Messages while rooms have unread messages. badge is the unread count as shown on screen, such as 3, 5+ or 99+.
+  ///
+  /// In en, this message translates to:
+  /// **'Rooms ({badge})'**
+  String messagesRoomsWithUnread(String badge);
+
   /// Heading above the room list in Messages while rooms are an internal public test.
   ///
   /// In en, this message translates to:

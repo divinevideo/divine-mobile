@@ -5949,6 +5949,7 @@
   },
   "messagesDirect": "Directos",
   "messagesRooms": "Salas",
+  "messagesRoomsWithUnread": "Salas ({badge})",
   "messagesPublicTestRooms": "Salas públicas de prueba",
   "messagesPublicTestDisclosure": "Estas salas de prueba son públicas. Cualquiera con acceso puede leer tus mensajes.",
   "messagesNoRooms": "Todavía no hay salas",

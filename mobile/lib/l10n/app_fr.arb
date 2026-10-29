@@ -5949,6 +5949,7 @@
   },
   "messagesDirect": "Messages directs",
   "messagesRooms": "Salons",
+  "messagesRoomsWithUnread": "Salons ({badge})",
   "messagesPublicTestRooms": "Salons de test publics",
   "messagesPublicTestDisclosure": "Ces salons de test sont publics. Toute personne y ayant accès peut lire vos messages.",
   "messagesNoRooms": "Aucun salon pour le moment",

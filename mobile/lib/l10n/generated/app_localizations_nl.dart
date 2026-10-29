@@ -14618,6 +14618,11 @@ class AppLocalizationsNl extends AppLocalizations {
   String get messagesRooms => 'Kamers';
 
   @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Kamers ($badge)';
+  }
+
+  @override
   String get messagesPublicTestRooms => 'Openbare testkamers';
 
   @override

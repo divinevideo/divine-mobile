@@ -5949,6 +5949,7 @@
   },
   "messagesDirect": "Diretti",
   "messagesRooms": "Stanze",
+  "messagesRoomsWithUnread": "Stanze ({badge})",
   "messagesPublicTestRooms": "Stanze di prova pubbliche",
   "messagesPublicTestDisclosure": "Queste stanze di prova sono pubbliche. Chiunque abbia accesso può leggere i tuoi messaggi.",
   "messagesNoRooms": "Ancora nessuna stanza",

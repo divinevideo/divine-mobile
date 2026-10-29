@@ -11334,6 +11334,16 @@
   },
   "messagesDirect": "Direct",
   "messagesRooms": "Rooms",
+  "messagesRoomsWithUnread": "Rooms ({badge})",
+  "@messagesRoomsWithUnread": {
+    "description": "Rooms selector in Messages while rooms have unread messages. badge is the unread count as shown on screen, such as 3, 5+ or 99+.",
+    "placeholders": {
+      "badge": {
+        "type": "String",
+        "example": "5+"
+      }
+    }
+  },
   "messagesPublicTestRooms": "Public test rooms",
   "messagesPublicTestDisclosure": "These test rooms are public. Anyone with access can read your messages.",
   "messagesNoRooms": "No rooms yet",

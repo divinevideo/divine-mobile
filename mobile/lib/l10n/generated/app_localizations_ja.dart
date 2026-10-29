@@ -13833,6 +13833,11 @@ class AppLocalizationsJa extends AppLocalizations {
   String get messagesRooms => 'ルーム';
 
   @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'ルーム ($badge)';
+  }
+
+  @override
   String get messagesPublicTestRooms => '公開テストルーム';
 
   @override

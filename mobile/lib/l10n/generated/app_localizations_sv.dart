@@ -14554,6 +14554,11 @@ class AppLocalizationsSv extends AppLocalizations {
   String get messagesRooms => 'Rum';
 
   @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Rum ($badge)';
+  }
+
+  @override
   String get messagesPublicTestRooms => 'Offentliga testrum';
 
   @override

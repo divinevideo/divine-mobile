@@ -5949,6 +5949,7 @@
   },
   "messagesDirect": "ダイレクト",
   "messagesRooms": "ルーム",
+  "messagesRoomsWithUnread": "ルーム ({badge})",
   "messagesPublicTestRooms": "公開テストルーム",
   "messagesPublicTestDisclosure": "これらのテストルームは公開されています。アクセスできる人は誰でもメッセージを読めます。",
   "messagesNoRooms": "まだルームはありません",

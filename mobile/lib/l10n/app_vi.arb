@@ -7245,6 +7245,7 @@
   },
   "messagesDirect": "Trực tiếp",
   "messagesRooms": "Phòng",
+  "messagesRoomsWithUnread": "Phòng ({badge})",
   "messagesPublicTestRooms": "Phòng thử nghiệm công khai",
   "messagesPublicTestDisclosure": "Các phòng thử nghiệm này là công khai. Bất kỳ ai có quyền truy cập đều có thể đọc tin nhắn của bạn.",
   "messagesNoRooms": "Chưa có phòng nào",

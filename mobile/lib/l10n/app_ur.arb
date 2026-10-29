@@ -7245,6 +7245,7 @@
   },
   "messagesDirect": "براہ راست",
   "messagesRooms": "کمرے",
+  "messagesRoomsWithUnread": "کمرے ({badge})",
   "messagesPublicTestRooms": "عوامی آزمائشی کمرے",
   "messagesPublicTestDisclosure": "یہ آزمائشی کمرے عوامی ہیں۔ رسائی رکھنے والا کوئی بھی شخص آپ کے پیغامات پڑھ سکتا ہے۔",
   "messagesNoRooms": "ابھی کوئی کمرہ نہیں",

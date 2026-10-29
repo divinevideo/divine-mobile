@@ -14540,6 +14540,11 @@ class AppLocalizationsUr extends AppLocalizations {
   String get messagesRooms => 'کمرے';
 
   @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'کمرے ($badge)';
+  }
+
+  @override
   String get messagesPublicTestRooms => 'عوامی آزمائشی کمرے';
 
   @override

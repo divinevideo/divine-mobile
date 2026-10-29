@@ -14533,6 +14533,11 @@ class AppLocalizationsMs extends AppLocalizations {
   String get messagesRooms => 'Bilik';
 
   @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Bilik ($badge)';
+  }
+
+  @override
   String get messagesPublicTestRooms => 'Bilik ujian awam';
 
   @override

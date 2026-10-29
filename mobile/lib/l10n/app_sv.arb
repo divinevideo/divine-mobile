@@ -5949,6 +5949,7 @@
   },
   "messagesDirect": "Direkt",
   "messagesRooms": "Rum",
+  "messagesRoomsWithUnread": "Rum ({badge})",
   "messagesPublicTestRooms": "Offentliga testrum",
   "messagesPublicTestDisclosure": "Dessa testrum är offentliga. Alla med åtkomst kan läsa dina meddelanden.",
   "messagesNoRooms": "Inga rum ännu",

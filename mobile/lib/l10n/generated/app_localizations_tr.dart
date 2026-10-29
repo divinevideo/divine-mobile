@@ -14469,6 +14469,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get messagesRooms => 'Odalar';
 
   @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Odalar ($badge)';
+  }
+
+  @override
   String get messagesPublicTestRooms => 'Herkese açık test odaları';
 
   @override

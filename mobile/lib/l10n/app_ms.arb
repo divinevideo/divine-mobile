@@ -7245,6 +7245,7 @@
   },
   "messagesDirect": "Langsung",
   "messagesRooms": "Bilik",
+  "messagesRoomsWithUnread": "Bilik ({badge})",
   "messagesPublicTestRooms": "Bilik ujian awam",
   "messagesPublicTestDisclosure": "Bilik ujian ini terbuka kepada umum. Sesiapa yang mempunyai akses boleh membaca mesej anda.",
   "messagesNoRooms": "Belum ada bilik",

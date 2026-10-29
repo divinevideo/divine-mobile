@@ -14482,6 +14482,11 @@ class AppLocalizationsVi extends AppLocalizations {
   String get messagesRooms => 'Phòng';
 
   @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Phòng ($badge)';
+  }
+
+  @override
   String get messagesPublicTestRooms => 'Phòng thử nghiệm công khai';
 
   @override

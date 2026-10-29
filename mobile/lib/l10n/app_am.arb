@@ -6002,6 +6002,7 @@
   },
   "messagesDirect": "ቀጥታ",
   "messagesRooms": "ክፍሎች",
+  "messagesRoomsWithUnread": "ክፍሎች ({badge})",
   "messagesPublicTestRooms": "ይፋዊ የሙከራ ክፍሎች",
   "messagesPublicTestDisclosure": "እነዚህ የሙከራ ክፍሎች ይፋዊ ናቸው። መዳረሻ ያለው ማንኛውም ሰው መልዕክቶችዎን ማንበብ ይችላል።",
   "messagesNoRooms": "ገና ምንም ክፍሎች የሉም",

@@ -312,7 +312,7 @@ void main() {
         });
         addTearDown(() => tester.runAsync(activity.close));
         await pumpPage(tester, account: _own, activity: activity);
-        final rooms = '${l10n.messagesRooms} (5+)';
+        final rooms = l10n.messagesRoomsWithUnread('5+');
         expect(find.text(rooms), findsOneWidget);
         await tester.tap(find.text(rooms));
         await tester.pump();
@@ -332,7 +332,7 @@ void main() {
         );
         await pumpPage(tester, account: _own, activity: activity);
         await tester.pump();
-        expect(find.text('${l10n.messagesRooms} (2)'), findsOneWidget);
+        expect(find.text(l10n.messagesRoomsWithUnread('2')), findsOneWidget);
         // close cancels the room timers synchronously; the pump drains the
         // rest of its work, which nothing flushes after the last pump.
         unawaited(activity.close());

@@ -14188,6 +14188,11 @@ class AppLocalizationsAm extends AppLocalizations {
   String get messagesRooms => 'ክፍሎች';
 
   @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'ክፍሎች ($badge)';
+  }
+
+  @override
   String get messagesPublicTestRooms => 'ይፋዊ የሙከራ ክፍሎች';
 
   @override

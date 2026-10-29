@@ -6066,6 +6066,7 @@
   },
   "messagesDirect": "Лични",
   "messagesRooms": "Стаи",
+  "messagesRoomsWithUnread": "Стаи ({badge})",
   "messagesPublicTestRooms": "Публични тестови стаи",
   "messagesPublicTestDisclosure": "Тези тестови стаи са публични. Всеки с достъп може да чете съобщенията ти.",
   "messagesNoRooms": "Все още няма стаи",
