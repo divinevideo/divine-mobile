@@ -1667,6 +1667,35 @@ void main() {
               DirectMessagesDao.deletionUnconfirmed,
             );
           });
+
+          test('joins a running Try again without touching the status '
+              'itself', () async {
+            final observed = await observedRanOutRetraction();
+            final seen = await watchStatuses();
+            final lookupGate = Completer<void>();
+            holdLookups(lookupGate);
+            final tryAgain = retryRetraction();
+            await pumpEventQueue();
+            final automatic = automaticRetry();
+            await pumpEventQueue();
+            lookupGate.complete();
+
+            expect(await automatic, DmMessageDeletionOutcome.unconfirmed);
+            expect(await tryAgain, DmMessageDeletionOutcome.unconfirmed);
+            await pumpEventQueue();
+
+            expect(observed.movesToPending, 1, reason: 'the Try again only');
+            expect(observed.warningsWritten, 1, reason: 'the Try again only');
+            expect(
+              (await messageRow()).deletionPublishStatus,
+              DirectMessagesDao.deletionUnconfirmed,
+            );
+            expect(seen, [
+              DmRetractionStatus.failed,
+              DmRetractionStatus.pending,
+              DmRetractionStatus.failed,
+            ]);
+          });
         });
       });
 
