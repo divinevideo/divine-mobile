@@ -12,7 +12,8 @@ const double profileVerticalTileAspectRatio = 2 / 3;
 const double profileSquareTileAspectRatio = 1;
 
 /// Below this width/height ratio a video counts as vertical. Matches the
-/// threshold the player and the Explore tiles use to pick cover over contain.
+/// threshold the Explore tiles (`VideoThumbnailWidget`) use to pick cover over
+/// contain.
 const double _verticalRatioThreshold = 0.9;
 
 /// Tile shape for a video with `WIDTHxHEIGHT` [dimensions].
