@@ -9111,6 +9111,39 @@ class AppLocalizationsRo extends AppLocalizations {
   String get videoEditorEffectSparkles => 'Sclipiri';
 
   @override
+  String get videoEditorEffectRain => 'Ploaie';
+
+  @override
+  String get videoEditorEffectLeaves => 'Frunze';
+
+  @override
+  String get videoEditorEffectBlossoms => 'Petale';
+
+  @override
+  String get videoEditorEffectBubbles => 'Bule';
+
+  @override
+  String get videoEditorEffectBokeh => 'Bokeh';
+
+  @override
+  String get videoEditorEffectMusicNotes => 'Note';
+
+  @override
+  String get videoEditorEffectStars => 'Stele';
+
+  @override
+  String get videoEditorEffectFireflies => 'Licurici';
+
+  @override
+  String get videoEditorEffectEmbers => 'Jar';
+
+  @override
+  String get videoEditorEffectMoney => 'Bani';
+
+  @override
+  String get videoEditorEffectBalloons => 'Baloane';
+
+  @override
   String get videoEditorEffectTiltShift => 'Tilt-shift';
 
   @override

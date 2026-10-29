@@ -8483,6 +8483,39 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoEditorEffectSparkles => '반짝이';
 
   @override
+  String get videoEditorEffectRain => '비';
+
+  @override
+  String get videoEditorEffectLeaves => '낙엽';
+
+  @override
+  String get videoEditorEffectBlossoms => '벚꽃';
+
+  @override
+  String get videoEditorEffectBubbles => '비눗방울';
+
+  @override
+  String get videoEditorEffectBokeh => '보케';
+
+  @override
+  String get videoEditorEffectMusicNotes => '음표';
+
+  @override
+  String get videoEditorEffectStars => '별';
+
+  @override
+  String get videoEditorEffectFireflies => '반딧불이';
+
+  @override
+  String get videoEditorEffectEmbers => '불씨';
+
+  @override
+  String get videoEditorEffectMoney => '돈';
+
+  @override
+  String get videoEditorEffectBalloons => '풍선';
+
+  @override
   String get videoEditorEffectTiltShift => '틸트 시프트';
 
   @override

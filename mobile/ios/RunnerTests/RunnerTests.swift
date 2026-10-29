@@ -2047,21 +2047,35 @@ final class ShaderVideoEffectTests: XCTestCase {
   /// Per style: the cell size, how fast and which way the cells move, how far
   /// a particle sways and how many cells hold one.
   private struct ParticleLook {
-    let style: Double
+    let style: Int
     var cell = 0.14
     var speed = -0.22
+    var drift = 0.0
     var sway = 0.1
     var density = 0.75
 
     init(style: Double) {
-      self.style = style
-      if style > 2.5 {
-        (cell, speed, sway, density) = (0.15, 0.03, 0.0, 0.45)
-      } else if style > 1.5 {
-        (cell, speed, sway, density) = (0.17, 0.12, 0.1, 0.35)
-      } else if style > 0.5 {
-        (cell, speed, sway, density) = (0.13, -0.32, 0.08, 0.6)
+      self.style = Int(style + 0.5)
+      switch self.style {
+      case 1: (cell, speed, sway, density) = (0.13, -0.32, 0.08, 0.6)
+      case 2: (cell, speed, sway, density) = (0.17, 0.12, 0.1, 0.35)
+      case 3: (cell, speed, sway, density) = (0.15, 0.03, 0.0, 0.45)
+      case 4: (cell, speed, sway, density) = (0.2, -1.5, 0.0, 0.7)
+      case 5: (cell, speed, sway, density) = (0.2, -0.14, 0.1, 0.4)
+      case 6: (cell, speed, sway, density) = (0.15, -0.12, 0.1, 0.45)
+      case 7: (cell, speed, sway, density) = (0.18, 0.09, 0.08, 0.35)
+      case 8: (cell, speed, sway, density) = (0.32, 0.025, 0.05, 0.45)
+      case 9: (cell, speed, sway, density) = (0.2, 0.1, 0.06, 0.35)
+      case 10: (cell, speed, sway, density) = (0.15, -0.1, 0.08, 0.45)
+      case 11: (cell, speed, sway, density) = (0.18, 0.015, 0.06, 0.4)
+      case 12: (cell, speed, sway, density) = (0.13, 0.35, 0.09, 0.55)
+      case 13: (cell, speed, sway, density) = (0.2, -0.2, 0.1, 0.45)
+      case 14: (cell, speed, sway, density) = (0.3, 0.1, 0.06, 0.35)
+      default: break
       }
+      // How fast the cells move sideways, for the rain and petals the wind
+      // slants.
+      drift = self.style == 4 ? 0.22 : (self.style == 6 ? 0.08 : 0.0)
     }
   }
 
@@ -2070,11 +2084,14 @@ final class ShaderVideoEffectTests: XCTestCase {
   ) -> [Double] {
     let s = Double(min(width, height))
     var color: [Double] = tap(px, py)
+    let fallLength: Double = hypot(look.drift, look.speed)
+    let fallX: Double = look.drift / fallLength
+    let fallY: Double = look.speed / fallLength
     for k in 0..<3 {
       let layer = Double(k)
       let depth: Double = 0.55 + 0.225 * layer
       let size: Double = s * look.cell * depth
-      let qx: Double = px / size + 0.37 * layer
+      let qx: Double = (px - look.drift * depth * t * s) / size + 0.37 * layer
       let qy: Double = (py - look.speed * depth * t * s) / size
       let idx: Double = qx.rounded(.down) + 131 * layer
       let idy: Double = qy.rounded(.down) + 71 * layer
@@ -2085,14 +2102,24 @@ final class ShaderVideoEffectTests: XCTestCase {
       let dx: Double = fract(qx) - (0.25 + 0.5 * h[0]) - look.sway * sin(swayAngle)
       let dy: Double = fract(qy) - (0.25 + 0.5 * h[1])
       let alpha: Double = 0.55 + 0.45 * depth
-      if look.style > 2.5 {
-        color = sparkle(color, dx, dy, g, alpha: alpha, seconds: t)
-      } else if look.style > 1.5 {
-        color = heartParticle(color, dx, dy, g, alpha: alpha, seconds: t)
-      } else if look.style > 0.5 {
-        color = confetti(color, dx, dy, h, g, alpha: alpha, seconds: t)
-      } else {
-        color = snowflake(color, dx, dy, g, alpha: alpha)
+      switch look.style {
+      case 1: color = confetti(color, dx, dy, h, g, alpha: alpha, seconds: t)
+      case 2: color = heartParticle(color, dx, dy, g, alpha: alpha, seconds: t)
+      case 3: color = sparkle(color, dx, dy, g, alpha: alpha, seconds: t)
+      case 4: color = raindrop(color, dx, dy, g, alpha: alpha, fallX: fallX, fallY: fallY)
+      case 5: color = leaf(color, dx, dy, h, g, alpha: alpha, seconds: t)
+      case 6: color = petal(color, dx, dy, h, g, alpha: alpha, seconds: t)
+      case 7: color = bubble(color, dx, dy, g, alpha: alpha, seconds: t)
+      case 8: color = bokeh(color, dx, dy, g, alpha: alpha, seconds: t)
+      case 9: color = note(color, dx, dy, g, alpha: alpha, seconds: t)
+      case 10: color = starParticle(color, dx, dy, h, g, alpha: alpha, seconds: t)
+      case 11: color = firefly(color, dx, dy, g, alpha: alpha, seconds: t)
+      case 12:
+        let height: Double = py / Double(self.height)
+        color = ember(color, dx, dy, g, alpha: alpha, seconds: t, height: height)
+      case 13: color = banknote(color, dx, dy, h, g, alpha: alpha, seconds: t)
+      case 14: color = balloon(color, dx, dy, g, alpha: alpha, seconds: t)
+      default: color = snowflake(color, dx, dy, g, alpha: alpha)
       }
     }
     return color
@@ -2158,6 +2185,327 @@ final class ShaderVideoEffectTests: XCTestCase {
     let r: Double = 0.07 + 0.05 * g[2]
     let cover: Double = 1 - smoothstep(r * 0.3, r, hypot(dx, dy))
     return mix(color, [0.97, 0.98, 1.0], alpha * cover)
+  }
+
+  /// Signed distance to a box of half-size `bx` by `by` around the origin.
+  private func box(_ px: Double, _ py: Double, _ bx: Double, _ by: Double) -> Double {
+    let qx: Double = abs(px) - bx
+    let qy: Double = abs(py) - by
+    let outside: Double = hypot(max(qx, 0), max(qy, 0))
+    return outside + min(max(qx, qy), 0)
+  }
+
+  /// Distance to the segment from (ax, ay) to (bx, by).
+  private func segment(
+    _ px: Double, _ py: Double, _ ax: Double, _ ay: Double, _ bx: Double, _ by: Double
+  ) -> Double {
+    let pax: Double = px - ax
+    let pay: Double = py - ay
+    let bax: Double = bx - ax
+    let bay: Double = by - ay
+    let along: Double = (pax * bax + pay * bay) / (bax * bax + bay * bay)
+    let h: Double = clamp(along)
+    return hypot(pax - bax * h, pay - bay * h)
+  }
+
+  /// Signed distance to a lens around the origin, pointed at y = ±b and w
+  /// wide on either side of its middle.
+  private func lens(_ px: Double, _ py: Double, _ b: Double, _ w: Double) -> Double {
+    let d: Double = 0.5 * (b * b / w - w)
+    let x: Double = abs(px)
+    let y: Double = abs(py)
+    if (y - b) * d > x * b { return hypot(x, y - b) }
+    return hypot(x + d, y) - d - w
+  }
+
+  /// Signed distance to a five-pointed star around the origin with its
+  /// points r out and its inner corners rf of the way there.
+  private func star(_ px: Double, _ py: Double, _ r: Double, _ rf: Double) -> Double {
+    let kx: Double = 0.809017
+    let ky: Double = -0.587785
+    var x: Double = abs(px)
+    var y: Double = py
+    let first: Double = max(kx * x + ky * y, 0)
+    x -= 2 * first * kx
+    y -= 2 * first * ky
+    let second: Double = max(-kx * x + ky * y, 0)
+    x += 2 * second * kx
+    y -= 2 * second * ky
+    x = abs(x)
+    y -= r
+    let bax: Double = -rf * ky
+    let bay: Double = rf * kx - 1
+    let along: Double = (x * bax + y * bay) / (bax * bax + bay * bay)
+    let h: Double = min(max(along, 0), r)
+    let side: Double = sign(y * bax - x * bay)
+    return hypot(x - bax * h, y - bay * h) * side
+  }
+
+  /// `light` added to `color` the way a screen blend does.
+  private func glow(_ color: [Double], _ light: [Double]) -> [Double] {
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let added: Double = clamp(light[k])
+      out[k] = 1 - (1 - color[k]) * (1 - added)
+    }
+    return out
+  }
+
+  /// `color` times `factor`, channel by channel.
+  private func scaled(_ color: [Double], _ factor: Double) -> [Double] {
+    [color[0] * factor, color[1] * factor, color[2] * factor]
+  }
+
+  /// `a + b · cos(2π (hue + offset))` for each channel's offset.
+  private func palette(
+    _ hue: Double, _ a: Double, _ b: Double, _ offsets: [Double]
+  ) -> [Double] {
+    var out = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let wave: Double = cos(6.2832 * (hue + offsets[k]))
+      out[k] = a + b * wave
+    }
+    return out
+  }
+
+  private func raindrop(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ g: [Double], alpha: Double,
+    fallX: Double, fallY: Double
+  ) -> [Double] {
+    let along: Double = dx * fallX + dy * fallY
+    let across: Double = abs(fallX * dy - fallY * dx)
+    let reach: Double = 0.14 + 0.08 * g[2]
+    let past: Double = max(abs(along) - reach, 0)
+    let line: Double = 1 - smoothstep(0.004, 0.011, hypot(across, past))
+    let head: Double = 0.25 + 0.75 * smoothstep(-reach, reach, along)
+    return mix(color, [0.82, 0.88, 0.96], alpha * 0.7 * line * head)
+  }
+
+  private func leaf(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ h: [Double], _ g: [Double],
+    alpha: Double, seconds t: Double
+  ) -> [Double] {
+    let tumbleAngle: Double = t * (1.2 + 1.2 * g[2]) + 6.2832 * h[1]
+    let tumble: Double = abs(cos(tumbleAngle))
+    let rockAngle: Double = t * (0.6 + 0.6 * g[0]) + 6.2832 * g[1]
+    let tilt: Double = 2 * g[2] - 1 + 0.6 * cos(rockAngle)
+    let u = turn(dx, dy, tilt)
+    let blade: Double = lens(u.x, u.y, 0.11, 0.05 * tumble + 0.006)
+    let stalk: Double = segment(u.x, u.y, 0, -0.11, 0, -0.128) - 0.006
+    let hue: Double = fract(g[2] * 7.31)
+    var tone: [Double] = mix([0.78, 0.2, 0.08], [0.95, 0.5, 0.1], smoothstep(0, 0.5, hue))
+    tone = mix(tone, [0.92, 0.72, 0.18], smoothstep(0.5, 1, hue))
+    let brown: Double = fract(g[2] * 13.7) >= 0.8 ? 1 : 0
+    tone = mix(tone, [0.5, 0.28, 0.12], brown)
+    let vein: Double = 1 - smoothstep(0.003, 0.007, abs(u.x))
+    let shade: Double = (0.6 + 0.4 * tumble) * (1 - 0.35 * vein)
+    tone = scaled(tone, shade)
+    let onStalk: Double = blade >= stalk ? 1 : 0
+    tone = mix(tone, scaled(tone, 0.6), onStalk)
+    let cover: Double = 1 - smoothstep(-0.012, 0.012, min(blade, stalk))
+    return mix(color, tone, alpha * cover)
+  }
+
+  private func petal(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ h: [Double], _ g: [Double],
+    alpha: Double, seconds t: Double
+  ) -> [Double] {
+    let flutterAngle: Double = t * (2 + 2 * g[1]) + 6.2832 * h[1]
+    let flutter: Double = abs(cos(flutterAngle))
+    let spin: Double = t * (0.8 + 1.2 * g[0]) * sign(h[0] - 0.5)
+    let u = turn(dx, dy, 6.2832 * g[2] + spin)
+    let w: Double = 0.075 * (0.25 + 0.75 * flutter)
+    let taper: Double = 0.8 + 0.25 * min(max(u.y / 0.1, -1), 1)
+    let ex: Double = u.x / (w * taper)
+    let ey: Double = u.y / 0.1
+    let body: Double = (hypot(ex, ey) - 1) * w
+    let bounds: Double = max(abs(u.y) - 0.1, abs(u.x) - 0.08)
+    let notch: Double = 0.03 - hypot(u.x, u.y - 0.11)
+    let edge: Double = max(max(body, bounds), notch)
+    let tint: [Double] = mix([0.96, 0.55, 0.7], [1.0, 0.87, 0.91], smoothstep(-1, 1, ey))
+    let cover: Double = 1 - smoothstep(-0.012, 0.012, edge)
+    return mix(color, scaled(tint, 0.75 + 0.25 * flutter), alpha * 0.95 * cover)
+  }
+
+  private func bubble(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ g: [Double], alpha: Double,
+    seconds t: Double
+  ) -> [Double] {
+    let r: Double = 0.08 + 0.07 * g[2]
+    let wobbleAngle: Double = t * (2 + 2 * g[0]) + 6.2832 * g[1]
+    let wobble: Double = 0.04 * sin(wobbleAngle)
+    let ux: Double = dx * (1 + wobble)
+    let uy: Double = dy * (1 - wobble)
+    let l: Double = hypot(ux, uy)
+    let film: Double = 1 - smoothstep(-0.006, 0.006, l - r)
+    let rim: Double = pow(clamp(l / r), 6) * film
+    let swirl: Double = g[0] + 0.12 * t + 0.5 * (ux - 0.6 * uy) / r
+    let iris: [Double] = palette(swirl, 0.6, 0.4, [0.0, 0.33, 0.67])
+    let sx: Double = ux + 0.4 * r
+    let sy: Double = uy - 0.45 * r
+    let shine: Double = exp(-(sx * sx + sy * sy) / (0.04 * r * r))
+    let tinted: [Double] = mix(color, iris, alpha * (0.08 * film + 0.6 * rim))
+    let light: Double = alpha * film * 0.8 * shine
+    return glow(tinted, [light, light, light])
+  }
+
+  private func bokeh(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ g: [Double], alpha: Double,
+    seconds t: Double
+  ) -> [Double] {
+    let r: Double = 0.11 + 0.08 * g[2]
+    let l: Double = hypot(dx, dy)
+    let inside: Double = 1 - smoothstep(r - 0.025, r, l)
+    let ring: Double = 0.6 + 0.4 * smoothstep(0.5 * r, r, l)
+    let pulseAngle: Double = t * (0.5 + 0.5 * g[0]) + 6.2832 * g[1]
+    let pulse: Double = 0.5 + 0.5 * sin(pulseAngle)
+    let strength: Double = alpha * inside * ring * (0.2 + 0.35 * pulse)
+    let tint: [Double] = palette(fract(g[2] * 7.31), 0.75, 0.25, [0.0, 0.2, 0.45])
+    return glow(color, scaled(tint, strength))
+  }
+
+  /// Signed distance to a note's head around the origin, in the note's units.
+  private func noteHead(_ x: Double, _ y: Double) -> Double {
+    let turned = turn(x, y, 0.4)
+    return (hypot(turned.x / 0.3, turned.y / 0.21) - 1) * 0.21
+  }
+
+  private func note(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ g: [Double], alpha: Double,
+    seconds t: Double
+  ) -> [Double] {
+    let size: Double = 0.155
+    let pair: Bool = fract(g[2] * 13.7) > 0.5
+    let rockAngle: Double = t * (1 + g[0]) + 6.2832 * g[1]
+    let turned = turn(dx, dy, 0.35 * sin(rockAngle))
+    let ux: Double = turned.x / size + (pair ? 0.36 : 0.14)
+    let uy: Double = turned.y / size + (pair ? 0.48 : 0.4)
+    var edge: Double = noteHead(ux, uy)
+    edge = min(edge, segment(ux, uy, 0.27, 0.06, 0.27, 1.0) - 0.045)
+    if pair {
+      let vx: Double = ux - 0.72
+      let vy: Double = uy - 0.16
+      edge = min(edge, noteHead(vx, vy))
+      edge = min(edge, segment(vx, vy, 0.27, 0.06, 0.27, 1.0) - 0.045)
+      edge = min(edge, segment(ux, uy, 0.27, 0.93, 0.99, 1.09) - 0.075)
+    } else {
+      edge = min(edge, segment(ux, uy, 0.27, 1.0, 0.55, 0.62) - 0.05)
+      edge = min(edge, segment(ux, uy, 0.55, 0.62, 0.5, 0.42) - 0.045)
+    }
+    edge *= size
+    let fill: Double = 1 - smoothstep(-0.012, 0.012, edge)
+    let ink: Double = 1 - smoothstep(0, 0.03, edge)
+    let tint: [Double] = palette(fract(g[2] * 7.31), 0.82, 0.18, [0.0, 0.33, 0.67])
+    let outline: Double = alpha * 0.6 * max(ink - fill, 0)
+    let inked: [Double] = mix(color, scaled(color, 0.35), outline)
+    return mix(inked, tint, alpha * fill)
+  }
+
+  private func starParticle(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ h: [Double], _ g: [Double],
+    alpha: Double, seconds t: Double
+  ) -> [Double] {
+    let r: Double = 0.1 + 0.04 * g[2]
+    let spin: Double = t * (0.6 + 0.8 * g[0]) * sign(h[0] - 0.5)
+    let u = turn(dx, dy, 6.2832 * g[2] + spin)
+    let edge: Double = star(u.x, u.y, r, 0.45)
+    let inner: Double = clamp(-edge / (0.35 * r))
+    let glintAngle: Double = t * (2 + 2 * g[1]) + 6.2832 * h[1]
+    let glint: Double = 0.5 + 0.5 * sin(glintAngle)
+    let gold: [Double] = mix([0.93, 0.6, 0.1], [1.0, 0.95, 0.6], inner)
+    let silver: [Double] = [0.72 + 0.24 * inner, 0.76 + 0.24 * inner, 0.84 + 0.24 * inner]
+    let isSilver: Double = fract(g[2] * 7.31) >= 0.75 ? 1 : 0
+    let tone: [Double] = scaled(mix(gold, silver, isSilver), 0.85 + 0.25 * glint)
+    let lit: [Double] = [min(tone[0], 1), min(tone[1], 1), min(tone[2], 1)]
+    let cover: Double = 1 - smoothstep(-0.012, 0.012, edge)
+    return mix(color, lit, alpha * 0.95 * cover)
+  }
+
+  private func firefly(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ g: [Double], alpha: Double,
+    seconds t: Double
+  ) -> [Double] {
+    let wanderAngle: Double = t * (0.5 + 0.5 * g[2]) + 6.2832 * g[0]
+    let y: Double = dy - 0.06 * sin(wanderAngle)
+    let blinkAngle: Double = t * (0.9 + 0.9 * g[0]) + 6.2832 * g[1]
+    let blink: Double = smoothstep(0.25, 0.9, 0.5 + 0.5 * sin(blinkAngle))
+    let r2: Double = dx * dx + y * y
+    let core: Double = exp(-r2 / 0.0008)
+    let halo: Double = exp(-r2 / 0.006)
+    let tint: [Double] = mix([0.75, 1.0, 0.3], [1.0, 1.0, 0.85], core)
+    return glow(color, scaled(tint, blink * alpha * (core + 0.55 * halo)))
+  }
+
+  private func ember(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ g: [Double], alpha: Double,
+    seconds t: Double, height: Double
+  ) -> [Double] {
+    let jitterAngle: Double = t * (3 + 2 * g[2]) + 6.2832 * g[0]
+    let x: Double = dx - 0.03 * sin(jitterAngle)
+    let flickerAngle: Double = t * (6 + 6 * g[0]) + 6.2832 * g[1]
+    let flicker: Double = 0.6 + 0.4 * sin(flickerAngle)
+    let ey: Double = dy * 0.45
+    let core: Double = exp(-(x * x + ey * ey) / 0.0006)
+    let halo: Double = exp(-(x * x + dy * dy) / 0.0036)
+    let hot: [Double] = mix([1.0, 0.32, 0.06], [1.0, 0.72, 0.25], fract(g[2] * 7.31))
+    let tint: [Double] = mix(hot, [1.0, 0.92, 0.7], 0.6 * core)
+    let fade: Double = 1 - 0.7 * height
+    return glow(color, scaled(tint, alpha * flicker * fade * (1.3 * core + 0.5 * halo)))
+  }
+
+  private func banknote(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ h: [Double], _ g: [Double],
+    alpha: Double, seconds t: Double
+  ) -> [Double] {
+    let tumbleAngle: Double = t * (2 + 2 * g[1]) + 6.2832 * h[1]
+    let tumble: Double = abs(cos(tumbleAngle))
+    let spin: Double = t * (0.6 + 1.0 * g[0]) * sign(h[0] - 0.5)
+    let u = turn(dx, dy, 6.2832 * g[2] + spin)
+    let breadth: Double = 0.062 * tumble + 0.004
+    let edge: Double = box(u.x, u.y, 0.12, breadth)
+    let frame: Double = box(u.x, u.y, 0.106, breadth - 0.014 * tumble)
+    let oval: Double = hypot(u.x / 0.12 / 0.3, u.y / breadth / 0.62)
+    let dark: [Double] = [0.18, 0.42, 0.24]
+    var tone: [Double] = mix([0.6, 0.8, 0.55], dark, smoothstep(-0.003, 0.003, frame))
+    tone = mix(tone, [0.78, 0.9, 0.72], 0.6 * (1 - smoothstep(0.8, 0.9, oval)))
+    tone = mix(tone, dark, 0.85 * (1 - smoothstep(0.08, 0.16, abs(oval - 1))))
+    let cover: Double = 1 - smoothstep(-0.012, 0.012, edge)
+    return mix(color, scaled(tone, 0.6 + 0.4 * tumble), alpha * cover)
+  }
+
+  private func balloon(
+    _ color: [Double], _ dx: Double, _ dy: Double, _ g: [Double], alpha: Double,
+    seconds t: Double
+  ) -> [Double] {
+    let size: Double = 0.16
+    let swingAngle: Double = t * (0.6 + 0.6 * g[0]) + 6.2832 * g[1]
+    let turned = turn(dx, dy, 0.12 * sin(swingAngle))
+    let ux: Double = turned.x / size
+    let uy: Double = turned.y / size
+    let qy: Double = uy - 0.38
+    let taper: Double = 1 - 0.15 * min(max(qy / 0.72, -1), 1)
+    let n: Double = hypot(ux * taper / 0.6, qy / 0.72)
+    let body: Double = (n - 1) * 0.6
+    let knot: Double = hypot(ux, uy + 0.41) - 0.08
+    let waveAngle: Double = 6 * uy + 2 * t + 6.2832 * g[1]
+    let wave: Double = 0.06 * sin(waveAngle)
+    let ends: Double = max(-1.12 - uy, uy + 0.45)
+    let line: Double = max(abs(ux - wave) - 0.02, ends)
+    let hue: Double = fract(g[2] * 7.31)
+    let offsets: [Double] = [0.0, 0.6667, 0.3333]
+    var tone = [Double](repeating: 0, count: 3)
+    for k in 0..<3 {
+      let ramp: Double = abs(fract(hue + offsets[k]) * 6 - 3) - 1
+      tone[k] = (0.2 + 0.8 * clamp(ramp)) * 0.92
+    }
+    let sx: Double = ux + 0.25
+    let sy: Double = qy - 0.3
+    let shine: Double = 0.7 * exp(-(sx * sx + sy * sy) / 0.02)
+    let skin: [Double] = mix(scaled(tone, 1 - 0.35 * smoothstep(0.3, 1, n)), [1, 1, 1], shine)
+    let string: Double = 1 - smoothstep(0, 0.06, line)
+    var out: [Double] = mix(color, [0.9, 0.9, 0.9], alpha * 0.7 * string)
+    out = mix(out, scaled(tone, 0.7), alpha * (1 - smoothstep(-0.075, 0.075, knot)))
+    return mix(out, skin, alpha * 0.95 * (1 - smoothstep(-0.075, 0.075, body)))
   }
 
   private func tiltShift(_ px: Double, _ py: Double, intensity: Double) -> [Double] {

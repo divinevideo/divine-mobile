@@ -1034,7 +1034,7 @@ void main() {
         for (final type in EditorEffectType.values)
           if (type.customId != null) type,
       ];
-      expect(custom, hasLength(11));
+      expect(custom, hasLength(22));
       for (final type in custom) {
         final effect = EditorVideoEffect.of(
           id: 'x',

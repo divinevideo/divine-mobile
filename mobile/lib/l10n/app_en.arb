@@ -6249,6 +6249,50 @@
   "@videoEditorEffectSparkles": {
     "description": "Name of a video effect: small four-pointed glints twinkle over the picture."
   },
+  "videoEditorEffectRain": "Rain",
+  "@videoEditorEffectRain": {
+    "description": "Name of a video effect: rain streaks down at a slant over the picture."
+  },
+  "videoEditorEffectLeaves": "Leaves",
+  "@videoEditorEffectLeaves": {
+    "description": "Name of a video effect: autumn leaves in reds, oranges and yellows rock and turn over as they fall over the picture."
+  },
+  "videoEditorEffectBlossoms": "Blossoms",
+  "@videoEditorEffectBlossoms": {
+    "description": "Name of a video effect: pink cherry blossom petals flutter down over the picture on the wind."
+  },
+  "videoEditorEffectBubbles": "Bubbles",
+  "@videoEditorEffectBubbles": {
+    "description": "Name of a video effect: shimmering soap bubbles float up over the picture."
+  },
+  "videoEditorEffectBokeh": "Bokeh",
+  "@videoEditorEffectBokeh": {
+    "description": "Name of a video effect, after the photography term: soft round discs of out-of-focus light drift and glow over the picture. Use the photography term your language uses."
+  },
+  "videoEditorEffectMusicNotes": "Music notes",
+  "@videoEditorEffectMusicNotes": {
+    "description": "Name of a video effect: music notes (♪, ♫) rock as they rise over the picture. Keep it short — it sits under a small tile."
+  },
+  "videoEditorEffectStars": "Stars",
+  "@videoEditorEffectStars": {
+    "description": "Name of a video effect: five-pointed gold and silver stars spin as they fall over the picture."
+  },
+  "videoEditorEffectFireflies": "Fireflies",
+  "@videoEditorEffectFireflies": {
+    "description": "Name of a video effect: small yellow-green lights wander about over the picture, glowing up and fading, like fireflies at night."
+  },
+  "videoEditorEffectEmbers": "Embers",
+  "@videoEditorEffectEmbers": {
+    "description": "Name of a video effect: glowing orange sparks rise from below and die away, as over a campfire."
+  },
+  "videoEditorEffectMoney": "Money",
+  "@videoEditorEffectMoney": {
+    "description": "Name of a video effect: green banknotes tumble down over the picture, as in \"make it rain\"."
+  },
+  "videoEditorEffectBalloons": "Balloons",
+  "@videoEditorEffectBalloons": {
+    "description": "Name of a video effect: colourful party balloons on strings swing as they rise over the picture."
+  },
   "videoEditorEffectTiltShift": "Tilt-Shift",
   "@videoEditorEffectTiltShift": {
     "description": "Name of a video effect: the top and bottom of the picture are blurred, so the scene looks like a miniature model. Tilt-shift is the photography term for this look."

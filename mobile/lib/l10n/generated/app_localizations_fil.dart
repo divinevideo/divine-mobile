@@ -8968,6 +8968,39 @@ class AppLocalizationsFil extends AppLocalizations {
   String get videoEditorEffectSparkles => 'Kislap';
 
   @override
+  String get videoEditorEffectRain => 'Ulan';
+
+  @override
+  String get videoEditorEffectLeaves => 'Mga Dahon';
+
+  @override
+  String get videoEditorEffectBlossoms => 'Mga Talulot';
+
+  @override
+  String get videoEditorEffectBubbles => 'Mga Bula';
+
+  @override
+  String get videoEditorEffectBokeh => 'Bokeh';
+
+  @override
+  String get videoEditorEffectMusicNotes => 'Mga Nota';
+
+  @override
+  String get videoEditorEffectStars => 'Mga Bituin';
+
+  @override
+  String get videoEditorEffectFireflies => 'Alitaptap';
+
+  @override
+  String get videoEditorEffectEmbers => 'Baga';
+
+  @override
+  String get videoEditorEffectMoney => 'Pera';
+
+  @override
+  String get videoEditorEffectBalloons => 'Mga Lobo';
+
+  @override
   String get videoEditorEffectTiltShift => 'Tilt-Shift';
 
   @override

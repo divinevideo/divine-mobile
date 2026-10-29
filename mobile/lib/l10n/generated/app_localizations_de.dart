@@ -9022,6 +9022,39 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorEffectSparkles => 'Funkeln';
 
   @override
+  String get videoEditorEffectRain => 'Regen';
+
+  @override
+  String get videoEditorEffectLeaves => 'Herbstlaub';
+
+  @override
+  String get videoEditorEffectBlossoms => 'Kirschblüten';
+
+  @override
+  String get videoEditorEffectBubbles => 'Seifenblasen';
+
+  @override
+  String get videoEditorEffectBokeh => 'Bokeh';
+
+  @override
+  String get videoEditorEffectMusicNotes => 'Musiknoten';
+
+  @override
+  String get videoEditorEffectStars => 'Sterne';
+
+  @override
+  String get videoEditorEffectFireflies => 'Glühwürmchen';
+
+  @override
+  String get videoEditorEffectEmbers => 'Glut';
+
+  @override
+  String get videoEditorEffectMoney => 'Geldregen';
+
+  @override
+  String get videoEditorEffectBalloons => 'Ballons';
+
+  @override
   String get videoEditorEffectTiltShift => 'Tilt-Shift';
 
   @override
