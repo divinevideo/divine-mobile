@@ -12,6 +12,7 @@ import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
+import 'package:nostr_sdk/filter.dart' as nostr_filter;
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
 
 class _MockNostrClient extends Mock implements NostrClient {}
@@ -557,6 +558,184 @@ void main() {
 
         expect(cancelled, isTrue);
         expect(await outgoingDao.getById(rowId), isNull);
+      });
+    });
+
+    group('stopHeldMemberDelivery (#10012)', () {
+      /// Members whose kind-10050 cannot be read: a wrap the fallback pool
+      /// confirms for them is held, and their row records it.
+      late Set<String> unreadable;
+
+      setUp(() {
+        unreadable = {};
+        when(
+          () => nostrClient.queryEventsDetailed(
+            any(),
+            subscriptionId: any(named: 'subscriptionId'),
+            useCache: any(named: 'useCache'),
+            tempRelays: any(named: 'tempRelays'),
+            requireAllRelaysSettled: any(named: 'requireAllRelaysSettled'),
+            acceptRelayClosedWhenOthersAnswered: any(
+              named: 'acceptRelayClosedWhenOthersAnswered',
+            ),
+            timeout: any(named: 'timeout'),
+          ),
+        ).thenAnswer((invocation) async {
+          final filters = (invocation.positionalArguments.first as List)
+              .cast<nostr_filter.Filter>();
+          final authors = filters.first.authors ?? const <String>[];
+          return (
+            events: const <Event>[],
+            timedOut: false,
+            noRelays: authors.any(unreadable.contains),
+          );
+        });
+      });
+
+      /// The row of [recipient], pinned to be held on its unreadable inbox.
+      Future<OutgoingDm> heldRowFor(
+        String conversationId,
+        String recipient,
+      ) async {
+        final row = await rowFor(conversationId, recipient);
+        expect(row?.recipientWrapStatus, equals(OutgoingWrapStatus.pending));
+        expect(
+          row?.recipientWrapEventId,
+          isNotNull,
+          reason: 'precondition: held on the wrap the pool accepted',
+        );
+        return row!;
+      }
+
+      test(
+        'keeps a record of a held member when the message is stored',
+        () async {
+          unreadable.add(_memberB);
+          final sent = await sendToAAndB();
+          final held = await heldRowFor(sent.conversationId, _memberB);
+          expect(await stored(sent.messageId), isNotNull);
+
+          expect(
+            await repository.stopHeldMemberDelivery(rumorId: held.id),
+            isTrue,
+          );
+
+          final row = await outgoingDao.getById(held.id);
+          expect(
+            row?.recipientWrapStatus,
+            equals(OutgoingWrapStatus.cancelled),
+          );
+        },
+      );
+
+      test('leaves a held 1:1 message as it is', () async {
+        unreadable.add(_memberB);
+        final result = await repository.sendMessage(
+          recipientPubkey: _memberB,
+          content: 'see you at eight',
+        );
+        final conversationId = DmRepository.computeConversationId([
+          _owner,
+          _memberB,
+        ]);
+        final held = await heldRowFor(conversationId, _memberB);
+        expect(held.id, equals(result.queuedRumorId));
+
+        expect(
+          await repository.stopHeldMemberDelivery(rumorId: held.id),
+          isFalse,
+        );
+
+        final row = await outgoingDao.getById(held.id);
+        expect(row?.recipientWrapStatus, equals(OutgoingWrapStatus.pending));
+      });
+
+      test('leaves a held member of a message no member has', () async {
+        unreadable.addAll([_memberA, _memberB]);
+        final sent = await sendToAAndB();
+        final held = await heldRowFor(sent.conversationId, _memberB);
+        expect(
+          await stored(sent.messageId),
+          isNull,
+          reason: 'precondition: nobody has it, so nothing is stored',
+        );
+
+        expect(
+          await repository.stopHeldMemberDelivery(rumorId: held.id),
+          isFalse,
+        );
+
+        final row = await outgoingDao.getById(held.id);
+        expect(row?.recipientWrapStatus, equals(OutgoingWrapStatus.pending));
+      });
+
+      test('leaves a member who is not held', () async {
+        final sent = await sendReachingOnlyA();
+        expect(
+          (await outgoingDao.getById(sent.rowForB))?.recipientWrapEventId,
+          isNull,
+          reason: 'precondition: the relay refused B, so nothing is held',
+        );
+
+        expect(
+          await repository.stopHeldMemberDelivery(rumorId: sent.rowForB),
+          isFalse,
+        );
+
+        final row = await outgoingDao.getById(sent.rowForB);
+        expect(row?.recipientWrapStatus, equals(OutgoingWrapStatus.failed));
+      });
+
+      test('changes nothing on a member already stopped', () async {
+        unreadable.add(_memberB);
+        final sent = await sendToAAndB();
+        final held = await heldRowFor(sent.conversationId, _memberB);
+        await stopB(held.id);
+
+        expect(
+          await repository.stopHeldMemberDelivery(rumorId: held.id),
+          isFalse,
+        );
+
+        final row = await outgoingDao.getById(held.id);
+        expect(row?.recipientWrapStatus, equals(OutgoingWrapStatus.cancelled));
+      });
+
+      test('is false for a row that is gone', () async {
+        expect(
+          await repository.stopHeldMemberDelivery(rumorId: _hex(0xdead)),
+          isFalse,
+        );
+      });
+
+      test("refuses another account's row", () async {
+        final rowId = _hex(0xf1);
+        await outgoingDao.enqueue(
+          OutgoingDm(
+            id: rowId,
+            conversationId: DmRepository.computeConversationId([
+              _memberC,
+              _memberA,
+              _memberB,
+            ]),
+            recipientPubkey: _memberB,
+            content: 'not ours',
+            createdAt: 1700000000,
+            rumorEventJson: jsonEncode({'id': rowId, 'kind': 14}),
+            recipientWrapStatus: OutgoingWrapStatus.pending,
+            recipientWrapEventId: _hex(0xf2),
+            selfWrapStatus: OutgoingWrapStatus.pending,
+            queuedAt: DateTime.utc(2026, 8),
+            ownerPubkey: _memberC,
+          ),
+        );
+
+        await expectLater(
+          repository.stopHeldMemberDelivery(rumorId: rowId),
+          throwsArgumentError,
+        );
+        final row = await outgoingDao.getById(rowId);
+        expect(row?.recipientWrapStatus, equals(OutgoingWrapStatus.pending));
       });
     });
 

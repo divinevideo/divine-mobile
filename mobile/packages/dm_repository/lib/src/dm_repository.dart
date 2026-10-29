@@ -8419,6 +8419,47 @@ class DmRepository {
     return stopped;
   }
 
+  /// Stop delivering a group message to a member held on an unreadable
+  /// inbox once its retries ran out (#10012), leaving the record
+  /// [cancelOutgoingSend] leaves, so the bubble reads "Not sent to everyone"
+  /// instead of "Failed to send".
+  ///
+  /// Only a held member ([_heldPoolWrapId]) of a group message that is stored
+  /// for the members who have it is stopped, and the call returns `true`.
+  /// Anything else is left as it is and returns `false`: a missing row, a
+  /// delivery already stopped, a member that is not held, a 1:1 message, and
+  /// a group message no member has, which all keep "Failed to send".
+  ///
+  /// Throws [StateError] if the queue DAO is not wired in, and
+  /// [ArgumentError] if the row belongs to a different account.
+  Future<bool> stopHeldMemberDelivery({required String rumorId}) async {
+    _assertInitialized();
+    final dao = _outgoingDmsDao;
+    if (dao == null) {
+      throw StateError(
+        'stopHeldMemberDelivery requires the outgoing_dms queue DAO; '
+        'wire OutgoingDmsDao into DmRepository before calling.',
+      );
+    }
+    var stopped = false;
+    // One transaction, as in [cancelOutgoingSend].
+    await _conversationsDao.runInTransaction<void>(() async {
+      final row = await dao.getById(rumorId);
+      if (row == null) return;
+      if (row.ownerPubkey != _userPubkey) {
+        throw ArgumentError.value(
+          rumorId,
+          'rumorId',
+          'queue row belongs to a different account',
+        );
+      }
+      if (!_isLiveDelivery(row) || _heldPoolWrapId(row) == null) return;
+      if (!await _stoppedRowKeepsItsRecord(row)) return;
+      stopped = await dao.markRecipientCancelled(rumorId);
+    });
+    return stopped;
+  }
+
   /// Cancel every queued row of the send batch containing [rumorId] — the
   /// group-send counterpart of [cancelOutgoingSend], for deleting a message.
   ///

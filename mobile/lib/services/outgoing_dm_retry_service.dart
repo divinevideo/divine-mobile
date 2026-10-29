@@ -79,7 +79,8 @@ class OutgoingDmRetryConfig {
 /// charged, and it waits for a relay to connect rather than the follow-up
 /// timer (#8516).
 ///
-/// **Scope:** three sweep arms run on each trigger:
+/// **Scope:** four sweep arms run on each trigger, then the
+/// delete-for-everyone pass ([_sweepMessageDeletions]):
 ///
 /// 1. `recipient: sent / self: failed` → [DmRepository.recoverSelfWrap]
 ///    (the canonical partial-delivery recovery from #4124).
@@ -99,7 +100,12 @@ class OutgoingDmRetryConfig {
 ///    A pending row that has burned the retry budget (`retry_count >=
 ///    maxRetries`) is terminalized to `failed` here, since
 ///    `getStillPendingForOwner` — unlike the failed arm's
-///    `getRetryableForOwner` — has no retry-count cap of its own.
+///    `getRetryableForOwner` — has no retry-count cap of its own. A group
+///    member held on an unreadable inbox is stopped instead, when the message
+///    is stored for the others ([DmRepository.stopHeldMemberDelivery]), so
+///    its bubble reads "Not sent to everyone" (#10012).
+/// 4. A held group member already `failed` with its budget spent, which the
+///    failed arm no longer selects, is stopped the same way.
 class OutgoingDmRetryService {
   OutgoingDmRetryService({
     required DmRepository dmRepository,
@@ -525,6 +531,7 @@ class OutgoingDmRetryService {
       var blockedInterrupted = 0;
       var notSentInterrupted = 0;
       var exhaustedInterrupted = 0;
+      var stoppedHeld = 0;
       var skippedInterruptedTooYoung = 0;
       if (!abortedNotReady) {
         final pending = await _dao.getStillPendingForOwner(
@@ -547,8 +554,11 @@ class OutgoingDmRetryService {
           // maxRetries`; `getStillPendingForOwner` does not, so without this
           // an unconfirmable pending row would re-drive forever.
           if (row.retryCount >= _retryConfig.maxRetries) {
-            await _markInterruptedExhausted(row);
-            exhaustedInterrupted++;
+            if (await _markInterruptedExhausted(row)) {
+              stoppedHeld++;
+            } else {
+              exhaustedInterrupted++;
+            }
             continue;
           }
 
@@ -635,6 +645,8 @@ class OutgoingDmRetryService {
         }
       }
 
+      if (!abortedNotReady) stoppedHeld += await _stopExhaustedHeldMembers();
+
       final deletions = await _sweepMessageDeletions();
 
       Log.info(
@@ -652,6 +664,7 @@ class OutgoingDmRetryService {
         'interrupted-blocked=$blockedInterrupted '
         'interrupted-not-sent=$notSentInterrupted '
         'interrupted-exhausted=$exhaustedInterrupted '
+        'held-stopped=$stoppedHeld '
         'skipped-backoff=$skippedBackoff '
         'skipped-interrupted-too-young=$skippedInterruptedTooYoung '
         'aborted-not-ready=$abortedNotReady '
@@ -942,9 +955,20 @@ class OutgoingDmRetryService {
   /// recipient wraps untouched. Rows whose recipient wrap is still
   /// pending/failed terminalize both wraps.
   ///
+  /// A group member a fallback-pool relay holds a wrap of (#10012) is first
+  /// offered to [DmRepository.stopHeldMemberDelivery]: when the message is
+  /// stored for the members who have it, the member is stopped instead, and
+  /// the bubble reads "Not sent to everyone". Returns whether it was stopped;
+  /// anything else is terminalized as below.
+  ///
   /// Swallows DAO errors — a failed mark just means the row is
   /// re-evaluated next sweep and terminalized then.
-  Future<void> _markInterruptedExhausted(OutgoingDm row) async {
+  Future<bool> _markInterruptedExhausted(OutgoingDm row) async {
+    if (row.recipientWrapStatus == OutgoingWrapStatus.pending &&
+        row.recipientWrapEventId != null &&
+        await _stopHeldMember(row.id)) {
+      return true;
+    }
     if (row.recipientWrapStatus == OutgoingWrapStatus.sent) {
       try {
         await _dao.markSelfWrapStatus(
@@ -959,12 +983,55 @@ class OutgoingDmRetryService {
           category: LogCategory.system,
         );
       }
-      return;
+      return false;
     }
     await _terminalizeRow(
       row.id,
       error: 'Exhausted retries without recipient confirmation',
     );
+    return false;
+  }
+
+  /// Stops the held group members already failed with their retry budget
+  /// spent, which the failed arm no longer re-drives: rows exhausted before
+  /// held members were stopped, or after a Resend whose retries ran out
+  /// (#10012). Returns how many were stopped.
+  Future<int> _stopExhaustedHeldMembers() async {
+    final rows = await _dao.getExhaustedHeldForOwner(
+      ownerPubkey: _userPubkey,
+      maxRetries: _retryConfig.maxRetries,
+      environment: _environment,
+    );
+    var stopped = 0;
+    for (final row in rows) {
+      if (await _stopHeldMember(row.id)) stopped++;
+    }
+    return stopped;
+  }
+
+  /// [DmRepository.stopHeldMemberDelivery] for the row [rowId]. Never
+  /// throws: a throw is logged and reported, and reads as not stopped, so
+  /// the row keeps the status it would have had (#10012).
+  Future<bool> _stopHeldMember(String rowId) async {
+    try {
+      return await _dmRepository.stopHeldMemberDelivery(rumorId: rowId);
+    } on Object catch (e, stackTrace) {
+      Log.error(
+        'could not stop held member delivery $rowId: $e',
+        name: 'OutgoingDmRetryService',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      unawaited(
+        _crashReporting.recordError(
+          e,
+          stackTrace,
+          reason: OutgoingDmRetryServiceReportableSites.stopHeldMemberDelivery,
+        ),
+      );
+      return false;
+    }
   }
 
   /// Offline pass: no publish can succeed, so instead of leaving the queue

@@ -40,6 +40,7 @@ OutgoingDm _row({
   DateTime? lastAttemptAt,
   String ownerPubkey = _ownerPubkey,
   DateTime? queuedAt,
+  String? recipientWrapEventId,
 }) {
   return OutgoingDm(
     id: id,
@@ -54,6 +55,7 @@ OutgoingDm _row({
     ownerPubkey: ownerPubkey,
     retryCount: retryCount,
     lastAttemptAt: lastAttemptAt,
+    recipientWrapEventId: recipientWrapEventId,
   );
 }
 
@@ -108,6 +110,13 @@ void main() {
     when(
       () => dmRepository.retryableMessageDeletions(),
     ).thenAnswer((_) async => const <DmMessageDeletionRetryTarget>[]);
+    when(
+      () => dao.getExhaustedHeldForOwner(
+        ownerPubkey: any(named: 'ownerPubkey'),
+        maxRetries: any(named: 'maxRetries'),
+        environment: any(named: 'environment'),
+      ),
+    ).thenAnswer((_) async => const <OutgoingDm>[]);
   });
 
   tearDown(() async {
@@ -160,6 +169,14 @@ void main() {
         final service = buildService(environment: 'staging');
 
         await service.sweep();
+
+        verify(
+          () => dao.getExhaustedHeldForOwner(
+            ownerPubkey: _ownerPubkey,
+            maxRetries: any(named: 'maxRetries'),
+            environment: 'staging',
+          ),
+        ).called(1);
 
         verify(
           () => dao.getRetryableForOwner(
@@ -2638,6 +2655,272 @@ void main() {
           verify(() => dao.incrementRetry('interrupted-throw')).called(1);
         },
       );
+    });
+
+    group('a held group member whose retries ran out (#10012)', () {
+      final now = DateTime.utc(2026, 5, 10, 12);
+
+      /// A pending row a fallback-pool relay holds a wrap of, with its
+      /// retries spent.
+      OutgoingDm heldExhausted(String id) => _row(
+        id: id,
+        recipient: OutgoingWrapStatus.pending,
+        self: OutgoingWrapStatus.pending,
+        retryCount: 5,
+        queuedAt: now.subtract(const Duration(minutes: 5)),
+        recipientWrapEventId: 'pool-wrap:$id',
+      );
+
+      void stubTerminalize() {
+        when(
+          () => dao.markRecipientWrapStatus(
+            id: any(named: 'id'),
+            status: any(named: 'status'),
+            lastError: any(named: 'lastError'),
+          ),
+        ).thenAnswer((_) async => true);
+        when(
+          () => dao.markSelfWrapStatus(
+            id: any(named: 'id'),
+            status: any(named: 'status'),
+            lastError: any(named: 'lastError'),
+          ),
+        ).thenAnswer((_) async => true);
+      }
+
+      void stubStop(Future<bool> Function() answer) {
+        when(
+          () => dmRepository.stopHeldMemberDelivery(
+            rumorId: any(named: 'rumorId'),
+          ),
+        ).thenAnswer((_) => answer());
+      }
+
+      void verifyNotTerminalized(String id) {
+        verifyNever(
+          () => dao.markRecipientWrapStatus(
+            id: id,
+            status: OutgoingWrapStatus.failed,
+            lastError: any(named: 'lastError'),
+          ),
+        );
+        verifyNever(
+          () => dao.markSelfWrapStatus(
+            id: id,
+            status: OutgoingWrapStatus.failed,
+            lastError: any(named: 'lastError'),
+          ),
+        );
+      }
+
+      void verifyTerminalized(String id) {
+        verify(
+          () => dao.markRecipientWrapStatus(
+            id: id,
+            status: OutgoingWrapStatus.failed,
+            lastError: any(named: 'lastError'),
+          ),
+        ).called(1);
+        verify(
+          () => dao.markSelfWrapStatus(
+            id: id,
+            status: OutgoingWrapStatus.failed,
+            lastError: any(named: 'lastError'),
+          ),
+        ).called(1);
+      }
+
+      test('stops it instead of failing it', () async {
+        when(
+          () => dao.getStillPendingForOwner(any()),
+        ).thenAnswer((_) async => [heldExhausted('held-1')]);
+        stubTerminalize();
+        stubStop(() async => true);
+
+        await buildService(now: () => now).sweep();
+
+        verify(
+          () => dmRepository.stopHeldMemberDelivery(rumorId: 'held-1'),
+        ).called(1);
+        verifyNotTerminalized('held-1');
+        verifyNever(() => dmRepository.recoverFullSend(rumorId: 'held-1'));
+      });
+
+      test('fails it as before when the repository keeps it', () async {
+        when(
+          () => dao.getStillPendingForOwner(any()),
+        ).thenAnswer((_) async => [heldExhausted('held-1to1')]);
+        stubTerminalize();
+        stubStop(() async => false);
+
+        await buildService(now: () => now).sweep();
+
+        verifyTerminalized('held-1to1');
+      });
+
+      test(
+        'fails it as before, and reports, when stopping it throws',
+        () async {
+          final crashReporting = _MockCrashReportingService();
+          when(
+            () => crashReporting.recordError(
+              any<dynamic>(),
+              any<StackTrace?>(),
+              reason: any(named: 'reason'),
+            ),
+          ).thenAnswer((_) async {});
+          when(
+            () => dao.getStillPendingForOwner(any()),
+          ).thenAnswer((_) async => [heldExhausted('held-throws')]);
+          stubTerminalize();
+          stubStop(() async => throw StateError('database is closed'));
+
+          await expectLater(
+            buildService(
+              now: () => now,
+              crashReporting: crashReporting,
+            ).sweep(),
+            completes,
+          );
+
+          verifyTerminalized('held-throws');
+          verify(
+            () => crashReporting.recordError(
+              any<dynamic>(),
+              any<StackTrace?>(),
+              reason:
+                  OutgoingDmRetryServiceReportableSites.stopHeldMemberDelivery,
+            ),
+          ).called(1);
+        },
+      );
+
+      test('fails a row no pool relay holds a wrap of without asking to stop '
+          'it', () async {
+        when(() => dao.getStillPendingForOwner(any())).thenAnswer(
+          (_) async => [
+            _row(
+              id: 'not-held',
+              recipient: OutgoingWrapStatus.pending,
+              self: OutgoingWrapStatus.pending,
+              retryCount: 5,
+              queuedAt: now.subtract(const Duration(minutes: 5)),
+            ),
+          ],
+        );
+        stubTerminalize();
+        stubStop(() async => true);
+
+        await buildService(now: () => now).sweep();
+
+        verifyNever(
+          () => dmRepository.stopHeldMemberDelivery(
+            rumorId: any(named: 'rumorId'),
+          ),
+        );
+        verifyTerminalized('not-held');
+      });
+
+      group('already failed with its retries spent', () {
+        void stubExhaustedHeld(List<String> ids) {
+          when(
+            () => dao.getExhaustedHeldForOwner(
+              ownerPubkey: any(named: 'ownerPubkey'),
+              maxRetries: any(named: 'maxRetries'),
+              environment: any(named: 'environment'),
+            ),
+          ).thenAnswer(
+            (_) async => [
+              for (final id in ids)
+                _row(
+                  id: id,
+                  recipient: OutgoingWrapStatus.failed,
+                  self: OutgoingWrapStatus.failed,
+                  retryCount: 5,
+                  recipientWrapEventId: 'pool-wrap:$id',
+                ),
+            ],
+          );
+        }
+
+        test('stops each one', () async {
+          stubExhaustedHeld(['spent-1', 'spent-2']);
+          stubStop(() async => true);
+
+          await buildService().sweep();
+
+          verify(
+            () => dao.getExhaustedHeldForOwner(
+              ownerPubkey: _ownerPubkey,
+              maxRetries: 5,
+              environment: any(named: 'environment'),
+            ),
+          ).called(1);
+          verify(
+            () => dmRepository.stopHeldMemberDelivery(rumorId: 'spent-1'),
+          ).called(1);
+          verify(
+            () => dmRepository.stopHeldMemberDelivery(rumorId: 'spent-2'),
+          ).called(1);
+        });
+
+        test('one that throws does not end the pass', () async {
+          stubExhaustedHeld(['spent-1', 'spent-2']);
+          stubStop(() async => true);
+          when(
+            () => dmRepository.stopHeldMemberDelivery(rumorId: 'spent-1'),
+          ).thenThrow(StateError('database is closed'));
+
+          await expectLater(buildService().sweep(), completes);
+
+          verify(
+            () => dmRepository.stopHeldMemberDelivery(rumorId: 'spent-2'),
+          ).called(1);
+        });
+
+        test('are left alone while the repository is not ready', () async {
+          stubExhaustedHeld(['spent-1']);
+          stubStop(() async => true);
+          when(
+            () => dao.getRetryableForOwner(
+              ownerPubkey: any(named: 'ownerPubkey'),
+              maxRetries: any(named: 'maxRetries'),
+            ),
+          ).thenAnswer(
+            (_) async => [
+              _row(
+                id: 'rumor-not-ready',
+                recipient: OutgoingWrapStatus.failed,
+                self: OutgoingWrapStatus.pending,
+              ),
+            ],
+          );
+          when(
+            () => dmRepository.recoverFullSend(rumorId: 'rumor-not-ready'),
+          ).thenThrow(StateError('not initialized'));
+
+          await buildService().sweep();
+
+          verifyNever(
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: any(named: 'rumorId'),
+            ),
+          );
+        });
+
+        test('are left alone while offline', () async {
+          stubExhaustedHeld(['spent-1']);
+          stubStop(() async => true);
+
+          await buildService(isOffline: () async => true).sweep();
+
+          verifyNever(
+            () => dmRepository.stopHeldMemberDelivery(
+              rumorId: any(named: 'rumorId'),
+            ),
+          );
+        });
+      });
     });
 
     group('offline pass (probe reports no connectivity)', () {

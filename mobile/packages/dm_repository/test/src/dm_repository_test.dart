@@ -32353,6 +32353,19 @@ void main() {
       );
     });
 
+    group('stopHeldMemberDelivery', () {
+      test(
+        'throws StateError when the outgoing_dms DAO is not wired in',
+        () async {
+          final repository = createRepository();
+          await expectLater(
+            () => repository.stopHeldMemberDelivery(rumorId: _rumorEventId),
+            throwsStateError,
+          );
+        },
+      );
+    });
+
     group('cancelOutgoingBatch', () {
       late _MockOutgoingDmsDao mockOutgoingDmsDao;
 

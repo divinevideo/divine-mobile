@@ -1,7 +1,9 @@
 // ABOUTME: E2E regression for #8434 — a group DM fans one rumor out as one gift
 // ABOUTME: wrap per recipient, so a recipient whose kind-10050 inbox is
 // ABOUTME: UNREADABLE must not have that recipient's fallback-pool OK scored as
-// ABOUTME: delivery while a readable sibling in the same send still is.
+// ABOUTME: delivery while a readable sibling in the same send still is; and
+// ABOUTME: for #10012, once that member's retries run out the bubble reads
+// ABOUTME: "Not sent to everyone" through the real retry sweep.
 // ABOUTME: Drives a real DmRepository + NostrClient over real sockets.
 // ABOUTME: Requires: NO Docker stack — every dependency here is local.
 
@@ -17,11 +19,14 @@ import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/client_utils/keys.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:nostr_sdk/event_kind.dart';
+import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:nostr_sdk/nostr.dart';
 import 'package:nostr_sdk/relay/relay_base.dart';
 import 'package:nostr_sdk/relay/relay_status.dart';
 import 'package:nostr_sdk/relay/web_socket_connection_manager.dart';
 import 'package:nostr_sdk/signer/local_nostr_signer.dart';
+import 'package:openvine/blocs/dm/conversation/conversation_bloc.dart';
+import 'package:openvine/services/outgoing_dm_retry_service.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../helpers/fake_relay.dart';
@@ -295,6 +300,134 @@ void main() {
           reason: 'the re-drive must not consume the row the send preserved',
         );
       },
+    );
+  });
+
+  group('#10012 a held group member whose retries run out', () {
+    /// Runs the real retry sweep, passes ten minutes apart, which outlasts
+    /// the interrupted-send guard and every backoff, until the row of
+    /// [member] leaves pending; returns it as that pass left it.
+    Future<OutgoingDm?> sweepUntilRetriesRunOut(
+      DmRepository repository,
+      AppDatabase db,
+      String member,
+    ) async {
+      var offset = Duration.zero;
+      final service = OutgoingDmRetryService(
+        dmRepository: repository,
+        outgoingDmsDao: db.outgoingDmsDao,
+        userPubkey: senderPubkey,
+        appForegroundStream: const Stream<bool>.empty(),
+        now: () => DateTime.now().add(offset),
+      );
+      for (var pass = 0; pass < 10; pass++) {
+        offset += const Duration(minutes: 10);
+        await service.sweep();
+        final row = await queueRowFor(db, member);
+        if (row?.recipientWrapStatus != OutgoingWrapStatus.pending) return row;
+      }
+      fail('the retries of ${pubkeyForLogs(member)} never ran out');
+    }
+
+    Future<DmDeliveryStatus> statusOf(
+      DmRepository repository,
+      String bubbleId,
+    ) async => ConversationState(
+      messages: await repository.watchMessages(groupConversationId).first,
+      pendingOutgoing: await repository.getOutgoing(groupConversationId),
+    ).statusFor(bubbleId);
+
+    testWidgets(
+      'ARM D: the member held on an unreadable inbox is stopped, so the bubble '
+      'reads not sent to everyone instead of failed',
+      (tester) async {
+        final relay = await FakeRelay.start(
+          reply: readableInbox(),
+          replyForKinds: const {EventKind.dmRelaysList},
+          stallReqForAuthors: {unreadablePubkey},
+        );
+        addTearDown(relay.stop);
+        final stack = await buildStack(relay);
+        // Each retry waits this long on the stalled inbox lookup.
+        DmRepository.inboxResolutionBudget = const Duration(milliseconds: 300);
+        final results = await stack.repository.sendGroupMessage(
+          recipientPubkeys: [readablePubkey, unreadablePubkey],
+          content: 'group message, one member unreadable',
+        );
+        expect(results[0].success, isTrue, reason: 'precondition');
+        expect(results[1].retryablePending, isTrue, reason: 'precondition');
+        final bubble =
+            (await stack.repository
+                    .watchMessages(
+                      groupConversationId,
+                    )
+                    .first)
+                .single;
+        expect(
+          await statusOf(stack.repository, bubble.id),
+          DmDeliveryStatus.pending,
+          reason: 'precondition: held, so still in progress',
+        );
+
+        final held = await sweepUntilRetriesRunOut(
+          stack.repository,
+          stack.db,
+          unreadablePubkey,
+        );
+
+        expect(
+          held?.recipientWrapStatus,
+          OutgoingWrapStatus.cancelled,
+          reason: 'stopped on the pass its retries ran out, never failed',
+        );
+        expect(held?.retryCount, greaterThanOrEqualTo(5));
+        expect(
+          await statusOf(stack.repository, bubble.id),
+          DmDeliveryStatus.notSentToEveryone,
+        );
+      },
+      timeout: const Timeout(Duration(minutes: 3)),
+    );
+
+    testWidgets(
+      'ARM E: control — when no member got the message there is nothing to '
+      'be not sent to everyone, so the held members end failed',
+      (tester) async {
+        final relay = await FakeRelay.start(
+          stallReqForKinds: const {EventKind.dmRelaysList},
+        );
+        addTearDown(relay.stop);
+        final stack = await buildStack(relay);
+        DmRepository.inboxResolutionBudget = const Duration(milliseconds: 300);
+        final results = await stack.repository.sendGroupMessage(
+          recipientPubkeys: [readablePubkey, unreadablePubkey],
+          content: 'group message, no member readable',
+        );
+        expect(results.every((r) => r.retryablePending), isTrue);
+        final held = await queueRowFor(stack.db, unreadablePubkey);
+        expect(
+          held?.recipientWrapEventId,
+          isNotNull,
+          reason: 'precondition: held on the wrap the pool accepted',
+        );
+
+        final ranOut = await sweepUntilRetriesRunOut(
+          stack.repository,
+          stack.db,
+          unreadablePubkey,
+        );
+
+        expect(ranOut?.recipientWrapStatus, OutgoingWrapStatus.failed);
+        expect(
+          (await queueRowFor(stack.db, readablePubkey))?.recipientWrapStatus,
+          OutgoingWrapStatus.failed,
+        );
+        expect(
+          await statusOf(stack.repository, held!.rumorId),
+          DmDeliveryStatus.failed,
+        );
+      },
+      timeout: const Timeout(Duration(minutes: 3)),
     );
   });
 }

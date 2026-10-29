@@ -18,4 +18,9 @@ abstract class OutgoingDmRetryServiceReportableSites {
   /// unconfirmed (#10012).
   static const String markMessageDeletionUnconfirmed =
       'OutgoingDmRetryService.markMessageDeletionUnconfirmed';
+
+  /// A group member held on an unreadable inbox, whose retries ran out, could
+  /// not be stopped (#10012).
+  static const String stopHeldMemberDelivery =
+      'OutgoingDmRetryService.stopHeldMemberDelivery';
 }
