@@ -931,6 +931,46 @@ void main() {
         expect(cue.end, equals(const Duration(seconds: 3)));
       });
 
+      test(
+        'never ends a cue before it starts across overlapping takes',
+        () async {
+          // Within the back-to-back tolerance, the second take starts 50 ms
+          // before the first ends, so mapping each end through its own take
+          // would put the end before the start.
+          stubMerge([_offset(0, 2000), _offset(2000, 2050)]);
+          final service = buildService(
+            remote: remoteReturning([_word('Hm.', 1990, 2030)]),
+          );
+
+          final outcome = await service.generateForClips(
+            clips: [
+              _clip('a', volume: 0, duration: const Duration(seconds: 6)),
+            ],
+            audioTracks: [
+              _track(
+                '${_takeId}_a',
+                url: '/tmp/take1.m4a',
+                startTime: Duration.zero,
+                endTime: const Duration(milliseconds: 2000),
+              ),
+              _track(
+                '${_takeId}_b',
+                url: '/tmp/take2.m4a',
+                startTime: const Duration(milliseconds: 1950),
+                endTime: const Duration(milliseconds: 4000),
+              ),
+            ],
+            localeIdentifier: 'en-US',
+          );
+
+          final cue = (outcome as CaptionsGenerated).cues.single;
+          expect(cue.end, greaterThanOrEqualTo(cue.start));
+          // It belongs to the second take, which it overlaps most.
+          expect(cue.start, equals(const Duration(milliseconds: 1950)));
+          expect(cue.end, equals(const Duration(milliseconds: 1980)));
+        },
+      );
+
       test('keeps a voice-over over clip speech in its own cues', () async {
         stubMerge([_offset(0, 6000), _offset(6000, 2000)]);
         final service = buildService(

@@ -444,19 +444,21 @@ class CaptionGenerationService {
       final last = math.max(first, _segmentIndexEndingAt(word.end, offsets));
       final owner = _mostOverlapped(word, first, last, offsets);
       if (first < last && _playBackToBack(sources, first, last)) {
-        mapped.add((
-          lane: sources[owner].lane,
-          word: CaptionSegment(
-            text: word.text,
-            start: _mergedToTimeline(
-              word.start,
-              sources[first],
-              offsets[first],
-            ),
-            end: _mergedToTimeline(word.end, sources[last], offsets[last]),
-          ),
-        ));
-        continue;
+        final start = _mergedToTimeline(
+          word.start,
+          sources[first],
+          offsets[first],
+        );
+        final end = _mergedToTimeline(word.end, sources[last], offsets[last]);
+        // Sources within the tolerance can overlap on the timeline, which
+        // would end a short cue before it starts; give it to its owner then.
+        if (end >= start) {
+          mapped.add((
+            lane: sources[owner].lane,
+            word: CaptionSegment(text: word.text, start: start, end: end),
+          ));
+          continue;
+        }
       }
       mapped.add(
         _mapWord(
