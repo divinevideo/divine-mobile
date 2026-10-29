@@ -67,7 +67,7 @@ void main() {
     bool tagged = true,
     String? id,
   }) => ChatMessage(
-    id: id ?? '$time'.padLeft(64, '0'),
+    id: id ?? '$time$author'.substring(0, 64),
     channelId: 'general',
     author: author,
     body: tagged ? 'hello nostr:${NostrKeyUtils.encodePubKey(me)}' : 'hello',
