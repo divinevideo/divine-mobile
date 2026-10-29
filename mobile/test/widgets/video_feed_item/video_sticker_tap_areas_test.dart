@@ -350,7 +350,7 @@ void main() {
         );
       });
 
-      testWidgets('draws a see-through look without its fill', (
+      testWidgets('keeps a see-through look in the frames with its button', (
         tester,
       ) async {
         const dark = VideoStickerRegion(
@@ -365,15 +365,10 @@ void main() {
         );
         await pump(tester, [dark]);
 
-        final pill = tester.widget<DecoratedBox>(
-          find.descendant(
-            of: find.byType(SocialStickerView),
-            matching: find.byType(DecoratedBox),
-          ),
-        );
-
-        expect(find.text('#summer'), findsOneWidget);
-        expect((pill.decoration as BoxDecoration).color, isNull);
+        expect(find.byType(SocialStickerView), findsNothing);
+        expect(find.text('#summer'), findsNothing);
+        await tapAt(tester, const Offset(180, 320));
+        expect(opened, equals([dark]));
       });
 
       testWidgets('draws only the button for a sticker without its look', (

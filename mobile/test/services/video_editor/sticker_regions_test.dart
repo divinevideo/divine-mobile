@@ -9,6 +9,7 @@ import 'package:flutter/widgets.dart' show SizedBox;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:models/models.dart' show VideoStickerKind, VideoStickerRegion;
 import 'package:openvine/models/divine_video_clip.dart';
+import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:openvine/services/video_editor/sticker_regions.dart';
@@ -255,6 +256,16 @@ void main() {
 
     test('leaves out a sticker no one can see', () {
       expect(_regions([_captured(_link, opacity: 0)]), isEmpty);
+    });
+
+    test('redraws only looks that cover platform-dependent glyphs', () {
+      expect(
+        [
+          for (final style in InfoStickerStyle.pills)
+            _regions([_captured(_link.copyWith(style: style))]).single.style,
+        ],
+        equals(['light', null, null, 'brand', 'highlight', null, null, null]),
+      );
     });
 
     test('leaves out a sticker that moves', () {

@@ -73,6 +73,7 @@ VideoStickerRegion? _regionOf(
     // back solid, and a copy would hide what lies on it.
     style:
         sticker.isAnimated ||
+            !sticker.style.coversBakedCopy ||
             !_isDrawnPlainly(layer) ||
             above.any((upper) => _isCoveredBy(item, upper, bodySize))
         ? null

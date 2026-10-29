@@ -258,7 +258,7 @@ class _StickerTapArea extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            if (sticker != null)
+            if (sticker != null && sticker.style.coversBakedCopy)
               // Laid over the sticker in the frames at its exact size, in the
               // parts that cover that one; the button below names it, and
               // only the button takes the pointer.

@@ -91,6 +91,13 @@ enum InfoStickerStyle {
   /// A clock face with hands; time only.
   analog;
 
+  /// Whether a redraw covers the baked-in glyphs, including platform font
+  /// fallbacks whose shape or width may differ on the viewer's phone.
+  bool get coversBakedCopy => switch (this) {
+    light || brand || highlight => true,
+    _ => false,
+  };
+
   /// The pill looks, which every sticker that shows a line of text can take,
   /// the default first.
   static const List<InfoStickerStyle> pills = [

@@ -174,7 +174,10 @@ frames, sharp at the screen's resolution, and makes it the button; without
 both fields it only places the button. The copy draws only what covers: the
 text, and the pill's fill and border where they are solid. A see-through fill,
 a glow or a shadow is in the frames already and would come out twice as
-strong.
+strong. Only the opaque `light`, `brand` and `highlight` looks are redrawn:
+the creator and viewer can have different emoji and fallback fonts, so a
+transparent copy could leave different glyphs visible underneath it. Other
+looks keep their original appearance in the frames and still get the button.
 
 Some stickers are published without `style`, since a copy would not match the
 frames:
@@ -183,6 +186,8 @@ frames:
   equalizer), as a copy could not keep time with the frames beneath;
 - a sticker drawn see-through, with a blend mode or through a mask, as a copy
   would come back solid;
+- a pill without an opaque background (`dark`, `glass`, `neon`, `plain` or
+  `outline`), as a copy would not cover platform-dependent glyphs;
 - a sticker with another layer over it at the same time, as a copy would hide
   that layer.
 
