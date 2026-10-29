@@ -257,6 +257,70 @@ void main() {
       expect(cubit.state.selectedType?.builtIn, VideoEffectType.crt);
     });
 
+    group('a picked effect', () {
+      const navigationBarHeight = 48.0;
+      const navigationBarTop = 600 - navigationBarHeight;
+
+      /// The whole tile of the effect named [label], not only its name.
+      Finder wholeTile(String label) => find
+          .ancestor(of: tile(label), matching: find.byType(GestureDetector))
+          .first;
+
+      /// The name of the first effect whose tile the navigation bar cuts.
+      String tileUnderNavigationBar(WidgetTester tester) {
+        final context = tester.element(
+          find.byType(VideoEditorEffectsBottomBar),
+        );
+        return EditorEffectType.values
+            .map((type) => videoEffectLabel(context, type))
+            .firstWhere((label) {
+              if (!tester.any(tile(label))) return false;
+              final rect = tester.getRect(wholeTile(label));
+              return rect.top < navigationBarTop &&
+                  rect.bottom > navigationBarTop;
+            });
+      }
+
+      testWidgets('scrolls fully clear of the system navigation bar', (
+        tester,
+      ) async {
+        usePhoneSize(tester);
+        await tester.pumpWidget(
+          buildWidget(navigationBarHeight: navigationBarHeight),
+        );
+        final label = tileUnderNavigationBar(tester);
+        final before = tester.getRect(wholeTile(label));
+
+        await tester.tapAt(
+          Offset(before.center.dx, (before.top + navigationBarTop) / 2),
+        );
+        await tester.pumpAndSettle();
+
+        expect(cubit.state.selectedType, isNotNull);
+        expect(
+          tester.getRect(wholeTile(label)).bottom,
+          moreOrLessEquals(navigationBarTop),
+        );
+      });
+
+      testWidgets('does not pull the grid back once the user scrolls it '
+          'away', (tester) async {
+        usePhoneSize(tester);
+        await tester.pumpWidget(buildWidget());
+        await tester.tap(tile(l10n.videoEditorEffectVhs));
+        await tester.pumpAndSettle();
+
+        // Scrolling under the tabs rebuilds the grid with VHS still picked.
+        await scrollGridBy(tester, -60);
+
+        expect(tabsCastShadow(tester), isTrue);
+        expect(
+          tester.getRect(wholeTile(l10n.videoEditorEffectVhs)).top,
+          lessThan(tester.getRect(grid()).top),
+        );
+      });
+    });
+
     test('draws the tile of every effect Divine renders but the echo with '
         'its shader', () {
       for (final type in EditorEffectType.values) {

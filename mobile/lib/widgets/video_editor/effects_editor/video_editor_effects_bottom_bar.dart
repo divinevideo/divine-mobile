@@ -498,8 +498,9 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-/// Scrolls [child] fully into view when it becomes selected, so a tile picked
-/// at the edge of the grid shows whole.
+/// Scrolls [child] fully into view when it becomes selected, clear of the
+/// system navigation bar the grid scrolls on under, so a tile picked at the
+/// edge of the grid shows whole.
 ///
 /// Only on becoming selected: the grid builds lazily, so a picked tile is
 /// built again whenever it scrolls back in, and must not pull the grid then.
@@ -523,25 +524,15 @@ class _RevealWhenSelectedState extends State<_RevealWhenSelected> {
   void _reveal() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final duration = const Duration(
-        milliseconds: 200,
-      ).autoReduceMotion(context);
-      // Each scrolls only when its edge is cut off, so at most one moves.
-      for (final policy in [
-        ScrollPositionAlignmentPolicy.keepVisibleAtStart,
-        ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
-      ]) {
-        runDetached(
-          Scrollable.ensureVisible(
-            context,
-            duration: duration,
-            alignmentPolicy: policy,
-          ),
-          'reveal the selected effect',
-          logName: 'VideoEditorEffectsBottomBar',
-          category: LogCategory.video,
-        );
-      }
+      final tile = context.findRenderObject();
+      if (tile is! RenderBox) return;
+      final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+      // The grid scrolls only when an edge of this rect is cut off.
+      tile.showOnScreen(
+        rect:
+            Offset.zero & Size(tile.size.width, tile.size.height + bottomInset),
+        duration: const Duration(milliseconds: 200).autoReduceMotion(context),
+      );
     });
   }
 
