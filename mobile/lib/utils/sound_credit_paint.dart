@@ -138,6 +138,10 @@ class _SoundCreditLayout {
               detail.copyWith(color: palette.ink.withValues(alpha: 0.8)),
             ),
       lyric: lyric == null ? null : _text(lyric, detail, maxLines: 2),
+      // The artist's ink is see-through. Over a see-through pill the artist
+      // in the frames shows through the copy, and drawn again it would come
+      // out twice as strong; a solid pill hides it, so the copy draws it.
+      paintsArtist: !overFrames || palette.background != null,
     );
   }
 
@@ -147,12 +151,16 @@ class _SoundCreditLayout {
     required this.title,
     required this.artist,
     required this.lyric,
+    required this.paintsArtist,
   });
 
   final SocialStickerData data;
   final StickerPillPalette palette;
   final TextPainter title;
   final TextPainter? artist;
+
+  /// Whether [artist] is painted; it keeps its place in the layout either way.
+  final bool paintsArtist;
   final TextPainter? lyric;
 
   bool get _isPlayer => data.soundDesign == SocialStickerSoundDesign.player;
@@ -301,7 +309,7 @@ class _SoundCreditLayout {
     y += title.height;
     final artist = this.artist;
     if (artist != null) {
-      artist.paint(canvas, Offset(x, y + _lineGap));
+      if (paintsArtist) artist.paint(canvas, Offset(x, y + _lineGap));
       y += _lineGap + artist.height;
     }
     lyric?.paint(canvas, Offset(x, y + _lineGap + _lyricGap));
