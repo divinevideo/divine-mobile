@@ -14081,6 +14081,43 @@ void main() {
         );
       });
 
+      test('maps a retraction whose retries ran out to failed bubble state '
+          '(#10012)', () async {
+        final convId = DmRepository.computeConversationId(
+          [_validPubkeyA, _validPubkeyB],
+        );
+        when(
+          () => mockDirectMessagesDao.watchMessagesForConversation(
+            convId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer(
+          (_) => Stream.value([
+            DirectMessageRow(
+              ownerPubkey: '',
+              id: _rumorEventId,
+              conversationId: convId,
+              senderPubkey: _validPubkeyA,
+              content: 'Hello!',
+              createdAt: 1700000000,
+              giftWrapId: _giftWrapEventId,
+              messageKind: 14,
+              isDeleted: true,
+              twinCollapsed: false,
+              deletionRumorJson: '{"kind":5}',
+              deletionPublishStatus: DirectMessagesDao.deletionUnconfirmed,
+            ),
+          ]),
+        );
+
+        final messages = await createRepository().watchMessages(convId).first;
+
+        expect(
+          messages.single.retractionStatus,
+          DmRetractionStatus.failed,
+        );
+      });
+
       test('maps an ordinary message to no retraction state', () async {
         final convId = DmRepository.computeConversationId(
           [_validPubkeyA, _validPubkeyB],
@@ -20027,6 +20064,13 @@ void main() {
             ownerPubkey: any(named: 'ownerPubkey'),
           ),
         ).thenAnswer((_) async => true);
+        // The row is pending, so a Try again's compare-and-set moves nothing.
+        when(
+          () => mockDirectMessagesDao.markUnconfirmedMessageDeletionPending(
+            _rumorEventId,
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer((_) async => false);
         when(
           () => mockDirectMessagesDao.markMessageDeletionBlocked(
             _rumorEventId,
@@ -20129,7 +20173,10 @@ void main() {
           ),
         ).thenAnswer((_) => publish.future);
 
-        final first = repo.retryMessageDeletion(rumorId: _rumorEventId);
+        final first = repo.retryMessageDeletion(
+          rumorId: _rumorEventId,
+          automatic: true,
+        );
         final second = repo.retryMessageDeletion(rumorId: _rumorEventId);
         await Future<void>.delayed(Duration.zero);
 
@@ -20151,6 +20198,85 @@ void main() {
 
         expect(await first, DmMessageDeletionOutcome.sent);
         expect(await second, DmMessageDeletionOutcome.sent);
+      });
+
+      group('markMessageDeletionUnconfirmed (#10012)', () {
+        setUp(() {
+          when(
+            () => mockDirectMessagesDao.markMessageDeletionUnconfirmed(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => true);
+        });
+
+        test(
+          'records the retraction as unconfirmed for this account',
+          () async {
+            final repo = createRepository();
+
+            await repo.markMessageDeletionUnconfirmed(rumorId: _rumorEventId);
+
+            verify(
+              () => mockDirectMessagesDao.markMessageDeletionUnconfirmed(
+                _rumorEventId,
+                ownerPubkey: _validPubkeyA,
+              ),
+            ).called(1);
+          },
+        );
+
+        test('leaves a retraction being retried to that retry', () async {
+          // A Try again moved it back to pending and is still running: it
+          // records its own result, and a mark now would show the warning
+          // while it still runs.
+          final repo = createRepository();
+          stubPendingDeletion();
+          final publish = Completer<NIP17SendResult>();
+          when(
+            () => mockMessageService.sendRumor(
+              rumorEvent: any(named: 'rumorEvent'),
+              recipientPubkey: any(named: 'recipientPubkey'),
+              awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
+            ),
+          ).thenAnswer((_) => publish.future);
+          final retry = repo.retryMessageDeletion(rumorId: _rumorEventId);
+          await pumpEventQueue();
+
+          await repo.markMessageDeletionUnconfirmed(rumorId: _rumorEventId);
+
+          verifyNever(
+            () => mockDirectMessagesDao.markMessageDeletionUnconfirmed(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          );
+          publish.complete(const NIP17SendResult.failure('no relay'));
+          expect(await retry, DmMessageDeletionOutcome.unconfirmed);
+          await repo.markMessageDeletionUnconfirmed(rumorId: _rumorEventId);
+          verify(
+            () => mockDirectMessagesDao.markMessageDeletionUnconfirmed(
+              _rumorEventId,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).called(1);
+        });
+
+        test('throws what the database throws', () async {
+          final repo = createRepository();
+          when(
+            () => mockDirectMessagesDao.markMessageDeletionUnconfirmed(
+              any(),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenThrow(StateError('database is closed'));
+
+          await expectLater(
+            repo.markMessageDeletionUnconfirmed(rumorId: _rumorEventId),
+            throwsStateError,
+          );
+        });
       });
 
       test('requires a relay OK before settling the row', () async {
@@ -20728,6 +20854,42 @@ void main() {
         expect(targets.single.rumorId, equals(_rumorEventId));
         expect(targets.single.conversationId, equals('conv_1'));
         expect(targets.single.createdAt, equals(1700000000));
+      });
+
+      test('marks a row whose retries ran out, and only that row '
+          '(#10012)', () async {
+        final repo = createRepository();
+        DirectMessageRow row(String id, String status) => DirectMessageRow(
+          ownerPubkey: '',
+          id: id,
+          conversationId: 'conv_1',
+          senderPubkey: _validPubkeyA,
+          content: 'Hello',
+          createdAt: 1700000000,
+          giftWrapId: 'wrap-$id',
+          messageKind: 14,
+          isDeleted: true,
+          twinCollapsed: false,
+          deletionRumorJson: '{"kind":5}',
+          deletionPublishStatus: status,
+        );
+        when(
+          () => mockDirectMessagesDao.getRetryableOwnMessageDeletions(
+            ownerPubkey: any(named: 'ownerPubkey'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            row('pending', DirectMessagesDao.deletionPending),
+            row('ran-out', DirectMessagesDao.deletionUnconfirmed),
+          ],
+        );
+
+        final targets = await repo.retryableMessageDeletions();
+
+        expect(
+          {for (final t in targets) t.rumorId: t.retriesRanOut},
+          equals({'pending': false, 'ran-out': true}),
+        );
       });
 
       test('returns empty without credentials', () async {
@@ -32195,6 +32357,22 @@ void main() {
           final repository = createRepository();
           await expectLater(
             () => repository.cancelOutgoingSend(rumorId: _rumorEventId),
+            throwsStateError,
+          );
+        },
+      );
+    });
+
+    group('stopHeldMemberDelivery', () {
+      test(
+        'throws StateError when the outgoing_dms DAO is not wired in',
+        () async {
+          final repository = createRepository();
+          await expectLater(
+            () => repository.stopHeldMemberDelivery(
+              rumorId: _rumorEventId,
+              maxRetries: 5,
+            ),
             throwsStateError,
           );
         },

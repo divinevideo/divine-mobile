@@ -2320,6 +2320,28 @@ void main() {
           expect(seen?.senderPubkey, equals(owner));
         });
 
+        test("keeps the owner's own retraction whose retries ran out, as the "
+            'thread does (#10012)', () async {
+          await seedRoom();
+          await message('visible', sender: visibleMember, createdAt: 100);
+          await message('own', sender: owner, createdAt: 150);
+          await database.directMessagesDao.markMessageDeletionPending(
+            'own',
+            deletionRumorJson: '{}',
+            ownerPubkey: owner,
+          );
+          await database.directMessagesDao.markMessageDeletionUnconfirmed(
+            'own',
+            ownerPubkey: owner,
+          );
+          await message('hidden', sender: hiddenMember, createdAt: 200);
+
+          final seen = await activity();
+
+          expect(seen?.content, equals('text of own'));
+          expect(seen?.senderPubkey, equals(owner));
+        });
+
         test('skips a legacy unowned copy of a message whose owned copy was '
             'retracted', () async {
           await seedRoom();
