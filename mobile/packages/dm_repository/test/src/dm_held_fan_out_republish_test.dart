@@ -114,6 +114,7 @@ void main() {
     late int policyChecks;
     late bool deviceOffline;
     late int connectedRelays;
+    late bool ownCopiesPublish;
     late DmRepository repository;
     late DmReactionsRepository reactions;
 
@@ -227,6 +228,7 @@ void main() {
       policyChecks = 0;
       deviceOffline = false;
       connectedRelays = 1;
+      ownCopiesPublish = true;
 
       when(
         () => nostrClient.connectedRelayCount,
@@ -283,6 +285,7 @@ void main() {
           targetRelays: any(named: 'targetRelays'),
         ),
       ).thenAnswer((invocation) async {
+        if (!ownCopiesPublish) return const PublishFailed();
         final event = invocation.positionalArguments.first as Event;
         published.add(event);
         return PublishSuccess(event: event);
@@ -961,6 +964,21 @@ void main() {
           expect(row.deletionPublishStatus, 'deletion_sent');
           expect(row.deletionRumorJson, isNull);
           expect(row.heldDeletionWraps, isNull);
+        });
+
+        test('settles even when the own copy fails to publish', () async {
+          await heldRetraction();
+          inboxes[peerB] = _Inbox.absent;
+          ownCopiesPublish = false;
+
+          expect(await retryRetraction(), DmMessageDeletionOutcome.sent);
+
+          expect(wrapsTo(peerB), hasLength(1));
+          expect(
+            (await messageRow()).deletionPublishStatus,
+            'deletion_sent',
+            reason: 'the recipient has it; the own copy is not delivery',
+          );
         });
       });
 
