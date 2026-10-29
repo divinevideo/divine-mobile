@@ -6,12 +6,15 @@ import 'package:openvine/models/caption_mention.dart';
 /// touched or joined to a neighboring word.
 ///
 /// [cursor] is the caret after the edit; it picks which of two identical
-/// neighboring tokens an insertion or deletion changed.
+/// neighboring tokens an insertion or deletion changed. A previous nonempty
+/// selection identifies replacements even when pasted text repeats a token.
 List<CaptionMention> updateChatMentionBindings({
   required String before,
   required String after,
   required int cursor,
   required List<CaptionMention> mentions,
+  int? previousSelectionStart,
+  int? previousSelectionEnd,
 }) {
   if (before == after) return List.of(mentions);
   var start = 0;
@@ -39,6 +42,23 @@ List<CaptionMention> updateChatMentionBindings({
       before[oldEnd - 1] == after[newEnd - 1]) {
     oldEnd--;
     newEnd--;
+  }
+  if (previousSelectionStart != null &&
+      previousSelectionEnd != null &&
+      previousSelectionStart >= 0 &&
+      previousSelectionEnd > previousSelectionStart &&
+      previousSelectionEnd <= before.length) {
+    final replacementEnd = previousSelectionEnd + insertedLength;
+    if (replacementEnd >= previousSelectionStart &&
+        replacementEnd <= after.length &&
+        before.substring(0, previousSelectionStart) ==
+            after.substring(0, previousSelectionStart) &&
+        before.substring(previousSelectionEnd) ==
+            after.substring(replacementEnd)) {
+      start = previousSelectionStart;
+      oldEnd = previousSelectionEnd;
+      newEnd = replacementEnd;
+    }
   }
   final delta = newEnd - oldEnd;
   final kept = <CaptionMention>[];

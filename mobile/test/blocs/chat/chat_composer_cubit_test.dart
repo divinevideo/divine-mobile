@@ -26,6 +26,42 @@ void main() {
         expect(bodies, ['@Alice']);
       });
 
+      for (final replaceFirst in [true, false]) {
+        test(
+          'replacement drops only the selected pick; first: $replaceFirst',
+          () async {
+            final first = 'a' * 64;
+            final second = 'b' * 64;
+            final bodies = <String>[];
+            final cubit = ChatComposerCubit(
+              send: (body) async {
+                bodies.add(body);
+                return true;
+              },
+            );
+            addTearDown(cubit.close);
+            cubit.updateDraft('@Al', 3);
+            cubit.selectMention(cursor: 3, pubkey: first, display: 'Alice');
+            cubit.updateDraft('@Alice @Al', 10);
+            cubit.selectMention(cursor: 10, pubkey: second, display: 'Alice');
+            cubit.updateDraft(
+              '@Alice @Alice ',
+              replaceFirst ? 0 : 13,
+              selectionExtent: replaceFirst ? 6 : 7,
+            );
+            cubit.updateDraft('@Alice @Alice @Alice ', replaceFirst ? 13 : 20);
+
+            expect(await cubit.submit(), isTrue);
+            expect(bodies, [
+              if (replaceFirst)
+                '@Alice @Alice nostr:${NostrKeyUtils.encodePubKey(second)}'
+              else
+                'nostr:${NostrKeyUtils.encodePubKey(first)} @Alice @Alice',
+            ]);
+          },
+        );
+      }
+
       test('keeps a changed draft while a send is pending', () async {
         final pending = Completer<bool>();
         final bodies = <String>[];

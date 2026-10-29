@@ -31,8 +31,15 @@ class ChatComposerCubit extends Cubit<ChatComposerState> {
       super(const ChatComposerState());
 
   final Future<bool> Function(String) _send;
+  int? _selectionStart;
+  int? _selectionEnd;
 
-  void updateDraft(String text, int cursor) {
+  void updateDraft(String text, int cursor, {int? selectionExtent}) {
+    final previousSelectionStart = _selectionStart;
+    final previousSelectionEnd = _selectionEnd;
+    final extent = selectionExtent ?? cursor;
+    _selectionStart = cursor < extent ? cursor : extent;
+    _selectionEnd = cursor > extent ? cursor : extent;
     emit(
       ChatComposerState(
         text: text,
@@ -42,6 +49,8 @@ class ChatComposerCubit extends Cubit<ChatComposerState> {
             after: text,
             cursor: cursor,
             mentions: state.mentions,
+            previousSelectionStart: previousSelectionStart,
+            previousSelectionEnd: previousSelectionEnd,
           ),
         ),
         submitting: state.submitting,

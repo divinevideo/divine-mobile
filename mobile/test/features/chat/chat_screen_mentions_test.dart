@@ -179,6 +179,30 @@ void main() {
         _verifySent(chat, 'hi @Alice');
       });
 
+      testWidgets('pasting over a selected pick leaves pasted names plain', (
+        tester,
+      ) async {
+        final chat = await _pumpComposer(tester);
+        await _pick(tester, '@Al', _alice);
+        tester.testTextInput.updateEditingValue(
+          const TextEditingValue(
+            text: '@Alice ',
+            selection: TextSelection(baseOffset: 0, extentOffset: 7),
+          ),
+        );
+        await tester.pump();
+        tester.testTextInput.updateEditingValue(
+          const TextEditingValue(
+            text: '@Alice @Alice ',
+            selection: TextSelection.collapsed(offset: 14),
+          ),
+        );
+        await tester.pump();
+        await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+        await tester.pumpAndSettle();
+        _verifySent(chat, '@Alice @Alice');
+      });
+
       testWidgets(
         'picked accounts work before the profile repository is ready',
         (tester) async {

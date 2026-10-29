@@ -107,7 +107,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen>
   }
 
   void _searchMentions() {
-    _composer.updateDraft(_controller.text, _controller.selection.baseOffset);
+    _composer.updateDraft(
+      _controller.text,
+      _controller.selection.baseOffset,
+      selectionExtent: _controller.selection.extentOffset,
+    );
     runDetached(
       _mentions.search(
         activeMentionQuery(_controller.text, _controller.selection.baseOffset),
