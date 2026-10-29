@@ -1217,6 +1217,77 @@ void main() {
         });
 
         test(
+          'keeps the unique windows of effected extracted sound off the server',
+          () async {
+            stubMerge([_offset(0, 2000)]);
+            stubExtraction();
+            stubGenerator(const [], requireOnDeviceRecognition: true);
+            when(
+              () => generator.generateCaptions(
+                audioPath: '/tmp/extracted.wav.wav',
+                localeIdentifier: any(named: 'localeIdentifier'),
+                requireOnDeviceRecognition: true,
+              ),
+            ).thenAnswer(
+              (_) async => [
+                _word('Before.', 200, 600),
+                _word('Repeated.', 1200, 1600),
+                _word('After.', 3200, 3600),
+              ],
+            );
+            final service = buildService(
+              remote: remoteReturning([_word('Clip.', 200, 600)]),
+            );
+
+            final outcome = await service.generateForClips(
+              clips: [
+                _clip('lead', duration: const Duration(seconds: 2), volume: 0),
+                _clip(
+                  'source',
+                  duration: const Duration(seconds: 4),
+                  trimStart: const Duration(seconds: 1),
+                  trimEnd: const Duration(seconds: 1),
+                ),
+                _clip('tail', duration: const Duration(seconds: 2), volume: 0),
+              ],
+              audioTracks: [
+                _track(
+                  _extractedId,
+                  url: '/tmp/extracted_robot.wav',
+                  originalUrl: '/tmp/extracted.wav',
+                  voiceEffect: const VoiceEffect(robot: 100),
+                  startTime: const Duration(seconds: 1),
+                  endTime: const Duration(seconds: 5),
+                  anchorClipId: 'source',
+                ),
+              ],
+              localeIdentifier: 'en-US',
+            );
+
+            expect(
+              capturedSegments().single.video.file?.path,
+              equals('/tmp/source.mp4'),
+            );
+            verify(
+              () => extraction.extractAudio(
+                videoPath: '/tmp/extracted.wav',
+                speed: 1,
+              ),
+            ).called(2);
+            expect(
+              (outcome as CaptionsGenerated).cues.map(
+                (cue) => (cue.text, cue.start),
+              ),
+              equals([
+                ('Before.', const Duration(milliseconds: 1200)),
+                ('Clip.', const Duration(milliseconds: 2200)),
+                ('After.', const Duration(milliseconds: 4200)),
+              ]),
+            );
+          },
+        );
+
+        test(
           'a strict locale rejection does not change later clip language',
           () async {
             stubExtraction();
