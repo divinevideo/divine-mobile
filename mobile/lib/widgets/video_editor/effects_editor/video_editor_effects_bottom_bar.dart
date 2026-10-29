@@ -386,12 +386,14 @@ class _GridLayout {
     // A title is shown at the top where the first one sits, just under the
     // tabs, not where the gap above it starts.
     final gapAboveTitle = _headerPadding.top - _firstHeaderPadding.top;
-    final titleOffsets = <EditorEffectCategory, double>{};
+    final titleOffsets = <double>[];
     var offset = 0.0;
     for (final MapEntry(key: category, value: types) in _sections.entries) {
-      titleOffsets[category] = category == EditorEffectCategory.values.first
-          ? 0
-          : offset + gapAboveTitle;
+      titleOffsets.add(
+        category == EditorEffectCategory.values.first
+            ? 0
+            : offset + gapAboveTitle,
+      );
       final rows = (types.length / columns).ceil();
       offset +=
           metrics.headerExtentOf(category) +
@@ -404,18 +406,20 @@ class _GridLayout {
   const _GridLayout._(this.columns, this._titleOffsets);
 
   final int columns;
-  final Map<EditorEffectCategory, double> _titleOffsets;
+
+  /// By [EditorEffectCategory.index].
+  final List<double> _titleOffsets;
 
   /// Where a tab scrolls the grid to: its section's title at the top.
-  double offsetOf(EditorEffectCategory category) => _titleOffsets[category]!;
+  double offsetOf(EditorEffectCategory category) =>
+      _titleOffsets[category.index];
 
   /// The section whose title has scrolled to the top of the grid at
   /// [offset].
   EditorEffectCategory categoryAt(double offset) {
     var category = EditorEffectCategory.values.first;
-    for (final MapEntry(key: candidate, value: start)
-        in _titleOffsets.entries) {
-      if (start <= offset + 1) category = candidate;
+    for (final candidate in EditorEffectCategory.values) {
+      if (offsetOf(candidate) <= offset + 1) category = candidate;
     }
     return category;
   }
@@ -703,7 +707,7 @@ const _particlesTileSeconds = 3.0;
 /// each other; the particles' last value is the style the native
 /// `ParticlesVideoEffect` draws.
 @visibleForTesting
-ShaderTile? shaderTileOf(EditorEffectType? type) => switch (type?.customId) {
+ShaderTile? shaderTileOf(EditorEffectType type) => switch (type.customId) {
   fisheyeVideoEffectId => (asset: 'shaders/fisheye.frag', values: const [0.8]),
   dropsVideoEffectId => (asset: 'shaders/drops.frag', values: _dropsTileValues),
   lightLeakVideoEffectId => (
