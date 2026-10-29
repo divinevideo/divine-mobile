@@ -187,14 +187,12 @@ void main() {
     return rumorId;
   }
 
-  /// `deleteMessageForEveryone` writes `deletion_pending` at its durability
-  /// boundary BEFORE any wire attempt, then drives the first attempt
-  /// unawaited. So "has a status" is true immediately and says nothing —
-  /// this waits for a TERMINAL status instead, and returns the row still
-  /// pending when the window elapses, which is itself the outcome under test.
-  Future<DirectMessageRow?> settledDeletionRow(
+  /// Reads the row of [rumorId] until [reached] holds for it or [window]
+  /// elapses, and returns it as last read.
+  Future<DirectMessageRow?> deletionRowWhen(
     AppDatabase db,
-    String rumorId, {
+    String rumorId,
+    bool Function(DirectMessageRow? row) reached, {
     Duration window = const Duration(seconds: 20),
   }) async {
     final deadline = DateTime.now().add(window);
@@ -204,12 +202,24 @@ void main() {
         rumorId,
         ownerPubkey: senderPubkey,
       );
-      final status = row?.deletionPublishStatus;
-      if (status != null && status != 'deletion_pending') return row;
+      if (reached(row)) return row;
       await Future<void>.delayed(const Duration(milliseconds: 50));
     }
     return row;
   }
+
+  /// `deleteMessageForEveryone` writes `deletion_pending` at its durability
+  /// boundary BEFORE any wire attempt, then drives the first attempt
+  /// unawaited. So "has a status" is true immediately and says nothing —
+  /// this waits for a TERMINAL status instead, and returns the row still
+  /// pending when the window elapses, which is itself the outcome under test.
+  Future<DirectMessageRow?> settledDeletionRow(
+    AppDatabase db,
+    String rumorId,
+  ) => deletionRowWhen(db, rumorId, (row) {
+    final status = row?.deletionPublishStatus;
+    return status != null && status != 'deletion_pending';
+  });
 
   /// Restores the production budget after a test shortens it.
   setUp(() {
@@ -479,17 +489,16 @@ void main() {
       DmRepository.inboxResolutionBudget = const Duration(milliseconds: 300);
       await seedOwnMessage(stack.db, rumorId);
       await stack.repository.deleteMessageForEveryone(rumorId);
-      final deadline = DateTime.now().add(const Duration(seconds: 20));
-      while ((await stack.db.directMessagesDao.getMessageById(
-            rumorId,
-            ownerPubkey: senderPubkey,
-          ))?.heldDeletionWraps ==
-          null) {
-        if (DateTime.now().isAfter(deadline)) {
-          fail('the first attempt never held');
-        }
-        await Future<void>.delayed(const Duration(milliseconds: 50));
-      }
+      final held = await deletionRowWhen(
+        stack.db,
+        rumorId,
+        (row) => row?.heldDeletionWraps != null,
+      );
+      expect(
+        held?.heldDeletionWraps,
+        isNotNull,
+        reason: 'precondition: the first attempt is held',
+      );
       return (
         repository: stack.repository,
         db: stack.db,

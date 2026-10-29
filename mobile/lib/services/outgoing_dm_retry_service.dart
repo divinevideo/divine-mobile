@@ -827,8 +827,10 @@ class OutgoingDmRetryService {
           : _retryConfig.maxRetries;
       if (attempts >= allowance) {
         skippedExhausted++;
-        // Still pending with this session's budget spent: nothing has
-        // recorded yet that its retries ran out.
+        // Still pending with this session's budget spent, so nothing has
+        // recorded yet that its retries ran out: the mark after its last
+        // attempt threw, that attempt threw itself, or a Try again's own
+        // write-back did not land.
         if (!target.retriesRanOut) await _markDeletionRanOut(target.rumorId);
         continue;
       }
