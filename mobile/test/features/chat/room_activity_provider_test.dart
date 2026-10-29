@@ -18,7 +18,7 @@ class _Auth extends Fake implements AuthService {
   @override
   String currentPublicKeyHex;
   @override
-  bool get isAuthenticated => true;
+  bool isAuthenticated = true;
   @override
   NostrIdentity get currentIdentity =>
       PubkeyOnlyNostrIdentity(pubkey: currentPublicKeyHex);
@@ -101,5 +101,82 @@ void main() {
         );
       },
     );
+
+    test(
+      'closes the room sessions of an account that becomes restricted',
+      () async {
+        final database = AppDatabase.test(NativeDatabase.memory());
+        addTearDown(database.close);
+        final restricted = StateProvider((ref) => false);
+        final container = ProviderContainer(
+          overrides: [
+            authServiceProvider.overrideWithValue(_Auth('01' * 32)),
+            databaseProvider.overrideWithValue(database),
+            isFeatureEnabledProvider(
+              FeatureFlag.concordChat,
+            ).overrideWith((ref) => true),
+            isDmRestrictedProvider.overrideWith((ref) => ref.watch(restricted)),
+          ],
+        );
+        addTearDown(container.dispose);
+        final subscription = container.listen<RoomActivityRepository?>(
+          roomActivityRepositoryProvider,
+          (_, _) {},
+        );
+        addTearDown(subscription.close);
+        final open = container.read(roomActivityRepositoryProvider)!;
+        container.read(restricted.notifier).state = true;
+        await container.pump();
+        expect(container.read(roomActivityRepositoryProvider), isNull);
+        await expectLater(
+          open.ensureStarted(open.summaries.keys.first),
+          throwsStateError,
+        );
+      },
+    );
+
+    test('fails a queued send closed once the account signs out', () async {
+      final database = AppDatabase.test(NativeDatabase.memory());
+      addTearDown(database.close);
+      final auth = _Auth('01' * 32);
+      final container = ProviderContainer(
+        overrides: [
+          authServiceProvider.overrideWithValue(auth),
+          databaseProvider.overrideWithValue(database),
+          isFeatureEnabledProvider(
+            FeatureFlag.concordChat,
+          ).overrideWith((ref) => true),
+          isDmRestrictedProvider.overrideWithValue(false),
+        ],
+      );
+      addTearDown(container.dispose);
+      final subscription = container.listen<RoomActivityRepository?>(
+        roomActivityRepositoryProvider,
+        (_, _) {},
+      );
+      addTearDown(subscription.close);
+      final activity = container.read(roomActivityRepositoryProvider)!;
+      auth.isAuthenticated = false;
+      await expectLater(
+        activity
+            .repositoryFor(activity.summaries.keys.first)
+            .sealedTransport!
+            .signer(
+              {
+                'kind': 20013,
+                'tags': <List<String>>[],
+                'content': '',
+                'created_at': 1,
+              },
+            ),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'chat session is no longer active',
+          ),
+        ),
+      );
+    });
   });
 }
