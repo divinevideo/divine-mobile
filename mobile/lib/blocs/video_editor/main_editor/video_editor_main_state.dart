@@ -46,6 +46,7 @@ class VideoEditorMainState extends Equatable {
     this.auditionOwner,
     this.pausesAfterAudition = false,
     this.isAuditionSeekPending = false,
+    this.isFinishing = false,
   });
 
   /// Whether the undo action is available.
@@ -163,6 +164,11 @@ class VideoEditorMainState extends Equatable {
   /// player has not reported yet, so it is not asked for again meanwhile.
   final bool isAuditionSeekPending;
 
+  /// Whether Done was tapped and the edit is being handed to the export,
+  /// which first waits for the fonts its stickers draw in; Done is off
+  /// meanwhile, so the edit is handed over once.
+  final bool isFinishing;
+
   /// Whether the voice-over recorder is open over the editor.
   ///
   /// The preview keeps playing beneath its translucent route so the take can
@@ -219,6 +225,7 @@ class VideoEditorMainState extends Equatable {
     bool clearAudition = false,
     bool? pausesAfterAudition,
     bool? isAuditionSeekPending,
+    bool? isFinishing,
   }) {
     return VideoEditorMainState(
       canUndo: canUndo ?? this.canUndo,
@@ -264,6 +271,7 @@ class VideoEditorMainState extends Equatable {
       pausesAfterAudition: pausesAfterAudition ?? this.pausesAfterAudition,
       isAuditionSeekPending:
           isAuditionSeekPending ?? this.isAuditionSeekPending,
+      isFinishing: isFinishing ?? this.isFinishing,
     );
   }
 
@@ -297,5 +305,6 @@ class VideoEditorMainState extends Equatable {
     auditionOwner,
     pausesAfterAudition,
     isAuditionSeekPending,
+    isFinishing,
   ];
 }

@@ -300,3 +300,13 @@ class VideoEditorDetachedClipOpacityPreviewChanged
   @override
   List<Object?> get props => [preview];
 }
+
+/// Starts or ends handing the edit over to the export after Done.
+class VideoEditorFinishingChanged extends VideoEditorMainEvent {
+  const VideoEditorFinishingChanged({required this.isFinishing});
+
+  final bool isFinishing;
+
+  @override
+  List<Object?> get props => [isFinishing];
+}

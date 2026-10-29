@@ -318,7 +318,7 @@ void main() {
     });
 
     group('interactions', () {
-      testWidgets('finishes once while the emoji font is pending', (
+      testWidgets('hands the edit over once the emoji font loads', (
         tester,
       ) async {
         final editor = _MockEditor();
@@ -333,26 +333,44 @@ void main() {
           WidgetLayer(widget: const SizedBox(), meta: meta),
         ]);
         when(() => editor.mounted).thenReturn(true);
+        when(() => mockBloc.isClosed).thenReturn(false);
         await tester.pumpWidget(buildWidget(editor: editor));
 
-        final toolbar = tester.widget<VideoEditorToolbar>(
-          find.byType(VideoEditorToolbar),
-        );
-        toolbar.onDone!();
-        toolbar.onDone!();
+        tester
+            .widget<VideoEditorToolbar>(find.byType(VideoEditorToolbar))
+            .onDone!();
         await tester.pump();
+        verify(
+          () => mockBloc.add(
+            const VideoEditorFinishingChanged(isFinishing: true),
+          ),
+        ).called(1);
         verifyNever(editor.doneEditing);
+
+        font.complete(true);
+        await tester.pump();
+
+        verify(editor.doneEditing).called(1);
+        verify(
+          () => mockBloc.add(
+            const VideoEditorFinishingChanged(isFinishing: false),
+          ),
+        ).called(1);
+      });
+
+      testWidgets('turns Done off while the edit is handed over', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          buildWidget(state: const VideoEditorMainState(isFinishing: true)),
+        );
+
         expect(
           tester
               .widget<VideoEditorToolbar>(find.byType(VideoEditorToolbar))
               .onDone,
           isNull,
         );
-
-        font.complete(true);
-        await tester.pump();
-
-        verify(editor.doneEditing).called(1);
       });
 
       testWidgets(

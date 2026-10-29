@@ -591,6 +591,25 @@ void main() {
       );
     });
 
+    group(VideoEditorFinishingChanged, () {
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'marks the edit as being handed over after Done',
+        build: buildBloc,
+        act: (bloc) =>
+            bloc.add(const VideoEditorFinishingChanged(isFinishing: true)),
+        expect: () => [const VideoEditorMainState(isFinishing: true)],
+      );
+
+      blocTest<VideoEditorMainBloc, VideoEditorMainState>(
+        'ends the handover',
+        build: buildBloc,
+        seed: () => const VideoEditorMainState(isFinishing: true),
+        act: (bloc) =>
+            bloc.add(const VideoEditorFinishingChanged(isFinishing: false)),
+        expect: () => [const VideoEditorMainState()],
+      );
+    });
+
     group(VideoEditorMaskEditingChanged, () {
       blocTest<VideoEditorMainBloc, VideoEditorMainState>(
         'hands the screen to the canvas while a shape mask is edited',

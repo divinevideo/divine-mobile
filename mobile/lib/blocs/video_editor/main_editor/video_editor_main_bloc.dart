@@ -46,6 +46,7 @@ class VideoEditorMainBloc
     on<VideoEditorDetachedClipOpacityPreviewChanged>(
       _onDetachedClipOpacityPreviewChanged,
     );
+    on<VideoEditorFinishingChanged>(_onFinishingChanged);
   }
 
   /// Updates undo/redo state based on editor capabilities.
@@ -299,6 +300,13 @@ class VideoEditorMainBloc
     Emitter<VideoEditorMainState> emit,
   ) {
     emit(state.copyWith(isMarkingTrackRegion: event.isMarking));
+  }
+
+  void _onFinishingChanged(
+    VideoEditorFinishingChanged event,
+    Emitter<VideoEditorMainState> emit,
+  ) {
+    emit(state.copyWith(isFinishing: event.isFinishing));
   }
 
   void _onMaskEditingChanged(

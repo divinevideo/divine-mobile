@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
@@ -57,19 +58,15 @@ class VideoEditorMainOverlayActions extends StatelessWidget {
 
 /// Top row actions: close and done buttons, plus the stop-motion frames chip
 /// or the text wrap hint.
-class _TopActions extends ConsumerStatefulWidget {
+class _TopActions extends ConsumerWidget {
   const _TopActions();
 
   @override
-  ConsumerState<_TopActions> createState() => _TopActionsState();
-}
-
-class _TopActionsState extends ConsumerState<_TopActions> {
-  bool _finishing = false;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scope = VideoEditorScope.of(context);
+    final isFinishing = context.select(
+      (VideoEditorMainBloc b) => b.state.isFinishing,
+    );
     final hasLoopSuggestion = context.select(
       (LoopSuggestionCubit cubit) =>
           cubit.state.status == LoopSuggestionStatus.searching,
@@ -137,7 +134,7 @@ class _TopActionsState extends ConsumerState<_TopActions> {
                 ),
         ),
         onClose: close,
-        onDone: hasLoopSuggestion || _finishing
+        onDone: hasLoopSuggestion || isFinishing
             ? null
             : () => _onDonePressed(context, scope),
       ),
@@ -149,7 +146,8 @@ class _TopActionsState extends ConsumerState<_TopActions> {
   /// that length by silently looping at render, so instead the tap surfaces a
   /// "capture more frames" snackbar and stays in the editor.
   void _onDonePressed(BuildContext context, VideoEditorScope scope) {
-    if (_finishing) return;
+    final bloc = context.read<VideoEditorMainBloc>();
+    if (bloc.state.isFinishing) return;
     if (context.read<LoopSuggestionCubit>().state.status ==
         LoopSuggestionStatus.searching) {
       return;
@@ -168,9 +166,9 @@ class _TopActionsState extends ConsumerState<_TopActions> {
       );
       return;
     }
-    setState(() => _finishing = true);
+    bloc.add(const VideoEditorFinishingChanged(isFinishing: true));
     runDetached(
-      _finishEditing(scope),
+      _finishEditing(bloc, scope),
       'finish editing',
       logName: 'VideoEditorMainOverlayActions',
       category: LogCategory.video,
@@ -180,7 +178,10 @@ class _TopActionsState extends ConsumerState<_TopActions> {
   /// Hands the edit over to the export, first loading the sticker emoji font
   /// when a social sticker has an emoji to draw in it: the export captures the
   /// stickers as they show, and a viewer's copy draws its emoji in that font.
-  Future<void> _finishEditing(VideoEditorScope scope) async {
+  Future<void> _finishEditing(
+    VideoEditorMainBloc bloc,
+    VideoEditorScope scope,
+  ) async {
     try {
       final editor = scope.editor;
       if (editor == null) return;
@@ -189,9 +190,9 @@ class _TopActionsState extends ConsumerState<_TopActions> {
           if (SocialStickerData.of(layer) case final sticker?)
             SocialStickerView.textOf(sticker),
       ]);
-      if (mounted && editor.mounted) editor.doneEditing();
+      if (editor.mounted) editor.doneEditing();
     } finally {
-      if (mounted) setState(() => _finishing = false);
+      bloc.addIfOpen(const VideoEditorFinishingChanged(isFinishing: false));
     }
   }
 
