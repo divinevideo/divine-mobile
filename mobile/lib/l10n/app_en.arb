@@ -11330,7 +11330,7 @@
   },
   "messagesRoomEmpty": "No recent messages. Say hello.",
   "@messagesRoomEmpty": {
-    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+    "description": "Invitation in a public room row when retained history holds no message to preview; says recent because older messages may have expired, and does not claim the room has never had messages."
   },
   "messagesDirect": "Direct",
   "messagesRooms": "Rooms",
