@@ -165,6 +165,7 @@ void main() {
 
       expect(result.single.logicalSize.width, closeTo(20, 1e-9));
       expect(result.single.logicalSize.height, closeTo(40, 1e-9));
+      expect(result.single.boxSize, equals(censor.size));
     });
   });
 }
