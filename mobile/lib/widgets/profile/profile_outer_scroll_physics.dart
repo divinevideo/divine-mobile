@@ -6,6 +6,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
+import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 
 /// Resolves the furthest the outer scroll may travel for a viewport of
 /// [viewportExtent], or `null` when the active tab imposes no limit.
@@ -31,8 +32,8 @@ double profileOuterScrollExtentFor({
   return math.max(0, header + tabBar + content - viewport);
 }
 
-/// The least content height a profile tab is given room for: one row of the
-/// three-column video grid plus the bottom safe area.
+/// The least content height a profile tab is given room for: one square tile
+/// of the [ProfileMasonryGrid] plus the bottom safe area.
 ///
 /// An empty, loading or short tab still scrolls far enough to show this much
 /// below the tabs, so its message is never squeezed against the bottom edge.
@@ -40,13 +41,11 @@ double profileTabMinimumContentExtent({
   required double tabWidth,
   required double bottomSafeArea,
 }) =>
-    (tabWidth - _gridSpacing * (_gridColumns - 1)) / _gridColumns +
+    (tabWidth -
+            ProfileMasonryGrid.spacing *
+                (ProfileMasonryGrid.crossAxisCount - 1)) /
+        ProfileMasonryGrid.crossAxisCount +
     bottomSafeArea;
-
-/// The geometry of the Videos tab's grid. The other tabs' grids differ by a
-/// pixel or two, which a one-row lower bound can ignore.
-const _gridColumns = 3;
-const _gridSpacing = 4.0;
 
 /// Physics for the profile's outer scroll position.
 ///
