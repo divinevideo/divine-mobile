@@ -2124,7 +2124,9 @@ class DmReactionsRepository {
     }
     final inboxes = inboxByRecipient ?? await _resolveInboxes(recipients);
     final held = recipients.any(
-      (recipient) => inboxes[recipient]?.state == DmInboxResolution.unreadable,
+      (recipient) =>
+          heldWraps[recipient]?.delivered != true &&
+          inboxes[recipient]?.state == DmInboxResolution.unreadable,
     );
     NIP17SendSuccess? lastSuccess;
     final failures = <NIP17SendFailure>[];

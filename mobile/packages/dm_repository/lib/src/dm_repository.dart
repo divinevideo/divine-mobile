@@ -10234,6 +10234,7 @@ class DmRepository {
     final selfWrapTargets = await selfWrapRelays;
     final held = recipients.any(
       (recipient) =>
+          heldWraps[recipient]?.delivered != true &&
           inboxByRecipient[recipient]?.state == DmInboxResolution.unreadable,
     );
     NIP17SendSuccess? lastSuccess;

@@ -663,6 +663,27 @@ void main() {
           expect((await rowOf(rumorId)).publishStatus, 'sent');
         });
 
+        test('publishes the own copy when only an already-delivered member '
+            'has an unreadable inbox after a restart', () async {
+          final rumorId = await heldRoomReaction();
+          expect(heldWraps((await rowOf(rumorId)).heldReactionWraps), {
+            peerB: deliveredEntry(wrapsTo(peerB).single.id),
+            peerC: heldEntry(wrapsTo(peerC).single.id),
+          });
+          expect(wrapsTo(owner), isEmpty);
+          buildStack();
+          inboxes[peerB] = _Inbox.unreadable;
+          inboxes[peerC] = _Inbox.absent;
+
+          final retried = await retry(rumorId);
+
+          expect(retried.success, isTrue);
+          expect(wrapsTo(peerB), hasLength(1));
+          expect(wrapsTo(peerC), hasLength(1));
+          expect((await rowOf(rumorId)).publishStatus, 'sent');
+          expect(wrapsTo(owner), hasLength(1));
+        });
+
         test('reads who has it from the row, so a restart sends them nothing '
             'again', () async {
           final rumorId = await heldRoomReaction();
@@ -1020,6 +1041,26 @@ void main() {
           expect(removalWrapsTo(owner), hasLength(1));
         });
 
+        test('publishes the own copy when only an already-delivered member '
+            'has an unreadable inbox after a restart', () async {
+          final rumorId = await heldRoomRemoval();
+          expect(heldWraps((await rowOf(rumorId)).heldRemovalWraps), {
+            peerB: deliveredEntry(removalWrapsTo(peerB).single.id),
+            peerC: heldEntry(removalWrapsTo(peerC).single.id),
+          });
+          expect(removalWrapsTo(owner), isEmpty);
+          buildStack();
+          inboxes[peerB] = _Inbox.unreadable;
+          inboxes[peerC] = _Inbox.absent;
+
+          expect(await retryRemoval(rumorId), DmReactionDeletionOutcome.sent);
+
+          expect(removalWrapsTo(peerB), hasLength(1));
+          expect(removalWrapsTo(peerC), hasLength(1));
+          expect((await rowOf(rumorId)).publishStatus, 'deletion_sent');
+          expect(removalWrapsTo(owner), hasLength(1));
+        });
+
         test('reads who has it from the row, so a restart sends them nothing '
             'again', () async {
           final rumorId = await heldRoomRemoval();
@@ -1306,6 +1347,26 @@ void main() {
             hasLength(2),
             reason: 'a retraction publishes the own copy per member (#10016)',
           );
+        });
+
+        test('publishes the own copies when only an already-delivered member '
+            'has an unreadable inbox after a restart', () async {
+          await heldRoomRetraction();
+          expect(heldWraps((await messageRow()).heldDeletionWraps), {
+            peerB: deliveredEntry(wrapsTo(peerB).single.id),
+            peerC: heldEntry(wrapsTo(peerC).single.id),
+          });
+          expect(wrapsTo(owner), isEmpty);
+          buildStack();
+          inboxes[peerB] = _Inbox.unreadable;
+          inboxes[peerC] = _Inbox.absent;
+
+          expect(await retryRetraction(), DmMessageDeletionOutcome.sent);
+
+          expect(wrapsTo(peerB), hasLength(1));
+          expect(wrapsTo(peerC), hasLength(1));
+          expect((await messageRow()).deletionPublishStatus, 'deletion_sent');
+          expect(wrapsTo(owner), hasLength(2));
         });
 
         test('reads who has it from the row, so a restart sends them nothing '
