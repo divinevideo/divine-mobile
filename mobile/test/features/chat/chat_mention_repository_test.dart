@@ -509,6 +509,46 @@ void main() {
 
     group('enroll', () {
       test(
+        'close waits for an observer a refused enrollment stopped',
+        () async {
+          final store = _RefusedLaterStore(me);
+          final closing = Completer<void>();
+          final room = _Room();
+          when(room.close).thenAnswer((_) => closing.future);
+          when(() => room.changes).thenAnswer((_) => const Stream.empty());
+          when(
+            () => room.timeline(now: any(named: 'now')),
+          ).thenReturn(FoldedThread([], {}));
+          final repo = ChatMentionRepository(
+            owner: me,
+            communityId: 'community-test',
+            store: store,
+            now: () => 1000,
+            canNotify: (_) => true,
+            createRoom: (_) => room,
+            startRoom: (_, _) async {},
+          );
+          await repo.initialize();
+          final write = store.held = Completer<void>();
+          final enrolling = expectLater(
+            repo.enroll('general'),
+            throwsStateError,
+          );
+          await pumpEventQueue();
+          await repo.refresh();
+          write.complete();
+          await enrolling;
+          var closed = false;
+          unawaited(repo.close().then((_) => closed = true));
+          await pumpEventQueue();
+          expect(closed, isFalse);
+          closing.complete();
+          await pumpEventQueue();
+          expect(closed, isTrue);
+        },
+      );
+
+      test(
         'an observer still starting when its enrollment fails stays down',
         () async {
           final store = _RefusedLaterStore(me);

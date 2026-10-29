@@ -58,6 +58,7 @@ class ChatMentionRepository implements LocalNotificationSource {
   final _repositories = <String, ConcordRepository>{};
   final _subscriptions = <String, StreamSubscription<void>>{};
   final _failedRooms = <String>{};
+  final _stopping = <Future<void>>{};
   Future<void>? _refreshing;
   final _snapshots = BehaviorSubject<List<NotificationItem>>.seeded(const []);
   Future<void>? _initializing;
@@ -114,11 +115,14 @@ class ChatMentionRepository implements LocalNotificationSource {
     final subscription = _subscriptions.remove(channel);
     final repository = _repositories.remove(channel);
     if (subscription == null && repository == null) return;
+    late final Future<void> stopping;
+    stopping = () async {
+      await subscription?.cancel();
+      await repository?.close();
+    }().whenComplete(() => _stopping.remove(stopping));
+    _stopping.add(stopping);
     runDetached(
-      () async {
-        await subscription?.cancel();
-        await repository?.close();
-      }(),
+      stopping,
       'stop chat mention room',
       logName: 'ChatMentions',
       category: LogCategory.storage,
@@ -392,6 +396,11 @@ class ChatMentionRepository implements LocalNotificationSource {
     ]);
     await Future.wait([
       for (final repository in _repositories.values) repository.close(),
+    ]);
+    // Account erasure waits on close, so wait for stopped rooms' writes too;
+    // runDetached already reported any failure.
+    await Future.wait([
+      for (final stop in List.of(_stopping)) stop.catchError((Object _) {}),
     ]);
     await _mutations;
     await _writes;
