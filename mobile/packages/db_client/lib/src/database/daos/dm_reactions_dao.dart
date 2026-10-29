@@ -293,13 +293,41 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
   ///
   /// Recorded only while the row still holds the reaction rumor that wrap
   /// carries — live, with its rumor, not confirmed or blocked — so an attempt
-  /// that ends after the reaction was removed records nothing. Returns whether
-  /// it was recorded.
+  /// that ends after the reaction was removed records nothing. A recipient
+  /// already recorded as having the reaction keeps that. Returns whether it
+  /// was recorded.
   Future<bool> recordHeldReactionWrap({
     required String id,
     required String ownerPubkey,
     required String recipientPubkey,
     required String wrapEventId,
+  }) => _recordReactionWraps(
+    id: id,
+    ownerPubkey: ownerPubkey,
+    wraps: {recipientPubkey: wrapEventId},
+    delivered: false,
+  );
+
+  /// Record that each recipient in [wraps] has the reaction [id], through the
+  /// gift wrap it names, in [DmMessageReactions.heldReactionWraps] (#10012),
+  /// so a later attempt sends them nothing. Recorded on the terms
+  /// [recordHeldReactionWrap] records on. Returns whether it was recorded.
+  Future<bool> recordDeliveredReactionWraps({
+    required String id,
+    required String ownerPubkey,
+    required Map<String, String> wraps,
+  }) => _recordReactionWraps(
+    id: id,
+    ownerPubkey: ownerPubkey,
+    wraps: wraps,
+    delivered: true,
+  );
+
+  Future<bool> _recordReactionWraps({
+    required String id,
+    required String ownerPubkey,
+    required Map<String, String> wraps,
+    required bool delivered,
   }) {
     return transaction(() async {
       final row = await getById(id: id, ownerPubkey: ownerPubkey);
@@ -315,10 +343,10 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
           .write(
             DmMessageReactionsCompanion(
               heldReactionWraps: Value(
-                withHeldPoolWrap(
+                withHeldWraps(
                   row.heldReactionWraps,
-                  recipientPubkey: recipientPubkey,
-                  wrapEventId: wrapEventId,
+                  wraps,
+                  delivered: delivered,
                 ),
               ),
             ),
@@ -335,6 +363,32 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
     required String ownerPubkey,
     required String recipientPubkey,
     required String wrapEventId,
+  }) => _recordRemovalWraps(
+    id: id,
+    ownerPubkey: ownerPubkey,
+    wraps: {recipientPubkey: wrapEventId},
+    delivered: false,
+  );
+
+  /// [recordDeliveredReactionWraps] for the kind-5 that removes the reaction
+  /// [id], in [DmMessageReactions.heldRemovalWraps], on the terms
+  /// [recordHeldRemovalWrap] records on.
+  Future<bool> recordDeliveredRemovalWraps({
+    required String id,
+    required String ownerPubkey,
+    required Map<String, String> wraps,
+  }) => _recordRemovalWraps(
+    id: id,
+    ownerPubkey: ownerPubkey,
+    wraps: wraps,
+    delivered: true,
+  );
+
+  Future<bool> _recordRemovalWraps({
+    required String id,
+    required String ownerPubkey,
+    required Map<String, String> wraps,
+    required bool delivered,
   }) {
     return transaction(() async {
       final row = await getById(id: id, ownerPubkey: ownerPubkey);
@@ -350,10 +404,10 @@ class DmReactionsDao extends DatabaseAccessor<AppDatabase>
           .write(
             DmMessageReactionsCompanion(
               heldRemovalWraps: Value(
-                withHeldPoolWrap(
+                withHeldWraps(
                   row.heldRemovalWraps,
-                  recipientPubkey: recipientPubkey,
-                  wrapEventId: wrapEventId,
+                  wraps,
+                  delivered: delivered,
                 ),
               ),
             ),

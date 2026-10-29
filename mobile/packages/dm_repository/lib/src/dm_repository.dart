@@ -9944,7 +9944,7 @@ class DmRepository {
     required String conversationId,
     required Event deletion,
     required List<String> recipients,
-    Map<String, String> heldWraps = const {},
+    Map<String, HeldWrap> heldWraps = const {},
   }) async {
     try {
       final (:result, :anyRecipientAccepted) = await _fanOutDeletion(
@@ -10071,7 +10071,8 @@ class DmRepository {
   /// other route back: [deleteMessageForEveryone] returns early on
   /// `is_deleted` and the sweep's worklist requires a non-null rumor (#8284).
   ///
-  /// A recipient whose earlier wrap the fallback pool accepted on an
+  /// A recipient an earlier attempt delivered the kind 5 to is sent nothing
+  /// again. One whose earlier wrap the fallback pool accepted on an
   /// unreadable inbox is sent nothing more while it stays unreadable, is
   /// settled on that wrap once they advertise no inbox, and is wrapped again
   /// only once their inbox is found (#10012).
@@ -10158,17 +10159,19 @@ class DmRepository {
       // for that one with it.
       heldWraps: mintedFresh
           ? const {}
-          : decodeHeldPoolWraps(row.heldDeletionWraps),
+          : decodeHeldWraps(row.heldDeletionWraps),
     );
   }
 
   /// Wrap [deletion] to each recipient in turn.
   ///
-  /// Terminal success only when EVERY recipient's wrap lands. One row cannot
-  /// track per-recipient delivery, so a partial fan-out must not settle it —
-  /// the sweep re-drives the whole rumor and the recipients that already have
-  /// it dedup on the (identical) rumor id. Mirrors
-  /// `DmReactionsRepository._fanOutRumor`.
+  /// Terminal success only when EVERY recipient's wrap lands. One row holds
+  /// the retraction for every member, so a partial fan-out must not settle
+  /// it: settling would clear the stored rumor the missed members still need.
+  /// Instead the attempt records on the row the members it delivered to, and
+  /// a later attempt passes them back in [heldWraps] and sends them nothing,
+  /// counting them as delivered, so the sweep re-drives the rumor only to the
+  /// members it missed (#10012). Mirrors `DmReactionsRepository._fanOutRumor`.
   ///
   /// A recipient's wrap "lands" only when the relay that confirmed it is one
   /// the recipient reads. When their kind-10050 could not be READ the wrap
@@ -10195,20 +10198,20 @@ class DmRepository {
   /// distinguish wholly refused from partly delivered fan-outs (#8201).
   ///
   /// The wrap the pool held is recorded on the retracted message [rumorId],
-  /// and a later attempt passes that record back as [heldWraps], keyed by
-  /// recipient, with the rules `_fanOutRumor` applies (#10012): nothing more
-  /// to that recipient while their inbox stays unreadable, the held wrap as
-  /// their delivery once they advertise no inbox, a new wrap once it is
-  /// found. An attempt in which any recipient's inbox is unreadable is held,
-  /// so no recipient's send publishes the sender's copy then; the attempt
-  /// that delivers publishes one per member, as every delivered retraction
-  /// does (#10016).
+  /// and a later attempt passes it back in [heldWraps], keyed by recipient,
+  /// with the rules `_fanOutRumor` applies (#10012): nothing more to that
+  /// recipient while their inbox stays unreadable, the held wrap as their
+  /// delivery once they advertise no inbox, a new wrap once it is found. An
+  /// attempt in which any recipient's inbox is unreadable is held, so no
+  /// recipient's send publishes the sender's copy then; the attempt that
+  /// delivers publishes one per member, as every delivered retraction does
+  /// (#10016), a member it sends nothing included.
   Future<({NIP17SendResult result, bool anyRecipientAccepted})>
   _fanOutDeletion({
     required String rumorId,
     required Event deletion,
     required List<String> recipients,
-    Map<String, String> heldWraps = const {},
+    Map<String, HeldWrap> heldWraps = const {},
   }) async {
     // Resolve every recipient's kind-10050 inbox concurrently BEFORE the loop,
     // exactly as `sendMessage` and `sendGroupMessage` do. Without it the
@@ -10235,19 +10238,23 @@ class DmRepository {
     );
     NIP17SendSuccess? lastSuccess;
     final failures = <NIP17SendFailure>[];
+    // The members this attempt delivered to, and the wrap each has (#10012).
+    final deliveredWraps = <String, String>{};
     for (final recipient in recipients) {
       final inbox = inboxByRecipient[recipient];
+      final heldWrap = heldWraps[recipient];
       final NIP17SendResult result;
-      final unsent = await resolveHeldPoolWrap(
+      final unsent = await resolveHeldWrap(
         messageService: _messageService!,
         rumor: deletion,
         recipientPubkey: recipient,
-        heldWrapId: heldWraps[recipient],
+        heldWrap: heldWrap,
         inboxState: inbox?.state,
       );
       if (unsent != null) {
         result = unsent;
-        // Settled on the held wrap: publish the copy its send would have.
+        // Settled on the held wrap, or delivered by an earlier attempt:
+        // publish the copy its send would have.
         if (unsent.success && !held) {
           final ownCopy = await _messageService!.publishSelfWrap(
             rumorEvent: deletion,
@@ -10255,9 +10262,9 @@ class DmRepository {
           );
           if (!ownCopy.success) {
             Log.warning(
-              'Own copy of retraction ${deletion.id} not published after '
-              'settling ${pubkeyForLogs(recipient)} on the held wrap: '
-              '${ownCopy.error}',
+              'Own copy of retraction ${deletion.id} not published for '
+              '${pubkeyForLogs(recipient)}, who has wrap '
+              '${unsent.messageEventId} with no send: ${ownCopy.error}',
               category: LogCategory.system,
             );
           }
@@ -10308,11 +10315,21 @@ class DmRepository {
         }
       }
       switch (result) {
-        case NIP17SendSuccess():
+        case NIP17SendSuccess(:final messageEventId):
           lastSuccess = result;
+          if (heldWrap?.delivered != true) {
+            deliveredWraps[recipient] = messageEventId;
+          }
         case NIP17SendFailure():
           failures.add(result);
       }
+    }
+    // Only an attempt that leaves the row to be retried needs the record.
+    if (failures.isNotEmpty && deliveredWraps.isNotEmpty) {
+      await _recordDeliveredDeletionWraps(
+        rumorId: rumorId,
+        wraps: deliveredWraps,
+      );
     }
     final anyRecipientAccepted = lastSuccess != null;
     if (failures.isEmpty) {
@@ -10339,25 +10356,50 @@ class DmRepository {
   }
 
   /// Records on the retraction of [rumorId] that the fallback pool holds
-  /// [wrapEventId] for [recipientPubkey] (#10012). Non-rethrowing: without
-  /// the record the next retry wraps the kind 5 again, as every retry did
-  /// before.
+  /// [wrapEventId] for [recipientPubkey] (#10012).
   Future<void> _recordHeldDeletionWrap({
     required String rumorId,
     required String recipientPubkey,
     required String wrapEventId,
+  }) => _recordDeletionWraps(
+    rumorId,
+    what: 'held pool wrap $wrapEventId',
+    write: () => _directMessagesDao.recordHeldDeletionWrap(
+      rumorId,
+      recipientPubkey: recipientPubkey,
+      wrapEventId: wrapEventId,
+      ownerPubkey: _ownerPubkey,
+    ),
+  );
+
+  /// Records on the retraction of [rumorId] that each member in [wraps] has
+  /// it, through the wrap it names (#10012).
+  Future<void> _recordDeliveredDeletionWraps({
+    required String rumorId,
+    required Map<String, String> wraps,
+  }) => _recordDeletionWraps(
+    rumorId,
+    what: 'that ${wraps.keys.map(pubkeyForLogs).join(', ')} have it',
+    write: () => _directMessagesDao.recordDeliveredDeletionWraps(
+      rumorId,
+      wraps: wraps,
+      ownerPubkey: _ownerPubkey,
+    ),
+  );
+
+  /// Runs [write], which records [what] on the retraction of [rumorId]
+  /// (#10012). Non-rethrowing: without the record the next retry wraps the
+  /// kind 5 again for those members, as every retry did before.
+  Future<void> _recordDeletionWraps(
+    String rumorId, {
+    required String what,
+    required Future<bool> Function() write,
   }) async {
     try {
-      await _directMessagesDao.recordHeldDeletionWrap(
-        rumorId,
-        recipientPubkey: recipientPubkey,
-        wrapEventId: wrapEventId,
-        ownerPubkey: _ownerPubkey,
-      );
+      await write();
     } on Object catch (e, stackTrace) {
       Log.error(
-        'Failed to record held pool wrap $wrapEventId on the retraction of '
-        '$rumorId: $e',
+        'Failed to record $what on the retraction of $rumorId: $e',
         category: LogCategory.system,
         error: e,
         stackTrace: stackTrace,

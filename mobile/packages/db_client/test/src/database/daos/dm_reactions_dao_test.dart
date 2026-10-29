@@ -1848,12 +1848,26 @@ void main() {
           '6666666666666666666666666666666666666666666666666666666666666666';
       const otherHeldWrap =
           '7777777777777777777777777777777777777777777777777777777777777777';
+      const thirdRecipient =
+          '8888888888888888888888888888888888888888888888888888888888888888';
 
       Future<DmReactionRow> rowOf(String id) async =>
           (await dao.getById(id: id, ownerPubkey: _ownerA))!;
 
       Map<String, dynamic>? decode(String? json) =>
           json == null ? null : jsonDecode(json) as Map<String, dynamic>;
+
+      /// A record's entry for a recipient the fallback pool holds [wrap] for.
+      Map<String, Object> held(String wrap) => {
+        'wrap': wrap,
+        'delivered': false,
+      };
+
+      /// A record's entry for a recipient who has the rumor through [wrap].
+      Map<String, Object> delivered(String wrap) => {
+        'wrap': wrap,
+        'delivered': true,
+      };
 
       Future<bool> recordReactionWrap({
         String recipient = _targetAuthor,
@@ -1875,6 +1889,20 @@ void main() {
         recipientPubkey: recipient,
         wrapEventId: wrap,
       );
+
+      Future<bool> recordDeliveredReactionWraps(Map<String, String> wraps) =>
+          dao.recordDeliveredReactionWraps(
+            id: _pendingId,
+            ownerPubkey: _ownerA,
+            wraps: wraps,
+          );
+
+      Future<bool> recordDeliveredRemovalWraps(Map<String, String> wraps) =>
+          dao.recordDeliveredRemovalWraps(
+            id: _pendingId,
+            ownerPubkey: _ownerA,
+            wraps: wraps,
+          );
 
       Future<void> remove({String deletionRumorJson = '{"kind":5}'}) =>
           dao.markOwnDeletionPending(
@@ -1898,8 +1926,8 @@ void main() {
 
           final row = await rowOf(_pendingId);
           expect(decode(row.heldReactionWraps), {
-            _targetAuthor: heldWrap,
-            _reactorB: otherHeldWrap,
+            _targetAuthor: held(heldWrap),
+            _reactorB: held(otherHeldWrap),
           });
           expect(row.heldRemovalWraps, isNull);
         });
@@ -1917,7 +1945,41 @@ void main() {
           expect(await recordReactionWrap(), isTrue);
 
           expect(decode((await rowOf(_pendingId)).heldReactionWraps), {
-            _targetAuthor: heldWrap,
+            _targetAuthor: held(heldWrap),
+          });
+        });
+
+        test('drops an entry it cannot read and keeps the others', () async {
+          await insertPending(recipientPubkeys: _recipients);
+          await (database.update(
+            database.dmMessageReactions,
+          )..where((t) => t.id.equals(_pendingId))).write(
+            DmMessageReactionsCompanion(
+              heldReactionWraps: Value(
+                jsonEncode({
+                  _reactorB: otherHeldWrap,
+                  thirdRecipient: delivered(otherHeldWrap),
+                }),
+              ),
+            ),
+          );
+
+          expect(await recordReactionWrap(), isTrue);
+
+          expect(decode((await rowOf(_pendingId)).heldReactionWraps), {
+            _targetAuthor: held(heldWrap),
+            thirdRecipient: delivered(otherHeldWrap),
+          });
+        });
+
+        test('leaves a recipient who has the reaction as having it', () async {
+          await insertPending();
+          await recordDeliveredReactionWraps({_targetAuthor: otherHeldWrap});
+
+          expect(await recordReactionWrap(), isTrue);
+
+          expect(decode((await rowOf(_pendingId)).heldReactionWraps), {
+            _targetAuthor: delivered(otherHeldWrap),
           });
         });
 
@@ -1985,16 +2047,70 @@ void main() {
         });
 
         test('stay while the reaction waits for another retry', () async {
-          await insertPending();
+          await insertPending(recipientPubkeys: _recipients);
           await recordReactionWrap();
+          await recordDeliveredReactionWraps({_reactorB: otherHeldWrap});
 
           await dao.markFailed(placeholderId: _pendingId, ownerPubkey: _ownerA);
           await dao.markPending(id: _pendingId, ownerPubkey: _ownerA);
           await dao.markUnconfirmed(id: _pendingId, ownerPubkey: _ownerA);
 
           expect(decode((await rowOf(_pendingId)).heldReactionWraps), {
-            _targetAuthor: heldWrap,
+            _targetAuthor: held(heldWrap),
+            _reactorB: delivered(otherHeldWrap),
           });
+        });
+      });
+
+      group('recordDeliveredReactionWraps', () {
+        test('records each recipient as having the reaction', () async {
+          await insertPending(recipientPubkeys: _recipients);
+
+          expect(
+            await recordDeliveredReactionWraps({
+              _targetAuthor: heldWrap,
+              _reactorB: otherHeldWrap,
+            }),
+            isTrue,
+          );
+
+          final row = await rowOf(_pendingId);
+          expect(decode(row.heldReactionWraps), {
+            _targetAuthor: delivered(heldWrap),
+            _reactorB: delivered(otherHeldWrap),
+          });
+          expect(row.heldRemovalWraps, isNull);
+        });
+
+        test('records a held recipient as having it through the wrap that '
+            'reached them', () async {
+          await insertPending();
+          await recordReactionWrap();
+
+          expect(
+            await recordDeliveredReactionWraps({_targetAuthor: otherHeldWrap}),
+            isTrue,
+          );
+
+          expect(decode((await rowOf(_pendingId)).heldReactionWraps), {
+            _targetAuthor: delivered(otherHeldWrap),
+          });
+        });
+
+        test('records nothing once the reaction was confirmed', () async {
+          await insertPending();
+          await dao.swapPlaceholderId(
+            placeholderId: _pendingId,
+            realRumorId: _pendingId,
+            ownerPubkey: _ownerA,
+          );
+
+          expect(
+            await recordDeliveredReactionWraps({_targetAuthor: heldWrap}),
+            isFalse,
+          );
+
+          expect((await rowOf(_pendingId)).heldReactionWraps, isNull);
         });
       });
 
@@ -2014,7 +2130,9 @@ void main() {
           expect(await recordRemovalWrap(), isTrue);
 
           final row = await rowOf(_pendingId);
-          expect(decode(row.heldRemovalWraps), {_targetAuthor: heldWrap});
+          expect(decode(row.heldRemovalWraps), {
+            _targetAuthor: held(heldWrap),
+          });
           expect(row.heldReactionWraps, isNull);
         });
 
@@ -2027,6 +2145,40 @@ void main() {
 
           expect((await rowOf(_pendingId)).heldRemovalWraps, isNull);
         });
+      });
+
+      group('recordDeliveredRemovalWraps', () {
+        test('records nothing for a reaction that is still live', () async {
+          await insertPending();
+
+          expect(
+            await recordDeliveredRemovalWraps({_targetAuthor: heldWrap}),
+            isFalse,
+          );
+
+          expect((await rowOf(_pendingId)).heldRemovalWraps, isNull);
+        });
+
+        test(
+          'records each recipient as having an outstanding removal',
+          () async {
+            await insertPending(recipientPubkeys: _recipients);
+            await remove();
+            await recordRemovalWrap();
+
+            expect(
+              await recordDeliveredRemovalWraps({_reactorB: otherHeldWrap}),
+              isTrue,
+            );
+
+            final row = await rowOf(_pendingId);
+            expect(decode(row.heldRemovalWraps), {
+              _targetAuthor: held(heldWrap),
+              _reactorB: delivered(otherHeldWrap),
+            });
+            expect(row.heldReactionWraps, isNull);
+          },
+        );
       });
 
       group('the wraps held for a removal', () {
@@ -2049,18 +2201,22 @@ void main() {
 
           final row = await rowOf(_pendingId);
           expect(row.rumorEventJson, '{"kind":5}');
-          expect(decode(row.heldRemovalWraps), {_targetAuthor: heldWrap});
+          expect(decode(row.heldRemovalWraps), {
+            _targetAuthor: held(heldWrap),
+          });
         });
 
         test('stay when the same kind-5 is recorded again', () async {
-          await insertPending();
+          await insertPending(recipientPubkeys: _recipients);
           await remove();
           await recordRemovalWrap();
+          await recordDeliveredRemovalWraps({_reactorB: otherHeldWrap});
 
           await remove();
 
           expect(decode((await rowOf(_pendingId)).heldRemovalWraps), {
-            _targetAuthor: heldWrap,
+            _targetAuthor: held(heldWrap),
+            _reactorB: delivered(otherHeldWrap),
           });
         });
 

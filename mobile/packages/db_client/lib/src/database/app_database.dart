@@ -56,9 +56,9 @@ const legacyV1NormalizationRepairIndexes = <String>[
   'idx_clip_category_owner_pubkey',
 ];
 
-/// The columns v31 adds (#10012): the wraps a fallback-pool relay accepted for
-/// a DM reaction, its removal, or a delete-for-everyone while a recipient's
-/// inbox could not be read.
+/// The columns v31 adds (#10012): for a DM reaction, its removal, or a
+/// delete-for-everyone, the members an attempt delivered it to and the wraps
+/// a fallback-pool relay accepted while a member's inbox could not be read.
 const _v31HeldWrapColumns = <(String, String)>[
   ('dm_message_reactions', 'held_reaction_wraps'),
   ('dm_message_reactions', 'held_removal_wraps'),
@@ -673,13 +673,13 @@ class AppDatabase extends _$AppDatabase {
     );
   }
 
-  /// Adds the record of the wraps a fallback-pool relay holds for a DM
-  /// reaction, its removal, or a delete-for-everyone (#10012).
+  /// Adds the record of the wraps relays hold of a DM reaction, its removal,
+  /// or a delete-for-everyone, per member (#10012).
   ///
-  /// Existing rows stay NULL: an attempt held before v31 recorded no wrap, so
-  /// its next retry wraps the rumor again, as every retry did before. A
-  /// versioned step only, outside the guarded `beforeOpen` recovery: that
-  /// path is not extended for new columns (MIGRATIONS.md).
+  /// Existing rows stay NULL: an attempt before v31 recorded nothing, so its
+  /// next retry wraps the rumor again for every member, as every retry did
+  /// before. A versioned step only, outside the guarded `beforeOpen`
+  /// recovery: that path is not extended for new columns (MIGRATIONS.md).
   Future<void> _repairSchemaV31() async {
     for (final (table, column) in _v31HeldWrapColumns) {
       await _addColumnIfMissing(table, column, 'TEXT NULL');

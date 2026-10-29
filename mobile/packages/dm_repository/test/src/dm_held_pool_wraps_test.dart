@@ -1,6 +1,6 @@
 // ABOUTME: Unit tests for the held-wrap record a DM reaction, removal or
-// ABOUTME: retraction row keeps (#10012): how it is read back, and which
-// ABOUTME: attempt counts as held by the fallback pool.
+// ABOUTME: retraction row keeps (#10012): how its held and delivered entries
+// ABOUTME: are read back, and which attempt counts as held by the pool.
 
 import 'dart:convert';
 
@@ -16,29 +16,62 @@ const _rumorId =
     '4e7d1c9b3a5f8e2d6c0b4a9f3e7d1c5b9a3f7e1d5c9b3a7f1e5d9c3b7a1f5e9d';
 
 void main() {
-  group('decodeHeldPoolWraps', () {
-    test('reads each recipient and the wrap held for them', () {
-      expect(decodeHeldPoolWraps(jsonEncode({_recipient: _wrapId})), {
-        _recipient: _wrapId,
-      });
+  group('decodeHeldWraps', () {
+    test('reads a recipient the fallback pool holds a wrap for', () {
+      expect(
+        decodeHeldWraps(
+          jsonEncode({
+            _recipient: {'wrap': _wrapId, 'delivered': false},
+          }),
+        ),
+        {_recipient: (wrapId: _wrapId, delivered: false)},
+      );
+    });
+
+    test('reads a recipient who has the rumor', () {
+      expect(
+        decodeHeldWraps(
+          jsonEncode({
+            _recipient: {'wrap': _wrapId, 'delivered': true},
+          }),
+        ),
+        {_recipient: (wrapId: _wrapId, delivered: true)},
+      );
+    });
+
+    test('reads an entry that does not say it was delivered as held', () {
+      expect(
+        decodeHeldWraps(
+          jsonEncode({
+            _recipient: {'wrap': _wrapId},
+          }),
+        ),
+        {_recipient: (wrapId: _wrapId, delivered: false)},
+      );
     });
 
     test('reads no record as no held wraps', () {
-      expect(decodeHeldPoolWraps(null), isEmpty);
+      expect(decodeHeldWraps(null), isEmpty);
     });
 
     test('reads a record that is not JSON as no held wraps', () {
-      expect(decodeHeldPoolWraps('not json'), isEmpty);
+      expect(decodeHeldWraps('not json'), isEmpty);
     });
 
     test('reads a record that is not an object as no held wraps', () {
-      expect(decodeHeldPoolWraps(jsonEncode([_recipient, _wrapId])), isEmpty);
+      expect(decodeHeldWraps(jsonEncode([_recipient, _wrapId])), isEmpty);
     });
 
-    test('drops an entry whose wrap id is not a string', () {
+    test('drops an entry that names no wrap', () {
       expect(
-        decodeHeldPoolWraps(jsonEncode({_recipient: _wrapId, 'other': 7})),
-        {_recipient: _wrapId},
+        decodeHeldWraps(
+          jsonEncode({
+            _recipient: {'wrap': _wrapId, 'delivered': true},
+            'bare': _wrapId,
+            'numbered': {'wrap': 7, 'delivered': true},
+          }),
+        ),
+        {_recipient: (wrapId: _wrapId, delivered: true)},
       );
     });
   });

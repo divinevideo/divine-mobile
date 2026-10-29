@@ -1111,6 +1111,29 @@ void main() {
               ownerPubkey: 'pubkey_alice',
             );
 
+        Future<bool> recordDelivered(
+          Map<String, String> wraps, {
+          String ownerPubkey = 'pubkey_alice',
+        }) => dao.recordDeliveredDeletionWraps(
+          'msg_del',
+          wraps: wraps,
+          ownerPubkey: ownerPubkey,
+        );
+
+        /// A record's entry for a recipient the fallback pool holds [wrap]
+        /// for.
+        Map<String, Object> held(String wrap) => {
+          'wrap': wrap,
+          'delivered': false,
+        };
+
+        /// A record's entry for a recipient who has the retraction through
+        /// [wrap].
+        Map<String, Object> delivered(String wrap) => {
+          'wrap': wrap,
+          'delivered': true,
+        };
+
         Future<Map<String, dynamic>?> heldWraps() async {
           final row = await dao.getMessageById(
             'msg_del',
@@ -1128,10 +1151,34 @@ void main() {
           expect(await recordWrap(to: otherRecipient, wrap: 'gw_c'), isTrue);
 
           expect(await heldWraps(), {
-            recipient: 'gw_held',
-            otherRecipient: 'gw_c',
+            recipient: held('gw_held'),
+            otherRecipient: held('gw_c'),
           });
         });
+
+        test('records each recipient a retraction reached', () async {
+          await insertOwnMessage();
+          await markPending();
+          await recordWrap();
+
+          expect(await recordDelivered({otherRecipient: 'gw_c'}), isTrue);
+
+          expect(await heldWraps(), {
+            recipient: held('gw_held'),
+            otherRecipient: delivered('gw_c'),
+          });
+        });
+
+        test(
+          'records no recipient on a message with no pending retraction',
+          () async {
+            await insertOwnMessage();
+
+            expect(await recordDelivered({recipient: 'gw_b'}), isFalse);
+
+            expect(await heldWraps(), isNull);
+          },
+        );
 
         test(
           'records nothing on a message with no pending retraction',
@@ -1192,13 +1239,14 @@ void main() {
             ownerPubkey: 'pubkey_alice',
           );
 
-          expect(await heldWraps(), {recipient: 'gw_held'});
+          expect(await heldWraps(), {recipient: held('gw_held')});
         });
 
         test('stay when a retry records the same kind-5 again', () async {
           await insertOwnMessage();
           await markPending();
           await recordWrap();
+          await recordDelivered({otherRecipient: 'gw_c'});
           await dao.markMessageDeletionBlocked(
             'msg_del',
             restoreToThread: true,
@@ -1207,7 +1255,10 @@ void main() {
 
           await markPending();
 
-          expect(await heldWraps(), {recipient: 'gw_held'});
+          expect(await heldWraps(), {
+            recipient: held('gw_held'),
+            otherRecipient: delivered('gw_c'),
+          });
         });
 
         test('go when a different kind-5 replaces it', () async {

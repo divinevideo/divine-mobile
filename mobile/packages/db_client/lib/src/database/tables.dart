@@ -886,15 +886,18 @@ class DirectMessages extends Table {
   TextColumn get deletionPublishStatus =>
       text().nullable().named('deletion_publish_status')();
 
-  /// The wraps of the kind-5 in [deletionRumorJson] that a fallback-pool
-  /// relay accepted while the recipient's kind-10050 inbox could not be read
-  /// (#10012): a JSON object from each such recipient's hex pubkey to the
-  /// wrap's event id. NULL when no attempt was held that way.
+  /// The wraps relays hold of the kind-5 in [deletionRumorJson], recorded by
+  /// attempts that did not deliver it to every member (#10012): a JSON object
+  /// from each recipient's hex pubkey to
+  /// `{"wrap": <gift-wrap event id>, "delivered": <bool>}`. NULL when no
+  /// attempt recorded one.
   ///
-  /// The relay already holds that wrap, so a retry sends that recipient
-  /// nothing while their inbox stays unreadable, counts the wrap as
-  /// delivered once they turn out to advertise no inbox, and wraps the
-  /// retraction again only once their inbox is found.
+  /// A delivered wrap is that member's copy, so a retry sends them nothing
+  /// again. Any other is a wrap a fallback-pool relay accepted while their
+  /// kind-10050 inbox could not be read: a retry sends them nothing while
+  /// their inbox stays unreadable, counts that wrap as delivered once they
+  /// turn out to advertise no inbox, and wraps the retraction again only once
+  /// their inbox is found.
   ///
   /// Lives as long as the rumor it was recorded for: cleared when the
   /// retraction is confirmed or a different kind-5 replaces it, and kept,
@@ -1030,15 +1033,18 @@ class DmMessageReactions extends Table {
   TextColumn get recipientPubkeys =>
       text().nullable().named('recipient_pubkeys')();
 
-  /// The wraps of this reaction that a fallback-pool relay accepted while the
-  /// recipient's kind-10050 inbox could not be read (#10012): a JSON object
-  /// from each such recipient's hex pubkey to the wrap's event id. NULL when
-  /// no attempt was held that way.
+  /// The wraps relays hold of this reaction, recorded by attempts that did
+  /// not deliver it to every member (#10012): a JSON object from each
+  /// recipient's hex pubkey to
+  /// `{"wrap": <gift-wrap event id>, "delivered": <bool>}`. NULL when no
+  /// attempt recorded one.
   ///
-  /// The relay already holds that wrap, so a retry sends that recipient
-  /// nothing while their inbox stays unreadable, counts the wrap as
-  /// delivered once they turn out to advertise no inbox, and wraps the
-  /// reaction again only once their inbox is found.
+  /// A delivered wrap is that member's copy, so a retry sends them nothing
+  /// again. Any other is a wrap a fallback-pool relay accepted while their
+  /// kind-10050 inbox could not be read: a retry sends them nothing while
+  /// their inbox stays unreadable, counts that wrap as delivered once they
+  /// turn out to advertise no inbox, and wraps the reaction again only once
+  /// their inbox is found.
   ///
   /// Lives as long as the reaction rumor in [rumorEventJson]: cleared when
   /// the reaction is confirmed or blocked, when its removal replaces the

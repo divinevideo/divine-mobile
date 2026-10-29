@@ -280,17 +280,23 @@ existing removal and rejoin markers.
 Version 31 adds three nullable JSON columns (#10012):
 `dm_message_reactions.held_reaction_wraps` and `held_removal_wraps`, and
 `direct_messages.held_deletion_wraps`. Each maps a recipient's hex pubkey to
-the gift wrap that a fallback-pool relay accepted for a reaction, its kind-5
-removal, or an own delete-for-everyone while that recipient's kind-10050 inbox
-could not be read. A retry sends that recipient nothing while the inbox stays
-unreadable, counts the held wrap as delivered once they advertise no inbox, and
-wraps the rumor again only once their inbox is found, which is what a held DM
-message already did through `outgoing_dms.recipient_wrap_event_id`. A
-reaction row carries two because it holds two rumors in turn. Each record lives
-as long as the rumor it was taken for and goes with it. Existing rows stay
-NULL, so an attempt held before v31 is wrapped again once, as before. The
-columns ride their rows' existing account cleanup and salvage handling, so
-neither list in `connection_native.dart` changes.
+`{"wrap": <gift-wrap event id>, "delivered": <bool>}` for a reaction, its
+kind-5 removal, or an own delete-for-everyone, written by an attempt that did
+not deliver the rumor to every recipient. A delivered entry is that recipient's
+copy, so a retry sends them nothing again: one row serves every member of a
+group, and without it each retry re-sent the rumor to the members who already
+had it, which a group DM message, queued one row per recipient, never did.
+Any other entry is a wrap a fallback-pool relay accepted while that
+recipient's kind-10050 inbox could not be read. A retry sends that recipient
+nothing while the inbox stays unreadable, counts the held wrap as delivered
+once they advertise no inbox, and wraps the rumor again only once their inbox
+is found, which is what a held DM message already did through
+`outgoing_dms.recipient_wrap_event_id`. A reaction row carries two because it
+holds two rumors in turn. Each record lives as long as the rumor it was taken
+for and goes with it. Existing rows stay NULL, so an attempt made before v31
+wraps the rumor again once for every recipient, as before. The columns ride
+their rows' existing account cleanup and salvage handling, so neither list in
+`connection_native.dart` changes.
 
 The step adds the columns through `_addColumnIfMissing` and checks `to` as well
 as `from`. The v12 rebuild lists `held_deletion_wraps` in `newColumns`, and the

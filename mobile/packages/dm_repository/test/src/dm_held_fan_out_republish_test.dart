@@ -1,8 +1,8 @@
-// ABOUTME: #10012 — a DM reaction, its removal, or a delete-for-everyone that
-// ABOUTME: the fallback pool confirmed on an unreadable inbox keeps that wrap:
-// ABOUTME: retries send that recipient nothing while the inbox stays
-// ABOUTME: unreadable, settle on it once it reads absent, and wrap it again
-// ABOUTME: once the inbox is found; the sender's copy waits for delivery.
+// ABOUTME: #10012 — retries of a DM reaction, its removal, or a
+// ABOUTME: delete-for-everyone send a member an earlier attempt reached nothing
+// ABOUTME: again, and keep a wrap the fallback pool confirmed on an unreadable
+// ABOUTME: inbox until it reads absent (settle) or is found (wrap again); the
+// ABOUTME: sender's copy waits for delivery.
 
 import 'dart:convert';
 
@@ -23,7 +23,7 @@ class _MockNostrClient extends Mock implements NostrClient {}
 
 class _FakeEvent extends Fake implements Event {}
 
-/// The real reaction queue, except that recording a held wrap throws.
+/// The real reaction queue, except that recording what relays hold throws.
 class _RecordFailingDmReactionsDao extends DmReactionsDao {
   _RecordFailingDmReactionsDao(super.attachedDatabase);
 
@@ -42,9 +42,23 @@ class _RecordFailingDmReactionsDao extends DmReactionsDao {
     required String recipientPubkey,
     required String wrapEventId,
   }) async => throw StateError('database is locked');
+
+  @override
+  Future<bool> recordDeliveredReactionWraps({
+    required String id,
+    required String ownerPubkey,
+    required Map<String, String> wraps,
+  }) async => throw StateError('database is locked');
+
+  @override
+  Future<bool> recordDeliveredRemovalWraps({
+    required String id,
+    required String ownerPubkey,
+    required Map<String, String> wraps,
+  }) async => throw StateError('database is locked');
 }
 
-/// The real message store, except that recording a held wrap throws.
+/// The real message store, except that recording what relays hold throws.
 class _RecordFailingDirectMessagesDao extends DirectMessagesDao {
   _RecordFailingDirectMessagesDao(super.attachedDatabase);
 
@@ -53,6 +67,13 @@ class _RecordFailingDirectMessagesDao extends DirectMessagesDao {
     String rumorId, {
     required String recipientPubkey,
     required String wrapEventId,
+    String? ownerPubkey,
+  }) async => throw StateError('database is locked');
+
+  @override
+  Future<bool> recordDeliveredDeletionWraps(
+    String rumorId, {
+    required Map<String, String> wraps,
     String? ownerPubkey,
   }) async => throw StateError('database is locked');
 }
@@ -109,6 +130,7 @@ void main() {
     late List<Event> published;
     late Map<String, List<String>?> recipientWrapTargets;
     late bool confirmRecipientWraps;
+    late Set<String> okLostFor;
     late DmSendPolicyDecision policyDecision;
     late bool policyThrows;
     late Set<String> policyThrowsFor;
@@ -133,6 +155,20 @@ void main() {
     /// The wraps a held-wrap column records, keyed by recipient.
     Map<String, dynamic>? heldWraps(String? json) =>
         json == null ? null : jsonDecode(json) as Map<String, dynamic>;
+
+    /// A held-wrap record's entry for a recipient the fallback pool holds
+    /// [wrapId] for while their inbox cannot be read.
+    Map<String, Object> heldEntry(String wrapId) => {
+      'wrap': wrapId,
+      'delivered': false,
+    };
+
+    /// A held-wrap record's entry for a recipient who has the rumor through
+    /// [wrapId].
+    Map<String, Object> deliveredEntry(String wrapId) => {
+      'wrap': wrapId,
+      'delivered': true,
+    };
 
     /// A repository and a reactions repository on the real message service,
     /// wired to each other as `repository_providers.dart` wires them.
@@ -226,6 +262,7 @@ void main() {
       published = [];
       recipientWrapTargets = {};
       confirmRecipientWraps = true;
+      okLostFor = {};
       policyDecision = DmSendPolicyDecision.allowed;
       policyThrows = false;
       policyThrowsFor = {};
@@ -262,7 +299,8 @@ void main() {
         ),
       );
       // A recipient wrap: the pool confirms it unless a test says the OK was
-      // lost, which holds an attempt for a reason other than the inbox.
+      // lost, for every recipient or for those in okLostFor, which holds an
+      // attempt for a reason other than the inbox.
       when(
         () => nostrClient.publishEventAwaitOk(
           any(),
@@ -275,11 +313,19 @@ void main() {
         published.add(event);
         recipientWrapTargets[event.id] =
             invocation.namedArguments[#targetRelays] as List<String>?;
+        final confirmed =
+            confirmRecipientWraps &&
+            !event.tags.any(
+              (tag) =>
+                  tag.length >= 2 &&
+                  tag[0] == 'p' &&
+                  okLostFor.contains(tag[1]),
+            );
         return PublishOutcome(
           eventId: event.id,
-          acceptedBy: confirmRecipientWraps ? const [_poolRelay] : const [],
+          acceptedBy: confirmed ? const [_poolRelay] : const [],
           rejectedBy: const {},
-          noResponseFrom: confirmRecipientWraps ? const [] : const [_poolRelay],
+          noResponseFrom: confirmed ? const [] : const [_poolRelay],
         );
       });
       // The sender's own copy.
@@ -381,7 +427,9 @@ void main() {
           );
           final row = await rowOf(rumorId);
           expect(row.publishStatus, 'pending');
-          expect(heldWraps(row.heldReactionWraps), {peerB: poolWrap.id});
+          expect(heldWraps(row.heldReactionWraps), {
+            peerB: heldEntry(poolWrap.id),
+          });
         });
 
         test('reports a failed record and still holds the reaction', () async {
@@ -426,7 +474,9 @@ void main() {
           expect(wrapsTo(owner), isEmpty);
           final row = await rowOf(rumorId);
           expect(row.publishStatus, 'pending');
-          expect(heldWraps(row.heldReactionWraps), {peerB: poolWrap.id});
+          expect(heldWraps(row.heldReactionWraps), {
+            peerB: heldEntry(poolWrap.id),
+          });
         });
 
         test('counts no attempt while no relay is connected, then counts '
@@ -540,6 +590,27 @@ void main() {
             reason: 'their inbox is unreadable, so no attempt is delivery',
           );
         });
+
+        test("records the members it reached when another member's OK never "
+            'came back, and sends them nothing again', () async {
+          await seedConversation(room, [owner, peerB, peerC]);
+          inboxes[peerB] = _Inbox.found;
+          inboxes[peerC] = _Inbox.found;
+          okLostFor = {peerC};
+          final held = await react(conversationId: room);
+          expect(held.success, isFalse, reason: 'precondition: C unconfirmed');
+          final delivery = wrapsTo(peerB).single;
+          expect(heldWraps((await rowOf(held.rumorId)).heldReactionWraps), {
+            peerB: deliveredEntry(delivery.id),
+          });
+          okLostFor = {};
+
+          final retried = await retry(held.rumorId);
+
+          expect(retried.success, isTrue);
+          expect(wrapsTo(peerB), hasLength(1), reason: 'B has it already');
+          expect(wrapsTo(peerC), hasLength(2));
+        });
       });
 
       group('in a group with one unreadable member', () {
@@ -553,10 +624,12 @@ void main() {
           return held.rumorId;
         }
 
-        test('sends that member nothing more and publishes no own copy '
-            'while their inbox stays unreadable', () async {
+        test('sends that member nothing more, the member who has it nothing '
+            'again, and publishes no own copy while their inbox stays '
+            'unreadable', () async {
           final rumorId = await heldRoomReaction();
           final poolWrap = wrapsTo(peerC).single;
+          final delivery = wrapsTo(peerB).single;
 
           for (var attempt = 0; attempt < 2; attempt++) {
             final retried = await retry(rumorId);
@@ -567,18 +640,17 @@ void main() {
           expect(wrapsTo(owner), isEmpty);
           expect(
             wrapsTo(peerB),
-            hasLength(3),
-            reason:
-                'one row cannot record that B already has it, so B is sent '
-                'it again on every attempt, as any partly delivered fan-out is',
+            hasLength(1),
+            reason: 'B has it from the first attempt',
           );
           expect(heldWraps((await rowOf(rumorId)).heldReactionWraps), {
-            peerC: poolWrap.id,
+            peerB: deliveredEntry(delivery.id),
+            peerC: heldEntry(poolWrap.id),
           });
         });
 
         test('settles that member on the held wrap once their inbox reads '
-            'absent', () async {
+            'absent, sending the member who has it nothing', () async {
           final rumorId = await heldRoomReaction();
           inboxes[peerC] = _Inbox.absent;
 
@@ -586,8 +658,67 @@ void main() {
 
           expect(retried.success, isTrue);
           expect(wrapsTo(peerC), hasLength(1));
+          expect(wrapsTo(peerB), hasLength(1));
           expect(wrapsTo(owner), hasLength(1));
           expect((await rowOf(rumorId)).publishStatus, 'sent');
+        });
+
+        test('reads who has it from the row, so a restart sends them nothing '
+            'again', () async {
+          final rumorId = await heldRoomReaction();
+          buildStack();
+          inboxes[peerC] = _Inbox.absent;
+
+          final retried = await retry(rumorId);
+
+          expect(retried.success, isTrue);
+          expect(wrapsTo(peerB), hasLength(1));
+        });
+
+        test('reports a failed record of who has it and still holds the '
+            'reaction', () async {
+          final reported = <String>[];
+          buildStack(
+            reactionsDao: _RecordFailingDmReactionsDao(db),
+            reportedSites: reported,
+          );
+
+          final rumorId = await heldRoomReaction();
+
+          expect(reported, [
+            DmReactionsRepositoryReportableSites.recordHeldPoolWrap,
+            DmReactionsRepositoryReportableSites.recordHeldPoolWrap,
+          ]);
+          final row = await rowOf(rumorId);
+          expect(row.publishStatus, 'pending');
+          expect(row.heldReactionWraps, isNull);
+        });
+
+        test('counts no attempt made while the device is offline, though a '
+            'member has it from before', () async {
+          final rumorId = await heldRoomReaction();
+          deviceOffline = true;
+
+          final outage = await retry(rumorId);
+
+          expect(outage.success, isFalse);
+          expect(
+            outage.reachedNoRelay,
+            isTrue,
+            reason: 'B was reached by an earlier attempt, not this one',
+          );
+        });
+
+        test('counts a member who has it as delivered without asking the '
+            'send policy again', () async {
+          final rumorId = await heldRoomReaction();
+          inboxes[peerC] = _Inbox.absent;
+          policyThrowsFor = {peerB};
+
+          final retried = await retry(rumorId);
+
+          expect(retried.success, isTrue);
+          expect(wrapsTo(peerB), hasLength(1));
         });
 
         test('publishes no own copy for a member settled on the held wrap '
@@ -613,12 +744,15 @@ void main() {
 
         test('still wraps the other members when the send policy throws '
             'for the held one', () async {
-          // C first, so a throw that escaped C's check would stop B's send.
+          // C first, so a throw that escaped C's check would stop B's send,
+          // and B's first OK lost, so the retry has a send for B to make.
           await seedConversation(room, [owner, peerC, peerB]);
           inboxes[peerB] = _Inbox.found;
           inboxes[peerC] = _Inbox.unreadable;
+          okLostFor = {peerB};
           final held = await react(conversationId: room);
           expect(held.success, isFalse, reason: 'precondition: held for C');
+          okLostFor = {};
           inboxes[peerC] = _Inbox.absent;
           policyThrowsFor = {peerC};
 
@@ -701,7 +835,9 @@ void main() {
           expect(removalWrapsTo(owner), isEmpty);
           final row = await rowOf(rumorId);
           expect(row.publishStatus, 'deletion_pending');
-          expect(heldWraps(row.heldRemovalWraps), {peerB: poolWrap.id});
+          expect(heldWraps(row.heldRemovalWraps), {
+            peerB: heldEntry(poolWrap.id),
+          });
         });
 
         test('reports a failed record and still holds the removal', () async {
@@ -739,7 +875,7 @@ void main() {
           expect(removalWrapsTo(peerB), hasLength(1));
           expect(removalWrapsTo(owner), isEmpty);
           expect(heldWraps((await rowOf(rumorId)).heldRemovalWraps), {
-            peerB: poolWrap.id,
+            peerB: heldEntry(poolWrap.id),
           });
         });
 
@@ -845,10 +981,12 @@ void main() {
           heldFor: [peerC],
         );
 
-        test('sends that member nothing more and publishes no own copy '
-            'while their inbox stays unreadable', () async {
+        test('sends that member nothing more, the member who has it nothing '
+            'again, and publishes no own copy while their inbox stays '
+            'unreadable', () async {
           final rumorId = await heldRoomRemoval();
           final poolWrap = removalWrapsTo(peerC).single;
+          final delivery = removalWrapsTo(peerB).single;
 
           for (var attempt = 0; attempt < 2; attempt++) {
             expect(
@@ -859,21 +997,50 @@ void main() {
 
           expect(removalWrapsTo(peerC), hasLength(1));
           expect(removalWrapsTo(owner), isEmpty);
-          expect(removalWrapsTo(peerB), hasLength(3));
+          expect(
+            removalWrapsTo(peerB),
+            hasLength(1),
+            reason: 'B has it from the first attempt',
+          );
           expect(heldWraps((await rowOf(rumorId)).heldRemovalWraps), {
-            peerC: poolWrap.id,
+            peerB: deliveredEntry(delivery.id),
+            peerC: heldEntry(poolWrap.id),
           });
         });
 
         test('settles that member on the held wrap once their inbox reads '
-            'absent', () async {
+            'absent, sending the member who has it nothing', () async {
           final rumorId = await heldRoomRemoval();
           inboxes[peerC] = _Inbox.absent;
 
           expect(await retryRemoval(rumorId), DmReactionDeletionOutcome.sent);
 
           expect(removalWrapsTo(peerC), hasLength(1));
+          expect(removalWrapsTo(peerB), hasLength(1));
           expect(removalWrapsTo(owner), hasLength(1));
+        });
+
+        test('reads who has it from the row, so a restart sends them nothing '
+            'again', () async {
+          final rumorId = await heldRoomRemoval();
+          buildStack();
+          inboxes[peerC] = _Inbox.absent;
+
+          expect(await retryRemoval(rumorId), DmReactionDeletionOutcome.sent);
+
+          expect(removalWrapsTo(peerB), hasLength(1));
+        });
+
+        test('counts no attempt made while the device is offline, though a '
+            'member has it from before', () async {
+          final rumorId = await heldRoomRemoval();
+          deviceOffline = true;
+
+          expect(
+            await retryRemoval(rumorId),
+            DmReactionDeletionOutcome.notSent,
+            reason: 'B was reached by an earlier attempt, not this one',
+          );
         });
       });
     });
@@ -943,7 +1110,7 @@ void main() {
           final poolWrap = wrapsTo(peerB).single;
           expect(wrapsTo(owner), isEmpty);
           expect(heldWraps((await messageRow()).heldDeletionWraps), {
-            peerB: poolWrap.id,
+            peerB: heldEntry(poolWrap.id),
           });
         });
 
@@ -980,7 +1147,9 @@ void main() {
           expect(wrapsTo(owner), isEmpty);
           final row = await messageRow();
           expect(row.deletionPublishStatus, DirectMessagesDao.deletionPending);
-          expect(heldWraps(row.heldDeletionWraps), {peerB: poolWrap.id});
+          expect(heldWraps(row.heldDeletionWraps), {
+            peerB: heldEntry(poolWrap.id),
+          });
         });
 
         test('publishes nothing while no relay is connected', () async {
@@ -1095,10 +1264,12 @@ void main() {
           heldFor: [peerC],
         );
 
-        test('sends that member nothing more and publishes no own copy '
-            'while their inbox stays unreadable', () async {
+        test('sends that member nothing more, the member who has it nothing '
+            'again, and publishes no own copy while their inbox stays '
+            'unreadable', () async {
           await heldRoomRetraction();
           final poolWrap = wrapsTo(peerC).single;
+          final delivery = wrapsTo(peerB).single;
 
           for (var attempt = 0; attempt < 2; attempt++) {
             expect(
@@ -1109,25 +1280,60 @@ void main() {
 
           expect(wrapsTo(peerC), hasLength(1));
           expect(wrapsTo(owner), isEmpty);
-          expect(wrapsTo(peerB), hasLength(3));
+          expect(
+            wrapsTo(peerB),
+            hasLength(1),
+            reason: 'B has it from the first attempt',
+          );
           expect(heldWraps((await messageRow()).heldDeletionWraps), {
-            peerC: poolWrap.id,
+            peerB: deliveredEntry(delivery.id),
+            peerC: heldEntry(poolWrap.id),
           });
         });
 
         test('settles that member on the held wrap once their inbox reads '
-            'absent, with one own copy per member as before', () async {
+            'absent, sending the member who has it nothing, with one own '
+            'copy per member as before', () async {
           await heldRoomRetraction();
           inboxes[peerC] = _Inbox.absent;
 
           expect(await retryRetraction(), DmMessageDeletionOutcome.sent);
 
           expect(wrapsTo(peerC), hasLength(1));
+          expect(wrapsTo(peerB), hasLength(1));
           expect(
             wrapsTo(owner),
             hasLength(2),
             reason: 'a retraction publishes the own copy per member (#10016)',
           );
+        });
+
+        test('reads who has it from the row, so a restart sends them nothing '
+            'again', () async {
+          await heldRoomRetraction();
+          buildStack();
+          inboxes[peerC] = _Inbox.absent;
+
+          expect(await retryRetraction(), DmMessageDeletionOutcome.sent);
+
+          expect(wrapsTo(peerB), hasLength(1));
+        });
+
+        test('reports a failed record of who has it and still holds the '
+            'retraction', () async {
+          final reported = <String>[];
+          buildStack(
+            messagesDao: _RecordFailingDirectMessagesDao(db),
+            reportedSites: reported,
+          );
+
+          await heldRoomRetraction();
+
+          expect(reported, [
+            DmRepositoryReportableSites.recordHeldPoolWrap,
+            DmRepositoryReportableSites.recordHeldPoolWrap,
+          ]);
+          expect((await messageRow()).heldDeletionWraps, isNull);
         });
 
         test('publishes no own copy for a member settled on the held wrap '
@@ -1154,12 +1360,15 @@ void main() {
 
         test('still wraps the other members when the send policy throws '
             'for the held one', () async {
-          // C first, so a throw that escaped C's check would stop B's send.
+          // C first, so a throw that escaped C's check would stop B's send,
+          // and B's first OK lost, so the retry has a send for B to make.
+          okLostFor = {peerB};
           await heldRetraction(
             participants: [owner, peerC, peerB],
             deliveredTo: {peerB: _Inbox.found},
             heldFor: [peerC],
           );
+          okLostFor = {};
           inboxes[peerC] = _Inbox.absent;
           policyThrowsFor = {peerC};
 

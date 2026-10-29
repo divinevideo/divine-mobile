@@ -407,11 +407,39 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
   ///
   /// Recorded only while the retraction is still pending with its stored
   /// kind-5, so an attempt that ends after another one settled the row
-  /// records nothing. Returns whether it was recorded.
+  /// records nothing. A recipient already recorded as having the retraction
+  /// keeps that. Returns whether it was recorded.
   Future<bool> recordHeldDeletionWrap(
     String rumorId, {
     required String recipientPubkey,
     required String wrapEventId,
+    String? ownerPubkey,
+  }) => _recordDeletionWraps(
+    rumorId,
+    wraps: {recipientPubkey: wrapEventId},
+    delivered: false,
+    ownerPubkey: ownerPubkey,
+  );
+
+  /// Record that each recipient in [wraps] has the retraction of [rumorId],
+  /// through the gift wrap it names, in [DirectMessages.heldDeletionWraps]
+  /// (#10012), so a later attempt sends them nothing. Recorded on the terms
+  /// [recordHeldDeletionWrap] records on. Returns whether it was recorded.
+  Future<bool> recordDeliveredDeletionWraps(
+    String rumorId, {
+    required Map<String, String> wraps,
+    String? ownerPubkey,
+  }) => _recordDeletionWraps(
+    rumorId,
+    wraps: wraps,
+    delivered: true,
+    ownerPubkey: ownerPubkey,
+  );
+
+  Future<bool> _recordDeletionWraps(
+    String rumorId, {
+    required Map<String, String> wraps,
+    required bool delivered,
     String? ownerPubkey,
   }) {
     return transaction(() async {
@@ -428,10 +456,10 @@ class DirectMessagesDao extends DatabaseAccessor<AppDatabase>
               .write(
                 DirectMessagesCompanion(
                   heldDeletionWraps: Value(
-                    withHeldPoolWrap(
+                    withHeldWraps(
                       row.heldDeletionWraps,
-                      recipientPubkey: recipientPubkey,
-                      wrapEventId: wrapEventId,
+                      wraps,
+                      delivered: delivered,
                     ),
                   ),
                 ),
