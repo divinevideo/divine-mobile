@@ -29,6 +29,7 @@ void main() {
   group(ConversationReactionsCubit, () {
     late AppDatabase db;
     late List<String> reportedSites;
+    late List<Object> reportedErrors;
     late ConversationReactionsCubit cubit;
     final conversationId = DmRepository.computeConversationId([
       _owner,
@@ -38,13 +39,12 @@ void main() {
     setUp(() async {
       db = AppDatabase.test(NativeDatabase.memory());
       reportedSites = <String>[];
+      reportedErrors = <Object>[];
       final messageService = _MockNip17MessageService();
       when(
-        () => messageService.buildRumor(
-          recipientPubkey: any(named: 'recipientPubkey'),
-          content: '',
-          eventKind: EventKind.eventDeletion,
-          additionalTags: any(named: 'additionalTags'),
+        () => messageService.buildDeletionRumor(
+          targetEventId: any(named: 'targetEventId'),
+          targetKind: EventKind.reaction,
         ),
       ).thenReturn(
         Event.fromJson({
@@ -63,7 +63,10 @@ void main() {
       final repository =
           DmReactionsRepository(
             reactionsDao: db.dmReactionsDao,
-            errorReporter: (_, _, {required site}) => reportedSites.add(site),
+            errorReporter: (error, _, {required site}) {
+              reportedSites.add(site);
+              reportedErrors.add(error);
+            },
           )..setCredentials(
             userPubkey: _owner,
             messageService: messageService,
@@ -134,6 +137,11 @@ void main() {
         expect(
           reportedSites,
           equals([DmReactionsRepositoryReportableSites.removeOwnSoftDelete]),
+        );
+        expect(
+          reportedErrors.single.toString(),
+          contains('disk I/O error'),
+          reason: 'the save itself failed, not the building of the removal',
         );
         final row = await db.dmReactionsDao.getById(
           id: _reactionId,

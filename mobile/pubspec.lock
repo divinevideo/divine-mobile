@@ -145,6 +145,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.0"
+  battery_plus:
+    dependency: "direct main"
+    description:
+      name: battery_plus
+      sha256: "49f75523cd5461a44202d67c5e1c73b790f16a822475b6f116d50714cd64a0ab"
+      url: "https://pub.dev"
+    source: hosted
+    version: "7.1.2"
+  battery_plus_platform_interface:
+    dependency: transitive
+    description:
+      name: battery_plus_platform_interface
+      sha256: e8342c0f32de4b1dfd0223114b6785e48e579bfc398da9471c9179b907fa4910
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.1"
   bech32:
     dependency: "direct main"
     description:
@@ -450,6 +466,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.1.8"
+  daylight:
+    dependency: "direct main"
+    description:
+      name: daylight
+      sha256: "5397bb889063eabcbca6a3b26258c950e62b7b6412be2ad75178e1fc6d8d9b0e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.0"
   dbus:
     dependency: transitive
     description:
@@ -1000,6 +1024,38 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.2"
+  geocoding:
+    dependency: "direct main"
+    description:
+      name: geocoding
+      sha256: "40f845e0a5505d4b47da991057f2ab25cd1c68bc4570255c7d4cfbb03a952063"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.0.0"
+  geocoding_android:
+    dependency: transitive
+    description:
+      name: geocoding_android
+      sha256: "17e88a69bb0e1ae44597d70df2d2fbdb2f503672cf665421a16ab56ab97e4ead"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.1.0"
+  geocoding_darwin:
+    dependency: transitive
+    description:
+      name: geocoding_darwin
+      sha256: "97552aa24f1453defc17e4d8e40b13ddf097e669c2edfa17ed86349cacdbc1ae"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.3"
+  geocoding_platform_interface:
+    dependency: transitive
+    description:
+      name: geocoding_platform_interface
+      sha256: "5164b8871705af7573698b3aa0746337faf818d72b488988741bcc7aeedd2f6e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.0.0"
   glob:
     dependency: transitive
     description:
@@ -2474,6 +2530,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.3.2"
+  upower:
+    dependency: transitive
+    description:
+      name: upower
+      sha256: cf042403154751180affa1d15614db7fa50234bc2373cd21c3db666c38543ebf
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.7.0"
   uri_parser:
     dependency: transitive
     description:

@@ -5416,6 +5416,72 @@
   "videoEditorFeedPreviewContent": "ان علاقوں کے پیچھے مواد رکھنے سے گریز کریں۔",
   "videoEditorStickersDivineOriginals": "Divine اوریجنلز",
   "videoEditorStickerSearchHint": "اسٹیکرز تلاش کریں...",
+  "videoEditorInfoStickersTitle": "معلومات",
+  "videoEditorInfoStickerTime": "وقت",
+  "videoEditorInfoStickerDate": "تاریخ",
+  "videoEditorInfoStickerLocation": "مقام",
+  "videoEditorInfoStickerWeather": "موسم",
+  "videoEditorInfoStickerAltitude": "بلندی",
+  "videoEditorInfoStickerBattery": "بیٹری",
+  "videoEditorInfoStickerStyleLight": "ہلکا",
+  "videoEditorInfoStickerStyleDark": "گہرا",
+  "videoEditorInfoStickerStyleBrand": "سبز",
+  "videoEditorInfoStickerStyleOutline": "خاکہ",
+  "videoEditorInfoStickerStyleDigital": "ڈیجیٹل",
+  "videoEditorInfoStickerStyleAnalog": "اینالاگ",
+  "videoEditorInfoStickerStyleGlass": "شیشہ",
+  "videoEditorInfoStickerStyleHighlight": "پیلا",
+  "videoEditorInfoStickerStyleNeon": "نیون",
+  "videoEditorInfoStickerStylePlain": "سادہ",
+  "videoEditorInfoStickerChangePlace": "جگہ تبدیل کریں",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "اس ڈیوائس پر جگہ کی تلاش دستیاب نہیں ہے۔",
+  "videoEditorInfoStickerRecordedValue": "ریکارڈنگ · {value}",
+  "videoEditorInfoStickerNowValue": "ابھی · {value}",
+  "videoEditorInfoStickerTodayValue": "آج · {value}",
+  "videoEditorInfoStickerDayCount": "دنوں کا شمار",
+  "videoEditorInfoStickerSun": "سورج",
+  "videoEditorInfoStickerMoon": "چاند",
+  "videoEditorInfoStickerRecTimer": "REC ٹائمر",
+  "videoEditorInfoStickerStyleFilm": "فلم",
+  "videoEditorInfoStickerStyleCamcorder": "کیم کورڈر",
+  "videoEditorInfoStickerDayCountValue": "دن {day}",
+  "videoEditorInfoStickerDayCountOfValue": "دن {day} از {total}",
+  "videoEditorInfoStickerDayLabel": "دن",
+  "videoEditorInfoStickerDayTotalLabel": "کل دن (اختیاری)",
+  "videoEditorInfoStickerSymbolPin": "پن",
+  "videoEditorInfoStickerSymbolFlag": "جھنڈا",
+  "videoEditorInfoStickerSymbolGlobe": "گلوب",
+  "videoEditorInfoStickerSymbolMap": "نقشہ",
+  "videoEditorInfoStickerMoonNew": "نیا چاند",
+  "videoEditorInfoStickerMoonWaxingCrescent": "بڑھتا ہلال",
+  "videoEditorInfoStickerMoonFirstQuarter": "پہلی چوتھائی",
+  "videoEditorInfoStickerMoonWaxingGibbous": "بڑھتا چاند",
+  "videoEditorInfoStickerMoonFull": "پورا چاند",
+  "videoEditorInfoStickerMoonWaningGibbous": "گھٹتا چاند",
+  "videoEditorInfoStickerMoonLastQuarter": "آخری چوتھائی",
+  "videoEditorInfoStickerMoonWaningCrescent": "گھٹتا ہلال",
+  "videoEditorInfoStickerPlaceSearchHint": "شہر یا جگہ تلاش کریں",
+  "videoEditorInfoStickerPlaceNoResults": "کوئی جگہ نہیں ملی",
+  "videoEditorInfoStickerPlaceSearchFailed": "جگہیں تلاش نہیں ہو سکیں۔ دوبارہ کوشش کریں۔",
+  "videoEditorInfoStickerPlacePrivacyNote": "آپ کی ویڈیو میں صرف جگہ کا نام جاتا ہے، آپ کا درست مقام کبھی نہیں۔",
+  "videoEditorInfoStickerLoading": "لوڈ ہو رہا ہے…",
+  "videoEditorInfoStickerLoadFailed": "لوڈ نہیں ہو سکا۔ دوبارہ کوشش کریں۔",
+  "videoEditorInfoStickerMetAttribution": "ڈیٹا: MET Norway",
+  "videoEditorInfoStickerWeatherNow": "پرانی ویڈیوز کے لیے موسم دستیاب نہیں، اس لیے یہ ابھی کا موسم ہے۔",
+  "videoEditorInfoStickerWeatherSunny": "دھوپ",
+  "videoEditorInfoStickerWeatherClearNight": "صاف رات",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "جزوی ابر آلود",
+  "videoEditorInfoStickerWeatherCloudy": "ابر آلود",
+  "videoEditorInfoStickerWeatherFog": "دھند",
+  "videoEditorInfoStickerWeatherRain": "بارش",
+  "videoEditorInfoStickerWeatherShowers": "بوچھاڑ",
+  "videoEditorInfoStickerWeatherSnow": "برف",
+  "videoEditorInfoStickerWeatherThunderstorm": "گرج چمک کے ساتھ طوفان",
+  "videoEditorInfoStickerSunTimeZoneNote": "اوقات آپ کے فون کے ٹائم زون میں ہیں۔",
+  "videoEditorInfoStickerTemperatureLabel": "درجہ حرارت",
+  "videoEditorInfoStickerUnitLabel": "اکائی",
+  "videoEditorInfoStickerBatteryLevelLabel": "بیٹری لیول",
+  "videoEditorInfoStickerAdd": "اسٹیکر شامل کریں",
   "videoEditorSelectFontSemanticLabel": "فانٹ منتخب کریں",
   "videoEditorFontUnknown": "نامعلوم",
   "videoEditorSplitPlayheadOutsideClip": "تقسیم کے لیے پلے ہیڈ منتخب کلپ کے اندر ہونا چاہیے۔",
@@ -7089,8 +7155,97 @@
   "ideasDescriptionFive": "بس شیئر کرنا تھا۔",
   "ideasTitleSix": "آج کا ایک حصہ",
   "ideasDescriptionSix": "یہ یہاں چھوڑ رہا ہوں۔",
+  "messagesRoomsUnreadLabel": "{count, plural, one{کمرے، {displayCount} غیر پڑھا پیغام} other{کمرے، {displayCount} غیر پڑھے پیغامات}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, one{نیا: {displayCount}} other{نئے: {displayCount}}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, one{{displayCount} غیر پڑھا پیغام} other{{displayCount} غیر پڑھے پیغامات}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, one{{displayCount} شخص} other{{displayCount} لوگ}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, one{{displayCount} پیغام} other{{displayCount} پیغامات}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "پچھلے 24 گھنٹے",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "سرگرمی دیکھی جا رہی ہے…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "سرگرمی لوڈ نہیں ہو سکی۔",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "حال ہی میں کوئی پیغام نہیں آیا۔ سلام کہیں۔",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "براہ راست",
   "messagesRooms": "کمرے",
+  "messagesRoomsWithUnread": "کمرے ({badge})",
   "messagesPublicTestRooms": "عوامی آزمائشی کمرے",
   "messagesPublicTestDisclosure": "یہ آزمائشی کمرے عوامی ہیں۔ رسائی رکھنے والا کوئی بھی شخص آپ کے پیغامات پڑھ سکتا ہے۔",
   "messagesNoRooms": "ابھی کوئی کمرہ نہیں",

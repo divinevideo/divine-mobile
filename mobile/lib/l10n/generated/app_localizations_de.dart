@@ -10853,6 +10853,221 @@ class AppLocalizationsDe extends AppLocalizations {
   String get videoEditorStickerSearchHint => 'Sticker suchen...';
 
   @override
+  String get videoEditorInfoStickersTitle => 'Info';
+
+  @override
+  String get videoEditorInfoStickerTime => 'Uhrzeit';
+
+  @override
+  String get videoEditorInfoStickerDate => 'Datum';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'Ort';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'Wetter';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'Höhe';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'Akku';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'Hell';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'Dunkel';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'Grün';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'Umriss';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'Digital';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'Analog';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'Glas';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'Gelb';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'Neon';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'Schlicht';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'Ort ändern';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Die Ortssuche ist auf diesem Gerät nicht verfügbar.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'Aufnahme · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'Jetzt · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'Heute · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'Tageszähler';
+
+  @override
+  String get videoEditorInfoStickerSun => 'Sonne';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'Mond';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC-Timer';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'Film';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'Camcorder';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'Tag $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'Tag $day von $total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'Tag';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'Anzahl Tage (optional)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'Pin';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'Flagge';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Globus';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Karte';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'Neumond';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'Zunehmende Sichel';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'Erstes Viertel';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'Zunehmender Mond';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'Vollmond';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'Abnehmender Mond';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'Letztes Viertel';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'Abnehmende Sichel';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint =>
+      'Nach Stadt oder Ort suchen';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'Keine Orte gefunden';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'Die Ortssuche hat nicht geklappt. Versuch\'s nochmal.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'In dein Video kommt nur der Ortsname, nie dein genauer Standort.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'Lädt…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed =>
+      'Das konnte nicht geladen werden. Versuch\'s nochmal.';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => 'Daten von MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'Für ältere Videos gibt es kein Wetter, das ist das Wetter von jetzt.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Sonnig';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Klare Nacht';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'Teils bewölkt';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Bewölkt';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Nebel';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Regen';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Schauer';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Schnee';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'Gewitter';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'Die Zeiten sind in der Zeitzone deines Handys.';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'Temperatur';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'Einheit';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'Akkustand';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'Sticker hinzufügen';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => 'Schriftart auswählen';
 
   @override
@@ -14421,10 +14636,89 @@ class AppLocalizationsDe extends AppLocalizations {
   String get ideasDescriptionSix => 'Das lasse ich hier.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Räume, $displayCount ungelesene Nachrichten',
+      one: 'Räume, $displayCount ungelesene Nachricht',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount neu',
+      one: '$displayCount neu',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount ungelesene Nachrichten',
+      one: '$displayCount ungelesene Nachricht',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount Personen',
+      one: '$displayCount Person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount Nachrichten',
+      one: '$displayCount Nachricht',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'Letzte 24 Std.';
+
+  @override
+  String get messagesRoomLoading => 'Aktivität wird geprüft…';
+
+  @override
+  String get messagesRoomLoadFailed =>
+      'Die Aktivität konnte nicht geladen werden.';
+
+  @override
+  String get messagesRoomEmpty =>
+      'Keine Nachrichten in letzter Zeit. Sag Hallo.';
+
+  @override
   String get messagesDirect => 'Direkt';
 
   @override
   String get messagesRooms => 'Räume';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Räume ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'Öffentliche Testräume';

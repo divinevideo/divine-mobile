@@ -179,8 +179,10 @@ void main() {
               expect(sendsAtHeartbeat, 3, reason: 'no overlapping fan-out');
               expect(
                 sends,
-                originalSucceeds ? 3 : 6,
-                reason: 'only a failed original needs a subsequent fan-out',
+                originalSucceeds ? 3 : 4,
+                reason:
+                    'only a failed original needs a subsequent fan-out, and it '
+                    'goes only to the member still missing the reaction',
               );
               unawaited(service.dispose());
               unawaited(foreground.close());

@@ -316,7 +316,6 @@ void main() {
             eventKind: EventKind.reaction,
             additionalTags: [
               ['e', message.id],
-              ['p', message.pubkey],
               ['k', '${EventKind.privateDirectMessage}'],
             ],
             createdAt: _sentAt + 1,

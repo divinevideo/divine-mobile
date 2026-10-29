@@ -25,6 +25,41 @@ void main() {
       );
     });
 
+    test('a room target survives updates and sets the row apart', () {
+      const room = ChatNotificationTarget(
+        communityId: 'community-test',
+        channelId: 'general',
+      );
+      final mention = ActorNotification(
+        id: 'chat:general:${'b' * 64}',
+        type: NotificationKind.mention,
+        actor: actor,
+        timestamp: timestamp,
+        chatTarget: room,
+      );
+      expect(mention.copyWith(isRead: true).chatTarget, room);
+      expect(
+        mention,
+        isNot(
+          mention.copyWith(
+            chatTarget: const ChatNotificationTarget(
+              communityId: 'community-test',
+              channelId: 'introductions',
+            ),
+          ),
+        ),
+      );
+      // A separately built target, not a canonicalized const, so equality
+      // has to come from the props.
+      expect(
+        room,
+        ChatNotificationTarget(
+          communityId: room.communityId,
+          channelId: room.channelId,
+        ),
+      );
+    });
+
     group('structure', () {
       test('exposes actor + type + timestamp', () {
         final notification = ActorNotification(

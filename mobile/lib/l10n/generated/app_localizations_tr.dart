@@ -10635,6 +10635,220 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorStickerSearchHint => 'Çıkartma ara...';
 
   @override
+  String get videoEditorInfoStickersTitle => 'Bilgi';
+
+  @override
+  String get videoEditorInfoStickerTime => 'Saat';
+
+  @override
+  String get videoEditorInfoStickerDate => 'Tarih';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'Konum';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'Hava durumu';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'Rakım';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'Pil';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'Açık';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'Koyu';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'Yeşil';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'Kontur';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'Dijital';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'Analog';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'Cam';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'Sarı';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'Neon';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'Sade';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'Yeri değiştir';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Bu cihazda yer arama kullanılamıyor.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'Kayıt · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'Şimdi · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'Bugün · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'Gün sayacı';
+
+  @override
+  String get videoEditorInfoStickerSun => 'Güneş';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'Ay';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC sayacı';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'Film';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'Kamera';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return '$day. gün';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return '$day. gün / $total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'Gün';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'Toplam gün (isteğe bağlı)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'İğne';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'Bayrak';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Küre';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Harita';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'Yeni ay';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'Büyüyen hilal';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'İlk dördün';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'Büyüyen şişkin ay';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'Dolunay';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'Küçülen şişkin ay';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'Son dördün';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'Küçülen hilal';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint => 'Şehir veya yer ara';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'Yer bulunamadı';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'Yer aranamadı. Tekrar dene.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'Videona yalnızca yerin adı girer, asla tam konumun değil.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'Yükleniyor…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed => 'Yüklenemedi. Tekrar dene.';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => 'Veriler: MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'Eski videolar için hava durumu yok, bu yüzden şu anki hava durumu gösteriliyor.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Güneşli';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Açık gece';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'Parçalı bulutlu';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Bulutlu';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Sis';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Yağmur';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Sağanak';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Kar';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm =>
+      'Gök gürültülü fırtına';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'Saatler telefonunun saat diliminde.';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'Sıcaklık';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'Birim';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'Pil seviyesi';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'Çıkartma ekle';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => 'Yazı tipi seç';
 
   @override
@@ -14177,10 +14391,87 @@ class AppLocalizationsTr extends AppLocalizations {
   String get ideasDescriptionSix => 'Bunu buraya bırakıyorum.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Odalar, $displayCount okunmamış mesaj',
+      one: 'Odalar, $displayCount okunmamış mesaj',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount yeni',
+      one: '$displayCount yeni',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount okunmamış mesaj',
+      one: '$displayCount okunmamış mesaj',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount kişi',
+      one: '$displayCount kişi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount mesaj',
+      one: '$displayCount mesaj',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'Son 24 saat';
+
+  @override
+  String get messagesRoomLoading => 'Hareketlilik kontrol ediliyor…';
+
+  @override
+  String get messagesRoomLoadFailed => 'Hareketlilik yüklenemedi.';
+
+  @override
+  String get messagesRoomEmpty => 'Son zamanlarda mesaj yok. Bir merhaba de.';
+
+  @override
   String get messagesDirect => 'Doğrudan';
 
   @override
   String get messagesRooms => 'Odalar';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Odalar ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'Herkese açık test odaları';

@@ -3050,6 +3050,72 @@
   "videoEditorFeedPreviewContent": "Plaats geen content achter deze gebieden.",
   "videoEditorStickersDivineOriginals": "Divine Originelen",
   "videoEditorStickerSearchHint": "Stickers zoeken...",
+  "videoEditorInfoStickersTitle": "Info",
+  "videoEditorInfoStickerTime": "Tijd",
+  "videoEditorInfoStickerDate": "Datum",
+  "videoEditorInfoStickerLocation": "Locatie",
+  "videoEditorInfoStickerWeather": "Weer",
+  "videoEditorInfoStickerAltitude": "Hoogte",
+  "videoEditorInfoStickerBattery": "Batterij",
+  "videoEditorInfoStickerStyleLight": "Licht",
+  "videoEditorInfoStickerStyleDark": "Donker",
+  "videoEditorInfoStickerStyleBrand": "Groen",
+  "videoEditorInfoStickerStyleOutline": "Omlijning",
+  "videoEditorInfoStickerStyleDigital": "Digitaal",
+  "videoEditorInfoStickerStyleAnalog": "Analoog",
+  "videoEditorInfoStickerStyleGlass": "Glas",
+  "videoEditorInfoStickerStyleHighlight": "Geel",
+  "videoEditorInfoStickerStyleNeon": "Neon",
+  "videoEditorInfoStickerStylePlain": "Simpel",
+  "videoEditorInfoStickerChangePlace": "Plek wijzigen",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "Plaatsen zoeken is niet beschikbaar op dit apparaat.",
+  "videoEditorInfoStickerRecordedValue": "Opname · {value}",
+  "videoEditorInfoStickerNowValue": "Nu · {value}",
+  "videoEditorInfoStickerTodayValue": "Vandaag · {value}",
+  "videoEditorInfoStickerDayCount": "Dagteller",
+  "videoEditorInfoStickerSun": "Zon",
+  "videoEditorInfoStickerMoon": "Maan",
+  "videoEditorInfoStickerRecTimer": "REC-timer",
+  "videoEditorInfoStickerStyleFilm": "Film",
+  "videoEditorInfoStickerStyleCamcorder": "Camcorder",
+  "videoEditorInfoStickerDayCountValue": "Dag {day}",
+  "videoEditorInfoStickerDayCountOfValue": "Dag {day} van {total}",
+  "videoEditorInfoStickerDayLabel": "Dag",
+  "videoEditorInfoStickerDayTotalLabel": "Aantal dagen (optioneel)",
+  "videoEditorInfoStickerSymbolPin": "Speld",
+  "videoEditorInfoStickerSymbolFlag": "Vlag",
+  "videoEditorInfoStickerSymbolGlobe": "Wereldbol",
+  "videoEditorInfoStickerSymbolMap": "Kaart",
+  "videoEditorInfoStickerMoonNew": "Nieuwe maan",
+  "videoEditorInfoStickerMoonWaxingCrescent": "Wassende sikkel",
+  "videoEditorInfoStickerMoonFirstQuarter": "Eerste kwartier",
+  "videoEditorInfoStickerMoonWaxingGibbous": "Wassende maan",
+  "videoEditorInfoStickerMoonFull": "Volle maan",
+  "videoEditorInfoStickerMoonWaningGibbous": "Afnemende maan",
+  "videoEditorInfoStickerMoonLastQuarter": "Laatste kwartier",
+  "videoEditorInfoStickerMoonWaningCrescent": "Afnemende sikkel",
+  "videoEditorInfoStickerPlaceSearchHint": "Zoek een stad of plek",
+  "videoEditorInfoStickerPlaceNoResults": "Geen plekken gevonden",
+  "videoEditorInfoStickerPlaceSearchFailed": "Plekken zoeken lukte niet. Probeer het opnieuw.",
+  "videoEditorInfoStickerPlacePrivacyNote": "Alleen de naam van de plek komt in je video, nooit je exacte locatie.",
+  "videoEditorInfoStickerLoading": "Laden…",
+  "videoEditorInfoStickerLoadFailed": "Laden lukte niet. Probeer het opnieuw.",
+  "videoEditorInfoStickerMetAttribution": "Gegevens van MET Norway",
+  "videoEditorInfoStickerWeatherNow": "Voor oudere video's is er geen weer, dus dit is het weer van nu.",
+  "videoEditorInfoStickerWeatherSunny": "Zonnig",
+  "videoEditorInfoStickerWeatherClearNight": "Heldere nacht",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "Half bewolkt",
+  "videoEditorInfoStickerWeatherCloudy": "Bewolkt",
+  "videoEditorInfoStickerWeatherFog": "Mist",
+  "videoEditorInfoStickerWeatherRain": "Regen",
+  "videoEditorInfoStickerWeatherShowers": "Buien",
+  "videoEditorInfoStickerWeatherSnow": "Sneeuw",
+  "videoEditorInfoStickerWeatherThunderstorm": "Onweer",
+  "videoEditorInfoStickerSunTimeZoneNote": "De tijden staan in de tijdzone van je telefoon.",
+  "videoEditorInfoStickerTemperatureLabel": "Temperatuur",
+  "videoEditorInfoStickerUnitLabel": "Eenheid",
+  "videoEditorInfoStickerBatteryLevelLabel": "Batterijniveau",
+  "videoEditorInfoStickerAdd": "Sticker toevoegen",
   "videoEditorSelectFontSemanticLabel": "Lettertype selecteren",
   "videoEditorFontUnknown": "Onbekend",
   "videoEditorSplitFailed": "Splitsen mislukt. Probeer het opnieuw.",
@@ -5793,8 +5859,97 @@
   "ideasDescriptionFive": "Wilde het gewoon delen.",
   "ideasTitleSix": "Een beetje van vandaag",
   "ideasDescriptionSix": "Dit laat ik hier achter.",
+  "messagesRoomsUnreadLabel": "{count, plural, one{Kamers, {displayCount} ongelezen bericht} other{Kamers, {displayCount} ongelezen berichten}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, one{{displayCount} nieuw} other{{displayCount} nieuw}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, one{{displayCount} ongelezen bericht} other{{displayCount} ongelezen berichten}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, one{{displayCount} persoon} other{{displayCount} personen}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, one{{displayCount} bericht} other{{displayCount} berichten}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "Afgelopen 24 uur",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "Activiteit bekijken…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "De activiteit kon niet worden geladen.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "Geen recente berichten. Zeg eens hallo.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "Direct",
   "messagesRooms": "Kamers",
+  "messagesRoomsWithUnread": "Kamers ({badge})",
   "messagesPublicTestRooms": "Openbare testkamers",
   "messagesPublicTestDisclosure": "Deze testkamers zijn openbaar. Iedereen met toegang kan je berichten lezen.",
   "messagesNoRooms": "Nog geen kamers",

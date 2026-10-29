@@ -2950,6 +2950,72 @@
   "videoEditorLayerAnimationPointLeaveHint": "スライドを終える位置を動画でタップしてください",
   "videoEditorStickersDivineOriginals": "Divine オリジナル",
   "videoEditorStickerSearchHint": "ステッカーを検索...",
+  "videoEditorInfoStickersTitle": "情報",
+  "videoEditorInfoStickerTime": "時刻",
+  "videoEditorInfoStickerDate": "日付",
+  "videoEditorInfoStickerLocation": "場所",
+  "videoEditorInfoStickerWeather": "天気",
+  "videoEditorInfoStickerAltitude": "標高",
+  "videoEditorInfoStickerBattery": "バッテリー",
+  "videoEditorInfoStickerStyleLight": "ライト",
+  "videoEditorInfoStickerStyleDark": "ダーク",
+  "videoEditorInfoStickerStyleBrand": "グリーン",
+  "videoEditorInfoStickerStyleOutline": "アウトライン",
+  "videoEditorInfoStickerStyleDigital": "デジタル",
+  "videoEditorInfoStickerStyleAnalog": "アナログ",
+  "videoEditorInfoStickerStyleGlass": "ガラス",
+  "videoEditorInfoStickerStyleHighlight": "イエロー",
+  "videoEditorInfoStickerStyleNeon": "ネオン",
+  "videoEditorInfoStickerStylePlain": "シンプル",
+  "videoEditorInfoStickerChangePlace": "場所を変更",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "この端末では場所の検索を利用できません。",
+  "videoEditorInfoStickerRecordedValue": "撮影時 · {value}",
+  "videoEditorInfoStickerNowValue": "現在 · {value}",
+  "videoEditorInfoStickerTodayValue": "今日 · {value}",
+  "videoEditorInfoStickerDayCount": "日数カウンター",
+  "videoEditorInfoStickerSun": "太陽",
+  "videoEditorInfoStickerMoon": "月",
+  "videoEditorInfoStickerRecTimer": "RECタイマー",
+  "videoEditorInfoStickerStyleFilm": "フィルム",
+  "videoEditorInfoStickerStyleCamcorder": "ビデオカメラ",
+  "videoEditorInfoStickerDayCountValue": "{day}日目",
+  "videoEditorInfoStickerDayCountOfValue": "{day}日目 / {total}日",
+  "videoEditorInfoStickerDayLabel": "日",
+  "videoEditorInfoStickerDayTotalLabel": "全日数（任意）",
+  "videoEditorInfoStickerSymbolPin": "ピン",
+  "videoEditorInfoStickerSymbolFlag": "国旗",
+  "videoEditorInfoStickerSymbolGlobe": "地球儀",
+  "videoEditorInfoStickerSymbolMap": "地図",
+  "videoEditorInfoStickerMoonNew": "新月",
+  "videoEditorInfoStickerMoonWaxingCrescent": "三日月",
+  "videoEditorInfoStickerMoonFirstQuarter": "上弦の月",
+  "videoEditorInfoStickerMoonWaxingGibbous": "十三夜月",
+  "videoEditorInfoStickerMoonFull": "満月",
+  "videoEditorInfoStickerMoonWaningGibbous": "寝待月",
+  "videoEditorInfoStickerMoonLastQuarter": "下弦の月",
+  "videoEditorInfoStickerMoonWaningCrescent": "有明月",
+  "videoEditorInfoStickerPlaceSearchHint": "都市や場所を検索",
+  "videoEditorInfoStickerPlaceNoResults": "場所が見つかりません",
+  "videoEditorInfoStickerPlaceSearchFailed": "場所を検索できませんでした。もう一度お試しください。",
+  "videoEditorInfoStickerPlacePrivacyNote": "動画に入るのは場所の名前だけで、正確な位置は入りません。",
+  "videoEditorInfoStickerLoading": "読み込み中…",
+  "videoEditorInfoStickerLoadFailed": "読み込めませんでした。もう一度お試しください。",
+  "videoEditorInfoStickerMetAttribution": "データ: MET Norway",
+  "videoEditorInfoStickerWeatherNow": "古い動画の天気はないため、現在の天気を表示しています。",
+  "videoEditorInfoStickerWeatherSunny": "晴れ",
+  "videoEditorInfoStickerWeatherClearNight": "晴れた夜",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "晴れ時々曇り",
+  "videoEditorInfoStickerWeatherCloudy": "曇り",
+  "videoEditorInfoStickerWeatherFog": "霧",
+  "videoEditorInfoStickerWeatherRain": "雨",
+  "videoEditorInfoStickerWeatherShowers": "にわか雨",
+  "videoEditorInfoStickerWeatherSnow": "雪",
+  "videoEditorInfoStickerWeatherThunderstorm": "雷雨",
+  "videoEditorInfoStickerSunTimeZoneNote": "時刻はスマートフォンのタイムゾーンで表示されます。",
+  "videoEditorInfoStickerTemperatureLabel": "気温",
+  "videoEditorInfoStickerUnitLabel": "単位",
+  "videoEditorInfoStickerBatteryLevelLabel": "バッテリー残量",
+  "videoEditorInfoStickerAdd": "ステッカーを追加",
   "videoEditorTextAlignmentSemanticLabel": "テキストの配置",
   "videoEditorTextBackgroundSemanticLabel": "テキストの背景",
   "videoEditorTextDontWrap": "折り返さない",
@@ -5793,8 +5859,97 @@
   "ideasDescriptionFive": "ただシェアしたかっただけ。",
   "ideasTitleSix": "今日のかけら",
   "ideasDescriptionSix": "ここに置いておきます。",
+  "messagesRoomsUnreadLabel": "{count, plural, other{ルーム、未読メッセージ{displayCount}件}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, other{新着{displayCount}件}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, other{未読メッセージ{displayCount}件}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, other{{displayCount}人}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, other{メッセージ{displayCount}件}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "過去24時間",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "アクティビティを確認中…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "アクティビティを読み込めませんでした。",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "最近のメッセージはありません。あいさつしてみましょう。",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "ダイレクト",
   "messagesRooms": "ルーム",
+  "messagesRoomsWithUnread": "ルーム ({badge})",
   "messagesPublicTestRooms": "公開テストルーム",
   "messagesPublicTestDisclosure": "これらのテストルームは公開されています。アクセスできる人は誰でもメッセージを読めます。",
   "messagesNoRooms": "まだルームはありません",

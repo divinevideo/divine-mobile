@@ -2496,6 +2496,72 @@
   "videoEditorLayerAnimationPointLeaveHint": "슬라이드가 끝날 위치를 영상에서 탭하세요",
   "videoEditorStickersDivineOriginals": "Divine 오리지널",
   "videoEditorStickerSearchHint": "스티커 검색...",
+  "videoEditorInfoStickersTitle": "정보",
+  "videoEditorInfoStickerTime": "시간",
+  "videoEditorInfoStickerDate": "날짜",
+  "videoEditorInfoStickerLocation": "위치",
+  "videoEditorInfoStickerWeather": "날씨",
+  "videoEditorInfoStickerAltitude": "고도",
+  "videoEditorInfoStickerBattery": "배터리",
+  "videoEditorInfoStickerStyleLight": "라이트",
+  "videoEditorInfoStickerStyleDark": "다크",
+  "videoEditorInfoStickerStyleBrand": "그린",
+  "videoEditorInfoStickerStyleOutline": "윤곽선",
+  "videoEditorInfoStickerStyleDigital": "디지털",
+  "videoEditorInfoStickerStyleAnalog": "아날로그",
+  "videoEditorInfoStickerStyleGlass": "글래스",
+  "videoEditorInfoStickerStyleHighlight": "옐로",
+  "videoEditorInfoStickerStyleNeon": "네온",
+  "videoEditorInfoStickerStylePlain": "심플",
+  "videoEditorInfoStickerChangePlace": "장소 변경",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "이 기기에서는 장소 검색을 사용할 수 없어요.",
+  "videoEditorInfoStickerRecordedValue": "촬영 시각 · {value}",
+  "videoEditorInfoStickerNowValue": "지금 · {value}",
+  "videoEditorInfoStickerTodayValue": "오늘 · {value}",
+  "videoEditorInfoStickerDayCount": "일수 카운터",
+  "videoEditorInfoStickerSun": "태양",
+  "videoEditorInfoStickerMoon": "달",
+  "videoEditorInfoStickerRecTimer": "REC 타이머",
+  "videoEditorInfoStickerStyleFilm": "필름",
+  "videoEditorInfoStickerStyleCamcorder": "캠코더",
+  "videoEditorInfoStickerDayCountValue": "{day}일째",
+  "videoEditorInfoStickerDayCountOfValue": "{total}일 중 {day}일째",
+  "videoEditorInfoStickerDayLabel": "일차",
+  "videoEditorInfoStickerDayTotalLabel": "전체 일수(선택)",
+  "videoEditorInfoStickerSymbolPin": "핀",
+  "videoEditorInfoStickerSymbolFlag": "국기",
+  "videoEditorInfoStickerSymbolGlobe": "지구본",
+  "videoEditorInfoStickerSymbolMap": "지도",
+  "videoEditorInfoStickerMoonNew": "삭",
+  "videoEditorInfoStickerMoonWaxingCrescent": "초승달",
+  "videoEditorInfoStickerMoonFirstQuarter": "상현달",
+  "videoEditorInfoStickerMoonWaxingGibbous": "차가는 달",
+  "videoEditorInfoStickerMoonFull": "보름달",
+  "videoEditorInfoStickerMoonWaningGibbous": "기우는 달",
+  "videoEditorInfoStickerMoonLastQuarter": "하현달",
+  "videoEditorInfoStickerMoonWaningCrescent": "그믐달",
+  "videoEditorInfoStickerPlaceSearchHint": "도시나 장소를 검색해요",
+  "videoEditorInfoStickerPlaceNoResults": "장소를 찾지 못했어요",
+  "videoEditorInfoStickerPlaceSearchFailed": "장소를 검색하지 못했어요. 다시 시도해 주세요.",
+  "videoEditorInfoStickerPlacePrivacyNote": "영상에는 장소 이름만 들어가고, 정확한 위치는 절대 들어가지 않아요.",
+  "videoEditorInfoStickerLoading": "불러오는 중…",
+  "videoEditorInfoStickerLoadFailed": "불러오지 못했어요. 다시 시도해 주세요.",
+  "videoEditorInfoStickerMetAttribution": "데이터 제공: MET Norway",
+  "videoEditorInfoStickerWeatherNow": "오래된 동영상의 날씨는 없어서 지금 날씨를 보여 줘요.",
+  "videoEditorInfoStickerWeatherSunny": "맑음",
+  "videoEditorInfoStickerWeatherClearNight": "맑은 밤",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "구름 조금",
+  "videoEditorInfoStickerWeatherCloudy": "흐림",
+  "videoEditorInfoStickerWeatherFog": "안개",
+  "videoEditorInfoStickerWeatherRain": "비",
+  "videoEditorInfoStickerWeatherShowers": "소나기",
+  "videoEditorInfoStickerWeatherSnow": "눈",
+  "videoEditorInfoStickerWeatherThunderstorm": "뇌우",
+  "videoEditorInfoStickerSunTimeZoneNote": "시간은 휴대폰의 시간대로 표시돼요.",
+  "videoEditorInfoStickerTemperatureLabel": "기온",
+  "videoEditorInfoStickerUnitLabel": "단위",
+  "videoEditorInfoStickerBatteryLevelLabel": "배터리 잔량",
+  "videoEditorInfoStickerAdd": "스티커 추가",
   "videoEditorTextAlignmentSemanticLabel": "텍스트 정렬",
   "videoEditorTextBackgroundSemanticLabel": "텍스트 배경",
   "videoEditorTextDontWrap": "줄 바꿈 안 함",
@@ -5339,8 +5405,97 @@
   "ideasDescriptionFive": "그냥 나누고 싶었어요.",
   "ideasTitleSix": "오늘의 한 조각",
   "ideasDescriptionSix": "여기에 남겨 둘게요.",
+  "messagesRoomsUnreadLabel": "{count, plural, other{채팅방, 읽지 않은 메시지 {displayCount}개}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, other{새 메시지 {displayCount}개}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, other{읽지 않은 메시지 {displayCount}개}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, other{{displayCount}명}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, other{메시지 {displayCount}개}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "최근 24시간",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "활동을 확인하고 있어요…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "활동을 불러오지 못했어요.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "최근 메시지가 없어요. 인사를 건네 보세요.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "다이렉트",
   "messagesRooms": "채팅방",
+  "messagesRoomsWithUnread": "채팅방 ({badge})",
   "messagesPublicTestRooms": "공개 테스트 채팅방",
   "messagesPublicTestDisclosure": "이 테스트 채팅방은 공개되어 있어요. 접근할 수 있는 사람은 누구나 메시지를 읽을 수 있어요.",
   "messagesNoRooms": "아직 채팅방이 없어요",

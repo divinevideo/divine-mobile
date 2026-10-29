@@ -11009,6 +11009,221 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorStickerSearchHint => 'స్టిక్కర్‌లను శోధించండి...';
 
   @override
+  String get videoEditorInfoStickersTitle => 'సమాచారం';
+
+  @override
+  String get videoEditorInfoStickerTime => 'సమయం';
+
+  @override
+  String get videoEditorInfoStickerDate => 'తేదీ';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'స్థలం';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'వాతావరణం';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'ఎత్తు';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'బ్యాటరీ';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'లేత';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'ముదురు';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'ఆకుపచ్చ';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'అవుట్‌లైన్';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'డిజిటల్';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'అనలాగ్';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'గ్లాస్';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'పసుపు';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'నియాన్';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'సాదా';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'స్థలం మార్చండి';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'ఈ పరికరంలో స్థల శోధన అందుబాటులో లేదు.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'రికార్డింగ్ · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'ఇప్పుడు · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'ఈరోజు · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'రోజుల లెక్కింపు';
+
+  @override
+  String get videoEditorInfoStickerSun => 'సూర్యుడు';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'చంద్రుడు';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC టైమర్';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'ఫిల్మ్';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'కామ్‌కార్డర్';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'రోజు $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return '$totalలో రోజు $day';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'రోజు';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'మొత్తం రోజులు (ఐచ్ఛికం)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'పిన్';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'జెండా';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => 'గ్లోబ్';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'మ్యాప్';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'అమావాస్య';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'పెరుగుతున్న నెలవంక';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'మొదటి పావు';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'పెరుగుతున్న చంద్రుడు';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'పౌర్ణమి';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'తగ్గుతున్న చంద్రుడు';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'చివరి పావు';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'తగ్గుతున్న నెలవంక';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint =>
+      'నగరం లేదా స్థలం కోసం వెతకండి';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'స్థలాలు ఏవీ కనుగొనబడలేదు';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'స్థలాల కోసం వెతకడం సాధ్యం కాలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'మీ వీడియోలో స్థలం పేరు మాత్రమే ఉంటుంది, మీ ఖచ్చితమైన స్థానం ఎప్పుడూ ఉండదు.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'లోడ్ అవుతోంది…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed =>
+      'లోడ్ చేయడం సాధ్యం కాలేదు. మళ్లీ ప్రయత్నించండి.';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => 'డేటా: MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'పాత వీడియోలకు వాతావరణ సమాచారం లేదు, కాబట్టి ఇది ఇప్పటి వాతావరణం.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'ఎండ';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'స్పష్టమైన రాత్రి';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'పాక్షికంగా మేఘావృతం';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'మేఘావృతం';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'పొగమంచు';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'వర్షం';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'జల్లులు';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'మంచు';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'ఉరుములతో వర్షం';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'సమయాలు మీ ఫోన్ టైమ్ జోన్‌లో ఉన్నాయి.';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'ఉష్ణోగ్రత';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'యూనిట్';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'బ్యాటరీ స్థాయి';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'స్టిక్కర్ జోడించండి';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => 'ఫాంట్‌ని ఎంచుకోండి';
 
   @override
@@ -14605,10 +14820,88 @@ class AppLocalizationsTe extends AppLocalizations {
   String get ideasDescriptionSix => 'దీన్ని ఇక్కడ వదిలేస్తున్నాను.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'గదులు, $displayCount చదవని సందేశాలు',
+      one: 'గదులు, $displayCount చదవని సందేశం',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'కొత్తవి: $displayCount',
+      one: 'కొత్తది: $displayCount',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount చదవని సందేశాలు',
+      one: '$displayCount చదవని సందేశం',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount మంది',
+      one: '$displayCount వ్యక్తి',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount సందేశాలు',
+      one: '$displayCount సందేశం',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'గత 24 గంటల్లో';
+
+  @override
+  String get messagesRoomLoading => 'చాట్‌లో చురుకుదనాన్ని చూస్తున్నాం…';
+
+  @override
+  String get messagesRoomLoadFailed =>
+      'చాట్‌లో చురుకుదనాన్ని లోడ్ చేయలేకపోయాం.';
+
+  @override
+  String get messagesRoomEmpty => 'ఇటీవల సందేశాలు లేవు. పలకరించండి.';
+
+  @override
   String get messagesDirect => 'నేరుగా';
 
   @override
   String get messagesRooms => 'గదులు';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'గదులు ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'బహిరంగ పరీక్ష గదులు';

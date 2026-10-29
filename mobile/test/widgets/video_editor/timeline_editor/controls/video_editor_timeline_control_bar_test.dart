@@ -1,7 +1,8 @@
 // ABOUTME: Widget tests for TimelineControlsBar.
-// ABOUTME: Verifies visibility logic for clip controls.
+// ABOUTME: Verifies which controls fill the slot below the timeline.
 
 import 'package:bloc_test/bloc_test.dart';
+import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,6 +18,7 @@ import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_action_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_clip_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_control_bar.dart';
+import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_editing_tools_bar.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_layer_multi_select_controls.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/video_editor_timeline_marker_controls.dart';
 import 'package:pro_video_editor/pro_video_editor.dart' show EditorVideo;
@@ -58,7 +60,18 @@ void main() {
       ).thenAnswer((_) => const Stream<TimelineOverlayState>.empty());
     });
 
-    Widget build({required bool isEditing, bool isMarkerMode = false}) {
+    Widget build({
+      required bool isEditing,
+      bool isMarkerMode = false,
+      bool showEditingTools = false,
+      VoidCallback? onTimelineTap,
+    }) {
+      final bar = TimelineControlsBar(
+        isEditing: isEditing,
+        isMarkerMode: isMarkerMode,
+        showEditingTools: showEditingTools,
+        playheadPosition: ValueNotifier(Duration.zero),
+      );
       return ProviderScope(
         child: MaterialApp(
           localizationsDelegates: appLocalizationsDelegates,
@@ -75,10 +88,21 @@ void main() {
                       LoopSuggestionCubit(repository: noMatchLoopRepository()),
                 ),
               ],
-              child: TimelineControlsBar(
-                isEditing: isEditing,
-                isMarkerMode: isMarkerMode,
-                playheadPosition: ValueNotifier(Duration.zero),
+              // The bar overlays the bottom of the timeline, as in the editor.
+              child: SizedBox.expand(
+                child: Stack(
+                  alignment: .bottomCenter,
+                  children: [
+                    if (onTimelineTap != null)
+                      Positioned.fill(
+                        child: GestureDetector(
+                          behavior: .opaque,
+                          onTap: onTimelineTap,
+                        ),
+                      ),
+                    bar,
+                  ],
+                ),
               ),
             ),
           ),
@@ -92,6 +116,60 @@ void main() {
       await tester.pumpWidget(build(isEditing: false));
 
       expect(find.byType(TimelineClipControls), findsNothing);
+    });
+
+    testWidgets('shows the editing tools while nothing is selected', (
+      tester,
+    ) async {
+      await tester.pumpWidget(build(isEditing: false, showEditingTools: true));
+
+      expect(find.byType(TimelineEditingToolsBar), findsOneWidget);
+      expect(find.byType(TimelineClipControls), findsNothing);
+    });
+
+    testWidgets('lets taps beside the editing tools reach the timeline', (
+      tester,
+    ) async {
+      var timelineTaps = 0;
+      await tester.pumpWidget(
+        build(
+          isEditing: false,
+          showEditingTools: true,
+          onTimelineTap: () => timelineTaps++,
+        ),
+      );
+
+      final button = tester.getRect(find.byType(DivineButton));
+      await tester.tapAt(Offset(8, button.center.dy));
+
+      expect(timelineTaps, equals(1));
+    });
+
+    testWidgets('keeps the editing tools at the bottom as the swap starts', (
+      tester,
+    ) async {
+      final editButton = find.descendant(
+        of: find.byType(TimelineEditingToolsBar),
+        matching: find.byType(DivineButton),
+      );
+      await tester.pumpWidget(build(isEditing: false, showEditingTools: true));
+      final settled = tester.getRect(editButton);
+
+      await tester.pumpWidget(build(isEditing: true, showEditingTools: true));
+
+      expect(tester.getRect(editButton), equals(settled));
+    });
+
+    testWidgets('swaps the editing tools for the clip controls', (
+      tester,
+    ) async {
+      await tester.pumpWidget(build(isEditing: false, showEditingTools: true));
+
+      await tester.pumpWidget(build(isEditing: true, showEditingTools: true));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TimelineClipControls), findsOneWidget);
+      expect(find.byType(TimelineEditingToolsBar), findsNothing);
     });
 
     testWidgets('shows clip controls when editing is active', (tester) async {

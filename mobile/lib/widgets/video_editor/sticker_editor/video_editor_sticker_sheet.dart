@@ -1,5 +1,5 @@
-// ABOUTME: Bottom sheet for sticker selection in the video editor.
-// ABOUTME: Features search functionality and a responsive grid of stickers.
+// ABOUTME: Bottom sheet for sticker selection in the video editor: a row of
+// ABOUTME: info stickers above a searchable, responsive grid of stickers.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,12 +8,14 @@ import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart' show StickerData;
 import 'package:openvine/blocs/video_editor/sticker/video_editor_sticker_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_kind_row.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 
-/// A bottom sheet that displays a searchable grid of stickers.
+/// A bottom sheet that displays the info stickers and a searchable grid of
+/// stickers.
 ///
-/// Returns the selected [StickerData] via `context.pop` when a sticker is
-/// tapped.
+/// Pops the selected [StickerData] when a sticker is tapped, or the
+/// `InfoStickerKind` when an info sticker is.
 class VideoEditorStickerSheet extends StatelessWidget {
   const VideoEditorStickerSheet({
     this.enableSearchBar = false,
@@ -37,6 +39,19 @@ class VideoEditorStickerSheet extends StatelessWidget {
         slivers: [
           // Floating Search Bar Header
           if (enableSearchBar) const _SearchBar(),
+
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const .fromLTRB(16, 16, 16, 12),
+              child: Text(
+                context.l10n.videoEditorInfoStickersTitle,
+                style: VineTheme.titleSmallFont(
+                  color: context.vineColors.onSurfaceMuted,
+                ),
+              ),
+            ),
+          ),
+          const SliverToBoxAdapter(child: InfoStickerKindRow()),
 
           SliverToBoxAdapter(
             child: Padding(

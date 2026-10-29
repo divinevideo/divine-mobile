@@ -63,8 +63,9 @@ sealed class NotificationItem extends Equatable {
 
   /// Underlying Nostr event ids that this item represents.
   ///
-  /// Items carry the server's UUID in [id] and the Nostr event id in
-  /// [sourceEventIds]. Cross-page snapshot dedupe in
+  /// Social items carry the server's UUID in [id] and the Nostr event id in
+  /// [sourceEventIds]; client-side rows (announcements, room mentions) carry
+  /// their own namespaced id. Cross-page snapshot dedupe in
   /// `NotificationRepository._emitSnapshotForPage` keys on overlap in this
   /// set rather than [id] equality so a logical event delivered as
   /// distinct rows across pages resolves to a single rendered row. For

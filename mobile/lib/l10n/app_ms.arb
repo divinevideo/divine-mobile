@@ -5416,6 +5416,72 @@
   "videoEditorFeedPreviewContent": "Elakkan meletakkan kandungan di belakang kawasan ini.",
   "videoEditorStickersDivineOriginals": "Divine Originals",
   "videoEditorStickerSearchHint": "Cari pelekat...",
+  "videoEditorInfoStickersTitle": "Info",
+  "videoEditorInfoStickerTime": "Masa",
+  "videoEditorInfoStickerDate": "Tarikh",
+  "videoEditorInfoStickerLocation": "Lokasi",
+  "videoEditorInfoStickerWeather": "Cuaca",
+  "videoEditorInfoStickerAltitude": "Ketinggian",
+  "videoEditorInfoStickerBattery": "Bateri",
+  "videoEditorInfoStickerStyleLight": "Cerah",
+  "videoEditorInfoStickerStyleDark": "Gelap",
+  "videoEditorInfoStickerStyleBrand": "Hijau",
+  "videoEditorInfoStickerStyleOutline": "Garis luar",
+  "videoEditorInfoStickerStyleDigital": "Digital",
+  "videoEditorInfoStickerStyleAnalog": "Analog",
+  "videoEditorInfoStickerStyleGlass": "Kaca",
+  "videoEditorInfoStickerStyleHighlight": "Kuning",
+  "videoEditorInfoStickerStyleNeon": "Neon",
+  "videoEditorInfoStickerStylePlain": "Ringkas",
+  "videoEditorInfoStickerChangePlace": "Tukar tempat",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "Carian tempat tidak tersedia pada peranti ini.",
+  "videoEditorInfoStickerRecordedValue": "Rakaman · {value}",
+  "videoEditorInfoStickerNowValue": "Sekarang · {value}",
+  "videoEditorInfoStickerTodayValue": "Hari ini · {value}",
+  "videoEditorInfoStickerDayCount": "Pengira hari",
+  "videoEditorInfoStickerSun": "Matahari",
+  "videoEditorInfoStickerMoon": "Bulan",
+  "videoEditorInfoStickerRecTimer": "Pemasa REC",
+  "videoEditorInfoStickerStyleFilm": "Filem",
+  "videoEditorInfoStickerStyleCamcorder": "Kamera video",
+  "videoEditorInfoStickerDayCountValue": "Hari ke-{day}",
+  "videoEditorInfoStickerDayCountOfValue": "Hari ke-{day} daripada {total}",
+  "videoEditorInfoStickerDayLabel": "Hari",
+  "videoEditorInfoStickerDayTotalLabel": "Jumlah hari (pilihan)",
+  "videoEditorInfoStickerSymbolPin": "Pin",
+  "videoEditorInfoStickerSymbolFlag": "Bendera",
+  "videoEditorInfoStickerSymbolGlobe": "Glob",
+  "videoEditorInfoStickerSymbolMap": "Peta",
+  "videoEditorInfoStickerMoonNew": "Anak bulan",
+  "videoEditorInfoStickerMoonWaxingCrescent": "Sabit muda",
+  "videoEditorInfoStickerMoonFirstQuarter": "Suku pertama",
+  "videoEditorInfoStickerMoonWaxingGibbous": "Bulan cembung muda",
+  "videoEditorInfoStickerMoonFull": "Bulan purnama",
+  "videoEditorInfoStickerMoonWaningGibbous": "Bulan cembung tua",
+  "videoEditorInfoStickerMoonLastQuarter": "Suku akhir",
+  "videoEditorInfoStickerMoonWaningCrescent": "Sabit tua",
+  "videoEditorInfoStickerPlaceSearchHint": "Cari bandar atau tempat",
+  "videoEditorInfoStickerPlaceNoResults": "Tiada tempat ditemui",
+  "videoEditorInfoStickerPlaceSearchFailed": "Tidak dapat mencari tempat. Cuba lagi.",
+  "videoEditorInfoStickerPlacePrivacyNote": "Hanya nama tempat yang masuk ke dalam video anda, bukan kedudukan tepat anda.",
+  "videoEditorInfoStickerLoading": "Memuatkan…",
+  "videoEditorInfoStickerLoadFailed": "Tidak dapat dimuatkan. Cuba lagi.",
+  "videoEditorInfoStickerMetAttribution": "Data daripada MET Norway",
+  "videoEditorInfoStickerWeatherNow": "Tiada data cuaca untuk video lama, jadi ini cuaca sekarang.",
+  "videoEditorInfoStickerWeatherSunny": "Cerah",
+  "videoEditorInfoStickerWeatherClearNight": "Malam cerah",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "Separa mendung",
+  "videoEditorInfoStickerWeatherCloudy": "Mendung",
+  "videoEditorInfoStickerWeatherFog": "Kabus",
+  "videoEditorInfoStickerWeatherRain": "Hujan",
+  "videoEditorInfoStickerWeatherShowers": "Hujan berselang",
+  "videoEditorInfoStickerWeatherSnow": "Salji",
+  "videoEditorInfoStickerWeatherThunderstorm": "Ribut petir",
+  "videoEditorInfoStickerSunTimeZoneNote": "Masa dipaparkan dalam zon waktu telefon anda.",
+  "videoEditorInfoStickerTemperatureLabel": "Suhu",
+  "videoEditorInfoStickerUnitLabel": "Unit",
+  "videoEditorInfoStickerBatteryLevelLabel": "Tahap bateri",
+  "videoEditorInfoStickerAdd": "Tambah pelekat",
   "videoEditorSelectFontSemanticLabel": "Pilih fon",
   "videoEditorFontUnknown": "Tidak diketahui",
   "videoEditorSplitPlayheadOutsideClip": "Kepala main mestilah berada dalam klip yang dipilih untuk memisahkan.",
@@ -7089,8 +7155,97 @@
   "ideasDescriptionFive": "Cuma hendak berkongsi.",
   "ideasTitleSix": "Sedikit tentang hari ini",
   "ideasDescriptionSix": "Saya tinggalkan ini di sini.",
+  "messagesRoomsUnreadLabel": "{count, plural, other{Bilik, {displayCount} mesej belum dibaca}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, other{{displayCount} baharu}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, other{{displayCount} mesej belum dibaca}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, other{{displayCount} orang}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, other{{displayCount} mesej}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "24 jam terakhir",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "Menyemak aktiviti…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "Aktiviti tidak dapat dimuatkan.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "Tiada mesej terkini. Jom sapa yang lain.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "Langsung",
   "messagesRooms": "Bilik",
+  "messagesRoomsWithUnread": "Bilik ({badge})",
   "messagesPublicTestRooms": "Bilik ujian awam",
   "messagesPublicTestDisclosure": "Bilik ujian ini terbuka kepada umum. Sesiapa yang mempunyai akses boleh membaca mesej anda.",
   "messagesNoRooms": "Belum ada bilik",

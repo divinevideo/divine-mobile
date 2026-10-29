@@ -10728,6 +10728,220 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorStickerSearchHint => 'Cari pelekat...';
 
   @override
+  String get videoEditorInfoStickersTitle => 'Info';
+
+  @override
+  String get videoEditorInfoStickerTime => 'Masa';
+
+  @override
+  String get videoEditorInfoStickerDate => 'Tarikh';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'Lokasi';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'Cuaca';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'Ketinggian';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'Bateri';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'Cerah';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'Gelap';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'Hijau';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'Garis luar';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'Digital';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'Analog';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'Kaca';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'Kuning';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'Neon';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'Ringkas';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'Tukar tempat';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Carian tempat tidak tersedia pada peranti ini.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'Rakaman · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'Sekarang · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'Hari ini · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'Pengira hari';
+
+  @override
+  String get videoEditorInfoStickerSun => 'Matahari';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'Bulan';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'Pemasa REC';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'Filem';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'Kamera video';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'Hari ke-$day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'Hari ke-$day daripada $total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'Hari';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'Jumlah hari (pilihan)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'Pin';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'Bendera';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Glob';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Peta';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'Anak bulan';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'Sabit muda';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'Suku pertama';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'Bulan cembung muda';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'Bulan purnama';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'Bulan cembung tua';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'Suku akhir';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'Sabit tua';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint => 'Cari bandar atau tempat';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'Tiada tempat ditemui';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'Tidak dapat mencari tempat. Cuba lagi.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'Hanya nama tempat yang masuk ke dalam video anda, bukan kedudukan tepat anda.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'Memuatkan…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed =>
+      'Tidak dapat dimuatkan. Cuba lagi.';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => 'Data daripada MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'Tiada data cuaca untuk video lama, jadi ini cuaca sekarang.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Cerah';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Malam cerah';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'Separa mendung';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Mendung';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Kabus';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Hujan';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Hujan berselang';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Salji';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'Ribut petir';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'Masa dipaparkan dalam zon waktu telefon anda.';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'Suhu';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'Unit';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'Tahap bateri';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'Tambah pelekat';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => 'Pilih fon';
 
   @override
@@ -14246,10 +14460,82 @@ class AppLocalizationsMs extends AppLocalizations {
   String get ideasDescriptionSix => 'Saya tinggalkan ini di sini.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Bilik, $displayCount mesej belum dibaca',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount baharu',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount mesej belum dibaca',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount orang',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount mesej',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => '24 jam terakhir';
+
+  @override
+  String get messagesRoomLoading => 'Menyemak aktiviti…';
+
+  @override
+  String get messagesRoomLoadFailed => 'Aktiviti tidak dapat dimuatkan.';
+
+  @override
+  String get messagesRoomEmpty => 'Tiada mesej terkini. Jom sapa yang lain.';
+
+  @override
   String get messagesDirect => 'Langsung';
 
   @override
   String get messagesRooms => 'Bilik';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Bilik ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'Bilik ujian awam';

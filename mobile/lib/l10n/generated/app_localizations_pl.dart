@@ -10934,6 +10934,222 @@ class AppLocalizationsPl extends AppLocalizations {
   String get videoEditorStickerSearchHint => 'Szukaj naklejek...';
 
   @override
+  String get videoEditorInfoStickersTitle => 'Info';
+
+  @override
+  String get videoEditorInfoStickerTime => 'Godzina';
+
+  @override
+  String get videoEditorInfoStickerDate => 'Data';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'Miejsce';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'Pogoda';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'Wysokość';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'Bateria';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'Jasny';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'Ciemny';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'Zielony';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'Kontur';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'Cyfrowy';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'Analogowy';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'Szkło';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'Żółty';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'Neon';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'Prosty';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'Zmień miejsce';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Wyszukiwanie miejsc nie jest dostępne na tym urządzeniu.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'Nagranie · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'Teraz · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'Dziś · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'Licznik dni';
+
+  @override
+  String get videoEditorInfoStickerSun => 'Słońce';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'Księżyc';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'Licznik REC';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'Klisza';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'Kamera';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'Dzień $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'Dzień $day z $total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'Dzień';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'Liczba dni (opcjonalnie)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'Pinezka';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'Flaga';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Globus';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Mapa';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'Nów';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'Przybywający sierp';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'Pierwsza kwadra';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'Przybywający garb';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'Pełnia';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'Ubywający garb';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'Ostatnia kwadra';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'Ubywający sierp';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint =>
+      'Szukaj miasta lub miejsca';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'Nie znaleziono miejsc';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'Nie udało się wyszukać miejsc. Spróbuj ponownie.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'Do twojego filmu trafia tylko nazwa miejsca, nigdy twoja dokładna lokalizacja.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'Wczytywanie…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed =>
+      'Nie udało się wczytać. Spróbuj ponownie.';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => 'Dane: MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'Dla starszych filmów nie ma danych o pogodzie, więc to pogoda w tej chwili.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Słonecznie';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Bezchmurna noc';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy =>
+      'Częściowe zachmurzenie';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Pochmurno';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Mgła';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Deszcz';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Przelotne opady';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Śnieg';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'Burza';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'Godziny są w strefie czasowej twojego telefonu.';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'Temperatura';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'Jednostka';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'Poziom baterii';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'Dodaj naklejkę';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => 'Wybierz czcionkę';
 
   @override
@@ -14551,10 +14767,98 @@ class AppLocalizationsPl extends AppLocalizations {
   String get ideasDescriptionSix => 'Zostawiam to tutaj.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Pokoje, $displayCount nieprzeczytanej wiadomości',
+      many: 'Pokoje, $displayCount nieprzeczytanych wiadomości',
+      few: 'Pokoje, $displayCount nieprzeczytane wiadomości',
+      one: 'Pokoje, $displayCount nieprzeczytana wiadomość',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Nieprzeczytane: $displayCount',
+      many: 'Nieprzeczytane: $displayCount',
+      few: 'Nieprzeczytane: $displayCount',
+      one: 'Nieprzeczytane: $displayCount',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount nieprzeczytanej wiadomości',
+      many: '$displayCount nieprzeczytanych wiadomości',
+      few: '$displayCount nieprzeczytane wiadomości',
+      one: '$displayCount nieprzeczytana wiadomość',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount osoby',
+      many: '$displayCount osób',
+      few: '$displayCount osoby',
+      one: '$displayCount osoba',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount wiadomości',
+      many: '$displayCount wiadomości',
+      few: '$displayCount wiadomości',
+      one: '$displayCount wiadomość',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'Ostatnie 24 godz.';
+
+  @override
+  String get messagesRoomLoading => 'Sprawdzanie aktywności…';
+
+  @override
+  String get messagesRoomLoadFailed => 'Nie udało się wczytać aktywności.';
+
+  @override
+  String get messagesRoomEmpty =>
+      'Ostatnio nie było wiadomości. Przywitaj się.';
+
+  @override
   String get messagesDirect => 'Bezpośrednie';
 
   @override
   String get messagesRooms => 'Pokoje';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Pokoje ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'Publiczne pokoje testowe';

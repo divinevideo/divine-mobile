@@ -2344,6 +2344,72 @@
   "videoEditorFeedPreviewContent": "Iwasan ang paglalagay ng content sa likod ng mga area na ito.",
   "videoEditorStickersDivineOriginals": "Divine Originals",
   "videoEditorStickerSearchHint": "Maghanap ng mga sticker...",
+  "videoEditorInfoStickersTitle": "Info",
+  "videoEditorInfoStickerTime": "Oras",
+  "videoEditorInfoStickerDate": "Petsa",
+  "videoEditorInfoStickerLocation": "Lokasyon",
+  "videoEditorInfoStickerWeather": "Panahon",
+  "videoEditorInfoStickerAltitude": "Altitude",
+  "videoEditorInfoStickerBattery": "Baterya",
+  "videoEditorInfoStickerStyleLight": "Light",
+  "videoEditorInfoStickerStyleDark": "Dark",
+  "videoEditorInfoStickerStyleBrand": "Green",
+  "videoEditorInfoStickerStyleOutline": "Outline",
+  "videoEditorInfoStickerStyleDigital": "Digital",
+  "videoEditorInfoStickerStyleAnalog": "Analog",
+  "videoEditorInfoStickerStyleGlass": "Glass",
+  "videoEditorInfoStickerStyleHighlight": "Yellow",
+  "videoEditorInfoStickerStyleNeon": "Neon",
+  "videoEditorInfoStickerStylePlain": "Plain",
+  "videoEditorInfoStickerChangePlace": "Palitan ang lugar",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "Hindi available ang place search sa device na ito.",
+  "videoEditorInfoStickerRecordedValue": "Na-record · {value}",
+  "videoEditorInfoStickerNowValue": "Ngayon · {value}",
+  "videoEditorInfoStickerTodayValue": "Ngayong araw · {value}",
+  "videoEditorInfoStickerDayCount": "Bilang ng araw",
+  "videoEditorInfoStickerSun": "Sunrise at sunset",
+  "videoEditorInfoStickerMoon": "Buwan",
+  "videoEditorInfoStickerRecTimer": "REC timer",
+  "videoEditorInfoStickerStyleFilm": "Film",
+  "videoEditorInfoStickerStyleCamcorder": "Camcorder",
+  "videoEditorInfoStickerDayCountValue": "Day {day}",
+  "videoEditorInfoStickerDayCountOfValue": "Day {day} ng {total}",
+  "videoEditorInfoStickerDayLabel": "Araw",
+  "videoEditorInfoStickerDayTotalLabel": "Kabuuang araw (opsyonal)",
+  "videoEditorInfoStickerSymbolPin": "Pin",
+  "videoEditorInfoStickerSymbolFlag": "Bandila",
+  "videoEditorInfoStickerSymbolGlobe": "Globo",
+  "videoEditorInfoStickerSymbolMap": "Mapa",
+  "videoEditorInfoStickerMoonNew": "Bagong buwan",
+  "videoEditorInfoStickerMoonWaxingCrescent": "Waxing crescent",
+  "videoEditorInfoStickerMoonFirstQuarter": "First quarter",
+  "videoEditorInfoStickerMoonWaxingGibbous": "Waxing gibbous",
+  "videoEditorInfoStickerMoonFull": "Kabilugan ng buwan",
+  "videoEditorInfoStickerMoonWaningGibbous": "Waning gibbous",
+  "videoEditorInfoStickerMoonLastQuarter": "Last quarter",
+  "videoEditorInfoStickerMoonWaningCrescent": "Waning crescent",
+  "videoEditorInfoStickerPlaceSearchHint": "Maghanap ng lungsod o lugar",
+  "videoEditorInfoStickerPlaceNoResults": "Walang nahanap na lugar",
+  "videoEditorInfoStickerPlaceSearchFailed": "Hindi makapaghanap ng mga lugar. Subukan ulit.",
+  "videoEditorInfoStickerPlacePrivacyNote": "Pangalan lang ng lugar ang mapupunta sa video mo, hindi kailanman ang eksaktong lokasyon mo.",
+  "videoEditorInfoStickerLoading": "Naglo-load…",
+  "videoEditorInfoStickerLoadFailed": "Hindi ma-load. Subukan ulit.",
+  "videoEditorInfoStickerMetAttribution": "Data mula sa MET Norway",
+  "videoEditorInfoStickerWeatherNow": "Walang weather para sa mas lumang video, kaya ito ang weather ngayon.",
+  "videoEditorInfoStickerWeatherSunny": "Maaraw",
+  "videoEditorInfoStickerWeatherClearNight": "Maaliwalas na gabi",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "Bahagyang maulap",
+  "videoEditorInfoStickerWeatherCloudy": "Maulap",
+  "videoEditorInfoStickerWeatherFog": "Hamog",
+  "videoEditorInfoStickerWeatherRain": "Ulan",
+  "videoEditorInfoStickerWeatherShowers": "Pabugso-bugsong ulan",
+  "videoEditorInfoStickerWeatherSnow": "Niyebe",
+  "videoEditorInfoStickerWeatherThunderstorm": "Kulog at kidlat",
+  "videoEditorInfoStickerSunTimeZoneNote": "Ang mga oras ay nasa time zone ng phone mo.",
+  "videoEditorInfoStickerTemperatureLabel": "Temperatura",
+  "videoEditorInfoStickerUnitLabel": "Unit",
+  "videoEditorInfoStickerBatteryLevelLabel": "Antas ng baterya",
+  "videoEditorInfoStickerAdd": "Magdagdag ng sticker",
   "videoEditorSelectFontSemanticLabel": "Pumili ng font",
   "videoEditorFontUnknown": "Hindi alam",
   "videoEditorSplitFailed": "Nabigo ang paghati. Pakisubukan muli.",
@@ -4820,8 +4886,97 @@
   "ideasDescriptionFive": "Gusto ko lang magbahagi.",
   "ideasTitleSix": "Kaunti mula sa araw na ito",
   "ideasDescriptionSix": "Iiwan ko ito rito.",
+  "messagesRoomsUnreadLabel": "{count, plural, one{Mga silid, {displayCount} mensaheng hindi pa nababasa} other{Mga silid, {displayCount} mensaheng hindi pa nababasa}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, one{Bago: {displayCount}} other{Bago: {displayCount}}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, one{{displayCount} mensaheng hindi pa nababasa} other{{displayCount} mensaheng hindi pa nababasa}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, one{{displayCount} tao} other{{displayCount} tao}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, one{{displayCount} mensahe} other{{displayCount} mensahe}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "Nakaraang 24 oras",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "Tinitingnan ang aktibidad…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "Hindi ma-load ang aktibidad.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "Walang kamakailang mensahe. Mag-hello ka.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "Direkta",
   "messagesRooms": "Mga silid",
+  "messagesRoomsWithUnread": "Mga silid ({badge})",
   "messagesPublicTestRooms": "Mga pampublikong silid para sa pagsubok",
   "messagesPublicTestDisclosure": "Pampubliko ang mga silid na ito para sa pagsubok. Mababasa ng sinumang may access ang mga mensahe mo.",
   "messagesNoRooms": "Wala pang mga silid",

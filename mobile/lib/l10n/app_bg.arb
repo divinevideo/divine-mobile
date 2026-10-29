@@ -3291,6 +3291,72 @@
   "videoEditorFeedPreviewContent": "Избягвайте да поставяте съдържание зад тези области.",
   "videoEditorStickersDivineOriginals": "Divine Оригинали",
   "videoEditorStickerSearchHint": "Търсене на стикери...",
+  "videoEditorInfoStickersTitle": "Инфо",
+  "videoEditorInfoStickerTime": "Час",
+  "videoEditorInfoStickerDate": "Дата",
+  "videoEditorInfoStickerLocation": "Място",
+  "videoEditorInfoStickerWeather": "Времето",
+  "videoEditorInfoStickerAltitude": "Надморска височина",
+  "videoEditorInfoStickerBattery": "Батерия",
+  "videoEditorInfoStickerStyleLight": "Светъл",
+  "videoEditorInfoStickerStyleDark": "Тъмен",
+  "videoEditorInfoStickerStyleBrand": "Зелен",
+  "videoEditorInfoStickerStyleOutline": "Контур",
+  "videoEditorInfoStickerStyleDigital": "Цифров",
+  "videoEditorInfoStickerStyleAnalog": "Аналогов",
+  "videoEditorInfoStickerStyleGlass": "Стъкло",
+  "videoEditorInfoStickerStyleHighlight": "Жълт",
+  "videoEditorInfoStickerStyleNeon": "Неон",
+  "videoEditorInfoStickerStylePlain": "Семпъл",
+  "videoEditorInfoStickerChangePlace": "Смени мястото",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "Търсенето на места не е налично на това устройство.",
+  "videoEditorInfoStickerRecordedValue": "Заснемане · {value}",
+  "videoEditorInfoStickerNowValue": "Сега · {value}",
+  "videoEditorInfoStickerTodayValue": "Днес · {value}",
+  "videoEditorInfoStickerDayCount": "Брояч на дни",
+  "videoEditorInfoStickerSun": "Слънце",
+  "videoEditorInfoStickerMoon": "Луна",
+  "videoEditorInfoStickerRecTimer": "REC таймер",
+  "videoEditorInfoStickerStyleFilm": "Филм",
+  "videoEditorInfoStickerStyleCamcorder": "Видеокамера",
+  "videoEditorInfoStickerDayCountValue": "Ден {day}",
+  "videoEditorInfoStickerDayCountOfValue": "Ден {day} от {total}",
+  "videoEditorInfoStickerDayLabel": "Ден",
+  "videoEditorInfoStickerDayTotalLabel": "Общо дни (по желание)",
+  "videoEditorInfoStickerSymbolPin": "Карфица",
+  "videoEditorInfoStickerSymbolFlag": "Знаме",
+  "videoEditorInfoStickerSymbolGlobe": "Глобус",
+  "videoEditorInfoStickerSymbolMap": "Карта",
+  "videoEditorInfoStickerMoonNew": "Новолуние",
+  "videoEditorInfoStickerMoonWaxingCrescent": "Растящ сърп",
+  "videoEditorInfoStickerMoonFirstQuarter": "Първа четвърт",
+  "videoEditorInfoStickerMoonWaxingGibbous": "Растяща луна",
+  "videoEditorInfoStickerMoonFull": "Пълнолуние",
+  "videoEditorInfoStickerMoonWaningGibbous": "Намаляваща луна",
+  "videoEditorInfoStickerMoonLastQuarter": "Последна четвърт",
+  "videoEditorInfoStickerMoonWaningCrescent": "Намаляващ сърп",
+  "videoEditorInfoStickerPlaceSearchHint": "Потърси град или място",
+  "videoEditorInfoStickerPlaceNoResults": "Няма намерени места",
+  "videoEditorInfoStickerPlaceSearchFailed": "Не успяхме да потърсим места. Опитай пак.",
+  "videoEditorInfoStickerPlacePrivacyNote": "Във видеото ти влиза само името на мястото, никога точното ти местоположение.",
+  "videoEditorInfoStickerLoading": "Зарежда се…",
+  "videoEditorInfoStickerLoadFailed": "Не успяхме да заредим. Опитай пак.",
+  "videoEditorInfoStickerMetAttribution": "Данни от MET Norway",
+  "videoEditorInfoStickerWeatherNow": "За по-стари видеа няма данни за времето, затова това е времето в момента.",
+  "videoEditorInfoStickerWeatherSunny": "Слънчево",
+  "videoEditorInfoStickerWeatherClearNight": "Ясна нощ",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "Частична облачност",
+  "videoEditorInfoStickerWeatherCloudy": "Облачно",
+  "videoEditorInfoStickerWeatherFog": "Мъгла",
+  "videoEditorInfoStickerWeatherRain": "Дъжд",
+  "videoEditorInfoStickerWeatherShowers": "Превалявания",
+  "videoEditorInfoStickerWeatherSnow": "Сняг",
+  "videoEditorInfoStickerWeatherThunderstorm": "Гръмотевична буря",
+  "videoEditorInfoStickerSunTimeZoneNote": "Часовете са в часовата зона на телефона ти.",
+  "videoEditorInfoStickerTemperatureLabel": "Температура",
+  "videoEditorInfoStickerUnitLabel": "Мерна единица",
+  "videoEditorInfoStickerBatteryLevelLabel": "Ниво на батерията",
+  "videoEditorInfoStickerAdd": "Добави стикер",
   "videoEditorSelectFontSemanticLabel": "Избери шрифт",
   "videoEditorFontUnknown": "Неизвестен",
   "videoEditorSplitFailed": "Разделянето не бе успешно. Моля, опитайте отново.",
@@ -5910,8 +5976,97 @@
   "ideasDescriptionFive": "Просто исках да споделя.",
   "ideasTitleSix": "Малко от днес",
   "ideasDescriptionSix": "Оставям това тук.",
+  "messagesRoomsUnreadLabel": "{count, plural, one{Стаи, {displayCount} непрочетено съобщение} other{Стаи, {displayCount} непрочетени съобщения}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, one{Ново: {displayCount}} other{Нови: {displayCount}}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, one{{displayCount} непрочетено съобщение} other{{displayCount} непрочетени съобщения}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, one{{displayCount} човек} other{{displayCount} души}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, one{{displayCount} съобщение} other{{displayCount} съобщения}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "Последните 24 ч.",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "Проверка на активността…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "Активността не можа да се зареди.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "Няма скорошни съобщения. Кажи здрасти.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "Лични",
   "messagesRooms": "Стаи",
+  "messagesRoomsWithUnread": "Стаи ({badge})",
   "messagesPublicTestRooms": "Публични тестови стаи",
   "messagesPublicTestDisclosure": "Тези тестови стаи са публични. Всеки с достъп може да чете съобщенията ти.",
   "messagesNoRooms": "Все още няма стаи",

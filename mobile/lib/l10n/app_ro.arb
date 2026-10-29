@@ -3050,6 +3050,72 @@
   "videoEditorFeedPreviewContent": "Evită să plasezi conținut în spatele acestor zone.",
   "videoEditorStickersDivineOriginals": "Divine Originale",
   "videoEditorStickerSearchHint": "Caută stickere...",
+  "videoEditorInfoStickersTitle": "Info",
+  "videoEditorInfoStickerTime": "Ora",
+  "videoEditorInfoStickerDate": "Data",
+  "videoEditorInfoStickerLocation": "Locație",
+  "videoEditorInfoStickerWeather": "Vremea",
+  "videoEditorInfoStickerAltitude": "Altitudine",
+  "videoEditorInfoStickerBattery": "Baterie",
+  "videoEditorInfoStickerStyleLight": "Luminos",
+  "videoEditorInfoStickerStyleDark": "Întunecat",
+  "videoEditorInfoStickerStyleBrand": "Verde",
+  "videoEditorInfoStickerStyleOutline": "Contur",
+  "videoEditorInfoStickerStyleDigital": "Digital",
+  "videoEditorInfoStickerStyleAnalog": "Analogic",
+  "videoEditorInfoStickerStyleGlass": "Sticlă",
+  "videoEditorInfoStickerStyleHighlight": "Galben",
+  "videoEditorInfoStickerStyleNeon": "Neon",
+  "videoEditorInfoStickerStylePlain": "Simplu",
+  "videoEditorInfoStickerChangePlace": "Schimbă locul",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "Căutarea locurilor nu este disponibilă pe acest dispozitiv.",
+  "videoEditorInfoStickerRecordedValue": "Înregistrare · {value}",
+  "videoEditorInfoStickerNowValue": "Acum · {value}",
+  "videoEditorInfoStickerTodayValue": "Azi · {value}",
+  "videoEditorInfoStickerDayCount": "Contor de zile",
+  "videoEditorInfoStickerSun": "Soare",
+  "videoEditorInfoStickerMoon": "Lună",
+  "videoEditorInfoStickerRecTimer": "Cronometru REC",
+  "videoEditorInfoStickerStyleFilm": "Film",
+  "videoEditorInfoStickerStyleCamcorder": "Cameră video",
+  "videoEditorInfoStickerDayCountValue": "Ziua {day}",
+  "videoEditorInfoStickerDayCountOfValue": "Ziua {day} din {total}",
+  "videoEditorInfoStickerDayLabel": "Ziua",
+  "videoEditorInfoStickerDayTotalLabel": "Total zile (opțional)",
+  "videoEditorInfoStickerSymbolPin": "Pin",
+  "videoEditorInfoStickerSymbolFlag": "Steag",
+  "videoEditorInfoStickerSymbolGlobe": "Glob",
+  "videoEditorInfoStickerSymbolMap": "Hartă",
+  "videoEditorInfoStickerMoonNew": "Lună nouă",
+  "videoEditorInfoStickerMoonWaxingCrescent": "Semilună în creștere",
+  "videoEditorInfoStickerMoonFirstQuarter": "Primul pătrar",
+  "videoEditorInfoStickerMoonWaxingGibbous": "Lună gibboasă în creștere",
+  "videoEditorInfoStickerMoonFull": "Lună plină",
+  "videoEditorInfoStickerMoonWaningGibbous": "Lună gibboasă în descreștere",
+  "videoEditorInfoStickerMoonLastQuarter": "Ultimul pătrar",
+  "videoEditorInfoStickerMoonWaningCrescent": "Semilună în descreștere",
+  "videoEditorInfoStickerPlaceSearchHint": "Caută un oraș sau un loc",
+  "videoEditorInfoStickerPlaceNoResults": "Nu am găsit niciun loc",
+  "videoEditorInfoStickerPlaceSearchFailed": "Nu am putut căuta locuri. Încearcă din nou.",
+  "videoEditorInfoStickerPlacePrivacyNote": "În video ajunge doar numele locului, niciodată poziția ta exactă.",
+  "videoEditorInfoStickerLoading": "Se încarcă…",
+  "videoEditorInfoStickerLoadFailed": "Nu am putut încărca. Încearcă din nou.",
+  "videoEditorInfoStickerMetAttribution": "Date de la MET Norway",
+  "videoEditorInfoStickerWeatherNow": "Pentru videoclipurile mai vechi nu există vremea, așa că aceasta este vremea de acum.",
+  "videoEditorInfoStickerWeatherSunny": "Însorit",
+  "videoEditorInfoStickerWeatherClearNight": "Noapte senină",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "Parțial noros",
+  "videoEditorInfoStickerWeatherCloudy": "Înnorat",
+  "videoEditorInfoStickerWeatherFog": "Ceață",
+  "videoEditorInfoStickerWeatherRain": "Ploaie",
+  "videoEditorInfoStickerWeatherShowers": "Averse",
+  "videoEditorInfoStickerWeatherSnow": "Ninsoare",
+  "videoEditorInfoStickerWeatherThunderstorm": "Furtună",
+  "videoEditorInfoStickerSunTimeZoneNote": "Orele sunt în fusul orar al telefonului tău.",
+  "videoEditorInfoStickerTemperatureLabel": "Temperatură",
+  "videoEditorInfoStickerUnitLabel": "Unitate",
+  "videoEditorInfoStickerBatteryLevelLabel": "Nivelul bateriei",
+  "videoEditorInfoStickerAdd": "Adaugă sticker",
   "videoEditorSelectFontSemanticLabel": "Selectează fontul",
   "videoEditorFontUnknown": "Necunoscut",
   "videoEditorSplitFailed": "Împărțire eșuată. Vă rugăm să încercați din nou.",
@@ -5793,8 +5859,97 @@
   "ideasDescriptionFive": "Am vrut doar să împărtășesc.",
   "ideasTitleSix": "Un pic din ziua de azi",
   "ideasDescriptionSix": "Las asta aici.",
+  "messagesRoomsUnreadLabel": "{count, plural, one{Camere, {displayCount} mesaj necitit} few{Camere, {displayCount} mesaje necitite} other{Camere, {displayCount} de mesaje necitite}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, one{Necitit: {displayCount}} few{Necitite: {displayCount}} other{Necitite: {displayCount}}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, one{{displayCount} mesaj necitit} few{{displayCount} mesaje necitite} other{{displayCount} de mesaje necitite}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, one{{displayCount} persoană} few{{displayCount} persoane} other{{displayCount} de persoane}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, one{{displayCount} mesaj} few{{displayCount} mesaje} other{{displayCount} de mesaje}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "Ultimele 24 de ore",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "Se verifică activitatea…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "Activitatea nu s-a putut încărca.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "Nu sunt mesaje recente. Spune salut.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "Directe",
   "messagesRooms": "Camere",
+  "messagesRoomsWithUnread": "Camere ({badge})",
   "messagesPublicTestRooms": "Camere publice de test",
   "messagesPublicTestDisclosure": "Aceste camere de test sunt publice. Oricine are acces îți poate citi mesajele.",
   "messagesNoRooms": "Încă nu există camere",

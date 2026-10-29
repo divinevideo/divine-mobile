@@ -19,6 +19,7 @@ import 'package:dm_repository/src/dm_batch_send_budget.dart';
 import 'package:dm_repository/src/dm_clock.dart';
 import 'package:dm_repository/src/dm_decrypt_isolate.dart';
 import 'package:dm_repository/src/dm_decryption_worker.dart';
+import 'package:dm_repository/src/dm_held_pool_wraps.dart';
 import 'package:dm_repository/src/dm_message_size.dart';
 import 'package:dm_repository/src/dm_reactions_repository.dart';
 import 'package:dm_repository/src/dm_read_state_writer.dart';
@@ -433,8 +434,9 @@ typedef DmVisibleActivity = ({
 /// [DmInboxResolution.unreadable] is a fact about our own read — the wrap may
 /// be sitting on relays the recipient never queries, so it is reported
 /// soft-unconfirmed and the durable row is kept for the sweep to re-resolve
-/// (#7317). A message's row also records the accepted wrap, so its retries
-/// publish another recipient wrap only once the inbox is found (#10012).
+/// (#7317). The held row also records the accepted wrap — a message's, a
+/// reaction's, its removal's and a retraction's — so its retries publish
+/// another recipient wrap only once the inbox is found (#10012).
 /// Shared by every gift-wrap publisher that also reports delivery —
 /// the 1:1 send, its retry, the reaction fan-out (#8443), the deletion
 /// fan-out (#8515), and the group send (#8434) — so no sweep can undo what a
@@ -3673,8 +3675,8 @@ class DmRepository {
   ///
   ///  * NIP-09 makes `k` a SHOULD (`09.md:9`), so a conforming foreign client
   ///    may omit it entirely (#7329).
-  ///  * Our own sender hardcodes `['k','14']` even when deleting a kind-15
-  ///    file message, so the tag is already wrong on our own wire.
+  ///  * Our own sender hardcoded `['k','14']` even when deleting a kind-15
+  ///    file message, and deletions sent or queued then still carry it.
   ///  * Before this, *every* wrapped kind-5 went to the reactions handler,
   ///    which answered `processed` for anything not tagged `['k','7']`. That
   ///    recorded the wrap terminally and lost message deletions for good
@@ -9811,12 +9813,13 @@ class DmRepository {
   /// Delete a sent message for everyone via NIP-09 kind 5.
   ///
   /// The kind-5 travels as a **NIP-17 rumor inside a kind-1059 gift wrap**
-  /// addressed to each participant (`17.md:87`), not as a bare event on the
-  /// public pool. The bare form named the counterparty in a plaintext `p` tag
-  /// alongside a real timestamp and the rumor kind, which defeats NIP-17's
-  /// first stated benefit (`17.md:97`) — and NIP-09 tells relays to keep
-  /// deletion requests indefinitely (`09.md:33`), so each one was a permanent
-  /// public record that these two pubkeys had a conversation (#7341).
+  /// (`17.md:87`), which Divine sends to each participant, not as a bare
+  /// event on the public pool. The bare form named the counterparty in a
+  /// plaintext `p` tag alongside a real timestamp and the rumor kind, which
+  /// defeats NIP-17's first stated benefit (`17.md:97`) — and NIP-09 tells
+  /// relays to keep deletion requests indefinitely (`09.md:33`), so each one
+  /// was a permanent public record that these two pubkeys had a conversation
+  /// (#7341).
   ///
   /// Returns once the deletion is **durable**, not once it is delivered. The
   /// row is soft-deleted and the rumor stored in one write; delivery is
@@ -9875,14 +9878,9 @@ class DmRepository {
     // `k` names the kind of the event being deleted (NIP-09 09.md:9), so it
     // reads the row rather than assuming 14 — a kind-15 file message was
     // previously mislabelled on the wire.
-    final deletion = _messageService!.buildRumor(
-      recipientPubkey: recipients.first,
-      content: '',
-      eventKind: EventKind.eventDeletion,
-      additionalTags: [
-        ['e', rumorId],
-        ['k', row.messageKind.toString()],
-      ],
+    final deletion = _messageService!.buildDeletionRumor(
+      targetEventId: rumorId,
+      targetKind: row.messageKind,
     );
 
     // Durability boundary. One write hides the bubble AND stores the rumor,
@@ -9946,11 +9944,14 @@ class DmRepository {
     required String conversationId,
     required Event deletion,
     required List<String> recipients,
+    Map<String, HeldWrap> heldWraps = const {},
   }) async {
     try {
       final (:result, :anyRecipientAccepted) = await _fanOutDeletion(
+        rumorId: rumorId,
         deletion: deletion,
         recipients: recipients,
+        heldWraps: heldWraps,
       );
       switch (result) {
         case NIP17SendSuccess():
@@ -10069,6 +10070,12 @@ class DmRepository {
   /// before #8232, or unreadable — it mints one, because that row has no
   /// other route back: [deleteMessageForEveryone] returns early on
   /// `is_deleted` and the sweep's worklist requires a non-null rumor (#8284).
+  ///
+  /// A recipient an earlier attempt delivered the kind 5 to is sent nothing
+  /// again. One whose earlier wrap the fallback pool accepted on an
+  /// unreadable inbox is sent nothing more while it stays unreadable, is
+  /// settled on that wrap once they advertise no inbox, and is wrapped again
+  /// only once their inbox is found (#10012).
   Future<DmMessageDeletionOutcome> retryMessageDeletion({
     required String rumorId,
   }) {
@@ -10122,14 +10129,9 @@ class DmRepository {
     final mintedFresh = replayable == null;
     final deletion =
         replayable ??
-        _messageService!.buildRumor(
-          recipientPubkey: recipients.first,
-          content: '',
-          eventKind: EventKind.eventDeletion,
-          additionalTags: [
-            ['e', rumorId],
-            ['k', row.messageKind.toString()],
-          ],
+        _messageService!.buildDeletionRumor(
+          targetEventId: rumorId,
+          targetKind: row.messageKind,
         );
 
     // A user-driven retry moves a blocked row back through pending so the
@@ -10153,16 +10155,23 @@ class DmRepository {
       conversationId: row.conversationId,
       deletion: deletion,
       recipients: recipients,
+      // A freshly minted kind 5 replaced the stored one, and the wraps held
+      // for that one with it.
+      heldWraps: mintedFresh
+          ? const {}
+          : decodeHeldWraps(row.heldDeletionWraps),
     );
   }
 
   /// Wrap [deletion] to each recipient in turn.
   ///
-  /// Terminal success only when EVERY recipient's wrap lands. One row cannot
-  /// track per-recipient delivery, so a partial fan-out must not settle it —
-  /// the sweep re-drives the whole rumor and the recipients that already have
-  /// it dedup on the (identical) rumor id. Mirrors
-  /// `DmReactionsRepository._fanOutRumor`.
+  /// Terminal success only when EVERY recipient's wrap lands. One row holds
+  /// the retraction for every member, so a partial fan-out must not settle
+  /// it: settling would clear the stored rumor the missed members still need.
+  /// Instead the attempt records on the row the members it delivered to, and
+  /// a later attempt passes them back in [heldWraps] and sends them nothing,
+  /// counting them as delivered, so the sweep re-drives the rumor only to the
+  /// members it missed (#10012). Mirrors `DmReactionsRepository._fanOutRumor`.
   ///
   /// A recipient's wrap "lands" only when the relay that confirmed it is one
   /// the recipient reads. When their kind-10050 could not be READ the wrap
@@ -10187,10 +10196,22 @@ class DmRepository {
   /// returns a [DmMessageDeletionOutcome]. The record also reports whether
   /// any post-downgrade recipient result was accepted, so the caller can
   /// distinguish wholly refused from partly delivered fan-outs (#8201).
+  ///
+  /// The wrap the pool held is recorded on the retracted message [rumorId],
+  /// and a later attempt passes it back in [heldWraps], keyed by recipient,
+  /// with the rules `_fanOutRumor` applies (#10012): nothing more to that
+  /// recipient while their inbox stays unreadable, the held wrap as their
+  /// delivery once they advertise no inbox, a new wrap once it is found. An
+  /// attempt in which any recipient's inbox is unreadable is held, so no
+  /// recipient's send publishes the sender's copy then; the attempt that
+  /// delivers publishes one per member, as every delivered retraction does
+  /// (#10016), a member it sends nothing included.
   Future<({NIP17SendResult result, bool anyRecipientAccepted})>
   _fanOutDeletion({
+    required String rumorId,
     required Event deletion,
     required List<String> recipients,
+    Map<String, HeldWrap> heldWraps = const {},
   }) async {
     // Resolve every recipient's kind-10050 inbox concurrently BEFORE the loop,
     // exactly as `sendMessage` and `sendGroupMessage` do. Without it the
@@ -10211,43 +10232,105 @@ class DmRepository {
         ).then((inbox) => inboxByRecipient[recipient] = inbox),
     ]);
     final selfWrapTargets = await selfWrapRelays;
+    final held = recipients.any(
+      (recipient) =>
+          heldWraps[recipient]?.delivered != true &&
+          inboxByRecipient[recipient]?.state == DmInboxResolution.unreadable,
+    );
     NIP17SendSuccess? lastSuccess;
     final failures = <NIP17SendFailure>[];
+    // The members this attempt delivered to, and the wrap each has (#10012).
+    final deliveredWraps = <String, String>{};
     for (final recipient in recipients) {
       final inbox = inboxByRecipient[recipient];
-      final published = await _messageService!
-          .sendRumor(
+      final heldWrap = heldWraps[recipient];
+      final NIP17SendResult result;
+      final unsent = await resolveHeldWrap(
+        messageService: _messageService!,
+        rumor: deletion,
+        recipientPubkey: recipient,
+        heldWrap: heldWrap,
+        inboxState: inbox?.state,
+      );
+      if (unsent != null) {
+        result = unsent;
+        // Settled on the held wrap, or delivered by an earlier attempt:
+        // publish the copy its send would have.
+        if (unsent.success && !held) {
+          final ownCopy = await _messageService!.publishSelfWrap(
             rumorEvent: deletion,
-            recipientPubkey: recipient,
-            targetRelays: inbox?.relays,
-            selfWrapTargetRelays: selfWrapTargets,
-            awaitRecipientOk: true,
-          )
-          .timeout(
-            _messagePublishTimeout,
-            // A hung socket is inconclusive, not a rejection: the frame may
-            // already be written. Time out into a retryable failure so the
-            // drive returns and the sweep re-drives, rather than leaving an
-            // unawaited future alive alongside every later attempt.
-            onTimeout: () => NIP17SendResult.failure(
-              'Deletion publish timed out after '
-              '${_messagePublishTimeout.inSeconds}s',
-              retryablePending: true,
-            ),
+            targetRelays: selfWrapTargets,
           );
-      // A pool `OK` for a recipient whose inbox we could not READ is not
-      // delivery: the retraction may be sitting where they never look, and
-      // `markMessageDeletionSent` would clear the stored rumor, taking the row
-      // off the sweep's worklist for good (#8515).
-      final result = inbox == null
-          ? published
-          : downgradeFallbackPoolDelivery(published, inbox.state);
+          if (!ownCopy.success) {
+            Log.warning(
+              'Own copy of retraction ${deletion.id} not published for '
+              '${pubkeyForLogs(recipient)}, who has wrap '
+              '${unsent.messageEventId} with no send: ${ownCopy.error}',
+              category: LogCategory.system,
+            );
+          }
+        }
+      } else {
+        final published = await _messageService!
+            .sendRumor(
+              rumorEvent: deletion,
+              recipientPubkey: recipient,
+              targetRelays: inbox?.relays,
+              selfWrapTargetRelays: selfWrapTargets,
+              awaitRecipientOk: true,
+              onSelfWrapDue: held
+                  ? (_) => Log.info(
+                      'Withholding the self-wrap for rumor ${deletion.id}: '
+                      'a recipient inbox is unreadable, so this attempt is '
+                      'held, not delivered (#10012)',
+                      category: LogCategory.system,
+                    )
+                  : null,
+            )
+            .timeout(
+              _messagePublishTimeout,
+              // A hung socket is inconclusive, not a rejection: the frame may
+              // already be written. Time out into a retryable failure so the
+              // drive returns and the sweep re-drives, rather than leaving an
+              // unawaited future alive alongside every later attempt.
+              onTimeout: () => NIP17SendResult.failure(
+                'Deletion publish timed out after '
+                '${_messagePublishTimeout.inSeconds}s',
+                retryablePending: true,
+              ),
+            );
+        // A pool `OK` for a recipient whose inbox we could not READ is not
+        // delivery: the retraction may be sitting where they never look, and
+        // `markMessageDeletionSent` would clear the stored rumor, taking the
+        // row off the sweep's worklist for good (#8515).
+        result = inbox == null
+            ? published
+            : downgradeFallbackPoolDelivery(published, inbox.state);
+        final heldWrapId = heldPoolWrapOf(published, result);
+        if (heldWrapId != null) {
+          await _recordHeldDeletionWrap(
+            rumorId: rumorId,
+            recipientPubkey: recipient,
+            wrapEventId: heldWrapId,
+          );
+        }
+      }
       switch (result) {
-        case NIP17SendSuccess():
+        case NIP17SendSuccess(:final messageEventId):
           lastSuccess = result;
+          if (heldWrap?.delivered != true) {
+            deliveredWraps[recipient] = messageEventId;
+          }
         case NIP17SendFailure():
           failures.add(result);
       }
+    }
+    // Only an attempt that leaves the row to be retried needs the record.
+    if (failures.isNotEmpty && deliveredWraps.isNotEmpty) {
+      await _recordDeliveredDeletionWraps(
+        rumorId: rumorId,
+        wraps: deliveredWraps,
+      );
     }
     final anyRecipientAccepted = lastSuccess != null;
     if (failures.isEmpty) {
@@ -10271,6 +10354,63 @@ class DmRepository {
           : NIP17SendResult.failure(summary),
       anyRecipientAccepted: anyRecipientAccepted,
     );
+  }
+
+  /// Records on the retraction of [rumorId] that the fallback pool holds
+  /// [wrapEventId] for [recipientPubkey] (#10012).
+  Future<void> _recordHeldDeletionWrap({
+    required String rumorId,
+    required String recipientPubkey,
+    required String wrapEventId,
+  }) => _recordDeletionWraps(
+    rumorId,
+    what: 'held pool wrap $wrapEventId',
+    write: () => _directMessagesDao.recordHeldDeletionWrap(
+      rumorId,
+      recipientPubkey: recipientPubkey,
+      wrapEventId: wrapEventId,
+      ownerPubkey: _ownerPubkey,
+    ),
+  );
+
+  /// Records on the retraction of [rumorId] that each member in [wraps] has
+  /// it, through the wrap it names (#10012).
+  Future<void> _recordDeliveredDeletionWraps({
+    required String rumorId,
+    required Map<String, String> wraps,
+  }) => _recordDeletionWraps(
+    rumorId,
+    what: 'that ${wraps.keys.map(pubkeyForLogs).join(', ')} have it',
+    write: () => _directMessagesDao.recordDeliveredDeletionWraps(
+      rumorId,
+      wraps: wraps,
+      ownerPubkey: _ownerPubkey,
+    ),
+  );
+
+  /// Runs [write], which records [what] on the retraction of [rumorId]
+  /// (#10012). Non-rethrowing: without the record the next retry wraps the
+  /// kind 5 again for those members, as every retry did before.
+  Future<void> _recordDeletionWraps(
+    String rumorId, {
+    required String what,
+    required Future<bool> Function() write,
+  }) async {
+    try {
+      await write();
+    } on Object catch (e, stackTrace) {
+      Log.error(
+        'Failed to record $what on the retraction of $rumorId: $e',
+        category: LogCategory.system,
+        error: e,
+        stackTrace: stackTrace,
+      );
+      _errorReporter?.call(
+        e,
+        stackTrace,
+        site: DmRepositoryReportableSites.recordHeldPoolWrap,
+      );
+    }
   }
 
   /// Refreshes the denormalized preview columns of [conversationId] from its

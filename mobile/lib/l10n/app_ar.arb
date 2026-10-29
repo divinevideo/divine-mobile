@@ -2950,6 +2950,72 @@
   "videoEditorLayerAnimationPointLeaveHint": "النقر على الفيديو لتحديد نقطة نهاية الانزلاق",
   "videoEditorStickersDivineOriginals": "Divine الأصلية",
   "videoEditorStickerSearchHint": "البحث في الملصقات...",
+  "videoEditorInfoStickersTitle": "معلومات",
+  "videoEditorInfoStickerTime": "الوقت",
+  "videoEditorInfoStickerDate": "التاريخ",
+  "videoEditorInfoStickerLocation": "الموقع",
+  "videoEditorInfoStickerWeather": "الطقس",
+  "videoEditorInfoStickerAltitude": "الارتفاع",
+  "videoEditorInfoStickerBattery": "البطارية",
+  "videoEditorInfoStickerStyleLight": "فاتح",
+  "videoEditorInfoStickerStyleDark": "داكن",
+  "videoEditorInfoStickerStyleBrand": "أخضر",
+  "videoEditorInfoStickerStyleOutline": "إطار",
+  "videoEditorInfoStickerStyleDigital": "رقمي",
+  "videoEditorInfoStickerStyleAnalog": "تناظري",
+  "videoEditorInfoStickerStyleGlass": "زجاجي",
+  "videoEditorInfoStickerStyleHighlight": "أصفر",
+  "videoEditorInfoStickerStyleNeon": "نيون",
+  "videoEditorInfoStickerStylePlain": "بسيط",
+  "videoEditorInfoStickerChangePlace": "تغيير المكان",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "البحث عن الأماكن غير متاح على هذا الجهاز.",
+  "videoEditorInfoStickerRecordedValue": "وقت التسجيل · {value}",
+  "videoEditorInfoStickerNowValue": "الآن · {value}",
+  "videoEditorInfoStickerTodayValue": "اليوم · {value}",
+  "videoEditorInfoStickerDayCount": "عدّاد الأيام",
+  "videoEditorInfoStickerSun": "الشمس",
+  "videoEditorInfoStickerMoon": "القمر",
+  "videoEditorInfoStickerRecTimer": "مؤقّت REC",
+  "videoEditorInfoStickerStyleFilm": "فيلم",
+  "videoEditorInfoStickerStyleCamcorder": "كاميرا فيديو",
+  "videoEditorInfoStickerDayCountValue": "اليوم {day}",
+  "videoEditorInfoStickerDayCountOfValue": "اليوم {day} من {total}",
+  "videoEditorInfoStickerDayLabel": "اليوم",
+  "videoEditorInfoStickerDayTotalLabel": "إجمالي الأيام (اختياري)",
+  "videoEditorInfoStickerSymbolPin": "دبوس",
+  "videoEditorInfoStickerSymbolFlag": "علم",
+  "videoEditorInfoStickerSymbolGlobe": "كرة أرضية",
+  "videoEditorInfoStickerSymbolMap": "خريطة",
+  "videoEditorInfoStickerMoonNew": "محاق",
+  "videoEditorInfoStickerMoonWaxingCrescent": "هلال متزايد",
+  "videoEditorInfoStickerMoonFirstQuarter": "تربيع أول",
+  "videoEditorInfoStickerMoonWaxingGibbous": "أحدب متزايد",
+  "videoEditorInfoStickerMoonFull": "بدر",
+  "videoEditorInfoStickerMoonWaningGibbous": "أحدب متناقص",
+  "videoEditorInfoStickerMoonLastQuarter": "تربيع ثانٍ",
+  "videoEditorInfoStickerMoonWaningCrescent": "هلال متناقص",
+  "videoEditorInfoStickerPlaceSearchHint": "البحث عن مدينة أو مكان",
+  "videoEditorInfoStickerPlaceNoResults": "لم يتم العثور على أماكن",
+  "videoEditorInfoStickerPlaceSearchFailed": "تعذّر البحث عن الأماكن. حاول مرة أخرى.",
+  "videoEditorInfoStickerPlacePrivacyNote": "يظهر في الفيديو اسم المكان فقط، ولا يظهر موقعك الدقيق أبدًا.",
+  "videoEditorInfoStickerLoading": "جارٍ التحميل…",
+  "videoEditorInfoStickerLoadFailed": "تعذّر التحميل. حاول مرة أخرى.",
+  "videoEditorInfoStickerMetAttribution": "البيانات من MET Norway",
+  "videoEditorInfoStickerWeatherNow": "لا تتوفر بيانات الطقس للفيديوهات الأقدم، لذا هذا هو الطقس الآن.",
+  "videoEditorInfoStickerWeatherSunny": "مشمس",
+  "videoEditorInfoStickerWeatherClearNight": "ليلة صافية",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "غائم جزئيًا",
+  "videoEditorInfoStickerWeatherCloudy": "غائم",
+  "videoEditorInfoStickerWeatherFog": "ضباب",
+  "videoEditorInfoStickerWeatherRain": "مطر",
+  "videoEditorInfoStickerWeatherShowers": "زخات مطر",
+  "videoEditorInfoStickerWeatherSnow": "ثلج",
+  "videoEditorInfoStickerWeatherThunderstorm": "عاصفة رعدية",
+  "videoEditorInfoStickerSunTimeZoneNote": "الأوقات حسب المنطقة الزمنية للهاتف.",
+  "videoEditorInfoStickerTemperatureLabel": "درجة الحرارة",
+  "videoEditorInfoStickerUnitLabel": "الوحدة",
+  "videoEditorInfoStickerBatteryLevelLabel": "مستوى البطارية",
+  "videoEditorInfoStickerAdd": "إضافة الملصق",
   "videoEditorTextAlignmentSemanticLabel": "محاذاة النص",
   "videoEditorTextBackgroundSemanticLabel": "خلفية النص",
   "videoEditorTextDontWrap": "بدون التفاف",
@@ -5793,8 +5859,97 @@
   "ideasDescriptionFive": "أردت المشاركة فقط.",
   "ideasTitleSix": "القليل من اليوم",
   "ideasDescriptionSix": "أترك هذا هنا.",
+  "messagesRoomsUnreadLabel": "{count, plural, zero{الغرف، رسائل غير مقروءة: {displayCount}} one{الغرف، {displayCount} رسالة غير مقروءة} two{الغرف، الرسائل غير المقروءة: {displayCount}} few{الغرف، {displayCount} رسائل غير مقروءة} many{الغرف، {displayCount} رسالة غير مقروءة} other{الغرف، {displayCount} رسالة غير مقروءة}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, zero{الجديد: {displayCount}} one{الجديد: {displayCount}} two{الجديد: {displayCount}} few{الجديد: {displayCount}} many{الجديد: {displayCount}} other{الجديد: {displayCount}}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, zero{رسائل غير مقروءة: {displayCount}} one{{displayCount} رسالة غير مقروءة} two{الرسائل غير المقروءة: {displayCount}} few{{displayCount} رسائل غير مقروءة} many{{displayCount} رسالة غير مقروءة} other{{displayCount} رسالة غير مقروءة}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, zero{أشخاص: {displayCount}} one{{displayCount} شخص} two{الأشخاص: {displayCount}} few{{displayCount} أشخاص} many{{displayCount} شخصًا} other{{displayCount} شخص}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, zero{رسائل: {displayCount}} one{{displayCount} رسالة} two{الرسائل: {displayCount}} few{{displayCount} رسائل} many{{displayCount} رسالة} other{{displayCount} رسالة}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "آخر 24 ساعة",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "جارٍ التحقق من النشاط…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "تعذّر تحميل النشاط.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "لا توجد رسائل حديثة. ما رأيك بإلقاء التحية؟",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "مباشرة",
   "messagesRooms": "الغرف",
+  "messagesRoomsWithUnread": "الغرف ({badge})",
   "messagesPublicTestRooms": "غرف اختبار عامة",
   "messagesPublicTestDisclosure": "غرف الاختبار هذه عامة. يمكن لأي شخص لديه صلاحية الوصول قراءة رسائلك.",
   "messagesNoRooms": "لا توجد غرف بعد",

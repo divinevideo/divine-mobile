@@ -328,6 +328,26 @@ class _SinceEnforcingRelay {
 
 class _MockNIP17MessageService extends Mock implements NIP17MessageService {}
 
+/// Mirrors NIP17MessageService.buildDeletionRumor, which is pure construction.
+void _stubBuildDeletionRumor(_MockNIP17MessageService service) {
+  when(
+    () => service.buildDeletionRumor(
+      targetEventId: any(named: 'targetEventId'),
+      targetKind: any(named: 'targetKind'),
+    ),
+  ).thenAnswer(
+    (invocation) => Event(
+      _validPubkeyA,
+      EventKind.eventDeletion,
+      [
+        ['e', invocation.namedArguments[#targetEventId] as String],
+        ['k', '${invocation.namedArguments[#targetKind]}'],
+      ],
+      '',
+    ),
+  );
+}
+
 class _MockDirectMessagesDao extends Mock implements DirectMessagesDao {}
 
 class _MockConversationsDao extends Mock implements ConversationsDao {}
@@ -19114,6 +19134,8 @@ void main() {
     // -----------------------------------------------------------------
 
     group('deleteMessageForEveryone', () {
+      setUp(() => _stubBuildDeletionRumor(mockMessageService));
+
       final conversationId = DmRepository.computeConversationId(
         [_validPubkeyA, _validPubkeyB],
       );
@@ -19288,31 +19310,26 @@ void main() {
           // `p` tag on a relay that retains deletion requests indefinitely.
           verifyNever(() => mockNostrClient.publishEvent(any()));
 
-          final captured =
-              verify(
-                    () => mockMessageService.sendRumor(
-                      rumorEvent: captureAny(named: 'rumorEvent'),
-                      recipientPubkey: any(named: 'recipientPubkey'),
-                      targetRelays: any(named: 'targetRelays'),
-                      awaitRecipientOk: any(named: 'awaitRecipientOk'),
-                      selfWrapOnSoftUnconfirmed: any(
-                        named: 'selfWrapOnSoftUnconfirmed',
-                      ),
-                      onSelfWrapDue: any(named: 'onSelfWrapDue'),
-                    ),
-                  ).captured.single
-                  as Event;
-          expect(captured.kind, equals(EventKind.eventDeletion));
-          // `p` now names the wrap recipient rather than advertising the
-          // counterparty publicly — same tag, opposite meaning.
-          expect(
-            captured.tags,
-            containsAll([
-              ['e', _rumorEventId],
-              ['k', '14'],
-              ['p', _validPubkeyB],
-            ]),
-          );
+          verify(
+            () => mockMessageService.sendRumor(
+              rumorEvent: any(named: 'rumorEvent'),
+              recipientPubkey: any(named: 'recipientPubkey'),
+              targetRelays: any(named: 'targetRelays'),
+              awaitRecipientOk: any(named: 'awaitRecipientOk'),
+              selfWrapOnSoftUnconfirmed: any(
+                named: 'selfWrapOnSoftUnconfirmed',
+              ),
+              onSelfWrapDue: any(named: 'onSelfWrapDue'),
+            ),
+          ).called(1);
+          // The rumor names the deleted message and its kind, and no one
+          // (#9774); buildDeletionRumor's own tests pin that shape.
+          verify(
+            () => mockMessageService.buildDeletionRumor(
+              targetEventId: _rumorEventId,
+              targetKind: EventKind.privateDirectMessage,
+            ),
+          ).called(1);
 
           // Durable first, delivered second.
           verify(
@@ -19679,13 +19696,8 @@ void main() {
             participants: [_validPubkeyA.toUpperCase(), _validPubkeyB],
           );
           final recipients = <String>[];
-          final addressedTo = <String>[];
           stubSendRumor((rumorEvent, recipientPubkey) {
             recipients.add(recipientPubkey);
-            addressedTo.addAll([
-              for (final tag in rumorEvent.tags)
-                if (tag.length >= 2 && tag[0] == 'p') tag[1],
-            ]);
             return NIP17SendResult.success(
               rumorEventId: rumorEvent.id,
               messageEventId: _giftWrapEventId,
@@ -19698,7 +19710,6 @@ void main() {
           await pumpEventQueue();
 
           expect(recipients, equals([_validPubkeyB]));
-          expect(addressedTo, equals([_validPubkeyB]));
         },
       );
 
@@ -19949,30 +19960,18 @@ void main() {
         await repo.deleteMessageForEveryone(_rumorEventId);
         await Future<void>.delayed(Duration.zero);
 
-        final captured =
-            verify(
-                  () => mockMessageService.sendRumor(
-                    rumorEvent: captureAny(named: 'rumorEvent'),
-                    recipientPubkey: any(named: 'recipientPubkey'),
-                    targetRelays: any(named: 'targetRelays'),
-                    awaitRecipientOk: any(named: 'awaitRecipientOk'),
-                    selfWrapOnSoftUnconfirmed: any(
-                      named: 'selfWrapOnSoftUnconfirmed',
-                    ),
-                    onSelfWrapDue: any(named: 'onSelfWrapDue'),
-                  ),
-                ).captured.single
-                as Event;
-        expect(
-          captured.tags,
-          containsAll([
-            ['k', EventKind.fileMessage.toString()],
-          ]),
-        );
+        verify(
+          () => mockMessageService.buildDeletionRumor(
+            targetEventId: _rumorEventId,
+            targetKind: EventKind.fileMessage,
+          ),
+        ).called(1);
       });
     });
 
     group('retryMessageDeletion', () {
+      setUp(() => _stubBuildDeletionRumor(mockMessageService));
+
       final conversationId = DmRepository.computeConversationId(
         [_validPubkeyA, _validPubkeyB],
       );
@@ -20308,6 +20307,13 @@ void main() {
               onSelfWrapDue: any(named: 'onSelfWrapDue'),
             ),
           ).thenAnswer((_) async => const NIP17SendResult.blocked('blocked'));
+          when(
+            () => mockDirectMessagesDao.recordDeliveredDeletionWraps(
+              any(),
+              wraps: any(named: 'wraps'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => true);
 
           final outcome = await repo.retryMessageDeletion(
             rumorId: _rumorEventId,
@@ -20318,6 +20324,15 @@ void main() {
             () => mockDirectMessagesDao.markMessageDeletionBlocked(
               _rumorEventId,
               restoreToThread: true,
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).called(1);
+          // The blocked retraction keeps its kind-5 and the record that B has
+          // it, so a Try again sends B nothing (#10012).
+          verify(
+            () => mockDirectMessagesDao.recordDeliveredDeletionWraps(
+              _rumorEventId,
+              wraps: {_validPubkeyB: _giftWrapEventId},
               ownerPubkey: any(named: 'ownerPubkey'),
             ),
           ).called(1);
@@ -20451,6 +20466,27 @@ void main() {
           ).thenAnswer((_) async => answer);
         }
 
+        /// The retraction records the wrap the fallback pool holds, and the
+        /// members a partly delivered attempt reached (#10012), so these tests
+        /// do not run the record's error branch against an unstubbed DAO.
+        void stubHeldDeletionWrapRecords() {
+          when(
+            () => mockDirectMessagesDao.recordHeldDeletionWrap(
+              any(),
+              recipientPubkey: any(named: 'recipientPubkey'),
+              wrapEventId: any(named: 'wrapEventId'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => true);
+          when(
+            () => mockDirectMessagesDao.recordDeliveredDeletionWraps(
+              any(),
+              wraps: any(named: 'wraps'),
+              ownerPubkey: any(named: 'ownerPubkey'),
+            ),
+          ).thenAnswer((_) async => true);
+        }
+
         void stubDeletionWrapConfirmed() {
           when(
             () => mockMessageService.sendRumor(
@@ -20483,6 +20519,7 @@ void main() {
             stubPendingDeletion();
             stubInboxLookup(unansweredList(noRelays: true));
             stubDeletionWrapConfirmed();
+            stubHeldDeletionWrapRecords();
             final repo = createRepository();
 
             final outcome = await repo.retryMessageDeletion(
@@ -20496,6 +20533,16 @@ void main() {
                 ownerPubkey: any(named: 'ownerPubkey'),
               ),
             );
+            // The retraction records the wrap the pool holds, so a retry
+            // while the inbox stays unreadable sends no other (#10012).
+            verify(
+              () => mockDirectMessagesDao.recordHeldDeletionWrap(
+                _rumorEventId,
+                recipientPubkey: _validPubkeyB,
+                wrapEventId: _giftWrapEventId,
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
+            ).called(1);
           },
         );
 
@@ -20506,6 +20553,7 @@ void main() {
             stubPendingDeletion();
             stubInboxLookup(unansweredList(timedOut: true));
             stubDeletionWrapConfirmed();
+            stubHeldDeletionWrapRecords();
             final repo = createRepository();
 
             await repo.retryMessageDeletion(rumorId: _rumorEventId);
@@ -20558,8 +20606,8 @@ void main() {
         );
 
         test(
-          'one unreadable member holds the whole GROUP retraction pending - '
-          'one row cannot record a partial fan-out',
+          'one unreadable member holds the whole GROUP retraction pending, '
+          'and the row records the member it reached',
           () async {
             stubPendingDeletion();
             when(
@@ -20604,6 +20652,7 @@ void main() {
                   : answeredList(const <Event>[]);
             });
             stubDeletionWrapConfirmed();
+            stubHeldDeletionWrapRecords();
             final repo = createRepository();
 
             final outcome = await repo.retryMessageDeletion(
@@ -20617,6 +20666,31 @@ void main() {
                 ownerPubkey: any(named: 'ownerPubkey'),
               ),
             );
+            // Only the member whose inbox we could not read is held (#10012).
+            verify(
+              () => mockDirectMessagesDao.recordHeldDeletionWrap(
+                _rumorEventId,
+                recipientPubkey: _validPubkeyC,
+                wrapEventId: _giftWrapEventId,
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
+            ).called(1);
+            verifyNever(
+              () => mockDirectMessagesDao.recordHeldDeletionWrap(
+                _rumorEventId,
+                recipientPubkey: _validPubkeyB,
+                wrapEventId: any(named: 'wrapEventId'),
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
+            );
+            // B has it, so a retry sends them nothing again (#10012).
+            verify(
+              () => mockDirectMessagesDao.recordDeliveredDeletionWraps(
+                _rumorEventId,
+                wraps: {_validPubkeyB: _giftWrapEventId},
+                ownerPubkey: any(named: 'ownerPubkey'),
+              ),
+            ).called(1);
           },
         );
       });
@@ -24574,6 +24648,8 @@ void main() {
     });
 
     group('_refreshConversationPreview', () {
+      setUp(() => _stubBuildDeletionRumor(mockMessageService));
+
       final participants = [_validPubkeyA, _validPubkeyB]..sort();
       final convId = DmRepository.computeConversationId(participants);
 

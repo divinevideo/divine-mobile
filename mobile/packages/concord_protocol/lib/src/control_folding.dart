@@ -35,6 +35,7 @@ FoldedThread foldControls(
             threadRootId: m.threadRootId,
             expiresAt: m.expiresAt,
             editedBody: c.body,
+            mentionedPubkeys: m.mentionedPubkeys,
           );
         }
       case ControlType.delete:

@@ -17,6 +17,7 @@ import 'package:nostr_sdk/nip19/pubkey_for_logs.dart';
 import 'package:notification_repository/src/announcements_repository.dart';
 import 'package:notification_repository/src/blocked_notification_filter.dart';
 import 'package:notification_repository/src/comment_like_cache_codec.dart';
+import 'package:notification_repository/src/local_notification_source.dart';
 import 'package:notification_repository/src/notification_page.dart';
 import 'package:profile_repository/profile_repository.dart';
 // Hide rxdart's `NotificationKind` (a stream-event enum) to avoid clashing
@@ -234,6 +235,7 @@ class NotificationRepository {
     void Function(String owner, Future<void> Function() close)?
     onAccountCreated,
     this.announcementsRepository,
+    this.localNotifications,
   }) : _funnelcakeApiClient = funnelcakeApiClient,
        _profileRepository = profileRepository,
        _notificationsDao = notificationsDao,
@@ -566,6 +568,10 @@ class NotificationRepository {
   /// Never part of social cursors.
   final AnnouncementsRepository? announcementsRepository;
 
+  /// Optional client-only source; [close] leaves it open because its creator
+  /// owns it.
+  final LocalNotificationSource? localNotifications;
+
   final Map<NotificationKind?, _NotificationFeed> _feeds = {};
   bool _closed = false;
   Future<void>? _closing;
@@ -662,6 +668,36 @@ class NotificationRepository {
   /// [watchUnreadCount] — it is `.distinct()`-filtered so the badge
   /// only rebuilds on actual count changes.
   Stream<NotificationPage> watchSnapshot({NotificationKind? filter}) {
+    final social = _watchSocialAndAnnouncements(filter: filter);
+    final local = localNotifications;
+    if (local == null ||
+        (filter != null && filter != NotificationKind.mention)) {
+      return social;
+    }
+    return Rx.combineLatest2<
+      NotificationPage,
+      List<NotificationItem>,
+      NotificationPage
+    >(
+      social,
+      local.watchSnapshot(),
+      (page, additions) {
+        final items = [...page.items, ...additions]
+          ..sort((a, b) {
+            final order = b.timestamp.compareTo(a.timestamp);
+            return order != 0 ? order : a.id.compareTo(b.id);
+          });
+        return page.copyWith(
+          items: items,
+          unreadCount: items.where((item) => !item.isRead).length,
+        );
+      },
+    );
+  }
+
+  Stream<NotificationPage> _watchSocialAndAnnouncements({
+    NotificationKind? filter,
+  }) {
     final social = _feedFor(filter).snapshot.stream;
     final announcements = announcementsRepository;
     if (filter != null || announcements == null) return social;
@@ -1486,7 +1522,8 @@ class NotificationRepository {
         NotificationKind.listAdd => const ['list_add'],
       };
 
-  void _refreshAnnouncements() {
+  void _refreshClientSources() {
+    _refreshLocalSource();
     if (_closed) return;
     final announcements = announcementsRepository;
     if (announcements == null) return;
@@ -1499,6 +1536,27 @@ class NotificationRepository {
         );
       }),
     );
+  }
+
+  /// Retries the local source, whose rows show on the unfiltered and
+  /// mentions feeds.
+  void _refreshLocalSource() {
+    if (_closed) return;
+    final local = localNotifications;
+    if (local != null) {
+      // Client-side sources must never fail a social refresh, but their
+      // failures are local state and logic errors, so keep the cause.
+      unawaited(
+        local.refresh().catchError((Object error, StackTrace stackTrace) {
+          Log.warning(
+            'Local notification refresh failed',
+            name: 'NotificationRepository',
+            error: error,
+            stackTrace: stackTrace,
+          );
+        }),
+      );
+    }
   }
 
   static final math.Random _jitter = math.Random();
@@ -1518,12 +1576,12 @@ class NotificationRepository {
   /// when the refresh was superseded by another first-page fetch before it
   /// could apply.
   Future<bool> refreshApplied() {
-    _refreshAnnouncements();
+    _refreshClientSources();
     return _refreshAppliedForLiveFeeds();
   }
 
   Future<({NotificationPage page, bool applied})> _refreshResult() {
-    _refreshAnnouncements();
+    _refreshClientSources();
     return _refreshResultFor(null);
   }
 
@@ -1596,7 +1654,11 @@ class NotificationRepository {
 
   /// Refreshes one filtered notification feed from the beginning.
   Future<NotificationPage> refreshFeed(NotificationKind? filter) {
-    if (filter == null) _refreshAnnouncements();
+    if (filter == null) {
+      _refreshClientSources();
+    } else if (filter == NotificationKind.mention) {
+      _refreshLocalSource();
+    }
     return _refreshResultFor(filter).then((result) => result.page);
   }
 
@@ -1707,10 +1769,17 @@ class NotificationRepository {
     if (ids.isEmpty) return;
     _throwIfClosed();
     final official = ids.where((id) => id.startsWith('announcement:')).toList();
-    final social = ids.where((id) => !id.startsWith('announcement:')).toList();
+    final chat = ids.where((id) => id.startsWith('chat:')).toList();
+    final social = ids
+        .where(
+          (id) => !id.startsWith('announcement:') && !id.startsWith('chat:'),
+        )
+        .toList();
     await Future.wait([
       if (official.isNotEmpty && announcementsRepository != null)
         announcementsRepository!.markSeen(official),
+      if (chat.isNotEmpty && localNotifications != null)
+        localNotifications!.markSeen(chat),
       if (social.isNotEmpty) _markSocialAsRead(social),
     ]);
   }
@@ -1786,7 +1855,8 @@ class NotificationRepository {
   /// sign + POST + DAO halves serialize behind other read mutations. On
   /// failure, only the rows this call flipped are restored, under the same
   /// applied-generation rule as [markAsRead]. Throws [StateError] when the
-  /// repository is already closed.
+  /// repository is already closed, and rethrows a local source's failed
+  /// write.
   Future<void> markAllAsRead() async {
     _throwIfClosed();
     // The existing server API offers no arrival watermark. A failed bare
@@ -1799,6 +1869,8 @@ class NotificationRepository {
     final callTimeFlips = _flipUnread();
     await Future.wait([
       if (official != null) official.markSeen(officialIds),
+      if (localNotifications case final local?)
+        local.markSeen(local.items.map((item) => item.id).toList()),
       _enqueueReadMutation(() => _writeMarkAllAsRead(callTimeFlips)),
     ]);
   }

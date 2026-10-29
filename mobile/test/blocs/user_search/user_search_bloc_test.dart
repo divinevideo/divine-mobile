@@ -184,7 +184,7 @@ void main() {
           () => mockProfileRepository.searchUsersProgressive(
             query: 'alice',
             limit: 50,
-            sortBy: profileSearchSortFollowers,
+            sortBy: profileSearchSortRelevance,
             cancellationToken: any(named: 'cancellationToken'),
           ),
         ).thenAnswer((_) => progressive([]));
@@ -201,7 +201,7 @@ void main() {
                   () => mockProfileRepository.searchUsersProgressive(
                     query: 'alice',
                     limit: 50,
-                    sortBy: profileSearchSortFollowers,
+                    sortBy: profileSearchSortRelevance,
                     cancellationToken: captureAny(named: 'cancellationToken'),
                   ),
                 ).captured.single
@@ -217,7 +217,7 @@ void main() {
           () => mockProfileRepository.searchUsersProgressive(
             query: 'alice',
             limit: 50,
-            sortBy: 'followers',
+            sortBy: profileSearchSortRelevance,
           ),
         ).thenAnswer(
           (_) => progressive([
@@ -338,7 +338,8 @@ void main() {
       });
 
       test(
-        'progressive snapshots retain visible rows and rank only new arrivals',
+        'a complete snapshot takes the server order and ranks only new '
+        'arrivals',
         () async {
           final stream = StreamController<ProgressiveSearchResult>();
           addTearDown(stream.close);
@@ -386,57 +387,82 @@ void main() {
           await second;
           expect(bloc.state.results, [
             profiles[1],
-            updated,
             profiles[3],
             profiles[2],
+            updated,
           ]);
           // UserProfile equality ignores the display name, so the list match
           // above cannot tell the updated row from the stale one.
-          expect(bloc.state.results[1].displayName, 'Updated');
+          expect(bloc.state.results[3].displayName, 'Updated');
           verify(() => loader.load([profiles[2].pubkey, profiles[3].pubkey]))
               .called(1);
         },
       );
 
-      test('load more keeps an exact match ahead of known accounts', () async {
-        final exact = createTestProfile('e' * 64, 'Alice');
-        when(
-          () => mockProfileRepository.searchUsersProgressive(
-            query: any(named: 'query'),
-            limit: any(named: 'limit'),
-            offset: any(named: 'offset'),
-            sortBy: any(named: 'sortBy'),
-          ),
-        ).thenAnswer(
-          (invocation) => progressive(
-            invocation.namedArguments[#offset] == 0
-                ? profiles.take(2).toList()
-                : [profiles[2], exact, profiles[3]],
-            restHasMore: invocation.namedArguments[#offset] == 0,
-          ),
-        );
-        final bloc = createBloc(rankingSignalsLoader: loader);
-        addTearDown(bloc.close);
-        await search(bloc);
-        when(() => loader.load(any())).thenAnswer(
-          (invocation) async => {
-            for (final key
-                in invocation.positionalArguments.single as Iterable<String>)
-              key: UserRankingSignals(
-                pubkey: key,
-                youFollow: key == profiles[3].pubkey,
-              ),
-          },
-        );
-        await loadMore(bloc);
-        expect(bloc.state.results, [
-          profiles[1],
-          profiles[0],
-          exact,
-          profiles[3],
-          profiles[2],
-        ]);
-      });
+      test(
+        'load more promotes a known account only up to an exact match',
+        () async {
+          final exact = createTestProfile('e' * 64, 'Alice');
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer(
+            (invocation) => progressive(
+              invocation.namedArguments[#offset] == 0
+                  ? profiles.take(2).toList()
+                  : [profiles[2], exact, profiles[3]],
+              restHasMore: invocation.namedArguments[#offset] == 0,
+            ),
+          );
+          final bloc = createBloc(rankingSignalsLoader: loader);
+          addTearDown(bloc.close);
+          await search(bloc);
+          when(() => loader.load(any())).thenAnswer(
+            (invocation) async => {
+              for (final key
+                  in invocation.positionalArguments.single as Iterable<String>)
+                key: UserRankingSignals(
+                  pubkey: key,
+                  youFollow: key == profiles[3].pubkey,
+                ),
+            },
+          );
+          await loadMore(bloc);
+          expect(bloc.state.results, [
+            profiles[1],
+            profiles[0],
+            profiles[2],
+            exact,
+            profiles[3],
+          ]);
+        },
+      );
+
+      test(
+        'keeps a match the server ranked first ahead of an exact match',
+        () async {
+          // The server weighs activity against match strength, so a busier
+          // near match can lead an exact one; a known account still cannot
+          // pass the exact match.
+          final exact = createTestProfile('e' * 64, 'Alice');
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer((_) => progressive([profiles[0], exact, profiles[1]]));
+          final bloc = createBloc(rankingSignalsLoader: loader);
+          addTearDown(bloc.close);
+          await search(bloc);
+          expect(bloc.state.results, [profiles[0], exact, profiles[1]]);
+        },
+      );
 
       test('a retained snapshot keeps the viewer on global search', () {
         final viewer = createTestProfile('f' * 64, 'Me');
@@ -455,6 +481,44 @@ void main() {
         addTearDown(bloc.close);
         expect(bloc.state.results, [viewer, profiles[0]]);
       });
+
+      test(
+        'a known exact match leads the run before it, but not past another '
+        'exact match',
+        () async {
+          final exact = createTestProfile('e' * 64, 'Alice');
+          final knownExact = createTestProfile('d' * 64, 'Alice');
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer(
+            (_) => progressive([profiles[0], exact, profiles[2], knownExact]),
+          );
+          when(() => loader.load(any())).thenAnswer(
+            (invocation) async => {
+              for (final key
+                  in invocation.positionalArguments.single as Iterable<String>)
+                key: UserRankingSignals(
+                  pubkey: key,
+                  youFollow: key == knownExact.pubkey,
+                ),
+            },
+          );
+          final bloc = createBloc(rankingSignalsLoader: loader);
+          addTearDown(bloc.close);
+          await search(bloc);
+          expect(bloc.state.results, [
+            profiles[0],
+            exact,
+            knownExact,
+            profiles[2],
+          ]);
+        },
+      );
 
       test('an exact match leads its page ahead of known accounts', () async {
         final exact = createTestProfile('e' * 64, 'Alice');
@@ -551,6 +615,81 @@ void main() {
           );
           await second;
           expect(bloc.state.results, [owner, impostor, profiles[0]]);
+        },
+      );
+
+      test(
+        'the username owner stays ahead of a known account in its run',
+        () async {
+          final owner = createTestProfile('f' * 64, 'AC555');
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer(
+            (_) => Stream.value(
+              ProgressiveSearchResult(
+                profiles: [owner, profiles[0], profiles[1]],
+                sources: const {},
+                isComplete: true,
+                usernameOwnerPubkey: owner.pubkey,
+              ),
+            ),
+          );
+          final bloc = createBloc(rankingSignalsLoader: loader);
+          addTearDown(bloc.close);
+          await search(bloc);
+          expect(bloc.state.results, [owner, profiles[1], profiles[0]]);
+        },
+      );
+
+      test(
+        'shown rows take the server order as soon as Funnelcake answers',
+        () async {
+          final stream = StreamController<ProgressiveSearchResult>();
+          addTearDown(stream.close);
+          when(
+            () => mockProfileRepository.searchUsersProgressive(
+              query: any(named: 'query'),
+              limit: any(named: 'limit'),
+              offset: any(named: 'offset'),
+              sortBy: any(named: 'sortBy'),
+            ),
+          ).thenAnswer((_) => stream.stream);
+          final bloc = createBloc(rankingSignalsLoader: loader);
+          addTearDown(bloc.close);
+          bloc.add(const UserSearchQueryChanged('alice'));
+          final cached = bloc.stream.firstWhere((s) => s.results.isNotEmpty);
+          stream.add(
+            ProgressiveSearchResult(
+              profiles: [profiles[0], profiles[2]],
+              sources: const {},
+              isComplete: false,
+            ),
+          );
+          await cached;
+          expect(bloc.state.results, [profiles[0], profiles[2]]);
+          final answered = bloc.stream.firstWhere(
+            (s) => s.results.length == 3,
+          );
+          stream.add(
+            ProgressiveSearchResult(
+              profiles: [profiles[3], profiles[2], profiles[0]],
+              sources: const {
+                SearchSource.funnelcakeApi: SearchSourceSuccess(
+                  resultCount: 3,
+                  latencyMs: 1,
+                ),
+              },
+              isComplete: false,
+            ),
+          );
+          await answered;
+          expect(bloc.state.status, isNot(UserSearchStatus.success));
+          expect(bloc.state.results, [profiles[3], profiles[2], profiles[0]]);
         },
       );
 
@@ -909,7 +1048,7 @@ void main() {
             () => mockProfileRepository.searchUsersProgressive(
               query: 'alice',
               limit: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
             ),
           ).called(1);
         },
@@ -1178,7 +1317,7 @@ void main() {
             () => mockProfileRepository.searchUsersProgressive(
               query: 'bob',
               limit: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
             ),
           ).called(1);
         },
@@ -1251,7 +1390,7 @@ void main() {
             () => mockProfileRepository.searchUsersProgressive(
               query: 'final',
               limit: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
             ),
           ).called(1);
           verifyNever(
@@ -1421,7 +1560,7 @@ void main() {
               query: 'alice',
               limit: 50,
               offset: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
             ),
           ).thenAnswer(
             (_) => progressive(createTestProfiles(10, start: 50)),
@@ -1458,7 +1597,7 @@ void main() {
               query: 'alice',
               limit: 50,
               offset: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
             ),
           ).thenAnswer(
             (_) => Stream.fromIterable([
@@ -1506,7 +1645,7 @@ void main() {
               query: 'alice',
               limit: 50,
               offset: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
             ),
           ).thenAnswer(
             (_) => progressive(
@@ -1545,7 +1684,7 @@ void main() {
               query: 'alice',
               limit: 50,
               offset: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
             ),
           ).thenAnswer(
             (_) => Stream.value(
@@ -1588,7 +1727,7 @@ void main() {
               query: 'alice',
               limit: 50,
               offset: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
             ),
           ).thenAnswer(
             (_) => progressive([
@@ -1658,7 +1797,7 @@ void main() {
               query: 'alice',
               limit: 50,
               offset: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
             ),
           ).thenAnswer(
             (_) => Stream<ProgressiveSearchResult>.error(
@@ -1747,7 +1886,7 @@ void main() {
             () => mockProfileRepository.searchUsersProgressive(
               query: 'liz',
               limit: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
               hasVideos: any(named: 'hasVideos'),
               boostPubkeys: {'01x${'a' * 61}', '02x${'a' * 61}'},
             ),
@@ -1780,7 +1919,7 @@ void main() {
             () => mockProfileRepository.searchUsersProgressive(
               query: 'test',
               limit: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
               hasVideos: any(named: 'hasVideos'),
               boostPubkeys: <String>{},
             ),
@@ -1864,7 +2003,7 @@ void main() {
               query: 'liz',
               limit: 50,
               offset: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
               hasVideos: any(named: 'hasVideos'),
             ),
           ).called(1);
@@ -1899,7 +2038,7 @@ void main() {
             () => mockProfileRepository.searchUsersProgressive(
               query: 'test',
               limit: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
               hasVideos: true,
             ),
           ).called(1);
@@ -1914,7 +2053,7 @@ void main() {
               query: 'alice',
               limit: 50,
               offset: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
               hasVideos: true,
             ),
           ).thenAnswer((_) => progressive(createTestProfiles(10)));
@@ -1937,7 +2076,7 @@ void main() {
               query: 'alice',
               limit: 50,
               offset: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
               hasVideos: true,
             ),
           ).called(1);
@@ -1964,7 +2103,7 @@ void main() {
             () => mockProfileRepository.searchUsersProgressive(
               query: 'test',
               limit: 50,
-              sortBy: 'followers',
+              sortBy: profileSearchSortRelevance,
               hasVideos: true,
             ),
           );

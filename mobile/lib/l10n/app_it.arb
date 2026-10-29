@@ -3050,6 +3050,72 @@
   "videoEditorFeedPreviewContent": "Evita di posizionare contenuti dietro queste aree.",
   "videoEditorStickersDivineOriginals": "Divine Originali",
   "videoEditorStickerSearchHint": "Cerca sticker...",
+  "videoEditorInfoStickersTitle": "Info",
+  "videoEditorInfoStickerTime": "Ora",
+  "videoEditorInfoStickerDate": "Data",
+  "videoEditorInfoStickerLocation": "Luogo",
+  "videoEditorInfoStickerWeather": "Meteo",
+  "videoEditorInfoStickerAltitude": "Altitudine",
+  "videoEditorInfoStickerBattery": "Batteria",
+  "videoEditorInfoStickerStyleLight": "Chiaro",
+  "videoEditorInfoStickerStyleDark": "Scuro",
+  "videoEditorInfoStickerStyleBrand": "Verde",
+  "videoEditorInfoStickerStyleOutline": "Contorno",
+  "videoEditorInfoStickerStyleDigital": "Digitale",
+  "videoEditorInfoStickerStyleAnalog": "Analogico",
+  "videoEditorInfoStickerStyleGlass": "Vetro",
+  "videoEditorInfoStickerStyleHighlight": "Giallo",
+  "videoEditorInfoStickerStyleNeon": "Neon",
+  "videoEditorInfoStickerStylePlain": "Semplice",
+  "videoEditorInfoStickerChangePlace": "Cambia luogo",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "La ricerca dei luoghi non è disponibile su questo dispositivo.",
+  "videoEditorInfoStickerRecordedValue": "Registrazione · {value}",
+  "videoEditorInfoStickerNowValue": "Ora · {value}",
+  "videoEditorInfoStickerTodayValue": "Oggi · {value}",
+  "videoEditorInfoStickerDayCount": "Contagiorni",
+  "videoEditorInfoStickerSun": "Sole",
+  "videoEditorInfoStickerMoon": "Luna",
+  "videoEditorInfoStickerRecTimer": "Timer REC",
+  "videoEditorInfoStickerStyleFilm": "Pellicola",
+  "videoEditorInfoStickerStyleCamcorder": "Videocamera",
+  "videoEditorInfoStickerDayCountValue": "Giorno {day}",
+  "videoEditorInfoStickerDayCountOfValue": "Giorno {day} di {total}",
+  "videoEditorInfoStickerDayLabel": "Giorno",
+  "videoEditorInfoStickerDayTotalLabel": "Giorni totali (facoltativo)",
+  "videoEditorInfoStickerSymbolPin": "Spillo",
+  "videoEditorInfoStickerSymbolFlag": "Bandiera",
+  "videoEditorInfoStickerSymbolGlobe": "Globo",
+  "videoEditorInfoStickerSymbolMap": "Mappa",
+  "videoEditorInfoStickerMoonNew": "Luna nuova",
+  "videoEditorInfoStickerMoonWaxingCrescent": "Luna crescente",
+  "videoEditorInfoStickerMoonFirstQuarter": "Primo quarto",
+  "videoEditorInfoStickerMoonWaxingGibbous": "Gibbosa crescente",
+  "videoEditorInfoStickerMoonFull": "Luna piena",
+  "videoEditorInfoStickerMoonWaningGibbous": "Gibbosa calante",
+  "videoEditorInfoStickerMoonLastQuarter": "Ultimo quarto",
+  "videoEditorInfoStickerMoonWaningCrescent": "Luna calante",
+  "videoEditorInfoStickerPlaceSearchHint": "Cerca una città o un luogo",
+  "videoEditorInfoStickerPlaceNoResults": "Nessun luogo trovato",
+  "videoEditorInfoStickerPlaceSearchFailed": "Impossibile cercare i luoghi. Riprova.",
+  "videoEditorInfoStickerPlacePrivacyNote": "Nel tuo video finisce solo il nome del luogo, mai la tua posizione esatta.",
+  "videoEditorInfoStickerLoading": "Caricamento…",
+  "videoEditorInfoStickerLoadFailed": "Impossibile caricare. Riprova.",
+  "videoEditorInfoStickerMetAttribution": "Dati di MET Norway",
+  "videoEditorInfoStickerWeatherNow": "Per i video più vecchi non c'è il meteo, quindi questo è il meteo di adesso.",
+  "videoEditorInfoStickerWeatherSunny": "Soleggiato",
+  "videoEditorInfoStickerWeatherClearNight": "Notte serena",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "Parzialmente nuvoloso",
+  "videoEditorInfoStickerWeatherCloudy": "Nuvoloso",
+  "videoEditorInfoStickerWeatherFog": "Nebbia",
+  "videoEditorInfoStickerWeatherRain": "Pioggia",
+  "videoEditorInfoStickerWeatherShowers": "Rovesci",
+  "videoEditorInfoStickerWeatherSnow": "Neve",
+  "videoEditorInfoStickerWeatherThunderstorm": "Temporale",
+  "videoEditorInfoStickerSunTimeZoneNote": "Gli orari sono nel fuso orario del tuo telefono.",
+  "videoEditorInfoStickerTemperatureLabel": "Temperatura",
+  "videoEditorInfoStickerUnitLabel": "Unità",
+  "videoEditorInfoStickerBatteryLevelLabel": "Livello batteria",
+  "videoEditorInfoStickerAdd": "Aggiungi sticker",
   "videoEditorSelectFontSemanticLabel": "Seleziona carattere",
   "videoEditorFontUnknown": "Sconosciuto",
   "videoEditorSplitFailed": "Divisione non riuscita. Riprovare.",
@@ -5793,8 +5859,97 @@
   "ideasDescriptionFive": "Volevo solo condividere.",
   "ideasTitleSix": "Un po’ di oggi",
   "ideasDescriptionSix": "Lo lascio qui.",
+  "messagesRoomsUnreadLabel": "{count, plural, one{Stanze, {displayCount} messaggio non letto} many{Stanze, {displayCount} messaggi non letti} other{Stanze, {displayCount} messaggi non letti}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, one{{displayCount} da leggere} many{{displayCount} da leggere} other{{displayCount} da leggere}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, one{{displayCount} messaggio non letto} many{{displayCount} messaggi non letti} other{{displayCount} messaggi non letti}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, one{{displayCount} persona} many{{displayCount} persone} other{{displayCount} persone}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, one{{displayCount} messaggio} many{{displayCount} messaggi} other{{displayCount} messaggi}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "Ultime 24 ore",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "Controllo dell’attività…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "Impossibile caricare l’attività.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "Nessun messaggio recente. Di’ ciao.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "Diretti",
   "messagesRooms": "Stanze",
+  "messagesRoomsWithUnread": "Stanze ({badge})",
   "messagesPublicTestRooms": "Stanze di prova pubbliche",
   "messagesPublicTestDisclosure": "Queste stanze di prova sono pubbliche. Chiunque abbia accesso può leggere i tuoi messaggi.",
   "messagesNoRooms": "Ancora nessuna stanza",

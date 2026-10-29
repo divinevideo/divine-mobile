@@ -14,74 +14,87 @@ class MessagesHomeView extends StatelessWidget {
   const MessagesHomeView({
     required this.direct,
     required this.rooms,
+    this.roomsUnreadCount = 0,
+    this.roomsUnreadLimited = false,
     super.key,
   });
 
   final Widget direct;
   final Widget rooms;
+  final int roomsUnreadCount;
+  final bool roomsUnreadLimited;
 
   @override
-  Widget build(BuildContext context) =>
-      BlocBuilder<MessagesNavigationCubit, MessagesSection>(
-        builder: (context, selected) {
-          final showRooms = selected == MessagesSection.rooms;
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: Align(
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Wrap(
-                    spacing: 8,
-                    children: [
-                      Semantics(
-                        selected: !showRooms,
-                        child: DivineButton(
-                          label: context.l10n.messagesDirect,
-                          type: !showRooms
-                              ? DivineButtonType.secondary
-                              : DivineButtonType.ghostSecondary,
-                          size: DivineButtonSize.small,
-                          onPressed: () =>
-                              _select(context, MessagesSection.direct),
-                        ),
-                      ),
-                      Semantics(
-                        selected: showRooms,
-                        child: DivineButton(
-                          label: context.l10n.messagesRooms,
-                          type: showRooms
-                              ? DivineButtonType.secondary
-                              : DivineButtonType.ghostSecondary,
-                          size: DivineButtonSize.small,
-                          onPressed: () =>
-                              _select(context, MessagesSection.rooms),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Expanded(
-                child: IndexedStack(
-                  index: showRooms ? 1 : 0,
-                  sizing: StackFit.expand,
-                  children: [
-                    _MessagesPane(active: !showRooms, child: direct),
-                    _MessagesPane(
-                      active: showRooms,
-                      child: rooms,
+  Widget build(
+    BuildContext context,
+  ) => BlocBuilder<MessagesNavigationCubit, MessagesSection>(
+    builder: (context, selected) {
+      final showRooms = selected == MessagesSection.rooms;
+      final unreadDisplay = '$roomsUnreadCount${roomsUnreadLimited ? '+' : ''}';
+      final unreadBadge = roomsUnreadCount > 99 ? '99+' : unreadDisplay;
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  Semantics(
+                    selected: !showRooms,
+                    child: DivineButton(
+                      label: context.l10n.messagesDirect,
+                      type: !showRooms
+                          ? DivineButtonType.secondary
+                          : DivineButtonType.ghostSecondary,
+                      size: DivineButtonSize.small,
+                      onPressed: () => _select(context, MessagesSection.direct),
                     ),
-                  ],
-                ),
+                  ),
+                  Semantics(
+                    selected: showRooms,
+                    child: DivineButton(
+                      label: roomsUnreadCount > 0
+                          ? context.l10n.messagesRoomsWithUnread(unreadBadge)
+                          : context.l10n.messagesRooms,
+                      semanticLabel: roomsUnreadCount > 0
+                          ? context.l10n.messagesRoomsUnreadLabel(
+                              roomsUnreadCount,
+                              unreadDisplay,
+                            )
+                          : null,
+                      type: showRooms
+                          ? DivineButtonType.secondary
+                          : DivineButtonType.ghostSecondary,
+                      size: DivineButtonSize.small,
+                      onPressed: () => _select(context, MessagesSection.rooms),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          );
-        },
+            ),
+          ),
+          Expanded(
+            child: IndexedStack(
+              index: showRooms ? 1 : 0,
+              sizing: StackFit.expand,
+              children: [
+                _MessagesPane(active: !showRooms, child: direct),
+                _MessagesPane(
+                  active: showRooms,
+                  child: rooms,
+                ),
+              ],
+            ),
+          ),
+        ],
       );
+    },
+  );
 
   void _select(BuildContext context, MessagesSection section) {
     FocusManager.instance.primaryFocus?.unfocus();

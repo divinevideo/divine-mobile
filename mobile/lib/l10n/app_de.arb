@@ -3050,6 +3050,72 @@
   "videoEditorFeedPreviewContent": "Vermeide es, Inhalte hinter diesen Bereichen zu platzieren.",
   "videoEditorStickersDivineOriginals": "Divine Originale",
   "videoEditorStickerSearchHint": "Sticker suchen...",
+  "videoEditorInfoStickersTitle": "Info",
+  "videoEditorInfoStickerTime": "Uhrzeit",
+  "videoEditorInfoStickerDate": "Datum",
+  "videoEditorInfoStickerLocation": "Ort",
+  "videoEditorInfoStickerWeather": "Wetter",
+  "videoEditorInfoStickerAltitude": "Höhe",
+  "videoEditorInfoStickerBattery": "Akku",
+  "videoEditorInfoStickerStyleLight": "Hell",
+  "videoEditorInfoStickerStyleDark": "Dunkel",
+  "videoEditorInfoStickerStyleBrand": "Grün",
+  "videoEditorInfoStickerStyleOutline": "Umriss",
+  "videoEditorInfoStickerStyleDigital": "Digital",
+  "videoEditorInfoStickerStyleAnalog": "Analog",
+  "videoEditorInfoStickerStyleGlass": "Glas",
+  "videoEditorInfoStickerStyleHighlight": "Gelb",
+  "videoEditorInfoStickerStyleNeon": "Neon",
+  "videoEditorInfoStickerStylePlain": "Schlicht",
+  "videoEditorInfoStickerChangePlace": "Ort ändern",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "Die Ortssuche ist auf diesem Gerät nicht verfügbar.",
+  "videoEditorInfoStickerRecordedValue": "Aufnahme · {value}",
+  "videoEditorInfoStickerNowValue": "Jetzt · {value}",
+  "videoEditorInfoStickerTodayValue": "Heute · {value}",
+  "videoEditorInfoStickerDayCount": "Tageszähler",
+  "videoEditorInfoStickerSun": "Sonne",
+  "videoEditorInfoStickerMoon": "Mond",
+  "videoEditorInfoStickerRecTimer": "REC-Timer",
+  "videoEditorInfoStickerStyleFilm": "Film",
+  "videoEditorInfoStickerStyleCamcorder": "Camcorder",
+  "videoEditorInfoStickerDayCountValue": "Tag {day}",
+  "videoEditorInfoStickerDayCountOfValue": "Tag {day} von {total}",
+  "videoEditorInfoStickerDayLabel": "Tag",
+  "videoEditorInfoStickerDayTotalLabel": "Anzahl Tage (optional)",
+  "videoEditorInfoStickerSymbolPin": "Pin",
+  "videoEditorInfoStickerSymbolFlag": "Flagge",
+  "videoEditorInfoStickerSymbolGlobe": "Globus",
+  "videoEditorInfoStickerSymbolMap": "Karte",
+  "videoEditorInfoStickerMoonNew": "Neumond",
+  "videoEditorInfoStickerMoonWaxingCrescent": "Zunehmende Sichel",
+  "videoEditorInfoStickerMoonFirstQuarter": "Erstes Viertel",
+  "videoEditorInfoStickerMoonWaxingGibbous": "Zunehmender Mond",
+  "videoEditorInfoStickerMoonFull": "Vollmond",
+  "videoEditorInfoStickerMoonWaningGibbous": "Abnehmender Mond",
+  "videoEditorInfoStickerMoonLastQuarter": "Letztes Viertel",
+  "videoEditorInfoStickerMoonWaningCrescent": "Abnehmende Sichel",
+  "videoEditorInfoStickerPlaceSearchHint": "Nach Stadt oder Ort suchen",
+  "videoEditorInfoStickerPlaceNoResults": "Keine Orte gefunden",
+  "videoEditorInfoStickerPlaceSearchFailed": "Die Ortssuche hat nicht geklappt. Versuch's nochmal.",
+  "videoEditorInfoStickerPlacePrivacyNote": "In dein Video kommt nur der Ortsname, nie dein genauer Standort.",
+  "videoEditorInfoStickerLoading": "Lädt…",
+  "videoEditorInfoStickerLoadFailed": "Das konnte nicht geladen werden. Versuch's nochmal.",
+  "videoEditorInfoStickerMetAttribution": "Daten von MET Norway",
+  "videoEditorInfoStickerWeatherNow": "Für ältere Videos gibt es kein Wetter, das ist das Wetter von jetzt.",
+  "videoEditorInfoStickerWeatherSunny": "Sonnig",
+  "videoEditorInfoStickerWeatherClearNight": "Klare Nacht",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "Teils bewölkt",
+  "videoEditorInfoStickerWeatherCloudy": "Bewölkt",
+  "videoEditorInfoStickerWeatherFog": "Nebel",
+  "videoEditorInfoStickerWeatherRain": "Regen",
+  "videoEditorInfoStickerWeatherShowers": "Schauer",
+  "videoEditorInfoStickerWeatherSnow": "Schnee",
+  "videoEditorInfoStickerWeatherThunderstorm": "Gewitter",
+  "videoEditorInfoStickerSunTimeZoneNote": "Die Zeiten sind in der Zeitzone deines Handys.",
+  "videoEditorInfoStickerTemperatureLabel": "Temperatur",
+  "videoEditorInfoStickerUnitLabel": "Einheit",
+  "videoEditorInfoStickerBatteryLevelLabel": "Akkustand",
+  "videoEditorInfoStickerAdd": "Sticker hinzufügen",
   "videoEditorSelectFontSemanticLabel": "Schriftart auswählen",
   "videoEditorFontUnknown": "Unbekannt",
   "videoEditorSplitFailed": "Teilen fehlgeschlagen. Bitte erneut versuchen.",
@@ -5793,8 +5859,97 @@
   "ideasDescriptionFive": "Wollte ich einfach teilen.",
   "ideasTitleSix": "Ein bisschen Heute",
   "ideasDescriptionSix": "Das lasse ich hier.",
+  "messagesRoomsUnreadLabel": "{count, plural, one{Räume, {displayCount} ungelesene Nachricht} other{Räume, {displayCount} ungelesene Nachrichten}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, one{{displayCount} neu} other{{displayCount} neu}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, one{{displayCount} ungelesene Nachricht} other{{displayCount} ungelesene Nachrichten}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, one{{displayCount} Person} other{{displayCount} Personen}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, one{{displayCount} Nachricht} other{{displayCount} Nachrichten}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "Letzte 24 Std.",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "Aktivität wird geprüft…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "Die Aktivität konnte nicht geladen werden.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "Keine Nachrichten in letzter Zeit. Sag Hallo.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "Direkt",
   "messagesRooms": "Räume",
+  "messagesRoomsWithUnread": "Räume ({badge})",
   "messagesPublicTestRooms": "Öffentliche Testräume",
   "messagesPublicTestDisclosure": "Diese Testräume sind öffentlich. Alle mit Zugang können deine Nachrichten lesen.",
   "messagesNoRooms": "Noch keine Räume",

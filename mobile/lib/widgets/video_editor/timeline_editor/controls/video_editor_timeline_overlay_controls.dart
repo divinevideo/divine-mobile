@@ -21,6 +21,7 @@ import 'package:openvine/models/video_editor/clip_speed_choice.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
 import 'package:openvine/models/video_editor/editor_censor_area.dart';
 import 'package:openvine/models/video_editor/editor_mask.dart';
+import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/layer_style.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
@@ -32,6 +33,7 @@ import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_reatta
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_transform.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/flashing_effect_snack_bar.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/open_effects_editor.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_layer_actions.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor.dart';
 import 'package:openvine/widgets/video_editor/timeline_editor/controls/layer_blend_mode_sheet.dart';
@@ -112,6 +114,8 @@ class _LayerOverlayControls extends StatelessWidget {
         layer != null && DetachedClipLayerData.isDetachedClipLayer(layer);
     final isAudioVisualizer =
         layer != null && AudioVisualizerLayerData.isAudioVisualizerLayer(layer);
+    final isInfoSticker =
+        layer != null && InfoStickerData.isInfoStickerLayer(layer);
 
     // Every layer that takes a style can be multi-selected, to paste a style
     // onto several at once, delete them, or combine drawings or stickers, as
@@ -135,6 +139,8 @@ class _LayerOverlayControls extends StatelessWidget {
             ? () => _editTextLayer(context: context)
             : isAudioVisualizer
             ? () => _editAudioVisualizer(context: context)
+            : isInfoSticker
+            ? () => _editInfoSticker(context: context)
             : null,
         onDuplicated: () => _duplicateLayer(context: context),
         onMultiSelect: canMultiSelect
@@ -236,6 +242,12 @@ class _LayerOverlayControls extends StatelessWidget {
     final layer = _liveLayer(context);
     if (layer == null) return;
     await editAudioVisualizerLayer(context, layer);
+  }
+
+  Future<void> _editInfoSticker({required BuildContext context}) async {
+    final layer = _liveLayer(context);
+    if (layer == null) return;
+    await editInfoStickerLayer(context, layer);
   }
 
   Future<void> _editTextLayer({required BuildContext context}) async {

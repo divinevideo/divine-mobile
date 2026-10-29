@@ -34,6 +34,7 @@ import 'package:openvine/services/video_editor/detached_clip_render_pass.dart';
 import 'package:openvine/services/video_editor/image_layer_sequence.dart';
 import 'package:openvine/services/video_editor/interrupted_render_monitor.dart';
 import 'package:openvine/services/video_editor/native_render_task_registry.dart';
+import 'package:openvine/services/video_editor/rec_timer_frames.dart';
 import 'package:openvine/services/video_editor/render_audio_fetcher.dart';
 import 'package:openvine/services/video_editor/render_audio_visualizer_energies.dart';
 import 'package:openvine/services/video_editor/render_cancellation_registry.dart';
@@ -954,7 +955,7 @@ class VideoEditorRenderService {
       shouldOptimizeForNetworkUse: true,
       audioTracks: audioTracks,
       imageLayers: buildImageLayers(
-        capturedLayers: capturedLayers,
+        capturedLayers: await withRecTimerFrames(capturedLayers, timelineMap),
         bodySize: parameters?.bodySize,
         videoSize: videoSize,
         targetAspectRatio: aspectRatio.value,

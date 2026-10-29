@@ -10676,6 +10676,226 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorStickerSearchHint => 'Tìm nhãn dán...';
 
   @override
+  String get videoEditorInfoStickersTitle => 'Thông tin';
+
+  @override
+  String get videoEditorInfoStickerTime => 'Giờ';
+
+  @override
+  String get videoEditorInfoStickerDate => 'Ngày';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'Địa điểm';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'Thời tiết';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'Độ cao';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'Pin';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'Sáng';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'Tối';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'Xanh lá';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'Viền';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'Kỹ thuật số';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'Kim';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'Kính';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'Vàng';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'Neon';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'Đơn giản';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'Đổi địa điểm';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Tìm kiếm địa điểm không khả dụng trên thiết bị này.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'Lúc quay · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'Bây giờ · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'Hôm nay · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'Đếm ngày';
+
+  @override
+  String get videoEditorInfoStickerSun => 'Mặt trời';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'Mặt trăng';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'Bộ đếm REC';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'Phim';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'Máy quay';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'Ngày $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'Ngày $day/$total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'Ngày';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel =>
+      'Tổng số ngày (không bắt buộc)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'Ghim';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'Cờ';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Quả địa cầu';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Bản đồ';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'Trăng non';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent =>
+      'Trăng lưỡi liềm đầu tháng';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'Bán nguyệt đầu tháng';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous =>
+      'Trăng khuyết đầu tháng';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'Trăng tròn';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous =>
+      'Trăng khuyết cuối tháng';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'Bán nguyệt cuối tháng';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent =>
+      'Trăng lưỡi liềm cuối tháng';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint =>
+      'Tìm thành phố hoặc địa điểm';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults =>
+      'Không tìm thấy địa điểm nào';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'Không tìm được địa điểm. Thử lại nhé.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'Video của bạn chỉ có tên địa điểm, không bao giờ có vị trí chính xác của bạn.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'Đang tải…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed => 'Không tải được. Thử lại nhé.';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => 'Dữ liệu từ MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'Không có thời tiết cho video cũ hơn, nên đây là thời tiết hiện tại.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Nắng';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Đêm quang';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'Ít mây';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Nhiều mây';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Sương mù';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Mưa';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Mưa rào';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Tuyết';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'Dông';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'Thời gian theo múi giờ trên điện thoại của bạn.';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'Nhiệt độ';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'Đơn vị';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'Mức pin';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'Thêm nhãn dán';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => 'Chọn phông chữ';
 
   @override
@@ -14188,10 +14408,83 @@ class AppLocalizationsVi extends AppLocalizations {
   String get ideasDescriptionSix => 'Để điều này ở đây.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Phòng, $displayCount tin nhắn chưa đọc',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount mới',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount tin nhắn chưa đọc',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount người',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount tin nhắn',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => '24 giờ qua';
+
+  @override
+  String get messagesRoomLoading => 'Đang kiểm tra hoạt động…';
+
+  @override
+  String get messagesRoomLoadFailed => 'Không tải được hoạt động.';
+
+  @override
+  String get messagesRoomEmpty =>
+      'Gần đây chưa có tin nhắn. Chào mọi người nào.';
+
+  @override
   String get messagesDirect => 'Trực tiếp';
 
   @override
   String get messagesRooms => 'Phòng';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Phòng ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'Phòng thử nghiệm công khai';

@@ -10090,6 +10090,215 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorStickerSearchHint => '搜索贴纸...';
 
   @override
+  String get videoEditorInfoStickersTitle => '信息';
+
+  @override
+  String get videoEditorInfoStickerTime => '时间';
+
+  @override
+  String get videoEditorInfoStickerDate => '日期';
+
+  @override
+  String get videoEditorInfoStickerLocation => '地点';
+
+  @override
+  String get videoEditorInfoStickerWeather => '天气';
+
+  @override
+  String get videoEditorInfoStickerAltitude => '海拔';
+
+  @override
+  String get videoEditorInfoStickerBattery => '电量';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => '浅色';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => '深色';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => '绿色';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => '描边';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => '数字';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => '指针';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => '玻璃';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => '黄色';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => '霓虹';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => '简约';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => '更换地点';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable => '此设备不支持地点搜索。';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return '拍摄时 · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return '现在 · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return '今天 · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => '天数计数';
+
+  @override
+  String get videoEditorInfoStickerSun => '太阳';
+
+  @override
+  String get videoEditorInfoStickerMoon => '月亮';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC 计时';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => '胶片';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => '摄像机';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return '第 $day 天';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return '第 $day 天 / 共 $total 天';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => '天数';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => '总天数（可选）';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => '图钉';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => '国旗';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => '地球仪';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => '地图';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => '新月';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => '蛾眉月';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => '上弦月';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => '盈凸月';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => '满月';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => '亏凸月';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => '下弦月';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => '残月';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint => '搜索城市或地点';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => '没有找到地点';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed => '无法搜索地点。请再试一次。';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      '视频里只会显示地点名称，绝不会包含你的精确位置。';
+
+  @override
+  String get videoEditorInfoStickerLoading => '加载中…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed => '无法加载。请再试一次。';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => '数据来自 MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow => '较早的视频没有天气数据，这里显示的是现在的天气。';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => '晴';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => '晴朗的夜晚';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => '晴间多云';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => '多云';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => '雾';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => '雨';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => '阵雨';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => '雪';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => '雷雨';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote => '时间按你手机的时区显示。';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => '温度';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => '单位';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => '电池电量';
+
+  @override
+  String get videoEditorInfoStickerAdd => '添加贴纸';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => '选择字体';
 
   @override
@@ -13388,10 +13597,82 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ideasDescriptionSix => '把这个留在这里。';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '聊天室、$displayCount 条未读消息',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount 条新消息',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount 条未读消息',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount 人',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount 条消息',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => '过去24小时';
+
+  @override
+  String get messagesRoomLoading => '正在查看动态…';
+
+  @override
+  String get messagesRoomLoadFailed => '无法加载动态。';
+
+  @override
+  String get messagesRoomEmpty => '最近没有消息，打个招呼吧。';
+
+  @override
   String get messagesDirect => '私信';
 
   @override
   String get messagesRooms => '聊天室';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return '聊天室 ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => '公开测试聊天室';

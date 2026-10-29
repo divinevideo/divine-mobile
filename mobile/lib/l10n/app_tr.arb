@@ -2957,6 +2957,72 @@
   "videoEditorLayerAnimationPointLeaveHint": "Videoda nereye kayarak çıkacağına dokun",
   "videoEditorStickersDivineOriginals": "Divine Orijinaller",
   "videoEditorStickerSearchHint": "Çıkartma ara...",
+  "videoEditorInfoStickersTitle": "Bilgi",
+  "videoEditorInfoStickerTime": "Saat",
+  "videoEditorInfoStickerDate": "Tarih",
+  "videoEditorInfoStickerLocation": "Konum",
+  "videoEditorInfoStickerWeather": "Hava durumu",
+  "videoEditorInfoStickerAltitude": "Rakım",
+  "videoEditorInfoStickerBattery": "Pil",
+  "videoEditorInfoStickerStyleLight": "Açık",
+  "videoEditorInfoStickerStyleDark": "Koyu",
+  "videoEditorInfoStickerStyleBrand": "Yeşil",
+  "videoEditorInfoStickerStyleOutline": "Kontur",
+  "videoEditorInfoStickerStyleDigital": "Dijital",
+  "videoEditorInfoStickerStyleAnalog": "Analog",
+  "videoEditorInfoStickerStyleGlass": "Cam",
+  "videoEditorInfoStickerStyleHighlight": "Sarı",
+  "videoEditorInfoStickerStyleNeon": "Neon",
+  "videoEditorInfoStickerStylePlain": "Sade",
+  "videoEditorInfoStickerChangePlace": "Yeri değiştir",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "Bu cihazda yer arama kullanılamıyor.",
+  "videoEditorInfoStickerRecordedValue": "Kayıt · {value}",
+  "videoEditorInfoStickerNowValue": "Şimdi · {value}",
+  "videoEditorInfoStickerTodayValue": "Bugün · {value}",
+  "videoEditorInfoStickerDayCount": "Gün sayacı",
+  "videoEditorInfoStickerSun": "Güneş",
+  "videoEditorInfoStickerMoon": "Ay",
+  "videoEditorInfoStickerRecTimer": "REC sayacı",
+  "videoEditorInfoStickerStyleFilm": "Film",
+  "videoEditorInfoStickerStyleCamcorder": "Kamera",
+  "videoEditorInfoStickerDayCountValue": "{day}. gün",
+  "videoEditorInfoStickerDayCountOfValue": "{day}. gün / {total}",
+  "videoEditorInfoStickerDayLabel": "Gün",
+  "videoEditorInfoStickerDayTotalLabel": "Toplam gün (isteğe bağlı)",
+  "videoEditorInfoStickerSymbolPin": "İğne",
+  "videoEditorInfoStickerSymbolFlag": "Bayrak",
+  "videoEditorInfoStickerSymbolGlobe": "Küre",
+  "videoEditorInfoStickerSymbolMap": "Harita",
+  "videoEditorInfoStickerMoonNew": "Yeni ay",
+  "videoEditorInfoStickerMoonWaxingCrescent": "Büyüyen hilal",
+  "videoEditorInfoStickerMoonFirstQuarter": "İlk dördün",
+  "videoEditorInfoStickerMoonWaxingGibbous": "Büyüyen şişkin ay",
+  "videoEditorInfoStickerMoonFull": "Dolunay",
+  "videoEditorInfoStickerMoonWaningGibbous": "Küçülen şişkin ay",
+  "videoEditorInfoStickerMoonLastQuarter": "Son dördün",
+  "videoEditorInfoStickerMoonWaningCrescent": "Küçülen hilal",
+  "videoEditorInfoStickerPlaceSearchHint": "Şehir veya yer ara",
+  "videoEditorInfoStickerPlaceNoResults": "Yer bulunamadı",
+  "videoEditorInfoStickerPlaceSearchFailed": "Yer aranamadı. Tekrar dene.",
+  "videoEditorInfoStickerPlacePrivacyNote": "Videona yalnızca yerin adı girer, asla tam konumun değil.",
+  "videoEditorInfoStickerLoading": "Yükleniyor…",
+  "videoEditorInfoStickerLoadFailed": "Yüklenemedi. Tekrar dene.",
+  "videoEditorInfoStickerMetAttribution": "Veriler: MET Norway",
+  "videoEditorInfoStickerWeatherNow": "Eski videolar için hava durumu yok, bu yüzden şu anki hava durumu gösteriliyor.",
+  "videoEditorInfoStickerWeatherSunny": "Güneşli",
+  "videoEditorInfoStickerWeatherClearNight": "Açık gece",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "Parçalı bulutlu",
+  "videoEditorInfoStickerWeatherCloudy": "Bulutlu",
+  "videoEditorInfoStickerWeatherFog": "Sis",
+  "videoEditorInfoStickerWeatherRain": "Yağmur",
+  "videoEditorInfoStickerWeatherShowers": "Sağanak",
+  "videoEditorInfoStickerWeatherSnow": "Kar",
+  "videoEditorInfoStickerWeatherThunderstorm": "Gök gürültülü fırtına",
+  "videoEditorInfoStickerSunTimeZoneNote": "Saatler telefonunun saat diliminde.",
+  "videoEditorInfoStickerTemperatureLabel": "Sıcaklık",
+  "videoEditorInfoStickerUnitLabel": "Birim",
+  "videoEditorInfoStickerBatteryLevelLabel": "Pil seviyesi",
+  "videoEditorInfoStickerAdd": "Çıkartma ekle",
   "videoEditorTextAlignmentSemanticLabel": "Metin hizalama",
   "videoEditorTextBackgroundSemanticLabel": "Metin arka planı",
   "videoEditorTextDontWrap": "Metni kaydırma",
@@ -5793,8 +5859,97 @@
   "ideasDescriptionFive": "Sadece paylaşmak istedim.",
   "ideasTitleSix": "Bugünden bir parça",
   "ideasDescriptionSix": "Bunu buraya bırakıyorum.",
+  "messagesRoomsUnreadLabel": "{count, plural, one{Odalar, {displayCount} okunmamış mesaj} other{Odalar, {displayCount} okunmamış mesaj}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, one{{displayCount} yeni} other{{displayCount} yeni}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, one{{displayCount} okunmamış mesaj} other{{displayCount} okunmamış mesaj}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, one{{displayCount} kişi} other{{displayCount} kişi}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, one{{displayCount} mesaj} other{{displayCount} mesaj}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "Son 24 saat",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "Hareketlilik kontrol ediliyor…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "Hareketlilik yüklenemedi.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "Son zamanlarda mesaj yok. Bir merhaba de.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "Doğrudan",
   "messagesRooms": "Odalar",
+  "messagesRoomsWithUnread": "Odalar ({badge})",
   "messagesPublicTestRooms": "Herkese açık test odaları",
   "messagesPublicTestDisclosure": "Bu test odaları herkese açıktır. Erişimi olan herkes mesajlarını okuyabilir.",
   "messagesNoRooms": "Henüz oda yok",

@@ -215,5 +215,31 @@ void main() {
       expect(folded.messages.map((m) => m.effectiveBody), ['edited']);
       expect(folded.reactions['a'], {'❤️': 1});
     });
+    test('an edit keeps the mentions the original message tagged', () {
+      final folded = foldControls(
+        [
+          ChatMessage(
+            id: 'a',
+            channelId: 'c',
+            author: 'u',
+            body: 'hi nostr:npub1example',
+            createdAt: 1,
+            mentionedPubkeys: ['f' * 64],
+          ),
+        ],
+        [
+          ControlEvent(
+            type: ControlType.edit,
+            targetId: 'a',
+            createdAt: 2,
+            body: 'hi again',
+            actor: 'u',
+          ),
+        ],
+        now: 10,
+      );
+      expect(folded.messages.single.effectiveBody, 'hi again');
+      expect(folded.messages.single.mentionedPubkeys, ['f' * 64]);
+    });
   });
 }

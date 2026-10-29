@@ -6218,6 +6218,72 @@
   "videoEditorFeedPreviewContent": "ఈ ప్రాంతాల వెనుక కంటెంట్‌ను ఉంచడం మానుకోండి.",
   "videoEditorStickersDivineOriginals": "Divine ఒరిజినల్‌లు",
   "videoEditorStickerSearchHint": "స్టిక్కర్‌లను శోధించండి...",
+  "videoEditorInfoStickersTitle": "సమాచారం",
+  "videoEditorInfoStickerTime": "సమయం",
+  "videoEditorInfoStickerDate": "తేదీ",
+  "videoEditorInfoStickerLocation": "స్థలం",
+  "videoEditorInfoStickerWeather": "వాతావరణం",
+  "videoEditorInfoStickerAltitude": "ఎత్తు",
+  "videoEditorInfoStickerBattery": "బ్యాటరీ",
+  "videoEditorInfoStickerStyleLight": "లేత",
+  "videoEditorInfoStickerStyleDark": "ముదురు",
+  "videoEditorInfoStickerStyleBrand": "ఆకుపచ్చ",
+  "videoEditorInfoStickerStyleOutline": "అవుట్‌లైన్",
+  "videoEditorInfoStickerStyleDigital": "డిజిటల్",
+  "videoEditorInfoStickerStyleAnalog": "అనలాగ్",
+  "videoEditorInfoStickerStyleGlass": "గ్లాస్",
+  "videoEditorInfoStickerStyleHighlight": "పసుపు",
+  "videoEditorInfoStickerStyleNeon": "నియాన్",
+  "videoEditorInfoStickerStylePlain": "సాదా",
+  "videoEditorInfoStickerChangePlace": "స్థలం మార్చండి",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "ఈ పరికరంలో స్థల శోధన అందుబాటులో లేదు.",
+  "videoEditorInfoStickerRecordedValue": "రికార్డింగ్ · {value}",
+  "videoEditorInfoStickerNowValue": "ఇప్పుడు · {value}",
+  "videoEditorInfoStickerTodayValue": "ఈరోజు · {value}",
+  "videoEditorInfoStickerDayCount": "రోజుల లెక్కింపు",
+  "videoEditorInfoStickerSun": "సూర్యుడు",
+  "videoEditorInfoStickerMoon": "చంద్రుడు",
+  "videoEditorInfoStickerRecTimer": "REC టైమర్",
+  "videoEditorInfoStickerStyleFilm": "ఫిల్మ్",
+  "videoEditorInfoStickerStyleCamcorder": "కామ్‌కార్డర్",
+  "videoEditorInfoStickerDayCountValue": "రోజు {day}",
+  "videoEditorInfoStickerDayCountOfValue": "{total}లో రోజు {day}",
+  "videoEditorInfoStickerDayLabel": "రోజు",
+  "videoEditorInfoStickerDayTotalLabel": "మొత్తం రోజులు (ఐచ్ఛికం)",
+  "videoEditorInfoStickerSymbolPin": "పిన్",
+  "videoEditorInfoStickerSymbolFlag": "జెండా",
+  "videoEditorInfoStickerSymbolGlobe": "గ్లోబ్",
+  "videoEditorInfoStickerSymbolMap": "మ్యాప్",
+  "videoEditorInfoStickerMoonNew": "అమావాస్య",
+  "videoEditorInfoStickerMoonWaxingCrescent": "పెరుగుతున్న నెలవంక",
+  "videoEditorInfoStickerMoonFirstQuarter": "మొదటి పావు",
+  "videoEditorInfoStickerMoonWaxingGibbous": "పెరుగుతున్న చంద్రుడు",
+  "videoEditorInfoStickerMoonFull": "పౌర్ణమి",
+  "videoEditorInfoStickerMoonWaningGibbous": "తగ్గుతున్న చంద్రుడు",
+  "videoEditorInfoStickerMoonLastQuarter": "చివరి పావు",
+  "videoEditorInfoStickerMoonWaningCrescent": "తగ్గుతున్న నెలవంక",
+  "videoEditorInfoStickerPlaceSearchHint": "నగరం లేదా స్థలం కోసం వెతకండి",
+  "videoEditorInfoStickerPlaceNoResults": "స్థలాలు ఏవీ కనుగొనబడలేదు",
+  "videoEditorInfoStickerPlaceSearchFailed": "స్థలాల కోసం వెతకడం సాధ్యం కాలేదు. మళ్లీ ప్రయత్నించండి.",
+  "videoEditorInfoStickerPlacePrivacyNote": "మీ వీడియోలో స్థలం పేరు మాత్రమే ఉంటుంది, మీ ఖచ్చితమైన స్థానం ఎప్పుడూ ఉండదు.",
+  "videoEditorInfoStickerLoading": "లోడ్ అవుతోంది…",
+  "videoEditorInfoStickerLoadFailed": "లోడ్ చేయడం సాధ్యం కాలేదు. మళ్లీ ప్రయత్నించండి.",
+  "videoEditorInfoStickerMetAttribution": "డేటా: MET Norway",
+  "videoEditorInfoStickerWeatherNow": "పాత వీడియోలకు వాతావరణ సమాచారం లేదు, కాబట్టి ఇది ఇప్పటి వాతావరణం.",
+  "videoEditorInfoStickerWeatherSunny": "ఎండ",
+  "videoEditorInfoStickerWeatherClearNight": "స్పష్టమైన రాత్రి",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "పాక్షికంగా మేఘావృతం",
+  "videoEditorInfoStickerWeatherCloudy": "మేఘావృతం",
+  "videoEditorInfoStickerWeatherFog": "పొగమంచు",
+  "videoEditorInfoStickerWeatherRain": "వర్షం",
+  "videoEditorInfoStickerWeatherShowers": "జల్లులు",
+  "videoEditorInfoStickerWeatherSnow": "మంచు",
+  "videoEditorInfoStickerWeatherThunderstorm": "ఉరుములతో వర్షం",
+  "videoEditorInfoStickerSunTimeZoneNote": "సమయాలు మీ ఫోన్ టైమ్ జోన్‌లో ఉన్నాయి.",
+  "videoEditorInfoStickerTemperatureLabel": "ఉష్ణోగ్రత",
+  "videoEditorInfoStickerUnitLabel": "యూనిట్",
+  "videoEditorInfoStickerBatteryLevelLabel": "బ్యాటరీ స్థాయి",
+  "videoEditorInfoStickerAdd": "స్టిక్కర్ జోడించండి",
   "videoEditorSelectFontSemanticLabel": "ఫాంట్‌ని ఎంచుకోండి",
   "videoEditorFontUnknown": "తెలియదు",
   "videoEditorSplitPlayheadOutsideClip": "ప్లేహెడ్ విభజించడానికి ఎంచుకున్న క్లిప్‌లో ఉండాలి.",
@@ -8718,8 +8784,97 @@
   "ideasDescriptionFive": "ఊరికే పంచుకోవాలనుకున్నాను.",
   "ideasTitleSix": "ఈ రోజులో కొంత",
   "ideasDescriptionSix": "దీన్ని ఇక్కడ వదిలేస్తున్నాను.",
+  "messagesRoomsUnreadLabel": "{count, plural, one{గదులు, {displayCount} చదవని సందేశం} other{గదులు, {displayCount} చదవని సందేశాలు}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, one{కొత్తది: {displayCount}} other{కొత్తవి: {displayCount}}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, one{{displayCount} చదవని సందేశం} other{{displayCount} చదవని సందేశాలు}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, one{{displayCount} వ్యక్తి} other{{displayCount} మంది}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, one{{displayCount} సందేశం} other{{displayCount} సందేశాలు}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "గత 24 గంటల్లో",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "చాట్‌లో చురుకుదనాన్ని చూస్తున్నాం…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "చాట్‌లో చురుకుదనాన్ని లోడ్ చేయలేకపోయాం.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "ఇటీవల సందేశాలు లేవు. పలకరించండి.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "నేరుగా",
   "messagesRooms": "గదులు",
+  "messagesRoomsWithUnread": "గదులు ({badge})",
   "messagesPublicTestRooms": "బహిరంగ పరీక్ష గదులు",
   "messagesPublicTestDisclosure": "ఈ పరీక్ష గదులు బహిరంగమైనవి. ప్రవేశం ఉన్న ఎవరైనా మీ సందేశాలను చదవగలరు.",
   "messagesNoRooms": "ఇంకా గదులు లేవు",

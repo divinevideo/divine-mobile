@@ -10818,6 +10818,221 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoEditorStickerSearchHint => 'Search stickers...';
 
   @override
+  String get videoEditorInfoStickersTitle => 'Info';
+
+  @override
+  String get videoEditorInfoStickerTime => 'Time';
+
+  @override
+  String get videoEditorInfoStickerDate => 'Date';
+
+  @override
+  String get videoEditorInfoStickerLocation => 'Location';
+
+  @override
+  String get videoEditorInfoStickerWeather => 'Weather';
+
+  @override
+  String get videoEditorInfoStickerAltitude => 'Altitude';
+
+  @override
+  String get videoEditorInfoStickerBattery => 'Battery';
+
+  @override
+  String get videoEditorInfoStickerStyleLight => 'Light';
+
+  @override
+  String get videoEditorInfoStickerStyleDark => 'Dark';
+
+  @override
+  String get videoEditorInfoStickerStyleBrand => 'Green';
+
+  @override
+  String get videoEditorInfoStickerStyleOutline => 'Outline';
+
+  @override
+  String get videoEditorInfoStickerStyleDigital => 'Digital';
+
+  @override
+  String get videoEditorInfoStickerStyleAnalog => 'Analog';
+
+  @override
+  String get videoEditorInfoStickerStyleGlass => 'Glass';
+
+  @override
+  String get videoEditorInfoStickerStyleHighlight => 'Yellow';
+
+  @override
+  String get videoEditorInfoStickerStyleNeon => 'Neon';
+
+  @override
+  String get videoEditorInfoStickerStylePlain => 'Plain';
+
+  @override
+  String get videoEditorInfoStickerChangePlace => 'Change place';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchUnavailable =>
+      'Place search isn\'t available on this device.';
+
+  @override
+  String videoEditorInfoStickerRecordedValue(String value) {
+    return 'Recorded · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerNowValue(String value) {
+    return 'Now · $value';
+  }
+
+  @override
+  String videoEditorInfoStickerTodayValue(String value) {
+    return 'Today · $value';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayCount => 'Day counter';
+
+  @override
+  String get videoEditorInfoStickerSun => 'Sun';
+
+  @override
+  String get videoEditorInfoStickerMoon => 'Moon';
+
+  @override
+  String get videoEditorInfoStickerRecTimer => 'REC timer';
+
+  @override
+  String get videoEditorInfoStickerStyleFilm => 'Film';
+
+  @override
+  String get videoEditorInfoStickerStyleCamcorder => 'Camcorder';
+
+  @override
+  String videoEditorInfoStickerDayCountValue(String day) {
+    return 'Day $day';
+  }
+
+  @override
+  String videoEditorInfoStickerDayCountOfValue(String day, String total) {
+    return 'Day $day of $total';
+  }
+
+  @override
+  String get videoEditorInfoStickerDayLabel => 'Day';
+
+  @override
+  String get videoEditorInfoStickerDayTotalLabel => 'Total days (optional)';
+
+  @override
+  String get videoEditorInfoStickerSymbolPin => 'Pin';
+
+  @override
+  String get videoEditorInfoStickerSymbolFlag => 'Flag';
+
+  @override
+  String get videoEditorInfoStickerSymbolGlobe => 'Globe';
+
+  @override
+  String get videoEditorInfoStickerSymbolMap => 'Map';
+
+  @override
+  String get videoEditorInfoStickerMoonNew => 'New moon';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingCrescent => 'Waxing crescent';
+
+  @override
+  String get videoEditorInfoStickerMoonFirstQuarter => 'First quarter';
+
+  @override
+  String get videoEditorInfoStickerMoonWaxingGibbous => 'Waxing gibbous';
+
+  @override
+  String get videoEditorInfoStickerMoonFull => 'Full moon';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningGibbous => 'Waning gibbous';
+
+  @override
+  String get videoEditorInfoStickerMoonLastQuarter => 'Last quarter';
+
+  @override
+  String get videoEditorInfoStickerMoonWaningCrescent => 'Waning crescent';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchHint =>
+      'Search for a city or place';
+
+  @override
+  String get videoEditorInfoStickerPlaceNoResults => 'No places found';
+
+  @override
+  String get videoEditorInfoStickerPlaceSearchFailed =>
+      'Couldn\'t search for places. Try again.';
+
+  @override
+  String get videoEditorInfoStickerPlacePrivacyNote =>
+      'Only the place name goes into your video, never your exact position.';
+
+  @override
+  String get videoEditorInfoStickerLoading => 'Loading…';
+
+  @override
+  String get videoEditorInfoStickerLoadFailed =>
+      'Couldn\'t load this. Try again.';
+
+  @override
+  String get videoEditorInfoStickerMetAttribution => 'Data from MET Norway';
+
+  @override
+  String get videoEditorInfoStickerWeatherNow =>
+      'There\'s no weather for older videos, so this is the weather right now.';
+
+  @override
+  String get videoEditorInfoStickerWeatherSunny => 'Sunny';
+
+  @override
+  String get videoEditorInfoStickerWeatherClearNight => 'Clear night';
+
+  @override
+  String get videoEditorInfoStickerWeatherPartlyCloudy => 'Partly cloudy';
+
+  @override
+  String get videoEditorInfoStickerWeatherCloudy => 'Cloudy';
+
+  @override
+  String get videoEditorInfoStickerWeatherFog => 'Fog';
+
+  @override
+  String get videoEditorInfoStickerWeatherRain => 'Rain';
+
+  @override
+  String get videoEditorInfoStickerWeatherShowers => 'Showers';
+
+  @override
+  String get videoEditorInfoStickerWeatherSnow => 'Snow';
+
+  @override
+  String get videoEditorInfoStickerWeatherThunderstorm => 'Thunderstorm';
+
+  @override
+  String get videoEditorInfoStickerSunTimeZoneNote =>
+      'Times are in your phone\'s time zone.';
+
+  @override
+  String get videoEditorInfoStickerTemperatureLabel => 'Temperature';
+
+  @override
+  String get videoEditorInfoStickerUnitLabel => 'Unit';
+
+  @override
+  String get videoEditorInfoStickerBatteryLevelLabel => 'Battery level';
+
+  @override
+  String get videoEditorInfoStickerAdd => 'Add sticker';
+
+  @override
   String get videoEditorSelectFontSemanticLabel => 'Select font';
 
   @override
@@ -14344,10 +14559,87 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ideasDescriptionSix => 'Leaving this here.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Rooms, $displayCount unread messages',
+      one: 'Rooms, $displayCount unread message',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount new',
+      one: '$displayCount new',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount unread messages',
+      one: '$displayCount unread message',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount people',
+      one: '$displayCount person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount messages',
+      one: '$displayCount message',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'Last 24h';
+
+  @override
+  String get messagesRoomLoading => 'Checking activity…';
+
+  @override
+  String get messagesRoomLoadFailed => 'Activity couldn’t load.';
+
+  @override
+  String get messagesRoomEmpty => 'No recent messages. Say hello.';
+
+  @override
   String get messagesDirect => 'Direct';
 
   @override
   String get messagesRooms => 'Rooms';
+
+  @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Rooms ($badge)';
+  }
 
   @override
   String get messagesPublicTestRooms => 'Public test rooms';

@@ -9482,6 +9482,18 @@ class $DirectMessagesTable extends DirectMessages
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _heldDeletionWrapsMeta = const VerificationMeta(
+    'heldDeletionWraps',
+  );
+  @override
+  late final GeneratedColumn<String> heldDeletionWraps =
+      GeneratedColumn<String>(
+        'held_deletion_wraps',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -9510,6 +9522,7 @@ class $DirectMessagesTable extends DirectMessages
     sendBatchId,
     deletionRumorJson,
     deletionPublishStatus,
+    heldDeletionWraps,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -9730,6 +9743,15 @@ class $DirectMessagesTable extends DirectMessages
         ),
       );
     }
+    if (data.containsKey('held_deletion_wraps')) {
+      context.handle(
+        _heldDeletionWrapsMeta,
+        heldDeletionWraps.isAcceptableOrUnknown(
+          data['held_deletion_wraps']!,
+          _heldDeletionWrapsMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -9842,6 +9864,10 @@ class $DirectMessagesTable extends DirectMessages
       deletionPublishStatus: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}deletion_publish_status'],
+      ),
+      heldDeletionWraps: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}held_deletion_wraps'],
       ),
     );
   }
@@ -9988,6 +10014,24 @@ class DirectMessageRow extends DataClass
   /// not whether the original message or reaction was previously delivered.
   /// Both distinct values stop automatic retries without asserting delivery.
   final String? deletionPublishStatus;
+
+  /// The wraps relays hold of the kind-5 in [deletionRumorJson], recorded by
+  /// attempts that did not deliver it to every member (#10012): a JSON object
+  /// from each recipient's hex pubkey to
+  /// `{"wrap": <gift-wrap event id>, "delivered": <bool>}`. NULL when no
+  /// attempt recorded one.
+  ///
+  /// A delivered wrap is that member's copy, so a retry sends them nothing
+  /// again. Any other is a wrap a fallback-pool relay accepted while their
+  /// kind-10050 inbox could not be read: a retry sends them nothing while
+  /// their inbox stays unreadable, counts that wrap as delivered once they
+  /// turn out to advertise no inbox, and wraps the retraction again only once
+  /// their inbox is found.
+  ///
+  /// Lives as long as the rumor it was recorded for: cleared when the
+  /// retraction is confirmed or a different kind-5 replaces it, and kept,
+  /// like the rumor, by a blocked one.
+  final String? heldDeletionWraps;
   const DirectMessageRow({
     required this.id,
     required this.conversationId,
@@ -10015,6 +10059,7 @@ class DirectMessageRow extends DataClass
     this.sendBatchId,
     this.deletionRumorJson,
     this.deletionPublishStatus,
+    this.heldDeletionWraps,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -10076,6 +10121,9 @@ class DirectMessageRow extends DataClass
     }
     if (!nullToAbsent || deletionPublishStatus != null) {
       map['deletion_publish_status'] = Variable<String>(deletionPublishStatus);
+    }
+    if (!nullToAbsent || heldDeletionWraps != null) {
+      map['held_deletion_wraps'] = Variable<String>(heldDeletionWraps);
     }
     return map;
   }
@@ -10140,6 +10188,9 @@ class DirectMessageRow extends DataClass
       deletionPublishStatus: deletionPublishStatus == null && nullToAbsent
           ? const Value.absent()
           : Value(deletionPublishStatus),
+      heldDeletionWraps: heldDeletionWraps == null && nullToAbsent
+          ? const Value.absent()
+          : Value(heldDeletionWraps),
     );
   }
 
@@ -10181,6 +10232,9 @@ class DirectMessageRow extends DataClass
       deletionPublishStatus: serializer.fromJson<String?>(
         json['deletionPublishStatus'],
       ),
+      heldDeletionWraps: serializer.fromJson<String?>(
+        json['heldDeletionWraps'],
+      ),
     );
   }
   @override
@@ -10215,6 +10269,7 @@ class DirectMessageRow extends DataClass
       'deletionPublishStatus': serializer.toJson<String?>(
         deletionPublishStatus,
       ),
+      'heldDeletionWraps': serializer.toJson<String?>(heldDeletionWraps),
     };
   }
 
@@ -10245,6 +10300,7 @@ class DirectMessageRow extends DataClass
     Value<String?> sendBatchId = const Value.absent(),
     Value<String?> deletionRumorJson = const Value.absent(),
     Value<String?> deletionPublishStatus = const Value.absent(),
+    Value<String?> heldDeletionWraps = const Value.absent(),
   }) => DirectMessageRow(
     id: id ?? this.id,
     conversationId: conversationId ?? this.conversationId,
@@ -10284,6 +10340,9 @@ class DirectMessageRow extends DataClass
     deletionPublishStatus: deletionPublishStatus.present
         ? deletionPublishStatus.value
         : this.deletionPublishStatus,
+    heldDeletionWraps: heldDeletionWraps.present
+        ? heldDeletionWraps.value
+        : this.heldDeletionWraps,
   );
   DirectMessageRow copyWithCompanion(DirectMessagesCompanion data) {
     return DirectMessageRow(
@@ -10343,6 +10402,9 @@ class DirectMessageRow extends DataClass
       deletionPublishStatus: data.deletionPublishStatus.present
           ? data.deletionPublishStatus.value
           : this.deletionPublishStatus,
+      heldDeletionWraps: data.heldDeletionWraps.present
+          ? data.heldDeletionWraps.value
+          : this.heldDeletionWraps,
     );
   }
 
@@ -10374,7 +10436,8 @@ class DirectMessageRow extends DataClass
           ..write('ownerPubkey: $ownerPubkey, ')
           ..write('sendBatchId: $sendBatchId, ')
           ..write('deletionRumorJson: $deletionRumorJson, ')
-          ..write('deletionPublishStatus: $deletionPublishStatus')
+          ..write('deletionPublishStatus: $deletionPublishStatus, ')
+          ..write('heldDeletionWraps: $heldDeletionWraps')
           ..write(')'))
         .toString();
   }
@@ -10407,6 +10470,7 @@ class DirectMessageRow extends DataClass
     sendBatchId,
     deletionRumorJson,
     deletionPublishStatus,
+    heldDeletionWraps,
   ]);
   @override
   bool operator ==(Object other) =>
@@ -10437,7 +10501,8 @@ class DirectMessageRow extends DataClass
           other.ownerPubkey == this.ownerPubkey &&
           other.sendBatchId == this.sendBatchId &&
           other.deletionRumorJson == this.deletionRumorJson &&
-          other.deletionPublishStatus == this.deletionPublishStatus);
+          other.deletionPublishStatus == this.deletionPublishStatus &&
+          other.heldDeletionWraps == this.heldDeletionWraps);
 }
 
 class DirectMessagesCompanion extends UpdateCompanion<DirectMessageRow> {
@@ -10467,6 +10532,7 @@ class DirectMessagesCompanion extends UpdateCompanion<DirectMessageRow> {
   final Value<String?> sendBatchId;
   final Value<String?> deletionRumorJson;
   final Value<String?> deletionPublishStatus;
+  final Value<String?> heldDeletionWraps;
   final Value<int> rowid;
   const DirectMessagesCompanion({
     this.id = const Value.absent(),
@@ -10495,6 +10561,7 @@ class DirectMessagesCompanion extends UpdateCompanion<DirectMessageRow> {
     this.sendBatchId = const Value.absent(),
     this.deletionRumorJson = const Value.absent(),
     this.deletionPublishStatus = const Value.absent(),
+    this.heldDeletionWraps = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DirectMessagesCompanion.insert({
@@ -10524,6 +10591,7 @@ class DirectMessagesCompanion extends UpdateCompanion<DirectMessageRow> {
     this.sendBatchId = const Value.absent(),
     this.deletionRumorJson = const Value.absent(),
     this.deletionPublishStatus = const Value.absent(),
+    this.heldDeletionWraps = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        conversationId = Value(conversationId),
@@ -10558,6 +10626,7 @@ class DirectMessagesCompanion extends UpdateCompanion<DirectMessageRow> {
     Expression<String>? sendBatchId,
     Expression<String>? deletionRumorJson,
     Expression<String>? deletionPublishStatus,
+    Expression<String>? heldDeletionWraps,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -10589,6 +10658,7 @@ class DirectMessagesCompanion extends UpdateCompanion<DirectMessageRow> {
       if (deletionRumorJson != null) 'deletion_rumor_json': deletionRumorJson,
       if (deletionPublishStatus != null)
         'deletion_publish_status': deletionPublishStatus,
+      if (heldDeletionWraps != null) 'held_deletion_wraps': heldDeletionWraps,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -10620,6 +10690,7 @@ class DirectMessagesCompanion extends UpdateCompanion<DirectMessageRow> {
     Value<String?>? sendBatchId,
     Value<String?>? deletionRumorJson,
     Value<String?>? deletionPublishStatus,
+    Value<String?>? heldDeletionWraps,
     Value<int>? rowid,
   }) {
     return DirectMessagesCompanion(
@@ -10650,6 +10721,7 @@ class DirectMessagesCompanion extends UpdateCompanion<DirectMessageRow> {
       deletionRumorJson: deletionRumorJson ?? this.deletionRumorJson,
       deletionPublishStatus:
           deletionPublishStatus ?? this.deletionPublishStatus,
+      heldDeletionWraps: heldDeletionWraps ?? this.heldDeletionWraps,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -10737,6 +10809,9 @@ class DirectMessagesCompanion extends UpdateCompanion<DirectMessageRow> {
         deletionPublishStatus.value,
       );
     }
+    if (heldDeletionWraps.present) {
+      map['held_deletion_wraps'] = Variable<String>(heldDeletionWraps.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -10772,6 +10847,7 @@ class DirectMessagesCompanion extends UpdateCompanion<DirectMessageRow> {
           ..write('sendBatchId: $sendBatchId, ')
           ..write('deletionRumorJson: $deletionRumorJson, ')
           ..write('deletionPublishStatus: $deletionPublishStatus, ')
+          ..write('heldDeletionWraps: $heldDeletionWraps, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -10927,6 +11003,29 @@ class $DmMessageReactionsTable extends DmMessageReactions
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _heldReactionWrapsMeta = const VerificationMeta(
+    'heldReactionWraps',
+  );
+  @override
+  late final GeneratedColumn<String> heldReactionWraps =
+      GeneratedColumn<String>(
+        'held_reaction_wraps',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _heldRemovalWrapsMeta = const VerificationMeta(
+    'heldRemovalWraps',
+  );
+  @override
+  late final GeneratedColumn<String> heldRemovalWraps = GeneratedColumn<String>(
+    'held_removal_wraps',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -10942,6 +11041,8 @@ class $DmMessageReactionsTable extends DmMessageReactions
     rumorEventJson,
     publishStatus,
     recipientPubkeys,
+    heldReactionWraps,
+    heldRemovalWraps,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -11073,6 +11174,24 @@ class $DmMessageReactionsTable extends DmMessageReactions
         ),
       );
     }
+    if (data.containsKey('held_reaction_wraps')) {
+      context.handle(
+        _heldReactionWrapsMeta,
+        heldReactionWraps.isAcceptableOrUnknown(
+          data['held_reaction_wraps']!,
+          _heldReactionWrapsMeta,
+        ),
+      );
+    }
+    if (data.containsKey('held_removal_wraps')) {
+      context.handle(
+        _heldRemovalWrapsMeta,
+        heldRemovalWraps.isAcceptableOrUnknown(
+          data['held_removal_wraps']!,
+          _heldRemovalWrapsMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -11133,6 +11252,14 @@ class $DmMessageReactionsTable extends DmMessageReactions
       recipientPubkeys: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}recipient_pubkeys'],
+      ),
+      heldReactionWraps: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}held_reaction_wraps'],
+      ),
+      heldRemovalWraps: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}held_removal_wraps'],
       ),
     );
   }
@@ -11212,6 +11339,30 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
   /// queued before schema v20, a row queued while its recipients could not
   /// be established, or a row the group-recovery pass has moved.
   final String? recipientPubkeys;
+
+  /// The wraps relays hold of this reaction, recorded by attempts that did
+  /// not deliver it to every member (#10012): a JSON object from each
+  /// recipient's hex pubkey to
+  /// `{"wrap": <gift-wrap event id>, "delivered": <bool>}`. NULL when no
+  /// attempt recorded one.
+  ///
+  /// A delivered wrap is that member's copy, so a retry sends them nothing
+  /// again. Any other is a wrap a fallback-pool relay accepted while their
+  /// kind-10050 inbox could not be read: a retry sends them nothing while
+  /// their inbox stays unreadable, counts that wrap as delivered once they
+  /// turn out to advertise no inbox, and wraps the reaction again only once
+  /// their inbox is found.
+  ///
+  /// Lives as long as the reaction rumor in [rumorEventJson]: cleared when
+  /// the reaction is confirmed or blocked, when its removal replaces the
+  /// rumor, and when a re-reaction revives the row.
+  final String? heldReactionWraps;
+
+  /// [heldReactionWraps] for the kind-5 that removes the reaction, a separate
+  /// rumor stored on the same row once the reaction is removed. Cleared when
+  /// the removal is confirmed, when a different kind-5 replaces it, and when a
+  /// re-reaction revives the row; a refused removal keeps it with its rumor.
+  final String? heldRemovalWraps;
   const DmReactionRow({
     required this.id,
     required this.conversationId,
@@ -11226,6 +11377,8 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
     this.rumorEventJson,
     this.publishStatus,
     this.recipientPubkeys,
+    this.heldReactionWraps,
+    this.heldRemovalWraps,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -11250,6 +11403,12 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
     }
     if (!nullToAbsent || recipientPubkeys != null) {
       map['recipient_pubkeys'] = Variable<String>(recipientPubkeys);
+    }
+    if (!nullToAbsent || heldReactionWraps != null) {
+      map['held_reaction_wraps'] = Variable<String>(heldReactionWraps);
+    }
+    if (!nullToAbsent || heldRemovalWraps != null) {
+      map['held_removal_wraps'] = Variable<String>(heldRemovalWraps);
     }
     return map;
   }
@@ -11277,6 +11436,12 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
       recipientPubkeys: recipientPubkeys == null && nullToAbsent
           ? const Value.absent()
           : Value(recipientPubkeys),
+      heldReactionWraps: heldReactionWraps == null && nullToAbsent
+          ? const Value.absent()
+          : Value(heldReactionWraps),
+      heldRemovalWraps: heldRemovalWraps == null && nullToAbsent
+          ? const Value.absent()
+          : Value(heldRemovalWraps),
     );
   }
 
@@ -11301,6 +11466,10 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
       rumorEventJson: serializer.fromJson<String?>(json['rumorEventJson']),
       publishStatus: serializer.fromJson<String?>(json['publishStatus']),
       recipientPubkeys: serializer.fromJson<String?>(json['recipientPubkeys']),
+      heldReactionWraps: serializer.fromJson<String?>(
+        json['heldReactionWraps'],
+      ),
+      heldRemovalWraps: serializer.fromJson<String?>(json['heldRemovalWraps']),
     );
   }
   @override
@@ -11320,6 +11489,8 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
       'rumorEventJson': serializer.toJson<String?>(rumorEventJson),
       'publishStatus': serializer.toJson<String?>(publishStatus),
       'recipientPubkeys': serializer.toJson<String?>(recipientPubkeys),
+      'heldReactionWraps': serializer.toJson<String?>(heldReactionWraps),
+      'heldRemovalWraps': serializer.toJson<String?>(heldRemovalWraps),
     };
   }
 
@@ -11337,6 +11508,8 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
     Value<String?> rumorEventJson = const Value.absent(),
     Value<String?> publishStatus = const Value.absent(),
     Value<String?> recipientPubkeys = const Value.absent(),
+    Value<String?> heldReactionWraps = const Value.absent(),
+    Value<String?> heldRemovalWraps = const Value.absent(),
   }) => DmReactionRow(
     id: id ?? this.id,
     conversationId: conversationId ?? this.conversationId,
@@ -11357,6 +11530,12 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
     recipientPubkeys: recipientPubkeys.present
         ? recipientPubkeys.value
         : this.recipientPubkeys,
+    heldReactionWraps: heldReactionWraps.present
+        ? heldReactionWraps.value
+        : this.heldReactionWraps,
+    heldRemovalWraps: heldRemovalWraps.present
+        ? heldRemovalWraps.value
+        : this.heldRemovalWraps,
   );
   DmReactionRow copyWithCompanion(DmMessageReactionsCompanion data) {
     return DmReactionRow(
@@ -11391,6 +11570,12 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
       recipientPubkeys: data.recipientPubkeys.present
           ? data.recipientPubkeys.value
           : this.recipientPubkeys,
+      heldReactionWraps: data.heldReactionWraps.present
+          ? data.heldReactionWraps.value
+          : this.heldReactionWraps,
+      heldRemovalWraps: data.heldRemovalWraps.present
+          ? data.heldRemovalWraps.value
+          : this.heldRemovalWraps,
     );
   }
 
@@ -11409,7 +11594,9 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
           ..write('isDeleted: $isDeleted, ')
           ..write('rumorEventJson: $rumorEventJson, ')
           ..write('publishStatus: $publishStatus, ')
-          ..write('recipientPubkeys: $recipientPubkeys')
+          ..write('recipientPubkeys: $recipientPubkeys, ')
+          ..write('heldReactionWraps: $heldReactionWraps, ')
+          ..write('heldRemovalWraps: $heldRemovalWraps')
           ..write(')'))
         .toString();
   }
@@ -11429,6 +11616,8 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
     rumorEventJson,
     publishStatus,
     recipientPubkeys,
+    heldReactionWraps,
+    heldRemovalWraps,
   );
   @override
   bool operator ==(Object other) =>
@@ -11446,7 +11635,9 @@ class DmReactionRow extends DataClass implements Insertable<DmReactionRow> {
           other.isDeleted == this.isDeleted &&
           other.rumorEventJson == this.rumorEventJson &&
           other.publishStatus == this.publishStatus &&
-          other.recipientPubkeys == this.recipientPubkeys);
+          other.recipientPubkeys == this.recipientPubkeys &&
+          other.heldReactionWraps == this.heldReactionWraps &&
+          other.heldRemovalWraps == this.heldRemovalWraps);
 }
 
 class DmMessageReactionsCompanion extends UpdateCompanion<DmReactionRow> {
@@ -11463,6 +11654,8 @@ class DmMessageReactionsCompanion extends UpdateCompanion<DmReactionRow> {
   final Value<String?> rumorEventJson;
   final Value<String?> publishStatus;
   final Value<String?> recipientPubkeys;
+  final Value<String?> heldReactionWraps;
+  final Value<String?> heldRemovalWraps;
   final Value<int> rowid;
   const DmMessageReactionsCompanion({
     this.id = const Value.absent(),
@@ -11478,6 +11671,8 @@ class DmMessageReactionsCompanion extends UpdateCompanion<DmReactionRow> {
     this.rumorEventJson = const Value.absent(),
     this.publishStatus = const Value.absent(),
     this.recipientPubkeys = const Value.absent(),
+    this.heldReactionWraps = const Value.absent(),
+    this.heldRemovalWraps = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   DmMessageReactionsCompanion.insert({
@@ -11494,6 +11689,8 @@ class DmMessageReactionsCompanion extends UpdateCompanion<DmReactionRow> {
     this.rumorEventJson = const Value.absent(),
     this.publishStatus = const Value.absent(),
     this.recipientPubkeys = const Value.absent(),
+    this.heldReactionWraps = const Value.absent(),
+    this.heldRemovalWraps = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        conversationId = Value(conversationId),
@@ -11517,6 +11714,8 @@ class DmMessageReactionsCompanion extends UpdateCompanion<DmReactionRow> {
     Expression<String>? rumorEventJson,
     Expression<String>? publishStatus,
     Expression<String>? recipientPubkeys,
+    Expression<String>? heldReactionWraps,
+    Expression<String>? heldRemovalWraps,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -11534,6 +11733,8 @@ class DmMessageReactionsCompanion extends UpdateCompanion<DmReactionRow> {
       if (rumorEventJson != null) 'rumor_event_json': rumorEventJson,
       if (publishStatus != null) 'publish_status': publishStatus,
       if (recipientPubkeys != null) 'recipient_pubkeys': recipientPubkeys,
+      if (heldReactionWraps != null) 'held_reaction_wraps': heldReactionWraps,
+      if (heldRemovalWraps != null) 'held_removal_wraps': heldRemovalWraps,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -11552,6 +11753,8 @@ class DmMessageReactionsCompanion extends UpdateCompanion<DmReactionRow> {
     Value<String?>? rumorEventJson,
     Value<String?>? publishStatus,
     Value<String?>? recipientPubkeys,
+    Value<String?>? heldReactionWraps,
+    Value<String?>? heldRemovalWraps,
     Value<int>? rowid,
   }) {
     return DmMessageReactionsCompanion(
@@ -11568,6 +11771,8 @@ class DmMessageReactionsCompanion extends UpdateCompanion<DmReactionRow> {
       rumorEventJson: rumorEventJson ?? this.rumorEventJson,
       publishStatus: publishStatus ?? this.publishStatus,
       recipientPubkeys: recipientPubkeys ?? this.recipientPubkeys,
+      heldReactionWraps: heldReactionWraps ?? this.heldReactionWraps,
+      heldRemovalWraps: heldRemovalWraps ?? this.heldRemovalWraps,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -11616,6 +11821,12 @@ class DmMessageReactionsCompanion extends UpdateCompanion<DmReactionRow> {
     if (recipientPubkeys.present) {
       map['recipient_pubkeys'] = Variable<String>(recipientPubkeys.value);
     }
+    if (heldReactionWraps.present) {
+      map['held_reaction_wraps'] = Variable<String>(heldReactionWraps.value);
+    }
+    if (heldRemovalWraps.present) {
+      map['held_removal_wraps'] = Variable<String>(heldRemovalWraps.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -11638,6 +11849,8 @@ class DmMessageReactionsCompanion extends UpdateCompanion<DmReactionRow> {
           ..write('rumorEventJson: $rumorEventJson, ')
           ..write('publishStatus: $publishStatus, ')
           ..write('recipientPubkeys: $recipientPubkeys, ')
+          ..write('heldReactionWraps: $heldReactionWraps, ')
+          ..write('heldRemovalWraps: $heldRemovalWraps, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -29150,6 +29363,7 @@ typedef $$DirectMessagesTableCreateCompanionBuilder =
       Value<String?> sendBatchId,
       Value<String?> deletionRumorJson,
       Value<String?> deletionPublishStatus,
+      Value<String?> heldDeletionWraps,
       Value<int> rowid,
     });
 typedef $$DirectMessagesTableUpdateCompanionBuilder =
@@ -29180,6 +29394,7 @@ typedef $$DirectMessagesTableUpdateCompanionBuilder =
       Value<String?> sendBatchId,
       Value<String?> deletionRumorJson,
       Value<String?> deletionPublishStatus,
+      Value<String?> heldDeletionWraps,
       Value<int> rowid,
     });
 
@@ -29319,6 +29534,11 @@ class $$DirectMessagesTableFilterComposer
 
   ColumnFilters<String> get deletionPublishStatus => $composableBuilder(
     column: $table.deletionPublishStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get heldDeletionWraps => $composableBuilder(
+    column: $table.heldDeletionWraps,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -29461,6 +29681,11 @@ class $$DirectMessagesTableOrderingComposer
     column: $table.deletionPublishStatus,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get heldDeletionWraps => $composableBuilder(
+    column: $table.heldDeletionWraps,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$DirectMessagesTableAnnotationComposer
@@ -29579,6 +29804,11 @@ class $$DirectMessagesTableAnnotationComposer
     column: $table.deletionPublishStatus,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get heldDeletionWraps => $composableBuilder(
+    column: $table.heldDeletionWraps,
+    builder: (column) => column,
+  );
 }
 
 class $$DirectMessagesTableTableManager
@@ -29644,6 +29874,7 @@ class $$DirectMessagesTableTableManager
                 Value<String?> sendBatchId = const Value.absent(),
                 Value<String?> deletionRumorJson = const Value.absent(),
                 Value<String?> deletionPublishStatus = const Value.absent(),
+                Value<String?> heldDeletionWraps = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DirectMessagesCompanion(
                 id: id,
@@ -29672,6 +29903,7 @@ class $$DirectMessagesTableTableManager
                 sendBatchId: sendBatchId,
                 deletionRumorJson: deletionRumorJson,
                 deletionPublishStatus: deletionPublishStatus,
+                heldDeletionWraps: heldDeletionWraps,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -29702,6 +29934,7 @@ class $$DirectMessagesTableTableManager
                 Value<String?> sendBatchId = const Value.absent(),
                 Value<String?> deletionRumorJson = const Value.absent(),
                 Value<String?> deletionPublishStatus = const Value.absent(),
+                Value<String?> heldDeletionWraps = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DirectMessagesCompanion.insert(
                 id: id,
@@ -29730,6 +29963,7 @@ class $$DirectMessagesTableTableManager
                 sendBatchId: sendBatchId,
                 deletionRumorJson: deletionRumorJson,
                 deletionPublishStatus: deletionPublishStatus,
+                heldDeletionWraps: heldDeletionWraps,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
@@ -29772,6 +30006,8 @@ typedef $$DmMessageReactionsTableCreateCompanionBuilder =
       Value<String?> rumorEventJson,
       Value<String?> publishStatus,
       Value<String?> recipientPubkeys,
+      Value<String?> heldReactionWraps,
+      Value<String?> heldRemovalWraps,
       Value<int> rowid,
     });
 typedef $$DmMessageReactionsTableUpdateCompanionBuilder =
@@ -29789,6 +30025,8 @@ typedef $$DmMessageReactionsTableUpdateCompanionBuilder =
       Value<String?> rumorEventJson,
       Value<String?> publishStatus,
       Value<String?> recipientPubkeys,
+      Value<String?> heldReactionWraps,
+      Value<String?> heldRemovalWraps,
       Value<int> rowid,
     });
 
@@ -29863,6 +30101,16 @@ class $$DmMessageReactionsTableFilterComposer
 
   ColumnFilters<String> get recipientPubkeys => $composableBuilder(
     column: $table.recipientPubkeys,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get heldReactionWraps => $composableBuilder(
+    column: $table.heldReactionWraps,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get heldRemovalWraps => $composableBuilder(
+    column: $table.heldRemovalWraps,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -29940,6 +30188,16 @@ class $$DmMessageReactionsTableOrderingComposer
     column: $table.recipientPubkeys,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get heldReactionWraps => $composableBuilder(
+    column: $table.heldReactionWraps,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get heldRemovalWraps => $composableBuilder(
+    column: $table.heldRemovalWraps,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$DmMessageReactionsTableAnnotationComposer
@@ -30007,6 +30265,16 @@ class $$DmMessageReactionsTableAnnotationComposer
     column: $table.recipientPubkeys,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get heldReactionWraps => $composableBuilder(
+    column: $table.heldReactionWraps,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get heldRemovalWraps => $composableBuilder(
+    column: $table.heldRemovalWraps,
+    builder: (column) => column,
+  );
 }
 
 class $$DmMessageReactionsTableTableManager
@@ -30062,6 +30330,8 @@ class $$DmMessageReactionsTableTableManager
                 Value<String?> rumorEventJson = const Value.absent(),
                 Value<String?> publishStatus = const Value.absent(),
                 Value<String?> recipientPubkeys = const Value.absent(),
+                Value<String?> heldReactionWraps = const Value.absent(),
+                Value<String?> heldRemovalWraps = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DmMessageReactionsCompanion(
                 id: id,
@@ -30077,6 +30347,8 @@ class $$DmMessageReactionsTableTableManager
                 rumorEventJson: rumorEventJson,
                 publishStatus: publishStatus,
                 recipientPubkeys: recipientPubkeys,
+                heldReactionWraps: heldReactionWraps,
+                heldRemovalWraps: heldRemovalWraps,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -30094,6 +30366,8 @@ class $$DmMessageReactionsTableTableManager
                 Value<String?> rumorEventJson = const Value.absent(),
                 Value<String?> publishStatus = const Value.absent(),
                 Value<String?> recipientPubkeys = const Value.absent(),
+                Value<String?> heldReactionWraps = const Value.absent(),
+                Value<String?> heldRemovalWraps = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => DmMessageReactionsCompanion.insert(
                 id: id,
@@ -30109,6 +30383,8 @@ class $$DmMessageReactionsTableTableManager
                 rumorEventJson: rumorEventJson,
                 publishStatus: publishStatus,
                 recipientPubkeys: recipientPubkeys,
+                heldReactionWraps: heldReactionWraps,
+                heldRemovalWraps: heldRemovalWraps,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0

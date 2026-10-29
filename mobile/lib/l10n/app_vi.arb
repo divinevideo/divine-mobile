@@ -5416,6 +5416,72 @@
   "videoEditorFeedPreviewContent": "Tránh đặt nội dung sau những khu vực này.",
   "videoEditorStickersDivineOriginals": "Divine Originals",
   "videoEditorStickerSearchHint": "Tìm nhãn dán...",
+  "videoEditorInfoStickersTitle": "Thông tin",
+  "videoEditorInfoStickerTime": "Giờ",
+  "videoEditorInfoStickerDate": "Ngày",
+  "videoEditorInfoStickerLocation": "Địa điểm",
+  "videoEditorInfoStickerWeather": "Thời tiết",
+  "videoEditorInfoStickerAltitude": "Độ cao",
+  "videoEditorInfoStickerBattery": "Pin",
+  "videoEditorInfoStickerStyleLight": "Sáng",
+  "videoEditorInfoStickerStyleDark": "Tối",
+  "videoEditorInfoStickerStyleBrand": "Xanh lá",
+  "videoEditorInfoStickerStyleOutline": "Viền",
+  "videoEditorInfoStickerStyleDigital": "Kỹ thuật số",
+  "videoEditorInfoStickerStyleAnalog": "Kim",
+  "videoEditorInfoStickerStyleGlass": "Kính",
+  "videoEditorInfoStickerStyleHighlight": "Vàng",
+  "videoEditorInfoStickerStyleNeon": "Neon",
+  "videoEditorInfoStickerStylePlain": "Đơn giản",
+  "videoEditorInfoStickerChangePlace": "Đổi địa điểm",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "Tìm kiếm địa điểm không khả dụng trên thiết bị này.",
+  "videoEditorInfoStickerRecordedValue": "Lúc quay · {value}",
+  "videoEditorInfoStickerNowValue": "Bây giờ · {value}",
+  "videoEditorInfoStickerTodayValue": "Hôm nay · {value}",
+  "videoEditorInfoStickerDayCount": "Đếm ngày",
+  "videoEditorInfoStickerSun": "Mặt trời",
+  "videoEditorInfoStickerMoon": "Mặt trăng",
+  "videoEditorInfoStickerRecTimer": "Bộ đếm REC",
+  "videoEditorInfoStickerStyleFilm": "Phim",
+  "videoEditorInfoStickerStyleCamcorder": "Máy quay",
+  "videoEditorInfoStickerDayCountValue": "Ngày {day}",
+  "videoEditorInfoStickerDayCountOfValue": "Ngày {day}/{total}",
+  "videoEditorInfoStickerDayLabel": "Ngày",
+  "videoEditorInfoStickerDayTotalLabel": "Tổng số ngày (không bắt buộc)",
+  "videoEditorInfoStickerSymbolPin": "Ghim",
+  "videoEditorInfoStickerSymbolFlag": "Cờ",
+  "videoEditorInfoStickerSymbolGlobe": "Quả địa cầu",
+  "videoEditorInfoStickerSymbolMap": "Bản đồ",
+  "videoEditorInfoStickerMoonNew": "Trăng non",
+  "videoEditorInfoStickerMoonWaxingCrescent": "Trăng lưỡi liềm đầu tháng",
+  "videoEditorInfoStickerMoonFirstQuarter": "Bán nguyệt đầu tháng",
+  "videoEditorInfoStickerMoonWaxingGibbous": "Trăng khuyết đầu tháng",
+  "videoEditorInfoStickerMoonFull": "Trăng tròn",
+  "videoEditorInfoStickerMoonWaningGibbous": "Trăng khuyết cuối tháng",
+  "videoEditorInfoStickerMoonLastQuarter": "Bán nguyệt cuối tháng",
+  "videoEditorInfoStickerMoonWaningCrescent": "Trăng lưỡi liềm cuối tháng",
+  "videoEditorInfoStickerPlaceSearchHint": "Tìm thành phố hoặc địa điểm",
+  "videoEditorInfoStickerPlaceNoResults": "Không tìm thấy địa điểm nào",
+  "videoEditorInfoStickerPlaceSearchFailed": "Không tìm được địa điểm. Thử lại nhé.",
+  "videoEditorInfoStickerPlacePrivacyNote": "Video của bạn chỉ có tên địa điểm, không bao giờ có vị trí chính xác của bạn.",
+  "videoEditorInfoStickerLoading": "Đang tải…",
+  "videoEditorInfoStickerLoadFailed": "Không tải được. Thử lại nhé.",
+  "videoEditorInfoStickerMetAttribution": "Dữ liệu từ MET Norway",
+  "videoEditorInfoStickerWeatherNow": "Không có thời tiết cho video cũ hơn, nên đây là thời tiết hiện tại.",
+  "videoEditorInfoStickerWeatherSunny": "Nắng",
+  "videoEditorInfoStickerWeatherClearNight": "Đêm quang",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "Ít mây",
+  "videoEditorInfoStickerWeatherCloudy": "Nhiều mây",
+  "videoEditorInfoStickerWeatherFog": "Sương mù",
+  "videoEditorInfoStickerWeatherRain": "Mưa",
+  "videoEditorInfoStickerWeatherShowers": "Mưa rào",
+  "videoEditorInfoStickerWeatherSnow": "Tuyết",
+  "videoEditorInfoStickerWeatherThunderstorm": "Dông",
+  "videoEditorInfoStickerSunTimeZoneNote": "Thời gian theo múi giờ trên điện thoại của bạn.",
+  "videoEditorInfoStickerTemperatureLabel": "Nhiệt độ",
+  "videoEditorInfoStickerUnitLabel": "Đơn vị",
+  "videoEditorInfoStickerBatteryLevelLabel": "Mức pin",
+  "videoEditorInfoStickerAdd": "Thêm nhãn dán",
   "videoEditorSelectFontSemanticLabel": "Chọn phông chữ",
   "videoEditorFontUnknown": "Không xác định",
   "videoEditorSplitPlayheadOutsideClip": "Đầu phát phải nằm trong clip đã chọn để tách.",
@@ -7089,8 +7155,97 @@
   "ideasDescriptionFive": "Chỉ muốn chia sẻ thôi.",
   "ideasTitleSix": "Một chút hôm nay",
   "ideasDescriptionSix": "Để điều này ở đây.",
+  "messagesRoomsUnreadLabel": "{count, plural, other{Phòng, {displayCount} tin nhắn chưa đọc}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, other{{displayCount} mới}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, other{{displayCount} tin nhắn chưa đọc}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, other{{displayCount} người}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, other{{displayCount} tin nhắn}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "24 giờ qua",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "Đang kiểm tra hoạt động…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "Không tải được hoạt động.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "Gần đây chưa có tin nhắn. Chào mọi người nào.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "Trực tiếp",
   "messagesRooms": "Phòng",
+  "messagesRoomsWithUnread": "Phòng ({badge})",
   "messagesPublicTestRooms": "Phòng thử nghiệm công khai",
   "messagesPublicTestDisclosure": "Các phòng thử nghiệm này là công khai. Bất kỳ ai có quyền truy cập đều có thể đọc tin nhắn của bạn.",
   "messagesNoRooms": "Chưa có phòng nào",

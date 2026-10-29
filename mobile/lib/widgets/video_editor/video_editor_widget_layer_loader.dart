@@ -1,12 +1,14 @@
 // ABOUTME: Rebuilds every kind of WidgetLayer the video editor creates from
 // ABOUTME: the meta it was exported with (stickers, detached clips, audio
-// ABOUTME: visualizers)
+// ABOUTME: visualizers, info stickers)
 
 import 'package:flutter/widgets.dart';
 import 'package:openvine/models/video_editor/audio_visualizer_layer.dart';
 import 'package:openvine/models/video_editor/detached_clip_layer.dart';
+import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_layer_view.dart';
 import 'package:openvine/widgets/video_editor/detached_clip/detached_clip_layer_view.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_view.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 
 /// The editor's `widgetLoader`: rebuilds a `WidgetLayer` from the meta map that
@@ -23,6 +25,12 @@ Widget videoEditorWidgetLayerLoader(String id, {Map<String, dynamic>? meta}) {
   }
   if (AudioVisualizerLayerData.fromMeta(meta) case final visualizer?) {
     return AudioVisualizerLayerView(data: visualizer);
+  }
+  if (InfoStickerData.isInfoStickerMeta(meta)) {
+    final info = InfoStickerData.fromMeta(meta);
+    // A kind this version does not know shows nothing rather than being read
+    // as an image sticker.
+    return info == null ? const SizedBox.shrink() : InfoStickerView(data: info);
   }
   return videoEditorStickerWidgetLoader(id, meta: meta);
 }

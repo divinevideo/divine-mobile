@@ -3050,6 +3050,72 @@
   "videoEditorFeedPreviewContent": "Unikaj umieszczania treści za tymi obszarami.",
   "videoEditorStickersDivineOriginals": "Divine Oryginały",
   "videoEditorStickerSearchHint": "Szukaj naklejek...",
+  "videoEditorInfoStickersTitle": "Info",
+  "videoEditorInfoStickerTime": "Godzina",
+  "videoEditorInfoStickerDate": "Data",
+  "videoEditorInfoStickerLocation": "Miejsce",
+  "videoEditorInfoStickerWeather": "Pogoda",
+  "videoEditorInfoStickerAltitude": "Wysokość",
+  "videoEditorInfoStickerBattery": "Bateria",
+  "videoEditorInfoStickerStyleLight": "Jasny",
+  "videoEditorInfoStickerStyleDark": "Ciemny",
+  "videoEditorInfoStickerStyleBrand": "Zielony",
+  "videoEditorInfoStickerStyleOutline": "Kontur",
+  "videoEditorInfoStickerStyleDigital": "Cyfrowy",
+  "videoEditorInfoStickerStyleAnalog": "Analogowy",
+  "videoEditorInfoStickerStyleGlass": "Szkło",
+  "videoEditorInfoStickerStyleHighlight": "Żółty",
+  "videoEditorInfoStickerStyleNeon": "Neon",
+  "videoEditorInfoStickerStylePlain": "Prosty",
+  "videoEditorInfoStickerChangePlace": "Zmień miejsce",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "Wyszukiwanie miejsc nie jest dostępne na tym urządzeniu.",
+  "videoEditorInfoStickerRecordedValue": "Nagranie · {value}",
+  "videoEditorInfoStickerNowValue": "Teraz · {value}",
+  "videoEditorInfoStickerTodayValue": "Dziś · {value}",
+  "videoEditorInfoStickerDayCount": "Licznik dni",
+  "videoEditorInfoStickerSun": "Słońce",
+  "videoEditorInfoStickerMoon": "Księżyc",
+  "videoEditorInfoStickerRecTimer": "Licznik REC",
+  "videoEditorInfoStickerStyleFilm": "Klisza",
+  "videoEditorInfoStickerStyleCamcorder": "Kamera",
+  "videoEditorInfoStickerDayCountValue": "Dzień {day}",
+  "videoEditorInfoStickerDayCountOfValue": "Dzień {day} z {total}",
+  "videoEditorInfoStickerDayLabel": "Dzień",
+  "videoEditorInfoStickerDayTotalLabel": "Liczba dni (opcjonalnie)",
+  "videoEditorInfoStickerSymbolPin": "Pinezka",
+  "videoEditorInfoStickerSymbolFlag": "Flaga",
+  "videoEditorInfoStickerSymbolGlobe": "Globus",
+  "videoEditorInfoStickerSymbolMap": "Mapa",
+  "videoEditorInfoStickerMoonNew": "Nów",
+  "videoEditorInfoStickerMoonWaxingCrescent": "Przybywający sierp",
+  "videoEditorInfoStickerMoonFirstQuarter": "Pierwsza kwadra",
+  "videoEditorInfoStickerMoonWaxingGibbous": "Przybywający garb",
+  "videoEditorInfoStickerMoonFull": "Pełnia",
+  "videoEditorInfoStickerMoonWaningGibbous": "Ubywający garb",
+  "videoEditorInfoStickerMoonLastQuarter": "Ostatnia kwadra",
+  "videoEditorInfoStickerMoonWaningCrescent": "Ubywający sierp",
+  "videoEditorInfoStickerPlaceSearchHint": "Szukaj miasta lub miejsca",
+  "videoEditorInfoStickerPlaceNoResults": "Nie znaleziono miejsc",
+  "videoEditorInfoStickerPlaceSearchFailed": "Nie udało się wyszukać miejsc. Spróbuj ponownie.",
+  "videoEditorInfoStickerPlacePrivacyNote": "Do twojego filmu trafia tylko nazwa miejsca, nigdy twoja dokładna lokalizacja.",
+  "videoEditorInfoStickerLoading": "Wczytywanie…",
+  "videoEditorInfoStickerLoadFailed": "Nie udało się wczytać. Spróbuj ponownie.",
+  "videoEditorInfoStickerMetAttribution": "Dane: MET Norway",
+  "videoEditorInfoStickerWeatherNow": "Dla starszych filmów nie ma danych o pogodzie, więc to pogoda w tej chwili.",
+  "videoEditorInfoStickerWeatherSunny": "Słonecznie",
+  "videoEditorInfoStickerWeatherClearNight": "Bezchmurna noc",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "Częściowe zachmurzenie",
+  "videoEditorInfoStickerWeatherCloudy": "Pochmurno",
+  "videoEditorInfoStickerWeatherFog": "Mgła",
+  "videoEditorInfoStickerWeatherRain": "Deszcz",
+  "videoEditorInfoStickerWeatherShowers": "Przelotne opady",
+  "videoEditorInfoStickerWeatherSnow": "Śnieg",
+  "videoEditorInfoStickerWeatherThunderstorm": "Burza",
+  "videoEditorInfoStickerSunTimeZoneNote": "Godziny są w strefie czasowej twojego telefonu.",
+  "videoEditorInfoStickerTemperatureLabel": "Temperatura",
+  "videoEditorInfoStickerUnitLabel": "Jednostka",
+  "videoEditorInfoStickerBatteryLevelLabel": "Poziom baterii",
+  "videoEditorInfoStickerAdd": "Dodaj naklejkę",
   "videoEditorSelectFontSemanticLabel": "Wybierz czcionkę",
   "videoEditorFontUnknown": "Nieznana",
   "videoEditorSplitFailed": "Podział nieudany. Spróbuj ponownie.",
@@ -5793,8 +5859,97 @@
   "ideasDescriptionFive": "Po prostu chcę się podzielić.",
   "ideasTitleSix": "Odrobina dzisiaj",
   "ideasDescriptionSix": "Zostawiam to tutaj.",
+  "messagesRoomsUnreadLabel": "{count, plural, one{Pokoje, {displayCount} nieprzeczytana wiadomość} few{Pokoje, {displayCount} nieprzeczytane wiadomości} many{Pokoje, {displayCount} nieprzeczytanych wiadomości} other{Pokoje, {displayCount} nieprzeczytanej wiadomości}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, one{Nieprzeczytane: {displayCount}} few{Nieprzeczytane: {displayCount}} many{Nieprzeczytane: {displayCount}} other{Nieprzeczytane: {displayCount}}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, one{{displayCount} nieprzeczytana wiadomość} few{{displayCount} nieprzeczytane wiadomości} many{{displayCount} nieprzeczytanych wiadomości} other{{displayCount} nieprzeczytanej wiadomości}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, one{{displayCount} osoba} few{{displayCount} osoby} many{{displayCount} osób} other{{displayCount} osoby}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, one{{displayCount} wiadomość} few{{displayCount} wiadomości} many{{displayCount} wiadomości} other{{displayCount} wiadomości}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "Ostatnie 24 godz.",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "Sprawdzanie aktywności…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "Nie udało się wczytać aktywności.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "Ostatnio nie było wiadomości. Przywitaj się.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "Bezpośrednie",
   "messagesRooms": "Pokoje",
+  "messagesRoomsWithUnread": "Pokoje ({badge})",
   "messagesPublicTestRooms": "Publiczne pokoje testowe",
   "messagesPublicTestDisclosure": "Te pokoje testowe są publiczne. Każdy, kto ma dostęp, może czytać Twoje wiadomości.",
   "messagesNoRooms": "Nie ma jeszcze pokoi",

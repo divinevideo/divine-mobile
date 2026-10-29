@@ -3680,6 +3680,72 @@
   "videoEditorFeedPreviewContent": "ከእነዚህ አካባቢዎች በስተጀርባ ይዘትን ከማስቀመጥ ተቆጠብ።",
   "videoEditorStickersDivineOriginals": "Divine ኦሪጅናል",
   "videoEditorStickerSearchHint": "ተለጣፊዎችን ፈልግ...",
+  "videoEditorInfoStickersTitle": "መረጃ",
+  "videoEditorInfoStickerTime": "ሰዓት",
+  "videoEditorInfoStickerDate": "ቀን",
+  "videoEditorInfoStickerLocation": "ቦታ",
+  "videoEditorInfoStickerWeather": "የአየር ሁኔታ",
+  "videoEditorInfoStickerAltitude": "ከፍታ",
+  "videoEditorInfoStickerBattery": "ባትሪ",
+  "videoEditorInfoStickerStyleLight": "ፈዛዛ",
+  "videoEditorInfoStickerStyleDark": "ጨለማ",
+  "videoEditorInfoStickerStyleBrand": "አረንጓዴ",
+  "videoEditorInfoStickerStyleOutline": "ዝርዝር መስመር",
+  "videoEditorInfoStickerStyleDigital": "ዲጂታል",
+  "videoEditorInfoStickerStyleAnalog": "አናሎግ",
+  "videoEditorInfoStickerStyleGlass": "መስታወት",
+  "videoEditorInfoStickerStyleHighlight": "ቢጫ",
+  "videoEditorInfoStickerStyleNeon": "ኒዮን",
+  "videoEditorInfoStickerStylePlain": "ቀላል",
+  "videoEditorInfoStickerChangePlace": "ቦታ ይቀይሩ",
+  "videoEditorInfoStickerPlaceSearchUnavailable": "በዚህ መሣሪያ ላይ የቦታ ፍለጋ አይገኝም።",
+  "videoEditorInfoStickerRecordedValue": "የተቀረጸበት · {value}",
+  "videoEditorInfoStickerNowValue": "አሁን · {value}",
+  "videoEditorInfoStickerTodayValue": "ዛሬ · {value}",
+  "videoEditorInfoStickerDayCount": "የቀን ቆጣሪ",
+  "videoEditorInfoStickerSun": "ፀሐይ",
+  "videoEditorInfoStickerMoon": "ጨረቃ",
+  "videoEditorInfoStickerRecTimer": "REC ሰዓት ቆጣሪ",
+  "videoEditorInfoStickerStyleFilm": "ፊልም",
+  "videoEditorInfoStickerStyleCamcorder": "ካምኮርደር",
+  "videoEditorInfoStickerDayCountValue": "ቀን {day}",
+  "videoEditorInfoStickerDayCountOfValue": "ቀን {day} ከ{total}",
+  "videoEditorInfoStickerDayLabel": "ቀን",
+  "videoEditorInfoStickerDayTotalLabel": "ጠቅላላ ቀናት (አማራጭ)",
+  "videoEditorInfoStickerSymbolPin": "ፒን",
+  "videoEditorInfoStickerSymbolFlag": "ባንዲራ",
+  "videoEditorInfoStickerSymbolGlobe": "ሉል",
+  "videoEditorInfoStickerSymbolMap": "ካርታ",
+  "videoEditorInfoStickerMoonNew": "አዲስ ጨረቃ",
+  "videoEditorInfoStickerMoonWaxingCrescent": "እያደገ ያለ ቀጭን ጨረቃ",
+  "videoEditorInfoStickerMoonFirstQuarter": "የመጀመሪያ ሩብ",
+  "videoEditorInfoStickerMoonWaxingGibbous": "እያደገ ያለ ጨረቃ",
+  "videoEditorInfoStickerMoonFull": "ሙሉ ጨረቃ",
+  "videoEditorInfoStickerMoonWaningGibbous": "እየቀነሰ ያለ ጨረቃ",
+  "videoEditorInfoStickerMoonLastQuarter": "የመጨረሻ ሩብ",
+  "videoEditorInfoStickerMoonWaningCrescent": "እየቀነሰ ያለ ቀጭን ጨረቃ",
+  "videoEditorInfoStickerPlaceSearchHint": "ከተማ ወይም ቦታ ይፈልጉ",
+  "videoEditorInfoStickerPlaceNoResults": "ምንም ቦታ አልተገኘም",
+  "videoEditorInfoStickerPlaceSearchFailed": "ቦታዎችን መፈለግ አልተቻለም። እንደገና ይሞክሩ።",
+  "videoEditorInfoStickerPlacePrivacyNote": "በቪዲዮዎ ውስጥ የሚገባው የቦታው ስም ብቻ ነው፤ ትክክለኛው አካባቢዎ በጭራሽ አይገባም።",
+  "videoEditorInfoStickerLoading": "በመጫን ላይ…",
+  "videoEditorInfoStickerLoadFailed": "መጫን አልተቻለም። እንደገና ይሞክሩ።",
+  "videoEditorInfoStickerMetAttribution": "መረጃ ከ MET Norway",
+  "videoEditorInfoStickerWeatherNow": "ለቆዩ ቪዲዮዎች የአየር ሁኔታ መረጃ የለም፤ ይህ የአሁኑ የአየር ሁኔታ ነው።",
+  "videoEditorInfoStickerWeatherSunny": "ፀሐያማ",
+  "videoEditorInfoStickerWeatherClearNight": "ጥርት ያለ ሌሊት",
+  "videoEditorInfoStickerWeatherPartlyCloudy": "በከፊል ደመናማ",
+  "videoEditorInfoStickerWeatherCloudy": "ደመናማ",
+  "videoEditorInfoStickerWeatherFog": "ጭጋግ",
+  "videoEditorInfoStickerWeatherRain": "ዝናብ",
+  "videoEditorInfoStickerWeatherShowers": "ካፊያ",
+  "videoEditorInfoStickerWeatherSnow": "በረዶ",
+  "videoEditorInfoStickerWeatherThunderstorm": "ነጎድጓድ",
+  "videoEditorInfoStickerSunTimeZoneNote": "ሰዓቶቹ በስልክዎ የሰዓት ሰቅ ናቸው።",
+  "videoEditorInfoStickerTemperatureLabel": "የሙቀት መጠን",
+  "videoEditorInfoStickerUnitLabel": "መለኪያ",
+  "videoEditorInfoStickerBatteryLevelLabel": "የባትሪ መጠን",
+  "videoEditorInfoStickerAdd": "ተለጣፊ ያክሉ",
   "videoEditorSelectFontSemanticLabel": "ቅርጸ-ቁምፊ ይምረጡ",
   "videoEditorFontUnknown": "ያልታወቀ",
   "videoEditorSplitFailed": "መከፋፈሉ አልተሳካም። እባክዎ እንደገና ይሞክሩ።",
@@ -5846,8 +5912,97 @@
   "ideasDescriptionFive": "ማጋራት ብቻ ፈለግሁ።",
   "ideasTitleSix": "ከዛሬ ትንሽ",
   "ideasDescriptionSix": "ይህን እዚህ እተዋለሁ።",
+  "messagesRoomsUnreadLabel": "{count, plural, one{ክፍሎች፣ {displayCount} ያልተነበበ መልእክት} other{ክፍሎች፣ {displayCount} ያልተነበቡ መልእክቶች}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, one{አዲስ፦ {displayCount}} other{አዳዲስ፦ {displayCount}}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, one{{displayCount} ያልተነበበ መልእክት} other{{displayCount} ያልተነበቡ መልእክቶች}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, one{{displayCount} ሰው} other{{displayCount} ሰዎች}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, one{{displayCount} መልእክት} other{{displayCount} መልእክቶች}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "ባለፉት 24 ሰዓታት",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "እንቅስቃሴ በመፈተሽ ላይ…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "እንቅስቃሴውን መጫን አልተቻለም።",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "የቅርብ ጊዜ መልእክቶች የሉም። ሰላም ይበሉ።",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "ቀጥታ",
   "messagesRooms": "ክፍሎች",
+  "messagesRoomsWithUnread": "ክፍሎች ({badge})",
   "messagesPublicTestRooms": "ይፋዊ የሙከራ ክፍሎች",
   "messagesPublicTestDisclosure": "እነዚህ የሙከራ ክፍሎች ይፋዊ ናቸው። መዳረሻ ያለው ማንኛውም ሰው መልዕክቶችዎን ማንበብ ይችላል።",
   "messagesNoRooms": "ገና ምንም ክፍሎች የሉም",
