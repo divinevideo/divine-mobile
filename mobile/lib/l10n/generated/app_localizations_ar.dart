@@ -8945,6 +8945,24 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoEditorEffectComic => 'رسوم مصوّرة';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'ريترو';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'تشويش';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'تشويه';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'إضاءة';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'حركة';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'جزيئات';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'ضبط القطرات';
 
   @override

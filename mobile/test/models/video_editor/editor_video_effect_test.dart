@@ -1114,4 +1114,17 @@ void main() {
       );
     });
   });
+
+  group(EditorEffectCategory, () {
+    test('lists every type the picker offers under exactly one category, and '
+        'leaves no category empty', () {
+      expect(
+        [for (final category in EditorEffectCategory.values) ...category.types],
+        unorderedEquals(EditorEffectType.values),
+      );
+      for (final category in EditorEffectCategory.values) {
+        expect(category.types, isNotEmpty, reason: category.name);
+      }
+    });
+  });
 }

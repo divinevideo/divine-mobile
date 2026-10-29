@@ -342,7 +342,7 @@ class _OverlayControls extends StatelessWidget {
           child: VideoEditorTuneOverlayControls(),
         ),
         // Effects-Editor: reaches down to the preview's edge, where its
-        // on-the-beat card sits; it centers its slider like the others.
+        // on-the-beat card sits, and centers its slider below its toolbar.
         VideoEditorMainState(openSubEditor: .effects) =>
           const VideoEditorEffectsOverlayControls(
             key: ValueKey('Effects-Overlay-Controls'),
@@ -358,8 +358,18 @@ class _OverlayControls extends StatelessWidget {
 ///
 /// Only visible while the draw, filter, tune or effects editor is open. Otherwise
 /// the timeline is shown instead (see [_TimelineSection]).
-class _BottomActions extends StatelessWidget {
+class _BottomActions extends StatefulWidget {
   const _BottomActions();
+
+  @override
+  State<_BottomActions> createState() => _BottomActionsState();
+}
+
+class _BottomActionsState extends State<_BottomActions> {
+  /// The sub-editor last open. Closing clears the open one at once, while the
+  /// bar collapses for a moment longer; keeping its height for that moment
+  /// stops the taller effects bar from snapping down first.
+  SubEditorType? _lastOpened;
 
   @override
   Widget build(BuildContext context) {
@@ -367,9 +377,14 @@ class _BottomActions extends StatelessWidget {
     final openSubEditor = context.select(
       (VideoEditorMainBloc b) => b.state.openSubEditor,
     );
+    _lastOpened = openSubEditor ?? _lastOpened;
 
     return SizedBox(
-      height: systemNavigationBarHeight + VideoEditorConstants.bottomBarHeight,
+      height:
+          systemNavigationBarHeight +
+          (_lastOpened == SubEditorType.effects
+              ? VideoEditorEffectsBottomBar.heightOf(context)
+              : VideoEditorConstants.bottomBarHeight),
       child: switch (openSubEditor) {
         // Draw-Bar
         SubEditorType.draw => const VideoEditorDrawBottomBar(
@@ -389,15 +404,13 @@ class _BottomActions extends StatelessWidget {
             key: ValueKey('Tune-Editor-Bottom-Bar'),
           ),
         ),
-        // Effects-Bar
-        SubEditorType.effects => Padding(
-          padding: .only(bottom: systemNavigationBarHeight),
-          child: const VideoEditorEffectsBottomBar(
-            key: ValueKey('Effects-Editor-Bottom-Bar'),
-          ),
+        // Effects-Bar: reaches under the system navigation bar, where its
+        // grid scrolls on.
+        SubEditorType.effects => const VideoEditorEffectsBottomBar(
+          key: ValueKey('Effects-Editor-Bottom-Bar'),
         ),
-        // Fallback — should not happen since _BottomActions is only
-        // rendered for draw/filter/tune/effects, but handle gracefully.
+        // Nothing open: the bar is collapsed, or collapsing after its
+        // sub-editor closed (see _lastOpened).
         _ => const SizedBox.shrink(),
       },
     );

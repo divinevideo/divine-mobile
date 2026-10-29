@@ -15095,6 +15095,42 @@ abstract class AppLocalizations {
   /// **'Comic'**
   String get videoEditorEffectComic;
 
+  /// Name of a group in the video effects picker: effects that look like old media, such as VHS tape, old film or an old TV.
+  ///
+  /// In en, this message translates to:
+  /// **'Retro'**
+  String get videoEditorEffectCategoryRetro;
+
+  /// Name of a group in the video effects picker: effects that make the picture break up digitally. Use the same word as the Glitch effect.
+  ///
+  /// In en, this message translates to:
+  /// **'Glitch'**
+  String get videoEditorEffectCategoryGlitch;
+
+  /// Name of a group in the video effects picker: effects that bend, mirror or split the picture, or show it as through a lens.
+  ///
+  /// In en, this message translates to:
+  /// **'Distort'**
+  String get videoEditorEffectCategoryDistort;
+
+  /// Name of a group in the video effects picker: effects that add, take away or flash light, such as glow, vignette or strobe.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get videoEditorEffectCategoryLight;
+
+  /// Name of a group in the video effects picker: effects that make the picture shake, pulse or leave a trail.
+  ///
+  /// In en, this message translates to:
+  /// **'Motion'**
+  String get videoEditorEffectCategoryMotion;
+
+  /// Name of a group in the video effects picker: effects where snow, confetti, hearts or sparkles fall or float over the picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Particles'**
+  String get videoEditorEffectCategoryParticles;
+
   /// Header of the expandable card in the video effects editor that holds the settings of the Drops effect.
   ///
   /// In en, this message translates to:

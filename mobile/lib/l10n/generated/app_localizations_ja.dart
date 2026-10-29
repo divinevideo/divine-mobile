@@ -8507,6 +8507,24 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoEditorEffectComic => 'コミック';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'レトロ';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'グリッチ';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'ゆがみ';
+
+  @override
+  String get videoEditorEffectCategoryLight => '光';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'モーション';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'パーティクル';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'しずくを調整';
 
   @override

@@ -9200,6 +9200,24 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectComic => 'కామిక్';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'రెట్రో';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'గ్లిచ్';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'వక్రీకరణ';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'కాంతి';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'కదలిక';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'కణాలు';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'బిందువుల సర్దుబాటు';
 
   @override

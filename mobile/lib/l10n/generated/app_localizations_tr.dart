@@ -8866,6 +8866,24 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorEffectComic => 'Çizgi Roman';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'Retro';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Bozulma';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Işık';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Hareket';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Parçacıklar';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Damlaları ayarla';
 
   @override

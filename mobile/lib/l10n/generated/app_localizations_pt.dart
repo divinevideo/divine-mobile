@@ -9025,6 +9025,24 @@ class AppLocalizationsPt extends AppLocalizations {
   String get videoEditorEffectComic => 'Quadrinhos';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'Retrô';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'Glitch';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'Distorção';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'Luz';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'Movimento';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'Partículas';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Ajustar gotas';
 
   @override
