@@ -1,5 +1,5 @@
 // ABOUTME: Works out where a rendered video's tappable stickers stand: the
-// ABOUTME: area and time of each link, mention and hashtag sticker.
+// ABOUTME: area and time of each link, mention, hashtag and sound sticker.
 
 import 'dart:ui';
 

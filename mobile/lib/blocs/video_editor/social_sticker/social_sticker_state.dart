@@ -16,8 +16,8 @@ class SocialStickerState extends Equatable {
   /// of the other hashtag stickers.
   final Set<String> otherHashtags;
 
-  /// The sounds a sound credit can credit: those in the video with a title
-  /// and an artist, and the one it credits now.
+  /// The sounds a sound credit can credit: those in the video with a title,
+  /// and the one it credits now.
   final List<SocialStickerData> soundChoices;
 
   /// Whether the last person picked cannot be mentioned.

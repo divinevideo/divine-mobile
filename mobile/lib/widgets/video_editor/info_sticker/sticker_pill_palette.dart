@@ -81,16 +81,11 @@ class StickerPill extends StatelessWidget {
   const StickerPill({
     required this.palette,
     required this.child,
-    this.borderRadius = 999,
     super.key,
   });
 
   final StickerPillPalette palette;
   final Widget child;
-
-  /// How round the corners are; a pill with more than one line has less
-  /// round ones.
-  final double borderRadius;
 
   @override
   Widget build(BuildContext context) {
@@ -98,7 +93,7 @@ class StickerPill extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: palette.background,
-        borderRadius: BorderRadius.circular(borderRadius),
+        borderRadius: BorderRadius.circular(999),
         border: border == null ? null : Border.all(color: border, width: 5),
       ),
       child: Padding(

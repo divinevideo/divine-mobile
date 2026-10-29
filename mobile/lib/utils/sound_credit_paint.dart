@@ -111,7 +111,8 @@ const _restingLevels = [0.45, 0.85, 0.6, 1.0, 0.7, 0.38];
 const double _lowestLevel = 0.12;
 
 /// A sound credit laid out at its own size: the pill, the symbol and the
-/// lines of text, the way the sticker widget used to lay them out.
+/// lines of text, as [soundCreditSize] measures it and [paintSoundCredit]
+/// draws it.
 class _SoundCreditLayout {
   factory _SoundCreditLayout(SocialStickerData data) {
     final palette = StickerPillPalette.of(data.style);

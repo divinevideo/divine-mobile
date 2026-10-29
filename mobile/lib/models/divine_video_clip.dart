@@ -369,9 +369,9 @@ class DivineVideoClip {
   /// changes it, and a save of an older copy keeps what the entry holds.
   final ClipGalleryBackup? galleryBackup;
 
-  /// Where a viewer can tap the link, mention and hashtag stickers on this
-  /// clip once it is published; set only on a final render, from the layers
-  /// it was rendered with.
+  /// Where a viewer can tap the link, mention, hashtag and sound stickers on
+  /// this clip once it is published; set only on a final render, from the
+  /// layers it was rendered with.
   final List<model.VideoStickerRegion> stickerRegions;
 
   /// The files to name as this clip's sources when an edit of it is signed:

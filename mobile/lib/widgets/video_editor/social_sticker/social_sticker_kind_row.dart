@@ -13,7 +13,7 @@ import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view
 /// its [SocialStickerKind].
 ///
 /// The sound credit is offered only with a [soundCredit] to show, which a
-/// video has when one of its sounds has a title and an artist.
+/// video has when one of its sounds has a title.
 class SocialStickerKindRow extends StatelessWidget {
   const SocialStickerKindRow({this.soundCredit, super.key});
 

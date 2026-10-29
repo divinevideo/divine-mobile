@@ -169,7 +169,8 @@ class LayerStyle extends Equatable {
 
 /// [animations] without the ones [layer] cannot play: typing a text out
 /// letter by letter or word by word means nothing on a sticker or a drawing,
-/// and a link, mention or hashtag sticker holds still where it is tapped.
+/// and a link, mention, hashtag or sound sticker holds still where it is
+/// tapped.
 List<pve.LayerAnimation> _playableOn(
   Layer layer,
   List<pve.LayerAnimation> animations,

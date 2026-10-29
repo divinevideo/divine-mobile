@@ -132,18 +132,18 @@ Future<List<ExportedLayer>> withStickerFrames(
   final frames = await stickerLayerFrames(layers, timelineMap, audioEnergies);
   return [
     for (final item in layers)
-      if (frames[item.layer.id] case final timerFrames?)
-        StickerFramesExportedLayer(item, timerFrames)
+      if (frames[item.layer.id] case final stickerFrames?)
+        StickerFramesExportedLayer(item, stickerFrames)
       else
         item,
   ];
 }
 
-/// A captured moving sticker that exports as [timerFrames], painted for every
+/// A captured moving sticker that exports as [stickerFrames], painted for every
 /// frame it shows, instead of the one still the capture took.
 class StickerFramesExportedLayer extends ExportedLayer {
-  /// [captured] exporting as [timerFrames].
-  StickerFramesExportedLayer(ExportedLayer captured, this.timerFrames)
+  /// [captured] exporting as [stickerFrames].
+  StickerFramesExportedLayer(ExportedLayer captured, this.stickerFrames)
     : super(
         layer: captured.layer,
         bytes: captured.bytes,
@@ -154,16 +154,16 @@ class StickerFramesExportedLayer extends ExportedLayer {
       );
 
   /// The frames the sticker exports as, one after the other.
-  final List<ExportedLayerFrame> timerFrames;
+  final List<ExportedLayerFrame> stickerFrames;
 
   @override
-  List<ExportedLayerFrame> get frames => timerFrames;
+  List<ExportedLayerFrame> get frames => stickerFrames;
 }
 
-/// The time windows of a timer from [start] until [end], or until the
-/// video ends when [end] is `null`: one for each of [framesPerSecond] frames
-/// a second of the video, each with the time it shows, cut at the timer's
-/// own start and end.
+/// The time windows of a moving sticker from [start] until [end], or until
+/// the video ends when [end] is `null`: one for each of [framesPerSecond]
+/// frames a second of the video, each with the time it shows, cut at the
+/// sticker's own start and end.
 List<({Duration shown, Duration? start, Duration? end})> stickerFrameWindows({
   required Duration? start,
   required Duration? end,
@@ -200,9 +200,9 @@ List<({Duration shown, Duration? start, Duration? end})> stickerFrameWindows({
   return windows;
 }
 
-/// How many frames a second a timer painted [frame] pixels large that runs
-/// for [span] changes: [stickerFramesPerSecond], or fewer when that many
-/// frames would hold more than [stickerFramePixelBudget] pixels.
+/// How many frames a second a moving sticker painted [frame] pixels large
+/// that runs for [span] changes: [stickerFramesPerSecond], or fewer when that
+/// many frames would hold more than [stickerFramePixelBudget] pixels.
 double stickerFramesPerSecondFor({
   required Size frame,
   required Duration span,

@@ -111,8 +111,8 @@ class SocialStickerData extends Equatable {
     );
   }
 
-  /// The credits for the distinct sounds among [sounds] that have a title
-  /// and an artist, in order; a sound used twice is offered once.
+  /// The credits for the distinct sounds among [sounds] that have a title,
+  /// in order; a sound used twice is offered once.
   static List<SocialStickerData> soundCreditsFor(Iterable<AudioEvent> sounds) {
     final credits = <SocialStickerData>[];
     for (final credit in sounds.map(soundCreditFor).nonNulls) {

@@ -31,7 +31,7 @@ class VideoEditorStickerSheet extends StatelessWidget {
   final bool enableSearchBar;
 
   /// The credit for the video's sound, offered as a social sticker; `null`
-  /// when its sound has no title and artist to credit.
+  /// when its sound has no title to credit.
   final SocialStickerData? soundCredit;
 
   @override

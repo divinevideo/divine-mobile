@@ -221,8 +221,8 @@ class _LayerOverlayControls extends StatelessWidget {
         //
         // They are off for a hidden area (blur, pixelate) too: it hides what is
         // beneath it the moment it shows, and an area that slid or faded in
-        // would show that for a moment first. And for a link, mention or
-        // hashtag sticker, which a viewer taps where it stands.
+        // would show that for a moment first. And for a link, mention,
+        // hashtag or sound sticker, which a viewer taps where it stands.
         onAnimate:
             layer == null ||
                 isDetachedClip ||

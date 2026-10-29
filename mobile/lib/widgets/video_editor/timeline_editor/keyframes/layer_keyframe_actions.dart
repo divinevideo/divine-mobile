@@ -22,8 +22,9 @@ import 'package:pro_image_editor/pro_image_editor.dart';
 ///
 /// Every overlay layer can, except a hidden area (blur, pixelate): it hides
 /// what is beneath it, and one that drifted would show what it hid for a
-/// moment, as an animated one would. A link, mention or hashtag sticker
-/// cannot either: a viewer taps it where it stands, so it holds still.
+/// moment, as an animated one would. A link, mention, hashtag or sound
+/// sticker cannot either: a viewer taps it where it stands, so it holds
+/// still.
 bool canKeyframeLayer(Layer? layer) =>
     layer != null &&
     !isCensorLayer(layer) &&
