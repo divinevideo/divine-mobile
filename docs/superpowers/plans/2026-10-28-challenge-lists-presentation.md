@@ -34,11 +34,11 @@
 
 **Interfaces:** ChallengeDetailView consumes `ChallengeParticipationState state`, `String? organizerName`, `VoidCallback? onOrganizerTap`, `VoidCallback onEnter`, `Future<void> Function() onRefresh`, and `Widget deliveryActions`. The parent owns record/choose/withdraw/play dispatch and passes callbacks. ChallengeView gains optional organizerName/onOrganizerTap separately from ownerName. Organizer lookup in ChallengePage uses `state.read.view.definition.event.pubkey`; ownerName remains the session owner for review. Detail does not own signing or transport.
 
-- [ ] Write widget tests that catch wrong signer credit, source actions displayed before Enter, closed/cancelled entry being offered, and compact title/rules expansion hiding or duplicating the main title. The chooser must expose Record a video / Choose one of your videos only after Enter, selecting neither signs, and cancellation returns unchanged.
-- [ ] Run `flutter test --no-pub test/features/challenges/challenge_view_test.dart`; expect the new behavior tests to fail on the existing text-only UI.
-- [ ] Implement the scrolling hero, expandable six-line rules, compact title, Entries/Winners selection, explicit source sheet, and organizer wiring using shared styles. Show the existing partial-read test notice and delivery status; never display a guessed total. Convert deadline instants to local before formatting and include the actual zone; keep organizer time available. Use new localized keys for changed copy rather than silently changing translated UTC text.
-- [ ] Update deadline tests to exercise an explicitly injected display timezone/local instant boundary and preserve app locale. Keep exact reviewed rules and technical detail disclosure in review; change only the primary entry label to Enter this video.
-- [ ] Run the complete `flutter test --no-pub test/features/challenges` suite and the ARB consistency test; expect all tests to pass with no signing regression. Commit the header/chooser behavior and its localization together.
+- [x] Write widget tests that catch wrong signer credit, source actions displayed before Enter, closed/cancelled entry being offered, and compact title/rules expansion hiding or duplicating the main title. The chooser must expose Record a video / Choose one of your videos only after Enter, selecting neither signs, and cancellation returns unchanged.
+- [x] Run `flutter test --no-pub test/features/challenges/challenge_view_test.dart`; expect the new behavior tests to fail on the existing text-only UI.
+- [x] Implement the scrolling hero, expandable six-line rules, compact title, Entries/Winners selection, explicit source sheet, and organizer wiring using shared styles. Show the existing partial-read test notice and delivery status; never display a guessed total. Convert deadline instants to local before formatting and include the actual zone; keep organizer time available. Use new localized keys for changed copy rather than silently changing translated UTC text.
+- [x] Update deadline tests to exercise an explicitly injected display timezone/local instant boundary and preserve app locale. Keep exact reviewed rules and technical detail disclosure in review; change only the primary entry label to Enter this video.
+- [x] Run the complete `flutter test --no-pub test/features/challenges` suite and the ARB consistency test; expect all tests to pass with no signing regression. Commit the header/chooser behavior and its localization together.
 
 ## Task 2: Pinned entry/results tiles and full-screen video selection
 
@@ -46,11 +46,11 @@
 
 **Interfaces:** ChallengeVideoTile consumes an exact verified `NostrEvent video`, a `bool Function(NostrEvent) allowed`, optional signed result label, and `VoidCallback onTap`. It adapts only that event to the existing VideoEvent thumbnail model, with permissive NIP-71 kind support and no latest resolver. ChallengeVideoPicker consumes the current candidate `List<VideoEvent>`, busy state, cancel callback and `Future<void> Function(String eventId) onContinue`; local selection never signs or prepares consent until Continue. Detail uses `cubit.playEntry(entryId)` for playback and `cubit.withdraw(jsonEncode(entry.event.toJson()))` for exact owned withdrawal.
 
-- [ ] Write failing behavior tests for a selection that requires Continue, entry tiles without raw event IDs, signed winner labels/order with unavailable slots, and policy revocation/backgrounding hiding thumbnails. Include narrow width/2x text scaling and long labels. Test video conversion on all v1 kinds 21/22/34235/34236 without changing event ID/author.
-- [ ] Run `flutter test --no-pub test/features/challenges/challenge_presentation_test.dart`; expect missing new presentation behavior.
-- [ ] Compose shared thumbnail rendering with the Lists two-column masonry geometry for entries and row-ordered fixed-aspect results. Use a one-column fallback for large text/narrow widths. Preserve unavailable result slots, current policy checks and pinned playback. Keep owned-entry withdrawal reachable and delivery actions outside the selected tab.
-- [ ] Implement the full-screen single-selection picker and Continue, with clear Back/cancel behavior, no raw identifier subtitles and no automatic entry. Keep the current repository's exact revision/ownership recheck at review preparation. Do not add fake pagination or claim full author-feed discovery; candidate pagination remains a later data-adapter task.
-- [ ] Run `flutter test --no-pub test/features/challenges test/services/challenges test/blocs/background_publish_bloc/challenge_handoff_test.dart`; expect consent, policy, restart and UI tests to pass. Commit the independently tested presentation.
+- [x] Write failing behavior tests for a selection that requires Continue, entry tiles without raw event IDs, signed winner labels/order with unavailable slots, and policy revocation/backgrounding hiding thumbnails. Include narrow width/2x text scaling and long labels. Test video conversion on all v1 kinds 21/22/34235/34236 without changing event ID/author.
+- [x] Run `flutter test --no-pub test/features/challenges/challenge_presentation_test.dart`; expect missing new presentation behavior.
+- [x] Compose shared thumbnail rendering with the Lists two-column masonry geometry for entries and row-ordered fixed-aspect results. Use a one-column fallback for large text/narrow widths. Preserve unavailable result slots, current policy checks and pinned playback. Keep owned-entry withdrawal reachable and delivery actions outside the selected tab.
+- [x] Implement the full-screen single-selection picker and Continue, with clear Back/cancel behavior, no raw identifier subtitles and no automatic entry. Keep the current repository's exact revision/ownership recheck at review preparation. Do not add fake pagination or claim full author-feed discovery; candidate pagination remains a later data-adapter task.
+- [x] Run `flutter test --no-pub test/features/challenges test/services/challenges test/blocs/background_publish_bloc/challenge_handoff_test.dart`; expect consent, policy, restart and UI tests to pass. Commit the independently tested presentation.
 
 ## Task 3: Visual, localization and delivery verification
 
@@ -75,3 +75,11 @@
 
 Native presentation delivery is not end-to-end delivery. Record its PR, checks and
 remaining dependencies in the handback; never mark the broader design complete.
+
+## Implementation delivery
+
+Native source now includes the Lists header/compact title, verified organizer profile, localized viewer and organizer time, source chooser, explicit single-selection picker, pinned masonry entries, ordered winner slots and lifecycle/policy media removal. It retains the existing test gate and signed consent/outbox boundaries.
+
+Figma implementation references: [video-list, 14010:65447](https://www.figma.com/design/rp1DsDEUuCaicW0lk6I2aZ/UI-Design?node-id=14010-65447&m=dev), [video-list-scrolled, 14010:65311](https://www.figma.com/design/rp1DsDEUuCaicW0lk6I2aZ/UI-Design?node-id=14010-65311&m=dev), and [my-video-list-actions, 14091:98092](https://www.figma.com/design/rp1DsDEUuCaicW0lk6I2aZ/UI-Design?node-id=14091-98092&m=dev).
+
+Delivery in progress: Linux golden generation, independent review and the linked mobile PR/CI record are pending. Funnelcake [#1402](https://github.com/divinevideo/divine-funnelcake/pull/1402) remains open at f5fdd9018b158ae1725b94a9296c80c51aaa9fa8 as checked October 30; it does not yet register production challenge read routes. Production discovery, signed-out reads and reverse associations remain the separate dependencies listed above.

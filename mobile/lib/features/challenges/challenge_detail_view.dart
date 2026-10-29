@@ -9,6 +9,7 @@ import 'package:openvine/features/challenges/challenge_video_tile.dart';
 import 'package:openvine/features/challenges/challenge_view.dart'
     show challengeLifecycleText;
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/widgets/user_avatar.dart';
 
 /// Lists-style presentation of verified known-coordinate challenge state.
 /// Actions remain owned by the participation cubit/repository.
@@ -23,6 +24,7 @@ class ChallengeDetailView extends StatefulWidget {
     required this.deliveryActions,
     this.viewerPubkey,
     this.organizerName,
+    this.organizerAvatarUrl,
     this.onOrganizerTap,
     super.key,
   });
@@ -36,6 +38,7 @@ class ChallengeDetailView extends StatefulWidget {
   final Widget deliveryActions;
   final String? viewerPubkey;
   final String? organizerName;
+  final String? organizerAvatarUrl;
   final VoidCallback? onOrganizerTap;
 
   @override
@@ -62,8 +65,16 @@ class _ChallengeDetailViewState extends State<ChallengeDetailView> {
     final l10n = context.l10n;
     final view = widget.state.read!.view;
     final definition = view.definition!;
+    final constrained =
+        MediaQuery.sizeOf(context).width < 360 ||
+        MediaQuery.textScalerOf(context).scale(16) > 24;
     final open = view.state == 'open';
     final rules = definition.event.content;
+    final organizerTime = challengeOrganizerTimeText(
+      l10n,
+      DateTime.fromMillisecondsSinceEpoch(definition.end * 1000, isUtc: true),
+      definition.endTimeZone,
+    );
     return Scaffold(
       backgroundColor: context.vineColors.nav,
       appBar: DiVineAppBar(
@@ -80,7 +91,7 @@ class _ChallengeDetailViewState extends State<ChallengeDetailView> {
             : const SizedBox.shrink(),
         customActions: [
           if (open)
-            if (_compact || MediaQuery.textScalerOf(context).scale(16) > 24)
+            if (_compact || constrained)
               DivineAppBarIconButton(
                 icon: SvgIconSource(DivineIconName.plus.assetPath),
                 semanticLabel: l10n.challengeEnter,
@@ -128,26 +139,52 @@ class _ChallengeDetailViewState extends State<ChallengeDetailView> {
                       ),
                       TextButton(
                         onPressed: widget.onOrganizerTap,
-                        child: Text(
-                          widget.organizerName ?? l10n.challengeOrganizer,
+                        style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                        child: Row(
+                          spacing: 8,
+                          children: [
+                            ExcludeSemantics(
+                              child: UserAvatar(
+                                imageUrl: widget.organizerAvatarUrl,
+                                size: 32,
+                                name: widget.organizerName,
+                                placeholderSeed: definition.event.pubkey,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                widget.organizerName ?? l10n.challengeOrganizer,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: VineTheme.bodyMediumFont(
+                                  color: context.vineColors.primaryText,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      Text(
-                        challengeDeadlineText(
-                          l10n,
-                          DateTime.fromMillisecondsSinceEpoch(
-                            definition.end * 1000,
-                            isUtc: true,
-                          ).toLocal(),
+                      if (open && constrained)
+                        DivineButton(
+                          label: l10n.challengeEnter,
+                          onPressed: widget.state.busy ? null : widget.onEnter,
                         ),
-                        style: VineTheme.bodyMediumFont(
-                          color: context.vineColors.secondaryText,
-                        ),
-                      ),
                       ExpansionTile(
                         tilePadding: EdgeInsets.zero,
-                        title: Text(l10n.challengeDetails),
+                        title: Text(
+                          challengeDeadlineText(
+                            l10n,
+                            DateTime.fromMillisecondsSinceEpoch(
+                              definition.end * 1000,
+                              isUtc: true,
+                            ).toLocal(),
+                          ),
+                          style: VineTheme.bodyMediumFont(
+                            color: context.vineColors.secondaryText,
+                          ),
+                        ),
                         children: [
+                          if (organizerTime != null) Text(organizerTime),
                           Text(
                             l10n.challengeOrganizerTimezone(
                               definition.endTimeZone,
@@ -167,21 +204,43 @@ class _ChallengeDetailViewState extends State<ChallengeDetailView> {
                           color: context.vineColors.primaryText,
                         ),
                       ),
-                      Text(
-                        rules,
-                        maxLines: _expanded ? null : 6,
-                        overflow: _expanded ? null : TextOverflow.ellipsis,
-                        style: VineTheme.bodyMediumFont(
-                          color: context.vineColors.secondaryText,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () => setState(() => _expanded = !_expanded),
-                        child: Text(
-                          _expanded
-                              ? l10n.profileShowLess
-                              : l10n.challengeAllRules,
-                        ),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final style = VineTheme.bodyMediumFont(
+                            color: context.vineColors.secondaryText,
+                          );
+                          final measurement = TextPainter(
+                            text: TextSpan(text: rules, style: style),
+                            textDirection: Directionality.of(context),
+                            textScaler: MediaQuery.textScalerOf(context),
+                            maxLines: 6,
+                          )..layout(maxWidth: constraints.maxWidth);
+                          final overflowing = measurement.didExceedMaxLines;
+                          measurement.dispose();
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                rules,
+                                maxLines: _expanded ? null : 6,
+                                overflow: _expanded
+                                    ? null
+                                    : TextOverflow.ellipsis,
+                                style: style,
+                              ),
+                              if (overflowing || _expanded)
+                                TextButton(
+                                  onPressed: () =>
+                                      setState(() => _expanded = !_expanded),
+                                  child: Text(
+                                    _expanded
+                                        ? l10n.profileShowLess
+                                        : l10n.challengeAllRules,
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
                       ),
                       widget.deliveryActions,
                     ],

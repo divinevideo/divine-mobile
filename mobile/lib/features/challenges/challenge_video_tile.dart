@@ -95,6 +95,8 @@ class _ChallengeVideoTileState extends State<ChallengeVideoTile>
       button: visible && widget.onTap != null,
       enabled: visible && widget.onTap != null,
       child: Material(
+        borderRadius: widget.borderRadius,
+        clipBehavior: Clip.antiAlias,
         color: context.vineColors.surfaceContainer,
         child: InkWell(
           onTap: !visible || widget.onTap == null

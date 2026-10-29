@@ -101,12 +101,9 @@ class ChallengePage extends ConsumerWidget {
                 (ChallengeParticipationCubit cubit) =>
                     cubit.state.read?.view.definition?.event.pubkey,
               );
-              final organizerName = organizer == null
+              final organizerProfile = organizer == null
                   ? null
-                  : ref
-                        .watch(userProfileReactiveProvider(organizer))
-                        .value
-                        ?.bestDisplayName;
+                  : ref.watch(userProfileReactiveProvider(organizer)).value;
               return ChallengeView(
                 loadCandidatePreview: (id) async {
                   final video = await session.adapter.exactEvent(id);
@@ -119,7 +116,8 @@ class ChallengePage extends ConsumerWidget {
                   await session.store.checkLive();
                   return session.reads.isVisible(video) ? video : null;
                 },
-                organizerName: organizerName,
+                organizerName: organizerProfile?.bestDisplayName,
+                organizerAvatarUrl: organizerProfile?.picture,
                 onOrganizerTap: organizer == null
                     ? null
                     : () {

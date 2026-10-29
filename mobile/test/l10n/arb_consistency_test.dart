@@ -614,6 +614,7 @@ void main() {
 // Keep this list small and reviewable so new translation gaps stay visible.
 const _knownUntranslatedDebt = <String>{
   // Native challenge Lists presentation; awaiting the translation pass.
+  'challengeOrganizerTime',
   'challengeLocalDeadline', 'challengeEnter', 'challengeEnterVideo',
   'challengeOrganizer', 'challengeAllRules', 'challengeWinners',
   'challengeAwaitingResults', 'challengeOrganizerTimezone',
@@ -631,7 +632,6 @@ const _knownUntranslatedDebt = <String>{
   'challengeRecord',
   'challengeChoose',
   'challengeReview',
-  'challengeAgree',
   'challengeWithdraw',
   'challengeWithdrawReview',
   'challengeWithdrawConfirm',
@@ -639,7 +639,6 @@ const _knownUntranslatedDebt = <String>{
   'challengeEmpty',
   'challengeNoVideos',
   'challengeRules',
-  'challengeDeadline',
   'challengeOwner',
   'challengeVideoRevision',
   'challengeRulesRevision',
@@ -651,7 +650,6 @@ const _knownUntranslatedDebt = <String>{
   'challengeWithdrawn',
   'challengeRecover',
   'challengeEntries',
-  'challengeResults',
   'challengeWinnerUnavailable',
   'challengePlay',
   'challengeOpen',

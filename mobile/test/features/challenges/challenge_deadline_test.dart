@@ -10,6 +10,8 @@ import 'package:openvine/features/challenges/challenge_deadline.dart';
 import 'package:openvine/features/challenges/challenge_participation_cubit.dart';
 import 'package:openvine/features/challenges/challenge_view.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:timezone/data/latest.dart' as tzdata;
+import 'package:timezone/timezone.dart' as tz;
 
 import '../../../packages/challenges_repository/test/harness.dart';
 
@@ -24,6 +26,30 @@ void main() {
         expect(
           challengeDeadlineText(l10n, instant),
           'Deadline: 31 déc. 2029 11:30 (UTC)',
+        );
+      },
+    );
+    test(
+      'organizer time converts the instant through the signed zone and DST',
+      () async {
+        final l10n = await AppLocalizations.delegate.load(const Locale('fr'));
+        await initializeDateFormatting('fr');
+        final instant = DateTime.utc(2030, 1, 1, 5, 30);
+        expect(
+          challengeOrganizerTimeText(l10n, instant, 'Pacific/Auckland'),
+          'Organizer time: 1 janv. 2030 18:30 (NZDT, Pacific/Auckland)',
+        );
+        expect(
+          challengeOrganizerTimeText(l10n, instant, 'Unknown/Synthetic'),
+          isNull,
+        );
+        tzdata.initializeTimeZones();
+        expect(
+          challengeDeadlineText(
+            l10n,
+            tz.TZDateTime.from(instant, tz.getLocation('Pacific/Auckland')),
+          ),
+          'Deadline: 1 janv. 2030 18:30 (NZDT)',
         );
       },
     );

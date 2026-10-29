@@ -351,6 +351,9 @@ dependencies:
   # Count Formatter - Compact number formatting
   count_formatter:
 
+  # Challenge deadline conversion for signed IANA organizer timezones.
+  timezone: ^0.11.0
+
   # Time Formatter - Locale-aware timestamp formatting
   time_formatter:
 

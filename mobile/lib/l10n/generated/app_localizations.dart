@@ -25146,12 +25146,6 @@ abstract class AppLocalizations {
   /// Native challenge participation test-build flow.
   ///
   /// In en, this message translates to:
-  /// **'Agree and submit'**
-  String get challengeAgree;
-
-  /// Native challenge participation test-build flow.
-  ///
-  /// In en, this message translates to:
   /// **'Withdraw entry'**
   String get challengeWithdraw;
 
@@ -25190,12 +25184,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Current rules'**
   String get challengeRules;
-
-  /// Challenge deadline, explicitly in UTC; deadline is formatted in the app locale.
-  ///
-  /// In en, this message translates to:
-  /// **'Deadline (UTC): {deadline}'**
-  String challengeDeadline(String deadline);
 
   /// Native challenge participation test-build flow.
   ///
@@ -25262,12 +25250,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Entries'**
   String get challengeEntries;
-
-  /// Native challenge participation test-build flow.
-  ///
-  /// In en, this message translates to:
-  /// **'Results'**
-  String get challengeResults;
 
   /// Native challenge participation test-build flow.
   ///
@@ -25424,6 +25406,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Organizer timezone: {timeZone}'**
   String challengeOrganizerTimezone(String timeZone);
+
+  /// No description provided for @challengeOrganizerTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Organizer time: {deadline} ({timeZone})'**
+  String challengeOrganizerTime(String deadline, String timeZone);
 }
 
 class _AppLocalizationsDelegate

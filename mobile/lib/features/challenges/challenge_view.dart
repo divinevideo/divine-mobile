@@ -19,12 +19,14 @@ class ChallengeView extends StatefulWidget {
     required this.onRecord,
     this.ownerName,
     this.organizerName,
+    this.organizerAvatarUrl,
     this.onOrganizerTap,
     this.loadCandidatePreview,
     super.key,
   });
   final Future<NostrEvent?> Function(String)? loadCandidatePreview;
   final String? organizerName;
+  final String? organizerAvatarUrl;
   final VoidCallback? onOrganizerTap;
   final String? ownerName;
   final Future<void> Function(BuildContext, String) onRecord;
@@ -145,6 +147,7 @@ class _ChallengeViewState extends State<ChallengeView>
         return ChallengeDetailView(
           state: state,
           organizerName: widget.organizerName,
+          organizerAvatarUrl: widget.organizerAvatarUrl,
           onOrganizerTap: widget.onOrganizerTap,
           viewerPubkey: cubit.submissions.currentOwner(),
           onEnter: _showEntrySources,
