@@ -13670,6 +13670,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get messagesRooms => '聊天室';
 
   @override
+  String messagesRoomsWithUnread(String badge) {
+    return '聊天室 ($badge)';
+  }
+
+  @override
   String get messagesPublicTestRooms => '公开测试聊天室';
 
   @override

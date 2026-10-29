@@ -14434,6 +14434,11 @@ class AppLocalizationsId extends AppLocalizations {
   String get messagesRooms => 'Ruang';
 
   @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Ruang ($badge)';
+  }
+
+  @override
   String get messagesPublicTestRooms => 'Ruang uji publik';
 
   @override

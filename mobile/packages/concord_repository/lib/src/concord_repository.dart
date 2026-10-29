@@ -13,7 +13,8 @@ abstract interface class RelayGateway {
 
 /// Optional historical boundary for the gateway's current subscriptions.
 abstract interface class RelayHistoryStatus {
-  /// Completes once every current subscription has received EOSE.
+  /// Completes once every current subscription has received EOSE, or with an
+  /// error if one times out, closes or is cancelled first.
   Future<void> get historyReady;
 
   /// A response reached its raw event limit before EOSE, including duplicates.
@@ -277,6 +278,8 @@ class ConcordRepository {
   ///
   /// Gateways without historical status retain their immediate-start behavior.
   /// Closing releases the waiter even if a relay never supplies its boundary.
+  ///
+  /// Throws the gateway's history error, such as a [TimeoutException].
   Future<void> waitForHistory() async {
     if (_closed) return;
     if (relay case final RelayHistoryStatus status) {

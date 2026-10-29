@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:bip340/bip340.dart' as schnorr;
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:test/test.dart';
 
 final String _own = schnorr.getPublicKey('01'.padLeft(64, '0'));
@@ -48,6 +49,7 @@ class _Cipher implements StreamCipher {
 class _Store extends InMemoryConcordStore {
   _Store() : super(_own);
   bool failRead = false;
+  String? failReadKey;
   bool failWrite = false;
   Completer<void>? reading;
   Completer<void>? resumeRead;
@@ -56,7 +58,9 @@ class _Store extends InMemoryConcordStore {
 
   @override
   Future<String?> get(String key) async {
-    if (failRead) throw StateError('storage unavailable');
+    if (failRead || key == failReadKey) {
+      throw StateError('storage unavailable');
+    }
     if (resumeRead != null) {
       if (!reading!.isCompleted) reading!.complete();
       await resumeRead!.future;
@@ -308,6 +312,60 @@ void main() {
     );
 
     test(
+      'a message dated beyond clock drift is neither latest nor recent',
+      () async {
+        final room = _Room('12' * 32);
+        final activity = _activity([room]);
+        await activity.start();
+        await room.ingest(kind: 9, body: 'Current', createdAt: _now - 60);
+        await room.ingest(
+          kind: 9,
+          body: 'Slightly ahead',
+          createdAt: _now + 60,
+        );
+        await room.ingest(kind: 9, body: 'Next week', createdAt: _now + 604800);
+        final summary = activity.summaries[room.channelId]!;
+        expect(summary.latestMessage!.effectiveBody, 'Slightly ahead');
+        expect(summary.recentMessageCount, 2);
+      },
+    );
+
+    test(
+      'clock drift is tolerated up to exactly fifteen minutes ahead',
+      () async {
+        final room = _Room('12' * 32);
+        final activity = _activity([room]);
+        await activity.start();
+        await room.ingest(kind: 9, body: 'Current', createdAt: _now - 60);
+        await room.ingest(kind: 9, body: 'At the limit', createdAt: _now + 900);
+        await room.ingest(
+          kind: 9,
+          body: 'Past the limit',
+          createdAt: _now + 901,
+        );
+        final summary = activity.summaries[room.channelId]!;
+        expect(summary.latestMessage!.effectiveBody, 'At the limit');
+        expect(summary.recentMessageCount, 2);
+      },
+    );
+
+    test(
+      'a message dated beyond clock drift still counts as unread',
+      () async {
+        final room = _Room('12' * 32);
+        await room.seed([
+          room.message('a', createdAt: _now - 60),
+          room.message('b', createdAt: _now + 604800),
+        ]);
+        final activity = _activity([room]);
+        await activity.start();
+        final summary = activity.summaries[room.channelId]!;
+        expect(summary.latestMessage!.id, 'a' * 64);
+        expect(summary.unreadCount, 2);
+      },
+    );
+
+    test(
       'pending messages never inflate activity or the latest preview',
       () async {
         final room = _Room('12' * 32);
@@ -385,6 +443,10 @@ void main() {
       await room.ingest(kind: 5, target: id);
       expect(activity.summaries[room.channelId]!.recentMessageCount, 0);
       await room.ingest(kind: 9, body: 'Expiring', expiresAt: _now + 5);
+      expect(
+        activity.summaries[room.channelId]!.latestMessage!.body,
+        'Expiring',
+      );
       now += 5;
       await room.repository.purgeExpired(now: now);
       await pumpEventQueue();
@@ -487,6 +549,56 @@ void main() {
     );
 
     test(
+      'a relay error during history leaves the room failed and retryable',
+      () async {
+        final relay = _HistoryRelay();
+        final room = _Room('12' * 32, relay: relay);
+        final activity = _activity([room]);
+        final starting = activity.ensureStarted(room.channelId);
+        await pumpEventQueue();
+        relay.events.addError(StateError('connection lost'));
+        await pumpEventQueue();
+        relay.history.complete();
+        await expectLater(starting, throwsStateError);
+        expect(activity.summaries[room.channelId]!.loadFailed, isTrue);
+        await activity.ensureStarted(room.channelId);
+        expect(activity.summaries[room.channelId]!.loadFailed, isFalse);
+      },
+    );
+
+    test('a failed background refresh leaves the room failed', () async {
+      final room = _Room('12' * 32);
+      final activity = _activity([room]);
+      await activity.start();
+      room.store.failReadKey = 'sealed:index';
+      await room.ingest(kind: 9);
+      expect(activity.summaries[room.channelId]!.loadFailed, isTrue);
+    });
+
+    test('the minute refresh ages messages out of the recent activity', () {
+      fakeAsync((async) {
+        var now = _now;
+        final room = _Room('12' * 32);
+        // Not _activity: its tear-down would await a close made in this zone.
+        final activity = RoomActivityRepository(
+          ownPubkey: _own,
+          channels: [room.source],
+          now: () => now,
+        );
+        unawaited(room.seed([room.message('a', createdAt: _now - 60)]));
+        async.flushMicrotasks();
+        unawaited(activity.start());
+        async.flushMicrotasks();
+        expect(activity.summaries[room.channelId]!.recentMessageCount, 1);
+        now += 24 * 60 * 60;
+        async.elapse(const Duration(minutes: 1));
+        expect(activity.summaries[room.channelId]!.recentMessageCount, 0);
+        unawaited(activity.close());
+        async.flushMicrotasks();
+      });
+    });
+
+    test(
       'serializes concurrent read snapshots without losing persisted IDs',
       () async {
         final room = _Room('12' * 32);
@@ -532,7 +644,7 @@ void main() {
     );
 
     test(
-      'close stops live delivery before draining a blocked read receipt',
+      'close stops live delivery before draining a blocked read-state write',
       () async {
         final room = _Room('12' * 32);
         final first = room.message('a');

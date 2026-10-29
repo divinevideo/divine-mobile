@@ -14665,6 +14665,11 @@ class AppLocalizationsFil extends AppLocalizations {
   String get messagesRooms => 'Mga silid';
 
   @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Mga silid ($badge)';
+  }
+
+  @override
   String get messagesPublicTestRooms =>
       'Mga pampublikong silid para sa pagsubok';
 

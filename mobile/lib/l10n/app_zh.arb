@@ -7245,6 +7245,7 @@
   },
   "messagesDirect": "私信",
   "messagesRooms": "聊天室",
+  "messagesRoomsWithUnread": "聊天室 ({badge})",
   "messagesPublicTestRooms": "公开测试聊天室",
   "messagesPublicTestDisclosure": "这些测试聊天室是公开的。任何有访问权限的人都可以阅读你的消息。",
   "messagesNoRooms": "暂无聊天室",

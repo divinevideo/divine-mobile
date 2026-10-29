@@ -14845,6 +14845,11 @@ class AppLocalizationsRo extends AppLocalizations {
   String get messagesRooms => 'Camere';
 
   @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Camere ($badge)';
+  }
+
+  @override
   String get messagesPublicTestRooms => 'Camere publice de test';
 
   @override

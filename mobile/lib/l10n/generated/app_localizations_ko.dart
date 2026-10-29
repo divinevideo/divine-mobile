@@ -13849,6 +13849,11 @@ class AppLocalizationsKo extends AppLocalizations {
   String get messagesRooms => '채팅방';
 
   @override
+  String messagesRoomsWithUnread(String badge) {
+    return '채팅방 ($badge)';
+  }
+
+  @override
   String get messagesPublicTestRooms => '공개 테스트 채팅방';
 
   @override

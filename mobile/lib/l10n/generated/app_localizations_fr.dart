@@ -14776,6 +14776,11 @@ class AppLocalizationsFr extends AppLocalizations {
   String get messagesRooms => 'Salons';
 
   @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Salons ($badge)';
+  }
+
+  @override
   String get messagesPublicTestRooms => 'Salons de test publics';
 
   @override

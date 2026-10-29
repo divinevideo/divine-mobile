@@ -11330,10 +11330,20 @@
   },
   "messagesRoomEmpty": "No recent messages. Say hello.",
   "@messagesRoomEmpty": {
-    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+    "description": "Invitation in a public room row when retained history holds no message to preview; says recent because older messages may have expired, and does not claim the room has never had messages."
   },
   "messagesDirect": "Direct",
   "messagesRooms": "Rooms",
+  "messagesRoomsWithUnread": "Rooms ({badge})",
+  "@messagesRoomsWithUnread": {
+    "description": "Rooms selector in Messages while rooms have unread messages. badge is the unread count as shown on screen, such as 3, 5+ or 99+.",
+    "placeholders": {
+      "badge": {
+        "type": "String",
+        "example": "5+"
+      }
+    }
+  },
   "messagesPublicTestRooms": "Public test rooms",
   "messagesPublicTestDisclosure": "These test rooms are public. Anyone with access can read your messages.",
   "messagesNoRooms": "No rooms yet",

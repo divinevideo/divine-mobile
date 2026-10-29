@@ -5949,6 +5949,7 @@
   },
   "messagesDirect": "Directe",
   "messagesRooms": "Camere",
+  "messagesRoomsWithUnread": "Camere ({badge})",
   "messagesPublicTestRooms": "Camere publice de test",
   "messagesPublicTestDisclosure": "Aceste camere de test sunt publice. Oricine are acces îți poate citi mesajele.",
   "messagesNoRooms": "Încă nu există camere",

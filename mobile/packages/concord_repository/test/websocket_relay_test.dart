@@ -323,7 +323,7 @@ void main() {
       },
     );
 
-    test('missing EOSE times out and cancels its deadline on close', () async {
+    test('missing EOSE times out', () async {
       gateway = WebSocketRelayGateway(
         relay.url,
         historyTimeout: const Duration(milliseconds: 100),
@@ -340,7 +340,24 @@ void main() {
         await request;
         deadlines.timers.single.fire();
         await history;
+      });
+    });
+
+    test('closing before EOSE cancels the history deadline', () async {
+      gateway = WebSocketRelayGateway(
+        relay.url,
+        historyTimeout: const Duration(milliseconds: 100),
+      );
+      final deadlines = _ControlledDeadlines(const Duration(milliseconds: 100));
+      await deadlines.run(() async {
+        final request = relay.nextFrame('REQ');
+        final subscription = gateway.subscribe({}).listen((_) {});
+        addTearDown(subscription.cancel);
+        final history = expectLater(gateway.historyReady, throwsStateError);
+        await request;
+        expect(deadlines.timers.single.isActive, isTrue);
         await gateway.close();
+        await history;
         expect(deadlines.timers.single.isActive, isFalse);
       });
     });
@@ -580,6 +597,31 @@ void main() {
         expect(relay.sockets, hasLength(3));
       },
     );
+    test('exhausted reconnects fail historical readiness', () async {
+      gateway = WebSocketRelayGateway(
+        relay.url,
+        reconnectDelay: const Duration(milliseconds: 5),
+        maxReconnectAttempts: 2,
+      );
+      final closer = relay.frames.stream.listen((frame) {
+        if (frame.first == 'REQ') unawaited(relay.sockets.last.close());
+      });
+      addTearDown(closer.cancel);
+      final subscription = gateway
+          .subscribe({})
+          .listen((_) {}, onError: (Object _) {});
+      addTearDown(subscription.cancel);
+      await expectLater(
+        gateway.historyReady,
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            'Relay reconnect exhausted',
+          ),
+        ),
+      );
+    });
     test(
       'stream first listened to after close completes without connecting',
       () async {

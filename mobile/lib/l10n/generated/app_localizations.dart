@@ -24219,7 +24219,7 @@ abstract class AppLocalizations {
   /// **'Activity couldn’t load.'**
   String get messagesRoomLoadFailed;
 
-  /// Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages.
+  /// Invitation in a public room row when retained history holds no message to preview; says recent because older messages may have expired, and does not claim the room has never had messages.
   ///
   /// In en, this message translates to:
   /// **'No recent messages. Say hello.'**
@@ -24236,6 +24236,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Rooms'**
   String get messagesRooms;
+
+  /// Rooms selector in Messages while rooms have unread messages. badge is the unread count as shown on screen, such as 3, 5+ or 99+.
+  ///
+  /// In en, this message translates to:
+  /// **'Rooms ({badge})'**
+  String messagesRoomsWithUnread(String badge);
 
   /// Heading above the room list in Messages while rooms are an internal public test.
   ///

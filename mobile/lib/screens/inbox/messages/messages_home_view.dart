@@ -59,7 +59,7 @@ class MessagesHomeView extends StatelessWidget {
                     selected: showRooms,
                     child: DivineButton(
                       label: roomsUnreadCount > 0
-                          ? '${context.l10n.messagesRooms} ($unreadBadge)'
+                          ? context.l10n.messagesRoomsWithUnread(unreadBadge)
                           : context.l10n.messagesRooms,
                       semanticLabel: roomsUnreadCount > 0
                           ? context.l10n.messagesRoomsUnreadLabel(

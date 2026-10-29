@@ -14680,6 +14680,11 @@ class AppLocalizationsBg extends AppLocalizations {
   String get messagesRooms => 'Стаи';
 
   @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Стаи ($badge)';
+  }
+
+  @override
   String get messagesPublicTestRooms => 'Публични тестови стаи';
 
   @override

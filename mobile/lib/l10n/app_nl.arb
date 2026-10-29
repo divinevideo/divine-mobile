@@ -5949,6 +5949,7 @@
   },
   "messagesDirect": "Direct",
   "messagesRooms": "Kamers",
+  "messagesRoomsWithUnread": "Kamers ({badge})",
   "messagesPublicTestRooms": "Openbare testkamers",
   "messagesPublicTestDisclosure": "Deze testkamers zijn openbaar. Iedereen met toegang kan je berichten lezen.",
   "messagesNoRooms": "Nog geen kamers",

@@ -8874,6 +8874,7 @@
   },
   "messagesDirect": "నేరుగా",
   "messagesRooms": "గదులు",
+  "messagesRoomsWithUnread": "గదులు ({badge})",
   "messagesPublicTestRooms": "బహిరంగ పరీక్ష గదులు",
   "messagesPublicTestDisclosure": "ఈ పరీక్ష గదులు బహిరంగమైనవి. ప్రవేశం ఉన్న ఎవరైనా మీ సందేశాలను చదవగలరు.",
   "messagesNoRooms": "ఇంకా గదులు లేవు",

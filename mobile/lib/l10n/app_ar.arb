@@ -5949,6 +5949,7 @@
   },
   "messagesDirect": "مباشرة",
   "messagesRooms": "الغرف",
+  "messagesRoomsWithUnread": "الغرف ({badge})",
   "messagesPublicTestRooms": "غرف اختبار عامة",
   "messagesPublicTestDisclosure": "غرف الاختبار هذه عامة. يمكن لأي شخص لديه صلاحية الوصول قراءة رسائلك.",
   "messagesNoRooms": "لا توجد غرف بعد",

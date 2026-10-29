@@ -14566,6 +14566,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get messagesRooms => 'الغرف';
 
   @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'الغرف ($badge)';
+  }
+
+  @override
   String get messagesPublicTestRooms => 'غرف اختبار عامة';
 
   @override

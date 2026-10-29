@@ -5949,6 +5949,7 @@
   },
   "messagesDirect": "Langsung",
   "messagesRooms": "Ruang",
+  "messagesRoomsWithUnread": "Ruang ({badge})",
   "messagesPublicTestRooms": "Ruang uji publik",
   "messagesPublicTestDisclosure": "Ruang uji ini bersifat publik. Siapa pun yang memiliki akses dapat membaca pesanmu.",
   "messagesNoRooms": "Belum ada ruang",

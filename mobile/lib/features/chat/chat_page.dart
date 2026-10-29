@@ -45,6 +45,9 @@ class ChatPage extends ConsumerWidget {
 
   final String? communityId;
   final String? channelId;
+
+  /// Test seam: builds an isolated repository the cubit owns, skipping the
+  /// shared room session and read tracking.
   final ConcordRepositoryBuilder? repositoryBuilder;
 
   @override
@@ -75,8 +78,8 @@ class ChatPage extends ConsumerWidget {
       return RouteErrorScreen(message: context.l10n.routeInvalidConversationId);
     }
     final channel = channelId ?? pocChatDefaultChannel;
-    // Validate before looking up a shared repository so malformed URLs remain
-    // ordinary route errors rather than missing-map-entry exceptions.
+    // repositoryFor throws for a room outside the catalog and runs before
+    // selectChatRoom could reject the URL, so validate the room here.
     if (!const ChatState().communities.any(
           (community) =>
               community.id == (communityId ?? pocChatCommunityId) &&

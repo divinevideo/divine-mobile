@@ -1,8 +1,6 @@
 // ABOUTME: Wires account-scoped Direct / Rooms navigation into Messages.
 // ABOUTME: Keeps the Concord POC behind its existing internal access gate.
 
-import 'dart:async';
-
 import 'package:concord_repository/concord_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -69,14 +67,24 @@ class _RoomsActivity extends StatelessWidget {
       key: ValueKey(activity),
       create: (_) {
         final cubit = RoomsCubit(activity);
-        unawaited(cubit.start());
+        runDetached(
+          cubit.start(),
+          'start room activity',
+          logName: 'MessagesHomePage',
+          category: LogCategory.ui,
+        );
         return cubit;
       },
       child: BlocBuilder<RoomsCubit, Map<String, RoomActivitySummary>>(
         builder: (context, summaries) => _MessagesContent(
           direct: direct,
           summaries: summaries,
-          onRetry: () => unawaited(context.read<RoomsCubit>().start()),
+          onRetry: () => runDetached(
+            context.read<RoomsCubit>().start(),
+            'retry room activity',
+            logName: 'MessagesHomePage',
+            category: LogCategory.ui,
+          ),
         ),
       ),
     );

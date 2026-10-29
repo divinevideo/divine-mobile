@@ -14717,6 +14717,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get messagesRooms => 'Salas';
 
   @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Salas ($badge)';
+  }
+
+  @override
   String get messagesPublicTestRooms => 'Salas públicas de prueba';
 
   @override

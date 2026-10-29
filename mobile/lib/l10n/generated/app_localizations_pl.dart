@@ -14856,6 +14856,11 @@ class AppLocalizationsPl extends AppLocalizations {
   String get messagesRooms => 'Pokoje';
 
   @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'Pokoje ($badge)';
+  }
+
+  @override
   String get messagesPublicTestRooms => 'Publiczne pokoje testowe';
 
   @override

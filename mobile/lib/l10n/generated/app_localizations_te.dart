@@ -14899,6 +14899,11 @@ class AppLocalizationsTe extends AppLocalizations {
   String get messagesRooms => 'గదులు';
 
   @override
+  String messagesRoomsWithUnread(String badge) {
+    return 'గదులు ($badge)';
+  }
+
+  @override
   String get messagesPublicTestRooms => 'బహిరంగ పరీక్ష గదులు';
 
   @override

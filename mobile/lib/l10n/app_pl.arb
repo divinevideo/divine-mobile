@@ -5949,6 +5949,7 @@
   },
   "messagesDirect": "Bezpośrednie",
   "messagesRooms": "Pokoje",
+  "messagesRoomsWithUnread": "Pokoje ({badge})",
   "messagesPublicTestRooms": "Publiczne pokoje testowe",
   "messagesPublicTestDisclosure": "Te pokoje testowe są publiczne. Każdy, kto ma dostęp, może czytać Twoje wiadomości.",
   "messagesNoRooms": "Nie ma jeszcze pokoi",
