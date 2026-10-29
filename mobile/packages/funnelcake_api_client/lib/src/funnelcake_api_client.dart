@@ -426,6 +426,49 @@ class FunnelcakeApiClient {
   Uri notificationsReadUri({required String pubkey}) =>
       Uri.parse('$_baseUrl/api/users/$pubkey/notifications/read');
 
+  /// Exact URL to bind in the activity request's NIP-98 signature.
+  Uri get notificationActivityUri =>
+      Uri.parse('$_baseUrl/api/v2/notifications/activity');
+
+  /// Reports visibility without changing notification read state.
+  ///
+  /// A 204 acknowledges applied, duplicate, and stale sequences alike.
+  /// Callers retry uncertain requests with the same [update] and fresh auth.
+  Future<void> recordNotificationActivity(
+    NotificationActivityUpdate update, {
+    Map<String, String>? authHeaders,
+  }) async {
+    if (!isAvailable) throw const FunnelcakeNotConfiguredException();
+    final uri = notificationActivityUri;
+    try {
+      final response = await _httpClient
+          .post(
+            uri,
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              ...buildDivineClientHeaders(appVersion: _appVersion),
+              ...?authHeaders,
+            },
+            body: update.body,
+          )
+          .timeout(_timeout);
+      if (response.statusCode != 204) {
+        throw FunnelcakeApiException(
+          message: 'Failed to report notification activity',
+          statusCode: response.statusCode,
+          url: uri.toString(),
+        );
+      }
+    } on TimeoutException {
+      throw FunnelcakeTimeoutException(uri.toString());
+    } on FunnelcakeException {
+      rethrow;
+    } on Object {
+      throw const FunnelcakeException('Notification activity request failed');
+    }
+  }
+
   /// Builds the JSON body sent to [markNotificationsRead].
   ///
   /// Exposed so callers building NIP-98 auth headers can hash the exact
