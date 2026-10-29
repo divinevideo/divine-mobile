@@ -53,7 +53,11 @@ class SocialStickerView extends StatelessWidget {
               mainAxisSize: .min,
               spacing: 14,
               children: [
-                Text('🔗', style: palette.textStyle()),
+                Text(
+                  '🔗',
+                  style: palette.textStyle(),
+                  textScaler: TextScaler.noScaling,
+                ),
                 _Line(text: textOf(data), style: palette.textStyle()),
               ],
             ),
@@ -73,6 +77,10 @@ const double _maxTextWidth = 720;
 
 /// One line of sticker text, cut short with an ellipsis past
 /// [_maxTextWidth].
+///
+/// Unscaled by the system font size, like the sound credit's painted text:
+/// the sticker is part of the video, sized by the creator's pinch, and the
+/// player draws it again over its copy for viewers of any font size.
 class _Line extends StatelessWidget {
   const _Line({required this.text, required this.style});
 
@@ -83,7 +91,13 @@ class _Line extends StatelessWidget {
   Widget build(BuildContext context) {
     return ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: _maxTextWidth),
-      child: Text(text, style: style, maxLines: 1, overflow: .ellipsis),
+      child: Text(
+        text,
+        style: style,
+        maxLines: 1,
+        overflow: .ellipsis,
+        textScaler: TextScaler.noScaling,
+      ),
     );
   }
 }
