@@ -439,9 +439,10 @@ class CaptionGenerationService {
 
     // Some on-device recognizers reject an explicit language even when it is
     // the device's own default, so [_recognizeOnDevice] retries without one.
-    // Once that happens, drop the language for the remaining sources too
-    // rather than pay the failed first attempt on every one.
+    // Remember rejections separately: a locale unavailable to a strict local
+    // recognizer may still work for ordinary OS recognition.
     String? effectiveLocale = localeIdentifier;
+    String? strictLocale = localeIdentifier;
 
     for (final source in sources) {
       final String audioPath;
@@ -468,10 +469,18 @@ class CaptionGenerationService {
       try {
         final result = await _recognizeOnDevice(
           audioPath: audioPath,
-          localeIdentifier: effectiveLocale,
+          localeIdentifier: source.onDeviceOnly
+              ? strictLocale
+              : effectiveLocale,
           requireOnDeviceRecognition: source.onDeviceOnly,
         );
-        if (result.localeRejected) effectiveLocale = null;
+        if (result.localeRejected) {
+          if (source.onDeviceOnly) {
+            strictLocale = null;
+          } else {
+            effectiveLocale = null;
+          }
+        }
         words.addAll(_windowToTimeline(result.segments, source));
       } on TimeoutException {
         Log.warning(

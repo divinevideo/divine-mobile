@@ -1216,6 +1216,49 @@ void main() {
           );
         });
 
+        test(
+          'a strict locale rejection does not change later clip language',
+          () async {
+            stubExtraction();
+            stubGenerator([_word('Wrong default.', 100, 500)]);
+            when(
+              () => generator.generateCaptions(
+                audioPath: any(named: 'audioPath'),
+                localeIdentifier: 'en-US',
+              ),
+            ).thenAnswer((_) async => [_word('Clip.', 100, 500)]);
+            stubGenerator(
+              [_word('Take.', 100, 500)],
+              requireOnDeviceRecognition: true,
+            );
+            when(
+              () => generator.generateCaptions(
+                audioPath: any(named: 'audioPath'),
+                localeIdentifier: 'en-US',
+                requireOnDeviceRecognition: true,
+              ),
+            ).thenThrow(
+              const SpeechRecognizerUnavailableException('No local model'),
+            );
+
+            final outcome = await buildService().generateForClips(
+              clips: [_clip('lead', volume: 0), _clip('a')],
+              audioTracks: [
+                robotTake().copyWith(
+                  startTime: Duration.zero,
+                  endTime: const Duration(seconds: 1),
+                ),
+              ],
+              localeIdentifier: 'en-US',
+            );
+
+            expect(
+              (outcome as CaptionsGenerated).cues.map((cue) => cue.text),
+              equals(['Take.', 'Clip.']),
+            );
+          },
+        );
+
         for (final serverFails in [false, true]) {
           test(
             'keeps other captions when strict local recognition fails '
