@@ -63,10 +63,10 @@ class VideoMetadataTagsSelector extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // The stickers' hashtags come first, as they do on the published post.
+    // The tags the post will carry: the stickers' first, at most ten.
     final tags = ref.watch(
       videoEditorProvider.select(
-        (s) => {...s.stickerCredits.hashtags, ...s.tags}.join(', '),
+        (s) => s.stickerCredits.hashtagsWith(s.tags).join(', '),
       ),
     );
 
