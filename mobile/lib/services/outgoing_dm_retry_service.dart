@@ -50,6 +50,22 @@ class OutgoingDmRetryConfig {
   }
 }
 
+/// What became of a held group member the sweep asked the repository to
+/// stop (#10012).
+enum _HeldMemberStop {
+  /// Stopped: its bubble reads "Not sent to everyone".
+  stopped,
+
+  /// Left as it was by the repository, or stopping it threw unexpectedly.
+  kept,
+
+  /// The repository is not ready: leave the row and end the arm.
+  notReady,
+
+  /// The row went missing or belongs to another account: leave it.
+  skipped,
+}
+
 /// Sweeps the durable `outgoing_dms` queue for rows whose recipient
 /// gift wrap landed but whose self-wrap did not, and re-publishes the
 /// missing self-wrap via [DmRepository.recoverSelfWrap].
@@ -554,9 +570,14 @@ class OutgoingDmRetryService {
           // maxRetries`; `getStillPendingForOwner` does not, so without this
           // an unconfirmable pending row would re-drive forever.
           if (row.retryCount >= _retryConfig.maxRetries) {
-            if (await _markInterruptedExhausted(row)) {
+            final stop = await _markInterruptedExhausted(row);
+            if (stop == _HeldMemberStop.notReady) {
+              abortedNotReady = true;
+              break;
+            }
+            if (stop == _HeldMemberStop.stopped) {
               stoppedHeld++;
-            } else {
+            } else if (stop == _HeldMemberStop.kept) {
               exhaustedInterrupted++;
             }
             continue;
@@ -645,7 +666,11 @@ class OutgoingDmRetryService {
         }
       }
 
-      if (!abortedNotReady) stoppedHeld += await _stopExhaustedHeldMembers();
+      if (!abortedNotReady) {
+        final failedHeld = await _stopExhaustedHeldMembers();
+        stoppedHeld += failedHeld.stopped;
+        abortedNotReady = failedHeld.notReady;
+      }
 
       final deletions = await _sweepMessageDeletions();
 
@@ -964,16 +989,18 @@ class OutgoingDmRetryService {
   /// A group member a fallback-pool relay holds a wrap of (#10012) is first
   /// offered to [DmRepository.stopHeldMemberDelivery]: when the message is
   /// stored for the members who have it, the member is stopped instead, and
-  /// the bubble reads "Not sent to everyone". Returns whether it was stopped;
-  /// anything else is terminalized as below.
+  /// the bubble reads "Not sent to everyone". A row the repository keeps is
+  /// terminalized as below, and so, after a report, is one whose stop threw
+  /// unexpectedly. One it is not ready for, or that went missing, is left as
+  /// it is.
   ///
   /// Swallows DAO errors — a failed mark just means the row is
   /// re-evaluated next sweep and terminalized then.
-  Future<bool> _markInterruptedExhausted(OutgoingDm row) async {
+  Future<_HeldMemberStop> _markInterruptedExhausted(OutgoingDm row) async {
     if (row.recipientWrapStatus == OutgoingWrapStatus.pending &&
-        row.recipientWrapEventId != null &&
-        await _stopHeldMember(row.id)) {
-      return true;
+        row.recipientWrapEventId != null) {
+      final stop = await _stopHeldMember(row.id);
+      if (stop != _HeldMemberStop.kept) return stop;
     }
     if (row.recipientWrapStatus == OutgoingWrapStatus.sent) {
       try {
@@ -989,20 +1016,21 @@ class OutgoingDmRetryService {
           category: LogCategory.system,
         );
       }
-      return false;
+      return _HeldMemberStop.kept;
     }
     await _terminalizeRow(
       row.id,
       error: 'Exhausted retries without recipient confirmation',
     );
-    return false;
+    return _HeldMemberStop.kept;
   }
 
   /// Stops the held group members already failed with their retry budget
   /// spent, which the failed arm no longer re-drives: rows exhausted before
   /// held members were stopped, or after a Resend whose retries ran out
-  /// (#10012). Returns how many were stopped.
-  Future<int> _stopExhaustedHeldMembers() async {
+  /// (#10012). Returns how many were stopped, and whether the repository was
+  /// not ready, which ends the arm as it does the others.
+  Future<({int stopped, bool notReady})> _stopExhaustedHeldMembers() async {
     final rows = await _dao.getExhaustedHeldForOwner(
       ownerPubkey: _userPubkey,
       maxRetries: _retryConfig.maxRetries,
@@ -1010,18 +1038,45 @@ class OutgoingDmRetryService {
     );
     var stopped = 0;
     for (final row in rows) {
-      if (await _stopHeldMember(row.id)) stopped++;
+      final stop = await _stopHeldMember(row.id);
+      if (stop == _HeldMemberStop.notReady) {
+        return (stopped: stopped, notReady: true);
+      }
+      if (stop == _HeldMemberStop.stopped) stopped++;
     }
-    return stopped;
+    return (stopped: stopped, notReady: false);
   }
 
-  /// [DmRepository.stopHeldMemberDelivery] for the row [rowId]. Never
-  /// throws: a throw is logged and reported, and reads as not stopped, so
-  /// the row keeps the status it would have had (#10012).
-  Future<bool> _stopHeldMember(String rowId) async {
+  /// [DmRepository.stopHeldMemberDelivery] for the row [rowId], with the
+  /// error policy of the other arms. Never throws. A [StateError] means the
+  /// repository is not ready and an [ArgumentError] that the row went missing
+  /// or is not ours: both are logged and left alone, unreported. Anything
+  /// else is logged and reported, and reads as kept, so the row gets the
+  /// status it would have had (#10012).
+  Future<_HeldMemberStop> _stopHeldMember(String rowId) async {
     try {
-      return await _dmRepository.stopHeldMemberDelivery(rumorId: rowId);
+      return await _dmRepository.stopHeldMemberDelivery(rumorId: rowId)
+          ? _HeldMemberStop.stopped
+          : _HeldMemberStop.kept;
     } on Object catch (e, stackTrace) {
+      // StateError and ArgumentError are part of stopHeldMemberDelivery's
+      // documented contract, as for the recovery calls of the other arms.
+      if (e is StateError) {
+        Log.warning(
+          'repo not ready to stop held member $rowId; aborting: $e',
+          name: 'OutgoingDmRetryService',
+          category: LogCategory.system,
+        );
+        return _HeldMemberStop.notReady;
+      }
+      if (e is ArgumentError) {
+        Log.warning(
+          'skipping held member $rowId: $e',
+          name: 'OutgoingDmRetryService',
+          category: LogCategory.system,
+        );
+        return _HeldMemberStop.skipped;
+      }
       Log.error(
         'could not stop held member delivery $rowId: $e',
         name: 'OutgoingDmRetryService',
@@ -1036,7 +1091,7 @@ class OutgoingDmRetryService {
           reason: OutgoingDmRetryServiceReportableSites.stopHeldMemberDelivery,
         ),
       );
-      return false;
+      return _HeldMemberStop.kept;
     }
   }
 

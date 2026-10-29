@@ -2801,7 +2801,8 @@ void main() {
       });
 
       test(
-        'fails it as before, and reports, when stopping it throws',
+        'fails it as before, and reports, when stopping it throws '
+        'unexpectedly',
         () async {
           final crashReporting = _MockCrashReportingService();
           when(
@@ -2815,7 +2816,7 @@ void main() {
             () => dao.getStillPendingForOwner(any()),
           ).thenAnswer((_) async => [heldExhausted('held-throws')]);
           stubTerminalize();
-          stubStop(() async => throw StateError('database is closed'));
+          stubStop(() async => throw Exception('drift busy'));
 
           await expectLater(
             buildService(
@@ -2836,6 +2837,81 @@ void main() {
           ).called(1);
         },
       );
+
+      group('when stopping it throws an expected error', () {
+        late _MockCrashReportingService crashReporting;
+
+        setUp(() {
+          crashReporting = _MockCrashReportingService();
+          when(
+            () => crashReporting.recordError(
+              any<dynamic>(),
+              any<StackTrace?>(),
+              reason: any(named: 'reason'),
+            ),
+          ).thenAnswer((_) async {});
+          when(() => dao.getStillPendingForOwner(any())).thenAnswer(
+            (_) async => [heldExhausted('held-1'), heldExhausted('held-2')],
+          );
+          stubTerminalize();
+          stubStop(() async => true);
+        });
+
+        test('leaves it pending and ends the arm while the repository is not '
+            'ready', () async {
+          when(
+            () => dmRepository.stopHeldMemberDelivery(rumorId: 'held-1'),
+          ).thenThrow(StateError('not initialized'));
+
+          await buildService(
+            now: () => now,
+            crashReporting: crashReporting,
+          ).sweep();
+
+          verifyNotTerminalized('held-1');
+          verifyNever(
+            () => dmRepository.stopHeldMemberDelivery(rumorId: 'held-2'),
+          );
+          verifyNotTerminalized('held-2');
+          verifyNever(
+            () => dao.getExhaustedHeldForOwner(
+              ownerPubkey: any(named: 'ownerPubkey'),
+              maxRetries: any(named: 'maxRetries'),
+              environment: any(named: 'environment'),
+            ),
+          );
+          verifyNever(
+            () => crashReporting.recordError(
+              any<dynamic>(),
+              any<StackTrace?>(),
+              reason: any(named: 'reason'),
+            ),
+          );
+        });
+
+        test('leaves a row that is gone or not ours and goes on', () async {
+          when(
+            () => dmRepository.stopHeldMemberDelivery(rumorId: 'held-1'),
+          ).thenThrow(ArgumentError.value('held-1', 'rumorId'));
+
+          await buildService(
+            now: () => now,
+            crashReporting: crashReporting,
+          ).sweep();
+
+          verifyNotTerminalized('held-1');
+          verify(
+            () => dmRepository.stopHeldMemberDelivery(rumorId: 'held-2'),
+          ).called(1);
+          verifyNever(
+            () => crashReporting.recordError(
+              any<dynamic>(),
+              any<StackTrace?>(),
+              reason: any(named: 'reason'),
+            ),
+          );
+        });
+      });
 
       test('fails a row no pool relay holds a wrap of without asking to stop '
           'it', () async {
@@ -2906,14 +2982,65 @@ void main() {
           ).called(1);
         });
 
-        test('one that throws does not end the pass', () async {
+        test('one that throws unexpectedly is reported and the rest go '
+            'on', () async {
+          final crashReporting = _MockCrashReportingService();
+          when(
+            () => crashReporting.recordError(
+              any<dynamic>(),
+              any<StackTrace?>(),
+              reason: any(named: 'reason'),
+            ),
+          ).thenAnswer((_) async {});
           stubExhaustedHeld(['spent-1', 'spent-2']);
           stubStop(() async => true);
           when(
             () => dmRepository.stopHeldMemberDelivery(rumorId: 'spent-1'),
-          ).thenThrow(StateError('database is closed'));
+          ).thenThrow(Exception('drift busy'));
 
-          await expectLater(buildService().sweep(), completes);
+          await expectLater(
+            buildService(crashReporting: crashReporting).sweep(),
+            completes,
+          );
+
+          verify(
+            () => dmRepository.stopHeldMemberDelivery(rumorId: 'spent-2'),
+          ).called(1);
+          verify(
+            () => crashReporting.recordError(
+              any<dynamic>(),
+              any<StackTrace?>(),
+              reason:
+                  OutgoingDmRetryServiceReportableSites.stopHeldMemberDelivery,
+            ),
+          ).called(1);
+        });
+
+        test(
+          'stops at the first one the repository is not ready for',
+          () async {
+            stubExhaustedHeld(['spent-1', 'spent-2']);
+            stubStop(() async => true);
+            when(
+              () => dmRepository.stopHeldMemberDelivery(rumorId: 'spent-1'),
+            ).thenThrow(StateError('not initialized'));
+
+            await buildService().sweep();
+
+            verifyNever(
+              () => dmRepository.stopHeldMemberDelivery(rumorId: 'spent-2'),
+            );
+          },
+        );
+
+        test('skips one that is gone or not ours', () async {
+          stubExhaustedHeld(['spent-1', 'spent-2']);
+          stubStop(() async => true);
+          when(
+            () => dmRepository.stopHeldMemberDelivery(rumorId: 'spent-1'),
+          ).thenThrow(ArgumentError.value('spent-1', 'rumorId'));
+
+          await buildService().sweep();
 
           verify(
             () => dmRepository.stopHeldMemberDelivery(rumorId: 'spent-2'),
