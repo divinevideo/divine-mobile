@@ -107,7 +107,6 @@ class ChatMentionRepository implements LocalNotificationSource {
     }
   }
 
-  /// Starts [channel]; a failure leaves it unobserved for [refresh] to retry.
   /// Detaches [channel]'s observer now and closes it without waiting for
   /// its relay.
   void _stopObserving(String channel) {
@@ -126,6 +125,7 @@ class ChatMentionRepository implements LocalNotificationSource {
     );
   }
 
+  /// Starts [channel]; a failure leaves it unobserved for [refresh] to retry.
   Future<void> _observeOrDefer(String channel) =>
       _observe(channel).catchError((Object error, StackTrace stack) {
         Log.warning(
@@ -176,7 +176,8 @@ class ChatMentionRepository implements LocalNotificationSource {
     _repositories[channel] = repository;
     try {
       await startRoom!(channel, repository);
-      if (_closed) return;
+      // A refused enrollment may have stopped this observer meanwhile.
+      if (_closed || !identical(_repositories[channel], repository)) return;
       void refresh() =>
           updateRoom(channel, repository.timeline(now: now()).messages);
       _subscriptions[channel] = repository.changes.listen(
@@ -195,6 +196,8 @@ class ChatMentionRepository implements LocalNotificationSource {
       );
       refresh();
     } on Object {
+      // Once stopped, the observer is already closing; never evict a retry's.
+      if (!identical(_repositories[channel], repository)) return;
       _repositories.remove(channel);
       await repository.close();
       rethrow;

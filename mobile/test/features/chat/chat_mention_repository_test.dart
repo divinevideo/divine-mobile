@@ -508,6 +508,97 @@ void main() {
     });
 
     group('enroll', () {
+      test(
+        'an observer still starting when its enrollment fails stays down',
+        () async {
+          final store = _RefusedLaterStore(me);
+          final starting = Completer<void>();
+          final room = _Room();
+          when(room.close).thenAnswer((_) async {});
+          when(() => room.changes).thenAnswer((_) => const Stream.empty());
+          when(
+            () => room.timeline(now: any(named: 'now')),
+          ).thenReturn(FoldedThread([message(friend, 1001)], {}));
+          final repo = ChatMentionRepository(
+            owner: me,
+            communityId: 'community-test',
+            store: store,
+            now: () => 1000,
+            canNotify: (_) => true,
+            createRoom: (_) => room,
+            startRoom: (_, _) => starting.future,
+          );
+          addTearDown(repo.close);
+          await repo.initialize();
+          final write = store.held = Completer<void>();
+          final enrolling = expectLater(
+            repo.enroll('general'),
+            throwsStateError,
+          );
+          await pumpEventQueue();
+          final refreshing = repo.refresh();
+          await pumpEventQueue();
+          write.complete();
+          await enrolling;
+          starting.complete();
+          await refreshing;
+          await pumpEventQueue();
+          verify(room.close).called(1);
+          verifyNever(() => room.changes);
+          expect(repo.items, isEmpty);
+        },
+      );
+
+      test(
+        'a stopped observer failing late keeps the retried room tracked',
+        () async {
+          final store = _RefusedLaterStore(me);
+          final starting = Completer<void>();
+          final first = _Room();
+          final second = _Room();
+          for (final room in [first, second]) {
+            when(room.close).thenAnswer((_) async {});
+            when(() => room.changes).thenAnswer((_) => const Stream.empty());
+            when(
+              () => room.timeline(now: any(named: 'now')),
+            ).thenReturn(FoldedThread([], {}));
+          }
+          final rooms = [first, second];
+          var starts = 0;
+          final repo = ChatMentionRepository(
+            owner: me,
+            communityId: 'community-test',
+            store: store,
+            now: () => 1000,
+            canNotify: (_) => true,
+            createRoom: (_) => rooms.removeAt(0),
+            startRoom: (_, _) async {
+              if (++starts == 1) {
+                await starting.future;
+                throw StateError('offline');
+              }
+            },
+          );
+          await repo.initialize();
+          final write = store.held = Completer<void>();
+          final enrolling = expectLater(
+            repo.enroll('general'),
+            throwsStateError,
+          );
+          await pumpEventQueue();
+          final refreshing = repo.refresh();
+          await pumpEventQueue();
+          write.complete();
+          await enrolling;
+          await repo.enroll('general');
+          starting.complete();
+          await refreshing;
+          await repo.close();
+          expect(rooms, isEmpty);
+          verify(second.close).called(1);
+        },
+      );
+
       test('a refused enrollment withdraws rows a refresh published', () async {
         final store = _RefusedLaterStore(me);
         final room = _Room();
