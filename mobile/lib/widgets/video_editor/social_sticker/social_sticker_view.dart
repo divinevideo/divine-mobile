@@ -92,7 +92,7 @@ const double _maxTextWidth = 720;
 ///
 /// Unscaled by the system font size, like the sound credit's painted text:
 /// the sticker is part of the video, sized by the creator's pinch, and the
-/// player draws it again over its copy for viewers of any font size.
+/// player's copy of it has to match the frames at any font size.
 class _Line extends StatelessWidget {
   const _Line({required this.text, required this.style});
 

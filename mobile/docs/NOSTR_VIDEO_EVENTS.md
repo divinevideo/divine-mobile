@@ -133,15 +133,15 @@ viewer can tap them. All of these are Divine conventions.
 The `sticker` tag's fields:
 
 - `kind` is `link`, `mention`, `hashtag` or `sound`.
-- `target` is the full `http`/`https` address, the full hex pubkey, or the hashtag
-  without `#`. A reader ignores any other scheme, a pubkey that is not 64 hex
-  characters, and a hashtag containing whitespace. For `sound` it is the id the
-  credited sound's page opens it by: `bundled_<id>` for a sound from Divine's
-  library, or the event id of a sound published on Nostr. It is empty for a
-  sound only the video carries (an imported file, a provider sound, a video's
-  original sound), and the sticker then opens the video's own sound, the one its
-  audio reference names; such a sticker is only published when it credits that
-  sound.
+- `target` is the full `http`/`https` address of a named host, the full hex
+  pubkey, or the hashtag. A reader strips one leading `#` from a hashtag and
+  lowercases it, as it does a pubkey. For `sound` it is the id the credited
+  sound's page opens it by: `bundled_<id>` for a sound from Divine's library,
+  or the event id of a sound published on Nostr. It is empty for a sound only
+  the video carries (an imported file, a provider sound, a video's original
+  sound), and the sticker then opens the video's own sound, the one its audio
+  reference names; such a sticker is only published when it credits that
+  sound. A reader takes any other sound target as empty.
 - The area gives the sticker's centre and its size before it is turned, as
   fractions of the video frame's width (`cx`, `w`) and height (`cy`, `h`).
 - `degrees` is how far it is turned clockwise around its centre.
@@ -152,21 +152,46 @@ The `sticker` tag's fields:
   `highlight`, `neon`, `plain` or `outline`).
 - `label` is the text the sticker shows, without `@` or `#`: a link's title or
   domain, a name, or a hashtag as typed; for a sound, its title, artist and line
-  of lyrics, one per line. At most 300 characters.
+  of lyrics, one per line.
+
+A reader drops the whole tag when:
+
+- a link has another scheme or no host;
+- a pubkey is not 64 hex characters;
+- a hashtag is empty, longer than 100 characters, or contains whitespace, `#`,
+  `/` or `?`;
+- the area is not four finite numbers, a size is not above 0 and at most 4, or
+  no part of the turned sticker can reach the frame;
+- the angle is not a finite number;
+- a time is not a whole number of milliseconds of zero or more, or the end is
+  not after the start.
+
+A label longer than 300 characters is dropped and the button kept.
 
 The sticker is also part of the video's frames, so other clients still show
 it. Divine draws it again from `style` and `label` exactly over the one in the
 frames, sharp at the screen's resolution, and makes it the button; without
-both fields it only places the button. A sound sticker whose design moves with
-the video (record, cassette, player, equalizer) is published without `style`,
-since a copy could not keep time with the frames beneath. So is a sticker drawn
-see-through, with a blend mode or through a mask, since a copy would come back
-solid. A sticker that moves
-across the video (keyframes, tracking or an animation) is never published with
-an area, which is why the editor offers none of those for these four sticker
-kinds. Before a link
-outside `divine.video` opens, the app shows its domain and full address in a
-sheet.
+both fields it only places the button. The copy draws only what covers: the
+text, and the pill's fill and border where they are solid. A see-through fill,
+a glow or a shadow is in the frames already and would come out twice as
+strong.
+
+Some stickers are published without `style`, since a copy would not match the
+frames:
+
+- a sound sticker whose design moves with the video (record, cassette, player,
+  equalizer), as a copy could not keep time with the frames beneath;
+- a sticker drawn see-through, with a blend mode or through a mask, as a copy
+  would come back solid;
+- a sticker with another layer over it at the same time, as a copy would hide
+  that layer.
+
+A sticker drawn fully transparent gets no tag. A sticker that moves across the
+video (keyframes, tracking or an animation) is never published with an area,
+which is why the editor offers none of those for these four sticker kinds.
+
+Before a link to a host outside `divine.video` and its subdomains opens, the
+app shows its whole domain and its address, cut after three lines, in a sheet.
 
 Publishing lives in `mobile/lib/services/video_publish/video_event_tags.dart`.
 The area is taken from the final render in

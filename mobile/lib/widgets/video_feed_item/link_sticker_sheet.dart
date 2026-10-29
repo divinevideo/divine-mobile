@@ -16,8 +16,9 @@ typedef LinkStickerLauncher = Future<void> Function(
 Future<void> _openLink(BuildContext context, String url) =>
     openExternalLink(context, url, requireConfirmationForUntrusted: false);
 
-/// Opens [url], a link on a video: one to Divine itself in the app, any
-/// other once the viewer has seen where it goes in [showLinkStickerSheet].
+/// Opens [url], a link on a video: one to Divine or its subdomains straight
+/// away, in the app where it leads to a screen there; any other once the
+/// viewer has seen where it goes in [showLinkStickerSheet].
 Future<void> openVideoLink(BuildContext context, String url) {
   final host = Uri.tryParse(url)?.host ?? '';
   return isTrustedExternalLinkHost(host)

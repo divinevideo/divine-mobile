@@ -10,7 +10,7 @@ import 'package:text_sanitizer/text_sanitizer.dart';
 
 /// What a tappable sticker on a video opens.
 enum VideoStickerKind {
-  /// A web page, opened in the browser.
+  /// A web page.
   link,
 
   /// A profile, by its hex pubkey.
@@ -19,7 +19,8 @@ enum VideoStickerKind {
   /// The feed of a hashtag.
   hashtag,
 
-  /// The page of the video's own sound, the one its audio reference names.
+  /// The page of the credited sound, or of the video's own sound, the one
+  /// its audio reference names, when the target is empty.
   sound,
 }
 
