@@ -1,6 +1,7 @@
 // ABOUTME: Works out where a rendered video's tappable stickers stand: the
 // ABOUTME: area and time of each link, mention, hashtag and sound sticker.
 
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:models/models.dart' show VideoStickerRegion;
@@ -24,9 +25,10 @@ List<VideoStickerRegion> stickerRegionsFor({
   if (bodySize == null || bodySize.isEmpty) return const [];
   final frame = ExportLayerMapping.keptRect(bodySize, targetAspectRatio);
   return [
-    for (final item in capturedLayers)
+    for (final (index, item) in capturedLayers.indexed)
       ?_regionOf(
         item,
+        above: capturedLayers.skip(index + 1),
         bodySize: bodySize,
         frame: frame,
         timelineMap: timelineMap,
@@ -36,6 +38,7 @@ List<VideoStickerRegion> stickerRegionsFor({
 
 VideoStickerRegion? _regionOf(
   ExportedLayer item, {
+  required Iterable<ExportedLayer> above,
   required Size bodySize,
   required Rect frame,
   required TransitionTimelineMap timelineMap,
@@ -47,7 +50,9 @@ VideoStickerRegion? _regionOf(
   if (target == null) return null;
   // A sticker that moves has no one place to tap. The editor offers no way
   // to move one; this keeps an older draft's from landing beside it.
-  if (layer.hasKeyframes || layer.divineAnimations.isNotEmpty) return null;
+  if (_moves(layer)) return null;
+  // Nothing on the video would show a viewer there is a button.
+  if (layer.opacity == 0) return null;
 
   final center = bodySize.center(Offset.zero) + layer.offset;
   // The capture is turned already; its box is the sticker before turning.
@@ -62,10 +67,14 @@ VideoStickerRegion? _regionOf(
     rotation: layer.rotation,
     start: timelineMap.editorToOutputOrNull(layer.startTime),
     end: timelineMap.editorToOutputOrNull(layer.endTime),
-    // Only a still sticker drawn as it is can be drawn again over the frames:
-    // a turning record or an equalizer would not keep time with the video
-    // beneath, and a faded, blended or masked one would come back solid.
-    style: sticker.isAnimated || !_isDrawnPlainly(layer)
+    // Only a still sticker drawn as it is, with nothing over it, can be drawn
+    // again over the frames: a turning record or an equalizer would not keep
+    // time with the video beneath, a faded, blended or masked one would come
+    // back solid, and a copy would hide what lies on it.
+    style:
+        sticker.isAnimated ||
+            !_isDrawnPlainly(layer) ||
+            above.any((upper) => _isCoveredBy(item, upper, bodySize))
         ? null
         : sticker.style.name,
     label: sticker.tapLabel,
@@ -76,9 +85,61 @@ VideoStickerRegion? _regionOf(
   return region.isOnFrame ? region : null;
 }
 
+/// Whether [layer] moves across the video.
+bool _moves(Layer layer) =>
+    layer.hasKeyframes || layer.divineAnimations.isNotEmpty;
+
 /// Whether [layer] is drawn onto the video fully opaque, unblended and
 /// whole, as a redraw of its sticker would be.
 bool _isDrawnPlainly(Layer layer) =>
     layer.opacity == 1 &&
     layer.blendMode == BlendMode.srcOver &&
     layer.mask == null;
+
+/// Whether [upper], drawn after [sticker], can show over any of it at the
+/// same time; one that moves is taken to cross it somewhere on its way.
+bool _isCoveredBy(ExportedLayer sticker, ExportedLayer upper, Size bodySize) {
+  final a = sticker.layer;
+  final b = upper.layer;
+  final showTogether =
+      (a.startTime == null || b.endTime == null || a.startTime! < b.endTime!) &&
+      (b.startTime == null || a.endTime == null || b.startTime! < a.endTime!);
+  if (!showTogether) return false;
+  if (_moves(b)) return true;
+  return _overlap(_corners(sticker, bodySize), _corners(upper, bodySize));
+}
+
+/// The corners of [item]'s box as it stands turned on the body.
+List<Offset> _corners(ExportedLayer item, Size bodySize) {
+  final center = bodySize.center(Offset.zero) + item.layer.offset;
+  final cos = math.cos(item.layer.rotation);
+  final sin = math.sin(item.layer.rotation);
+  final half = item.boxSize / 2;
+  return [
+    for (final (x, y) in [
+      (-half.width, -half.height),
+      (half.width, -half.height),
+      (half.width, half.height),
+      (-half.width, half.height),
+    ])
+      center + Offset(x * cos - y * sin, x * sin + y * cos),
+  ];
+}
+
+/// Whether two turned boxes, given by their corners in order, overlap: no
+/// side of either one has the other wholly beyond it.
+bool _overlap(List<Offset> a, List<Offset> b) {
+  for (final box in [a, b]) {
+    for (var i = 0; i < box.length; i++) {
+      final side = box[(i + 1) % box.length] - box[i];
+      double across(Offset point) => point.dx * -side.dy + point.dy * side.dx;
+      final onA = a.map(across);
+      final onB = b.map(across);
+      if (onA.reduce(math.max) <= onB.reduce(math.min) ||
+          onB.reduce(math.max) <= onA.reduce(math.min)) {
+        return false;
+      }
+    }
+  }
+  return true;
+}

@@ -1,6 +1,7 @@
 // ABOUTME: Tests where a rendered video's tappable stickers stand: placed on
 // ABOUTME: the kept frame from the export's capture, and timed on the output.
 
+import 'dart:math' show pi;
 import 'dart:typed_data';
 import 'dart:ui';
 
@@ -54,6 +55,26 @@ ExportedLayer _captured(
     boxSize: box,
   );
 }
+
+/// The capture of a layer that is no social sticker, such as an emoji,
+/// standing [offset] from the body's centre, [box] big.
+ExportedLayer _other({
+  Offset offset = Offset.zero,
+  Size box = const Size(40, 40),
+  Duration? startTime,
+  Duration? endTime,
+}) => ExportedLayer(
+  layer: WidgetLayer(
+    id: 'emoji',
+    widget: const SizedBox(),
+    offset: offset,
+    startTime: startTime,
+    endTime: endTime,
+  ),
+  bytes: Uint8List(0),
+  logicalSize: box,
+  boxSize: box,
+);
 
 /// The editor timeline of one clip lasting [duration].
 TransitionTimelineMap _timeline(Duration duration) =>
@@ -165,6 +186,7 @@ void main() {
             soundId: 'bundled_song',
             soundDesign: SocialStickerSoundDesign.vinyl,
           ),
+          offset: const Offset(0, 100),
         ),
       ]);
 
@@ -196,6 +218,43 @@ void main() {
         regions.map((region) => region.style),
         equals([null, null, null, 'light']),
       );
+    });
+
+    test('gives a sticker no look where a layer above lies on it', () {
+      String? styleWith(ExportedLayer upper, {double rotation = 0}) =>
+          _regions([_captured(_link, rotation: rotation), upper]).single.style;
+
+      expect(styleWith(_other()), isNull);
+      expect(styleWith(_other(offset: const Offset(0, -60))), equals('light'));
+      expect(
+        styleWith(_other(offset: const Offset(0, -60)), rotation: pi / 2),
+        isNull,
+      );
+      expect(
+        styleWith(
+          _other(
+            startTime: const Duration(seconds: 1),
+            endTime: const Duration(seconds: 2),
+          ),
+        ),
+        isNull,
+        reason: 'the sticker shows the whole video, so the two meet',
+      );
+      expect(
+        _regions([
+          _captured(_link, endTime: const Duration(seconds: 1)),
+          _other(startTime: const Duration(seconds: 1)),
+        ]).single.style,
+        equals('light'),
+      );
+      expect(
+        _regions([_other(), _captured(_link)]).single.style,
+        equals('light'),
+      );
+    });
+
+    test('leaves out a sticker no one can see', () {
+      expect(_regions([_captured(_link, opacity: 0)]), isEmpty);
     });
 
     test('leaves out a sticker that moves', () {
