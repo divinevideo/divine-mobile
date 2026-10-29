@@ -422,6 +422,7 @@ class CaptionGenerationService {
         final result = await _recognizeOnDevice(
           audioPath: audioPath,
           localeIdentifier: effectiveLocale,
+          requireOnDeviceRecognition: source.onDeviceOnly,
         );
         if (result.localeRejected) effectiveLocale = null;
         words.addAll(_windowToTimeline(result.segments, source));
@@ -468,12 +469,14 @@ class CaptionGenerationService {
   _recognizeOnDevice({
     required String audioPath,
     required String? localeIdentifier,
+    required bool requireOnDeviceRecognition,
   }) async {
     try {
       final segments = await _captionGenerator
           .generateCaptions(
             audioPath: audioPath,
             localeIdentifier: localeIdentifier,
+            requireOnDeviceRecognition: requireOnDeviceRecognition,
           )
           .timeout(_onDeviceClipTimeout);
       return (segments: segments, localeRejected: false);
@@ -486,7 +489,10 @@ class CaptionGenerationService {
         category: LogCategory.video,
       );
       final segments = await _captionGenerator
-          .generateCaptions(audioPath: audioPath)
+          .generateCaptions(
+            audioPath: audioPath,
+            requireOnDeviceRecognition: requireOnDeviceRecognition,
+          )
           .timeout(_onDeviceClipTimeout);
       return (segments: segments, localeRejected: true);
     }

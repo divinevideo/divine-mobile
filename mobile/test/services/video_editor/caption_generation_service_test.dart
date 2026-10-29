@@ -157,11 +157,15 @@ void main() {
       );
     }
 
-    void stubGenerator(List<CaptionSegment> words) {
+    void stubGenerator(
+      List<CaptionSegment> words, {
+      bool requireOnDeviceRecognition = false,
+    }) {
       when(
         () => generator.generateCaptions(
           audioPath: any(named: 'audioPath'),
           localeIdentifier: any(named: 'localeIdentifier'),
+          requireOnDeviceRecognition: requireOnDeviceRecognition,
         ),
       ).thenAnswer((_) async => words);
     }
@@ -1023,10 +1027,52 @@ void main() {
           endTime: const Duration(seconds: 4),
         );
 
+        test(
+          'keeps strict local recognition when retrying the locale',
+          () async {
+            stubMerge([_offset(0, 6000)]);
+            stubExtraction();
+            when(
+              () => generator.generateCaptions(
+                audioPath: any(named: 'audioPath'),
+                localeIdentifier: any(named: 'localeIdentifier'),
+                requireOnDeviceRecognition: true,
+              ),
+            ).thenThrow(
+              const SpeechRecognizerUnavailableException('Unavailable locally'),
+            );
+            final service = buildService(
+              remote: remoteReturning([_word('Clip talk.', 4500, 5000)]),
+            );
+
+            final outcome = await service.generateForClips(
+              clips: [_clip('a', duration: const Duration(seconds: 6))],
+              audioTracks: [robotTake()],
+              localeIdentifier: 'en-US',
+            );
+
+            expect(
+              (outcome as CaptionsGenerated).cues.single.text,
+              equals('Clip talk.'),
+            );
+            final locales = verify(
+              () => generator.generateCaptions(
+                audioPath: any(named: 'audioPath'),
+                localeIdentifier: captureAny(named: 'localeIdentifier'),
+                requireOnDeviceRecognition: true,
+              ),
+            ).captured;
+            expect(locales, equals(['en-US', null]));
+          },
+        );
+
         test('recognizes the take on the device, next to the server', () async {
           stubMerge([_offset(0, 6000)]);
           stubExtraction();
-          stubGenerator([_word('Narrated.', 500, 1000)]);
+          stubGenerator(
+            [_word('Narrated.', 500, 1000)],
+            requireOnDeviceRecognition: true,
+          );
           final service = buildService(
             remote: remoteReturning([_word('Clip talk.', 4500, 5000)]),
           );
@@ -1058,7 +1104,10 @@ void main() {
           'sends nothing to the server when the take is all there is',
           () async {
             stubExtraction();
-            stubGenerator([_word('Narrated.', 500, 1000)]);
+            stubGenerator(
+              [_word('Narrated.', 500, 1000)],
+              requireOnDeviceRecognition: true,
+            );
             final remote = remoteReturning(const []);
 
             final outcome = await buildService(remote: remote).generateForClips(
@@ -1091,6 +1140,7 @@ void main() {
               () => generator.generateCaptions(
                 audioPath: any(named: 'audioPath'),
                 localeIdentifier: any(named: 'localeIdentifier'),
+                requireOnDeviceRecognition: true,
               ),
             ).thenThrow(const SpeechNotAuthorizedException());
             final service = buildService(
