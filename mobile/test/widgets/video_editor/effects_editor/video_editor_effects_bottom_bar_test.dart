@@ -283,6 +283,13 @@ void main() {
       usePhoneSize(tester);
       await tester.pumpWidget(buildWidget(navigationBarHeight: 48));
 
+      final bar = find.byType(VideoEditorEffectsBottomBar);
+      expect(
+        tester.getSize(bar).height,
+        moreOrLessEquals(
+          VideoEditorEffectsBottomBar.heightOf(tester.element(bar)) + 48,
+        ),
+      );
       expect(tester.getRect(grid()).bottom, 600);
       await tester.drag(grid(), const Offset(0, -5000));
       await tester.pumpAndSettle();
@@ -401,27 +408,55 @@ void main() {
 
     testWidgets('marks the picked effect and the shown category as selected '
         'for screen readers, and titles each section', (tester) async {
-      cubit.selectType(const EditorEffectType.builtIn(VideoEffectType.vhs));
+      usePhoneSize(tester);
+      final semantics = tester.ensureSemantics();
+      // Not in the first section, which the tabs show anyway.
+      cubit.selectType(
+        const EditorEffectType.builtIn(VideoEffectType.vignette),
+      );
       await tester.pumpWidget(buildWidget());
+      await tester.pumpAndSettle();
 
       expect(
-        tester.getSemantics(find.bySemanticsLabel(l10n.videoEditorEffectVhs)),
+        tester.getSemantics(
+          find.bySemanticsLabel(l10n.videoEditorEffectVignette),
+        ),
         matchesSemantics(
-          label: l10n.videoEditorEffectVhs,
+          label: l10n.videoEditorEffectVignette,
           isButton: true,
           isSelected: true,
           hasSelectedState: true,
           hasTapAction: true,
         ),
       );
-      expect(isTabHighlighted(tester, EditorEffectCategory.retro), isTrue);
+      expect(
+        tester.getSemantics(tab(EditorEffectCategory.light)),
+        isSemantics(isSelected: true),
+      );
+      expect(
+        tester.getSemantics(tab(EditorEffectCategory.retro)),
+        isSemantics(isSelected: false),
+      );
       expect(
         tester
-            .getSemantics(header(EditorEffectCategory.retro))
+            .getSemantics(header(EditorEffectCategory.light))
             .flagsCollection
             .isHeader,
         isTrue,
       );
+      semantics.dispose();
+    });
+
+    testWidgets('stops growing with the text past 125%', (tester) async {
+      final bar = find.byType(VideoEditorEffectsBottomBar);
+      final heights = <double>[];
+      for (final textScale in [1.0, 1.25, 3.0]) {
+        await tester.pumpWidget(buildWidget(textScale: textScale));
+        heights.add(tester.getSize(bar).height);
+      }
+
+      expect(heights[1], greaterThan(heights[0]));
+      expect(heights[2], heights[1]);
     });
 
     for (final textScale in [1.0, 3.0]) {
