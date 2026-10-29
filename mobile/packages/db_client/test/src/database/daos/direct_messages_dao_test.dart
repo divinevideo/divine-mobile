@@ -1153,6 +1153,20 @@ void main() {
           expect(await heldWraps(), isNull);
         });
 
+        test('records nothing on a blocked retraction', () async {
+          await insertOwnMessage();
+          await markPending();
+          await dao.markMessageDeletionBlocked(
+            'msg_del',
+            restoreToThread: true,
+            ownerPubkey: 'pubkey_alice',
+          );
+
+          expect(await recordWrap(), isFalse);
+
+          expect(await heldWraps(), isNull);
+        });
+
         test('go when the retraction is confirmed', () async {
           await insertOwnMessage();
           await markPending();

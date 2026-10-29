@@ -111,6 +111,7 @@ void main() {
     late bool confirmRecipientWraps;
     late DmSendPolicyDecision policyDecision;
     late bool policyThrows;
+    late Set<String> policyThrowsFor;
     late int policyChecks;
     late bool deviceOffline;
     late int connectedRelays;
@@ -145,9 +146,11 @@ void main() {
         signer: signer,
         senderPublicKey: owner,
         nostrService: nostrClient,
-        sendPolicy: (_) async {
+        sendPolicy: (recipient) async {
           policyChecks++;
-          if (policyThrows) throw StateError('policy unavailable');
+          if (policyThrows || policyThrowsFor.contains(recipient)) {
+            throw StateError('policy unavailable');
+          }
           return policyDecision;
         },
         isOffline: () async => deviceOffline,
@@ -225,6 +228,7 @@ void main() {
       confirmRecipientWraps = true;
       policyDecision = DmSendPolicyDecision.allowed;
       policyThrows = false;
+      policyThrowsFor = {};
       policyChecks = 0;
       deviceOffline = false;
       connectedRelays = 1;
@@ -584,6 +588,49 @@ void main() {
           expect(wrapsTo(peerC), hasLength(1));
           expect(wrapsTo(owner), hasLength(1));
           expect((await rowOf(rumorId)).publishStatus, 'sent');
+        });
+
+        test('publishes no own copy for a member settled on the held wrap '
+            'while another member stays unreadable', () async {
+          await seedConversation(room, [owner, peerB, peerC]);
+          inboxes[peerB] = _Inbox.unreadable;
+          inboxes[peerC] = _Inbox.unreadable;
+          final held = await react(conversationId: room);
+          expect(held.success, isFalse, reason: 'precondition: held for both');
+          inboxes[peerC] = _Inbox.absent;
+
+          final retried = await retry(held.rumorId);
+
+          expect(retried.success, isFalse);
+          expect(wrapsTo(peerB), hasLength(1));
+          expect(wrapsTo(peerC), hasLength(1));
+          expect(
+            wrapsTo(owner),
+            isEmpty,
+            reason: 'B is still held, so the attempt is not delivery',
+          );
+        });
+
+        test('still wraps the other members when the send policy throws '
+            'for the held one', () async {
+          // C first, so a throw that escaped C's check would stop B's send.
+          await seedConversation(room, [owner, peerC, peerB]);
+          inboxes[peerB] = _Inbox.found;
+          inboxes[peerC] = _Inbox.unreadable;
+          final held = await react(conversationId: room);
+          expect(held.success, isFalse, reason: 'precondition: held for C');
+          inboxes[peerC] = _Inbox.absent;
+          policyThrowsFor = {peerC};
+
+          final retried = await retry(held.rumorId);
+
+          expect(retried.success, isFalse);
+          expect(wrapsTo(peerC), hasLength(1));
+          expect(
+            wrapsTo(peerB),
+            hasLength(2),
+            reason: 'it fails C alone, as it would inside a send',
+          );
         });
       });
     });
@@ -1080,6 +1127,52 @@ void main() {
             wrapsTo(owner),
             hasLength(2),
             reason: 'a retraction publishes the own copy per member (#10016)',
+          );
+        });
+
+        test('publishes no own copy for a member settled on the held wrap '
+            'while another member stays unreadable', () async {
+          await heldRetraction(
+            participants: [owner, peerB, peerC],
+            heldFor: [peerB, peerC],
+          );
+          inboxes[peerC] = _Inbox.absent;
+
+          expect(
+            await retryRetraction(),
+            DmMessageDeletionOutcome.unconfirmed,
+          );
+
+          expect(wrapsTo(peerB), hasLength(1));
+          expect(wrapsTo(peerC), hasLength(1));
+          expect(
+            wrapsTo(owner),
+            isEmpty,
+            reason: 'B is still held, so the attempt is not delivery',
+          );
+        });
+
+        test('still wraps the other members when the send policy throws '
+            'for the held one', () async {
+          // C first, so a throw that escaped C's check would stop B's send.
+          await heldRetraction(
+            participants: [owner, peerC, peerB],
+            deliveredTo: {peerB: _Inbox.found},
+            heldFor: [peerC],
+          );
+          inboxes[peerC] = _Inbox.absent;
+          policyThrowsFor = {peerC};
+
+          expect(
+            await retryRetraction(),
+            DmMessageDeletionOutcome.unconfirmed,
+          );
+
+          expect(wrapsTo(peerC), hasLength(1));
+          expect(
+            wrapsTo(peerB),
+            hasLength(2),
+            reason: 'it fails C alone, as it would inside a send',
           );
         });
       });
