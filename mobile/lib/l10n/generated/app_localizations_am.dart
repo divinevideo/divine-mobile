@@ -10390,6 +10390,12 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => 'ቁመት';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => 'ወደ ጎን';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'ከላይ ወደ ታች';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'ብጁ';
 
   @override

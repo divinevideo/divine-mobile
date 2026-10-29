@@ -10635,6 +10635,12 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => 'اونچائی';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => 'پہلو کی طرف';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'اوپر سے نیچے';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'اپنی مرضی کا';
 
   @override

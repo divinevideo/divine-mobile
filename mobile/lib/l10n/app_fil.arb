@@ -2318,6 +2318,8 @@
   "videoEditorLayerAnimationPulseTo": "Paliitin hanggang",
   "videoEditorLayerAnimationWiggleAngle": "Hilig",
   "videoEditorLayerAnimationBounceHeight": "Taas",
+  "videoEditorLayerAnimationFlipSideways": "Patagilid",
+  "videoEditorLayerAnimationFlipOver": "Mula itaas pababa",
   "videoEditorLayerAnimationCustomPoint": "Custom",
   "videoEditorLayerAnimationPointEnterHint": "I-tap ang video kung saan ito dapat mag-slide papasok",
   "videoEditorLayerAnimationPointLeaveHint": "I-tap ang video kung saan ito dapat mag-slide palabas",

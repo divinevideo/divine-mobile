@@ -5386,6 +5386,8 @@
   "videoEditorLayerAnimationPulseTo": "缩小至",
   "videoEditorLayerAnimationWiggleAngle": "倾斜度",
   "videoEditorLayerAnimationBounceHeight": "高度",
+  "videoEditorLayerAnimationFlipSideways": "左右",
+  "videoEditorLayerAnimationFlipOver": "上下",
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },

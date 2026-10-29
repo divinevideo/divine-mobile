@@ -287,4 +287,6 @@ pve.LayerAnimation _withSlideFrom(pve.LayerAnimation animation, Offset from) =>
       scaleFrom: animation.scaleFrom,
       wiggleAngle: animation.wiggleAngle,
       bounceHeight: animation.bounceHeight,
+      turns: animation.turns,
+      flipAxis: animation.flipAxis,
     );

@@ -10640,6 +10640,12 @@ class AppLocalizationsMs extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => 'Ketinggian';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => 'Ke sisi';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'Atas ke bawah';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'Tersuai';
 
   @override

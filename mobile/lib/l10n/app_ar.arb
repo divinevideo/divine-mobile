@@ -2945,6 +2945,8 @@
   "videoEditorLayerAnimationPulseTo": "التصغير إلى",
   "videoEditorLayerAnimationWiggleAngle": "الميل",
   "videoEditorLayerAnimationBounceHeight": "الارتفاع",
+  "videoEditorLayerAnimationFlipSideways": "جانبيًا",
+  "videoEditorLayerAnimationFlipOver": "من الأعلى إلى الأسفل",
   "videoEditorLayerAnimationCustomPoint": "مخصص",
   "videoEditorLayerAnimationPointEnterHint": "النقر على الفيديو لتحديد نقطة بدء الانزلاق",
   "videoEditorLayerAnimationPointLeaveHint": "النقر على الفيديو لتحديد نقطة نهاية الانزلاق",

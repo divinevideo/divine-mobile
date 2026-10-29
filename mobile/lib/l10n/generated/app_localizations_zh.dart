@@ -10009,6 +10009,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => '高度';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => '左右';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => '上下';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => '自定义';
 
   @override

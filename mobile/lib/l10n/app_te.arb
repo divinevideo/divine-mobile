@@ -6188,6 +6188,8 @@
   "videoEditorLayerAnimationPulseTo": "ఇంతవరకు కుదించు",
   "videoEditorLayerAnimationWiggleAngle": "వంపు",
   "videoEditorLayerAnimationBounceHeight": "ఎత్తు",
+  "videoEditorLayerAnimationFlipSideways": "పక్కకు",
+  "videoEditorLayerAnimationFlipOver": "పై నుండి కిందికి",
   "@videoEditorLayerAnimationScaleFrom": {
     "description": "Section label above the slider that sets the starting size for a scale animation (0% to 100%)."
   },

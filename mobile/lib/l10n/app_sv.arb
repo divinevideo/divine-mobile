@@ -3025,6 +3025,8 @@
   "videoEditorLayerAnimationPulseTo": "Krymp till",
   "videoEditorLayerAnimationWiggleAngle": "Lutning",
   "videoEditorLayerAnimationBounceHeight": "Höjd",
+  "videoEditorLayerAnimationFlipSideways": "I sidled",
+  "videoEditorLayerAnimationFlipOver": "Uppifrån och ned",
   "videoEditorLayerAnimationCustomPoint": "Egen punkt",
   "videoEditorLayerAnimationPointEnterHint": "Tryck på videon där den ska glida in ifrån",
   "videoEditorLayerAnimationPointLeaveHint": "Tryck på videon där den ska glida ut till",

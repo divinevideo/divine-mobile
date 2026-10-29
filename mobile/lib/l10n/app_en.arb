@@ -7579,7 +7579,7 @@
   },
   "videoEditorTransitionSpin": "Spin",
   "@videoEditorTransitionSpin": {
-    "description": "Transition option: the picture spins all the way round as it changes from the current clip to the next."
+    "description": "Transition option: the picture spins all the way round as it changes from the current clip to the next. Also the layer animation that turns a text or sticker around its center into place, away, or on and on in the Loop tab."
   },
   "videoEditorTransitionWhipPan": "Whip pan",
   "@videoEditorTransitionWhipPan": {
@@ -7619,7 +7619,7 @@
   },
   "videoEditorTransitionFlip": "Flip",
   "@videoEditorTransitionFlip": {
-    "description": "Transition option: the picture turns over in 3D like a card, with the next clip on its back."
+    "description": "Transition option: the picture turns over in 3D like a card, with the next clip on its back. Also the layer animation that turns a text or sticker over like a card as it appears or disappears."
   },
   "videoEditorTransitionCube": "Cube",
   "@videoEditorTransitionCube": {
@@ -7881,6 +7881,14 @@
   "videoEditorLayerAnimationBounceHeight": "Height",
   "@videoEditorLayerAnimationBounceHeight": {
     "description": "Section label above the slider that sets how high a bouncing layer is lifted, as a percentage of its own height."
+  },
+  "videoEditorLayerAnimationFlipSideways": "Sideways",
+  "@videoEditorLayerAnimationFlipSideways": {
+    "description": "Screen reader label of the icon option that makes a flip layer animation turn the layer around its vertical axis like a card, its left and right edges trading places."
+  },
+  "videoEditorLayerAnimationFlipOver": "Top over bottom",
+  "@videoEditorLayerAnimationFlipOver": {
+    "description": "Screen reader label of the icon option that makes a flip layer animation turn the layer around its horizontal axis, its top and bottom edges trading places."
   },
   "videoEditorLayerAnimationCustomPoint": "Custom",
   "@videoEditorLayerAnimationCustomPoint": {

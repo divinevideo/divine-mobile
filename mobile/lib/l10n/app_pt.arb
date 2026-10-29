@@ -3025,6 +3025,8 @@
   "videoEditorLayerAnimationPulseTo": "Encolher até",
   "videoEditorLayerAnimationWiggleAngle": "Inclinação",
   "videoEditorLayerAnimationBounceHeight": "Altura",
+  "videoEditorLayerAnimationFlipSideways": "De lado",
+  "videoEditorLayerAnimationFlipOver": "De cima para baixo",
   "videoEditorLayerAnimationCustomPoint": "Ponto personalizado",
   "videoEditorLayerAnimationPointEnterHint": "Toque no vídeo de onde isso deve deslizar",
   "videoEditorLayerAnimationPointLeaveHint": "Toque no vídeo para onde isso deve deslizar",

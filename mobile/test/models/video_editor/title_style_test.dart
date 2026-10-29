@@ -204,6 +204,53 @@ void main() {
         );
       });
 
+      test('round-trips a spin and a flip with their turns and axis', () {
+        const turning = TitleStyle(
+          fontIndex: 0,
+          color: Color(0xFFFFFFFF),
+          background: Color(0xFF000000),
+          colorMode: LayerBackgroundMode.onlyColor,
+          enter: [
+            pve.LayerAnimation(
+              type: pve.LayerAnimationType.flip,
+              phase: pve.AnimationPhase.animateIn,
+              duration: Duration(milliseconds: 500),
+              turns: 0.25,
+              flipAxis: pve.FlipAxis.horizontal,
+            ),
+          ],
+          loop: [
+            pve.LayerAnimation(
+              type: pve.LayerAnimationType.spin,
+              phase: pve.AnimationPhase.loop,
+              duration: Duration(milliseconds: 1800),
+              turns: 2,
+            ),
+          ],
+        );
+
+        expect(
+          TitleStyle.fromJson(jsonDecode(jsonEncode(turning.toJson()))),
+          equals(turning),
+        );
+      });
+
+      test('rejects a flip axis this build does not know', () {
+        final json = style.toJson();
+        final enter = [
+          {
+            ...const pve.LayerAnimation(
+              type: pve.LayerAnimationType.flip,
+              phase: pve.AnimationPhase.animateIn,
+              duration: Duration(milliseconds: 500),
+            ).toMap(),
+            'flipAxis': 'diagonal',
+          },
+        ];
+
+        expect(TitleStyle.fromJson({...json, 'enter': enter}), isNull);
+      });
+
       test('rejects a wrongly typed wiggle angle rather than throwing', () {
         final json = style.toJson();
         final loop = [

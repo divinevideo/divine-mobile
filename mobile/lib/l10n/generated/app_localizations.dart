@@ -17657,7 +17657,7 @@ abstract class AppLocalizations {
   /// **'Zoom out'**
   String get videoEditorTransitionZoomOut;
 
-  /// Transition option: the picture spins all the way round as it changes from the current clip to the next.
+  /// Transition option: the picture spins all the way round as it changes from the current clip to the next. Also the layer animation that turns a text or sticker around its center into place, away, or on and on in the Loop tab.
   ///
   /// In en, this message translates to:
   /// **'Spin'**
@@ -17717,7 +17717,7 @@ abstract class AppLocalizations {
   /// **'Diagonal wipe'**
   String get videoEditorTransitionDiagonalWipe;
 
-  /// Transition option: the picture turns over in 3D like a card, with the next clip on its back.
+  /// Transition option: the picture turns over in 3D like a card, with the next clip on its back. Also the layer animation that turns a text or sticker over like a card as it appears or disappears.
   ///
   /// In en, this message translates to:
   /// **'Flip'**
@@ -18082,6 +18082,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Height'**
   String get videoEditorLayerAnimationBounceHeight;
+
+  /// Screen reader label of the icon option that makes a flip layer animation turn the layer around its vertical axis like a card, its left and right edges trading places.
+  ///
+  /// In en, this message translates to:
+  /// **'Sideways'**
+  String get videoEditorLayerAnimationFlipSideways;
+
+  /// Screen reader label of the icon option that makes a flip layer animation turn the layer around its horizontal axis, its top and bottom edges trading places.
+  ///
+  /// In en, this message translates to:
+  /// **'Top over bottom'**
+  String get videoEditorLayerAnimationFlipOver;
 
   /// Direction option for a slide animation that starts (or ends) at a point the creator taps on the video, instead of travelling to or from a canvas edge.
   ///

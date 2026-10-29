@@ -10548,6 +10548,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => 'Yükseklik';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => 'Yana doğru';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'Yukarıdan aşağı';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'Özel nokta';
 
   @override

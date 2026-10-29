@@ -10588,6 +10588,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoEditorLayerAnimationBounceHeight => 'Độ cao';
 
   @override
+  String get videoEditorLayerAnimationFlipSideways => 'Sang ngang';
+
+  @override
+  String get videoEditorLayerAnimationFlipOver => 'Từ trên xuống';
+
+  @override
   String get videoEditorLayerAnimationCustomPoint => 'Tùy chỉnh';
 
   @override

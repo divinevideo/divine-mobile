@@ -3025,6 +3025,8 @@
   "videoEditorLayerAnimationPulseTo": "Schrumpfen auf",
   "videoEditorLayerAnimationWiggleAngle": "Neigung",
   "videoEditorLayerAnimationBounceHeight": "Höhe",
+  "videoEditorLayerAnimationFlipSideways": "Seitlich",
+  "videoEditorLayerAnimationFlipOver": "Kopfüber",
   "videoEditorLayerAnimationCustomPoint": "Eigener Punkt",
   "videoEditorLayerAnimationPointEnterHint": "Tippe im Video an, von wo aus es hereingleiten soll",
   "videoEditorLayerAnimationPointLeaveHint": "Tippe im Video an, wohin es hinausgleiten soll",
