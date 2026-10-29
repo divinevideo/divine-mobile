@@ -28,6 +28,7 @@ import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/content_deletion_service.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
 import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
+import 'package:openvine/widgets/profile/profile_tab_thumbnail.dart';
 import 'package:openvine/widgets/profile/profile_videos_grid.dart';
 import 'package:openvine/widgets/profile/profile_videos_grid_skeleton.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
@@ -238,6 +239,27 @@ void main() {
         );
 
         expect(find.byType(ProfileMasonryGrid), findsOneWidget);
+      });
+
+      testWidgets('sizes each tile from its video dimensions', (tester) async {
+        when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+        final videos = _createTestVideos(pubkey: _otherPubkey);
+
+        await tester.pumpWidget(
+          buildSubject(
+            userIdHex: _otherPubkey,
+            videos: [
+              videos[0].copyWith(dimensions: '480x480'),
+              videos[1].copyWith(dimensions: '1080x1920'),
+            ],
+          ),
+        );
+
+        final tiles = find.byType(ProfileTabThumbnail);
+        final square = tester.getSize(tiles.at(0));
+        final vertical = tester.getSize(tiles.at(1));
+        expect(square.height, moreOrLessEquals(square.width));
+        expect(vertical.height, moreOrLessEquals(vertical.width * 3 / 2));
       });
 
       testWidgets(
