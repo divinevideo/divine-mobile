@@ -357,8 +357,15 @@ void main() {
         styleOf('東京', InfoStickerStyle.dark, emojiFontLoaded: true),
         isNull,
       );
-      // A solid pill hides whatever the frames show beneath.
-      expect(styleOf('東京', InfoStickerStyle.light), equals('light'));
+      // A solid background does not correct different fallback advances.
+      for (final style in InfoStickerStyle.pills) {
+        expect(styleOf('東京', style, emojiFontLoaded: true), isNull);
+        expect(styleOf('Lena 🌸', style), isNull);
+        expect(
+          styleOf('Lena 🌸', style, emojiFontLoaded: true),
+          equals(style.name),
+        );
+      }
     });
 
     test('leaves out a sticker that moves', () {

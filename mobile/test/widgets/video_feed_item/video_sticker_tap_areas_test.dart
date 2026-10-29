@@ -429,6 +429,36 @@ void main() {
         expect(opened, equals([tokyo]));
       });
 
+      testWidgets('waits for emoji font readiness on a solid look too', (
+        tester,
+      ) async {
+        final font = Completer<bool>();
+        debugLoadStickerEmojiFont = () => font.future;
+        addTearDown(resetStickerEmojiFontForTesting);
+        const party = VideoStickerRegion(
+          kind: VideoStickerKind.hashtag,
+          target: 'party🎉',
+          centerX: 0.5,
+          centerY: 0.5,
+          width: 0.4,
+          height: 0.1,
+          style: 'light',
+          label: 'party🎉',
+        );
+        await pump(tester, [party]);
+        final copiesBeforeFont = find
+            .byType(SocialStickerView)
+            .evaluate()
+            .length;
+        await tapAt(tester, const Offset(180, 320));
+        font.complete(true);
+        await tester.pumpAndSettle();
+
+        expect(copiesBeforeFont, isZero);
+        expect(find.text('#party🎉'), findsOneWidget);
+        expect(opened, equals([party]));
+      });
+
       testWidgets('draws only the button for a sticker without its look', (
         tester,
       ) async {

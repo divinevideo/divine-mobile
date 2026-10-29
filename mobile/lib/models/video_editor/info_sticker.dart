@@ -91,13 +91,6 @@ enum InfoStickerStyle {
   /// A clock face with hands; time only.
   analog;
 
-  /// Whether the look's pill is solid, so a redraw covers the glyphs in the
-  /// video beneath, whatever font the viewer's phone draws them in.
-  bool get coversBakedCopy => switch (this) {
-    light || brand || highlight => true,
-    _ => false,
-  };
-
   /// The pill looks, which every sticker that shows a line of text can take,
   /// the default first.
   static const List<InfoStickerStyle> pills = [

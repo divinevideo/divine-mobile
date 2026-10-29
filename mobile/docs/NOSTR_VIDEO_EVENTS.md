@@ -184,11 +184,12 @@ creator's and the viewer's phone. Divine draws sticker text in its bundled
 font, Bricolage Grotesque, and emoji in Noto Color Emoji, which it downloads
 from Google Fonts (`fonts.gstatic.com`, about 24 MB, kept on the device) the
 first time a sticker needs it. The link and note marks are drawn from vector
-paths, not emoji. A viewer's copy of a see-through look waits until Noto Color
+paths, not emoji. A viewer's copy of every look waits until Noto Color
 Emoji has loaded when its text has an emoji, and is never drawn for text in a
 script the bundled font lacks; until then the sticker shows as it is in the
-frames, with its button. The solid looks (`light`, `brand`, `highlight`) cover
-the frames beneath and are always drawn again.
+frames, with its button. A solid background cannot correct different glyph
+advances when a copy is fitted to the captured box, so the same readiness and
+coverage checks apply to `light`, `brand` and `highlight` too.
 
 Some stickers are published without `style`, since a copy would not match the
 frames:
@@ -197,7 +198,7 @@ frames:
   equalizer), as a copy could not keep time with the frames beneath;
 - a sticker drawn see-through, with a blend mode or through a mask, as a copy
   would come back solid;
-- a see-through look whose text has a character the bundled font lacks,
+- any look whose text has a character the bundled font lacks,
   unless every such character is an emoji and the creator's app drew it in
   Noto Color Emoji, as a viewer's phone could draw it differently;
 - a sticker with another layer over it at the same time, as a copy would hide

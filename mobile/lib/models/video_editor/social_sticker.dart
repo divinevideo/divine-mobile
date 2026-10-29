@@ -218,14 +218,12 @@ class SocialStickerData extends Equatable {
   bool get hasEmoji => StickerTextGlyphs.of(_drawnText) == .emoji;
 
   /// Whether a sharp copy of the sticker, drawn over the same sticker in a
-  /// video's frames, looks like it on every phone. A solid look hides what is
-  /// beneath; any other needs text every phone draws alike, emoji in the
-  /// sticker emoji font, which [emojiFontLoaded] says is loaded.
-  bool isRedrawnAlike({required bool emojiFontLoaded}) =>
-      style.coversBakedCopy ||
-      StickerTextGlyphs.of(
-        _drawnText,
-      ).isDrawnAlike(emojiFontLoaded: emojiFontLoaded);
+  /// video's frames, has matching glyphs and advances on every phone. Every
+  /// look needs the bundled font, with emoji in the loaded sticker emoji
+  /// font: a solid background cannot correct a differently sized glyph.
+  bool isRedrawnAlike({required bool emojiFontLoaded}) => StickerTextGlyphs.of(
+    _drawnText,
+  ).isDrawnAlike(emojiFontLoaded: emojiFontLoaded);
 
   /// Whether the sticker moves with how loud the video's sound is.
   bool get listensToSound =>
