@@ -23,5 +23,5 @@ No livestream/LiveKit work. No synthetic activity or online claims. No real acco
 - Initial relay EOSE and pending verification must finish before a room is known-empty. Raw response limits count discarded and duplicate wraps and remain conservative across reconnects.
 - Read snapshots coalesce only after a rendered frame and request a frame on app resume; covered/background/scrolled-away rooms do not acknowledge new messages.
 - Resolve the current signer for each send, bound to the captured authenticated account, so a recovery upgrade does not pin an unavailable signer.
-- Stop owned channel writers immediately on teardown, before waiting for read metadata persistence. Keep exact read IDs to avoid late deliveries becoming unread after a timestamp watermark.
+- Stop owned channel writers immediately on teardown, before waiting for read metadata persistence. Keep exact read IDs: a timestamp watermark would mark a late delivery read, while exact IDs keep it unread.
 - All ten new labels are translated in every shipped locale; no localization debt was added. Empty copy refers to recent activity, not all-time history.
