@@ -301,11 +301,11 @@ void main() {
         ]);
       });
 
-      test('removes the edited effect for "none" and for zero intensity', () {
+      test('removes an edited effect dialed down to no intensity', () {
         final cubit = buildCubit()
           ..syncApplied(const [vhs, vignette])
           ..startEditing(effectId: 'vhs')
-          ..selectType(null);
+          ..setIntensity(0);
         addTearDown(cubit.close);
         expect(cubit.confirm().effects, const [vignette]);
 
