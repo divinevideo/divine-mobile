@@ -164,7 +164,7 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     try {
       await onRead!(List.unmodifiable(messages));
     } on Object catch (error, stack) {
-      if (!isClosed) addError(error, stack);
+      addError(error, stack);
     }
   }
 

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bloc_test/bloc_test.dart';
 import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -71,6 +72,35 @@ void main() {
         await cubit.markRead([first]);
         expect(read?.map((m) => m.body), ['seen']);
       },
+    );
+
+    late Completer<void> gate;
+
+    blocTest<ChatCubit, ChatState>(
+      'reports a read write that fails after the room closed',
+      setUp: () => gate = Completer<void>(),
+      build: () => ChatCubit(
+        _Repository(),
+        onRead: (_) async {
+          await gate.future;
+          throw StateError('write unavailable');
+        },
+      ),
+      act: (cubit) async {
+        final marking = cubit.markRead([
+          ChatMessage(
+            id: '01' * 32,
+            channelId: 'general',
+            author: '02' * 32,
+            body: 'seen',
+            createdAt: 1,
+          ),
+        ]);
+        await cubit.close();
+        gate.complete();
+        await marking;
+      },
+      errors: () => [isA<StateError>()],
     );
   });
 }
