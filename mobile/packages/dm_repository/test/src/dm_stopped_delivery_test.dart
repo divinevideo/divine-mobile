@@ -775,6 +775,14 @@ void main() {
           isNull,
           reason: 'precondition: the relay refused B, so nothing is held',
         );
+        // Spent, so only the held check can keep it.
+        for (var charged = 0; charged < budget; charged++) {
+          await outgoingDao.incrementRetry(sent.rowForB);
+        }
+        expect(
+          (await outgoingDao.getById(sent.rowForB))?.retryCount,
+          greaterThanOrEqualTo(budget),
+        );
 
         expect(
           await stop(sent.rowForB),
