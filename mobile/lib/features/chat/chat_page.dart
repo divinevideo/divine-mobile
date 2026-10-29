@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
+import 'package:openvine/blocs/mention_search/mention_search_cubit.dart';
 import 'package:openvine/features/chat/chat_screen.dart';
 import 'package:openvine/features/chat/concord_session.dart';
 import 'package:openvine/features/chat/concord_store.dart';
@@ -16,7 +17,9 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/database_provider.dart';
 import 'package:openvine/providers/protected_minor_providers.dart';
+import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/router/route_error_screen.dart';
+import 'package:openvine/services/mention_resolution_service.dart';
 
 /// Selects only channels present in the current POC catalog.
 /// A missing pair opens the default; an incomplete or unknown pair is rejected.
@@ -82,8 +85,27 @@ class ChatPage extends ConsumerWidget {
         sealedAuthor: pubkey,
         channelIdFor: pocChannelIdFor,
         ownsRepository: true,
+        mentionResolutionServiceOf: () {
+          final profiles = ref.read(profileRepositoryProvider);
+          return profiles == null
+              ? null
+              : MentionResolutionService(
+                  profileRepository: profiles,
+                );
+        },
       ),
-      child: _ChatSelection(communityId: communityId, channelId: channelId),
+      child: BlocProvider(
+        create: (chatContext) => MentionSearchCubit(
+          profileRepositoryOf: () => ref.read(profileRepositoryProvider),
+          candidatePubkeys: () => [
+            ...chatContext.read<ChatCubit>().visibleMessages().map(
+              (message) => message.author,
+            ),
+            ...ref.read(followRepositoryProvider).followingPubkeys,
+          ],
+        ),
+        child: _ChatSelection(communityId: communityId, channelId: channelId),
+      ),
     );
   }
 }

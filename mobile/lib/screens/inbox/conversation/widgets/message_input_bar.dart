@@ -28,7 +28,6 @@ const String codeDelimiter = '`';
 /// the send can be built, and it bounds the serialized rumor so tags count too;
 /// this stops the ordinary long paste at the keyboard instead of letting it
 /// fail after the fact (#7331).
-@visibleForTesting
 const int dmComposerMaxCharacters = 10000;
 
 /// How close to [dmComposerMaxCharacters] the counter starts showing.
@@ -64,6 +63,7 @@ class MessageInputBar extends StatefulWidget {
   const MessageInputBar({
     required this.onSend,
     this.controller,
+    this.focusNode,
     this.enabled = true,
     this.clearOnSend = true,
     this.textCapitalization = TextCapitalization.none,
@@ -101,6 +101,7 @@ class MessageInputBar extends StatefulWidget {
   /// controller so it can put the text back rather than lose it, or sets
   /// [clearOnSend] to false and clears after acceptance.
   final TextEditingController? controller;
+  final FocusNode? focusNode;
 
   @override
   State<MessageInputBar> createState() => _MessageInputBarState();
@@ -194,6 +195,7 @@ class _MessageInputBarState extends State<MessageInputBar> {
                 // Field honours font scaling (#4620): no withNoTextScaling.
                 child: TextField(
                   controller: _controller,
+                  focusNode: widget.focusNode,
                   enabled: widget.enabled,
                   style: VineTheme.bodyLargeFont(
                     color: context.vineColors.primaryText,

@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
-import 'package:openvine/blocs/caption_mentions/caption_mentions_cubit.dart';
+import 'package:openvine/blocs/mention_search/mention_search_cubit.dart';
 import 'package:profile_repository/profile_repository.dart';
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
@@ -41,7 +41,23 @@ void main() {
     ).thenAnswer((_) async => const <UserProfile>[]);
   });
 
-  group(CaptionMentionsCubit, () {
+  group(MentionSearchCubit, () {
+    test('offers an uncached participant returned by the API', () async {
+      when(
+        () => profileRepository.searchUsersFromApi(
+          query: 'riv',
+          limit: any(named: 'limit'),
+          sortBy: any(named: 'sortBy'),
+        ),
+      ).thenAnswer((_) async => [_profile(_alice, name: 'River')]);
+      final cubit = MentionSearchCubit(
+        profileRepositoryOf: () => profileRepository,
+        candidatePubkeys: () => [_alice],
+      );
+      addTearDown(cubit.close);
+      await cubit.search('riv');
+      expect(cubit.state.suggestions.single.pubkey, _alice);
+    });
     group('search', () {
       test(
         'offers followed accounts from cache before any network call',
@@ -50,7 +66,7 @@ void main() {
             () => profileRepository.getCachedProfiles(pubkeys: [_alice]),
           ).thenAnswer((_) async => [_profile(_alice, name: 'OG-AB')]);
 
-          final cubit = CaptionMentionsCubit(
+          final cubit = MentionSearchCubit(
             profileRepositoryOf: () => profileRepository,
             candidatePubkeys: () => [_alice],
           );
@@ -69,7 +85,7 @@ void main() {
       test(
         'does not search the API when the query contains a private key',
         () async {
-          final cubit = CaptionMentionsCubit(
+          final cubit = MentionSearchCubit(
             profileRepositoryOf: () => profileRepository,
             candidatePubkeys: () => [_alice],
           );
@@ -104,7 +120,7 @@ void main() {
           ),
         ).thenAnswer((_) async => [_profile(_bob, name: 'OG-AB')]);
 
-        final cubit = CaptionMentionsCubit(
+        final cubit = MentionSearchCubit(
           profileRepositoryOf: () => profileRepository,
           candidatePubkeys: () => [_alice],
         );
@@ -127,7 +143,7 @@ void main() {
           ),
         ).thenThrow(Exception('offline'));
 
-        final cubit = CaptionMentionsCubit(
+        final cubit = MentionSearchCubit(
           profileRepositoryOf: () => profileRepository,
           candidatePubkeys: () => [_alice],
         );
@@ -161,7 +177,7 @@ void main() {
             ),
           ).thenAnswer((_) async => [_profile(_bob, name: 'bob')]);
 
-          final cubit = CaptionMentionsCubit(
+          final cubit = MentionSearchCubit(
             profileRepositoryOf: () => profileRepository,
             candidatePubkeys: () => const <String>[],
           );
@@ -182,7 +198,7 @@ void main() {
           () => profileRepository.getCachedProfiles(pubkeys: [_alice]),
         ).thenAnswer((_) async => [_profile(_alice, name: 'alice')]);
 
-        final cubit = CaptionMentionsCubit(
+        final cubit = MentionSearchCubit(
           profileRepositoryOf: () => profileRepository,
           candidatePubkeys: () => [_alice],
         );
@@ -211,7 +227,7 @@ void main() {
           ),
         ).thenAnswer((_) => slow.future);
 
-        final cubit = CaptionMentionsCubit(
+        final cubit = MentionSearchCubit(
           profileRepositoryOf: () => profileRepository,
           candidatePubkeys: () => const <String>[],
         );
@@ -235,7 +251,7 @@ void main() {
             ],
           );
 
-          final cubit = CaptionMentionsCubit(
+          final cubit = MentionSearchCubit(
             profileRepositoryOf: () => profileRepository,
             candidatePubkeys: () => [_bob, _alice, _bob],
           );
@@ -265,7 +281,7 @@ void main() {
           () => profileRepository.getCachedProfiles(pubkeys: [_alice]),
         ).thenAnswer((_) async => [_profile(_alice, name: 'alice')]);
 
-        final cubit = CaptionMentionsCubit(
+        final cubit = MentionSearchCubit(
           profileRepositoryOf: () => profileRepository,
           candidatePubkeys: () => [_alice],
         );

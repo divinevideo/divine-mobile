@@ -5,26 +5,26 @@ import 'package:openvine/mentions/mention_search.dart';
 import 'package:openvine/mentions/mention_suggestion.dart';
 import 'package:profile_repository/profile_repository.dart';
 
-part 'caption_mentions_state.dart';
+part 'mention_search_state.dart';
 
 /// Supplies the profile repository at the moment a search runs.
 typedef ProfileRepositoryLookup = ProfileRepository? Function();
 
-/// Suggests accounts while the author types `@` in a video caption.
+/// Suggests accounts while typing `@` in a caption or room message.
 ///
 /// Mirrors the comment composer's two tiers: accounts the author follows are
 /// matched from cache and appear immediately, then a REST search backfills
 /// when that is thin. Failures leave the tier-1 results on screen rather than
 /// surfacing an error — an autocomplete that cannot reach the network should
-/// quietly offer less, not interrupt someone writing a caption.
-class CaptionMentionsCubit extends Cubit<CaptionMentionsState>
-    with CloseGuardedEmit<CaptionMentionsState> {
-  CaptionMentionsCubit({
+/// quietly offer less without interrupting composition.
+class MentionSearchCubit extends Cubit<MentionSearchState>
+    with CloseGuardedEmit<MentionSearchState> {
+  MentionSearchCubit({
     ProfileRepositoryLookup? profileRepositoryOf,
     MentionCandidatePubkeysProvider? candidatePubkeys,
   }) : _profileRepositoryOf = profileRepositoryOf,
        _candidatePubkeys = candidatePubkeys,
-       super(const CaptionMentionsState());
+       super(const MentionSearchState());
 
   /// Resolved per search rather than captured at construction, so the cubit
   /// never holds a previous account's repository — and so a caption field can
@@ -58,7 +58,7 @@ class CaptionMentionsCubit extends Cubit<CaptionMentionsState>
     );
     if (id != _searchId) return;
     emitIfOpen(
-      CaptionMentionsState(
+      MentionSearchState(
         query: trimmed,
         suggestions: tier1.matches.map(_toSuggestion).toList(),
       ),
@@ -75,7 +75,7 @@ class CaptionMentionsCubit extends Cubit<CaptionMentionsState>
       );
       if (id != _searchId) return;
       emitIfOpen(
-        CaptionMentionsState(
+        MentionSearchState(
           query: trimmed,
           suggestions: merged.map(_toSuggestion).toList(),
         ),
@@ -89,8 +89,8 @@ class CaptionMentionsCubit extends Cubit<CaptionMentionsState>
   /// Dismisses the suggestion list.
   void clear() {
     _searchId++;
-    if (state == const CaptionMentionsState()) return;
-    emitIfOpen(const CaptionMentionsState());
+    if (state == const MentionSearchState()) return;
+    emitIfOpen(const MentionSearchState());
   }
 
   static MentionSuggestion _toSuggestion(MentionMatch match) =>

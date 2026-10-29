@@ -5,6 +5,7 @@ import 'package:concord_protocol/concord_protocol.dart';
 import 'package:concord_repository/concord_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:openvine/blocs/close_guard.dart';
+import 'package:openvine/services/mention_resolution_service.dart';
 
 class ChatCommunity {
   const ChatCommunity(this.id, this.name, this.channels);
@@ -80,10 +81,12 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     this.sealedAuthor = '',
     this.channelIdFor,
     this.ownsRepository = false,
+    this.mentionResolutionServiceOf,
   }) : super(ChatState(loading: ownsRepository));
   final ConcordRepository _repo;
   final String Function(String channel)? channelIdFor;
   final bool ownsRepository;
+  final MentionResolutionService? Function()? mentionResolutionServiceOf;
   StreamSubscription<void>? _updates;
   bool _starting = false;
 
@@ -182,6 +185,7 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     required String author,
     required String body,
     required int nowMilliseconds,
+    List<MentionBinding> selectedMentions = const [],
   }) async {
     if (state.sending || state.loading || state.loadFailed || isClosed) {
       return false;
@@ -190,6 +194,18 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     final now = nowMilliseconds ~/ 1000;
     emitIfOpen(state.copyWith(sending: true, sendFailed: false));
     try {
+      var preparedBody = body.trim();
+      if (selectedMentions.isNotEmpty) {
+        final resolver = mentionResolutionServiceOf?.call();
+        if (resolver == null) {
+          throw StateError('Mention resolution unavailable');
+        }
+        preparedBody = (await resolver.resolveTextMentions(
+          rawText: body,
+          selectedMentions: selectedMentions,
+        )).canonicalText.trim();
+      }
+      if (isClosed) return false;
       final stream = pocStreamForChannel?.call(channelId);
       final effectiveAuthor = author.isNotEmpty ? author : sealedAuthor;
       if (_repo.sealedTransport != null &&
@@ -198,7 +214,7 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
         await _repo.sendSealedMessage(
           channelId: channelIdFor?.call(channelId) ?? channelId,
           author: effectiveAuthor,
-          body: body,
+          body: preparedBody,
           createdAt: now,
           ms: nowMilliseconds % 1000,
           streamSeedHex: stream.seedHex,
@@ -209,7 +225,7 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
           communityId: communityId,
           channelId: channelId,
           author: author,
-          body: body,
+          body: preparedBody,
           createdAt: now,
         );
       }

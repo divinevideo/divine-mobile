@@ -1,8 +1,8 @@
-part of 'caption_mentions_cubit.dart';
+part of 'mention_search_cubit.dart';
 
-/// Suggestions for the mention currently being typed in a caption.
-class CaptionMentionsState extends Equatable {
-  const CaptionMentionsState({
+/// Suggestions for the mention currently being typed.
+class MentionSearchState extends Equatable {
+  const MentionSearchState({
     this.query = '',
     this.suggestions = const [],
   });

@@ -14,11 +14,13 @@ import 'package:openvine/blocs/chat/chat_cubit.dart';
 import 'package:openvine/features/chat/chat_screen.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
+import 'package:openvine/services/mention_resolution_service.dart';
 import 'package:openvine/widgets/user_avatar.dart';
 
 class _ChatCubit extends MockCubit<ChatState> implements ChatCubit {}
 
 void main() {
+  setUpAll(() => registerFallbackValue(const <MentionBinding>[]));
   group(ChatScreen, () {
     testWidgets('keeps focus and a new draft while a send finishes', (
       tester,
@@ -36,6 +38,7 @@ void main() {
           author: any(named: 'author'),
           body: any(named: 'body'),
           nowMilliseconds: any(named: 'nowMilliseconds'),
+          selectedMentions: any(named: 'selectedMentions'),
         ),
       ).thenAnswer((_) => sent.future);
       await tester.pumpWidget(
@@ -57,6 +60,7 @@ void main() {
           author: any(named: 'author'),
           body: 'first message',
           nowMilliseconds: any(named: 'nowMilliseconds'),
+          selectedMentions: any(named: 'selectedMentions'),
         ),
       ).called(1);
       states.add(const ChatState(sending: true));
@@ -192,6 +196,7 @@ void main() {
                 author: any(named: 'author'),
                 body: any(named: 'body'),
                 nowMilliseconds: any(named: 'nowMilliseconds'),
+                selectedMentions: any(named: 'selectedMentions'),
               ),
             ).thenAnswer((_) async => accepted);
             await tester.pumpWidget(
@@ -223,6 +228,7 @@ void main() {
                 author: any(named: 'author'),
                 body: 'keep this draft',
                 nowMilliseconds: any(named: 'nowMilliseconds'),
+                selectedMentions: any(named: 'selectedMentions'),
               ),
             ).called(1);
             expect(
@@ -248,6 +254,7 @@ void main() {
             author: any(named: 'author'),
             body: any(named: 'body'),
             nowMilliseconds: any(named: 'nowMilliseconds'),
+            selectedMentions: any(named: 'selectedMentions'),
           ),
         ).thenAnswer((_) async => false);
       });
@@ -274,6 +281,7 @@ void main() {
           author: any(named: 'author'),
           body: any(named: 'body'),
           nowMilliseconds: any(named: 'nowMilliseconds'),
+          selectedMentions: any(named: 'selectedMentions'),
         ),
       );
 
@@ -344,6 +352,7 @@ void main() {
             author: any(named: 'author'),
             body: 'draft',
             nowMilliseconds: any(named: 'nowMilliseconds'),
+            selectedMentions: any(named: 'selectedMentions'),
           ),
         ).called(1);
       });

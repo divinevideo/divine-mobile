@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/blocs/caption_mentions/caption_mentions_cubit.dart';
+import 'package:openvine/blocs/mention_search/mention_search_cubit.dart';
 import 'package:openvine/constants/video_editor_constants.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/mentions/mention_text_editing.dart';
@@ -44,7 +44,7 @@ class _VideoMetadataCaptionFieldState
   // no identity key is needed), and keeps a caption field renderable on a
   // screen where the repository layer is not reachable — every sibling input
   // in this form reads its repository on interaction too.
-  late final CaptionMentionsCubit _cubit = CaptionMentionsCubit(
+  late final MentionSearchCubit _cubit = MentionSearchCubit(
     profileRepositoryOf: () => ref.read(profileRepositoryProvider),
     candidatePubkeys: () => ref.read(followRepositoryProvider).followingPubkeys,
   );
@@ -76,7 +76,7 @@ class _VideoMetadataCaptionFieldState
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<CaptionMentionsCubit>.value(
+    return BlocProvider<MentionSearchCubit>.value(
       value: _cubit,
       child: _CaptionFieldView(
         controller: widget.controller,
@@ -102,7 +102,7 @@ class _CaptionFieldView extends ConsumerWidget {
     ref.read(videoEditorProvider.notifier).updateMetadata(description: value);
     if (!enableMentionAutocomplete) return;
     unawaited(
-      context.read<CaptionMentionsCubit>().search(
+      context.read<MentionSearchCubit>().search(
         activeMentionQuery(value, controller.selection.baseOffset),
       ),
     );
@@ -139,7 +139,7 @@ class _CaptionFieldView extends ConsumerWidget {
       ),
     );
 
-    context.read<CaptionMentionsCubit>().clear();
+    context.read<MentionSearchCubit>().clear();
   }
 
   bool _canSelectSuggestion(String displayName) {
@@ -231,7 +231,7 @@ class _CaptionMentionSuggestions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final suggestions = context.select(
-      (CaptionMentionsCubit cubit) => cubit.state.suggestions,
+      (MentionSearchCubit cubit) => cubit.state.suggestions,
     );
     if (suggestions.isEmpty) return const SizedBox.shrink();
 

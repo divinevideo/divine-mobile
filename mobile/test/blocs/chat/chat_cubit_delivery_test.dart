@@ -6,10 +6,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
+import 'package:openvine/services/mention_resolution_service.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
+import 'package:profile_repository/profile_repository.dart';
 
 class _Repo extends Mock implements ConcordRepository {}
 
 class _Transport extends Mock implements SealedChatTransport {}
+
+class _Profiles extends Mock implements ProfileRepository {}
 
 class _Errors extends BlocObserver {
   final errors = <Object>[];
@@ -64,6 +69,86 @@ ChatCubit _cubitOver(
 
 void main() {
   group('send', () {
+    test(
+      'keeps same-name account order while trimming the sent draft',
+      () async {
+        final repo = _Repo();
+        const pubkey =
+            '3333333333333333333333333333333333333333333333333333333333333333';
+        when(() => repo.pendingIds).thenReturn([]);
+        when(() => repo.sealedTransport).thenReturn(_Transport());
+        when(() => repo.timeline(now: any(named: 'now')))
+            .thenReturn(FoldedThread([], {}));
+        when(
+          () => repo.sendSealedMessage(
+            channelId: any(named: 'channelId'),
+            author: any(named: 'author'),
+            body: any(named: 'body'),
+            createdAt: any(named: 'createdAt'),
+            ms: any(named: 'ms'),
+            streamSeedHex: any(named: 'streamSeedHex'),
+            streamPubkey: any(named: 'streamPubkey'),
+          ),
+        ).thenAnswer((_) async => <String, dynamic>{});
+        final cubit = ChatCubit(
+          repo,
+          sealedAuthor: '01' * 32,
+          pocStreamForChannel: (_) => GroupKey('02' * 32, '03' * 32),
+          mentionResolutionServiceOf: () => MentionResolutionService(
+            profileRepository: _Profiles(),
+          ),
+        );
+        addTearDown(cubit.close);
+        expect(
+          await cubit.send(
+            communityId: 'community-test',
+            channelId: 'general',
+            author: '',
+            body: '  Hi @River and @River ',
+            nowMilliseconds: 1700000000000,
+            selectedMentions: const [
+              MentionBinding(
+                display: 'River',
+                pubkey: pubkey,
+                start: 5,
+                end: 11,
+              ),
+              MentionBinding(
+                display: 'River',
+                pubkey: '4444444444444444444444444444444444444444444444444444444444444444',
+                start: 16,
+                end: 22,
+              ),
+            ],
+          ),
+          isTrue,
+        );
+        final sent =
+            verify(
+                  () => repo.sendSealedMessage(
+                    channelId: any(named: 'channelId'),
+                    author: any(named: 'author'),
+                    body: captureAny(named: 'body'),
+                    createdAt: any(named: 'createdAt'),
+                    ms: any(named: 'ms'),
+                    streamSeedHex: any(named: 'streamSeedHex'),
+                    streamPubkey: any(named: 'streamPubkey'),
+                  ),
+                ).captured.single
+                as String;
+        expect(sent, startsWith('Hi nostr:npub1'));
+        final parts = sent.split(' and ');
+        expect(parts, hasLength(2));
+        expect(
+          NostrKeyUtils.decode(parts.first.substring('Hi nostr:'.length)),
+          pubkey,
+        );
+        expect(
+          NostrKeyUtils.decode(parts.last.substring('nostr:'.length)),
+          '4' * 64,
+        );
+      },
+    );
     test(
       'clears a failed delivery notice when the pending message arrives',
       () async {
