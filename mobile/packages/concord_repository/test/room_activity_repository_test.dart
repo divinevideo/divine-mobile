@@ -331,6 +331,25 @@ void main() {
     );
 
     test(
+      'clock drift is tolerated up to exactly fifteen minutes ahead',
+      () async {
+        final room = _Room('12' * 32);
+        final activity = _activity([room]);
+        await activity.start();
+        await room.ingest(kind: 9, body: 'Current', createdAt: _now - 60);
+        await room.ingest(kind: 9, body: 'At the limit', createdAt: _now + 900);
+        await room.ingest(
+          kind: 9,
+          body: 'Past the limit',
+          createdAt: _now + 901,
+        );
+        final summary = activity.summaries[room.channelId]!;
+        expect(summary.latestMessage!.effectiveBody, 'At the limit');
+        expect(summary.recentMessageCount, 2);
+      },
+    );
+
+    test(
       'a message dated beyond clock drift still counts as unread',
       () async {
         final room = _Room('12' * 32);
