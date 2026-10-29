@@ -13,7 +13,7 @@
 - [x] Package: test unread/unique contributors/recent counts/edits/deletion/expiry/dedup/read persistence/loading/errors and resource cleanup; implement source aggregation and read metadata.
 - [x] App: share room sessions behind existing gates, wire RoomsCubit, reuse repositories in ChatPage, record reads with route/app/scroll visibility. Test lifecycle and account isolation.
 - [x] UI: accessible adaptive room rows, latest preview/time, recent contributor avatars/count, unread and aggregate badges, loading/retry/empty states. Localize new copy and run consistency checks. Cover narrow layouts, large text, light/dark and navigation.
-- [ ] Validate package tests, affected app tests, localization guards and flutter analyze. Rebase, review complete diff in fresh context, resolve findings, commit/push/open PR targeting main, request mapped reviewers and inspect CI.
+- [x] Validate package tests, affected app tests, localization guards and flutter analyze. Rebase, review complete diff in fresh context, resolve findings, commit/push/open PR targeting main, request mapped reviewers and inspect CI.
 
 No livestream/LiveKit work. No synthetic activity or online claims. No real account identifiers in committed artifacts.
 
