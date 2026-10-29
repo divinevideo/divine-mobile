@@ -47,6 +47,35 @@ void main() {
     });
   });
 
+  group('profileTileAspectRatioForRatio', () {
+    test('gives a vertical ratio a 2:3 tile', () {
+      expect(
+        profileTileAspectRatioForRatio(9 / 16),
+        equals(profileVerticalTileAspectRatio),
+      );
+    });
+
+    test('gives a square or landscape ratio a square tile', () {
+      expect(
+        profileTileAspectRatioForRatio(1),
+        equals(profileSquareTileAspectRatio),
+      );
+      expect(
+        profileTileAspectRatioForRatio(16 / 9),
+        equals(profileSquareTileAspectRatio),
+      );
+    });
+
+    test('falls back when the ratio is missing or unusable', () {
+      expect(profileTileAspectRatioForRatio(null, fallback: 1), equals(1));
+      expect(profileTileAspectRatioForRatio(0, fallback: 1), equals(1));
+      expect(
+        profileTileAspectRatioForRatio(double.nan, fallback: 1),
+        equals(1),
+      );
+    });
+  });
+
   group('profileTileAspectRatioForVideo', () {
     test('uses the video dimensions when present', () {
       expect(

@@ -31,7 +31,19 @@ double profileTileAspectRatio(
   if (width == null || height == null || width <= 0 || height <= 0) {
     return fallback;
   }
-  return width / height < _verticalRatioThreshold
+  return profileTileAspectRatioForRatio(width / height);
+}
+
+/// Tile shape for a video whose frames are [ratio] wide per unit of height.
+///
+/// Vertical videos get a 2:3 tile; square and landscape videos get a square
+/// one. A missing, non-finite or non-positive ratio falls back to [fallback].
+double profileTileAspectRatioForRatio(
+  double? ratio, {
+  double fallback = profileVerticalTileAspectRatio,
+}) {
+  if (ratio == null || !ratio.isFinite || ratio <= 0) return fallback;
+  return ratio < _verticalRatioThreshold
       ? profileVerticalTileAspectRatio
       : profileSquareTileAspectRatio;
 }

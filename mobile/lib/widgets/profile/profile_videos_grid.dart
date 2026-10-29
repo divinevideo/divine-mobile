@@ -49,10 +49,14 @@ class _GridUploadingVideoEntry extends _GridVideoEntry {
   _GridUploadingVideoEntry({
     required this.draftId,
     required this.thumbnailPath,
+    required this.aspectRatio,
   });
 
   final String draftId;
   final String? thumbnailPath;
+
+  /// Width/height ratio of the draft's canvas, when it has a clip.
+  final double? aspectRatio;
 }
 
 /// Debug-only counter incremented at the top of every
@@ -78,7 +82,15 @@ class ActiveUploadsView extends Equatable {
   // Public field uses the record type inline so the private [_ActiveUpload]
   // typedef alias doesn't leak through the public API surface
   // (avoids `library_private_types_in_public_api`).
-  final List<({String draftId, String? title, String? thumbnailPath})> uploads;
+  final List<
+    ({
+      String draftId,
+      String? title,
+      String? thumbnailPath,
+      double? aspectRatio,
+    })
+  >
+  uploads;
 
   /// Projects the bloc's [BackgroundPublishState] into the shape the grid
   /// renders. Used as the selector callback in [_ProfileVideosGridState.build].
@@ -90,6 +102,13 @@ class ActiveUploadsView extends Equatable {
             draftId: upload.draft.id,
             title: upload.draft.title,
             thumbnailPath: upload.draft.coverThumbnailPath,
+            // The render is cropped to the editor canvas, so the canvas
+            // shape is the shape the published video will have.
+            aspectRatio:
+                (upload.draft.finalRenderedClip ??
+                        upload.draft.clips.firstOrNull)
+                    ?.targetAspectRatio
+                    .value,
           ),
     ]);
   }
@@ -290,7 +309,7 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
         currentUserPubkey != null && currentUserPubkey == widget.userIdHex;
 
     // Subscribe to the *shape* of the active upload list (id + title +
-    // thumbnailPath per upload). Progress is intentionally excluded so that
+    // thumbnailPath + aspect ratio per upload). Progress is intentionally excluded so that
     // per-tick progress emissions don't rebuild the grid — each upload
     // tile subscribes to its own progress in [_VideoGridUploadingTile].
     //
@@ -305,7 +324,14 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
                 (bloc) => ActiveUploadsView.fromState(bloc.state),
               )
               .uploads
-        : const <({String draftId, String? title, String? thumbnailPath})>[];
+        : const <
+            ({
+              String draftId,
+              String? title,
+              String? thumbnailPath,
+              double? aspectRatio,
+            })
+          >[];
 
     // De-duplicate relay-delivered videos against active uploads.
     //
@@ -353,6 +379,7 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
         (upload) => _GridUploadingVideoEntry(
           draftId: upload.draftId,
           thumbnailPath: upload.thumbnailPath,
+          aspectRatio: upload.aspectRatio,
         ),
       ),
       ...filteredVideos.map(_GridVideoEventEntry.new),
@@ -436,8 +463,10 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
           sliver: ProfileMasonryGrid(
             childCount: allVideos.length,
             aspectRatioOf: (index) => switch (allVideos[index]) {
-              // A draft still uploading has no published dimensions yet.
-              _GridUploadingVideoEntry() => profileVerticalTileAspectRatio,
+              // A draft still uploading takes the shape it will publish
+              // with, so the tile does not change shape when it lands.
+              final _GridUploadingVideoEntry entry =>
+                profileTileAspectRatioForRatio(entry.aspectRatio),
               final _GridVideoEventEntry entry =>
                 profileTileAspectRatioForVideo(
                   entry.videoEvent,

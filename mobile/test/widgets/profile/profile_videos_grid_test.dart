@@ -72,17 +72,21 @@ const _ownPubkey =
 const _otherPubkey =
     'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 
-DivineVideoDraft _createTestDraft({String title = 'Test Draft'}) {
+DivineVideoDraft _createTestDraft({
+  String title = 'Test Draft',
+  model.AspectRatio? aspectRatio = model.AspectRatio.vertical,
+}) {
   return DivineVideoDraft.create(
     clips: [
-      DivineVideoClip(
-        id: 'clip-1',
-        video: EditorVideo.file('/path/to/video.mp4'),
-        duration: const Duration(seconds: 3),
-        recordedAt: DateTime(2025, 12, 13),
-        targetAspectRatio: model.AspectRatio.vertical,
-        originalAspectRatio: 9 / 16,
-      ),
+      if (aspectRatio != null)
+        DivineVideoClip(
+          id: 'clip-1',
+          video: EditorVideo.file('/path/to/video.mp4'),
+          duration: const Duration(seconds: 3),
+          recordedAt: DateTime(2025, 12, 13),
+          targetAspectRatio: aspectRatio,
+          originalAspectRatio: aspectRatio.value,
+        ),
     ],
     title: title,
     description: 'Test description',
@@ -1474,6 +1478,60 @@ void main() {
 
         expect(find.byType(ProfileMasonryGrid), findsOneWidget);
         expect(find.byType(PartialCircleSpinner), findsOneWidget);
+      });
+
+      group('uploading tile shape', () {
+        Future<Size> pumpUploadingTile(
+          WidgetTester tester,
+          model.AspectRatio? aspectRatio,
+        ) async {
+          when(() => mockAuth.currentPublicKeyHex).thenReturn(_ownPubkey);
+          final draft = _createTestDraft(aspectRatio: aspectRatio);
+          when(() => mockBloc.state).thenReturn(
+            BackgroundPublishState(
+              uploads: [
+                BackgroundUpload(draft: draft, result: null, progress: 0.5),
+              ],
+            ),
+          );
+
+          await tester.pumpWidget(
+            buildSubject(userIdHex: _ownPubkey),
+          );
+
+          return tester.getSize(
+            find
+                .ancestor(
+                  of: find.byType(PartialCircleSpinner),
+                  matching: find.byType(ClipRRect),
+                )
+                .first,
+          );
+        }
+
+        testWidgets('gives a square draft a square tile', (tester) async {
+          final size = await pumpUploadingTile(
+            tester,
+            model.AspectRatio.square,
+          );
+
+          expect(size.height, moreOrLessEquals(size.width));
+        });
+
+        testWidgets('gives a vertical draft a 2:3 tile', (tester) async {
+          final size = await pumpUploadingTile(
+            tester,
+            model.AspectRatio.vertical,
+          );
+
+          expect(size.height, moreOrLessEquals(size.width * 3 / 2));
+        });
+
+        testWidgets('gives a draft without clips a 2:3 tile', (tester) async {
+          final size = await pumpUploadingTile(tester, null);
+
+          expect(size.height, moreOrLessEquals(size.width * 3 / 2));
+        });
       });
 
       testWidgets('does not show uploading tile when viewing '
