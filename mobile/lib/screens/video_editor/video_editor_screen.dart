@@ -993,7 +993,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     mainBloc.add(const VideoEditorMainOpenSubEditor(.captions));
 
     // The cubit prefers server-side transcription (higher quality), falling
-    // back to on-device per clip when the request fails.
+    // back to on-device per sound when the request fails.
     final result = await showCaptionsEditorSheet(
       context,
       burnIn: burnIn,
@@ -1003,6 +1003,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
       clips: clipEditorBloc.state.clips,
       totalDuration: clipEditorBloc.state.totalDuration,
       initialCues: initialCues,
+      audioTracks: editor.stateManager.audioTracks,
       canDeleteTrack: hasSession,
       blossomUploadService: ref.read(blossomUploadServiceProvider),
     );

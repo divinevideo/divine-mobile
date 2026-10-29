@@ -1,9 +1,12 @@
-// ABOUTME: Generates caption cues for the editor timeline from clip audio.
-// ABOUTME: Server path merges audio once; on-device fallback stays per-clip.
+// ABOUTME: Generates caption cues for the editor timeline from clip, voice-over
+// ABOUTME: and extracted sound. Server path merges once; on-device runs each.
 
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:caption_generator/caption_generator.dart';
+import 'package:collection/collection.dart' show mergeSort;
+import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/models/video_editor/caption_generation_outcome.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
@@ -14,23 +17,27 @@ import 'package:unified_logger/unified_logger.dart';
 
 export 'package:openvine/models/video_editor/caption_generation_outcome.dart';
 
-/// Generates caption cues from the editor's clip timeline.
+/// Generates caption cues from the editor's timeline.
+///
+/// Speech comes from the clips' own sound, from voice-over takes and from
+/// sound extracted from a clip. Music and other sounds are not transcribed.
 ///
 /// Two transcription paths, matched to what each backend handles well:
 ///
 /// * **Server** (when a [CaptionRemoteTranscriber] is present): the audible
-///   clips' trimmed audio is merged into a single continuous WAV and
+///   sources' trimmed audio is merged into a single continuous WAV and
 ///   transcribed in one pass, then mapped back onto the composition timeline
 ///   via the merge's per-segment offset map. One continuous stream gives cloud
 ///   ASR more context than isolated short clips.
-/// * **On-device** (no remote, or the server path failed): each clip's audio is
-///   transcribed separately. The OS recognizer is built for short utterances
-///   and stalls on a long merged file, so the fallback must stay per-clip.
+/// * **On-device** (no remote, or the server path failed): each source's audio
+///   is transcribed separately. The OS recognizer is built for short
+///   utterances and stalls on a long merged file, so the fallback must stay
+///   per-source.
 ///
 /// Both paths carry a timeout so a stalled recognizer or network never hangs
-/// the editor. Muted clips, clips without a local file, and empty trim windows
-/// are excluded; their timeline span is still counted so later cues stay
-/// aligned. Voice-over and music tracks are not transcribed.
+/// the editor. Muted clips and tracks, clips without a local file, and empty
+/// trim windows are excluded; their timeline span is still counted so later
+/// cues stay aligned.
 class CaptionGenerationService {
   /// Creates the service.
   CaptionGenerationService({
@@ -78,80 +85,187 @@ class CaptionGenerationService {
   /// Max time for the whole server transcription before falling back.
   final Duration _remoteTimeout;
 
-  /// Max time for one clip's on-device transcription before failing.
+  /// Max time for one source's on-device transcription before failing.
   final Duration _onDeviceClipTimeout;
 
-  /// Transcribes [clips] into timeline-mapped caption cues.
+  /// How far apart two sources may be on the timeline and still count as
+  /// playing back to back. A take's probed length and its placed window can
+  /// differ by a few milliseconds.
+  static const Duration _backToBackTolerance = Duration(milliseconds: 100);
+
+  /// Transcribes [clips] and the speech among [audioTracks] into
+  /// timeline-mapped caption cues.
+  ///
+  /// Of [audioTracks], only voice-over takes and sound extracted from a clip
+  /// are transcribed, where they play on the timeline. A take is recognized
+  /// as recorded, before any voice effect, which would only make it harder
+  /// to understand.
   ///
   /// [localeIdentifier] is the BCP-47 recognition language (the app locale).
   /// Never throws — failures come back as [CaptionsFailed].
   Future<CaptionGenerationOutcome> generateForClips({
     required List<DivineVideoClip> clips,
     required String localeIdentifier,
+    List<AudioEvent> audioTracks = const [],
   }) async {
+    final totalDuration = clips.fold(
+      Duration.zero,
+      (sum, clip) => sum + clip.playbackDuration,
+    );
+    final sources = _speechSources(
+      clips: clips,
+      audioTracks: audioTracks,
+      totalDuration: totalDuration,
+    );
+    if (sources.isEmpty) return const CaptionsEmpty();
+
     final remote = _remoteTranscriber;
     if (remote != null) {
       final outcome = await _generateViaServerMerge(
         remote: remote,
-        clips: clips,
+        sources: sources,
+        totalDuration: totalDuration,
         localeIdentifier: localeIdentifier,
       );
       if (outcome != null) return outcome;
       // The merge or the server call failed — fall through to on-device.
     }
-    return _generateOnDevicePerClip(
-      clips: clips,
+    return _generateOnDevicePerSource(
+      sources: sources,
+      totalDuration: totalDuration,
       localeIdentifier: localeIdentifier,
     );
   }
 
-  /// Server path: merge audible clips into one WAV and transcribe it remotely.
+  /// The audible stretches of [clips] and [audioTracks], in timeline order.
+  List<_SpeechSource> _speechSources({
+    required List<DivineVideoClip> clips,
+    required List<AudioEvent> audioTracks,
+    required Duration totalDuration,
+  }) {
+    final sources = <_SpeechSource>[];
+    var clipStart = Duration.zero;
+    for (final clip in clips) {
+      final source = _clipSource(clip, timelineStart: clipStart);
+      if (source != null) sources.add(source);
+      clipStart += clip.playbackDuration;
+    }
+    for (final track in audioTracks) {
+      final source = _trackSource(track, totalDuration: totalDuration);
+      if (source != null) sources.add(source);
+    }
+    mergeSort(
+      sources,
+      compare: (a, b) => a.timelineStart.compareTo(b.timelineStart),
+    );
+    return sources;
+  }
+
+  /// The clip's own sound, or `null` when it is muted, has no local file or
+  /// an empty trim window.
+  ///
+  /// A clip under a speed ramp is transcribed at its recorded speed (see
+  /// [_effectiveSpeed]), so its words are moved through the ramp.
+  static _SpeechSource? _clipSource(
+    DivineVideoClip clip, {
+    required Duration timelineStart,
+  }) {
+    final video = clip.video;
+    final path = video?.file?.path;
+    final sourceEnd = clip.duration - clip.trimEnd;
+    if (video == null ||
+        path == null ||
+        clip.volume <= 0 ||
+        sourceEnd <= clip.trimStart) {
+      return null;
+    }
+    final ramped = clip.speedRamp != null;
+    final extractedStart = ramped
+        ? clip.trimStart
+        : clip.sourceDurationToPlaybackDuration(clip.trimStart);
+    return _SpeechSource(
+      id: clip.id,
+      lane: _SpeechSource.clipsLane,
+      media: video,
+      filePath: path,
+      sourceStart: clip.trimStart,
+      sourceEnd: sourceEnd,
+      speed: _effectiveSpeed(clip),
+      timelineStart: timelineStart,
+      extractedStart: extractedStart,
+      extractedEnd:
+          extractedStart +
+          (ramped ? clip.trimmedDuration : clip.playbackDuration),
+      toPlayback: ramped ? clip.sourceOffsetToPlaybackOffset : null,
+    );
+  }
+
+  /// A voice-over take or sound extracted from a clip, as far as it plays
+  /// inside the video, or `null` for any other track, a muted one, or one
+  /// that plays nothing there.
+  ///
+  /// Takes and extracted sound are always placed with an end; a track
+  /// without one is skipped.
+  static _SpeechSource? _trackSource(
+    AudioEvent track, {
+    required Duration totalDuration,
+  }) {
+    if (!track.isVoiceOver && !track.isLocalExtracted) return null;
+    final path = track.originalLocalFilePath;
+    final endTime = track.endTime;
+    if (path == null || endTime == null || track.volume <= 0) return null;
+
+    final timelineEnd = endTime < totalDuration ? endTime : totalDuration;
+    var sourceEnd =
+        track.startOffset + track.sourceSpanOf(timelineEnd - track.startTime);
+    final soundSeconds = track.duration;
+    if (soundSeconds != null) {
+      final soundLength = Duration(
+        microseconds: (soundSeconds * Duration.microsecondsPerSecond).round(),
+      );
+      if (sourceEnd > soundLength) sourceEnd = soundLength;
+    }
+    if (sourceEnd <= track.startOffset) return null;
+
+    final extractedStart = track.timelineSpanOf(track.startOffset);
+    return _SpeechSource(
+      id: track.id,
+      lane: track.id,
+      media: EditorVideo.file(path),
+      filePath: path,
+      sourceStart: track.startOffset,
+      sourceEnd: sourceEnd,
+      speed: track.playbackSpeed,
+      timelineStart: track.startTime,
+      extractedStart: extractedStart,
+      extractedEnd:
+          extractedStart + track.timelineSpanOf(sourceEnd - track.startOffset),
+    );
+  }
+
+  /// Server path: merge the sources into one WAV and transcribe it remotely.
   ///
   /// Returns the outcome, or `null` when the merge or the remote call failed so
   /// the caller can fall back to on-device. An empty transcript is a valid
   /// "no speech" result ([CaptionsEmpty]), not a fallback trigger.
   Future<CaptionGenerationOutcome?> _generateViaServerMerge({
     required CaptionRemoteTranscriber remote,
-    required List<DivineVideoClip> clips,
+    required List<_SpeechSource> sources,
+    required Duration totalDuration,
     required String localeIdentifier,
   }) async {
-    final segments = <AudioMergeSegment>[];
-    final timelineStarts = <Duration>[];
-    final mergedClips = <DivineVideoClip>[];
-    var clipStart = Duration.zero;
-    var totalDuration = Duration.zero;
-
-    for (final clip in clips) {
-      final start = clipStart;
-      clipStart += clip.playbackDuration;
-      totalDuration += clip.playbackDuration;
-
-      final video = clip.video;
-      final endTime = clip.duration - clip.trimEnd;
-      if (video?.file == null ||
-          clip.volume <= 0 ||
-          endTime <= clip.trimStart) {
-        continue;
-      }
-
-      timelineStarts.add(start);
-      mergedClips.add(clip);
-      segments.add(
-        AudioMergeSegment(
-          video: video!,
-          startTime: clip.trimStart,
-          endTime: endTime,
-          speed: _effectiveSpeed(clip),
-        ),
-      );
-    }
-
-    if (segments.isEmpty) return const CaptionsEmpty();
-
     final AudioMergeResult merged;
     try {
       merged = await _audioExtractionService.mergeClipAudio(
-        segments: segments,
+        segments: [
+          for (final source in sources)
+            AudioMergeSegment(
+              video: source.media,
+              startTime: source.sourceStart,
+              endTime: source.sourceEnd,
+              speed: source.speed,
+            ),
+        ],
         sampleRate: _asrSampleRate,
         channels: _asrChannels,
       );
@@ -171,20 +285,13 @@ class CaptionGenerationService {
             localeIdentifier: localeIdentifier,
           )
           .timeout(_remoteTimeout);
-      final mapped = _mapMergedToTimeline(
-        words,
-        merged.segments,
-        timelineStarts,
-        mergedClips,
-      );
-      if (mapped.isEmpty) return const CaptionsEmpty();
       // The server times whole cues only, so the words the grouper spreads
       // over them are an estimate. The cues keep none: an estimate stored as
       // if it were spoken would stop following the cue when it is trimmed,
       // while an empty list lets the cue spread its words over whatever
       // window it ends up with.
-      final cues = _buildCues(
-        groupCaptionSegments(mapped),
+      final cues = _cuesFrom(
+        _mapMergedToTimeline(words, merged.segments, sources),
         totalDuration,
         keepWords: false,
       );
@@ -202,45 +309,36 @@ class CaptionGenerationService {
     }
   }
 
-  /// On-device path: transcribe each clip's audio separately.
+  /// On-device path: transcribe each source's audio separately.
   ///
-  /// The OS recognizer is designed for short utterances, so each clip is
-  /// extracted and transcribed on its own (with a per-clip timeout) and its
-  /// words are windowed to the clip's trim range and shifted onto the timeline.
-  Future<CaptionGenerationOutcome> _generateOnDevicePerClip({
-    required List<DivineVideoClip> clips,
+  /// The OS recognizer is designed for short utterances, so each source is
+  /// extracted and transcribed on its own (with a per-source timeout) and its
+  /// words are windowed to the part that plays and shifted onto the timeline.
+  Future<CaptionGenerationOutcome> _generateOnDevicePerSource({
+    required List<_SpeechSource> sources,
+    required Duration totalDuration,
     required String localeIdentifier,
   }) async {
-    final words = <CaptionSegment>[];
-    var clipStart = Duration.zero;
-    var totalDuration = Duration.zero;
-    for (final clip in clips) {
-      totalDuration += clip.playbackDuration;
-    }
+    final words = <_LaneWord>[];
 
     // Some on-device recognizers reject an explicit language even when it is
     // the device's own default, so [_recognizeOnDevice] retries without one.
-    // Once that happens, drop the language for the remaining clips too rather
-    // than pay the failed first attempt on every clip.
+    // Once that happens, drop the language for the remaining sources too
+    // rather than pay the failed first attempt on every one.
     String? effectiveLocale = localeIdentifier;
 
-    for (final clip in clips) {
-      final videoPath = clip.video?.file?.path;
-      final start = clipStart;
-      clipStart += clip.playbackDuration;
-      if (videoPath == null || clip.volume <= 0) continue;
-
+    for (final source in sources) {
       final String audioPath;
       try {
         final extraction = await _audioExtractionService.extractAudio(
-          videoPath: videoPath,
-          speed: _effectiveSpeed(clip),
+          videoPath: source.filePath,
+          speed: source.speed,
         );
         audioPath = extraction.audioFilePath;
       } on AudioExtractionException catch (e) {
         if (e.message.contains('no audio track')) continue;
         Log.warning(
-          '🎬 Caption audio extraction failed for clip ${clip.id}: $e',
+          '🎬 Caption audio extraction failed for ${source.id}: $e',
           name: _logName,
           category: LogCategory.video,
         );
@@ -253,19 +351,17 @@ class CaptionGenerationService {
           localeIdentifier: effectiveLocale,
         );
         if (result.localeRejected) effectiveLocale = null;
-        words.addAll(
-          _windowToTimeline(result.segments, clip, clipStartTime: start),
-        );
+        words.addAll(_windowToTimeline(result.segments, source));
       } on TimeoutException {
         Log.warning(
-          '🎬 On-device caption transcription timed out for clip ${clip.id}',
+          '🎬 On-device caption transcription timed out for ${source.id}',
           name: _logName,
           category: LogCategory.video,
         );
         return const CaptionsFailed(CaptionGenerationFailure.failed);
       } on CaptionGenerationException catch (e) {
         Log.warning(
-          '🎬 Caption transcription failed for clip ${clip.id}: $e',
+          '🎬 Caption transcription failed for ${source.id}: $e',
           name: _logName,
           category: LogCategory.video,
         );
@@ -275,8 +371,8 @@ class CaptionGenerationService {
         // malformed native result). Honor the "never throws" contract so the
         // caller shows the manual-entry fallback instead of stalling.
         Log.warning(
-          '🎬 On-device caption transcription failed unexpectedly for clip '
-          '${clip.id}: $e',
+          '🎬 On-device caption transcription failed unexpectedly for '
+          '${source.id}: $e',
           name: _logName,
           category: LogCategory.video,
         );
@@ -286,17 +382,16 @@ class CaptionGenerationService {
       }
     }
 
-    if (words.isEmpty) return const CaptionsEmpty();
-    final cues = _buildCues(groupCaptionSegments(words), totalDuration);
+    final cues = _cuesFrom(words, totalDuration);
     return cues.isEmpty ? const CaptionsEmpty() : CaptionsGenerated(cues);
   }
 
-  /// Runs on-device recognition for one clip. Some on-device recognizers reject
-  /// an explicit language even when it is the device's own default, so on
-  /// [SpeechRecognizerUnavailableException] this retries once without a
+  /// Runs on-device recognition for one source. Some on-device recognizers
+  /// reject an explicit language even when it is the device's own default, so
+  /// on [SpeechRecognizerUnavailableException] this retries once without a
   /// language (the device default). Returns the words and whether the language
   /// was dropped, so the caller can skip the doomed first attempt on later
-  /// clips.
+  /// sources.
   Future<({List<CaptionSegment> segments, bool localeRejected})>
   _recognizeOnDevice({
     required String audioPath,
@@ -325,48 +420,50 @@ class CaptionGenerationService {
     }
   }
 
-  /// Shifts each transcribed word from merged-output time onto the composition
-  /// timeline. A word is attributed to the segment whose output window contains
-  /// its start, then moved by that segment's `timelineStart - outputStart`
-  /// delta — the two differ only when clips were skipped from the merge (muted
-  /// / no file), leaving the skipped clip's timeline span as a caption-free gap.
+  /// Shifts each transcribed cue from merged-output time onto the composition
+  /// timeline.
   ///
-  /// The merged audio is gap-free, so a word can straddle the boundary between
-  /// two concatenated segments. Its endpoints are clamped to the attributed
-  /// segment's output window before the shift, so a word whose tail belongs to
-  /// the next audible clip is capped at this clip's timeline end instead of
-  /// spilling later speech into the skipped clip's muted gap. The full word
-  /// text is kept intact; only its timing is bounded.
-  ///
-  /// A clip under a speed ramp is merged at its recorded speed (see
-  /// [_effectiveSpeed]), so its words are moved through the ramp instead.
-  List<CaptionSegment> _mapMergedToTimeline(
+  /// The merged audio is gap-free, and the server times whole cues, often a
+  /// little early or late, so a cue near the boundary between two
+  /// concatenated sources can start in one and lie mostly in the other, or
+  /// cover both. A cue across sources that also play back to back on the
+  /// timeline (consecutive clips, takes laid one after another) has each end
+  /// moved through its own source. Any other cue belongs to the source it
+  /// overlaps most and is clamped to it, so it never spills into a skipped
+  /// clip's muted gap or onto a source that plays elsewhere. The full text is
+  /// kept intact; only its timing is bounded.
+  List<_LaneWord> _mapMergedToTimeline(
     List<CaptionSegment> words,
     List<AudioMergeSegmentOffset> offsets,
-    List<Duration> timelineStarts,
-    List<DivineVideoClip> clips,
+    List<_SpeechSource> sources,
   ) {
     if (offsets.isEmpty) return const [];
-    final mapped = <CaptionSegment>[];
+    final mapped = <_LaneWord>[];
     for (final word in words) {
-      final index = _segmentIndexFor(word.start, offsets);
-      final offset = offsets[index];
-      final clip = clips[index];
-      Duration onTimeline(Duration time) {
-        final local =
-            _clamp(time, offset.outputStart, offset.outputEnd) -
-            offset.outputStart;
-        return timelineStarts[index] +
-            (clip.speedRamp == null
-                ? local
-                : clip.sourceOffsetToPlaybackOffset(local));
+      final first = _segmentIndexFor(word.start, offsets);
+      final last = math.max(first, _segmentIndexEndingAt(word.end, offsets));
+      final owner = _mostOverlapped(word, first, last, offsets);
+      if (first < last && _playBackToBack(sources, first, last)) {
+        mapped.add((
+          lane: sources[owner].lane,
+          word: CaptionSegment(
+            text: word.text,
+            start: _mergedToTimeline(
+              word.start,
+              sources[first],
+              offsets[first],
+            ),
+            end: _mergedToTimeline(word.end, sources[last], offsets[last]),
+          ),
+        ));
+        continue;
       }
-
       mapped.add(
-        CaptionSegment(
-          text: word.text,
-          start: onTimeline(word.start),
-          end: onTimeline(word.end),
+        _mapWord(
+          word,
+          sources[owner],
+          windowStart: offsets[owner].outputStart,
+          windowEnd: offsets[owner].outputEnd,
         ),
       );
     }
@@ -385,46 +482,118 @@ class CaptionGenerationService {
     return offsets.length - 1;
   }
 
-  /// Windows [segments] (timed in the clip's full-source playback time) to the
-  /// clip's trim range and shifts them onto the composition timeline.
-  ///
-  /// A clip under a speed ramp is transcribed at its recorded speed (see
-  /// [_effectiveSpeed]), so its words are moved through the ramp.
-  List<CaptionSegment> _windowToTimeline(
-    List<CaptionSegment> segments,
-    DivineVideoClip clip, {
-    required Duration clipStartTime,
-  }) {
-    if (clip.speedRamp != null) {
-      final windowStart = clip.trimStart;
-      final windowEnd = clip.trimStart + clip.trimmedDuration;
-      Duration onTimeline(Duration time) =>
-          clipStartTime +
-          clip.sourceOffsetToPlaybackOffset(
-            _clamp(time, windowStart, windowEnd) - windowStart,
-          );
-      return [
-        for (final segment in segments)
-          if (segment.end > windowStart && segment.start < windowEnd)
-            CaptionSegment(
-              text: segment.text,
-              start: onTimeline(segment.start),
-              end: onTimeline(segment.end),
-            ),
-      ];
+  /// The index of the concatenated segment a span ending at [time] ends in:
+  /// one ending exactly on a boundary ends in the segment before it.
+  static int _segmentIndexEndingAt(
+    Duration time,
+    List<AudioMergeSegmentOffset> offsets,
+  ) {
+    for (var i = 0; i < offsets.length; i++) {
+      if (time <= offsets[i].outputEnd) return i;
     }
-    final windowStart = clip.sourceDurationToPlaybackDuration(clip.trimStart);
-    final windowEnd = windowStart + clip.playbackDuration;
-    final shift = clipStartTime - windowStart;
-    return [
-      for (final segment in segments)
-        if (segment.end > windowStart && segment.start < windowEnd)
-          CaptionSegment(
-            text: segment.text,
-            start: _clamp(segment.start, windowStart, windowEnd) + shift,
-            end: _clamp(segment.end, windowStart, windowEnd) + shift,
-          ),
+    return offsets.length - 1;
+  }
+
+  /// Of the segments [first] to [last], the one [word] overlaps most; the
+  /// earliest on a tie.
+  static int _mostOverlapped(
+    CaptionSegment word,
+    int first,
+    int last,
+    List<AudioMergeSegmentOffset> offsets,
+  ) {
+    var best = first;
+    var bestOverlap = Duration.zero;
+    for (var i = first; i <= last; i++) {
+      final offset = offsets[i];
+      final overlap =
+          (word.end < offset.outputEnd ? word.end : offset.outputEnd) -
+          (word.start > offset.outputStart ? word.start : offset.outputStart);
+      if (overlap > bestOverlap) {
+        best = i;
+        bestOverlap = overlap;
+      }
+    }
+    return best;
+  }
+
+  /// Whether the sources [first] to [last] each start where the one before
+  /// ends on the timeline, as they do in the merged audio.
+  static bool _playBackToBack(
+    List<_SpeechSource> sources,
+    int first,
+    int last,
+  ) {
+    for (var i = first; i < last; i++) {
+      final gap = sources[i + 1].timelineStart - sources[i].timelineEnd;
+      if (gap.abs() > _backToBackTolerance) return false;
+    }
+    return true;
+  }
+
+  /// Where [time] in the merged audio, inside [source]'s [offset] window,
+  /// plays on the timeline.
+  static Duration _mergedToTimeline(
+    Duration time,
+    _SpeechSource source,
+    AudioMergeSegmentOffset offset,
+  ) => source.onTimeline(
+    _clamp(time, offset.outputStart, offset.outputEnd) - offset.outputStart,
+  );
+
+  /// Windows [segments] (timed in the source's extracted sound) to the part of
+  /// it that plays and shifts them onto the composition timeline.
+  List<_LaneWord> _windowToTimeline(
+    List<CaptionSegment> segments,
+    _SpeechSource source,
+  ) => [
+    for (final segment in segments)
+      if (segment.end > source.extractedStart &&
+          segment.start < source.extractedEnd)
+        _mapWord(
+          segment,
+          source,
+          windowStart: source.extractedStart,
+          windowEnd: source.extractedEnd,
+        ),
+  ];
+
+  /// Moves [word], timed in a window from [windowStart] to [windowEnd] of
+  /// [source]'s sound, to where it plays on the timeline.
+  static _LaneWord _mapWord(
+    CaptionSegment word,
+    _SpeechSource source, {
+    required Duration windowStart,
+    required Duration windowEnd,
+  }) {
+    Duration onTimeline(Duration time) =>
+        source.onTimeline(_clamp(time, windowStart, windowEnd) - windowStart);
+    return (
+      lane: source.lane,
+      word: CaptionSegment(
+        text: word.text,
+        start: onTimeline(word.start),
+        end: onTimeline(word.end),
+      ),
+    );
+  }
+
+  /// Groups [words] into cues lane by lane, so a voice-over talking over a
+  /// clip never shares a cue with it, and orders the cues by start.
+  List<CaptionCue> _cuesFrom(
+    List<_LaneWord> words,
+    Duration totalDuration, {
+    bool keepWords = true,
+  }) {
+    final lanes = <String, List<CaptionSegment>>{};
+    for (final (:lane, :word) in words) {
+      (lanes[lane] ??= []).add(word);
+    }
+    final grouped = [
+      for (final laneWords in lanes.values) ...groupCaptionSegments(laneWords),
     ];
+    mergeSort(grouped, compare: (a, b) => a.start.compareTo(b.start));
+    return _buildCues(grouped, totalDuration, keepWords: keepWords);
   }
 
   /// Turns grouped segments into cues, keeping the recognizer's word timings
@@ -482,4 +651,72 @@ class CaptionGenerationService {
       );
     }
   }
+}
+
+/// A transcribed word on the timeline, with the lane it is grouped in.
+typedef _LaneWord = ({String lane, CaptionSegment word});
+
+/// One stretch of sound to transcribe and where it plays: a clip's own sound,
+/// a voice-over take, or sound extracted from a clip.
+class _SpeechSource {
+  const _SpeechSource({
+    required this.id,
+    required this.lane,
+    required this.media,
+    required this.filePath,
+    required this.sourceStart,
+    required this.sourceEnd,
+    required this.speed,
+    required this.timelineStart,
+    required this.extractedStart,
+    required this.extractedEnd,
+    this.toPlayback,
+  });
+
+  /// The lane every clip shares. Track ids carry a marker prefix, so none
+  /// is this.
+  static const String clipsLane = 'clips';
+
+  /// The clip or track id, for logs.
+  final String id;
+
+  /// Words in one lane are grouped into cues together: the clips share
+  /// [clipsLane], and each track has its own.
+  final String lane;
+
+  /// The file the sound is read from, for the merge.
+  final EditorVideo media;
+
+  /// The path of [media], for on-device extraction.
+  final String filePath;
+
+  /// Where in the file the part that plays begins.
+  final Duration sourceStart;
+
+  /// Where in the file the part that plays ends.
+  final Duration sourceEnd;
+
+  /// The speed the sound is transcribed at.
+  final double speed;
+
+  /// Where on the timeline the part that plays begins.
+  final Duration timelineStart;
+
+  /// Where the part that plays begins in the whole file extracted at
+  /// [speed], which is how on-device recognition times its words.
+  final Duration extractedStart;
+
+  /// Where the part that plays ends in the whole file extracted at [speed].
+  final Duration extractedEnd;
+
+  /// Moves an offset into the transcribed sound to an offset on the
+  /// timeline, for a clip under a speed ramp; the two are equal otherwise.
+  final Duration Function(Duration offset)? toPlayback;
+
+  /// Where [offset] into the part that plays lands on the timeline.
+  Duration onTimeline(Duration offset) =>
+      timelineStart + (toPlayback?.call(offset) ?? offset);
+
+  /// Where the part that plays ends on the timeline.
+  Duration get timelineEnd => onTimeline(extractedEnd - extractedStart);
 }

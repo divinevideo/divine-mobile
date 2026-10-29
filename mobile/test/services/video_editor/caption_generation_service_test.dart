@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:caption_generator/caption_generator.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:models/models.dart' show AudioEvent;
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/audio_extraction_service.dart';
 import 'package:openvine/services/video_editor/caption_generation_service.dart';
@@ -42,6 +43,33 @@ DivineVideoClip _clip(
   originalAspectRatio: 9 / 16,
   trimStart: trimStart,
   trimEnd: trimEnd,
+  volume: volume,
+  playbackSpeed: playbackSpeed,
+);
+
+const _takeId = '${AudioEvent.voiceOverIdPrefix}_1';
+const _extractedId = '${AudioEvent.localExtractedMarker}_1';
+
+/// A 10 s sound at [url] that plays from [startTime] to [endTime].
+AudioEvent _track(
+  String id, {
+  required String url,
+  required Duration startTime,
+  required Duration endTime,
+  Duration startOffset = Duration.zero,
+  double volume = 1,
+  double playbackSpeed = 1,
+  String? originalUrl,
+}) => AudioEvent(
+  id: id,
+  pubkey: '',
+  createdAt: 0,
+  url: url,
+  originalUrl: originalUrl,
+  duration: 10,
+  startTime: startTime,
+  endTime: endTime,
+  startOffset: startOffset,
   volume: volume,
   playbackSpeed: playbackSpeed,
 );
@@ -260,11 +288,12 @@ void main() {
           // Clips a and c are audible; the muted clip between them is dropped
           // from the merge but still occupies 3s of timeline. In the merged
           // audio a and c are contiguous ([0,3s) and [3s,6s)); on the timeline
-          // a is at 0s and c is at 6s. A word straddling the a/c merge boundary
-          // must stay inside a's span, not spill its tail into the muted gap.
+          // a is at 0s and c is at 6s. A word lying mostly in a, with its tail
+          // across the a/c merge boundary, must stay inside a's span, not
+          // spill its tail into the muted gap.
           stubMerge([_offset(0, 3000), _offset(3000, 3000)]);
           final service = buildService(
-            remote: remoteReturning([_word('boundary', 2900, 3200)]),
+            remote: remoteReturning([_word('boundary', 2800, 3100)]),
           );
 
           final outcome = await service.generateForClips(
@@ -274,9 +303,30 @@ void main() {
 
           final cue = (outcome as CaptionsGenerated).cues.single;
           expect(cue.text, equals('boundary'));
-          expect(cue.start, equals(const Duration(milliseconds: 2900)));
+          expect(cue.start, equals(const Duration(milliseconds: 2800)));
           // Clamped to clip a's timeline end (3s); never into the gap [3s,6s).
           expect(cue.end, equals(const Duration(seconds: 3)));
+        },
+      );
+
+      test(
+        'gives a cue starting just before a boundary to the source it lies in',
+        () async {
+          // The server times this cue 50ms early: it starts at the end of a
+          // but lies almost entirely in c, which plays after the muted gap.
+          stubMerge([_offset(0, 3000), _offset(3000, 3000)]);
+          final service = buildService(
+            remote: remoteReturning([_word('Late.', 2950, 3700)]),
+          );
+
+          final outcome = await service.generateForClips(
+            clips: [_clip('a'), _clip('muted', volume: 0), _clip('c')],
+            localeIdentifier: 'en-US',
+          );
+
+          final cue = (outcome as CaptionsGenerated).cues.single;
+          expect(cue.start, equals(const Duration(seconds: 6)));
+          expect(cue.end, equals(const Duration(milliseconds: 6700)));
         },
       );
 
@@ -722,6 +772,235 @@ void main() {
           _word('there.', 450, 900),
         ]);
       });
+    });
+
+    group('speech tracks', () {
+      List<AudioMergeSegment> capturedSegments() =>
+          verify(
+                () => extraction.mergeClipAudio(
+                  segments: captureAny(named: 'segments'),
+                  sampleRate: any(named: 'sampleRate'),
+                  channels: any(named: 'channels'),
+                ),
+              ).captured.single
+              as List<AudioMergeSegment>;
+
+      test('merges a voice-over take as recorded, where it plays', () async {
+        stubMerge([_offset(0, 6000), _offset(6000, 2000)]);
+        final service = buildService(
+          remote: remoteReturning([_word('Narrated.', 6500, 7000)]),
+        );
+
+        final outcome = await service.generateForClips(
+          clips: [_clip('a', duration: const Duration(seconds: 6))],
+          audioTracks: [
+            _track(
+              _takeId,
+              url: '/tmp/take_robot.m4a',
+              originalUrl: '/tmp/take.m4a',
+              startTime: const Duration(seconds: 2),
+              endTime: const Duration(seconds: 4),
+              startOffset: const Duration(seconds: 1),
+              playbackSpeed: 2,
+            ),
+          ],
+          localeIdentifier: 'en-US',
+        );
+
+        final take = capturedSegments().last;
+        expect(take.video.file?.path, equals('/tmp/take.m4a'));
+        expect(take.startTime, equals(const Duration(seconds: 1)));
+        // 2 s of timeline at 2× plays 4 s of the take.
+        expect(take.endTime, equals(const Duration(seconds: 5)));
+        expect(take.speed, equals(2));
+        final cue = (outcome as CaptionsGenerated).cues.single;
+        expect(cue.start, equals(const Duration(milliseconds: 2500)));
+        expect(cue.end, equals(const Duration(seconds: 3)));
+      });
+
+      test(
+        'transcribes extracted sound in place of its muted clip',
+        () async {
+          stubMerge([_offset(0, 3000)]);
+          final service = buildService(
+            remote: remoteReturning([_word('Hi.', 100, 600)]),
+          );
+
+          final outcome = await service.generateForClips(
+            clips: [_clip('a', volume: 0)],
+            audioTracks: [
+              _track(
+                _extractedId,
+                url: '/tmp/extracted.wav',
+                startTime: Duration.zero,
+                endTime: const Duration(seconds: 3),
+              ),
+            ],
+            localeIdentifier: 'en-US',
+          );
+
+          expect(
+            capturedSegments().single.video.file?.path,
+            equals('/tmp/extracted.wav'),
+          );
+          final cue = (outcome as CaptionsGenerated).cues.single;
+          expect(cue.start, equals(const Duration(milliseconds: 100)));
+        },
+      );
+
+      test('leaves out music and muted takes', () async {
+        stubMerge([_offset(0, 3000)]);
+        final service = buildService(remote: remoteReturning(const []));
+
+        await service.generateForClips(
+          clips: [_clip('a')],
+          audioTracks: [
+            _track(
+              '${AudioEvent.localImportMarker}_song',
+              url: '/tmp/song.mp3',
+              startTime: Duration.zero,
+              endTime: const Duration(seconds: 3),
+            ),
+            _track(
+              _takeId,
+              url: '/tmp/take.m4a',
+              startTime: Duration.zero,
+              endTime: const Duration(seconds: 3),
+              volume: 0,
+            ),
+          ],
+          localeIdentifier: 'en-US',
+        );
+
+        expect(
+          capturedSegments().single.video.file?.path,
+          equals('/tmp/a.mp4'),
+        );
+      });
+
+      test('stops a take where the video ends', () async {
+        stubMerge([_offset(0, 3000), _offset(3000, 1000)]);
+        final service = buildService(remote: remoteReturning(const []));
+
+        await service.generateForClips(
+          clips: [_clip('a')],
+          audioTracks: [
+            _track(
+              _takeId,
+              url: '/tmp/take.m4a',
+              startTime: const Duration(seconds: 2),
+              endTime: const Duration(seconds: 5),
+            ),
+          ],
+          localeIdentifier: 'en-US',
+        );
+
+        expect(
+          capturedSegments().last.endTime,
+          equals(const Duration(seconds: 1)),
+        );
+      });
+
+      test('lets one cue run across takes laid back to back', () async {
+        stubMerge([_offset(0, 1500), _offset(1500, 2000)]);
+        final service = buildService(
+          remote: remoteReturning([_word('Eins. Zwei.', 200, 3000)]),
+        );
+
+        final outcome = await service.generateForClips(
+          clips: [_clip('a', volume: 0, duration: const Duration(seconds: 6))],
+          audioTracks: [
+            _track(
+              '${_takeId}_a',
+              url: '/tmp/take1.m4a',
+              startTime: Duration.zero,
+              endTime: const Duration(milliseconds: 1500),
+            ),
+            _track(
+              '${_takeId}_b',
+              url: '/tmp/take2.m4a',
+              startTime: const Duration(milliseconds: 1500),
+              endTime: const Duration(milliseconds: 3500),
+            ),
+          ],
+          localeIdentifier: 'en-US',
+        );
+
+        final cue = (outcome as CaptionsGenerated).cues.single;
+        expect(cue.start, equals(const Duration(milliseconds: 200)));
+        expect(cue.end, equals(const Duration(seconds: 3)));
+      });
+
+      test('keeps a voice-over over clip speech in its own cues', () async {
+        stubMerge([_offset(0, 6000), _offset(6000, 2000)]);
+        final service = buildService(
+          remote: remoteReturning([
+            _word('Clip', 1000, 1300),
+            _word('talk.', 1350, 1600),
+            _word('Voice', 6000, 6300),
+            _word('over.', 6350, 6600),
+          ]),
+        );
+
+        final outcome = await service.generateForClips(
+          clips: [_clip('a', duration: const Duration(seconds: 6))],
+          audioTracks: [
+            _track(
+              _takeId,
+              url: '/tmp/take.m4a',
+              startTime: const Duration(seconds: 1),
+              endTime: const Duration(seconds: 3),
+            ),
+          ],
+          localeIdentifier: 'en-US',
+        );
+
+        final cues = (outcome as CaptionsGenerated).cues;
+        expect(
+          cues.map((cue) => cue.text),
+          unorderedEquals(['Clip talk.', 'Voice over.']),
+        );
+      });
+
+      test(
+        'on-device, windows the take and shifts it to where it plays',
+        () async {
+          stubExtraction();
+          when(
+            () => generator.generateCaptions(
+              audioPath: '/tmp/take.m4a.wav',
+              localeIdentifier: any(named: 'localeIdentifier'),
+            ),
+          ).thenAnswer(
+            (_) async => [_word('Cut', 0, 800), _word('Kept.', 1200, 1800)],
+          );
+
+          final outcome = await buildService().generateForClips(
+            clips: [
+              _clip('a', volume: 0, duration: const Duration(seconds: 6)),
+            ],
+            audioTracks: [
+              _track(
+                _takeId,
+                url: '/tmp/take_robot.m4a',
+                originalUrl: '/tmp/take.m4a',
+                startTime: const Duration(seconds: 2),
+                endTime: const Duration(seconds: 4),
+                startOffset: const Duration(seconds: 1),
+              ),
+            ],
+            localeIdentifier: 'en-US',
+          );
+
+          verify(
+            () => extraction.extractAudio(videoPath: '/tmp/take.m4a', speed: 1),
+          ).called(1);
+          final cue = (outcome as CaptionsGenerated).cues.single;
+          expect(cue.text, equals('Kept.'));
+          expect(cue.start, equals(const Duration(milliseconds: 2200)));
+          expect(cue.end, equals(const Duration(milliseconds: 2800)));
+        },
+      );
     });
 
     test('leaves server cues without word timings', () async {
