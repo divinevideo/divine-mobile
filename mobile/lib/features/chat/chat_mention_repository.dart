@@ -132,6 +132,9 @@ class ChatMentionRepository implements LocalNotificationSource {
       } on Object {
         _rooms.remove(channel);
         _messages.remove(channel);
+        // A refresh during the write may have observed the room and
+        // published its rows.
+        reevaluate();
         rethrow;
       }
     });
@@ -340,7 +343,7 @@ class ChatMentionRepository implements LocalNotificationSource {
         _seen
           ..clear()
           ..addAll(before);
-        // A rebuild during the write may have published these rows as read.
+        // A reevaluation during the write may have published these as read.
         reevaluate();
         rethrow;
       }

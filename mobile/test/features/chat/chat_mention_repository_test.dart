@@ -661,6 +661,37 @@ void main() {
       );
     });
 
+    group('enroll', () {
+      test('a refused enrollment withdraws rows a refresh published', () async {
+        final store = _RefusedLaterStore(me);
+        final room = _Room();
+        when(room.close).thenAnswer((_) async {});
+        when(() => room.changes).thenAnswer((_) => const Stream.empty());
+        when(
+          () => room.timeline(now: any(named: 'now')),
+        ).thenReturn(FoldedThread([message(friend, 1001)], {}));
+        final repo = ChatMentionRepository(
+          owner: me,
+          communityId: 'community-test',
+          store: store,
+          now: () => 1000,
+          canNotify: (_) => true,
+          createRoom: (_) => room,
+          startRoom: (_, _) async {},
+        );
+        addTearDown(repo.close);
+        await repo.initialize();
+        final write = store.held = Completer<void>();
+        final enrolling = expectLater(repo.enroll('general'), throwsStateError);
+        await pumpEventQueue();
+        await repo.refresh();
+        expect(repo.items, hasLength(1));
+        write.complete();
+        await enrolling;
+        expect(repo.items, isEmpty);
+      });
+    });
+
     group('markSeen', () {
       test('a refused read republishes the row as unread', () async {
         final store = _RefusedLaterStore(me);
