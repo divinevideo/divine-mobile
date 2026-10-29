@@ -10,6 +10,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:nostr_sdk/event.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
+import 'package:openvine/services/nip98_http_client.dart';
 import 'package:openvine/services/notification_activity_sender.dart';
 
 class _MockAuthService extends Mock implements AuthService {}
@@ -29,11 +30,13 @@ void main() {
     late List<http.Request> requests;
     late NotificationActivitySender sender;
     late int signatures;
+    var rejectClock = false;
     Future<void> Function()? beforeSignature;
     var current = true;
 
     setUp(() {
       signatures = 0;
+      rejectClock = false;
       current = true;
       beforeSignature = null;
       auth = _MockAuthService();
@@ -45,6 +48,7 @@ void main() {
           content: any(named: 'content'),
           tags: any(named: 'tags'),
           createdAt: any(named: 'createdAt'),
+          allowUserInteraction: false,
         ),
       ).thenAnswer((invocation) async {
         signatures++;
@@ -61,12 +65,26 @@ void main() {
       requests = [];
       final transport = MockClient((request) async {
         requests.add(request);
+        if (rejectClock && requests.length == 1) {
+          return http.Response(
+            '{"error":"Auth failed: event timestamp is in the future"}',
+            401,
+            headers: {'date': 'Thu, 29 Oct 2026 19:00:00 GMT'},
+          );
+        }
         return http.Response('', 204);
       });
+      final signedTransport = Nip98HttpClient(
+        inner: transport,
+        authService: nip98,
+        trustedOrigin: Uri.parse('https://api.example.com'),
+        allowUserInteraction: false,
+      );
       final client = FunnelcakeApiClient(
         baseUrl: 'https://api.example.com',
-        httpClient: transport,
+        httpClient: signedTransport,
       );
+      addTearDown(signedTransport.close);
       addTearDown(transport.close);
       addTearDown(client.dispose);
       addTearDown(nip98.dispose);
@@ -114,6 +132,14 @@ void main() {
       signing.complete();
       await operation;
       expect(requests, isEmpty);
+    });
+
+    test('clock-skew retry also uses only noninteractive signing', () async {
+      rejectClock = true;
+      await sender.send(owner, update, () => current);
+      expect(requests, hasLength(2));
+      expect(signatures, 2);
+      expect(requests.last.body, update.body);
     });
 
     test('a different current signing owner is never used', () async {

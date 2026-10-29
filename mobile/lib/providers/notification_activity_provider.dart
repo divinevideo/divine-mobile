@@ -20,6 +20,7 @@ final notificationActivitySendProvider = Provider<NotificationActivitySend>((
     inner: ref.watch(instrumentedHttpClientFactoryProvider)(),
     authService: auth,
     trustedOrigin: Uri.parse(baseUrl),
+    allowUserInteraction: false,
   );
   final client = FunnelcakeApiClient(
     baseUrl: baseUrl,

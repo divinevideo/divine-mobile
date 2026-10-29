@@ -12,6 +12,7 @@ import 'package:unified_logger/unified_logger.dart';
 ///
 /// Only HTTPS responses to authenticated requests can adjust the signing clock.
 /// Redirects are not followed: the signature is bound to the original URL.
+/// Autonomous transports disable user interaction for clock-recovery signing.
 class Nip98HttpClient extends http.BaseClient {
   Nip98HttpClient({
     required http.Client inner,
@@ -19,10 +20,12 @@ class Nip98HttpClient extends http.BaseClient {
     required Uri trustedOrigin,
     Duration retryBudget = const Duration(seconds: 15),
     Duration Function()? elapsed,
+    bool allowUserInteraction = true,
   }) : _inner = inner,
        _authService = authService,
        _trustedOrigin = trustedOrigin.origin,
-       _retryBudget = retryBudget {
+       _retryBudget = retryBudget,
+       _allowUserInteraction = allowUserInteraction {
     final stopwatch = Stopwatch()..start();
     _elapsed = elapsed ?? () => stopwatch.elapsed;
   }
@@ -32,6 +35,7 @@ class Nip98HttpClient extends http.BaseClient {
   final String _trustedOrigin;
   final Duration _retryBudget;
   late final Duration Function() _elapsed;
+  final bool _allowUserInteraction;
   bool _closed = false;
   // Avoid starting a mutation retry just before the caller's timeout. This
   // reserves room for transport work, without claiming to cancel sent requests.
@@ -100,12 +104,20 @@ class Nip98HttpClient extends http.BaseClient {
       _logRecovery('retry skipped: request body is not UTF-8');
       return originalResponse;
     }
-    final token = await _authService.createAuthToken(
-      url: request.url.toString(),
-      method: method!,
-      payload: payload,
-      reuseCached: false,
-    );
+    final token = _allowUserInteraction
+        ? await _authService.createAuthToken(
+            url: request.url.toString(),
+            method: method!,
+            payload: payload,
+            reuseCached: false,
+          )
+        : await _authService.createAuthToken(
+            url: request.url.toString(),
+            method: method!,
+            payload: payload,
+            reuseCached: false,
+            allowUserInteraction: false,
+          );
     final blockedAfterSigning = _retryBlockedReason(
       owner,
       method,

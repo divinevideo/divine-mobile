@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:openvine/services/nip98_auth_service.dart';
 
@@ -11,7 +9,6 @@ class NotificationActivitySender {
   }) : _client = client,
        _authService = authService;
 
-  static const _signingTimeout = Duration(seconds: 15);
   final FunnelcakeApiClient _client;
   final Nip98AuthService _authService;
 
@@ -23,14 +20,13 @@ class NotificationActivitySender {
   ) async {
     bool current() => isCurrent() && _authService.isCurrentOwner(owner);
     if (!current()) return;
-    final token = await _authService
-        .createAuthToken(
-          url: _client.notificationActivityUri.toString(),
-          method: HttpMethod.post,
-          payload: update.body,
-          reuseCached: false,
-        )
-        .timeout(_signingTimeout);
+    final token = await _authService.createAuthToken(
+      url: _client.notificationActivityUri.toString(),
+      method: HttpMethod.post,
+      payload: update.body,
+      reuseCached: false,
+      allowUserInteraction: false,
+    );
     if (!current()) return;
     if (token == null || token.signedEvent.pubkey != owner) {
       throw const Nip98AuthException(

@@ -59,7 +59,7 @@ class NotificationActivitySessionCoordinator {
     } else if (_foreground && (changedOwner || becameReady)) {
       _emit(NotificationActivityState.foreground);
       _startHeartbeat();
-    } else if (becameReady && _sequence > 0) {
+    } else if (becameReady && _visit > 0) {
       _emit(NotificationActivityState.background);
     }
   }

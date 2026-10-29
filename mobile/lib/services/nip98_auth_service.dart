@@ -84,6 +84,7 @@ class Nip98AuthService {
   // Funnelcake rejects NIP-98 auth events older than 60s, so keep a buffer.
   static const Duration _tokenValidityDuration = Duration(seconds: 45);
   static const Duration _cacheCleanupInterval = Duration(minutes: 15);
+  static const _nonInteractiveRemoteTimeout = Duration(seconds: 15);
 
   Timer? _cleanupTimer;
   final Map<String, Duration> _serverOffsets = {};
@@ -155,11 +156,14 @@ class Nip98AuthService {
   /// Before learning server time, slow clocks can expire tokens and fast
   /// clocks can exceed the server's future-skew allowance. The HTTP transport
   /// corrects either rejection and passes `reuseCached: false` on its retry.
+  /// Passive callers disable [allowUserInteraction]; only their noninteractive
+  /// remote signing is bounded, without shortening human approval flows.
   Future<Nip98Token?> createAuthToken({
     required String url,
     required HttpMethod method,
     String? payload,
     bool reuseCached = true,
+    bool allowUserInteraction = true,
   }) async {
     if (!_authService.isAuthenticated) {
       Log.error(
@@ -225,6 +229,7 @@ class Nip98AuthService {
           url: normalizedUrl,
           method: method,
           payload: payload,
+          allowUserInteraction: allowUserInteraction,
         );
         _invalidateOffsetsAfterClockJump();
         if (!_authService.isAuthenticated ||
@@ -287,6 +292,7 @@ class Nip98AuthService {
   Future<Event?> _createAuthEvent({
     required String url,
     required HttpMethod method,
+    required bool allowUserInteraction,
     String? payload,
   }) async {
     try {
@@ -310,12 +316,26 @@ class Nip98AuthService {
       }
 
       // Create the event
-      final authEvent = await _authService.createAndSignEvent(
-        kind: 27235, // NIP-98 HTTP Auth event kind
-        content: '', // Content is empty for auth events
-        tags: tags,
-        createdAt: timestamp,
-      );
+      final boundRemote =
+          !allowUserInteraction &&
+          (_authService.currentIdentity?.signsRemotelyNonInteractive ?? false);
+      final signing = allowUserInteraction
+          ? _authService.createAndSignEvent(
+              kind: 27235,
+              content: '',
+              tags: tags,
+              createdAt: timestamp,
+            )
+          : _authService.createAndSignEvent(
+              kind: 27235,
+              content: '',
+              tags: tags,
+              createdAt: timestamp,
+              allowUserInteraction: false,
+            );
+      final authEvent = boundRemote
+          ? await signing.timeout(_nonInteractiveRemoteTimeout)
+          : await signing;
 
       if (authEvent == null) {
         Log.error(

@@ -43,6 +43,26 @@ void main() {
       },
     );
 
+    test('first offline visit catches up after it backgrounds', () {
+      fakeAsync((async) {
+        final sent = <NotificationActivityUpdate>[];
+        final coordinator = NotificationActivitySessionCoordinator(
+          send: (_, update, _) async => sent.add(update),
+        );
+        addTearDown(coordinator.dispose);
+        coordinator.setAccount(owner: owner, ready: false);
+        coordinator.setForeground(true);
+        coordinator.setForeground(false);
+        coordinator.setAccount(owner: owner, ready: true);
+        async.flushMicrotasks();
+
+        expect(sent, hasLength(1));
+        expect(sent.single.state, NotificationActivityState.background);
+        expect(sent.single.visit, 1);
+        expect(sent.single.sequence, 1);
+      });
+    });
+
     test('a background launch sends no visit or heartbeat', () {
       fakeAsync((async) {
         final sent = <NotificationActivityUpdate>[];

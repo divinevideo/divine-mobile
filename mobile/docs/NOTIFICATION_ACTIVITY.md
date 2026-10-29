@@ -33,6 +33,20 @@ current Flutter lifecycle state at activation. A hidden background launch cannot
 report a foreground visit. Delayed signing rechecks both the owner and current
 update before transmission.
 
+Passive activity signing never opens signer approval UI, including a clock-skew
+retry. Local keys and noninteractive Keycast RPC are supported. Amber uses only
+its content resolver after HTTP-auth kind 27235 permission has been granted;
+the explicit signer connection requests that permission alongside relay auth.
+Existing Amber users may need to reconnect and grant it. Missing permission or
+an unavailable resolver suppresses the activity report without an intent fallback.
+Silent resolver calls are bounded to six seconds, and noninteractive Keycast
+signing to fifteen seconds. User-initiated signing retains its existing behavior.
+
+NIP-46 bunker and NIP-07 extension identities currently offer no explicit silent
+signing capability, so autonomous activity reports fail closed for those signers.
+Their foreground presence and visit resets cannot be reported until such a
+capability exists; normal notification and signing flows are unchanged.
+
 An `activityDigest` push displays the supplied aggregate title and body through
 the existing Android data-message and iOS alert paths. Its real triggering
 `eventId` is for identity and deduplication; tapping opens Notifications rather

@@ -1,6 +1,7 @@
 // ABOUTME: Android Nostr Signer implementation for NIP-55 external signing.
 // ABOUTME: Handles communication with external Android signer apps via content providers and intents.
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:math';
@@ -174,6 +175,7 @@ class AndroidNostrSigner implements NostrSigner {
 
     List<Map<String, dynamic>> permissions = [];
     permissions.add({'type': 'sign_event', 'kind': 22242});
+    permissions.add({'type': 'sign_event', 'kind': 27235});
     permissions.add({'type': 'nip04_encrypt'});
     permissions.add({'type': 'nip44_encrypt'});
     permissions.add({'type': 'nip04_decrypt'});
@@ -330,22 +332,39 @@ class AndroidNostrSigner implements NostrSigner {
   }
 
   @override
-  Future<Event?> signEvent(Event event) async {
+  Future<Event?> signEvent(Event event) =>
+      _signEvent(event, allowUserInteraction: true);
+
+  /// Signs only with a previously approved content-resolver permission.
+  ///
+  /// A missing permission or unavailable provider never launches signer UI.
+  Future<Event?> signEventWithoutUserInteraction(Event event) =>
+      _signEvent(event, allowUserInteraction: false);
+
+  static const _nonInteractiveSigningTimeout = Duration(seconds: 6);
+
+  Future<Event?> _signEvent(
+    Event event, {
+    required bool allowUserInteraction,
+  }) async {
     var eventMap = event.toJson();
     var eventJson = jsonEncode(eventMap);
 
     return _lock.synchronized(() async {
-      var queryResult = await _contentResolverQuery(
+      final query = _contentResolverQuery(
         "SIGN_EVENT",
         [eventJson, "", _npub!],
         ["signature", "result", "event", "rejected"],
       );
+      final queryResult = allowUserInteraction
+          ? await query
+          : await query.timeout(_nonInteractiveSigningTimeout);
       if (hasResult(queryResult)) {
         event.sig = getResult(queryResult)!;
         return event;
       }
 
-      if (isRejected(queryResult)) {
+      if (isRejected(queryResult) || !allowUserInteraction) {
         return null;
       }
 
@@ -372,7 +391,7 @@ class AndroidNostrSigner implements NostrSigner {
       }
 
       return null;
-    }, timeout: timeout);
+    }, timeout: allowUserInteraction ? timeout : _nonInteractiveSigningTimeout);
   }
 
   bool isRejected(Map<String, Object?> queryResult) {
