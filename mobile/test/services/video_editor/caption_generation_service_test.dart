@@ -795,6 +795,72 @@ void main() {
               ).captured.single
               as List<AudioMergeSegment>;
 
+      test('keeps anchored speech outside its audible clip window', () async {
+        stubMerge([
+          _offset(0, 1000),
+          _offset(1000, 2000),
+          _offset(3000, 1000),
+        ]);
+        final service = buildService(
+          remote: remoteReturning([
+            _word('Before.', 200, 600),
+            _word('Clip.', 1200, 1600),
+            _word('After.', 3200, 3600),
+          ]),
+        );
+
+        final outcome = await service.generateForClips(
+          clips: [
+            _clip('lead', duration: const Duration(seconds: 2), volume: 0),
+            _clip(
+              'source',
+              duration: const Duration(seconds: 4),
+              trimStart: const Duration(seconds: 1),
+              trimEnd: const Duration(seconds: 1),
+            ),
+            _clip('tail', duration: const Duration(seconds: 2), volume: 0),
+          ],
+          audioTracks: [
+            _track(
+              _extractedId,
+              url: '/tmp/extracted.wav',
+              startTime: const Duration(seconds: 1),
+              endTime: const Duration(seconds: 5),
+              anchorClipId: 'source',
+            ),
+          ],
+          localeIdentifier: 'en-US',
+        );
+
+        final cues = (outcome as CaptionsGenerated).cues;
+        expect(
+          cues.map((cue) => (cue.text, cue.start, cue.end)),
+          equals([
+            (
+              'Before.',
+              const Duration(milliseconds: 1200),
+              const Duration(milliseconds: 1600),
+            ),
+            (
+              'Clip.',
+              const Duration(milliseconds: 2200),
+              const Duration(milliseconds: 2600),
+            ),
+            (
+              'After.',
+              const Duration(milliseconds: 4200),
+              const Duration(milliseconds: 4600),
+            ),
+          ]),
+        );
+        final segments = capturedSegments();
+        expect(segments, hasLength(3));
+        expect(segments.first.startTime, Duration.zero);
+        expect(segments.first.endTime, const Duration(seconds: 1));
+        expect(segments.last.startTime, const Duration(seconds: 3));
+        expect(segments.last.endTime, const Duration(seconds: 4));
+      });
+
       test('merges a voice-over take as recorded, where it plays', () async {
         stubMerge([_offset(0, 6000), _offset(6000, 2000)]);
         final service = buildService(
@@ -827,6 +893,56 @@ void main() {
         final cue = (outcome as CaptionsGenerated).cues.single;
         expect(cue.start, equals(const Duration(milliseconds: 2500)));
         expect(cue.end, equals(const Duration(seconds: 3)));
+      });
+
+      test('on-device keeps only the unique anchored speech windows', () async {
+        stubExtraction();
+        stubGenerator(const []);
+        when(
+          () => generator.generateCaptions(
+            audioPath: '/tmp/extracted.wav.wav',
+            localeIdentifier: any(named: 'localeIdentifier'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            _word('Before.', 200, 600),
+            _word('Repeated.', 1200, 1600),
+            _word('After.', 3200, 3600),
+          ],
+        );
+
+        final outcome = await buildService().generateForClips(
+          clips: [
+            _clip('lead', duration: const Duration(seconds: 2), volume: 0),
+            _clip(
+              'source',
+              duration: const Duration(seconds: 4),
+              trimStart: const Duration(seconds: 1),
+              trimEnd: const Duration(seconds: 1),
+            ),
+            _clip('tail', duration: const Duration(seconds: 2), volume: 0),
+          ],
+          audioTracks: [
+            _track(
+              _extractedId,
+              url: '/tmp/extracted.wav',
+              startTime: const Duration(seconds: 1),
+              endTime: const Duration(seconds: 5),
+              anchorClipId: 'source',
+            ),
+          ],
+          localeIdentifier: 'en-US',
+        );
+
+        expect(
+          (outcome as CaptionsGenerated).cues.map(
+            (cue) => (cue.text, cue.start),
+          ),
+          equals([
+            ('Before.', const Duration(milliseconds: 1200)),
+            ('After.', const Duration(milliseconds: 4200)),
+          ]),
+        );
       });
 
       test(
@@ -1097,6 +1213,45 @@ void main() {
               ('Narrated.', const Duration(milliseconds: 2500)),
               ('Clip talk.', const Duration(milliseconds: 4500)),
             ]),
+          );
+        });
+
+        test('one failed take does not discard another take', () async {
+          stubMerge([_offset(0, 6000)]);
+          stubExtraction();
+          stubGenerator(
+            [_word('Kept.', 100, 400)],
+            requireOnDeviceRecognition: true,
+          );
+          when(
+            () => generator.generateCaptions(
+              audioPath: '/tmp/take.m4a.wav',
+              localeIdentifier: any(named: 'localeIdentifier'),
+              requireOnDeviceRecognition: true,
+            ),
+          ).thenThrow(const SpeechNotAuthorizedException());
+          final service = buildService(
+            remote: remoteReturning([_word('Clip.', 4500, 5000)]),
+          );
+
+          final outcome = await service.generateForClips(
+            clips: [_clip('a', duration: const Duration(seconds: 6))],
+            audioTracks: [
+              robotTake(),
+              robotTake().copyWith(
+                id: '${_takeId}_second',
+                url: '/tmp/second_robot.m4a',
+                originalUrl: '/tmp/second.m4a',
+                startTime: const Duration(seconds: 4),
+                endTime: const Duration(seconds: 6),
+              ),
+            ],
+            localeIdentifier: 'en-US',
+          );
+
+          expect(
+            (outcome as CaptionsGenerated).cues.map((cue) => cue.text),
+            equals(['Kept.', 'Clip.']),
           );
         });
 

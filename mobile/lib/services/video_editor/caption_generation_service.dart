@@ -163,28 +163,67 @@ class CaptionGenerationService {
     required Duration totalDuration,
   }) {
     final sources = <_SpeechSource>[];
-    final audibleClipIds = <String>{};
+    final audibleClips = <String, _SpeechSource>{};
     var clipStart = Duration.zero;
     for (final clip in clips) {
       final source = _clipSource(clip, timelineStart: clipStart);
       if (source != null) {
         sources.add(source);
-        audibleClipIds.add(clip.id);
+        audibleClips[clip.id] = source;
       }
       clipStart += clip.playbackDuration;
     }
     for (final track in audioTracks) {
-      // Sound still anchored to the clip it was extracted from repeats that
-      // clip while the clip plays its own sound; caption it once, there.
-      if (audibleClipIds.contains(track.anchorClipId)) continue;
       final source = _trackSource(track, totalDuration: totalDuration);
-      if (source != null) sources.add(source);
+      if (source == null) continue;
+      final anchor = audibleClips[track.anchorClipId];
+      if (anchor == null) {
+        sources.add(source);
+        continue;
+      }
+      // Anchored audio keeps its full sound across the clip's trims (J/L-cut).
+      // Only the shared window repeats the clip; keep the unique head/tail.
+      final beforeEnd = source.timelineEnd < anchor.timelineStart
+          ? source.timelineEnd
+          : anchor.timelineStart;
+      if (beforeEnd > source.timelineStart) {
+        sources.add(_trackWindow(source, source.timelineStart, beforeEnd));
+      }
+      final afterStart = source.timelineStart > anchor.timelineEnd
+          ? source.timelineStart
+          : anchor.timelineEnd;
+      if (afterStart < source.timelineEnd) {
+        sources.add(_trackWindow(source, afterStart, source.timelineEnd));
+      }
     }
     mergeSort(
       sources,
       compare: (a, b) => a.timelineStart.compareTo(b.timelineStart),
     );
     return sources;
+  }
+
+  /// A track's sound restricted to the timeline window [start] to [end].
+  static _SpeechSource _trackWindow(
+    _SpeechSource source,
+    Duration start,
+    Duration end,
+  ) {
+    final startOffset = start - source.timelineStart;
+    final endOffset = end - source.timelineStart;
+    return _SpeechSource(
+      id: source.id,
+      lane: source.lane,
+      media: source.media,
+      filePath: source.filePath,
+      sourceStart: source.sourceStart + startOffset * source.speed,
+      sourceEnd: source.sourceStart + endOffset * source.speed,
+      speed: source.speed,
+      timelineStart: start,
+      extractedStart: source.extractedStart + startOffset,
+      extractedEnd: source.extractedStart + endOffset,
+      onDeviceOnly: source.onDeviceOnly,
+    );
   }
 
   /// The clip's own sound, or `null` when it is muted, has no local file or
@@ -366,20 +405,23 @@ class CaptionGenerationService {
         if (source.onDeviceOnly) source,
     ];
     if (onDeviceOnly.isEmpty) return const [];
-    final result = await _transcribeOnDevice(
-      sources: onDeviceOnly,
-      localeIdentifier: localeIdentifier,
-    );
-    if (result.failure != null) {
-      Log.warning(
-        '🎬 On-device captions failed for tracks with a voice effect; '
-        'keeping the server captions: ${result.failure}',
-        name: _logName,
-        category: LogCategory.video,
+    final words = <_LaneWord>[];
+    for (final source in onDeviceOnly) {
+      final result = await _transcribeOnDevice(
+        sources: [source],
+        localeIdentifier: localeIdentifier,
       );
-      return const [];
+      words.addAll(result.words);
+      if (result.failure != null) {
+        Log.warning(
+          '🎬 On-device captions failed for ${source.id}; '
+          'keeping the other captions: ${result.failure}',
+          name: _logName,
+          category: LogCategory.video,
+        );
+      }
     }
-    return _group(result.words);
+    return _group(words);
   }
 
   /// Transcribes each of [sources] on the device, or stops at the first
