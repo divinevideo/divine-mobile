@@ -342,7 +342,7 @@ class _OverlayControls extends StatelessWidget {
           child: VideoEditorTuneOverlayControls(),
         ),
         // Effects-Editor: reaches down to the preview's edge, where its
-        // on-the-beat card sits; it centers its slider like the others.
+        // on-the-beat card sits, and centers its slider below its toolbar.
         VideoEditorMainState(openSubEditor: .effects) =>
           const VideoEditorEffectsOverlayControls(
             key: ValueKey('Effects-Overlay-Controls'),
@@ -409,8 +409,8 @@ class _BottomActionsState extends State<_BottomActions> {
         SubEditorType.effects => const VideoEditorEffectsBottomBar(
           key: ValueKey('Effects-Editor-Bottom-Bar'),
         ),
-        // Fallback — should not happen since _BottomActions is only
-        // rendered for draw/filter/tune/effects, but handle gracefully.
+        // Nothing open: the bar is collapsed, or collapsing after its
+        // sub-editor closed (see _lastOpened).
         _ => const SizedBox.shrink(),
       },
     );

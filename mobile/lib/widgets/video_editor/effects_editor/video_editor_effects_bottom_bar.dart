@@ -117,8 +117,7 @@ class _EffectsPickerState extends State<_EffectsPicker>
   bool _scrolledUnder = false;
 
   /// Set by [build], from the text size and width it lays out at, and read
-  /// by the scroll handlers in between.
-  late _PickerMetrics _metrics;
+  /// by [_onScroll] and [_scrollGridTo] in between.
   late _GridLayout _layout;
 
   @override
@@ -197,18 +196,18 @@ class _EffectsPickerState extends State<_EffectsPicker>
     final selectedType = context.select(
       (VideoEditorEffectsCubit c) => c.state.selectedType,
     );
-    _metrics = _PickerMetrics(
+    final metrics = _PickerMetrics(
       MediaQuery.textScalerOf(context),
       context.vineColors,
     );
     final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
-    _layout = _GridLayout(_metrics, width: MediaQuery.sizeOf(context).width);
+    _layout = _GridLayout(metrics, width: MediaQuery.sizeOf(context).width);
     return SizedBox(
-      height: _metrics.barExtent + bottomInset,
+      height: metrics.barExtent + bottomInset,
       child: Stack(
         children: [
           Positioned.fill(
-            top: _metrics.tabsExtent,
+            top: metrics.tabsExtent,
             child: NotificationListener<UserScrollNotification>(
               onNotification: (notification) {
                 if (notification.direction != ScrollDirection.idle) {
@@ -223,7 +222,7 @@ class _EffectsPickerState extends State<_EffectsPicker>
                       in _sections.entries) ...[
                     SliverToBoxAdapter(
                       child: SizedBox(
-                        height: _metrics.headerExtentOf(category),
+                        height: metrics.headerExtentOf(category),
                         child: _SectionHeader(category: category),
                       ),
                     ),
@@ -232,7 +231,7 @@ class _EffectsPickerState extends State<_EffectsPicker>
                       sliver: SliverGrid.builder(
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: _layout.columns,
-                          mainAxisExtent: _metrics.rowExtent,
+                          mainAxisExtent: metrics.rowExtent,
                           mainAxisSpacing: _rowSpacing,
                           crossAxisSpacing: _columnSpacing,
                         ),
@@ -260,7 +259,7 @@ class _EffectsPickerState extends State<_EffectsPicker>
           // rather than a box shadow: a soft drop shadow is lost on the dark
           // surface.
           Positioned(
-            top: _metrics.tabsExtent,
+            top: metrics.tabsExtent,
             left: 0,
             right: 0,
             height: _shadowExtent,
@@ -289,15 +288,15 @@ class _EffectsPickerState extends State<_EffectsPicker>
             top: 0,
             left: 0,
             right: 0,
-            height: _metrics.tabsExtent,
+            height: metrics.tabsExtent,
             child: ColoredBox(
               color: context.vineColors.surfaceContainerHigh,
               child: Align(
                 alignment: .bottomCenter,
                 child: _CategoryTabs(
                   controller: tabController,
-                  tabHeight: _metrics.tabHeight,
-                  highlightHeight: _metrics.highlightHeight,
+                  tabHeight: metrics.tabHeight,
+                  highlightHeight: metrics.highlightHeight,
                   onTap: (index) => _scrollGridTo(
                     EditorEffectCategory.values[index],
                     animate: true,

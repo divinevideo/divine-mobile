@@ -65,8 +65,8 @@ class VideoEditorEffectsOverlayControls extends StatelessWidget {
                     alignment: .bottomCenter,
                     child: _DropsSettingsCard(),
                   ),
-                  // Centered between the toolbar and the bottom of the
-                  // preview, where the on-the-beat switch sits.
+                  // Centered between the toolbar and the room kept at the
+                  // bottom for the on-the-beat switch.
                   Padding(
                     padding: const .only(
                       bottom: VideoEditorConstants.bottomBarHeight,
