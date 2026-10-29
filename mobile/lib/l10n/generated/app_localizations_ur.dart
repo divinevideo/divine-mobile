@@ -8916,6 +8916,24 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectComic => 'کامک';
 
   @override
+  String get videoEditorEffectCategoryRetro => 'ریٹرو';
+
+  @override
+  String get videoEditorEffectCategoryGlitch => 'گلچ';
+
+  @override
+  String get videoEditorEffectCategoryDistort => 'بگاڑ';
+
+  @override
+  String get videoEditorEffectCategoryLight => 'روشنی';
+
+  @override
+  String get videoEditorEffectCategoryMotion => 'حرکت';
+
+  @override
+  String get videoEditorEffectCategoryParticles => 'ذرات';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'قطرے ایڈجسٹ کریں';
 
   @override
