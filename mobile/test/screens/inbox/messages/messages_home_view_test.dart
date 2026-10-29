@@ -22,7 +22,12 @@ void main() {
     });
     tearDown(() => cubit.close());
 
-    Widget subject({double textScale = 1, ThemeData? theme}) => MaterialApp(
+    Widget subject({
+      double textScale = 1,
+      ThemeData? theme,
+      int roomsUnreadCount = 0,
+      bool roomsUnreadLimited = false,
+    }) => MaterialApp(
       theme: theme,
       localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -31,9 +36,11 @@ void main() {
         child: Scaffold(
           body: BlocProvider.value(
             value: cubit,
-            child: const MessagesHomeView(
-              direct: TextField(key: Key('direct-draft')),
-              rooms: Text('rooms-content'),
+            child: MessagesHomeView(
+              direct: const TextField(key: Key('direct-draft')),
+              rooms: const Text('rooms-content'),
+              roomsUnreadCount: roomsUnreadCount,
+              roomsUnreadLimited: roomsUnreadLimited,
             ),
           ),
         ),
@@ -57,6 +64,53 @@ void main() {
       expect(find.text('unfinished'), findsOneWidget);
       expect(find.text('rooms-content'), findsNothing);
     });
+
+    testWidgets(
+      'shows aggregate room unread count without changing navigation',
+      (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(subject(roomsUnreadCount: 124));
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        expect(find.text('${l10n.messagesRooms} (99+)'), findsOneWidget);
+        expect(
+          find.bySemanticsLabel(l10n.messagesRoomsUnreadLabel(124, '124')),
+          findsOneWidget,
+        );
+        await tester.tap(find.text('${l10n.messagesRooms} (99+)'));
+        await tester.pump();
+        expect(find.text('rooms-content'), findsOneWidget);
+
+        await tester.pumpWidget(subject());
+        expect(find.text(l10n.messagesRooms), findsOneWidget);
+        expect(find.text('${l10n.messagesRooms} (0)'), findsNothing);
+        semantics.dispose();
+      },
+    );
+
+    testWidgets(
+      'marks the aggregate count as a lower bound for limited history',
+      (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWidget(
+          subject(
+            roomsUnreadCount: 12,
+            roomsUnreadLimited: true,
+          ),
+        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text('${l10n.messagesRooms} (12+)'), findsOneWidget);
+        expect(
+          find.bySemanticsLabel(l10n.messagesRoomsUnreadLabel(12, '12+')),
+          findsOneWidget,
+        );
+        semantics.dispose();
+      },
+    );
 
     testWidgets('pauses animations in the hidden section', (tester) async {
       bool? directAnimates;
@@ -115,9 +169,18 @@ void main() {
       testWidgets('controls support large text in ${theme.brightness}', (
         tester,
       ) async {
-        await tester.pumpWidget(subject(textScale: 2, theme: theme));
+        tester.view.physicalSize = const Size(320, 900);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await tester.pumpWidget(
+          subject(
+            textScale: 2,
+            theme: theme,
+            roomsUnreadCount: 124,
+          ),
+        );
         final l10n = lookupAppLocalizations(const Locale('en'));
-        await tester.tap(find.text(l10n.messagesRooms));
+        await tester.tap(find.text('${l10n.messagesRooms} (99+)'));
         await tester.pump();
         expect(find.text('rooms-content'), findsOneWidget);
         expect(tester.takeException(), isNull);

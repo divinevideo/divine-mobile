@@ -11,6 +11,15 @@ abstract interface class RelayGateway {
   Future<void> publish(Map<String, dynamic> event);
 }
 
+/// Optional historical boundary for the gateway's current subscriptions.
+abstract interface class RelayHistoryStatus {
+  /// Completes once every current subscription has received EOSE.
+  Future<void> get historyReady;
+
+  /// A response reached its raw event limit before EOSE, including duplicates.
+  bool get historyLimited;
+}
+
 abstract interface class AccountScopedStore {
   Future<void> put(String key, String value);
   Future<String?> get(String key);
@@ -118,6 +127,8 @@ class ConcordRepository {
   }
 
   final _changes = StreamController<void>.broadcast();
+  final _incoming = <Future<void>>{};
+  final _closingSignal = Completer<void>();
   Stream<void> get changes => _changes.stream;
   StreamSubscription<Map<String, dynamic>>? _subscription;
   Timer? _expiryTimer;
@@ -237,11 +248,7 @@ class ConcordRepository {
     _subscription = sealedTransport!
         .subscribeWraps(streamPubkey: streamPubkey, limit: historyLimit)
         .listen(
-          (wrap) => unawaited(
-            ingestSealedWrap(wrap).catchError((Object error, StackTrace stack) {
-              if (!_closed) _changes.addError(error, stack);
-            }),
-          ),
+          _ingestIncoming,
           onError: (Object error, StackTrace stack) {
             if (!_closed) _changes.addError(error, stack);
           },
@@ -254,6 +261,32 @@ class ConcordRepository {
       );
     });
     _notify();
+  }
+
+  void _ingestIncoming(Map<String, dynamic> wrap) {
+    late final Future<void> incoming;
+    incoming = ingestSealedWrap(wrap)
+        .catchError((Object error, StackTrace stack) {
+          if (!_closed) _changes.addError(error, stack);
+        })
+        .whenComplete(() => _incoming.remove(incoming));
+    _incoming.add(incoming);
+  }
+
+  /// Waits for relay history and the verified ingestion it already delivered.
+  ///
+  /// Gateways without historical status retain their immediate-start behavior.
+  /// Closing releases the waiter even if a relay never supplies its boundary.
+  Future<void> waitForHistory() async {
+    if (_closed) return;
+    if (relay case final RelayHistoryStatus status) {
+      await Future.any<void>([status.historyReady, _closingSignal.future]);
+    }
+    if (_closed) return;
+    await Future.any<void>([
+      Future.wait<void>(List.of(_incoming)),
+      _closingSignal.future,
+    ]);
   }
 
   String? _tag(Map<String, dynamic> rumor, String name) {
@@ -379,6 +412,7 @@ class ConcordRepository {
   }
 
   Future<void> close() async {
+    if (!_closingSignal.isCompleted) _closingSignal.complete();
     _closed = true;
     _expiryTimer?.cancel();
     await _subscription?.cancel();

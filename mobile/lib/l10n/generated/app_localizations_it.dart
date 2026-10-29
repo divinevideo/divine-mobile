@@ -14651,6 +14651,83 @@ class AppLocalizationsIt extends AppLocalizations {
   String get ideasDescriptionSix => 'Lo lascio qui.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Stanze, $displayCount messaggi non letti',
+      many: 'Stanze, $displayCount messaggi non letti',
+      one: 'Stanze, $displayCount messaggio non letto',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount da leggere',
+      many: '$displayCount da leggere',
+      one: '$displayCount da leggere',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount messaggi non letti',
+      many: '$displayCount messaggi non letti',
+      one: '$displayCount messaggio non letto',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount persone',
+      many: '$displayCount persone',
+      one: '$displayCount persona',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount messaggi',
+      many: '$displayCount messaggi',
+      one: '$displayCount messaggio',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'Ultime 24 ore';
+
+  @override
+  String get messagesRoomLoading => 'Controllo dell’attività…';
+
+  @override
+  String get messagesRoomLoadFailed => 'Impossibile caricare l’attività.';
+
+  @override
+  String get messagesRoomEmpty => 'Nessun messaggio recente. Di’ ciao.';
+
+  @override
   String get messagesDirect => 'Diretti';
 
   @override

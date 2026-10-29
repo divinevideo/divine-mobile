@@ -14540,6 +14540,78 @@ class AppLocalizationsNl extends AppLocalizations {
   String get ideasDescriptionSix => 'Dit laat ik hier achter.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Kamers, $displayCount ongelezen berichten',
+      one: 'Kamers, $displayCount ongelezen bericht',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount nieuw',
+      one: '$displayCount nieuw',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount ongelezen berichten',
+      one: '$displayCount ongelezen bericht',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount personen',
+      one: '$displayCount persoon',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount berichten',
+      one: '$displayCount bericht',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'Afgelopen 24 uur';
+
+  @override
+  String get messagesRoomLoading => 'Activiteit bekijken…';
+
+  @override
+  String get messagesRoomLoadFailed => 'De activiteit kon niet worden geladen.';
+
+  @override
+  String get messagesRoomEmpty => 'Geen recente berichten. Zeg eens hallo.';
+
+  @override
   String get messagesDirect => 'Direct';
 
   @override

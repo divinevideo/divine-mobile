@@ -14408,6 +14408,74 @@ class AppLocalizationsVi extends AppLocalizations {
   String get ideasDescriptionSix => 'Để điều này ở đây.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Phòng, $displayCount tin nhắn chưa đọc',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount mới',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount tin nhắn chưa đọc',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount người',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount tin nhắn',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => '24 giờ qua';
+
+  @override
+  String get messagesRoomLoading => 'Đang kiểm tra hoạt động…';
+
+  @override
+  String get messagesRoomLoadFailed => 'Không tải được hoạt động.';
+
+  @override
+  String get messagesRoomEmpty =>
+      'Gần đây chưa có tin nhắn. Chào mọi người nào.';
+
+  @override
   String get messagesDirect => 'Trực tiếp';
 
   @override

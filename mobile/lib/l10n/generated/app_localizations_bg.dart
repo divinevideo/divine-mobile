@@ -14602,6 +14602,78 @@ class AppLocalizationsBg extends AppLocalizations {
   String get ideasDescriptionSix => 'Оставям това тук.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Стаи, $displayCount непрочетени съобщения',
+      one: 'Стаи, $displayCount непрочетено съобщение',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Нови: $displayCount',
+      one: 'Ново: $displayCount',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount непрочетени съобщения',
+      one: '$displayCount непрочетено съобщение',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount души',
+      one: '$displayCount човек',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount съобщения',
+      one: '$displayCount съобщение',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'Последните 24 ч.';
+
+  @override
+  String get messagesRoomLoading => 'Проверка на активността…';
+
+  @override
+  String get messagesRoomLoadFailed => 'Активността не можа да се зареди.';
+
+  @override
+  String get messagesRoomEmpty => 'Няма скорошни съобщения. Кажи здрасти.';
+
+  @override
   String get messagesDirect => 'Лични';
 
   @override

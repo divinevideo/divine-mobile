@@ -24165,6 +24165,66 @@ abstract class AppLocalizations {
   /// **'Leaving this here.'**
   String get ideasDescriptionSix;
 
+  /// Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Rooms, {displayCount} unread message} other{Rooms, {displayCount} unread messages}}'**
+  String messagesRoomsUnreadLabel(int count, String displayCount);
+
+  /// Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{displayCount} new} other{{displayCount} new}}'**
+  String messagesRoomNewCount(int count, String displayCount);
+
+  /// Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{displayCount} unread message} other{{displayCount} unread messages}}'**
+  String messagesRoomUnreadLabel(int count, String displayCount);
+
+  /// Latest public room message preview with the safely resolved sender name.
+  ///
+  /// In en, this message translates to:
+  /// **'{author}: {message}'**
+  String messagesRoomLatestMessage(String author, String message);
+
+  /// Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{displayCount} person} other{{displayCount} people}}'**
+  String messagesRoomContributors(int count, String displayCount);
+
+  /// Public room messages in the last 24 hours. displayCount can include + when history is incomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{displayCount} message} other{{displayCount} messages}}'**
+  String messagesRoomRecentMessages(int count, String displayCount);
+
+  /// Time window for the adjacent room contributor and message counts.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 24h'**
+  String get messagesRoomActivityPeriod;
+
+  /// Room activity has not finished loading; zero activity is not yet known.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking activity…'**
+  String get messagesRoomLoading;
+
+  /// Room activity load failed, shown alongside a Retry button.
+  ///
+  /// In en, this message translates to:
+  /// **'Activity couldn’t load.'**
+  String get messagesRoomLoadFailed;
+
+  /// Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages.
+  ///
+  /// In en, this message translates to:
+  /// **'No recent messages. Say hello.'**
+  String get messagesRoomEmpty;
+
   /// Label of the chip in the Messages tab that shows the account's direct conversations. Sits beside the Rooms chip.
   ///
   /// In en, this message translates to:

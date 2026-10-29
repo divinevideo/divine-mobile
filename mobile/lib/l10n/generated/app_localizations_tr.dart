@@ -14391,6 +14391,78 @@ class AppLocalizationsTr extends AppLocalizations {
   String get ideasDescriptionSix => 'Bunu buraya bırakıyorum.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Odalar, $displayCount okunmamış mesaj',
+      one: 'Odalar, $displayCount okunmamış mesaj',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount yeni',
+      one: '$displayCount yeni',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount okunmamış mesaj',
+      one: '$displayCount okunmamış mesaj',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount kişi',
+      one: '$displayCount kişi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount mesaj',
+      one: '$displayCount mesaj',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'Son 24 saat';
+
+  @override
+  String get messagesRoomLoading => 'Hareketlilik kontrol ediliyor…';
+
+  @override
+  String get messagesRoomLoadFailed => 'Hareketlilik yüklenemedi.';
+
+  @override
+  String get messagesRoomEmpty => 'Son zamanlarda mesaj yok. Bir merhaba de.';
+
+  @override
   String get messagesDirect => 'Doğrudan';
 
   @override

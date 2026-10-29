@@ -1,6 +1,9 @@
 // ABOUTME: Full-screen mobile room conversation with Divine's shared composer.
 // ABOUTME: Keeps channel context, sender identity, and delivery state readable.
 
+import 'dart:async';
+
+import 'package:concord_protocol/concord_protocol.dart';
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -22,10 +25,64 @@ class ChatScreen extends StatefulWidget {
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   final _controller = TextEditingController();
+  final _scrollController = ScrollController();
+  bool _readScheduled = false;
+  List<ChatMessage> _readSnapshot = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _scrollController.addListener(_scheduleCurrentRead);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _scheduleCurrentRead();
+  }
+
+  void _scheduleCurrentRead() {
+    if (mounted) _scheduleRead(context.read<ChatCubit>().visibleMessages());
+  }
+
+  void _scheduleRead(List<ChatMessage> messages) {
+    final cubit = context.read<ChatCubit>();
+    _readSnapshot = List.unmodifiable(messages);
+    if (_readScheduled || messages.isEmpty || cubit.onRead == null) return;
+    _readScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _readScheduled = false;
+      if (!mounted ||
+          !TickerMode.valuesOf(context).enabled ||
+          ModalRoute.of(context)?.isCurrent == false ||
+          cubit.state.threadRootId != null) {
+        return;
+      }
+      final lifecycle = WidgetsBinding.instance.lifecycleState;
+      if (lifecycle != null && lifecycle != AppLifecycleState.resumed) return;
+      if (_scrollController.hasClients &&
+          _scrollController.position.pixels > 1) {
+        return;
+      }
+      // The reversed list starts at the newest message. Do not acknowledge
+      // incoming messages while reading older history or another route.
+      unawaited(cubit.markRead(_readSnapshot));
+    });
+    WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scheduleCurrentRead();
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _scrollController.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -80,6 +137,7 @@ class _ChatScreenState extends State<ChatScreen> {
     builder: (context, state) {
       final cubit = context.read<ChatCubit>();
       final messages = cubit.visibleMessages();
+      _scheduleRead(messages);
       final community = state.communities
           .where((entry) => entry.id == state.selectedCommunityId)
           .firstOrNull;
@@ -139,6 +197,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: messages.isEmpty
                       ? _EmptyRoom(channel: state.selectedChannelId)
                       : ListView.builder(
+                          controller: _scrollController,
                           reverse: true,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           itemCount: messages.length,

@@ -13,6 +13,8 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/chat/chat_cubit.dart';
 import 'package:openvine/features/chat/chat_page.dart';
 import 'package:openvine/features/chat/chat_screen.dart';
+import 'package:openvine/features/chat/concord_session.dart';
+import 'package:openvine/features/chat/room_activity_provider.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -108,6 +110,75 @@ void main() {
 
     setUp(() => database = AppDatabase.test(NativeDatabase.memory()));
     tearDown(() => database.close());
+
+    testWidgets(
+      'reuses the inbox session and keeps it alive after leaving a room',
+      (tester) async {
+        late _RoomRelay relay;
+        late RoomActivityRepository activity;
+        await tester.runAsync(() async {
+          relay = _RoomRelay();
+          final store = InMemoryConcordStore('a' * 64);
+          final key = pocStreamKeyFor('general');
+          final repository = ConcordRepository(
+            relay: relay,
+            store: store,
+            cipher: _Cipher(),
+            sealedTransport: SealedChatTransport(
+              relay: relay,
+              signer: (_) async => throw StateError('unused'),
+            ),
+          );
+          activity = RoomActivityRepository(
+            ownPubkey: 'a' * 64,
+            channels: [
+              RoomActivityChannel(
+                channelId: pocChannelIdFor('general'),
+                repository: repository,
+                store: store,
+                streamSeedHex: key.seedHex,
+                streamPubkey: key.pubkey,
+              ),
+            ],
+          );
+          await activity.start();
+        });
+        addTearDown(() async {
+          await tester.runAsync(activity.close);
+          await relay.wraps.close();
+        });
+        expect(relay.wraps.hasListener, isTrue);
+        final container = ProviderContainer(
+          overrides: [
+            authServiceProvider.overrideWithValue(_Auth('a' * 64)),
+            databaseProvider.overrideWithValue(database),
+            featureFlagStateProvider.overrideWithValue({
+              FeatureFlag.concordChat: true,
+            }),
+            isDmRestrictedProvider.overrideWithValue(false),
+            roomActivityRepositoryProvider.overrideWithValue(activity),
+          ],
+        );
+        addTearDown(container.dispose);
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: ChatPage(),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.byType(ChatScreen), findsOneWidget);
+        expect(relay.cancelled.isCompleted, isFalse);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+        expect(relay.wraps.hasListener, isTrue);
+        await tester.runAsync(activity.close);
+      },
+    );
 
     testWidgets('closes a running room when its account loses access', (
       tester,

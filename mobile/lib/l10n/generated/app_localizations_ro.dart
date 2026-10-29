@@ -14762,6 +14762,83 @@ class AppLocalizationsRo extends AppLocalizations {
   String get ideasDescriptionSix => 'Las asta aici.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Camere, $displayCount de mesaje necitite',
+      few: 'Camere, $displayCount mesaje necitite',
+      one: 'Camere, $displayCount mesaj necitit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Necitite: $displayCount',
+      few: 'Necitite: $displayCount',
+      one: 'Necitit: $displayCount',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount de mesaje necitite',
+      few: '$displayCount mesaje necitite',
+      one: '$displayCount mesaj necitit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount de persoane',
+      few: '$displayCount persoane',
+      one: '$displayCount persoană',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount de mesaje',
+      few: '$displayCount mesaje',
+      one: '$displayCount mesaj',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'Ultimele 24 de ore';
+
+  @override
+  String get messagesRoomLoading => 'Se verifică activitatea…';
+
+  @override
+  String get messagesRoomLoadFailed => 'Activitatea nu s-a putut încărca.';
+
+  @override
+  String get messagesRoomEmpty => 'Nu sunt mesaje recente. Spune salut.';
+
+  @override
   String get messagesDirect => 'Directe';
 
   @override

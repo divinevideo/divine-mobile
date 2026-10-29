@@ -14636,6 +14636,80 @@ class AppLocalizationsDe extends AppLocalizations {
   String get ideasDescriptionSix => 'Das lasse ich hier.';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Räume, $displayCount ungelesene Nachrichten',
+      one: 'Räume, $displayCount ungelesene Nachricht',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount neu',
+      one: '$displayCount neu',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount ungelesene Nachrichten',
+      one: '$displayCount ungelesene Nachricht',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount Personen',
+      one: '$displayCount Person',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount Nachrichten',
+      one: '$displayCount Nachricht',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'Letzte 24 Std.';
+
+  @override
+  String get messagesRoomLoading => 'Aktivität wird geprüft…';
+
+  @override
+  String get messagesRoomLoadFailed =>
+      'Die Aktivität konnte nicht geladen werden.';
+
+  @override
+  String get messagesRoomEmpty =>
+      'Keine Nachrichten in letzter Zeit. Sag Hallo.';
+
+  @override
   String get messagesDirect => 'Direkt';
 
   @override

@@ -5859,6 +5859,94 @@
   "ideasDescriptionFive": "أردت المشاركة فقط.",
   "ideasTitleSix": "القليل من اليوم",
   "ideasDescriptionSix": "أترك هذا هنا.",
+  "messagesRoomsUnreadLabel": "{count, plural, zero{الغرف، رسائل غير مقروءة: {displayCount}} one{الغرف، {displayCount} رسالة غير مقروءة} two{الغرف، الرسائل غير المقروءة: {displayCount}} few{الغرف، {displayCount} رسائل غير مقروءة} many{الغرف، {displayCount} رسالة غير مقروءة} other{الغرف، {displayCount} رسالة غير مقروءة}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, zero{الجديد: {displayCount}} one{الجديد: {displayCount}} two{الجديد: {displayCount}} few{الجديد: {displayCount}} many{الجديد: {displayCount}} other{الجديد: {displayCount}}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, zero{رسائل غير مقروءة: {displayCount}} one{{displayCount} رسالة غير مقروءة} two{الرسائل غير المقروءة: {displayCount}} few{{displayCount} رسائل غير مقروءة} many{{displayCount} رسالة غير مقروءة} other{{displayCount} رسالة غير مقروءة}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, zero{أشخاص: {displayCount}} one{{displayCount} شخص} two{الأشخاص: {displayCount}} few{{displayCount} أشخاص} many{{displayCount} شخصًا} other{{displayCount} شخص}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, zero{رسائل: {displayCount}} one{{displayCount} رسالة} two{الرسائل: {displayCount}} few{{displayCount} رسائل} many{{displayCount} رسالة} other{{displayCount} رسالة}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "آخر 24 ساعة",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "جارٍ التحقق من النشاط…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "تعذّر تحميل النشاط.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "لا توجد رسائل حديثة. ما رأيك بإلقاء التحية؟",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "مباشرة",
   "messagesRooms": "الغرف",
   "messagesPublicTestRooms": "غرف اختبار عامة",

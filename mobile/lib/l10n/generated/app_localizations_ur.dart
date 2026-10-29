@@ -14462,6 +14462,78 @@ class AppLocalizationsUr extends AppLocalizations {
   String get ideasDescriptionSix => 'یہ یہاں چھوڑ رہا ہوں۔';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'کمرے، $displayCount غیر پڑھے پیغامات',
+      one: 'کمرے، $displayCount غیر پڑھا پیغام',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'نئے: $displayCount',
+      one: 'نیا: $displayCount',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount غیر پڑھے پیغامات',
+      one: '$displayCount غیر پڑھا پیغام',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount لوگ',
+      one: '$displayCount شخص',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount پیغامات',
+      one: '$displayCount پیغام',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'پچھلے 24 گھنٹے';
+
+  @override
+  String get messagesRoomLoading => 'سرگرمی دیکھی جا رہی ہے…';
+
+  @override
+  String get messagesRoomLoadFailed => 'سرگرمی لوڈ نہیں ہو سکی۔';
+
+  @override
+  String get messagesRoomEmpty => 'حال ہی میں کوئی پیغام نہیں آیا۔ سلام کہیں۔';
+
+  @override
   String get messagesDirect => 'براہ راست';
 
   @override

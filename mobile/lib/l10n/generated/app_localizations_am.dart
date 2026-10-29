@@ -14110,6 +14110,78 @@ class AppLocalizationsAm extends AppLocalizations {
   String get ideasDescriptionSix => 'ይህን እዚህ እተዋለሁ።';
 
   @override
+  String messagesRoomsUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ክፍሎች፣ $displayCount ያልተነበቡ መልእክቶች',
+      one: 'ክፍሎች፣ $displayCount ያልተነበበ መልእክት',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomNewCount(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'አዳዲስ፦ $displayCount',
+      one: 'አዲስ፦ $displayCount',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomUnreadLabel(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount ያልተነበቡ መልእክቶች',
+      one: '$displayCount ያልተነበበ መልእክት',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomLatestMessage(String author, String message) {
+    return '$author: $message';
+  }
+
+  @override
+  String messagesRoomContributors(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount ሰዎች',
+      one: '$displayCount ሰው',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String messagesRoomRecentMessages(int count, String displayCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$displayCount መልእክቶች',
+      one: '$displayCount መልእክት',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get messagesRoomActivityPeriod => 'ባለፉት 24 ሰዓታት';
+
+  @override
+  String get messagesRoomLoading => 'እንቅስቃሴ በመፈተሽ ላይ…';
+
+  @override
+  String get messagesRoomLoadFailed => 'እንቅስቃሴውን መጫን አልተቻለም።';
+
+  @override
+  String get messagesRoomEmpty => 'የቅርብ ጊዜ መልእክቶች የሉም። ሰላም ይበሉ።';
+
+  @override
   String get messagesDirect => 'ቀጥታ';
 
   @override

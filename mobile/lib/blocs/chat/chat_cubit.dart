@@ -80,10 +80,16 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     this.sealedAuthor = '',
     this.channelIdFor,
     this.ownsRepository = false,
+    this.initialize,
+    this.onRead,
   }) : super(ChatState(loading: ownsRepository));
   final ConcordRepository _repo;
   final String Function(String channel)? channelIdFor;
   final bool ownsRepository;
+
+  /// Shares the inbox's already-running channel instead of restarting it.
+  final Future<void> Function()? initialize;
+  final Future<void> Function(List<ChatMessage> messages)? onRead;
   StreamSubscription<void>? _updates;
   bool _starting = false;
 
@@ -102,15 +108,19 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     );
     final stream = pocStreamForChannel?.call(state.selectedChannelId);
     try {
-      if (stream == null) throw StateError('missing channel key');
-      await _repo.startChannel(
-        channelId:
-            channelIdFor?.call(state.selectedChannelId) ??
-            state.selectedChannelId,
-        epoch: 0,
-        streamSeedHex: stream.seedHex,
-        streamPubkey: stream.pubkey,
-      );
+      if (initialize case final initialize?) {
+        await initialize();
+      } else {
+        if (stream == null) throw StateError('missing channel key');
+        await _repo.startChannel(
+          channelId:
+              channelIdFor?.call(state.selectedChannelId) ??
+              state.selectedChannelId,
+          epoch: 0,
+          streamSeedHex: stream.seedHex,
+          streamPubkey: stream.pubkey,
+        );
+      }
       refresh(now: DateTime.now().millisecondsSinceEpoch ~/ 1000);
     } on Object catch (error, stack) {
       addError(error, stack);
@@ -118,6 +128,16 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     } finally {
       _starting = false;
       emitIfOpen(state.copyWith(loading: false));
+    }
+  }
+
+  /// Acknowledges only the snapshot actually rendered by the foreground view.
+  Future<void> markRead(Iterable<ChatMessage> messages) async {
+    if (isClosed || state.loading || state.loadFailed || onRead == null) return;
+    try {
+      await onRead!(List.unmodifiable(messages));
+    } on Object catch (error, stack) {
+      if (!isClosed) addError(error, stack);
     }
   }
 

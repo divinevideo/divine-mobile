@@ -5859,6 +5859,94 @@
   "ideasDescriptionFive": "Só queria compartilhar.",
   "ideasTitleSix": "Um pouco de hoje",
   "ideasDescriptionSix": "Vou deixar isso aqui.",
+  "messagesRoomsUnreadLabel": "{count, plural, zero{Salas, {displayCount} mensagens não lidas} one{Salas, {displayCount} mensagem não lida} many{Salas, {displayCount} mensagens não lidas} other{Salas, {displayCount} mensagens não lidas}}",
+  "@messagesRoomsUnreadLabel": {
+    "description": "Accessible Rooms selector label with the full unread count. displayCount includes + when retained room history is incomplete; the visible count is capped at 99+.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomNewCount": "{count, plural, zero{Não lidas: {displayCount}} one{Não lida: {displayCount}} many{Não lidas: {displayCount}} other{Não lidas: {displayCount}}}",
+  "@messagesRoomNewCount": {
+    "description": "Compact new-message badge on a public room. count selects grammar from the full unread count; displayCount can be capped at 99+ or include + when retained history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomUnreadLabel": "{count, plural, zero{{displayCount} mensagens não lidas} one{{displayCount} mensagem não lida} many{{displayCount} mensagens não lidas} other{{displayCount} mensagens não lidas}}",
+  "@messagesRoomUnreadLabel": {
+    "description": "Accessible room unread badge label. displayCount is the full count, with + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomLatestMessage": "{author}: {message}",
+  "@messagesRoomLatestMessage": {
+    "description": "Latest public room message preview with the safely resolved sender name.",
+    "placeholders": {
+      "author": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomContributors": "{count, plural, zero{{displayCount} pessoas} one{{displayCount} pessoa} many{{displayCount} pessoas} other{{displayCount} pessoas}}",
+  "@messagesRoomContributors": {
+    "description": "Unique people who posted in this public room in the last 24 hours, not online presence or membership. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomRecentMessages": "{count, plural, zero{{displayCount} mensagens} one{{displayCount} mensagem} many{{displayCount} mensagens} other{{displayCount} mensagens}}",
+  "@messagesRoomRecentMessages": {
+    "description": "Public room messages in the last 24 hours. displayCount can include + when history is incomplete.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "displayCount": {
+        "type": "String"
+      }
+    }
+  },
+  "messagesRoomActivityPeriod": "Últimas 24 h",
+  "@messagesRoomActivityPeriod": {
+    "description": "Time window for the adjacent room contributor and message counts."
+  },
+  "messagesRoomLoading": "Conferindo a atividade…",
+  "@messagesRoomLoading": {
+    "description": "Room activity has not finished loading; zero activity is not yet known."
+  },
+  "messagesRoomLoadFailed": "Não foi possível carregar a atividade.",
+  "@messagesRoomLoadFailed": {
+    "description": "Room activity load failed, shown alongside a Retry button."
+  },
+  "messagesRoomEmpty": "Não há mensagens recentes. Dê um oi.",
+  "@messagesRoomEmpty": {
+    "description": "Invitation in a public room row when retained history has no recent messages; does not claim the room has never had messages."
+  },
   "messagesDirect": "Diretas",
   "messagesRooms": "Salas",
   "messagesPublicTestRooms": "Salas públicas de teste",
