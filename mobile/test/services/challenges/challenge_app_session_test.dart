@@ -254,6 +254,12 @@ void main() {
       'recording and exact successful-video review survive SQLite reopen',
       () async {
         SharedPreferences.setMockInitialValues({});
+        // The tag's enabled state is a process-wide cache that this test turns
+        // off; later suites in the merged run must not inherit it.
+        addTearDown(() {
+          SharedPreferences.setMockInitialValues({});
+          Nip89ClientTag.resetForTest();
+        });
         await Nip89ClientTag.setEnabled(enabled: true);
         final organizer = SyntheticSigner();
         final creator = SyntheticSigner();
