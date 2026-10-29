@@ -127,6 +127,7 @@ void main() {
       DraftSaveOutcome saveAsDraftResult = DraftSaveOutcome.saved,
       LoopSuggestionCubit? loopCubit,
       ProImageEditorState? editor,
+      VideoEditorMainBloc? mainBloc,
     }) {
       if (state != null) {
         when(() => mockBloc.state).thenReturn(state);
@@ -175,7 +176,9 @@ void main() {
                 onAddEditTextLayer: ([layer]) async => null,
                 child: MultiBlocProvider(
                   providers: [
-                    BlocProvider<VideoEditorMainBloc>.value(value: mockBloc),
+                    BlocProvider<VideoEditorMainBloc>.value(
+                      value: mainBloc ?? mockBloc,
+                    ),
                     BlocProvider<ClipEditorBloc>.value(value: clipEditorBloc),
                     BlocProvider(create: (_) => TextWrapHintCubit()),
                     if (loopCubit == null)
@@ -318,10 +321,12 @@ void main() {
     });
 
     group('interactions', () {
-      testWidgets('hands the edit over once the emoji font loads', (
+      testWidgets('claims Done before the finishing event is processed', (
         tester,
       ) async {
         final editor = _MockEditor();
+        final bloc = VideoEditorMainBloc();
+        addTearDown(bloc.close);
         final font = Completer<bool>();
         debugLoadStickerEmojiFont = () => font.future;
         addTearDown(resetStickerEmojiFontForTesting);
@@ -333,29 +338,64 @@ void main() {
           WidgetLayer(widget: const SizedBox(), meta: meta),
         ]);
         when(() => editor.mounted).thenReturn(true);
-        when(() => mockBloc.isClosed).thenReturn(false);
-        await tester.pumpWidget(buildWidget(editor: editor));
+        await tester.pumpWidget(buildWidget(editor: editor, mainBloc: bloc));
 
-        tester
-            .widget<VideoEditorToolbar>(find.byType(VideoEditorToolbar))
-            .onDone!();
+        final done = tester
+            .widget<VideoEditorToolbar>(
+              find.byType(VideoEditorToolbar),
+            )
+            .onDone!;
+        done();
+        done();
         await tester.pump();
-        verify(
-          () => mockBloc.add(
-            const VideoEditorFinishingChanged(isFinishing: true),
-          ),
-        ).called(1);
+        expect(bloc.state.isFinishing, isTrue);
         verifyNever(editor.doneEditing);
 
         font.complete(true);
         await tester.pump();
 
         verify(editor.doneEditing).called(1);
-        verify(
-          () => mockBloc.add(
-            const VideoEditorFinishingChanged(isFinishing: false),
+        expect(bloc.state.isFinishing, isFalse);
+      });
+
+      testWidgets('Close cancels a pending handover owned by the main bloc', (
+        tester,
+      ) async {
+        final editor = _MockEditor();
+        final bloc = VideoEditorMainBloc();
+        addTearDown(bloc.close);
+        final font = Completer<bool>();
+        debugLoadStickerEmojiFont = () => font.future;
+        addTearDown(resetStickerEmojiFontForTesting);
+        final meta = const SocialStickerData(
+          kind: SocialStickerKind.hashtag,
+          hashtag: 'party🎉',
+        ).toMeta();
+        when(() => editor.activeLayers).thenReturn([
+          WidgetLayer(widget: const SizedBox(), meta: meta),
+        ]);
+        when(() => editor.mounted).thenReturn(true);
+        await tester.pumpWidget(
+          buildWidget(
+            editor: editor,
+            mainBloc: bloc,
+            isAutosavedDraft: true,
+            hasBeenEdited: true,
           ),
-        ).called(1);
+        );
+        tester
+            .widget<VideoEditorToolbar>(find.byType(VideoEditorToolbar))
+            .onDone!();
+        await tester.pump();
+        await tester.tap(find.bySemanticsLabel(closeLabel));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.videoEditorSaveDraftTitle), findsOneWidget);
+
+        font.complete(true);
+        await tester.pump();
+
+        verifyNever(editor.doneEditing);
+        expect(bloc.state.isFinishing, isFalse);
       });
 
       testWidgets('turns Done off while the edit is handed over', (

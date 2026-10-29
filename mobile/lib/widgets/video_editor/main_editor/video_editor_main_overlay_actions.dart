@@ -6,7 +6,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/video_editor/clip_editor/clip_editor_bloc.dart';
 import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
@@ -95,6 +94,7 @@ class _TopActions extends ConsumerWidget {
     });
 
     void close() {
+      context.read<VideoEditorMainBloc>().cancelFinishing();
       if (isAutosavedDraft) {
         _onClosePressed(
           context: context,
@@ -166,9 +166,10 @@ class _TopActions extends ConsumerWidget {
       );
       return;
     }
-    bloc.add(const VideoEditorFinishingChanged(isFinishing: true));
+    final generation = bloc.claimFinishing();
+    if (generation == null) return;
     runDetached(
-      _finishEditing(bloc, scope),
+      _finishEditing(bloc, scope, generation),
       'finish editing',
       logName: 'VideoEditorMainOverlayActions',
       category: LogCategory.video,
@@ -181,6 +182,7 @@ class _TopActions extends ConsumerWidget {
   Future<void> _finishEditing(
     VideoEditorMainBloc bloc,
     VideoEditorScope scope,
+    int generation,
   ) async {
     try {
       final editor = scope.editor;
@@ -190,9 +192,11 @@ class _TopActions extends ConsumerWidget {
           if (SocialStickerData.of(layer) case final sticker?)
             SocialStickerView.textOf(sticker),
       ]);
-      if (editor.mounted) editor.doneEditing();
+      if (bloc.ownsFinishing(generation) && editor.mounted) {
+        editor.doneEditing();
+      }
     } finally {
-      bloc.addIfOpen(const VideoEditorFinishingChanged(isFinishing: false));
+      bloc.releaseFinishing(generation);
     }
   }
 

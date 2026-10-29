@@ -9,6 +9,48 @@ void main() {
   group(VideoEditorMainBloc, () {
     VideoEditorMainBloc buildBloc() => VideoEditorMainBloc();
 
+    group('finishing ownership', () {
+      test('reserves before queued events and releases its state', () async {
+        final bloc = buildBloc();
+        addTearDown(bloc.close);
+        final started = bloc.stream.firstWhere((state) => state.isFinishing);
+        final generation = bloc.claimFinishing();
+
+        expect(generation, isNotNull);
+        expect(bloc.claimFinishing(), isNull);
+        expect(bloc.ownsFinishing(generation!), isTrue);
+        await started;
+        final stopped = bloc.stream.firstWhere((state) => !state.isFinishing);
+        bloc.releaseFinishing(generation);
+        await stopped;
+        expect(bloc.ownsFinishing(generation), isFalse);
+      });
+
+      test('obsolete cleanup cannot release a newer handover', () async {
+        final bloc = buildBloc();
+        addTearDown(bloc.close);
+        final first = bloc.claimFinishing();
+        expect(first, isNotNull);
+        bloc.cancelFinishing();
+        final next = bloc.claimFinishing();
+        expect(next, isNotNull);
+        expect(next, isNot(first));
+
+        bloc.releaseFinishing(first!);
+
+        expect(bloc.ownsFinishing(first), isFalse);
+        expect(bloc.ownsFinishing(next!), isTrue);
+        bloc.releaseFinishing(next);
+      });
+
+      test('cannot reserve after close', () async {
+        final bloc = buildBloc();
+        await bloc.close();
+
+        expect(bloc.claimFinishing(), isNull);
+      });
+    });
+
     test('initial state has correct defaults', () async {
       final bloc = buildBloc();
       expect(bloc.state.canUndo, isFalse);

@@ -49,6 +49,40 @@ class VideoEditorMainBloc
     on<VideoEditorFinishingChanged>(_onFinishingChanged);
   }
 
+  int _finishGeneration = 0;
+  int? _activeFinishGeneration;
+
+  /// Reserves Done synchronously, before the finishing event is processed.
+  /// Returns an owner token, or null when another handover already owns it.
+  int? claimFinishing() {
+    if (isClosed || _activeFinishGeneration != null || state.isFinishing) {
+      return null;
+    }
+    final generation = ++_finishGeneration;
+    _activeFinishGeneration = generation;
+    add(const VideoEditorFinishingChanged(isFinishing: true));
+    return generation;
+  }
+
+  /// Whether an asynchronous handover may still complete its action.
+  bool ownsFinishing(int generation) =>
+      !isClosed && _activeFinishGeneration == generation;
+
+  /// Releases only this handover; an obsolete completion cannot clear a new one.
+  void releaseFinishing(int generation) {
+    if (_activeFinishGeneration != generation) return;
+    _activeFinishGeneration = null;
+    if (!isClosed) {
+      add(const VideoEditorFinishingChanged(isFinishing: false));
+    }
+  }
+
+  /// Cancels a pending Done when Close or system back leaves the edit flow.
+  void cancelFinishing() {
+    final generation = _activeFinishGeneration;
+    if (generation != null) releaseFinishing(generation);
+  }
+
   /// Updates undo/redo state based on editor capabilities.
   void _onCapabilitiesChanged(
     VideoEditorMainCapabilitiesChanged event,
