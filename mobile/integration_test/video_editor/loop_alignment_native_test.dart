@@ -19,8 +19,8 @@ import 'package:openvine/services/video_editor/pve_loop_frame_matcher.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
 import 'package:unified_logger/unified_logger.dart';
 
-/// Only redirects temporary outputs. Decode, metadata, render and cancellation
-/// all call the production native backend, with no channel mocks or overrides.
+/// Redirects only `outputPath`; every other call goes to the production
+/// `PveLoopNativeBackend`, with no channel mocks or overrides.
 class _ArtifactBackend implements LoopNativeBackend {
   _ArtifactBackend(this.directory);
   final Directory directory;
