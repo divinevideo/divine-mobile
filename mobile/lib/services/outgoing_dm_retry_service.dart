@@ -1002,7 +1002,7 @@ class OutgoingDmRetryService {
   Future<_HeldMemberStop> _markInterruptedExhausted(OutgoingDm row) async {
     if (row.recipientWrapStatus == OutgoingWrapStatus.pending &&
         row.recipientWrapEventId != null) {
-      final stop = await _stopHeldMember(row.id);
+      final stop = await _stopHeldMember(row);
       if (stop != _HeldMemberStop.kept) return stop;
     }
     if (row.recipientWrapStatus == OutgoingWrapStatus.sent) {
@@ -1041,13 +1041,7 @@ class OutgoingDmRetryService {
     );
     var stopped = 0;
     for (final row in rows) {
-      // A 1:1 message keeps "Failed to send", so it is never offered: the
-      // conversation of a 1:1 row is the pair of its owner and recipient.
-      final pair = [row.ownerPubkey, row.recipientPubkey];
-      if (row.conversationId == DmRepository.computeConversationId(pair)) {
-        continue;
-      }
-      final stop = await _stopHeldMember(row.id);
+      final stop = await _stopHeldMember(row);
       if (stop == _HeldMemberStop.notReady) {
         return (stopped: stopped, notReady: true);
       }
@@ -1056,13 +1050,20 @@ class OutgoingDmRetryService {
     return (stopped: stopped, notReady: false);
   }
 
-  /// [DmRepository.stopHeldMemberDelivery] for the row [rowId], with the
-  /// error policy of the other arms. Never throws. A [StateError] means the
-  /// repository is not ready and an [ArgumentError] that the row went missing
-  /// or is not ours: both are logged and left alone, unreported. Anything
-  /// else is logged and reported, and reads as kept, so the row gets the
-  /// status it would have had (#10012).
-  Future<_HeldMemberStop> _stopHeldMember(String rowId) async {
+  /// [DmRepository.stopHeldMemberDelivery] for [row], with the error policy
+  /// of the other arms. Never throws. A 1:1 row is kept without asking: it
+  /// keeps "Failed to send". A [StateError] means the repository is not ready
+  /// and an [ArgumentError] that the row went missing or is not ours: both
+  /// are logged and left alone, unreported. Anything else is logged and
+  /// reported, and reads as kept, so the row gets the status it would have
+  /// had (#10012).
+  Future<_HeldMemberStop> _stopHeldMember(OutgoingDm row) async {
+    final rowId = row.id;
+    // The conversation of a 1:1 row is the pair of its owner and recipient.
+    final pair = [row.ownerPubkey, row.recipientPubkey];
+    if (row.conversationId == DmRepository.computeConversationId(pair)) {
+      return _HeldMemberStop.kept;
+    }
     try {
       return await _dmRepository.stopHeldMemberDelivery(
             rumorId: rowId,

@@ -2865,6 +2865,31 @@ void main() {
         verifyTerminalized('held-1to1');
       });
 
+      test('never offers a 1:1 message, which fails as before', () async {
+        when(() => dao.getStillPendingForOwner(any())).thenAnswer(
+          (_) async => [
+            heldExhausted('one-to-one').copyWith(
+              conversationId: DmRepository.computeConversationId([
+                _ownerPubkey,
+                _recipientPubkey,
+              ]),
+            ),
+          ],
+        );
+        stubTerminalize();
+        stubStop(() async => true);
+
+        await buildService(now: () => now).sweep();
+
+        verifyNever(
+          () => dmRepository.stopHeldMemberDelivery(
+            rumorId: any(named: 'rumorId'),
+            maxRetries: any(named: 'maxRetries'),
+          ),
+        );
+        verifyTerminalized('one-to-one');
+      });
+
       test(
         'fails it as before, and reports, when stopping it throws '
         'unexpectedly',
