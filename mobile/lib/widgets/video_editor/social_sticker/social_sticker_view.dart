@@ -75,13 +75,21 @@ class SocialStickerView extends StatelessWidget {
                   ink: palette.ink,
                   shadows: palette.shadows,
                 ),
-                _Line(text: textOf(data), style: palette.textStyle()),
+                _Line(
+                  text: textOf(data),
+                  style: palette.textStyle(),
+                  loadEmojiFont: !overFrames,
+                ),
               ],
             ),
           ),
           _ => StickerPill(
             palette: palette,
-            child: _Line(text: textOf(data), style: palette.textStyle()),
+            child: _Line(
+              text: textOf(data),
+              style: palette.textStyle(),
+              loadEmojiFont: !overFrames,
+            ),
           ),
         },
       ),
@@ -103,10 +111,15 @@ const double _markSize = 48;
 /// player's copy of it has to match the frames at any font size. Its emoji
 /// are drawn in the sticker emoji font, which it loads when it has any.
 class _Line extends StatefulWidget {
-  const _Line({required this.text, required this.style});
+  const _Line({
+    required this.text,
+    required this.style,
+    required this.loadEmojiFont,
+  });
 
   final String text;
   final TextStyle style;
+  final bool loadEmojiFont;
 
   @override
   State<_Line> createState() => _LineState();
@@ -126,12 +139,15 @@ class _LineState extends State<_Line> {
   }
 
   // The text is laid out again on its own once the font is in.
-  void _loadEmojiFont() => runDetached(
-    loadStickerEmojiFontFor([widget.text]),
-    'load the sticker emoji font',
-    logName: 'SocialStickerView',
-    category: LogCategory.video,
-  );
+  void _loadEmojiFont() {
+    if (!widget.loadEmojiFont) return;
+    runDetached(
+      loadStickerEmojiFontFor([widget.text]),
+      'load the sticker emoji font',
+      logName: 'SocialStickerView',
+      category: LogCategory.video,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -183,7 +199,7 @@ class _SoundCreditState extends State<_SoundCredit> {
   }
 
   void _loadEmojiFont() {
-    if (_emojiFontLoaded) return;
+    if (_emojiFontLoaded || widget.overFrames) return;
     runDetached(
       loadStickerEmojiFontFor([SocialStickerView.textOf(widget.data)]).then((
         _,

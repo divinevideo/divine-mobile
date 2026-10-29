@@ -378,10 +378,13 @@ void main() {
       });
 
       testWidgets(
-        'draws a see-through look with an emoji once its font is in',
+        'keeps emoji in the frames even if a font loads later',
         (tester) async {
-          final font = Completer<bool>();
-          debugLoadStickerEmojiFont = () => font.future;
+          var loads = 0;
+          debugLoadStickerEmojiFont = () async {
+            loads++;
+            return true;
+          };
           addTearDown(resetStickerEmojiFontForTesting);
           const party = VideoStickerRegion(
             kind: VideoStickerKind.hashtag,
@@ -396,15 +399,46 @@ void main() {
           await pump(tester, [party]);
 
           expect(find.byType(SocialStickerView), findsNothing);
+          expect(loads, isZero);
           await tapAt(tester, const Offset(180, 320));
           expect(opened, equals([party]));
 
-          font.complete(true);
-          await tester.pumpAndSettle();
+          // An unrelated editor load cannot attest how these frames were
+          // captured. A later playback update must still keep their glyphs.
+          await loadStickerEmojiFont();
+          states.add(_playing(const Duration(milliseconds: 100)));
+          await tester.pump();
 
-          expect(find.text('#party🎉'), findsOneWidget);
+          expect(find.byType(SocialStickerView), findsNothing);
+          expect(loads, equals(1));
         },
       );
+
+      testWidgets('does not download fonts for solid emoji copies', (
+        tester,
+      ) async {
+        var loads = 0;
+        debugLoadStickerEmojiFont = () async {
+          loads++;
+          return true;
+        };
+        addTearDown(resetStickerEmojiFontForTesting);
+        const party = VideoStickerRegion(
+          kind: VideoStickerKind.hashtag,
+          target: 'party🎉',
+          centerX: 0.5,
+          centerY: 0.5,
+          width: 0.4,
+          height: 0.1,
+          style: 'light',
+          label: 'party🎉',
+        );
+        await pump(tester, [party]);
+        await tester.pump();
+
+        expect(find.byType(SocialStickerView), findsOneWidget);
+        expect(loads, isZero);
+      });
 
       testWidgets('keeps a see-through look in a script it lacks as it is', (
         tester,

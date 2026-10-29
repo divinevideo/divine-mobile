@@ -98,13 +98,11 @@ TransitionTimelineMap _timeline(Duration duration) =>
 List<VideoStickerRegion> _regions(
   List<ExportedLayer> layers, {
   Size bodySize = const Size(360, 640),
-  bool emojiFontLoaded = false,
 }) => stickerRegionsFor(
   capturedLayers: layers,
   bodySize: bodySize,
   targetAspectRatio: 9 / 16,
   timelineMap: _timeline(const Duration(seconds: 6)),
-  emojiFontLoaded: emojiFontLoaded,
 );
 
 void main() {
@@ -324,9 +322,8 @@ void main() {
     test('gives a see-through look only to text every phone draws alike', () {
       String? styleOf(
         String name,
-        InfoStickerStyle style, {
-        bool emojiFontLoaded = false,
-      }) => _regions(
+        InfoStickerStyle style,
+      ) => _regions(
         [
           _captured(
             SocialStickerData(
@@ -337,7 +334,6 @@ void main() {
             ),
           ),
         ],
-        emojiFontLoaded: emojiFontLoaded,
       ).single.style;
 
       expect(
@@ -349,14 +345,7 @@ void main() {
       );
       expect(styleOf('Zoë', InfoStickerStyle.dark), equals('dark'));
       expect(styleOf('Lena 🌸', InfoStickerStyle.dark), isNull);
-      expect(
-        styleOf('Lena 🌸', InfoStickerStyle.dark, emojiFontLoaded: true),
-        equals('dark'),
-      );
-      expect(
-        styleOf('東京', InfoStickerStyle.dark, emojiFontLoaded: true),
-        isNull,
-      );
+      expect(styleOf('東京', InfoStickerStyle.dark), isNull);
       // A solid pill hides whatever the frames show beneath.
       expect(styleOf('東京', InfoStickerStyle.light), equals('light'));
     });
@@ -394,7 +383,6 @@ void main() {
           bodySize: null,
           targetAspectRatio: 9 / 16,
           timelineMap: _timeline(const Duration(seconds: 6)),
-          emojiFontLoaded: false,
         ),
         isEmpty,
       );
