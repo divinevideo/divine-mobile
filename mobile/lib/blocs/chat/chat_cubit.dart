@@ -106,7 +106,8 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
   final String Function(String channel)? channelIdFor;
   final bool ownsRepository;
 
-  /// Shares the inbox's already-running channel instead of restarting it.
+  /// Starts the channel through its shared owner instead of
+  /// [ConcordRepository.startChannel], reusing a session already running.
   final Future<void> Function()? initialize;
   final Future<void> Function(List<ChatMessage> messages)? onRead;
   StreamSubscription<void>? _updates;

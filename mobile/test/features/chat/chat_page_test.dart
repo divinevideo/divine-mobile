@@ -174,7 +174,7 @@ void main() {
     tearDown(() => database.close());
 
     testWidgets(
-      'reuses the inbox session and keeps it alive after leaving a room',
+      'reuses the shared room session and keeps it alive after leaving a room',
       (tester) async {
         late _RoomRelay relay;
         late RoomActivityRepository activity;
