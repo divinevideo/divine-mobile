@@ -158,7 +158,7 @@ void main() {
       verify(() => repository.discard(late)).called(1);
     });
     for (final error in [
-      const LoopAlignmentFailure('decode'),
+      const LoopAlignmentFailure('decode /documents/clip.mp4'),
       const LoopAlignmentTimeout(),
     ]) {
       blocTest<LoopSuggestionCubit, LoopSuggestionState>(
@@ -173,7 +173,7 @@ void main() {
           ).thenThrow(error);
           return LoopSuggestionCubit(repository: repository);
         },
-        act: (cubit) => cubit.fix(_input('one')),
+        act: (cubit) => cubit.fix(_input('rev-0b7d2f')),
         expect: () => [
           isA<LoopSuggestionState>().having(
             (s) => s.status,
@@ -189,6 +189,14 @@ void main() {
           ),
         ],
         errors: () => [error],
+        verify: (_) async {
+          final logs = (await LogCaptureService().getAllLogsAsText()).join(
+            '\n',
+          );
+          expect(logs, contains('type=${error.runtimeType}'));
+          expect(logs, isNot(contains('/documents/clip.mp4')));
+          expect(logs, isNot(contains('rev-0b7d2f')));
+        },
       );
     }
     blocTest<LoopSuggestionCubit, LoopSuggestionState>(
