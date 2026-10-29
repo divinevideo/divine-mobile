@@ -313,15 +313,19 @@ void main() {
         when(() => mentions.enroll(any())).thenAnswer((_) async {});
       });
 
-      Future<void> pumpRoom(
+      Future<ProviderContainer> pumpRoom(
         WidgetTester tester, {
         String? communityId,
         String? channelId,
+        ChatMentionRepository? Function()? source,
       }) async {
         final container = ProviderContainer(
           overrides: [
             ...overrides(auth: _Auth('a' * 64)),
-            chatMentionRepositoryProvider.overrideWithValue(mentions),
+            if (source != null)
+              chatMentionRepositoryProvider.overrideWith((_) => source())
+            else
+              chatMentionRepositoryProvider.overrideWithValue(mentions),
           ],
         );
         addTearDown(container.dispose);
@@ -346,6 +350,7 @@ void main() {
           ),
         );
         await tester.pump();
+        return container;
       }
 
       testWidgets('enrolls the room the route opened', (tester) async {
@@ -382,6 +387,26 @@ void main() {
         tester.element(find.byType(ChatPage)).markNeedsBuild();
         await tester.pump();
         verify(() => mentions.enroll('general')).called(1);
+      });
+
+      testWidgets('enrolls the open room with a source rebuilt meanwhile', (
+        tester,
+      ) async {
+        final enrolling = Completer<void>();
+        when(() => mentions.enroll(any())).thenAnswer((_) => enrolling.future);
+        final rebuilt = _Mentions();
+        when(() => rebuilt.enroll(any())).thenAnswer((_) async {});
+        var builds = 0;
+        final container = await pumpRoom(
+          tester,
+          source: () => ++builds == 1 ? mentions : rebuilt,
+        );
+        verify(() => mentions.enroll('general')).called(1);
+        container.invalidate(chatMentionRepositoryProvider);
+        enrolling.complete();
+        await tester.pump();
+        await tester.pump();
+        verify(() => rebuilt.enroll('general')).called(1);
       });
     });
   });
