@@ -609,7 +609,7 @@ void main() {
     );
 
     test(
-      'close stops live delivery before draining a blocked read receipt',
+      'close stops live delivery before draining a blocked read-state write',
       () async {
         final room = _Room('12' * 32);
         final first = room.message('a');

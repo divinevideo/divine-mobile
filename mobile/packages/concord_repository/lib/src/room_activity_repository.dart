@@ -67,7 +67,7 @@ class RoomActivityChannel {
 
 /// Owns room sessions shared by the catalog and the active chat screen.
 ///
-/// Read receipts contain exact message IDs rather than a timestamp watermark:
+/// Read state stores exact message IDs rather than a timestamp watermark:
 /// a late delivery must remain unread even when its timestamp sorts earlier.
 /// Metadata uses a separate key and never rewrites encrypted message records.
 class RoomActivityRepository {
@@ -319,7 +319,7 @@ class RoomActivityRepository {
 
   Future<void> _closeSource(_ActivitySource source) async {
     // Stop the encrypted writer and relay listener immediately, even while
-    // an independent read-receipt write is still awaiting persistence.
+    // an independent read-state write is still awaiting persistence.
     final closing = source.channel.repository.close();
     final subscription = source.subscription;
     await Future.wait<void>([
