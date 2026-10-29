@@ -13,6 +13,9 @@ import 'package:pro_video_editor/core/analysis/similarity_estimator.dart';
 /// All coordinates are upright analysis pixels. The returned pose maps the
 /// reference to the target, about the image center rather than its top left.
 class PveLoopFrameMatcher implements LoopFrameMatcher {
+  /// The edge margin `detectCornersInRect` skips by default.
+  static const _trackingBorder = 8;
+
   @override
   LoopFrameMatch? match(LoopFrame reference, LoopFrame target) {
     final w = reference.width;
@@ -29,27 +32,11 @@ class PveLoopFrameMatcher implements LoopFrameMatcher {
     // Measure the bands inside the trackable image. Subtracting the detector's
     // border from an 8% band left only six pixels on a 180px portrait frame,
     // making gentle drift lose otherwise reliable opposite-edge support.
-    const trackingBorder = 8;
-    final bandX = trackingBorder + (w - 2 * trackingBorder) * .08;
-    final bandY = trackingBorder + (h - 2 * trackingBorder) * .08;
-    final strips = [
-      (0.0, 0.0, bandX, h.toDouble()),
-      (w - bandX, 0.0, w.toDouble(), h.toDouble()),
-      (0.0, 0.0, w.toDouble(), bandY),
-      (0.0, h - bandY, w.toDouble(), h.toDouble()),
-    ];
-    final boundaryPoints = <Float32List>[];
-    for (final strip in strips) {
-      boundaryPoints.add(
-        detectCornersInRect(
-          from.levels.first,
-          left: strip.$1,
-          top: strip.$2,
-          right: strip.$3,
-          bottom: strip.$4,
-        ),
-      );
-    }
+    final boundaryPoints = _bandCorners(
+      from,
+      bandX: _trackingBorder + (w - 2 * _trackingBorder) * .08,
+      bandY: _trackingBorder + (h - 2 * _trackingBorder) * .08,
+    );
     final tracked = _track(from, to, Float32List.fromList(points));
     if (tracked.length < 20) return null;
     final fitting = <(double, double, double, double)>[];
@@ -92,27 +79,10 @@ class PveLoopFrameMatcher implements LoopFrameMatcher {
     // Keep camera identity tied to the original outer edges. The wider support
     // bands can include a subject beside a plain margin; letting those same
     // points define the background would mistake subject motion for drift.
-    final boundaryMatches = <(double, double, double, double)>[];
-    for (final strip in [
-      (0.0, 0.0, w * .08, h.toDouble()),
-      (w * .92, 0.0, w.toDouble(), h.toDouble()),
-      (0.0, 0.0, w.toDouble(), h * .08),
-      (0.0, h * .92, w.toDouble(), h.toDouble()),
-    ]) {
-      boundaryMatches.addAll(
-        _track(
-          from,
-          to,
-          detectCornersInRect(
-            from.levels.first,
-            left: strip.$1,
-            top: strip.$2,
-            right: strip.$3,
-            bottom: strip.$4,
-          ),
-        ),
-      );
-    }
+    final boundaryMatches = [
+      for (final points in _bandCorners(from, bandX: w * .08, bandY: h * .08))
+        ..._track(from, to, points),
+    ];
     final boundaryTraining = [
       for (var i = 0; i < boundaryMatches.length; i++)
         if (i % 3 != 0) boundaryMatches[i],
@@ -238,6 +208,32 @@ class PveLoopFrameMatcher implements LoopFrameMatcher {
       }
     }
     return false;
+  }
+
+  /// Corners in the left, right, top and bottom bands, in that order.
+  List<Float32List> _bandCorners(
+    LumaPyramid frame, {
+    required double bandX,
+    required double bandY,
+  }) {
+    final level = frame.levels.first;
+    final w = level.width.toDouble();
+    final h = level.height.toDouble();
+    return [
+      for (final (left, top, right, bottom) in [
+        (0.0, 0.0, bandX, h),
+        (w - bandX, 0.0, w, h),
+        (0.0, 0.0, w, bandY),
+        (0.0, h - bandY, w, h),
+      ])
+        detectCornersInRect(
+          level,
+          left: left,
+          top: top,
+          right: right,
+          bottom: bottom,
+        ),
+    ];
   }
 
   List<(double, double, double, double)> _track(
