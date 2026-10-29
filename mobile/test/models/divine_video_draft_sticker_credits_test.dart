@@ -91,6 +91,19 @@ void main() {
 
         expect(draft.stickerCredits, equals(const SocialStickerCredits()));
       });
+
+      test('fails rather than credit nothing for a history it cannot read', () {
+        final draft = _draft(
+          editorEditingParameters: const {},
+          editorStateHistory: {
+            'version': '6.5.0',
+            'position': 0,
+            'history': 'not a history',
+          },
+        );
+
+        expect(() => draft.stickerCredits, throwsA(anything));
+      });
     });
   });
 }
