@@ -159,7 +159,8 @@ class ChatCubit extends Cubit<ChatState> with CloseGuardedEmit<ChatState> {
     }
   }
 
-  /// Acknowledges only the snapshot actually rendered by the foreground view.
+  /// Forwards [messages] to [onRead]; callers pass only what the foreground
+  /// view rendered.
   Future<void> markRead(Iterable<ChatMessage> messages) async {
     if (isClosed || state.loading || state.loadFailed || onRead == null) return;
     try {

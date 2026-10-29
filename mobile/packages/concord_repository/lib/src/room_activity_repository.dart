@@ -266,7 +266,10 @@ class RoomActivityRepository {
     _notify();
   }
 
-  /// Acknowledges only the rendered message snapshot after durable storage.
+  /// Durably records [messages] from others as read, starting the room first
+  /// if needed; later arrivals stay unread.
+  ///
+  /// Throws the room's load error or the store's write error.
   Future<void> markRead(
     String channelId,
     Iterable<ChatMessage> messages,
