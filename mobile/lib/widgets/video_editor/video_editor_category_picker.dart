@@ -20,7 +20,7 @@ import 'package:unified_logger/unified_logger.dart';
 ///
 /// The picker reaches down under the system navigation bar, so the grid
 /// scrolls on behind it; the editor must not pad it for it.
-class VideoEditorCategoryPicker<C, T> extends StatelessWidget {
+class VideoEditorCategoryPicker<C extends Object, T> extends StatelessWidget {
   const VideoEditorCategoryPicker({
     required this.sections,
     required this.categoryLabel,
@@ -91,7 +91,7 @@ const EdgeInsets _headerPadding = EdgeInsets.fromLTRB(16, 43, 16, 8);
 /// The width and height of a tile's preview.
 const double _previewSize = 52;
 
-class _CategoryPicker<C, T> extends StatefulWidget {
+class _CategoryPicker<C extends Object, T> extends StatefulWidget {
   const _CategoryPicker({required this.picker});
 
   final VideoEditorCategoryPicker<C, T> picker;
@@ -100,14 +100,17 @@ class _CategoryPicker<C, T> extends StatefulWidget {
   State<_CategoryPicker<C, T>> createState() => _CategoryPickerState<C, T>();
 }
 
-class _CategoryPickerState<C, T> extends State<_CategoryPicker<C, T>>
+class _CategoryPickerState<C extends Object, T>
+    extends State<_CategoryPicker<C, T>>
     with TickerProviderStateMixin, ReducedMotionTabControllerMixin {
   final _gridController = ScrollController();
 
-  /// The tab of the category the grid opens at, if any.
+  /// The tab of the category the grid opens at, if any. A category with no
+  /// section opens the grid at its start.
   late final int? _initialIndex = switch (widget.picker.initialCategory) {
-    final category? => _categories.indexOf(category),
-    null => null,
+    final category? when widget.picker.sections.containsKey(category) =>
+      _categories.indexOf(category),
+    _ => null,
   };
 
   /// Whether scrolling moves the tab highlight. A jump to a section, from a
@@ -147,6 +150,12 @@ class _CategoryPickerState<C, T> extends State<_CategoryPicker<C, T>>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    syncTabController();
+  }
+
+  @override
+  void didUpdateWidget(_CategoryPicker<C, T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
     syncTabController();
   }
 
@@ -413,7 +422,7 @@ class _GridLayout {
       offset +=
           metrics.headerExtentOf(index) +
           rows * metrics.rowExtent +
-          (rows - 1) * _rowSpacing;
+          max(rows - 1, 0) * _rowSpacing;
     }
     return _GridLayout._(columns, titleOffsets);
   }
