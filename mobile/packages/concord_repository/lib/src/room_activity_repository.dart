@@ -105,6 +105,10 @@ class RoomActivityRepository {
   // as current, allowing for a sender whose clock runs fast.
   static const int _maxFutureSkewSeconds = 15 * 60;
 
+  // How often summaries are rebuilt, so a quiet room's activity still ages
+  // out of the 24-hour window.
+  static const Duration _activityRefreshInterval = Duration(minutes: 1);
+
   Map<String, RoomActivitySummary> get summaries =>
       Map.unmodifiable(_summaries);
   Stream<void> get changes => _changes.stream;
@@ -142,7 +146,7 @@ class RoomActivityRepository {
     if (source.started) return Future.value();
     final starting = source.starting;
     if (starting != null) return starting;
-    _activityTimer ??= Timer.periodic(const Duration(minutes: 1), (_) {
+    _activityTimer ??= Timer.periodic(_activityRefreshInterval, (_) {
       _sources.values
           .where((source) => source.started)
           .forEach(_refreshInBackground);
