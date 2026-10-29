@@ -260,6 +260,44 @@ void main() {
 
         expect(cubit.state.dropsSettings.seed, 42);
       });
+
+      group('over a short preview', () {
+        Future<void> openShort(WidgetTester tester) async {
+          cubit.selectType(EditorEffectType.drops);
+          // The preview left above the effects picker on a small phone.
+          await tester.pumpWidget(buildWidget(height: 380));
+          await tester.pumpAndSettle();
+          await tester.tap(find.text(l10n.videoEditorDropsSettingsTitle));
+          await tester.pumpAndSettle();
+        }
+
+        testWidgets('open below the toolbar', (tester) async {
+          await openShort(tester);
+
+          expect(tester.takeException(), isNull);
+          expect(find.text(l10n.videoEditorDropsCountLabel), findsOneWidget);
+          expect(
+            tester.getRect(find.byType(ExpansionTile)).top,
+            greaterThanOrEqualTo(
+              tester.getRect(find.bySemanticsLabel(doneLabel)).bottom,
+            ),
+          );
+        });
+
+        testWidgets('close again from the start of their title, without '
+            'closing the editor', (tester) async {
+          await openShort(tester);
+          final title = tester.getRect(
+            find.text(l10n.videoEditorDropsSettingsTitle),
+          );
+
+          await tester.tapAt(Offset(title.left + 8, title.center.dy));
+          await tester.pumpAndSettle();
+
+          expect(cubit.state.isEditing, isTrue);
+          expect(find.text(l10n.videoEditorDropsCountLabel), findsNothing);
+        });
+      });
     });
 
     group('toolbar', () {
