@@ -214,8 +214,9 @@ class _DropsSettingsCard extends StatelessWidget {
   static const EdgeInsets _margin = EdgeInsets.fromLTRB(16, 16, 72, 16);
   static const EdgeInsets _childrenPadding = EdgeInsets.fromLTRB(16, 0, 16, 16);
 
-  /// A one-line [ListTile]'s height and the padding it keeps around a title
-  /// taller than that, which the card's title row is.
+  /// A one-line [ListTile]'s height before visual density, and the padding
+  /// it keeps around a title taller than that. The card's title row is one,
+  /// its title kept to a single line.
   static const double _titleRowMinHeight = 56;
   static const double _titleRowVerticalPadding = 8;
 
@@ -236,7 +237,8 @@ class _DropsSettingsCard extends StatelessWidget {
             MediaQuery.textScalerOf(context).scale(titleStyle.fontSize!) *
             (titleStyle.height ?? 1.2);
         final titleRow = max(
-          _titleRowMinHeight,
+          _titleRowMinHeight +
+              Theme.of(context).visualDensity.baseSizeAdjustment.dy,
           titleLine + 2 * _titleRowVerticalPadding,
         );
         // The settings scroll in what the area under the toolbar leaves
@@ -268,6 +270,8 @@ class _DropsSettingsCard extends StatelessWidget {
                   title: Text(
                     l10n.videoEditorDropsSettingsTitle,
                     style: titleStyle,
+                    maxLines: 1,
+                    overflow: .ellipsis,
                   ),
                   shape: const Border(),
                   collapsedShape: const Border(),

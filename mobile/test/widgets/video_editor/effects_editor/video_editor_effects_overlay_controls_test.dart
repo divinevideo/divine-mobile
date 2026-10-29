@@ -67,7 +67,7 @@ void main() {
 
     tearDown(() => cubit.close());
 
-    Widget buildWidget({double height = 600}) {
+    Widget buildWidget({double height = 600, double width = 400}) {
       return MaterialApp(
         localizationsDelegates: appLocalizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -96,7 +96,7 @@ void main() {
                 BlocProvider<VideoEditorMainBloc>.value(value: mainBloc),
               ],
               child: SizedBox(
-                width: 400,
+                width: width,
                 height: height,
                 child: const VideoEditorEffectsOverlayControls(),
               ),
@@ -262,10 +262,13 @@ void main() {
       });
 
       group('over a short preview', () {
-        Future<void> openShort(WidgetTester tester) async {
+        Future<void> openShort(
+          WidgetTester tester, {
+          double width = 400,
+        }) async {
           cubit.selectType(EditorEffectType.drops);
           // The preview left above the effects picker on a small phone.
-          await tester.pumpWidget(buildWidget(height: 380));
+          await tester.pumpWidget(buildWidget(height: 380, width: width));
           await tester.pumpAndSettle();
           await tester.tap(find.text(l10n.videoEditorDropsSettingsTitle));
           await tester.pumpAndSettle();
@@ -276,6 +279,21 @@ void main() {
 
           expect(tester.takeException(), isNull);
           expect(find.text(l10n.videoEditorDropsCountLabel), findsOneWidget);
+          expect(
+            tester.getRect(find.byType(ExpansionTile)).top,
+            greaterThanOrEqualTo(
+              tester.getRect(find.bySemanticsLabel(doneLabel)).bottom,
+            ),
+          );
+        });
+
+        testWidgets('keep their title to one line on a narrow phone with '
+            'large text', (tester) async {
+          tester.platformDispatcher.textScaleFactorTestValue = 2;
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+          await openShort(tester, width: 320);
+
+          expect(tester.takeException(), isNull);
           expect(
             tester.getRect(find.byType(ExpansionTile)).top,
             greaterThanOrEqualTo(
