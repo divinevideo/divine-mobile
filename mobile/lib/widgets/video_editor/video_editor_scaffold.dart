@@ -368,7 +368,7 @@ class _BottomActions extends StatefulWidget {
 class _BottomActionsState extends State<_BottomActions> {
   /// The sub-editor last open. Closing clears the open one at once, while the
   /// bar collapses for a moment longer; keeping its height for that moment
-  /// stops the taller effects bar from snapping down first.
+  /// stops the taller effects and filter bars from snapping down first.
   SubEditorType? _lastOpened;
 
   @override
@@ -382,20 +382,24 @@ class _BottomActionsState extends State<_BottomActions> {
     return SizedBox(
       height:
           systemNavigationBarHeight +
-          (_lastOpened == SubEditorType.effects
-              ? VideoEditorEffectsBottomBar.heightOf(context)
-              : VideoEditorConstants.bottomBarHeight),
+          switch (_lastOpened) {
+            SubEditorType.effects => VideoEditorEffectsBottomBar.heightOf(
+              context,
+            ),
+            SubEditorType.filter => VideoEditorFilterBottomBar.heightOf(
+              context,
+            ),
+            _ => VideoEditorConstants.bottomBarHeight,
+          },
       child: switch (openSubEditor) {
         // Draw-Bar
         SubEditorType.draw => const VideoEditorDrawBottomBar(
           key: ValueKey('Draw-Editor-Bottom-Bar'),
         ),
-        // Filter-Bar
-        SubEditorType.filter => Padding(
-          padding: .only(bottom: systemNavigationBarHeight),
-          child: const VideoEditorFilterBottomBar(
-            key: ValueKey('Filter-Editor-Bottom-Bar'),
-          ),
+        // Filter-Bar: reaches under the system navigation bar, where its
+        // grid scrolls on.
+        SubEditorType.filter => const VideoEditorFilterBottomBar(
+          key: ValueKey('Filter-Editor-Bottom-Bar'),
         ),
         // Tune-Bar
         SubEditorType.tune => Padding(

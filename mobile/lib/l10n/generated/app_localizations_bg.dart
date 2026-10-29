@@ -9013,6 +9013,27 @@ class AppLocalizationsBg extends AppLocalizations {
   String get videoEditorEffectCategoryParticles => 'Частици';
 
   @override
+  String get videoEditorFilterCategoryNatural => 'Естествени';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'Наситени';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'Топли';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'Студени';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'Винтидж';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'Черно-бели';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'Оттенъци';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'Настройка на капките';
 
   @override

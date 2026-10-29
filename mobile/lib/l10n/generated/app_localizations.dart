@@ -15065,6 +15065,48 @@ abstract class AppLocalizations {
   /// **'Particles'**
   String get videoEditorEffectCategoryParticles;
 
+  /// Name of a group in the colour filter picker of the video editor: filters that lift the picture subtly and keep its colours true to life.
+  ///
+  /// In en, this message translates to:
+  /// **'Natural'**
+  String get videoEditorFilterCategoryNatural;
+
+  /// Name of a group in the colour filter picker of the video editor: filters that add colour and contrast.
+  ///
+  /// In en, this message translates to:
+  /// **'Vibrant'**
+  String get videoEditorFilterCategoryVibrant;
+
+  /// Name of a group in the colour filter picker of the video editor: filters that give the picture a golden, orange or yellow cast. Warm as in colour temperature.
+  ///
+  /// In en, this message translates to:
+  /// **'Warm'**
+  String get videoEditorFilterCategoryWarm;
+
+  /// Name of a group in the colour filter picker of the video editor: filters that give the picture a blue or green cast. Cool as in colour temperature, not as in great.
+  ///
+  /// In en, this message translates to:
+  /// **'Cool'**
+  String get videoEditorFilterCategoryCool;
+
+  /// Name of a group in the colour filter picker of the video editor: filters that make the picture look faded, washed out or sepia, like an old photo.
+  ///
+  /// In en, this message translates to:
+  /// **'Vintage'**
+  String get videoEditorFilterCategoryVintage;
+
+  /// Name of a group in the colour filter picker of the video editor: black-and-white filters. Short, as it labels a tab.
+  ///
+  /// In en, this message translates to:
+  /// **'B&W'**
+  String get videoEditorFilterCategoryBlackAndWhite;
+
+  /// Name of a group in the colour filter picker of the video editor: filters that lay one strong colour, such as red or blue, over the whole picture.
+  ///
+  /// In en, this message translates to:
+  /// **'Tints'**
+  String get videoEditorFilterCategoryTints;
+
   /// Header of the expandable card in the video effects editor that holds the settings of the Drops effect.
   ///
   /// In en, this message translates to:

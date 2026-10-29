@@ -8733,6 +8733,27 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoEditorEffectCategoryParticles => 'ቅንጣቶች';
 
   @override
+  String get videoEditorFilterCategoryNatural => 'ተፈጥሯዊ';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'ደማቅ';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'ሞቃት';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'ቀዝቃዛ';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'ቪንቴጅ';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'ጥቁር እና ነጭ';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'ቀለሞች';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'ጠብታዎችን አስተካክል';
 
   @override

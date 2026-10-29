@@ -9185,6 +9185,27 @@ class AppLocalizationsTe extends AppLocalizations {
   String get videoEditorEffectCategoryParticles => 'కణాలు';
 
   @override
+  String get videoEditorFilterCategoryNatural => 'సహజం';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'ప్రకాశవంతం';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'వెచ్చని';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'చల్లని';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'వింటేజ్';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'నలుపు తెలుపు';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'రంగులు';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'బిందువుల సర్దుబాటు';
 
   @override

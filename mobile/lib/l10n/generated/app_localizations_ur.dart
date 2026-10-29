@@ -8934,6 +8934,27 @@ class AppLocalizationsUr extends AppLocalizations {
   String get videoEditorEffectCategoryParticles => 'ذرات';
 
   @override
+  String get videoEditorFilterCategoryNatural => 'قدرتی';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => 'شوخ';
+
+  @override
+  String get videoEditorFilterCategoryWarm => 'گرم';
+
+  @override
+  String get videoEditorFilterCategoryCool => 'ٹھنڈا';
+
+  @override
+  String get videoEditorFilterCategoryVintage => 'ونٹیج';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => 'سیاہ و سفید';
+
+  @override
+  String get videoEditorFilterCategoryTints => 'رنگ';
+
+  @override
   String get videoEditorDropsSettingsTitle => 'قطرے ایڈجسٹ کریں';
 
   @override

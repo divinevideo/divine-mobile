@@ -8419,6 +8419,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoEditorEffectCategoryParticles => '粒子';
 
   @override
+  String get videoEditorFilterCategoryNatural => '自然';
+
+  @override
+  String get videoEditorFilterCategoryVibrant => '鲜艳';
+
+  @override
+  String get videoEditorFilterCategoryWarm => '暖色';
+
+  @override
+  String get videoEditorFilterCategoryCool => '冷色';
+
+  @override
+  String get videoEditorFilterCategoryVintage => '怀旧';
+
+  @override
+  String get videoEditorFilterCategoryBlackAndWhite => '黑白';
+
+  @override
+  String get videoEditorFilterCategoryTints => '色调';
+
+  @override
   String get videoEditorDropsSettingsTitle => '调节水滴';
 
   @override
