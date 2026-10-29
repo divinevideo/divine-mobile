@@ -1,5 +1,5 @@
-// ABOUTME: Tests the sheet a link sticker opens: the address shown in full
-// ABOUTME: before the link opens, and the sheet closing once it has.
+// ABOUTME: Tests the sheet a link sticker opens: the whole domain and the
+// ABOUTME: address shown before the link opens, and the sheet closing after.
 
 import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -42,7 +42,7 @@ void main() {
     }
 
     group('renders', () {
-      testWidgets('the domain and the full address before opening', (
+      testWidgets('the domain and the address before opening', (
         tester,
       ) async {
         await openSheet(tester);
@@ -56,13 +56,20 @@ void main() {
       });
 
       testWidgets('the whole domain, however long', (tester) async {
+        tester.view.physicalSize = const Size(390, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
         // Cut at its end, this host would read as divine.video.
         const host =
             'divine.video.account-security-check.verify-login-session.example.com';
         await openSheet(tester, url: 'https://$host/login');
 
         final domain = tester.renderObject<RenderParagraph>(find.text(host));
+        final lineHeight = domain.getFullHeightForCaret(
+          const TextPosition(offset: 0),
+        );
 
+        expect(domain.size.height, greaterThan(lineHeight * 1.5));
         expect(domain.didExceedMaxLines, isFalse);
       });
     });

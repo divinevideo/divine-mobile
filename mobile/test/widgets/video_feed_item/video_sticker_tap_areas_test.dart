@@ -288,26 +288,29 @@ void main() {
         expect(opened, equals([onEdge]));
       });
 
-      testWidgets('turns its button with the sticker', (tester) async {
-        // Upright, the sticker reaches 72 points above and below its centre
-        // but only 24 to either side, half the smallest target.
-        const upright = VideoStickerRegion(
+      testWidgets('turns its button with the sticker, clockwise', (
+        tester,
+      ) async {
+        // 144 points long and 48 high, the smallest target. Turned an eighth
+        // clockwise, it runs down to the right of its centre; neither point
+        // below lies in the unturned box.
+        const slanted = VideoStickerRegion(
           kind: VideoStickerKind.hashtag,
           target: 'summer',
           centerX: 0.5,
           centerY: 0.5,
           width: 0.4,
           height: 0.05,
-          rotation: math.pi / 2,
+          rotation: math.pi / 4,
         );
-        await pump(tester, [upright]);
+        await pump(tester, [slanted]);
 
-        await tapAt(tester, const Offset(180, 320 - 60));
-        expect(opened, equals([upright]));
+        await tapAt(tester, const Offset(222, 362));
+        expect(opened, equals([slanted]));
         expect(playerTaps, isZero);
 
-        await tapAt(tester, const Offset(180 + 60, 320));
-        expect(opened, equals([upright]));
+        await tapAt(tester, const Offset(222, 278));
+        expect(opened, equals([slanted]));
         expect(playerTaps, equals(1));
       });
     });
