@@ -340,6 +340,8 @@ class ChatMentionRepository implements LocalNotificationSource {
         _seen
           ..clear()
           ..addAll(before);
+        // A rebuild during the write may have published these rows as read.
+        reevaluate();
         rethrow;
       }
       reevaluate();

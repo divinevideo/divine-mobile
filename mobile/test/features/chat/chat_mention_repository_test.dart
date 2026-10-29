@@ -24,6 +24,21 @@ class _FailingStore extends InMemoryConcordStore {
   }
 }
 
+/// Holds the next write until [held] completes, then refuses it.
+class _RefusedLaterStore extends InMemoryConcordStore {
+  _RefusedLaterStore(super.pubkey);
+  Completer<void>? held;
+  @override
+  Future<void> put(String key, String value) async {
+    if (held case final gate?) {
+      held = null;
+      await gate.future;
+      throw StateError('write refused');
+    }
+    await super.put(key, value);
+  }
+}
+
 /// Holds every read until [gate] completes and counts writes.
 class _GatedStore extends InMemoryConcordStore {
   _GatedStore(super.pubkey);
@@ -647,6 +662,31 @@ void main() {
     });
 
     group('markSeen', () {
+      test('a refused read republishes the row as unread', () async {
+        final store = _RefusedLaterStore(me);
+        final repo = ChatMentionRepository(
+          owner: me,
+          communityId: 'community-test',
+          store: store,
+          now: () => 1000,
+          canNotify: (_) => true,
+        );
+        addTearDown(repo.close);
+        await repo.enroll('general');
+        repo.updateRoom('general', [message(friend, 1001)]);
+        final write = store.held = Completer<void>();
+        final marking = expectLater(
+          repo.markSeen([repo.items.single.id]),
+          throwsStateError,
+        );
+        await pumpEventQueue();
+        repo.reevaluate();
+        expect(repo.items.single.isRead, isTrue);
+        write.complete();
+        await marking;
+        expect(repo.items.single.isRead, isFalse);
+      });
+
       test(
         'a mark-all before state loads does not overwrite saved rooms',
         () async {
