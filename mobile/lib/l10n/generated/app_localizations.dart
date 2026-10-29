@@ -25376,6 +25376,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Technical details'**
   String get challengeDetails;
+
+  /// Challenge deadline in the viewer display timezone, including its actual zone label.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline: {deadline} ({timeZone})'**
+  String challengeLocalDeadline(String deadline, String timeZone);
+
+  /// No description provided for @challengeEnter.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter challenge'**
+  String get challengeEnter;
+
+  /// No description provided for @challengeEnterVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter this video'**
+  String get challengeEnterVideo;
+
+  /// No description provided for @challengeOrganizer.
+  ///
+  /// In en, this message translates to:
+  /// **'Organizer'**
+  String get challengeOrganizer;
+
+  /// No description provided for @challengeAllRules.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all rules'**
+  String get challengeAllRules;
+
+  /// No description provided for @challengeWinners.
+  ///
+  /// In en, this message translates to:
+  /// **'Winners'**
+  String get challengeWinners;
+
+  /// No description provided for @challengeAwaitingResults.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting results'**
+  String get challengeAwaitingResults;
+
+  /// No description provided for @challengeOrganizerTimezone.
+  ///
+  /// In en, this message translates to:
+  /// **'Organizer timezone: {timeZone}'**
+  String challengeOrganizerTimezone(String timeZone);
 }
 
 class _AppLocalizationsDelegate

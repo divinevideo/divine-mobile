@@ -15538,4 +15538,32 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String get challengeDetails => 'Technical details';
+
+  @override
+  String challengeLocalDeadline(String deadline, String timeZone) {
+    return 'Deadline: $deadline ($timeZone)';
+  }
+
+  @override
+  String get challengeEnter => 'Enter challenge';
+
+  @override
+  String get challengeEnterVideo => 'Enter this video';
+
+  @override
+  String get challengeOrganizer => 'Organizer';
+
+  @override
+  String get challengeAllRules => 'Show all rules';
+
+  @override
+  String get challengeWinners => 'Winners';
+
+  @override
+  String get challengeAwaitingResults => 'Awaiting results';
+
+  @override
+  String challengeOrganizerTimezone(String timeZone) {
+    return 'Organizer timezone: $timeZone';
+  }
 }

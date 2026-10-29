@@ -12145,5 +12145,15 @@
   "challengeDetails": "Technical details",
   "@challengeDetails": {
     "description": "Challenge entry review challengeDetails"
-  }
+  },
+  "challengeLocalDeadline": "Deadline: {deadline} ({timeZone})",
+  "@challengeLocalDeadline": {"description": "Challenge deadline in the viewer display timezone, including its actual zone label.", "placeholders": {"deadline": {"type": "String"}, "timeZone": {"type": "String"}}},
+  "challengeEnter": "Enter challenge",
+  "challengeEnterVideo": "Enter this video",
+  "challengeOrganizer": "Organizer",
+  "challengeAllRules": "Show all rules",
+  "challengeWinners": "Winners",
+  "challengeAwaitingResults": "Awaiting results",
+  "challengeOrganizerTimezone": "Organizer timezone: {timeZone}",
+  "@challengeOrganizerTimezone": {"placeholders": {"timeZone": {"type": "String"}}}
 }

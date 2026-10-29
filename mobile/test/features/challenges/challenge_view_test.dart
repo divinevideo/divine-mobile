@@ -43,7 +43,7 @@ void main() {
         );
         await tester.pumpAndSettle();
         expect(find.text('Synthetic challenge'), findsOneWidget);
-        expect(find.text('Record a video'), findsOneWidget);
+        expect(find.text('Enter challenge'), findsOneWidget);
         await cubit.selectVideo(h.video.id);
         await tester.pumpAndSettle();
         expect(find.text('Human-made synthetic rules.'), findsOneWidget);
@@ -56,10 +56,10 @@ void main() {
           findsOneWidget,
         );
         expect(find.text(h.video.id), findsNothing);
-        await tester.scrollUntilVisible(find.text('Agree and submit'), 150);
+        await tester.scrollUntilVisible(find.text('Enter this video'), 150);
         await tester.pump();
         final agree = find.ancestor(
-          of: find.text('Agree and submit'),
+          of: find.text('Enter this video'),
           matching: find.byType(DivineButton),
         );
         expect(tester.widget<DivineButton>(agree).onPressed, isNull);

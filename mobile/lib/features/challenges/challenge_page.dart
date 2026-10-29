@@ -13,7 +13,9 @@ import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/user_profile_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
+import 'package:openvine/router/routes/profile_routes.dart';
 import 'package:openvine/screens/video_recorder_screen.dart';
+import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:uuid/uuid.dart';
 
 class ChallengePage extends ConsumerWidget {
@@ -93,21 +95,45 @@ class ChallengePage extends ConsumerWidget {
             unawaited(cubit.load());
             return cubit;
           },
-          child: ChallengeView(
-            ownerName: ref
-                .watch(userProfileReactiveProvider(session.store.owner))
-                .value
-                ?.bestDisplayName,
-            onRecord: (context, id) async {
-              await context.push<void>(
-                Uri(
-                  path: VideoRecorderScreen.path,
-                  queryParameters: {'challenge_recording': id},
-                ).toString(),
+          child: Builder(
+            builder: (context) {
+              final organizer = context.select(
+                (ChallengeParticipationCubit cubit) =>
+                    cubit.state.read?.view.definition?.event.pubkey,
               );
-              if (context.mounted) {
-                await context.read<ChallengeParticipationCubit>().load();
-              }
+              final organizerName = organizer == null
+                  ? null
+                  : ref
+                        .watch(userProfileReactiveProvider(organizer))
+                        .value
+                        ?.bestDisplayName;
+              return ChallengeView(
+                organizerName: organizerName,
+                onOrganizerTap: organizer == null
+                    ? null
+                    : () {
+                        unawaited(
+                          OtherProfileRouteData(
+                            npub: NostrKeyUtils.encodePubKey(organizer),
+                          ).push<void>(context),
+                        );
+                      },
+                ownerName: ref
+                    .watch(userProfileReactiveProvider(session.store.owner))
+                    .value
+                    ?.bestDisplayName,
+                onRecord: (context, id) async {
+                  await context.push<void>(
+                    Uri(
+                      path: VideoRecorderScreen.path,
+                      queryParameters: {'challenge_recording': id},
+                    ).toString(),
+                  );
+                  if (context.mounted) {
+                    await context.read<ChallengeParticipationCubit>().load();
+                  }
+                },
+              );
             },
           ),
         );
