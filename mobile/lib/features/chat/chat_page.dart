@@ -74,12 +74,12 @@ class ChatPage extends ConsumerWidget {
     if (repositoryBuilder == null && shared == null) {
       return RouteErrorScreen(message: context.l10n.routeInvalidConversationId);
     }
-    final channel = channelId ?? 'general';
+    final channel = channelId ?? pocChatDefaultChannel;
     // Validate before looking up a shared repository so malformed URLs remain
     // ordinary route errors rather than missing-map-entry exceptions.
     if (!const ChatState().communities.any(
           (community) =>
-              community.id == (communityId ?? 'community-test') &&
+              community.id == (communityId ?? pocChatCommunityId) &&
               community.channels.contains(channel),
         ) ||
         (communityId == null) != (channelId == null)) {
@@ -97,7 +97,7 @@ class ChatPage extends ConsumerWidget {
               store: DriftConcordStore(
                 dao: database!.concordStoreDao,
                 account: pubkey,
-                scope: '$concordRelayUrl/${channelId ?? 'general'}',
+                scope: '$concordRelayUrl/${channelId ?? pocChatDefaultChannel}',
               ),
             ),
         pocStreamForChannel: pocStreamKeyFor,
