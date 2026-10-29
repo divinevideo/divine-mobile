@@ -524,6 +524,38 @@ void main() {
     const pubkey =
         '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
+    test('publishes conflicts without rebuilding auth subscriptions', () async {
+      final authStateController = StreamController<AuthState>.broadcast();
+      addTearDown(authStateController.close);
+      final authService = _MockAuthService();
+      when(() => authService.authState).thenReturn(AuthState.authenticated);
+      when(() => authService.currentPublicKeyHex).thenReturn(pubkey);
+      when(
+        () => authService.authStateStream,
+      ).thenAnswer((_) => authStateController.stream);
+      final container = ProviderContainer(
+        overrides: [authServiceProvider.overrideWithValue(authService)],
+      );
+      addTearDown(container.dispose);
+      final subscription = container.listen(
+        registeredKeyConflictProvider,
+        (_, _) {},
+        fireImmediately: true,
+      );
+      addTearDown(subscription.close);
+      final store = container.read(registeredKeyConflictStoreProvider);
+
+      store.record(expectedPubkeyHex: pubkey, email: 'first@example.com');
+      await pumpEventQueue();
+      expect(subscription.read()?.email, 'first@example.com');
+
+      store.record(expectedPubkeyHex: pubkey, email: 'second@example.com');
+      await pumpEventQueue();
+      expect(subscription.read()?.email, 'second@example.com');
+      // The auth-state mirror and conflict notifier each subscribe once.
+      verify(() => authService.authStateStream).called(2);
+    });
+
     test('clears the active conflict when authentication ends', () async {
       var authState = AuthState.authenticated;
       final authStateController = StreamController<AuthState>.broadcast();

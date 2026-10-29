@@ -288,21 +288,34 @@ final registeredKeyConflictStoreProvider = Provider<RegisteredKeyConflictStore>(
   },
 );
 
-final registeredKeyConflictProvider = Provider<RegisteredKeyConflict?>((ref) {
-  final authState = ref.watch(currentAuthStateProvider);
-  final authService = ref.watch(authServiceProvider);
-  final store = ref.watch(registeredKeyConflictStoreProvider);
-  store.syncAuthState(authState);
-  final storeSubscription = store.stream.listen((_) {
-    ref.invalidateSelf();
-  });
-  final authSubscription = authService.authStateStream.listen(
-    store.syncAuthState,
-  );
-  ref.onDispose(storeSubscription.cancel);
-  ref.onDispose(authSubscription.cancel);
-  return store.current;
-});
+final _registeredKeyConflictStateProvider =
+    NotifierProvider<RegisteredKeyConflictNotifier, RegisteredKeyConflict?>(
+      RegisteredKeyConflictNotifier.new,
+    );
+
+class RegisteredKeyConflictNotifier extends Notifier<RegisteredKeyConflict?> {
+  @override
+  RegisteredKeyConflict? build() {
+    final authState = ref.watch(currentAuthStateProvider);
+    final authService = ref.watch(authServiceProvider);
+    final store = ref.watch(registeredKeyConflictStoreProvider);
+    store.syncAuthState(authState);
+    final storeSubscription = store.stream.listen((_) {
+      state = store.current;
+    });
+    final authSubscription = authService.authStateStream.listen(
+      store.syncAuthState,
+    );
+    ref.onDispose(storeSubscription.cancel);
+    ref.onDispose(authSubscription.cancel);
+    return store.current;
+  }
+}
+
+/// Read-only recovery context; callers can override this boundary in UI tests.
+final registeredKeyConflictProvider = Provider<RegisteredKeyConflict?>(
+  (ref) => ref.watch(_registeredKeyConflictStateProvider),
+);
 
 /// Boundary-safe auth helper for recorder exits.
 ///
