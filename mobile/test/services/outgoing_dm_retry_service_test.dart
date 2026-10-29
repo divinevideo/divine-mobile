@@ -1298,6 +1298,46 @@ void main() {
           ).called(1);
         });
 
+        group('follow-up pass', () {
+          /// Runs one pass on a budget of [maxRetries] attempts, and returns
+          /// how many passes ran within the five minutes after it.
+          int passesAfter({required int maxRetries}) {
+            var passes = 0;
+            fakeAsync((async) {
+              when(() => dmRepository.retryableMessageDeletions()).thenAnswer(
+                (_) async {
+                  passes++;
+                  return [target('del1')];
+                },
+              );
+              stubOutcome(DmMessageDeletionOutcome.unconfirmed);
+              final service = buildService(
+                retryConfig: OutgoingDmRetryConfig(maxRetries: maxRetries),
+              );
+              unawaited(service.initialize());
+              async.flushMicrotasks();
+              unawaited(service.sweep());
+              async.flushMicrotasks();
+              expect(passes, 1, reason: 'precondition: the first pass ran');
+
+              async
+                ..elapse(const Duration(minutes: 5))
+                ..flushMicrotasks();
+              unawaited(service.dispose());
+              async.flushMicrotasks();
+            });
+            return passes - 1;
+          }
+
+          test('is armed while the deletion has attempts left', () {
+            expect(passesAfter(maxRetries: 2), greaterThan(0));
+          });
+
+          test('is not armed by the attempt that ran out', () {
+            expect(passesAfter(maxRetries: 1), 0);
+          });
+        });
+
         test('does not mark one a relay confirmed', () async {
           stubPending(['del1']);
           stubOutcome(DmMessageDeletionOutcome.sent);

@@ -715,7 +715,8 @@ class OutgoingDmRetryService {
             failedInterrupted > 0 ||
             skippedBackoff > 0 ||
             skippedInterruptedTooYoung > 0 ||
-            deletions.unconfirmed > 0 ||
+            // The attempt that ran out leaves nothing for this session.
+            deletions.unconfirmed > deletions.ranOut ||
             deletions.skippedBackoff > 0,
       );
     } on Object catch (e, stackTrace) {
