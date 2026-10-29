@@ -347,6 +347,32 @@ void main() {
         );
       });
 
+      testWidgets('draws a see-through look without its fill', (
+        tester,
+      ) async {
+        const dark = VideoStickerRegion(
+          kind: VideoStickerKind.hashtag,
+          target: 'summer',
+          centerX: 0.5,
+          centerY: 0.5,
+          width: 0.4,
+          height: 0.1,
+          style: 'dark',
+          label: 'summer',
+        );
+        await pump(tester, [dark]);
+
+        final pill = tester.widget<DecoratedBox>(
+          find.descendant(
+            of: find.byType(SocialStickerView),
+            matching: find.byType(DecoratedBox),
+          ),
+        );
+
+        expect(find.text('#summer'), findsOneWidget);
+        expect((pill.decoration as BoxDecoration).color, isNull);
+      });
+
       testWidgets('draws only the button for a sticker without its look', (
         tester,
       ) async {

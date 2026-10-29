@@ -19,9 +19,17 @@ import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dar
 /// Lays out at its own size; the editor's widget layer scales it to the
 /// layer's width with a `FittedBox`.
 class SocialStickerView extends StatelessWidget {
-  const SocialStickerView({required this.data, super.key});
+  const SocialStickerView({
+    required this.data,
+    this.overFrames = false,
+    super.key,
+  });
 
   final SocialStickerData data;
+
+  /// Whether the sticker is drawn again over itself in a video's frames, in
+  /// its [StickerPillPalette.covering] colors.
+  final bool overFrames;
 
   /// The sticker's text, as it reads on the video and to a screen reader.
   static String textOf(SocialStickerData data) => switch (data.kind) {
@@ -37,7 +45,8 @@ class SocialStickerView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final palette = StickerPillPalette.of(data.style);
+    final look = StickerPillPalette.of(data.style);
+    final palette = overFrames ? look.covering : look;
     return Semantics(
       label: textOf(data),
       excludeSemantics: true,
@@ -46,7 +55,10 @@ class SocialStickerView extends StatelessWidget {
       child: DefaultTextStyle(
         style: VineTheme.bodyMediumFont(color: VineTheme.whiteText),
         child: switch (data.kind) {
-          SocialStickerKind.soundCredit => _SoundCredit(data: data),
+          SocialStickerKind.soundCredit => _SoundCredit(
+            data: data,
+            overFrames: overFrames,
+          ),
           SocialStickerKind.link => StickerPill(
             palette: palette,
             child: Row(
@@ -106,9 +118,10 @@ class _Line extends StatelessWidget {
 /// moving with the playhead: a record or a cassette's reels turning, a
 /// player's bar running and an equalizer following the video's sound.
 class _SoundCredit extends StatefulWidget {
-  const _SoundCredit({required this.data});
+  const _SoundCredit({required this.data, required this.overFrames});
 
   final SocialStickerData data;
+  final bool overFrames;
 
   @override
   State<_SoundCredit> createState() => _SoundCreditState();
@@ -186,6 +199,7 @@ class _SoundCreditState extends State<_SoundCredit> {
         size: soundCreditSize(data),
         painter: _SoundCreditPainter(
           data: data,
+          overFrames: widget.overFrames,
           playTime: playTime,
           timelineMap: _timelineMap,
           levels: _levels,
@@ -200,12 +214,14 @@ class _SoundCreditState extends State<_SoundCredit> {
 class _SoundCreditPainter extends CustomPainter {
   _SoundCreditPainter({
     required this.data,
+    required this.overFrames,
     required this.playTime,
     required this.timelineMap,
     required this.levels,
   }) : super(repaint: playTime);
 
   final SocialStickerData data;
+  final bool overFrames;
   final ValueListenable<Duration>? playTime;
   final TransitionTimelineMap? timelineMap;
   final Float32List? levels;
@@ -216,7 +232,13 @@ class _SoundCreditPainter extends CustomPainter {
     final motion = editorTime == null
         ? const SoundCreditMotion()
         : _motionAt(timelineMap?.editorToOutput(editorTime) ?? editorTime);
-    paintSoundCredit(canvas, size, data: data, motion: motion);
+    paintSoundCredit(
+      canvas,
+      size,
+      data: data,
+      motion: motion,
+      overFrames: overFrames,
+    );
   }
 
   SoundCreditMotion _motionAt(Duration time) {
@@ -233,6 +255,7 @@ class _SoundCreditPainter extends CustomPainter {
   @override
   bool shouldRepaint(_SoundCreditPainter oldDelegate) =>
       oldDelegate.data != data ||
+      oldDelegate.overFrames != overFrames ||
       !identical(oldDelegate.playTime, playTime) ||
       !identical(oldDelegate.timelineMap, timelineMap) ||
       !identical(oldDelegate.levels, levels);

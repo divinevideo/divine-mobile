@@ -259,16 +259,16 @@ class _StickerTapArea extends StatelessWidget {
           alignment: Alignment.center,
           children: [
             if (sticker != null)
-              // Laid over the sticker in the frames at its exact size, so it
-              // covers that one; the button below names it, and only the
-              // button takes the pointer.
+              // Laid over the sticker in the frames at its exact size, in the
+              // parts that cover that one; the button below names it, and
+              // only the button takes the pointer.
               IgnorePointer(
                 child: ExcludeSemantics(
                   child: SizedBox.fromSize(
                     size: stickerSize,
                     child: FittedBox(
                       fit: BoxFit.fill,
-                      child: SocialStickerView(data: sticker),
+                      child: SocialStickerView(data: sticker, overFrames: true),
                     ),
                   ),
                 ),

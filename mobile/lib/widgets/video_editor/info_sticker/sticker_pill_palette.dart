@@ -12,7 +12,14 @@ class StickerPillPalette {
     this.background,
     this.border,
     this.glow,
-  });
+  }) : _isCovering = false;
+
+  const StickerPillPalette._covering({
+    required this.ink,
+    this.background,
+    this.border,
+  }) : glow = null,
+       _isCovering = true;
 
   factory StickerPillPalette.of(InfoStickerStyle style) => switch (style) {
     InfoStickerStyle.dark => const StickerPillPalette(
@@ -56,9 +63,27 @@ class StickerPillPalette {
   /// The color the text glows in, for the neon look.
   final Color? glow;
 
+  final bool _isCovering;
+
+  /// Only the parts of these colors that hide what is beneath: the ink, and
+  /// the background and border where they are solid.
+  ///
+  /// For drawing a sticker again, sharp, over the same sticker in a video's
+  /// frames. A see-through fill, a glow or a shadow is in the frames already
+  /// and would come out twice as strong.
+  StickerPillPalette get covering => StickerPillPalette._covering(
+    ink: ink,
+    background: _solid(background),
+    border: _solid(border),
+  );
+
+  static Color? _solid(Color? color) =>
+      color != null && color.a == 1 ? color : null;
+
   /// A glow for neon; otherwise, without an opaque background, a shadow so
-  /// the ink reads on a light video.
+  /// the ink reads on a light video. None in [covering] colors.
   List<Shadow> get shadows => switch (glow) {
+    _ when _isCovering => const [],
     final glow? => [
       Shadow(color: glow, blurRadius: 6),
       Shadow(color: glow, blurRadius: 18),

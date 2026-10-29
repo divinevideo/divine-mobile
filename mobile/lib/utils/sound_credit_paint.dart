@@ -46,14 +46,15 @@ Size soundCreditSize(SocialStickerData data) {
 }
 
 /// Paints the sound credit [data] describes into [size] as it looks at
-/// [motion].
+/// [motion]; [overFrames], in its [StickerPillPalette.covering] colors.
 void paintSoundCredit(
   Canvas canvas,
   Size size, {
   required SocialStickerData data,
   SoundCreditMotion motion = const SoundCreditMotion(),
+  bool overFrames = false,
 }) {
-  final layout = _SoundCreditLayout(data);
+  final layout = _SoundCreditLayout(data, overFrames: overFrames);
   final design = layout.size;
   canvas
     ..save()
@@ -114,8 +115,12 @@ const double _lowestLevel = 0.12;
 /// lines of text, as [soundCreditSize] measures it and [paintSoundCredit]
 /// draws it.
 class _SoundCreditLayout {
-  factory _SoundCreditLayout(SocialStickerData data) {
-    final palette = StickerPillPalette.of(data.style);
+  factory _SoundCreditLayout(
+    SocialStickerData data, {
+    bool overFrames = false,
+  }) {
+    final look = StickerPillPalette.of(data.style);
+    final palette = overFrames ? look.covering : look;
     final detail = palette.textStyle(fontSize: 36);
     final lyric = data.lyric;
     final artist = data.soundArtist;
