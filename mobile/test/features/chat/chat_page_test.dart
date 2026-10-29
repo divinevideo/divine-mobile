@@ -170,6 +170,7 @@ void main() {
             }),
             isDmRestrictedProvider.overrideWithValue(false),
             roomActivityRepositoryProvider.overrideWithValue(activity),
+            chatMentionRepositoryProvider.overrideWithValue(null),
           ],
         );
         addTearDown(container.dispose);
