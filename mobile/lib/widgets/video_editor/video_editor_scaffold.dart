@@ -17,6 +17,7 @@ import 'package:openvine/widgets/video_editor/filter_editor/video_editor_filter_
 import 'package:openvine/widgets/video_editor/filter_editor/video_editor_filter_overlay_controls.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_canvas.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_caption_preview_overlay.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_finish_listener.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_overlay_actions.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor_view.dart';
@@ -45,24 +46,26 @@ class VideoEditorScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: VideoEditorConstants.uiOverlayStyleFor(context.vineColors),
-      child: LoopRepairResultListener(
-        child: Stack(
-          fit: .expand,
-          children: [
-            // No bottom bar: the Edit button overlays the timeline in the slot
-            // of its context controls (see TimelineControlsBar), so showing or
-            // hiding it never resizes the canvas.
-            Scaffold(
-              backgroundColor: context.vineColors.surfaceContainerHigh,
-              resizeToAvoidBottomInset: false,
-              body: LayerTrackingResultListener(
-                child: ClipEditorResultListeners(
-                  child: _ScaffoldBody(isLoading: isLoading),
+      child: VideoEditorFinishListener(
+        child: LoopRepairResultListener(
+          child: Stack(
+            fit: .expand,
+            children: [
+              // No bottom bar: the Edit button overlays the timeline in the slot
+              // of its context controls (see TimelineControlsBar), so showing or
+              // hiding it never resizes the canvas.
+              Scaffold(
+                backgroundColor: context.vineColors.surfaceContainerHigh,
+                resizeToAvoidBottomInset: false,
+                body: LayerTrackingResultListener(
+                  child: ClipEditorResultListeners(
+                    child: _ScaffoldBody(isLoading: isLoading),
+                  ),
                 ),
               ),
-            ),
-            const _OperationProgressOverlays(),
-          ],
+              const _OperationProgressOverlays(),
+            ],
+          ),
         ),
       ),
     );

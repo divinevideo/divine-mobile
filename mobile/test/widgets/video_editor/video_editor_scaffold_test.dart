@@ -28,6 +28,7 @@ import 'package:openvine/widgets/branded_loading_scaffold.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/open_effects_editor.dart';
 import 'package:openvine/widgets/video_editor/effects_editor/video_editor_effects_bottom_bar.dart';
 import 'package:openvine/widgets/video_editor/filter_editor/video_editor_filter_bottom_bar.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_finish_listener.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_overlay_actions.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/mask_editor/video_editor_mask_editor_view.dart';
@@ -334,6 +335,7 @@ void main() {
         await tester.pump();
 
         expect(find.byType(VideoEditorMainOverlayActions), findsOneWidget);
+        expect(find.byType(VideoEditorFinishListener), findsOneWidget);
         expect(collapseSection().sizeFactor.value, 1);
 
         mainBloc.add(
@@ -347,6 +349,7 @@ void main() {
         // The recorder brings its own toolbar over the preview, and the
         // section collapses whole so the video fills the screen behind it.
         expect(find.byType(VideoEditorMainOverlayActions), findsNothing);
+        expect(find.byType(VideoEditorFinishListener), findsOneWidget);
         expect(collapseSection().sizeFactor.value, 0);
 
         mainBloc.add(const VideoEditorMainSubEditorClosed());

@@ -111,41 +111,33 @@ class _TopActions extends ConsumerWidget {
     // Android's system back lands here and leaves the way the close button
     // does. An open sub-editor takes that back press itself
     // (`VideoEditorCanvas`), so it must not also close the editor.
-    return BlocListener<VideoEditorMainBloc, VideoEditorMainState>(
-      listenWhen: (previous, current) =>
-          previous.handOverCounter != current.handOverCounter,
-      listener: (context, _) {
-        final editor = VideoEditorScope.of(context).editor;
-        if (editor != null && editor.mounted) editor.doneEditing();
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (context.read<VideoEditorMainBloc>().state.isSubEditorOpen) return;
+        close();
       },
-      child: PopScope(
-        canPop: false,
-        onPopInvokedWithResult: (didPop, result) {
-          if (didPop) return;
-          if (context.read<VideoEditorMainBloc>().state.isSubEditorOpen) return;
-          close();
-        },
-        child: VideoEditorToolbar(
-          closeIcon: .caretLeft,
-          doneIcon: .arrowRight,
-          closeSemanticLabel: context.l10n.videoEditorCloseEditorSemanticLabel,
-          doneSemanticLabel:
-              context.l10n.videoEditorContinueToPostDetailsSemanticLabel,
-          // The wrap hint is brief and only follows a text the user is
-          // sizing, so it takes the slot over from the frames chip meanwhile.
-          center: VideoEditorTextWrapHint(
-            fallback: stopMotionData == null
-                ? null
-                : _StopMotionFramesChip(
-                    clipId: stopMotionData.clipId,
-                    value: stopMotionData.value,
-                  ),
-          ),
-          onClose: close,
-          onDone: hasLoopSuggestion || isFinishing
+      child: VideoEditorToolbar(
+        closeIcon: .caretLeft,
+        doneIcon: .arrowRight,
+        closeSemanticLabel: context.l10n.videoEditorCloseEditorSemanticLabel,
+        doneSemanticLabel:
+            context.l10n.videoEditorContinueToPostDetailsSemanticLabel,
+        // The wrap hint is brief and only follows a text the user is
+        // sizing, so it takes the slot over from the frames chip meanwhile.
+        center: VideoEditorTextWrapHint(
+          fallback: stopMotionData == null
               ? null
-              : () => _onDonePressed(context, scope),
+              : _StopMotionFramesChip(
+                  clipId: stopMotionData.clipId,
+                  value: stopMotionData.value,
+                ),
         ),
+        onClose: close,
+        onDone: hasLoopSuggestion || isFinishing
+            ? null
+            : () => _onDonePressed(context, scope),
       ),
     );
   }

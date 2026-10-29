@@ -26,6 +26,7 @@ import 'package:openvine/models/video_publish/video_publish_provider_state.dart'
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
 import 'package:openvine/utils/sticker_emoji_font.dart';
+import 'package:openvine/widgets/video_editor/main_editor/video_editor_finish_listener.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_main_overlay_actions.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/video_editor_toolbar.dart';
@@ -128,6 +129,7 @@ void main() {
       LoopSuggestionCubit? loopCubit,
       ProImageEditorState? editor,
       VideoEditorMainBloc? mainBloc,
+      ValueNotifier<bool>? actionsVisible,
     }) {
       if (state != null) {
         when(() => mockBloc.state).thenReturn(state);
@@ -190,7 +192,16 @@ void main() {
                     else
                       BlocProvider.value(value: loopCubit),
                   ],
-                  child: const VideoEditorMainOverlayActions(),
+                  child: VideoEditorFinishListener(
+                    child: actionsVisible == null
+                        ? const VideoEditorMainOverlayActions()
+                        : ValueListenableBuilder<bool>(
+                            valueListenable: actionsVisible,
+                            builder: (_, visible, _) => visible
+                                ? const VideoEditorMainOverlayActions()
+                                : const SizedBox.shrink(),
+                          ),
+                  ),
                 ),
               ),
             ),
@@ -321,6 +332,44 @@ void main() {
     });
 
     group('interactions', () {
+      testWidgets('delivers a pending handover while actions are unmounted', (
+        tester,
+      ) async {
+        final editor = _MockEditor();
+        final bloc = VideoEditorMainBloc();
+        addTearDown(bloc.close);
+        final visible = ValueNotifier(true);
+        addTearDown(visible.dispose);
+        final font = Completer<bool>();
+        debugLoadStickerEmojiFont = () => font.future;
+        addTearDown(resetStickerEmojiFontForTesting);
+        final meta = const SocialStickerData(
+          kind: SocialStickerKind.hashtag,
+          hashtag: 'party🎉',
+        ).toMeta();
+        when(() => editor.activeLayers).thenReturn([
+          WidgetLayer(widget: const SizedBox(), meta: meta),
+        ]);
+        when(() => editor.mounted).thenReturn(true);
+        await tester.pumpWidget(
+          buildWidget(editor: editor, mainBloc: bloc, actionsVisible: visible),
+        );
+        tester
+            .widget<VideoEditorToolbar>(find.byType(VideoEditorToolbar))
+            .onDone!();
+        await tester.pump();
+        expect(bloc.state.isFinishing, isTrue);
+
+        visible.value = false;
+        await tester.pump();
+        expect(find.byType(VideoEditorMainOverlayActions), findsNothing);
+        font.complete(true);
+        await tester.pump();
+
+        expect(bloc.state.handOverCounter, 1);
+        verify(editor.doneEditing).called(1);
+      });
+
       testWidgets('hands the edit over once for two Done calls in one task', (
         tester,
       ) async {
