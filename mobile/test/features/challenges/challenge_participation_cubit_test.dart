@@ -181,12 +181,16 @@ void main() {
         expect(cubit.state.playing?.id, h.video.id);
         expect(cubit.state.playingEntryId, entryId);
         final release = Completer<void>();
+        final readStarted = Completer<void>();
         var delay = false;
         final delayed = ChallengeParticipationCubit(
           coordinate: cubit.coordinate,
           submissions: h.repository,
           refresh: () async {
-            if (delay) await release.future;
+            if (delay) {
+              readStarted.complete();
+              await release.future;
+            }
             return cubit.refresh();
           },
           loadCandidates: cubit.loadCandidates,
@@ -200,7 +204,7 @@ void main() {
         await delayed.playEntry(entryId);
         delay = true;
         final refreshing = delayed.load();
-        await Future<void>.delayed(Duration.zero);
+        await readStarted.future;
         delayed.stopPlaying();
         release.complete();
         await refreshing;

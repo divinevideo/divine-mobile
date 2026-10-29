@@ -259,7 +259,9 @@ class _ChallengeDetailViewState extends State<ChallengeDetailView> {
                       initialIndex: _winners ? 1 : 0,
                       child: TabBar(
                         onTap: (index) => setState(() => _winners = index == 1),
-                        labelStyle: VineTheme.titleMediumFont(),
+                        labelStyle: VineTheme.titleMediumFont(
+                          color: context.vineColors.primaryText,
+                        ),
                         labelColor: context.vineColors.primaryText,
                         unselectedLabelColor: context.vineColors.primaryText,
                         indicatorColor: context.vineColors.accentPositive,
