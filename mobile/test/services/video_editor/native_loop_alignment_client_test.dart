@@ -9,6 +9,7 @@ import 'package:loop_alignment_repository/loop_alignment_repository.dart';
 import 'package:openvine/services/video_editor/native_loop_alignment_client.dart';
 import 'package:openvine/services/video_editor/video_render_failures.dart';
 import 'package:pro_video_editor/pro_video_editor.dart';
+import 'package:unified_logger/unified_logger.dart';
 
 void main() {
   group('NativeLoopAlignmentClient', () {
@@ -189,6 +190,28 @@ void main() {
         expect(silent.covered, isFalse);
         await client.discard(output);
         await client.finish('a');
+      },
+    );
+    test(
+      'analysis and inspection logs omit source paths and revisions',
+      () async {
+        await LogCaptureService().clearAllLogs();
+        final private = LoopRepairInput(
+          clips: input().clips,
+          revision: 'rev-7c41e9',
+        );
+        final backend = FakeBackend()..texture = true;
+        final client = NativeLoopAlignmentClient(backend: backend);
+        await client.analyze(private, const LoopAlignmentLimits(), 'a', (_) {});
+        final output = await client.render(private, repairPlan(), 'a', (_) {});
+        await client.inspect(private, repairPlan(), output, 'a');
+        await client.discard(output);
+        await client.finish('a');
+        final logs = (await LogCaptureService().getAllLogsAsText()).join('\n');
+        expect(logs, contains('Loop analysis:'));
+        expect(logs, contains('Loop output inspection:'));
+        expect(logs, isNot(contains('/source.mp4')));
+        expect(logs, isNot(contains('rev-7c41e9')));
       },
     );
     test(
