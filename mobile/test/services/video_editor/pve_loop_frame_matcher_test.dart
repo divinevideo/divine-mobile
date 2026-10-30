@@ -211,11 +211,13 @@ void main() {
           _frame(width, height, plainMargins: true, foreground: 1),
           _frame(width, height, plainMargins: true, foreground: 1.5),
         );
+        expect(match, isNotNull);
         expect(
-          match != null &&
-              const LoopAlignmentLimits().acceptsMatch(match, width, height),
+          const LoopAlignmentLimits().acceptsMatch(match!, width, height),
           isFalse,
         );
+        expect(match.left.retained, isZero);
+        expect(match.top.retained, isZero);
       });
     }
     for (final (width, height) in [(180, 320), (320, 180)]) {
@@ -238,11 +240,13 @@ void main() {
               foregroundTouchesEdges: true,
             ),
           );
+          expect(match, isNotNull);
           expect(
-            match != null &&
-                const LoopAlignmentLimits().acceptsMatch(match, width, height),
+            const LoopAlignmentLimits().acceptsMatch(match!, width, height),
             isFalse,
           );
+          expect(match.left.retained, isZero);
+          expect(match.top.retained, isZero);
         });
       }
     }
@@ -280,15 +284,15 @@ void main() {
                 vertical: vertical,
               ),
             );
+            expect(match, isNotNull);
             expect(
-              match != null &&
-                  const LoopAlignmentLimits().acceptsMatch(
-                    match,
-                    width,
-                    height,
-                  ),
+              const LoopAlignmentLimits().acceptsMatch(match!, width, height),
               isFalse,
             );
+            final plainSide = horizontal ? match.right : match.left;
+            final plainEnd = vertical ? match.bottom : match.top;
+            expect(plainSide.retained, isZero);
+            expect(plainEnd.retained, isZero);
           },
         );
       }
@@ -376,11 +380,16 @@ void main() {
             _flipped(reference, horizontal: horizontal, vertical: vertical),
             _flipped(target, horizontal: horizontal, vertical: vertical),
           );
+          expect(match, isNotNull);
           expect(
-            match != null &&
-                const LoopAlignmentLimits().acceptsMatch(match, width, height),
+            const LoopAlignmentLimits().acceptsMatch(match!, width, height),
             isFalse,
           );
+          final stationarySide = horizontal ? match.right : match.left;
+          final plainEnd = vertical ? match.bottom : match.top;
+          expect(stationarySide.retained, greaterThan(0));
+          expect(stationarySide.agreeing, isZero);
+          expect(plainEnd.retained, isZero);
         });
       }
     }
@@ -440,11 +449,14 @@ void main() {
         _frame(180, 320, plainMargins: true, foreground: 1),
         _frame(180, 320, plainMargins: true, foreground: 5),
       );
+      expect(match, isNotNull);
       expect(
-        match != null &&
-            const LoopAlignmentLimits().acceptsMatch(match, 180, 320),
+        const LoopAlignmentLimits().acceptsMatch(match!, 180, 320),
         isFalse,
       );
+      expect(match.left.retained, isZero);
+      expect(match.top.retained, isZero);
+      expect(match.boundaryModelError, greaterThan(.5));
     });
     for (final (width, height) in [(180, 320), (320, 180)]) {
       for (final (dx, angle, scale) in [(2.0, 0.0, 1.0), (0.0, .01, 1.01)]) {
