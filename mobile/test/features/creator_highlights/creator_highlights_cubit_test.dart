@@ -110,6 +110,7 @@ void main() {
       final cubit = CreatorHighlightsCubit(
         repository: repository,
         owner: _owner,
+        now: () => DateTime(2026, 10, 30),
       );
       final first = cubit.refresh();
       final second = cubit.refresh();
@@ -125,6 +126,7 @@ void main() {
       final cubit = CreatorHighlightsCubit(
         repository: repository,
         owner: _owner,
+        now: () => DateTime(2026, 10, 30),
       );
       final load = cubit.refresh();
       await cubit.close();
