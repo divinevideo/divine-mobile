@@ -165,9 +165,6 @@ void main() {
       when(
         () => mockFollowRepository.followingStream,
       ).thenAnswer((_) => followingController.stream);
-      when(() => mockFollowRepository.isFollowingConfirmedByRelay)
-          .thenReturn(true);
-      when(() => mockFollowRepository.initialized).thenAnswer((_) async {});
       when(() => mockFollowRepository.followingPubkeys).thenReturn([]);
 
       when(
@@ -462,7 +459,14 @@ void main() {
       });
     });
 
+    void stubConfirmedFollowingReadiness() {
+      when(() => mockFollowRepository.isFollowingConfirmedByRelay)
+          .thenReturn(true);
+      when(() => mockFollowRepository.initialized).thenAnswer((_) async {});
+    }
+
     group('VideoFeedStarted', () {
+      setUp(stubConfirmedFollowingReadiness);
       feedBlocTest(
         'emits [loading, success] when home feed loads successfully',
         setUp: () {
@@ -7119,6 +7123,7 @@ void main() {
     });
 
     group('cache-first home feed', () {
+      setUp(stubConfirmedFollowingReadiness);
       late _MockHomeFeedCache mockCache;
       late SharedPreferences sharedPreferences;
       late StreamController<List<String>> cacheFollowingController;
