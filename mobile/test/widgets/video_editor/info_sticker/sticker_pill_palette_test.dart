@@ -28,6 +28,18 @@ void main() {
         expect(light.covering.background, equals(light.background));
         expect(outline.covering.border, equals(outline.border));
       });
+
+      test('keeps a fill exactly in the looks with a solid pill', () {
+        // A look with a solid pill gets a copy in any script, which is only
+        // right while its covering fill hides the frames beneath.
+        for (final style in InfoStickerStyle.pills) {
+          expect(
+            StickerPillPalette.of(style).covering.background != null,
+            equals(style.hasSolidPill),
+            reason: style.name,
+          );
+        }
+      });
     });
   });
 }

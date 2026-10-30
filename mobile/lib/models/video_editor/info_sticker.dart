@@ -103,6 +103,12 @@ enum InfoStickerStyle {
     plain,
     outline,
   ];
+
+  /// Whether the look's pill is solid and hides what lies beneath it.
+  bool get hasSolidPill => switch (this) {
+    light || brand || highlight => true,
+    _ => false,
+  };
 }
 
 /// How a date sticker writes its date.

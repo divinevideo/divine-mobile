@@ -1,5 +1,5 @@
 // ABOUTME: Whether a sticker's text looks the same on every phone: drawn in the
-// ABOUTME: bundled sticker font, and its emoji in the bundled emoji font.
+// ABOUTME: bundled sticker font, and its emoji in the downloaded emoji font.
 
 import 'package:openvine/models/video_editor/sticker_emoji_glyphs.dart';
 

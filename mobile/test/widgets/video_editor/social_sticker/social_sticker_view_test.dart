@@ -3,7 +3,10 @@
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
+import 'package:openvine/utils/sound_credit_paint.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/sticker_pill_palette.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 
 const _mention = SocialStickerData(
@@ -46,6 +49,46 @@ void main() {
 
           expect(large, equals(regular), reason: data.kind.name);
         }
+      });
+    });
+  });
+
+  group(SocialStickerCopy, () {
+    group('renders', () {
+      testWidgets('a solid sound credit in a pill rounded like its own', (
+        tester,
+      ) async {
+        const credit = SocialStickerData(
+          kind: SocialStickerKind.soundCredit,
+          soundTitle: 'Song',
+          soundArtist: 'Artist',
+        );
+        // Twice the size it lays out at, as the frames carry it scaled.
+        final box = soundCreditSize(credit) * 2;
+        await tester.pumpWidget(
+          Directionality(
+            textDirection: TextDirection.ltr,
+            child: Center(
+              child: SizedBox.fromSize(
+                size: box,
+                child: const SocialStickerCopy(data: credit),
+              ),
+            ),
+          ),
+        );
+
+        // Its own corners are 48 round where it lays out, 96 at twice that.
+        expect(
+          find.byType(SocialStickerCopy),
+          paints..something((method, arguments) {
+            if (method != #drawRRect) return false;
+            final [RRect pill, Paint paint] = arguments;
+            return pill.outerRect == Offset.zero & box &&
+                (pill.tlRadiusX - 96).abs() < 1e-9 &&
+                paint.color ==
+                    StickerPillPalette.of(InfoStickerStyle.light).background;
+          }),
+        );
       });
     });
   });

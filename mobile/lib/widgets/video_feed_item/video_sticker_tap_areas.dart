@@ -174,9 +174,10 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
     });
   }
 
-  /// Loads the sticker emoji font when a sticker has an emoji to draw in it,
-  /// and draws the stickers again once it is in; until then a see-through one
-  /// shows only as it is in the frames.
+  /// Loads the sticker emoji font when a sticker's emoji are all its text
+  /// needs beyond the sticker font, and draws the stickers again once it is
+  /// in; until then a see-through one shows only as it is in the frames, and
+  /// a solid one draws its emoji in the phone's own font.
   void _loadEmojiFont() {
     if (stickerEmojiFontLoaded) return;
     final hasEmoji = widget.video.stickerRegions.any(
@@ -280,7 +281,7 @@ class _StickerTapArea extends StatelessWidget {
           alignment: Alignment.center,
           children: [
             if (sticker != null &&
-                sticker.isRedrawnAlike(emojiFontLoaded: stickerEmojiFontLoaded))
+                sticker.canBeRedrawn(emojiFontLoaded: stickerEmojiFontLoaded))
               // Laid over the sticker in the frames at its exact size, in the
               // parts that cover that one; the button below names it, and
               // only the button takes the pointer.
@@ -288,10 +289,7 @@ class _StickerTapArea extends StatelessWidget {
                 child: ExcludeSemantics(
                   child: SizedBox.fromSize(
                     size: stickerSize,
-                    child: FittedBox(
-                      fit: BoxFit.fill,
-                      child: SocialStickerView(data: sticker, overFrames: true),
-                    ),
+                    child: SocialStickerCopy(data: sticker),
                   ),
                 ),
               ),

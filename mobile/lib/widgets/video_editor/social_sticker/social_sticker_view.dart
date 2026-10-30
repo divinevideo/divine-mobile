@@ -89,6 +89,60 @@ class SocialStickerView extends StatelessWidget {
   }
 }
 
+/// A sharp copy of a social sticker, filling the box the same sticker takes
+/// in a video's frames, to be laid over it there.
+///
+/// A solid look draws its pill at that box, hiding the sticker beneath, and
+/// scales the rest to fit inside in proportion: a viewer's phone may draw
+/// text the sticker font lacks, or emoji before the sticker emoji font has
+/// loaded, wider or narrower than the creator's did, and stretched to the
+/// box it would come out distorted. The frames show through
+/// any other look, so it is stretched to lie on its own text there; see
+/// [SocialStickerData.canBeRedrawn] for when that matches.
+class SocialStickerCopy extends StatelessWidget {
+  const SocialStickerCopy({required this.data, super.key});
+
+  final SocialStickerData data;
+
+  @override
+  Widget build(BuildContext context) {
+    final sticker = SocialStickerView(data: data, overFrames: true);
+    final pill = StickerPillPalette.of(data.style).covering.background;
+    if (pill == null) return FittedBox(fit: .fill, child: sticker);
+    return CustomPaint(
+      painter: _PillPainter(
+        color: pill,
+        roundness: data.kind == SocialStickerKind.soundCredit
+            ? soundCreditRoundness(data)
+            : 0.5,
+      ),
+      child: FittedBox(child: sticker),
+    );
+  }
+}
+
+/// Paints a pill in [color] filling the box, the radius of its corners
+/// [roundness] of its height.
+class _PillPainter extends CustomPainter {
+  const _PillPainter({required this.color, required this.roundness});
+
+  final Color color;
+  final double roundness;
+
+  @override
+  void paint(Canvas canvas, Size size) => canvas.drawRRect(
+    RRect.fromRectAndRadius(
+      Offset.zero & size,
+      Radius.circular(size.height * roundness),
+    ),
+    Paint()..color = color,
+  );
+
+  @override
+  bool shouldRepaint(_PillPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.roundness != roundness;
+}
+
 /// The widest a sticker's line of text gets before it ends in an ellipsis.
 const double _maxTextWidth = 720;
 
@@ -101,7 +155,8 @@ const double _markSize = 48;
 /// Unscaled by the system font size, like the sound credit's painted text:
 /// the sticker is part of the video, sized by the creator's pinch, and the
 /// player's copy of it has to match the frames at any font size. Its emoji
-/// are drawn in the sticker emoji font, which it loads when it has any.
+/// are drawn in the sticker emoji font once that is loaded, which it loads
+/// when they are all its text needs beyond the sticker font.
 class _Line extends StatefulWidget {
   const _Line({required this.text, required this.style});
 
