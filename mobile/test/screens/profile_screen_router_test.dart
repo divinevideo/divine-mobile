@@ -17,7 +17,10 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/background_publish/background_publish_bloc.dart';
 import 'package:openvine/blocs/fullscreen_feed/fullscreen_feed_bloc.dart';
+import 'package:openvine/blocs/profile_feed/profile_feed_scope.dart';
+import 'package:openvine/blocs/profile_feed/profile_tab_retap_cubit.dart';
 import 'package:openvine/blocs/video_volume/video_volume_cubit.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/divine_video_draft.dart';
@@ -34,10 +37,12 @@ import 'package:openvine/services/video_publish/publish_error_kind.dart';
 import 'package:openvine/services/video_publish/video_publish_service.dart';
 import 'package:openvine/utils/nostr_key_utils.dart';
 import 'package:openvine/widgets/profile/blocked_user_screen.dart';
+import 'package:riverpod/misc.dart' show Override;
 import 'package:unified_logger/unified_logger.dart';
 import 'package:videos_repository/videos_repository.dart';
 
 import '../helpers/go_router.dart';
+import '../helpers/scroll.dart';
 import '../helpers/test_provider_overrides.dart';
 import '../helpers/test_pubkeys.dart';
 
@@ -240,6 +245,8 @@ void main() {
       UserProfile? sharedProfile,
       Nip05VerificationStatus verificationStatus =
           Nip05VerificationStatus.verified,
+      List<Override> extraOverrides = const [],
+      ProfileTabRetapCubit? profileRetaps,
     }) async {
       const profile = ProfileScreenRouter();
       final router = GoRouter(
@@ -288,6 +295,7 @@ void main() {
             routerLocationStreamProvider.overrideWithValue(
               Stream.value(location),
             ),
+            ...extraOverrides,
           ],
           child: MaterialApp.router(
             localizationsDelegates: appLocalizationsDelegates,
@@ -299,6 +307,10 @@ void main() {
                   value: backgroundPublishBloc,
                 ),
                 BlocProvider<PeopleListsBloc>.value(value: peopleListsBloc),
+                if (profileRetaps != null)
+                  BlocProvider<ProfileTabRetapCubit>.value(
+                    value: profileRetaps,
+                  ),
                 BlocProvider<VideoVolumeCubit>(
                   create: (_) => VideoVolumeCubit(
                     sharedPreferences: createMockSharedPreferences(),
@@ -594,6 +606,221 @@ void main() {
           await tester.pump(const Duration(seconds: 3));
         },
       );
+    });
+
+    group('when the videos fail to load', () {
+      setUp(stubProfileDependencies);
+
+      void stubFeedThrows() => when(
+        () => videosRepository.getAuthorFeed(
+          authorPubkey: any(named: 'authorPubkey'),
+          offset: any(named: 'offset'),
+          relaySeed: any(named: 'relaySeed'),
+          skipCache: any(named: 'skipCache'),
+        ),
+      ).thenThrow(Exception('unreachable'));
+
+      final settingsButton = find.byWidgetPredicate(
+        (widget) =>
+            widget is DivineIconButton &&
+            widget.semanticIdentifier == SemanticIds.profileSettingsButton,
+      );
+
+      testWidgets('tells screen readers the videos failed to load', (
+        tester,
+      ) async {
+        stubFeedThrows();
+        await pumpProfileRoute(
+          tester,
+          location: ProfileScreenRouter.pathForNpub(_npub),
+          path: ProfileScreenRouter.pathWithNpub,
+        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        expect(
+          tester.takeAnnouncements().map((a) => a.message),
+          contains(l10n.profileFeedError),
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 3));
+      });
+
+      testWidgets('keeps Settings reachable', (tester) async {
+        stubFeedThrows();
+        await pumpProfileRoute(
+          tester,
+          location: ProfileScreenRouter.pathForNpub(_npub),
+          path: ProfileScreenRouter.pathWithNpub,
+        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        expect(find.text(l10n.profileFeedError), findsOneWidget);
+        expect(settingsButton, findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 3));
+      });
+
+      testWidgets('reloads when a retry signal arrives', (
+        tester,
+      ) async {
+        stubFeedThrows();
+        final triggers = StreamController<void>.broadcast();
+        addTearDown(triggers.close);
+        await pumpProfileRoute(
+          tester,
+          location: ProfileScreenRouter.pathForNpub(_npub),
+          path: ProfileScreenRouter.pathWithNpub,
+          extraOverrides: [
+            profileFeedRetryTriggersProvider.overrideWithValue(
+              triggers.stream,
+            ),
+          ],
+        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.profileFeedError), findsOneWidget);
+
+        when(
+          () => videosRepository.getAuthorFeed(
+            authorPubkey: any(named: 'authorPubkey'),
+            offset: any(named: 'offset'),
+            relaySeed: any(named: 'relaySeed'),
+            skipCache: any(named: 'skipCache'),
+          ),
+        ).thenAnswer(
+          (_) async => const AuthorFeedResult(authorPubkey: _authorPubkeyHex),
+        );
+        triggers.add(null);
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+
+        expect(find.text(l10n.profileFeedError), findsNothing);
+        expect(find.text(l10n.profileNoVideosTitle), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 3));
+      });
+
+      void stubFeedEmpty() =>
+          when(
+            () => videosRepository.getAuthorFeed(
+              authorPubkey: any(named: 'authorPubkey'),
+              offset: any(named: 'offset'),
+              relaySeed: any(named: 'relaySeed'),
+              skipCache: any(named: 'skipCache'),
+            ),
+          ).thenAnswer(
+            (_) async => const AuthorFeedResult(authorPubkey: _authorPubkeyHex),
+          );
+
+      testWidgets('Retry reloads the videos', (
+        tester,
+      ) async {
+        stubFeedThrows();
+        await pumpProfileRoute(
+          tester,
+          location: ProfileScreenRouter.pathForNpub(_npub),
+          path: ProfileScreenRouter.pathWithNpub,
+        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        stubFeedEmpty();
+        final retry = find.text(l10n.profileRetryButton);
+        await scrollUntilTappable(
+          tester,
+          retry,
+          100,
+          scrollable: find
+              .descendant(
+                of: find.byType(NestedScrollView),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        await tester.tap(retry);
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+
+        expect(find.text(l10n.profileFeedError), findsNothing);
+        expect(find.text(l10n.profileNoVideosTitle), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 3));
+      });
+
+      testWidgets('pulling down reloads the videos', (tester) async {
+        stubFeedThrows();
+        await pumpProfileRoute(
+          tester,
+          location: ProfileScreenRouter.pathForNpub(_npub),
+          path: ProfileScreenRouter.pathWithNpub,
+        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        stubFeedEmpty();
+        await tester.fling(
+          find.byType(NestedScrollView),
+          const Offset(0, 400),
+          1000,
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+
+        expect(find.text(l10n.profileFeedError), findsNothing);
+        expect(find.text(l10n.profileNoVideosTitle), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 3));
+      });
+
+      testWidgets('re-tapping the Profile tab reloads the videos', (
+        tester,
+      ) async {
+        stubFeedThrows();
+        final retaps = ProfileTabRetapCubit();
+        addTearDown(retaps.close);
+        await pumpProfileRoute(
+          tester,
+          location: ProfileScreenRouter.pathForNpub(_npub),
+          path: ProfileScreenRouter.pathWithNpub,
+          profileRetaps: retaps,
+        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+        expect(find.text(l10n.profileFeedError), findsOneWidget);
+
+        stubFeedEmpty();
+        retaps.request();
+        await tester.pump();
+        await tester.runAsync(pumpEventQueue);
+        await tester.pump();
+
+        expect(find.text(l10n.profileFeedError), findsNothing);
+        expect(find.text(l10n.profileNoVideosTitle), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 3));
+      });
+
+      testWidgets('shows the error and Retry in the Videos tab', (
+        tester,
+      ) async {
+        stubFeedThrows();
+        await pumpProfileRoute(
+          tester,
+          location: ProfileScreenRouter.pathForNpub(_npub),
+          path: ProfileScreenRouter.pathWithNpub,
+        );
+        final l10n = lookupAppLocalizations(const Locale('en'));
+
+        expect(find.text(l10n.profileFeedError), findsOneWidget);
+        expect(find.text(l10n.profileRetryButton), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 3));
+      });
     });
   });
 

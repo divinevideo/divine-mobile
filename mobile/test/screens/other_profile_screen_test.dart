@@ -20,6 +20,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/blocs/other_profile/other_profile_bloc.dart';
+import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
 import 'package:openvine/features/people_lists/bloc/people_lists_bloc.dart';
@@ -431,6 +432,38 @@ void main() {
       final l10n = lookupAppLocalizations(const Locale('en'));
       expect(find.text('Target User'), findsWidgets);
       expect(find.text(l10n.profileDeletedAccountName), findsNothing);
+    });
+  });
+
+  group('when the videos fail to load', () {
+    final backButton = find.byWidgetPredicate(
+      (widget) =>
+          widget is DivineIconButton &&
+          widget.semanticIdentifier == SemanticIds.profileBackButton,
+    );
+
+    testWidgets('keeps Back and offers Retry', (
+      tester,
+    ) async {
+      when(
+        () => videosRepository.getAuthorFeed(
+          authorPubkey: any(named: 'authorPubkey'),
+          offset: any(named: 'offset'),
+          relaySeed: any(named: 'relaySeed'),
+          skipCache: any(named: 'skipCache'),
+        ),
+      ).thenThrow(Exception('unreachable'));
+      final container = createContainer(StateProvider<bool>((ref) => false));
+      addTearDown(container.dispose);
+
+      await tester.pumpWidget(buildSubject(container: container));
+      await tester.pump();
+      await tester.pump();
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      expect(find.text(l10n.profileFeedError), findsOneWidget);
+      expect(backButton, findsOneWidget);
+      expect(find.text(l10n.profileRetryButton), findsOneWidget);
     });
   });
 
