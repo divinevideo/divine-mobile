@@ -27,7 +27,7 @@ The maintainer chose conservative rejection instead of a broader temporal camera
 - [x] Reproduce the published matcher's false correction and arm-in-ring regression.
 - [x] Restore narrow support and remove the experimental expanded-band policy.
 - [x] Verify subject negatives, mirrored scenes, ambiguous-shot rejection, ordinary translation/rotation/scale controls, native-client/Cubit privacy tests, package tests, and analysis.
-- [x] Run encoded native positive and negative fixtures: all seven macOS integration tests and the application build pass.
+- [x] Run encoded native positive and negative fixtures: all eight macOS integration tests and the application build pass.
 - [x] Independently review the complete change and inspect required CI after publication. The original private recording remains unresolved and has not been replayed by this repair.
 
 ## Global Constraints
