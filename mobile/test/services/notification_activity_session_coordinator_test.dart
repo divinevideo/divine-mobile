@@ -43,6 +43,37 @@ void main() {
       },
     );
 
+    test('sends one update at a time while an earlier send is in flight', () {
+      fakeAsync((async) {
+        final sent = <NotificationActivityUpdate>[];
+        final firstSend = Completer<void>();
+        var inFlight = 0;
+        var mostInFlight = 0;
+        final coordinator = NotificationActivitySessionCoordinator(
+          send: (_, update, _) async {
+            inFlight++;
+            if (inFlight > mostInFlight) mostInFlight = inFlight;
+            sent.add(update);
+            if (sent.length == 1) await firstSend.future;
+            inFlight--;
+          },
+        );
+        addTearDown(coordinator.dispose);
+        coordinator.setAccount(owner: owner, ready: true);
+        coordinator.setForeground(true);
+        async.flushMicrotasks();
+        coordinator.setForeground(false);
+        coordinator.setForeground(true);
+        async.flushMicrotasks();
+        expect(sent, hasLength(1));
+
+        firstSend.complete();
+        async.flushMicrotasks();
+        expect(mostInFlight, 1);
+        expect(sent.map((update) => update.sequence), [1, 3]);
+      });
+    });
+
     test('first offline visit catches up after it backgrounds', () {
       fakeAsync((async) {
         final sent = <NotificationActivityUpdate>[];
