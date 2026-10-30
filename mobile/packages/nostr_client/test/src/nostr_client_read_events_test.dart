@@ -88,6 +88,8 @@ class _ControlledNostr extends Mock implements Nostr {
     Duration timeout = const Duration(seconds: 5),
     DateTime? deadline,
     bool requireAllRelaysSettled = false,
+    int? maxCollectedEvents,
+    int? maxCollectedBytes,
   }) {
     final pending = Completer<QueryResult>();
     pendingReads.add(pending);
