@@ -350,6 +350,9 @@ final class NativeLoopAlignmentClient implements LoopAlignmentClient {
               path,
               VideoRenderData(
                 id: id,
+                // A fixed composition clock repeats a picture of a
+                // fractional-rate source; inspection needs every one.
+                preserveSourceFrameTiming: true,
                 videoSegments: [
                   VideoSegment(
                     video: EditorVideo.file(clip.path),
