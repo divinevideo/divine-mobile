@@ -14,6 +14,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:nostr_client/nostr_client.dart';
 import 'package:nostr_sdk/event.dart';
+import 'package:openvine/blocs/profile_feed/profile_feed_scope.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/auth_rpc_capability.dart';
@@ -477,6 +478,12 @@ List<Override> getStandardTestOverrides({
     nostrServiceProvider.overrideWithValue(mockNostr),
     subscriptionManagerProvider.overrideWithValue(mockSub),
 
+    // The real triggers read the relay pool and connectivity_plus, which a
+    // widget test does not stand up; a test that retries passes its own.
+    profileFeedRetryTriggersProvider.overrideWithValue(
+      const Stream<void>.empty(),
+    ),
+
     // Always override BlossomAuthService to avoid 15-minute cleanup timer
     blossomAuthServiceProvider.overrideWithValue(mockBlossom),
 
@@ -576,7 +583,7 @@ Widget testProviderScope({
         mockFollowRepository: mockFollowRepository,
         rankingSignalsLoader: rankingSignalsLoader,
       ).where(
-        (override) => !_rankingLoaderProviders.any(
+        (override) => !_replaceableStandardOverrides.any(
           (provider) =>
               _overridesProvider(additionalOverrides, provider) &&
               _overridesProvider([override], provider),
@@ -593,9 +600,10 @@ Widget testProviderScope({
 }
 
 /// Standard fixtures a caller's own override replaces instead of duplicating.
-final List<Object> _rankingLoaderProviders = [
+final List<Object> _replaceableStandardOverrides = [
   userRankingSignalsLoaderProvider,
   ownFollowListRankingSignalsLoaderProvider,
+  profileFeedRetryTriggersProvider,
 ];
 
 bool _overridesProvider(List<Override>? overrides, Object provider) {

@@ -115,4 +115,24 @@ void main() {
       },
     );
   });
+
+  group('appForegroundResumesProvider', () {
+    test('emits when the app returns to the foreground', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      var resumes = 0;
+      final subscription = container
+          .read(appForegroundResumesProvider)
+          .listen((_) => resumes++);
+      addTearDown(subscription.cancel);
+      final foreground = container.read(appForegroundProvider.notifier);
+
+      foreground.setForeground(false);
+      await pumpEventQueue();
+      foreground.setForeground(true);
+      await pumpEventQueue();
+
+      expect(resumes, equals(1));
+    });
+  });
 }
