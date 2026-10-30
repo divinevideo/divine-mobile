@@ -4,8 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:openvine/features/creator_highlights/creator_highlights_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class _Preferences extends Mock implements SharedPreferences {}
 
 const owner =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -324,6 +327,16 @@ void main() {
   });
 
   group('markPresented', () {
+    test('a rejected storage write throws an operational exception', () async {
+      final storage = _Preferences();
+      prefs = storage;
+      when(() => storage.setString(any(), any()))
+          .thenAnswer((_) async => false);
+      await expectLater(
+        repository([]).markPresented(owner, '2026-10-30'),
+        throwsA(isA<CreatorHighlightPresentationException>()),
+      );
+    });
     test(
       'daily animation claims are private to owner and calendar date',
       () async {

@@ -9,7 +9,19 @@ import 'package:videos_repository/videos_repository.dart';
 
 abstract interface class CreatorHighlightsRepository {
   Future<CreatorHighlight?> load(String owner);
+
+  /// Saves the daily presentation marker.
+  ///
+  /// Throws [CreatorHighlightPresentationException] when storage rejects it.
   Future<void> markPresented(String owner, String localDate);
+}
+
+/// The device could not persist a daily presentation marker.
+class CreatorHighlightPresentationException implements Exception {
+  const CreatorHighlightPresentationException();
+
+  @override
+  String toString() => 'Could not save highlight presentation';
 }
 
 class FunnelcakeCreatorHighlightsRepository
@@ -219,6 +231,6 @@ class FunnelcakeCreatorHighlightsRepository
       presentationKey(owner),
       localDate,
     );
-    if (!saved) throw StateError('Could not save highlight presentation');
+    if (!saved) throw const CreatorHighlightPresentationException();
   }
 }

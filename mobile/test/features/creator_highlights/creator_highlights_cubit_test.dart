@@ -197,7 +197,7 @@ void main() {
   group('presented', () {
     test('reports storage failure without replaying the celebration', () async {
       final repository = _Repository()
-        ..presentationError = StateError('Could not save presentation');
+        ..presentationError = const CreatorHighlightPresentationException();
       final cubit = _ObservedCubit(repository: repository);
       repository.pending.complete(_card);
       await cubit.refresh();
@@ -205,7 +205,8 @@ void main() {
       await cubit.presented(_card);
       expect(cubit.state.card?.celebrate, isFalse);
       expect(cubit.errors, hasLength(1));
-      expect(cubit.errors.single, isA<Reportable<Object>>());
+      expect(cubit.errors.single, same(repository.presentationError));
+      expect(cubit.errors.single, isNot(isA<ReportableError>()));
       await cubit.close();
     });
     test(
