@@ -15297,7 +15297,11 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String creatorHighlightWeeklyViews(int count) {
-    return 'Totaal aantal weergaven tot nu toe van video’s die je deze week hebt geplaatst: $count.';
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Totaal aantal weergaven tot nu toe van video’s die je deze week hebt geplaatst: $countString.';
   }
 
   @override

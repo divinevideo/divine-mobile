@@ -14505,7 +14505,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String creatorHighlightWeeklyViews(int count) {
-    return '이번 주에 올린 동영상의 지금까지 누적 조회수: $count회.';
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '이번 주에 올린 동영상의 지금까지 누적 조회수: $countString회.';
   }
 
   @override

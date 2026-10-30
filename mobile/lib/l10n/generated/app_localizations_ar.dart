@@ -15238,7 +15238,11 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String creatorHighlightWeeklyViews(int count) {
-    return 'إجمالي مشاهدات فيديوهاتك المنشورة هذا الأسبوع حتى الآن: $count.';
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'إجمالي مشاهدات فيديوهاتك المنشورة هذا الأسبوع حتى الآن: $countString.';
   }
 
   @override

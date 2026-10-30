@@ -14317,7 +14317,11 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String creatorHighlightWeeklyViews(int count) {
-    return '你本周发布的视频截至目前的总播放次数：$count 次。';
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '你本周发布的视频截至目前的总播放次数：$countString 次。';
   }
 
   @override

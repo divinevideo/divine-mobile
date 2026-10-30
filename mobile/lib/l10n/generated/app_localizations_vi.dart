@@ -15162,7 +15162,11 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String creatorHighlightWeeklyViews(int count) {
-    return 'Tổng lượt xem tính đến hiện tại của các video bạn đăng trong tuần này: $count.';
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Tổng lượt xem tính đến hiện tại của các video bạn đăng trong tuần này: $countString.';
   }
 
   @override

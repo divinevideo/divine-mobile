@@ -25437,7 +25437,7 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{One creative day this week. Keep going.} other{{count} creative days this week. Keep going.}}'**
   String creatorHighlightCreationDays(int count);
 
-  /// Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.
+  /// Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.
   ///
   /// In en, this message translates to:
   /// **'{count, plural, =1{{count} view on videos you posted this week, so far.} other{{count} views on videos you posted this week, so far.}}'**

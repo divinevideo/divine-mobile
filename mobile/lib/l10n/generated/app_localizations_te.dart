@@ -15580,7 +15580,11 @@ class AppLocalizationsTe extends AppLocalizations {
 
   @override
   String creatorHighlightWeeklyViews(int count) {
-    return 'ఈ వారం మీరు పోస్ట్ చేసిన వీడియోలకు ఇప్పటివరకు వచ్చిన మొత్తం వీక్షణలు: $count.';
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'ఈ వారం మీరు పోస్ట్ చేసిన వీడియోలకు ఇప్పటివరకు వచ్చిన మొత్తం వీక్షణలు: $countString.';
   }
 
   @override

@@ -15523,7 +15523,11 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String creatorHighlightWeeklyViews(int count) {
-    return 'Vizionări totale până acum ale videoclipurilor pe care le-ai publicat săptămâna asta: $count.';
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Vizionări totale până acum ale videoclipurilor pe care le-ai publicat săptămâna asta: $countString.';
   }
 
   @override

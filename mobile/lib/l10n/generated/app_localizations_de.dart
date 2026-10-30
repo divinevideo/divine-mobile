@@ -15396,7 +15396,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String creatorHighlightWeeklyViews(int count) {
-    return 'Bisherige Aufrufe insgesamt für die Videos, die du diese Woche gepostet hast: $count.';
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Bisherige Aufrufe insgesamt für die Videos, die du diese Woche gepostet hast: $countString.';
   }
 
   @override

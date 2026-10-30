@@ -15358,7 +15358,11 @@ class AppLocalizationsBg extends AppLocalizations {
 
   @override
   String creatorHighlightWeeklyViews(int count) {
-    return 'Общо гледания досега на видеата, които публикува тази седмица: $count.';
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Общо гледания досега на видеата, които публикува тази седмица: $countString.';
   }
 
   @override

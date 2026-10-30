@@ -219,11 +219,14 @@ void main() {
           ),
           isNotNull,
         );
-        expect(find.text('Your daily highlight'), findsOneWidget);
-        expect(find.text('You made something today.'), findsOneWidget);
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(InboxNotificationsPage)),
+        );
+        expect(find.text(l10n.creatorHighlightLabel), findsOneWidget);
+        expect(find.text(l10n.creatorHighlightCreatedToday(1)), findsOneWidget);
         expect(tester.takeException(), isNull);
         expect(authorRequests, 2);
-        await tester.tap(find.text('Watch video'));
+        await tester.tap(find.text(l10n.creatorHighlightWatch));
         await tester.pumpAndSettle();
         expect(find.text('Video destination'), findsOneWidget);
         expect(receivedExtra, isA<VideoDetailRouteExtra>());
@@ -233,23 +236,23 @@ void main() {
         );
         router.pop();
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Make another'));
+        await tester.tap(find.text(l10n.creatorHighlightCreate));
         await tester.pumpAndSettle();
         expect(find.text('Camera destination'), findsOneWidget);
         router.pop();
         await tester.pumpAndSettle();
-        await tester.tap(find.text('See your stats'));
+        await tester.tap(find.text(l10n.creatorHighlightAnalytics));
         await tester.pumpAndSettle();
         expect(find.text('Analytics destination'), findsOneWidget);
         router.pop();
         await tester.pumpAndSettle();
-        await tester.tap(find.text('Likes'));
+        await tester.tap(find.text(l10n.notificationsTabLikes));
         await tester.pumpAndSettle();
-        expect(find.text('Your daily highlight'), findsNothing);
+        expect(find.text(l10n.creatorHighlightLabel), findsNothing);
         expect(authorRequests, 2);
-        await tester.tap(find.text('All'));
+        await tester.tap(find.text(l10n.notificationsTabAll));
         await tester.pumpAndSettle();
-        expect(find.text('Your daily highlight'), findsOneWidget);
+        expect(find.text(l10n.creatorHighlightLabel), findsOneWidget);
         expect(authorRequests, 3);
         await tester.drag(
           find.byType(CustomScrollView).first,
@@ -265,7 +268,7 @@ void main() {
         when(() => auth.currentPublicKeyHex).thenReturn(null);
         authStates.add(AuthState.unauthenticated);
         await tester.pumpAndSettle();
-        expect(find.text('Your daily highlight'), findsNothing);
+        expect(find.text(l10n.creatorHighlightLabel), findsNothing);
         expect(tester.takeException(), isNull);
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pumpAndSettle();

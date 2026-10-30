@@ -116,9 +116,12 @@ void main() {
       await tester.pumpWidget(subject(true));
       await tester.pumpAndSettle();
       expect(presented, 1);
-      await tester.tap(find.text('Make another'));
-      await tester.tap(find.text('See your stats'));
-      await tester.tap(find.text('Watch video'));
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(CreatorHighlightCard)),
+      );
+      await tester.tap(find.text(l10n.creatorHighlightCreate));
+      await tester.tap(find.text(l10n.creatorHighlightAnalytics));
+      await tester.tap(find.text(l10n.creatorHighlightWatch));
       expect((created, analytics, watched), (1, 1, 1));
       await tester.pumpWidget(subject(true));
       await tester.pumpAndSettle();
@@ -141,48 +144,62 @@ void main() {
 
   group('renders', () {
     for (final brightness in Brightness.values) {
-      testWidgets(
-        'card scrolls at large text in $brightness with reduced motion',
-        (tester) async {
-          tester.view.physicalSize = const Size(320, 640);
-          tester.view.devicePixelRatio = 1;
-          addTearDown(tester.view.resetPhysicalSize);
-          addTearDown(tester.view.resetDevicePixelRatio);
-          await tester.pumpWidget(
-            MaterialApp(
-              theme: ThemeData(brightness: brightness),
-              localizationsDelegates: appLocalizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              home: Builder(
-                builder: (context) => MediaQuery(
-                  data: MediaQuery.of(context).copyWith(
-                    disableAnimations: true,
-                    textScaler: const TextScaler.linear(2),
-                  ),
-                  child: Scaffold(
-                    body: SingleChildScrollView(
-                      child: CreatorHighlightCard(
-                        highlight: _card,
-                        isVisible: true,
-                        onPresented: () {},
-                        onCreate: () {},
-                        onAnalytics: () {},
-                        onWatch: () {},
+      for (final locale in AppLocalizations.supportedLocales) {
+        testWidgets(
+          '${locale.languageCode} card scrolls at large text in $brightness '
+          'with reduced motion',
+          (tester) async {
+            tester.view.physicalSize = const Size(320, 640);
+            tester.view.devicePixelRatio = 1;
+            addTearDown(tester.view.resetPhysicalSize);
+            addTearDown(tester.view.resetDevicePixelRatio);
+            await tester.pumpWidget(
+              MaterialApp(
+                locale: locale,
+                theme: ThemeData(brightness: brightness),
+                localizationsDelegates: appLocalizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                home: Builder(
+                  builder: (context) => MediaQuery(
+                    data: MediaQuery.of(context).copyWith(
+                      disableAnimations: true,
+                      textScaler: const TextScaler.linear(2),
+                    ),
+                    child: Scaffold(
+                      body: SingleChildScrollView(
+                        child: CreatorHighlightCard(
+                          highlight: _card,
+                          isVisible: true,
+                          onPresented: () {},
+                          onCreate: () {},
+                          onAnalytics: () {},
+                          onWatch: () {},
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          );
-          await tester.pumpAndSettle();
-          expect(find.text('You made something today.'), findsOneWidget);
-          expect(tester.takeException(), isNull);
-          await tester.ensureVisible(find.text('See your stats'));
-          await tester.pumpAndSettle();
-          expect(tester.takeException(), isNull);
-        },
-      );
+            );
+            await tester.pumpAndSettle();
+            final l10n = lookupAppLocalizations(locale);
+            expect(
+              find.text(l10n.creatorHighlightCreatedToday(_card.createdToday)),
+              findsOneWidget,
+            );
+            expect(
+              find.text(l10n.creatorHighlightWeeklyViews(_card.views!)),
+              findsOneWidget,
+            );
+            expect(tester.takeException(), isNull);
+            await tester.ensureVisible(
+              find.text(l10n.creatorHighlightAnalytics),
+            );
+            await tester.pumpAndSettle();
+            expect(tester.takeException(), isNull);
+          },
+        );
+      }
     }
   });
 }

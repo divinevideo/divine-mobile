@@ -15535,7 +15535,11 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String creatorHighlightWeeklyViews(int count) {
-    return 'Łączna liczba wyświetleń do tej pory filmów opublikowanych przez ciebie w tym tygodniu: $count.';
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Łączna liczba wyświetleń do tej pory filmów opublikowanych przez ciebie w tym tygodniu: $countString.';
   }
 
   @override

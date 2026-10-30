@@ -15110,7 +15110,11 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String creatorHighlightWeeklyViews(int count) {
-    return 'Total tayangan sejauh ini pada video yang kamu posting minggu ini: $count.';
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Total tayangan sejauh ini pada video yang kamu posting minggu ini: $countString.';
   }
 
   @override

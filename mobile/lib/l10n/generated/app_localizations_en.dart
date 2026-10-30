@@ -15326,11 +15326,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String creatorHighlightWeeklyViews(int count) {
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count views on videos you posted this week, so far.',
-      one: '$count view on videos you posted this week, so far.',
+      other: '$countString views on videos you posted this week, so far.',
+      one: '$countString view on videos you posted this week, so far.',
     );
     return '$_temp0';
   }

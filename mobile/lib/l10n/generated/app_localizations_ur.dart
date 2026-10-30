@@ -15217,7 +15217,11 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String creatorHighlightWeeklyViews(int count) {
-    return 'اس ہفتے آپ کی پوسٹ کی ہوئی ویڈیوز پر اب تک کے کل ویوز: $count۔';
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'اس ہفتے آپ کی پوسٹ کی ہوئی ویڈیوز پر اب تک کے کل ویوز: $countString۔';
   }
 
   @override

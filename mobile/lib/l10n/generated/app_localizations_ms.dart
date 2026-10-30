@@ -15212,7 +15212,11 @@ class AppLocalizationsMs extends AppLocalizations {
 
   @override
   String creatorHighlightWeeklyViews(int count) {
-    return 'Jumlah tontonan setakat ini bagi video yang anda siarkan minggu ini: $count.';
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Jumlah tontonan setakat ini bagi video yang anda siarkan minggu ini: $countString.';
   }
 
   @override

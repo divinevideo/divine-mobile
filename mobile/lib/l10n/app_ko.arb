@@ -5687,10 +5687,11 @@
   },
   "creatorHighlightWeeklyViews": "이번 주에 올린 동영상의 지금까지 누적 조회수: {count}회.",
   "@creatorHighlightWeeklyViews": {
-    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "description": "Lifetime views so far across videos published this local calendar week, not views received this week. Format the count for the selected app language.",
     "placeholders": {
       "count": {
-        "type": "int"
+        "type": "int",
+        "format": "decimalPattern"
       }
     }
   },

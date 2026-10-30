@@ -15232,7 +15232,11 @@ class AppLocalizationsSv extends AppLocalizations {
 
   @override
   String creatorHighlightWeeklyViews(int count) {
-    return 'Totalt antal visningar hittills för videorna du publicerade den här veckan: $count.';
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Totalt antal visningar hittills för videorna du publicerade den här veckan: $countString.';
   }
 
   @override

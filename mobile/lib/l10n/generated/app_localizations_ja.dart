@@ -14490,7 +14490,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String creatorHighlightWeeklyViews(int count) {
-    return '今週投稿した動画の、これまでの合計再生回数：$count回。';
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return '今週投稿した動画の、これまでの合計再生回数：$countString回。';
   }
 
   @override

@@ -14851,7 +14851,11 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String creatorHighlightWeeklyViews(int count) {
-    return 'በዚህ ሳምንት ያሳተሟቸው ቪዲዮዎች እስካሁን ያገኟቸው ጠቅላላ እይታዎች፦ $count።';
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'በዚህ ሳምንት ያሳተሟቸው ቪዲዮዎች እስካሁን ያገኟቸው ጠቅላላ እይታዎች፦ $countString።';
   }
 
   @override

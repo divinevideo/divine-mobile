@@ -15344,7 +15344,11 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String creatorHighlightWeeklyViews(int count) {
-    return 'Kabuuang views sa ngayon ng mga video na pinost mo ngayong linggo: $count.';
+    final intl.NumberFormat countNumberFormat =
+        intl.NumberFormat.decimalPattern(localeName);
+    final String countString = countNumberFormat.format(count);
+
+    return 'Kabuuang views sa ngayon ng mga video na pinost mo ngayong linggo: $countString.';
   }
 
   @override
