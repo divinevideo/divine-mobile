@@ -438,6 +438,7 @@ class _SocialStickerCountdownFieldsState
             autofocus: widget.autofocus,
             labelText: context.l10n.videoEditorSocialStickerCountdownTitleHint,
             maxLength: SocialStickerData.maxCountdownTitleLength,
+            textCapitalization: .words,
             textInputAction: .done,
             onChanged: cubit.countdownTitleChanged,
           ),
