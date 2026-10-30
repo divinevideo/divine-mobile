@@ -14,7 +14,7 @@ import 'package:pro_video_editor/core/analysis/similarity_estimator.dart';
 /// reference to the target, about the image center rather than its top left.
 class PveLoopFrameMatcher implements LoopFrameMatcher {
   /// The edge margin `detectCornersInRect` skips by default.
-  static const _trackingBorder = 8;
+  static const _detectorBorder = 8;
 
   @override
   LoopFrameMatch? match(LoopFrame reference, LoopFrame target) {
@@ -33,8 +33,8 @@ class PveLoopFrameMatcher implements LoopFrameMatcher {
     // only count agreement with the main fit; neither fit uses them.
     final boundaryPoints = _bandCorners(
       from,
-      bandX: _trackingBorder + (w - 2 * _trackingBorder) * .08,
-      bandY: _trackingBorder + (h - 2 * _trackingBorder) * .08,
+      bandX: _detectorBorder + (w - 2 * _detectorBorder) * .08,
+      bandY: _detectorBorder + (h - 2 * _detectorBorder) * .08,
     );
     final tracked = _track(from, to, Float32List.fromList(points));
     if (tracked.length < 20) return null;
