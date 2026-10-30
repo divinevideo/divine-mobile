@@ -1174,9 +1174,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     Emitter<VideoFeedBlocState> emit,
   ) async {
     if (state.source.type != VideoFeedSourceType.following) return;
-    // This first-page refresh retires the previous pagination generation,
-    // including its loading indicator if the replacement read fails.
-    if (state.isLoadingMore) emit(state.copyWith(isLoadingMore: false));
+    // A committed badge page remains owned until a replacement succeeds.
+    if (state.isLoadingMore && !_followingFeed.hasBadgeAuthors) {
+      emit(state.copyWith(isLoadingMore: false));
+    }
     final feedLoad = _feedTracker?.startFeedLoad(
       state.source.mode.name,
       reason: FeedLoadReason.refresh,
@@ -1571,7 +1572,10 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     bool startsNewFeedSession = false,
   }) async {
     final generation = ++_loadGeneration;
-    _paginationGeneration++;
+    // A failed refresh must leave the committed badge pager's page usable.
+    if (!preserveCurrentVideo || !_followingFeed.hasBadgeAuthors) {
+      _paginationGeneration++;
+    }
     final nextFeedSessionRevision = startsNewFeedSession
         ? state.feedSessionRevision + 1
         : state.feedSessionRevision;
