@@ -96,7 +96,8 @@ ios/fastlane/README.md
 ios/fastlane/DerivedData/
 ios/fastlane/.venv/
 
-# Generated loop-alignment fixtures and native-test output. Keep private
-# recordings outside the checkout; these rules cover only the generator's files.
+# Generated loop-alignment fixtures and native-test output. These rules match
+# only top-level .mp4 files and native-output/, so keep private recordings
+# outside the checkout.
 integration_test/fixtures/*.mp4
 integration_test/fixtures/native-output/
