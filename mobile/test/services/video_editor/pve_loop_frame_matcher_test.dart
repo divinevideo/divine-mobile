@@ -174,6 +174,26 @@ LoopFrame _patchedMarginFrame(
   );
 }
 
+// A rigid subject fills the middle 90% of the height and reaches both side
+// edges, so its motion crosses the left and right support bands.
+LoopFrame _oppositeEdgeSubjectFrame(
+  int width,
+  int height,
+  double shift,
+  Duration time,
+) {
+  final pixels = Uint8List(width * height);
+  for (var y = 0; y < height; y++) {
+    for (var x = 0; x < width; x++) {
+      final value = y > height * .05 && y < height * .95
+          ? _subjectTexture(x - shift, y.toDouble())
+          : _texture(x.toDouble(), y.toDouble());
+      pixels[y * width + x] = value.round().clamp(0, 255);
+    }
+  }
+  return LoopFrame(time: time, width: width, height: height, luma: pixels);
+}
+
 LoopFrame _repeatedFrame(int width, int height, double shift) => LoopFrame(
   time: Duration.zero,
   width: width,
@@ -274,8 +294,8 @@ void main() {
     for (final (width, height) in [(180, 320), (320, 180)]) {
       // The texture repeats on a (4.49, 5.24) lattice, so larger motions alias.
       for (final motion in [.5, 1.0, 2.0]) {
-        test('edge-touching subject motion $motion is not camera drift at '
-            '$width x $height', () {
+        test('stationary-outline subject touching adjacent edges, motion '
+            '$motion, is not camera drift at $width x $height', () {
           final match = PveLoopFrameMatcher().match(
             _frame(
               width,
@@ -309,7 +329,7 @@ void main() {
         (true, true),
       ]) {
         test(
-          'edge-touching subject rejection survives flip $horizontal/$vertical '
+          'adjacent-edge subject rejection survives flip $horizontal/$vertical '
           'at $width x $height',
           () {
             final match = PveLoopFrameMatcher().match(
@@ -572,6 +592,49 @@ void main() {
       expect(match.pose.ty.abs(), lessThan(.3));
       expect(const LoopAlignmentLimits().acceptsMatch(match, 320, 180), isTrue);
     });
+    for (final (width, height) in [(180, 320), (320, 180)]) {
+      test('known limit: a rigid subject touching opposite edges is accepted '
+          'as camera drift at $width x $height', () {
+        // main behaves the same; the framing-contract work should flip this.
+        final frames = [
+          for (var i = 0; i < 90; i++)
+            _oppositeEdgeSubjectFrame(
+              width,
+              height,
+              2 * i / 89,
+              Duration(microseconds: i * 33333),
+            ),
+        ];
+        final match = PveLoopFrameMatcher().match(frames.first, frames.last);
+        expect(match, isNotNull);
+        expect(
+          const LoopAlignmentLimits().acceptsMatch(match!, width, height),
+          isTrue,
+        );
+        expect(match.pose.tx, closeTo(2, .3));
+        final plan = const LoopAlignmentPlanner().plan(
+          input: LoopRepairInput(
+            clips: [
+              LoopClipInput(
+                clipId: 'opposite-edge-subject',
+                path: '/synthetic.mp4',
+                sourceStart: Duration.zero,
+                sourceEnd: const Duration(microseconds: 90 * 33333),
+                speed: 1,
+                width: width,
+                height: height,
+              ),
+            ],
+            revision: 'synthetic-opposite-edge-subject',
+          ),
+          firstFrames: frames,
+          lastFrames: frames,
+          matcher: PveLoopFrameMatcher(),
+          limits: const LoopAlignmentLimits(),
+        );
+        expect(plan, isNotNull);
+      });
+    }
     for (final (width, height, leftSpan) in [
       (180, 320, .01),
       (320, 180, .02),
