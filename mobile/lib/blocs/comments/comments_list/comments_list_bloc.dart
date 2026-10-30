@@ -349,6 +349,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
               videoDimensions: comment.videoDimensions,
               videoDuration: comment.videoDuration,
               videoBlurhash: comment.videoBlurhash,
+              stickerTags: comment.stickerTags,
             ),
         );
       }

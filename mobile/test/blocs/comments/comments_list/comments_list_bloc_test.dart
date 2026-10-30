@@ -688,12 +688,13 @@ void main() {
               videoDimensions: '720x1280',
               videoDuration: 6,
               videoBlurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH',
-            ),
+            ).copyWith(stickerTags: [_replyStickerTag]),
           ),
         ),
         verify: (b) {
           final comment = b.state.commentsById[validId('c1')]!;
           expect(comment.hasVideo, isTrue);
+          expect(comment.stickerTags, equals([_replyStickerTag]));
           // Upgrade must merge in place, not replace with the echo: the
           // existing REST copy's threading (a field the echo lacks) survives.
           expect(comment.replyToEventId, equals(validId('parent')));
@@ -1691,3 +1692,13 @@ void main() {
     });
   });
 }
+
+const _replyStickerTag = [
+  'sticker',
+  'reply',
+  'target',
+  '0.5 0.5 0.4 0.2',
+  '0',
+  '0',
+  '0',
+];
