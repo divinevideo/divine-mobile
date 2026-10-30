@@ -1,4 +1,4 @@
-// ABOUTME: Verifies anonymous creation, disabled behavior and cache disposal at the provider boundary.
+// ABOUTME: Verifies build defaults, anonymous creation, disabled behavior and cache disposal.
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +7,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:openvine/features/feature_flags/models/feature_flag.dart';
 import 'package:openvine/features/feature_flags/providers/feature_flag_providers.dart';
+import 'package:openvine/features/feature_flags/services/build_configuration.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/short_link_provider.dart';
@@ -16,6 +17,24 @@ void main() {
   const shortened = 'https://divine.video/l/Abc12345';
 
   group('shortLinkClientProvider', () {
+    test('short-link sharing is enabled by default on native builds', () {
+      expect(
+        const BuildConfiguration(
+          isWeb: false,
+        ).getDefault(FeatureFlag.shortLinksSharing),
+        isTrue,
+      );
+    });
+
+    test('web builds retain canonical links by default', () {
+      expect(
+        const BuildConfiguration(
+          isWeb: true,
+        ).getDefault(FeatureFlag.shortLinksSharing),
+        isFalse,
+      );
+    });
+
     test('disabled sharing does not construct auth or HTTP', () {
       final container = ProviderContainer(
         overrides: [
