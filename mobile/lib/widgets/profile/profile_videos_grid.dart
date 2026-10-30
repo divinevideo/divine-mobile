@@ -34,6 +34,7 @@ import 'package:openvine/widgets/profile/profile_tab_loading_more_sliver.dart';
 import 'package:openvine/widgets/profile/profile_tab_thumbnail.dart';
 import 'package:openvine/widgets/profile/profile_tab_thumbnail_placeholder.dart';
 import 'package:openvine/widgets/profile/profile_videos_grid_skeleton.dart';
+import 'package:openvine/widgets/profile/profile_videos_load_failed.dart';
 
 /// Internal class that represents a video entry in the grid
 /// It can be a video event or an uploading video
@@ -391,6 +392,9 @@ class _ProfileVideosGridState extends ConsumerState<ProfileVideosGrid>
     if (allVideos.isEmpty) {
       if (widget.isLoading) {
         return const ProfileVideosGridSkeleton();
+      }
+      if (feedState.status == ProfileFeedStatus.failure) {
+        return const ProfileVideosLoadFailed();
       }
       if (!isOwnProfile || feedState.unavailablePinnedCoordinates.isEmpty) {
         return ProfileTabEmptyState(

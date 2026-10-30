@@ -12,6 +12,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
+import 'package:openvine/blocs/profile_feed/profile_tab_retap_cubit.dart';
 import 'package:openvine/constants/semantic_ids.dart';
 import 'package:openvine/constants/text_scale_limits.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -75,6 +76,12 @@ class VineBottomNav extends ConsumerWidget {
     if (tabIndex == 0 && currentIndex == 0 && !isCampaignLanding) {
       context.read<HomeFeedRetapCubit>().request();
       return;
+    }
+
+    // Re-tapping the profile tab while on it retries a failed profile load.
+    // Read leniently: the cubit is provided only above AppShell.
+    if (tabIndex == 3 && currentIndex == 3) {
+      context.read<ProfileTabRetapCubit?>()?.request();
     }
 
     // Pop any pushed routes first

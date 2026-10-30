@@ -500,41 +500,27 @@ class _OtherProfileViewState extends ConsumerState<OtherProfileView> {
 
               return Scaffold(
                 backgroundColor: context.vineColors.surface,
-                body: switch (feedState.status) {
-                  ProfileFeedStatus.failure => Center(
-                    child: Text(
-                      context.l10n.profileFeedError,
-                      style: TextStyle(color: context.vineColors.primaryText),
-                    ),
-                  ),
-                  // During the cold load we render the real layout (header
-                  // skeletonizes itself; the videos tab shows a skeleton grid)
-                  // instead of a separate placeholder, so the load→ready
-                  // transition does not pop.
-                  ProfileFeedStatus.initial ||
-                  ProfileFeedStatus.loading ||
-                  ProfileFeedStatus.ready => ProfileGridView(
-                    userIdHex: widget.pubkey,
-                    isOwnProfile: false,
-                    profile: headerProfile,
-                    profileStats: headerStats,
-                    displayName: displayName,
-                    videos: feedState.videos,
-                    isLoadingVideos:
-                        feedState.status != ProfileFeedStatus.ready ||
-                        feedState.isInitialLoad,
-                    scrollController: _scrollController,
-                    onBack: context.safePop,
-                    onMore: _more,
-                    onMessageUser: _messageUser,
-                    isMessageRestricted: isMessageRestricted,
-                    onShareProfile: _shareProfile,
-                    onBlockedTap: _showUnblockConfirmation,
-                    displayNameHint: widget.displayNameHint,
-                    avatarUrlHint: widget.avatarUrlHint,
-                    refreshNotifier: _refreshNotifier,
-                  ),
-                },
+                // A failed load shows its error inside the Videos tab, so the
+                // header and its back button stay reachable (#9773).
+                body: ProfileGridView(
+                  userIdHex: widget.pubkey,
+                  isOwnProfile: false,
+                  profile: headerProfile,
+                  profileStats: headerStats,
+                  displayName: displayName,
+                  videos: feedState.videos,
+                  isLoadingVideos: feedState.isLoadingVideos,
+                  scrollController: _scrollController,
+                  onBack: context.safePop,
+                  onMore: _more,
+                  onMessageUser: _messageUser,
+                  isMessageRestricted: isMessageRestricted,
+                  onShareProfile: _shareProfile,
+                  onBlockedTap: _showUnblockConfirmation,
+                  displayNameHint: widget.displayNameHint,
+                  avatarUrlHint: widget.avatarUrlHint,
+                  refreshNotifier: _refreshNotifier,
+                ),
               );
             },
           );
