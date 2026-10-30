@@ -7,7 +7,7 @@ import 'dart:math' as math;
 import 'package:clock/clock.dart';
 import 'package:divine_video_player/divine_video_player.dart'
     show DivineVideoPlayerController, DivineVideoPlayerState;
-import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter/foundation.dart' show kIsWeb, listEquals;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart'
@@ -144,6 +144,7 @@ class VideoStickerTapAreas extends StatefulWidget {
     required this.controller,
     this.shouldPortraitExpand = true,
     this.onOpen = openVideoSticker,
+    this.canSetReminders = !kIsWeb,
     super.key,
   });
 
@@ -155,6 +156,10 @@ class VideoStickerTapAreas extends StatefulWidget {
 
   /// Opens a tapped sticker.
   final VideoStickerOpener onOpen;
+
+  /// Whether a tap on a countdown can set a reminder, which the web cannot;
+  /// without, a countdown is drawn with its time left and is no button.
+  final bool canSetReminders;
 
   @override
   State<VideoStickerTapAreas> createState() => _VideoStickerTapAreasState();
@@ -267,7 +272,11 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
                 _StickerTapArea(
                   region: region,
                   frame: frame,
-                  onTap: () => widget.onOpen(context, region, widget.video),
+                  onTap:
+                      region.kind == VideoStickerKind.countdown &&
+                          !widget.canSetReminders
+                      ? null
+                      : () => widget.onOpen(context, region, widget.video),
                 ),
             ],
           ),
@@ -275,7 +284,8 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
       },
     );
     // A tap on a countdown sets its reminder through the scope's cubit.
-    return _shown.any((region) => region.kind == VideoStickerKind.countdown)
+    return widget.canSetReminders &&
+            _shown.any((region) => region.kind == VideoStickerKind.countdown)
         ? CountdownReminderScope(child: areas)
         : areas;
   }
@@ -305,7 +315,9 @@ class _StickerTapArea extends StatelessWidget {
 
   final VideoStickerRegion region;
   final Rect frame;
-  final VoidCallback onTap;
+
+  /// Opens the sticker; without, it is only drawn.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -344,17 +356,18 @@ class _StickerTapArea extends StatelessWidget {
                   ),
                 ),
               ),
-            Semantics(
-              button: true,
-              label: _label(context),
-              child: GestureDetector(
-                // Translucent and empty, so the player beneath still sees the
-                // pointer: its double tap likes, its long press peeks.
-                behavior: HitTestBehavior.translucent,
-                onTap: onTap,
-                child: const SizedBox.expand(),
+            if (onTap != null)
+              Semantics(
+                button: true,
+                label: _label(context),
+                child: GestureDetector(
+                  // Translucent and empty, so the player beneath still sees
+                  // the pointer: its double tap likes, its long press peeks.
+                  behavior: HitTestBehavior.translucent,
+                  onTap: onTap,
+                  child: const SizedBox.expand(),
+                ),
               ),
-            ),
           ],
         ),
       ),

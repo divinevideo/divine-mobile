@@ -48,7 +48,7 @@ class CountdownReminderScope extends ConsumerWidget {
             CountdownReminderStatus.notificationsOff =>
               l10n.videoStickerCountdownNotificationsOff,
             CountdownReminderStatus.over => l10n.videoStickerCountdownOver,
-            // Logged by the service; the web has no reminders to set.
+            // Logged by the service.
             CountdownReminderStatus.idle ||
             CountdownReminderStatus.failed => null,
           };

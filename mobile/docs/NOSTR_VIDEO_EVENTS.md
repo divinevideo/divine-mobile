@@ -243,7 +243,8 @@ The newer kinds:
   true in every client. Divine's player draws it again with the time left in
   place of the date, ticking each second, and its date again once it is over;
   a tap sets a local reminder for the end, or removes it, and asks for
-  notification permission only then. The editor offers a countdown only the
+  notification permission only then. On the web, which has no reminders, it
+  is no button. The editor offers a countdown only the
   solid `light`, `brand` and `highlight` looks, so the copy hides the date in
   the frames.
 - `reply` shows the avatar, name and comment the video replies to, as they

@@ -250,6 +250,7 @@ void main() {
       WidgetTester tester,
       List<VideoStickerRegion> regions, {
       String? audioEventId,
+      bool canSetReminders = true,
     }) async {
       tester.view.physicalSize = const Size(360, 640);
       tester.view.devicePixelRatio = 1;
@@ -281,6 +282,7 @@ void main() {
                     video: _video(regions, audioEventId: audioEventId),
                     controller: controller,
                     onOpen: (_, region, _) => opened.add(region),
+                    canSetReminders: canSetReminders,
                   ),
                 ),
               ],
@@ -579,6 +581,29 @@ void main() {
         await tester.pump(const Duration(seconds: 1));
 
         expect(tester.widget<Text>(timeLeft).data, isNot(equals(before)));
+      });
+
+      testWidgets('draws a countdown without a button where no reminder '
+          'can be set', (tester) async {
+        final countdown = _countdown(
+          clock.now().add(const Duration(days: 12, hours: 4)),
+        );
+        await pump(tester, [countdown], canSetReminders: false);
+
+        expect(find.textContaining('12 days 0'), findsOneWidget);
+        expect(
+          find.bySemanticsLabel(
+            lookupAppLocalizations(
+              const Locale('en'),
+            ).videoStickerCountdownSemanticLabel,
+          ),
+          findsNothing,
+        );
+
+        await tapAt(tester, const Offset(180, 320));
+
+        expect(opened, isEmpty);
+        expect(playerTaps, equals(1));
       });
 
       testWidgets('draws a countdown that is over with its date', (
