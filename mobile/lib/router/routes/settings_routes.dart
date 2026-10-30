@@ -52,6 +52,8 @@ import 'package:openvine/screens/settings/supporter_screen.dart';
 import 'package:openvine/widgets/bug_report_dialog.dart';
 import 'package:openvine/widgets/feature_request_dialog.dart';
 
+part 'settings_routes.g.dart';
+
 List<RouteBase> settingsRoutes(Ref ref) {
   return [
     GoRoute(
@@ -119,19 +121,7 @@ List<RouteBase> settingsRoutes(Ref ref) {
         (coordinate) => BadgeDetailScreen(coordinate: coordinate),
       ),
     ),
-    GoRoute(
-      path: BadgeVideosScreen.path,
-      name: BadgeVideosScreen.routeName,
-      builder: (_, state) => _badgeRouteScreen(
-        state,
-        (coordinate) => BadgeVideosScreen(
-          coordinate: coordinate,
-          seed: state.extra is BadgeVideosSeed
-              ? state.extra! as BadgeVideosSeed
-              : null,
-        ),
-      ),
-    ),
+    ...$appRoutes,
     GoRoute(
       path: BadgeEditorScreen.editPath,
       name: BadgeEditorScreen.editRouteName,
@@ -374,4 +364,26 @@ String? accountCredentialsRedirectIfUnavailable(Ref ref) {
   final source = ref.read(authServiceProvider).authenticationSource;
   if (source == AuthenticationSource.divineOAuth) return null;
   return GeneralSettingsScreen.path;
+}
+
+/// Videos from a badge’s accepted holders, with optional in-session holder data.
+@TypedGoRoute<BadgeVideosRouteData>(
+  path: BadgeVideosScreen.path,
+  name: BadgeVideosScreen.routeName,
+)
+class BadgeVideosRouteData extends GoRouteData with $BadgeVideosRouteData {
+  const BadgeVideosRouteData({required this.naddr, this.$extra});
+
+  final String naddr;
+  final Object? $extra;
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) {
+    final coordinate = BadgeCoordinate.tryParse(naddr);
+    if (coordinate == null) return const BadgesScreen();
+    return BadgeVideosScreen(
+      coordinate: coordinate,
+      seed: extraAs<BadgeVideosSeed>($extra),
+    );
+  }
 }
