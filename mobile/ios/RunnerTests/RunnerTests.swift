@@ -1013,7 +1013,10 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
 
     clipURL = FileManager.default.temporaryDirectory
       .appendingPathComponent("playback_end_\(UUID().uuidString).mp4")
-    try Self.writeClip(to: clipURL, frames: 30)
+    let clip = try XCTUnwrap(
+      Data(base64Encoded: Self.clipBase64, options: .ignoreUnknownCharacters)
+    )
+    try clip.write(to: clipURL)
     _ = try invoke("setClips", ["clips": [["uri": clipURL.path, "startMs": 0]]])
     try waitForState("the clip loads") { $0["status"] as? String == "paused" }
   }
@@ -1376,42 +1379,59 @@ final class DivineVideoPlayerPlaybackEndTests: XCTestCase {
     let description: String
   }
 
-  /// Writes a 30 fps H.264 clip of [frames] grey frames.
-  private static func writeClip(to url: URL, frames: Int) throws {
-    let writer = try AVAssetWriter(outputURL: url, fileType: .mp4)
-    let input = AVAssetWriterInput(
-      mediaType: .video,
-      outputSettings: [
-        AVVideoCodecKey: AVVideoCodecType.h264,
-        AVVideoWidthKey: 64,
-        AVVideoHeightKey: 64,
-      ]
-    )
-    let adaptor = AVAssetWriterInputPixelBufferAdaptor(
-      assetWriterInput: input,
-      sourcePixelBufferAttributes: nil
-    )
-    writer.add(input)
-    XCTAssertTrue(writer.startWriting())
-    writer.startSession(atSourceTime: .zero)
-    for index in 0..<frames {
-      var buffer: CVPixelBuffer?
-      CVPixelBufferCreate(nil, 64, 64, kCVPixelFormatType_32BGRA, nil, &buffer)
-      let frame = try XCTUnwrap(buffer)
-      CVPixelBufferLockBaseAddress(frame, [])
-      memset(CVPixelBufferGetBaseAddress(frame)!, 0x80, CVPixelBufferGetDataSize(frame))
-      CVPixelBufferUnlockBaseAddress(frame, [])
-      while !input.isReadyForMoreMediaData {
-        RunLoop.main.run(until: Date().addingTimeInterval(0.01))
-      }
-      adaptor.append(frame, withPresentationTime: CMTime(value: CMTimeValue(index), timescale: 30))
-    }
-    input.markAsFinished()
-    let finished = DispatchSemaphore(value: 0)
-    writer.finishWriting { finished.signal() }
-    finished.wait()
-    XCTAssertEqual(writer.status, .completed, "\(writer.error.map { "\($0)" } ?? "")")
-  }
+  /// A 30 fps H.264 clip of 30 grey 64×64 frames, 1 s long, as `AVAssetWriter`
+  /// encodes it. Committed rather than encoded per test: encoding started a
+  /// video encoder in every `setUp`, which took seconds on a busy simulator and
+  /// longest on the first test of a freshly booted one.
+  private static let clipBase64 = """
+    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
+    AAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAABAAAAAQAAAAAAA
+    JGVkdHMAAAAcZWxzdAAAAAAAAAABAAACWAAAABQAAQAAAAADU21kaWEAAAAgbWRoZAAAAADnCl9/
+    5wpfgAAAAlgAAAJYVcQAAAAAADFoZGxyAAAAAAAAAAB2aWRlAAAAAAAAAAAAAAAAQ29yZSBNZWRp
+    YSBWaWRlbwAAAAL6bWluZgAAABR2bWhkAAAAAQAAAAAAAAAAAAAAJGRpbmYAAAAcZHJlZgAAAAAA
+    AAABAAAADHVybCAAAAABAAACunN0YmwAAACgc3RzZAAAAAAAAAABAAAAkGF2YzEAAAAAAAAAAQAA
+    AAAAAAAAAAAAAAAAAAAAQABAAEgAAABIAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+    AAAAAAAAAAAY//8AAAAqYXZjQwFkAAr/4QATJ2QACqxSMQmwFqBAQEYVr3vgIAEABCj+CYsAAAAQ
+    cGFzcAAAAAEAAAABAAAAGHN0dHMAAAAAAAAAAQAAAB4AAAAUAAABAGN0dHMAAAAAAAAAHgAAAAEA
+    AAAUAAAAAQAAACgAAAABAAAAAAAAAAEAAAAoAAAAAQAAAAAAAAABAAAAKAAAAAEAAAAAAAAAAQAA
+    ACgAAAABAAAAAAAAAAEAAAAoAAAAAQAAAAAAAAABAAAAKAAAAAEAAAAAAAAAAQAAACgAAAABAAAA
+    AAAAAAEAAAAoAAAAAQAAAAAAAAABAAAAKAAAAAEAAAAAAAAAAQAAACgAAAABAAAAAAAAAAEAAAAo
+    AAAAAQAAAAAAAAABAAAAKAAAAAEAAAAAAAAAAQAAACgAAAABAAAAAAAAAAEAAAAoAAAAAQAAAAAA
+    AAABAAAAFAAAABRzdHNzAAAAAAAAAAEAAAABAAAAKnNkdHAAAAAAIBAYEBgQGBAYEBgQGBAYEBgQ
+    GBAYEBgQGBAYEBgYAAAAHHN0c2MAAAAAAAAAAQAAAAEAAAAeAAAAAQAAAIxzdHN6AAAAAAAAAAAA
+    AAAeAAAAVwAAAC8AAAAwAAAAMAAAADAAAAAyAAAAMAAAADIAAAAwAAAAMgAAADAAAAAyAAAAMAAA
+    ADIAAAAwAAAAMgAAADAAAAAyAAAAMAAAADIAAAAwAAAAMgAAADAAAAAyAAAAMAAAADIAAAAwAAAA
+    MgAAADAAAAAyAAAAFHN0Y28AAAAAAAAAAQAAACw=
+    """
 }
 
 /// The registry iOS hands this plugin *is* the `FlutterEngine`, and the plugin
