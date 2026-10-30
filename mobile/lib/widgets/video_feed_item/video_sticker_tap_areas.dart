@@ -1,23 +1,29 @@
-// ABOUTME: A playing video's link, mention, hashtag and sound stickers, drawn
-// ABOUTME: sharp over its frames as buttons that open what each points to.
+// ABOUTME: A playing video's tappable stickers (link, mention, hashtag, sound,
+// ABOUTME: place, countdown, reply), drawn sharp over its frames as buttons.
 
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:clock/clock.dart';
 import 'package:divine_video_player/divine_video_player.dart'
     show DivineVideoPlayerController, DivineVideoPlayerState;
 import 'package:flutter/foundation.dart' show listEquals;
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:models/models.dart'
     show VideoEvent, VideoStickerKind, VideoStickerRegion;
+import 'package:openvine/blocs/countdown_reminder/countdown_reminder_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/screens/sound_detail_screen.dart';
+import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/utils/detached_future.dart';
+import 'package:openvine/utils/map_search_launcher.dart';
 import 'package:openvine/utils/pause_aware_modals.dart';
 import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_navigation.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
+import 'package:openvine/widgets/video_feed_item/countdown_sticker_reminder.dart';
 import 'package:openvine/widgets/video_feed_item/link_sticker_sheet.dart';
 import 'package:unified_logger/unified_logger.dart';
 
@@ -29,7 +35,8 @@ typedef VideoStickerOpener = void Function(
 );
 
 /// Opens what [region] on [video] points to: a profile, a hashtag's feed, a
-/// sound, or a link through [openVideoLink].
+/// sound, a link through [openVideoLink], a place in a map app, or what the
+/// video replies to; a countdown sets or removes a reminder instead.
 void openVideoSticker(
   BuildContext context,
   VideoStickerRegion region,
@@ -58,6 +65,44 @@ void openVideoSticker(
           extra: <String, dynamic>{'sourceVideo': video},
         ),
         'open the sound of a sound sticker',
+        logName: 'VideoStickerTapAreas',
+        category: LogCategory.ui,
+      );
+    case VideoStickerKind.place:
+      runDetached(
+        openMapSearch(region.target),
+        'open the place of a location sticker',
+        logName: 'VideoStickerTapAreas',
+        category: LogCategory.ui,
+      );
+    case VideoStickerKind.countdown:
+      final l10n = context.l10n;
+      runDetached(
+        context.read<CountdownReminderCubit>().reminderToggled(
+          video: video,
+          region: region,
+          title: region.label ?? l10n.videoEditorSocialStickerCountdown,
+          body: l10n.videoStickerCountdownReminderBody,
+        ),
+        'set the reminder of a countdown sticker',
+        logName: 'VideoStickerTapAreas',
+        category: LogCategory.ui,
+      );
+    case VideoStickerKind.reply:
+      // The video's own reply tags name the video the thread hangs on. A
+      // reply to a comment opens that thread, with the comment in it.
+      final rootId = video.replyRootRouteId;
+      final repliesToComment =
+          rootId != null && region.target != video.replyRootEventId;
+      runDetached(
+        context.pushWithVideoPause<void>(
+          VideoDetailScreen.pathForId(rootId ?? region.target),
+          extra: VideoDetailRouteExtra(
+            autoOpenComments: repliesToComment,
+            focusCommentId: repliesToComment ? region.target : null,
+          ),
+        ),
+        'open what a reply sticker replies to',
         logName: 'VideoStickerTapAreas',
         category: LogCategory.ui,
       );
@@ -204,7 +249,7 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
   @override
   Widget build(BuildContext context) {
     if (_shown.isEmpty || _aspectRatio <= 0) return const SizedBox.shrink();
-    return LayoutBuilder(
+    final areas = LayoutBuilder(
       builder: (context, constraints) {
         final frame = videoFrameRect(
           _aspectRatio,
@@ -228,6 +273,10 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
         );
       },
     );
+    // A tap on a countdown sets its reminder through the scope's cubit.
+    return _shown.any((region) => region.kind == VideoStickerKind.countdown)
+        ? CountdownReminderScope(child: areas)
+        : areas;
   }
 }
 
@@ -269,6 +318,9 @@ class _StickerTapArea extends StatelessWidget {
     final width = math.max(stickerSize.width, kMinInteractiveDimension);
     final height = math.max(stickerSize.height, kMinInteractiveDimension);
     final sticker = SocialStickerData.ofRegion(region);
+    final redrawn =
+        sticker != null &&
+        sticker.isRedrawnAlike(emojiFontLoaded: stickerEmojiFontLoaded);
     return Positioned(
       left: center.dx - width / 2,
       top: center.dy - height / 2,
@@ -279,8 +331,7 @@ class _StickerTapArea extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            if (sticker != null &&
-                sticker.isRedrawnAlike(emojiFontLoaded: stickerEmojiFontLoaded))
+            if (redrawn)
               // Laid over the sticker in the frames at its exact size, in the
               // parts that cover that one; the button below names it, and
               // only the button takes the pointer.
@@ -290,7 +341,9 @@ class _StickerTapArea extends StatelessWidget {
                     size: stickerSize,
                     child: FittedBox(
                       fit: BoxFit.fill,
-                      child: SocialStickerView(data: sticker, overFrames: true),
+                      child: sticker.kind == SocialStickerKind.countdown
+                          ? _LiveCountdown(data: sticker)
+                          : SocialStickerView(data: sticker, overFrames: true),
                     ),
                   ),
                 ),
@@ -321,5 +374,65 @@ class _StickerTapArea extends StatelessWidget {
       region.target,
     ),
     VideoStickerKind.sound => context.l10n.videoStickerSoundSemanticLabel,
+    VideoStickerKind.place => context.l10n.videoStickerPlaceSemanticLabel(
+      region.label ?? region.target,
+    ),
+    VideoStickerKind.countdown =>
+      context.l10n.videoStickerCountdownSemanticLabel,
+    VideoStickerKind.reply => context.l10n.videoStickerReplySemanticLabel,
   };
+}
+
+/// A countdown drawn over itself in the frames with the time left in place
+/// of its date, ticking every second until it ends; then its date again.
+class _LiveCountdown extends StatefulWidget {
+  const _LiveCountdown({required this.data});
+
+  final SocialStickerData data;
+
+  @override
+  State<_LiveCountdown> createState() => _LiveCountdownState();
+}
+
+class _LiveCountdownState extends State<_LiveCountdown> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _tick());
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  void _tick() {
+    if (!mounted) return;
+    setState(() {});
+    if (!_left.isNegative) return;
+    // Over: the date stays as it is from here on.
+    _ticker?.cancel();
+    _ticker = null;
+  }
+
+  Duration get _left =>
+      (widget.data.countdownEnd ?? clock.now()).difference(clock.now());
+
+  @override
+  Widget build(BuildContext context) {
+    final left = _left;
+    return SocialStickerView(
+      data: widget.data.copyWith(
+        localeName: Localizations.localeOf(context).toString(),
+        use24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
+      ),
+      overFrames: true,
+      countdownValue: left > Duration.zero
+          ? countdownTimeLeft(context.l10n, left)
+          : null,
+    );
+  }
 }

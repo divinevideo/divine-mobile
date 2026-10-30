@@ -2096,6 +2096,49 @@ class AppLocalizationsRo extends AppLocalizations {
       'Sticker cu sunet, deschide sunetul';
 
   @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'Sticker cu locație, deschide $place pe o hartă';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'Sticker cu numărătoare inversă, setează un memento';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'Sticker cu răspuns, deschide la ce răspunde acest videoclip';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count de zile',
+      few: '$count zile',
+      one: '$count zi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'Memento setat. Te anunțăm când e momentul.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'Memento șters.';
+
+  @override
+  String get videoStickerCountdownOver => 'Numărătoarea inversă s-a încheiat.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'Activează notificările pentru Divine ca să primești mementoul.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'A venit momentul! Numărătoarea inversă pe care ai salvat-o tocmai s-a încheiat.';
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Acest link se deschide în afara Divine. Verifică adresa înainte să continui.';
 
@@ -11104,6 +11147,34 @@ class AppLocalizationsRo extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerLinkInvalid => 'Încă nu e o adresă web.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'Interactive';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'Numărătoare inversă';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'Vara';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint =>
+      'Pentru ce faci numărătoarea inversă?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'Cei care se uită văd cât timp a mai rămas și pot seta un memento.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'Momentul a trecut. Alege unul nou.';
+
+  @override
+  String get videoEditorSocialStickerReply => 'Răspuns';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'Cei care se uită ating stickerul și văd la ce răspunzi.';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Notă';

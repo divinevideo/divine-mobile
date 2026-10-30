@@ -1888,6 +1888,44 @@ class AppLocalizationsKo extends AppLocalizations {
   String get videoStickerSoundSemanticLabel => '사운드 스티커, 사운드 열기';
 
   @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return '위치 스티커, 지도에서 $place 열기';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel => '카운트다운 스티커, 알림 설정';
+
+  @override
+  String get videoStickerReplySemanticLabel => '답글 스티커, 이 동영상이 답하는 대상 열기';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count일',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet => '알림을 설정했어요. 때가 되면 알려 드릴게요.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => '알림을 삭제했어요.';
+
+  @override
+  String get videoStickerCountdownOver => '이 카운트다운은 끝났어요.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      '알림을 받으려면 Divine 알림을 켜 주세요.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      '시간이 됐어요! 저장한 카운트다운이 방금 끝났어요.';
+
+  @override
   String get videoStickerLinkSheetBody =>
       '이 링크는 Divine 밖에서 열려요. 이동하기 전에 주소를 확인하세요.';
 
@@ -10363,6 +10401,31 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerLinkInvalid => '아직 웹 주소가 아니에요.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => '인터랙티브';
+
+  @override
+  String get videoEditorSocialStickerCountdown => '카운트다운';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => '여름';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint => '무엇을 향해 카운트다운하나요?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      '시청자는 남은 시간을 보고 알림을 설정할 수 있어요.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver => '이미 지난 시간이에요. 새로 골라 주세요.';
+
+  @override
+  String get videoEditorSocialStickerReply => '답글';
+
+  @override
+  String get videoEditorSocialStickerReplyNote => '시청자가 탭하면 무엇에 답하는지 볼 수 있어요.';
 
   @override
   String get videoEditorSocialStickerSoundNote => '음표';

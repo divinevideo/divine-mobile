@@ -85,6 +85,7 @@ List<RouteBase> videoRoutes() {
           fallbackVideoIds: routeExtra?.fallbackVideoIds ?? const [],
           initialVideo: routeExtra?.initialVideo,
           dmReplyContext: routeExtra?.dmReplyContext,
+          focusCommentId: routeExtra?.focusCommentId,
         );
       },
     ),

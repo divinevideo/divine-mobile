@@ -1,6 +1,7 @@
-// ABOUTME: The row of social stickers in the sticker sheet, each shown with a
-// ABOUTME: sample of what it looks like; tapping one pops its kind.
+// ABOUTME: The rows of social and interactive stickers in the sticker sheet,
+// ABOUTME: each shown with a sample of what it looks like; a tap pops its kind.
 
+import 'package:clock/clock.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/l10n/l10n.dart';
@@ -40,6 +41,45 @@ class SocialStickerKindRow extends StatelessWidget {
       ),
       ?soundCredit,
     ];
+    return _SampleRow(samples: samples);
+  }
+}
+
+/// A horizontal row of the interactive stickers; tapping one pops the sheet
+/// with its [SocialStickerKind].
+///
+/// The reply is offered only with a [reply] to show, which a video recorded
+/// as a reply has.
+class InteractiveStickerKindRow extends StatelessWidget {
+  const InteractiveStickerKindRow({this.reply, super.key});
+
+  /// The sticker showing what the video replies to, or `null` when it
+  /// replies to nothing.
+  final SocialStickerData? reply;
+
+  @override
+  Widget build(BuildContext context) {
+    final sample =
+        SocialStickerData.countdown(
+          now: clock.now().add(const Duration(days: 11)),
+          localeName: Localizations.localeOf(context).toString(),
+          use24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
+        ).copyWith(
+          countdownTitle: context.l10n.videoEditorSocialStickerCountdownSample,
+        );
+    return _SampleRow(samples: [sample, ?reply]);
+  }
+}
+
+/// A sideways row of [samples], each popping the sheet with its kind.
+class _SampleRow extends StatelessWidget {
+  const _SampleRow({required this.samples});
+
+  final List<SocialStickerData> samples;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return SizedBox(
       height: 112,
       child: ListView.separated(

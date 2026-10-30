@@ -31,6 +31,16 @@ class _CommentsListState extends State<CommentsList> {
   /// object for `ensureVisible` even though the list is index-built (#5854).
   final GlobalKey _scrollTargetKey = GlobalKey();
 
+  /// The ids of the comments the list shows, in order, as last built; the
+  /// scroll target's place among them tells where to jump while it is not
+  /// built yet.
+  List<String> _shownIds = const [];
+
+  /// How often the list jumps towards a scroll target it has not built yet.
+  /// Each jump lays out more of the list, which sharpens the estimate of
+  /// where the target lies.
+  static const _maxJumpsTowardsTarget = 5;
+
   @override
   void initState() {
     super.initState();
@@ -53,13 +63,19 @@ class _CommentsListState extends State<CommentsList> {
   }
 
   /// Scrolls the flagged comment into view after the next frame (so the target
-  /// item is laid out), then acks the one-shot signal. No-op if the target is
-  /// not currently built — [CommentItem]'s reply-tap scroll keeps it close
-  /// enough that the just-inserted reply is laid out.
-  void _scrollToTarget() {
+  /// item is laid out), then acks the one-shot signal. A target the list has
+  /// not built yet, such as a comment far down that the list was opened on,
+  /// is jumped towards first, [_maxJumpsTowardsTarget] times at most.
+  void _scrollToTarget([int jumps = 0]) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final targetContext = _scrollTargetKey.currentContext;
+      if (targetContext == null &&
+          jumps < _maxJumpsTowardsTarget &&
+          _jumpTowardsTarget()) {
+        _scrollToTarget(jumps + 1);
+        return;
+      }
       if (targetContext != null) {
         final reduceMotion = MediaQuery.of(context).disableAnimations;
         Scrollable.ensureVisible(
@@ -73,6 +89,23 @@ class _CommentsListState extends State<CommentsList> {
       }
       context.read<CommentsListBloc>().add(const CommentsScrollHandled());
     });
+  }
+
+  /// Jumps to where the scroll target should lie, estimated from its place
+  /// among [_shownIds]; `false` when the list does not show it.
+  bool _jumpTowardsTarget() {
+    final target = context.read<CommentsListBloc>().state.scrollToCommentId;
+    final index = _shownIds.indexOf(target ?? '');
+    if (index < 0 || !widget.scrollController.hasClients) return false;
+    final position = widget.scrollController.position;
+    final share = _shownIds.length < 2 ? 0.0 : index / (_shownIds.length - 1);
+    position.jumpTo(
+      (position.maxScrollExtent * share).clamp(
+        position.minScrollExtent,
+        position.maxScrollExtent,
+      ),
+    );
+    return true;
   }
 
   @override
@@ -123,6 +156,7 @@ class _CommentsListState extends State<CommentsList> {
                     ? all
                     : all.where((node) => !node.comment.hasVideo).toList();
 
+                _shownIds = [for (final node in threaded) node.comment.id];
                 if (threaded.isEmpty) {
                   return CommentsEmptyState(
                     isClassicVine: widget.showClassicVineNotice,

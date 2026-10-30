@@ -3624,6 +3624,12 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
                 context.read<ClipEditorBloc>().add(
                   const ClipEditorCapturedChromaKeysBakeRequested(),
                 );
+
+                // After the seeded first entry, so what is placed now is an
+                // edit the creator can undo.
+                if (editorStateHistory.isEmpty) {
+                  scope.onFreshSessionReady?.call();
+                }
               },
               onDone: _handleDone,
               onImportHistoryStart: (state, import) {

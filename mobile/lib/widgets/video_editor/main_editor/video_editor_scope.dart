@@ -52,6 +52,7 @@ class VideoEditorScope extends InheritedWidget {
     this.previewReleasedNotifier,
     this.onAddAudioVisualizer,
     this.onOpenLayout,
+    this.onFreshSessionReady,
     super.child = const SizedBox.shrink(),
     super.key,
   }) : assert(
@@ -92,6 +93,11 @@ class VideoEditorScope extends InheritedWidget {
   /// Callback to open the split-screen layout screen, or `null` where the
   /// editor offers none.
   final VoidCallback? onOpenLayout;
+
+  /// Called once the canvas is up in a session that starts without a saved
+  /// history, such as one straight from the camera, where the editor places
+  /// what a new video starts with; `null` where it places nothing.
+  final VoidCallback? onFreshSessionReady;
 
   /// Callback to open the clips editor.
   final VoidCallback onOpenClipsEditor;

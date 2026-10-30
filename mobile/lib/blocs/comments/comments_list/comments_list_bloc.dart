@@ -4,6 +4,7 @@ import 'package:comments_repository/comments_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:meta/meta.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/comments/comments_list/comments_list_helpers.dart';
 import 'package:openvine/blocs/comments/comments_list/reportable_sites.dart';
 import 'package:openvine/blocs/comments/comments_list/throttled_subscription.dart';
@@ -30,6 +31,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     String? rootAddressableId,
     int? initialTotalCount,
     bool includeVideoReplies = false,
+    String? focusCommentId,
   }) : _commentsRepository = commentsRepository,
        _initialTotalCount = initialTotalCount,
        _includeVideoReplies = includeVideoReplies,
@@ -39,6 +41,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
            rootEventKind: rootEventKind,
            rootAuthorPubkey: rootAuthorPubkey,
            rootAddressableId: rootAddressableId,
+           pendingFocusCommentId: focusCommentId,
          ),
        ) {
     on<CommentsLoadRequested>(_onLoadRequested);
@@ -60,6 +63,10 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
 
   /// Page size for comment loading.
   static const _pageSize = 50;
+
+  /// The most comments loaded while looking for the comment the list was
+  /// opened on, before it is shown from the top without it.
+  static const _maxCommentsLoadedForFocus = 500;
 
   /// Maximum number of real-time comments to accept per second.
   /// Beyond this rate the stream is paused briefly to avoid UI thrashing
@@ -144,6 +151,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
           replyCountsByCommentId: computeReplyCounts(commentsById),
         ),
       );
+      _focusWhenLoaded(emit);
       await _startWatchingComments();
       await _removeAuthorDeletedComments(thread.comments, emit);
     } on CommentsRepositoryException catch (e, stackTrace) {
@@ -235,6 +243,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
           replyCountsByCommentId: computeReplyCounts(allCommentsById),
         ),
       );
+      _focusWhenLoaded(emit);
       await _removeAuthorDeletedComments(thread.comments, emit);
     } on CommentsRepositoryException catch (e, stackTrace) {
       _logRepoFailure(e, stackTrace, 'Error loading more comments');
@@ -242,6 +251,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         state.copyWith(
           isLoadingMore: false,
           error: CommentsListError.loadFailed,
+          clearPendingFocus: true,
         ),
       );
     } catch (e, stackTrace) {
@@ -255,8 +265,29 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         state.copyWith(
           isLoadingMore: false,
           error: CommentsListError.loadFailed,
+          clearPendingFocus: true,
         ),
       );
+    }
+  }
+
+  /// Scrolls to the comment the list was opened on once it is loaded, and
+  /// loads older comments while it is not, up to
+  /// [_maxCommentsLoadedForFocus]. One that is gone, such as a deleted
+  /// comment, leaves the list where it starts.
+  void _focusWhenLoaded(Emitter<CommentsListState> emit) {
+    final focus = state.pendingFocusCommentId;
+    if (focus == null) return;
+    if (state.commentsById.containsKey(focus)) {
+      emit(
+        state.copyWith(scrollToCommentId: focus, clearPendingFocus: true),
+      );
+    } else if (state.hasMoreContent &&
+        state.commentsById.length < _maxCommentsLoadedForFocus) {
+      // Reached after the page load awaited; the sheet may have closed.
+      addIfOpen(const CommentsLoadMoreRequested());
+    } else {
+      emit(state.copyWith(clearPendingFocus: true));
     }
   }
 

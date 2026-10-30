@@ -22,6 +22,7 @@ import 'package:openvine/models/divine_video_draft.dart';
 import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/caption_track.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
+import 'package:openvine/models/video_reply_context.dart';
 import 'package:openvine/repositories/scheduled_posts_repository.dart';
 import 'package:openvine/services/auth_service.dart';
 import 'package:openvine/services/collaborator_invite_service.dart';
@@ -1816,6 +1817,72 @@ void main() {
             ),
           ).captured;
           expect(captured.single, equals([credited, library]));
+        },
+      );
+
+      test(
+        'publishes a reply sticker only on a reply to what it shows',
+        () async {
+          _setupSuccessfulPublish(
+            mockAuthService: mockAuthService,
+            mockUploadManager: mockUploadManager,
+            mockDraftService: mockDraftService,
+            mockVideoEventPublisher: mockVideoEventPublisher,
+          );
+          VideoStickerRegion reply(String target) => VideoStickerRegion(
+            kind: VideoStickerKind.reply,
+            target: target,
+            centerX: 0.5,
+            centerY: 0.5,
+            width: 0.5,
+            height: 0.1,
+          );
+          final comment = reply('d' * 64);
+
+          await service.publishVideo(
+            draft: _createTestDraft().copyWith(
+              videoReplyContext: VideoReplyContext(
+                rootEventId: 'b' * 64,
+                rootEventKind: 34236,
+                rootAuthorPubkey: 'c' * 64,
+                parentCommentId: 'd' * 64,
+              ),
+              finalRenderedClip: _createTestClip().copyWith(
+                stickerRegions: [comment, reply('e' * 64)],
+              ),
+            ),
+          );
+
+          final captured = verify(
+            () => mockVideoEventPublisher.publishVideoEvent(
+              upload: any(named: 'upload'),
+              title: any(named: 'title'),
+              description: any(named: 'description'),
+              hashtags: any(named: 'hashtags'),
+              expirationTimestamp: any(named: 'expirationTimestamp'),
+              allowAudioReuse: any(named: 'allowAudioReuse'),
+              collaboratorPubkeys: any(named: 'collaboratorPubkeys'),
+              mentionedPubkeys: any(named: 'mentionedPubkeys'),
+              linkUrls: any(named: 'linkUrls'),
+              stickerRegions: captureAny(named: 'stickerRegions'),
+              inspiredByAddressableId: any(named: 'inspiredByAddressableId'),
+              inspiredByRelayUrl: any(named: 'inspiredByRelayUrl'),
+              inspiredByNpubs: any(named: 'inspiredByNpubs'),
+              clipSourceCredits: any(named: 'clipSourceCredits'),
+              selectedAudio: any(named: 'selectedAudio'),
+              selectedAudioEventId: any(named: 'selectedAudioEventId'),
+              selectedAudioRelay: any(named: 'selectedAudioRelay'),
+              language: any(named: 'language'),
+              contentWarning: any(named: 'contentWarning'),
+              thumbnailTimestamp: any(named: 'thumbnailTimestamp'),
+              replyContext: any(named: 'replyContext'),
+              addReplyToFeed: any(named: 'addReplyToFeed'),
+              onEventSigned: any(named: 'onEventSigned'),
+              onPublishedEvent: any(named: 'onPublishedEvent'),
+              onAudioReuseDegraded: any(named: 'onAudioReuseDegraded'),
+            ),
+          ).captured;
+          expect(captured.single, equals([comment]));
         },
       );
 

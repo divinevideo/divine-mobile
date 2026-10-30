@@ -2043,6 +2043,48 @@ class AppLocalizationsEn extends AppLocalizations {
   String get videoStickerSoundSemanticLabel => 'Sound sticker, opens the sound';
 
   @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'Location sticker, opens $place in a map';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'Countdown sticker, sets a reminder';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'Reply sticker, opens what this video replies to';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '$count day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'Reminder set. We\'ll ping you when it\'s time.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'Reminder removed.';
+
+  @override
+  String get videoStickerCountdownOver => 'This countdown is over.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'Turn on notifications for Divine to get the reminder.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'It\'s time! The countdown you saved just ended.';
+
+  @override
   String get videoStickerLinkSheetBody =>
       'This link opens outside Divine. Check the address before you go.';
 
@@ -10973,6 +11015,34 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get videoEditorSocialStickerLinkInvalid =>
       'That\'s not a web address yet.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'Interactive';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'Countdown';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'Summer';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint =>
+      'What are you counting down to?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'Viewers see the time left and can set a reminder.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'That moment has passed. Pick a new one.';
+
+  @override
+  String get videoEditorSocialStickerReply => 'Reply';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'Viewers tap it to see what you\'re replying to.';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Note';

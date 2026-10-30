@@ -1,5 +1,5 @@
-// ABOUTME: Draws a social sticker in its pill: an @mention, a #hashtag, a link,
-// ABOUTME: or a sound credit that moves with the editor's playhead.
+// ABOUTME: Draws a social sticker: an @mention, a #hashtag or a link in its
+// ABOUTME: pill, a sound credit that moves with the playhead, a countdown, a reply.
 
 import 'dart:async';
 
@@ -7,6 +7,7 @@ import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intl/intl.dart';
 import 'package:openvine/blocs/video_editor/audio_visualizer/video_editor_audio_visualizer_cubit.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
@@ -16,6 +17,7 @@ import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/info_sticker/sticker_pill_palette.dart';
 import 'package:openvine/widgets/video_editor/main_editor/video_editor_scope.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_marks.dart';
+import 'package:openvine/widgets/vine_cached_image.dart';
 import 'package:unified_logger/unified_logger.dart';
 
 /// A social sticker as it shows on the video.
@@ -26,6 +28,7 @@ class SocialStickerView extends StatelessWidget {
   const SocialStickerView({
     required this.data,
     this.overFrames = false,
+    this.countdownValue,
     super.key,
   });
 
@@ -34,6 +37,26 @@ class SocialStickerView extends StatelessWidget {
   /// Whether the sticker is drawn again over itself in a video's frames, in
   /// its [StickerPillPalette.covering] colors.
   final bool overFrames;
+
+  /// What a countdown shows under its title instead of its date: the time
+  /// left, which the player draws over the date in the frames.
+  final String? countdownValue;
+
+  /// The date a countdown counts down to, written in its locale and clock the
+  /// way the video shows it, such as "Jun 21, 2027 · 6:00 PM", in the
+  /// phone's time zone.
+  static String countdownDateOf(SocialStickerData data) {
+    final end = data.countdownEnd?.toLocal();
+    if (end == null) return '';
+    final locale = data.localeName;
+    final known = locale != null && DateFormat.localeExists(locale)
+        ? locale
+        : null;
+    final time = data.use24HourFormat
+        ? DateFormat.Hm(known)
+        : DateFormat.jm(known);
+    return '${DateFormat.yMMMd(known).format(end)} · ${time.format(end)}';
+  }
 
   /// The sticker's text, as it reads on the video and to a screen reader.
   static String textOf(SocialStickerData data) => switch (data.kind) {
@@ -45,14 +68,22 @@ class SocialStickerView extends StatelessWidget {
       data.soundArtist,
       data.lyric,
     ].nonNulls.join(' · '),
+    SocialStickerKind.countdown => [
+      data.countdownTitle ?? '',
+      countdownDateOf(data),
+    ].join(' · '),
+    SocialStickerKind.reply => [?data.name, ?data.replyText].join(': '),
   };
 
   @override
   Widget build(BuildContext context) {
     final look = StickerPillPalette.of(data.style);
     final palette = overFrames ? look.covering : look;
+    final countdownValue = this.countdownValue;
     return Semantics(
-      label: textOf(data),
+      label: countdownValue == null
+          ? textOf(data)
+          : '${data.countdownTitle ?? ''} · $countdownValue',
       excludeSemantics: true,
       // The headless draft rasterizer mounts the sticker without a Material
       // above it, whose fallback text style underlines everything in yellow.
@@ -79,6 +110,12 @@ class SocialStickerView extends StatelessWidget {
               ],
             ),
           ),
+          SocialStickerKind.countdown => _CountdownCard(
+            data: data,
+            palette: palette,
+            value: countdownValue ?? countdownDateOf(data),
+          ),
+          SocialStickerKind.reply => _ReplyCard(data: data, palette: palette),
           _ => StickerPill(
             palette: palette,
             child: _Line(text: textOf(data), style: palette.textStyle()),
@@ -95,18 +132,164 @@ const double _maxTextWidth = 720;
 /// The side of the mark beside a link's text, the height of its letters.
 const double _markSize = 48;
 
-/// One line of sticker text, cut short with an ellipsis past
-/// [_maxTextWidth].
+/// How wide a countdown's date or time left is laid out, whatever it says,
+/// so the copy the player draws with the time left is as large as the
+/// sticker in the frames with the date.
+const double _countdownValueWidth = 440;
+
+/// The size of a countdown's date or time left.
+const double _countdownValueFontSize = 40;
+
+/// A countdown: its title over its date, or over the time left the player
+/// draws in [value].
+class _CountdownCard extends StatelessWidget {
+  const _CountdownCard({
+    required this.data,
+    required this.palette,
+    required this.value,
+  });
+
+  final SocialStickerData data;
+  final StickerPillPalette palette;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final valueStyle = palette
+        .textStyle(fontSize: _countdownValueFontSize)
+        .copyWith(fontFeatures: const [FontFeature.tabularFigures()]);
+    return StickerPill(
+      palette: palette,
+      radius: 48,
+      padding: const .symmetric(horizontal: 40, vertical: 28),
+      child: Column(
+        mainAxisSize: .min,
+        spacing: 8,
+        children: [
+          _Line(text: data.countdownTitle ?? '', style: palette.textStyle()),
+          SizedBox(
+            width: _countdownValueWidth,
+            height: _countdownValueFontSize * 1.15,
+            child: FittedBox(
+              fit: .scaleDown,
+              child: Text(
+                value,
+                style: valueStyle,
+                maxLines: 1,
+                textScaler: TextScaler.noScaling,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The widest a reply's name and comment get.
+const double _maxReplyTextWidth = 600;
+
+/// A reply: the picture, name and comment of what the video replies to.
+class _ReplyCard extends StatelessWidget {
+  const _ReplyCard({required this.data, required this.palette});
+
+  final SocialStickerData data;
+  final StickerPillPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = data.replyText;
+    return StickerPill(
+      palette: palette,
+      radius: 40,
+      padding: const .symmetric(horizontal: 28, vertical: 24),
+      child: Row(
+        mainAxisSize: .min,
+        spacing: 20,
+        children: [
+          _ReplyPicture(data: data, palette: palette),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: _maxReplyTextWidth),
+            child: Column(
+              mainAxisSize: .min,
+              crossAxisAlignment: .start,
+              spacing: 6,
+              children: [
+                _Line(
+                  text: data.name ?? '',
+                  style: palette.textStyle(fontSize: 40),
+                ),
+                if (text != null)
+                  _Line(
+                    text: text,
+                    style: palette
+                        .textStyle(fontSize: 34)
+                        .copyWith(fontWeight: FontWeight.w400),
+                    maxLines: 3,
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The avatar of whoever wrote the comment a reply replies to, round, or the
+/// thumbnail of the video, upright; their initial while neither is in.
+class _ReplyPicture extends StatelessWidget {
+  const _ReplyPicture({required this.data, required this.palette});
+
+  final SocialStickerData data;
+  final StickerPillPalette palette;
+
+  @override
+  Widget build(BuildContext context) {
+    final toVideo = data.replyToVideo;
+    final url = data.replyImageUrl;
+    final fallback = ColoredBox(
+      color: palette.ink.withValues(alpha: 0.2),
+      child: Center(
+        child: Text(
+          (data.name ?? '').characters.firstOrNull?.toUpperCase() ?? '',
+          style: palette.textStyle(fontSize: 40),
+          textScaler: TextScaler.noScaling,
+        ),
+      ),
+    );
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(toVideo ? 16 : 44),
+      child: SizedBox(
+        width: toVideo ? 84 : 88,
+        height: toVideo ? 112 : 88,
+        child: url == null
+            ? fallback
+            : VineCachedImage(
+                imageUrl: url,
+                // The capture of the sticker takes it as it is at the time.
+                fadeInDuration: Duration.zero,
+                placeholder: (_, _) => fallback,
+                errorWidget: (_, _, _) => fallback,
+              ),
+      ),
+    );
+  }
+}
+
+/// One line of sticker text, or up to [maxLines], cut short with an
+/// ellipsis past [_maxTextWidth].
 ///
 /// Unscaled by the system font size, like the sound credit's painted text:
 /// the sticker is part of the video, sized by the creator's pinch, and the
 /// player's copy of it has to match the frames at any font size. Its emoji
 /// are drawn in the sticker emoji font, which it loads when it has any.
 class _Line extends StatefulWidget {
-  const _Line({required this.text, required this.style});
+  const _Line({required this.text, required this.style, this.maxLines = 1});
 
   final String text;
   final TextStyle style;
+  final int maxLines;
 
   @override
   State<_Line> createState() => _LineState();
@@ -140,7 +323,7 @@ class _LineState extends State<_Line> {
       child: Text(
         widget.text,
         style: withStickerEmojiFont(widget.style),
-        maxLines: 1,
+        maxLines: widget.maxLines,
         overflow: .ellipsis,
         textScaler: TextScaler.noScaling,
       ),

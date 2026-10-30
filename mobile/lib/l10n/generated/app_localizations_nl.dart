@@ -2051,6 +2051,48 @@ class AppLocalizationsNl extends AppLocalizations {
       'Geluidssticker, opent het geluid';
 
   @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'Locatiesticker, opent $place in een kaart';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'Aftelsticker, zet een herinnering';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'Antwoordsticker, opent waarop deze video reageert';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dagen',
+      one: '$count dag',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'Herinnering gezet. We laten het je weten als het zover is.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'Herinnering verwijderd.';
+
+  @override
+  String get videoStickerCountdownOver => 'Dit aftellen is voorbij.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'Zet meldingen voor Divine aan om de herinnering te krijgen.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'Het is zover! Het aftellen dat je hebt bewaard is net afgelopen.';
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Deze link opent buiten Divine. Controleer het adres voordat je verdergaat.';
 
@@ -10925,6 +10967,34 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerLinkInvalid => 'Dat is nog geen webadres.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'Interactief';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'Aftellen';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'Zomer';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint =>
+      'Waar tel je naartoe af?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'Kijkers zien hoeveel tijd er nog is en kunnen een herinnering zetten.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'Dat moment is voorbij. Kies een nieuw.';
+
+  @override
+  String get videoEditorSocialStickerReply => 'Antwoord';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'Kijkers tikken erop om te zien waarop je reageert.';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Noot';

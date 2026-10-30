@@ -77,6 +77,7 @@ final class CommentsListState extends Equatable {
     this.newCommentIds = const {},
     this.isBackfillComplete = false,
     this.scrollToCommentId,
+    this.pendingFocusCommentId,
   });
 
   /// The current status of the list.
@@ -139,6 +140,11 @@ final class CommentsListState extends Equatable {
   /// optimistic-insert handler and cleared by [CommentsScrollHandled] after the
   /// UI performs the scroll.
   final String? scrollToCommentId;
+
+  /// The comment the list was opened on, such as the one a tapped reply
+  /// sticker replies to, until it is loaded and handed to
+  /// [scrollToCommentId], or until the list has none of it to load.
+  final String? pendingFocusCommentId;
 
   /// Returns a comparator for sorting comments based on [sortMode].
   ///
@@ -253,6 +259,7 @@ final class CommentsListState extends Equatable {
     String? scrollToCommentId,
     bool clearError = false,
     bool clearScrollTo = false,
+    bool clearPendingFocus = false,
   }) {
     return CommentsListState(
       status: status ?? this.status,
@@ -276,6 +283,8 @@ final class CommentsListState extends Equatable {
       scrollToCommentId: clearScrollTo
           ? null
           : (scrollToCommentId ?? this.scrollToCommentId),
+      // Set only when the list is opened on a comment.
+      pendingFocusCommentId: clearPendingFocus ? null : pendingFocusCommentId,
     );
   }
 
@@ -295,5 +304,6 @@ final class CommentsListState extends Equatable {
     newCommentIds,
     isBackfillComplete,
     scrollToCommentId,
+    pendingFocusCommentId,
   ];
 }

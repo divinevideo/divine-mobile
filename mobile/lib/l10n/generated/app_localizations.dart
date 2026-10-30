@@ -3457,6 +3457,60 @@ abstract class AppLocalizations {
   /// **'Sound sticker, opens the sound'**
   String get videoStickerSoundSemanticLabel;
 
+  /// Screen reader label for the button over a location sticker on a playing video; tapping it opens the place in the phone's map app.
+  ///
+  /// In en, this message translates to:
+  /// **'Location sticker, opens {place} in a map'**
+  String videoStickerPlaceSemanticLabel(String place);
+
+  /// Screen reader label for the button over a countdown sticker on a playing video; tapping it sets or removes a reminder for when the countdown ends.
+  ///
+  /// In en, this message translates to:
+  /// **'Countdown sticker, sets a reminder'**
+  String get videoStickerCountdownSemanticLabel;
+
+  /// Screen reader label for the button over a reply sticker on a playing video; tapping it opens the comment or video this video replies to.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply sticker, opens what this video replies to'**
+  String get videoStickerReplySemanticLabel;
+
+  /// The whole days left on a countdown sticker in the player, shown before the hours, minutes and seconds, as in '12 days 04:33:10'.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{count} day} other{{count} days}}'**
+  String videoStickerCountdownDays(int count);
+
+  /// Snackbar after a viewer taps a countdown sticker: a reminder is now set for when the countdown ends.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder set. We\'ll ping you when it\'s time.'**
+  String get videoStickerCountdownReminderSet;
+
+  /// Snackbar after a viewer taps a countdown sticker they had set a reminder for: the reminder is gone.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder removed.'**
+  String get videoStickerCountdownReminderRemoved;
+
+  /// Snackbar when a viewer taps a countdown sticker whose date has already passed, so there is nothing to remind them of.
+  ///
+  /// In en, this message translates to:
+  /// **'This countdown is over.'**
+  String get videoStickerCountdownOver;
+
+  /// Snackbar when a viewer taps a countdown sticker but the app may not show notifications, so the reminder cannot be set.
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on notifications for Divine to get the reminder.'**
+  String get videoStickerCountdownNotificationsOff;
+
+  /// Text of the notification a viewer gets when a countdown they set a reminder for ends; the countdown's title is the notification's title.
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s time! The countdown you saved just ended.'**
+  String get videoStickerCountdownReminderBody;
+
   /// Note in the sheet a link sticker on a video opens, above the link's full address: the page opens outside the app.
   ///
   /// In en, this message translates to:
@@ -18538,6 +18592,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'That\'s not a web address yet.'**
   String get videoEditorSocialStickerLinkInvalid;
+
+  /// Heading above the row of interactive stickers (countdown, reply) in the video editor's sticker sheet: stickers viewers can tap in the Divine player.
+  ///
+  /// In en, this message translates to:
+  /// **'Interactive'**
+  String get videoEditorInteractiveStickersTitle;
+
+  /// Name of the sticker that counts down to a date and time; the sheet title and timeline label for it.
+  ///
+  /// In en, this message translates to:
+  /// **'Countdown'**
+  String get videoEditorSocialStickerCountdown;
+
+  /// Made-up title on the sample countdown sticker in the sticker sheet, something people count down to. One short word.
+  ///
+  /// In en, this message translates to:
+  /// **'Summer'**
+  String get videoEditorSocialStickerCountdownSample;
+
+  /// Label of the field where the creator types the title a countdown sticker shows above its date.
+  ///
+  /// In en, this message translates to:
+  /// **'What are you counting down to?'**
+  String get videoEditorSocialStickerCountdownTitleHint;
+
+  /// Help line in the countdown sticker sheet: in the Divine player the sticker shows the live time left, and a tap sets a reminder for when it ends.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewers see the time left and can set a reminder.'**
+  String get videoEditorSocialStickerCountdownNote;
+
+  /// Warning in the countdown sticker sheet when the countdown's date and time are already over, for example in a draft reopened later.
+  ///
+  /// In en, this message translates to:
+  /// **'That moment has passed. Pick a new one.'**
+  String get videoEditorSocialStickerCountdownOver;
+
+  /// Name of the sticker that shows the comment or video a video reply answers; the sheet title and timeline label for it.
+  ///
+  /// In en, this message translates to:
+  /// **'Reply'**
+  String get videoEditorSocialStickerReply;
+
+  /// Help line in the reply sticker sheet: in the player, tapping the sticker opens the comment or video this video replies to.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewers tap it to see what you\'re replying to.'**
+  String get videoEditorSocialStickerReplyNote;
 
   /// Name of the sound credit design with a music note in front of the title and artist.
   ///

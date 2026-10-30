@@ -297,6 +297,72 @@ void main() {
     );
 
     testWidgets(
+      'reaches a flagged comment far below what the list has built',
+      (tester) async {
+        final comments = [
+          for (var i = 0; i < 80; i++)
+            CommentBuilder()
+                .withId('$i'.padLeft(64, 'a'))
+                .withContent('comment number $i')
+                .withCreatedAt(DateTime(2026).add(Duration(minutes: 80 - i)))
+                .build(),
+        ];
+        // Far past the build cache extent of the first frame.
+        final target = comments[70];
+        final base = CommentsListState(
+          rootEventId: testVideoEventId,
+          rootAuthorPubkey: testVideoAuthorPubkey,
+          status: CommentsStatus.success,
+          commentsById: {for (final c in comments) c.id: c},
+        );
+
+        whenListen(
+          mockListBloc,
+          Stream.fromIterable([
+            base,
+            base.copyWith(scrollToCommentId: target.id),
+          ]),
+          initialState: base,
+        );
+
+        final sc = ScrollController();
+        addTearDown(sc.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              nostrServiceProvider.overrideWithValue(mockNostrClient),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: MultiBlocProvider(
+                  providers: [
+                    BlocProvider<CommentsListBloc>.value(value: mockListBloc),
+                    BlocProvider<CommentReactionsBloc>.value(
+                      value: mockReactionsBloc,
+                    ),
+                  ],
+                  child: CommentsList(
+                    showClassicVineNotice: false,
+                    scrollController: sc,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final shown = find.text('comment number 70');
+        expect(shown, findsOneWidget);
+        final viewport = tester.getRect(find.byType(ListView));
+        expect(viewport.contains(tester.getCenter(shown)), isTrue);
+        verify(() => mockListBloc.add(const CommentsScrollHandled())).called(1);
+      },
+    );
+
+    testWidgets(
       'ListView declares onDrag keyboard-dismiss behavior',
       (tester) async {
         final comment = CommentBuilder().build();

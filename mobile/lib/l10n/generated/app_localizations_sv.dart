@@ -2034,6 +2034,48 @@ class AppLocalizationsSv extends AppLocalizations {
       'Ljudklistermärke, öppnar ljudet';
 
   @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'Platsklistermärke, öppnar $place i en karta';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'Nedräkningsklistermärke, ställer in en påminnelse';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'Svarsklistermärke, öppnar det som videon svarar på';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dagar',
+      one: '$count dag',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'Påminnelse inställd. Vi hör av oss när det är dags.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'Påminnelsen togs bort.';
+
+  @override
+  String get videoStickerCountdownOver => 'Den här nedräkningen är slut.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'Slå på aviseringar för Divine för att få påminnelsen.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'Nu är det dags! Nedräkningen du sparade har precis tagit slut.';
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Länken öppnas utanför Divine. Kolla adressen innan du fortsätter.';
 
@@ -10882,6 +10924,34 @@ class AppLocalizationsSv extends AppLocalizations {
   @override
   String get videoEditorSocialStickerLinkInvalid =>
       'Det är inte en webbadress än.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'Interaktiva';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'Nedräkning';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'Sommar';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint =>
+      'Vad räknar du ner till?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'Tittare ser hur lång tid som är kvar och kan ställa in en påminnelse.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'Det ögonblicket har passerat. Välj ett nytt.';
+
+  @override
+  String get videoEditorSocialStickerReply => 'Svar';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'Tittare trycker på den för att se vad du svarar på.';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Not';

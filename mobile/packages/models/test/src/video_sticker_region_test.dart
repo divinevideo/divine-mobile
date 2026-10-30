@@ -271,6 +271,64 @@ void main() {
           closeTo(-math.pi / 4, 1e-9),
         );
       });
+
+      List<String> tagOf(String kind, String target) => [
+        'sticker',
+        kind,
+        target,
+        '0.5 0.5 0.2 0.1',
+        '0',
+      ];
+
+      test('reads a place by its full name', () {
+        expect(
+          VideoStickerRegion.fromTag(
+            tagOf('place', ' Zermatt, Wallis, Schweiz '),
+          )?.target,
+          equals('Zermatt, Wallis, Schweiz'),
+        );
+      });
+
+      test('drops a place on more than one line', () {
+        expect(
+          VideoStickerRegion.fromTag(tagOf('place', 'Zermatt\nWallis')),
+          isNull,
+        );
+      });
+
+      test('reads the moment a countdown ends', () {
+        final region = VideoStickerRegion.fromTag(
+          tagOf('countdown', '1782064800'),
+        );
+
+        expect(region?.countdownEnd, equals(DateTime.utc(2026, 6, 21, 18)));
+      });
+
+      test('drops a countdown that is no Unix time in seconds', () {
+        for (final target in ['soon', '0', '-5', '253402300800']) {
+          expect(
+            VideoStickerRegion.fromTag(tagOf('countdown', target)),
+            isNull,
+            reason: target,
+          );
+        }
+      });
+
+      test('reads a reply by its event id in lower case', () {
+        expect(
+          VideoStickerRegion.fromTag(
+            tagOf('reply', _pubkey.toUpperCase()),
+          )?.target,
+          equals(_pubkey),
+        );
+        expect(VideoStickerRegion.fromTag(tagOf('reply', 'note1abc')), isNull);
+      });
+    });
+
+    group('countdownEnd', () {
+      test('is null for any other kind', () {
+        expect(_link.countdownEnd, isNull);
+      });
     });
 
     group('isOnFrame', () {

@@ -2072,6 +2072,50 @@ class AppLocalizationsIt extends AppLocalizations {
   String get videoStickerSoundSemanticLabel => 'Sticker audio, apre l\'audio';
 
   @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'Sticker luogo, apre $place in una mappa';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'Sticker conto alla rovescia, imposta un promemoria';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'Sticker risposta, apre ciò a cui risponde questo video';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count giorni',
+      many: '$count giorni',
+      one: '$count giorno',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'Promemoria impostato. Ti avvisiamo quando è il momento.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'Promemoria rimosso.';
+
+  @override
+  String get videoStickerCountdownOver =>
+      'Questo conto alla rovescia è finito.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'Attiva le notifiche di Divine per ricevere il promemoria.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'È il momento! Il conto alla rovescia che hai salvato è appena finito.';
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Questo link si apre fuori da Divine. Controlla l\'indirizzo prima di andare.';
 
@@ -11007,6 +11051,34 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get videoEditorSocialStickerLinkInvalid =>
       'Non è ancora un indirizzo web.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'Interattivi';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'Conto alla rovescia';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'Estate';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint =>
+      'Per cosa stai facendo il conto alla rovescia?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'Chi guarda vede il tempo che manca e può impostare un promemoria.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'Quel momento è passato. Scegline uno nuovo.';
+
+  @override
+  String get videoEditorSocialStickerReply => 'Risposta';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'Toccandolo, si vede a cosa stai rispondendo.';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Nota';

@@ -2062,6 +2062,49 @@ class AppLocalizationsEs extends AppLocalizations {
       'Sticker de sonido, abre el sonido';
 
   @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'Sticker de ubicación, abre $place en un mapa';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'Sticker de cuenta regresiva, pone un recordatorio';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'Sticker de respuesta, abre a qué responde este video';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días',
+      many: '$count días',
+      one: '$count día',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'Recordatorio listo. Te avisamos cuando sea el momento.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'Recordatorio eliminado.';
+
+  @override
+  String get videoStickerCountdownOver => 'Esta cuenta regresiva ya terminó.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'Activá las notificaciones de Divine para recibir el recordatorio.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      '¡Llegó el momento! La cuenta regresiva que guardaste acaba de terminar.';
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Este enlace se abre fuera de Divine. Revisa la dirección antes de continuar.';
 
@@ -10986,6 +11029,34 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get videoEditorSocialStickerLinkInvalid =>
       'Eso todavía no es una dirección web.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'Interactivos';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'Cuenta regresiva';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'Verano';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint =>
+      '¿Para qué es la cuenta regresiva?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'Quienes miren ven el tiempo que falta y pueden poner un recordatorio.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'Ese momento ya pasó. Elegí uno nuevo.';
+
+  @override
+  String get videoEditorSocialStickerReply => 'Respuesta';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'Al tocarlo, ven a qué estás respondiendo.';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Nota';

@@ -4,14 +4,20 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:clock/clock.dart';
 import 'package:divine_video_player/divine_video_player.dart';
 import 'package:flutter/gestures.dart' show kDoubleTapTimeout;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/notifications_providers.dart';
+import 'package:openvine/router/route_paths.dart';
+import 'package:openvine/screens/video_detail_screen.dart';
+import 'package:openvine/services/notification_service.dart';
 import 'package:openvine/utils/sticker_emoji_font.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 import 'package:openvine/widgets/video_feed_item/link_sticker_sheet.dart';
@@ -19,6 +25,8 @@ import 'package:openvine/widgets/video_feed_item/player_gesture_surface.dart';
 import 'package:openvine/widgets/video_feed_item/video_sticker_tap_areas.dart';
 
 class _MockController extends Mock implements DivineVideoPlayerController {}
+
+class _MockNotificationService extends Mock implements NotificationService {}
 
 const _link = VideoStickerRegion(
   kind: VideoStickerKind.link,
@@ -34,6 +42,7 @@ const _link = VideoStickerRegion(
 VideoEvent _video(
   List<VideoStickerRegion> regions, {
   String? audioEventId,
+  List<List<String>> tags = const [],
 }) => VideoEvent(
   id: 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
   pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
@@ -42,6 +51,19 @@ VideoEvent _video(
   timestamp: DateTime.utc(2026),
   audioEventId: audioEventId,
   stickerRegions: regions,
+  nostrEventTags: tags,
+);
+
+/// A countdown to [end] across the middle of the frame, in a solid look.
+VideoStickerRegion _countdown(DateTime end) => VideoStickerRegion(
+  kind: VideoStickerKind.countdown,
+  target: '${end.millisecondsSinceEpoch ~/ 1000}',
+  centerX: 0.5,
+  centerY: 0.5,
+  width: 0.6,
+  height: 0.15,
+  style: 'light',
+  label: 'Summer',
 );
 
 DivineVideoPlayerState _playing(
@@ -120,6 +142,87 @@ void main() {
       expect(find.byType(LinkStickerSheetTile), findsOneWidget);
       expect(find.text('https://example.com/hello'), findsOneWidget);
     });
+
+    group('a reply sticker', () {
+      const root =
+          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+      const comment =
+          'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+
+      /// Taps a reply sticker to [target] on a video replying under [root],
+      /// and resolves with the video it opens and the comment its comments
+      /// open on, if they open.
+      Future<(String?, String?)> open(
+        WidgetTester tester,
+        String target,
+      ) async {
+        String? openedId;
+        String? focusedComment;
+        final region = VideoStickerRegion(
+          kind: VideoStickerKind.reply,
+          target: target,
+          centerX: 0.5,
+          centerY: 0.5,
+          width: 0.4,
+          height: 0.1,
+        );
+        final reply = _video(
+          [region],
+          tags: [
+            ['E', root, '', 'aa'],
+            ['K', '34236'],
+          ],
+        );
+        final router = GoRouter(
+          routes: [
+            GoRoute(
+              path: '/',
+              builder: (context, _) => TextButton(
+                onPressed: () => openVideoSticker(context, region, reply),
+                child: const Text('tap'),
+              ),
+            ),
+            GoRoute(
+              path: '${RoutePaths.videoDetailBase}/:id',
+              builder: (_, state) {
+                openedId = state.pathParameters['id'];
+                final extra = state.extra as VideoDetailRouteExtra?;
+                expect(
+                  extra?.autoOpenComments,
+                  equals(extra?.focusCommentId != null),
+                );
+                focusedComment = extra?.focusCommentId;
+                return const SizedBox();
+              },
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MaterialApp.router(
+              localizationsDelegates: appLocalizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              routerConfig: router,
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('tap'));
+        await tester.pumpAndSettle();
+        return (openedId, focusedComment);
+      }
+
+      testWidgets('opens the video it replies to', (tester) async {
+        expect(await open(tester, root), equals((root, null)));
+      });
+
+      testWidgets('opens the comments of the video on the comment', (
+        tester,
+      ) async {
+        expect(await open(tester, comment), equals((root, comment)));
+      });
+    });
   });
 
   group(VideoStickerTapAreas, () {
@@ -150,28 +253,36 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
-        MaterialApp(
-          localizationsDelegates: appLocalizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Stack(
-            children: [
-              Positioned.fill(
-                child: PlayerGestureSurface(
-                  interactiveReady: true,
-                  isOwnVideo: false,
-                  onTap: () => playerTaps++,
-                  onDoubleTapDown: (_) => playerDoubleTaps++,
-                  onLongPressStart: () {},
+        ProviderScope(
+          overrides: [
+            // A countdown's reminder is set through it.
+            notificationServiceProvider.overrideWithValue(
+              _MockNotificationService(),
+            ),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: appLocalizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Stack(
+              children: [
+                Positioned.fill(
+                  child: PlayerGestureSurface(
+                    interactiveReady: true,
+                    isOwnVideo: false,
+                    onTap: () => playerTaps++,
+                    onDoubleTapDown: (_) => playerDoubleTaps++,
+                    onLongPressStart: () {},
+                  ),
                 ),
-              ),
-              Positioned.fill(
-                child: VideoStickerTapAreas(
-                  video: _video(regions, audioEventId: audioEventId),
-                  controller: controller,
-                  onOpen: (_, region, _) => opened.add(region),
+                Positioned.fill(
+                  child: VideoStickerTapAreas(
+                    video: _video(regions, audioEventId: audioEventId),
+                    controller: controller,
+                    onOpen: (_, region, _) => opened.add(region),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       );
@@ -457,6 +568,32 @@ void main() {
         expect(copiesBeforeFont, isZero);
         expect(find.text('#party🎉'), findsOneWidget);
         expect(opened, equals([party]));
+      });
+
+      testWidgets('draws a countdown with the time left over its date', (
+        tester,
+      ) async {
+        await pump(tester, [
+          _countdown(clock.now().add(const Duration(days: 12, hours: 4))),
+        ]);
+
+        final timeLeft = find.textContaining('12 days 0');
+        expect(find.text('Summer'), findsOneWidget);
+        expect(timeLeft, findsOneWidget);
+
+        final before = tester.widget<Text>(timeLeft).data;
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(tester.widget<Text>(timeLeft).data, isNot(equals(before)));
+      });
+
+      testWidgets('draws a countdown that is over with its date', (
+        tester,
+      ) async {
+        await pump(tester, [_countdown(DateTime.utc(2025, 6, 21, 12))]);
+
+        expect(find.textContaining('2025'), findsOneWidget);
+        expect(find.textContaining('days'), findsNothing);
       });
 
       testWidgets('draws only the button for a sticker without its look', (

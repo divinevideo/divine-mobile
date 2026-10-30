@@ -1,5 +1,5 @@
 // ABOUTME: Tests the social sticker cubit: who a mention may name, the typed
-// ABOUTME: hashtag and its limit, the link, and the credited sound and design.
+// ABOUTME: hashtag and its limit, the link, the sound, and the countdown.
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
@@ -252,6 +252,30 @@ void main() {
             'A line',
           ),
           isA<SocialStickerState>().having((s) => s.data.lyric, 'lyric', null),
+        ],
+      );
+    });
+
+    group('countdown', () {
+      blocTest<SocialStickerCubit, SocialStickerState>(
+        'can be placed once it has a title and a moment still to come',
+        build: () => build(SocialStickerData.countdown(now: DateTime.now())),
+        act: (cubit) => cubit
+          ..countdownTitleChanged(' Summer ')
+          ..countdownEndChanged(
+            DateTime.now().subtract(const Duration(days: 1)),
+          )
+          ..countdownEndChanged(DateTime.now().add(const Duration(days: 30))),
+        expect: () => [
+          isA<SocialStickerState>()
+              .having((s) => s.data.countdownTitle, 'title', 'Summer')
+              .having((s) => s.canConfirm, 'canConfirm', isTrue),
+          isA<SocialStickerState>()
+              .having((s) => s.isCountdownOver, 'isCountdownOver', isTrue)
+              .having((s) => s.canConfirm, 'canConfirm', isFalse),
+          isA<SocialStickerState>()
+              .having((s) => s.isCountdownOver, 'isCountdownOver', isFalse)
+              .having((s) => s.canConfirm, 'canConfirm', isTrue),
         ],
       );
     });

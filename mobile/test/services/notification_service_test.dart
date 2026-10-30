@@ -9,6 +9,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/services/notification_helpers.dart'
     show localNotificationTapPayload;
 import 'package:openvine/services/notification_service.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 class _MockFlutterLocalNotificationsPlugin extends Mock
     implements FlutterLocalNotificationsPlugin {}
@@ -915,6 +916,122 @@ void main() {
       expect(first, isNot(equals(differsByAddress)));
       expect(first, isNot(equals(differsByTarget)));
       expect(first, isNot(equals(differsByMessageId)));
+    });
+  });
+
+  group('toggleReminder', () {
+    late NotificationService service;
+    late _MockFlutterLocalNotificationsPlugin plugin;
+    final end = DateTime.utc(2027, 6, 21, 18);
+
+    setUpAll(() {
+      registerFallbackValue(tz.TZDateTime.utc(2000));
+      registerFallbackValue(const NotificationDetails());
+      registerFallbackValue(AndroidScheduleMode.inexactAllowWhileIdle);
+    });
+
+    setUp(() {
+      service = NotificationService();
+      plugin = _MockFlutterLocalNotificationsPlugin();
+      when(
+        () => plugin.zonedSchedule(
+          id: any(named: 'id'),
+          scheduledDate: any(named: 'scheduledDate'),
+          notificationDetails: any(named: 'notificationDetails'),
+          androidScheduleMode: any(named: 'androidScheduleMode'),
+          title: any(named: 'title'),
+          body: any(named: 'body'),
+          payload: any(named: 'payload'),
+        ),
+      ).thenAnswer((_) async {});
+      when(
+        () => plugin.cancel(id: any(named: 'id')),
+      ).thenAnswer((_) async {});
+    });
+
+    tearDown(() => service.dispose());
+
+    Future<ReminderToggle> toggle() => service.toggleReminder(
+      id: 7,
+      title: 'Summer',
+      body: 'It is time',
+      at: end,
+      payload: '{}',
+    );
+
+    test('sets a reminder for the moment it ends', () async {
+      when(plugin.pendingNotificationRequests).thenAnswer((_) async => []);
+      service.debugConfigurePlugin(plugin);
+
+      expect(await toggle(), equals(ReminderToggle.scheduled));
+
+      final scheduled =
+          verify(
+                () => plugin.zonedSchedule(
+                  id: 7,
+                  scheduledDate: captureAny(named: 'scheduledDate'),
+                  notificationDetails: any(named: 'notificationDetails'),
+                  androidScheduleMode:
+                      AndroidScheduleMode.inexactAllowWhileIdle,
+                  title: 'Summer',
+                  body: 'It is time',
+                  payload: '{}',
+                ),
+              ).captured.single
+              as tz.TZDateTime;
+      expect(scheduled.isAtSameMomentAs(end), isTrue);
+    });
+
+    test('removes the reminder set before', () async {
+      when(plugin.pendingNotificationRequests).thenAnswer(
+        (_) async => [const PendingNotificationRequest(7, 'Summer', '', '{}')],
+      );
+      service.debugConfigurePlugin(plugin);
+
+      expect(await toggle(), equals(ReminderToggle.cancelled));
+
+      verify(() => plugin.cancel(id: 7)).called(1);
+      verifyNever(
+        () => plugin.zonedSchedule(
+          id: any(named: 'id'),
+          scheduledDate: any(named: 'scheduledDate'),
+          notificationDetails: any(named: 'notificationDetails'),
+          androidScheduleMode: any(named: 'androidScheduleMode'),
+          title: any(named: 'title'),
+          body: any(named: 'body'),
+          payload: any(named: 'payload'),
+        ),
+      );
+    });
+
+    test('sets none when notifications stay off', () async {
+      final androidPlugin = _MockAndroidFlutterLocalNotificationsPlugin();
+      when(plugin.pendingNotificationRequests).thenAnswer((_) async => []);
+      when(
+        () => plugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >(),
+      ).thenReturn(androidPlugin);
+      when(
+        androidPlugin.requestNotificationsPermission,
+      ).thenAnswer((_) async => false);
+      service.debugConfigurePlugin(plugin, permissionsGranted: false);
+
+      expect(await toggle(), equals(ReminderToggle.denied));
+
+      verify(androidPlugin.requestNotificationsPermission).called(1);
+      verifyNever(
+        () => plugin.zonedSchedule(
+          id: any(named: 'id'),
+          scheduledDate: any(named: 'scheduledDate'),
+          notificationDetails: any(named: 'notificationDetails'),
+          androidScheduleMode: any(named: 'androidScheduleMode'),
+          title: any(named: 'title'),
+          body: any(named: 'body'),
+          payload: any(named: 'payload'),
+        ),
+      );
     });
   });
 }

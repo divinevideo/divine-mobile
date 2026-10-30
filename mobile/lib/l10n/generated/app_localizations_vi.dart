@@ -2006,6 +2006,47 @@ class AppLocalizationsVi extends AppLocalizations {
   String get videoStickerSoundSemanticLabel => 'Nhãn dán âm thanh, mở âm thanh';
 
   @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'Nhãn dán địa điểm, mở $place trên bản đồ';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'Nhãn dán đếm ngược, đặt lời nhắc';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'Nhãn dán trả lời, mở nội dung video này trả lời';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ngày',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'Đã đặt lời nhắc. Chúng mình sẽ báo khi đến giờ.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'Đã xóa lời nhắc.';
+
+  @override
+  String get videoStickerCountdownOver => 'Đếm ngược này đã kết thúc.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'Bật thông báo cho Divine để nhận lời nhắc.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'Đến giờ rồi! Đếm ngược bạn đã lưu vừa kết thúc.';
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Liên kết này mở bên ngoài Divine. Hãy kiểm tra địa chỉ trước khi tiếp tục.';
 
@@ -10832,6 +10873,34 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get videoEditorSocialStickerLinkInvalid =>
       'Đây chưa phải là địa chỉ web.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'Tương tác';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'Đếm ngược';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'Mùa hè';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint =>
+      'Bạn đang đếm ngược đến điều gì?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'Người xem thấy thời gian còn lại và có thể đặt lời nhắc.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'Thời điểm đó đã qua. Chọn thời điểm mới nhé.';
+
+  @override
+  String get videoEditorSocialStickerReply => 'Trả lời';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'Người xem chạm vào để thấy bạn đang trả lời điều gì.';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Nốt nhạc';

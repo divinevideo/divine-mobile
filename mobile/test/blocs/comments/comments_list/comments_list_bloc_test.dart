@@ -1581,5 +1581,82 @@ void main() {
         },
       );
     });
+
+    group('focusCommentId', () {
+      final newer = makeComment(
+        validId('c1'),
+        createdAt: DateTime.fromMillisecondsSinceEpoch(5000),
+      );
+      final older = makeComment(
+        validId('c0'),
+        createdAt: DateTime.fromMillisecondsSinceEpoch(1000),
+      );
+
+      /// Pages the newest comment first and [olderPage] after it, of
+      /// [totalCount] in all.
+      void pages({required List<Comment> olderPage, required int totalCount}) =>
+          when(
+            () => mockCommentsRepository.loadComments(
+              rootEventId: any(named: 'rootEventId'),
+              rootEventKind: any(named: 'rootEventKind'),
+              rootAddressableId: any(named: 'rootAddressableId'),
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+            ),
+          ).thenAnswer((invocation) async {
+            final page = invocation.namedArguments[#before] == null
+                ? [newer]
+                : olderPage;
+            return CommentThread(
+              rootEventId: validId('root'),
+              comments: page,
+              totalCount: totalCount,
+              commentCache: {for (final c in page) c.id: c},
+            );
+          });
+
+      CommentsListBloc focusing(String id) => CommentsListBloc(
+        commentsRepository: mockCommentsRepository,
+        rootEventId: validId('root'),
+        rootEventKind: 34236,
+        rootAuthorPubkey: validId('author'),
+        focusCommentId: id,
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'scrolls to the comment it opens on once that is loaded',
+        setUp: () => pages(olderPage: const [], totalCount: 1),
+        build: () => focusing(newer.id),
+        act: (b) => b.add(const CommentsLoadRequested()),
+        verify: (b) {
+          expect(b.state.scrollToCommentId, equals(newer.id));
+          expect(b.state.pendingFocusCommentId, isNull);
+        },
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'loads older comments until the one it opens on is there',
+        setUp: () => pages(olderPage: [older], totalCount: 2),
+        build: () => focusing(older.id),
+        act: (b) => b.add(const CommentsLoadRequested()),
+        verify: (b) {
+          expect(b.state.commentsById.keys, contains(older.id));
+          expect(b.state.scrollToCommentId, equals(older.id));
+          expect(b.state.pendingFocusCommentId, isNull);
+        },
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'stays at the top when the comment it opens on is gone',
+        setUp: () => pages(olderPage: [older], totalCount: 2),
+        build: () => focusing(validId('deleted')),
+        act: (b) => b.add(const CommentsLoadRequested()),
+        verify: (b) {
+          expect(b.state.commentsById, hasLength(2));
+          expect(b.state.scrollToCommentId, isNull);
+          expect(b.state.pendingFocusCommentId, isNull);
+        },
+      );
+    });
   });
 }

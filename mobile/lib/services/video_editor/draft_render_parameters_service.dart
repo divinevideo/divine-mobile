@@ -424,7 +424,8 @@ class DraftRenderParametersService {
   /// Runs while the layers are mounted but before the capture frame, so all
   /// of it lands in the first build the rasterizer measures: the fonts the
   /// text layers name, images for stickers, the fonts and emoji info stickers
-  /// draw with, and the fonts of social stickers, their emoji font included.
+  /// draw with, and the fonts of social stickers, their emoji font included,
+  /// and the picture of a reply sticker.
   Future<void> _prepareLayerContent(
     List<Layer> layers,
     List<StickerData> stickers,
@@ -436,6 +437,7 @@ class DraftRenderParametersService {
           .nonNulls,
     ),
     _precacheStickers(stickers),
+    _precacheReplyPictures(layers),
     preloadInfoStickerContent(layers.map(InfoStickerData.of).nonNulls),
     if (layers.any(SocialStickerData.isSocialStickerLayer))
       preloadInfoStickerFonts(),
@@ -445,6 +447,30 @@ class DraftRenderParametersService {
           SocialStickerView.textOf(sticker),
     ]),
   ]);
+
+  /// Loads the avatar or thumbnail of every reply sticker among [layers] into
+  /// the cache the sticker reads it from, so the capture does not take the
+  /// initial it shows meanwhile. One that cannot load keeps the initial.
+  Future<void> _precacheReplyPictures(List<Layer> layers) async {
+    final urls = {
+      for (final layer in layers) ?SocialStickerData.of(layer)?.replyImageUrl,
+    };
+    await Future.wait(
+      urls.map((url) async {
+        try {
+          await _resolveImage(
+            MediaCacheImageProvider(url, cacheManager: openVineImageCache),
+          );
+        } catch (error) {
+          Log.warning(
+            'Could not preload a reply sticker picture for render: $error',
+            name: _logName,
+            category: LogCategory.video,
+          );
+        }
+      }),
+    );
+  }
 
   /// Loads every sticker's image into the cache the sticker widget reads from.
   ///

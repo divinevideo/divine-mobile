@@ -1,5 +1,5 @@
 // ABOUTME: Navigation-scoped context for publishing a recorded clip as a comment.
-// ABOUTME: Carries the NIP-22 root and optional parent comment metadata.
+// ABOUTME: Carries the NIP-22 root, the parent comment and a snapshot of either.
 
 import 'package:equatable/equatable.dart';
 
@@ -11,6 +11,9 @@ class VideoReplyContext extends Equatable {
     this.rootAddressableId,
     this.parentCommentId,
     this.parentAuthorPubkey,
+    this.replyToName,
+    this.replyToText,
+    this.replyToImageUrl,
   });
 
   final String rootEventId;
@@ -20,7 +23,25 @@ class VideoReplyContext extends Equatable {
   final String? parentCommentId;
   final String? parentAuthorPubkey;
 
+  /// The name of whoever wrote what the reply replies to, the parent comment
+  /// or else the root video, as it was when the reply was recorded.
+  final String? replyToName;
+
+  /// The text of the parent comment as it was when the reply was recorded;
+  /// `null` for a reply to the video itself.
+  final String? replyToText;
+
+  /// The avatar of whoever wrote the parent comment, or the thumbnail of the
+  /// root video for a reply to the video itself.
+  final String? replyToImageUrl;
+
   bool get isReplyToComment => parentCommentId != null;
+
+  /// The id of the event the reply answers: the parent comment, or the root.
+  String get replyToEventId => parentCommentId ?? rootEventId;
+
+  /// The pubkey of whoever wrote the event the reply answers.
+  String get replyToPubkey => parentAuthorPubkey ?? rootAuthorPubkey;
 
   factory VideoReplyContext.fromJson(Map<String, dynamic> json) =>
       VideoReplyContext(
@@ -30,6 +51,9 @@ class VideoReplyContext extends Equatable {
         rootAddressableId: json['rootAddressableId'] as String?,
         parentCommentId: json['parentCommentId'] as String?,
         parentAuthorPubkey: json['parentAuthorPubkey'] as String?,
+        replyToName: json['replyToName'] as String?,
+        replyToText: json['replyToText'] as String?,
+        replyToImageUrl: json['replyToImageUrl'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -39,6 +63,9 @@ class VideoReplyContext extends Equatable {
     if (rootAddressableId != null) 'rootAddressableId': rootAddressableId,
     if (parentCommentId != null) 'parentCommentId': parentCommentId,
     if (parentAuthorPubkey != null) 'parentAuthorPubkey': parentAuthorPubkey,
+    if (replyToName != null) 'replyToName': replyToName,
+    if (replyToText != null) 'replyToText': replyToText,
+    if (replyToImageUrl != null) 'replyToImageUrl': replyToImageUrl,
   };
 
   @override
@@ -49,5 +76,8 @@ class VideoReplyContext extends Equatable {
     rootAddressableId,
     parentCommentId,
     parentAuthorPubkey,
+    replyToName,
+    replyToText,
+    replyToImageUrl,
   ];
 }

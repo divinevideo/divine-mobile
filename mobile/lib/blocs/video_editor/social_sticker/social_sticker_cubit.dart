@@ -1,6 +1,7 @@
 // ABOUTME: Holds a social sticker while the creator sets it up: its look, the
-// ABOUTME: person, hashtag, link or sound, and whether it can be placed.
+// ABOUTME: person, hashtag, link, sound or countdown, and if it can be placed.
 
+import 'package:clock/clock.dart';
 import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -27,7 +28,7 @@ class SocialStickerCubit extends Cubit<SocialStickerState> {
   }) : _blocklistRepository = blocklistRepository,
        super(
          SocialStickerState(
-           data: _canMention(blocklistRepository, initial.pubkey)
+           data: canMention(blocklistRepository, initial.pubkey)
                ? initial
                : SocialStickerData(kind: initial.kind, style: initial.style),
            otherHashtags: otherHashtags,
@@ -37,15 +38,16 @@ class SocialStickerCubit extends Cubit<SocialStickerState> {
                    if (!soundChoices.any(initial.isSameSound)) initial,
                    ...soundChoices,
                  ],
-           personBlocked: !_canMention(blocklistRepository, initial.pubkey),
+           personBlocked: !canMention(blocklistRepository, initial.pubkey),
          ),
        );
 
   final ContentBlocklistRepository _blocklistRepository;
 
-  /// Whether [pubkey], when there is one, can be mentioned: not someone the
-  /// creator blocked, and not someone who blocked or muted them.
-  static bool _canMention(
+  /// Whether [pubkey], when there is one, can be mentioned or replied to with
+  /// a sticker: not someone the creator blocked, and not someone who blocked
+  /// or muted them.
+  static bool canMention(
     ContentBlocklistRepository blocklistRepository,
     String? pubkey,
   ) =>
@@ -63,7 +65,7 @@ class SocialStickerCubit extends Cubit<SocialStickerState> {
   /// Someone who cannot be mentioned leaves the sticker as it was and is
   /// flagged with [SocialStickerState.personBlocked].
   void personPicked(UserProfile profile) {
-    if (!_canMention(_blocklistRepository, profile.pubkey)) {
+    if (!canMention(_blocklistRepository, profile.pubkey)) {
       emit(state.copyWith(personBlocked: true));
       return;
     }
@@ -106,4 +108,14 @@ class SocialStickerCubit extends Cubit<SocialStickerState> {
   /// it is blank.
   void lyricChanged(String text) =>
       emit(state.copyWith(data: state.data.withLyric(text)));
+
+  /// Shows [text] as the countdown's title.
+  void countdownTitleChanged(String text) => emit(
+    state.copyWith(data: state.data.copyWith(countdownTitle: text.trim())),
+  );
+
+  /// Counts down to [end], a wall-clock time of the phone.
+  void countdownEndChanged(DateTime end) => emit(
+    state.copyWith(data: state.data.copyWith(countdownEnd: end.toUtc())),
+  );
 }

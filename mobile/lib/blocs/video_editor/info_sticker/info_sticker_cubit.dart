@@ -278,6 +278,7 @@ class InfoStickerCubit extends Cubit<InfoStickerState>
         data: kind == InfoStickerKind.location
             ? data.copyWith(
                 placeName: place.name,
+                placeAddress: place.address,
                 countryCode: place.countryCode,
               )
             : data,

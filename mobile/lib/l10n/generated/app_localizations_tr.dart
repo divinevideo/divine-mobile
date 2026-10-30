@@ -1974,6 +1974,48 @@ class AppLocalizationsTr extends AppLocalizations {
   String get videoStickerSoundSemanticLabel => 'Ses çıkartması, sesi açar';
 
   @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'Konum çıkartması, $place yerini haritada açar';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'Geri sayım çıkartması, hatırlatıcı kurar';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'Yanıt çıkartması, bu videonun yanıt verdiği şeyi açar';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count gün',
+      one: '$count gün',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'Hatırlatıcı kuruldu. Zamanı gelince haber veririz.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'Hatırlatıcı kaldırıldı.';
+
+  @override
+  String get videoStickerCountdownOver => 'Bu geri sayım sona erdi.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'Hatırlatıcıyı almak için Divine bildirimlerini aç.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'Zamanı geldi! Kaydettiğin geri sayım az önce bitti.';
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Bu bağlantı Divine dışında açılır. Devam etmeden önce adresi kontrol et.';
 
@@ -10790,6 +10832,34 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get videoEditorSocialStickerLinkInvalid =>
       'Bu henüz bir web adresi değil.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'Etkileşimli';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'Geri sayım';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'Yaz';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint =>
+      'Neye geri sayıyorsun?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'İzleyenler kalan süreyi görür ve hatırlatıcı kurabilir.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'O an geçti. Yenisini seç.';
+
+  @override
+  String get videoEditorSocialStickerReply => 'Yanıt';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'İzleyenler dokunup neye yanıt verdiğini görür.';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Nota';

@@ -1878,6 +1878,44 @@ class AppLocalizationsJa extends AppLocalizations {
   String get videoStickerSoundSemanticLabel => 'サウンドステッカー、サウンドを開きます';
 
   @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return '場所ステッカー、$place を地図で開きます';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel => 'カウントダウンステッカー、リマインダーを設定します';
+
+  @override
+  String get videoStickerReplySemanticLabel => '返信ステッカー、この動画の返信先を開きます';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count日',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'リマインダーを設定しました。時間になったらお知らせします。';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'リマインダーを削除しました。';
+
+  @override
+  String get videoStickerCountdownOver => 'このカウントダウンは終了しました。';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'リマインダーを受け取るには、Divine の通知をオンにしてください。';
+
+  @override
+  String get videoStickerCountdownReminderBody => '時間です！保存したカウントダウンが終了しました。';
+
+  @override
   String get videoStickerLinkSheetBody =>
       'このリンクはDivineの外で開きます。移動する前にアドレスを確認してください。';
 
@@ -10343,6 +10381,32 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerLinkInvalid => 'まだウェブアドレスではありません。';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'インタラクティブ';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'カウントダウン';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => '夏';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint => '何までカウントダウンしますか？';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      '視聴者は残り時間を見て、リマインダーを設定できます。';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'その日時は過ぎています。新しい日時を選んでください。';
+
+  @override
+  String get videoEditorSocialStickerReply => '返信';
+
+  @override
+  String get videoEditorSocialStickerReplyNote => '視聴者がタップすると、返信先が表示されます。';
 
   @override
   String get videoEditorSocialStickerSoundNote => '音符';

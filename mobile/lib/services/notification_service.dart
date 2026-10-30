@@ -10,7 +10,23 @@ import 'package:openvine/config/screenshot_mode.dart';
 import 'package:openvine/services/notification_helpers.dart'
     show NotificationPayloadKeys, isRoutableNotificationPayload;
 import 'package:openvine/utils/detached_future.dart';
+import 'package:timezone/timezone.dart' as tz;
 import 'package:unified_logger/unified_logger.dart';
+
+/// What [NotificationService.toggleReminder] did.
+enum ReminderToggle {
+  /// The reminder is set.
+  scheduled,
+
+  /// The reminder was set already and is removed now.
+  cancelled,
+
+  /// The app may not show notifications, so no reminder was set.
+  denied,
+
+  /// The platform could not set the reminder, as on the web.
+  failed,
+}
 
 /// Types of notifications
 enum NotificationType {
@@ -232,7 +248,8 @@ class NotificationService {
   ///
   /// Prompts the user when the platform has not decided yet. Production code
   /// should prefer [refreshPermissionState] and leave prompting to the
-  /// sign-in-gated push registration flow.
+  /// sign-in-gated push registration flow, and to [toggleReminder], which the
+  /// user asks for.
   Future<void> ensurePermission() => _runPermissionOperation(_ensurePermission);
 
   /// Re-read the platform permission state without ever prompting.
@@ -742,6 +759,74 @@ class NotificationService {
       );
     }
   }
+
+  /// Sets a reminder that shows [title] and [body] at [at], tapped to open
+  /// what [payload] points to, or removes the reminder when one with [id] is
+  /// set already.
+  ///
+  /// The user asks for it with a tap, such as on a countdown sticker, so this
+  /// asks for notification permission when the platform has not decided yet.
+  /// Android may show it up to an hour late: an exact alarm needs a
+  /// permission of its own.
+  Future<ReminderToggle> toggleReminder({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime at,
+    String? payload,
+  }) async {
+    if (kIsWeb) return ReminderToggle.failed;
+    try {
+      if (!_pluginInitialized) await _initializePlugin();
+      final pending = await _flutterLocalNotificationsPlugin
+          .pendingNotificationRequests();
+      if (pending.any((request) => request.id == id)) {
+        await _flutterLocalNotificationsPlugin.cancel(id: id);
+        return ReminderToggle.cancelled;
+      }
+      await ensurePermission();
+      if (!hasPermissions) return ReminderToggle.denied;
+      await _flutterLocalNotificationsPlugin.zonedSchedule(
+        id: id,
+        scheduledDate: tz.TZDateTime.from(at.toUtc(), tz.UTC),
+        notificationDetails: _reminderDetails,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        title: title,
+        body: body,
+        payload: payload,
+      );
+      return ReminderToggle.scheduled;
+    } on Exception catch (e) {
+      Log.error(
+        'Failed to set or remove reminder $id: $e',
+        name: 'NotificationService',
+        category: LogCategory.system,
+      );
+      return ReminderToggle.failed;
+    }
+  }
+
+  /// How a reminder shows: in its own channel, so a viewer can silence
+  /// reminders without silencing uploads.
+  static const _reminderDetails = NotificationDetails(
+    android: AndroidNotificationDetails(
+      'openvine_reminders', // channel ID - stable, do not change
+      'Reminders', // channel name - user-visible
+      channelDescription: 'Reminders you set for countdowns in videos',
+      importance: Importance.high,
+      priority: Priority.high,
+    ),
+    iOS: DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: false,
+      presentSound: true,
+    ),
+    macOS: DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: false,
+      presentSound: true,
+    ),
+  );
 
   /// Add notification to internal list
   void _addNotification(AppNotification notification) {
