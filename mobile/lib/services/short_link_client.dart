@@ -66,7 +66,6 @@ class ShortLinkClient {
 
   Future<String> _create(String target, Completer<void> abort) async {
     final body = jsonEncode({'url': target});
-    if (_closed || abort.isCompleted) return target;
     final request =
         http.AbortableRequest(
             'POST',
