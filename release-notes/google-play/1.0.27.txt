@@ -1,0 +1,160 @@
+<en-US>
+New in Divine 1.0.27:
+• Create with new effects, transitions, voice effects, animated masks and interactive stickers. Effects and filters are now easier to browse.
+• Chats now show mentions, unread messages and recent activity.
+• Profiles, sharing and sign-in are smoother, with fixes throughout the app.
+</en-US>
+
+<am>
+በDivine 1.0.27 አዲስ፦
+• አዳዲስ ተፅዕኖዎች፣ ሽግግሮች፣ የድምፅ ተፅዕኖዎች፣ ተንቀሳቃሽ የቅርጽ ጭንብሎች እና መስተጋብራዊ ተለጣፊዎች። ተፅዕኖዎችን እና አጣሪዎችን ማሰስ አሁን ቀላል ነው።
+• ውይይቶች አሁን መጠቀሶችን፣ ያልተነበቡ መልዕክቶችን እና የቅርብ ጊዜ እንቅስቃሴን ያሳያሉ።
+• መገለጫዎች፣ ማጋራት እና መግባት አሁን ይበልጥ ለስላሳ ናቸው፣ በመተግበሪያውም ሙሉ ማሻሻያዎች ተደርገዋል።
+</am>
+
+<ar>
+الجديد في Divine 1.0.27:
+• مؤثرات وانتقالات ومؤثرات صوتية وأقنعة متحركة وملصقات تفاعلية جديدة. وأصبح تصفح المؤثرات والفلاتر أسهل.
+• تعرض الدردشات الآن الإشارات والرسائل غير المقروءة والنشاط الأخير.
+• أصبحت الملفات الشخصية والمشاركة وتسجيل الدخول أكثر سلاسة، مع إصلاحات في أنحاء التطبيق.
+</ar>
+
+<bg-BG>
+Ново в Divine 1.0.27:
+• Нови ефекти, преходи, гласови ефекти, анимирани маски и интерактивни стикери. Ефектите и филтрите вече се разглеждат по-лесно.
+• Чатовете вече показват споменавания, непрочетени съобщения и скорошна активност.
+• Профилите, споделянето и влизането са по-плавни, с поправки в цялото приложение.
+</bg-BG>
+
+<de-DE>
+Neu in Divine 1.0.27:
+• Neue Effekte, Übergänge, Stimmeffekte, animierte Masken und interaktive Sticker. Effekte und Filter lassen sich jetzt leichter durchstöbern.
+• Chats zeigen jetzt Erwähnungen, ungelesene Nachrichten und letzte Aktivitäten.
+• Profile, Teilen und Anmeldung laufen flüssiger – plus Fehlerbehebungen in der ganzen App.
+</de-DE>
+
+<es-419>
+Novedades de Divine 1.0.27:
+• Nuevos efectos, transiciones, efectos de voz, máscaras animadas y stickers interactivos. Ahora es más fácil explorar efectos y filtros.
+• Los chats ahora muestran menciones, mensajes sin leer y actividad reciente.
+• Los perfiles, compartir y el inicio de sesión funcionan mejor, con correcciones en toda la app.
+</es-419>
+
+<fil>
+Bago sa Divine 1.0.27:
+• May bagong effects, transitions, voice effects, animated masks, at interactive stickers. Mas madali na ring mag-browse ng effects at filters.
+• Makikita na sa chats ang mentions, unread messages, at recent activity.
+• Mas smooth na ang profiles, sharing, at sign-in, kasama ang fixes sa buong app.
+</fil>
+
+<fr-FR>
+Nouveautés de Divine 1.0.27 :
+• De nouveaux effets, transitions, effets de voix, masques animés et stickers interactifs. Les effets et filtres sont désormais plus faciles à parcourir.
+• Les discussions affichent désormais les mentions, les messages non lus et l’activité récente.
+• Les profils, le partage et la connexion sont plus fluides, avec des correctifs dans toute l’app.
+</fr-FR>
+
+<id>
+Yang baru di Divine 1.0.27:
+• Efek, transisi, efek vokal, masking bentuk beranimasi, dan stiker interaktif baru. Efek dan filter kini lebih mudah dijelajahi.
+• Chat kini menampilkan mention, pesan belum dibaca, dan aktivitas terbaru.
+• Profil, berbagi, dan proses masuk kini lebih lancar, plus perbaikan di seluruh aplikasi.
+</id>
+
+<it-IT>
+Novità in Divine 1.0.27:
+• Nuovi effetti, transizioni, effetti voce, maschere animate e sticker interattivi. Ora effetti e filtri sono più facili da esplorare.
+• Le chat mostrano ora menzioni, messaggi non letti e attività recenti.
+• Profili, condivisione e accesso sono più fluidi, con correzioni in tutta l’app.
+</it-IT>
+
+<ja-JP>
+Divine 1.0.27 の新機能：
+• 新しいエフェクト、トランジション、ボイスエフェクト、アニメーションするシェイプマスク、インタラクティブなステッカーを追加しました。エフェクトとフィルターも探しやすくなりました。
+• チャットにメンション、未読メッセージ、最近のアクティビティが表示されるようになりました。
+• プロフィール、共有、サインインがよりスムーズになり、アプリ全体の不具合も修正しました。
+</ja-JP>
+
+<ko-KR>
+Divine 1.0.27의 새로운 기능:
+• 새로운 효과, 전환, 음성 효과, 애니메이션 모양 마스크, 인터랙티브 스티커를 추가했어요. 효과와 필터도 더 쉽게 둘러볼 수 있어요.
+• 채팅에서 멘션, 안 읽은 메시지, 최근 활동을 볼 수 있어요.
+• 프로필, 공유, 로그인이 더 매끄러워졌고 앱 전반의 문제도 고쳤어요.
+</ko-KR>
+
+<ms>
+Baharu dalam Divine 1.0.27:
+• Kesan, peralihan, kesan vokal, topeng bentuk beranimasi dan pelekat interaktif baharu. Kesan dan tapis kini lebih mudah diterokai.
+• Sembang kini memaparkan sebutan, mesej belum dibaca dan aktiviti terkini.
+• Profil, perkongsian dan log masuk kini lebih lancar, dengan pembaikan di seluruh aplikasi.
+</ms>
+
+<nl-NL>
+Nieuw in Divine 1.0.27:
+• Nieuwe effecten, overgangen, stemeffecten, geanimeerde vormmaskers en interactieve stickers. Effecten en filters zijn nu makkelijker te bekijken.
+• Chats tonen nu vermeldingen, ongelezen berichten en recente activiteit.
+• Profielen, delen en inloggen werken soepeler, met verbeteringen in de hele app.
+</nl-NL>
+
+<pl-PL>
+Nowości w Divine 1.0.27:
+• Nowe efekty, przejścia, efekty głosu, animowane maski kształtu i interaktywne naklejki. Efekty i filtry łatwiej teraz przeglądać.
+• Czaty pokazują teraz wzmianki, nieprzeczytane wiadomości i ostatnią aktywność.
+• Profile, udostępnianie i logowanie działają płynniej, a w całej aplikacji wprowadziliśmy poprawki.
+</pl-PL>
+
+<pt-BR>
+Novidades no Divine 1.0.27:
+• Novos efeitos, transições, efeitos de voz, máscaras animadas e stickers interativos. Agora ficou mais fácil explorar efeitos e filtros.
+• Os chats agora mostram menções, mensagens não lidas e atividade recente.
+• Perfis, compartilhamento e login estão mais fluidos, com correções em todo o app.
+</pt-BR>
+
+<ro>
+Noutăți în Divine 1.0.27:
+• Efecte, tranziții, efecte de voce, măști de formă animate și stickere interactive noi. Efectele și filtrele sunt acum mai ușor de explorat.
+• Conversațiile afișează acum mențiuni, mesaje necitite și activitate recentă.
+• Profilurile, partajarea și autentificarea sunt mai fluide, cu remedieri în toată aplicația.
+</ro>
+
+<sv-SE>
+Nytt i Divine 1.0.27:
+• Nya effekter, övergångar, rösteffekter, animerade formmasker och interaktiva klistermärken. Effekter och filter är nu enklare att bläddra bland.
+• Chattar visar nu omnämnanden, olästa meddelanden och senaste aktivitet.
+• Profiler, delning och inloggning flyter bättre, med förbättringar i hela appen.
+</sv-SE>
+
+<te>
+Divine 1.0.27లో కొత్తవి:
+• కొత్త ఎఫెక్ట్‌లు, పరివర్తనలు, వాయిస్ ఎఫెక్ట్‌లు, యానిమేటెడ్ ఆకార మాస్క్‌లు, ఇంటరాక్టివ్ స్టిక్కర్లు. ఇప్పుడు ఎఫెక్ట్‌లు, ఫిల్టర్‌లను మరింత సులభంగా చూడవచ్చు.
+• చాట్‌లలో ఇప్పుడు ప్రస్తావనలు, చదవని సందేశాలు, ఇటీవలి కార్యకలాపాలు కనిపిస్తాయి.
+• ప్రొఫైల్‌లు, భాగస్వామ్యం, సైన్ ఇన్ మరింత సాఫీగా ఉన్నాయి. యాప్ అంతటా సమస్యలనూ పరిష్కరించాం.
+</te>
+
+<tr-TR>
+Divine 1.0.27'de yenilikler:
+• Yeni efektler, geçişler, ses efektleri, hareketli şekil maskeleri ve etkileşimli çıkartmalar. Efektlere ve filtrelere göz atmak artık daha kolay.
+• Sohbetlerde artık senden bahsedilen mesajlar, okunmamış mesajlar ve son etkinlikler görünüyor.
+• Profiller, paylaşım ve giriş daha akıcı; uygulama genelinde de düzeltmeler var.
+</tr-TR>
+
+<ur>
+Divine 1.0.27 میں نیا:
+• نئے ایفیکٹس، ٹرانزیشنز، آواز کے اثرات، متحرک شیپ ماسکس اور انٹرایکٹو اسٹیکرز۔ اب ایفیکٹس اور فلٹرز دیکھنا زیادہ آسان ہے۔
+• چیٹس اب ذکر، غیر پڑھے ہوئے پیغامات اور حالیہ سرگرمی دکھاتی ہیں۔
+• پروفائل، شیئرنگ اور سائن ان اب زیادہ ہموار ہیں، اور پوری ایپ میں کئی اصلاحات کی گئی ہیں۔
+</ur>
+
+<vi>
+Điểm mới trong Divine 1.0.27:
+• Hiệu ứng, chuyển cảnh, hiệu ứng giọng, mặt nạ hình dạng động và nhãn dán tương tác mới. Hiệu ứng và bộ lọc giờ dễ duyệt hơn.
+• Đoạn chat giờ hiển thị lượt nhắc đến, tin nhắn chưa đọc và hoạt động gần đây.
+• Hồ sơ, chia sẻ và đăng nhập mượt mà hơn, cùng nhiều bản sửa lỗi trên toàn ứng dụng.
+</vi>
+
+<zh-CN>
+Divine 1.0.27 新功能：
+• 新增特效、转场、变声效果、动画形状蒙版和互动贴纸。特效和滤镜现在更容易浏览。
+• 聊天现在会显示提及、未读消息和最近活动。
+• 主页、分享和登录体验更流畅，并修复了整个应用中的多项问题。
+</zh-CN>

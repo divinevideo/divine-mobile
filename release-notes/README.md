@@ -34,6 +34,18 @@ implementation details.
 `1.0.23.md` preserves the reviewed notes already published for that release. It
 is not permission to rebuild or replace its existing downloads.
 
+## Prepare Google Play “What’s new” copy
+
+Keep the paste-ready Play Console translations in
+`release-notes/google-play/<version>.txt`. Use Play Console language tags, put
+each tag on its own line, and keep each translated note within 500 Unicode
+characters. Cover every locale declared in
+`mobile/android/app/src/main/res/xml/locales_config.xml`, following the register
+and regional choices in `mobile/docs/LOCALIZATION_STYLE_GUIDE.md`.
+
+This short store copy complements the full release notes above; it does not
+replace `release-notes/<version>.md` for GitHub production publication.
+
 ## Choose the Codemagic channel
 
 `PUBLISH_TO_GITHUB=YES` enables GitHub publishing. It remains off by default.
