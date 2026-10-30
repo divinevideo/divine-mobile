@@ -1898,6 +1898,42 @@ class AppLocalizationsZh extends AppLocalizations {
   String get videoStickerSoundSemanticLabel => '声音贴纸，打开声音';
 
   @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return '地点贴纸，在地图中打开 $place';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel => '倒计时贴纸，设置提醒';
+
+  @override
+  String get videoStickerReplySemanticLabel => '回复贴纸，打开这个视频回复的内容';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count 天',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet => '提醒已设置，到时间我们会通知你。';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => '提醒已移除。';
+
+  @override
+  String get videoStickerCountdownOver => '这个倒计时已经结束了。';
+
+  @override
+  String get videoStickerCountdownNotificationsOff => '打开 Divine 的通知才能收到提醒。';
+
+  @override
+  String get videoStickerCountdownReminderBody => '时间到！你保存的倒计时刚刚结束。';
+
+  @override
   String get videoStickerLinkSheetBody => '此链接会在 Divine 之外打开。继续之前请先核对网址。';
 
   @override
@@ -10239,6 +10275,30 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerLinkInvalid => '这还不是一个网址。';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => '互动';
+
+  @override
+  String get videoEditorSocialStickerCountdown => '倒计时';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => '夏天';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint => '你在倒数什么？';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote => '观众能看到剩余时间，还可以设置提醒。';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver => '这个时间已经过了，选个新的吧。';
+
+  @override
+  String get videoEditorSocialStickerReply => '回复';
+
+  @override
+  String get videoEditorSocialStickerReplyNote => '观众点一下就能看到你在回复什么。';
 
   @override
   String get videoEditorSocialStickerSoundNote => '音符';

@@ -244,6 +244,7 @@ class InfoStickerData extends Equatable {
     this.use24HourFormat = false,
     this.dateFormat = InfoStickerDateFormat.dayMonth,
     this.placeName,
+    this.placeAddress,
     this.countryCode,
     this.placeSymbol = InfoStickerPlaceSymbol.pin,
     this.globe,
@@ -321,6 +322,11 @@ class InfoStickerData extends Equatable {
   /// The name of the place a location sticker shows.
   final String? placeName;
 
+  /// The place's name, town, region and country, such as "Zermatt, Wallis,
+  /// Schweiz", which a viewer's map app searches for when they tap the
+  /// published sticker. A sticker placed before it was kept has none.
+  final String? placeAddress;
+
   /// The ISO 3166 code of the country the place is in, for its flag.
   final String? countryCode;
 
@@ -375,6 +381,15 @@ class InfoStickerData extends Equatable {
     if (_moonPhase case final phase?) return phase;
     final time = dateTime;
     return time == null ? null : InfoStickerMoonPhase.at(time);
+  }
+
+  /// What a tap on the published location sticker searches the viewer's map
+  /// app for: the place's full name, or only its name on a sticker placed
+  /// before the full name was kept; `null` for every other kind.
+  String? get mapQuery {
+    if (kind != InfoStickerKind.location) return null;
+    final query = (placeAddress ?? placeName)?.trim();
+    return query == null || query.isEmpty ? null : query;
   }
 
   /// Whether the sticker has everything it needs to be placed.
@@ -432,6 +447,7 @@ class InfoStickerData extends Equatable {
     'use24HourFormat': use24HourFormat,
     'dateFormat': dateFormat.name,
     'placeName': ?placeName,
+    'placeAddress': ?placeAddress,
     'countryCode': ?countryCode,
     'placeSymbol': placeSymbol.name,
     'globe': ?globe?.name,
@@ -458,6 +474,7 @@ class InfoStickerData extends Equatable {
     DateTime? dateTime,
     InfoStickerDateFormat? dateFormat,
     String? placeName,
+    String? placeAddress,
     String? countryCode,
     InfoStickerPlaceSymbol? placeSymbol,
     InfoStickerGlobe? globe,
@@ -484,6 +501,7 @@ class InfoStickerData extends Equatable {
     use24HourFormat: use24HourFormat,
     dateFormat: dateFormat ?? this.dateFormat,
     placeName: placeName ?? this.placeName,
+    placeAddress: placeAddress ?? this.placeAddress,
     countryCode: countryCode ?? this.countryCode,
     placeSymbol: placeSymbol ?? this.placeSymbol,
     globe: globe ?? this.globe,
@@ -505,8 +523,9 @@ class InfoStickerData extends Equatable {
     moonPhase: dateTime == null ? _moonPhase : null,
   );
 
-  /// This sticker without what a place gave it: the place name, country and
-  /// side of the world, the weather, the sun times and the altitude.
+  /// This sticker without what a place gave it: the place's name, full name,
+  /// country and side of the world, the weather, the sun times and the
+  /// altitude.
   /// [copyWith] cannot unset them, so another place's values start from
   /// here, and a value the new place lacks is not left over from the last
   /// one.
@@ -563,6 +582,9 @@ class InfoStickerData extends Equatable {
           InfoStickerDateFormat.dayMonth,
       placeName: meta['placeName'] is String
           ? meta['placeName'] as String
+          : null,
+      placeAddress: meta['placeAddress'] is String
+          ? meta['placeAddress'] as String
           : null,
       countryCode: meta['countryCode'] is String
           ? meta['countryCode'] as String
@@ -621,6 +643,7 @@ class InfoStickerData extends Equatable {
     use24HourFormat,
     dateFormat,
     placeName,
+    placeAddress,
     countryCode,
     placeSymbol,
     globe,

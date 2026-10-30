@@ -1993,6 +1993,47 @@ class AppLocalizationsAm extends AppLocalizations {
   String get videoStickerSoundSemanticLabel => 'የድምጽ ተለጣፊ፣ ድምጹን ይከፍታል';
 
   @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'የቦታ ተለጣፊ፣ $placeን በካርታ ይከፍታል';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel => 'የኋሊት ቆጠራ ተለጣፊ፣ ማስታወሻ ያዘጋጃል';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'የምላሽ ተለጣፊ፣ ይህ ቪዲዮ የሚመልሰውን ይከፍታል';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ቀናት',
+      one: '$count ቀን',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'ማስታወሻ ተዘጋጅቷል። ጊዜው ሲደርስ እናሳውቅዎታለን።';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'ማስታወሻው ተወግዷል።';
+
+  @override
+  String get videoStickerCountdownOver => 'ይህ የኋሊት ቆጠራ አልቋል።';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'ማስታወሻውን ለማግኘት የDivine ማሳወቂያዎችን ያብሩ።';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'ጊዜው ደርሷል! ያስቀመጡት የኋሊት ቆጠራ አሁን አልቋል።';
+
+  @override
   String get videoStickerLinkSheetBody =>
       'ይህ ሊንክ ከDivine ውጭ ይከፈታል። ከመሄድዎ በፊት አድራሻውን ያረጋግጡ።';
 
@@ -10627,6 +10668,32 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerLinkInvalid => 'ይህ ገና የድር አድራሻ አይደለም።';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'መስተጋብራዊ';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'የኋሊት ቆጠራ';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'በጋ';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint => 'ወደ ምን እየቆጠሩ ነው?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'ተመልካቾች የቀረውን ጊዜ ያያሉ፤ ማስታወሻም ማዘጋጀት ይችላሉ።';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver => 'ያ ጊዜ አልፏል። አዲስ ይምረጡ።';
+
+  @override
+  String get videoEditorSocialStickerReply => 'ምላሽ';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'ተመልካቾች ሲነኩት ምን ላይ ምላሽ እንደሚሰጡ ያያሉ።';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'ኖታ';

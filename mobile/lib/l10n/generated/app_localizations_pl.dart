@@ -2096,6 +2096,50 @@ class AppLocalizationsPl extends AppLocalizations {
       'Naklejka z dźwiękiem, otwiera dźwięk';
 
   @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'Naklejka z miejscem, otwiera $place na mapie';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'Naklejka z odliczaniem, ustawia przypomnienie';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'Naklejka z odpowiedzią, otwiera to, na co odpowiada ten film';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dnia',
+      many: '$count dni',
+      few: '$count dni',
+      one: '$count dzień',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'Przypomnienie ustawione. Damy znać, gdy nadejdzie czas.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'Przypomnienie usunięte.';
+
+  @override
+  String get videoStickerCountdownOver => 'To odliczanie już się skończyło.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'Włącz powiadomienia dla Divine, żeby dostać przypomnienie.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'Już czas! Zapisane odliczanie właśnie się skończyło.';
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Ten link otwiera się poza Divine. Sprawdź adres, zanim przejdziesz dalej.';
 
@@ -11091,6 +11135,34 @@ class AppLocalizationsPl extends AppLocalizations {
   @override
   String get videoEditorSocialStickerLinkInvalid =>
       'To jeszcze nie jest adres strony.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'Interaktywne';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'Odliczanie';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'Lato';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint =>
+      'Do czego odliczasz?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'Widzowie widzą, ile czasu zostało, i mogą ustawić przypomnienie.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'Ten moment już minął. Wybierz nowy.';
+
+  @override
+  String get videoEditorSocialStickerReply => 'Odpowiedź';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'Widzowie stukają w nią, żeby zobaczyć, na co odpowiadasz.';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Nuta';

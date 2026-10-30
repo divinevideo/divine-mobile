@@ -1,6 +1,7 @@
-// ABOUTME: A social sticker (mention, hashtag, link or sound credit), kept in
-// ABOUTME: the meta of its layer, and what the stickers add to a video's post.
+// ABOUTME: A social sticker (mention, hashtag, link, sound credit, countdown or
+// ABOUTME: reply), kept in its layer's meta, and what they add to the post.
 
+import 'package:characters/characters.dart';
 import 'package:equatable/equatable.dart';
 import 'package:hashtag_repository/hashtag_repository.dart';
 import 'package:models/models.dart'
@@ -12,6 +13,7 @@ import 'package:models/models.dart'
         VideoStickerRegion;
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/sticker_text_glyphs.dart';
+import 'package:openvine/models/video_reply_context.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 /// The [infoStickerLayerKindKey] value of a social sticker layer.
@@ -31,6 +33,28 @@ enum SocialStickerKind {
 
   /// The title and artist of a sound used in the video.
   soundCredit,
+
+  /// A title and the moment it counts down to. The Divine player shows the
+  /// time left over it, and a tap sets a reminder for when it ends.
+  countdown,
+
+  /// The comment or video this video replies to: who wrote it and what they
+  /// wrote, or the video's thumbnail. A tap opens it.
+  reply;
+
+  /// The looks a sticker of this kind can take, the default first.
+  ///
+  /// A countdown takes only solid looks, so the player's copy can hide its
+  /// date in the frames; a reply's card takes a light or a dark one.
+  List<InfoStickerStyle> get styles => switch (this) {
+    countdown => const [
+      InfoStickerStyle.light,
+      InfoStickerStyle.brand,
+      InfoStickerStyle.highlight,
+    ],
+    reply => const [InfoStickerStyle.light, InfoStickerStyle.dark],
+    _ => InfoStickerStyle.pills,
+  };
 }
 
 /// How a sound credit shows its sound.
@@ -56,7 +80,8 @@ enum SocialStickerSoundDesign {
 ///
 /// Stored in both meta slots of its `WidgetLayer`, like an info sticker. A
 /// mention, a hashtag and a link also go into the published event; see
-/// [SocialStickerCredits].
+/// [SocialStickerCredits]. A reply keeps the name, text and picture of what it
+/// replies to as they were when the reply camera was opened.
 class SocialStickerData extends Equatable {
   const SocialStickerData({
     required this.kind,
@@ -71,6 +96,14 @@ class SocialStickerData extends Equatable {
     this.soundId,
     this.soundDesign = SocialStickerSoundDesign.note,
     this.lyric,
+    this.countdownTitle,
+    this.countdownEnd,
+    this.localeName,
+    this.use24HourFormat = false,
+    this.replyEventId,
+    this.replyText,
+    this.replyImageUrl,
+    this.replyToVideo = false,
   });
 
   /// A mention of [profile] in [style], by their handle or, without one, by
@@ -150,17 +183,75 @@ class SocialStickerData extends Equatable {
   /// The most characters a link's title can have.
   static const int maxLinkTitleLength = 40;
 
+  /// The most characters a countdown's title can have.
+  static const int maxCountdownTitleLength = 40;
+
+  /// A new countdown, in [style], writing its date in [localeName], its time
+  /// on a 24-hour clock when [use24HourFormat], and counting down to the full
+  /// hour after a day from [now].
+  factory SocialStickerData.countdown({
+    required DateTime now,
+    String? localeName,
+    bool use24HourFormat = false,
+    InfoStickerStyle style = InfoStickerStyle.light,
+  }) => SocialStickerData(
+    kind: SocialStickerKind.countdown,
+    style: style,
+    localeName: localeName,
+    use24HourFormat: use24HourFormat,
+    countdownEnd: defaultCountdownEnd(now).toUtc(),
+  );
+
+  /// The sticker showing what [context] replies to, from the snapshot taken
+  /// when the reply camera was opened, or `null` when it has none. The comment
+  /// is kept on one line and cut to [maxReplyTextLength].
+  static SocialStickerData? replyTo(
+    VideoReplyContext context, {
+    InfoStickerStyle style = InfoStickerStyle.light,
+  }) {
+    final name = context.replyToName?.trim();
+    if (name == null || name.isEmpty) return null;
+    final text = context.replyToText?.replaceAll(RegExp(r'\s+'), ' ').trim();
+    final chars = text?.characters;
+    final imageUrl = context.replyToImageUrl?.trim();
+    return SocialStickerData(
+      kind: SocialStickerKind.reply,
+      style: style,
+      pubkey: context.replyToPubkey,
+      name: name,
+      replyEventId: context.replyToEventId,
+      replyText: chars == null || chars.isEmpty
+          ? null
+          : chars.length <= maxReplyTextLength
+          ? text
+          : '${chars.take(maxReplyTextLength - 1).toString().trimRight()}…',
+      replyImageUrl: imageUrl == null || imageUrl.isEmpty ? null : imageUrl,
+      replyToVideo: !context.isReplyToComment,
+    );
+  }
+
+  /// The full hour after a day from [now], where a new countdown starts.
+  static DateTime defaultCountdownEnd(DateTime now) {
+    final local = now.toLocal();
+    return DateTime(local.year, local.month, local.day + 1, local.hour + 1);
+  }
+
+  /// The most characters of a comment a reply shows.
+  static const int maxReplyTextLength = 140;
+
   /// What the sticker points to.
   final SocialStickerKind kind;
 
-  /// How the sticker looks; one of [InfoStickerStyle.pills].
+  /// How the sticker looks; one of its kind's [SocialStickerKind.styles].
   final InfoStickerStyle style;
 
-  /// The hex public key of the person a mention names.
+  /// The hex public key of the person a mention names, or of the one who
+  /// wrote what a reply replies to.
   final String? pubkey;
 
-  /// The handle or name a mention shows after its `@`, as it was when the
-  /// creator picked the person.
+  /// The handle or name a mention shows after its `@`, or a reply shows for
+  /// whoever wrote what it replies to, as it was when the creator picked the
+  /// person or recorded the reply.
   final String? name;
 
   /// The hashtag a hashtag sticker shows, normalized and without its `#`.
@@ -189,6 +280,35 @@ class SocialStickerData extends Equatable {
   /// A line of lyrics the creator added under a sound credit.
   final String? lyric;
 
+  /// The title a countdown shows over its date, such as "Summer".
+  final String? countdownTitle;
+
+  /// The moment a countdown counts down to, in UTC.
+  final DateTime? countdownEnd;
+
+  /// The locale a countdown writes its date in, as `Locale.toString` gives
+  /// it, so a draft reopened in another language looks the way it was
+  /// published.
+  final String? localeName;
+
+  /// Whether a countdown writes its time on a 24-hour clock, as the phone
+  /// did when it was made.
+  final bool use24HourFormat;
+
+  /// The hex id of the comment or video a reply replies to.
+  final String? replyEventId;
+
+  /// The text of the comment a reply replies to, cut to
+  /// [maxReplyTextLength]; `null` for a reply to a video.
+  final String? replyText;
+
+  /// The picture a reply shows: the avatar of whoever wrote the comment, or
+  /// the thumbnail of the video.
+  final String? replyImageUrl;
+
+  /// Whether a reply replies to a video rather than to a comment.
+  final bool replyToVideo;
+
   /// The domain of a link's address, without `www.`, as the sticker shows
   /// it when it has no title.
   String? get linkDomain {
@@ -203,7 +323,9 @@ class SocialStickerData extends Equatable {
       kind == SocialStickerKind.soundCredit &&
       soundDesign != SocialStickerSoundDesign.note;
 
-  /// The text the sticker draws, its link or note mark aside.
+  /// The text the sticker draws, its link or note mark aside. A countdown's
+  /// date is left out: the copy the player draws over it covers it with the
+  /// time left.
   String get _drawnText => [
     name,
     hashtag,
@@ -211,6 +333,8 @@ class SocialStickerData extends Equatable {
     soundTitle,
     soundArtist,
     lyric,
+    countdownTitle,
+    replyText,
   ].nonNulls.join('\n');
 
   /// Whether the sticker's text is in the sticker font but for its emoji,
@@ -224,12 +348,14 @@ class SocialStickerData extends Equatable {
   /// can be in any script and its emoji in any font. The frames show through
   /// any other look, so its text needs glyphs every phone draws alike: all in
   /// the sticker font, with emoji in the loaded sticker emoji font. Whether
-  /// the sticker holds still is up to the caller; see [isAnimated].
+  /// the sticker holds still is up to the caller; see [isAnimated]. A reply
+  /// is never drawn again: its picture is not in the event.
   bool canBeRedrawn({required bool emojiFontLoaded}) =>
-      style.hasSolidPill ||
-      StickerTextGlyphs.of(
-        _drawnText,
-      ).isDrawnAlike(emojiFontLoaded: emojiFontLoaded);
+      kind != SocialStickerKind.reply &&
+      (style.hasSolidPill ||
+          StickerTextGlyphs.of(
+            _drawnText,
+          ).isDrawnAlike(emojiFontLoaded: emojiFontLoaded));
 
   /// Whether the sticker moves with how loud the video's sound is.
   bool get listensToSound =>
@@ -248,6 +374,11 @@ class SocialStickerData extends Equatable {
       HashtagExtractor.normalizeVideoHashtag(hashtag ?? '') != null,
     SocialStickerKind.link => normalizeLinkUrl(url ?? '') != null,
     SocialStickerKind.soundCredit => soundTitle?.isNotEmpty ?? false,
+    SocialStickerKind.countdown =>
+      (countdownTitle?.trim().isNotEmpty ?? false) && countdownEnd != null,
+    SocialStickerKind.reply =>
+      NostrHexUtils.isValidEventId(replyEventId?.toLowerCase() ?? '') &&
+          (name?.isNotEmpty ?? false),
   };
 
   /// What a tap on the sticker opens on the published video.
@@ -256,11 +387,14 @@ class SocialStickerData extends Equatable {
     SocialStickerKind.mention => VideoStickerKind.mention,
     SocialStickerKind.hashtag => VideoStickerKind.hashtag,
     SocialStickerKind.soundCredit => VideoStickerKind.sound,
+    SocialStickerKind.countdown => VideoStickerKind.countdown,
+    SocialStickerKind.reply => VideoStickerKind.reply,
   };
 
   /// The web address, hex pubkey or hashtag a tap on the published sticker
   /// opens; for a sound credit its sound's page id, or empty when it has
-  /// none and opens the video's own sound; `null` when it is not complete.
+  /// none and opens the video's own sound; a countdown's end in Unix seconds;
+  /// a reply's event id; `null` when it is not complete.
   String? get tapTarget => switch (kind) {
     SocialStickerKind.link => normalizeLinkUrl(url ?? ''),
     SocialStickerKind.mention =>
@@ -269,11 +403,17 @@ class SocialStickerData extends Equatable {
       hashtag ?? '',
     ),
     SocialStickerKind.soundCredit => isComplete ? soundId ?? '' : null,
+    SocialStickerKind.countdown =>
+      isComplete
+          ? '${countdownEnd!.millisecondsSinceEpoch ~/ Duration.millisecondsPerSecond}'
+          : null,
+    SocialStickerKind.reply => isComplete ? replyEventId!.toLowerCase() : null,
   };
 
   /// The text the sticker shows, without its `@` or `#`, so the published
   /// video can draw it again over itself: for a sound credit its title,
-  /// artist and line of lyrics, one per line.
+  /// artist and line of lyrics, one per line; for a reply the name and
+  /// comment it shows, one per line.
   String? get tapLabel => switch (kind) {
     SocialStickerKind.link => linkTitle ?? linkDomain,
     SocialStickerKind.mention => name,
@@ -283,6 +423,8 @@ class SocialStickerData extends Equatable {
       soundArtist ?? '',
       lyric ?? '',
     ].join('\n').trimRight(),
+    SocialStickerKind.countdown => countdownTitle?.trim(),
+    SocialStickerKind.reply => [?name, ?replyText].join('\n'),
   };
 
   /// Whether the sound credit [region] publishes credits [sound], read from
@@ -298,13 +440,24 @@ class SocialStickerData extends Equatable {
   }
 
   /// The sticker [region] of a published video shows, rebuilt from the look
-  /// and text it was published with, or `null` when it names no pill look
-  /// this app draws or carries no text. A sound credit comes back as the
-  /// still note design, the only one published with a look.
+  /// and text it was published with, or `null` when it names no look this
+  /// app draws for its kind, carries no text, or is no social sticker the
+  /// player draws again. A sound credit comes back as the still note design,
+  /// the only one published with a look.
   static SocialStickerData? ofRegion(VideoStickerRegion region) {
+    final kind = switch (region.kind) {
+      VideoStickerKind.link => SocialStickerKind.link,
+      VideoStickerKind.mention => SocialStickerKind.mention,
+      VideoStickerKind.hashtag => SocialStickerKind.hashtag,
+      VideoStickerKind.sound => SocialStickerKind.soundCredit,
+      VideoStickerKind.countdown => SocialStickerKind.countdown,
+      VideoStickerKind.place || VideoStickerKind.reply => null,
+    };
     final style = InfoStickerStyle.values.asNameMap()[region.style];
     final label = region.label;
-    if (style == null || !InfoStickerStyle.pills.contains(style)) return null;
+    if (kind == null || style == null || !kind.styles.contains(style)) {
+      return null;
+    }
     if (label == null) return null;
     return switch (region.kind) {
       VideoStickerKind.link => SocialStickerData(
@@ -329,6 +482,13 @@ class SocialStickerData extends Equatable {
         label.split('\n'),
         soundId: region.target,
       ),
+      VideoStickerKind.countdown => SocialStickerData(
+        kind: SocialStickerKind.countdown,
+        style: style,
+        countdownTitle: label,
+        countdownEnd: region.countdownEnd,
+      ),
+      VideoStickerKind.place || VideoStickerKind.reply => null,
     };
   }
 
@@ -355,13 +515,6 @@ class SocialStickerData extends Equatable {
     );
   }
 
-  /// Whether [layer] is a sticker a viewer can tap on the published video.
-  ///
-  /// Such a sticker holds still, so its tap area stays where it shows: it
-  /// takes no keyframes, no tracking and no animations.
-  static bool isTappableLayer(Layer? layer) =>
-      layer != null && of(layer) != null;
-
   /// The meta stored on the layer.
   Map<String, dynamic> toMeta() => {
     infoStickerLayerKindKey: socialStickerLayerKind,
@@ -377,6 +530,14 @@ class SocialStickerData extends Equatable {
     'soundId': ?soundId,
     'soundDesign': soundDesign.name,
     'lyric': ?lyric,
+    'countdownTitle': ?countdownTitle,
+    'countdownEnd': ?countdownEnd?.toUtc().toIso8601String(),
+    'locale': ?localeName,
+    if (use24HourFormat) 'use24HourFormat': true,
+    'replyEventId': ?replyEventId,
+    'replyText': ?replyText,
+    'replyImageUrl': ?replyImageUrl,
+    if (replyToVideo) 'replyToVideo': true,
   };
 
   /// This sticker with what is given changed.
@@ -389,6 +550,10 @@ class SocialStickerData extends Equatable {
     String? soundArtist,
     SocialStickerSoundDesign? soundDesign,
     String? lyric,
+    String? countdownTitle,
+    DateTime? countdownEnd,
+    String? localeName,
+    bool? use24HourFormat,
   }) => SocialStickerData(
     kind: kind,
     style: style ?? this.style,
@@ -402,6 +567,14 @@ class SocialStickerData extends Equatable {
     soundId: soundId,
     soundDesign: soundDesign ?? this.soundDesign,
     lyric: lyric ?? this.lyric,
+    countdownTitle: countdownTitle ?? this.countdownTitle,
+    countdownEnd: countdownEnd ?? this.countdownEnd,
+    localeName: localeName ?? this.localeName,
+    use24HourFormat: use24HourFormat ?? this.use24HourFormat,
+    replyEventId: replyEventId,
+    replyText: replyText,
+    replyImageUrl: replyImageUrl,
+    replyToVideo: replyToVideo,
   );
 
   /// This sound credit crediting the sound [sound] credits instead: its
@@ -471,9 +644,9 @@ class SocialStickerData extends Equatable {
     };
     return SocialStickerData(
       kind: kind,
-      style: style != null && InfoStickerStyle.pills.contains(style)
+      style: style != null && kind.styles.contains(style)
           ? style
-          : InfoStickerStyle.pills.first,
+          : kind.styles.first,
       pubkey: text('pubkey'),
       name: text('name'),
       hashtag: text('hashtag'),
@@ -488,6 +661,14 @@ class SocialStickerData extends Equatable {
               .firstOrNull ??
           SocialStickerSoundDesign.note,
       lyric: text('lyric'),
+      countdownTitle: text('countdownTitle'),
+      countdownEnd: DateTime.tryParse(text('countdownEnd') ?? '')?.toUtc(),
+      localeName: text('locale'),
+      use24HourFormat: meta['use24HourFormat'] == true,
+      replyEventId: text('replyEventId'),
+      replyText: text('replyText'),
+      replyImageUrl: text('replyImageUrl'),
+      replyToVideo: meta['replyToVideo'] == true,
     );
   }
 
@@ -512,6 +693,14 @@ class SocialStickerData extends Equatable {
     soundId,
     soundDesign,
     lyric,
+    countdownTitle,
+    countdownEnd,
+    localeName,
+    use24HourFormat,
+    replyEventId,
+    replyText,
+    replyImageUrl,
+    replyToVideo,
   ];
 }
 
@@ -545,6 +734,10 @@ class SocialStickerCredits extends Equatable {
           links.add(SocialStickerData.normalizeLinkUrl(sticker.url!)!);
         case SocialStickerKind.soundCredit:
           // The sound is credited in the event through its own tags already.
+          break;
+        case SocialStickerKind.countdown || SocialStickerKind.reply:
+          // A countdown adds nothing, and what a reply replies to is in the
+          // event through the reply's own tags.
           break;
       }
     }

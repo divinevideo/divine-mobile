@@ -2080,6 +2080,49 @@ class AppLocalizationsFr extends AppLocalizations {
   String get videoStickerSoundSemanticLabel => 'Sticker son, ouvre le son';
 
   @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'Sticker lieu, ouvre $place dans une carte';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'Sticker compte à rebours, crée un rappel';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'Sticker réponse, ouvre ce à quoi cette vidéo répond';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count jours',
+      many: '$count jours',
+      one: '$count jour',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'Rappel créé. On te prévient le moment venu.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'Rappel supprimé.';
+
+  @override
+  String get videoStickerCountdownOver => 'Ce compte à rebours est terminé.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'Active les notifications de Divine pour recevoir le rappel.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'C\'est l\'heure ! Le compte à rebours que tu as enregistré vient de se terminer.';
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Ce lien s\'ouvre en dehors de Divine. Vérifie l\'adresse avant d\'y aller.';
 
@@ -11040,6 +11083,34 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get videoEditorSocialStickerLinkInvalid =>
       'Ce n\'est pas encore une adresse web.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'Interactifs';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'Compte à rebours';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'Été';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint =>
+      'Tu comptes à rebours jusqu\'à quoi ?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'Les spectateurs voient le temps restant et peuvent mettre un rappel.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'Ce moment est passé. Choisis-en un nouveau.';
+
+  @override
+  String get videoEditorSocialStickerReply => 'Réponse';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'En le touchant, on voit à quoi tu réponds.';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Note';

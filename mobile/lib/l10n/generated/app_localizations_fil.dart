@@ -2036,6 +2036,48 @@ class AppLocalizationsFil extends AppLocalizations {
       'Sound sticker, binubuksan ang sound';
 
   @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'Location sticker, binubuksan ang $place sa mapa';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'Countdown sticker, nagse-set ng reminder';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'Reply sticker, binubuksan ang sinasagot ng video na ito';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count araw',
+      one: '$count araw',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'Na-set na ang reminder. Sasabihan ka namin pag oras na.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'Tinanggal ang reminder.';
+
+  @override
+  String get videoStickerCountdownOver => 'Tapos na ang countdown na ito.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'I-on ang notifications para sa Divine para makuha ang reminder.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'Oras na! Kakatapos lang ng countdown na na-save mo.';
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Bubuksan ang link na ito sa labas ng Divine. Tingnan muna ang address bago ka tumuloy.';
 
@@ -10957,6 +10999,34 @@ class AppLocalizationsFil extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerLinkInvalid => 'Hindi pa ito web address.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'Interactive';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'Countdown';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'Tag-init';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint =>
+      'Para saan ang countdown mo?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'Makikita ng viewers ang natitirang oras at puwede silang mag-set ng reminder.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'Lumipas na ang oras na \'yan. Pumili ng bago.';
+
+  @override
+  String get videoEditorSocialStickerReply => 'Reply';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'I-tap ito ng viewers para makita kung ano ang sinasagot mo.';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Nota';

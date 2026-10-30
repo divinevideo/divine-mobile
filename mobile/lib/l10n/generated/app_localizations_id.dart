@@ -1970,6 +1970,47 @@ class AppLocalizationsId extends AppLocalizations {
   String get videoStickerSoundSemanticLabel => 'Stiker suara, membuka suaranya';
 
   @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'Stiker lokasi, membuka $place di peta';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'Stiker hitung mundur, memasang pengingat';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'Stiker balasan, membuka apa yang dibalas video ini';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hari',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'Pengingat dipasang. Kami kabari saat waktunya tiba.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'Pengingat dihapus.';
+
+  @override
+  String get videoStickerCountdownOver => 'Hitung mundur ini sudah selesai.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'Nyalakan notifikasi untuk Divine agar dapat pengingatnya.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'Sudah waktunya! Hitung mundur yang kamu simpan baru saja selesai.';
+
+  @override
   String get videoStickerLinkSheetBody =>
       'Tautan ini terbuka di luar Divine. Periksa alamatnya sebelum kamu lanjut.';
 
@@ -10785,6 +10826,34 @@ class AppLocalizationsId extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerLinkInvalid => 'Itu belum alamat web.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'Interaktif';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'Hitung mundur';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'Musim panas';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint =>
+      'Kamu menghitung mundur ke apa?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'Penonton melihat sisa waktu dan bisa memasang pengingat.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'Momen itu sudah lewat. Pilih yang baru.';
+
+  @override
+  String get videoEditorSocialStickerReply => 'Balasan';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'Penonton mengetuknya untuk melihat apa yang kamu balas.';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'Not';

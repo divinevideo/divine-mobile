@@ -120,19 +120,21 @@ Publishing lives in `mobile/lib/services/video_event_publisher.dart` and
 
 ### Divine Sticker Tags
 
-Social stickers placed in the video editor add what they point to, plus where a
-viewer can tap them. All of these are Divine conventions.
+Social, location and interactive stickers placed in the video editor add what
+they point to, plus where a viewer can tap them. All of these are Divine
+conventions.
 
 | Tag | Format | Description |
 |-----|--------|-------------|
 | `t` | `["t", "summer"]` | A hashtag sticker's hashtag, written with the post's own hashtags. |
 | `p` | `["p", "<pubkey>", "<relay>", "mention"]` | A mention sticker's profile, written like a caption mention. |
 | `r` | `["r", "https://example.com/page", "link"]` | The web page of a link sticker. The `link` marker is required: an unmarked `r` tag on a video event is read as one of the video's own media URLs. |
-| `sticker` | `["sticker", "<kind>", "<target>", "<cx> <cy> <w> <h>", "<degrees>", "<start ms>", "<end ms>", "<style>", "<label>"]` | Where a link, mention, hashtag or sound sticker stands on the video and how it looks, so a viewer can draw it again and tap it. |
+| `sticker` | `["sticker", "<kind>", "<target>", "<cx> <cy> <w> <h>", "<degrees>", "<start ms>", "<end ms>", "<style>", "<label>"]` | Where a tappable sticker stands on the video and how it looks, so a viewer can tap it and, for most kinds, draw it again. |
 
 The `sticker` tag's fields:
 
-- `kind` is `link`, `mention`, `hashtag` or `sound`.
+- `kind` is `link`, `mention`, `hashtag`, `sound`, `place`, `countdown` or
+  `reply`.
 - `target` is the full `http`/`https` address of a named host, the full hex
   pubkey, or the hashtag. A reader strips one leading `#` from a hashtag and
   lowercases it, as it does a pubkey. For `sound` it is the id the credited
@@ -141,7 +143,12 @@ The `sticker` tag's fields:
   the video carries (an imported file, a provider sound, a video's original
   sound), and the sticker then opens the video's own sound, the one its audio
   reference names; such a sticker is only published when it credits that
-  sound. A reader takes any other sound target as empty.
+  sound. A reader takes any other sound target as empty. For `place` it is the
+  place's full name with its region and country, such as
+  `Zermatt, Wallis, Schweiz`, which a tap searches the viewer's map app for;
+  the location sticker keeps no coordinates. For `countdown` it is the Unix
+  time in seconds the countdown ends at. For `reply` it is the hex id of the
+  comment or video the video replies to.
 - The area gives the sticker's centre and its size before it is turned, as
   fractions of the video frame's width (`cx`, `w`) and height (`cy`, `h`).
 - `degrees` is how far it is turned clockwise around its centre.
@@ -152,7 +159,9 @@ The `sticker` tag's fields:
   `highlight`, `neon`, `plain` or `outline`).
 - `label` is the text the sticker shows, without `@` or `#`: a link's title or
   domain, a name, or a hashtag as typed; for a sound, its title, artist and line
-  of lyrics, one per line.
+  of lyrics, one per line; a place's name as the sticker shows it; a
+  countdown's title; for a reply, the name of whom it replies to and the
+  comment, one per line.
 
 A reader drops the whole tag when:
 
@@ -162,6 +171,11 @@ A reader drops the whole tag when:
 - a pubkey is not 64 hex characters;
 - a hashtag is empty, longer than 100 characters, or contains whitespace, `#`,
   `/` or `?`;
+- a place is empty, longer than 200 characters, or contains a control
+  character such as a line break;
+- a countdown is not a whole number of seconds after 1970 and before the year
+  10000;
+- a reply target is not 64 hex characters;
 - the area is not four finite numbers, a size is not above 0 and at most 4, or
   no part of the turned sticker can reach the frame;
 - the angle is not a finite number;
@@ -217,7 +231,31 @@ frames:
 
 A sticker drawn fully transparent gets no tag. A sticker that moves across the
 video (keyframes, tracking or an animation) is never published with an area,
-which is why the editor offers none of those for these four sticker kinds.
+which is why the editor offers none of those for any tappable sticker.
+
+The newer kinds:
+
+- `place` comes from a location sticker. It is never published with `style`:
+  its flag or globe is not in the tag, so the viewer gets only the button. A
+  location sticker placed before the full name was kept publishes its name
+  alone as the target.
+- `countdown` shows its title over the date and time it ends, which stay
+  true in every client. Divine's player draws it again with the time left in
+  place of the date, ticking each second, and its date again once it is over;
+  a tap sets a local reminder for the end, or removes it, and asks for
+  notification permission only then. On the web, which has no reminders, it
+  is no button. The editor offers a countdown in only the
+  solid `light`, `brand` and `highlight` looks, so the copy hides the date in
+  the frames.
+- `reply` shows the avatar, name and comment the video replies to, as they
+  were when the reply camera was opened, or the thumbnail and creator of the
+  video. It is never published with `style`, as its picture is not in the tag.
+  A tap opens the video the reply's own NIP-22 root tags name; for a reply to
+  a comment, with its comments open on that comment. It is published only on a
+  video that replies to its target.
+
+Older Divine versions drop a sticker tag whose `kind` they do not know, and
+then show the sticker only as it is in the frames.
 
 Before a link to a host outside `divine.video` and its subdomains opens, the
 app shows its whole domain and its address, cut after three lines, in a sheet.

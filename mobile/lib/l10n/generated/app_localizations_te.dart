@@ -2083,6 +2083,48 @@ class AppLocalizationsTe extends AppLocalizations {
       'సౌండ్ స్టిక్కర్, సౌండ్‌ను తెరుస్తుంది';
 
   @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'స్థల స్టిక్కర్, $placeని మ్యాప్‌లో తెరుస్తుంది';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'కౌంట్‌డౌన్ స్టిక్కర్, రిమైండర్ సెట్ చేస్తుంది';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'ప్రత్యుత్తర స్టిక్కర్, ఈ వీడియో దేనికి ప్రత్యుత్తరమో దాన్ని తెరుస్తుంది';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count రోజులు',
+      one: '$count రోజు',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'రిమైండర్ సెట్ అయింది. సమయం వచ్చినప్పుడు మీకు తెలియజేస్తాం.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'రిమైండర్ తీసివేయబడింది.';
+
+  @override
+  String get videoStickerCountdownOver => 'ఈ కౌంట్‌డౌన్ ముగిసింది.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'రిమైండర్ పొందడానికి Divine నోటిఫికేషన్‌లను ఆన్ చేయండి.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'సమయం వచ్చింది! మీరు సేవ్ చేసిన కౌంట్‌డౌన్ ఇప్పుడే ముగిసింది.';
+
+  @override
   String get videoStickerLinkSheetBody =>
       'ఈ లింక్ Divine వెలుపల తెరుచుకుంటుంది. వెళ్లే ముందు చిరునామాను తనిఖీ చేయండి.';
 
@@ -11166,6 +11208,34 @@ class AppLocalizationsTe extends AppLocalizations {
   @override
   String get videoEditorSocialStickerLinkInvalid =>
       'ఇది ఇంకా వెబ్ చిరునామా కాదు.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'ఇంటరాక్టివ్';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'కౌంట్‌డౌన్';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'వేసవి';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint =>
+      'మీరు దేనికి కౌంట్‌డౌన్ చేస్తున్నారు?';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'వీక్షకులు మిగిలిన సమయాన్ని చూసి, రిమైండర్ పెట్టుకోవచ్చు.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'ఆ సమయం గడిచిపోయింది. కొత్తది ఎంచుకోండి.';
+
+  @override
+  String get videoEditorSocialStickerReply => 'ప్రత్యుత్తరం';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'వీక్షకులు దాన్ని ట్యాప్ చేసి మీరు దేనికి ప్రత్యుత్తరం ఇస్తున్నారో చూస్తారు.';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'స్వరం';

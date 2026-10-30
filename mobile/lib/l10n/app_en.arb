@@ -1376,6 +1376,52 @@
   "@videoStickerSoundSemanticLabel": {
     "description": "Screen reader label for the invisible button over a sound sticker on a playing video; tapping it opens the page of the video's sound."
   },
+  "videoStickerPlaceSemanticLabel": "Location sticker, opens {place} in a map",
+  "@videoStickerPlaceSemanticLabel": {
+    "description": "Screen reader label for the button over a location sticker on a playing video; tapping it opens the place in the phone's map app.",
+    "placeholders": {
+      "place": {
+        "type": "String"
+      }
+    }
+  },
+  "videoStickerCountdownSemanticLabel": "Countdown sticker, sets a reminder",
+  "@videoStickerCountdownSemanticLabel": {
+    "description": "Screen reader label for the button over a countdown sticker on a playing video; tapping it sets or removes a reminder for when the countdown ends."
+  },
+  "videoStickerReplySemanticLabel": "Reply sticker, opens what this video replies to",
+  "@videoStickerReplySemanticLabel": {
+    "description": "Screen reader label for the button over a reply sticker on a playing video; tapping it opens the comment or video this video replies to."
+  },
+  "videoStickerCountdownDays": "{count, plural, =1{{count} day} other{{count} days}}",
+  "@videoStickerCountdownDays": {
+    "description": "The whole days left on a countdown sticker in the player, shown before the hours, minutes and seconds, as in '12 days 04:33:10'.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "videoStickerCountdownReminderSet": "Reminder set. We'll ping you when it's time.",
+  "@videoStickerCountdownReminderSet": {
+    "description": "Snackbar after a viewer taps a countdown sticker: a reminder is now set for when the countdown ends."
+  },
+  "videoStickerCountdownReminderRemoved": "Reminder removed.",
+  "@videoStickerCountdownReminderRemoved": {
+    "description": "Snackbar after a viewer taps a countdown sticker they had set a reminder for: the reminder is gone."
+  },
+  "videoStickerCountdownOver": "This countdown is over.",
+  "@videoStickerCountdownOver": {
+    "description": "Snackbar when a viewer taps a countdown sticker whose date has already passed, so there is nothing to remind them of."
+  },
+  "videoStickerCountdownNotificationsOff": "Turn on notifications for Divine to get the reminder.",
+  "@videoStickerCountdownNotificationsOff": {
+    "description": "Snackbar when a viewer taps a countdown sticker but the app may not show notifications, so the reminder cannot be set."
+  },
+  "videoStickerCountdownReminderBody": "It's time! The countdown you saved just ended.",
+  "@videoStickerCountdownReminderBody": {
+    "description": "Text of the notification a viewer gets when a countdown they set a reminder for ends; the countdown's title is the notification's title."
+  },
   "videoStickerLinkSheetBody": "This link opens outside Divine. Check the address before you go.",
   "@videoStickerLinkSheetBody": {
     "description": "Note in the sheet a link sticker on a video opens, above the link's full address: the page opens outside the app."
@@ -8126,6 +8172,38 @@
   "videoEditorSocialStickerLinkInvalid": "That's not a web address yet.",
   "@videoEditorSocialStickerLinkInvalid": {
     "description": "Warning in the link sticker sheet while the typed text is not a usable web address."
+  },
+  "videoEditorInteractiveStickersTitle": "Interactive",
+  "@videoEditorInteractiveStickersTitle": {
+    "description": "Heading above the row of interactive stickers (countdown, reply) in the video editor's sticker sheet: stickers viewers can tap in the Divine player."
+  },
+  "videoEditorSocialStickerCountdown": "Countdown",
+  "@videoEditorSocialStickerCountdown": {
+    "description": "Name of the sticker that counts down to a date and time; the sheet title and timeline label for it."
+  },
+  "videoEditorSocialStickerCountdownSample": "Summer",
+  "@videoEditorSocialStickerCountdownSample": {
+    "description": "Made-up title on the sample countdown sticker in the sticker sheet, something people count down to. One short word."
+  },
+  "videoEditorSocialStickerCountdownTitleHint": "What are you counting down to?",
+  "@videoEditorSocialStickerCountdownTitleHint": {
+    "description": "Label of the field where the creator types the title a countdown sticker shows above its date."
+  },
+  "videoEditorSocialStickerCountdownNote": "Viewers see the time left and can set a reminder.",
+  "@videoEditorSocialStickerCountdownNote": {
+    "description": "Help line in the countdown sticker sheet: in the Divine player the sticker shows the live time left, and a tap sets a reminder for when it ends."
+  },
+  "videoEditorSocialStickerCountdownOver": "That moment has passed. Pick a new one.",
+  "@videoEditorSocialStickerCountdownOver": {
+    "description": "Warning in the countdown sticker sheet when the countdown's date and time are already over, for example in a draft reopened later."
+  },
+  "videoEditorSocialStickerReply": "Reply",
+  "@videoEditorSocialStickerReply": {
+    "description": "Name of the sticker that shows the comment or video a video reply answers; the sheet title and timeline label for it."
+  },
+  "videoEditorSocialStickerReplyNote": "Viewers tap it to see what you're replying to.",
+  "@videoEditorSocialStickerReplyNote": {
+    "description": "Help line in the reply sticker sheet: in the player, tapping the sticker opens the comment or video this video replies to."
   },
   "videoEditorSocialStickerSoundNote": "Note",
   "@videoEditorSocialStickerSoundNote": {

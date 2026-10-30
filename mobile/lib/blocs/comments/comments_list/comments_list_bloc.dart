@@ -4,6 +4,7 @@ import 'package:comments_repository/comments_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:meta/meta.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/comments/comments_list/comments_list_helpers.dart';
 import 'package:openvine/blocs/comments/comments_list/reportable_sites.dart';
 import 'package:openvine/blocs/comments/comments_list/throttled_subscription.dart';
@@ -30,6 +31,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
     String? rootAddressableId,
     int? initialTotalCount,
     bool includeVideoReplies = false,
+    String? focusCommentId,
   }) : _commentsRepository = commentsRepository,
        _initialTotalCount = initialTotalCount,
        _includeVideoReplies = includeVideoReplies,
@@ -39,6 +41,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
            rootEventKind: rootEventKind,
            rootAuthorPubkey: rootAuthorPubkey,
            rootAddressableId: rootAddressableId,
+           pendingFocusCommentId: focusCommentId,
          ),
        ) {
     on<CommentsLoadRequested>(_onLoadRequested);
@@ -60,6 +63,11 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
 
   /// Page size for comment loading.
   static const _pageSize = 50;
+
+  /// Below this many loaded comments, the search for the comment the list was
+  /// opened on asks for another page; at or above it, the list is shown from
+  /// the top without that comment.
+  static const _maxCommentsLoadedForFocus = 500;
 
   /// Maximum number of real-time comments to accept per second.
   /// Beyond this rate the stream is paused briefly to avoid UI thrashing
@@ -144,6 +152,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
           replyCountsByCommentId: computeReplyCounts(commentsById),
         ),
       );
+      _focusWhenLoaded(emit, pageAddedComments: thread.comments.isNotEmpty);
       await _startWatchingComments();
       await _removeAuthorDeletedComments(thread.comments, emit);
     } on CommentsRepositoryException catch (e, stackTrace) {
@@ -217,6 +226,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         includeVideoReplies: _includeVideoReplies,
       );
 
+      final loadedBefore = state.commentsById.length;
       final allCommentsById = {
         ...state.commentsById,
         for (final c in thread.comments) c.id: c,
@@ -235,6 +245,10 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
           replyCountsByCommentId: computeReplyCounts(allCommentsById),
         ),
       );
+      _focusWhenLoaded(
+        emit,
+        pageAddedComments: allCommentsById.length > loadedBefore,
+      );
       await _removeAuthorDeletedComments(thread.comments, emit);
     } on CommentsRepositoryException catch (e, stackTrace) {
       _logRepoFailure(e, stackTrace, 'Error loading more comments');
@@ -242,6 +256,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         state.copyWith(
           isLoadingMore: false,
           error: CommentsListError.loadFailed,
+          clearPendingFocus: true,
         ),
       );
     } catch (e, stackTrace) {
@@ -255,8 +270,38 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         state.copyWith(
           isLoadingMore: false,
           error: CommentsListError.loadFailed,
+          clearPendingFocus: true,
         ),
       );
+    }
+  }
+
+  /// Scrolls to the comment the list was opened on once it is loaded, and
+  /// asks for another page of older comments while it is not and fewer than
+  /// [_maxCommentsLoadedForFocus] are loaded, so the list can end a page past
+  /// it. The search also ends on the last page and on a failed load. A comment
+  /// it does not find, such as a deleted one, leaves the list where it starts.
+  ///
+  /// A page that added no comment ends the search: `hasMoreContent` can stay
+  /// true past the last comment the relays return, because the count it is
+  /// measured against includes comments the list never gets.
+  void _focusWhenLoaded(
+    Emitter<CommentsListState> emit, {
+    required bool pageAddedComments,
+  }) {
+    final focus = state.pendingFocusCommentId;
+    if (focus == null) return;
+    if (state.commentsById.containsKey(focus)) {
+      emit(
+        state.copyWith(scrollToCommentId: focus, clearPendingFocus: true),
+      );
+    } else if (pageAddedComments &&
+        state.hasMoreContent &&
+        state.commentsById.length < _maxCommentsLoadedForFocus) {
+      // Reached after the page load awaited; the sheet may have closed.
+      addIfOpen(const CommentsLoadMoreRequested());
+    } else {
+      emit(state.copyWith(clearPendingFocus: true));
     }
   }
 
@@ -306,6 +351,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
               videoDimensions: comment.videoDimensions,
               videoDuration: comment.videoDuration,
               videoBlurhash: comment.videoBlurhash,
+              stickerTags: comment.stickerTags,
             ),
         );
       }

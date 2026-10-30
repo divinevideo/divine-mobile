@@ -1,5 +1,5 @@
-// ABOUTME: An area of a published video a viewer can tap: a sticker that
-// ABOUTME: opens a web page, a profile, a hashtag or a sound, and its tag.
+// ABOUTME: An area of a published video a viewer can tap: a sticker that opens
+// ABOUTME: a web page, profile, hashtag, sound, place or reply, and its tag.
 
 import 'dart:math' as math;
 
@@ -22,6 +22,17 @@ enum VideoStickerKind {
   /// The page of the credited sound, or of the video's own sound, the one
   /// its audio reference names, when the target is empty.
   sound,
+
+  /// A place, by its full name such as "Zermatt, Wallis, Schweiz", which the
+  /// viewer's map app searches for. The sticker keeps no coordinates.
+  place,
+
+  /// A countdown to a moment, by its Unix time in seconds. The Divine player
+  /// shows the time left; a tap sets a reminder for when it ends.
+  countdown,
+
+  /// The comment or video this video replies to, by its hex event id.
+  reply,
 }
 
 /// A sticker on a published video that opens what it points to when tapped.
@@ -63,7 +74,11 @@ class VideoStickerRegion extends Equatable {
 
   /// The web address, hex pubkey or hashtag (without `#`) a tap opens; for a
   /// [VideoStickerKind.sound], the id of the credited sound's page (see
-  /// [AudioEvent.soundPageId]), or empty for the video's own sound.
+  /// [AudioEvent.soundPageId]), or empty for the video's own sound; for a
+  /// [VideoStickerKind.place], the place's full name; for a
+  /// [VideoStickerKind.countdown], the Unix time in seconds it counts down
+  /// to; for a [VideoStickerKind.reply], the hex id of the comment or video
+  /// it replies to.
   final String target;
 
   /// The sticker's centre, as a fraction of the frame's width.
@@ -94,11 +109,29 @@ class VideoStickerRegion extends Equatable {
 
   /// The text the sticker shows: a link's title or domain, a name, or a
   /// hashtag as it was typed, without its `@` or `#`; for a sound, its title,
-  /// artist and line of lyrics, one per line.
+  /// artist and line of lyrics, one per line; a place's name; a countdown's
+  /// title; for a reply, the name of whom it replies to and their comment,
+  /// one per line.
   final String? label;
 
   /// The longest [label] a tag may carry.
   static const int maxLabelLength = 300;
+
+  /// The longest full name of a place a tag may carry.
+  static const int maxPlaceLength = 200;
+
+  /// The moment a [VideoStickerKind.countdown] counts down to, or `null` for
+  /// any other kind.
+  DateTime? get countdownEnd {
+    final seconds = kind == VideoStickerKind.countdown
+        ? int.tryParse(target)
+        : null;
+    if (seconds == null) return null;
+    return DateTime.fromMillisecondsSinceEpoch(
+      seconds * Duration.millisecondsPerSecond,
+      isUtc: true,
+    );
+  }
 
   /// Whether the sticker shows at [position] of the published video.
   bool isShownAt(Duration position) {
@@ -190,7 +223,9 @@ class VideoStickerRegion extends Equatable {
   /// [raw] as the target of a [kind] sticker, or `null` when it is not one:
   /// a link only to an http(s) page of a named host, a mention only to a
   /// pubkey, a hashtag only as one word, a sound only by a library or event
-  /// id, and otherwise by nothing, meaning the video's own sound.
+  /// id, and otherwise by nothing, meaning the video's own sound, a place
+  /// only by a name on one line, a countdown only to a moment between 1970
+  /// and the year 10000, and a reply only to an event id.
   static String? _target(VideoStickerKind kind, String raw) {
     final value = raw.trim();
     switch (kind) {
@@ -222,8 +257,29 @@ class VideoStickerRegion extends Equatable {
         }
         final eventId = value.toLowerCase();
         return NostrHexUtils.isValidEventId(eventId) ? eventId : '';
+      case VideoStickerKind.place:
+        // Handed to a map app's search, and drawn nowhere else.
+        if (value.isEmpty ||
+            value.length > maxPlaceLength ||
+            value.contains(RegExp(r'[\u0000-\u001f\u007f]'))) {
+          return null;
+        }
+        return sanitizeUtf16(value);
+      case VideoStickerKind.countdown:
+        final seconds = int.tryParse(value);
+        if (seconds == null || seconds <= 0 || seconds >= _maxCountdownEnd) {
+          return null;
+        }
+        return '$seconds';
+      case VideoStickerKind.reply:
+        final eventId = value.toLowerCase();
+        return NostrHexUtils.isValidEventId(eventId) ? eventId : null;
     }
   }
+
+  /// The start of the year 10000 in Unix seconds, past which a date no longer
+  /// fits a four-digit year.
+  static const int _maxCountdownEnd = 253402300800;
 
   /// [raw] as a time on the video: `null` when absent or empty, `false` when
   /// it is no whole number of milliseconds of zero or more.

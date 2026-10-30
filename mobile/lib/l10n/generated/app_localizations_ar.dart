@@ -2039,6 +2039,52 @@ class AppLocalizationsAr extends AppLocalizations {
   String get videoStickerSoundSemanticLabel => 'ملصق صوت، يفتح الصوت';
 
   @override
+  String videoStickerPlaceSemanticLabel(String place) {
+    return 'ملصق موقع، يفتح $place في خريطة';
+  }
+
+  @override
+  String get videoStickerCountdownSemanticLabel =>
+      'ملصق عدّ تنازلي، يضبط تذكيرًا';
+
+  @override
+  String get videoStickerReplySemanticLabel =>
+      'ملصق رد، يفتح ما يرد عليه هذا الفيديو';
+
+  @override
+  String videoStickerCountdownDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count يوم',
+      many: '$count يومًا',
+      few: '$count أيام',
+      two: '$count يوم',
+      one: '$count يوم',
+      zero: '$count يوم',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get videoStickerCountdownReminderSet =>
+      'تم ضبط التذكير. سيصل تنبيه عند حلول الوقت.';
+
+  @override
+  String get videoStickerCountdownReminderRemoved => 'تمت إزالة التذكير.';
+
+  @override
+  String get videoStickerCountdownOver => 'انتهى هذا العدّ التنازلي.';
+
+  @override
+  String get videoStickerCountdownNotificationsOff =>
+      'يلزم تفعيل إشعارات Divine لتلقي التذكير.';
+
+  @override
+  String get videoStickerCountdownReminderBody =>
+      'حان الوقت! انتهى العدّ التنازلي المحفوظ للتو.';
+
+  @override
   String get videoStickerLinkSheetBody =>
       'يُفتح هذا الرابط خارج Divine. تحقّق من العنوان قبل أن تنتقل.';
 
@@ -10856,6 +10902,34 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get videoEditorSocialStickerLinkInvalid => 'هذا ليس عنوان ويب بعد.';
+
+  @override
+  String get videoEditorInteractiveStickersTitle => 'تفاعلية';
+
+  @override
+  String get videoEditorSocialStickerCountdown => 'العدّ التنازلي';
+
+  @override
+  String get videoEditorSocialStickerCountdownSample => 'الصيف';
+
+  @override
+  String get videoEditorSocialStickerCountdownTitleHint =>
+      'العدّ التنازلي لأي مناسبة؟';
+
+  @override
+  String get videoEditorSocialStickerCountdownNote =>
+      'يرى المشاهدون الوقت المتبقي ويمكنهم ضبط تذكير.';
+
+  @override
+  String get videoEditorSocialStickerCountdownOver =>
+      'مضى هذا الوقت. اختيار وقت جديد.';
+
+  @override
+  String get videoEditorSocialStickerReply => 'رد';
+
+  @override
+  String get videoEditorSocialStickerReplyNote =>
+      'عند لمسه يرى المشاهدون ما يرد عليه الفيديو.';
 
   @override
   String get videoEditorSocialStickerSoundNote => 'نوتة';

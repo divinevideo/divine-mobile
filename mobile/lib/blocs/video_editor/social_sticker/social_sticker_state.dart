@@ -34,8 +34,18 @@ class SocialStickerState extends Equatable {
         otherHashtags.length >= HashtagExtractor.maxHashtagsPerVideo;
   }
 
+  /// Whether a countdown counts down to a moment that has passed, such as one
+  /// in a draft reopened later.
+  bool get isCountdownOver {
+    final end = data.countdownEnd;
+    return data.kind == SocialStickerKind.countdown &&
+        end != null &&
+        !end.isAfter(clock.now());
+  }
+
   /// Whether the sticker can be placed as it is.
-  bool get canConfirm => data.isComplete && !isOverHashtagLimit;
+  bool get canConfirm =>
+      data.isComplete && !isOverHashtagLimit && !isCountdownOver;
 
   SocialStickerState copyWith({
     SocialStickerData? data,

@@ -7,6 +7,7 @@ import 'package:models/models.dart'
     show AudioEvent, UserProfile, VideoStickerKind, VideoStickerRegion;
 import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
+import 'package:openvine/models/video_reply_context.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 
 const _pubkey =
@@ -21,27 +22,47 @@ WidgetLayer _layer(Map<String, dynamic> meta) => WidgetLayer(
 void main() {
   group(SocialStickerData, () {
     group('toMeta and fromMeta', () {
-      test('round-trip a mention, a hashtag and a sound credit', () {
-        const stickers = [
-          SocialStickerData(
+      test('round-trip every kind of social sticker', () {
+        final stickers = [
+          const SocialStickerData(
             kind: SocialStickerKind.mention,
             style: InfoStickerStyle.neon,
             pubkey: _pubkey,
             name: 'alice',
           ),
-          SocialStickerData(kind: SocialStickerKind.hashtag, hashtag: 'summer'),
-          SocialStickerData(
+          const SocialStickerData(
+            kind: SocialStickerKind.hashtag,
+            hashtag: 'summer',
+          ),
+          const SocialStickerData(
             kind: SocialStickerKind.link,
             url: 'https://divine.video/',
             linkTitle: 'Divine',
           ),
-          SocialStickerData(
+          const SocialStickerData(
             kind: SocialStickerKind.soundCredit,
             style: InfoStickerStyle.glass,
             soundTitle: 'Song',
             soundArtist: 'Artist',
             soundDesign: SocialStickerSoundDesign.cassette,
             lyric: 'A line',
+          ),
+          SocialStickerData(
+            kind: SocialStickerKind.countdown,
+            style: InfoStickerStyle.brand,
+            countdownTitle: 'Summer',
+            countdownEnd: DateTime.utc(2027, 6, 21, 18),
+            localeName: 'de_CH',
+            use24HourFormat: true,
+          ),
+          const SocialStickerData(
+            kind: SocialStickerKind.reply,
+            style: InfoStickerStyle.dark,
+            pubkey: _pubkey,
+            name: 'alice',
+            replyEventId: _pubkey,
+            replyImageUrl: 'https://divine.video/thumb.jpg',
+            replyToVideo: true,
           ),
         ];
 
@@ -254,6 +275,28 @@ void main() {
         );
       });
 
+      test('rebuilds a countdown in a solid look, and no place or reply', () {
+        final countdown = SocialStickerData.ofRegion(
+          region(
+            VideoStickerKind.countdown,
+            '1813600800',
+            style: 'light',
+            label: 'Summer',
+          ),
+        );
+
+        expect(countdown?.countdownTitle, equals('Summer'));
+        expect(countdown?.countdownEnd, equals(DateTime.utc(2027, 6, 21, 18)));
+        expect(
+          [
+            region(VideoStickerKind.countdown, '1813600800'),
+            region(VideoStickerKind.place, 'Zermatt', style: 'light'),
+            region(VideoStickerKind.reply, _pubkey, style: 'light'),
+          ].map(SocialStickerData.ofRegion),
+          everyElement(isNull),
+        );
+      });
+
       test('reads back the text the publish recorded', () {
         const sticker = SocialStickerData(
           kind: SocialStickerKind.hashtag,
@@ -348,6 +391,109 @@ void main() {
       test('offers no credit for a sound without a title', () {
         expect(
           SocialStickerData.soundCreditFor(sound(creatorName: 'Artist')),
+          isNull,
+        );
+      });
+    });
+
+    group('countdown', () {
+      test('starts at the full hour after a day from now', () {
+        expect(
+          SocialStickerData.defaultCountdownEnd(DateTime(2026, 10, 30, 14, 25)),
+          equals(DateTime(2026, 10, 31, 15)),
+        );
+      });
+
+      test('is tapped by its end in Unix seconds and shows its title', () {
+        final countdown = SocialStickerData(
+          kind: SocialStickerKind.countdown,
+          countdownTitle: ' Summer ',
+          countdownEnd: DateTime.utc(2027, 6, 21, 18),
+        );
+
+        expect(countdown.tapKind, equals(VideoStickerKind.countdown));
+        expect(countdown.tapTarget, equals('1813600800'));
+        expect(countdown.tapLabel, equals('Summer'));
+      });
+
+      test('cannot be placed without a title', () {
+        final countdown = SocialStickerData.countdown(now: DateTime(2026));
+
+        expect(countdown.isComplete, isFalse);
+        expect(countdown.tapTarget, isNull);
+      });
+    });
+
+    group('replyTo', () {
+      const comment = VideoReplyContext(
+        rootEventId:
+            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+        rootEventKind: 34236,
+        rootAuthorPubkey:
+            'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+        parentCommentId: _pubkey,
+        parentAuthorPubkey:
+            'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+        replyToName: 'alice',
+        replyToText: 'Which one?\n\nThe red  one',
+        replyToImageUrl: 'https://divine.video/alice.jpg',
+      );
+
+      test('shows the comment it replies to on one line', () {
+        final reply = SocialStickerData.replyTo(comment)!;
+
+        expect(reply.replyEventId, equals(_pubkey));
+        expect(reply.pubkey, equals(comment.parentAuthorPubkey));
+        expect(reply.replyText, equals('Which one? The red one'));
+        expect(reply.replyToVideo, isFalse);
+        expect(reply.tapLabel, equals('alice\nWhich one? The red one'));
+      });
+
+      test('cuts a long comment short', () {
+        final reply = SocialStickerData.replyTo(
+          VideoReplyContext(
+            rootEventId: comment.rootEventId,
+            rootEventKind: comment.rootEventKind,
+            rootAuthorPubkey: comment.rootAuthorPubkey,
+            parentCommentId: _pubkey,
+            replyToName: 'alice',
+            replyToText: 'ha' * 100,
+          ),
+        )!;
+
+        expect(
+          reply.replyText!.length,
+          equals(SocialStickerData.maxReplyTextLength),
+        );
+        expect(reply.replyText, endsWith('…'));
+      });
+
+      test('shows the video it replies to by its thumbnail', () {
+        final reply = SocialStickerData.replyTo(
+          VideoReplyContext(
+            rootEventId: comment.rootEventId,
+            rootEventKind: comment.rootEventKind,
+            rootAuthorPubkey: comment.rootAuthorPubkey,
+            replyToName: 'bob',
+            replyToImageUrl: 'https://divine.video/thumb.jpg',
+          ),
+        )!;
+
+        expect(reply.replyEventId, equals(comment.rootEventId));
+        expect(reply.replyText, isNull);
+        expect(reply.replyToVideo, isTrue);
+        expect(reply.tapTarget, equals(comment.rootEventId));
+      });
+
+      test('shows nothing without a name to show', () {
+        expect(
+          SocialStickerData.replyTo(
+            VideoReplyContext(
+              rootEventId: comment.rootEventId,
+              rootEventKind: comment.rootEventKind,
+              rootAuthorPubkey: comment.rootAuthorPubkey,
+            ),
+          ),
           isNull,
         );
       });

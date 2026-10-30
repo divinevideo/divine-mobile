@@ -125,6 +125,15 @@ class SocialStickerSheet extends StatelessWidget {
                     SocialStickerSoundDesignPicker(),
                     SocialStickerLyricField(),
                   ],
+                  SocialStickerKind.countdown => [
+                    SocialStickerCountdownFields(autofocus: isNew),
+                  ],
+                  // What it replies to comes from the reply itself.
+                  SocialStickerKind.reply => [
+                    StickerSheetNote(
+                      text: context.l10n.videoEditorSocialStickerReplyNote,
+                    ),
+                  ],
                 },
                 const SocialStickerStylePicker(),
               ],

@@ -1,6 +1,8 @@
-// ABOUTME: The controls of the social sticker sheet: the person, the hashtag
-// ABOUTME: with suggestions, the link, the sound and its design, and the look.
+// ABOUTME: The controls of the social sticker sheet: the person, the hashtag,
+// ABOUTME: the link, the sound and its design, the countdown, and the look.
 
+import 'package:clock/clock.dart';
+import 'package:cupertino_ui/cupertino_ui.dart' show CupertinoDatePicker;
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,7 +13,6 @@ import 'package:models/models.dart' show UserProfile;
 import 'package:openvine/blocs/hashtag_search/hashtag_search_bloc.dart';
 import 'package:openvine/blocs/video_editor/social_sticker/social_sticker_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
-import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/widgets/user_picker_sheet.dart';
@@ -389,6 +390,81 @@ class _SocialStickerLyricFieldState extends State<SocialStickerLyricField> {
   }
 }
 
+/// A countdown's title and the moment it counts down to, on a wheel whose
+/// earliest moment is now, or the countdown's own end when that has passed.
+class SocialStickerCountdownFields extends StatefulWidget {
+  const SocialStickerCountdownFields({this.autofocus = false, super.key});
+
+  final bool autofocus;
+
+  @override
+  State<SocialStickerCountdownFields> createState() =>
+      _SocialStickerCountdownFieldsState();
+}
+
+class _SocialStickerCountdownFieldsState
+    extends State<SocialStickerCountdownFields> {
+  late final _controller = TextEditingController(
+    text: context.read<SocialStickerCubit>().state.data.countdownTitle ?? '',
+  );
+
+  /// When the wheel starts: the countdown's end, which a new one starts with.
+  late final DateTime _initialEnd =
+      context.read<SocialStickerCubit>().state.data.countdownEnd?.toLocal() ??
+      SocialStickerData.defaultCountdownEnd(clock.now());
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isOver = context.select(
+      (SocialStickerCubit cubit) => cubit.state.isCountdownOver,
+    );
+    final cubit = context.read<SocialStickerCubit>();
+    final now = clock.now();
+    return Column(
+      crossAxisAlignment: .stretch,
+      spacing: 8,
+      children: [
+        Padding(
+          padding: const .symmetric(horizontal: 16),
+          child: DivineTextField(
+            controller: _controller,
+            filled: true,
+            autofocus: widget.autofocus,
+            labelText: context.l10n.videoEditorSocialStickerCountdownTitleHint,
+            maxLength: SocialStickerData.maxCountdownTitleLength,
+            textCapitalization: .words,
+            textInputAction: .done,
+            onChanged: cubit.countdownTitleChanged,
+          ),
+        ),
+        StickerSheetNote(
+          text: isOver
+              ? context.l10n.videoEditorSocialStickerCountdownOver
+              : context.l10n.videoEditorSocialStickerCountdownNote,
+          warning: isOver,
+        ),
+        SizedBox(
+          height: 180,
+          child: CupertinoDatePicker(
+            initialDateTime: _initialEnd,
+            // A countdown in a draft reopened after its end still opens on it.
+            minimumDate: _initialEnd.isBefore(now) ? _initialEnd : now,
+            use24hFormat: MediaQuery.alwaysUse24HourFormatOf(context),
+            backgroundColor: context.vineColors.surface,
+            onDateTimeChanged: cubit.countdownEndChanged,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 /// A row of the looks the sticker can take, each shown as the sticker in it.
 class SocialStickerStylePicker extends StatelessWidget {
   const SocialStickerStylePicker({super.key});
@@ -402,10 +478,10 @@ class SocialStickerStylePicker extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: .horizontal,
         padding: const .symmetric(horizontal: 16),
-        itemCount: InfoStickerStyle.pills.length,
+        itemCount: data.kind.styles.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
-          final style = InfoStickerStyle.pills[index];
+          final style = data.kind.styles[index];
           return StickerChoiceTile(
             semanticLabel: l10n.infoStickerStyleLabel(style),
             selected: style == data.style,

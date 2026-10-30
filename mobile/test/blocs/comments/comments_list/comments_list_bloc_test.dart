@@ -688,12 +688,13 @@ void main() {
               videoDimensions: '720x1280',
               videoDuration: 6,
               videoBlurhash: 'LKO2?U%2Tw=w]~RBVZRi};RPxuwH',
-            ),
+            ).copyWith(stickerTags: [_replyStickerTag]),
           ),
         ),
         verify: (b) {
           final comment = b.state.commentsById[validId('c1')]!;
           expect(comment.hasVideo, isTrue);
+          expect(comment.stickerTags, equals([_replyStickerTag]));
           // Upgrade must merge in place, not replace with the echo: the
           // existing REST copy's threading (a field the echo lacks) survives.
           expect(comment.replyToEventId, equals(validId('parent')));
@@ -1581,5 +1582,123 @@ void main() {
         },
       );
     });
+
+    group('focusCommentId', () {
+      final newer = makeComment(
+        validId('c1'),
+        createdAt: DateTime.fromMillisecondsSinceEpoch(5000),
+      );
+      final older = makeComment(
+        validId('c0'),
+        createdAt: DateTime.fromMillisecondsSinceEpoch(1000),
+      );
+
+      /// Pages the newest comment first and [olderPage] after it, of
+      /// [totalCount] in all.
+      void pages({required List<Comment> olderPage, required int totalCount}) =>
+          when(
+            () => mockCommentsRepository.loadComments(
+              rootEventId: any(named: 'rootEventId'),
+              rootEventKind: any(named: 'rootEventKind'),
+              rootAddressableId: any(named: 'rootAddressableId'),
+              limit: any(named: 'limit'),
+              before: any(named: 'before'),
+            ),
+          ).thenAnswer((invocation) async {
+            final page = invocation.namedArguments[#before] == null
+                ? [newer]
+                : olderPage;
+            return CommentThread(
+              rootEventId: validId('root'),
+              comments: page,
+              totalCount: totalCount,
+              commentCache: {for (final c in page) c.id: c},
+            );
+          });
+
+      CommentsListBloc focusing(String id) => CommentsListBloc(
+        commentsRepository: mockCommentsRepository,
+        rootEventId: validId('root'),
+        rootEventKind: 34236,
+        rootAuthorPubkey: validId('author'),
+        focusCommentId: id,
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'scrolls to the comment it opens on once that is loaded',
+        setUp: () => pages(olderPage: const [], totalCount: 1),
+        build: () => focusing(newer.id),
+        act: (b) => b.add(const CommentsLoadRequested()),
+        verify: (b) {
+          expect(b.state.scrollToCommentId, equals(newer.id));
+          expect(b.state.pendingFocusCommentId, isNull);
+        },
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'loads older comments until the one it opens on is there',
+        setUp: () => pages(olderPage: [older], totalCount: 2),
+        build: () => focusing(older.id),
+        act: (b) => b.add(const CommentsLoadRequested()),
+        verify: (b) {
+          expect(b.state.commentsById.keys, contains(older.id));
+          expect(b.state.scrollToCommentId, equals(older.id));
+          expect(b.state.pendingFocusCommentId, isNull);
+        },
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'stays at the top when the comment it opens on is gone',
+        setUp: () => pages(olderPage: [older], totalCount: 2),
+        build: () => focusing(validId('deleted')),
+        act: (b) => b.add(const CommentsLoadRequested()),
+        verify: (b) {
+          expect(b.state.commentsById, hasLength(2));
+          expect(b.state.scrollToCommentId, isNull);
+          expect(b.state.pendingFocusCommentId, isNull);
+        },
+      );
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'stops at a page that adds no comment, with a higher count',
+        // The relay's inclusive `until` hands back the oldest comment again
+        // once it has nothing older, while the count includes comments the
+        // list never gets.
+        setUp: () => pages(olderPage: [older], totalCount: 1000),
+        build: () => CommentsListBloc(
+          commentsRepository: mockCommentsRepository,
+          rootEventId: validId('root'),
+          rootEventKind: 34236,
+          rootAuthorPubkey: validId('author'),
+          initialTotalCount: 1000,
+          focusCommentId: validId('deleted'),
+        ),
+        act: (b) => b.add(const CommentsLoadRequested()),
+        verify: (b) {
+          expect(b.state.hasMoreContent, isTrue);
+          expect(b.state.pendingFocusCommentId, isNull);
+          expect(b.state.scrollToCommentId, isNull);
+          verify(
+            () => mockCommentsRepository.loadComments(
+              rootEventId: any(named: 'rootEventId'),
+              rootEventKind: any(named: 'rootEventKind'),
+              rootAddressableId: any(named: 'rootAddressableId'),
+              limit: any(named: 'limit'),
+              before: any(named: 'before', that: isNotNull),
+            ),
+          ).called(2);
+        },
+      );
+    });
   });
 }
+
+const _replyStickerTag = [
+  'sticker',
+  'reply',
+  'target',
+  '0.5 0.5 0.4 0.2',
+  '0',
+  '0',
+  '0',
+];

@@ -102,15 +102,22 @@ class StickerPillPalette {
 }
 
 /// A sticker's pill in [palette]: solid, see-through, outlined or bare.
+///
+/// A sticker of more than one line, such as a countdown, sits in a card with
+/// a smaller [radius] and its own [padding].
 class StickerPill extends StatelessWidget {
   const StickerPill({
     required this.palette,
     required this.child,
+    this.radius = 999,
+    this.padding = const .symmetric(horizontal: 32, vertical: 16),
     super.key,
   });
 
   final StickerPillPalette palette;
   final Widget child;
+  final double radius;
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
@@ -118,13 +125,10 @@ class StickerPill extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: palette.background,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(radius),
         border: border == null ? null : Border.all(color: border, width: 5),
       ),
-      child: Padding(
-        padding: const .symmetric(horizontal: 32, vertical: 16),
-        child: child,
-      ),
+      child: Padding(padding: padding, child: child),
     );
   }
 }

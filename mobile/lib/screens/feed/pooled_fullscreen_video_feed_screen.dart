@@ -201,6 +201,7 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
     this.trafficSource = ViewTrafficSource.unknown,
     this.sourceDetail,
     this.autoOpenComments = false,
+    this.focusCommentId,
     this.onPageChanged,
     this.dmReplyContext,
     this.onBack,
@@ -230,6 +231,9 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
   ///
   /// Used when navigating from a comment/reply notification.
   final bool autoOpenComments;
+
+  /// The comment the sheet [autoOpenComments] opens scrolls to.
+  final String? focusCommentId;
 
   /// Called whenever the active video index changes.
   ///
@@ -328,6 +332,7 @@ class PooledFullscreenVideoFeedScreen extends ConsumerWidget {
         trafficSource: trafficSource,
         sourceDetail: sourceDetail,
         autoOpenComments: autoOpenComments,
+        focusCommentId: focusCommentId,
         onPageChanged: onPageChanged,
         dmReplyContext: dmReplyContext,
         loadMoreOnEndSwipe: source is SingleVideoViewSource,
@@ -355,6 +360,7 @@ class FullscreenFeedContent extends ConsumerStatefulWidget {
     this.trafficSource = ViewTrafficSource.unknown,
     this.sourceDetail,
     this.autoOpenComments = false,
+    this.focusCommentId,
     this.onPageChanged,
     this.dmReplyContext,
     this.initialVideoKey,
@@ -379,6 +385,9 @@ class FullscreenFeedContent extends ConsumerStatefulWidget {
   ///
   /// Used when navigating from a comment/reply notification.
   final bool autoOpenComments;
+
+  /// The comment the sheet [autoOpenComments] opens scrolls to.
+  final String? focusCommentId;
 
   /// Called whenever the active video index changes.
   ///
@@ -703,7 +712,11 @@ class _FullscreenFeedContentState extends ConsumerState<FullscreenFeedContent>
                   if (video == null) return;
                   runDetached(
                     Future<void>.sync(
-                      () => CommentsScreen.show(context, video),
+                      () => CommentsScreen.show(
+                        context,
+                        video,
+                        focusCommentId: widget.focusCommentId,
+                      ),
                     ),
                     'open comments from fullscreen feed',
                     logName: 'FullscreenFeedContent',

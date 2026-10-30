@@ -1,11 +1,12 @@
 // ABOUTME: Works out where a rendered video's tappable stickers stand: the
-// ABOUTME: area and time of each link, mention, hashtag and sound sticker.
+// ABOUTME: area and time of each social and location sticker.
 
 import 'dart:math' as math;
 import 'dart:ui';
 
-import 'package:models/models.dart' show VideoStickerRegion;
+import 'package:models/models.dart' show VideoStickerKind, VideoStickerRegion;
 import 'package:openvine/extensions/layer_animation_storage.dart';
+import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
 import 'package:openvine/models/video_editor/transition_geometry.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
@@ -52,8 +53,8 @@ VideoStickerRegion? _regionOf(
 }) {
   final layer = item.layer;
   final sticker = SocialStickerData.of(layer);
-  if (sticker == null) return null;
-  final target = sticker.tapTarget;
+  final place = sticker == null ? InfoStickerData.of(layer) : null;
+  final target = sticker?.tapTarget ?? place?.mapQuery;
   if (target == null) return null;
   // A sticker that moves has no one place to tap. The editor offers no way
   // to move one; this keeps an older draft's from landing beside it.
@@ -65,7 +66,7 @@ VideoStickerRegion? _regionOf(
   // The capture is turned already; its box is the sticker before turning.
   final size = item.boxSize;
   final region = VideoStickerRegion(
-    kind: sticker.tapKind,
+    kind: sticker?.tapKind ?? VideoStickerKind.place,
     target: target,
     centerX: (center.dx - frame.left) / frame.width,
     centerY: (center.dy - frame.top) / frame.height,
@@ -78,15 +79,17 @@ VideoStickerRegion? _regionOf(
     // again over the frames: a turning record or an equalizer would not keep
     // time with the video beneath, a faded, blended or masked one would come
     // back solid, a copy would hide what lies on it, and a see-through one in
-    // glyphs either phone draws its own way would show both.
+    // glyphs either phone draws its own way would show both. A location
+    // sticker is not drawn again: its flag and globe are not in the tag.
     style:
-        sticker.isAnimated ||
+        sticker == null ||
+            sticker.isAnimated ||
             !sticker.canBeRedrawn(emojiFontLoaded: emojiFontLoaded) ||
             !_isDrawnPlainly(layer) ||
             above.any((upper) => _isCoveredBy(item, upper, bodySize))
         ? null
         : sticker.style.name,
-    label: sticker.tapLabel,
+    label: sticker?.tapLabel ?? place?.placeName,
   );
   final start = region.start;
   final end = region.end;

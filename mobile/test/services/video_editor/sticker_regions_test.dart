@@ -71,6 +71,22 @@ ExportedLayer _captured(
   );
 }
 
+/// The capture of an info sticker carrying [data] in the body's centre.
+ExportedLayer _capturedInfo(InfoStickerData data) {
+  final meta = data.toMeta();
+  return ExportedLayer(
+    layer: WidgetLayer(
+      id: 'info',
+      widget: const SizedBox(),
+      meta: meta,
+      exportConfigs: WidgetLayerExportConfigs(id: 'info', meta: meta),
+    ),
+    bytes: Uint8List(0),
+    logicalSize: const Size(144, 32),
+    boxSize: const Size(144, 32),
+  );
+}
+
 /// The capture of a layer that is no social sticker, such as an emoji,
 /// standing [offset] from the body's centre, [box] big.
 ExportedLayer _other({
@@ -149,6 +165,76 @@ void main() {
             end: Duration(seconds: 3),
             style: 'light',
             label: 'divine.video',
+          ),
+        ]),
+      );
+    });
+
+    test('opens a location sticker by its full name, without a look', () {
+      final regions = _regions([
+        _capturedInfo(
+          const InfoStickerData(
+            kind: InfoStickerKind.location,
+            localeName: 'de_CH',
+            placeName: 'Zermatt',
+            placeAddress: 'Zermatt, Wallis, Schweiz',
+          ),
+        ),
+        // Placed before the full name was kept.
+        _capturedInfo(
+          const InfoStickerData(
+            kind: InfoStickerKind.location,
+            localeName: 'en',
+            placeName: 'Bern',
+          ),
+        ),
+        _capturedInfo(
+          const InfoStickerData(
+            kind: InfoStickerKind.battery,
+            localeName: 'en',
+          ),
+        ),
+      ]);
+
+      expect(
+        regions.map((region) => (region.kind, region.target, region.label)),
+        equals([
+          (VideoStickerKind.place, 'Zermatt, Wallis, Schweiz', 'Zermatt'),
+          (VideoStickerKind.place, 'Bern', 'Bern'),
+        ]),
+      );
+      expect(regions.map((region) => region.style), everyElement(isNull));
+    });
+
+    test('gives a countdown its look and a reply none', () {
+      final regions = _regions([
+        _captured(
+          SocialStickerData(
+            kind: SocialStickerKind.countdown,
+            countdownTitle: 'Summer',
+            countdownEnd: DateTime.utc(2027, 6, 21, 18),
+          ),
+        ),
+        _captured(
+          const SocialStickerData(
+            kind: SocialStickerKind.reply,
+            pubkey: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            name: 'alice',
+            replyEventId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+            replyText: 'Which one?',
+          ),
+          offset: const Offset(0, 200),
+        ),
+      ]);
+
+      expect(
+        regions.map((region) => (region.kind, region.target, region.style)),
+        equals([
+          (VideoStickerKind.countdown, '1813600800', 'light'),
+          (
+            VideoStickerKind.reply,
+            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+            null,
           ),
         ]),
       );

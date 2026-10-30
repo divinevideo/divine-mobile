@@ -25,6 +25,7 @@ import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/models/video_editor/layer_style.dart';
 import 'package:openvine/models/video_editor/live_equalizer.dart';
 import 'package:openvine/models/video_editor/social_sticker.dart';
+import 'package:openvine/models/video_editor/tappable_sticker_layer.dart';
 import 'package:openvine/models/video_editor/title_style.dart';
 import 'package:openvine/screens/video_editor/video_audio_editor_timing_screen.dart';
 import 'package:openvine/widgets/video_editor/audio_visualizer/audio_visualizer_layer_actions.dart';
@@ -221,13 +222,13 @@ class _LayerOverlayControls extends StatelessWidget {
         //
         // They are off for a hidden area (blur, pixelate) too: it hides what is
         // beneath it the moment it shows, and an area that slid or faded in
-        // would show that for a moment first. And for a link, mention,
-        // hashtag or sound sticker, which a viewer taps where it stands.
+        // would show that for a moment first. And for a sticker a viewer taps
+        // where it stands, such as a link or a location.
         onAnimate:
             layer == null ||
                 isDetachedClip ||
                 isCensorLayer(layer) ||
-                SocialStickerData.isTappableLayer(layer)
+                isTappableStickerLayer(layer)
             ? null
             : () => _animateLayer(context: context),
         // Saved title styles, for text only. A burned-in caption cue is a text

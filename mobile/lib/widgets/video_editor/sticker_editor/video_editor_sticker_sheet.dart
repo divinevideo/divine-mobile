@@ -1,5 +1,5 @@
 // ABOUTME: Bottom sheet for sticker selection in the video editor: rows of
-// ABOUTME: info and social stickers above a searchable grid of stickers.
+// ABOUTME: info, social and interactive stickers above a grid of stickers.
 
 import 'package:divine_ui/divine_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -13,8 +13,8 @@ import 'package:openvine/widgets/video_editor/info_sticker/info_sticker_kind_row
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_kind_row.dart';
 import 'package:openvine/widgets/video_editor/sticker_editor/video_editor_sticker.dart';
 
-/// A bottom sheet that displays the info and social stickers and a
-/// searchable grid of stickers.
+/// A bottom sheet that displays the info, social and interactive stickers
+/// and a searchable grid of stickers.
 ///
 /// Pops the selected [StickerData] when a sticker is tapped, the
 /// `InfoStickerKind` when an info sticker is, or the `SocialStickerKind`
@@ -25,6 +25,7 @@ class VideoEditorStickerSheet extends StatelessWidget {
     super.key,
     this.scrollController,
     this.soundCredit,
+    this.reply,
   });
 
   final ScrollController? scrollController;
@@ -33,6 +34,10 @@ class VideoEditorStickerSheet extends StatelessWidget {
   /// The credit for the video's sound, offered as a social sticker; `null`
   /// when its sound has no title to credit.
   final SocialStickerData? soundCredit;
+
+  /// The sticker showing what the video replies to, offered as an
+  /// interactive sticker; `null` when it replies to nothing.
+  final SocialStickerData? reply;
 
   @override
   Widget build(BuildContext context) {
@@ -75,6 +80,19 @@ class VideoEditorStickerSheet extends StatelessWidget {
           SliverToBoxAdapter(
             child: SocialStickerKindRow(soundCredit: soundCredit),
           ),
+
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const .fromLTRB(16, 16, 16, 12),
+              child: Text(
+                context.l10n.videoEditorInteractiveStickersTitle,
+                style: VineTheme.titleSmallFont(
+                  color: context.vineColors.onSurfaceMuted,
+                ),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(child: InteractiveStickerKindRow(reply: reply)),
 
           SliverToBoxAdapter(
             child: Padding(

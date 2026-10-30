@@ -17,6 +17,7 @@ import 'package:openvine/blocs/video_editor/filter_editor/video_editor_filter_bl
 import 'package:openvine/blocs/video_editor/layer_tracking/layer_tracking_cubit.dart';
 import 'package:openvine/blocs/video_editor/loop_suggestion/loop_suggestion_cubit.dart';
 import 'package:openvine/blocs/video_editor/main_editor/video_editor_main_bloc.dart';
+import 'package:openvine/blocs/video_editor/social_sticker/social_sticker_cubit.dart';
 import 'package:openvine/blocs/video_editor/sticker/video_editor_sticker_bloc.dart';
 import 'package:openvine/blocs/video_editor/style_clipboard/style_clipboard_cubit.dart';
 import 'package:openvine/blocs/video_editor/text_editor/video_editor_text_bloc.dart';
@@ -48,10 +49,12 @@ import 'package:openvine/models/video_recorder/video_recorder_mode.dart';
 import 'package:openvine/providers/analytics_providers.dart';
 import 'package:openvine/providers/auth_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
+import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/social_providers.dart';
 import 'package:openvine/providers/upload_media_providers.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
+import 'package:openvine/providers/video_reply_context_provider.dart';
 import 'package:openvine/repositories/sticker_repository.dart';
 import 'package:openvine/router/route_paths.dart';
 import 'package:openvine/screens/library_screen.dart';
@@ -815,6 +818,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         child: VideoEditorStickerSheet(
           scrollController: scrollController,
           soundCredit: soundCredits.firstOrNull,
+          reply: _replySticker,
         ),
       ),
     );
@@ -902,6 +906,16 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
         final first = soundCredits.firstOrNull;
         if (first == null) return;
         initial = first;
+      case SocialStickerKind.countdown:
+        initial = SocialStickerData.countdown(
+          now: DateTime.now(),
+          localeName: Localizations.localeOf(context).toString(),
+          use24HourFormat: MediaQuery.alwaysUse24HourFormatOf(context),
+        );
+      case SocialStickerKind.reply:
+        final reply = _replySticker;
+        if (reply == null) return;
+        initial = reply;
     }
     final data = await showSocialStickerSheet(
       context,
@@ -926,6 +940,39 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
     );
   }
 
+  /// The sticker showing what the video replies to, from the snapshot taken
+  /// when the reply camera was opened, or `null` when it replies to nothing,
+  /// has no snapshot, or replies to someone the creator cannot mention: whom
+  /// they blocked, or who blocked or muted them.
+  SocialStickerData? get _replySticker {
+    final replyContext = ref.read(videoReplyContextProvider);
+    final sticker = replyContext == null
+        ? null
+        : SocialStickerData.replyTo(replyContext);
+    if (sticker == null) return null;
+    final blocklist = ref.read(contentBlocklistRepositoryProvider);
+    return SocialStickerCubit.canMention(blocklist, sticker.pubkey)
+        ? sticker
+        : null;
+  }
+
+  /// Places the reply sticker on a video recorded as a reply, once, when its
+  /// editing starts; the creator can move, restyle or remove it from there.
+  void _placeReplySticker() {
+    final sticker = _replySticker;
+    final editor = _editor;
+    if (sticker == null || editor == null || !mounted) return;
+    Log.debug(
+      'Placing the reply sticker',
+      name: 'VideoEditorScreen',
+      category: LogCategory.video,
+    );
+    editor.addLayer(
+      socialStickerWidgetLayer(sticker, width: _replyStickerWidth),
+      blockSelectLayer: true,
+    );
+  }
+
   /// The credits for the video's sounds that have a title: the recorded
   /// sound first, then the timeline's tracks.
   List<SocialStickerData> get _soundCredits =>
@@ -938,6 +985,11 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
   /// at most 300, converted to render coordinates.
   double get _newStickerWidth =>
       min(300, (_bodySizeNotifier.value.width / 3) / _fittedBoxScale);
+
+  /// How wide a reply sticker starts: two thirds of the screen, at most 400,
+  /// so its comment reads without a pinch.
+  double get _replyStickerWidth =>
+      min(400, (_bodySizeNotifier.value.width * 2 / 3) / _fittedBoxScale);
 
   /// Opens the audio visualizer sheet and adds the visualizer picked there.
   ///
@@ -1502,6 +1554,7 @@ class _VideoEditorScreenState extends ConsumerState<VideoEditorScreen>
               },
               onAddStickers: () =>
                   _runDetached(_addStickers(), 'open sticker picker'),
+              onFreshSessionReady: _placeReplySticker,
               onAddAudioVisualizer: () => _runDetached(
                 _addAudioVisualizer(
                   context.read<VideoEditorAudioVisualizerCubit>(),

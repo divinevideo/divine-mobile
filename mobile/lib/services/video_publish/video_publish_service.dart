@@ -698,16 +698,23 @@ class VideoPublishService {
   /// The stickers of [draft]'s final render a viewer can tap, without a
   /// sound sticker that names no sound of its own and credits a sound other
   /// than the one the video points to: a tap on it opens the video's sound.
+  /// A reply sticker is kept only on a video published as a reply to what it
+  /// shows, which a viewer's tap opens through the video's reply tags.
   List<VideoStickerRegion> _publishedStickerRegions(DivineVideoDraft draft) {
     final sound = draft.selectedSound;
+    final repliesTo = draft.videoReplyContext?.replyToEventId.toLowerCase();
     return [
       for (final region
           in draft.finalRenderedClip?.stickerRegions ??
               const <VideoStickerRegion>[])
-        if (region.kind != VideoStickerKind.sound ||
+        if (switch (region.kind) {
+          VideoStickerKind.sound =>
             region.target.isNotEmpty ||
-            (sound != null &&
-                SocialStickerData.regionCreditsSound(region, sound)))
+                (sound != null &&
+                    SocialStickerData.regionCreditsSound(region, sound)),
+          VideoStickerKind.reply => region.target == repliesTo,
+          _ => true,
+        })
           region,
     ];
   }
