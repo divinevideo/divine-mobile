@@ -171,12 +171,12 @@ A reader drops the whole tag when:
 A label longer than 300 characters is dropped and the button kept.
 
 The sticker is also part of the video's frames, so other clients still show
-it. Divine draws it again from `style` and `label` exactly over the one in the
-frames, sharp at the screen's resolution, and makes it the button; without
-both fields it only places the button. The copy draws only what covers: the
-text, and the pill's fill and border where they are solid. A see-through fill,
-a glow or a shadow is in the frames already and would come out twice as
-strong.
+it. Divine draws it again from `style` and `label` over the one in the frames,
+in the same area, sharp at the screen's resolution, and makes it the button;
+without both fields it only places the button. The copy draws only what
+covers: the text, and the pill's fill and border where they are solid. A
+see-through fill, a glow or a shadow is in the frames already and would come
+out twice as strong.
 
 Over a see-through look (`dark`, `glass`, `neon`, `plain`, `outline`) the
 frames show through the copy, so its text has to come out the same on the
@@ -184,17 +184,23 @@ creator's and the viewer's phone. Divine draws sticker text in its bundled
 font, Bricolage Grotesque, and emoji in Noto Color Emoji, which it downloads
 from Google Fonts (`fonts.gstatic.com`, about 24 MB, kept on the device) the
 first time a sticker needs it. The link and note marks are drawn from vector
-paths, not emoji. A viewer's copy of every look waits until Noto Color
-Emoji has loaded when its text has an emoji, and is never drawn for text in a
-script the bundled font lacks; until then the sticker shows as it is in the
-frames, with its button. A solid background cannot correct different glyph
-advances when a copy is fitted to the captured box, so the same readiness and
-coverage checks apply to `light`, `brand` and `highlight` too.
+paths, not emoji. A viewer's copy of a see-through look waits until Noto
+Color Emoji has loaded when its text has an emoji, and is never drawn for
+text in a script the bundled font lacks; until then the sticker shows as it
+is in the frames, with its button.
+
+A solid look (`light`, `brand`, `highlight`) hides the sticker in the frames,
+so its copy is drawn whatever script its text is in, and before Noto Color
+Emoji has loaded. The copy's pill fills the area, and the rest is scaled to
+fit inside it in proportion: a viewer's phone may draw a script the bundled
+font lacks, or emoji before Noto Color Emoji has loaded, wider or narrower
+than the creator's did, and stretched to the area its text would come out
+distorted.
 
 Emoji coverage is taken from the exact pinned font's cmap, not a Unicode
-emoji property. Newer emoji absent from that file keep their appearance in
-the frames and their button instead of being redrawn in a phone's fallback
-font.
+emoji property. Over a see-through look, newer emoji absent from that file
+keep their appearance in the frames and their button instead of being
+redrawn in a phone's fallback font.
 
 Some stickers are published without `style`, since a copy would not match the
 frames:
@@ -203,7 +209,7 @@ frames:
   equalizer), as a copy could not keep time with the frames beneath;
 - a sticker drawn see-through, with a blend mode or through a mask, as a copy
   would come back solid;
-- any look whose text has a character the bundled font lacks,
+- a see-through look whose text has a character the bundled font lacks,
   unless every such character is an emoji and the creator's app drew it in
   Noto Color Emoji, as a viewer's phone could draw it differently;
 - a sticker with another layer over it at the same time, as a copy would hide

@@ -8,6 +8,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:openvine/blocs/camera_permission/camera_permission_bloc.dart';
 import 'package:openvine/blocs/dm/unread_count/dm_unread_count_cubit.dart';
 import 'package:openvine/blocs/notifications/badge/notification_badge_cubit.dart';
+import 'package:openvine/blocs/profile_feed/profile_tab_retap_cubit.dart';
 import 'package:openvine/l10n/l10n.dart';
 import 'package:openvine/observability/crash_reporter.dart';
 import 'package:openvine/observability/reportable_error.dart';
@@ -69,6 +70,7 @@ void main() {
     late _MockDmUnreadCountCubit dmUnreadCubit;
     late _MockNotificationBadgeCubit notifBadgeCubit;
     late HomeFeedRetapCubit retapCubit;
+    late ProfileTabRetapCubit profileRetapCubit;
     late _FakeCameraPermissionBloc cameraPermissionBloc;
 
     setUp(() {
@@ -76,12 +78,16 @@ void main() {
       dmUnreadCubit = _MockDmUnreadCountCubit();
       notifBadgeCubit = _MockNotificationBadgeCubit();
       retapCubit = HomeFeedRetapCubit();
+      profileRetapCubit = ProfileTabRetapCubit();
       cameraPermissionBloc = _FakeCameraPermissionBloc();
       whenListen(dmUnreadCubit, const Stream<int>.empty(), initialState: 0);
       whenListen(notifBadgeCubit, const Stream<int>.empty(), initialState: 0);
     });
 
-    tearDown(() => retapCubit.close());
+    tearDown(() async {
+      await retapCubit.close();
+      await profileRetapCubit.close();
+    });
 
     Widget withBadgeProviders(Widget child) {
       return MultiBlocProvider(
@@ -89,6 +95,7 @@ void main() {
           BlocProvider<DmUnreadCountCubit>.value(value: dmUnreadCubit),
           BlocProvider<NotificationBadgeCubit>.value(value: notifBadgeCubit),
           BlocProvider<HomeFeedRetapCubit>.value(value: retapCubit),
+          BlocProvider<ProfileTabRetapCubit>.value(value: profileRetapCubit),
           BlocProvider<CameraPermissionBloc>.value(value: cameraPermissionBloc),
         ],
         child: child,
@@ -135,6 +142,7 @@ void main() {
       WidgetTester tester,
       MockGoRouter router, {
       bool isCampaignLanding = false,
+      int currentIndex = 0,
     }) async {
       await tester.pumpWidget(
         withBadgeProviders(
@@ -147,7 +155,7 @@ void main() {
                 goRouter: router,
                 child: Scaffold(
                   body: VineBottomNav(
-                    currentIndex: 0,
+                    currentIndex: currentIndex,
                     isCampaignLanding: isCampaignLanding,
                   ),
                 ),
@@ -485,6 +493,29 @@ void main() {
         verifyNever(() => router.go(any()));
       },
     );
+
+    testWidgets('retapping the active profile tab counts as a profile '
+        'retap', (tester) async {
+      await pumpSubjectWithRouter(tester, MockGoRouter(), currentIndex: 3);
+
+      final rect = tester.getRect(find.bySemanticsIdentifier('profile_tab'));
+      await tester.tapAt(rect.center);
+      await tester.pump();
+
+      expect(profileRetapCubit.state, equals(1));
+    });
+
+    testWidgets('opening the profile tab from another tab is not a retap', (
+      tester,
+    ) async {
+      await pumpSubjectWithRouter(tester, MockGoRouter());
+
+      final rect = tester.getRect(find.bySemanticsIdentifier('profile_tab'));
+      await tester.tapAt(rect.center);
+      await tester.pump();
+
+      expect(profileRetapCubit.state, isZero);
+    });
 
     testWidgets('retapping the active home tab is a no-op while a refresh is '
         'already in flight', (tester) async {

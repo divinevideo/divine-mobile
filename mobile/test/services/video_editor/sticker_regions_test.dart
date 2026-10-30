@@ -21,6 +21,20 @@ const _link = SocialStickerData(
   url: 'https://divine.video/about',
 );
 
+const List<InfoStickerStyle> _solidPills = [
+  InfoStickerStyle.light,
+  InfoStickerStyle.brand,
+  InfoStickerStyle.highlight,
+];
+
+const List<InfoStickerStyle> _seeThroughPills = [
+  InfoStickerStyle.dark,
+  InfoStickerStyle.glass,
+  InfoStickerStyle.neon,
+  InfoStickerStyle.plain,
+  InfoStickerStyle.outline,
+];
+
 /// The capture of a sticker carrying [data], standing [offset] from the
 /// body's centre, [box] big before it is turned by [rotation].
 ExportedLayer _captured(
@@ -357,14 +371,33 @@ void main() {
         styleOf('東京', InfoStickerStyle.dark, emojiFontLoaded: true),
         isNull,
       );
-      // A solid background does not correct different fallback advances.
-      for (final style in InfoStickerStyle.pills) {
+      for (final style in _seeThroughPills) {
         expect(styleOf('東京', style, emojiFontLoaded: true), isNull);
         expect(styleOf('Lena 🌸', style), isNull);
         expect(
           styleOf('Lena 🌸', style, emojiFontLoaded: true),
           equals(style.name),
         );
+      }
+    });
+
+    test('gives a solid look to text in any script', () {
+      String? styleOf(String name, InfoStickerStyle style) => _regions([
+        _captured(
+          SocialStickerData(
+            kind: SocialStickerKind.mention,
+            pubkey: 'a' * 64,
+            name: name,
+            style: style,
+          ),
+        ),
+      ]).single.style;
+
+      // The solid pill hides the sticker in the frames, whatever glyphs the
+      // creator's and the viewer's phones draw.
+      for (final style in _solidPills) {
+        expect(styleOf('東京', style), equals(style.name));
+        expect(styleOf('Lena 🌸', style), equals(style.name));
       }
     });
 

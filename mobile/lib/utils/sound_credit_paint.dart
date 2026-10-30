@@ -47,6 +47,11 @@ Size soundCreditSize(SocialStickerData data) {
   return size;
 }
 
+/// How round the corners of a sound credit for [data] are: their radius over
+/// its height at [soundCreditSize], at most half of it.
+double soundCreditRoundness(SocialStickerData data) =>
+    math.min(_radius / soundCreditSize(data).height, 0.5);
+
 /// Paints the sound credit [data] describes into [size] as it looks at
 /// [motion]; [overFrames], in its [StickerPillPalette.covering] colors.
 void paintSoundCredit(

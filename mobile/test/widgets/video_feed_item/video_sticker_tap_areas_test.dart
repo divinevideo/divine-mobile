@@ -12,7 +12,9 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/models/video_editor/info_sticker.dart';
 import 'package:openvine/utils/sticker_emoji_font.dart';
+import 'package:openvine/widgets/video_editor/info_sticker/sticker_pill_palette.dart';
 import 'package:openvine/widgets/video_editor/social_sticker/social_sticker_view.dart';
 import 'package:openvine/widgets/video_feed_item/link_sticker_sheet.dart';
 import 'package:openvine/widgets/video_feed_item/player_gesture_surface.dart';
@@ -366,15 +368,10 @@ void main() {
         );
         await pump(tester, [dark]);
 
-        final pill = tester.widget<DecoratedBox>(
-          find.descendant(
-            of: find.byType(SocialStickerView),
-            matching: find.byType(DecoratedBox),
-          ),
-        );
-
         expect(find.text('#summer'), findsOneWidget);
-        expect((pill.decoration as BoxDecoration).color, isNull);
+        // The see-through pill is in the frames already; a second one over it
+        // would come out twice as dark.
+        expect(find.byType(SocialStickerCopy), isNot(paints..rrect()));
       });
 
       testWidgets(
@@ -429,7 +426,7 @@ void main() {
         expect(opened, equals([tokyo]));
       });
 
-      testWidgets('waits for emoji font readiness on a solid look too', (
+      testWidgets('draws a solid look with an emoji before its font is in', (
         tester,
       ) async {
         final font = Completer<bool>();
@@ -446,18 +443,54 @@ void main() {
           label: 'party🎉',
         );
         await pump(tester, [party]);
-        final copiesBeforeFont = find
-            .byType(SocialStickerView)
-            .evaluate()
-            .length;
+
+        expect(find.text('#party🎉'), findsOneWidget);
         await tapAt(tester, const Offset(180, 320));
+        expect(opened, equals([party]));
+
         font.complete(true);
         await tester.pumpAndSettle();
-
-        expect(copiesBeforeFont, isZero);
         expect(find.text('#party🎉'), findsOneWidget);
-        expect(opened, equals([party]));
       });
+
+      testWidgets(
+        'draws a solid look in a script it lacks, its text in proportion',
+        (tester) async {
+          const tokyo = VideoStickerRegion(
+            kind: VideoStickerKind.hashtag,
+            target: '東京',
+            centerX: 0.5,
+            centerY: 0.5,
+            width: 0.75,
+            height: 0.125,
+            style: 'light',
+            label: '東京',
+          );
+          await pump(tester, [tokyo]);
+
+          // The pill fills the sticker's 270 by 80 area, hiding the sticker
+          // in the frames however wide this phone draws its text.
+          expect(
+            find.byType(SocialStickerCopy),
+            paints..rrect(
+              rrect: RRect.fromRectAndRadius(
+                const Rect.fromLTWH(0, 0, 270, 80),
+                const Radius.circular(40),
+              ),
+              color: StickerPillPalette.of(InfoStickerStyle.light).background,
+            ),
+          );
+          final text = find.text('#東京');
+          final drawn = tester.getRect(text);
+          final laidOut = tester.getSize(text);
+          expect(
+            drawn.width / drawn.height,
+            closeTo(laidOut.width / laidOut.height, 0.001),
+          );
+          await tapAt(tester, const Offset(180, 320));
+          expect(opened, equals([tokyo]));
+        },
+      );
 
       testWidgets('draws only the button for a sticker without its look', (
         tester,

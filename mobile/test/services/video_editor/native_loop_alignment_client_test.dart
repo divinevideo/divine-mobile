@@ -118,6 +118,7 @@ void main() {
         expect(segment.startTime, const Duration(seconds: 50));
         expect(segment.endTime, const Duration(seconds: 51));
         expect(backend.renders.single.maxFrameRate, isNull);
+        expect(backend.renders.single.preserveSourceFrameTiming, isTrue);
         expect(segment.playbackSpeed, isNull);
         expect(segment.reverseVideo, isFalse);
         expect(segment.volume, isNull);

@@ -6,12 +6,27 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_cubit.dart';
+import 'package:openvine/blocs/profile_feed/profile_feed_retry_triggers.dart';
 import 'package:openvine/l10n/l10n.dart';
+import 'package:openvine/providers/app_foreground_provider.dart';
 import 'package:openvine/providers/moderation_providers.dart';
 import 'package:openvine/providers/nostr_client_provider.dart';
+import 'package:openvine/providers/relay_providers.dart';
 import 'package:openvine/providers/repository_providers.dart';
 import 'package:openvine/providers/video_providers.dart';
 import 'package:openvine/utils/video_nostr_enrichment.dart';
+
+/// Tells every live [ProfileFeedCubit] when a failed load is worth retrying;
+/// see [profileFeedRetryTriggers].
+final profileFeedRetryTriggersProvider = Provider<Stream<void>>((ref) {
+  final nostrClient = ref.watch(nostrServiceProvider);
+  return profileFeedRetryTriggers(
+    relayStatuses: nostrClient.relayStatusStream,
+    initialRelayStatuses: nostrClient.relayStatuses,
+    connectivity: ref.watch(connectivityRelayReconnectProvider),
+    foregroundResumes: ref.watch(appForegroundResumesProvider),
+  );
+});
 
 /// Provides a [ProfileFeedCubit] for [userIdHex], keyed so it is recreated when
 /// any identity-flippable dependency changes (content/divine-host filter
@@ -46,6 +61,7 @@ class ProfileFeedScope extends ConsumerWidget {
     final videoEventService = ref.watch(videoEventServiceProvider);
     final blocklistRepository = ref.watch(contentBlocklistRepositoryProvider);
     final profilePinsRepository = ref.watch(profilePinsRepositoryProvider);
+    final retryTriggers = ref.watch(profileFeedRetryTriggersProvider);
     final enrichmentAttemptTracker = NostrTagEnrichmentAttemptTracker();
 
     return BlocProvider<ProfileFeedCubit>(
@@ -57,6 +73,7 @@ class ProfileFeedScope extends ConsumerWidget {
         videoEventService,
         blocklistRepository,
         profilePinsRepository,
+        retryTriggers,
       )),
       create: (_) => ProfileFeedCubit(
         authorPubkey: userIdHex,
@@ -70,6 +87,7 @@ class ProfileFeedScope extends ConsumerWidget {
           callerName: 'ProfileFeedCubit',
           attemptTracker: enrichmentAttemptTracker,
         ),
+        retryTriggers: retryTriggers,
       ),
       child: ProfileFeedFeedbackListeners(
         child: _BlocklistVersionForwarder(

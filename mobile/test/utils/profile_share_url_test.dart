@@ -37,7 +37,6 @@ void main() {
         final client = ShortLinkClient(
           client: transport,
           enabled: enabled,
-          authorize: (_, _) async => 'Nostr synthetic',
         );
         addTearDown(client.close);
         addTearDown(transport.close);
