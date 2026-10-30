@@ -83,22 +83,10 @@ Initial conservative acceptance limits are:
 - Matches occupy at least four cells of a 3 by 3 image grid and span at least
   35% of the image width and height.
 - Require independent support from opposite boundary strips: left and right,
-  or top and bottom. Detect corners locally in the outer 8% of the full image,
-  outside the corner detector's 8-pixel border. Each supporting strip needs
-  at least four forward/backward-consistent matches and 60% agreement within
-  one analysis pixel. The independent background fit uses these same bands.
-  Do not widen support into possible foreground to rescue a plain margin,
-  because a wider band can reach a subject. This does not establish semantic
-  background identity, and it has known limits. Coherent foreground obscuring
-  the boundaries stays ambiguous: a rigid subject filling nearly the whole
-  frame can be accepted as camera drift. Measured: one reaching the left and
-  right edges was accepted when inset 5% from the top and bottom and rejected
-  at 10%; one reaching the top and bottom was already rejected at 5%. On
-  encoded footage a plain margin within a few pixels of the band can still gain
-  support from resampling ringing. Once ringing gives a band corners, a subject moving less than the
-  one-pixel agreement tolerance can pass as camera drift: on one-off synthetic
-  encodes with a 10% plain margin, a fitted displacement of about 0.6 analysis
-  pixels was repaired and about 1.3 was declined.
+  or top and bottom. Detect corners locally in the outer 8% strips, outside
+  the tracker's 8-pixel border. Each supporting strip needs at least four
+  forward/backward-consistent matches and 60% agreement within one analysis
+  pixel. A bright moving subject must not monopolize feature selection.
 - Withhold every third consistent match from a separate fit. Require at
   least five withheld points and median prediction error at most one
   analysis pixel.

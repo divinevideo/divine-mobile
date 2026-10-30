@@ -60,20 +60,14 @@ LoopFrameMatch evidence(
 );
 
 class SceneMatcher implements LoopFrameMatcher {
-  SceneMatcher(this.poses, {this.unreliableTime, this.refusedTime});
+  SceneMatcher(this.poses, {this.unreliableTime});
   final Map<LoopFrame, LoopPose> poses;
   final Duration? unreliableTime;
-
-  /// The match at this time exists but carries no boundary support.
-  final Duration? refusedTime;
   @override
-  LoopFrameMatch? match(LoopFrame reference, LoopFrame target) {
-    if (target.time == unreliableTime) return null;
-    final pose = poses[reference]!.inverse().then(poses[target]!);
-    return target.time == refusedTime
-        ? evidence(pose, left: 0, right: 0)
-        : evidence(pose);
-  }
+  LoopFrameMatch? match(LoopFrame reference, LoopFrame target) =>
+      target.time == unreliableTime
+      ? null
+      : evidence(poses[reference]!.inverse().then(poses[target]!));
 }
 
 LoopClipInput clip(

@@ -24,8 +24,8 @@ class PveLoopFrameMatcher implements LoopFrameMatcher {
     final from = LumaPyramid.fromLuma(reference.luma, w, h);
     final to = LumaPyramid.fromLuma(target.luma, w, h);
     final points = <double>[...detectCorners(from.levels.first)];
-    // Keep support in the full-image outer 8%: widening into the subject can
-    // mistake its motion for camera drift. Each band uses a local threshold.
+    // Local quality thresholds keep a bright subject from suppressing weaker
+    // background features. These points are tracked independently of the fit.
     final strips = [
       (0.0, 0.0, w * .08, h.toDouble()),
       (w * .92, 0.0, w.toDouble(), h.toDouble()),
