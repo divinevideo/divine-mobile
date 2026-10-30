@@ -194,6 +194,23 @@ LoopFrame _oppositeEdgeSubjectFrame(
   return LoopFrame(time: time, width: width, height: height, luma: pixels);
 }
 
+void _expectCameraCancelled(
+  LoopAlignmentPlan plan,
+  List<LoopFrame> frames, {
+  double dx = 0,
+  double dy = 0,
+  double angle = 0,
+  double scale = 1,
+}) {
+  final correction = plan.clips.single;
+  final start = correction.correctionAt(frames.first.time);
+  final end = correction.correctionAt(frames.last.time);
+  expect(end.tx - start.tx, closeTo(-dx, .3));
+  expect(end.ty - start.ty, closeTo(-dy, .3));
+  expect(end.angle - start.angle, closeTo(-angle, .001));
+  expect(end.scale / start.scale, closeTo(1 / scale, .001));
+}
+
 LoopFrame _repeatedFrame(int width, int height, double shift) => LoopFrame(
   time: Duration.zero,
   width: width,
@@ -425,7 +442,7 @@ void main() {
         limits: const LoopAlignmentLimits(),
       );
       expect(plan, isNotNull);
-      expect(plan!.zoom, inInclusiveRange(1, 1.08));
+      _expectCameraCancelled(plan!, frames, dx: 2);
     });
     for (final (width, height) in [(180, 320), (320, 180)]) {
       for (final (horizontal, vertical) in [
@@ -531,9 +548,14 @@ void main() {
       expect(match.boundaryModelError, greaterThan(.5));
     });
     for (final (width, height) in [(180, 320), (320, 180)]) {
-      for (final (dx, angle, scale) in [(2.0, 0.0, 1.0), (0.0, .01, 1.01)]) {
+      for (final (dx, dy, angle, scale) in [
+        (2.0, 0.0, 0.0, 1.0),
+        (0.0, 2.0, 0.0, 1.0),
+        (0.0, 0.0, .01, 1.01),
+      ]) {
         test(
-          'plans supported camera motion $dx/$angle/$scale at $width x $height',
+          'plans supported camera motion $dx/$dy/$angle/$scale '
+          'at $width x $height',
           () {
             final frames = [
               for (var i = 0; i < 90; i++)
@@ -541,6 +563,7 @@ void main() {
                   width,
                   height,
                   dx: dx * i / 89,
+                  dy: dy * i / 89,
                   angle: angle * i / 89,
                   scale: math.pow(scale, i / 89).toDouble(),
                   time: Duration(microseconds: i * 33333),
@@ -568,12 +591,14 @@ void main() {
             );
             expect(plan, isNotNull);
             expect(plan!.zoom, inInclusiveRange(1, 1.08));
-            final correction = plan.clips.single;
-            final start = correction.correctionAt(frames.first.time);
-            final end = correction.correctionAt(frames.last.time);
-            expect(end.tx - start.tx, closeTo(-dx, .3));
-            expect(end.angle - start.angle, closeTo(-angle, .001));
-            expect(end.scale / start.scale, closeTo(1 / scale, .001));
+            _expectCameraCancelled(
+              plan,
+              frames,
+              dx: dx,
+              dy: dy,
+              angle: angle,
+              scale: scale,
+            );
           },
         );
       }
