@@ -52,22 +52,36 @@ class CameraMinorConsentRecorder implements MinorConsentRecorder {
 
   final CameraService _camera;
   bool _disposed = false;
+  Future<void>? _disposal;
+  final _initializations = <Future<void>>{};
   final _lifecycleOperations = <Future<void>>{};
 
   @override
   void Function(String? path)? onAutoStopped;
 
   @override
-  Future<void> initialize() => _camera.initialize();
+  Future<void> initialize() async {
+    if (_disposed) return;
+    final operation = _camera.initialize();
+    _initializations.add(operation);
+    try {
+      await operation;
+    } finally {
+      _initializations.remove(operation);
+    }
+  }
 
   @override
   Future<bool> start({
     required Duration maxDuration,
     required String outputDirectory,
-  }) => _camera.startRecording(
-    maxDuration: maxDuration,
-    outputDirectory: outputDirectory,
-  );
+  }) async {
+    if (_disposed) return false;
+    return _camera.startRecording(
+      maxDuration: maxDuration,
+      outputDirectory: outputDirectory,
+    );
+  }
 
   @override
   Future<String?> stop() async {
@@ -88,11 +102,13 @@ class CameraMinorConsentRecorder implements MinorConsentRecorder {
   }
 
   @override
-  Future<void> dispose() async {
-    if (_disposed) return;
+  Future<void> dispose() => _disposal ??= _dispose();
+
+  Future<void> _dispose() async {
     _disposed = true;
     try {
-      await Future.wait(_lifecycleOperations.toList());
+      // A late initialization can acquire the camera after an early release.
+      await Future.wait([..._initializations, ..._lifecycleOperations]);
     } finally {
       await _camera.dispose();
     }
