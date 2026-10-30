@@ -209,7 +209,7 @@ void main() {
         await client.finish('a');
         final logs = (await LogCaptureService().getAllLogsAsText()).join('\n');
         expect(logs, contains('Loop analysis:'));
-        expect(logs, contains('Loop output inspection:'));
+        expect(logs, contains('Loop output inspection: mediaCovered='));
         expect(logs, isNot(contains('/source.mp4')));
         expect(logs, isNot(contains('rev-7c41e9')));
       },

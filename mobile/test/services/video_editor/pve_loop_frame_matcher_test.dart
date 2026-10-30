@@ -40,7 +40,7 @@ LoopFrame _frame(
               sy > height * (1 - plainHorizontalMargin))) {
         value = 100;
       }
-      if (stationaryStrip && x > 16 && x < 22) {
+      if (stationaryStrip && x > width * .09 && x < width * .12) {
         value = 160 + 40 * math.sin((x - 1) * .7) * math.cos((y + 1) * .6);
       }
       if (foreground != 0 &&
@@ -386,64 +386,77 @@ void main() {
         );
       }
     }
-    test('a stationary arm in the wider ring preserves narrow background support', () {
-      final match = PveLoopFrameMatcher().match(
-        _frame(180, 320, plainHorizontalMargin: .13, stationaryStrip: true),
-        _frame(
-          180,
-          320,
-          dx: 2,
-          plainHorizontalMargin: .13,
-          stationaryStrip: true,
-        ),
-      );
-      expect(match, isNotNull);
-      expect(match!.pose.tx, closeTo(2, .3));
-      expect(
-        const LoopAlignmentLimits().acceptsMatch(match, 180, 320),
-        isTrue,
-        reason:
-            'L${match.left.agreeing}/${match.left.retained} R${match.right.agreeing}/${match.right.retained} '
-            'T${match.top.agreeing}/${match.top.retained} B${match.bottom.agreeing}/${match.bottom.retained} '
-            'boundary=${match.boundaryModelError} withheld=${match.withheldMedianError} '
-            'global=${match.consistentCount}/${match.retainedCount}',
-      );
-    });
-    test('plans real camera drift behind an arm in the wider ring', () {
-      final frames = [
-        for (var i = 0; i < 90; i++)
-          _frame(
-            180,
-            320,
-            dx: 2 * i / 89,
-            time: Duration(microseconds: i * 33333),
-            plainHorizontalMargin: .13,
-            stationaryStrip: true,
-          ),
-      ];
-      final plan = const LoopAlignmentPlanner().plan(
-        input: LoopRepairInput(
-          clips: [
-            const LoopClipInput(
-              clipId: 'camera-with-occluding-arm',
-              path: '/synthetic.mp4',
-              sourceStart: Duration.zero,
-              sourceEnd: Duration(microseconds: 90 * 33333),
-              speed: 1,
-              width: 180,
-              height: 320,
+    for (final (width, height) in [(180, 320), (320, 180)]) {
+      test(
+        'a stationary arm just past the left band preserves narrow background support at $width x $height',
+        () {
+          final match = PveLoopFrameMatcher().match(
+            _frame(
+              width,
+              height,
+              plainHorizontalMargin: .13,
+              stationaryStrip: true,
             ),
-          ],
-          revision: 'synthetic-drift-with-arm',
-        ),
-        firstFrames: frames,
-        lastFrames: frames,
-        matcher: PveLoopFrameMatcher(),
-        limits: const LoopAlignmentLimits(),
+            _frame(
+              width,
+              height,
+              dx: 2,
+              plainHorizontalMargin: .13,
+              stationaryStrip: true,
+            ),
+          );
+          expect(match, isNotNull);
+          expect(match!.pose.tx, closeTo(2, .3));
+          expect(
+            const LoopAlignmentLimits().acceptsMatch(match, width, height),
+            isTrue,
+            reason:
+                'L${match.left.agreeing}/${match.left.retained} R${match.right.agreeing}/${match.right.retained} '
+                'T${match.top.agreeing}/${match.top.retained} B${match.bottom.agreeing}/${match.bottom.retained} '
+                'boundary=${match.boundaryModelError} withheld=${match.withheldMedianError} '
+                'global=${match.consistentCount}/${match.retainedCount}',
+          );
+        },
       );
-      expect(plan, isNotNull);
-      _expectCameraCancelled(plan!, frames, dx: 2);
-    });
+      test(
+        'plans real camera drift behind an arm just past the left band at $width x $height',
+        () {
+          final frames = [
+            for (var i = 0; i < 90; i++)
+              _frame(
+                width,
+                height,
+                dx: 2 * i / 89,
+                time: Duration(microseconds: i * 33333),
+                plainHorizontalMargin: .13,
+                stationaryStrip: true,
+              ),
+          ];
+          final plan = const LoopAlignmentPlanner().plan(
+            input: LoopRepairInput(
+              clips: [
+                LoopClipInput(
+                  clipId: 'camera-with-occluding-arm',
+                  path: '/synthetic.mp4',
+                  sourceStart: Duration.zero,
+                  sourceEnd: const Duration(microseconds: 90 * 33333),
+                  speed: 1,
+                  width: width,
+                  height: height,
+                ),
+              ],
+              revision: 'synthetic-drift-with-arm',
+            ),
+            firstFrames: frames,
+            lastFrames: frames,
+            matcher: PveLoopFrameMatcher(),
+            limits: const LoopAlignmentLimits(),
+          );
+          expect(plan, isNotNull);
+          _expectCameraCancelled(plan!, frames, dx: 2);
+        },
+      );
+    }
     for (final (width, height) in [(180, 320), (320, 180)]) {
       for (final (horizontal, vertical) in [
         (false, false),
