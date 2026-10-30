@@ -25,6 +25,7 @@ import 'package:openvine/models/stop_motion_clip_frame.dart';
 import 'package:openvine/models/video_editor/clip_chroma_key.dart';
 import 'package:openvine/models/video_editor/editor_video_effect.dart';
 import 'package:openvine/models/video_editor/video_editor_provider_state.dart';
+import 'package:openvine/models/video_reply_context.dart';
 import 'package:openvine/providers/app_providers.dart';
 import 'package:openvine/providers/clip_manager_provider.dart';
 import 'package:openvine/providers/database_provider.dart';
@@ -33,6 +34,7 @@ import 'package:openvine/providers/service_providers.dart';
 import 'package:openvine/providers/shared_preferences_provider.dart';
 import 'package:openvine/providers/video_editor_provider.dart';
 import 'package:openvine/providers/video_publish_provider.dart';
+import 'package:openvine/providers/video_reply_context_provider.dart';
 import 'package:openvine/services/c2pa_signing_service.dart';
 import 'package:openvine/services/draft_storage_service.dart';
 import 'package:openvine/services/native_proofmode_service.dart';
@@ -3039,6 +3041,70 @@ void main() {
           );
         },
       );
+
+      group('reply context', () {
+        const replyContext = VideoReplyContext(
+          rootEventId: '1111111111111111111111111111111111111111111111111111111111111111',
+          rootEventKind: 34236,
+          rootAuthorPubkey: '2222222222222222222222222222222222222222222222222222222222222222',
+          parentCommentId: '3333333333333333333333333333333333333333333333333333333333333333',
+          parentAuthorPubkey: '4444444444444444444444444444444444444444444444444444444444444444',
+        );
+
+        DivineVideoDraft draftWith({VideoReplyContext? videoReplyContext}) =>
+            DivineVideoDraft.create(
+              id: 'draft-1',
+              clips: [
+                DivineVideoClip(
+                  id: 'present',
+                  video: EditorVideo.file(clipVideoPath),
+                  thumbnailPath: clipThumbnailPath,
+                  duration: const Duration(seconds: 3),
+                  recordedAt: DateTime.now(),
+                  targetAspectRatio: .vertical,
+                  originalAspectRatio: 9 / 16,
+                ),
+              ],
+              title: 'Title',
+              description: '',
+              hashtags: const {},
+              selectedApproach: 'video',
+              videoReplyContext: videoReplyContext,
+            );
+
+        test('a reopened reply draft publishes as a reply again', () async {
+          when(
+            () => mockDraftStorage.getDraftById('draft-1'),
+          ).thenAnswer((_) async => draftWith(videoReplyContext: replyContext));
+
+          final notifier = container.read(videoEditorProvider.notifier);
+          final result = await notifier.restoreDraft('draft-1');
+
+          expect(result, isTrue);
+          expect(container.read(videoReplyContextProvider), replyContext);
+          expect(notifier.getActiveDraft().videoReplyContext, replyContext);
+        });
+
+        test(
+          'a draft without a reply target drops the context left by an '
+          'abandoned reply',
+          () async {
+            container
+                .read(videoReplyContextProvider.notifier)
+                .set(replyContext);
+            when(
+              () => mockDraftStorage.getDraftById('draft-1'),
+            ).thenAnswer((_) async => draftWith());
+
+            final notifier = container.read(videoEditorProvider.notifier);
+            final result = await notifier.restoreDraft('draft-1');
+
+            expect(result, isTrue);
+            expect(container.read(videoReplyContextProvider), isNull);
+            expect(notifier.getActiveDraft().videoReplyContext, isNull);
+          },
+        );
+      });
 
       test('restores hashtags under the hashtag rules', () async {
         final draft = DivineVideoDraft.create(
