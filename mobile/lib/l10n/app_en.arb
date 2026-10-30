@@ -11989,10 +11989,6 @@
   "@challengeReview": {
     "description": "Native challenge participation test-build flow."
   },
-  "challengeAgree": "Agree and submit",
-  "@challengeAgree": {
-    "description": "Native challenge participation test-build flow."
-  },
   "challengeWithdraw": "Withdraw entry",
   "@challengeWithdraw": {
     "description": "Native challenge participation test-build flow."
@@ -12020,11 +12016,6 @@
   "challengeRules": "Current rules",
   "@challengeRules": {
     "description": "Native challenge participation test-build flow."
-  },
-  "challengeDeadline": "Deadline (UTC): {deadline}",
-  "@challengeDeadline": {
-    "description": "Challenge deadline, explicitly in UTC; deadline is formatted in the app locale.",
-    "placeholders": {"deadline": {"type": "String"}}
   },
   "challengeOwner": "Signing account",
   "@challengeOwner": {
@@ -12068,10 +12059,6 @@
   },
   "challengeEntries": "Entries",
   "@challengeEntries": {
-    "description": "Native challenge participation test-build flow."
-  },
-  "challengeResults": "Results",
-  "@challengeResults": {
     "description": "Native challenge participation test-build flow."
   },
   "challengeWinnerUnavailable": "Selected entry unavailable",
@@ -12145,5 +12132,17 @@
   "challengeDetails": "Technical details",
   "@challengeDetails": {
     "description": "Challenge entry review challengeDetails"
-  }
+  },
+  "challengeLocalDeadline": "Deadline: {deadline} ({timeZone})",
+  "@challengeLocalDeadline": {"description": "Challenge deadline in the viewer display timezone, including its actual zone label.", "placeholders": {"deadline": {"type": "String"}, "timeZone": {"type": "String"}}},
+  "challengeEnter": "Enter challenge",
+  "challengeEnterVideo": "Enter this video",
+  "challengeOrganizer": "Organizer",
+  "challengeAllRules": "Show all rules",
+  "challengeWinners": "Winners",
+  "challengeAwaitingResults": "Awaiting results",
+  "challengeOrganizerTimezone": "Organizer timezone: {timeZone}",
+  "@challengeOrganizerTimezone": {"placeholders": {"timeZone": {"type": "String"}}},
+  "challengeOrganizerTime": "Organizer time: {deadline} ({timeZone})",
+  "@challengeOrganizerTime": {"placeholders": {"deadline": {"type": "String"}, "timeZone": {"type": "String"}}}
 }

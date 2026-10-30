@@ -15228,9 +15228,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get challengeReview => 'Review your entry';
 
   @override
-  String get challengeAgree => 'Agree and submit';
-
-  @override
   String get challengeWithdraw => 'Withdraw entry';
 
   @override
@@ -15251,11 +15248,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get challengeRules => 'Current rules';
-
-  @override
-  String challengeDeadline(String deadline) {
-    return 'Deadline (UTC): $deadline';
-  }
 
   @override
   String get challengeOwner => 'Signing account';
@@ -15289,9 +15281,6 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get challengeEntries => 'Entries';
-
-  @override
-  String get challengeResults => 'Results';
 
   @override
   String get challengeWinnerUnavailable => 'Selected entry unavailable';
@@ -15354,4 +15343,37 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get challengeDetails => 'Technical details';
+
+  @override
+  String challengeLocalDeadline(String deadline, String timeZone) {
+    return 'Deadline: $deadline ($timeZone)';
+  }
+
+  @override
+  String get challengeEnter => 'Enter challenge';
+
+  @override
+  String get challengeEnterVideo => 'Enter this video';
+
+  @override
+  String get challengeOrganizer => 'Organizer';
+
+  @override
+  String get challengeAllRules => 'Show all rules';
+
+  @override
+  String get challengeWinners => 'Winners';
+
+  @override
+  String get challengeAwaitingResults => 'Awaiting results';
+
+  @override
+  String challengeOrganizerTimezone(String timeZone) {
+    return 'Organizer timezone: $timeZone';
+  }
+
+  @override
+  String challengeOrganizerTime(String deadline, String timeZone) {
+    return 'Organizer time: $deadline ($timeZone)';
+  }
 }
