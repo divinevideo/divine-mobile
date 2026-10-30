@@ -1,4 +1,5 @@
 import 'package:divine_video_player/divine_video_player.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -390,6 +391,16 @@ void main() {
         expect(a.hashCode, isNot(equals(b.hashCode)));
       });
 
+      test('states with different texture crops are not equal', () {
+        const a = DivineVideoPlayerState();
+        const b = DivineVideoPlayerState(
+          textureCrop: Rect.fromLTRB(0, 0, 1080 / 1088, 1),
+        );
+
+        expect(a, isNot(equals(b)));
+        expect(a.hashCode, isNot(equals(b.hashCode)));
+      });
+
       test('states with different pixel aspect ratios are not equal', () {
         const a = DivineVideoPlayerState();
         const b = DivineVideoPlayerState(pixelWidthHeightRatio: 9 / 16);
@@ -458,6 +469,14 @@ void main() {
         expect(original.rotationDegrees, isZero);
       });
 
+      test('overrides textureCrop when specified', () {
+        const crop = Rect.fromLTRB(0, 0, 1080 / 1088, 1);
+        final copy = const DivineVideoPlayerState().copyWith(textureCrop: crop);
+
+        expect(copy.textureCrop, equals(crop));
+        expect(copy.copyWith().textureCrop, equals(crop));
+      });
+
       test('overrides pixelWidthHeightRatio when specified', () {
         const original = DivineVideoPlayerState();
         final copy = original.copyWith(pixelWidthHeightRatio: 9 / 16);
@@ -524,6 +543,7 @@ void main() {
           'videoHeight': 1080,
           'pixelWidthHeightRatio': 0.75,
           'rotationDegrees': 90,
+          'textureCrop': [0.0, 0.0, 1080 / 1088, 1.0],
         });
 
         expect(state.status, equals(PlaybackStatus.playing));
@@ -540,6 +560,10 @@ void main() {
         expect(state.videoHeight, equals(1080));
         expect(state.pixelWidthHeightRatio, equals(0.75));
         expect(state.rotationDegrees, equals(90));
+        expect(
+          state.textureCrop,
+          equals(const Rect.fromLTRB(0, 0, 1080 / 1088, 1)),
+        );
       });
 
       test('uses defaults for missing keys', () {
@@ -559,6 +583,7 @@ void main() {
         expect(state.videoHeight, isZero);
         expect(state.pixelWidthHeightRatio, equals(1.0));
         expect(state.rotationDegrees, isZero);
+        expect(state.textureCrop, isNull);
       });
 
       test('parses all status values', () {
@@ -636,6 +661,15 @@ void main() {
         expect(string, contains('1920x1080'));
         expect(string, contains('pixelRatio: 0.75'));
         expect(string, contains('rotation: 90'));
+        expect(string, isNot(contains('textureCrop')));
+      });
+
+      test('includes the texture crop when present', () {
+        const state = DivineVideoPlayerState(
+          textureCrop: Rect.fromLTRB(0, 0, 0.5, 1),
+        );
+
+        expect(state.toString(), contains('textureCrop: Rect.fromLTRB('));
       });
 
       test('includes error message when present', () {

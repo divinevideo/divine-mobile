@@ -65,6 +65,7 @@ class DivineVideoPlayerState {
     this.videoHeight = 0,
     this.pixelWidthHeightRatio = 1.0,
     this.rotationDegrees = 0,
+    this.textureCrop,
     this.errorMessage,
     this.errorCode,
   });
@@ -128,6 +129,16 @@ class DivineVideoPlayerState {
   /// native side sends 0 and no [RotatedBox] is needed.
   final int rotationDegrees;
 
+  /// The part of the native texture that holds the picture, as fractions of
+  /// the texture's width and height, or `null` when the texture shows the
+  /// picture alone.
+  ///
+  /// Android's `SurfaceProducer` hands Flutter the decoder's whole buffer,
+  /// which can be larger than the picture: H.264 codes a 1080-pixel side as
+  /// 1088 and crops the rest off. `DivineVideoPlayer` then draws only this
+  /// part. It is in the texture's own orientation, before [rotationDegrees].
+  final Rect? textureCrop;
+
   /// The native error message when [status] is [PlaybackStatus.error],
   /// `null` otherwise.
   final String? errorMessage;
@@ -178,6 +189,7 @@ class DivineVideoPlayerState {
     int? videoHeight,
     double? pixelWidthHeightRatio,
     int? rotationDegrees,
+    Rect? textureCrop,
     String? errorMessage,
     NativePlayerErrorCode? errorCode,
     bool clearError = false,
@@ -198,6 +210,7 @@ class DivineVideoPlayerState {
       pixelWidthHeightRatio:
           pixelWidthHeightRatio ?? this.pixelWidthHeightRatio,
       rotationDegrees: rotationDegrees ?? this.rotationDegrees,
+      textureCrop: textureCrop ?? this.textureCrop,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       errorCode: clearError ? null : (errorCode ?? this.errorCode),
     );
@@ -225,12 +238,25 @@ class DivineVideoPlayerState {
       pixelWidthHeightRatio:
           (map['pixelWidthHeightRatio'] as num?)?.toDouble() ?? 1.0,
       rotationDegrees: (map['rotationDegrees'] as int?) ?? 0,
+      textureCrop: _parseTextureCrop(map['textureCrop']),
       errorMessage: map['errorMessage'] as String?,
       errorCode: rawErrorCode is String
           ? NativePlayerErrorCode.fromString(rawErrorCode)
           : null,
     );
   }
+
+  /// Reads the `[left, top, right, bottom]` fractions Android sends.
+  static Rect? _parseTextureCrop(Object? value) => switch (value) {
+    [final num left, final num top, final num right, final num bottom] =>
+      Rect.fromLTRB(
+        left.toDouble(),
+        top.toDouble(),
+        right.toDouble(),
+        bottom.toDouble(),
+      ),
+    _ => null,
+  };
 
   static PlaybackStatus _parseStatus(String value) {
     return switch (value) {
@@ -263,6 +289,7 @@ class DivineVideoPlayerState {
           videoHeight == other.videoHeight &&
           pixelWidthHeightRatio == other.pixelWidthHeightRatio &&
           rotationDegrees == other.rotationDegrees &&
+          textureCrop == other.textureCrop &&
           errorMessage == other.errorMessage &&
           errorCode == other.errorCode;
 
@@ -282,6 +309,7 @@ class DivineVideoPlayerState {
     videoHeight,
     pixelWidthHeightRatio,
     rotationDegrees,
+    textureCrop,
     errorMessage,
     errorCode,
   );
@@ -294,6 +322,7 @@ class DivineVideoPlayerState {
       'size: ${videoWidth}x$videoHeight, '
       'pixelRatio: $pixelWidthHeightRatio, '
       'firstFrame: $isFirstFrameRendered, '
+      '${textureCrop != null ? 'textureCrop: $textureCrop, ' : ''}'
       '${errorCode != null ? 'errorCode: $errorCode, ' : ''}'
       '${errorMessage != null ? 'error: $errorMessage, ' : ''}'
       'rotation: $rotationDegrees)';
