@@ -11,6 +11,7 @@ import 'package:content_blocklist_repository/content_blocklist_repository.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/foundation.dart';
 import 'package:models/models.dart';
+import 'package:openvine/blocs/close_guard.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_enrichment_merge.dart';
 import 'package:openvine/blocs/profile_feed/profile_feed_pin_overlay.dart';
 import 'package:openvine/blocs/profile_feed/profile_video_metadata_cache.dart';
@@ -64,6 +65,7 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
     required ContentBlocklistRepository blocklistRepository,
     required ProfilePinsRepository profilePinsRepository,
     required EnrichVideos enrichVideos,
+    Stream<void> retryTriggers = const Stream<void>.empty(),
   }) : _authorPubkey = authorPubkey,
        _videosRepository = videosRepository,
        _videoEventService = videoEventService,
@@ -74,6 +76,7 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
     on<ProfileFeedStarted>(_onStarted, transformer: sequential());
     on<ProfileFeedLoadMoreRequested>(_onLoadMore, transformer: droppable());
     on<ProfileFeedRefreshRequested>(_onRefresh, transformer: restartable());
+    on<ProfileFeedRetryRequested>(_onRetry, transformer: droppable());
     on<ProfileFeedFiltersChanged>(_onFiltersChanged, transformer: sequential());
     // Audited: the cubit listens to the app-wide [VideoEventService], so a
     // streaming relay — including this author's whole backlog, delivered as
@@ -89,10 +92,6 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
       transformer: _auditSequential(relaySnapshotAudit),
     );
     on<ProfileFeedVideoUpdated>(_onVideoUpdated, transformer: restartable());
-    on<ProfileFeedInitialLoadTimedOut>(
-      _onInitialLoadTimedOut,
-      transformer: sequential(),
-    );
     on<ProfileFeedEnrichmentReady>(
       _onEnrichmentReady,
       transformer: sequential(),
@@ -108,13 +107,11 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
     );
 
     _registerRealtimeListeners();
+    _retryTriggerSubscription = retryTriggers.listen(
+      (_) => addIfOpen(const ProfileFeedRetryRequested()),
+    );
     add(const ProfileFeedStarted());
   }
-
-  /// Hard ceiling on how long [ProfileFeedState.isInitialLoad] stays true if no
-  /// source settles, so the loading spinner can't strand (#4164).
-  @visibleForTesting
-  static Duration initialLoadHardTimeout = const Duration(seconds: 10);
 
   /// Audit window for coalescing [ProfileFeedRelaySnapshotChanged] bursts. The
   /// cubit listens to the app-wide [VideoEventService], so unrelated feeds'
@@ -159,12 +156,17 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
   /// copy in [_unfilteredVideos] always wins over one held here.
   final Map<String, VideoEvent> _resolvedPinnedVideos = {};
 
-  /// True while a cold-load fetch is in flight (timer-coupled lifecycle
-  /// bookkeeping; the observable result is [ProfileFeedState.isInitialLoad]).
+  /// True while a cold-load fetch is in flight (lifecycle bookkeeping; the
+  /// observable result is [ProfileFeedState.isInitialLoad]). Only the load
+  /// settling clears it: every REST call has its own time budget, so a fixed
+  /// ceiling here would only show "No videos yet" before REST answers (#9773).
   bool _initialLoadPending = false;
-  Timer? _initialLoadTimer;
   Timer? _snapshotPersistTimer;
   ProfileVideoOffsetSnapshot? _pendingSnapshot;
+
+  /// Signals that a failed load is worth retrying now (a relay reconnecting,
+  /// the network or the app coming back); see [ProfileFeedRetryRequested].
+  late final StreamSubscription<void> _retryTriggerSubscription;
 
   VoidCallback? _removeChangeListener;
   VoidCallback? _unregisterUpdate;
@@ -369,6 +371,16 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
     }
   }
 
+  Future<void> _onRetry(
+    ProfileFeedRetryRequested event,
+    Emitter<ProfileFeedState> emit,
+  ) async {
+    if (state.status != ProfileFeedStatus.failure) return;
+    // The cold load's pin fetch and backfill failed along with it.
+    unawaited(_revalidatePins(null));
+    await _doRefresh(emit, backfillInitialPage: true);
+  }
+
   Future<void> _onVideoUpdated(
     ProfileFeedVideoUpdated event,
     Emitter<ProfileFeedState> emit,
@@ -381,7 +393,6 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
     emit(
       state.copyWith(
         isRefreshing: true,
-        isInitialLoad: false,
         isFetchingTotalCount: true,
       ),
     );
@@ -430,6 +441,7 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
           status: state.videos.isEmpty
               ? ProfileFeedStatus.failure
               : ProfileFeedStatus.ready,
+          isInitialLoad: false,
           isRefreshing: false,
           isFetchingTotalCount: false,
         ),
@@ -696,6 +708,7 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
     _unfilteredVideos = merged;
     emit(
       state.copyWith(
+        status: _statusShowing(filtered),
         videos: filtered,
         hasMoreContent: state.totalVideoCount != null
             ? state.hasMoreContent
@@ -715,8 +728,17 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
     // Re-filter in place over the cached source — no re-fetch, no re-key
     // (#4782). Equatable suppresses the emit when the filtered list is
     // unchanged.
-    emit(state.copyWith(videos: _applyFeedFilters(_unfilteredVideos)));
+    final videos = _applyFeedFilters(_unfilteredVideos);
+    emit(state.copyWith(status: _statusShowing(videos), videos: videos));
   }
+
+  /// The status to emit alongside [videos]: [ProfileFeedStatus.failure] means
+  /// a failed cold load left nothing to show, so videos arriving by another
+  /// path end it.
+  ProfileFeedStatus _statusShowing(List<VideoEvent> videos) =>
+      state.status == ProfileFeedStatus.failure && videos.isNotEmpty
+      ? ProfileFeedStatus.ready
+      : state.status;
 
   // ---------------------------------------------------------------------------
   // Pinned videos (kind 10001)
@@ -1019,31 +1041,9 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
   // Initial-load spinner machine (#4164)
   // ---------------------------------------------------------------------------
 
-  void _onInitialLoadTimedOut(
-    ProfileFeedInitialLoadTimedOut event,
-    Emitter<ProfileFeedState> emit,
-  ) {
-    if (!_initialLoadPending) return;
-    _initialLoadPending = false;
-    _initialLoadTimer = null;
-    if (state.isInitialLoad) {
-      emit(state.copyWith(isInitialLoad: false));
-    }
-  }
+  void _beginInitialLoadTracking() => _initialLoadPending = true;
 
-  void _beginInitialLoadTracking() {
-    _initialLoadPending = true;
-    _initialLoadTimer?.cancel();
-    _initialLoadTimer = Timer(initialLoadHardTimeout, () {
-      if (!isClosed) add(const ProfileFeedInitialLoadTimedOut());
-    });
-  }
-
-  void _completeInitialLoad() {
-    _initialLoadPending = false;
-    _initialLoadTimer?.cancel();
-    _initialLoadTimer = null;
-  }
+  void _completeInitialLoad() => _initialLoadPending = false;
 
   bool _shouldKeepInitialLoad({required bool videosEmpty}) =>
       _initialLoadPending && videosEmpty;
@@ -1146,7 +1146,7 @@ class ProfileFeedCubit extends Bloc<ProfileFeedEvent, ProfileFeedState> {
   Future<void> close() async {
     _removeChangeListener?.call();
     _unregisterUpdate?.call();
-    _initialLoadTimer?.cancel();
+    unawaited(_retryTriggerSubscription.cancel());
     _flushSnapshot();
     try {
       await _videoEventService.unsubscribeFromUserVideos(_authorPubkey);

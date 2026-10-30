@@ -117,6 +117,13 @@ class ProfileFeedState extends Equatable {
   /// How many videos the owner may pin.
   static const int maxPinnedVideos = ProfilePinsRepository.maxPins;
 
+  /// Whether the Videos tab should show its loading skeleton rather than
+  /// videos, the empty state or the load error.
+  bool get isLoadingVideos => switch (status) {
+    ProfileFeedStatus.initial || ProfileFeedStatus.loading => true,
+    ProfileFeedStatus.ready || ProfileFeedStatus.failure => isInitialLoad,
+  };
+
   /// Whether the owner may pin one more video.
   bool get canPinMore => pinnedCoordinates.length < maxPinnedVideos;
 
