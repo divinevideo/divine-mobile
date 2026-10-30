@@ -15,6 +15,7 @@ import 'package:openvine/l10n/localized_time_formatter.dart';
 import 'package:openvine/mixins/scroll_pagination_mixin.dart';
 import 'package:openvine/screens/video_detail_screen.dart';
 import 'package:openvine/widgets/linkified_text/linkified_text_widgets.dart';
+import 'package:openvine/widgets/profile/profile_masonry_grid.dart';
 import 'package:openvine/widgets/profile/profile_tab_bottom_inset_sliver.dart';
 import 'package:openvine/widgets/profile/profile_tab_empty_state.dart';
 import 'package:openvine/widgets/profile/profile_tab_error_state.dart';
@@ -110,21 +111,15 @@ class _ProfileCommentsGridState extends State<ProfileCommentsGrid>
               ),
               SliverPadding(
                 padding: const EdgeInsets.all(2),
-                sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 2,
-                    mainAxisSpacing: 2,
+                sliver: ProfileMasonryGrid(
+                  childCount: state.videoReplies.length,
+                  aspectRatioOf: (index) => profileTileAspectRatio(
+                    state.videoReplies[index].videoDimensions,
                   ),
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    if (index >= state.videoReplies.length) {
-                      return const SizedBox.shrink();
-                    }
-                    return _VideoReplyTile(
-                      comment: state.videoReplies[index],
-                      index: index,
-                    );
-                  }, childCount: state.videoReplies.length),
+                  itemBuilder: (context, index) => _VideoReplyTile(
+                    comment: state.videoReplies[index],
+                    index: index,
+                  ),
                 ),
               ),
             ],
