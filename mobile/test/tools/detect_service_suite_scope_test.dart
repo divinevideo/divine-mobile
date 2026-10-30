@@ -163,6 +163,7 @@ fi
         'mobile/linux/CMakeLists.txt',
         '.github/workflows/mobile_service_integration_tests.yaml',
         'mobile/scripts/ci/detect_service_suite_scope.sh',
+        'mobile/scripts/ci/write_service_suite_bundle.sh',
         'mobile/scripts/check_service_suite_coverage.sh',
       ]) {
         expectScope(

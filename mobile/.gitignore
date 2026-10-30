@@ -85,6 +85,7 @@ test*.mp4
 test/**/failures/
 packages/*/test/**/failures/
 integration_test/test_bundle.dart
+integration_test/service_suites_bundle_test.dart
 test/.test_optimizer.dart
 
 # fastlane screenshot pipeline artifacts (generated per run)
