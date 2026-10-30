@@ -3,6 +3,8 @@
 
 import 'dart:async';
 
+import 'package:divine_camera/divine_camera.dart'
+    show DivineCameraLens, DivineVideoQuality, DivineVideoStabilizationMode;
 import 'package:flutter/widgets.dart' show AppLifecycleState;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:openvine/services/minor_consent_recorder.dart';
@@ -22,6 +24,42 @@ class _FakeCameraService extends MockCameraService {
   String? lastOutputDirectory;
   final lifecycleStates = <AppLifecycleState>[];
   Completer<void>? lifecycleGate;
+  Completer<void>? initializationGate;
+  Completer<void>? disposalGate;
+  Object? initializationFailure;
+  int initializationCount = 0;
+  int disposalCount = 0;
+
+  @override
+  Future<void> initialize({
+    DivineVideoQuality videoQuality = DivineVideoQuality.fhd,
+    DivineCameraLens initialLens = DivineCameraLens.front,
+    bool enableAutoLensSwitch = false,
+    bool preferUnprocessedAudio = false,
+    DivineVideoStabilizationMode videoStabilizationMode =
+        DivineVideoStabilizationMode.off,
+    bool mirrorFrontCameraOutput = false,
+  }) async {
+    initializationCount++;
+    await initializationGate?.future;
+    await super.initialize(
+      videoQuality: videoQuality,
+      initialLens: initialLens,
+      enableAutoLensSwitch: enableAutoLensSwitch,
+      preferUnprocessedAudio: preferUnprocessedAudio,
+      videoStabilizationMode: videoStabilizationMode,
+      mirrorFrontCameraOutput: mirrorFrontCameraOutput,
+    );
+    final error = initializationFailure;
+    if (error != null) Error.throwWithStackTrace(error, StackTrace.current);
+  }
+
+  @override
+  Future<void> dispose() async {
+    disposalCount++;
+    await disposalGate?.future;
+    await super.dispose();
+  }
 
   @override
   Future<void> handleAppLifecycleState(AppLifecycleState state) async {
@@ -106,6 +144,93 @@ void main() {
 
       await recorder.dispose();
 
+      expect(camera.isInitialized, isFalse);
+    });
+
+    test(
+      'dispose releases a camera whose initialization was pending',
+      () async {
+        final camera = _FakeCameraService()
+          ..initializationGate = Completer<void>();
+        final recorder = CameraMinorConsentRecorder(camera: camera);
+        final initializing = recorder.initialize();
+        final disposing = recorder.dispose();
+        await pumpEventQueue();
+
+        final releasesBeforeInitialization = camera.disposalCount;
+        camera.initializationGate!.complete();
+        await Future.wait([initializing, disposing]);
+        await recorder.dispose();
+
+        expect(camera.initializationCount, 1);
+        expect(camera.disposalCount, 1);
+        expect(camera.isInitialized, isFalse);
+        expect(releasesBeforeInitialization, 0);
+      },
+    );
+
+    test(
+      'an initialization failure still releases the eventual camera',
+      () async {
+        final failure = StateError('initialization failed after allocation');
+        final camera = _FakeCameraService()
+          ..initializationGate = Completer<void>()
+          ..initializationFailure = failure;
+        final recorder = CameraMinorConsentRecorder(camera: camera);
+        final initializing = expectLater(
+          recorder.initialize(),
+          throwsA(failure),
+        );
+        final disposing = recorder.dispose();
+        // Disposal may also report the preparation failure, but must release.
+        final disposalResult = expectLater(disposing, throwsA(failure));
+        camera.initializationGate!.complete();
+        await Future.wait([initializing, disposalResult]);
+
+        expect(camera.disposalCount, 1);
+        expect(camera.isInitialized, isFalse);
+      },
+    );
+
+    test('repeated disposal waits for the same native release', () async {
+      final camera = _FakeCameraService()..disposalGate = Completer<void>();
+      await camera.initialize();
+      final recorder = CameraMinorConsentRecorder(camera: camera);
+      var firstCompleted = false;
+      var secondCompleted = false;
+      final first = recorder.dispose().then((_) => firstCompleted = true);
+      final second = recorder.dispose().then((_) => secondCompleted = true);
+      await pumpEventQueue();
+
+      expect(camera.disposalCount, 1);
+      expect(firstCompleted, isFalse);
+      expect(secondCompleted, isFalse);
+      camera.disposalGate!.complete();
+      await Future.wait([first, second]);
+
+      expect(firstCompleted, isTrue);
+      expect(secondCompleted, isTrue);
+      expect(camera.isInitialized, isFalse);
+    });
+
+    test('does not initialize or start after disposal begins', () async {
+      final camera = _FakeCameraService()
+        ..initializationGate = Completer<void>();
+      final recorder = CameraMinorConsentRecorder(camera: camera);
+      final initializing = recorder.initialize();
+      final disposing = recorder.dispose();
+
+      final lateInitialization = recorder.initialize();
+      final lateStart = await recorder.start(
+        maxDuration: const Duration(seconds: 60),
+        outputDirectory: '/tmp',
+      );
+      camera.initializationGate!.complete();
+      await Future.wait([initializing, disposing, lateInitialization]);
+
+      expect(camera.initializationCount, 1);
+      expect(camera.lastOutputDirectory, isNull);
+      expect(lateStart, isFalse);
       expect(camera.isInitialized, isFalse);
     });
   });
