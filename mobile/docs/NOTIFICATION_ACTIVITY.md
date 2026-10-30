@@ -25,8 +25,28 @@ increments `visit`, even while signing or transport is unavailable. This lets
 the server recognize a return when the previous background request was lost.
 Transient `inactive` transitions retain visibility and do not create visits.
 Foreground heartbeats run every 60 seconds and preserve the visit number.
+Heartbeats replace the pending state without restarting a failing request's
+backoff. Failed sends wait 5, 15, 30, then 60 seconds; foreground retries stay
+at 60 seconds until a send succeeds. A real visibility transition sends its new
+state immediately. Background retries stop after four retries. Failure logs
+record only the error type and retry delay, without request bodies or account
+identifiers.
 Backgrounding and disposal stop heartbeats. Server receipt time is authoritative;
 presence expires after 180 seconds if the app crashes or the OS suspends it.
+Logging out or switching accounts retires the old account's signing callbacks;
+it does not send a final background update for that account. Its server presence
+can therefore remain until that same 180-second lease expires.
+
+## Remote off switch
+
+The activity endpoint can return HTTP 410 to stop reporting without an app
+release. A 410 cancels pending retries and heartbeats and suppresses further
+report signing across visibility and account changes for this provider's
+lifetime. App restart or a server-environment change creates a new provider and
+allows reporting again. Operators must return 410 at the activity route to use
+the switch; a 204 means the report was accepted. This is an off switch, not a
+remotely re-enabled configuration feed. Ordinary 404/429/503 responses keep the
+bounded backoff behavior and do not activate the switch.
 
 The provider waits for the matching signer-backed Nostr session and uses the
 current Flutter lifecycle state at activation. A hidden background launch cannot
@@ -42,12 +62,22 @@ the explicit signer connection requests that permission alongside relay auth.
 Existing Amber users may need to reconnect and grant it. Missing permission or
 an unavailable resolver suppresses the activity report without an intent fallback.
 Silent resolver calls are bounded to six seconds, and noninteractive Keycast
-signing to fifteen seconds. User-initiated signing retains its existing behavior.
+signing to fifteen seconds. A new Amber connection asks for standing kind 27235
+permission. Once granted, user-initiated NIP-98 requests also try the content
+resolver before opening the signer, so those HTTP-auth requests no longer prompt
+individually when the resolver succeeds. The permission is scoped to the event
+kind; each signed token still binds one exact URL, method and body for its short
+validity window. Existing Amber connections keep their prior grants until the
+user explicitly reconnects.
 
 NIP-46 bunker and NIP-07 extension identities currently offer no explicit silent
 signing capability, so autonomous activity reports fail closed for those signers.
 Their foreground presence and visit resets cannot be reported until such a
-capability exists; normal notification and signing flows are unchanged.
+capability exists. If the proposed server allowance policy ships without its
+signer fallback, those accounts receive the initial absence allowance but cannot
+reset it by opening the app, and later eligible pushes can be suppressed.
+Deploy the compatible server fallback before activating that policy. This PR
+does not add silent signing support to those identities.
 
 An `activityDigest` push displays the supplied aggregate title and body through
 the existing Android data-message and iOS alert paths. Its real triggering
@@ -57,6 +87,22 @@ than a single video. No synthetic Nostr event kind or actor is introduced.
 Roll out the push-service policy and Funnelcake gateway before releasing mobile.
 Foreground visits reset only the absence allowance; the server retains the
 six-hour cooldown, delivery identities, consent, expiry, and quiet-hour rules.
+
+## Privacy disclosure before release
+
+The published privacy policy lives in the web repository, outside this mobile
+change. Its activity disclosure must be published before releasing reporting.
+Proposed text for the policy owner to reconcile with the deployed retention
+settings:
+
+> When you're signed in, the app tells Divine when you open and close it, and
+> checks in once a minute while it's open. We use this only to time notifications.
+> Current status is kept for three minutes, and visit counts for up to 90 days.
+> It isn't shown to anyone.
+
+Retries can add reports while a send is failing; the one-minute cadence describes
+successful foreground check-ins. The remote off switch does not publish this
+disclosure or establish that the backend rollout has completed.
 
 ## Optional simulator evidence
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:funnelcake_api_client/funnelcake_api_client.dart';
+import 'package:unified_logger/unified_logger.dart';
 import 'package:uuid/uuid.dart';
 
 /// Sends only while the captured owner and lifecycle update remain current.
@@ -33,6 +34,7 @@ class NotificationActivitySessionCoordinator {
   bool _ready = false;
   bool _foreground = false;
   bool _disposed = false;
+  bool _reportingDisabled = false;
   bool _sending = false;
   int _retryCount = 0;
   NotificationActivityUpdate? _pending;
@@ -41,7 +43,7 @@ class NotificationActivitySessionCoordinator {
 
   /// Changes signing readiness without inventing a visit on reconnection.
   void setAccount({required String? owner, required bool ready}) {
-    if (_disposed) return;
+    if (_disposed || _reportingDisabled) return;
     final changedOwner = owner != _owner;
     final becameReady = ready && !_ready;
     if (changedOwner) {
@@ -51,6 +53,7 @@ class NotificationActivitySessionCoordinator {
       _sessionId = owner == null ? null : const Uuid().v4();
       _sequence = 0;
       _visit = _foreground ? 1 : 0;
+      _retryCount = 0;
     }
     _ready = ready && owner != null;
     if (!_ready) {
@@ -66,7 +69,7 @@ class NotificationActivitySessionCoordinator {
 
   /// Applies real visibility transitions; transient inactive states stay outside.
   void setForeground(bool foreground) {
-    if (_disposed || foreground == _foreground) return;
+    if (_disposed || _reportingDisabled || foreground == _foreground) return;
     _foreground = foreground;
     _heartbeat?.cancel();
     _heartbeat = null;
@@ -86,21 +89,24 @@ class NotificationActivitySessionCoordinator {
   void _startHeartbeat() {
     _heartbeat?.cancel();
     _heartbeat = Timer.periodic(heartbeatInterval, (_) {
-      if (_ready && _foreground) _emit(NotificationActivityState.foreground);
+      if (_ready && _foreground) {
+        _emit(NotificationActivityState.foreground, isHeartbeat: true);
+      }
     });
   }
 
-  void _emit(NotificationActivityState state) {
+  void _emit(NotificationActivityState state, {bool isHeartbeat = false}) {
     final sessionId = _sessionId;
-    if (_disposed || !_ready || sessionId == null) return;
+    if (_disposed || _reportingDisabled || !_ready || sessionId == null) return;
     // Exhausting an integer sequence cannot grant a new visit allowance.
     if (_sequence == _maximumSequence) {
       _stopTimers();
       return;
     }
-    _retry?.cancel();
-    _retry = null;
-    _retryCount = 0;
+    if (!isHeartbeat) {
+      _retry?.cancel();
+      _retry = null;
+    }
     // Offline visits still advance their epoch, even without emitted updates.
     _sequence = _visit > _sequence ? _visit : _sequence + 1;
     _pending = NotificationActivityUpdate(
@@ -113,7 +119,13 @@ class NotificationActivitySessionCoordinator {
   }
 
   Future<void> _drain() async {
-    if (_sending || _disposed || !_ready) return;
+    if (_sending ||
+        _disposed ||
+        _reportingDisabled ||
+        !_ready ||
+        _retry != null) {
+      return;
+    }
     _sending = true;
     try {
       while (!_disposed && _ready) {
@@ -127,14 +139,46 @@ class NotificationActivitySessionCoordinator {
             identical(update, _pending);
         try {
           await _send(owner, update, isCurrent);
-          if (isCurrent()) _pending = null;
-        } on Object {
+          if (isCurrent()) {
+            _pending = null;
+            _retryCount = 0;
+          }
+        } on Object catch (error) {
+          if (!_disposed &&
+              error is FunnelcakeApiException &&
+              error.statusCode == 410) {
+            _reportingDisabled = true;
+            _pending = null;
+            _stopTimers();
+            Log.info(
+              'Activity reporting disabled by the server until app restart',
+              name: 'NotificationActivity',
+              category: LogCategory.system,
+            );
+            return;
+          }
           if (!isCurrent()) continue;
-          if (_retryCount < _retryDelays.length) {
-            _retry = Timer(_retryDelays[_retryCount++], () {
+          if (_foreground || _retryCount < _retryDelays.length) {
+            final delay =
+                _retryDelays[_retryCount.clamp(0, _retryDelays.length - 1)];
+            if (_retryCount < _retryDelays.length) _retryCount++;
+            Log.warning(
+              'Activity report failed (${error.runtimeType}); '
+              'retry in ${delay.inSeconds}s',
+              name: 'NotificationActivity',
+              category: LogCategory.system,
+            );
+            _retry = Timer(delay, () {
               _retry = null;
               unawaited(_drain());
             });
+          } else {
+            Log.warning(
+              'Activity report failed (${error.runtimeType}); '
+              'background retries exhausted',
+              name: 'NotificationActivity',
+              category: LogCategory.system,
+            );
           }
           return;
         }

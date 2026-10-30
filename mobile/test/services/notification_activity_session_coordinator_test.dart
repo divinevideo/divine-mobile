@@ -150,6 +150,118 @@ void main() {
       });
     });
 
+    test('heartbeats preserve backoff while every report fails', () {
+      fakeAsync((async) {
+        final attempts = <Duration>[];
+        final sent = <NotificationActivityUpdate>[];
+        final coordinator = NotificationActivitySessionCoordinator(
+          send: (_, update, _) async {
+            attempts.add(async.elapsed);
+            sent.add(update);
+            throw const FunnelcakeApiException(
+              message: 'Service unavailable',
+              statusCode: 503,
+            );
+          },
+        );
+        addTearDown(coordinator.dispose);
+        coordinator.setAccount(owner: owner, ready: true);
+        coordinator.setForeground(true);
+        async.flushMicrotasks();
+        async.elapse(const Duration(seconds: 239));
+
+        expect(attempts.map((time) => time.inSeconds), [
+          0,
+          5,
+          20,
+          50,
+          110,
+          170,
+          230,
+        ]);
+        expect(sent[4].sequence, 2);
+        expect(sent[4].visit, 1);
+      });
+    });
+
+    test('a successful send resets backoff for a later failure', () {
+      fakeAsync((async) {
+        final attempts = <Duration>[];
+        final coordinator = NotificationActivitySessionCoordinator(
+          send: (_, _, _) async {
+            attempts.add(async.elapsed);
+            if (attempts.length.isOdd) {
+              throw const FunnelcakeTimeoutException();
+            }
+          },
+        );
+        addTearDown(coordinator.dispose);
+        coordinator.setAccount(owner: owner, ready: true);
+        coordinator.setForeground(true);
+        async.flushMicrotasks();
+        async.elapse(const Duration(seconds: 65));
+
+        expect(attempts.map((time) => time.inSeconds), [0, 5, 60, 65]);
+      });
+    });
+
+    test(
+      'HTTP 410 disables reporting through lifecycle and account changes',
+      () {
+        fakeAsync((async) {
+          var attempts = 0;
+          final currentChecks = <bool Function()>[];
+          final coordinator = NotificationActivitySessionCoordinator(
+            send: (_, _, isCurrent) async {
+              attempts++;
+              currentChecks.add(isCurrent);
+              throw const FunnelcakeApiException(
+                message: 'Reporting disabled',
+                statusCode: 410,
+              );
+            },
+          );
+          addTearDown(coordinator.dispose);
+          coordinator.setAccount(owner: owner, ready: true);
+          coordinator.setForeground(true);
+          async.flushMicrotasks();
+          coordinator.setForeground(false);
+          coordinator.setForeground(true);
+          coordinator.setAccount(owner: otherOwner, ready: true);
+          async.elapse(const Duration(minutes: 5));
+
+          expect(attempts, 1);
+          expect(currentChecks.single(), isFalse);
+        });
+      },
+    );
+
+    test('a real background transition supersedes a delayed retry', () {
+      fakeAsync((async) {
+        final sent = <NotificationActivityUpdate>[];
+        final coordinator = NotificationActivitySessionCoordinator(
+          send: (_, update, _) async {
+            sent.add(update);
+            if (sent.length == 1) {
+              throw const FunnelcakeTimeoutException();
+            }
+          },
+        );
+        addTearDown(coordinator.dispose);
+        coordinator.setAccount(owner: owner, ready: true);
+        coordinator.setForeground(true);
+        async.flushMicrotasks();
+        coordinator.setForeground(false);
+        async.flushMicrotasks();
+        async.elapse(const Duration(minutes: 3));
+
+        expect(sent.map((update) => update.state), [
+          NotificationActivityState.foreground,
+          NotificationActivityState.background,
+        ]);
+      });
+    });
+
     test(
       'newer background supersedes an in-flight foreground and its retry',
       () {
