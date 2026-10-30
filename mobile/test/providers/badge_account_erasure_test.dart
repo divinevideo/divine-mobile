@@ -80,6 +80,8 @@ void main() {
           );
           final auth = _Auth();
           when(() => auth.currentPublicKeyHex).thenReturn(owner);
+          when(() => auth.authStateStream)
+              .thenAnswer((_) => const Stream.empty());
           final container = ProviderContainer(
             overrides: [
               authServiceProvider.overrideWithValue(auth),
@@ -129,6 +131,7 @@ void main() {
               required kind,
               required content,
               required tags,
+              createdAt,
             }) async => null,
           );
           await reopened.loadAwardedBadges();

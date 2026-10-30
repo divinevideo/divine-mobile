@@ -904,6 +904,7 @@ class BadgeRepository {
     _resetSubscriptionSession();
     await _subscriptionSessionChanges?.cancel();
     await _subscriptionChanges.close();
+    await closeAccountState();
   }
 
   Future<BadgeDashboardData> loadDashboard() async {
