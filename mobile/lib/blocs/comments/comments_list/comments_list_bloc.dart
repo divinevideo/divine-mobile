@@ -151,7 +151,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
           replyCountsByCommentId: computeReplyCounts(commentsById),
         ),
       );
-      _focusWhenLoaded(emit);
+      _focusWhenLoaded(emit, pageAddedComments: thread.comments.isNotEmpty);
       await _startWatchingComments();
       await _removeAuthorDeletedComments(thread.comments, emit);
     } on CommentsRepositoryException catch (e, stackTrace) {
@@ -225,6 +225,7 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
         includeVideoReplies: _includeVideoReplies,
       );
 
+      final loadedBefore = state.commentsById.length;
       final allCommentsById = {
         ...state.commentsById,
         for (final c in thread.comments) c.id: c,
@@ -243,7 +244,10 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
           replyCountsByCommentId: computeReplyCounts(allCommentsById),
         ),
       );
-      _focusWhenLoaded(emit);
+      _focusWhenLoaded(
+        emit,
+        pageAddedComments: allCommentsById.length > loadedBefore,
+      );
       await _removeAuthorDeletedComments(thread.comments, emit);
     } on CommentsRepositoryException catch (e, stackTrace) {
       _logRepoFailure(e, stackTrace, 'Error loading more comments');
@@ -275,14 +279,22 @@ class CommentsListBloc extends Bloc<CommentsListEvent, CommentsListState> {
   /// loads older comments while it is not, up to
   /// [_maxCommentsLoadedForFocus]. One that is gone, such as a deleted
   /// comment, leaves the list where it starts.
-  void _focusWhenLoaded(Emitter<CommentsListState> emit) {
+  ///
+  /// A page that added no comment ends the search: `hasMoreContent` can stay
+  /// true past the last comment the relays return, because the count it is
+  /// measured against includes comments the list never gets.
+  void _focusWhenLoaded(
+    Emitter<CommentsListState> emit, {
+    required bool pageAddedComments,
+  }) {
     final focus = state.pendingFocusCommentId;
     if (focus == null) return;
     if (state.commentsById.containsKey(focus)) {
       emit(
         state.copyWith(scrollToCommentId: focus, clearPendingFocus: true),
       );
-    } else if (state.hasMoreContent &&
+    } else if (pageAddedComments &&
+        state.hasMoreContent &&
         state.commentsById.length < _maxCommentsLoadedForFocus) {
       // Reached after the page load awaited; the sheet may have closed.
       addIfOpen(const CommentsLoadMoreRequested());

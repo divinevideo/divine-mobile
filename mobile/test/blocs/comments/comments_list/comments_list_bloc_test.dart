@@ -1657,6 +1657,37 @@ void main() {
           expect(b.state.pendingFocusCommentId, isNull);
         },
       );
+
+      blocTest<CommentsListBloc, CommentsListState>(
+        'stops at a page that adds no comment, with a higher count',
+        // The relay's inclusive `until` hands back the oldest comment again
+        // once it has nothing older, while the count includes comments the
+        // list never gets.
+        setUp: () => pages(olderPage: [older], totalCount: 1000),
+        build: () => CommentsListBloc(
+          commentsRepository: mockCommentsRepository,
+          rootEventId: validId('root'),
+          rootEventKind: 34236,
+          rootAuthorPubkey: validId('author'),
+          initialTotalCount: 1000,
+          focusCommentId: validId('deleted'),
+        ),
+        act: (b) => b.add(const CommentsLoadRequested()),
+        verify: (b) {
+          expect(b.state.hasMoreContent, isTrue);
+          expect(b.state.pendingFocusCommentId, isNull);
+          expect(b.state.scrollToCommentId, isNull);
+          verify(
+            () => mockCommentsRepository.loadComments(
+              rootEventId: any(named: 'rootEventId'),
+              rootEventKind: any(named: 'rootEventKind'),
+              rootAddressableId: any(named: 'rootAddressableId'),
+              limit: any(named: 'limit'),
+              before: any(named: 'before', that: isNotNull),
+            ),
+          ).called(2);
+        },
+      );
     });
   });
 }
