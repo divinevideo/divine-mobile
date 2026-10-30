@@ -18,6 +18,9 @@ LoopFrame _frame(
   bool plainMargins = false,
   Duration time = Duration.zero,
   double foreground = 0,
+  bool foregroundTouchesEdges = false,
+  double plainHorizontalMargin = 0,
+  bool stationaryStrip = false,
 }) {
   final pixels = Uint8List(width * height);
   for (var y = 0; y < height; y++) {
@@ -38,11 +41,19 @@ LoopFrame _frame(
       if (plainMargins && (sx < width * .1 || sy < height * .1)) {
         value = 100;
       }
+      if (plainHorizontalMargin > 0 &&
+          (sy < height * plainHorizontalMargin ||
+              sy > height * (1 - plainHorizontalMargin))) {
+        value = 100;
+      }
+      if (stationaryStrip && x > 16 && x < 22) {
+        value = 160 + 40 * math.sin((x - 1) * .7) * math.cos((y + 1) * .6);
+      }
       if (foreground != 0 &&
           x > width * .1 &&
-          x < width * .9 &&
+          (foregroundTouchesEdges || x < width * .9) &&
           y > height * .1 &&
-          y < height * .9) {
+          (foregroundTouchesEdges || y < height * .9)) {
         value =
             160 +
             40 *
@@ -59,6 +70,58 @@ LoopFrame _frame(
     luma: pixels,
   );
 }
+
+// A rigid foreground moves coherently; the narrow-band picture stays fixed.
+LoopFrame _coherentForegroundFrame(
+  int width,
+  int height,
+  double shift,
+  Duration time,
+) {
+  final pixels = Uint8List(width * height);
+  for (var y = 0; y < height; y++) {
+    for (var x = 0; x < width; x++) {
+      var value = 100.0;
+      final sx = x - shift;
+      final sy = y.toDouble();
+      if (sx > width * .1 && sy > height * .1) {
+        value =
+            160 +
+            26 * math.sin(sx * .43 + sy * .11) +
+            23 * math.cos(sy * .37 - sx * .09) +
+            21 * math.sin(sx * .17 + sy * .23) +
+            17 * math.cos(sx * .61 - sy * .41);
+      }
+      if (x > width * .02 &&
+          x < width * .07 &&
+          y > height * .3 &&
+          y < height * .5) {
+        value =
+            100 +
+            25 * math.sin(x * .43 + y * .11) +
+            21 * math.cos(y * .37 - x * .09);
+      }
+      pixels[y * width + x] = value.round().clamp(0, 255);
+    }
+  }
+  return LoopFrame(time: time, width: width, height: height, luma: pixels);
+}
+
+LoopFrame _flipped(
+  LoopFrame frame, {
+  required bool horizontal,
+  required bool vertical,
+}) => LoopFrame(
+  time: frame.time,
+  width: frame.width,
+  height: frame.height,
+  luma: Uint8List.fromList([
+    for (var y = 0; y < frame.height; y++)
+      for (var x = 0; x < frame.width; x++)
+        frame.luma[(vertical ? frame.height - y - 1 : y) * frame.width +
+            (horizontal ? frame.width - x - 1 : x)],
+  ]),
+);
 
 LoopFrame _repeatedFrame(int width, int height, double shift) => LoopFrame(
   time: Duration.zero,
@@ -104,62 +167,43 @@ void main() {
       });
     }
     for (final (width, height) in [(180, 320), (320, 180)]) {
-      test('repairs gentle drift with plain margins at $width x $height', () {
-        // A wall at the top and left has no corners. Reliable background
-        // texture starts just inside the trackable edge region. Eroding that
-        // region by the detector's border used to discard every repair
-        // candidate.
-        final frames = [
-          for (var i = 0; i < 90; i++)
-            _frame(
-              width,
-              height,
-              dx: 2 * i / 89,
-              time: Duration(microseconds: i * 33333),
-              plainMargins: true,
-            ),
-        ];
-        final plan = const LoopAlignmentPlanner().plan(
-          input: LoopRepairInput(
-            clips: [
-              LoopClipInput(
-                clipId: 'drifting-camera',
-                path: '/synthetic.mp4',
-                sourceStart: Duration.zero,
-                sourceEnd: const Duration(microseconds: 90 * 33333),
-                speed: 1,
-                width: width,
-                height: height,
+      test(
+        'plain-margin drift requires narrow opposite-edge evidence at $width x $height',
+        () {
+          // Decline these ambiguous shots instead of widening into foreground.
+          final frames = [
+            for (var i = 0; i < 90; i++)
+              _frame(
+                width,
+                height,
+                dx: 2 * i / 89,
+                time: Duration(microseconds: i * 33333),
+                plainMargins: true,
               ),
-            ],
-            revision: 'synthetic-drift',
-          ),
-          firstFrames: frames,
-          lastFrames: frames,
-          matcher: PveLoopFrameMatcher(),
-          limits: const LoopAlignmentLimits(),
-        );
-        expect(plan, isNotNull);
-        expect(plan!.zoom, inInclusiveRange(1, 1.08));
-        final opening = const LoopFrameResampler().warp(
-          frames.first,
-          plan.clips.single.correctionAt(frames.first.time),
-          plan.zoom,
-          longestEdge: 320,
-        );
-        final ending = const LoopFrameResampler().warp(
-          frames.last,
-          plan.clips.single.correctionAt(frames.last.time),
-          plan.zoom,
-          longestEdge: 320,
-        );
-        final seam = PveLoopFrameMatcher().match(opening, ending);
-        expect(seam, isNotNull);
-        expect(
-          seam!.pose.maximumCornerDisplacement(width, height),
-          lessThan(.5),
-        );
-      });
+          ];
+          final plan = const LoopAlignmentPlanner().plan(
+            input: LoopRepairInput(
+              clips: [
+                LoopClipInput(
+                  clipId: 'drifting-camera',
+                  path: '/synthetic.mp4',
+                  sourceStart: Duration.zero,
+                  sourceEnd: const Duration(microseconds: 90 * 33333),
+                  speed: 1,
+                  width: width,
+                  height: height,
+                ),
+              ],
+              revision: 'synthetic-drift',
+            ),
+            firstFrames: frames,
+            lastFrames: frames,
+            matcher: PveLoopFrameMatcher(),
+            limits: const LoopAlignmentLimits(),
+          );
+          expect(plan, isNull);
+        },
+      );
     }
     for (final (width, height) in [(180, 320), (320, 180)]) {
       test('small subject motion is not camera drift at $width x $height', () {
@@ -174,12 +218,210 @@ void main() {
         );
       });
     }
+    for (final (width, height) in [(180, 320), (320, 180)]) {
+      for (final motion in [.5, 1.0, 2.0, 3.0, 5.0]) {
+        test('edge-touching subject motion $motion is not camera drift at '
+            '$width x $height', () {
+          final match = PveLoopFrameMatcher().match(
+            _frame(
+              width,
+              height,
+              plainMargins: true,
+              foreground: 1,
+              foregroundTouchesEdges: true,
+            ),
+            _frame(
+              width,
+              height,
+              plainMargins: true,
+              foreground: 1 + motion,
+              foregroundTouchesEdges: true,
+            ),
+          );
+          expect(
+            match != null &&
+                const LoopAlignmentLimits().acceptsMatch(match, width, height),
+            isFalse,
+          );
+        });
+      }
+    }
+    for (final (width, height) in [(180, 320), (320, 180)]) {
+      for (final (horizontal, vertical) in [
+        (true, false),
+        (false, true),
+        (true, true),
+      ]) {
+        test(
+          'edge-touching subject rejection survives flip $horizontal/$vertical '
+          'at $width x $height',
+          () {
+            final match = PveLoopFrameMatcher().match(
+              _flipped(
+                _frame(
+                  width,
+                  height,
+                  plainMargins: true,
+                  foreground: 1,
+                  foregroundTouchesEdges: true,
+                ),
+                horizontal: horizontal,
+                vertical: vertical,
+              ),
+              _flipped(
+                _frame(
+                  width,
+                  height,
+                  plainMargins: true,
+                  foreground: 2,
+                  foregroundTouchesEdges: true,
+                ),
+                horizontal: horizontal,
+                vertical: vertical,
+              ),
+            );
+            expect(
+              match != null &&
+                  const LoopAlignmentLimits().acceptsMatch(
+                    match,
+                    width,
+                    height,
+                  ),
+              isFalse,
+            );
+          },
+        );
+      }
+    }
+    test('a stationary arm in the wider ring preserves narrow background support', () {
+      final match = PveLoopFrameMatcher().match(
+        _frame(180, 320, plainHorizontalMargin: .13, stationaryStrip: true),
+        _frame(
+          180,
+          320,
+          dx: 2,
+          plainHorizontalMargin: .13,
+          stationaryStrip: true,
+        ),
+      );
+      expect(match, isNotNull);
+      expect(match!.pose.tx, closeTo(2, .3));
+      expect(
+        const LoopAlignmentLimits().acceptsMatch(match, 180, 320),
+        isTrue,
+        reason:
+            'L${match.left.agreeing}/${match.left.retained} R${match.right.agreeing}/${match.right.retained} '
+            'T${match.top.agreeing}/${match.top.retained} B${match.bottom.agreeing}/${match.bottom.retained} '
+            'boundary=${match.boundaryModelError} withheld=${match.withheldMedianError} '
+            'global=${match.consistentCount}/${match.retainedCount}',
+      );
+    });
+    test('plans real camera drift behind an arm in the wider ring', () {
+      final frames = [
+        for (var i = 0; i < 90; i++)
+          _frame(
+            180,
+            320,
+            dx: 2 * i / 89,
+            time: Duration(microseconds: i * 33333),
+            plainHorizontalMargin: .13,
+            stationaryStrip: true,
+          ),
+      ];
+      final plan = const LoopAlignmentPlanner().plan(
+        input: LoopRepairInput(
+          clips: [
+            const LoopClipInput(
+              clipId: 'camera-with-occluding-arm',
+              path: '/synthetic.mp4',
+              sourceStart: Duration.zero,
+              sourceEnd: Duration(microseconds: 90 * 33333),
+              speed: 1,
+              width: 180,
+              height: 320,
+            ),
+          ],
+          revision: 'synthetic-drift-with-arm',
+        ),
+        firstFrames: frames,
+        lastFrames: frames,
+        matcher: PveLoopFrameMatcher(),
+        limits: const LoopAlignmentLimits(),
+      );
+      expect(plan, isNotNull);
+      expect(plan!.zoom, inInclusiveRange(1, 1.08));
+    });
+    for (final (width, height) in [(180, 320), (320, 180)]) {
+      for (final (horizontal, vertical) in [
+        (false, false),
+        (true, false),
+        (false, true),
+        (true, true),
+      ]) {
+        test('coherent subject cannot override stationary boundary '
+            '$width x $height flip $horizontal/$vertical', () {
+          final reference = _coherentForegroundFrame(
+            width,
+            height,
+            1,
+            Duration.zero,
+          );
+          final target = _coherentForegroundFrame(
+            width,
+            height,
+            3,
+            const Duration(seconds: 3),
+          );
+          final match = PveLoopFrameMatcher().match(
+            _flipped(reference, horizontal: horizontal, vertical: vertical),
+            _flipped(target, horizontal: horizontal, vertical: vertical),
+          );
+          expect(
+            match != null &&
+                const LoopAlignmentLimits().acceptsMatch(match, width, height),
+            isFalse,
+          );
+        });
+      }
+    }
+    test('coherent moving subject cannot reframe a stationary picture', () {
+      final frames = [
+        for (var i = 0; i < 90; i++)
+          _coherentForegroundFrame(
+            180,
+            320,
+            1 + 2 * i / 89,
+            Duration(microseconds: i * 33333),
+          ),
+      ];
+      final plan = const LoopAlignmentPlanner().plan(
+        input: LoopRepairInput(
+          clips: [
+            const LoopClipInput(
+              clipId: 'stationary-camera-moving-subject',
+              path: '/synthetic.mp4',
+              sourceStart: Duration.zero,
+              sourceEnd: Duration(microseconds: 90 * 33333),
+              speed: 1,
+              width: 180,
+              height: 320,
+            ),
+          ],
+          revision: 'synthetic-stationary-camera',
+        ),
+        firstFrames: frames,
+        lastFrames: frames,
+        matcher: PveLoopFrameMatcher(),
+        limits: const LoopAlignmentLimits(),
+      );
+      expect(plan, isNull);
+    });
     test('large camera movement remains outside drift correction', () {
       // Six pixels is 3.3% of the width: only the 3% displacement limit
       // keeps this otherwise trackable movement out of drift correction.
       final match = PveLoopFrameMatcher().match(
-        _frame(180, 320, plainMargins: true),
-        _frame(180, 320, dx: 6, plainMargins: true),
+        _frame(180, 320),
+        _frame(180, 320, dx: 6),
       );
       expect(match, isNotNull);
       expect(
@@ -204,6 +446,54 @@ void main() {
         isFalse,
       );
     });
+    for (final (width, height) in [(180, 320), (320, 180)]) {
+      for (final (dx, angle, scale) in [(2.0, 0.0, 1.0), (0.0, .01, 1.01)]) {
+        test(
+          'plans supported camera motion $dx/$angle/$scale at $width x $height',
+          () {
+            final frames = [
+              for (var i = 0; i < 90; i++)
+                _frame(
+                  width,
+                  height,
+                  dx: dx * i / 89,
+                  angle: angle * i / 89,
+                  scale: math.pow(scale, i / 89).toDouble(),
+                  time: Duration(microseconds: i * 33333),
+                ),
+            ];
+            final plan = const LoopAlignmentPlanner().plan(
+              input: LoopRepairInput(
+                clips: [
+                  LoopClipInput(
+                    clipId: 'supported-camera',
+                    path: '/synthetic.mp4',
+                    sourceStart: Duration.zero,
+                    sourceEnd: const Duration(microseconds: 90 * 33333),
+                    speed: 1,
+                    width: width,
+                    height: height,
+                  ),
+                ],
+                revision: 'synthetic-supported-motion',
+              ),
+              firstFrames: frames,
+              lastFrames: frames,
+              matcher: PveLoopFrameMatcher(),
+              limits: const LoopAlignmentLimits(),
+            );
+            expect(plan, isNotNull);
+            expect(plan!.zoom, inInclusiveRange(1, 1.08));
+            final correction = plan.clips.single;
+            final start = correction.correctionAt(frames.first.time);
+            final end = correction.correctionAt(frames.last.time);
+            expect(end.tx - start.tx, closeTo(-dx, .3));
+            expect(end.angle - start.angle, closeTo(-angle, .001));
+            expect(end.scale / start.scale, closeTo(1 / scale, .001));
+          },
+        );
+      }
+    }
     test('rotation and scale recover known centered camera geometry', () {
       const angle = .01;
       const scale = 1.01;

@@ -13,16 +13,13 @@ python3 integration_test/fixtures/generate_loop_drift.py /private/tmp/loop-nativ
 mise exec -- flutter test --no-pub -d macos integration_test/video_editor/loop_alignment_native_test.dart --dart-define=LOOP_ALIGNMENT_FIXTURE_DIR=/private/tmp/loop-native-verification --reporter expanded
 ```
 
-The regular macOS application build prerequisites are required. The fixtures use
-independently generated texture, plain margins, and two analysis pixels of camera
-drift over three seconds. Both portrait and landscape videos contain 90 frames
-and audio. Generated videos stay outside the repository.
+The regular macOS application build prerequisites are required. The fixtures use independently generated texture. In both portrait and landscape they cover two analysis pixels of camera translation, gentle rotation/scale, a moving edge-touching subject beside plain margins, and camera translation beside plain margins. Full-texture clips are positive repair controls. The portrait plain-margin shot and both subject-motion shots are conservative rejection controls; the extra landscape plain-margin clip is available for manual comparison. Every video contains 90 frames over three seconds and AAC audio. Generated videos stay outside the repository.
 
-The test requires an accepted repair without trimming, decodes the actual exported
+For camera-motion fixtures, the test requires an accepted repair without trimming, decodes the actual exported
 MP4, checks the measured seam improvement and residual camera displacement, and
 checks frame count, duration, and audio retention. It retains MP4s, diagnostic logs,
 and JSON measurements under the fixture directory's native-output subdirectory.
-Use ffprobe and video playback to inspect those artifacts independently.
+Use ffprobe and video playback to inspect those artifacts independently. The conservative rejection controls must return no match and no rendered replacement; their diagnostics are retained too.
 
 This test is an explicit native integration command; passing ordinary app CI does
 not establish that it ran. It does not replace validation of a reported recording

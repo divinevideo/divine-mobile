@@ -68,8 +68,69 @@ void main() {
   final directory = Directory('$fixtureRoot/native-output');
 
   group('Native loop alignment', () {
+    if (inputVideo.isEmpty) {
+      for (final name in [
+        'portrait-subject',
+        'landscape-subject',
+        'portrait-ambiguous',
+      ]) {
+        testWidgets(
+          'declines encoded $name without independent camera evidence',
+          (
+            tester,
+          ) async {
+            await directory.create(recursive: true);
+            await LogCaptureService().clearAllLogs();
+            final source = '$fixtureRoot/$name-drift.mp4';
+            final backend = _ArtifactBackend(directory);
+            final metadata = await backend.metadata(source);
+            final clips = [
+              DivineVideoClip(
+                id: 'synthetic-$name',
+                video: EditorVideo.file(source),
+                duration: metadata.duration,
+                recordedAt: DateTime.utc(2026),
+                targetAspectRatio: .vertical,
+                originalAspectRatio:
+                    metadata.resolution.width / metadata.resolution.height,
+              ),
+            ];
+            final repository = LoopAlignmentRepository(
+              client: NativeLoopAlignmentClient(backend: backend),
+            );
+            final result = await repository.repair(
+              LoopRepairInputMapper.fromComposition(
+                clips,
+                composition: const {},
+              ),
+              taskId: 'native-$name',
+            );
+            addTearDown(() => repository.discard(result));
+            final diagnostics = (await LogCaptureService().getAllLogsAsText())
+                .join('\n');
+            await File('${directory.path}/$name-diagnostics.txt')
+                .writeAsString(diagnostics);
+            expect(
+              result.status,
+              LoopRepairStatus.noMatch,
+              reason: diagnostics,
+            );
+            expect(result.output, isNull);
+          },
+          timeout: const Timeout(Duration(minutes: 3)),
+        );
+      }
+    }
+
     for (final name
-        in inputVideo.isEmpty ? ['portrait', 'landscape'] : ['recording']) {
+        in inputVideo.isEmpty
+            ? [
+                'portrait',
+                'landscape',
+                'portrait-rotation',
+                'landscape-rotation',
+              ]
+            : ['recording']) {
       testWidgets('repairs encoded $name drift with real native rendering', (
         tester,
       ) async {

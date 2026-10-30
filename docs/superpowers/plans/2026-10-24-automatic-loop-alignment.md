@@ -20,13 +20,23 @@ Native output timing, crop, pixel correspondence, and source preservation checks
 remain required. Genuine variable frame rate or delayed-first-frame inputs may
 be declined when the native renderer cannot preserve the required timing proof.
 
+## Review repair: 2026-10-30
+
+The maintainer chose conservative rejection instead of a broader temporal camera-framing model. The earlier ship-with-limit decision is superseded: remove the expanded support bands and restore the original outer 8% bands for both support and the independent background fit. This gives up the added plain-background repairs, rejects the reproduced edge-touching subject false correction, and restores the reproduced narrow-background drift behind an arm. Keep diagnostics, privacy fixes, native verification, and all existing acceptance/crop/output limits. This is not semantic background identification; sufficiently occluded or ambiguous footage can still be declined.
+
+- [x] Reproduce the published matcher's false correction and arm-in-ring regression.
+- [x] Restore narrow support and remove the experimental expanded-band policy.
+- [x] Verify subject negatives, mirrored scenes, ambiguous-shot rejection, ordinary translation/rotation/scale controls, native-client/Cubit privacy tests, package tests, and analysis.
+- [x] Run encoded native positive and negative fixtures: all seven macOS integration tests and the application build pass.
+- [ ] Independently review the complete change and inspect required CI after publication. The original private recording remains unresolved and has not been replayed by this repair.
+
 ## Global Constraints
 
 - Extend the existing Loop action and label it **Fix loop**; no additional toolbar item, settings, manual controls, or Keep step.
 - No automatic changes on import or export; unsuccessful operations change neither composition nor history.
 - Analysis longest edge 320 pixels; preserve upright aspect ratio and decoded source timestamps. One analysis decoder runs alongside the preview player.
 - At least 20 consistent matches; at least 60% agreement; four cells of a 3 by 3 grid; at least 35% width and height coverage.
-- Independent opposite boundary strips: outer 8% of the trackable interior, starting after the corner detector's 8-pixel border; four agreeing matches per supporting strip, 60% agreement within one analysis pixel. Withhold every third match; at least five withheld points, median error at most one pixel. The independent background fit still uses the original outer 8% of the full image, excluding that detector border, so the wider support strips cannot define camera identity on their own. That holds only while the narrow strips see background: a subject reaching the far edges sets the background fit, and its edge in the wider strips then supplies opposite-edge support.
+- Independent opposite boundary strips: outer 8% of the full image, excluding the corner detector's 8-pixel border; four agreeing matches per supporting strip, 60% agreement within one analysis pixel. Use these same narrow bands for the independent background fit. Withhold every third global match; at least five withheld points, median error at most one pixel.
 - Displacement at most 3% on each axis; rotation at most 2 degrees; scale 0.97–1.03; one constant additional zoom at most 1.08, covering every output frame.
 - Displayed-join score uses 64-pixel luma frames and weights 1, 0.5, 0.25. Require at least 25% improvement, final error at most 0.03, and no increase in the motion-continuity proxy. Compare with the same crop.
 - Preserve current duration first; any accepted end trim is at most 200 ms, never an extension, and respects existing clip/composition floors and anchored audio.

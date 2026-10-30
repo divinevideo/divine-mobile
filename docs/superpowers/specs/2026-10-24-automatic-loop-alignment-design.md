@@ -83,15 +83,16 @@ Initial conservative acceptance limits are:
 - Matches occupy at least four cells of a 3 by 3 image grid and span at least
   35% of the image width and height.
 - Require independent support from opposite boundary strips: left and right,
-  or top and bottom. Detect corners locally in the outer 8% of the trackable
-  interior, starting after the corner detector's 8-pixel border. Each
-  supporting strip needs at least four forward/backward-consistent matches and
-  60% agreement within one analysis pixel. A bright moving subject must not
-  monopolize feature selection. The independent background fit uses only the
-  outer 8% of the full image, less the same 8-pixel detector border. It stays
-  independent of the subject only while those narrow strips see background; a
-  subject that reaches them can establish camera identity, and its edge inside
-  the wider strips can then supply opposite-edge support.
+  or top and bottom. Detect corners locally in the outer 8% of the full image,
+  outside the corner detector's 8-pixel border. Each supporting strip needs
+  at least four forward/backward-consistent matches and 60% agreement within
+  one analysis pixel. The independent background fit uses these same bands.
+  Do not widen support into possible foreground to rescue a plain margin.
+  The maintainer chose conservative rejection on 2026-10-30: this restores
+  the original support policy, fixes the reproduced edge-touching subject
+  false correction and arm-in-ring regression, and gives up the added
+  plain-background repairs. It does not establish semantic background identity;
+  coherent foreground obscuring the original boundaries remains ambiguous.
 - Withhold every third consistent match from a separate fit. Require at
   least five withheld points and median prediction error at most one
   analysis pixel.

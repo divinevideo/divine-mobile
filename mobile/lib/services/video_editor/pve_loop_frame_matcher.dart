@@ -13,9 +13,6 @@ import 'package:pro_video_editor/core/analysis/similarity_estimator.dart';
 /// All coordinates are upright analysis pixels. The returned pose maps the
 /// reference to the target, about the image center rather than its top left.
 class PveLoopFrameMatcher implements LoopFrameMatcher {
-  /// The edge margin `detectCornersInRect` skips by default.
-  static const _detectorBorder = 8;
-
   @override
   LoopFrameMatch? match(LoopFrame reference, LoopFrame target) {
     final w = reference.width;
@@ -27,15 +24,26 @@ class PveLoopFrameMatcher implements LoopFrameMatcher {
     final from = LumaPyramid.fromLuma(reference.luma, w, h);
     final to = LumaPyramid.fromLuma(target.luma, w, h);
     final points = <double>[...detectCorners(from.levels.first)];
-    // Support bands are the outer 8% of the trackable interior: 8% of the full
-    // frame, less the detector's border, is six pixels on a 180px portrait
-    // frame and loses opposite-edge support under gentle drift. Support points
-    // only count agreement with the main fit; neither fit uses them.
-    final boundaryPoints = _bandCorners(
-      from,
-      bandX: _detectorBorder + (w - 2 * _detectorBorder) * .08,
-      bandY: _detectorBorder + (h - 2 * _detectorBorder) * .08,
-    );
+    // Keep support in the full-image outer 8%: widening into the subject can
+    // mistake its motion for camera drift. Each band uses a local threshold.
+    final strips = [
+      (0.0, 0.0, w * .08, h.toDouble()),
+      (w * .92, 0.0, w.toDouble(), h.toDouble()),
+      (0.0, 0.0, w.toDouble(), h * .08),
+      (0.0, h * .92, w.toDouble(), h.toDouble()),
+    ];
+    final boundaryPoints = <Float32List>[];
+    for (final strip in strips) {
+      boundaryPoints.add(
+        detectCornersInRect(
+          from.levels.first,
+          left: strip.$1,
+          top: strip.$2,
+          right: strip.$3,
+          bottom: strip.$4,
+        ),
+      );
+    }
     final tracked = _track(from, to, Float32List.fromList(points));
     if (tracked.length < 20) return null;
     final fitting = <(double, double, double, double)>[];
@@ -63,8 +71,10 @@ class PveLoopFrameMatcher implements LoopFrameMatcher {
         ? errors[errors.length ~/ 2]
         : (errors[errors.length ~/ 2 - 1] + errors[errors.length ~/ 2]) / 2;
     final support = <LoopBoundarySupport>[];
+    final boundaryMatches = <(double, double, double, double)>[];
     for (final points in boundaryPoints) {
       final matches = _track(from, to, points);
+      boundaryMatches.addAll(matches);
       support.add(
         LoopBoundarySupport(
           agreeing: matches.where((p) => error(p) <= 1).length,
@@ -73,14 +83,8 @@ class PveLoopFrameMatcher implements LoopFrameMatcher {
       );
     }
     // A subpixel compromise between foreground and background can pass a
-    // one-pixel inlier count everywhere, so fit the background separately on
-    // the narrow outer 8% bands. The wider support bands can reach a subject
-    // beside a plain margin and would read its motion as drift. A subject that
-    // reaches the narrow bands still defeats this check.
-    final boundaryMatches = [
-      for (final points in _bandCorners(from, bandX: w * .08, bandY: h * .08))
-        ..._track(from, to, points),
-    ];
+    // one-pixel inlier count everywhere. Measure disagreement with an
+    // independent background fit instead of treating that count as proof.
     final boundaryTraining = [
       for (var i = 0; i < boundaryMatches.length; i++)
         if (i % 3 != 0) boundaryMatches[i],
@@ -206,34 +210,6 @@ class PveLoopFrameMatcher implements LoopFrameMatcher {
       }
     }
     return false;
-  }
-
-  /// Corners in the left, right, top and bottom bands, in that order. Each
-  /// band has its own quality threshold, so a bright subject cannot suppress
-  /// weaker edge features.
-  List<Float32List> _bandCorners(
-    LumaPyramid frame, {
-    required double bandX,
-    required double bandY,
-  }) {
-    final level = frame.levels.first;
-    final w = level.width.toDouble();
-    final h = level.height.toDouble();
-    return [
-      for (final (left, top, right, bottom) in [
-        (0.0, 0.0, bandX, h),
-        (w - bandX, 0.0, w, h),
-        (0.0, 0.0, w, bandY),
-        (0.0, h - bandY, w, h),
-      ])
-        detectCornersInRect(
-          level,
-          left: left,
-          top: top,
-          right: right,
-          bottom: bottom,
-        ),
-    ];
   }
 
   List<(double, double, double, double)> _track(
