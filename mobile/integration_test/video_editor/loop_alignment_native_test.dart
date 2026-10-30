@@ -73,6 +73,7 @@ void main() {
         'portrait-subject',
         'landscape-subject',
         'portrait-ambiguous',
+        'landscape-ambiguous',
       ]) {
         testWidgets(
           'declines encoded $name without independent camera evidence',

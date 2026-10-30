@@ -17,6 +17,8 @@ cases = [
     for suffix, kind in [('', 'translation'), ('-rotation', 'rotation'), ('-subject', 'subject'), ('-ambiguous', 'ambiguous')]
 ]
 for name, width, height, kind in cases:
+    # Resampling ringing reaches the 8% support band from a 10% plain margin.
+    margin = .12 if kind == 'ambiguous' else .1
     command = [
         'ffmpeg', '-v', 'error', '-y', '-f', 'rawvideo', '-pixel_format', 'gray',
         '-video_size', f'{width}x{height}', '-framerate', '30', '-i', 'pipe:0',
@@ -40,7 +42,7 @@ for name, width, height, kind in cases:
                     cx, cy = x - width / 2 - shift, y - height / 2
                     sx = (cosine * cx + sine * cy) / scale + width / 2
                     sy = (-sine * cx + cosine * cy) / scale + height / 2
-                    value = 100 if kind in ('subject', 'ambiguous') and (sx < width * .1 or sy < height * .1) else (
+                    value = 100 if kind in ('subject', 'ambiguous') and (sx < width * margin or sy < height * margin) else (
                         100 + 26 * math.sin(sx * .43 + sy * .11)
                         + 23 * math.cos(sy * .37 - sx * .09)
                         + 21 * math.sin(sx * .17 + sy * .23)
