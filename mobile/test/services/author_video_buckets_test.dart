@@ -14,12 +14,14 @@ VideoEvent _video(
   String id, {
   required String pubkey,
   required int createdAt,
+  int? eventCreatedAt,
   String? vineId,
   int? nostrLikeCount,
 }) => VideoEvent(
   id: id,
   pubkey: pubkey,
   createdAt: createdAt,
+  eventCreatedAt: eventCreatedAt,
   content: 'content $id',
   timestamp: DateTime.fromMillisecondsSinceEpoch(createdAt * 1000),
   title: 'Video $id',
@@ -99,6 +101,53 @@ void main() {
       final afterRemove = buckets.videosFor(_authorA);
       expect(identical(afterRemove, afterStableUpdate), isFalse);
       expect(afterRemove.map((video) => video.id), ['a-new-id']);
+    });
+
+    group('addOrUpdateByVine', () {
+      // An edit re-emits the original published_at, which createdAt prefers,
+      // so only the signed created_at orders the revisions.
+      VideoEvent original() => _video(
+        'original',
+        pubkey: _authorA,
+        createdAt: 100,
+        eventCreatedAt: 100,
+        vineId: 'clip',
+      );
+      VideoEvent edited() => _video(
+        'edited',
+        pubkey: _authorA,
+        createdAt: 100,
+        eventCreatedAt: 200,
+        vineId: 'clip',
+      );
+
+      test('replaces the cached revision with a later edit', () {
+        final buckets = AuthorVideoBuckets()..seed(_authorA, [original()]);
+
+        buckets.addOrUpdateByVine(
+          edited(),
+          authorPubkey: _authorA,
+          isHistorical: false,
+        );
+
+        expect(buckets.videosFor(_authorA).map((video) => video.id), [
+          'edited',
+        ]);
+      });
+
+      test('keeps a later edit when an earlier revision arrives', () {
+        final buckets = AuthorVideoBuckets()..seed(_authorA, [edited()]);
+
+        buckets.addOrUpdateByVine(
+          original(),
+          authorPubkey: _authorA,
+          isHistorical: false,
+        );
+
+        expect(buckets.videosFor(_authorA).map((video) => video.id), [
+          'edited',
+        ]);
+      });
     });
   });
 }

@@ -10,7 +10,9 @@ VideoEvent _video({
   required String id,
   String pubkey = 'author',
   int createdAt = 0,
+  int? eventCreatedAt,
   DateTime? timestamp,
+  String content = '',
   String? title,
   String? videoUrl,
   String? publishedAt,
@@ -37,7 +39,8 @@ VideoEvent _video({
     id: id,
     pubkey: pubkey,
     createdAt: createdAt,
-    content: '',
+    eventCreatedAt: eventCreatedAt,
+    content: content,
     timestamp:
         timestamp ?? DateTime.fromMillisecondsSinceEpoch(createdAt * 1000),
     title: title,
@@ -165,6 +168,29 @@ void main() {
       );
 
       expect(merged.title, equals('new'));
+    });
+
+    test('a later edit wins although both copies share published_at', () {
+      // An edit re-emits the original published_at, so createdAt ties and
+      // only the signed created_at tells the revisions apart. The original
+      // carries the lower id, so an id tie-break would keep it.
+      final original = _video(
+        id: 'aaa',
+        createdAt: 1000,
+        eventCreatedAt: 1000,
+        publishedAt: '1000',
+        content: 'old caption',
+      );
+      final edited = _video(
+        id: 'bbb',
+        createdAt: 1000,
+        eventCreatedAt: 2000,
+        publishedAt: '1000',
+        content: 'new caption',
+      );
+
+      expect(mergeProfileFeedVideos(original, edited).content, 'new caption');
+      expect(mergeProfileFeedVideos(edited, original).content, 'new caption');
     });
 
     test('fills addressable d tag from the secondary copy', () {

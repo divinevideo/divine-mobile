@@ -18,18 +18,20 @@ String canonicalProfileFeedVideoKey(VideoEvent video) =>
 /// Merges two [VideoEvent]s for the same addressable video, applying the
 /// #3384 REST-count-wins / max-merge policy.
 ///
-/// The "primary" copy is the newer one (greater `createdAt`; ties broken by the
-/// smaller `id`). Metadata scalars take primary-wins (`primary ?? secondary`);
-/// list fields take primary-if-non-empty; every engagement counter takes the
-/// per-counter max ([mergeNullableEngagementMax]); raw tags merge primary-wins
-/// except `views` and `unique_viewers`, which take the higher parsed count
-/// ([mergeVideoRawTagsPrimaryWins]). When neither copy carries a `publishedAt`,
-/// the merged `createdAt`/`timestamp` preserve the older value so re-merging is
-/// stable.
+/// The "primary" copy is the newer revision: greater
+/// [VideoEvent.nostrCreatedAt], ties broken by the smaller `id`. Not
+/// `createdAt`, which prefers `published_at`: an edit re-emits that tag, so
+/// every revision of a video shares it. Metadata scalars take primary-wins
+/// (`primary ?? secondary`); list fields take primary-if-non-empty; every
+/// engagement counter takes the per-counter max ([mergeNullableEngagementMax]);
+/// raw tags merge primary-wins except `views` and `unique_viewers`, which take
+/// the higher parsed count ([mergeVideoRawTagsPrimaryWins]). When neither copy
+/// carries a `publishedAt`, the merged `createdAt`/`timestamp` preserve the
+/// older value so re-merging is stable.
 VideoEvent mergeProfileFeedVideos(VideoEvent existing, VideoEvent incoming) {
   final incomingIsNewer =
-      incoming.createdAt > existing.createdAt ||
-      (incoming.createdAt == existing.createdAt &&
+      incoming.nostrCreatedAt > existing.nostrCreatedAt ||
+      (incoming.nostrCreatedAt == existing.nostrCreatedAt &&
           incoming.id.compareTo(existing.id) < 0);
   final primary = incomingIsNewer ? incoming : existing;
   final secondary = incomingIsNewer ? existing : incoming;
