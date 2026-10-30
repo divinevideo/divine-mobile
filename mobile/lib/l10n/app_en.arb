@@ -12232,17 +12232,7 @@
     "description": "Challenge entry review challengeDetails"
   },
   "challengeLocalDeadline": "Deadline: {deadline} ({timeZone})",
-  "@challengeLocalDeadline": {
-    "description": "Challenge deadline in the viewer display timezone, including its actual zone label.",
-    "placeholders": {
-      "deadline": {
-        "type": "String"
-      },
-      "timeZone": {
-        "type": "String"
-      }
-    }
-  },
+  "@challengeLocalDeadline": {"description": "Challenge deadline in the viewer display timezone, including its actual zone label.", "placeholders": {"deadline": {"type": "String"}, "timeZone": {"type": "String"}}},
   "challengeEnter": "Enter challenge",
   "challengeEnterVideo": "Enter this video",
   "challengeOrganizer": "Organizer",
@@ -12250,24 +12240,9 @@
   "challengeWinners": "Winners",
   "challengeAwaitingResults": "Awaiting results",
   "challengeOrganizerTimezone": "Organizer timezone: {timeZone}",
-  "@challengeOrganizerTimezone": {
-    "placeholders": {
-      "timeZone": {
-        "type": "String"
-      }
-    }
-  },
+  "@challengeOrganizerTimezone": {"placeholders": {"timeZone": {"type": "String"}}},
   "challengeOrganizerTime": "Organizer time: {deadline} ({timeZone})",
-  "@challengeOrganizerTime": {
-    "placeholders": {
-      "deadline": {
-        "type": "String"
-      },
-      "timeZone": {
-        "type": "String"
-      }
-    }
-  },
+  "@challengeOrganizerTime": {"placeholders": {"deadline": {"type": "String"}, "timeZone": {"type": "String"}}},
   "minorAccountReviewVideoSubmittedBody": "Your video has been submitted for review.",
   "minorAccountReviewVideoSubmittedTitle": "Video submitted",
   "minorAccountReviewRecordConsentPrivacyBody": "Your video goes privately to Divine Support and Trust & Safety for review. It is not published or shared with other users."
