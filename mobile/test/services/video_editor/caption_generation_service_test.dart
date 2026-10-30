@@ -7,6 +7,7 @@ import 'package:caption_generator/caption_generator.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:models/models.dart' show AudioEvent, VoiceEffect;
+import 'package:openvine/extensions/audio_event_speed.dart';
 import 'package:openvine/models/divine_video_clip.dart';
 import 'package:openvine/services/audio_extraction_service.dart';
 import 'package:openvine/services/video_editor/caption_generation_service.dart';
@@ -893,6 +894,120 @@ void main() {
         final cue = (outcome as CaptionsGenerated).cues.single;
         expect(cue.start, equals(const Duration(milliseconds: 2500)));
         expect(cue.end, equals(const Duration(seconds: 3)));
+      });
+
+      group('under a speed ramp', () {
+        // The first half of the sound at 2×, the second half at 0.5×.
+        const ramp = VideoSpeedRamp([
+          VideoSpeedRampPoint(position: 0, speed: 2),
+          VideoSpeedRampPoint(position: 0.5, speed: 2),
+          VideoSpeedRampPoint(position: 0.5000001, speed: 0.5),
+          VideoSpeedRampPoint(position: 1, speed: 0.5),
+        ]);
+
+        void expectNear(Duration actual, int milliseconds) => expect(
+          (actual.inMilliseconds - milliseconds).abs(),
+          lessThanOrEqualTo(2),
+        );
+
+        test(
+          'merges a take as recorded and moves its words through the ramp',
+          () async {
+            stubMerge([_offset(0, 6000), _offset(6000, 2000)]);
+            // 1.2 s to 1.8 s into the take: in its slow half.
+            final service = buildService(
+              remote: remoteReturning([_word('Slow.', 7200, 7800)]),
+            );
+
+            final outcome = await service.generateForClips(
+              clips: [_clip('a', duration: const Duration(seconds: 6))],
+              audioTracks: [
+                _track(
+                  _takeId,
+                  url: '/tmp/take.m4a',
+                  startTime: const Duration(seconds: 1),
+                  endTime: const Duration(milliseconds: 3500),
+                  startOffset: const Duration(seconds: 1),
+                ).withSpeedRamp(ramp),
+              ],
+              localeIdentifier: 'en-US',
+            );
+
+            final take = capturedSegments().last;
+            expect(take.speed, equals(1));
+            expect(take.startTime, equals(const Duration(seconds: 1)));
+            // 2.5 s of timeline play 1 s of the take fast and 1 s slow.
+            expectNear(take.endTime, 3000);
+            final cue = (outcome as CaptionsGenerated).cues.single;
+            // 0.5 s for the fast second, then 2 s per second of the slow one.
+            expectNear(cue.start, 1900);
+            expectNear(cue.end, 3100);
+          },
+        );
+
+        test(
+          'keeps anchored speech outside its clip window along the ramp',
+          () async {
+            stubMerge([
+              _offset(0, 2500),
+              _offset(2500, 2000),
+              _offset(4500, 500),
+            ]);
+            final service = buildService(
+              remote: remoteReturning([
+                _word('Fast.', 200, 600),
+                _word('Slow.', 2100, 2300),
+                _word('After.', 4600, 4800),
+              ]),
+            );
+
+            final outcome = await service.generateForClips(
+              clips: [
+                _clip('lead', duration: const Duration(seconds: 2), volume: 0),
+                _clip(
+                  'source',
+                  duration: const Duration(seconds: 4),
+                  trimStart: const Duration(seconds: 1),
+                  trimEnd: const Duration(seconds: 1),
+                ),
+                _clip('tail', duration: const Duration(seconds: 2), volume: 0),
+              ],
+              audioTracks: [
+                // 5 s of timeline play 2 s of the sound fast and 2 s slow.
+                _track(
+                  _extractedId,
+                  url: '/tmp/extracted.wav',
+                  startTime: Duration.zero,
+                  endTime: const Duration(seconds: 5),
+                  anchorClipId: 'source',
+                ).withSpeedRamp(ramp),
+              ],
+              localeIdentifier: 'en-US',
+            );
+
+            final segments = capturedSegments();
+            expect(segments, hasLength(3));
+            // Before the clip, 0 s to 2 s of timeline: 2.5 s of the sound.
+            expect(segments.first.startTime, Duration.zero);
+            expectNear(segments.first.endTime, 2500);
+            // After it, 4 s to 5 s of timeline: the last 0.5 s.
+            expectNear(segments.last.startTime, 3500);
+            expectNear(segments.last.endTime, 4000);
+            expect(segments.last.speed, equals(1));
+            final cues = (outcome as CaptionsGenerated).cues;
+            expect(cues.map((cue) => cue.text), [
+              'Fast.',
+              'Slow.',
+              'After.',
+            ]);
+            expectNear(cues[0].start, 100);
+            expectNear(cues[0].end, 300);
+            expectNear(cues[1].start, 1200);
+            expectNear(cues[1].end, 1600);
+            expectNear(cues[2].start, 4200);
+            expectNear(cues[2].end, 4600);
+          },
+        );
       });
 
       test('on-device keeps only the unique anchored speech windows', () async {
