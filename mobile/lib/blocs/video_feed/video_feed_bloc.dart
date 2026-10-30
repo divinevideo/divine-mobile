@@ -1154,10 +1154,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     }
 
     // Silent refresh — keep current videos visible, replace when done.
-    // Starting the load discards the page a load-more is still fetching, and a
-    // failed refresh emits nothing, so the flag that page holds is released
-    // here as every other path that starts a load does.
-    if (state.isLoadingMore) emit(state.copyWith(isLoadingMore: false));
     final feedLoad = _feedTracker?.startFeedLoad(
       state.source.mode.name,
       reason: FeedLoadReason.refresh,
@@ -1174,10 +1170,6 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     Emitter<VideoFeedBlocState> emit,
   ) async {
     if (state.source.type != VideoFeedSourceType.following) return;
-    // A committed badge page remains owned until a replacement succeeds.
-    if (state.isLoadingMore && !_followingFeed.hasBadgeAuthors) {
-      emit(state.copyWith(isLoadingMore: false));
-    }
     final feedLoad = _feedTracker?.startFeedLoad(
       state.source.mode.name,
       reason: FeedLoadReason.refresh,
@@ -1571,10 +1563,18 @@ class VideoFeedBloc extends Bloc<VideoFeedEvent, VideoFeedBlocState>
     List<VideoEvent>? prefetchedCachedVideos,
     bool startsNewFeedSession = false,
   }) async {
+    final continuesBadgeSnapshot =
+        !startsNewFeedSession &&
+        source.type == VideoFeedSourceType.following &&
+        state.source == source &&
+        state.status == VideoFeedStatus.success &&
+        state.paginationCursor != null &&
+        _followingFeed.hasBadgeAuthors;
     final generation = ++_loadGeneration;
-    // A failed refresh must leave the committed badge pager's page usable.
-    if (!preserveCurrentVideo || !_followingFeed.hasBadgeAuthors) {
+    // Retire a still-visible badge page only when its replacement commits.
+    if (!continuesBadgeSnapshot) {
       _paginationGeneration++;
+      if (state.isLoadingMore) emit(state.copyWith(isLoadingMore: false));
     }
     final nextFeedSessionRevision = startsNewFeedSession
         ? state.feedSessionRevision + 1
