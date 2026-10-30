@@ -559,7 +559,7 @@ final class NativeLoopAlignmentClient implements LoopAlignmentClient {
     );
     _check(op);
     Log.info(
-      'Loop output inspection: covered=$covered, '
+      'Loop output inspection: mediaCovered=$covered, '
       'registrationAndProgression=${proof.confident}, '
       'difference=${proof.scores.difference}, motion=${proof.scores.motion}',
       name: 'LoopRepair',
