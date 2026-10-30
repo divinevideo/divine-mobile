@@ -416,6 +416,47 @@ void main() {
     });
   });
 
+  group('DivineVideoClip timing JSON', () {
+    test('round-trips a sub-millisecond length and trims exactly', () {
+      // A 30 fps recording trimmed by dragging a handle.
+      final trimmed = clip('/videos/clip.mp4').copyWith(
+        duration: const Duration(microseconds: 1966667),
+        trimStart: const Duration(microseconds: 212345),
+        trimEnd: const Duration(microseconds: 98765),
+      );
+
+      final restored = DivineVideoClip.fromJson(trimmed.toJson(), '/videos');
+
+      expect(restored.duration, trimmed.duration);
+      expect(restored.trimStart, trimmed.trimStart);
+      expect(restored.trimEnd, trimmed.trimEnd);
+      expect(restored.playbackDuration, trimmed.playbackDuration);
+    });
+
+    test('writes no microsecond fields for whole milliseconds', () {
+      final json = clip('/videos/clip.mp4')
+          .copyWith(trimStart: const Duration(milliseconds: 250))
+          .toJson();
+
+      expect(json.containsKey('durationUs'), isFalse);
+      expect(json.containsKey('trimStartUs'), isFalse);
+      expect(json.containsKey('trimEndUs'), isFalse);
+    });
+
+    test('reads drafts written before the microsecond fields', () {
+      final legacy = clip('/videos/clip.mp4').toJson()
+        ..['durationMs'] = 1966
+        ..['trimStartMs'] = 212
+        ..['trimEndMs'] = 98;
+
+      final restored = DivineVideoClip.fromJson(legacy, '/videos');
+
+      expect(restored.duration, const Duration(milliseconds: 1966));
+      expect(restored.trimStart, const Duration(milliseconds: 212));
+      expect(restored.trimEnd, const Duration(milliseconds: 98));
+    });
+  });
+
   group('DivineVideoClip.minTrimStart', () {
     test('defaults to zero and survives copyWith', () {
       final original = clip('/videos/clip.mp4');
