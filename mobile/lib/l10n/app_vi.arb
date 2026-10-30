@@ -7403,5 +7403,56 @@
   "videoEditorLoopRepairProgress": "Đang căn chỉnh vòng lặp…",
   "videoEditorLoopRepairTrimmed": "Đã làm mượt vòng lặp. Đã cắt {seconds} giây.",
   "notificationFromDivine": "Từ Divine",
-  "announcementUnavailable": "Thông báo này không còn khả dụng."
+  "announcementUnavailable": "Thông báo này không còn khả dụng.",
+  "creatorHighlightLabel": "Điểm nhấn hôm nay của bạn",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "Video bạn đã tạo hôm nay: {count}.",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "Tuần này có thêm một chút dấu ấn của bạn.",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "Số ngày sáng tạo trong tuần này: {count}. Cứ tiếp tục nhé.",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "Tổng lượt xem tính đến hiện tại của các video bạn đăng trong tuần này: {count}.",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "Video được xem nhiều nhất trong số video bạn đăng tuần này",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "Tạo thêm video",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "Xem số liệu của bạn",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "Xem video",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

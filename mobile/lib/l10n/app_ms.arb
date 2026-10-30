@@ -7403,5 +7403,56 @@
   "videoEditorLoopRepairProgress": "Menjajarkan gelung anda…",
   "videoEditorLoopRepairTrimmed": "Gelung dilancarkan. {seconds} s dibuang.",
   "notificationFromDivine": "Daripada Divine",
-  "announcementUnavailable": "Pengumuman ini tidak lagi tersedia."
+  "announcementUnavailable": "Pengumuman ini tidak lagi tersedia.",
+  "creatorHighlightLabel": "Sorotan harian anda",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "Video yang anda hasilkan hari ini: {count}.",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "Minggu ini ada sedikit lagi sentuhan anda.",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "Hari berkarya minggu ini: {count}. Teruskan berkarya.",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "Jumlah tontonan setakat ini bagi video yang anda siarkan minggu ini: {count}.",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "Paling banyak ditonton antara video yang anda siarkan minggu ini",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "Hasilkan lagi",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "Lihat statistik anda",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "Tonton video",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

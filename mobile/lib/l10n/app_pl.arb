@@ -6112,5 +6112,56 @@
   "videoEditorLoopRepairProgress": "Wyrównywanie pętli…",
   "videoEditorLoopRepairTrimmed": "Pętla wygładzona. Usunięto {seconds} s.",
   "notificationFromDivine": "Od Divine",
-  "announcementUnavailable": "To ogłoszenie nie jest już dostępne."
+  "announcementUnavailable": "To ogłoszenie nie jest już dostępne.",
+  "creatorHighlightLabel": "Twój moment dnia",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "Twoje dzisiejsze filmy: {count}.",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "W tym tygodniu jest trochę więcej ciebie.",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "Dni twórczości w tym tygodniu: {count}. Twórz dalej.",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "Łączna liczba wyświetleń do tej pory filmów opublikowanych przez ciebie w tym tygodniu: {count}.",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "Najczęściej oglądany z twoich filmów opublikowanych w tym tygodniu",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "Stwórz kolejny",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "Zobacz swoje statystyki",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "Obejrzyj film",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

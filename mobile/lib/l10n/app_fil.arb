@@ -5139,5 +5139,56 @@
   "videoEditorLoopRepairProgress": "Inihahanay ang loop mo…",
   "videoEditorLoopRepairTrimmed": "Mas maayos na ang loop. Inalis ang {seconds} s.",
   "notificationFromDivine": "Mula sa Divine",
-  "announcementUnavailable": "Hindi na available ang anunsyong ito."
+  "announcementUnavailable": "Hindi na available ang anunsyong ito.",
+  "creatorHighlightLabel": "Highlight mo ngayong araw",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "Mga video na ginawa mo ngayon: {count}.",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "May dagdag na bahagi mo sa linggong ito.",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "Mga araw na gumawa ka ngayong linggo: {count}. Tuloy lang.",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "Kabuuang views sa ngayon ng mga video na pinost mo ngayong linggo: {count}.",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "Pinakapinanood sa mga video na pinost mo ngayong linggo",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "Gumawa pa",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "Tingnan ang stats mo",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "Panoorin ang video",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

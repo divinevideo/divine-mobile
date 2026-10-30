@@ -5658,5 +5658,56 @@
   "videoEditorLoopRepairProgress": "루프를 정렬하는 중…",
   "videoEditorLoopRepairTrimmed": "루프를 다듬었어요. {seconds}초를 잘라냈어요.",
   "notificationFromDivine": "Divine의 소식",
-  "announcementUnavailable": "이 공지는 더 이상 볼 수 없습니다."
+  "announcementUnavailable": "이 공지는 더 이상 볼 수 없습니다.",
+  "creatorHighlightLabel": "오늘의 하이라이트",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "오늘 만든 동영상: {count}개.",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "이번 주에 나만의 색깔을 조금 더했어요.",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "이번 주에 창작한 날: {count}일. 계속 만들어 봐요.",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "이번 주에 올린 동영상의 지금까지 누적 조회수: {count}회.",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "이번 주에 올린 동영상 중 가장 많이 시청된 영상",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "하나 더 만들기",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "내 통계 보기",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "동영상 보기",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

@@ -1137,6 +1137,7 @@ void main() {
               'badge_dismissal_event_$deletedPubkey',
               'dismissed_badge_coordinates_$deletedPubkey',
               'dismissed_badge_awards_$deletedPubkey',
+              'creator_highlight_presented_$deletedPubkey',
               ...DmSyncState.readStateStorageKeys(deletedPubkey),
               NotificationRepository.readStateStorageKey(deletedPubkey),
             ];

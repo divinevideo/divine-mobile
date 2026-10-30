@@ -15192,4 +15192,39 @@ class AppLocalizationsMs extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get creatorHighlightLabel => 'Sorotan harian anda';
+
+  @override
+  String creatorHighlightCreatedToday(int count) {
+    return 'Video yang anda hasilkan hari ini: $count.';
+  }
+
+  @override
+  String get creatorHighlightWeekTitle =>
+      'Minggu ini ada sedikit lagi sentuhan anda.';
+
+  @override
+  String creatorHighlightCreationDays(int count) {
+    return 'Hari berkarya minggu ini: $count. Teruskan berkarya.';
+  }
+
+  @override
+  String creatorHighlightWeeklyViews(int count) {
+    return 'Jumlah tontonan setakat ini bagi video yang anda siarkan minggu ini: $count.';
+  }
+
+  @override
+  String get creatorHighlightTopVideo =>
+      'Paling banyak ditonton antara video yang anda siarkan minggu ini';
+
+  @override
+  String get creatorHighlightCreate => 'Hasilkan lagi';
+
+  @override
+  String get creatorHighlightAnalytics => 'Lihat statistik anda';
+
+  @override
+  String get creatorHighlightWatch => 'Tonton video';
 }

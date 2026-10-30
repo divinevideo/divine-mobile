@@ -15503,4 +15503,39 @@ class AppLocalizationsRo extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get creatorHighlightLabel => 'Momentul tău de azi';
+
+  @override
+  String creatorHighlightCreatedToday(int count) {
+    return 'Videoclipuri create azi: $count.';
+  }
+
+  @override
+  String get creatorHighlightWeekTitle =>
+      'Săptămâna asta are ceva mai mult din tine.';
+
+  @override
+  String creatorHighlightCreationDays(int count) {
+    return 'Zile de creație săptămâna asta: $count. Continuă așa.';
+  }
+
+  @override
+  String creatorHighlightWeeklyViews(int count) {
+    return 'Vizionări totale până acum ale videoclipurilor pe care le-ai publicat săptămâna asta: $count.';
+  }
+
+  @override
+  String get creatorHighlightTopVideo =>
+      'Cel mai vizionat dintre videoclipurile tale publicate săptămâna asta';
+
+  @override
+  String get creatorHighlightCreate => 'Creează încă unul';
+
+  @override
+  String get creatorHighlightAnalytics => 'Vezi statisticile tale';
+
+  @override
+  String get creatorHighlightWatch => 'Urmărește videoclipul';
 }

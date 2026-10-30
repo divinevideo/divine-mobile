@@ -12144,5 +12144,56 @@
   "challengeOrganizerTimezone": "Organizer timezone: {timeZone}",
   "@challengeOrganizerTimezone": {"placeholders": {"timeZone": {"type": "String"}}},
   "challengeOrganizerTime": "Organizer time: {deadline} ({timeZone})",
-  "@challengeOrganizerTime": {"placeholders": {"deadline": {"type": "String"}, "timeZone": {"type": "String"}}}
+  "@challengeOrganizerTime": {"placeholders": {"deadline": {"type": "String"}, "timeZone": {"type": "String"}}},
+  "creatorHighlightLabel": "Your daily highlight",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "{count, plural, =1{You made something today.} other{You made {count} videos today.}}",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "Your week has a little more you in it.",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "{count, plural, =1{One creative day this week. Keep going.} other{{count} creative days this week. Keep going.}}",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "{count, plural, =1{{count} view on videos you posted this week, so far.} other{{count} views on videos you posted this week, so far.}}",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "Most-watched of this week’s videos",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "Make another",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "See your stats",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "Watch video",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

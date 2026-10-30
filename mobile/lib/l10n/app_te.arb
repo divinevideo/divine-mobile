@@ -9032,5 +9032,56 @@
   "videoEditorLoopRepairProgress": "మీ లూప్‌ను సమలేఖనం చేస్తున్నాం…",
   "videoEditorLoopRepairTrimmed": "లూప్ సాఫీగా మారింది. {seconds} సె. తొలగించాం.",
   "notificationFromDivine": "Divine నుండి",
-  "announcementUnavailable": "ఈ ప్రకటన ఇకపై అందుబాటులో లేదు."
+  "announcementUnavailable": "ఈ ప్రకటన ఇకపై అందుబాటులో లేదు.",
+  "creatorHighlightLabel": "ఈ రోజు మీ హైలైట్",
+  "@creatorHighlightLabel": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreatedToday": "ఈ రోజు మీరు సృష్టించిన వీడియోలు: {count}.",
+  "@creatorHighlightCreatedToday": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeekTitle": "ఈ వారంలో మీ ముద్ర మరికాస్త పెరిగింది.",
+  "@creatorHighlightWeekTitle": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreationDays": "ఈ వారం మీరు సృష్టించిన రోజులు: {count}. ఇలాగే కొనసాగించండి.",
+  "@creatorHighlightCreationDays": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightWeeklyViews": "ఈ వారం మీరు పోస్ట్ చేసిన వీడియోలకు ఇప్పటివరకు వచ్చిన మొత్తం వీక్షణలు: {count}.",
+  "@creatorHighlightWeeklyViews": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "creatorHighlightTopVideo": "ఈ వారం మీరు పోస్ట్ చేసిన వీడియోల్లో అత్యధికంగా చూసిన వీడియో",
+  "@creatorHighlightTopVideo": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightCreate": "మరొకటి సృష్టించండి",
+  "@creatorHighlightCreate": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightAnalytics": "మీ గణాంకాలను చూడండి",
+  "@creatorHighlightAnalytics": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  },
+  "creatorHighlightWatch": "వీడియో చూడండి",
+  "@creatorHighlightWatch": {
+    "description": "Private daily creator celebration in Inbox. Uses real publication and view facts; week means the current local calendar week."
+  }
 }

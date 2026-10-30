@@ -15142,4 +15142,39 @@ class AppLocalizationsVi extends AppLocalizations {
   String challengeOrganizerTime(String deadline, String timeZone) {
     return 'Organizer time: $deadline ($timeZone)';
   }
+
+  @override
+  String get creatorHighlightLabel => 'Điểm nhấn hôm nay của bạn';
+
+  @override
+  String creatorHighlightCreatedToday(int count) {
+    return 'Video bạn đã tạo hôm nay: $count.';
+  }
+
+  @override
+  String get creatorHighlightWeekTitle =>
+      'Tuần này có thêm một chút dấu ấn của bạn.';
+
+  @override
+  String creatorHighlightCreationDays(int count) {
+    return 'Số ngày sáng tạo trong tuần này: $count. Cứ tiếp tục nhé.';
+  }
+
+  @override
+  String creatorHighlightWeeklyViews(int count) {
+    return 'Tổng lượt xem tính đến hiện tại của các video bạn đăng trong tuần này: $count.';
+  }
+
+  @override
+  String get creatorHighlightTopVideo =>
+      'Video được xem nhiều nhất trong số video bạn đăng tuần này';
+
+  @override
+  String get creatorHighlightCreate => 'Tạo thêm video';
+
+  @override
+  String get creatorHighlightAnalytics => 'Xem số liệu của bạn';
+
+  @override
+  String get creatorHighlightWatch => 'Xem video';
 }
