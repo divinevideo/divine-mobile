@@ -41,6 +41,10 @@ enum EditorFilterCategory {
       PresetFilters.ginza,
       PresetFilters.dogpatch,
       _glow,
+      _soft,
+      _crisp,
+      _fresh,
+      _daylight,
     ],
     vibrant => [
       PresetFilters.juno,
@@ -51,6 +55,10 @@ enum EditorFilterCategory {
       PresetFilters.skyline,
       _dramatic,
       _vivid,
+      _pop,
+      _punch,
+      _tropic,
+      _electric,
     ],
     warm => [
       PresetFilters.valencia,
@@ -70,6 +78,14 @@ enum EditorFilterCategory {
       PresetFilters.perpetua,
       PresetFilters.brooklyn,
       _cinematic,
+      _frost,
+      _glacier,
+      _lagoon,
+      _nordic,
+      _midnight,
+      _breeze,
+      _pine,
+      _twilight,
     ],
     vintage => [
       PresetFilters.gingham,
@@ -91,8 +107,26 @@ enum EditorFilterCategory {
       PresetFilters.inkwell,
       PresetFilters.willow,
       _noir,
+      _graphite,
+      _ash,
+      _charcoal,
+      _stark,
+      _steel,
     ],
-    tints => [_ruby, _ocean, _forest, _sunset, _violet, _mint, _coral, _arctic],
+    tints => [
+      _ruby,
+      _ocean,
+      _forest,
+      _sunset,
+      _violet,
+      _mint,
+      _coral,
+      _arctic,
+      _gold,
+      _lime,
+      _rose,
+      _indigo,
+    ],
   };
 }
 
@@ -203,4 +237,196 @@ final _coral = FilterModel(
 final _arctic = FilterModel(
   name: 'Arctic',
   filters: [ColorFilterAddons.addictiveColor(0, 30, 60)],
+);
+
+final _soft = FilterModel(
+  name: 'Soft',
+  filters: [
+    ColorFilterAddons.contrast(-0.08),
+    ColorFilterAddons.brightness(0.04),
+  ],
+);
+
+final _crisp = FilterModel(
+  name: 'Crisp',
+  filters: [
+    ColorFilterAddons.contrast(0.1),
+    ColorFilterAddons.saturation(0.05),
+  ],
+);
+
+final _fresh = FilterModel(
+  name: 'Fresh',
+  filters: [
+    ColorFilterAddons.brightness(0.06),
+    ColorFilterAddons.saturation(0.08),
+  ],
+);
+
+final _daylight = FilterModel(
+  name: 'Daylight',
+  filters: [
+    ColorFilterAddons.exposure(0.15),
+    ColorFilterAddons.temperature(0.03),
+  ],
+);
+
+final _pop = FilterModel(
+  name: 'Pop',
+  filters: [
+    ColorFilterAddons.saturation(0.15),
+    ColorFilterAddons.brightness(0.06),
+    ColorFilterAddons.contrast(0.08),
+  ],
+);
+
+final _punch = FilterModel(
+  name: 'Punch',
+  filters: [
+    ColorFilterAddons.contrast(0.25),
+    ColorFilterAddons.saturation(0.1),
+    ColorFilterAddons.brightness(-0.04),
+  ],
+);
+
+final _tropic = FilterModel(
+  name: 'Tropic',
+  filters: [
+    ColorFilterAddons.saturation(0.25),
+    ColorFilterAddons.temperature(0.05),
+    ColorFilterAddons.contrast(0.06),
+  ],
+);
+
+final _electric = FilterModel(
+  name: 'Electric',
+  filters: [
+    ColorFilterAddons.saturation(0.3),
+    ColorFilterAddons.temperature(-0.06),
+    ColorFilterAddons.contrast(0.1),
+  ],
+);
+
+final _frost = FilterModel(
+  name: 'Frost',
+  filters: [
+    ColorFilterAddons.temperature(-0.1),
+    ColorFilterAddons.brightness(0.06),
+    ColorFilterAddons.saturation(-0.1),
+  ],
+);
+
+final _glacier = FilterModel(
+  name: 'Glacier',
+  filters: [
+    ColorFilterAddons.temperature(-0.2),
+    ColorFilterAddons.contrast(0.08),
+  ],
+);
+
+final _lagoon = FilterModel(
+  name: 'Lagoon',
+  filters: [
+    ColorFilterAddons.colorOverlay(0, 150, 160, 0.1),
+    ColorFilterAddons.saturation(0.1),
+  ],
+);
+
+final _nordic = FilterModel(
+  name: 'Nordic',
+  filters: [
+    ColorFilterAddons.temperature(-0.08),
+    ColorFilterAddons.saturation(-0.25),
+    ColorFilterAddons.contrast(0.06),
+  ],
+);
+
+final _midnight = FilterModel(
+  name: 'Midnight',
+  filters: [
+    ColorFilterAddons.temperature(-0.15),
+    ColorFilterAddons.saturation(-0.15),
+    ColorFilterAddons.brightness(-0.06),
+    ColorFilterAddons.contrast(0.06),
+  ],
+);
+
+final _breeze = FilterModel(
+  name: 'Breeze',
+  filters: [
+    ColorFilterAddons.temperature(-0.06),
+    ColorFilterAddons.brightness(0.08),
+    ColorFilterAddons.contrast(-0.06),
+  ],
+);
+
+final _pine = FilterModel(
+  name: 'Pine',
+  filters: [
+    ColorFilterAddons.colorOverlay(30, 140, 100, 0.08),
+    ColorFilterAddons.contrast(0.05),
+  ],
+);
+
+final _twilight = FilterModel(
+  name: 'Twilight',
+  filters: [ColorFilterAddons.temperature(-0.12), ColorFilterAddons.tint(0.04)],
+);
+
+final _graphite = FilterModel(
+  name: 'Graphite',
+  filters: [ColorFilterAddons.grayscale(), ColorFilterAddons.contrast(0.3)],
+);
+
+final _ash = FilterModel(
+  name: 'Ash',
+  filters: [ColorFilterAddons.grayscale(), ColorFilterAddons.fade(0.6)],
+);
+
+final _charcoal = FilterModel(
+  name: 'Charcoal',
+  filters: [
+    ColorFilterAddons.grayscale(),
+    ColorFilterAddons.brightness(-0.12),
+    ColorFilterAddons.contrast(0.08),
+  ],
+);
+
+// Weights red up and blue down before the grayscale, like a red lens filter:
+// skies go dark and skin goes light.
+final _stark = FilterModel(
+  name: 'Stark',
+  filters: [
+    ColorFilterAddons.rgbScale(1.35, 1, 0.55),
+    ColorFilterAddons.grayscale(),
+    ColorFilterAddons.contrast(0.12),
+  ],
+);
+
+final _steel = FilterModel(
+  name: 'Steel',
+  filters: [
+    ColorFilterAddons.grayscale(),
+    ColorFilterAddons.colorOverlay(60, 90, 130, 0.06),
+  ],
+);
+
+final _gold = FilterModel(
+  name: 'Gold',
+  filters: [ColorFilterAddons.addictiveColor(50, 45, 0)],
+);
+
+final _lime = FilterModel(
+  name: 'Lime',
+  filters: [ColorFilterAddons.addictiveColor(30, 50, 0)],
+);
+
+final _rose = FilterModel(
+  name: 'Rose',
+  filters: [ColorFilterAddons.addictiveColor(50, 0, 25)],
+);
+
+final _indigo = FilterModel(
+  name: 'Indigo',
+  filters: [ColorFilterAddons.addictiveColor(20, 0, 60)],
 );
