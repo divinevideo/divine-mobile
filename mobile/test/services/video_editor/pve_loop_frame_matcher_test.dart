@@ -522,11 +522,12 @@ void main() {
         _frame(320, 180, foreground: 1),
         _frame(320, 180, foreground: 5),
       );
-      if (match != null &&
-          const LoopAlignmentLimits().acceptsMatch(match, 320, 180)) {
-        expect(match.pose.tx.abs(), lessThan(.5));
-        expect(match.pose.ty.abs(), lessThan(.5));
-      }
+      expect(match, isNotNull);
+      expect(
+        const LoopAlignmentLimits().acceptsMatch(match!, 320, 180),
+        isFalse,
+      );
+      expect(match.boundaryModelError, greaterThan(.5));
     });
   });
 }
