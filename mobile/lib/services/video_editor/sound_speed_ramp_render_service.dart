@@ -48,11 +48,26 @@ class SoundSpeedRampRenderService {
   /// Bumped by [clear]; a render started under an older one discards itself.
   int _generation = 0;
 
+  /// The windows the timeline plays, which are never evicted.
+  Set<String> _retained = const {};
+
   static const _logName = 'SoundSpeedRampRenderService';
 
-  /// How many rendered windows stay on disk. Every edit of a ramp or a window
-  /// renders a new one; the ones the preview asks for are kept the longest.
+  /// How many rendered windows the timeline no longer plays stay on disk.
+  /// Every edit of a ramp or a window renders a new one; the ones the preview
+  /// asks for are kept the longest.
   static const maxCachedFiles = 12;
+
+  /// Keeps the rendered windows of [sounds] on disk however many there are;
+  /// only the other windows count against [maxCachedFiles]. Each call
+  /// replaces the sounds of the one before.
+  ///
+  /// Without it, a timeline playing more ramped windows than the cap would
+  /// evict one it plays with every render, and render that one again.
+  void retain(Iterable<AudioEvent> sounds) {
+    _retained = sounds.map(_keyOf).nonNulls.toSet();
+    _evict();
+  }
 
   /// The rendered window of [sound], or `null` when it is not rendered yet
   /// or the sound has no ramp. Never starts a render.
@@ -119,9 +134,7 @@ class SoundSpeedRampRenderService {
         return null;
       }
       _cache[key] = output;
-      while (_cache.length > maxCachedFiles) {
-        _deleteQuietly(_cache.remove(_cache.keys.first)!);
-      }
+      _evict();
       Log.info(
         '🎵 Ramped sound rendered: ${sound.id} → $output',
         name: _logName,
@@ -138,6 +151,18 @@ class SoundSpeedRampRenderService {
       );
       if (output != null) _deleteQuietly('$output.tmp.wav');
       return null;
+    }
+  }
+
+  /// Deletes the least recently used windows the timeline does not play
+  /// until no more than [maxCachedFiles] of them are left.
+  void _evict() {
+    final stale = [
+      for (final key in _cache.keys)
+        if (!_retained.contains(key)) key,
+    ];
+    for (var i = 0; i < stale.length - maxCachedFiles; i++) {
+      _deleteQuietly(_cache.remove(stale[i])!);
     }
   }
 

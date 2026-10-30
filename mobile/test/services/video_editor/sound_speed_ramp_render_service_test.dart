@@ -158,6 +158,44 @@ void main() {
       });
     });
 
+    group('retain', () {
+      AudioEvent endingAt(int seconds) =>
+          rampedSound().copyWith(endTime: Duration(seconds: seconds));
+      final playing = [
+        for (var i = 0; i <= SoundSpeedRampRenderService.maxCachedFiles; i++)
+          endingAt(10 + i),
+      ];
+
+      test('keeps every window the timeline plays, however many', () async {
+        service.retain(playing);
+        final paths = [
+          for (final sound in playing) await service.render(sound),
+        ];
+
+        // A resync asks for every window again.
+        for (final (i, sound) in playing.indexed) {
+          expect(await service.render(sound), paths[i]);
+          expect(File(paths[i]!).existsSync(), isTrue);
+        }
+        expect(merges, hasLength(playing.length));
+      });
+
+      test('lets go of a window the timeline no longer plays', () async {
+        service.retain(playing);
+        final oldest = await service.render(playing.first);
+        for (final sound in playing.skip(1)) {
+          await service.render(sound);
+        }
+        expect(File(oldest!).existsSync(), isTrue);
+
+        service.retain(const []);
+
+        expect(service.cached(playing.first), isNull);
+        expect(File(oldest).existsSync(), isFalse);
+        expect(service.cached(playing.last), isNotNull);
+      });
+    });
+
     group('cached', () {
       test('never starts a render', () {
         expect(service.cached(rampedSound()), isNull);

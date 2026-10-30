@@ -1991,6 +1991,7 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
   Future<void> _syncStopMotionAudio() async {
     final generation = ++_audioSyncGeneration;
     final overlayState = context.read<TimelineOverlayBloc>().state;
+    _soundRampRenders.retain(overlayState.audioTracks);
     final isVoiceOverPreview = _isVoiceOverPreview;
     final audioById = {for (final e in overlayState.audioTracks) e.id: e};
     // Recording a voice-over mutes every sound, so the dips do not matter and
@@ -2179,6 +2180,8 @@ class _VideoEditorState extends ConsumerState<_VideoEditor>
         identical(_videoPlayer, player);
 
     final overlayState = context.read<TimelineOverlayBloc>().state;
+    // Every ramped window the timeline plays stays rendered, however many.
+    _soundRampRenders.retain(overlayState.audioTracks);
     // Captured before the loop can await: the track builders below await the
     // native side, and reading the bloc from a disposed context afterwards
     // would throw.
