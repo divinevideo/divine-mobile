@@ -87,12 +87,16 @@ Initial conservative acceptance limits are:
   outside the corner detector's 8-pixel border. Each supporting strip needs
   at least four forward/backward-consistent matches and 60% agreement within
   one analysis pixel. The independent background fit uses these same bands.
-  Do not widen support into possible foreground to rescue a plain margin.
-  The maintainer chose conservative rejection on 2026-10-30: this restores
-  the original support policy, fixes the reproduced edge-touching subject
-  false correction and arm-in-ring regression, and gives up the added
-  plain-background repairs. It does not establish semantic background identity;
-  coherent foreground obscuring the original boundaries remains ambiguous.
+  Do not widen support into possible foreground to rescue a plain margin,
+  because a wider band can reach a subject. This does not establish semantic
+  background identity, and it has known limits. Coherent foreground obscuring
+  the boundaries stays ambiguous, including a rigid subject reaching opposite
+  edges, which is accepted as camera drift. On encoded footage a plain margin
+  within a few pixels of the band can still gain support from resampling
+  ringing. Once ringing gives a band corners, a subject moving less than the
+  one-pixel agreement tolerance can pass as camera drift: on synthetic encoded
+  shots with a 10% plain margin, about 0.6 analysis pixels of subject motion
+  was repaired and about 1.3 was declined.
 - Withhold every third consistent match from a separate fit. Require at
   least five withheld points and median prediction error at most one
   analysis pixel.
