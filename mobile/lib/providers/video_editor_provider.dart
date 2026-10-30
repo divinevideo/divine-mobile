@@ -1297,6 +1297,16 @@ class VideoEditorNotifier extends Notifier<VideoEditorProviderState> {
     }
 
     _challengeContext = draft.challengeContext;
+    // The draft's own reply target wins over whatever the provider holds, so a
+    // reopened reply still publishes into its thread and an unrelated draft
+    // never picks up the context of a reply the user abandoned.
+    final replyContextNotifier = ref.read(videoReplyContextProvider.notifier);
+    final replyContext = draft.videoReplyContext;
+    if (replyContext != null) {
+      replyContextNotifier.set(replyContext);
+    } else {
+      replyContextNotifier.clear();
+    }
 
     // Drop clips whose source video file is gone. A draft can outlive its
     // media: a clip removed mid-session has its file deleted by
