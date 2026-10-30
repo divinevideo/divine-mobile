@@ -213,24 +213,23 @@ class SocialStickerData extends Equatable {
     lyric,
   ].nonNulls.join('\n');
 
-  /// Whether the sticker's text has an emoji, which looks the same on every
-  /// phone only in the sticker emoji font.
+  /// Whether the sticker's text is in the sticker font but for its emoji,
+  /// which look the same on every phone only in the sticker emoji font. Text
+  /// with a character neither font has does not count: another phone draws
+  /// it differently anyway.
   bool get hasEmoji => StickerTextGlyphs.of(_drawnText) == .emoji;
 
-  /// Whether a sharp copy of the sticker, drawn over the same sticker in a
-  /// video's frames, has matching glyphs and advances on every phone: its
-  /// text all in the bundled font, with emoji in the loaded sticker emoji
-  /// font.
-  bool isRedrawnAlike({required bool emojiFontLoaded}) => StickerTextGlyphs.of(
-    _drawnText,
-  ).isDrawnAlike(emojiFontLoaded: emojiFontLoaded);
-
-  /// Whether a sharp copy of the sticker can be drawn over the same sticker
-  /// in a video's frames. A solid pill hides the sticker beneath, so its
-  /// text can be in any script; the frames show through any other look, so
-  /// its copy needs the glyphs of [isRedrawnAlike].
+  /// Whether the sticker's text allows a sharp copy over the same sticker in
+  /// a video's frames. A solid pill hides the sticker beneath, so its text
+  /// can be in any script and its emoji in any font. The frames show through
+  /// any other look, so its text needs glyphs every phone draws alike: all in
+  /// the sticker font, with emoji in the loaded sticker emoji font. Whether
+  /// the sticker holds still is up to the caller; see [isAnimated].
   bool canBeRedrawn({required bool emojiFontLoaded}) =>
-      style.hasSolidPill || isRedrawnAlike(emojiFontLoaded: emojiFontLoaded);
+      style.hasSolidPill ||
+      StickerTextGlyphs.of(
+        _drawnText,
+      ).isDrawnAlike(emojiFontLoaded: emojiFontLoaded);
 
   /// Whether the sticker moves with how loud the video's sound is.
   bool get listensToSound =>

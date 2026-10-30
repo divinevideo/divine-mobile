@@ -171,12 +171,12 @@ A reader drops the whole tag when:
 A label longer than 300 characters is dropped and the button kept.
 
 The sticker is also part of the video's frames, so other clients still show
-it. Divine draws it again from `style` and `label` exactly over the one in the
-frames, sharp at the screen's resolution, and makes it the button; without
-both fields it only places the button. The copy draws only what covers: the
-text, and the pill's fill and border where they are solid. A see-through fill,
-a glow or a shadow is in the frames already and would come out twice as
-strong.
+it. Divine draws it again from `style` and `label` over the one in the frames,
+in the same area, sharp at the screen's resolution, and makes it the button;
+without both fields it only places the button. The copy draws only what
+covers: the text, and the pill's fill and border where they are solid. A
+see-through fill, a glow or a shadow is in the frames already and would come
+out twice as strong.
 
 Over a see-through look (`dark`, `glass`, `neon`, `plain`, `outline`) the
 frames show through the copy, so its text has to come out the same on the
@@ -193,8 +193,9 @@ A solid look (`light`, `brand`, `highlight`) hides the sticker in the frames,
 so its copy is drawn whatever script its text is in, and before Noto Color
 Emoji has loaded. The copy's pill fills the area, and the rest is scaled to
 fit inside it in proportion: a viewer's phone may draw a script the bundled
-font lacks wider or narrower than the creator's did, and stretched to the
-area its text would come out distorted.
+font lacks, or emoji before Noto Color Emoji has loaded, wider or narrower
+than the creator's did, and stretched to the area its text would come out
+distorted.
 
 Emoji coverage is taken from the exact pinned font's cmap, not a Unicode
 emoji property. Over a see-through look, newer emoji absent from that file

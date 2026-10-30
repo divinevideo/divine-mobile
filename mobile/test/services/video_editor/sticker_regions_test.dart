@@ -397,7 +397,7 @@ void main() {
       // creator's and the viewer's phones draw.
       for (final style in _solidPills) {
         expect(styleOf('東京', style), equals(style.name));
-        expect(styleOf('Лена 🌸', style), equals(style.name));
+        expect(styleOf('Lena 🌸', style), equals(style.name));
       }
     });
 

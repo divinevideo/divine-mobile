@@ -30,8 +30,8 @@ void main() {
       });
 
       test('keeps a fill exactly in the looks with a solid pill', () {
-        // The publish gives a copy in any script to a look with a solid
-        // pill, which only a covering fill hides the frames beneath.
+        // A look with a solid pill gets a copy in any script, which is only
+        // right while its covering fill hides the frames beneath.
         for (final style in InfoStickerStyle.pills) {
           expect(
             StickerPillPalette.of(style).covering.background != null,

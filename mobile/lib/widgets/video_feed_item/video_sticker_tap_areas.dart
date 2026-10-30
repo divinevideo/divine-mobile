@@ -174,9 +174,10 @@ class _VideoStickerTapAreasState extends State<VideoStickerTapAreas> {
     });
   }
 
-  /// Loads the sticker emoji font when a sticker has an emoji to draw in it,
-  /// and draws the stickers again once it is in; until then a see-through one
-  /// shows only as it is in the frames.
+  /// Loads the sticker emoji font when a sticker's emoji are all its text
+  /// needs beyond the sticker font, and draws the stickers again once it is
+  /// in; until then a see-through one shows only as it is in the frames, and
+  /// a solid one draws its emoji in the phone's own font.
   void _loadEmojiFont() {
     if (stickerEmojiFontLoaded) return;
     final hasEmoji = widget.video.stickerRegions.any(

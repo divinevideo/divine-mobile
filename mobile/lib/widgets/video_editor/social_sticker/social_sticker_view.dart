@@ -94,8 +94,9 @@ class SocialStickerView extends StatelessWidget {
 ///
 /// A solid look draws its pill at that box, hiding the sticker beneath, and
 /// scales the rest to fit inside in proportion: a viewer's phone may draw
-/// text the bundled fonts lack wider or narrower than the creator's did, and
-/// stretched to the box it would come out distorted. The frames show through
+/// text the sticker font lacks, or emoji before the sticker emoji font has
+/// loaded, wider or narrower than the creator's did, and stretched to the
+/// box it would come out distorted. The frames show through
 /// any other look, so it is stretched to lie on its own text there; see
 /// [SocialStickerData.canBeRedrawn] for when that matches.
 class SocialStickerCopy extends StatelessWidget {
@@ -154,7 +155,8 @@ const double _markSize = 48;
 /// Unscaled by the system font size, like the sound credit's painted text:
 /// the sticker is part of the video, sized by the creator's pinch, and the
 /// player's copy of it has to match the frames at any font size. Its emoji
-/// are drawn in the sticker emoji font, which it loads when it has any.
+/// are drawn in the sticker emoji font once that is loaded, which it loads
+/// when they are all its text needs beyond the sticker font.
 class _Line extends StatefulWidget {
   const _Line({required this.text, required this.style});
 

@@ -368,15 +368,10 @@ void main() {
         );
         await pump(tester, [dark]);
 
-        final pill = tester.widget<DecoratedBox>(
-          find.descendant(
-            of: find.byType(SocialStickerView),
-            matching: find.byType(DecoratedBox),
-          ),
-        );
-
         expect(find.text('#summer'), findsOneWidget);
-        expect((pill.decoration as BoxDecoration).color, isNull);
+        // The see-through pill is in the frames already; a second one over it
+        // would come out twice as dark.
+        expect(find.byType(SocialStickerCopy), isNot(paints..rrect()));
       });
 
       testWidgets(
